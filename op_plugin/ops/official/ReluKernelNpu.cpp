@@ -43,7 +43,7 @@ at::Tensor relu(const at::Tensor& self) {
 at::Tensor& relu_(at::Tensor& self) {
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);
-    relu_out_npu_nocheck(contiguous_self, self);
+    relu_out_npu_nocheck(contiguous_self, contiguous_self);
     npu_utils::format_fresh_view(self, contiguous_self);
   } else {
     relu_out_npu_nocheck(self, self);
