@@ -52,7 +52,7 @@ at::Tensor cosh(const at::Tensor& self) {
   return result;
 }
 
-at::Tensor& cosh_( at::Tensor& self) {
+at::Tensor& cosh_(at::Tensor& self) {
   return op_plugin::cosh_out(self, self);
 }
 
