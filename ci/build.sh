@@ -140,7 +140,7 @@ function main()
     if [ -d ${OP_PLUGIN_PATH}/dist ]; then
         rm -r ${OP_PLUGIN_PATH}/dist
     fi
-    cp -rf ${PYTORCH_PATH}/dist ${OP_PLUGIN_PATH}
+    cp -rf ${PYTORCH_PATH}/dist ${CUR_DIR}
 
     exit 0
 }
