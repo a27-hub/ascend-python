@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "op_plugin/ops/OpInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
 
 namespace op_plugin {
 at::Tensor _embedding_bag_backward_symint(

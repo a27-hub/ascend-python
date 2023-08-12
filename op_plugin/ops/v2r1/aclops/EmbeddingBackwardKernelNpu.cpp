@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "op_plugin/ops/OpInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
 
 namespace op_plugin {
 at::Tensor embedding_backward_symint(
@@ -25,10 +24,7 @@ at::Tensor embedding_backward_symint(
     bool scale_grad_by_freq, 
     bool sparse) {
   TORCH_CHECK(sparse == false, "the current NPU does not yet support sparse tensor, when sparse is set to True");
-
   // run dense tensor backward
-  return at::embedding_dense_backward(
-      grad, indices, num_weights.guard_int(__FILE__, __LINE__),
-      padding_idx.guard_int(__FILE__, __LINE__), scale_grad_by_freq);
+  return at::embedding_dense_backward_symint(grad, indices, std::move(num_weights), padding_idx, scale_grad_by_freq);
 }
 } // namespace op_plugin
