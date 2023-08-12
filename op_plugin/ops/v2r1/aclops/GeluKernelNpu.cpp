@@ -14,16 +14,10 @@
 // limitations under the License.
 
 #include "op_plugin/ops/OpInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace op_plugin {
 at::Tensor gelu(const at::Tensor& self, c10::string_view approximate) {
-  at::Tensor result = at_npu::native::OpPreparation::apply_tensor(self);
-  at_npu::native::OpCommand cmd;
-  cmd.Name("Gelu")
-      .Input(self)
-      .Output(result)
-      .Run();
-  return result;
+  return gelu_common_nocheck(self);
 }
 } // namespace op_plugin

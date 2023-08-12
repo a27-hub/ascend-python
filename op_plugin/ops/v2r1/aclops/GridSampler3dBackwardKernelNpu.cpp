@@ -14,36 +14,9 @@
 // limitations under the License.
 
 #include "op_plugin/ops/OpInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace op_plugin {
-using npu_preparation = at_npu::native::OpPreparation;
-
-namespace {
-std::tuple<at::Tensor&, at::Tensor&> grid_sampler_3d_backward_nocheck(
-    const at::Tensor& grad,
-    const at::Tensor& input,
-    const at::Tensor& grid,
-    std::string inter_mode,
-    std::string padding_mode,
-    bool align_corners,
-    at::Tensor& dx,
-    at::Tensor& dgrid) {
-  at_npu::native::OpCommand cmd;
-  cmd.Name("GridSampler3DGrad")
-      .Input(grad)
-      .Input(input)
-      .Input(grid)
-      .Output(dx)
-      .Output(dgrid)
-      .Attr("interpolation_mode", inter_mode)
-      .Attr("padding_mode", padding_mode)
-      .Attr("align_corners", align_corners)
-      .Run();
-  return std::tie(dx, dgrid);
-}
-} // namespace
-
 std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(
     const at::Tensor& grad,
     const at::Tensor& input,
@@ -52,32 +25,6 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(
     int64_t padding_mode,
     bool align_corners,
     std::array<bool,2> output_mask) {
-  TORCH_CHECK(
-      (0 <= interpolation_mode && interpolation_mode <= 2),
-      "interpolation_mode must be in range [0~2].")
-  TORCH_CHECK(
-      (0 <= padding_mode && padding_mode <= 2),
-      "padding_mode must be in range [0~2].")
-  at::Tensor format_cast_of_grad = grad;
-  at::Tensor format_cast_of_input = input;
-  at::Tensor format_cast_of_grid = grid;
-  if (format_cast_of_grad.scalar_type() == at::ScalarType::Half) {
-    format_cast_of_grad = op_plugin::npu_dtype_cast(format_cast_of_grad, at::ScalarType::Float);
-  }
-  if (format_cast_of_input.scalar_type() == at::ScalarType::Half) {
-    format_cast_of_input = op_plugin::npu_dtype_cast(format_cast_of_input, at::ScalarType::Float);
-  }
-  if (format_cast_of_grid.scalar_type() == at::ScalarType::Half) {
-    format_cast_of_grid = op_plugin::npu_dtype_cast(format_cast_of_grid, at::ScalarType::Float);
-  }
-
-  at::Tensor dx = npu_preparation::apply_tensor(format_cast_of_input);
-  at::Tensor dgrid = npu_preparation::apply_tensor(format_cast_of_grid);
-  std::string inter_mode_list[] = {"bilinear", "nearest", "bicubic"};
-  std::string padding_mode_list[] = {"zeros", "border", "reflection"};
-
-  grid_sampler_3d_backward_nocheck(format_cast_of_grad, format_cast_of_input, format_cast_of_grid,
-      inter_mode_list[interpolation_mode], padding_mode_list[padding_mode], align_corners, dx, dgrid);
-  return std::tie(dx, dgrid);
+  return grid_sampler3d_backward_common_nocheck(grad, input, grid, interpolation_mode, padding_mode, align_corners);
 }
 } // namespace op_plugin
