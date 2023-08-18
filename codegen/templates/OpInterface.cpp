@@ -15,6 +15,8 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/OpInterface.h"
+#include "torch_npu/csrc/framework/interface/EnvVariables.h"
+#include "torch_npu/csrc/framework/FormatHelper.h"
 
 namespace ${namespace} {
 ${declarations}
