@@ -112,6 +112,8 @@ official:
    impl_ns: acl_op
  - func: _softmax(Tensor self, int dim, bool half_to_float) -> Tensor
    impl_ns: acl_op
+ - func: _softmax.out(Tensor self, int dim, bool half_to_float, *, Tensor(a!) out) -> Tensor(a!)
+   impl_ns: acl_op
  - func: _softmax_backward_data(Tensor grad_output, Tensor output, int dim, ScalarType input_dtype) -> Tensor
    impl_ns: acl_op
  - func: _softmax_backward_data.out(Tensor grad_output, Tensor output, int dim, ScalarType input_dtype, *, Tensor(a!) grad_input) -> Tensor(a!)
@@ -1329,6 +1331,8 @@ official:
  - func: searchsorted.Tensor(Tensor sorted_sequence, Tensor self, *, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None) -> Tensor
    impl_ns: acl_op
  - func: searchsorted.Tensor_out(Tensor sorted_sequence, Tensor self, *, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None, Tensor(a!) out) -> Tensor(a!)
+   impl_ns: acl_op
+ - func: sgn(Tensor self) -> Tensor
    impl_ns: acl_op
  - func: sgn.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op
