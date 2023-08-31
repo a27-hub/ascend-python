@@ -50,4 +50,11 @@ at::Tensor expm1(const at::Tensor& self) {
   return out;
 }
 
+at::Tensor& expm1_(at::Tensor& self) {
+  DO_COMPATIBILITY(aclnnInplaceExpm1, acl_op::expm1_(self));
+  // dispatch hostAPI
+  EXEC_NPU_CMD(aclnnInplaceExpm1, self);
+  return self;
+}
+
 } // namespace op_api
