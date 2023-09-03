@@ -18,16 +18,14 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-using calcu_op_util = at_npu::native::CalcuOpUtil;
 
 at::Tensor upsample_nearest2d(
     const at::Tensor& input,
     c10::optional<at::IntArrayRef> output_size,
     c10::optional<at::ArrayRef<double>> scale_factors) {
   auto osize = op_infer::upsample_infershape_with_scale(input.sizes(), output_size, scale_factors);
-  auto scale_h = calcu_op_util::GetScaleValue(scale_factors, 0);
-  auto scale_w = calcu_op_util::GetScaleValue(scale_factors, 1);
-
+  auto scale_h = op_plugin::utils::get_scale_value(scale_factors, 0);
+  auto scale_w = op_plugin::utils::get_scale_value(scale_factors, 1);
   return acl_op::upsample_nearest2d(input, osize, scale_h, scale_w);
 }
 } // namespace acl_op
