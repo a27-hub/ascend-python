@@ -36,4 +36,5 @@ std::tuple<at::Tensor, at::Tensor> _prelu_kernel_backward(
 
   return std::tie<at::Tensor, at::Tensor>(grad_input, grad_weight);
 }
+
 } // namespace acl_op
