@@ -59,4 +59,4 @@ at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor) {
   dot_out_npu_nocheck(result, self, tensor);
   return result;
 }
-} // op_plugin
+} // acl_op
