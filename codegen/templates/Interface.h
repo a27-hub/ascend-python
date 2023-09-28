@@ -19,6 +19,7 @@
 
 #include <ATen/Tensor.h>
 #include <ATen/ATen.h>
+#include "op_plugin/utils/Export.h"
 #include "op_plugin/ops/${torch_dir}/BackwardManual.h"
 
 namespace ${namespace} {
