@@ -26,8 +26,7 @@ at::Tensor flatten_indices(const at::Tensor& indices, c10::IntArrayRef full_size
 
 inline at::SparseTensorImpl* get_sparse_impl(const SparseTensor& self)
 {
-    TORCH_INTERNAL_ASSERT(
-        self.is_sparse(), "_internal_get_SparseTensorImpl: not a sparse tensor", OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(self.is_sparse(), "_internal_get_SparseTensorImpl: not a sparse tensor", OPS_ERROR(ErrCode::VALUE));
     return static_cast<at::SparseTensorImpl*>(self.unsafeGetTensorImpl());
 }
 

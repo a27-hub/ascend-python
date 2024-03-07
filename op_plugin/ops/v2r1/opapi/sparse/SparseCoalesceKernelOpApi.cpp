@@ -33,7 +33,7 @@ using namespace at::sparse;
 SparseTensor _coalesce_sparse(const SparseTensor& self)
 {
     int64_t nnz = self._nnz();
-    TORCH_INTERNAL_ASSERT(!self.is_coalesced(), OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(!self.is_coalesced(), OPS_ERROR(ErrCode::VALUE));
     if (nnz < 2) {
         SparseTensor dst = self.clone();
         dst._coalesced_(true);
