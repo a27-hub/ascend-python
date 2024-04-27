@@ -79,8 +79,8 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
         range[0] = min.toFloat();
         range[1] = max.toFloat();
     } else {
-        range[0] = min.toInt32();
-        range[1] = max.toInt32();
+        range[0] = min.toInt();
+        range[1] = max.toInt();
     }
 
     histogram_fixed_width(result, self, range, nbins)
