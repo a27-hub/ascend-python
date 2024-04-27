@@ -28,10 +28,11 @@ at::Tensor& histc_out(const at::Tensor& self, int64_t bins, const at::Scalar& mi
 
 at::Tensor histc(const at::Tensor& self, int64_t bins, const at::Scalar& min,
                  const at::Scalar& max) {
-  at::ScalarType out_type = self.scalar_type();
-  at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format({bins},
-                      self.options().dtype(out_type));
-  EXEC_NPU_CMD(aclnnHistc, self, bins, min, max, result);
+  // at::ScalarType out_type = self.scalar_type();
+  // at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format({bins},
+  //                     self.options().dtype(out_type));
+  // EXEC_NPU_CMD(aclnnHistc, self, bins, min, max, result);
+  at::Tensor result = acl_op::histc(self, bins, min, max);
   return result;
 }
 
