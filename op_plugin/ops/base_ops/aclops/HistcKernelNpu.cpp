@@ -83,7 +83,7 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
         range[1] = max.toInt();
     }
 
-    histogram_fixed_width(result, self, range, nbins)
+    histogram_fixed_width(result, self, range, nbins);
     return result;
 }
 } // namespace acl_op
