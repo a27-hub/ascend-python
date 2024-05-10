@@ -36,15 +36,15 @@ at::Tensor &histc_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_
     return result;
 }
 
-at::Tensor &histogram_fixed_width(at::Tensor &result, const at::Tensor &self, at::Tensor &range, at::Tensor &nbins)
+at::Tensor &histogram_fixed_width(at::Tensor &result, const at::Tensor &self, at::Tensor &min, at::Tensor &max, int64_t bins)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("HistogramFixedWidth")
+    cmd.Name("HistogramV2")
         .Input(self)
-        .Input(range)
-        .Input(nbins)
+        .Input(min)
+        .Input(max)
         .Output(result)
-        .Attr("dtype", 3)
+        .Attr("bins", bins)
         .Run();
     return result;
 }
@@ -71,19 +71,17 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
     at::Tensor result =
         npu_preparation::apply_tensor({bins}, self.options().dtype(at::kInt), self);
 
-    at::Tensor nbins = npu_preparation::apply_tensor({1}, self.options().dtype(at::kInt), self);
-
-    at::Tensor range = npu_preparation::apply_tensor({2}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);
-    nbins[0] = bins;
+    at::Tensor minTensor = npu_preparation::apply_tensor({1}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);
+    at::Tensor maxTensor = npu_preparation::apply_tensor({1}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);
     if (is_fp) {
-        range[0] = min.toFloat();
-        range[1] = max.toFloat();
+        minTensor[0] = min.toFloat();
+        maxTensor[0] = max.toFloat();
     } else {
-        range[0] = min.toInt();
-        range[1] = max.toInt();
+        minTensor[0] = min.toInt();
+        maxTensor[0] = max.toInt();
     }
 
-    histogram_fixed_width(result, self, range, nbins);
+    histogram_fixed_width(result, self, minTensor, maxTensor, bins);
     return result;
 }
 } // namespace acl_op
