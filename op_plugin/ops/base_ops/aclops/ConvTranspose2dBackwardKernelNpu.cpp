@@ -197,7 +197,7 @@ at::Tensor convolution_transpose3d_nocheck(const at::Tensor &input, const at::Te
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size =
         convolution_transpose3d_npu_output_size(input, weight, bias, padding, output_padding, stride, dilation, groups);
-    at::Tensor result = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_NDC1HWC0);
+    at::Tensor result = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_ND);
 
     convolution_transpose3d_out_npu_nocheck(result, input, weight, bias, padding, output_padding, stride, dilation,
                                             groups);

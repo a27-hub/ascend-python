@@ -130,7 +130,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward(
     at::Tensor grad_bias;
 
     if (output_mask[0]) {
-        grad_input = npu_preparation::apply_tensor_with_format(input, ACL_FORMAT_NDC1HWC0);
+        grad_input = npu_preparation::apply_tensor_with_format(input, ACL_FORMAT_ND);
     }
     if (output_mask[1]) {
         grad_weight = npu_preparation::apply_tensor_with_format(weight.sizes(), weight.options().dtype(at::kFloat),

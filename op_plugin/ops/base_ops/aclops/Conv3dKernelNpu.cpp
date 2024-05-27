@@ -209,7 +209,7 @@ at::Tensor slow_conv3d_forward(const at::Tensor &self, const at::Tensor &weight,
 {
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     auto output_size = slow_conv3d_npu_output_size(self, weight, bias, stride, padding);
-    auto result = npu_preparation::apply_tensor_with_format(self, std::get<0>(output_size), ACL_FORMAT_NDC1HWC0);
+    auto result = npu_preparation::apply_tensor_with_format(self, std::get<0>(output_size), ACL_FORMAT_ND);
 
     slow_conv3d_forward_npu_nocheck(result, self, weight, kernel_size, bias, stride, padding);
     return result;
