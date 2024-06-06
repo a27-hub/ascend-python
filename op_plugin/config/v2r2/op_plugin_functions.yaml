@@ -1949,6 +1949,9 @@ symint:
    impl_ns: acl_op
  - func: npu_ps_roi_pooling_backward(Tensor output_grad, Tensor rois, float spatial_scale, int group_size, int output_dim, SymInt[] input_size) -> Tensor
    impl_ns: acl_op
+ - func: _amp_update_scale_(Tensor(a!) self, Tensor(b!) growth_tracker, Tensor found_inf, float growth_factor, float backoff_factor, int growth_interval) -> Tensor(a!)
+   impl_ns: op_api
+
 
 custom:
   - func: repeat_interleave_backward_tensor(Tensor grad, Tensor self, Tensor repeats, int? dim=None) -> Tensor
