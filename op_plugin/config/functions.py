@@ -6,7 +6,6 @@ yaml = YAML()
 yaml.width = 1000
 
 with open('op_plugin_functions.yaml', 'r') as f:
-    # yaml111 = YAML()
     oldyaml = yaml.load(f)
 
 VERSION = 'v2.1'
