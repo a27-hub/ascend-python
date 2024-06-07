@@ -27,7 +27,6 @@ def main():
             del newdict['version']
             newyaml.append(newdict)
 
-
     with open(f'{output_dir}/new_derivatives.yaml', 'w') as f:
         yaml.dump(data=newyaml, stream=f)
 

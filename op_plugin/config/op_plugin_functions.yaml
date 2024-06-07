@@ -136,6 +136,7 @@ official:
     version: v2.0.0, v2.1.0, v2.1.0, v2.2.0, v2.2.0, v2.3.1, v2.3.1, v2.4.0, v2.4.0
     kernel: aclop/KernelNpu.cpp
   - func: _conv_depthwise2d.out(Tensor self, Tensor weight, int[2] kernel_size, Tensor? bias, int[2] stride, int[2] padding, int[2] dilation, *, Tensor(a!) out) -> Tensor(a!)
+    use_const_ref_for_mutable_tensors: True
     impl_ns: acl_op, op_api
     version: v1.11.0, v1.11.0
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp
@@ -1240,6 +1241,7 @@ official:
     version: v1.11.0, v2.1.0, v2.2.0, v2.3.1, v2.4.0
     kernel: opapi/KernelNpuOpApi.cpp
   - func: cat(Tensor[] tensors, int dim=0) -> Tensor
+    structured_delegate: cat.out
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11.0, v1.11.0, v2.0.0, v2.1.0, v2.1.0, v2.2.0, v2.2.0, v2.3.1, v2.3.1, v2.4.0, v2.4.0
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp
@@ -1252,6 +1254,7 @@ official:
     version: v1.11.0, v1.11.0, v2.0.0, v2.1.0, v2.1.0, v2.2.0, v2.2.0, v2.3.1, v2.3.1, v2.4.0, v2.4.0
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp
   - func: cat.out(Tensor[] tensors, int dim=0, *, Tensor(a!) out) -> Tensor(a!)
+    structured: True
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11.0, v1.11.0, v2.0.0, v2.1.0, v2.1.0, v2.2.0, v2.2.0, v2.3.1, v2.3.1, v2.4.0, v2.4.0
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp

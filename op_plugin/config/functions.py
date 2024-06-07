@@ -22,28 +22,22 @@ def main():
     with open(source_yaml, 'r') as f:
         oldyaml = yaml.load(f)
 
-
     newyaml = {'official':[], 'custom':[], 'symint':[], 'tocpu':[], 'unsupported':[]}
 
     string = ['official', 'custom', 'symint']
-
 
     # official,custom,symint
     for key in string:
         for func in oldyaml[key]:
             if version in func['version']:
-                newdict = {}
-                newdict['func'] = func['func']
+                newdict = func
                 impl_nslist = re.split(', ', func['impl_ns'])
                 versionlist = re.split(', ', func['version'])
                 versionidx = [idx for idx,val in enumerate(versionlist) if val == version]
                 supportversion = [impl_nslist[i] for i in versionidx]
-                if ACL_OP in supportversion and OP_API in supportversion:
-                    newdict['impl_ns'] = f'{ACL_OP}, {OP_API}'
-                elif ACL_OP in supportversion:
-                    newdict['impl_ns'] = ACL_OP
-                elif OP_API in supportversion:
-                    newdict['impl_ns'] = OP_API
+                del newdict['kernel']
+                del newdict['version']
+                newdict['impl_ns'] = ', '.join(supportversion)
                 newyaml[key].append(newdict)
 
     # tocpu and unsupported
