@@ -38,8 +38,18 @@ python_execute="$2"
 
 export PYTORCH_VERSION="$PYTORCH_VERSION"
 
+${python_execute} -m op_plugin.config.functions \
+  --version="$PYTORCH_VERSION" \
+  --output_dir="$CDIR/op_plugin/config" \
+  --source_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
+
+${python_execute} -m op_plugin.config.derivatives \
+  --version="$PYTORCH_VERSION" \
+  --output_dir="$CDIR/op_plugin/config" \
+  --source_yaml="$CDIR/op_plugin/config/derivatives.yaml"
+
 ${python_execute} -m codegen.gen_backend_stubs  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$CDIR/op_plugin/" \
-  --source_yaml="$CDIR/op_plugin/config/$PYTORCH_VERSION_DIR/op_plugin_functions.yaml" \
+  --source_yaml="$CDIR/op_plugin/config/new_op_plugin_functions.yaml" \
   --impl_path="$CDIR/torch_npu/csrc/aten"  # Used to double-check the yaml file definitions.
