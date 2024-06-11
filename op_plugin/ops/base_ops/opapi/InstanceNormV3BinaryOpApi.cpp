@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_instance_norm_ascend_binary(const at::Tensor &x, const at::Tensor &gamma, const at::Tensor &beta, c10::string_view data_format, double epsilon)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_instance_norm_v3_binary(const at::Tensor &x, const at::Tensor &gamma, const at::Tensor &beta, c10::string_view data_format, double epsilon)
 {
     at::SmallVector<int64_t, SIZE> shape;
 
