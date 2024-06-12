@@ -8,25 +8,13 @@ from torch_npu.testing.common_utils import create_common_tensor
 
 class TestAminmax(TestCase):
     def cpu_op_exec(self, input0):
-        output = torch._aminmax(input0)
+        output = torch.aminmax(input0)
         output0 = output[0].numpy()
         output1 = output[1].numpy()
         return output0, output1
 
     def npu_op_exec(self, input0):
-        output = torch._aminmax(input0)
-        output0 = output[0].cpu().numpy()
-        output1 = output[1].cpu().numpy()
-        return output0, output1
-
-    def cpu_op_dim_exec(self, input0, dim, keepdim):
-        output = torch._aminmax(input0, dim, keepdim)
-        output0 = output[0].numpy()
-        output1 = output[1].numpy()
-        return output0, output1
-
-    def npu_op_dim_exec(self, input0, dim, keepdim):
-        output = torch._aminmax(input0, dim, keepdim)
+        output = torch.aminmax(input0)
         output0 = output[0].cpu().numpy()
         output1 = output[1].cpu().numpy()
         return output0, output1
@@ -47,7 +35,7 @@ class TestAminmax(TestCase):
         output1 = output[1].cpu().numpy()
         return output0, output1
 
-    def test__aminmax_shape_format(self):
+    def test_aminmax_shape_format(self):
         shape_format = [
             [np.float16, 0, [256, 1000]],
             [np.float32, 0, [1000]],
@@ -69,7 +57,7 @@ class TestAminmax(TestCase):
             self.assertRtolEqual(cpu_output0.astype(npu_output0.dtype), npu_output0)
             self.assertRtolEqual(cpu_output1.astype(npu_output1.dtype), npu_output1)
 
-    def test__aminmax_dim_shape_format(self):
+    def test_aminmax_out_shape_format(self):
         shape_format = [
             [np.float16, 0, [64, 4]],
             [np.float32, 0, [32, 4, 16, 8]],
@@ -82,26 +70,7 @@ class TestAminmax(TestCase):
             if cpu_input.dtype == torch.half:
                 cpu_input = cpu_input.to(torch.float)
 
-            cpu_output0, cpu_output1 = self.cpu_op_dim_exec(cpu_input, dim, keepdim)
-            npu_output0, npu_output1 = self.npu_op_dim_exec(npu_input, dim, keepdim)
-
-            self.assertRtolEqual(cpu_output0.astype(npu_output0.dtype), npu_output0)
-            self.assertRtolEqual(cpu_output1.astype(npu_output1.dtype), npu_output1)
-
-    def test__aminmax_out_shape_format(self):
-        shape_format = [
-            [np.float16, 0, [64, 4]],
-            [np.float32, 0, [32, 4, 16, 8]],
-        ]
-
-        for item in shape_format:
-            cpu_input, npu_input = create_common_tensor(item, 0, 100)
-            dim = np.random.randint(len(item[2]))
-            keepdim = np.random.randint(10) > 4
-            if cpu_input.dtype == torch.half:
-                cpu_input = cpu_input.to(torch.float)
-
-            out_temp = torch._aminmax(cpu_input, dim, keepdim)[0]
+            out_temp = cpu_input.aminmax(dim=dim, keepdim=keepdim)[0]
             out_size = out_temp.size()
             cpu_out_min = torch.zeros(out_size).to(cpu_input.dtype)
             cpu_out_max = torch.zeros(out_size).to(cpu_input.dtype)
