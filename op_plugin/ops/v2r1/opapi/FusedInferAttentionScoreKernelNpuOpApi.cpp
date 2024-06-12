@@ -25,7 +25,7 @@ const static int64_t PFA_SPARSE_HIGH_PRECISION_BAND = 14;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
+std::tuple<at::Tensor, at::Tensor> _npu_fused_infer_attention_score_symint(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const c10::optional<at::Tensor> &pse_shift,
     const c10::optional<at::Tensor> &atten_mask,
