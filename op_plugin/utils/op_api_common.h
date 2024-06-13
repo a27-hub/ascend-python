@@ -427,6 +427,18 @@ inline aclDataType ConvertType(const at::ScalarType scalarType)
     return at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
 }
 
+inline char* ConvertType(const std::string &str)
+{
+    char* string_ptr = const_cast<char *>(str.c_str());
+    return string_ptr;
+}
+
+inline std::string CopyType(char* str)
+{
+    std::string result = str;
+    return result;
+}
+
 template <typename T> T ConvertType(T value)
 {
     return value;
@@ -585,10 +597,23 @@ void add_param_to_buf(char *);
 void add_param_to_buf(const char *);
 void add_param_to_buf();
 
+void add_param_to_buf(const c10::optional<std::vector<int64_t>> &);
+void add_param_to_buf(const std::vector<int64_t> &);
+void add_param_to_buf(const std::vector<bool> &);
+void add_param_to_buf(const std::vector<at::Tensor> &);
+void add_param_to_buf(const std::vector<at::Scalar> &);
+
+
 template <typename T, typename... Args> void add_param_to_buf(const T &arg, Args &...args)
 {
     add_param_to_buf(arg);
     add_param_to_buf(args...);
+}
+
+template <typename ...Ts, std::size_t ...i>
+void add_params_to_buf(const std::tuple<Ts...> &t, std::index_sequence<i...>)
+{
+    (add_param_to_buf(std::get<i>(t)), ...);
 }
 
 uint64_t calc_hash_id();
@@ -670,6 +695,49 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     return true;
 }
 
+template <typename ...Ts>
+bool test_hit_cache(
+    aclrtStream acl_stream, const char *aclnn_api, void *phrase2, const std::tuple<Ts...> &args, int* api_ret)
+{
+    static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
+    static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
+    static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");
+    static const auto canUsePTACacheAddr = GetOpApiFuncAddr("CanUsePTACache");
+    PTAGetExecCache ptaGetExecCacheFunc = reinterpret_cast<PTAGetExecCache>(ptaGetExecCacheAddr);
+    InitPTACacheThreadLocal initPTACacheThreadLocalFunc =
+        reinterpret_cast<InitPTACacheThreadLocal>(initPTACacheThreadLocalAddr);
+    SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);
+    CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
+    bool has_func = ptaGetExecCacheFunc && initPTACacheThreadLocalFunc && setPTAHashKeyFunc;
+    bool can_use = canUsePTACacheFunc && canUsePTACacheFunc(aclnn_api);
+    if (!has_func || !can_use) {
+        return false;
+    }
+    uint64_t workspace_size = 0;
+    uint64_t *workspace_size_addr = &workspace_size;
+    initPTACacheThreadLocalFunc();
+    g_hash_offset = 0;
+    add_param_to_buf(std::string(aclnn_api));
+    add_params_to_buf(args, std::make_index_sequence<sizeof...(Ts)>{});
+    uint64_t hashId = calc_hash_id();
+    setPTAHashKeyFunc(hashId);
+    aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
+    if (executor == nullptr) {
+        return false;
+    }
+    void *workspace_addr = nullptr;
+    at::Tensor workspace_tensor;
+    if (workspace_size != 0) {
+        workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size);
+        workspace_addr = const_cast<void *>(workspace_tensor.storage().data());
+    }
+    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(phrase2);
+    *api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
+    TORCH_CHECK(*api_ret == 0, "call failed, detail:", aclGetRecentErrMsg(), OPS_ERROR(ErrCode::INTERNAL));
+    UnInitCacheThreadLocal();
+    return true;
+}
+
 /**
  * check arg is at::Tensor ?
  */
@@ -741,6 +809,10 @@ auto DecodeDevice(Ts&... args) -> at::Device
             aclOpExecutor **executor_addr = &executor;                                                                 \
             InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                \
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
+            int api_ret = 0;                                                                                           \
+            if (test_hit_cache(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret)) {                      \
+                return api_ret;                                                                                        \
+            }                                                                                                          \
             at_npu::native::SetDeterministic();                                                                        \
             if (initMemFunc) {                                                                                         \
                 initMemFunc(nullptr, false);                                                                           \
@@ -757,7 +829,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
                 workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
-            auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
+            api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
             TORCH_CHECK(api_ret == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg(),                     \
                         OPS_ERROR(ErrCode::INTERNAL));                                                                 \
             ReleaseConvertTypes(convert_params);                                                                       \

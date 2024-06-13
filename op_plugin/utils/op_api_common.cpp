@@ -226,9 +226,27 @@ void add_param_to_buf(const at::IntArrayRef &at_array)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
+void add_param_to_buf(const std::vector<int64_t> &at_array)
+{
+    MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(int64_t)));
+    auto counter = at_array.size();
+    MEMCPY_TO_BUF(&counter, sizeof(counter));
+}
+
 void add_param_to_buf(const at::ArrayRef<bool> &at_array)
 {
     MEMCPY_TO_BUF(at_array.data(), static_cast<int64_t>(at_array.size() * sizeof(bool)));
+    auto counter = at_array.size();
+    MEMCPY_TO_BUF(&counter, sizeof(counter));
+}
+
+void add_param_to_buf(const std::vector<bool> &at_array)
+{
+    bool *value_ptr = reinterpret_cast<bool *>(malloc(at_array.size() * sizeof(bool)));
+    for (int i = 0; i < at_array.size(); i++) {
+        value_ptr[i] = at_array[i];
+    }
+    MEMCPY_TO_BUF(value_ptr, static_cast<int64_t>(at_array.size() * sizeof(int64_t)));
     auto counter = at_array.size();
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
@@ -242,7 +260,26 @@ void add_param_to_buf(const at::TensorList &at_tensor_list)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
+void add_param_to_buf(const std::vector<at::Tensor> &at_tensor_list)
+{
+    for (size_t i = 0; i < at_tensor_list.size(); i++) {
+        add_param_to_buf(at_tensor_list[i]);
+    }
+    auto counter = at_tensor_list.size();
+    MEMCPY_TO_BUF(&counter, sizeof(counter));
+}
+
 void add_param_to_buf(const at::ArrayRef<at::Scalar> &at_scalar_list)
+{
+    for (size_t i = 0; i < at_scalar_list.size(); i++) {
+        add_param_to_buf(at_scalar_list[i]);
+    }
+    auto counter = at_scalar_list.size();
+    MEMCPY_TO_BUF(&counter, sizeof(counter));
+    MEMCPY_TO_BUF(",", 1);
+}
+
+void add_param_to_buf(const std::vector<at::Scalar> &at_scalar_list)
 {
     for (size_t i = 0; i < at_scalar_list.size(); i++) {
         add_param_to_buf(at_scalar_list[i]);
@@ -262,6 +299,15 @@ void add_param_to_buf(const c10::optional<at::Tensor> &opt_tensor)
 }
 
 void add_param_to_buf(const c10::optional<at::IntArrayRef> &opt_array)
+{
+    if (opt_array.has_value()) {
+        add_param_to_buf(opt_array.value());
+    } else {
+        MEMCPY_TO_BUF(",", 1);
+    }
+}
+
+void add_param_to_buf(const c10::optional<std::vector<int64_t>> &opt_array)
 {
     if (opt_array.has_value()) {
         add_param_to_buf(opt_array.value());
