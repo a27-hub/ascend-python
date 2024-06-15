@@ -20,14 +20,14 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-static const int POSITIVE = 1;
-static const int NEGETIVE = 2;
+static const uint32_t POSITIVE = 1;
+static const uint32_t NEGETIVE = 2;
 static const int SIZE_T_TWICE = 2;
 static const int DIM_THRESHOLD = 5;
 
 namespace {
 
-void check_negetive(const at::Tensor &self, at::IntArrayRef pad, std::vector<int64_t> &out_shape, int &sign_symbol)
+void check_negetive(const at::Tensor &self, at::IntArrayRef pad, std::vector<int64_t> &out_shape, uint32_t &sign_symbol)
 {
     auto self_dim = self.dim();
     auto pad_cover = static_cast<int64_t>(pad.size()) / 2;
@@ -79,7 +79,7 @@ at::Tensor do_indexing(const at::Tensor &self, at::IntArrayRef pad)
 
     int64_t max_pad_size = 2 * self.dim();
     auto pad_vec = op_infer::array_to_small_vector(pad);
-    for (auto i = 0 ; i < pad_vec.size(); i++) {
+    for (size_t i = 0 ; i < pad_vec.size(); i++) {
         pad_vec[i] = pad_vec[i] >= 0 ? 0 : pad_vec[i];
     }
     if (static_cast<int64_t>(pad.size()) < max_pad_size) {
@@ -117,7 +117,7 @@ at::Tensor constant_pad_nd(const at::Tensor &self, at::IntArrayRef pad, const at
     TORCH_CHECK(pad.size() % 2 == 0, "Length of pad must be even but instead it equals ", pad.size(),
         OPS_ERROR(ErrCode::PARAM));
 
-    int sign_symbol = 0; // 0代表pad全0或没有元素，1代表有正数，2代表有负数，3代表同时有正数和负数
+    uint32_t sign_symbol = 0; // 0代表pad全0或没有元素，1代表有正数，2代表有负数，3代表同时有正数和负数
     auto input_sizes = self.sizes();
     auto l_inp = self.dim();
     auto l_pad = static_cast<int64_t>(pad.size()) / 2;
@@ -146,7 +146,7 @@ at::Tensor constant_pad_nd(const at::Tensor &self, at::IntArrayRef pad, const at
         vector_int.emplace_back(paddings_vector[i - 1]);
     }
     for (int64_t i = 0; i < l_pad; i++) {
-        auto pad_idx = pad.size() - ((i + 1) * 2);
+        auto pad_idx = static_cast<int64_t>(pad.size()) - ((i + 1) * 2);
         auto positive_pad1 = pad[pad_idx] > 0 ? pad[pad_idx] : 0;
         auto positive_pad2 = pad[pad_idx + 1] > 0 ? pad[pad_idx + 1] : 0;
         auto new_dim = input_sizes[l_diff + i] + positive_pad1 + positive_pad2;
