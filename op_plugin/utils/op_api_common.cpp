@@ -189,6 +189,41 @@ void add_param_to_buf(const at::Tensor &at_tensor)
     addTensorAddrToCachedListFunc(const_cast<void*>(at_tensor.storage().data()));
 }
 
+void add_param_to_buf(const CopyTensor &at_tensor)
+{
+    static const auto addTensorAddrToCachedListAddr = GetOpApiFuncAddr("AddTensorAddrToCachedList");
+    TORCH_CHECK(addTensorAddrToCachedListAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
+    AddTensorAddrToCachedList addTensorAddrToCachedListFunc =
+        reinterpret_cast<AddTensorAddrToCachedList>(addTensorAddrToCachedListAddr);
+    if (at_tensor.data_ptr == nullptr) {
+        MEMCPY_TO_BUF(",", 1);
+        return;
+    }
+    // view shape
+    MEMCPY_TO_BUF(at_tensor.sizes.data(), static_cast<int64_t>(at_tensor.sizes.size() * sizeof(int64_t)));
+    // data type
+    auto st = at_tensor.scalar_type;
+    MEMCPY_TO_BUF(&st, sizeof(st));
+    // seperator
+    MEMCPY_TO_BUF(",", 1);
+    // strides
+    MEMCPY_TO_BUF(at_tensor.strides.data(), static_cast<int64_t>(at_tensor.sizes.size() * sizeof(int64_t)));
+    // offset
+    auto so = at_tensor.storage_offset;
+    MEMCPY_TO_BUF(&so, sizeof(so));
+    // storage shape
+    aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(st);
+    c10::SmallVector<int64_t, 5> storageDims;
+    if (acl_data_type != ACL_STRING) {
+        TORCH_CHECK(at_tensor.itemsize > 0, "the itemsize of tensor must be greater than 0.",
+                    OPS_ERROR(ErrCode::PARAM));
+        storageDims.push_back(at_tensor.nbytes / at_tensor.itemsize);
+    }
+    MEMCPY_TO_BUF(storageDims.data(), static_cast<int64_t>(storageDims.size() * sizeof(int64_t)));
+
+    addTensorAddrToCachedListFunc(at_tensor.data_ptr);
+}
+
 void add_param_to_buf(const at::Scalar &at_scalar)
 {
     at::ScalarType scalar_data_type = at_scalar.type();
@@ -260,7 +295,7 @@ void add_param_to_buf(const at::TensorList &at_tensor_list)
     MEMCPY_TO_BUF(&counter, sizeof(counter));
 }
 
-void add_param_to_buf(const std::vector<at::Tensor> &at_tensor_list)
+void add_param_to_buf(const std::vector<CopyTensor> &at_tensor_list)
 {
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
         add_param_to_buf(at_tensor_list[i]);

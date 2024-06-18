@@ -33,7 +33,6 @@
 #include "torch_npu/csrc/framework/StorageDescHelper.h"
 #include "torch_npu/csrc/framework/interface/EnvVariables.h"
 #include "torch_npu/csrc/aten/NPUNativeFunctions.h"
-#include "torch_npu/csrc/aten/common/from_blob.h"
 
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
@@ -233,10 +232,72 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
     return acl_tensor;
 }
 
-inline at::Tensor CopyType(const at::Tensor &at_tensor)
+struct CopyTensor {
+    void *data_ptr = nullptr;       // at_tensor.storage().data()
+    at::ScalarType scalar_type;     // at_tensor.scalar_type()
+    size_t nbytes;                  // at_tensor.storage().nbytes()
+    size_t itemsize;                // at_tensor.itemsize()
+    int64_t storage_offset;         // at_tensor.storage_offset()
+    std::vector<int64_t> sizes;     // at_tensor.sizes()
+    std::vector<int64_t> strides;   // at_tensor.strides()
+};
+
+inline aclTensor *ConvertType(const CopyTensor &at_tensor)
 {
-    auto result = at_npu::native::fake_blob(at_tensor);
-    return result;
+    static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
+    if (aclCreateTensor == nullptr) {
+        return nullptr;
+    }
+
+    if (at_tensor.data_ptr == nullptr) {
+        return nullptr;
+    }
+    at::ScalarType scalar_data_type = at_tensor.scalar_type;
+    aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
+    c10::SmallVector<int64_t, 5> storageDims;
+    // if acl_data_type is ACL_STRING, storageDims is empty.
+    if (acl_data_type != ACL_STRING) {
+        TORCH_CHECK(at_tensor.itemsize > 0, "the itemsize of tensor must be greater than 0.",
+                    OPS_ERROR(ErrCode::VALUE));
+        storageDims.push_back(at_tensor.nbytes / at_tensor.itemsize);
+    }
+
+    const auto dimNum = at_tensor.sizes.size();
+    aclFormat format = ACL_FORMAT_ND;
+    switch (dimNum) {
+        case 3:
+            format = ACL_FORMAT_NCL;
+            break;
+        case 4:
+            format = ACL_FORMAT_NCHW;
+            break;
+        case 5:
+            format = ACL_FORMAT_NCDHW;
+            break;
+        default:
+            format = ACL_FORMAT_ND;
+    }
+
+    auto acl_tensor = aclCreateTensor(
+        at_tensor.sizes.data(), at_tensor.sizes.size(), acl_data_type, at_tensor.strides.data(),
+        at_tensor.storage_offset, format, storageDims.data(), storageDims.size(), at_tensor.data_ptr);
+    return acl_tensor;
+}
+
+inline CopyTensor CopyType(const at::Tensor &at_tensor)
+{
+    if (!at_tensor.defined()) {
+        return CopyTensor();
+    }
+    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor), "only npu tensor is supported", OPS_ERROR(ErrCode::PARAM));
+    return CopyTensor{
+        const_cast<void *>(at_tensor.storage().data()),
+        at_tensor.scalar_type(),
+        at_tensor.storage().nbytes(),
+        at_tensor.itemsize(),
+        at_tensor.storage_offset(),
+        at_tensor.sizes().vec(),
+        at_tensor.strides().vec()};
 }
 
 inline aclScalar *ConvertType(const at::Scalar &at_scalar)
@@ -333,7 +394,7 @@ inline std::vector<bool> CopyType(const at::ArrayRef<bool> &value)
     return value.vec();
 }
 
-inline aclTensorList *ConvertType(const std::vector<at::Tensor> &at_tensor_list)
+inline aclTensorList *ConvertType(const std::vector<CopyTensor> &at_tensor_list)
 {
     static const auto aclCreateTensorList = GET_OP_API_FUNC(aclCreateTensorList);
     if (aclCreateTensorList == nullptr) {
@@ -348,9 +409,9 @@ inline aclTensorList *ConvertType(const std::vector<at::Tensor> &at_tensor_list)
     return acl_tensor_list;
 }
 
-inline std::vector<at::Tensor> CopyType(const at::TensorList &at_tensor_list)
+inline std::vector<CopyTensor> CopyType(const at::TensorList &at_tensor_list)
 {
-    std::vector<at::Tensor> tensor_list(at_tensor_list.size());
+    std::vector<CopyTensor> tensor_list(at_tensor_list.size());
     for (size_t i = 0; i < at_tensor_list.size(); i++) {
         tensor_list[i] = CopyType(at_tensor_list[i]);
     }
@@ -377,6 +438,15 @@ inline std::vector<at::Scalar> CopyType(const at::ArrayRef<at::Scalar> &at_scala
     return at_scalar_list.vec();
 }
 
+inline CopyTensor CopyType(const c10::optional<at::Tensor> &opt_tensor)
+{
+    if (opt_tensor.has_value() && opt_tensor.value().defined()) {
+        return CopyType(opt_tensor.value());
+    }
+
+    return CopyTensor();
+}
+
 inline aclTensor *ConvertType(const c10::optional<at::Tensor> &opt_tensor)
 {
     if (opt_tensor.has_value() && opt_tensor.value().defined()) {
@@ -384,15 +454,6 @@ inline aclTensor *ConvertType(const c10::optional<at::Tensor> &opt_tensor)
     }
 
     return nullptr;
-}
-
-inline c10::optional<at::Tensor> CopyType(const c10::optional<at::Tensor> &opt_tensor)
-{
-    if (opt_tensor.has_value() && opt_tensor.value().defined()) {
-        return CopyType(opt_tensor.value());
-    }
-
-    return c10::nullopt;
 }
 
 inline aclIntArray *ConvertType(const c10::optional<std::vector<int64_t>> &opt_array)
@@ -597,10 +658,11 @@ void add_param_to_buf(char *);
 void add_param_to_buf(const char *);
 void add_param_to_buf();
 
+void add_param_to_buf(const CopyTensor &);
 void add_param_to_buf(const c10::optional<std::vector<int64_t>> &);
 void add_param_to_buf(const std::vector<int64_t> &);
 void add_param_to_buf(const std::vector<bool> &);
-void add_param_to_buf(const std::vector<at::Tensor> &);
+void add_param_to_buf(const std::vector<CopyTensor> &);
 void add_param_to_buf(const std::vector<at::Scalar> &);
 
 
