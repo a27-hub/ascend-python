@@ -18,6 +18,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include <iostream>
 
 namespace op_api {
 const static int64_t ATTENMASK_LIMIT = 2048;
@@ -26,6 +27,7 @@ const static int64_t D_LIMIT = 512;
 const static int64_t BNSD_DIM = 4;
 const static int64_t TOKEN_MAX = 2147483647;
 const static int64_t LEFT_UP_CAUSAL = 2;
+using namespace std;
 
 inline void validate_sdpa_input(
     const at::Tensor &query,
@@ -130,6 +132,7 @@ at::Tensor scaled_dot_product_attention(
            3. For GQA, the key shape is [B, N2, S2, D], where N2 <= N_LIMIT, and N1 is a positive integer
               multiple of N2.
            4. It only supports SocVersion after Ascend910B1. */
+
         c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
         int64_t head_num = query.size(1);
         c10::string_view input_layout = "BNSD";
@@ -139,6 +142,16 @@ at::Tensor scaled_dot_product_attention(
         int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
         c10::optional<at::Tensor> nulltensor = c10::nullopt;
         c10::OptionalIntArrayRef nulllen = c10::nullopt;
+        cout << "fa--query的shape是" << query.sizes()[0] << endl;
+        cout << "fa--key的shape是" << key.sizes()[0] << endl;
+        cout << "fa--value的shape是" << value.sizes()[0] << endl;
+        cout << "fa--head_num" << head_num << endl;
+        cout << "fa--atten_mask的shape是" << atten_mask.sizes()[0] << endl;
+        cout << "fa--input_scale" << input_scale << endl;
+        cout << "fa--keep_prob" << keep_prob << endl;
+        cout << "fa--TOKEN_MAX" << TOKEN_MAX << endl;
+        cout << "fa--next_tockens" << next_tockens << endl;
+        cout << "fa--sparse_mode" << sparse_mode << endl;
         auto output =
             at_npu::native::custom_ops::npu_fusion_attention(query, key, value, head_num, input_layout, nulltensor,
                                                              nulltensor, atten_mask, input_scale.as_float_unchecked(),
