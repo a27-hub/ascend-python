@@ -110,17 +110,18 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor &x1, const at::Tensor &x2, c1
             EXEC_NPU_CMD(aclnnMatmulAllReduce, x1, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode,
                          result);
         }
-    }
-    if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+    } else if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
         const at::Tensor &dequant_scale_real = dequant_scale.value_or(at::Tensor());
         EXEC_NPU_CMD(aclnnQuantMatmulAllReduce, x1, x2, bias_real, x3_real, dequant_scale_real, hcom_ptr,
                      reduce_op_ptr, comm_turn, stream_mode, result);
-    }
-    if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+    } else if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
         const at::Tensor &antiquant_scale_real = antiquant_scale.value_or(at::Tensor());
         const at::Tensor &antiquant_offset_real = antiquant_offset.value_or(at::Tensor());
         EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1, x2, bias_real, antiquant_scale_real, antiquant_offset_real,
                      x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, antiquant_group_size, result);
+    } else {
+        TORCH_CHECK(false, "the type of x1 and x2 should be suit the not quant scenario, "
+                    "dequant scenario, antiquant scenario.", OPS_ERROR(ErrCode::TYPE));
     }
 
     return result;
