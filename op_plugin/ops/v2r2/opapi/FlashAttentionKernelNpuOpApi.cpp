@@ -54,11 +54,11 @@ DropOutStatus get_dropout_status(double keep_prob)
     return DropOutStatus::DROPOUT_NORMAL;
 }
 
-at::Tensor format_trans(const at::Tensor &at_tensor)
+at::Tensor check_npu(const at::Tensor &at_tensor)
 {
     if (at_tensor.defined()) {
         TORCH_CHECK(torch_npu::utils::is_npu(at_tensor), "only npu tensor is supported" + OPS_ERROR(ErrCode::NOT_SUPPORT));
-        return custom_ops::npu_format_cast(at_tensor, ACL_FORMAT_ND);
+        return at_tensor;
     }
     return at_tensor;
 }
@@ -197,46 +197,46 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     auto ac_seq_qlen = actual_seq_qlen.value_or(at::IntArrayRef{});
     auto ac_seq_kvlen = actual_seq_kvlen.value_or(at::IntArrayRef{});
 
-    at::Tensor format_query = format_trans(query);
-    at::Tensor format_key = format_trans(key);
-    at::Tensor format_value = format_trans(value);
-    at::Tensor format_dy = format_trans(dy);
+    at::Tensor npu_query = check_npu(query);
+    at::Tensor npu_key = check_npu(key);
+    at::Tensor npu_value = check_npu(value);
+    at::Tensor npu_dy = check_npu(dy);
 
-    at::Tensor format_pse = format_trans(pse_const);
-    at::Tensor format_drop_mask = format_trans(drop_mask_const);
-    at::Tensor format_padding_mask = format_trans(padding_mask_const);
-    at::Tensor format_atten_mask = format_trans(atten_mask_const);
-    at::Tensor format_softmax_max = format_trans(softmax_max_const);
-    at::Tensor format_softmax_sum = format_trans(softmax_sum_const);
-    at::Tensor format_softmax = format_trans(softmax_const);
-    at::Tensor format_attention = format_trans(attention_const);
-    at::Tensor dq = OpPreparation::apply_tensor_without_format(format_query);
-    at::Tensor dk = OpPreparation::apply_tensor_without_format(format_key);
-    at::Tensor dv = OpPreparation::apply_tensor_without_format(format_value);
+    at::Tensor npu_pse = check_npu(pse_const);
+    at::Tensor npu_drop_mask = check_npu(drop_mask_const);
+    at::Tensor npu_padding_mask = check_npu(padding_mask_const);
+    at::Tensor npu_atten_mask = check_npu(atten_mask_const);
+    at::Tensor npu_softmax_max = check_npu(softmax_max_const);
+    at::Tensor npu_softmax_sum = check_npu(softmax_sum_const);
+    at::Tensor npu_softmax = check_npu(softmax_const);
+    at::Tensor npu_attention = check_npu(attention_const);
+    at::Tensor dq = OpPreparation::apply_tensor_without_format(npu_query);
+    at::Tensor dk = OpPreparation::apply_tensor_without_format(npu_key);
+    at::Tensor dv = OpPreparation::apply_tensor_without_format(npu_value);
     char* input_layout_ptr = const_cast<char *>(input_layout.c_str());
     at::Tensor dpse;
-    if (format_pse.defined()) {
-        dpse = OpPreparation::apply_tensor_without_format(format_pse);
+    if (npu_pse.defined()) {
+        dpse = OpPreparation::apply_tensor_without_format(npu_pse);
     } else {
         dpse = at::empty({0}, query.options());
     }
 
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
         EXEC_NPU_CMD(
-            aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
-            format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
+            aclnnFlashAttentionUnpaddingScoreGrad, npu_query, npu_key, npu_value, npu_dy,
+            npu_pse, npu_drop_mask, npu_padding_mask, npu_atten_mask, npu_softmax_max,
+            npu_softmax_sum, npu_softmax, npu_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
             scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_ptr, inner_precise, sparse_mode,
             dq, dk, dv, dpse);
     } else {
         EXEC_NPU_CMD(
-            aclnnFlashAttentionScoreGrad, format_query, format_key, format_value, format_dy,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
-            format_softmax_sum, format_softmax, format_attention, prefixN, scale_value, keep_prob,
+            aclnnFlashAttentionScoreGrad, npu_query, npu_key, npu_value, npu_dy,
+            npu_pse, npu_drop_mask, npu_padding_mask, npu_atten_mask, npu_softmax_max,
+            npu_softmax_sum, npu_softmax, npu_attention, prefixN, scale_value, keep_prob,
             pre_tockens, next_tockens, head_num, input_layout_ptr, inner_precise, sparse_mode, dq, dk, dv, dpse);
     }
 
-    if (!format_pse.defined()) {
+    if (!npu_pse.defined()) {
         at::Tensor dpse_required;
         dpse = dpse_required;
     }
@@ -408,14 +408,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
 
     double scale_value = scale;
 
-    at::Tensor format_query = format_trans(query);
-    at::Tensor attention_score = OpPreparation::apply_tensor_without_format(format_query);
-    at::Tensor format_key = format_trans(key);
-    at::Tensor format_value = format_trans(value);
+    at::Tensor npu_query = check_npu(query);
+    at::Tensor attention_score = OpPreparation::apply_tensor_without_format(npu_query);
+    at::Tensor npu_key = check_npu(key);
+    at::Tensor npu_value = check_npu(value);
 
-    at::Tensor format_pse = format_trans(pse);
-    at::Tensor format_padding_mask = format_trans(padding_mask);
-    at::Tensor format_atten_mask = format_trans(atten_mask);
+    at::Tensor npu_pse = check_npu(pse);
+    at::Tensor npu_padding_mask = check_npu(padding_mask);
+    at::Tensor npu_atten_mask = check_npu(atten_mask);
 
     int64_t seed;
     int64_t offset;
@@ -428,7 +428,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
         numels *= accum;
     }
-    at::Tensor format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
+    at::Tensor npu_drop_mask = dropout_gen_mask(npu_query, npu_key, keep_prob, head_num, input_layout_str,
         gen_mask_parallel, sync, seed, offset, numels);
 
     at::Tensor softmax_max;
@@ -450,15 +450,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     char* input_layout_ptr = const_cast<char *>(input_layout_str.c_str());
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
         EXEC_NPU_CMD(
-            aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+            aclnnFlashAttentionVarLenScore, npu_query, npu_key, npu_value,
+            npu_pse, npu_drop_mask, npu_padding_mask, npu_atten_mask, prefixN,
             ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
             input_layout_ptr, inner_precise, sparse_mode, softmax_max, softmax_sum,
             softmax_out, attention_score);
     } else {
         EXEC_NPU_CMD(
-            aclnnFlashAttentionScore, format_query, format_key, format_value,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+            aclnnFlashAttentionScore, npu_query, npu_key, npu_value,
+            npu_pse, npu_drop_mask, npu_padding_mask, npu_atten_mask, prefixN,
             scale, keep_prob, pre_tockens, next_tockens, head_num, input_layout_ptr,
             inner_precise, sparse_mode, softmax_max, softmax_sum, softmax_out, attention_score);
     }
