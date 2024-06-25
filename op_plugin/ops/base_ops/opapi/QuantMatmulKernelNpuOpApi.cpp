@@ -27,7 +27,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::vector<uint64_t> &batch_record)
 {
     TORCH_CHECK(at_npu::native::FormatHelper::IsBaseFormatType(x2),
-                "x2 should be in the original image format, but it is ",
+                "x2 should be in the original format, but it is ",
                 npu_preparation::get_tensor_npu_format(x2), OPS_ERROR(ErrCode::PARAM));
     uint64_t batch_val = 1;
     auto x1_dim_num = x1.dim();
