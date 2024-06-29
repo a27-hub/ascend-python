@@ -6033,6 +6033,7 @@ tocpu:
   - func: unique_dim_consecutive
     version: v1.11, v2.0
 unsupported:
+
   - func: _conj
     version: v1.11, v2.0
   - func: _conj_physical
@@ -6149,3 +6150,40 @@ unsupported:
     version: v1.11, v2.0
   - func: special_zeta.self_scalar_out
     version: v1.11, v2.0
+quant:
+ - func: q_scale(Tensor self) -> float
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: q_per_channel_scales(Tensor self) -> Tensor
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: q_zero_point(Tensor self) -> int
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: q_per_channel_zero_points(Tensor self) -> Tensor
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: q_per_channel_axis(Tensor self) -> int
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: qscheme(Tensor self) -> QScheme
+   impl_ns: acl_op
+   version: v2.2
+   kernel: aclop/KernelNpu.cpp
+ - func: dequantize.self(Tensor self) -> Tensor
+   impl_ns: acl_op, acl_op, acl_op
+   version: v2.2, v2.3, v2.4
+   kernel: aclop/KernelNpu.cpp
+ - func: int_repr(Tensor self) -> Tensor
+   impl_ns: acl_op, acl_op, acl_op
+   version: v2.2, v2.3, v2.4
+   kernel: aclop/KernelNpu.cpp
+ - func: _empty_affine_quantized(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, float scale=1, int zero_point=0, MemoryFormat? memory_format=contiguous_format) -> Tensor
+   impl_ns: acl_op, acl_op, acl_op
+   version: v2.2, v2.3, v2.4
+   kernel: aclop/KernelNpu.cpp

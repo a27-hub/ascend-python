@@ -23,9 +23,9 @@ def main():
     with open(source_yaml, 'r') as f:
         oldyaml = yaml.load(f)
 
-    newyaml = {'official':[], 'custom':[], 'symint':[], 'tocpu':[], 'unsupported':[]}
+    newyaml = {'official':[], 'custom':[], 'symint':[], 'tocpu':[], 'unsupported':[], 'quant':[]}
 
-    string = ['official', 'custom', 'symint']
+    string = ['official', 'custom', 'symint', 'quant']
 
     # official,custom,symint
     for key in string:
