@@ -6033,7 +6033,6 @@ tocpu:
   - func: unique_dim_consecutive
     version: v1.11, v2.0
 unsupported:
-
   - func: _conj
     version: v1.11, v2.0
   - func: _conj_physical
