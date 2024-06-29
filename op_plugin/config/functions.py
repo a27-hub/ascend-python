@@ -43,6 +43,11 @@ def main():
                 if (version == 'v1.11' or version == 'v2.0') and func.get('sparse'):
                     del newdict['sparse']
 
+                if func.get('exposed') and version in versionlist:
+                    newdict['exposed'] = 'True'
+                elif func.get('exposed'):
+                    del newdict['sparse']
+
                 newyaml[key].append(newdict)
 
     # tocpu and unsupported
