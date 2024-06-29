@@ -40,7 +40,7 @@ def main():
                     newdict['impl_ns'] = ', '.join(supportversion)
                 del newdict['kernel']
                 del newdict['version']
-                if version == 'v1.11.0' or version == 'v2.0.0':
+                if version == 'v1.11' or version == 'v2.0':
                     del newdict['sparse']
 
                 newyaml[key].append(newdict)
