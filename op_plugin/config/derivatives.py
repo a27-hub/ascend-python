@@ -30,7 +30,7 @@ def main():
             newyaml.append(newdict)
 
     flags = os.O_WRONLY | os.O_CREAT
-    moeds = stat.S_IWUSR | stat.S_IRUSR
+    modes = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(f'{output_dir}/new_derivatives.yaml', flags, modes), 'w') as f:
         yaml.dump(data=newyaml, stream=f)
 
