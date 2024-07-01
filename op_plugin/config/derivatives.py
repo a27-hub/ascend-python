@@ -1,6 +1,7 @@
 from operator import itemgetter
 import argparse
 import os
+import stat
 from ruamel.yaml import YAML
 
 
@@ -28,7 +29,9 @@ def main():
             del newdict['version']
             newyaml.append(newdict)
 
-    with open(f'{output_dir}/new_derivatives.yaml', 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT
+    moeds = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(f'{output_dir}/new_derivatives.yaml', flags, modes), 'w') as f:
         yaml.dump(data=newyaml, stream=f)
 
 if __name__ == '__main__':

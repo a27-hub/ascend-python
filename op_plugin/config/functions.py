@@ -1,5 +1,7 @@
 import re
 import argparse
+import os
+import stat
 from ruamel.yaml import YAML
 
 OP_API = 'op_api'
@@ -55,10 +57,12 @@ def main():
     for key in ['tocpu', 'unsupported']:
         for func in oldyaml[key]:
             if version in func['version']:
-                newyamlget(key).append(func['func'])
+                newyaml.get(key).append(func['func'])
 
     # save to yaml
-    with open(f'{output_dir}/new_op_plugin_functions.yaml', 'w') as f:
+    flags = os.O_WRONLY | os.O_CREAT
+    moeds = stat.S_IWUSR | stat.S_IRUSR
+    with os.fdopen(os.open(f'{output_dir}/new_op_plugin_functions.yaml', flags, modes), 'w') as f:
         yaml.dump(data=newyaml, stream=f)
 
 if __name__ == '__main__':
