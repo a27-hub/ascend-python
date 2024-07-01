@@ -1,7 +1,8 @@
-from ruamel.yaml import YAML
 from operator import itemgetter
 import argparse
 import os
+from ruamel.yaml import YAML
+
 
 def main():
     parser = argparse.ArgumentParser()

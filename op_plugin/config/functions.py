@@ -1,9 +1,10 @@
-from ruamel.yaml import YAML
 import re
 import argparse
+from ruamel.yaml import YAML
 
 OP_API = 'op_api'
 ACL_OP = 'acl_op'
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -48,13 +49,13 @@ def main():
                 elif func.get('exposed'):
                     del newdict['sparse']
 
-                newyaml[key].append(newdict)
+                newyaml.get(key).append(newdict)
 
     # tocpu and unsupported
     for key in ['tocpu', 'unsupported']:
         for func in oldyaml[key]:
             if version in func['version']:
-                newyaml[key].append(func['func'])
+                newyamlget(key).append(func['func'])
 
     # save to yaml
     with open(f'{output_dir}/new_op_plugin_functions.yaml', 'w') as f:
