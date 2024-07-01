@@ -2,7 +2,7 @@ from operator import itemgetter
 import argparse
 import os
 import stat
-from ruamel.yaml import YAML
+import yaml
 
 
 def main():
@@ -16,11 +16,9 @@ def main():
     output_dir = args.output_dir
     source_yaml = args.source_yaml
 
-    yaml = YAML()
-    yaml.width = 1000
 
     with open(source_yaml, 'r') as f:
-        oldyaml = yaml.load(f)
+        oldyaml = yaml.safe_load(f)
 
     newyaml = []
     for func in oldyaml:

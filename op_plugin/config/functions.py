@@ -2,7 +2,7 @@ import re
 import argparse
 import os
 import stat
-from ruamel.yaml import YAML
+import yaml
 
 OP_API = 'op_api'
 ACL_OP = 'acl_op'
@@ -19,12 +19,8 @@ def main():
     output_dir = args.output_dir
     source_yaml = args.source_yaml
 
-    yaml = YAML()
-    yaml.width = 1000
-    yaml.indent(mapping=2, sequence=4, offset=2)
-
     with open(source_yaml, 'r') as f:
-        oldyaml = yaml.load(f)
+        oldyaml = yaml.safe_load(f)
 
     newyaml = {'official':[], 'custom':[], 'symint':[], 'tocpu':[], 'unsupported':[], 'quant':[]}
 
