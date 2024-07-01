@@ -38,7 +38,7 @@ def main():
                 if func.get('impl_ns') and func.get('version'):
                     impl_nslist = re.split(', ', func['impl_ns'])
                     versionlist = re.split(', ', func['version'])
-                    versionidx = [idx for idx,val in enumerate(versionlist) if val == version]
+                    versionidx = [idx for idx, val in enumerate(versionlist) if val == version]
                     supportversion = [impl_nslist[i] for i in versionidx]
                     newdict['impl_ns'] = ', '.join(supportversion)
                 del newdict['kernel']
