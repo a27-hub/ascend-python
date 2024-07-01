@@ -95,6 +95,9 @@ official:
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp
+  - func: _amp_update_scale_(Tensor(a!) self, Tensor(b!) growth_tracker, Tensor found_inf, float growth_factor, float backoff_factor, int growth_interval) -> Tensor(a!)
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.1, v2.2, v2.3, v2.4
   - func: _batch_norm_impl_index(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> (Tensor, Tensor, Tensor, Tensor, int)
     impl_ns: acl_op, acl_op, acl_op, acl_op, acl_op, acl_op
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
@@ -224,6 +227,14 @@ official:
   - func: _fft_r2c.out(Tensor self, int[] dim, int normalization, bool onesided, *, Tensor(a!) out) -> Tensor(a!)
     impl_ns: op_api
     version: v2.1
+    kernel: opapi/KernelNpuOpApi.cpp
+  - func: _foreach_abs_(Tensor(a!)[] self) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
+    kernel: opapi/KernelNpuOpApi.cpp
+  - func: _foreach_abs(Tensor[] tensors) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
     kernel: opapi/KernelNpuOpApi.cpp
   - func: _foreach_add.List(Tensor[] tensors1, Tensor[] tensors2, *, Scalar alpha=1) -> Tensor[]
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
@@ -3274,6 +3285,14 @@ official:
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
     kernel: aclop/KernelNpu.cpp, opapi/KernelNpuOpApi.cpp
+  - func: polar(Tensor abs, Tensor angle) -> Tensor
+    impl_ns: op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4
+    kernel: opapi/KernelNpuOpApi.cpp
+  - func: polar.out(Tensor abs, Tensor angle, *, Tensor(a!) out) -> Tensor(a!)
+    impl_ns: op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4
+    kernel: opapi/KernelNpuOpApi.cpp
   - func: prelu(Tensor self, Tensor weight) -> Tensor
     impl_ns: acl_op, op_api
     version: v1.11, v1.11
@@ -5302,7 +5321,7 @@ custom:
     impl_ns: acl_op, acl_op, acl_op, acl_op, acl_op, acl_op
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
     kernel: aclop/KernelNpu.cpp
-  - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, int antiquant_group_size=0, int comm_turn=0) -> Tensor
+  - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, Tensor? pertoken_scale=None, int antiquant_group_size=0, int comm_turn=0) -> Tensor
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
     kernel: opapi/KernelNpuOpApi.cpp
@@ -5701,10 +5720,11 @@ symint:
     impl_ns: acl_op, acl_op, acl_op, acl_op, acl_op
     version: v2.0, v2.1, v2.2, v2.3, v2.4
     kernel: aclop/KernelNpu.cpp
-  - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
+  - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, SymInt[]? actual_shared_prefix_len=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, int key_antiquant_mode=0, int value_antiquant_mode=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
     impl_ns: op_api
     version: v2.1
     kernel: opapi/KernelNpuOpApi.cpp
+    exposed: v2.1
   - func: npu_incre_flash_attention(Tensor query, Tensor key, Tensor value, *, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? pse_shift=None, SymInt[]? actual_seq_lengths=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? kv_padding_size=None, int num_heads=1, float scale_value=1.0, str input_layout="BSH", int num_key_value_heads=0, int block_size=0, int inner_precise=1) -> Tensor
     impl_ns: op_api
     version: v2.1
