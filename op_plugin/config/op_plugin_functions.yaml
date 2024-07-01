@@ -5139,9 +5139,9 @@ custom:
     kernel: opapi/KernelNpuOpApi.cpp
   - func: npu_geglu(Tensor self, int dim=-1, int approximate=1, bool activate_left=False) -> (Tensor, Tensor)
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
-    version: v1.11, v2.0
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
     kernel: opapi/KernelNpuOpApi.cpp
-    exposed: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
+    exposed: v1.11, v2.0
   - func: npu_geglu_grad(Tensor grad_output, Tensor self, Tensor gelu, int dim=-1, int approximate=1, bool activate_left=False) -> Tensor
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
