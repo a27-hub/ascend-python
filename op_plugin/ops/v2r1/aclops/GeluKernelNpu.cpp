@@ -18,6 +18,6 @@
 
 namespace acl_op {
 at::Tensor gelu(const at::Tensor& self, c10::string_view approximate) {
-  return gelu_common_nocheck(self);
+    return gelu_v2_common_nocheck(self, approximate);
 }
 } // namespace acl_op

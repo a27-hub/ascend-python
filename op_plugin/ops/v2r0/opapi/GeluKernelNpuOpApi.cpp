@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Huawei Technologies Co., Ltd
+// Copyright (c) 2023-2024 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -19,11 +19,22 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+constexpr static int64_t APPROXIMATE_TANH = 1;
 
-at::Tensor gelu(const at::Tensor& self, c10::string_view approximate) {
-  DO_COMPATIBILITY(aclnnGelu, acl_op::gelu(self));
-  at::Tensor result = npu_preparation::apply_tensor_without_format(self);
-  EXEC_NPU_CMD(aclnnGelu, self, result);
-  return result;
+at::Tensor gelu(const at::Tensor &self, c10::string_view approximate)
+{
+    DO_COMPATIBILITY(aclnnGeluV2, acl_op::gelu(self, approximate));
+    std::string approximate_str = std::string(approximate);
+    TORCH_CHECK(!(approximate_str == "tanh" && approximate_str == "none"),
+        "approximate only supports to set none or tanh mode." + OPS_ERROR(ErrCode::PARAM));
+
+    int64_t approximate_mode = 0;
+    if (approximate_str == "tanh") {
+        approximate_mode = APPROXIMATE_TANH;
+    }
+    at::Tensor result = npu_preparation::apply_tensor_without_format(self);
+
+    EXEC_NPU_CMD(aclnnGeluV2, self, approximate_mode, result);
+    return result;
 }
-}  // namespace op_api
+} // namespace op_api
