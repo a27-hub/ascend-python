@@ -94,7 +94,6 @@ at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, con
 
 #endif
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
 at::Tensor npu_ps_roi_pooling(
     const at::Tensor& self,
     const at::Tensor& rois,
@@ -110,6 +109,5 @@ at::Tensor npu_ps_roi_pooling(
     ps_roi_pooling_npu_nocheck(result, self, rois, spatial_scale, group_size, output_dim);
     return result;
 }
-#endif
 
 } // namespace acl_op

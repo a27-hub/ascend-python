@@ -37,8 +37,6 @@ at::Tensor& index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& i
 }
 #endif
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
-
 at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tensor& index,
                       const at::Tensor& source)
 {
@@ -47,6 +45,5 @@ at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tenso
     EXEC_NPU_CMD(aclnnIndexCopy, self, dim, index, source, out);
     return out;
 }
-#endif
 
 }

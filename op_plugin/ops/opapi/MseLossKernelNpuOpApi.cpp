@@ -49,7 +49,6 @@ at::Tensor& mse_loss_out(
 }
 #endif
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
 at::Tensor mse_loss(
     const at::Tensor& self,
     const at::Tensor& target,

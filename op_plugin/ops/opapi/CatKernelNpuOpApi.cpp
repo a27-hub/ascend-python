@@ -237,7 +237,6 @@ at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim) {
 }
 #endif
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
 at::Tensor& cat_out(at::TensorList tensors, at::Dimname dim, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnCat, acl_op::cat_out(tensors, dim, result));
   return at::cat_out(result, tensors, dimname_to_position(tensors[0], dim));
@@ -247,6 +246,5 @@ at::Tensor cat(at::TensorList tensors, at::Dimname dim) {
   DO_COMPATIBILITY(aclnnCat, acl_op::cat(tensors, dim));
   return at::cat(tensors, dimname_to_position(tensors[0], dim));
 }
-#endif
 
 }

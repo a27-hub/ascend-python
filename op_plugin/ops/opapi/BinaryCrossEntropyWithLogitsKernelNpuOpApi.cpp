@@ -20,7 +20,6 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
 at::Tensor binary_cross_entropy_with_logits(const at::Tensor& self, const at::Tensor& target,
                                             const c10::optional<at::Tensor>& weight_opt,
                                             const c10::optional<at::Tensor>& pos_weight_opt, int64_t reduction) {
@@ -42,6 +41,5 @@ at::Tensor binary_cross_entropy_with_logits(const at::Tensor& self, const at::Te
     EXEC_NPU_CMD(aclnnBinaryCrossEntropyWithLogits, self, target, weight_opt, pos_weight_opt, reduction, result);
     return result;
 }
-#endif
 
 }
