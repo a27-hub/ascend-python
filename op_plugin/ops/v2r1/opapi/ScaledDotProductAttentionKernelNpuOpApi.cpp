@@ -21,7 +21,9 @@
 
 namespace op_api {
 const static int64_t ATTENMASK_LIMIT = 2048;
+const static int64_t B_LIMIT = 65536;
 const static int64_t N_LIMIT = 2048;
+const static int64_t FIA_N_LIMIT = 256;
 const static int64_t D_LIMIT = 512;
 const static int64_t BNSD_DIM = 4;
 const static int64_t TOKEN_MAX = 2147483647;
@@ -145,6 +147,34 @@ at::Tensor scaled_dot_product_attention(
                                                              keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
                                                              nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
+    } else if ((!query.requires_grad() || !key.requires_grad() || !value.requires_grad()) &&
+                (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
+                (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
+                (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 ==0 &&
+                ((attn_mask.has_value() && attn_mask->dtype() == at::kBool && attn_mask->size(-2) == query.size(2) &&
+                attn_mask->size(-1) == key.size(2)) || !attn_mask.has_value()) &&
+                (query.size(0) == key.size(0) && query.size(3) == key.size(3) && key.size(0) == value.size(0) &&
+                key.size(1) == value.size(1) && key.size(2) == value.size(2) && key.size(3) == value.size(3)) &&
+                (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= FIA_N_LIMIT) &&
+                (query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) <= 64) &&
+                c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+                c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
+                int64_t head_num = query.size(1);
+                int64_t head_num_kv = key.size(1);
+                c10::string_view input_layout = "BNSD";
+                auto input_scale = calculate_scale(query, scale);
+                int64_t next_tockens = is_causal ? 0 : TOKEN_MAX;
+                int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
+                c10::optional<at::Tensor> nulltensor = c10::nullopt;
+                c10::OptionalSymIntArrayRef nulllen = c10::nullopt;
+                auto output =
+                    at_npu::native::custom_ops::npu_fused_infer_attention_score(query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor,
+                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
+                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
+                                                                                nulltensor, nulltensor, nulltensor, nulllen, head_num, input_scale.as_float_unchecked(),
+                                                                                TOKEN_MAX, next_tockens, input_layout, head_num_kv, sparse_mode, 2, 0, 0, 0, 0, false);
+                
+                return std::get<0>(output);
     }
     c10::optional<at::Tensor> atten_mask_math = convert_boolean_attn_mask_math(attn_mask, query.dtype());
     auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal,
