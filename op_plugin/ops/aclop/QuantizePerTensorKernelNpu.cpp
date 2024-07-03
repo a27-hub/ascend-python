@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0) || (defined VERSION_V2R1)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 
@@ -49,7 +49,7 @@ at::Tensor& quantize_per_tensor_out_nocheck(
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0) || (defined VERSION_V2R1)
 at::Tensor quantize_per_tensor(
     const at::Tensor& self,
     double scale,
@@ -87,7 +87,7 @@ at::Tensor quantize_per_tensor(
 } // namespace acl_op
 #endif
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include <ATen/ops/quantize_per_tensor.h>
@@ -202,7 +202,7 @@ REGISTER_PRIVATEUSE1_DISPATCH(dequantize_tensor_per_tensor_affine_stub, &dequant
 } // namespace at
 #endif
 
-#ifdef VERSION_V2R3
+#if (defined VERSION_V2R3)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include <ATen/ops/quantize_per_tensor.h>

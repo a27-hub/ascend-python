@@ -11,7 +11,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 using npu_preparation = at_npu::native::OpPreparation;
 
 constexpr int ATTRS_DIM = 2;

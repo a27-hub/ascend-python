@@ -55,7 +55,7 @@ std::tuple<at::Tensor, at::Tensor> npu_max(const at::Tensor& self, at::Dimname d
   return acl_op::npu_max(self, dimname_to_position(self, dim), keepdim);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor npu_max_backward(
     const at::Tensor& grad,
     int64_t dim,
@@ -76,7 +76,7 @@ at::Tensor npu_max_backward(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_max_backward_symint(const at::Tensor &grad, int64_t dim, const at::Tensor &indices,
                                    c10::SymIntArrayRef sizes_symint, bool keepdim)
 {

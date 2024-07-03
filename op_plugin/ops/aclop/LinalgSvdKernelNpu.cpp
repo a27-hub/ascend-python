@@ -18,7 +18,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> _linalg_svd_out(
     const at::Tensor &A,
     const bool full_matrices,
@@ -39,7 +39,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> _linalg_svd_out(
     const at::Tensor& A,
     const bool full_matrices,

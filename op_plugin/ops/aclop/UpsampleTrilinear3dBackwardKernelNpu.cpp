@@ -116,7 +116,7 @@ at::Tensor upsample_trilinear3d_backward(
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_trilinear3d_backward(
     const at::Tensor& grad_output,
     c10::optional<at::IntArrayRef> output_size,

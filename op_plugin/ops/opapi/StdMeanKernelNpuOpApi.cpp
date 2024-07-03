@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple <at::Tensor, at::Tensor> std_mean(
     const at::Tensor & self,
     c10::optional<at::IntArrayRef> dim,
@@ -42,7 +42,7 @@ std::tuple <at::Tensor, at::Tensor> std_mean(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 std::tuple<at::Tensor, at::Tensor> std_mean(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,

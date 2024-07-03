@@ -23,7 +23,7 @@ namespace acl_op {
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor &index_copy_npu_impl(const int64_t dim, const at::Tensor &index, const at::Tensor &source,
                                 at::Tensor &result)
 {
@@ -74,7 +74,7 @@ at::Tensor &index_copy_npu_(at::Tensor &self, const at::Dimname dim, const at::T
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& index_copy_npu_impl(
     const int64_t dim,
     const at::Tensor& index,
@@ -103,7 +103,7 @@ at::Tensor& index_copy_npu_impl(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& index_copy_npu_impl(
     const int64_t dim,
     const at::Tensor& index,
@@ -141,7 +141,7 @@ at::Tensor& index_copy_npu_impl(
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tensor& index, const at::Tensor& source)
 {
     at::Tensor contiguous_self(self.clone());
@@ -152,7 +152,7 @@ at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tenso
 }
 #endif
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor &_index_copy_(at::Tensor &self, const int64_t dim, const at::Tensor &index, const at::Tensor &source)
 {
     at::Tensor contiguous_self(self);
@@ -166,7 +166,7 @@ at::Tensor &_index_copy_(at::Tensor &self, const int64_t dim, const at::Tensor &
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& index, const at::Tensor& source)
 {
     at::Tensor contiguous_self(self);
@@ -180,7 +180,7 @@ at::Tensor& index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& i
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor index_copy(const at::Tensor& self, const int64_t dim, const at::Tensor& index, const at::Tensor& source)
 {
     at::Tensor contiguous_self(self.clone());

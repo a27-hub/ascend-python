@@ -79,7 +79,7 @@ std::tuple<at::Tensor &, at::Tensor &> median_out_npu_nocheck(at::Tensor &values
     return median_out_value_nocheck(values, indices, self, dimname_to_position(self, dim), keepdim);
 }
 
-#ifdef VERSION_V1R11 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 c10::SmallVector<int64_t, SIZE> median_npu_output_size(const at::Tensor &self, int64_t dim, bool keepdim)
 {
     dim = op_plugin::utils::make_warp_dim(dim, self.dim());
@@ -134,7 +134,7 @@ std::tuple<at::Tensor, at::Tensor> median(const at::Tensor &self, int64_t dim, b
     return std::tuple<at::Tensor &, at::Tensor &>(values, indices);
 }
 
-#ifdef VERSION_V1R11 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor nanmedian(const at::Tensor &self)
 {
     TORCH_NPU_WARN_ONCE(

@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& grad, const at::Tensor& input,
                                                             const at::Tensor& grid, int64_t interpolation_mode,
                                                             int64_t padding_mode, bool align_corners)
@@ -36,7 +36,7 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& gr
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& grad, const at::Tensor& input,
                                                             const at::Tensor& grid, int64_t interpolation_mode,
                                                             int64_t padding_mode, bool align_corners,

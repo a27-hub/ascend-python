@@ -19,7 +19,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 at::Tensor& max_unpool2d_backward_out(
     const at::Tensor& grad_output,
     const at::Tensor& self,

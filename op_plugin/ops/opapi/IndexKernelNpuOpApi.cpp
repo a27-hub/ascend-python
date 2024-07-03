@@ -20,7 +20,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor> indices) {
   std::vector<at::Tensor> all_defined_indices;
   at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
@@ -51,7 +51,7 @@ at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Ten
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor> indices) {
   std::vector<at::Tensor> all_defined_indices;
   at::SmallVector<int64_t, op_infer::N> zeroSize = {0};

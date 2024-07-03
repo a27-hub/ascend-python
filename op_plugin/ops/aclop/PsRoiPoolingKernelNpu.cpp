@@ -61,7 +61,7 @@ at::Tensor &ps_roi_pooling_backward_npu_nocheck(at::Tensor &input_grad, const at
 }
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor npu_ps_roi_pooling_backward(const at::Tensor &output_grad, const at::Tensor &rois, double spatial_scale,
                                        int64_t group_size, int64_t output_dim, at::IntArrayRef input_size)
 {
@@ -76,7 +76,7 @@ at::Tensor npu_ps_roi_pooling_backward(const at::Tensor &output_grad, const at::
     return input_grad;
 }
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, const at::Tensor &rois,
                                               double spatial_scale, int64_t group_size, int64_t output_dim,
                                               c10::SymIntArrayRef input_size_symint)

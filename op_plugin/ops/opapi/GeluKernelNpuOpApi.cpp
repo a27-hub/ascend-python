@@ -19,7 +19,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& gelu_out(const at::Tensor& self, at::Tensor& result) {
     DO_COMPATIBILITY(aclnnGelu, acl_op::gelu_out(self, result));
     npu_preparation::check_tensor({self}, result, self);
@@ -36,7 +36,7 @@ at::Tensor gelu(const at::Tensor& self) {
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor gelu(const at::Tensor& self, c10::string_view approximate) {
     DO_COMPATIBILITY(aclnnGelu, acl_op::gelu(self));
     at::Tensor result = npu_preparation::apply_tensor_without_format(self);

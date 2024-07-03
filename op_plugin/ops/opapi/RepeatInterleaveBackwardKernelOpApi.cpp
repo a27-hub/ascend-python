@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor repeat_interleave_backward_int(const at::Tensor& input_grad, const at::Tensor& self, int64_t repeats,
     c10::optional<int64_t> dim)
 {
@@ -70,7 +70,7 @@ at::Tensor repeat_interleave_backward_tensor(const at::Tensor& input_grad, const
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor repeat_interleave_backward_one_repeat(const at::Tensor& input_grad, const at::Tensor& self, int64_t repeats,
     c10::optional<int64_t> dim)
 {

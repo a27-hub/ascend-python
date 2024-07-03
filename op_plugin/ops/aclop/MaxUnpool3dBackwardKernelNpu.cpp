@@ -21,7 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 at::Tensor &max_unpool3d_backward_out_npu_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
                                                   const at::Tensor &indices)
 {
@@ -49,7 +49,7 @@ at::Tensor &max_unpool3d_backward_out_npu_nocheck(at::Tensor &grad_input, const 
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor &max_unpool3d_backward_out(
     const at::Tensor &grad_output,
     const at::Tensor &self,
@@ -96,7 +96,7 @@ at::Tensor max_unpool3d_backward(
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& max_unpool3d_backward_out(
     const at::Tensor& grad_output,
     const at::Tensor& self,

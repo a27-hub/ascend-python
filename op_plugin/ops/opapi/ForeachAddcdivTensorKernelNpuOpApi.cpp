@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
@@ -75,7 +75,7 @@ void _foreach_addcdiv_(const at::TensorList input,
 #endif
 
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,

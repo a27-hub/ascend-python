@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11 || VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor median(const at::Tensor& self)
 {
   DO_COMPATIBILITY(aclnnMedian, acl_op::median(self));
@@ -60,7 +60,7 @@ std::tuple<at::Tensor&, at::Tensor&> median_out(const at::Tensor& self,
 }
 #endif
 
-#ifdef VERSION_V1R11 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor nanmedian(const at::Tensor& self)
 {
   DO_COMPATIBILITY(aclnnNanMedian, acl_op::nanmedian(self));

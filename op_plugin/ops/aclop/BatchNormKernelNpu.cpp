@@ -303,7 +303,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
   return std::tie(result, save_mean, save_invstd);
 }
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     const at::Tensor& self,
     const c10::optional<at::Tensor>& weight_opt,

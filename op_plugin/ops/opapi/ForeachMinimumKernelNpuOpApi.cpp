@@ -19,7 +19,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
@@ -41,7 +41,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
@@ -63,7 +63,7 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList
 }
 #endif
 
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
@@ -144,7 +144,7 @@ void _foreach_minimum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 }
 #endif
 
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
@@ -225,7 +225,7 @@ void _foreach_minimum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 }
 #endif
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);

@@ -47,7 +47,7 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     /* k == 5 currently unsupported by the binary file
-      CheckForbidInternalFormat = False: turn on private format£»CheckJitDisable = False: turn on JitCompile
+      CheckForbidInternalFormat = False: turn on private formatï¿½ï¿½CheckJitDisable = False: turn on JitCompile
     */
     if (k == 5 || (!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
         return acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
@@ -184,7 +184,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(const at::T
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     /* k == 5 and groups > 3 currently unsupported by the binary file
-      CheckForbidInternalFormat = False: turn on private format£»CheckJitDisable = False: turn on JitCompile
+      CheckForbidInternalFormat = False: turn on private formatï¿½ï¿½CheckJitDisable = False: turn on JitCompile
     */
     if (!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable()) {
         return acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
@@ -224,7 +224,7 @@ tensor_list3 convolution_backward_overrideable(const at::Tensor &grad_output, co
                                       output_padding, groups, output_mask);
 }
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 static inline c10::SmallVector<int64_t, op_infer::N> expand_dim_if_needed(
     at::IntArrayRef list_param,
     const char* param_name,
@@ -251,7 +251,7 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
   int64_t dim = k - 2;
   int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
-  // CheckForbidInternalFormat = False: turn on private format£»CheckJitDisable = False: turn on JitCompile
+  // CheckForbidInternalFormat = False: turn on private formatï¿½ï¿½CheckJitDisable = False: turn on JitCompile
   if ((!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
     return acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                         transposed, output_padding, groups, output_mask);

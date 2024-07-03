@@ -18,7 +18,7 @@
 
 namespace acl_op {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor dequantize(const at::Tensor& self) {
     return self.to(at::kFloat);
 }

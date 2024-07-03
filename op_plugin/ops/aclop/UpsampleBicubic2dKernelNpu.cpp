@@ -127,7 +127,7 @@ at::Tensor upsample_bicubic2d(
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_bicubic2d(
     const at::Tensor& self,
     c10::optional<at::IntArrayRef> output_size,

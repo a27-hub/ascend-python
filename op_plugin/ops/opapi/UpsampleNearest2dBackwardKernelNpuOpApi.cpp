@@ -54,7 +54,7 @@ at::Tensor upsample_nearest2d_backward(
   return grad_input;
 }
 
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 at::Tensor upsample_nearest2d_backward(
     const at::Tensor& grad_output,
     c10::optional<at::IntArrayRef> output_size,

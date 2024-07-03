@@ -148,7 +148,7 @@ at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, 
     return self;
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor scatter(const at::Tensor &self, int64_t dim, const at::Tensor &index, const at::Tensor &src)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);

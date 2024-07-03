@@ -41,7 +41,7 @@ at::Tensor sum(const at::Tensor &self, c10::optional<c10::ScalarType> dtype) {
   return op_api::sum(self, c10::SmallVector<int64_t, N>{}, false, dtype);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& sum_out(const at::Tensor &self,
                     at::IntArrayRef dim,
                     bool keepdim,
@@ -58,7 +58,7 @@ at::Tensor sum(const at::Tensor &self,
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& sum_out(const at::Tensor &self,
                     at::OptionalIntArrayRef dim,
                     bool keepdim,

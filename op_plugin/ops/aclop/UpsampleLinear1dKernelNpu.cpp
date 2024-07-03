@@ -123,7 +123,7 @@ at::Tensor upsample_linear1d(
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_linear1d(
     const at::Tensor& self,
     c10::optional<at::IntArrayRef> output_size,

@@ -39,7 +39,7 @@ at::Tensor mean(const at::Tensor& self, c10::optional<c10::ScalarType> dtype) {
   return acl_op::mean(self, c10::SmallVector<int64_t, N> {}, false, dtype);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& mean_out(
     const at::Tensor& self,
     at::IntArrayRef dim,
@@ -58,7 +58,7 @@ at::Tensor mean(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor& mean_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,

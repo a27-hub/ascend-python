@@ -18,7 +18,7 @@
 
 namespace acl_op {
 
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 std::tuple<at::Tensor, at::Tensor> _symeig_helper(
     const at::Tensor& self,
     bool eigenvectors,

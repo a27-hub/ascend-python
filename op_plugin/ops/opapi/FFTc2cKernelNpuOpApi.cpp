@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/fft_plan_op_api.h"
 namespace op_api {
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 using npu_preparation = at_npu::native::OpPreparation;
 enum class fft_norm_mode {
     none,       // No normalization

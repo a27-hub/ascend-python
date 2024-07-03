@@ -21,7 +21,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& std_out(
     const at::Tensor& self,
     c10::optional<at::IntArrayRef> dim,
@@ -60,7 +60,7 @@ at::Tensor std(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& std_out(const at::Tensor& self, at::OptionalIntArrayRef dim,
                     const c10::optional<c10::Scalar>& correction, bool keepdim, at::Tensor& result)
 {

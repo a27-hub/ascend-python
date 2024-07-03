@@ -24,7 +24,7 @@ const static int NO_EXPERT_WEIGHT_DIM = 2;
 const static int MAX_EXPERT_NUM = 256;
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Tensor &weight2,
     c10::string_view activation, c10::optional<at::IntArrayRef> expert_tokens, c10::optional<at::IntArrayRef> expert_tokens_index,
     const c10::optional<at::Tensor> &bias1, const c10::optional<at::Tensor> &bias2,
@@ -76,7 +76,7 @@ at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Ten
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Tensor &weight2,
     c10::string_view activation, at::OptionalIntArrayRef expert_tokens, c10::OptionalIntArrayRef expert_tokens_index,
     const c10::optional<at::Tensor> &bias1, const c10::optional<at::Tensor> &bias2,

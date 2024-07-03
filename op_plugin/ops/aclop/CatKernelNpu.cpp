@@ -35,7 +35,7 @@ at_npu::native::DynamicInputRegFunc concat_func =
   return ge_op;
 };
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(at::TensorList tensors) {
   at::ScalarType high_type = at::native::result_type(tensors);
   c10::SmallVector<at::Tensor, N> dst_tensor_list;
@@ -80,7 +80,7 @@ at::Tensor& cat_out_nocheck(at::Tensor& result, at::TensorList tensors, int64_t 
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(const at::MaterializedITensorListRef& tensors) {
   auto high_type = at::native::result_type(tensors);
   c10::SmallVector<at::Tensor, N> dst_tensor_list;
@@ -142,7 +142,7 @@ at::Tensor cat(at::TensorList tensors, at::Dimname dim) {
     return at::cat(tensors, dimname_to_position(tensors[0], dim));
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& _cat_out(at::TensorList tensors, int64_t dim, at::Tensor& result) {
   if (tensors.size() == 1) {
     return result.copy_(tensors[0]);
@@ -225,7 +225,7 @@ at::Tensor cat(at::TensorList tensors, int64_t dim) {
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& cat_out(const at::ITensorListRef& tensors, int64_t dim, at::Tensor& result) {
   auto materialized = tensors.materialize();
   c10::SmallVector<at::Tensor, N> input_tensors = cat_dest_tensor_list(materialized);
@@ -292,7 +292,7 @@ at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim) {
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& cat_out(const at::ITensorListRef& tensors, int64_t dim, at::Tensor& result) {
   auto materialized = tensors.materialize();
   c10::SmallVector<at::Tensor, N> input_tensors = cat_dest_tensor_list(materialized);

@@ -145,7 +145,7 @@ std::tuple<at::Tensor, at::Tensor> sort(
   return acl_op::sort(self, dimname_to_position(self, dim), descending);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple<at::Tensor, at::Tensor> sort(
     const at::Tensor& self,
     c10::optional<bool> stable,

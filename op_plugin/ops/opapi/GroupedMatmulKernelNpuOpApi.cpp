@@ -65,7 +65,7 @@ void create_new_tensor(std::vector<at::Tensor> &y, size_t dim_m, size_t dim_n, c
     y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
 //    Thus, "Tensor[] bias" is used in Torch1.11 and Torch2.0, while
@@ -112,7 +112,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (int i = 0; i < num_x; i++) {
                 create_new_tensor_multi_dim(y, x[i], weight[i], options);
             }
-        }  // Ð£ÑéNO_SPLITÊ±ÎªÌØÊâ³¡¾°£¨groupListÎª¿Õ£©»ònum_x > 1
+        }  // Ð£ï¿½ï¿½NO_SPLITÊ±Îªï¿½ï¿½ï¿½â³¡ï¿½ï¿½ï¿½ï¿½groupListÎªï¿½Õ£ï¿½ï¿½ï¿½num_x > 1
     } else if (IN_NOT_SPLIT_OUT_SPLIT == split_item_value || IN_SPLIT_OUT_SPLIT == split_item_value) {
         if (num_x > 1) {
             size_t dim_m = 0;
@@ -133,7 +133,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
 //    Thus, "Tensor[] bias" is used in Torch1.11 and Torch2.0, while
@@ -174,7 +174,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (int i = 0; i < num_x; i++) {
                 create_new_tensor_multi_dim(y, x[i], weight[i], options);
             }
-        }  // Ð£ÑéNO_SPLITÊ±ÎªÌØÊâ³¡¾°£¨groupListÎª¿Õ£©»ònum_x > 1
+        }  // Ð£ï¿½ï¿½NO_SPLITÊ±Îªï¿½ï¿½ï¿½â³¡ï¿½ï¿½ï¿½ï¿½groupListÎªï¿½Õ£ï¿½ï¿½ï¿½num_x > 1
     } else if (IN_NOT_SPLIT_OUT_SPLIT == split_item_value || IN_SPLIT_OUT_SPLIT == split_item_value) {
         if (num_x > 1) {
             size_t dim_m = 0;
@@ -195,7 +195,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
 //    Thus, "Tensor[] bias" is used in Torch1.11 and Torch2.0, while
@@ -242,7 +242,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (int i = 0; i < num_x; i++) {
                 create_new_tensor_multi_dim(y, x[i], weight[i], options);
             }
-        }  // Ð£ÑéNO_SPLITÊ±ÎªÌØÊâ³¡¾°£¨groupListÎª¿Õ£©»ònum_x > 1
+        }  // Ð£ï¿½ï¿½NO_SPLITÊ±Îªï¿½ï¿½ï¿½â³¡ï¿½ï¿½ï¿½ï¿½groupListÎªï¿½Õ£ï¿½ï¿½ï¿½num_x > 1
     } else if (IN_NOT_SPLIT_OUT_SPLIT == split_item_value || IN_SPLIT_OUT_SPLIT == split_item_value) {
         if (num_x > 1) {
             size_t dim_m = 0;

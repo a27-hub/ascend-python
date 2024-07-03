@@ -19,7 +19,7 @@
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor kl_div(
     const at::Tensor& self,
     const at::Tensor& target,
@@ -82,7 +82,7 @@ at::Tensor kl_div_backward(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_kl_div(
     const at::Tensor& self,
     const at::Tensor& target,

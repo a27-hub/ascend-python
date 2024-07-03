@@ -17,7 +17,7 @@
 
 namespace op_api {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& nansum_out(const at::Tensor& self, at::IntArrayRef dim, bool keepdim,
                        c10::optional<c10::ScalarType> dtype, at::Tensor& result)
 {
@@ -55,7 +55,7 @@ at::Tensor nansum(const at::Tensor& self, c10::optional<c10::ScalarType> dtype)
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& nansum_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
                        c10::optional<c10::ScalarType> dtype, at::Tensor& result)
 {

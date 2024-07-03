@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor dequantize(const at::Tensor& self) {
   return self.to(at::kFloat);
 }

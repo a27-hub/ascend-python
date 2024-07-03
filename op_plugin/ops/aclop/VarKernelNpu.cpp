@@ -18,7 +18,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& var_out(
     const at::Tensor& self,
     c10::optional<at::IntArrayRef> dims,
@@ -63,7 +63,7 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& var_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,
@@ -96,7 +96,7 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& var_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,

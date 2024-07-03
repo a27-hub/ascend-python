@@ -45,7 +45,7 @@ at::Tensor& l1_loss_backward_out_nocheck(
 }
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& l1_loss_backward_out(
     const at::Tensor& grad_output,
     const at::Tensor& self,

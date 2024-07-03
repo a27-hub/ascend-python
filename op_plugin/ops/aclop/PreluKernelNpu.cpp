@@ -29,14 +29,14 @@ at::Tensor prelu_common_nocheck(const at::Tensor& self, const at::Tensor& weight
     return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor prelu(const at::Tensor& self, const at::Tensor& weight) {
     return prelu_common_nocheck(self, weight);
 }
 #endif
 
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor _prelu_kernel(const at::Tensor& self, const at::Tensor& weight) {
     return prelu_common_nocheck(self, weight);
 }

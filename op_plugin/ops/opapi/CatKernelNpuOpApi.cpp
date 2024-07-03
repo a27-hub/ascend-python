@@ -22,7 +22,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(at::TensorList tensors) {
   c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;
   // pytorch supports empty tensors, which needs to be removed from the NPU.
@@ -132,7 +132,7 @@ at::Tensor cat(at::TensorList tensors, int64_t dim) {
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(
     const at::MaterializedITensorListRef& tensors) {
   c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;

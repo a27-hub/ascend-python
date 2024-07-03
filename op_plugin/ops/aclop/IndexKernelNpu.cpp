@@ -17,7 +17,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig) {
     if (self.device().type() == at::kCPU) {
         return at::native::index(self, orig);
@@ -26,7 +26,7 @@ at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Ten
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Tensor>>& orig) {
     return index_common(self, orig);
 }

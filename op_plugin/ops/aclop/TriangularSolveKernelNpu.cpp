@@ -32,7 +32,7 @@ std::tuple<at::Tensor &, at::Tensor &> triangular_solve_out(const at::Tensor &se
     return std::tie(result, clone_a);
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 std::tuple<at::Tensor, at::Tensor> triangular_solve(const at::Tensor &self, const at::Tensor &A, bool upper,
                                                     bool transpose, bool unitriangular)
 {

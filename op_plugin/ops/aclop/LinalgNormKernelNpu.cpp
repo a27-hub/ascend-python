@@ -21,7 +21,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 float calculate_p(at::Scalar p)
 {
     float val = op_plugin::utils::get_scalar_float_value(p);
@@ -78,7 +78,7 @@ at::Tensor& linalg_norm_out_npu_nocheck(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 static inline std::vector<int64_t> create_dim_backshift_permutation(int64_t dim0, int64_t dim1, int64_t ndim)
 {
     TORCH_CHECK((dim0 != dim1) && (dim0 < ndim) && (dim0 >= 0) && (dim1 < ndim) && (dim1 >= 0),
@@ -195,7 +195,7 @@ at::Tensor &linalg_norm_out_npu_nocheck(at::Tensor &out, const at::Tensor &self,
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor linalg_vector_norm(
     const at::Tensor& self,
     const at::Scalar& scalar_ord,
@@ -234,7 +234,7 @@ at::Tensor& linalg_vector_norm_out(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor linalg_vector_norm(const at::Tensor &self, const at::Scalar &scalar_ord, at::OptionalIntArrayRef opt_dim,
                               bool keepdim, at::optional<at::ScalarType> opt_dtype)
 {

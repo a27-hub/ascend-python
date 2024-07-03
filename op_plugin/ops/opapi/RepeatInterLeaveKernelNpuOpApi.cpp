@@ -38,7 +38,7 @@ bool check_tensor_repeats(const at::Tensor &self, const at::Tensor &repeats, c10
 
   if (repeats.dim() == 1) {
     if (dim.has_value()) {
-      // with dim£ºcheck repeats is rank 1 with 1 element / rank 1 with (self.size(dim)) elements
+      // with dimï¿½ï¿½check repeats is rank 1 with 1 element / rank 1 with (self.size(dim)) elements
       int64_t real_dim = wrap_dim(self, dim);
       if (repeats.size(0) == self.size(real_dim) || repeats.size(0) == 1) {
         return true;
@@ -76,7 +76,7 @@ at::Tensor apply_result_tensor(const at::Tensor &self, c10::SmallVector<int64_t,
     return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor repeat_interleave(const at::Tensor& self, int64_t repeats,
     c10::optional<int64_t> dim, c10::optional<int64_t> output_size)
 {
@@ -136,7 +136,7 @@ at::Tensor repeat_interleave(const at::Tensor& self, const at::Tensor& repeats,
 }
 #endif
 
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 at::Tensor repeat_interleave_symint(
     const at::Tensor& self,
     c10::SymInt repeats,
@@ -200,7 +200,7 @@ at::Tensor repeat_interleave(const at::Tensor& self, const at::Tensor& repeats,
 }
 #endif
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 at::Tensor repeat_interleave_symint(
     const at::Tensor& self,
     c10::SymInt repeats,

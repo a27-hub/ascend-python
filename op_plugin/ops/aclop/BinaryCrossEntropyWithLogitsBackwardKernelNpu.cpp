@@ -20,7 +20,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using calcu_op_util = at_npu::native::CalcuOpUtil;
 using npu_utils = at_npu::native::NpuUtils;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor binary_cross_entropy_with_logits_backward(
     const at::Tensor& grad_output,
     const at::Tensor& self,

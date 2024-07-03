@@ -48,7 +48,7 @@ std::tuple<at::Tensor, at::Tensor> slogdet(const at::Tensor& self) {
     return std::tie(sign, y);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple<at::Tensor, at::Tensor> linalg_slogdet(const at::Tensor& self)
 {
     TORCH_CHECK(self.dim() >= 2, "input must be at least 2 dimensions", OPS_ERROR(ErrCode::PARAM));

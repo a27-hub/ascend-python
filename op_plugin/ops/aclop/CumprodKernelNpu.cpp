@@ -95,7 +95,7 @@ at::Tensor& cumprod_(at::Tensor& self, at::Dimname dim, c10::optional<at::Scalar
   return acl_op::cumprod_(self, dimname_to_position(self, dim), dtype);
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor cumprod(
     const at::Tensor& self,
     int64_t dim,

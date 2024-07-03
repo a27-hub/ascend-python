@@ -18,7 +18,7 @@
 
 namespace acl_op {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& square_out(const at::Tensor& self, at::Tensor& result) {
   at::Scalar exp = 2;
   return acl_op::pow_out(self, exp, result);

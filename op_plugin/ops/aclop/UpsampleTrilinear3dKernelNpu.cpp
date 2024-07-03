@@ -85,7 +85,7 @@ at::Tensor upsample_trilinear3d(const at::Tensor &input, at::IntArrayRef output_
     return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_trilinear3d(const at::Tensor &input, c10::optional<at::IntArrayRef> output_size, bool align_corners,
                                 c10::optional<at::ArrayRef<double>> scale_factors)
 {

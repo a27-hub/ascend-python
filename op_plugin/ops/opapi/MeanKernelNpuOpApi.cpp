@@ -19,7 +19,7 @@
 
 namespace op_api {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& mean_out(const at::Tensor& self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype,
                      at::Tensor& result) {
   DO_COMPATIBILITY(aclnnMean, acl_op::mean_out(self, dim, keepdim, dtype, result));
@@ -31,7 +31,7 @@ at::Tensor& mean_out(const at::Tensor& self, at::IntArrayRef dim, bool keepdim, 
   } else {
     dstType = self.scalar_type();
   }
-  // ÍÆµ¼reduecshape
+  // ï¿½Æµï¿½reduecshape
   auto outputSize = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
   at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
 
@@ -72,7 +72,7 @@ at::Tensor mean(const at::Tensor& self, c10::optional<c10::ScalarType> dtype) {
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& mean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
                      c10::optional<c10::ScalarType> dtype, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnMean, acl_op::mean_out(self, dim, keepdim, dtype, result));

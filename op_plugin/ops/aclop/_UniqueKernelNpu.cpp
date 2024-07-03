@@ -44,15 +44,15 @@ std::tuple<at::Tensor&, at::Tensor&> _unique_out_npu(
 }
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 std::tuple<at::Tensor, at::Tensor> _unique(
     const at::Tensor& self_op,
     bool sorted,
     bool return_inverse) {
   /*
-   * Ëã×ÓÈ¥ÖØµ÷ÓÃµÄstd::unordered_set»á¸ù¾İhashº¯Êı´òÂÒË³Ğò£¬
-   * fp16³¡¾°Óë»ù±¾Êı¾İÀàĞÍµÄ´òÂÒ·½Ê½²»Í¬£¬Ê¹µÃsorted=falseÊ±£¬fp16¾«¶È²»´ï±ê.
-   * ´ËÍâ£¬Ëã×ÓÈ¥ÖØÊ±£¬fp16´æÔÚÊı¾İ¾«¶ÈËğÊ§£¬Òò´ËÕâÀï½«fp16Ç¿×ªfp32´¦Àí.
+   * ï¿½ï¿½ï¿½ï¿½È¥ï¿½Øµï¿½ï¿½Ãµï¿½std::unordered_setï¿½ï¿½ï¿½ï¿½ï¿½hashï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë³ï¿½ï¿½
+   * fp16ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ´ï¿½ï¿½Ò·ï¿½Ê½ï¿½ï¿½Í¬ï¿½ï¿½Ê¹ï¿½ï¿½sorted=falseÊ±ï¿½ï¿½fp16ï¿½ï¿½ï¿½È²ï¿½ï¿½ï¿½ï¿½.
+   * ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½Ê±ï¿½ï¿½fp16ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ¾ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï½«fp16Ç¿×ªfp32ï¿½ï¿½ï¿½ï¿½.
    */
   const at::Tensor self = self_op.scalar_type() == at::kHalf ?
       at_npu::native::custom_ops::npu_dtype_cast(self_op, at::kFloat) : self_op;

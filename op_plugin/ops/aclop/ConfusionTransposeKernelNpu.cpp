@@ -21,7 +21,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 void check_confusion_transpose_perm(at::IntArrayRef perm, at::IntArrayRef shape)
 {
     auto input_dim = shape.size();
@@ -35,7 +35,7 @@ void check_confusion_transpose_perm(at::IntArrayRef perm, at::IntArrayRef shape)
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 void check_confusion_transpose_perm(at::IntArrayRef perm, at::IntArrayRef shape)
 {
     auto input_dim = shape.size();
@@ -81,7 +81,7 @@ at::Tensor npu_confusion_transpose(const at::Tensor& self,
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor npu_confusion_transpose_backward(
     const at::Tensor& grad,
     at::IntArrayRef perm,
@@ -118,7 +118,7 @@ at::Tensor npu_confusion_transpose_backward(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor npu_confusion_transpose_backward_symint(const at::Tensor &grad, at::IntArrayRef perm,
                                                    c10::SymIntArrayRef shape_symint, bool transpose_first)
 {

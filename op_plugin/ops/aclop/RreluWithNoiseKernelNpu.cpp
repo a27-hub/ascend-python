@@ -23,7 +23,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 void _rrelu_with_noise_train(
     at::Tensor& output,
     const at::Tensor& input,
@@ -64,7 +64,7 @@ at::Tensor& rrelu_with_noise_out_nocheck(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 void _rrelu_with_noise_train(at::Tensor &output, const at::Tensor &input, const at::Tensor &noise, at::Scalar lower_,
                              at::Scalar upper_, c10::optional<at::Generator> generator)
 {
@@ -116,7 +116,7 @@ at::Tensor &rrelu_with_noise_out_nocheck(at::Tensor &output, const at::Tensor &s
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor rrelu_with_noise(
     const at::Tensor& self,
     const at::Tensor& noise,
@@ -163,7 +163,7 @@ at::Tensor& rrelu_with_noise_out(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor rrelu_with_noise(const at::Tensor &self, const at::Tensor &noise, const at::Scalar &lower,
                             const at::Scalar &upper, bool training, c10::optional<at::Generator> generator)
 {

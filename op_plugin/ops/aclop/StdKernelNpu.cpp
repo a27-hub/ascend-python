@@ -22,7 +22,7 @@ using calcu_op_util = at_npu::native::CalcuOpUtil;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 int64_t calc_shape_prod(const at::Tensor& self, at::IntArrayRef dim) {
   int64_t shape_prod = 1;
   if (self.dim() == 0) {
@@ -89,7 +89,7 @@ std::tuple<at::Tensor&, at::Tensor&> std_mean_out_npu_nocheck(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 std::tuple<at::Tensor&, at::Tensor&> std_mean_out_nocheck(
     at::Tensor& result_std,
     at::Tensor& result_mean,
@@ -141,7 +141,7 @@ std::tuple<at::Tensor&, at::Tensor&> std_mean_out_nocheck(
 #endif
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& std_out(
     const at::Tensor& self,
     c10::optional<at::IntArrayRef> dim,
@@ -216,7 +216,7 @@ at::Tensor std(
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& std_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,
@@ -302,7 +302,7 @@ at::Tensor std(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& std_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,

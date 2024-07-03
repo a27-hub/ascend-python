@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& _index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& index,
                          const at::Tensor& source) {
     DO_COMPATIBILITY(aclnnInplaceIndexCopy, acl_op::_index_copy_(self, dim, index, source));
@@ -27,7 +27,7 @@ at::Tensor& _index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& 
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2 || VERSION_V2R3 || VERSION_V2R4
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor& index_copy_(at::Tensor& self, const int64_t dim, const at::Tensor& index,
                         const at::Tensor& source)
 {

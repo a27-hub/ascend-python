@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 std::vector<at::Tensor> _foreach_pow(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
@@ -70,7 +70,7 @@ void _foreach_pow_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 }
 #endif
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 std::vector<at::Tensor> _foreach_pow(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);

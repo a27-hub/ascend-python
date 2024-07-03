@@ -43,7 +43,7 @@ at::Tensor upsample_nearest1d(const at::Tensor& self,
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_nearest1d(
     const at::Tensor& input,
     c10::optional<at::IntArrayRef> output_size,

@@ -40,7 +40,7 @@ at::Tensor& softplus_backward_out(
   return grad_input;
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor softplus_backward(
     const at::Tensor& grad_output,
     const at::Tensor& self,

@@ -19,7 +19,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& l1_loss_out(const at::Tensor& self,
                         const at::Tensor& target,
                         int64_t reduction,
@@ -46,7 +46,7 @@ at::Tensor& l1_loss_out(const at::Tensor& self,
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor l1_loss(const at::Tensor& self,
                    const at::Tensor& target,
                    int64_t reduction)

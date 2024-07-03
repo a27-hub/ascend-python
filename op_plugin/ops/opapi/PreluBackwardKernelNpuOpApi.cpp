@@ -19,7 +19,7 @@
 
 namespace op_api {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 using npu_preparation = at_npu::native::OpPreparation;
 std::tuple<at::Tensor, at::Tensor> prelu_backward(const at::Tensor& grad_output,
                                                   const at::Tensor& self,
@@ -34,7 +34,7 @@ std::tuple<at::Tensor, at::Tensor> prelu_backward(const at::Tensor& grad_output,
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 std::tuple<at::Tensor, at::Tensor> _prelu_kernel_backward(
     const at::Tensor& grad_output,
     const at::Tensor& self,

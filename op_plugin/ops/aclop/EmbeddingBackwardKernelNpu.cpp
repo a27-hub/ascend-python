@@ -17,7 +17,7 @@
 #include "torch_npu/csrc/core/npu/NPUException.h"
 
 namespace acl_op {
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor embedding_backward(
     const at::Tensor& grad,
     const at::Tensor& indices,
@@ -32,7 +32,7 @@ at::Tensor embedding_backward(
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor embedding_backward_symint(
     const at::Tensor& grad,
     const at::Tensor& indices,

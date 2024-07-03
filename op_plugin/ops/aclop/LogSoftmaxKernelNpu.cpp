@@ -47,7 +47,7 @@ at::Tensor _log_softmax(const at::Tensor& self, int64_t dim, bool half_to_float)
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& _log_softmax_out(const at::Tensor& self, int64_t dim, bool half_to_float, at::Tensor& result) {
     c10::ScalarType result_type = half_to_float ? c10::ScalarType::Float : result.scalar_type();
     npu_preparation::CheckOut(

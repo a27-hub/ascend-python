@@ -85,7 +85,7 @@ at::Tensor cumsum(const at::Tensor &self, int64_t dim, const c10::optional<at::S
     return acl_op::cumsum_out(self, dim, dtype, result);
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& cumsum_(
     at::Tensor& self,
     int64_t dim,

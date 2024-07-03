@@ -144,7 +144,7 @@ at::Tensor im2col(const at::Tensor &self, at::IntArrayRef kernel_size, at::IntAr
     return result;
 }
 
-#ifdef VERSION_V1R11 || VERSION_V2R0
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 at::Tensor col2im_backward(
     const at::Tensor& self,
     at::IntArrayRef kernel_size,

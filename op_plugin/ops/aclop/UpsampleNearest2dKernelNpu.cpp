@@ -83,7 +83,7 @@ at::Tensor upsample_nearest2d(const at::Tensor &self, at::IntArrayRef output_siz
     return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor upsample_nearest2d(
     const at::Tensor& input,
     c10::optional<at::IntArrayRef> output_size,

@@ -95,7 +95,7 @@ at::Tensor index_add(
     return acl_op::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& index_add_(
     at::Tensor& self,
     int64_t dim,

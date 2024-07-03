@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef VERSION_V2R2
+#if (defined VERSION_V2R2)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include <ATen/ops/_empty_affine_quantized.h>

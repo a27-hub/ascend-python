@@ -28,7 +28,7 @@ inline bool check_use_aclop(const at::Scalar& scalar_ord)
 }
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor linalg_vector_norm(
     const at::Tensor& self,
     const at::Scalar& scalar_ord,
@@ -76,7 +76,7 @@ at::Tensor& linalg_vector_norm_out(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor linalg_vector_norm(
     const at::Tensor& self,
     const at::Scalar& scalar_ord,

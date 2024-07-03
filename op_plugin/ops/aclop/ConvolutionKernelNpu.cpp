@@ -108,7 +108,7 @@ inline std::vector<int64_t> expand_param_if_needed(at::IntArrayRef list_param, c
     }
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 inline std::vector<int64_t> conv_output_size(at::IntArrayRef input_size, at::IntArrayRef weight_size,
                                              at::IntArrayRef padding, at::IntArrayRef stride,
                                              at::IntArrayRef dilation = at::IntArrayRef())
@@ -365,7 +365,7 @@ at::native::ConvBackend select_conv_backend(const at::Tensor &input_r, const at:
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 void check_shape_forward(
     const at::Tensor& input,
     const c10::IntArrayRef& weight_sizes,
@@ -554,7 +554,7 @@ at::native::ConvBackend select_conv_backend(
 
 } // namespace
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor conv_transpose2d(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias,
                             at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding,
                             int64_t groups, at::IntArrayRef dilation)
@@ -863,7 +863,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(const at::T
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor conv_transpose2d(
     const at::Tensor& input,
     const at::Tensor& weight,

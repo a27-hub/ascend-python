@@ -18,13 +18,13 @@
 
 namespace acl_op {
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor gelu_backward(const at::Tensor& grad, const at::Tensor& self) {
     return gelu_backward_common_nocheck(grad, self);
 }
 #endif
 
-#ifdef VERSION_V2R0 || VERSION_V2R1 ||VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) ||(defined VERSION_V2R2)
 at::Tensor gelu_backward(const at::Tensor& grad, const at::Tensor& self, c10::string_view approximate) {
   return gelu_backward_common_nocheck(grad, self);
 }

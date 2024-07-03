@@ -61,7 +61,7 @@ std::vector<at::Tensor> where(const at::Tensor& condition) {
   return squeeze_result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor _s_where(const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other)
 {
     at::Tensor result = npu_preparation::apply_tensor(self);
@@ -88,7 +88,7 @@ at::Tensor where(const at::Tensor &condition, const at::Tensor &self, const at::
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor &where_out(const at::Tensor &condition, const at::Tensor &self, const at::Tensor &other, at::Tensor &out)
 {
     at::Tensor b_condition;
@@ -122,7 +122,7 @@ at::Tensor where(const at::Tensor &condition, const at::Tensor &self, const at::
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& where_out(
     const at::Tensor& condition,
     const at::Tensor& self,

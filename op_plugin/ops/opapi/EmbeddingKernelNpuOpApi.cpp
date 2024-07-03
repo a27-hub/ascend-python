@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-#ifdef VERSION_V2R0 || VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor embedding_symint(

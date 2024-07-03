@@ -53,7 +53,7 @@ vector<at::Tensor> where(const at::Tensor &condition)
     return exec_aclnn_where(condition, out);
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor _s_where(
     const at::Tensor& condition,
     const at::Tensor& self,
@@ -75,7 +75,7 @@ at::Tensor where(
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor& where_out(
     const at::Tensor& condition,
     const at::Tensor& self,
@@ -128,7 +128,7 @@ at::Tensor where(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor& where_out(
     const at::Tensor& condition,
     const at::Tensor& self,

@@ -17,7 +17,7 @@
 #include <ATen/ops/_unsafe_index_native.h>
 
 namespace acl_op {
-#ifdef VERSION_V2R1
+#if (defined VERSION_V2R1)
 at::Tensor _unsafe_index(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &indices)
 {
     return at::native::_unsafe_index(self, indices);

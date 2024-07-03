@@ -30,7 +30,7 @@ at::Tensor leaky_relu_backward(
   return result;
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor& leaky_relu_backward_out(
     const at::Tensor& grad_output,
     const at::Tensor& self,

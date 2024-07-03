@@ -22,7 +22,7 @@ at::Tensor& zeros_out(at::IntArrayRef size, at::Tensor& result) {
   return result.zero_();
 }
 
-#ifdef VERSION_V1R11
+#if (defined VERSION_V1R11)
 at::Tensor zeros(
     at::IntArrayRef size,
     c10::optional<at::ScalarType> dtype_opt,
@@ -43,7 +43,7 @@ at::Tensor zeros(
 }
 #endif
 
-#ifdef VERSION_V2R0
+#if (defined VERSION_V2R0)
 at::Tensor zeros(
     at::IntArrayRef size,
     c10::optional<at::ScalarType> dtype_opt,
@@ -64,7 +64,7 @@ at::Tensor zeros(
 }
 #endif
 
-#ifdef VERSION_V2R1 || VERSION_V2R2
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
 at::Tensor zeros_symint(
     c10::SymIntArrayRef size,
     c10::optional<at::ScalarType> dtype_opt,
