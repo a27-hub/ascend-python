@@ -18,6 +18,8 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
+using npu_preparation = at_npu::native::OpPreparation;
+
 std::tuple<at::Tensor&, at::Tensor&> min_v1_out_npu_nocheck(
     at::Tensor& output,
     at::Tensor& indices,

@@ -18,6 +18,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
+using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 std::tuple<at::Tensor&, at::Tensor&> max_v1_out_nocheck(
     at::Tensor& output,

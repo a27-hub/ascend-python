@@ -75,6 +75,7 @@ at::Tensor npu_ps_roi_pooling_backward(const at::Tensor &output_grad, const at::
 
     return input_grad;
 }
+#endif
 
 #if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, const at::Tensor &rois,
@@ -91,7 +92,6 @@ at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, con
 
     return input_grad;
 }
-
 #endif
 
 at::Tensor npu_ps_roi_pooling(

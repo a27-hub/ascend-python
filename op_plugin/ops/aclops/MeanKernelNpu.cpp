@@ -14,10 +14,10 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-
 at::Tensor& mean_out(
     const at::Tensor& self,
     at::DimnameList dim,

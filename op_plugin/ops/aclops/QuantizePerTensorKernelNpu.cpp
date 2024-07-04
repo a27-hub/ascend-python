@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #if (defined VERSION_V1R11) || (defined VERSION_V2R0) || (defined VERSION_V2R1)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
@@ -21,6 +22,7 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
+
 at::Tensor& quantize_per_tensor_out_nocheck(
     at::Tensor& result,
     const at::Tensor& self,
@@ -46,8 +48,9 @@ at::Tensor& quantize_per_tensor_out_nocheck(
 
     return result;
 }
-#endif
 } // namespace
+#endif
+
 
 #if (defined VERSION_V1R11) || (defined VERSION_V2R0) || (defined VERSION_V2R1)
 at::Tensor quantize_per_tensor(
