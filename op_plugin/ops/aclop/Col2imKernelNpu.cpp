@@ -17,6 +17,8 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
+using npu_preparation = at_npu::native::OpPreparation;
+using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::Tensor &col2im_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output, at::IntArrayRef input_size,
                                at::IntArrayRef kernel_size, at::IntArrayRef dilation, at::IntArrayRef padding,

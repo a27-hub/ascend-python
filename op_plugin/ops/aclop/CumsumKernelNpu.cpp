@@ -15,9 +15,12 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include <ATen/NamedTensorUtils.h>
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
+using npu_compile_type = at_npu::native::CompileType;
+using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 at::Tensor &cumsum_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_t dim)
