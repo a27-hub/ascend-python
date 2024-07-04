@@ -18,6 +18,7 @@
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
+using npu_utils = at_npu::native::NpuUtils;
 
 at::Tensor prelu_common_nocheck(const at::Tensor& self, const at::Tensor& weight) {
   at::Tensor result = npu_preparation::apply_tensor(self);
