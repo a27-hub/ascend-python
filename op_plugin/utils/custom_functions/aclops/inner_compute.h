@@ -21,11 +21,6 @@
 
 namespace acl_op {
 at::Tensor embedding_common_nocheck(const at::Tensor& weight, const at::Tensor& indices);
-at::Tensor gelu_common_nocheck(const at::Tensor& self);
-at::Tensor gelu_backward_common_nocheck(const at::Tensor& grad, const at::Tensor& self);
-std::tuple<at::Tensor, at::Tensor> grid_sampler3d_backward_common_nocheck(const at::Tensor& grad, const at::Tensor& input,
-                                                                          const at::Tensor& grid, int64_t interpolation_mode,
-                                                                          int64_t padding_mode, bool align_corners);
 at::Tensor& sum_out_common_nocheck(at::Tensor& result, const at::Tensor& self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype);
 at::Tensor sum_common_nocheck(const at::Tensor& self, at::IntArrayRef dim, bool keepdim, c10::optional<c10::ScalarType> dtype);
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
@@ -48,7 +43,6 @@ at::Tensor mean_common_nocheck(const at::Tensor& self, at::IntArrayRef dim, bool
                                                                    const at::Tensor& grad_output,
                                                                    const at::Tensor& self,
                                                                    const at::Tensor& weight);
-at::Tensor prelu_common_nocheck(const at::Tensor& self, const at::Tensor& weight);
 at::Tensor zeros_common_nocheck(at::IntArrayRef size, c10::optional<at::ScalarType> dtype_opt,
                                 c10::optional<at::Layout> layout_opt, c10::optional<at::Device> device_opt,
                                 c10::optional<bool> pin_memory_opt);
