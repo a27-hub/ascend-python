@@ -160,7 +160,7 @@ inline c10::SmallVector<int64_t, N> expand_dim_if_needed(at::IntArrayRef list_pa
 }
 } // namespace
 
-#if (defined VERSION_V1R11)
+#if defined VERSION_V1R11
 void check_shape_forward(const at::Tensor &input, const c10::IntArrayRef &weight_sizes, const at::Tensor &bias,
                          const ConvParams &params)
 {
@@ -630,7 +630,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(const at::T
 }
 #endif
 
-#if (defined VERSION_V2R0)
+#if defined VERSION_V2R0
 void check_shape_forward(
     const at::Tensor& input,
     const c10::IntArrayRef& weight_sizes,
@@ -1177,7 +1177,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(
 }
 
 #endif
-#if (defined VERSION_V2R1)
+#if defined VERSION_V2R1
 void check_shape_forward(
     const at::Tensor& input,
     const c10::IntArrayRef& weight_sizes,
@@ -1673,7 +1673,185 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(
 }
 #endif
 
-#if (defined VERSION_V2R2)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+void check_shape_forward(
+    const at::Tensor& input,
+    const c10::IntArrayRef& weight_sizes,
+    const at::Tensor& bias,
+    const ConvParams& params) {
+  int64_t k = input.ndimension();
+  int64_t weight_dim = static_cast<int64_t>(weight_sizes.size());
+  int64_t groups = params.groups;
+  const auto& padding = params.padding;
+  const auto& dilation = params.dilation;
+  bool transposed = params.transposed;
+
+  TORCH_CHECK(!params.is_padding_neg(), "negative padding is not supported" + OPS_ERROR(ErrCode::NOT_SUPPORT));
+  TORCH_CHECK(!params.is_output_padding_neg(), "negative output_padding is not supported" + OPS_ERROR(ErrCode::NOT_SUPPORT));
+  TORCH_CHECK(!params.is_stride_nonpos(), "non-positive stride is not supported" + OPS_ERROR(ErrCode::NOT_SUPPORT));
+
+  TORCH_CHECK(weight_dim == k,
+      "Expected ", weight_dim, "-dimensional input for ", weight_dim,
+      "-dimensional weight ", weight_sizes, ", but got ", k, "-dimensional input of size ",
+      input.sizes(), " instead", OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(weight_sizes[0] >= groups,
+      "Given groups=", groups, ", expected weight to be at least ", groups,
+      " at dimension 0, but got weight of size ", weight_sizes, " instead", OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(weight_sizes[0] % groups == 0,
+      "Given groups=", groups, ", expected weight to be divisible by ",
+      groups, " at dimension 0, but got weight of size [", weight_sizes,
+      "] instead", OPS_ERROR(ErrCode::PARAM));
+
+  if (!transposed) {
+    std::vector<int64_t> input_shape;
+    std::vector<int64_t> kernel_shape;
+    bool kernel_size_correct = true;
+
+    TORCH_CHECK(input.size(1) == (weight_sizes[1] * groups),
+        "Given groups=", groups, ", weight of size ", weight_sizes,
+        ", expected input", input.sizes(), " to have ",
+        (weight_sizes[1] * groups), " channels, but got ", input.size(1),
+        " channels instead", OPS_ERROR(ErrCode::PARAM));
+
+    TORCH_CHECK(!bias.defined() || (bias.ndimension() == 1 && bias.size(0) == weight_sizes[0]),
+        "Given weight of size ", weight_sizes,
+        ", expected bias to be 1-dimensional with ", weight_sizes[0], " elements",
+        ", but got bias of size ", bias.sizes(), " instead", OPS_ERROR(ErrCode::PARAM));
+
+    for (const auto i : c10::irange(2, k)) {
+      input_shape.push_back(input.size(i) + 2 * padding[i-2]);
+      // log new kernel size considering dilation
+      kernel_shape.push_back(dilation[i-2] * (weight_sizes[i]-1) + 1);
+      if (input_shape.back() < kernel_shape.back()) {
+        kernel_size_correct = false;
+      }
+    }
+
+    TORCH_CHECK(input_shape.size() == kernel_shape.size(), "Inconsistent shape between Input and Kernel", OPS_ERROR(ErrCode::PARAM));
+
+    if (!kernel_size_correct) {
+      // If kernel size is incorrect
+      std::ostringstream input_ss;
+      std::ostringstream kernel_ss;
+      std::string separator = "";
+
+      for (uint64_t i = 0, len = input_shape.size(); i < len; ++i) {
+        input_ss << separator << input_shape[i];
+        kernel_ss << separator << kernel_shape[i];
+        separator = " x ";
+      }
+
+      TORCH_CHECK(false, "Calculated padded input size per channel: (", input_ss.str(), "). Kernel size: (",
+                  kernel_ss.str(), "). Kernel size can't be greater than actual input size", OPS_ERROR(ErrCode::PARAM));
+    }
+  } else {
+    // transposed
+    TORCH_CHECK(input.size(1) == weight_sizes[0],
+        "Given transposed=", transposed, ", weight of size ", weight_sizes,
+        ", expected input", input.sizes(), " to have ", weight_sizes[0],
+        " channels, but got ", input.size(1), " channels instead", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!bias.defined() || (bias.ndimension() == 1 && bias.size(0) == weight_sizes[1] * groups),
+        "Given transposed=", transposed, ", weight of size ", weight_sizes,
+        ", expected bias to be 1-dimensional with ", weight_sizes[1] * groups, " elements",
+        ", but got bias of size ", bias.sizes(), " instead", OPS_ERROR(ErrCode::PARAM));
+  }
+}
+
+void check_shape_backward(
+    const at::Tensor& input,
+    const c10::IntArrayRef& weight_sizes,
+    const ConvParams& params) {
+  check_shape_forward(input, weight_sizes, at::Tensor(), params);
+}
+
+at::native::ConvBackend select_conv_backend(
+    const at::Tensor& input,
+    const at::Tensor& weight,
+    const at::OptionalIntArrayRef bias_sizes_opt,
+    const bool need_backward,
+    const ConvParams& params) {
+  // don't send empty inputs through backends
+  if (input.size(0) == 0 || input.size(1) == 0) {
+    return at::native::ConvBackend::Empty;
+  } else if (input.numel() == 0) {
+    TORCH_CHECK(false, "Only zero batch or zero channel inputs are supported, but got input shape: ", input.sizes(), OPS_ERROR(ErrCode::NOT_SUPPORT));
+  }
+
+  if (torch_npu::utils::is_npu(input)) {
+    // backends without support for groups
+    if (params.transposed) {
+      if (input.ndimension() == 4) {
+        return at::native::ConvBackend::SlowTranspose2d;
+      } else if (input.ndimension() == 5) {
+        return at::native::ConvBackend::SlowTranspose3d;
+      } else {
+        TORCH_CHECK(false, "Only 4D or 5D input is supported", OPS_ERROR(ErrCode::NOT_SUPPORT));
+      }
+    } else {  /* Not transposed */
+      if (input.ndimension() == 4) {
+        if (params.is_dilated()) {
+          return at::native::ConvBackend::SlowDilated2d;
+        } else {
+          return at::native::ConvBackend::Slow2d;
+        }
+      } else if (input.ndimension() == 5) {
+        return at::native::ConvBackend::Slow3d;
+      } else {
+        TORCH_CHECK(false, "Only 4D or 5D input is supported", OPS_ERROR(ErrCode::NOT_SUPPORT));
+      }
+    }
+  } else {
+    // Only reach here when input is backend with out-of-source implementation.
+    return at::native::ConvBackend::Overrideable;
+  }
+    // Error out if no suitable backend was found.
+    TORCH_CHECK(false, "unsupported ConvNd parameters", OPS_ERROR(ErrCode::NOT_SUPPORT));
+}
+
+// Selects a backend for convolution based on the inputs and params.
+at::native::ConvBackend select_conv_backend(
+    const at::Tensor& input_r,
+    const at::Tensor& weight_r,
+    const c10::optional<at::Tensor>& bias_opt,
+    at::IntArrayRef stride_opt,
+    at::IntArrayRef padding_opt,
+    at::IntArrayRef dilation_opt,
+    bool transposed,
+    at::IntArrayRef output_padding_opt,
+    int64_t groups) {
+  c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
+  const at::Tensor& bias = *bias_maybe_owned;
+
+  auto& ctx = at::globalContext();
+  auto k = weight_r.ndimension();
+  int64_t dim = k - 2;
+  ConvParams params;
+  params.stride = expand_param_if_needed(stride_opt, "stride", dim);
+  params.padding = expand_param_if_needed(padding_opt, "padding", dim);
+  params.dilation = expand_param_if_needed(dilation_opt, "dilation", dim);
+  params.transposed = transposed;
+  params.output_padding = expand_param_if_needed(output_padding_opt, "output_padding", dim);
+  params.groups = groups;
+
+  auto input = input_r;
+  auto weight = weight_r;
+  check_shape_forward(input, weight.sizes(), bias, params);
+
+  // Expand 1d -> 2d.
+  // This is only done for backends that don't natively support 1d spatial input.
+  if (k == 3 && !input.is_mkldnn()) {
+    // avoid accidentally going through NHWC for permuted 3d input.
+    params.view1d_as_2d();
+    input = view4d(input);
+    weight = view4d(weight);
+  }
+
+  auto bias_sizes_opt = bias.defined() ? c10::optional<at::IntArrayRef>(bias.sizes()) : c10::nullopt;
+  bool need_backward = c10::GradMode::is_enabled() &&
+      (input.requires_grad() || weight.requires_grad() || (bias.defined() && bias.requires_grad()));
+  return select_conv_backend(input, weight, bias_sizes_opt, need_backward, params);
+}
+
 at::Tensor conv_transpose2d(
     const at::Tensor& input,
     const at::Tensor& weight,
