@@ -32,7 +32,7 @@ std::tuple<at::Tensor, at::Tensor> prelu_backward(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 std::tuple<at::Tensor, at::Tensor> _prelu_kernel_backward(
     const at::Tensor& grad_output,
     const at::Tensor& self,

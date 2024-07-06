@@ -76,7 +76,7 @@ at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Ten
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Tensor &weight2,
     c10::string_view activation, at::OptionalIntArrayRef expert_tokens, c10::OptionalIntArrayRef expert_tokens_index,
     const c10::optional<at::Tensor> &bias1, const c10::optional<at::Tensor> &bias2,

@@ -20,7 +20,7 @@
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
 namespace op_api {
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 const static int64_t ATTENMASK_LIMIT = 2048;
 const static int64_t N_LIMIT = 2048;
 const static int64_t D_LIMIT = 512;

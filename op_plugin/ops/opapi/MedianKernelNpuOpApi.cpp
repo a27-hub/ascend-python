@@ -58,7 +58,7 @@ std::tuple<at::Tensor&, at::Tensor&> median_out(const at::Tensor& self,
   return std::tie(values, indices);
 }
 
-#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor nanmedian(const at::Tensor& self)
 {
   DO_COMPATIBILITY(aclnnNanMedian, acl_op::nanmedian(self));

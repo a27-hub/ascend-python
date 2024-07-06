@@ -20,7 +20,7 @@
 
 namespace acl_op {
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor _weight_norm(
     const at::Tensor& v_in,
     const at::Tensor& g_in,

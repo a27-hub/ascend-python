@@ -36,7 +36,7 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& gr
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& grad, const at::Tensor& input,
                                                             const at::Tensor& grid, int64_t interpolation_mode,
                                                             int64_t padding_mode, bool align_corners,

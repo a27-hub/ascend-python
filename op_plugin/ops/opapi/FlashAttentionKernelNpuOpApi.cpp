@@ -1252,7 +1252,7 @@ at::Tensor npu_incre_flash_attention_symint(
 }
 #endif
 
-#if (defined VERSION_V2R2)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, double keep_prob, int64_t head_num, std::string input_layout,
     bool gen_mask_parallel, bool sync, int64_t &seed, int64_t &offset, int64_t &numels)
 {

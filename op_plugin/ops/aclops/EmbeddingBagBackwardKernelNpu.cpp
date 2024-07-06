@@ -53,7 +53,7 @@ at::Tensor _embedding_bag_backward(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor _embedding_bag_backward_symint(
     const at::Tensor& grad,
     const at::Tensor& indices,

@@ -64,7 +64,7 @@ at::Tensor& rrelu_with_noise_out_nocheck(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 void _rrelu_with_noise_train(at::Tensor &output, const at::Tensor &input, const at::Tensor &noise, at::Scalar lower_,
                              at::Scalar upper_, c10::optional<at::Generator> generator)
 {
@@ -163,7 +163,7 @@ at::Tensor& rrelu_with_noise_out(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor rrelu_with_noise(const at::Tensor &self, const at::Tensor &noise, const at::Scalar &lower,
                             const at::Scalar &upper, bool training, c10::optional<at::Generator> generator)
 {

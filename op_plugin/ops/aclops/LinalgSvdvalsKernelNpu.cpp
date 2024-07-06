@@ -17,7 +17,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& linalg_svdvals_out(const at::Tensor& A, c10::optional<c10::string_view> driver, at::Tensor & S) {

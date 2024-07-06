@@ -35,7 +35,7 @@ void check_confusion_transpose_perm(at::IntArrayRef perm, at::IntArrayRef shape)
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 void check_confusion_transpose_perm(at::IntArrayRef perm, at::IntArrayRef shape)
 {
     auto input_dim = shape.size();
@@ -118,7 +118,7 @@ at::Tensor npu_confusion_transpose_backward(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 at::Tensor npu_confusion_transpose_backward_symint(const at::Tensor &grad, at::IntArrayRef perm,
                                                    c10::SymIntArrayRef shape_symint, bool transpose_first)
 {

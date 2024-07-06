@@ -195,7 +195,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
 //    Thus, "Tensor[] bias" is used in Torch1.11 and Torch2.0, while

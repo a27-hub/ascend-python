@@ -62,7 +62,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
 #endif
 
 
-#if (defined VERSION_V2R2)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
     const at::Tensor& self,
     bool sorted,

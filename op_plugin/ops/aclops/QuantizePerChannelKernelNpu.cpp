@@ -94,7 +94,7 @@ at::Tensor quantize_per_channel(
 #endif
 
 
-#if (defined VERSION_V2R2)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include <ATen/ops/quantize_per_channel.h>
