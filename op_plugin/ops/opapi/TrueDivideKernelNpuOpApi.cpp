@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if defined VERSION_V2R0
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -117,3 +118,4 @@ at::Tensor& true_divide_(at::Tensor& self, const at::Scalar& other) {
 }
 
 }  // namespace op_api
+#endif
