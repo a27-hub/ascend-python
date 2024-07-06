@@ -24,7 +24,7 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     const at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars);
-    // 暂不支持对scalarlist的处理，暂时走cuda原生路径
+    // 鏆備笉鏀寔瀵箂calarlist鐨勫鐞嗭紝鏆傛椂璧癱uda鍘熺敓璺緞
     return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars);
 }
 
@@ -34,7 +34,7 @@ void _foreach_addcmul_(const at::TensorList input,
     const at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars);
-    // 暂不支持对scalarlist的处理，暂时走cuda原生路径
+    // 鏆備笉鏀寔瀵箂calarlist鐨勫鐞嗭紝鏆傛椂璧癱uda鍘熺敓璺緞
     at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars);
 }
 }
