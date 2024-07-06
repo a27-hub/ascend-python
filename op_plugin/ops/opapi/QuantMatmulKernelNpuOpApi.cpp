@@ -18,6 +18,8 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+#if defined VERSION_V1R11 || defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4
+
 constexpr size_t X_MIN_DIM = 2;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 constexpr size_t X_MAX_DIM = 6;
@@ -142,4 +144,6 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
     }
     return result;
 }
+#endif
+
 }

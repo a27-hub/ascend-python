@@ -17,7 +17,7 @@
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
-#if (defined VERSION_V1R11)
+#if (defined VERSION_V1R11) || (defined VERSION_V2R0)
 at::Tensor repeat_interleave(
     const at::Tensor& self,
     int64_t repeats,
