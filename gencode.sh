@@ -46,6 +46,6 @@ ${python_execute} -m codegen.gen_backend_stubs  \
 
 ${python_execute} -m codegen.struct.gen_struct_aclnn  \
   --version="$PYTORCH_VERSION" \
-  --output_dir="$CDIR/op_plugin/ops/" \
+  --output_dir="$CDIR/op_plugin/ops/base_ops/opapi/" \
   --source_yaml="$CDIR/op_plugin/config/$PYTORCH_VERSION_DIR/op_plugin_functions.yaml" \
   --struct_yaml=
