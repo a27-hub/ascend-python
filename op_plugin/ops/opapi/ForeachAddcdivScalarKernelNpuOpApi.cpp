@@ -18,7 +18,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
+std::vector<at::Tensor> _foreach_addcdiv(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Scalar& scalar)
@@ -47,7 +48,8 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     return result;
 }
 
-void _foreach_addcdiv_(const at::TensorList input,
+void _foreach_addcdiv_(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Scalar& scalar)

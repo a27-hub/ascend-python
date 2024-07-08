@@ -21,7 +21,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if defined VERSION_V2R1
-std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
+std::vector<at::Tensor> _foreach_addcmul(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Tensor& scalars)
@@ -51,7 +52,8 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     return result;
 }
 
-void _foreach_addcmul_(const at::TensorList input,
+void _foreach_addcmul_(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Tensor& scalars)
@@ -74,8 +76,9 @@ void _foreach_addcmul_(const at::TensorList input,
 }
 #endif
 
-#if defined VERSION_V2R2
-std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+std::vector<at::Tensor> _foreach_addcmul(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Tensor& scalars)
@@ -104,7 +107,8 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     return result;
 }
 
-void _foreach_addcmul_(const at::TensorList input,
+void _foreach_addcmul_(
+    const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
     const at::Tensor& scalars)
