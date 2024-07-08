@@ -204,30 +204,3 @@ REGISTER_PRIVATEUSE1_DISPATCH(dequantize_tensor_per_tensor_affine_stub, &dequant
 } // namespace native
 } // namespace at
 #endif
-
-#if (defined VERSION_V2R3)
-#include "op_plugin/AclOpsInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
-#include <ATen/ops/quantize_per_tensor.h>
-
-namespace acl_op {
-at::Tensor dequantize(const at::Tensor& self)
-{
-    return at::native::dequantize_quantized(self);
-}
-
-at::Tensor _empty_affine_quantized(
-    at::IntArrayRef size,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
-    double scale,
-    int64_t zero_point,
-    c10::optional<c10::MemoryFormat> memory_format)
-{
-    return at::native::empty_affine_quantized(
-        size, dtype, layout, device, pin_memory, scale, zero_point, memory_format);
-}
-} // namespace acl_op
-#endif

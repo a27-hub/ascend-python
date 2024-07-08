@@ -93,7 +93,6 @@ at::Tensor quantize_per_channel(
 } // namespace acl_op
 #endif
 
-
 #if (defined VERSION_V2R2)
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
