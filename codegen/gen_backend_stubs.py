@@ -34,7 +34,7 @@ def main() -> None:
     fm = make_file_manager(options.output_dir)
 
     import os
-    pytorch_version = os.environ.get('PYTORCH_VERSION').split('.')
+    pytorch_version = '2.1.0.post3'.split('.')
     torch_dir = f"v{pytorch_version[0]}r{pytorch_version[1]}"
 
     all_functions = sorted(set(concatMap(lambda f: [f],

@@ -6,7 +6,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# https://opensource.org/licenses/BSD-3-Clause
+# https://opensource.org/licenses/BSD-3-Clause                                                  
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,14 +19,15 @@ import stat
 import functools
 import hashlib
 from typing import (List, Dict, Optional, Set, Callable, Any,
-                    Union, TypeVar, Iterable, Tuple)
+                    Union, TypeVar, Iterable, Tuple, Sequence)
 from collections import defaultdict
 import yaml
 
 from codegen.code_template import CodeTemplate
 from codegen.model import (NativeFunction, SelfArgument,
-                           TensorOptionsArguments,
-                           assert_never)
+                           TensorOptionsArguments, SchemaKind,
+                           assert_never, NativeFunctionsGroup,
+                           FunctionSchema)
 from codegen.api.types.signatures import NativeSignature
 from codegen.context import native_function_manager
 from codegen.utils import concatMap, context
@@ -224,6 +225,43 @@ def parse_native_yaml_struct(
             rs.append(func)
 
     return rs
+
+
+# Groups "similar" NativeFunctions together
+# example add.Tensor, add_.Tensor, add.out
+# "similar" NativeFunctions are all expected to have an identical `signature()`,
+# But have differing SchemaKinds.
+def pre_group_native_functions(
+    native_functions: Sequence[NativeFunction],
+) -> Dict[FunctionSchema, Dict[SchemaKind, NativeFunction]]:
+    pre_grouped_native_functions: Dict[
+        FunctionSchema, Dict[SchemaKind, NativeFunction]
+    ] = defaultdict(dict)
+    for f in native_functions:
+        d = pre_grouped_native_functions[f.func.signature()]
+        if f.func.kind() in d:
+            raise RuntimeError(f"{f.func.kind()} is already in {d}")
+        d[f.func.kind()] = f
+    return pre_grouped_native_functions
+
+
+def get_grouped_native_functions(
+    native_functions: Sequence[NativeFunction],
+) -> Sequence[Union[NativeFunction, NativeFunctionsGroup]]:
+    def flatten_pre_group(
+        d: Dict[SchemaKind, NativeFunction]
+    ) -> Sequence[Union[NativeFunction, NativeFunctionsGroup]]:
+        r = NativeFunctionsGroup.from_dict(d)
+        if r is None:
+            return list(d.values())
+        else:
+            return [r]
+
+    # TODO: how come ValuesView isn't a Sequence lol
+    pre_grouped_native_functions = pre_group_native_functions(native_functions)
+    return list(
+        concatMap(flatten_pre_group, list(pre_grouped_native_functions.values()))
+    )
 
 
 def gen_function_declaration(
