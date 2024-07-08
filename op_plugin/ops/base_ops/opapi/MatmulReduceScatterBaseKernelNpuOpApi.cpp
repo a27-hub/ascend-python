@@ -17,6 +17,18 @@
 #include "op_plugin/utils/op_api_common.h"
 #include <cstdlib>
 
+namespace {
+uint8_t GetDebugMode()
+{
+    auto debugModeEnv = getenv("ASCEND_MC2_DEBUG_MODE");
+    uint8_t debugMode = 0;
+    if (debugModeEnv != nullptr) {
+        debugMode = std::atoi(debugModeEnv);
+    }
+    return debugMode;
+}
+}
+
 namespace op_api {
 
 at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &self, const at::Tensor &x2, c10::string_view hcom,
@@ -32,8 +44,10 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &self, const at::Tensor &
                 self.size(1), " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
-    // auto output_size = {self.size(0) / world_size, x2.size(1)};
-    auto output_size = {self.size(0), x2.size(1)};
+    auto output_size = {self.size(0) / world_size, x2.size(1)};
+    if (GetDebugMode() == 1) { // 仅计算
+        output_size = {self.size(0), x2.size(1)};
+    }
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
     char *reduce_op_ptr = const_cast<char *>(reduce_op.data());
     char *hcom_ptr = const_cast<char *>(hcom.data());
