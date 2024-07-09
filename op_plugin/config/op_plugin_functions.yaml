@@ -5791,10 +5791,6 @@ tocpu:
     version: v1.11, v2.0
   - func: _fft_r2c.out
     version: v1.11, v2.0
-  - func: _foreach_abs
-    version: v1.11, v2.0
-  - func: _foreach_abs_
-    version: v1.11, v2.0
   - func: _foreach_acos
     version: v1.11, v2.0
   - func: _foreach_acos_
@@ -5905,12 +5901,6 @@ tocpu:
     version: v1.11, v2.0
   - func: binomial
     version: v1.11, v2.0
-  - func: bucketize.Scalar
-    version: v1.11
-  - func: bucketize.Tensor
-    version: v1.11
-  - func: bucketize.Tensor_out
-    version: v1.11
   - func: cauchy_
     version: v1.11, v2.0
   - func: cholesky_inverse

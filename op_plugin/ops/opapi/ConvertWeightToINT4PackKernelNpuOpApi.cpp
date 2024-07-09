@@ -24,14 +24,14 @@ void convertToINT4Pack(const std::vector<int32_t>& weightData, std::vector<int32
 {
     size_t n = weightInt4PackData.size();
     for (size_t i = 0; i < n; ++i) {
-        uint32_t  a = static_cast<uint32_t>(weightData[i * 8]);
-        uint32_t  b = static_cast<uint32_t>(weightData[i * 8 + 1]);
-        uint32_t  c = static_cast<uint32_t>(weightData[i * 8 + 2]);
-        uint32_t  d = static_cast<uint32_t>(weightData[i * 8 + 3]);
-        uint32_t  e = static_cast<uint32_t>(weightData[i * 8 + 4]);
-        uint32_t  f = static_cast<uint32_t>(weightData[i * 8 + 5]);
-        uint32_t  g = static_cast<uint32_t>(weightData[i * 8 + 6]);
-        uint32_t  h = static_cast<uint32_t>(weightData[i * 8 + 7]);
+        uint32_t a = static_cast<uint32_t>(weightData[i * 8]);
+        uint32_t b = static_cast<uint32_t>(weightData[i * 8 + 1]);
+        uint32_t c = static_cast<uint32_t>(weightData[i * 8 + 2]);
+        uint32_t d = static_cast<uint32_t>(weightData[i * 8 + 3]);
+        uint32_t e = static_cast<uint32_t>(weightData[i * 8 + 4]);
+        uint32_t f = static_cast<uint32_t>(weightData[i * 8 + 5]);
+        uint32_t g = static_cast<uint32_t>(weightData[i * 8 + 6]);
+        uint32_t h = static_cast<uint32_t>(weightData[i * 8 + 7]);
 
         weightInt4PackData[i] = (a & 0xF) | (b & 0xF) << 4 | (c & 0xF) << 8 | (d & 0xF) << 12 |
                                 (e & 0xF) << 16 | (f & 0xF) << 20 | (g & 0xF) << 24 | (h & 0xF) << 28;

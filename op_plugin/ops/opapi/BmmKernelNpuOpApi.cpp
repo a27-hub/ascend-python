@@ -30,6 +30,9 @@ at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &
     // use and functions such as hfloat32 can be enabled through this switch
     int cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+
+    auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
+    at::namedinference::propagate_names_if_nonempty(result, outnames);
     return result;
 }
 
@@ -47,6 +50,9 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
     // use and functions such as hfloat32 can be enabled through this switch
     int cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+
+    auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
+    at::namedinference::propagate_names_if_nonempty(result, outnames);
     return result;
 }
 

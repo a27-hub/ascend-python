@@ -64,8 +64,7 @@ at::Tensor var(
 std::tuple<at::Tensor, at::Tensor> var_mean(
     const at::Tensor &self,
     c10::optional<at::IntArrayRef> dims,
-    c10::optional<int64_t> correction,
-    bool keepdim)
+    c10::optional<int64_t> correction, bool keepdim)
 {
     DO_COMPATIBILITY(aclnnVarMean, acl_op::var_mean(self, dims, correction, keepdim));
     c10::SmallVector<int64_t, N> real_dim = op_plugin::utils::get_dimlist_for_tensor(self);
@@ -77,8 +76,8 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
     auto var = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
     auto mean = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
 
-    EXEC_NPU_CMD(aclnnVarMean, self, dims, real_correction, keepdim, mean, var);
-    return std::tuple<at::Tensor, at::Tensor>(mean, var);
+    EXEC_NPU_CMD(aclnnVarMean, self, dims, real_correction, keepdim, var, mean);
+    return std::tuple<at::Tensor, at::Tensor>(var, mean);
 }
 #endif
 
@@ -148,8 +147,8 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
   auto mean = npu_preparation::apply_tensor_without_format(output_size, self.options());
 
   auto rd = at::IntArrayRef(real_dim);
-  EXEC_NPU_CMD(aclnnVarMean, self, rd, real_correction, keepdim, mean, var);
-  return std::tuple<at::Tensor, at::Tensor>(mean, var);
+  EXEC_NPU_CMD(aclnnVarMean, self, rd, real_correction, keepdim, var, mean);
+  return std::tuple<at::Tensor, at::Tensor>(var, mean);
 }
 #endif
 } // namespace op_api
