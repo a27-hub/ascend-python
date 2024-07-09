@@ -15,10 +15,7 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
-
-#include <ATen/NamedTensorUtils.h>
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
-
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
