@@ -3733,35 +3733,35 @@ official:
   - func: scatter.reduce_out(Tensor self, int dim, Tensor index, Tensor src, *, str reduce, Tensor(a!) out) -> Tensor(a!)
     impl_ns: op_api
     version: v1.11
-    kernel: opapi/QuantScatterKernelNpuOpApi.cpp
+    kernel: opapi/ScatterKernelNpuOpApi.cpp
   - func: scatter.src(Tensor self, int dim, Tensor index, Tensor src) -> Tensor
     impl_ns: acl_op
     version: v2.0
-    kernel: aclops/MaxUnpool2dKernelNpu.cpp
+    kernel: aclops/ScatterKernelNpu.cpp
   - func: scatter.src_out(Tensor self, int dim, Tensor index, Tensor src, *, Tensor(a!) out) -> Tensor(a!)
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
-    kernel: aclops/MaxUnpool2dKernelNpu.cpp, opapi/QuantScatterKernelNpuOpApi.cpp
+    kernel: aclops/ScatterKernelNpu.cpp, opapi/ScatterKernelNpuOpApi.cpp
   - func: scatter.value(Tensor self, int dim, Tensor index, Scalar value) -> Tensor
     impl_ns: acl_op
     version: v2.0
-    kernel: aclops/MaxUnpool2dKernelNpu.cpp
+    kernel: aclops/ScatterKernelNpu.cpp
   - func: scatter.value_out(Tensor self, int dim, Tensor index, Scalar value, *, Tensor(a!) out) -> Tensor(a!)
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
-    kernel: aclops/MaxUnpool2dKernelNpu.cpp, opapi/QuantScatterKernelNpuOpApi.cpp
+    kernel: aclops/ScatterKernelNpu.cpp, opapi/ScatterKernelNpuOpApi.cpp
   - func: scatter.value_reduce_out(Tensor self, int dim, Tensor index, Scalar value, *, str reduce, Tensor(a!) out) -> Tensor(a!)
     impl_ns: op_api
     version: v1.11
-    kernel: opapi/QuantScatterKernelNpuOpApi.cpp
+    kernel: opapi/ScatterKernelNpuOpApi.cpp
   - func: scatter_.src(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor(a!)
-    impl_ns: acl_op, acl_op, acl_op, acl_op, acl_op, acl_op
-    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
-    kernel: aclops/MaskedScatterKernelNpu.cpp
+    impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
+    version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
+    kernel: aclops/ScatterKernelNpu.cpp, opapi/ScatterKernelNpuOpApi
   - func: scatter_.value(Tensor(a!) self, int dim, Tensor index, Scalar value) -> Tensor(a!)
     impl_ns: acl_op, acl_op, acl_op, acl_op, acl_op, acl_op
-    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4
-    kernel: aclops/MaskedScatterKernelNpu.cpp
+    version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
+    kernel: aclops/ScatterKernelNpu.cpp, opapi/ScatterKernelNpuOpApi
   - func: scatter_add(Tensor self, int dim, Tensor index, Tensor src) -> Tensor
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4
