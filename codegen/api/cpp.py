@@ -83,7 +83,7 @@ from codegen.utils import assert_never
 # BTW: policy on name collisions: we try not to have types with
 # collisions, but functions are fair game to collide
 
-PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION')
+PYTORCH_VERSION = '2.1.0.post3'
 
 
 def name(

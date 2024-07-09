@@ -1,0 +1,44 @@
+- func: abs(Tensor self) -> Tensor
+  branch: base
+  result:
+    size: self
+    dtype: self
+    name: self
+  exec: aclnnAbs
+
+- func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  branch: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnAbs, self, result
+
+- func: ceil_(Tensor(a!) self) -> Tensor(a!)
+  branch: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnInplaceCeil
+
+- func: batch_norm_stats(Tensor input, float eps) -> (Tensor, Tensor)
+  branch: base
+  result0:
+    size: '{self.size(1)}'
+    dtype: at::kFloat
+  result1:
+    size: '{self.size(1)}'
+    dtype: at::kFloat
+  exec: aclnnBatchNormStats
+
+- func: adaptive_max_pool2d.out(Tensor self, int[2] output_size, *, Tensor(a!) out, Tensor(b!) indices) -> (Tensor(a!), Tensor(b!))
+  branch: base
+  result0:
+    size: op_infer::max_pool2d_out_size(self, output_size)
+    dtype: self
+  result1:
+    size: op_infer::max_pool2d_out_size(self, output_size)
+    dtype: at::ScalarType::Long
+  exec: aclnnAdaptiveMaxPool2d
+
+- func: adaptive_max_pool2d(Tensor self, int[2] output_size) -> (Tensor, Tensor)
+  structured_delegate: adaptive_max_pool2d.out
