@@ -139,9 +139,9 @@ at::Tensor matmul_opt_nocheck(c10::optional<at::Tensor> out_opt, const at::Tenso
 } // namespace
 
 at::Tensor matmul(const at::Tensor& tensor1, const at::Tensor& tensor2) {
-    // 1、cann support matmul int8(input)->int32(out)
-    // 2、onnx can support because of change y dtype to be int32.
-    // 3、torch need int8(input)->int8(out), cann can not support.
+    // 1.cann support matmul int8(input)->int32(out)
+    // 2.onnx can support because of change y dtype to be int32.
+    // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(tensor1.scalar_type() != at::ScalarType::Char && tensor2.scalar_type() != at::ScalarType::Char,
                 "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
@@ -151,9 +151,9 @@ at::Tensor matmul(const at::Tensor& tensor1, const at::Tensor& tensor2) {
 }
 
 at::Tensor& matmul_out(const at::Tensor& tensor1, const at::Tensor& tensor2, at::Tensor& result) {
-    // 1、cann support matmul int8(input)->int32(out)
-    // 2、onnx can support because of change y dtype to be int32.
-    // 3、torch need int8(input)->int8(out), cann can not support.
+    // 1.cann support matmul int8(input)->int32(out)
+    // 2.onnx can support because of change y dtype to be int32.
+    // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(tensor1.scalar_type() != at::ScalarType::Char && tensor2.scalar_type() != at::ScalarType::Char,
                 "matmul is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);

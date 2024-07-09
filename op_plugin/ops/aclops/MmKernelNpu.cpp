@@ -266,9 +266,9 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
     TORCH_CHECK(self.dim() == 2 && mat2.dim() == 2, "both arguments to matmul need to be 2D, but they are ",
                 self.dim(), "D and ", mat2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
 
-    // 1¡¢cann bmm support int8(input)->int32(out)
-    // 2¡¢onnx can support because of change y dtype to be int32.
-    // 3¡¢torch need int8(input)->int8(out), cann can not support.
+    // 1.cann bmm support int8(input)->int32(out)
+    // 2.onnx can support because of change y dtype to be int32.
+    // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
                 "mm is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
     auto output_size = {self.size(0), mat2.size(1)};

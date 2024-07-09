@@ -24,7 +24,7 @@ at::Tensor conv_tbc(const at::Tensor &self, const at::Tensor &weight, const at::
                                              int64_t pad) {
   DO_COMPATIBILITY(aclnnConvTbc, acl_op::conv_tbc(self, weight, bias, pad));
 
-  // CheckForbidInternalFormat = False: turn on private format£»CheckJitDisable = False: turn on JitCompile
+  // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable = False: turn on JitCompile
   if ((!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
     return acl_op::conv_tbc(self, weight, bias, pad);
   }

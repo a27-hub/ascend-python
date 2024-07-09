@@ -26,26 +26,11 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList tensors1, at::TensorList ten
     }
     at::TensorList result_ = at::TensorList(result);
 
-    // convert scalar to tensor in PTA for now£¬wait for ascendc aclnn framwork support scalar type
+    // convert scalar to tensor in PTA for now, wait for ascendc aclnn framwork support scalar type
     at::Tensor scalar_ = npu_preparation::copy_scalar_to_device(alpha, scalar_type, tensors1[0].device());
 
     EXEC_NPU_CMD(aclnnForeachSubList, tensors1, tensors2, scalar_, result_);
     return result;
-}
-
-void _foreach_sub_(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar &alpha)
-{
-    at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at_npu::native::env::CheckJitDisable() ||
-        !at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
-        return at::native::foreach_tensor_sub_list_kernel_slow_(tensors1, tensors2, alpha);
-    }
-    // convert scalar to tensor in PTA for now£¬wait for ascendc aclnn framwork support scalar type
-    auto scalar_type = tensors1[0].scalar_type();
-    at::Tensor scalar_ = npu_preparation::copy_scalar_to_device(alpha, scalar_type, tensors1[0].device());
-
-    EXEC_NPU_CMD(aclnnForeachSubList, tensors1, tensors2, scalar_, tensors1);
-    return;
 }
 
 std::vector<at::Tensor> _foreach_sub(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
@@ -53,13 +38,6 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList tensors, at::ArrayRef<at::Sc
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
     return at::native::foreach_tensor_sub_scalarlist_kernel_slow(tensors, scalars);
-}
-
-void _foreach_sub_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
-{
-    // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
-    at::native::check_foreach_api_restrictions(tensors, scalars);
-    return at::native::foreach_tensor_sub_scalarlist_kernel_slow_(tensors, scalars);
 }
 
 std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar &scalar)
@@ -93,4 +71,42 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar &scal
     return result;
 }
 
+void _foreach_sub_(const at::TensorList self, const at::Scalar &scalar)
+{
+    at::native::check_foreach_api_restrictions(self);
+    if (!at_npu::native::env::CheckJitDisable() ||
+        !at::native::can_use_fast_route(self, scalar, false)) {
+        return at::native::foreach_tensor_sub_scalar_kernel_slow_(self, scalar);
+    }
+
+    auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Int) {
+        TORCH_CHECK(false, "input must be half, float or int32", OPS_ERROR(ErrCode::TYPE));
+    }
+    at::Tensor scalar_tensor = npu_preparation::copy_scalar_to_device(scalar, scalar_type, self[0].device());
+    EXEC_NPU_CMD(aclnnForeachSubScalar, self, scalar_tensor, self);
+}
+
+void _foreach_sub_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
+{
+    // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
+    at::native::check_foreach_api_restrictions(tensors, scalars);
+    return at::native::foreach_tensor_sub_scalarlist_kernel_slow_(tensors, scalars);
+}
+
+void _foreach_sub_(at::TensorList tensors1, at::TensorList tensors2, const at::Scalar &alpha)
+{
+    at::native::check_foreach_api_restrictions(tensors1, tensors2);
+    if (!at_npu::native::env::CheckJitDisable() ||
+        !at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
+        return at::native::foreach_tensor_sub_list_kernel_slow_(tensors1, tensors2, alpha);
+    }
+    // convert scalar to tensor in PTA for now, wait for ascendc aclnn framwork support scalar type
+    auto scalar_type = tensors1[0].scalar_type();
+    at::Tensor scalar_ = npu_preparation::copy_scalar_to_device(alpha, scalar_type, tensors1[0].device());
+
+    EXEC_NPU_CMD(aclnnForeachSubList, tensors1, tensors2, scalar_, tensors1);
+    return;
+}
 }

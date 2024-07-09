@@ -51,9 +51,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _unique2(
     bool return_inverse,
     bool return_counts) {
   /*
-   * Ëã×ÓÈ¥ÖØµ÷ÓÃµÄstd::unordered_set»á¸ù¾İhashº¯Êı´òÂÒË³Ğò£¬
-   * fp16³¡¾°Óë»ù±¾Êı¾İÀàĞÍµÄ´òÂÒ·½Ê½²»Í¬£¬Ê¹µÃsorted=falseÊ±£¬fp16¾«¶È²»´ï±ê.
-   * ´ËÍâ£¬Ëã×ÓÈ¥ÖØÊ±£¬fp16´æÔÚÊı¾İ¾«¶ÈËğÊ§£¬Òò´ËÕâÀï½«fp16Ç¿×ªfp32´¦Àí.
+   * ç®—å­å»é‡è°ƒç”¨çš„std::unordered_setä¼šæ ¹æ®hashå‡½æ•°æ‰“ä¹±é¡ºåºï¼Œ
+   * fp16åœºæ™¯ä¸åŸºæœ¬æ•°æ®ç±»å‹çš„æ‰“ä¹±æ–¹å¼ä¸åŒï¼Œä½¿å¾—sorted=falseæ—¶ï¼Œfp16ç²¾åº¦ä¸è¾¾æ ‡.
+   * æ­¤å¤–ï¼Œç®—å­å»é‡æ—¶ï¼Œfp16å­˜åœ¨æ•°æ®ç²¾åº¦æŸå¤±ï¼Œå› æ­¤è¿™é‡Œå°†fp16å¼ºè½¬fp32å¤„ç†.
    */
   const at::Tensor self = self_op.scalar_type() == at::kHalf ?
       at_npu::native::custom_ops::npu_dtype_cast(self_op, at::kFloat) : self_op;

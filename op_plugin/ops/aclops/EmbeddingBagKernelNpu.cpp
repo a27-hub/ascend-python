@@ -126,7 +126,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
         _embedding_bag_npu_output_size(weight, indices_cast, offsets_cast, include_last_offset);
 
     at::Tensor output_tensor = npu_preparation::apply_tensor(weight, result_size);
-    // ÉêÇëoffset2bagµÄTensor
+    // ç”³è¯·offset2bagçš„Tensor
     int64_t indices_num = indices_cast.size(0);
 
     string mode_str = get_mode_str(mode);
@@ -179,7 +179,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forwar
         _embedding_bag_npu_output_size(weight, indices_cast, offsets_cast, include_last_offset);
 
     at::Tensor output_tensor = npu_preparation::apply_tensor(weight, result_size);
-    // ÉêÇëoffset2bagµÄTensor
+    // ç”³è¯·offset2bagçš„Tensor
     int64_t indices_num = indices_cast.size(0);
 
     string mode_str = get_mode_str(mode);

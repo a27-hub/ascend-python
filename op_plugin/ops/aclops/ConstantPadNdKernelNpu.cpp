@@ -32,7 +32,7 @@ void check_negetive(const at::Tensor &self, at::IntArrayRef pad, std::vector<int
     auto self_dim = self.dim();
     auto pad_cover = static_cast<int64_t>(pad.size()) / 2;
     bool hasZero = false;
-    // padÖĞÃ¿¸öÖµ¶¼²»ÄÜÈÃoutµÄshapeĞ¡ÓÚ0£¬Èç¹ûpadÖĞ´æÔÚÕıÊı£¬ÔòoutµÄshapeÖĞ²»ÄÜÓĞ0
+    // padä¸­æ¯ä¸ªå€¼éƒ½ä¸èƒ½è®©outçš„shapeå°äº0, å¦‚æœpadä¸­å­˜åœ¨æ­£æ•°, åˆ™outçš„shapeä¸­ä¸èƒ½æœ‰0
     for (auto i = 0; i < pad_cover; ++i) {
         auto cur_shape = self.sizes()[self_dim - i -1];
         auto begin = pad[SIZE_T_TWICE * i];
@@ -117,7 +117,7 @@ at::Tensor constant_pad_nd(const at::Tensor &self, at::IntArrayRef pad, const at
     TORCH_CHECK(pad.size() % 2 == 0, "Length of pad must be even but instead it equals ", pad.size(),
         OPS_ERROR(ErrCode::PARAM));
 
-    int sign_symbol = 0; // 0´ú±ípadÈ«0»òÃ»ÓĞÔªËØ£¬1´ú±íÓĞÕıÊı£¬2´ú±íÓĞ¸ºÊı£¬3´ú±íÍ¬Ê±ÓĞÕıÊıºÍ¸ºÊı
+    int sign_symbol = 0; // 0ä»£è¡¨padå…¨0æˆ–æ²¡æœ‰å…ƒç´ , 1ä»£è¡¨æœ‰æ­£æ•°, 2ä»£è¡¨æœ‰è´Ÿæ•°, 3ä»£è¡¨åŒæ—¶æœ‰æ­£æ•°å’Œè´Ÿæ•°
     auto input_sizes = self.sizes();
     auto l_inp = self.dim();
     auto l_pad = static_cast<int64_t>(pad.size()) / 2;
@@ -154,7 +154,7 @@ at::Tensor constant_pad_nd(const at::Tensor &self, at::IntArrayRef pad, const at
     }
     check_negetive(self, pad, new_shape, sign_symbol);
     at::Tensor result = npu_preparation::apply_tensor(self, new_shape);
-    if (sign_symbol != NEGETIVE) {   // pad²ÎÊıÖĞ°üº¬ÕıÊı¡£
+    if (sign_symbol != NEGETIVE) {   // padå‚æ•°ä¸­åŒ…å«æ­£æ•°.
         if (self.numel() == 0) {
             acl_op::fill_(result, value);
             return result;
@@ -185,7 +185,7 @@ at::Tensor constant_pad_nd(const at::Tensor &self, at::IntArrayRef pad, const at
                 .Run();
         }
     }
-    if ((sign_symbol & NEGETIVE) != 0) {     // pad²ÎÊıÖĞ´æÔÚ¸ºÊı¡£
+    if ((sign_symbol & NEGETIVE) != 0) {     // padå‚æ•°ä¸­å­˜åœ¨è´Ÿæ•°.
         if (sign_symbol == NEGETIVE) {
             return do_indexing(self, pad);
         } else {

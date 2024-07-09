@@ -29,7 +29,7 @@ tensor_list npu_moe_init_routing(const at::Tensor &x, const at::Tensor &row_idx,
     TORCH_CHECK(x.dim() == DIM_TWO, "The x should be 2D");
     TORCH_CHECK(
         x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
-        "float16°¢ float32 or bfloat16 tensor expected but got a tensor with dtype: ",
+        "float16„ÄÅfloat32 or bfloat16 tensor expected but got a tensor with dtype: ",
         x.scalar_type());
     TORCH_CHECK(expert_idx.dim() == DIM_TWO, "The expert_idx should be 2D");
     TORCH_CHECK(

@@ -43,7 +43,7 @@ def main():
                     del newdict['sparse']
 
                 if func.get('exposed') and version in versionlist:
-                    newdict['exposed'] = 'True'
+                    newdict['exposed'] = True
                 elif func.get('exposed'):
                     del newdict['sparse']
 

@@ -79,9 +79,9 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2) {
                 OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.dim() == 3 && mat2.dim() == 3, "bmm expect self 3D tensors, but got: ",
         self.dim(), "D and ", mat2.dim(), "D" + OPS_ERROR(ErrCode::PARAM));
-    // 1¡¢cann bmm support int8(input)->int32(out)
-    // 2¡¢onnx can support because of change y dtype to be int32.
-    // 3¡¢torch need int8(input)->int8(out), cann can not support.
+    // 1.cann bmm support int8(input)->int32(out)
+    // 2.onnx can support because of change y dtype to be int32.
+    // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
                 "bmm is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};

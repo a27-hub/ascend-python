@@ -30,7 +30,7 @@ at::Tensor& stride_copy_out_npu_nocheck(
     at::IntArrayRef stride,
     at::Scalar storage_offset) {
   if ((result.nbytes() < 32) && (!at_npu::native::StorageDescHelper::MetaDataAreMatch(&result))) {
-    // [Ëã×ÓÏÞÖÆ] ¶ÔÓÚ1. Ð¡ÓÚÒ»¸öblockµÄÊý¾Ý°áÔË 2.result²»match£¬AstridedÔÝ²»Ö§³Ö¡£
+    // [ç®—å­é™åˆ¶] å¯¹äºŽ1. å°äºŽä¸€ä¸ªblockçš„æ•°æ®æ¬è¿ 2.resultä¸matchï¼ŒAstridedæš‚ä¸æ”¯æŒã€‚
     acl_op::npu_view_copy(result, self, false);
     return result;
   }

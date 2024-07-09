@@ -35,7 +35,7 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &dY, const at::Tensor &
     at::Tensor bias_refined =
         bias.defined() ? bias.resize_(normalized_shape) : at::zeros(normalized_shape, X.options());
 
-    // 根据输入input和normalized_shape计算M
+    // 鏍规嵁杈撳叆input鍜宯ormalized_shape璁＄畻M
     const size_t norm_dim = normalized_shape.size();
     const auto input_shape = X.sizes();
     const size_t input_dim = static_cast<size_t>(X.dim());
@@ -51,12 +51,12 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &dY, const at::Tensor &
     at::Tensor mean_refined = mean.reshape(mean_shape);
     at::Tensor variance_refined = variance.reshape(mean_shape);
 
-    // 构造输出tensor
+    // 鏋勯�犺緭鍑簍ensor
     at::Tensor grad_input;
     at::Tensor grad_weight;
     at::Tensor grad_bias;
 
-    // 根据mask初始化输出tensor
+    // 鏍规嵁mask鍒濆鍖栬緭鍑簍ensor
     if (output_mask[0]) {
         grad_input =
             at::native::empty_like(X, c10::nullopt /* dtype */, c10::nullopt /* layout */, c10::nullopt /* device */,
@@ -72,7 +72,7 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &dY, const at::Tensor &
                                            c10::nullopt /* device */, c10::nullopt /* pin_memory */,
                                            LEGACY_CONTIGUOUS_MEMORY_FORMAT);
     }
-    // 调用HostAPI接口
+    // 璋冪敤HostAPI鎺ュ彛
     EXEC_NPU_CMD(aclnnLayerNormBackward, dY, X, normalized_shape, mean_refined, variance_refined, weight_refined,
                  bias_refined, output_mask, grad_input, grad_weight, grad_bias);
     return std::tie(grad_input, grad_weight, grad_bias);

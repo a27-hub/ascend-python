@@ -174,7 +174,7 @@ std::tuple<at::Tensor, at::Tensor> nll_loss_forward(
     output_size = {self_cp.size(0)};
   }
 
-  // Special output, output' dim is <= 1 fixedly£¡
+  // Special output, output' dim is <= 1 fixedly
   at::Tensor result = npu_preparation::apply_tensor_with_format(
       self_cp, output_size, ACL_FORMAT_ND);
   at::Tensor total_weight = npu_preparation::apply_tensor_with_format(

@@ -54,7 +54,7 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
 
     // Groups > 1 and 3D scenes are currently not supported (binary operator problem), and path 3 implementation is
     // temporarily called
-    // CheckForbidInternalFormat = False: turn on private format£»CheckJitDisable = False: turn on JitCompile
+    // CheckForbidInternalFormat = False: turn on private format; CheckJitDisable = False: turn on JitCompile
     if (dim == 3 || (!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
         return acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups,
                                     false, false, false, false);
