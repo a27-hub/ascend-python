@@ -6216,8 +6216,8 @@ quant:
     version: v2.2
     kernel: aclops/QuantizeTensorKernelNpu.cpp
   - func: dequantize.self(Tensor self) -> Tensor
-    impl_ns: acl_op, acl_op, acl_op, acl_op
-    version: v1.11, v2.2, v2.3, v2.4
+    impl_ns: acl_op, acl_op, acl_op
+    version: v2.2, v2.3, v2.4
     kernel: aclops/QuantizeTensorKernelNpu.cpp, opapi/DequantizeKernelNpuOpApi.cpp
   - func: int_repr(Tensor self) -> Tensor
     impl_ns: acl_op, acl_op, acl_op
