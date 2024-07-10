@@ -55,7 +55,7 @@ at::Tensor kl_div_backward(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor kl_div_backward(
     const at::Tensor& grad_output,
     const at::Tensor& self,

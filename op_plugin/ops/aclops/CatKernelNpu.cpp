@@ -80,7 +80,7 @@ at::Tensor& cat_out_nocheck(at::Tensor& result, at::TensorList tensors, int64_t 
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(const at::MaterializedITensorListRef& tensors) {
   auto high_type = at::native::result_type(tensors);
   c10::SmallVector<at::Tensor, N> dst_tensor_list;
@@ -292,7 +292,7 @@ at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim) {
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor& cat_out(const at::ITensorListRef& tensors, int64_t dim, at::Tensor& result) {
   auto materialized = tensors.materialize();
   c10::SmallVector<at::Tensor, N> input_tensors = cat_dest_tensor_list(materialized);

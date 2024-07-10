@@ -133,7 +133,7 @@ at::Tensor cat(at::TensorList tensors, int64_t dim) {
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(
     const at::MaterializedITensorListRef& tensors) {
   c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;

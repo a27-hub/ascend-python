@@ -32,7 +32,7 @@ at::Tensor& mse_loss_out(
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor& mse_loss_out(
     const at::Tensor& self,
     const at::Tensor& target,

@@ -21,7 +21,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 std::tuple<at::Tensor, at::Tensor> fake_quantize_per_channel_affine_cachemask(
     const at::Tensor& self,
     const at::Tensor& scale,

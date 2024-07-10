@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor trace(const at::Tensor &self) {
     DO_COMPATIBILITY(aclnnTrace, acl_op::trace(self));
     c10::SmallVector<int64_t, op_infer::N> outputSize = {};

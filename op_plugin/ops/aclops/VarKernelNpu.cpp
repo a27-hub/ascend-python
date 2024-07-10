@@ -96,7 +96,7 @@ std::tuple<at::Tensor, at::Tensor> var_mean(
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor& var_out(
     const at::Tensor& self,
     at::OptionalIntArrayRef dim,

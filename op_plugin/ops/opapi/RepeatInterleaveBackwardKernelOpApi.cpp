@@ -70,7 +70,7 @@ at::Tensor repeat_interleave_backward_tensor(const at::Tensor& input_grad, const
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor repeat_interleave_backward_one_repeat(const at::Tensor& input_grad, const at::Tensor& self, int64_t repeats,
     c10::optional<int64_t> dim)
 {

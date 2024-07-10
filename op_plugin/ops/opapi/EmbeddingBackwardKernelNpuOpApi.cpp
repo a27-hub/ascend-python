@@ -32,7 +32,7 @@ at::Tensor embedding_backward(const at::Tensor& grad, const at::Tensor& indices,
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor embedding_backward_symint(const at::Tensor& grad, const at::Tensor& indices, c10::SymInt num_weights,
                                      c10::SymInt padding_idx, bool scale_grad_by_freq, bool sparse) {
     DO_COMPATIBILITY(aclnnEmbeddingDenseBackward,

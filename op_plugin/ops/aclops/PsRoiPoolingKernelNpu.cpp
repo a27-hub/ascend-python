@@ -77,7 +77,7 @@ at::Tensor npu_ps_roi_pooling_backward(const at::Tensor &output_grad, const at::
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, const at::Tensor &rois,
                                               double spatial_scale, int64_t group_size, int64_t output_dim,
                                               c10::SymIntArrayRef input_size_symint)

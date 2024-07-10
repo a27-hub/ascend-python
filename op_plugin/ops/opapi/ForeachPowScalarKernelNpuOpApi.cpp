@@ -60,7 +60,7 @@ void _foreach_pow_(const at::TensorList self, const at::Scalar& scalar)
 }
 #endif
 
-#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 std::vector<at::Tensor> _foreach_pow(const at::TensorList self, const at::Scalar& scalar)
 {
     at::native::check_foreach_api_restrictions(self);

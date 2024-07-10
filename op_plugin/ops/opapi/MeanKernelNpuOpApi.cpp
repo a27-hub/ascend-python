@@ -72,7 +72,7 @@ at::Tensor mean(const at::Tensor& self, c10::optional<c10::ScalarType> dtype) {
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor& mean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool keepdim,
                      c10::optional<c10::ScalarType> dtype, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnMean, acl_op::mean_out(self, dim, keepdim, dtype, result));

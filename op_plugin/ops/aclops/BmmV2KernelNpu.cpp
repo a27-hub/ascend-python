@@ -386,7 +386,7 @@ at::Tensor npu_bmm_v2_mat2_backward_symint(const at::Tensor &grad, const at::Ten
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor npu_bmm_v2_mat1_backward_symint(const at::Tensor &grad, const at::Tensor &mat1, const at::Tensor &mat2,
                                            c10::SymIntArrayRef sizes_symint)
 {

@@ -1673,7 +1673,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _slow_conv2d_backward(
 }
 #endif
 
-#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 void check_shape_forward(
     const at::Tensor& input,
     const c10::IntArrayRef& weight_sizes,

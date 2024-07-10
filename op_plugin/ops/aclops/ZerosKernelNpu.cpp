@@ -64,7 +64,7 @@ at::Tensor zeros(
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor zeros_symint(
     c10::SymIntArrayRef size,
     c10::optional<at::ScalarType> dtype_opt,

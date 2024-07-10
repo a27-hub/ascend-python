@@ -41,7 +41,7 @@ at::Tensor &l1_loss_backward_out(const at::Tensor &grad_output, const at::Tensor
 }
 #endif
 
-#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V1R11) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor l1_loss_backward(const at::Tensor &grad_output, const at::Tensor &self, const at::Tensor &target,
                             int64_t reduction)
 {

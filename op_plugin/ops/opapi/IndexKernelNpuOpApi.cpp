@@ -51,7 +51,7 @@ at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Ten
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor index_high_dims_op_api(const at::Tensor& self, std::vector<at::Tensor> indices) {
   std::vector<at::Tensor> all_defined_indices;
   at::SmallVector<int64_t, op_infer::N> zeroSize = {0};

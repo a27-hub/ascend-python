@@ -70,7 +70,7 @@ void _foreach_pow_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 }
 #endif
 
-#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 std::vector<at::Tensor> _foreach_pow(at::TensorList tensors1, at::TensorList tensors2)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);

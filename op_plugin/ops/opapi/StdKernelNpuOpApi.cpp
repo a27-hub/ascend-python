@@ -60,7 +60,7 @@ at::Tensor std(
 }
 #endif
 
-#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor& std_out(const at::Tensor& self, at::OptionalIntArrayRef dim,
                     const c10::optional<c10::Scalar>& correction, bool keepdim, at::Tensor& result)
 {

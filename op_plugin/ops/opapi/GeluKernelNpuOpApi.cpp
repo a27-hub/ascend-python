@@ -36,7 +36,7 @@ at::Tensor gelu(const at::Tensor& self) {
 }
 #endif
 
-#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4)
+#if (defined VERSION_V2R0) || (defined VERSION_V2R1) || (defined VERSION_V2R2) || (defined VERSION_V2R3) || (defined VERSION_V2R4) || (defined VERSION_V2R5)
 at::Tensor gelu(const at::Tensor& self, c10::string_view approximate) {
     DO_COMPATIBILITY(aclnnGelu, acl_op::gelu(self));
     at::Tensor result = npu_preparation::apply_tensor_without_format(self);
