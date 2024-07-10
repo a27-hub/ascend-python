@@ -155,4 +155,4 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor &x1, const at::Tensor &x2, c1
 
     return result;
 }
-}
+}  // namespace op_api
