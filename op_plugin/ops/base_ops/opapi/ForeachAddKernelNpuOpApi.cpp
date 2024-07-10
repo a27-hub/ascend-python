@@ -50,7 +50,7 @@ void _split_and_exec_npu_cmd_add(at::TensorList& tensors1, at::TensorList tensor
 }
 
 std::vector<at::Tensor> _foreach_add(at::TensorList tensors1,
-                                     at::TensorList tensors2, const at::Scalar& alpha)
+                                     at::TensorList tensors2, const at::Scalar &alpha)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
@@ -81,8 +81,8 @@ void _foreach_add_(at::TensorList tensors1, at::TensorList tensors2, const at::S
     return;
 }
 
-void _split_and_exec_npu_cmd_add_scalarlist(at::TensorList& tensors1, at::ArrayRef<at::Scalar> scalars,
-                                            at::TensorList& result_list, bool is_inplace)
+void _split_and_exec_npu_cmd_add_scalarlist(at::TensorList &tensors1, at::ArrayRef<at::Scalar> scalars,
+                                            at::TensorList &result_list, bool is_inplace)
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;

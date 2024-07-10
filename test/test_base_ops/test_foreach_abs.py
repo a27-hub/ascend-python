@@ -14,7 +14,7 @@ class TestForeachAbs(TestCase):
         "float32" : torch.float32,
         "bfloat16" : torch.bfloat16
     }
-
+    
     def create_tensors(self, tensor_nums, dtype):
         cpu_tensors = []
         npu_tensors = []
