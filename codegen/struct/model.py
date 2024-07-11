@@ -36,25 +36,36 @@ class ResInfo:
 
     @staticmethod
     def parse(results: Dict[str, Dict[str, str]], f: 'NativeFunction') -> List['ResInfo']:
-
+        kind = f.func.kind()
         tensor_number = sum(map(lambda x: x.type.name ==
                             BaseTy.Tensor, f.func.returns))
-        if len(results) != tensor_number and f.func.kind() == SchemaKind.functional:
+        if len(results) != tensor_number and kind == SchemaKind.functional:
             raise RuntimeError(f"The number of result info in yaml is {len(results)}."
                                f"That does not match {f.func.name}'s returns tensor number {tensor_number}")
 
         arguments = f.func.arguments.flat_all
         input_tensors = [arg.name for arg in arguments
                          if isinstance(arg.type, BaseType) and arg.type.name == BaseTy.Tensor]
-
         res_infos = []
-        for name, info in results.items():
-            size = info.pop('size', None)
-            dtype = info.pop('dtype', None)
-            if size is None:
-                raise RuntimeError(f"The {name}'s size  is None in {f.func.name}")
-            if dtype is None:
-                raise RuntimeError(f"The {name}'s dtype  is None in {f.func.name}")
+
+        if kind == SchemaKind.out:
+            result_names = cpp.return_names(f)
+        else:
+            result_names = [k for k in results.keys()]
+
+        for name in result_names:
+            info = results.get(name, None)
+            if kind == SchemaKind.out and info is None:
+                size, dtype = name, name
+                infer_name = None
+            else:
+                size = info.pop('size', None)
+                dtype = info.pop('dtype', None)
+                if size is None:
+                    raise RuntimeError(f"The {name}'s size  is None in {f.func.name}")
+                if dtype is None:
+                    raise RuntimeError(f"The {name}'s dtype  is None in {f.func.name}")
+                infer_name = info.pop('name', None)
 
             if size in input_tensors:
                 size_formula = f'{size}.sizes()'
@@ -64,8 +75,6 @@ class ResInfo:
                 dtype_formula = f'{dtype}.scalar_type()'
             else:
                 dtype_formula = dtype
-
-            infer_name = info.pop('name', None)
 
             res_infos.append(
                 ResInfo(name=name, size=size_formula, dtype=dtype_formula,
