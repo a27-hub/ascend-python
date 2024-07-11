@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-inline c10::SmallVector<int64_t, N> swiglu_backward_infershape(const at::Tensor &x, int64_t dim)
+inline c10::SmallVector<int64_t, SIZE> swiglu_backward_infershape(const at::Tensor &x, int64_t dim)
 {
     if (dim < 0) {
         dim += x.sizes().size();
