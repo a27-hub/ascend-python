@@ -28,8 +28,8 @@ at::Tensor& histc_out(const at::Tensor& self, int64_t bins, const at::Scalar& mi
 
 at::Tensor histc(const at::Tensor& self, int64_t bins, const at::Scalar& min,
                  const at::Scalar& max) {
-  at::Tensor result = acl_op::histc(self, bins, min, max);
-  return result;
+    at::Tensor result = acl_op::histc(self, bins, min, max);
+    return result;
 }
 
 }  // namespace op_api
