@@ -52,9 +52,9 @@ class ResInfo:
             size = info.pop('size', None)
             dtype = info.pop('dtype', None)
             if size is None:
-                raise RuntimeError(f"The {name}'s size  is None")
+                raise RuntimeError(f"The {name}'s size  is None in {f.func.name}")
             if dtype is None:
-                raise RuntimeError(f"The {name}'s dtype  is None")
+                raise RuntimeError(f"The {name}'s dtype  is None in {f.func.name}")
 
             if size in input_tensors:
                 size_formula = f'{size}.sizes()'

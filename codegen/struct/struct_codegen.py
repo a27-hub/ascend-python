@@ -33,8 +33,8 @@ from codegen.api import cpp
 from .model import StructInfo
 
 
-PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION')[:3]
-# PYTORCH_VERSION = '2.1.0.post3'[:3]
+# PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION')[:3]
+PYTORCH_VERSION = '2.1.0.post3'[:3]
 
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str}) {

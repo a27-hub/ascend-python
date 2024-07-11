@@ -20,16 +20,6 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& acosh_out(const at::Tensor& self, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnAcosh, acl_op::acosh_out(self, result));
-  TORCH_CHECK(!isIntegralType(result.scalar_type(), true), "result type ", toString(self.scalar_type()),
-              " can't be cast to the desired output type ", toString(result.scalar_type()),
-              OPS_ERROR(ErrCode::TYPE));
-  npu_preparation::check_tensor({self}, result, result.scalar_type(), self.sizes());
-  EXEC_NPU_CMD(aclnnAcosh, self, result);
-  return result;
-}
-
 at::Tensor acosh(const at::Tensor& self) {
   DO_COMPATIBILITY(aclnnAcosh, acl_op::acosh(self));
   auto output_options = (isIntegralType(self.scalar_type(), true)) ?
@@ -39,12 +29,4 @@ at::Tensor acosh(const at::Tensor& self) {
   return result;
 }
 
-at::Tensor& acosh_(at::Tensor& self) {
-  DO_COMPATIBILITY(aclnnInplaceAcosh, acl_op::acosh_(self));
-  TORCH_CHECK(!isIntegralType(self.scalar_type(), true),
-              "result type Float can't be cast to the desired output type ", toString(self.scalar_type()),
-              OPS_ERROR(ErrCode::TYPE));
-  EXEC_NPU_CMD(aclnnInplaceAcosh, self);
-  return self;
-}
 } // namespace op_api

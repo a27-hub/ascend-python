@@ -62,7 +62,7 @@ class CodeTemplate:
 
     @staticmethod
     def from_file(filename: str) -> 'CodeTemplate':
-        CodeTemplate.check_dir_path(filename)
+        # CodeTemplate.check_dir_path(filename)
         with open(filename, 'r') as f:
             return CodeTemplate(f.read(), filename)
 

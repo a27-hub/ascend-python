@@ -12,6 +12,18 @@
 - func: abs_(Tensor(a!) self) -> Tensor(a!)
   structured_delegate: abs.out
 
+- func: acosh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: out
+  exec: aclnnAcosh
+
+- func: acosh_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAcosh
+
+
 - func: ceil.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
   version: base
   out:
@@ -48,3 +60,10 @@
 
 - func: adaptive_max_pool2d(Tensor self, int[2] output_size) -> (Tensor, Tensor)
   structured_delegate: adaptive_max_pool2d.out
+
+- func: _adaptive_avg_pool2d_backward(Tensor grad_output, Tensor self) -> Tensor
+  version: base
+  out:
+    size: self
+    dtype: self
+  exec: aclnnAdaptiveAvgPool2dBackward
