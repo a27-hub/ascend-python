@@ -39,9 +39,9 @@ class ResInfo:
 
         tensor_number = sum(map(lambda x: x.type.name ==
                             BaseTy.Tensor, f.func.returns))
-        if len(results) != tensor_number and f.func.kind() != SchemaKind.inplace:
+        if len(results) != tensor_number and f.func.kind() == SchemaKind.functional:
             raise RuntimeError(f"The number of result info in yaml is {len(results)}."
-                               "That does not match {f.func.name}'s returns tensor number {tensor_number}")
+                               f"That does not match {f.func.name}'s returns tensor number {tensor_number}")
 
         arguments = f.func.arguments.flat_all
         input_tensors = [arg.name for arg in arguments
