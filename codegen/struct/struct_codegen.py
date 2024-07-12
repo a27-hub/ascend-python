@@ -30,7 +30,7 @@ from codegen.utils import concatMap
 from codegen.context import native_function_manager
 from codegen.api.types import NativeSignature
 from codegen.api import cpp
-from .model import StructInfo
+from .model import StructInfo, ResInfo
 
 
 # PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION')[:3]
@@ -38,8 +38,9 @@ PYTORCH_VERSION = '2.1.0.post3'[:3]
 
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str}) {
-    std::cout<<"in struct "<<"${func_name}"<<std::endl;
+    std::cout<<"in struct "<<"${test_name}"<<std::endl;
     ${do_compatibility}
+    ${define_size_or_dtype}
     ${check_or_apply_tensor}
     EXEC_NPU_CMD(${aclnnargs});
     ${infer_name}
@@ -49,7 +50,7 @@ ${return_type} ${func_name}(${args_str}) {
 
 ACLNN_FUNCTIONS_DELEGATE = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str}) {
-    std::cout<<"in struct "<<"${func_name}"<<std::endl;
+    std::cout<<"in struct "<<"${test_name}"<<std::endl;
     return op_api::${func_name_out}(${args_str_out});
 }
 """)
@@ -95,6 +96,16 @@ def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[
     return struct_infos
 
 
+def gen_size_dtype_map(resinfos: List['ResInfo']) -> Tuple[Dict[str, str],Dict[str,str]]:
+    size_map: Dict[str, str] = defaultdict(None)
+    dtype_map: Dict[str, str] = defaultdict(None)
+    for resinfo in resinfos:
+        if size_map.get(resinfo.size) == None:
+            size_map[resinfo.size] = f"output_size{len(size_map)}"
+        if dtype_map.get(resinfo.dtype) == None:
+            dtype_map[resinfo.dtype] = f"output_dtype{len(dtype_map)}"
+    return size_map, dtype_map
+
 def compute_op_api_definition(struct: StructInfo):
     f = struct.func
 
@@ -115,6 +126,7 @@ def compute_op_api_definition(struct: StructInfo):
             delegate_args_exprs_str = f'{args_exprs_str}, {f.func.arguments.self_arg.argument.name}'
             return [ACLNN_FUNCTIONS_DELEGATE.substitute(
                     return_type=return_type,
+                    test_name=struct.name,
                     func_name=name,
                     args_str=args_str,
                     func_name_out=delegate_name,
@@ -128,13 +140,19 @@ def compute_op_api_definition(struct: StructInfo):
         tensor_arguments = ", ".join([arg.name for arg in arguments
                                       if isinstance(arg.type, BaseType) and arg.type.name == BaseTy.Tensor])
 
+        size_map, dtype_map = gen_size_dtype_map(res_infos)
+
+        define_size = "".join([f"auto {name} = {size};\n" for size, name in size_map.items()])
+        define_dtype = "".join([f"auto {name} = {dtype};\n" for dtype, name in dtype_map.items()])
+        define_size_or_dtype = "".join([define_size, define_dtype])
+
         if kind == SchemaKind.out:
             apply_tensor_list = list(concatMap(
                 lambda res_info:
                 [CHECK_TENSOR.substitute(input=tensor_arguments,
                                          result_name=res_info.name,
-                                         size=res_info.size,
-                                         dtype=res_info.dtype)],
+                                         size=size_map[res_info.size],
+                                         dtype=dtype_map[res_info.dtype])],
                 res_infos))
         elif kind == SchemaKind.inplace:
             apply_tensor_list = []
@@ -142,8 +160,8 @@ def compute_op_api_definition(struct: StructInfo):
             apply_tensor_list = list(concatMap(
                 lambda res_info:
                 [APPLY_TENSOR.substitute(result_name=res_info.name,
-                                         size=res_info.size,
-                                         dtype=f'{res_info.option}.options().dtype({res_info.dtype})')],
+                                         size=size_map[res_info.size],
+                                         dtype=f'{res_info.option}.options().dtype({dtype_map[res_info.dtype]})')],
                 res_infos))
 
         infer_name_list = list(concatMap(
@@ -160,6 +178,8 @@ def compute_op_api_definition(struct: StructInfo):
     return [ACLNN_FUNCTIONS_DEFINITION.substitute(
             return_type=return_type,
             func_name=name,
+            define_size_or_dtype=define_size_or_dtype,
+            test_name=struct.name,
             args_str=args_str,
             check_or_apply_tensor=apply_tensor,
             do_compatibility=do_compatibility,
