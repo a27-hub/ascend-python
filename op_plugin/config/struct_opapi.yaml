@@ -51,10 +51,10 @@
 - func: adaptive_max_pool2d.out(Tensor self, int[2] output_size, *, Tensor(a!) out, Tensor(b!) indices) -> (Tensor(a!), Tensor(b!))
   version: base
   out:
-    size: op_infer::max_pool2d_out_size(self, output_size)
+    size: max_pool2d_out_size(self, output_size)
     dtype: self
   indices:
-    size: op_infer::max_pool2d_out_size(self, output_size)
+    size: max_pool2d_out_size(self, output_size)
     dtype: at::ScalarType::Long
   exec: aclnnAdaptiveMaxPool2d
 
@@ -82,7 +82,7 @@
 - func: addr(Tensor self, Tensor vec1, Tensor vec2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
   version: base
   result:
-    size: op_infer::addr_npu_output_size(self, vec1, vec2, beta, alpha)
+    size: addr_npu_output_size(self, vec1, vec2, beta, alpha)
     dtype: at::native::result_type({self, vec1, vec2})
   exec: aclnnAddr
 
@@ -100,13 +100,13 @@
 - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
   version: base
   result0:
-    size: op_infer::rms_norm_npu_output_size(x1, gamma)[0]
+    size: rms_norm_npu_output_size(x1, gamma)[0]
     dtype: x1
   result1:
-    size: op_infer::rms_norm_npu_output_size(x1, gamma)[1]
+    size: rms_norm_npu_output_size(x1, gamma)[1]
     dtype: at::kFloat
   result2:
-    size: op_infer::rms_norm_npu_output_size(x1, gamma)[0]
+    size: rms_norm_npu_output_size(x1, gamma)[0]
     dtype: x1
   exec: aclnnAddRmsNorm
 
@@ -117,7 +117,7 @@
 - func: amax.out(Tensor self, int[1] dim=[], bool keepdim=False, *, Tensor(a!) out) -> Tensor(a!)
   version: base
   out:
-    size: op_infer::reduce_ops_npu_output_size(self, dim, keepdim)
+    size: reduce_ops_npu_output_size(self, dim, keepdim)
     dtype: self
   exec: aclnnAmax
 
@@ -128,26 +128,26 @@
 - func: amin.out(Tensor self, int[1] dim=[], bool keepdim=False, *, Tensor(a!) out) -> Tensor(a!)
   version: base
   out:
-    size: op_infer::reduce_ops_npu_output_size(self, dim, keepdim)
+    size: reduce_ops_npu_output_size(self, dim, keepdim)
     dtype: self
   exec: aclnnAmin
 
 - func: _aminmax(Tensor self) -> (Tensor, Tensor)
   version: base
   result0:
-    size: op_infer::reduce_ops_npu_output_size(self, self.sizes(), false)
+    size: reduce_ops_npu_output_size(self, get_dimlist_for_tensor(self), false)
     dtype: self
   result1:
-    size: op_infer::reduce_ops_npu_output_size(self, self.sizes(), false)
+    size: reduce_ops_npu_output_size(self, get_dimlist_for_tensor(self), false)
     dtype: self
   exec: aclnnAminmaxAll
 
 - func: _aminmax.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor, Tensor)
   version: base
   result0:
-    size: op_infer::reduce_ops_npu_output_size(self, {dim}, keepdim)
+    size: reduce_ops_npu_output_size(self, {dim}, keepdim)
     dtype: self
   result1:
-    size: op_infer::reduce_ops_npu_output_size(self, {dim}, keepdim)
+    size: reduce_ops_npu_output_size(self, {dim}, keepdim)
     dtype: self
   exec: aclnnAminmaxDim

@@ -20,6 +20,8 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+using namespace op_plugin::utils;
+using namespace op_infer;
 
 ${op_api_definition}
 
