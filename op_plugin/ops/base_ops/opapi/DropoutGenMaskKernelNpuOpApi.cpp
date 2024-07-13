@@ -69,4 +69,39 @@ at::Tensor _npu_dropout_gen_mask(const at::Tensor &self, at::IntArrayRef size, d
     }
     return mask;
 }
+
+at::Tensor npu_dropout_gen_mask(at::IntArrayRef size, double p, c10::optional<at::ScalarType> dtype_opt,
+                                c10::optional<c10::Layout> layout_opt, c10::optional<c10::Device> device_opt,
+                                c10::optional<bool> pin_memory_opt)
+{
+    DO_COMPATIBILITY(aclnnDropoutGenMaskV2, acl_op::npu_dropout_gen_mask(size, p, dtype_opt, layout_opt, device_opt,
+                                                                         pin_memory_opt));
+    c10::TensorOptions options = c10::TensorOptions().dtype(dtype_opt)
+                                                     .device(device_opt)
+                                                     .layout(layout_opt)
+                                                     .pinned_memory(pin_memory_opt);
+    const int64_t BYTE_BIT = 8;
+    const int64_t DATA_ALIGN = 128;
+    // DropOutGenMask use seed and seed1 to generator a seed, like this:
+    //  seed1   seed
+    // 127~64   63~0
+    // so, we set seed1 = 0 to ensure the seed which user set is equal to the seed
+    // used by the operator DropOutGenMask
+    const auto gen = at_npu::detail::getDefaultNPUGenerator();
+    auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
+    // At present, the default value of random number may be very large,
+    // which will cause overflow in graph mode, so we set seed = 0 to avoid it.
+    const uint64_t seed = pair.first;
+    const uint64_t offset = pair.second;
+    int64_t numels = c10::multiply_integers(size);
+    uint64_t length = (static_cast<uint64_t>(numels) + DATA_ALIGN - 1) / DATA_ALIGN * DATA_ALIGN / BYTE_BIT;
+    at::Tensor mask = npu_preparation::apply_tensor_without_format(at::IntArrayRef{length},
+                                                                options.dtype(at::kByte));
+
+    auto scalarType = c10::typeMetaToScalarType(options.dtype());
+    aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnDropoutGenMaskV2, size, p, seed, offset, dataType, mask);
+    return mask;
+}
+
 }  // namespace op_api
