@@ -11,22 +11,33 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestDynamicQuant(TestCase):
-    def supported_op_exec(self, inputRaw, smoothScalesDummy):
-        inputFp32 = inputRaw * smoothScalesDummy
+    def supported_op_exec(self, inputRaw, smoothScalesDummy=None, is_symmetrical=True):
+        if smoothScalesDummy is not None:
+            inputFp32 = inputRaw * smoothScalesDummy
         inputFp32 = inputFp32.float()
-        inputAbs = inputFp32.abs()
-        inputMax = inputAbs.max(dim=-1, keepdim=True)[0]
-        scaleNpu = inputMax / 127
+        if is_symmetrical:
+            inputAbs = inputFp32.abs()
+            inputMax = inputAbs.max(dim=-1, keepdim=True)[0]
+            scaleNpu = inputMax / 127
+            offsetNpu = 0
+        else:
+            inputMax = inputAbs.max(dim=-1, keepdim=True)[0]
+            inputMin = inputAbs.min(dim=-1, keepdim=True)[0]
+            scaleNpu = (inputMax - inputMin) / 255
+            offsetNpu = 127 - inputMax / scaleNpu
         try:
-            inputScaled = inputFp32 / scaleNpu
+            inputScaled = inputFp32 / scaleNpu + offsetNpu
         except ZeroDivisionError as err:
             raise err
         outputNpu = inputScaled.round()
 
-        return [outputNpu.to(torch.int8), scaleNpu.squeeze(-1).float()]
+        if is_symmetrical:
+            return [outputNpu.to(torch.int8), scaleNpu.squeeze(-1).float()]
+        else:
+            return [outputNpu.to(torch.int8), scaleNpu.squeeze(-1).float(), offsetNpu.squeeze(-1).float()]
 
-    def custom_op_exec(self, inputNpu, smoothScalesNpu):
-        return torch_npu.npu_dynamic_quant(inputNpu, smooth_scales=smoothScalesNpu)
+    def custom_op_exec(self, inputNpu, smoothScalesNpu, is_symmetrical=True):
+        return torch_npu.npu_dynamic_quant(inputNpu, smooth_scales=smoothScalesNpu, is_symmetrical=is_symmetrical)
 
     def generate_input(self, inputShape, dtype="float16"):
         inputDummy = np.random.random(inputShape)
@@ -48,6 +59,16 @@ class TestDynamicQuant(TestCase):
         customOutput = self.custom_op_exec(inputDummy.clone(), smoothScalesDummy.clone())
         self.assertTensorsSlowEqual(supportedOutput[0], customOutput[0], 1)
         self.assertRtolEqual(supportedOutput[1], customOutput[1], 0.0001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_dynamic_quant_not_symmetrical(self, device="npu"):
+        inputDummy, smoothScalesDummy = self.generate_input([4, 2048, 1024])
+
+        supportedOutput = self.supported_op_exec(inputDummy.clone(), smoothScalesDummy.clone(), False)
+        customOutput = self.custom_op_exec(inputDummy.clone(), smoothScalesDummy.clone())
+        self.assertTensorsSlowEqual(supportedOutput[0], customOutput[0], 1)
+        self.assertRtolEqual(supportedOutput[1], customOutput[1], 0.0001)
+        self.assertRtolEqual(supportedOutput[2], customOutput[2], 0.0001)
 
 if __name__ == "__main__":
     run_tests()
