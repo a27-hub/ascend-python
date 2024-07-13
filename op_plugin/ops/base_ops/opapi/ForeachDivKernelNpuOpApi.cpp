@@ -26,8 +26,8 @@ void _split_and_exec_npu_cmd_div(at::TensorList& tensors1, at::TensorList& tenso
 
     size_t loop_time = tensor_count / max_tensor_count;
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivList, tensors1, tensors2, result_list);
-            return;
+        EXEC_NPU_CMD(aclnnForeachDivList, tensors1, tensors2, result_list);
+        return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
@@ -115,9 +115,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
 
     // Type Check
     auto scalar_type = tensors[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
+    TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
+                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
 
     std::vector<at::Tensor> result;
     
@@ -142,9 +141,8 @@ void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     }
 
     auto scalar_type = tensors[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
+    TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
+                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
     _split_and_exec_npu_cmd_div_scalar_list(tensors, scalars, tensors, true);
 }
 
@@ -159,9 +157,9 @@ void _split_and_exec_npu_cmd_div_scalar(at::TensorList& tensors1, const at::Scal
     at::Scalar scalar_ = op_api::adaptToDouble(scalar, tensors1);
 
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivScalar, tensors1, scalar_, result_list);
-            return;
-        }
+        EXEC_NPU_CMD(aclnnForeachDivScalar, tensors1, scalar_, result_list);
+        return;
+    }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
@@ -183,9 +181,8 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
     auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
+    TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
+                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
     _split_and_exec_npu_cmd_div_scalar(self, scalar, self, true);
 }
 
@@ -199,9 +196,8 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
 
     // Type Check
     auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
+    TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
+                scalar_type == at::ScalarType::BFloat16, "input must be half, float or bfloat16");
 
     std::vector<at::Tensor> result(self.size());
     auto iterRes = result.data();

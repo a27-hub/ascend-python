@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-void _split_and_exec_npu_cmd_add_scalar(const at::TensorList tensors1, const at::Scalar& scalar,
+void _split_and_exec_npu_cmd_add_scalar(const at::TensorList tensors1, const at::Scalar &scalar,
                                         at::TensorList result_list, bool is_inplace)
 {
     size_t tensor_count = tensors1.size();
@@ -29,8 +29,8 @@ void _split_and_exec_npu_cmd_add_scalar(const at::TensorList tensors1, const at:
     at::Scalar scalar_ = op_api::adaptToDouble(scalar, tensors1);
 
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachAddScalar, tensors1, scalar_, result_list);
-            return;
+        EXEC_NPU_CMD(aclnnForeachAddScalar, tensors1, scalar_, result_list);
+        return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
@@ -46,7 +46,7 @@ void _split_and_exec_npu_cmd_add_scalar(const at::TensorList tensors1, const at:
     }
 }
 
-std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar& scalar)
+std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar &scalar)
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at::native::can_use_fast_route(self, scalar, false)) {
@@ -66,7 +66,7 @@ std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar
     return result;
 }
 
-void _foreach_add_(const at::TensorList self, const at::Scalar& scalar)
+void _foreach_add_(const at::TensorList self, const at::Scalar &scalar)
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at::native::can_use_fast_route(self, scalar, false)) {
