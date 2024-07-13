@@ -4189,7 +4189,7 @@ custom:
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api
     version: 1,11, 2.0, 2.1, 2.2, 2.3, 2.4
     kernel: op_api/KernelNpuOpApi.cpp
-  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias=None, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
     impl_ns: acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: 1,11, 1,11, 2.0, 2.0, 2.1, 2.1, 2.2, 2.2, 2.3, 2.3, 2.4, 2.4
     kernel: acl_op/KernelNpu.cpp, op_api/KernelNpuOpApi.cpp

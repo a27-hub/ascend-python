@@ -86,5 +86,28 @@ class TestNPUAddLayerNorm(TestCase):
         self.assertRtolEqual(supported_output.rstd, custom_output.rstd)
         self.assertRtolEqual(supported_output.x, custom_output.x)
 
+    @SupportedDevices(['Ascend910B'])
+    def test_add_layer_norm_gamma_mix_dtype(self, device="npu"):
+        if device is None:
+            device = get_npu_device()
+        cpu_input_x1 = np.random.uniform(0, 100, [1, 1024, 8192]).astype(np.float16)
+        cpu_input_x2 = np.random.uniform(0, 100, [1, 1024, 8192]).astype(np.float16)
+        cpu_input_gamma = np.random.uniform(0, 1, [8192]).astype(np.float32)
+        cpu_input_beta = np.random.uniform(0, 1, [8192]).astype(np.float32)
+
+        npu_input_x1 = torch.from_numpy(cpu_input_x1).to(device)
+        npu_input_x2 = torch.from_numpy(cpu_input_x2).to(device)
+        npu_input_gamma = torch.from_numpy(cpu_input_gamma).to(device)
+        npu_input_beta = torch.from_numpy(cpu_input_beta).to(device)
+
+        supported_output = self.supported_op_exec(cpu_input_x1, cpu_input_x2, cpu_input_gamma, cpu_input_beta)
+        custom_output = self.custom_op_exec(npu_input_x1, npu_input_x2, npu_input_gamma, npu_input_beta)
+
+        self.assertEqual(supported_output.x.dtype, "float32")
+        self.assertRtolEqual(supported_output.y, custom_output.y)
+        self.assertRtolEqual(supported_output.mean, custom_output.mean)
+        self.assertRtolEqual(supported_output.rstd, custom_output.rstd)
+        self.assertRtolEqual(supported_output.x, custom_output.x)
+
 if __name__ == "__main__":
     run_tests()
