@@ -23,7 +23,6 @@
   version: base
   exec: aclnnInplaceAcosh
 
-
 - func: ceil.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
   version: base
   out:
@@ -151,3 +150,90 @@
     size: reduce_ops_npu_output_size(self, {dim}, keepdim)
     dtype: self
   exec: aclnnAminmaxDim
+
+- func: asinh(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.dtype()'
+  exec: aclnnAsinh
+
+- func: asinh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnAsinh
+
+- func: asinh_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAsinh
+
+- func: asin(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat: self.dtype()'
+    name: self
+  exec: aclnnAsin
+
+- func: asin.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    name: self
+  exec: aclnnAsin
+
+- func: asin_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAsin
+
+- func: atan2(Tensor self, Tensor other) -> Tensor
+  version: base
+  result:
+    size: broadcast_ops_npu_output_size(self, other)
+    dtype: 'isIntegralType(at::native::result_type(self, other), true) ? at::kFloat: at::native::result_type(self, other)'
+  exec: aclnnAtan2
+
+- func: atan2.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: broadcast_ops_npu_output_size(self, other)
+  exec: aclnnAtan2
+
+- func: atan2_(Tensor(a!) self, Tensor other) -> Tensor(a!)
+  version: base
+  exec: aclnnaclnnInplaceAtan2Atan2
+
+- func: atan(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+  exec: aclnnAtan
+
+- func: atan.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnAtan
+
+- func: atan_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAtan
+
+- func: atanh(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+  exec: aclnnAtanh
+
+- func: atanh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnAtanh
+
+- func: atanh_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAtanh
