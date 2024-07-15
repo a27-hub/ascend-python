@@ -61,6 +61,8 @@ class ResInfo:
             else:
                 size = info.pop('size', None)
                 dtype = info.pop('dtype', None)
+                size =  name if size is None and kind == SchemaKind.out else size
+                dtype =  name if dtype is None and kind == SchemaKind.out else dtype
                 if size is None:
                     raise RuntimeError(f"The {name}'s size  is None in {f.func.name}")
                 if dtype is None:

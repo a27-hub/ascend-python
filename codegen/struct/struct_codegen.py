@@ -53,6 +53,7 @@ ${return_type} ${func_name}(${args_str}) {
     std::cout<<"in struct "<<"${test_name}"<<std::endl;
     return op_api::${func_name_out}(${args_str_out});
 }
+
 """)
 
 
@@ -63,7 +64,7 @@ DO_COMPATIBILITY(${aclnnname}, acl_op::${func_name}(${args_exprs_str}));
 
 APPLY_TENSOR = CodeTemplate("""\
 at::Tensor ${result_name} = npu_preparation::apply_tensor_without_format(${size},
-                            ${dtype});
+                                                            ${dtype});
 """)
 
 
@@ -86,6 +87,12 @@ def filt_op_branch(struct_ops: Dict) -> Dict:
     return filt_ops
 
 
+def remove_empty_lines(text):
+    lines = text.split('\n')
+    struct_code = '\n'.join(line for line in lines if line.strip())
+    return struct_code + '\n\n'
+
+
 def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[StructInfo]:
     with open(path, 'r') as struct_file:
         struct_ops = yaml.safe_load(struct_file)
@@ -96,15 +103,16 @@ def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[
     return struct_infos
 
 
-def gen_size_dtype_map(resinfos: List['ResInfo']) -> Tuple[Dict[str, str],Dict[str,str]]:
+def gen_size_dtype_map(resinfos: List['ResInfo']) -> Tuple[Dict[str, str], Dict[str, str]]:
     size_map: Dict[str, str] = defaultdict(None)
     dtype_map: Dict[str, str] = defaultdict(None)
     for resinfo in resinfos:
         if size_map.get(resinfo.size) == None:
-            size_map[resinfo.size] = f"output_size{len(size_map)}"
+            size_map[resinfo.size] = f"output_size_{len(size_map)}"
         if dtype_map.get(resinfo.dtype) == None:
-            dtype_map[resinfo.dtype] = f"output_dtype{len(dtype_map)}"
+            dtype_map[resinfo.dtype] = f"output_dtype_{len(dtype_map)}"
     return size_map, dtype_map
+
 
 def compute_op_api_definition(struct: StructInfo):
     f = struct.func
@@ -142,8 +150,10 @@ def compute_op_api_definition(struct: StructInfo):
 
         size_map, dtype_map = gen_size_dtype_map(res_infos)
 
-        define_size = "".join([f"auto {name} = {size};\n" for size, name in size_map.items()])
-        define_dtype = "".join([f"auto {name} = {dtype};\n" for dtype, name in dtype_map.items()])
+        define_size = "".join(
+            [f"auto {name} = {size};\n" for size, name in size_map.items()])
+        define_dtype = "".join(
+            [f"auto {name} = {dtype};\n" for dtype, name in dtype_map.items()])
         define_size_or_dtype = "".join([define_size, define_dtype])
 
         if kind == SchemaKind.out:
@@ -175,17 +185,18 @@ def compute_op_api_definition(struct: StructInfo):
 
         apply_tensor = "".join(apply_tensor_list)
 
-    return [ACLNN_FUNCTIONS_DEFINITION.substitute(
-            return_type=return_type,
-            func_name=name,
-            define_size_or_dtype=define_size_or_dtype,
-            test_name=struct.name,
-            args_str=args_str,
-            check_or_apply_tensor=apply_tensor,
-            do_compatibility=do_compatibility,
-            aclnnargs=struct.cmd_args,
-            result=struct.return_args,
-            infer_name=infer_name)]
+    return [remove_empty_lines(
+            ACLNN_FUNCTIONS_DEFINITION.substitute(
+                return_type=return_type,
+                func_name=name,
+                define_size_or_dtype=define_size_or_dtype,
+                test_name=struct.name,
+                args_str=args_str,
+                check_or_apply_tensor=apply_tensor,
+                do_compatibility=do_compatibility,
+                aclnnargs=struct.cmd_args,
+                result=struct.return_args,
+                infer_name=infer_name))]
 
 
 def gen_op_api(
