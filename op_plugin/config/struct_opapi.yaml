@@ -505,3 +505,27 @@
     size: gamma
     dtype: at::kFloat
   exec: aclnnDeepNormGrad
+
+- func: diag(Tensor self, int diagonal=0) -> Tensor
+  version: base
+  structured_delegate: diag.out
+
+- func: diag.out(Tensor self, int diagonal=0, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: diag_npu_output_size_opapi(self, diagonal)
+    dtype: self
+  exec: aclnnDiag
+
+- func: dot(Tensor self, Tensor tensor) -> Tensor
+  version: base
+  out:
+    size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
+    dtype: self
+  exec: aclnnDot
+
+- func: dot.out(Tensor self, Tensor tensor, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
+  exec: aclnnDot
