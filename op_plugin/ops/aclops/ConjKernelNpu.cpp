@@ -17,7 +17,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-#if defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4
+#if defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4 || defined VERSION_V2R5
 at::Tensor _conj(const at::Tensor& self)
 {
     TORCH_CHECK(false, "conj operator is not support" + OPS_ERROR(ErrCode::NOT_SUPPORT));

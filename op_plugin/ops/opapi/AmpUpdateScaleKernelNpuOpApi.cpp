@@ -18,7 +18,7 @@
 
 namespace op_api {
 
-#if defined VERSION_V1R11 || defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4
+#if defined VERSION_V1R11 || defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4 || defined VERSION_V2R5
 at::Tensor& _amp_update_scale_(
     at::Tensor& current_scale,
     at::Tensor& growth_tracker,

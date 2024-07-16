@@ -18,7 +18,7 @@
 
 namespace op_api {
 
-#if defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4
+#if defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4 || defined VERSION_V2R5
 at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor& result)
 {
     TORCH_WARN_ONCE(
