@@ -424,3 +424,84 @@
 - func: clamp_max_.Tensor(Tensor(a!) self, Tensor max) -> Tensor(a!)
   version: base
   exec: aclnnInplaceClampMaxTensor
+
+- func: col2im(Tensor self, SymInt[2] output_size, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride) -> Tensor
+  version: v2.1, v2.2, v2.3, v2.4, v2.5
+  result:
+    size: im2col_backward_npu_output_size(self, output_size, kernel_size)
+    dtype: self
+  exec: aclnnIm2colBackward
+
+- func: col2im.out(Tensor self, SymInt[2] output_size, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride, *, Tensor(a!) out) -> Tensor(a!)
+  version: v2.1, v2.2, v2.3, v2.4, v2.5
+  out:
+    size: im2col_backward_npu_output_size(self, output_size, kernel_size)
+  exec: aclnnIm2colBackward  
+
+- func: col2im(Tensor self, int[2] output_size, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride) -> Tensor
+  version: v1.11
+  result:
+    size: im2col_backward_npu_output_size(self, output_size, kernel_size)
+    dtype: self
+  exec: aclnnIm2colBackward
+
+
+- func: col2im.out(Tensor self, int[2] output_size, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride, *, Tensor(a!) out) -> Tensor(a!)
+  version: v1.11
+  out:
+    size: im2col_backward_npu_output_size(self, output_size, kernel_size)
+  exec: aclnnIm2colBackward  
+
+- func: cosh(Tensor self) -> Tensor
+  out:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+  exec: aclnnCosh
+
+- func: cosh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: self
+  exec: aclnnCosh
+
+- func: cosh_(Tensor(a!) self) -> Tensor(a!)
+  exec: aclnnInplaceCosh
+
+- func: cos(Tensor self) -> Tensor
+  version: base
+  resutl:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+  exec: aclnnCos
+
+- func: cos.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnCos
+
+- func: cos_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceCos
+
+- func: _ctc_loss_backward(Tensor grad, Tensor log_probs, Tensor targets, int[] input_lengths, int[] target_lengths, Tensor neg_log_likelihood, Tensor log_alpha, int blank, bool zero_infinity=False) -> Tensor
+  version: base
+  result:
+    size: log_probs
+    dtype: grad
+  exec: aclnnCtcLossBackward
+
+- func: npu_deep_norm_backward(Tensor dy, Tensor x, Tensor gx, Tensor gamma, Tensor mean, Tensor rstd, float alpha=0.3) -> (Tensor, Tensor, Tensor, Tensor)
+  version: base
+  result0:
+    size: x
+    dtype: x
+  result1:
+    size: gx
+    dtype: gx 
+  result2:
+    size: gamma
+    dtype: at::kFloat
+  result3:
+    size: gamma
+    dtype: at::kFloat
+  exec: aclnnDeepNormGrad
