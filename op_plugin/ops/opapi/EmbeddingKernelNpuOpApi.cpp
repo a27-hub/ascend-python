@@ -23,7 +23,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 #if defined VERSION_V1R11
 at::Tensor embedding(const at::Tensor& weight, const at::Tensor& indices, int64_t padding_idx, bool scale_grad_by_freq,
-                     bool sparse) {
+                     bool sparse)
+{
   DO_COMPATIBILITY(aclnnEmbedding, acl_op::embedding(weight, indices, padding_idx, scale_grad_by_freq, sparse));
   // calculate the output size
   auto output_size = op_infer::array_to_small_vector(indices.sizes());
@@ -42,7 +43,8 @@ at::Tensor embedding_symint(
     const at::Tensor& indices,
     c10::SymInt padding_idx,
     bool scale_grad_by_freq,
-    bool sparse) {
+    bool sparse)
+{
     DO_COMPATIBILITY(aclnnEmbedding, acl_op::embedding_symint(weight, indices, padding_idx, scale_grad_by_freq, sparse));
     // calculate the output size
     auto output_size = op_infer::array_to_small_vector(indices.sizes());

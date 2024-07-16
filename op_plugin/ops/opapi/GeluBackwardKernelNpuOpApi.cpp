@@ -29,7 +29,7 @@ at::Tensor gelu_backward(const at::Tensor& grad, const at::Tensor& self) {
     auto output_dtype = at::native::result_type(grad, self);
     // construct the output tensor of the NPU
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(output_size,
-                                                                        self.options().dtype(output_dtype));
+        self.options().dtype(output_dtype));
     // dispatch hostAPI
     EXEC_NPU_CMD(aclnnGeluBackward, grad, self, grad_input);
     return grad_input;
@@ -45,7 +45,7 @@ at::Tensor gelu_backward(const at::Tensor& grad, const at::Tensor& self, c10::st
     auto output_dtype = at::native::result_type(grad, self);
     // construct the output tensor of the NPU
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(output_size,
-                                                                        self.options().dtype(output_dtype));
+        self.options().dtype(output_dtype));
     // dispatch hostAPI
     EXEC_NPU_CMD(aclnnGeluBackward, grad, self, grad_input);
     return grad_input;

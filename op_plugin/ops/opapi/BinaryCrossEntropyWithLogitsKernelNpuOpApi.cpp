@@ -24,7 +24,7 @@ at::Tensor binary_cross_entropy_with_logits(const at::Tensor& self, const at::Te
                                             const c10::optional<at::Tensor>& weight_opt,
                                             const c10::optional<at::Tensor>& pos_weight_opt, int64_t reduction) {
     DO_COMPATIBILITY(aclnnBinaryCrossEntropyWithLogits,
-                    acl_op::binary_cross_entropy_with_logits(self, target, weight_opt, pos_weight_opt, reduction));
+        acl_op::binary_cross_entropy_with_logits(self, target, weight_opt, pos_weight_opt, reduction));
 
     // calculate the output size
     at::IntArrayRef outputSize;
