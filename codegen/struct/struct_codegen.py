@@ -80,9 +80,12 @@ at::namedinference::propagate_names(${result_name}, ${infer_func});
 
 def filt_op_branch(struct_ops: Dict) -> Dict:
     filt_ops = []
+    pytorch_version = PYTORCH_VERSION.split('.')
+    version = f"v{pytorch_version[0]}.{pytorch_version[1]}"
     for struct in struct_ops:
         branch = struct.pop('version', 'base')
-        if branch == 'base' or branch == PYTORCH_VERSION:
+        branch_list = branch.split(',')
+        if 'base' in branch_list or version in branch_list:
             filt_ops.append(struct)
     return filt_ops
 
