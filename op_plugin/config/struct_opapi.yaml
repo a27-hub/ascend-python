@@ -335,3 +335,92 @@
     dtype: self
   exec: aclnnChannelShuffle
 
+- func: clamp.out(Tensor self, Scalar? min=None, Scalar? max=None, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: self
+  exec: aclnnClamp
+
+- func: clamp(Tensor self, Scalar? min=None, Scalar? max=None) -> Tensor
+  version: base
+  structured_delegate: clamp.out
+
+- func: clamp_(Tensor(a!) self, Scalar? min=None, Scalar? max=None) -> Tensor(a!)
+  version: base
+  structured_delegate: clamp.out
+
+- func: clamp.Tensor_out(Tensor self, Tensor? min=None, Tensor? max=None, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: clamp_npu_output_size(self, min, max)
+  exec: aclnnClampTensor
+
+- func: clamp.Tensor(Tensor self, Tensor? min=None, Tensor? max=None) -> Tensor
+  version: base
+  result:
+    size: clamp_npu_output_size(self, min, max)
+    dtype: self
+  exec: aclnnClampTensor
+
+- func: clamp_.Tensor(Tensor(a!) self, Tensor? min=None, Tensor? max=None) -> Tensor(a!)
+  version: base
+  structured_delegate: clamp.Tensor_out
+
+- func: clamp_min.out(Tensor self, Scalar min, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: self
+  exec: aclnnClampMin
+
+- func: clamp_min(Tensor self, Scalar min) -> Tensor
+  version: base
+  structured_delegate: clamp_min.out
+
+- func: clamp_min_(Tensor(a!) self, Scalar min) -> Tensor(a!)
+  version: base
+  structured_delegate: clamp_min.out
+
+- func: clamp_min.Tensor_out(Tensor self, Tensor min, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: self
+  exec: aclnnClampMinTensor
+ 
+- func: clamp_min.Tensor(Tensor self, Tensor min) -> Tensor
+  version: base
+  structured_delegate: clamp_min.Tensor_out
+
+- func: clamp_min_.Tensor(Tensor(a!) self, Tensor min) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceClampMinTensor
+
+- func: clamp_max(Tensor self, Scalar max) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnClampMax
+
+- func: clamp_max_(Tensor(a!) self, Scalar max) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceClampMax
+
+- func: clamp_max.Tensor_out(Tensor self, Tensor max, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: op_infer::broadcast_ops_npu_output_size(self, max)
+  exec: aclnnClampMaxTensor
+
+- func: clamp_max.Tensor(Tensor self, Tensor max) -> Tensor
+  version: base
+  result:
+    size: op_infer::broadcast_ops_npu_output_size(self, max)
+    dtype: self
+  exec: aclnnClampMaxTensor
+
+- func: clamp_max_.Tensor(Tensor(a!) self, Tensor max) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceClampMaxTensor
