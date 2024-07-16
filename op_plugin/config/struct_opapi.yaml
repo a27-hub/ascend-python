@@ -301,3 +301,37 @@
     dtype: target
   exec: aclnnBinaryCrossEntropyWithLogitsBackward
 
+- func: bitwise_not(Tensor self) -> Tensor
+  version: base
+  structured_delegate: bitwise_not.out
+
+- func: bitwise_not.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: self
+    name: self
+  exec: aclnnBitwiseNot
+
+- func: bitwise_not_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  structured_delegate: bitwise_not.out
+
+- func: celu(Tensor self, Scalar alpha=1.0) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnCelu
+
+- func: celu_(Tensor(a!) self, Scalar alpha=1.0) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceCelu
+
+- func: channel_shuffle(Tensor self, int groups) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnChannelShuffle
+
