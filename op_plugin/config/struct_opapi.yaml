@@ -155,7 +155,7 @@
   version: base
   result:
     size: self
-    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.dtype()'
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
   exec: aclnnAsinh
 
 - func: asinh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -172,7 +172,7 @@
   version: base
   result:
     size: self
-    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat: self.dtype()'
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat: self.scalar_type()'
     name: self
   exec: aclnnAsin
 
@@ -237,3 +237,67 @@
 - func: atanh_(Tensor(a!) self) -> Tensor(a!)
   version: base
   exec: aclnnInplaceAtanh
+
+- func: batch_norm_backward_elemt(Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor? weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count) -> Tensor
+  version: base
+  result:
+    size: input
+    dtype: input
+  exec: aclnnBatchNormElemtBackward
+
+- func: batch_norm_gather_stats_with_counts(Tensor input, Tensor mean, Tensor invstd, Tensor? running_mean, Tensor? running_var, float momentum, float eps, Tensor counts) -> (Tensor, Tensor)
+  version: base
+  result0:
+    size: '{input.size(1)}'
+    dtype: 'input.scalar_type() == mean.scalar_type() && input.scalar_type() == at::kHalf? at::kHalf: at::kFloat'
+  result1:
+    size: '{input.size(1)}'
+    dtype: 'input.scalar_type() == mean.scalar_type() && input.scalar_type() == at::kHalf? at::kHalf: at::kFloat'
+  exec: aclnnBatchNormGatherStatsWithCounts
+
+- func: native_batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)
+  version: base
+  result0:
+    size: input
+    dtype: input
+  result1:
+    size: 'training? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}: c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+    dtype: 'training? at::kFloat: input.scalar_type()'
+  result2:
+    size: 'training? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}: c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+    dtype: 'training? at::kFloat: input.scalar_type()'
+  exec: aclnnBatchNorm
+
+- func: native_batch_norm.out(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, *, Tensor(a!) out, Tensor(b!) save_mean, Tensor(c!) save_invstd) -> (Tensor(a!), Tensor(b!), Tensor(c!))
+  version: base
+  exec: aclnnBatchNorm
+
+- func: binary_cross_entropy_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight=None, int reduction=Mean) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnBinaryCrossEntropyBackward
+
+- func: binary_cross_entropy_backward.grad_input(Tensor grad_output, Tensor self, Tensor target, Tensor? weight=None, int reduction=Mean, *, Tensor(a!) grad_input) -> Tensor(a!)
+  version: base
+  exec: aclnnBinaryCrossEntropyBackward 
+
+- func: binary_cross_entropy(Tensor self, Tensor target, Tensor? weight=None, int reduction=Mean) -> Tensor
+  version: base
+  result:
+    size: 'reduction == at::Reduction::None? input_same_output_size(self): at::ArrayRef<int64_t>()'
+    dtype: self
+  exec: aclnnBinaryCrossEntropy
+
+- func: binary_cross_entropy.out(Tensor self, Tensor target, Tensor? weight=None, int reduction=Mean, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  exec: aclnnBinaryCrossEntropy
+
+- func: npu_binary_cross_entropy_with_logits_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight_opt, Tensor? pos_weight_opt, int reduction) -> Tensor
+  version: base
+  result:
+    size: target
+    dtype: target
+  exec: aclnnBinaryCrossEntropyWithLogitsBackward
+
