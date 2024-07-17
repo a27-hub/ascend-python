@@ -529,3 +529,100 @@
   out:
     size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
   exec: aclnnDot
+
+- func: elu_backward.grad_input(Tensor grad_output, Scalar alpha, Scalar scale, Scalar input_scale, bool is_result, Tensor self_or_result, *, Tensor(a!) grad_input) -> Tensor(a!)
+  version: base
+  grad_input:
+    size: grad_output
+  exec: aclnnEluBackward
+
+- func: elu_backward(Tensor grad_output, Scalar alpha, Scalar scale, Scalar input_scale, bool is_result, Tensor self_or_result) -> Tensor
+  version: base
+  result:
+    size: grad_output
+    dtype: grad_output
+  exec: aclnnEluBackward
+
+- func: elu(Tensor self, Scalar alpha=1, Scalar scale=1, Scalar input_scale=1) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnElu
+
+- func: elu.out(Tensor self, Scalar alpha=1, Scalar scale=1, Scalar input_scale=1, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnElu
+
+- func: elu_(Tensor(a!) self, Scalar alpha=1, Scalar scale=1, Scalar input_scale=1) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceElu
+
+- func: embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor
+  version: v2.1, v2.2, v2.3, v2.4, v2.5
+  result:
+    size: '{num_weights, grad_output.size(-1)}'
+    dtype: grad_output
+  exec: aclnnEmbeddingDenseBackward
+
+- func: embedding_dense_backward(Tensor grad_output, Tensor indices, int num_weights, int padding_idx, bool scale_grad_by_freq) -> Tensor
+  version: v1.11
+  result:
+    size: '{num_weights, grad_output.size(-1)}'
+    dtype: grad_output
+  exec: aclnnEmbeddingDenseBackward
+
+- func: erfc(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+  exec: aclnnErfc
+
+- func: erfc.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnErfc
+
+- func: erfc_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceErfc
+
+- func: erfinv(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'at::isFloatingType(self.scalar_type()) ? self.scalar_type(): at::kFloat'
+  exec: aclnnErfinv
+
+- func: erfinv.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnErfinv
+
+- func: erfinv_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceErfinv
+
+- func: erf(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+  exec: aclnnErf
+
+- func: erf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnErf
+
+- func: erf_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceErf
+
+
