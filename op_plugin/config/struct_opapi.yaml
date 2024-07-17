@@ -625,4 +625,130 @@
   version: base
   exec: aclnnInplaceErf
 
+- func: exp2(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::ScalarType::Float: self.scalar_type()'
+  exec: aclnnExp2
 
+- func: exp2.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnExp2
+
+- func: exp2_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceExp2
+
+- func: exp(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat: self.scalar_type()'
+  exec: aclnnExp
+
+- func: exp.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnExp
+
+- func: exp_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceExp
+
+- func: expm1(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isFloatingType(self.scalar_type())? self.scalar_type(): at::kFloat'
+  exec: aclnnExpm1
+
+- func: expm1.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnExpm1 
+
+- func: expm1_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceExpm1
+
+- func: fill_diagonal_(Tensor(a!) self, Scalar fill_value, bool wrap=False) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceFillDiagonal
+
+- func: flip(Tensor self, int[] dims) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnFlip  
+
+- func: floor(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnFloor
+
+- func: floor.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnFloor 
+
+- func: floor_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceFloor
+
+- func: fmod.Tensor(Tensor self, Tensor other) -> Tensor
+  version: base
+  result:
+    size: broadcast_ops_npu_output_size(self, other)
+    dtype: at::native::result_type(self, other)
+  exec: aclnnFmodTensor 
+
+- func: fmod.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: broadcast_ops_npu_output_size(self, other)
+  exec: aclnnFmodTensor
+
+- func: fmod_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceFmodTensor
+
+- func: fmod.Scalar(Tensor self, Scalar other) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnFmodScalar 
+
+- func: fmod.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+  exec: aclnnFmodScalar 
+
+- func: fmod_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceFmodScalar
+
+- func: frac(Tensor self) -> Tensor
+  version: base
+  structured_delegate: frac.out
+
+- func: frac.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    dtype: self
+  exec: aclnnFrac 
+
+- func: frac_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceFrac
