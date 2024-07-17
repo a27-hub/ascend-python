@@ -19,6 +19,7 @@
 
 namespace op_api {
 
+#if defined VERSION_V2R1 || defined VERSION_V2R2 || defined VERSION_V2R3 || defined VERSION_V2R4 || defined VERSION_V2R5
 std::vector<at::Tensor> _foreach_clamp_max(at::TensorList tensors1, at::TensorList tensors2)
 {
     return op_api::_foreach_minimum(tensors1, tensors2);
@@ -51,4 +52,5 @@ void _foreach_clamp_max_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalar
     op_api::_foreach_minimum_(tensors, scalars);
     return;
 }
+#endif
 }  // namespace op_api
