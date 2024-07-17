@@ -533,6 +533,66 @@ official:
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/ForeachRoundOffNumberKernelNpuOpApi.cpp
+  - func: _foreach_reciprocal_(Tensor(a!)[] self) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachReciprocalKernelNpuOpApi.cpp
+  - func: _foreach_reciprocal(Tensor[] tensors) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachReciprocalKernelNpuOpApi.cpp
+  - func: _foreach_zero_(Tensor(a!)[] self) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
+    version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachZeroInplaceKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachClampMaxKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachClampMaxKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachClampMaxKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachClampMaxKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max.List(Tensor[] self, Tensor[] other) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachClampMaxKernelNpuOpApi.cpp
+  - func: _foreach_clamp_max_.List(Tensor(a!)[] self, Tensor[] other) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min.List(Tensor[] self, Tensor[] other) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
+  - func: _foreach_clamp_min_.List(Tensor(a!)[] self, Tensor[] other) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachMaximumKernelNpuOpApi.cpp
   - func: _fused_adamw_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] exp_avgs, Tensor(d!)[] exp_avg_sqs, Tensor(e!)[] max_exp_avg_sqs, Tensor[] state_steps, *, float lr, float beta1, float beta2, float weight_decay, float eps, bool amsgrad, bool maximize, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()
     impl_ns: op_api, op_api
     version: v2.1, v2.2
@@ -1643,11 +1703,11 @@ official:
   - func: embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor
     impl_ns: acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4, v2.5, v2.5
-    kernel: aclops/EmbeddingBackwardKernelNpu.cpp, opapi/EmbeddingBackwardKernelNpuOpApi.cpp
+    kernel: aclops/EmbeddingDenseBackwardKernelNpu.cpp, opapi/EmbeddingDenseBackwardKernelNpuOpApi.cpp
   - func: embedding_dense_backward(Tensor grad_output, Tensor indices, int num_weights, int padding_idx, bool scale_grad_by_freq) -> Tensor
     impl_ns: acl_op, op_api
     version: v1.11, v1.11
-    kernel: aclops/EmbeddingBackwardKernelNpu.cpp, opapi/EmbeddingBackwardKernelNpuOpApi.cpp
+    kernel: aclops/EmbeddingDenseBackwardKernelNpu.cpp, opapi/EmbeddingDenseBackwardKernelNpuOpApi.cpp
   - func: embedding_renorm_(Tensor(a!) self, Tensor indices, float max_norm, float norm_type) -> Tensor(a!)
     impl_ns: acl_op, op_api, acl_op, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4, v2.5, v2.5
@@ -5839,10 +5899,6 @@ tocpu:
     version: v1.11, v2.0
   - func: _foreach_log_
     version: v1.11, v2.0
-  - func: _foreach_reciprocal
-    version: v1.11, v2.0
-  - func: _foreach_reciprocal_
-    version: v1.11, v2.0
   - func: _foreach_sin
     version: v1.11, v2.0
   - func: _foreach_sin_
@@ -5858,8 +5914,6 @@ tocpu:
   - func: _foreach_tanh
     version: v1.11, v2.0
   - func: _foreach_tanh_
-    version: v1.11, v2.0
-  - func: _foreach_zero_
     version: v1.11, v2.0
   - func: _linalg_inv_out_helper_
     version: v1.11
