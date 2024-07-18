@@ -19,9 +19,35 @@
     dtype: out
   exec: aclnnAcosh
 
+- func: acosh(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+  exec: aclnnAcosh
+
 - func: acosh_(Tensor(a!) self) -> Tensor(a!)
   version: base
   exec: aclnnInplaceAcosh
+
+- func: acos(Tensor self) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+    name: self
+  exec: aclnnAcos
+
+- func: acos.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: self
+    name: self
+  exec: aclnnAcos
+
+- func: acos_(Tensor(a!) self) -> Tensor(a!)
+  version: base
+  exec: aclnnInplaceAcos
 
 - func: ceil.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
   version: base
