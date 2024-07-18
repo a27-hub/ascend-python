@@ -156,7 +156,7 @@ at::Tensor scaled_dot_product_attention(
                 (query.size(0) == key.size(0) && query.size(3) == key.size(3) && key.size(0) == value.size(0) &&
                 key.size(1) == value.size(1) && key.size(2) == value.size(2) && key.size(3) == value.size(3)) &&
                 (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= FIA_N_LIMIT) &&
-                (query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) <= 64) &&
+                ((key.size(1) != 0 && query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) <= 64) || key.size(1) == 0) &&
                 c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
                 c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
                 int64_t head_num = query.size(1);
