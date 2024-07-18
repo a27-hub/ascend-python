@@ -166,7 +166,7 @@ at::Tensor scaled_dot_product_attention(
                 int64_t next_tockens = is_causal ? 0 : TOKEN_MAX;
                 int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
                 c10::optional<at::Tensor> nulltensor = c10::nullopt;
-                c10::OptionalSymIntArrayRef nulllen = c10::nullopt;
+                at::OptionalSymIntArrayRef nulllen = c10::nullopt;
                 auto output =
                     at_npu::native::custom_ops::npu_fused_infer_attention_score(query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor,
                                                                                 nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
