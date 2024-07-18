@@ -778,3 +778,55 @@
 - func: frac_(Tensor(a!) self) -> Tensor(a!)
   version: base
   exec: aclnnInplaceFrac
+
+- func: gcd.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
+  version: base
+  out:
+    size: broadcast_ops_npu_output_size(self, other)
+  exec: aclnnGcd
+
+- func: glu_backward(Tensor grad_output, Tensor self, int dim) -> Tensor
+  version: base
+  result:
+    size: self
+    dtype: self
+  exec: aclnnGluBackward
+
+- func: glu_backward.grad_input(Tensor grad_output, Tensor self, int dim, *, Tensor(a!) grad_input) -> Tensor(a!)
+  version: base
+  grad_input:
+    size: self
+    dtype: grad_output
+  exec: aclnnGluBackward
+
+- func: glu(Tensor self, int dim=-1) -> Tensor
+  result:
+    size: glu_npu_output_size(self, dim)
+    dtype: self
+  exec: aclnnGlu
+
+- func: glu.out(Tensor self, int dim=-1, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: glu_npu_output_size(self, dim)
+  exec: aclnnGlu
+
+- func: grid_sampler_2d_backward(Tensor grad_output, Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners, bool[2] output_mask) -> (Tensor, Tensor)
+  out0:
+    size: input
+    dtype: input
+  out1:
+    size: grid
+    dtype: grid
+  exec: aclnnGridSampler2DBackward
+
+- func: grid_sampler_2d(Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners) -> Tensor
+  out0:
+    size: '{input.size(0), input.size(1), grid.size(1), grid.size(2)}'
+    dtype: input
+  exec: aclnnGridSampler2D
+
+- func: grid_sampler_3d(Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners) -> Tensor
+  out0:
+    size: '{input.size(0), input.size(1), grid.size(1), grid.size(2), grid.size(3)}'
+    dtype: input
+  exec: aclnnGridSampler3D
