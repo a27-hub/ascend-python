@@ -147,7 +147,7 @@ at::Tensor scaled_dot_product_attention(
                                                              keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
                                                              nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
-    } else if ((!query.requires_grad() || !key.requires_grad() || !value.requires_grad()) &&
+    } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
                 (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
                 (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 ==0 &&
