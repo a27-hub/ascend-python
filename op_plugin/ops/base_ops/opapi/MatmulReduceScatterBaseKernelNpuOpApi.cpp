@@ -39,7 +39,7 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &self, const at::Tensor &
                 "world_size should be 2 or 4 or 8, but the actual value is ", world_size, OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(self.dim() == 2 && x2.dim() == 2, "Both inputs of mm are required to be 2D, but the actual inputs are ",
                 self.dim(), "D and ", x2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
-    if (GetDebugMode() != 1) {
+    if (GetDebugMode() != 4) { // 非纯通信
         TORCH_CHECK(self.size(1) == x2.size(0),
                     "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ",
                     self.size(1), " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
@@ -50,7 +50,7 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &self, const at::Tensor &
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
     auto output_size = {self.size(0) / world_size, x2.size(1)};
-    if (GetDebugMode() == 1) { // 仅计算
+    if (GetDebugMode() == 1) { // 纯计算
         output_size = {self.size(0), x2.size(1)};
     }
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
