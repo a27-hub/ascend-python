@@ -16,12 +16,27 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+namespace {
+uint8_t GetDebugMode()
+{
+    auto debugModeEnv = getenv("ASCEND_MC2_DEBUG_MODE");
+    uint8_t debugMode = 0;
+    if (debugModeEnv != nullptr) {
+        debugMode = std::atoi(debugModeEnv);
+    }
+    return debugMode;
+}
+}
+
 namespace op_api {
 
 static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size_gather_mm(const at::Tensor &x1, const at::Tensor &x2,
                                                                            int64_t world_size, int64_t gather_index)
 {
     auto out_x = gather_index == 0 ? x1.size(0) * world_size : x1.size(0);
+    if (GetDebugMode() == 1) { // 纯计算
+        out_x = out_x / world_size;
+    }
     auto out_y = x2.size(1);
     return {out_x, out_y};
 }
@@ -49,7 +64,7 @@ std::tuple<at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self
     auto out_gather_size = get_output_size_gather(self, x2, world_size, gather_index);
     auto out_gather_mm = at_npu::native::OpPreparation::apply_tensor_without_format(out_gather_mm_size, self.options());
     at::Tensor out_gather = at::empty({0}, self.options());
-    if (gather_output) {
+    if (gather_output || GetDebugMode() == 4) { // 纯通信
         out_gather = at_npu::native::OpPreparation::apply_tensor_without_format(out_gather_size, self.options());
     }
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
