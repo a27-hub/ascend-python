@@ -15,7 +15,7 @@ class TestForeachCeil(TestCase):
         "bfloat16" : torch.bfloat16,
     }
 
-    def assert_equal(self, cpu_outs, npu_outs):
+    def assert_equal_bfloat16(self, cpu_outs, npu_outs):
         for cpu_out, npu_out in zip(cpu_outs, npu_outs):
             if (cpu_out.shape != npu_out.shape):
                 self.fail("shape error")
@@ -25,7 +25,7 @@ class TestForeachCeil(TestCase):
             if not result:
                 self.fail("result error!")
         return True
-    
+
     def create_tensors(self, tensor_nums, dtype):
         cpu_tensors = []
         npu_tensors = []

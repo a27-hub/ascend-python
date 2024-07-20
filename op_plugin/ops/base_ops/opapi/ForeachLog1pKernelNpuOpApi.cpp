@@ -48,6 +48,7 @@ void _split_and_exec_npu_cmd_log1p(const at::TensorList tensors1, at::TensorList
 void _foreach_log1p_(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachLog1p, at::native::foreach_tensor_log1p_slow_(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_log1p_slow_(self);
     }
@@ -67,6 +68,7 @@ void _foreach_log1p_(const at::TensorList self)
 std::vector<at::Tensor> _foreach_log1p(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachLog1p, at::native::foreach_tensor_log1p_slow(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_log1p_slow(self);
     }
