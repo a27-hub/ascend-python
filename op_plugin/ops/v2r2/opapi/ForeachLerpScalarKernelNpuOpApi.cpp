@@ -75,6 +75,8 @@ std::vector<at::Tensor> exec_npu_cmd(at::TensorList tensors1, at::TensorList ten
 void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2, const at::Scalar& weight)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
+    DO_COMPATIBILITY(aclnnForeachLerpScalar,
+                     at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight));
     if (!at::native::can_use_fast_route({tensors1, tensors2}, weight)) {
         return at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight);
     }
@@ -84,6 +86,8 @@ void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2
 std::vector<at::Tensor> _foreach_lerp(const at::TensorList tensors1, const at::TensorList tensors2, const at::Scalar& weight)
 {
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
+    DO_COMPATIBILITY(aclnnForeachLerpScalar,
+                     at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight));
     if (!at::native::can_use_fast_route({tensors1, tensors2}, weight)) {
         return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);
     }

@@ -160,6 +160,8 @@ void _foreach_minimum_(at::TensorList tensors, const at::Scalar& scalar)
 std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachMinimumScalarList,
+                     at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, false)) {
         return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow(tensors, scalars);
     }
@@ -179,6 +181,8 @@ std::vector<at::Tensor> _foreach_minimum(at::TensorList tensors, at::ArrayRef<at
 void _foreach_minimum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachMinimumScalarList,
+                     at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow_(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, false)) {
         return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow_(tensors, scalars);
     }
