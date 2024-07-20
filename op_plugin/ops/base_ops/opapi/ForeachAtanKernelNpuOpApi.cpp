@@ -46,6 +46,7 @@ void _split_and_exec_npu_cmd_atan(at::TensorList tensors1, at::TensorList result
 void _foreach_atan_(const at::TensorList self_atan)
 {
     at::native::check_foreach_api_restrictions(self_atan);
+    DO_COMPATIBILITY(aclnnForeachAtan, at::native::foreach_tensor_atan_slow_(self_atan));
     if (!at::native::can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
         return at::native::foreach_tensor_atan_slow_(self_atan);
     }
@@ -61,6 +62,7 @@ void _foreach_atan_(const at::TensorList self_atan)
 std::vector<at::Tensor> _foreach_atan(const at::TensorList self_atan)
 {
     at::native::check_foreach_api_restrictions(self_atan);
+    DO_COMPATIBILITY(aclnnForeachAtan, at::native::foreach_tensor_atan_slow(self_atan));
     if (!at::native::can_use_fast_route(self_atan) || at::native::has_integral_tensor(self_atan, true)) {
         return at::native::foreach_tensor_atan_slow(self_atan);
     }
