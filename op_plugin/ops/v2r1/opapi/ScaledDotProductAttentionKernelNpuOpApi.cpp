@@ -170,7 +170,9 @@ at::Tensor scaled_dot_product_attention(
                 if (query.size(2) == 1) {
                     is_causal = false;
                 } else {
-                    inner_precise = 2;
+                    if (!is_causal) {
+                        inner_precise = 2;
+                    }
                 }
                 c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
                 int64_t head_num = query.size(1);
