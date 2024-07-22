@@ -162,8 +162,8 @@ at::Tensor scaled_dot_product_attention(
                 1. It only supports the type of fp16 or bf16, and dim = BNSD_DIM
                 2. The shape [B, N1, S1, D] of the query is suppported, where B <= B_LIMIT, N1 <= FIA_N_LIMIT,
                     D <= D_LIMIT and must be a positive integer multiple of 16. 
-                3. The shape of the key and value should be the same, and dim = BNSD_DIM. For GQA, the key shape is [B, N2, S2, D], where 0 < N2 <= FIA_N_LIMIT, N1 is a positive integer
-                    multiple of N2 and N1/N2 <= 64.
+                3. The shape of the key and value should be the same, and dim = BNSD_DIM. For GQA, the key shape is [B, N2, S2, D],
+                    where 0 < N2 <= FIA_N_LIMIT, N1 is a positive integer multiple of N2 and N1/N2 <= 64.
                 4. The attn_mask supports only the bool data type, and shpae[-2] = S1, shpae[-1] = S2.
                 5. It only supports SocVersion after Ascend910B1. */
                 int64_t inner_precise = 0;
