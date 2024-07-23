@@ -938,3 +938,27 @@
     size: '{bins}'
     dtype: self
   exec: aclnnHistc
+
+- func: inverse(Tensor self) -> Tensor
+  out:
+    size: self
+    dtype: self
+  exec: aclnnInverse
+
+- func: inverse.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: self
+  exec: aclnnInverse
+
+- func: isclose(Tensor self, Tensor other, float rtol=1e-05, float atol=1e-08, bool equal_nan=False) -> Tensor
+  out:
+    size: 'at::isFloatingType(self.scalar_type()) && equal_nan? self.sizes(): broadcast_ops_npu_output_size(self, other)'
+    dtype: at::kBool
+  exec: aclnnIsClose
+
+- func: isfinite(Tensor self) -> Tensor
+  out:
+    size: self
+    dtype: at::kBool
+  exec: aclnnIsFinite
+
