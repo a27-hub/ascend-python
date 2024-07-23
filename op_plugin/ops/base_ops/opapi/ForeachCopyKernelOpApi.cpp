@@ -12,7 +12,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_calcu_util = at_npu::native::CalcuOpUtil;
 
 
-void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking=false)
+void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking = false)
 {
     if (non_blocking) {
         EXEC_NPU_CMD(aclnnForeachCopy, src, dst);
@@ -21,7 +21,7 @@ void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_bl
     }
 }
 
-void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool is_inplace, bool non_blocking=false)
+void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool is_inplace, bool non_blocking = false)
 {
     size_t tensor_count = src.size();
     size_t max_tensor_count = 1;
@@ -49,7 +49,7 @@ void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, b
     }
 }
 
-void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking=false)
+void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking = false)
 {
     at::native::check_foreach_api_restrictions(self);
     if (!at::native::can_use_fast_route(self)) {
