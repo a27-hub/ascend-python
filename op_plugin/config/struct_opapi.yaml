@@ -962,3 +962,89 @@
     dtype: at::kBool
   exec: aclnnIsFinite
 
+- func: isin.Scalar_Tensor_out(Scalar element, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
+    dtype: at::kBool
+  exec: aclnnIsInScalarTensor
+
+- func: isin.Tensor_Scalar(Tensor element, Scalar test_elements, *, bool assume_unique=False, bool invert=False) -> Tensor
+  out:
+    size: element
+    dtype: at::kBool
+  exec: aclnnIsInTensorScalar
+
+- func: isin.Tensor_Scalar_out(Tensor element, Scalar test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: element
+    dtype: at::kBool
+  exec: aclnnIsInTensorScalar
+
+- func: isneginf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: self
+  exec: aclnnIsNegInf
+
+- func: isposinf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: self
+  exec: aclnnIsPosInf
+
+- func: kl_div(Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor
+  out:
+    size: 'reduction == at::Reduction::None
+           ? broadcast_ops_npu_output_size(self.sizes(), target.sizes())
+           : at::ArrayRef<int64_t>()'
+    dtype: at::native::result_type(self, target)
+  exec: aclnnKlDiv
+
+- func: leaky_relu_backward(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result) -> Tensor
+  out:
+    size: self
+    dtype: self
+  exec: aclnnLeakyReluBackward
+
+- func: leaky_relu_backward.grad_input(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result, *, Tensor(a!) grad_input) -> Tensor(a!)
+  grad_input:
+    size: self
+  exec: aclnnLeakyReluBackward
+
+- func: leaky_relu(Tensor self, Scalar negative_slope=0.01) -> Tensor
+  structured_delegate: leaky_relu.out
+
+- func: leaky_relu.out(Tensor self, Scalar negative_slope=0.01, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: self
+    dtype: self
+  exec: aclnnLeakyRelu
+
+- func: leaky_relu_(Tensor(a!) self, Scalar negative_slope=0.01) -> Tensor(a!)
+  exec: aclnnInplaceLeakyRelu
+
+- func: lerp.Scalar(Tensor self, Tensor end, Scalar weight) -> Tensor
+  out:
+    size: broadcast_ops_npu_output_size(self, end)
+    dtype: self
+  exec: aclnnLerps
+
+- func: lerp.Tensor(Tensor self, Tensor end, Tensor weight) -> Tensor
+  out:
+    size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
+    dtype: self
+  exec: aclnnLerp
+
+- func: lerp_.Scalar(Tensor(a!) self, Tensor end, Scalar weight) -> Tensor(a!)
+  exec: aclnnInplaceLerps
+
+- func: lerp_.Tensor(Tensor(a!) self, Tensor end, Tensor weight) -> Tensor(a!)
+  exec: aclnnInplaceLerp
+
+- func: lerp.Scalar_out(Tensor self, Tensor end, Scalar weight, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: broadcast_ops_npu_output_size(self, end)
+  exec: aclnnLerps
+
+- func: lerp.Tensor_out(Tensor self, Tensor end, Tensor weight, *, Tensor(a!) out) -> Tensor(a!)
+  out:
+    size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
+  exec: aclnnLerp
