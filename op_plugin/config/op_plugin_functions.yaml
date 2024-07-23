@@ -237,6 +237,14 @@ official:
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/ForeachAbsKernelOpApi.cpp
+  - func: _foreach_sign_(Tensor(a!)[] self) -> ()
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachSignKernelOpApi.cpp
+  - func: _foreach_sign(Tensor[] tensors) -> Tensor[]
+    impl_ns: op_api, op_api, op_api, op_api, op_api
+    version: v2.1, v2.2, v2.3, v2.4, v2.5
+    kernel: opapi/ForeachSignKernelOpApi.cpp
   - func: _foreach_add.List(Tensor[] tensors1, Tensor[] tensors2, *, Scalar alpha=1) -> Tensor[]
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
