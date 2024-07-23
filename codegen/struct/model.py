@@ -190,7 +190,7 @@ class StructInfo:
                 for key in e.keys():
                     if key not in output_names:
                         raise ValueError(
-                            f"Result infomations contains invalid key: {key}")
+                            f"Result infomations contains invalid key: {key} in {schema_str}")
 
             results = ResInfo.parse(e, schema_function)
 
