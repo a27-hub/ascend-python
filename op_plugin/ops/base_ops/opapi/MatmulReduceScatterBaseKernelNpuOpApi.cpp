@@ -18,29 +18,29 @@
 
 namespace op_api {
 
-at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &self, const at::Tensor &x2, c10::string_view hcom,
+at::Tensor npu_mm_reduce_scatter_base(const at::Tensor &x1, const at::Tensor &x2, c10::string_view hcom,
                                       int64_t world_size, c10::string_view reduce_op,
                                       const c10::optional<at::Tensor> &bias, int64_t comm_turn)
 {
     TORCH_CHECK(world_size == 2 || world_size == 4 || world_size == 8,
                 "world_size should be 2 or 4 or 8, but the actual value is ", world_size, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(self.dim() == 2 && x2.dim() == 2, "Both inputs of mm are required to be 2D, but the actual inputs are ",
-                self.dim(), "D and ", x2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.size(1) == x2.size(0),
+    TORCH_CHECK(x1.dim() == 2 && x2.dim() == 2, "Both inputs of mm are required to be 2D, but the actual inputs are ",
+                x1.dim(), "D and ", x2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x1.size(1) == x2.size(0),
                 "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ",
-                self.size(1), " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.size(1) >= 256 && self.size(1) < 65535,
+                x1.size(1), " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x1.size(1) >= 256 && x1.size(1) < 65535,
                 "The K-axis should be in range [256, 65535), but the actual value is ",
-                self.size(1), OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
+                x1.size(1), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x1.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
-    auto output_size = {self.size(0) / world_size, x2.size(1)};
-    auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options());
+    auto output_size = {x1.size(0) / world_size, x2.size(1)};
+    auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, x1.options());
     char *reduce_op_ptr = const_cast<char *>(reduce_op.data());
     char *hcom_ptr = const_cast<char *>(hcom.data());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
-    EXEC_NPU_CMD(aclnnMatmulReduceScatter, self, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode,
+    EXEC_NPU_CMD(aclnnMatmulReduceScatter, x1, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode,
                  result);
     return result;
 }
