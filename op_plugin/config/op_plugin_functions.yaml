@@ -4817,7 +4817,7 @@ custom:
     impl_ns: acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api, acl_op, op_api
     version: v1.11, v1.11, v2.0, v2.0, v2.1, v2.1, v2.2, v2.2, v2.3, v2.3, v2.4, v2.4, v2.5, v2.5
     kernel: aclops/AddRmsNormKernelNpu.cpp, opapi/AddRmsNormKernelOpApi.cpp
-  - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
+  - func: npu_all_gather_base_mm(Tensor x1, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/AllGatherBaseMatmulKernelNpuOpApi.cpp
@@ -5331,7 +5331,7 @@ custom:
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/MatmulAllReduceBaseKernelNpuOpApi.cpp
     exposed: v1.11, v2.1, v2.4, v2.5
-  - func: npu_mm_reduce_scatter_base(Tensor self, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, int comm_turn=0) -> Tensor
+  - func: npu_mm_reduce_scatter_base(Tensor x1, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, int comm_turn=0) -> Tensor
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/MatmulReduceScatterBaseKernelNpuOpApi.cpp
