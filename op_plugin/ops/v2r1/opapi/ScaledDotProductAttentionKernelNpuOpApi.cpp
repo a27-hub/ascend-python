@@ -188,8 +188,7 @@ at::Tensor scaled_dot_product_attention(
                                                                                 nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
                                                                                 nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
                                                                                 nulltensor, nulltensor, nulltensor, nulllen, head_num, input_scale.as_float_unchecked(),
-                                                                                TOKEN_MAX, next_tockens, input_layout, head_num_kv, sparse_mode, inner_precise, 0, 0, 0,
-                                                                                0, false);
+                                                                                TOKEN_MAX, next_tockens, input_layout, head_num_kv, sparse_mode, inner_precise, 0, 0, 0, 0, false);
                 
                 return std::get<0>(output);
     }
