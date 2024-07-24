@@ -1813,6 +1813,10 @@ official:
    impl_ns: op_api
  - func: _foreach_tanh_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
+ - func: _foreach_sign(Tensor[] self) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_sign_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
  - func: _foreach_maximum.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_maximum_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
