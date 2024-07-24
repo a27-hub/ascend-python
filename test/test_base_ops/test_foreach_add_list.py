@@ -77,7 +77,7 @@ class TestForeachAddList(TestCase):
             cpu_output = torch._foreach_add(cpu_tensors[0], cpu_tensors[1], alpha=scalar)
             npu_output = torch._foreach_add(npu_tensors[0], npu_tensors[1], alpha=scalar)
 
-            self.assertRtolEqual(cpu_output, npu_output)
+            self.assert_equal_bfloat16(cpu_output, npu_output)
             
     @SupportedDevices(['Ascend910B'])
     def test_foreach_add_list_out_int32_shpae_tensor_num(self):
@@ -121,7 +121,7 @@ class TestForeachAddList(TestCase):
             torch._foreach_add_(cpu_tensors[0], cpu_tensors[1], alpha=scalar)
             torch._foreach_add_(npu_tensors[0], npu_tensors[1], alpha=scalar)
 
-            self.assertRtolEqual(cpu_tensors[0], npu_tensors[0])
+            self.assert_equal_bfloat16(cpu_tensors[0], npu_tensors[0])
             
     @SupportedDevices(['Ascend910B'])
     def test_foreach_add_list_inplace_int32_shpae_tensor_num(self):
