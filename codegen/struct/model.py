@@ -124,6 +124,8 @@ class StructInfo:
         funcname_map: Dict[str, NativeFunction] = {}
         struct_map: Dict[str, Dict] = {}
         for e in es:
+            e.pop('acl_op', None)
+            e.pop('op_api', None)
             schema_str = e.get('func', None)
             op_name = split_name_params(schema_str)[0]
             if op_name in funcname_map:
@@ -150,10 +152,10 @@ class StructInfo:
 
             if 'op_api' not in schema_function.impl_ns:
                 raise RuntimeError(f"The Aten function {schema_str} has no op_opi"
-                                   "in the impl_ns field of op_plugin_functions yaml")
+                                   " implement in op_plugin_functions yaml")
             acl_op = 'acl_op' in schema_function.impl_ns
 
-            structured_delegate = e.pop('structured_delegate', None)
+            structured_delegate = e['autogen'].pop('structured_delegate', None)
             if structured_delegate is not None:
                 if func_kind == SchemaKind.inplace:
                     struct_info = StructInfo(
@@ -168,7 +170,7 @@ class StructInfo:
                     e = struct_map[structured_delegate]
                     e.pop('func')
 
-            aclnn_arguments = e.pop('exec', None)
+            aclnn_arguments = e['autogen'].pop('exec', None)
 
             aclnn_arguments = [argument.strip()
                                for argument in aclnn_arguments.split(',')]
@@ -187,12 +189,12 @@ class StructInfo:
 
             if func_kind == SchemaKind.out:
                 output_names = cpp.return_names(schema_function)
-                for key in e.keys():
+                for key in e['autogen'].keys():
                     if key not in output_names:
                         raise ValueError(
                             f"Result infomations contains invalid key: {key} in {schema_str}")
 
-            results = ResInfo.parse(e, schema_function)
+            results = ResInfo.parse(e['autogen'], schema_function)
 
             if func_kind == SchemaKind.inplace:
                 return_argument = [

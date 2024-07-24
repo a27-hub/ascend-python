@@ -36,6 +36,10 @@ from .model import StructInfo, ResInfo
 # PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION')[:3]
 PYTORCH_VERSION = '2.1.0.post3'[:3]
 
+
+USED_KEYS = ['official', 'custom']
+
+
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str}) {
     std::cout<<"in struct "<<"${test_name}"<<std::endl;
@@ -89,6 +93,14 @@ def filt_op_branch(struct_ops: Dict) -> Dict:
             filt_ops.append(struct)
     return filt_ops
 
+def filt_op_branch1(struct_ops: Dict) -> Dict:
+    support_ops = []
+    for key in USED_KEYS:
+        support_ops += struct_ops[key]
+
+    filt_ops = list(filter(lambda x: 'autogen' in x.keys(), support_ops))
+    return filt_ops
+
 
 def remove_empty_lines(text):
     lines = text.split('\n')
@@ -100,7 +112,7 @@ def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[
     with open(path, 'r') as struct_file:
         struct_ops = yaml.safe_load(struct_file)
 
-    filt_ops = filt_op_branch(struct_ops)
+    filt_ops = filt_op_branch1(struct_ops)
     struct_infos = StructInfo.from_yaml(filt_ops, native_functions)
 
     return struct_infos
