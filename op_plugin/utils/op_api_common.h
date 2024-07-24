@@ -17,6 +17,7 @@
 #define TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
 
 #include <fstream>
+#include <chrono>
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <vector>
@@ -541,7 +542,10 @@ inline void UnInitCacheThreadLocal()
     }
 }
 
-template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *aclnn_api, void *phrase2, Args &&...args)
+void set_aclnn_deterministic(bool deterministic);
+
+template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *aclnn_api, void *phrase2,
+                                           bool deterministic, Args &&...args)
 {
     static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
@@ -562,6 +566,11 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
     add_param_to_buf(std::string(aclnn_api), args...);
+    auto start_time = std::chrono::high_resolution_clock::now();
+    add_param_to_buf(deterministic);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time);
+    std::cout << "pta add_param_to_buf : " << duration.count() << " ns" << std::endl;
     uint64_t hashId = calc_hash_id();
     setPTAHashKeyFunc(hashId);
     aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
@@ -657,7 +666,13 @@ auto DecodeDevice(Ts&... args) -> at::Device
         aclOpExecutor **executor_addr = &executor;                                                                     \
         InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                    \
         UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);            \
-        if (hit_cache(acl_stream, #aclnn_api, opApiFuncAddr, __VA_ARGS__)) {                                           \
+        auto start_time = std::chrono::high_resolution_clock::now();                                                   \
+        auto deterministic = at::globalContext().deterministicAlgorithms();                                            \
+        set_aclnn_deterministic(deterministic);                                                                        \
+        auto end_time = std::chrono::high_resolution_clock::now();                                                     \
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time);                   \
+        std::cout << "pta set deterministic : " << duration.count() << " ns" << std::endl;                             \
+        if (hit_cache(acl_stream, #aclnn_api, opApiFuncAddr, deterministic, __VA_ARGS__)) {                            \
             break;                                                                                                     \
         }                                                                                                              \
         at_npu::native::SetDeterministic();                                                                            \

@@ -19,6 +19,7 @@
 
 thread_local char g_hash_buf[g_hash_buf_size];
 thread_local int g_hash_offset = 0;
+static bool g_deterministicaclnn_oldstatus = false;
 constexpr int g_rShift33Bits = 33;
 constexpr uint64_t MIX_STEP1 = 18397679294719823053LLU;
 constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
@@ -26,6 +27,7 @@ constexpr int OWNER_ROOT_UID = 0;
 
 
 typedef void(*AddTensorAddrToCachedList) (void *addr);
+typedef void(*SetAclnnDeterministic) (bool);
 
 bool checkOwner(string cusLibPath)
 {
@@ -304,6 +306,19 @@ void add_param_to_buf(const char *c)
 }
 
 void add_param_to_buf() {}
+
+void set_aclnn_deterministic(bool deterministic)
+{
+    if (g_deterministicaclnn_oldstatus == deterministic) {
+        return;
+    }
+    static const auto setDeterministicAddr = GetOpApiFuncAddr("SetDeterministic");
+    TORCH_CHECK(setDeterministicAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
+    SetAclnnDeterministic setDeterministicFunc =
+        reinterpret_cast<SetAclnnDeterministic>(setDeterministicAddr);
+    setDeterministicFunc(deterministic);
+    g_deterministicaclnn_oldstatus = deterministic;
+}
 
 inline uint64_t rotating_left(uint64_t x, uint8_t n)
 {
