@@ -60,7 +60,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
         return;
     }
     // notice: foreach_copy_, has no real inplace, but here should give true to inplace config.
-    split_and_exec_npu_cmd_copy(self, src, true, non_blocking);
+    split_and_exec_npu_cmd_copy(self, src, true, true);
 }
 
 } // namespace at_npu
