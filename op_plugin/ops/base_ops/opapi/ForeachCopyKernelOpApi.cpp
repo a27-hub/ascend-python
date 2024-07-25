@@ -21,16 +21,13 @@ void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_bl
     }
 }
 
-void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool is_inplace, bool non_blocking)
+void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
     size_t tensor_count = src.size();
     size_t max_tensor_count = 1;
-    if (is_inplace) {
-        max_tensor_count = 48;
-    } else {
-        max_tensor_count = 24;
-    }
+    max_tensor_count = 48;
     size_t loop_time = tensor_count / max_tensor_count;
+
     if (tensor_count <= max_tensor_count) {
             exec_npu_cmd_copy(dst, src, non_blocking);
             return;
@@ -60,7 +57,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
         return;
     }
     // notice: foreach_copy_, has no real inplace, but here should give true to inplace config.
-    split_and_exec_npu_cmd_copy(self, src, true, true);
+    split_and_exec_npu_cmd_copy(self, src, true);
 }
 
 } // namespace at_npu
