@@ -29,6 +29,7 @@ OP_PLUGIN_HIDDEN int64_t make_warp_dim(int64_t dim, int64_t dim_post_expr);
 OP_PLUGIN_HIDDEN bool is_transpose_last_two_dims(const at::Tensor &tensor);
 OP_PLUGIN_HIDDEN bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_scalar_one(const c10::Scalar &scalar);
+OP_PLUGIN_HIDDEN bool is_cpu_scalar(const at::Tensor &tensor);
 OP_PLUGIN_HIDDEN float get_scalar_float_value(const c10::Scalar &scalar);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> convert_array_to_vector(c10::IntArrayRef intArray);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> get_dimlist_for_tensor(const at::Tensor &self);

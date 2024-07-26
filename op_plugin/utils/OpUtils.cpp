@@ -110,6 +110,14 @@ bool is_scalar_one(const c10::Scalar &scalar)
   }
 }
 
+bool is_cpu_scalar(const at::Tensor &tensor)
+{
+    if (tensor.dim() == 0 && !at_npu::key::isDeviceTensor(tensor)) {
+        return true;
+    }
+        return false;
+}
+
 float get_scalar_float_value(const c10::Scalar &scalar)
 {
   float value;
