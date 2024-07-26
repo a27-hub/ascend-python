@@ -15,6 +15,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include <ATen/native/ForeachUtils.h>
+#include "op_plugin/utils/custom_functions/opapi/foreach_op_utils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -47,6 +48,10 @@ void _split_and_exec_npu_cmd_asin(at::TensorList tensors1, at::TensorList result
 void _foreach_asin_(const at::TensorList self_asin)
 {
     at::native::check_foreach_api_restrictions(self_asin);
+    DO_COMPATIBILITY(aclnnForeachAsin, at::native::foreach_tensor_asin_slow_(self_asin));
+    if (!CheckSupport910bAnd910c(c10_npu::GetSocVersion())) {
+        return at::native::foreach_tensor_asin_slow_(self_asin);
+    }
     if (!at::native::can_use_fast_route(self_asin) || at::native::has_integral_tensor(self_asin, true)) {
         return at::native::foreach_tensor_asin_slow_(self_asin);
     }
@@ -62,6 +67,10 @@ void _foreach_asin_(const at::TensorList self_asin)
 std::vector<at::Tensor> _foreach_asin(const at::TensorList self_asin)
 {
     at::native::check_foreach_api_restrictions(self_asin);
+    DO_COMPATIBILITY(aclnnForeachAsin, at::native::foreach_tensor_asin_slow(self_asin));
+    if (!CheckSupport910bAnd910c(c10_npu::GetSocVersion())) {
+        return at::native::foreach_tensor_asin_slow(self_asin);
+    }
     if (!at::native::can_use_fast_route(self_asin) || at::native::has_integral_tensor(self_asin, true)) {
         return at::native::foreach_tensor_asin_slow(self_asin);
     }

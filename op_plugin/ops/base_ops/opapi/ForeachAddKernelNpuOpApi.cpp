@@ -15,6 +15,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/scalar_op_api.h"
+#include "op_plugin/utils/custom_functions/opapi/foreach_op_utils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -113,6 +114,10 @@ std::vector<at::Tensor> _foreach_add(at::TensorList tensors, at::ArrayRef<at::Sc
 {
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachAddScalarList, at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars));
+    if (!CheckSupport910aAnd910bAnd910c(c10_npu::GetSocVersion())) {
+        return at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars);
+    }
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars);
     }
@@ -133,6 +138,10 @@ void _foreach_add_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachAddScalarList, at::native::foreach_tensor_add_scalarlist_kernel_slow_(tensors, scalars));
+    if (!CheckSupport910aAnd910bAnd910c(c10_npu::GetSocVersion())) {
+        return at::native::foreach_tensor_add_scalarlist_kernel_slow_(tensors, scalars);
+    }
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         at::native::foreach_tensor_add_scalarlist_kernel_slow_(tensors, scalars);
         return;
