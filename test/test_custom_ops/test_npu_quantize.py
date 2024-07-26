@@ -63,6 +63,7 @@ class TestNPUQuantize(TestCase):
         npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 4, torch.quint8)
         self.assertRtolEqual(cpu_output1, npu_output1)
 
+
     def test_npu_quantize_30_30_30_30_30_2_uint8(self, device="npu"):
         datainfo = DataInfo(-1, 1, (30, 30, 30, 30), (30,), (30,), np.float16, np.float32, np.uint8)
         input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
