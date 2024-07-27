@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Huawei Technologies Co., Ltd
+// Copyright (c) 2023-2024 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -20,18 +20,22 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor gelu_backward(const at::Tensor& grad, const at::Tensor& self, c10::string_view approximate) {
-  DO_COMPATIBILITY(aclnnGeluBackward, acl_op::gelu_backward(grad, self));
-  // calculate the output size
-  auto output_size = op_infer::broadcast_ops_npu_output_size(grad, self);
-  // dtype promotion
-  auto output_dtype = at::native::result_type(grad, self);
-  // construct the output tensor of the NPU
-  at::Tensor grad_input = npu_preparation::apply_tensor_without_format(output_size,
-                                                                       self.options().dtype(output_dtype));
-  // dispatch hostAPI
-  EXEC_NPU_CMD(aclnnGeluBackward, grad, self, grad_input);
-  return grad_input;
+at::Tensor gelu_backward(const at::Tensor &grad, const at::Tensor &self, c10::string_view approximate)
+{
+    DO_COMPATIBILITY(aclnnGeluBackwardV2, acl_op::gelu_backward(grad, self));
+    std::string approximate_str = std::string(approximate);
+    TORCH_CHECK(!(approximate_str == "tanh" && approximate_str == "none"),
+        "approximate only supports to set none or tanh mode." + OPS_ERROR(ErrCode::PARAM));
+    // calculate the output size
+    auto output_size = op_infer::broadcast_ops_npu_output_size(grad, self);
+    // dtype promotion
+    auto output_dtype = at::native::result_type(grad, self);
+    // construct the output tensor of the NPU
+    at::Tensor grad_input =
+        npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
+    char *approximate_ptr = const_cast<char *>(approximate_str.c_str());
+    // dispatch hostAPI
+    EXEC_NPU_CMD(aclnnGeluBackwardV2, grad, self, approximate_ptr, grad_input);
+    return grad_input;
 }
-
 } // namespace op_api

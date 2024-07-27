@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Huawei Technologies Co., Ltd
+// Copyright (c) 2023-2024 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -16,15 +16,24 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-at::Tensor gelu_backward_common_nocheck(const at::Tensor& grad, const at::Tensor& self) {
-  at::Tensor grad_input = at_npu::native::OpPreparation::apply_tensor(self);
-  at_npu::native::OpCommand cmd;
-  cmd.Name("GeluGrad")
-      .Input(grad)
-      .Input(self)
-      .Input(grad)
-      .Output(grad_input)
-      .Run();
-  return grad_input;
+at::Tensor gelu_backward_common_nocheck(const at::Tensor &grad, const at::Tensor &self)
+{
+    at::Tensor grad_input = at_npu::native::OpPreparation::apply_tensor(self);
+    at_npu::native::OpCommand cmd;
+    cmd.Name("GeluGrad").Input(grad).Input(self).Input(grad).Output(grad_input).Run();
+    return grad_input;
+}
+
+at::Tensor gelu_backward_v2_common_nocheck(const at::Tensor &grad, const at::Tensor &self, c10::string_view approximate)
+{
+    at::Tensor grad_input = at_npu::native::OpPreparation::apply_tensor(self);
+    at_npu::native::OpCommand cmd;
+    cmd.Name("GeluGradV2")
+        .Input(grad)
+        .Input(self)
+        .Attr<std::string>("approximate", std::string(approximate).data())
+        .Output(grad_input)
+        .Run();
+    return grad_input;
 }
 } // namespace acl_op
