@@ -50,27 +50,33 @@ void _split_and_exec_npu_cmd_sign(const at::TensorList tensors1, at::TensorList 
 
 void _foreach_sign_(const at::TensorList self)
 {
+    printf("\n into pta\n");
     DO_COMPATIBILITY(aclnnForeachSign, at::native::foreach_tensor_sign_slow_(self));
+    printf("\n not COMPATIBILITY\n");
     at::native::check_foreach_api_restrictions(self);
 
     static const bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1;
     if (!is_support_nd_out || !at::native::can_use_fast_route(self)) {
+        printf("\n slow path\n");
         return at::native::foreach_tensor_sign_slow_(self);
     }
-    
+    printf("\n fast path\n");
     _split_and_exec_npu_cmd_sign(self, self, true);
 }
 
 
 std::vector<at::Tensor> _foreach_sign(const at::TensorList self)
 {
+    printf("\n into pta\n");
     DO_COMPATIBILITY(aclnnForeachSign, at::native::foreach_tensor_sign_slow(self));
+    printf("\n not COMPATIBILITY\n");
     at::native::check_foreach_api_restrictions(self);
 
     static const bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1;
     if (!is_support_nd_out || !at::native::can_use_fast_route(self)) {
+        printf("\n slow path\n");
         return at::native::foreach_tensor_sign_slow(self);
     }
 
@@ -82,7 +88,7 @@ std::vector<at::Tensor> _foreach_sign(const at::TensorList self)
         result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
-
+    printf("\n fast path\n");
     _split_and_exec_npu_cmd_sign(self, result_, false);
     return result;
 }
