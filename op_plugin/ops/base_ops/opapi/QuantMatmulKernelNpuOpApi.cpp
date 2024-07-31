@@ -77,6 +77,8 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
                             const c10::optional<at::Tensor>& offset, const c10::optional<at::Tensor>& pertoken_scale,
                             const c10::optional<at::Tensor>& bias, c10::optional<at::ScalarType> output_dtype)
 {
+    TORCH_CHECK(at_npu::native::FormatHelper::IsBaseFormatType(x2),
+                "x2 should be in the ND format, but is is ", npu_preparation::get_tensor_npu_format(x2));
     auto x1_dim_num = x1.dim();
     TORCH_CHECK(x1_dim_num >= X_MIN_DIM && x1_dim_num <= X_MAX_DIM, "x1 shape dim num should be within 2~6, but it is ",
                 x1_dim_num);
