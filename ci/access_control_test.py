@@ -15,6 +15,8 @@ import torch_npu
 BASE_DIR = Path(__file__).absolute().parent.parent
 TEST_DIR = os.path.join(BASE_DIR, 'test')
 
+modify_file_hash = {}
+
 
 class AccurateTest(metaclass=ABCMeta):
     @abstractmethod
@@ -40,20 +42,23 @@ class AccurateTest(metaclass=ABCMeta):
         return ut_files
 
     def get_ut_files(self, regex):
-        test_base_path = os.path.join(TEST_DIR, 'test_base_ops')
-        check_dir_path_readable(test_base_path)
-        ut_files = self.find_ut_by_regex(regex, test_base_path)
-
+        test_custom_path = os.path.join(TEST_DIR, 'test_custom_ops')
+        check_dir_path_readable(test_custom_path)
+        ut_files = self.find_ut_by_regex(regex, test_custom_path)
+        
         version_path = get_test_torch_version_path()
         test_version_path = os.path.join(TEST_DIR, version_path)
         check_dir_path_readable(test_version_path)
         version_ut_files = self.find_ut_by_regex(regex, test_version_path)
-        ut_files.extend(version_ut_files)
-
-        test_custom_path = os.path.join(TEST_DIR, 'test_custom_ops')
-        check_dir_path_readable(test_custom_path)
-        custom_ut_files = self.find_ut_by_regex(regex, test_custom_path)
-        ut_files.extend(custom_ut_files)
+        if not version_ut_files:
+            test_base_path = os.path.join(TEST_DIR, 'test_base_ops')
+            check_dir_path_readable(test_base_path)
+            base_ut_files = self.find_ut_by_regex(regex, test_base_path)
+            ut_files.extend(base_ut_files)
+        else:
+            for file in version_ut_files:
+                file_name = Path(file).name
+                modify_file_hash[file_name] = file
         return ut_files
 
 
@@ -75,7 +80,7 @@ class OpStrategy(AccurateTest):
         if filename.find('KernelNpu') >= 0: 
             feature_line = filename.split('KernelNpu')[0]
             features = re.findall('[A-Z][^A-Z]*', feature_line)
-            regex = '*' + '*'.join([f"{feature.lower()}" for feature in features]) + '*'
+            regex = '*' + '*'.join([f"{feature.lower()}" for feature in features]) + '.py'
             return self.get_ut_files(regex)
         return []
 
@@ -84,16 +89,18 @@ class DirectoryStrategy(AccurateTest):
     """
     Determine whether the modified files are test cases
     """
-    def identify(self, modify_file):
+    def identify(self, modify_file, ut_files):
         is_test_file = str(Path(modify_file).parts[0]) == "test" \
             and re.match("test_(.+).py", Path(modify_file).name)
-        if is_test_file:
-            ut_files = []
-            version_path = get_test_torch_version_path()
-            if str(Path(modify_file).parts[1]) in [version_path, "test_custom_ops", "test_base_ops"]:
-                ut_files.append(os.path.join(BASE_DIR, modify_file))
-            return ut_files
-        return []
+        version_path = get_test_torch_version_path()
+        if is_test_file and str(Path(modify_file).parts[1]) in [version_path, "test_custom_ops", "test_base_ops"]:
+            modify_file_path = os.path.join(BASE_DIR, modify_file)
+            modify_file_name = Path(modify_file).name
+            if modify_file_name in modify_file_hash:
+                if str(Path(modify_file).parts[1]) == version_path:
+                    modify_file_hash[modify_file_name] = modify_file_path
+            else:
+                modify_file_hash[modify_file_name] = modify_file_path
 
 
 class CoreTestStrategy(AccurateTest):
@@ -127,8 +134,10 @@ class TestMgr():
 
     def analyze(self):
         for modify_file in self.modify_files:
-            self.test_files['ut_files'] += DirectoryStrategy().identify(modify_file)
+            DirectoryStrategy().identify(modify_file, self.test_files['ut_files'])
             self.test_files['ut_files'] += OpStrategy().identify(modify_file)
+        for v in modify_file_hash.values():
+            self.test_files['ut_files'].append(v)
         unique_files = sorted(set(self.test_files['ut_files']))
 
         exist_ut_file = [

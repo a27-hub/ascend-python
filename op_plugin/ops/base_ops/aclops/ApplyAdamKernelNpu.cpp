@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -50,12 +49,12 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> apply_adam_out_npu_nocheck(
       .Output(var_out)
       .Output(m_out)
       .Output(v_out);
-  if (use_locking != c10::nullopt) {
-    cmd.Attr("use_locking", bool(use_locking));
-  }
-  if (use_nesterov != c10::nullopt) {
-    cmd.Attr("use_nesterov", bool(use_nesterov));
-  }
+    if (use_locking.has_value()) {
+        cmd.Attr("use_locking", use_locking.value());
+    }
+    if (use_nesterov.has_value()) {
+        cmd.Attr("use_nesterov", use_nesterov.value());
+    }
   cmd.Run();
   return std::tie(var_out, m_out, v_out);
 }
@@ -71,7 +70,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_apply_adam(
     const at::Tensor& grad,
     c10::optional<bool> use_locking,
     c10::optional<bool> use_nesterov) {
-  TORCH_CHECK(false, "npu_apply_adam is not implemented for Tensor");
+  TORCH_CHECK(false, "npu_apply_adam is not implemented for Tensor"
+      + OPS_ERROR(ErrCode::PARAM));
 }
 
 std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_apply_adam_out(

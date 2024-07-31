@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -27,7 +26,7 @@ at::Tensor npu_rotated_box_encode(
   at::Tensor result = npu_preparation::apply_tensor(self);
   at::Tensor weight_cpu = weight.to(at::Device(at::kCPU), at::kFloat);
   auto weight_ptr = weight_cpu.data_ptr<float>();
-  TORCH_CHECK(weight_ptr != nullptr, "weight_cpu is null")
+  TORCH_CHECK(weight_ptr != nullptr, "weight_cpu is null" + OPS_ERROR(ErrCode::VALUE))
   at::ArrayRef<float> weight_list(weight_ptr, weight_cpu.numel());
 
   at_npu::native::OpCommand cmd;

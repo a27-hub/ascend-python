@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -37,7 +36,8 @@ at::Tensor logical_or(const at::Tensor& self, const at::Tensor& other)
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
     if (at_npu::native::OpPreparation::IsCPUScalar(other)) {
         at::Scalar scalar = other.item();
-        auto cp_other = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, other.scalar_type());
+        auto cp_other = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, other.scalar_type(),
+                                                                             self.device());
         EXEC_NPU_CMD(aclnnLogicalOr, self, cp_other, result);
     } else {
         EXEC_NPU_CMD(aclnnLogicalOr, self, other, result);
@@ -51,7 +51,8 @@ at::Tensor& logical_or_(at::Tensor& self, const at::Tensor& other)
     npu_preparation::check_memory({self, other},{self});
     if (at_npu::native::OpPreparation::IsCPUScalar(other)) {
         at::Scalar scalar = other.item();
-        auto cp_other = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, other.scalar_type());
+        auto cp_other = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, other.scalar_type(),
+                                                                             self.device());
         EXEC_NPU_CMD(aclnnInplaceLogicalOr, self, cp_other);
     } else {
         EXEC_NPU_CMD(aclnnInplaceLogicalOr, self, other);

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -45,7 +44,12 @@ at::Tensor le(const at::Tensor &self, const at::Tensor &other)
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result =
         at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
-    EXEC_NPU_CMD(aclnnLeTensor, self, other, result);
+    if (at_npu::native::OpPreparation::IsCPUScalar(other)) {
+        const at::Scalar other_scalar = other.item();
+        EXEC_NPU_CMD(aclnnLeScalar, self, other_scalar, result);
+    } else {
+        EXEC_NPU_CMD(aclnnLeTensor, self, other, result);
+    }
     return result;
 }
 
@@ -73,7 +77,7 @@ at::Tensor &le_(at::Tensor &self, const at::Tensor &other)
         return op_api::le_(self, other.item());
     } else {
         TORCH_CHECK(self.device() == other.device(),
-                    "Expected all tensors to be on the same device, but found at least two devices");
+                    "Expected all tensors to be on the same device, but found at least two devices", OPS_ERROR(ErrCode::INTERNAL));
         at_npu::native::OpPreparation::CheckMemory({self, other}, {self});
         EXEC_NPU_CMD(aclnnInplaceLeTensor, self, other);
         return self;

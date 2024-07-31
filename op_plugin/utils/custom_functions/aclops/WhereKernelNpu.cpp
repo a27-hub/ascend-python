@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -34,7 +33,8 @@ at::Tensor &where_out_nocheck(at::Tensor &out, const at::Tensor &condition, cons
     }
 
     TORCH_CHECK(!(condition.scalar_type() != at::ScalarType::Byte && condition.scalar_type() != at::ScalarType::Bool),
-                "Expected condition to have ScalarType Byte, but got ScalarType ", toString(condition.scalar_type()));
+                "Expected condition to have ScalarType Byte, but got ScalarType ", toString(condition.scalar_type()),
+                OPS_ERROR(ErrCode::TYPE));
 
     at_npu::native::OpCommand cmd;
     cmd.Name("Select").Input(condition).Input(self_cp).Input(other_cp).Output(out).Run();
@@ -48,7 +48,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_expand_outplace(const at::Ten
 {
     for (auto &t : {to_expand1, to_expand2, to_expand3}) {
         if (!t.defined()) {
-            TORCH_CHECK(false, api_name, "(...) called with an undefined Tensor");
+            TORCH_CHECK(false, api_name, "(...) called with an undefined Tensor", OPS_ERROR(ErrCode::PARAM));
         }
     }
 

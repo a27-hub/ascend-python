@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -29,7 +28,7 @@ at::Tensor& linalg_svdvals_out(const at::Tensor& A, c10::optional<c10::string_vi
 }
 
 at::Tensor linalg_svdvals(const at::Tensor& A, c10::optional<c10::string_view> driver) {
-    TORCH_CHECK(A.dim() >= 2, "linalg_svdvals: The input tensor must have at least 2 dimensions.")
+    TORCH_CHECK(A.dim() >= 2, "linalg_svdvals: The input tensor must have at least 2 dimensions." + OPS_ERROR(ErrCode::PARAM))
     auto U = at::empty({0}, A.options());
     auto Vh = at::empty({0}, A.options());
     auto sizes = A.sizes().vec();

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -42,7 +41,7 @@ at::Tensor& affine_grid_generator_backward_nocheck(
   assist.select(-1, 0).copy_(_linspace_from_neg_one(grad, size[3], align_corners));
   assist.select(-1, 1).copy_(_linspace_from_neg_one(grad, size[2], align_corners).unsqueeze_(-1));
   assist.select(-1, 2).fill_(1);
-  AT_ASSERT(grad.sizes() == at::IntArrayRef({size[0], size[2], size[3], 2}));
+  AT_ASSERT(grad.sizes() == at::IntArrayRef({size[0], size[2], size[3], 2}), OPS_ERROR(ErrCode::VALUE));
 
   auto reassist = assist.view({size[0], size[2]*size[3], 3}).transpose(1, 2);
   auto grid = grad.view({size[0], size[2]*size[3], 2});
@@ -65,7 +64,8 @@ at::Tensor affine_grid_generator_backward(
     const at::Tensor& grad,
     at::IntArrayRef size,
     bool align_corners) {
-  TORCH_CHECK(size.size() == 4, "AffineGridGeneratorBackward needs 4d (spatial) input.")
+  TORCH_CHECK(size.size() == 4, "AffineGridGeneratorBackward needs 4d (spatial) input."
+      + OPS_ERROR(ErrCode::PARAM));
 
   c10::SmallVector<int64_t, SIZE> output_size = {size[0], 3, 2};
   at::Tensor result = npu_preparation::apply_tensor_with_format(grad, output_size, ACL_FORMAT_ND);

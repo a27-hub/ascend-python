@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License");
@@ -26,8 +25,13 @@ const static int MAX_EXPERT_NUM = 256;
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Tensor &weight2,
-    c10::string_view activation, c10::optional<at::IntArrayRef> expert_tokens, const c10::optional<at::Tensor> &bias1,
-    const c10::optional<at::Tensor> &bias2, c10::optional<int64_t> inner_precise)
+    c10::string_view activation, c10::optional<at::IntArrayRef> expert_tokens, c10::optional<at::IntArrayRef> expert_tokens_index,
+    const c10::optional<at::Tensor> &bias1, const c10::optional<at::Tensor> &bias2,
+    const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset,
+    const c10::optional<at::Tensor> &deq_scale1, const c10::optional<at::Tensor> &deq_scale2,
+    const c10::optional<at::Tensor> &antiquant_scale1, const c10::optional<at::Tensor> &antiquant_scale2,
+    const c10::optional<at::Tensor> &antiquant_offset1, const c10::optional<at::Tensor> &antiquant_offset2,
+    c10::optional<int64_t> inner_precise, c10::optional<at::ScalarType> output_dtype)
 {
     auto weight1_dim_num = weight1.dim();
     auto weight2_dim_num = weight2.dim();
@@ -41,37 +45,31 @@ at::Tensor npu_ffn(const at::Tensor &x, const at::Tensor &weight1, const at::Ten
     char *activation_ptr = const_cast<char *>(activation.data());
     const at::Tensor &bias1_real = bias1.value_or(at::Tensor());
     const at::Tensor &bias2_real = bias2.value_or(at::Tensor());
-    const at::Tensor &scale = at::Tensor();
-    const at::Tensor &offset = at::Tensor();
-    const at::Tensor &deq_scale1 = at::Tensor();
-    const at::Tensor &deq_scale2 = at::Tensor();
-    const at::Tensor &antiquant_scale1 = at::Tensor();
-    const at::Tensor &antiquant_scale2 = at::Tensor();
-    const at::Tensor &antiquant_offset1 = at::Tensor();
-    const at::Tensor &antiquant_offset2 = at::Tensor();
+    const at::Tensor &scale_real = scale.value_or(at::Tensor());
+    const at::Tensor &offset_real = offset.value_or(at::Tensor());
+    const at::Tensor &deq_scale1_real = deq_scale1.value_or(at::Tensor());
+    const at::Tensor &deq_scale2_real = deq_scale2.value_or(at::Tensor());
+    const at::Tensor &antiquant_scale1_real = antiquant_scale1.value_or(at::Tensor());
+    const at::Tensor &antiquant_scale2_real = antiquant_scale2.value_or(at::Tensor());
+    const at::Tensor &antiquant_offset1_real = antiquant_offset1.value_or(at::Tensor());
+    const at::Tensor &antiquant_offset2_real = antiquant_offset2.value_or(at::Tensor());
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     output_size[x.dim() - 1] = weight2.size(weight2.dim() - 1);
-    at::Tensor result = npu_preparation::apply_tensor_without_format(x, output_size);
-    int64_t inner_precise_val = inner_precise.has_value() ? inner_precise.value() : 0;
-    if (expert_tokens.has_value()) {
-        auto expert_tokens_real = expert_tokens.value();
-        auto token_size = expert_tokens_real.size();
-        TORCH_CHECK(token_size <= MAX_EXPERT_NUM, "expert_tokens should be smaller than 256, but it is ", token_size);
-        TORCH_CHECK(weight1_dim_num == EXPERT_WEIGHT_DIM && weight2_dim_num == EXPERT_WEIGHT_DIM,
-            "The dimension of weight(has expert_tokens) should be 3, but weight1_dim_num is ",
-            weight1_dim_num, ", weight2_dim_num is ", weight2_dim_num);
-        EXEC_NPU_CMD(aclnnFFN, x, weight1, weight2, expert_tokens_real, bias1_real, bias2_real,
-            scale, offset, deq_scale1, deq_scale2, antiquant_scale1, antiquant_scale2, antiquant_offset1,
-            antiquant_offset2, activation_ptr, inner_precise_val, result);
-    } else {
-        auto expert_tokens_empty = at::Tensor();
-        TORCH_CHECK(weight1_dim_num == NO_EXPERT_WEIGHT_DIM && weight2_dim_num == NO_EXPERT_WEIGHT_DIM,
-            "The dimension of weight(no expert_tokens) should be 2, but weight1_dim_num is ",
-            weight1_dim_num, ", weight2_dim_num is ", weight2_dim_num);
-        EXEC_NPU_CMD(aclnnFFN, x, weight1, weight2, expert_tokens_empty, bias1_real, bias2_real,
-            scale, offset, deq_scale1, deq_scale2, antiquant_scale1, antiquant_scale2, antiquant_offset1,
-            antiquant_offset2, activation_ptr, inner_precise_val, result);
+    c10::TensorOptions options = x.options().dtype(x.scalar_type());
+    if (deq_scale1.has_value()) {
+        options = x.options().dtype(output_dtype.value_or(at::kHalf));
     }
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
+    int64_t inner_precise_val = inner_precise.has_value() ? inner_precise.value() : 0;
+    auto expert_tokens_real = at::IntArrayRef{};
+    if (expert_tokens.has_value() || expert_tokens_index.has_value()) {
+        TORCH_CHECK(!(expert_tokens.has_value() && expert_tokens_index.has_value()), "expert_tokens and expert_tokens_index should not have the value simultaneously.");
+        expert_tokens_real = expert_tokens.has_value() ? expert_tokens.value() : expert_tokens_index.value();
+    }
+    auto tokens_index_flag = expert_tokens_index.has_value();
+    EXEC_NPU_CMD(aclnnFFNV2, x, weight1, weight2, expert_tokens_real, bias1_real, bias2_real,
+        scale_real, offset_real, deq_scale1_real, deq_scale2_real, antiquant_scale1_real, antiquant_scale2_real,
+        antiquant_offset1_real, antiquant_offset2_real, activation_ptr, inner_precise_val, tokens_index_flag, result);
 
     return result;
 }

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -46,8 +45,8 @@ at::Tensor index(const at::Tensor& self, const torch::List<c10::optional<at::Ten
   if (self.device().type() == at::kCPU) {
     return at::native::index(self, orig);
   }
-  at::native::checkIndexTensorTypes(orig);
-  auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig);
+  bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);
+  auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig, needCast, true);
   return index_high_dims_op_api(self, indices);
 }
 

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -50,11 +49,11 @@ at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& i
 at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& index,
     const at::Tensor& src, c10::string_view reduce, at::Tensor& result)
 {
-  npu_preparation::check_tensor({self, src, index}, result, self);
-  TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply");
-  int64_t reduction = get_reduce(reduce);
-  EXEC_NPU_CMD(aclnnScatter, self, dim, index, src, reduction, result);
-  return result;
+    npu_preparation::check_tensor({self, src, index}, result, self);
+    TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply", OPS_ERROR(ErrCode::PARAM));
+    int64_t reduction = get_reduce(reduce);
+    EXEC_NPU_CMD(aclnnScatter, self, dim, index, src, reduction, result);
+    return result;
 }
 
 at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& index,
@@ -70,11 +69,29 @@ at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& i
 at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& index,
     const at::Scalar& value, c10::string_view reduce, at::Tensor& result)
 {
-  npu_preparation::check_tensor({self, index}, result, self);
-  TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply");
-  int64_t reduction = get_reduce(reduce);
-  EXEC_NPU_CMD(aclnnScatterValue, self, dim, index, value, reduction, result);
-  return result;
+    npu_preparation::check_tensor({self, index}, result, self);
+    TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply", OPS_ERROR(ErrCode::PARAM));
+    int64_t reduction = get_reduce(reduce);
+    EXEC_NPU_CMD(aclnnScatterValue, self, dim, index, value, reduction, result);
+    return result;
+}
+
+at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Tensor &src)
+{
+    DO_COMPATIBILITY(aclnnInplaceScatter, acl_op::scatter_(self, dim, index_ex, src));
+    npu_preparation::check_tensor({self, src, index_ex}, self, self);
+    int64_t reduction = 0;
+    EXEC_NPU_CMD(aclnnInplaceScatter, self, dim, index_ex, src, reduction);
+    return self;
+}
+
+at::Tensor &scatter_(at::Tensor &self, int64_t dim, const at::Tensor &index_ex, const at::Scalar& value)
+{
+    DO_COMPATIBILITY(aclnnInplaceScatterValue, acl_op::scatter_(self, dim, index_ex, value));
+    npu_preparation::check_tensor({self, index_ex}, self, self);
+    int64_t reduction = 0;
+    EXEC_NPU_CMD(aclnnInplaceScatterValue, self, dim, index_ex, value, reduction);
+    return self;
 }
 }  // namespace op_api
 

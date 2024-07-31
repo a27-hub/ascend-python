@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -32,7 +31,7 @@ int64_t calc_shape_prod(const at::Tensor& self, at::IntArrayRef dim) {
       shape_prod *= self.size(i);
     }
   } else {
-    for (auto i = 0; i < dim.size(); i++) {
+    for (size_t i = 0; i < dim.size(); i++) {
       shape_prod *= self.size(dim[i]);
     }
   }

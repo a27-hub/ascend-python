@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -37,7 +36,7 @@ at::Tensor& dot_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, cons
 at::Tensor& dot_out(const at::Tensor& self, const at::Tensor& tensor, at::Tensor& result) {
     auto self_dtype = self.scalar_type();
     TORCH_CHECK(self_dtype != at::kInt && self_dtype != at::kByte && self_dtype != at::kChar,
-                "'dot_npu' not implemented for 'Int'");
+        "'dot_npu' not implemented for 'Int'" + OPS_ERROR(ErrCode::TYPE));
     c10::SmallVector<int64_t, N> output_size = {};
     npu_preparation::CheckOut(
         {self, tensor},
@@ -59,7 +58,7 @@ at::Tensor& dot_out(const at::Tensor& self, const at::Tensor& tensor, at::Tensor
 at::Tensor dot(const at::Tensor& self, const at::Tensor& tensor) {
     auto self_dtype = self.scalar_type();
     TORCH_CHECK(self_dtype != at::kInt && self_dtype != at::kByte && self_dtype != at::kChar,
-                "'dot_npu' not implemented for 'Int'");
+        "'dot_npu' not implemented for 'Int'" + OPS_ERROR(ErrCode::TYPE));
     c10::SmallVector<int64_t, N> output_size = {};
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     dot_out_npu_nocheck(result, self, tensor);

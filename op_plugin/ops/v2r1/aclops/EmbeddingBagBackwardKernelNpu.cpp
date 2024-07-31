@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -15,6 +14,7 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
+
 
 namespace acl_op {
 at::Tensor _embedding_bag_backward_symint(

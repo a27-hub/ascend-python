@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -25,7 +24,8 @@ namespace {
 
 static void round_decimals_check(const at::Tensor& self, int64_t decimals) {
   if (isIntegralType(self.scalar_type(), true)) {
-    TORCH_CHECK(decimals == 0, "round_npu not implemented for ", toString(self.scalar_type()), " with decimals != 0");
+    TORCH_CHECK(decimals == 0, "round_npu not implemented for ", toString(self.scalar_type()), " with decimals != 0"
+        + OPS_ERROR(ErrCode::VALUE));
   }
 }
 

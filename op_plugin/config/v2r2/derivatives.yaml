@@ -6,21 +6,17 @@
   output_differentiability: [True, False, False, False, False, False, False, False]
   query_weight, key_weight, value_weight, out_proj_weight, query, key, value, query_bias, key_bias, value_bias, out_proj_bias: npu_multi_head_attention_backward(query, key, value, query_weight, key_weight, value_weight, out_proj_weight, query_bias, key_bias, value_bias, out_proj_bias, result2, result3, result4, result5, result6, result7, grad, result1, attn_head_num, attn_dim_per_head, src_len, tgt_len, dropout_prob, softmax_use_float)
 
-- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
   output_differentiability: [True, True, True, True, False, False, False]
-  query, key, value, pse: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, sparse_mode, gen_mask_parallel, sync)
-
-- name: npu_fusion_attention_v3(Tensor x, Tensor weight, int head_num, str input_layout, Tensor? bias=None, Tensor? pse=None, Tensor? atten_mask=None, Tensor? prefix=None, float scale_qk=1., float scale_q=1., float scale_k=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int sparse_mode=0, int pse_type=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
-  output_differentiability: [True, True, True, True, False, False, False]
-  x, weight, pse: npu_fusion_attention_grad_v3(x, weight, result3, grad, result1, result2, result0, head_num, input_layout, bias, pse, atten_mask, prefix, scale_qk, scale_q, scale_k, keep_prob, pre_tockens, next_tockens, sparse_mode, pse_type, result4, result5, result6, gen_mask_parallel, sync)
+  query, key, value, pse: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync)
 
 - name: npu_gru(Tensor input, Tensor hx, Tensor weight_input, Tensor weight_hidden, Tensor bias_input, Tensor bias_hidden, Tensor seq_length, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [True, True, False, False, False, False]
   weight_input, weight_hidden, input, bias_input, bias_hidden, hx: npu_gru_backward(grads[0], grads[1], input, weight_input, weight_hidden, bias_input, bias_hidden, seq_length, hx, result0, result1, result2, result3, result4, result5)
 
-- name: npu_geglu(Tensor self, int dim=-1, int approximate=1) -> (Tensor, Tensor)
+- name: npu_geglu(Tensor self, int dim=-1, int approximate=1, bool activate_left=False) -> (Tensor, Tensor)
   output_differentiability: [True, False]
-  self: npu_geglu_grad(grad, self, result1, dim, approximate)
+  self: npu_geglu_grad(grad, self, result1, dim, approximate, activate_left)
 
 - name: npu_lstm(Tensor input, Tensor weight, Tensor bias, Tensor seq_mask, Tensor h, Tensor c, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first, bool flag_seq, bool direction) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [True, True, True, False, False, False, False, False]
@@ -131,12 +127,12 @@
   self: npu_swiglu_backward(grad, self, dim)
 
 - name: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
-  output_differentiability: [True, False, False, False]
-  x1, x2, gamma, beta: npu_add_layer_norm_backward(grad, x1, x2, result2, result1, gamma)
+  output_differentiability: [True, False, False, True]
+  x1, x2, gamma, beta: npu_add_layer_norm_backward(grads[0], x1, x2, result2, result1, gamma, grads[1])
 
 - name: npu_deep_norm(Tensor x, Tensor gx, Tensor beta, Tensor gamma, float alpha=0.3, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
   output_differentiability: [False, False, True]
-  x, gx, beta, gamma: npu_deep_norm_backward(grad, x, gx, gamma, result0, result1, alpha=0.3)
+  x, gx, beta, gamma: npu_deep_norm_backward(grad, x, gx, gamma, result0, result1, alpha)
 
 - name: _npu_format_cast(Tensor self, int acl_format) -> Tensor
   self: grad
@@ -144,3 +140,13 @@
 - name: npu_multi_head_attention_v2(Tensor query, Tensor key, Tensor value, Tensor? atten_mask=None, Tensor? alibi_mask=None, float scale=1.0, int head_num=1, str input_layout="BNSD", float keep_prob=1., int pre_tokens=2147483647, int next_tokens=1, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, int, int, int)
   output_differentiability: [True, False, False, False, False]
   query, key, value: npu_multi_head_attention_v2_grad(grad, query, key, value, result1, result0, atten_mask, alibi_mask, scale, head_num, input_layout, keep_prob, pre_tokens, next_tokens, result2, result3, result4, gen_mask_parallel, sync)
+
+- name: repeat_interleave.self_Tensor(Tensor self, Tensor repeats, int? dim=None, *, SymInt? output_size=None) -> Tensor
+  self: repeat_interleave_backward_tensor(grad, self, repeats, dim)
+
+- name: repeat_interleave.self_int(Tensor self, SymInt repeats, int? dim=None, *, SymInt? output_size=None) -> Tensor
+  self: repeat_interleave_backward_int(grad, self, repeats, dim)
+
+- name: matmul_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
+  output_differentiability: [True, True]
+  grad_out, self, other: matmul_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)

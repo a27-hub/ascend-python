@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -23,8 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 at::SmallVector<int64_t, SIZE> upsample_nearest2d_output_size_npu(const at::Tensor &input, at::IntArrayRef output_size)
 {
-    TORCH_CHECK(input.dim() >= 2, "Input's dim must be at least 2.");
-    TORCH_CHECK(output_size.size() >= 2, "Output size must be at least 2.");
+    TORCH_CHECK(input.dim() >= 2, "Input's dim must be at least 2.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(output_size.size() >= 2, "Output size must be at least 2.", OPS_ERROR(ErrCode::PARAM));
     int64_t N = input.size(0);
     int64_t C = input.size(1);
     int64_t H = output_size[0];

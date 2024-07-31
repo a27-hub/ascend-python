@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -30,11 +29,11 @@ std::tuple<at::Tensor, at::Tensor> triangular_solve_out_common_nocheck(const at:
     std::tie(self_broadcasted, a_broadcasted) = at::native::_linalg_broadcast_batch_dims(self, A, "triangular_solve");
     TORCH_CHECK(self_broadcasted.dtype() == at::kFloat && a_broadcasted.dtype() == at::kFloat,
                 "_triangular_solve_helper_npu only supported Float, but get ", self_broadcasted.dtype(), ' ',
-                a_broadcasted.dtype());
+                a_broadcasted.dtype(), OPS_ERROR(ErrCode::TYPE));
     auto self_working_copy = npu_preparation::apply_tensor(self_broadcasted);
     auto a_working_copy = a_broadcasted.clone();
     at::Tensor a_tensor = a_broadcasted;
-    TORCH_CHECK(a_tensor.dim() >= 2, "The dim of input tensor must larger than two.");
+    TORCH_CHECK(a_tensor.dim() >= 2, "The dim of input tensor must larger than two.", OPS_ERROR(ErrCode::VALUE));
     if (unitriangular) {
         auto diagonal_tensor = at::eye(a_tensor.size(-2), a_tensor.size(-1), a_tensor.options());
         a_tensor = a_tensor * (1 - diagonal_tensor) + diagonal_tensor;

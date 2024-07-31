@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -28,11 +27,11 @@ c10::SmallVector<int64_t, N> ciou_output_size(
     const at::Tensor& gtboxes,
     bool is_cross) {
     TORCH_CHECK(self.dim() == 2, "ciou expected input in 2D, "
-                                 "but input self has sizes ",
-                self.dim());
+        "but input self has sizes ", self.dim(),
+        OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(gtboxes.dim() == 2, "ciou expected input in 2D, "
-                                    "but input gtboxes has sizes ",
-                gtboxes.dim());
+        "but input gtboxes has sizes ", gtboxes.dim(),
+        OPS_ERROR(ErrCode::PARAM));
   c10::SmallVector<int64_t, N> output_size;
   if (is_cross) {
     output_size = {gtboxes.size(1), self.size(1)};

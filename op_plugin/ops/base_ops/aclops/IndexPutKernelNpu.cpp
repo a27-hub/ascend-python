@@ -204,14 +204,8 @@ at::Tensor &index_put_aicpu(at::Tensor &result, at::Tensor &self, std::vector<at
 
 at::Tensor &index_put_aicore(at::Tensor &self, std::vector<at::Tensor> indices_expand,
                              at::SmallVector<int64_t, N> masks, at::SmallVector<int64_t, N> bool_masks,
-                             const at::Tensor &value, bool accumulate)
+                             const at::Tensor &value_broadcast, bool accumulate)
 {
-    // value broadcast
-    auto index_output_size = op_infer::index_npu_output_size(self, indices_expand);
-    auto value_shape = op_infer::array_to_small_vector(value.sizes());
-    at::Tensor value_broadcast =
-        (index_output_size != value_shape) ? acl_op::npu_broadcast(value, index_output_size) : value;
-
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         index_put_aicore_nocheck(contiguous_self, indices_expand, masks, bool_masks, value_broadcast, accumulate);
@@ -241,19 +235,20 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
     if (self.device().type() == at::kCPU) {
         return at::native::_index_put_impl_(self, indices, value, accumulate, unsafe);
     }
-    at::native::checkIndexTensorTypes(indices);
+    bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     at::SmallVector<int64_t, N> masks;
     std::vector<at::Tensor> all_defined_indices;
     std::vector<at::Tensor> indices_expand;
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
-    indices_expand = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices);
+    indices_expand = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast);
     for (at::Tensor index_opt : indices_expand) {
         indices_expand_list.push_back(index_opt);
     }
     auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
     TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
-                "shape mismatch: value tensor of shape ", value.sizes(),
-                " cannot be broadcast to indexing result of shape ", info.src.sizes());
+        "shape mismatch: value tensor of shape ", value.sizes(),
+        " cannot be broadcast to indexing result of shape ", info.src.sizes(),
+        OPS_ERROR(ErrCode::PARAM));
     for (c10::optional<at::Tensor> index_opt : indices_expand) {
         if (index_opt.has_value()) {
             const auto &index = *index_opt;
@@ -279,11 +274,19 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
     npu_preparation::CastBackToOriFormat(value_copy);
 
     bool aicpu_true = is_aicpu_valid(self, all_defined_indices, masks);
+    auto index_output_size = op_infer::index_npu_output_size(self, indices_expand);
+    if (index_output_size.size() > 8) {
+        aicpu_true = true;
+    }
     if (aicpu_true) {
         index_put_aicpu(self_copy, self_copy, all_defined_indices, masks, value_copy, accumulate);
     } else {
         auto bool_mask = npu_expand_tensors_mask(self, indices);
-        index_put_aicore(self_copy, indices_expand, masks, bool_mask, value_copy, accumulate);
+        // value broadcast
+        auto value_shape = op_infer::array_to_small_vector(value_copy.sizes());
+        at::Tensor value_broadcast =
+            (index_output_size != value_shape) ? acl_op::npu_broadcast(value_copy, index_output_size) : value_copy;
+        index_put_aicore(self_copy, indices_expand, masks, bool_mask, value_broadcast, accumulate);
     }
     self.copy_(self_copy);
     return self;

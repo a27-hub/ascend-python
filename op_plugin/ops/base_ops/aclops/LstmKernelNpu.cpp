@@ -42,11 +42,12 @@ tensor_list npu_lstm_npu_nocheck(const at::Tensor &input, const at::Tensor &weig
     at::Tensor y_output = npu_preparation::apply_tensor(input, output_size);
     at::Tensor h_output = npu_preparation::apply_tensor(input, output_size);
     at::Tensor c_output = npu_preparation::apply_tensor(input, output_size);
-    at::Tensor i_output = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_FRACTAL_NZ);
-    at::Tensor j_output = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_FRACTAL_NZ);
-    at::Tensor f_output = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_FRACTAL_NZ);
-    at::Tensor o_output = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_FRACTAL_NZ);
-    at::Tensor tanhc = npu_preparation::apply_tensor_with_format(input, output_size, ACL_FORMAT_FRACTAL_NZ);
+    int64_t output_format = train ? ACL_FORMAT_FRACTAL_NZ : ACL_FORMAT_ND;
+    at::Tensor i_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
+    at::Tensor j_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
+    at::Tensor f_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
+    at::Tensor o_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
+    at::Tensor tanhc = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
 
     string direction = flag_direction ? "REDIRECTIONAL" : "UNIDIRECTIONAL";
     string gate_order = "ifjo";
@@ -119,7 +120,8 @@ std::tuple<at::Tensor, at::Tensor> get_wb_double_layer_or_bidirec(const at::Tens
 std::tuple<at::Tensor, at::Tensor> get_wb_multi_layer_or_bidirec(const at::Tensor &input, at::TensorList params,
                                                                  int64_t layers, bool hasBiases)
 {
-    TORCH_CHECK(layers > 0, "layers should be greater than 0.");
+    TORCH_CHECK(layers > 0, "layers should be greater than 0."
+        + OPS_ERROR(ErrCode::VALUE));
     at::Tensor weight;
     at::Tensor bias;
     if (hasBiases) {
@@ -216,7 +218,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm_multi_layer_direc_npu(const 
                                                                           double dropout, bool train,
                                                                           bool bidirectional, bool batch_first)
 {
-    TORCH_CHECK(layers > 0, "layers should be greater than 0.");
+    TORCH_CHECK(layers > 0, "layers should be greater than 0."
+        + OPS_ERROR(ErrCode::VALUE));
     int64_t num_step = input.size(0);
     at::Tensor y;
     at::Tensor h;
@@ -258,7 +261,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm_multi_layer_bidirec_npu(cons
                                                                             double dropout, bool train,
                                                                             bool bidirectional, bool batch_first)
 {
-    TORCH_CHECK(layers > 0, "layers should be greater than 0.");
+    TORCH_CHECK(layers > 0, "layers should be greater than 0."
+        + OPS_ERROR(ErrCode::VALUE));
     int64_t num_step = input.size(0);
     // get h and c of first layer
     at::Tensor hL0 = hx[0].slice(0, 0, 2);
@@ -399,7 +403,8 @@ tensor_list3 lstm_onelayer_direc_packseq(const at::Tensor &data, const at::Tenso
                                          bool train, bool bidirectional)
 {
     int64_t t_size = batch_sizes.numel();
-    TORCH_CHECK(t_size > 0, "lstm_onelayer_direc_packseq: t_size is zero!");
+    TORCH_CHECK(t_size > 0, "lstm_onelayer_direc_packseq: t_size is zero!"
+        + OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor input = data.reshape({t_size, data.size(0) / t_size, data.size(1)});
 
@@ -436,7 +441,8 @@ tensor_list3 lstm_onelayer_bidirec_packseq(const at::Tensor &data, const at::Ten
                                            bool train, bool bidirectional)
 {
     int64_t t_size = batch_sizes.numel();
-    TORCH_CHECK(t_size > 0, "lstm_onelayer_bidirec_packseq: t_size is zero!");
+    TORCH_CHECK(t_size > 0, "lstm_onelayer_bidirec_packseq: t_size is zero!"
+        + OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor input = data.reshape({t_size, data.size(0) / t_size, data.size(1)});
     bool batch_first = false;
@@ -479,7 +485,8 @@ tensor_list3 lstm_double_layer_direc_packseq(const at::Tensor &data, const at::T
                                              double dropout_p, bool train, bool bidirectional)
 {
     int64_t t_size = batch_sizes.numel();
-    TORCH_CHECK(t_size > 0, "lstm_double_layer_direc_packseq: t_size is zero!");
+    TORCH_CHECK(t_size > 0, "lstm_double_layer_direc_packseq: t_size is zero!"
+        + OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor input = data.reshape({t_size, data.size(0) / t_size, data.size(1)});
 
@@ -519,7 +526,8 @@ tensor_list3 lstm_double_layer_bidirec_packseq(const at::Tensor &data, const at:
                                                double dropout_p, bool train, bool bidirectional)
 {
     int64_t t_size = batch_sizes.numel();
-    TORCH_CHECK(t_size > 0, "batch_sizes can not be empty.");
+    TORCH_CHECK(t_size > 0, "batch_sizes can not be empty."
+        + OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor input = data.reshape({t_size, data.size(0) / t_size, data.size(1)});
     bool batch_first = false;

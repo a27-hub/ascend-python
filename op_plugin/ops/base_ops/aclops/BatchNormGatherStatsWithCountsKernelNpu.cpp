@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -30,7 +29,7 @@ tensor_list1 batch_norm_gather_stats_with_counts_npu_impl(at::Tensor &mean_all, 
                                                           const at::Tensor &counts)
 {
     auto options = self.options();
-    TORCH_CHECK(self.dim() > 1, "The dim input tensor [self] must more than 1.");
+    TORCH_CHECK(self.dim() > 1, "The dim input tensor [self] must more than 1." + OPS_ERROR(ErrCode::PARAM));
     auto dim_c = self.size(1);
     at::Tensor mean_cp = at_npu::native::custom_ops::npu_dtype_cast(mean, at::kFloat);
     at::Tensor invstd_cp = at_npu::native::custom_ops::npu_dtype_cast(invstd, at::kFloat);
@@ -43,7 +42,7 @@ tensor_list1 batch_norm_gather_stats_with_counts_npu_impl(at::Tensor &mean_all, 
         at_npu::native::custom_ops::npu_format_cast(
             (running_var.defined() ? running_var.unsqueeze(0) : at::ones({1, dim_c}, options)), ACL_FORMAT_ND),
         at::kFloat);
-    at::IntArrayRef axes({0});
+    std::vector<int64_t> axes = {0};
     at::Tensor counts_tensor = at_npu::native::custom_ops::npu_dtype_cast(counts, mean_cp.scalar_type());
     at::Tensor counts_tensor_t = counts_tensor.unsqueeze(-1);
     at::Tensor counts_tensor_broadcast = acl_op::npu_broadcast(counts_tensor_t, invstd.sizes());

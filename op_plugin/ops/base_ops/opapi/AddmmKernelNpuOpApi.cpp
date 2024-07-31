@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -35,6 +34,9 @@ at::Tensor &addmm_out(
     npu_preparation::check_tensor({self, mat1, mat2}, result, result.scalar_type(), output_size);
     EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
 
+    auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
+    at::namedinference::propagate_names_if_nonempty(result, names);
+
     return result;
 }
 
@@ -50,6 +52,9 @@ at::Tensor addmm(
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
+
+    auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
+    at::namedinference::propagate_names_if_nonempty(result, names);
 
     return result;
 }
@@ -67,6 +72,9 @@ at::Tensor &addmm_(
 
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     EXEC_NPU_CMD(aclnnInplaceAddmm, self, mat1, mat2, beta, alpha, cube_math_type);
+
+    auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
+    at::namedinference::propagate_names_if_nonempty(self, names);
 
     return self;
 }

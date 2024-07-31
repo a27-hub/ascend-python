@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -34,7 +33,7 @@ int64_t calc_shape_prod(const at::Tensor& self, at::IntArrayRef dim) {
     for (auto i = 0; i < dim.size(); i++) {
         TORCH_CHECK(-self.dim() <= dim[i] && dim[i] < self.dim(),
                     "Dimension out of range (expected to be in range of [",
-                    -self.dim(), ", ", self.dim() - 1, "], but got ", dim[i], ")");
+                    -self.dim(), ", ", self.dim() - 1, "], but got ", dim[i], ")", OPS_ERROR(ErrCode::PARAM));
         shape_prod *= self.size(dim[i]);
     }
   }
@@ -71,7 +70,7 @@ std::tuple<at::Tensor&, at::Tensor&> std_mean_out_npu_nocheck(
   if (result_mean.dim() != 0 && keepdim == false) {
     auto dimVector = op_infer::array_to_small_vector(dim);
     std::sort(dimVector.begin(), dimVector.end());
-    for (int64_t i = 0; i < dimVector.size(); i++) {
+    for (size_t i = 0; i < dimVector.size(); i++) {
       result_mean_copy = result_mean_copy.unsqueeze(dimVector[i]);
     }
   }

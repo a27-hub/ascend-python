@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -23,7 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor bincount(const at::Tensor &self, const c10::optional<at::Tensor> &weight_opt, int64_t minlength)
 {
     const at::Tensor &weights = c10::value_or_else(weight_opt, [] { return at::Tensor(); });
-    TORCH_CHECK(self.numel() > 0, "The input tensor is an empty tensor.");
+    TORCH_CHECK(self.numel() > 0, "The input tensor is an empty tensor." + OPS_ERROR(ErrCode::PARAM));
     if (self.sizes()[0] == 0) {
         auto result = npu_preparation::ApplyTensorWithSizes({0}, self.options().dtype(at::kLong));
         return result;

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -13,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#include <ATen/NamedTensorUtils.h>
 
 #include "op_plugin/utils/OpUtils.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
@@ -143,7 +144,7 @@ int64_t complete_pad(int64_t s_size, int64_t p_size, int64_t k_size, int64_t str
   int64_t needpads = 0;
   int64_t sizeP = s_size + p_size * 2;
   int64_t leftLen = sizeP - k_size;
-  TORCH_CHECK(stride != 0, "CompletePad stride is zero!");
+  TORCH_CHECK(stride != 0, "CompletePad stride is zero!", OPS_ERROR(ErrCode::VALUE));
   auto reminder = leftLen % stride;
   if (reminder != 0) {
     needpads = stride - reminder;
@@ -156,7 +157,8 @@ c10::optional<double> get_scale_value(c10::optional<c10::ArrayRef<double>> scale
     if (!scales) {
         return c10::nullopt;
     }
-    TORCH_CHECK(scales->size() > idx, "idx", idx, "is overrange scales->at(idx) ", scales->size());
+    TORCH_CHECK(scales->size() > idx, "idx", idx, "is overrange scales->at(idx) ", scales->size(),
+        OPS_ERROR(ErrCode::VALUE));
     return scales->at(idx);
 }
 
@@ -182,5 +184,32 @@ at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
   self_cast = at_npu::native::OpPreparation::CastBackToOriFormat(self_cast);
   return self_cast;
 }
+
+NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
+{
+    NameVector names;
+    bool has_names = false;
+
+    for (auto tensor : tensor_list) {
+        if (tensor.has_names()) {
+            has_names = true;
+            break;
+        }
+    }
+
+    if (!has_names) {
+        return names;
+    }
+
+    for (auto tensor : tensor_list) {
+        if (names.empty()) {
+            names = tensor.names();
+        } else {
+            names = NameVector(at::unify_from_right(names, tensor.names()));
+        }
+    }
+    return names;
+}
+
 }  // namespace utils
 }  // namespace op_plugin

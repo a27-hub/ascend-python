@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -66,10 +65,12 @@ at::Tensor& diag_out(
     int64_t diagonal,
     at::Tensor& result) {
   TORCH_CHECK((self.dim() == 1) || (self.dim() == 2),
-              "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim());
+      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim(),
+      OPS_ERROR(ErrCode::PARAM));
   diagonal = op_infer::make_wrap_dim(diagonal, self.dim());
   TORCH_CHECK((self.dim() == 1) || (self.dim() == 2 && diagonal <= self.size(0) && diagonal <= self.size(1)),
-              "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal);
+      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal,
+      OPS_ERROR(ErrCode::PARAM));
 
   auto output_size = diag_npu_output_size(self, diagonal);
   npu_preparation::CheckOut(
@@ -91,10 +92,12 @@ at::Tensor diag(
     const at::Tensor& self,
     int64_t diagonal) {
   TORCH_CHECK((self.dim() == 1) || (self.dim() == 2),
-              "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim());
+      "Value should be a 1-dimensional tensor or 2-dimensional tensor, but got ", self.dim(),
+      OPS_ERROR(ErrCode::PARAM));
   diagonal = op_infer::make_wrap_dim(diagonal, self.dim());
   TORCH_CHECK((self.dim() == 1) || (self.dim() == 2 && diagonal <= self.size(0) && diagonal <= self.size(1)),
-              "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal);
+      "If the value is 2-dimensional tensor, the diagonal shoule less than shape.Diagonal is ", diagonal,
+      OPS_ERROR(ErrCode::PARAM));
 
   auto output_size = diag_npu_output_size(self, diagonal);
   at::Tensor result = npu_preparation::apply_tensor(self, output_size);

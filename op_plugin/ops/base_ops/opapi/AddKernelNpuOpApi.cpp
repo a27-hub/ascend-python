@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -24,9 +23,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 inline void alpha_check_npu(const at::ScalarType dtype, at::Scalar alpha)
 {
     TORCH_CHECK(!alpha.isBoolean() || dtype == at::ScalarType::Bool,
-                "Boolean alpha only supported for Boolean results.");
+                "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(isFloatingType(dtype) || alpha.isIntegral(true),
-                "For integral input tensors, argument alpha must not be a floating point number.");
+                "For integral input tensors, argument alpha must not be a floating point number."
+                + OPS_ERROR(ErrCode::TYPE));
 }
 
 static at::Tensor &add_out_npu_nocheck(
@@ -57,12 +57,13 @@ static at::Tensor &inplace_add_out_npu_no_check(at::Tensor &self, const at::Tens
     return self;
 }
 
-static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type)
+static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
+                                        const c10::Device device)
 {
     if (npu_preparation::is_scalar_wrapped_to_tensor(tensor) ||
         (tensor.dim() == 0 && !torch_npu::utils::is_npu(tensor))) {
         at::Scalar scalar = tensor.item();
-        return npu_preparation::copy_scalar_to_device(scalar, result_type);
+        return npu_preparation::copy_scalar_to_device(scalar, result_type, device);
     }
     return tensor;
 }
@@ -82,7 +83,7 @@ at::Tensor add(const at::Tensor &self, const at::Tensor &other, const at::Scalar
     at::Tensor output_tensor = add_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
-    at::Tensor self_cp = self_tensor_to_device(self, result_type);
+    at::Tensor self_cp = self_tensor_to_device(self, result_type, output_tensor.device());
     // construct the output tensor of the NPU
     at::Tensor result =
         npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
@@ -113,7 +114,7 @@ at::Tensor &add_out(const at::Tensor &self, const at::Tensor &other, const at::S
     at::Tensor output_tensor = isSelfWrapped ? other : self;
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
-    at::Tensor self_cp = self_tensor_to_device(self, result_type);
+    at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
 
     npu_preparation::check_tensor({self}, result, result, output_size);
     npu_preparation::check_memory({self, other}, {result});

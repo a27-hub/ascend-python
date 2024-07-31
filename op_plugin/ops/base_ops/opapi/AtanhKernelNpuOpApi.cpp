@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -21,14 +20,15 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& atanh_out(const at::Tensor& self, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnAtanh, acl_op::atanh_out(self, result));
-  TORCH_CHECK(!isIntegralType(result.scalar_type(), true), "result type ", toString(self.scalar_type()),
-              " can't be cast to the desired output type ", toString(result.scalar_type()));
-  auto output_size = self.sizes();
-  npu_preparation::check_tensor({self}, result, result.scalar_type(), output_size);
-  EXEC_NPU_CMD(aclnnAtanh, self, result);
-  return result;
+at::Tensor& atanh_out(const at::Tensor& self, at::Tensor& result)
+{
+    DO_COMPATIBILITY(aclnnAtanh, acl_op::atanh_out(self, result));
+    TORCH_CHECK(!isIntegralType(result.scalar_type(), true), "result type ", toString(self.scalar_type()),
+                " can't be cast to the desired output type ", toString(result.scalar_type()), OPS_ERROR(ErrCode::TYPE));
+    auto output_size = self.sizes();
+    npu_preparation::check_tensor({self}, result, result.scalar_type(), output_size);
+    EXEC_NPU_CMD(aclnnAtanh, self, result);
+    return result;
 }
 
 at::Tensor atanh(const at::Tensor& self) {
@@ -43,12 +43,13 @@ at::Tensor atanh(const at::Tensor& self) {
   return result;
 }
 
-at::Tensor& atanh_(at::Tensor& self) {
-  DO_COMPATIBILITY(aclnnInplaceAtanh, acl_op::atanh_(self));
-  TORCH_CHECK(!isIntegralType(self.scalar_type(), true), "result type Float can't be cast to the desired output type ",
-              toString(self.scalar_type()));
-  EXEC_NPU_CMD(aclnnInplaceAtanh, self);
-  return self;
+at::Tensor& atanh_(at::Tensor& self)
+{
+    DO_COMPATIBILITY(aclnnInplaceAtanh, acl_op::atanh_(self));
+    TORCH_CHECK(!isIntegralType(self.scalar_type(), true), "result type Float can't be cast to the desired output type ",
+                toString(self.scalar_type()), OPS_ERROR(ErrCode::TYPE));
+    EXEC_NPU_CMD(aclnnInplaceAtanh, self);
+    return self;
 }
 
 }  // namespace op_api

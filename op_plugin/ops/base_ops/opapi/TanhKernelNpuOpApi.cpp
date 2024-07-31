@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -21,11 +20,15 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor& tanh_out(const at::Tensor& self, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnTanh, acl_op::tanh_out(self, result));
-  TORCH_CHECK(!isIntegralType(result.scalar_type(), true), "result dtype can't be cast to the desired output type.\n");
-  EXEC_NPU_CMD(aclnnTanh, self, result);
-  return result;
+at::Tensor& tanh_out(const at::Tensor& self, at::Tensor& result)
+{
+    DO_COMPATIBILITY(aclnnTanh, acl_op::tanh_out(self, result));
+    TORCH_CHECK(!isIntegralType(result.scalar_type(), true), "result dtype can't be cast to the desired output type.\n",
+                OPS_ERROR(ErrCode::TYPE));
+    npu_preparation::check_tensor({self}, result, result, self.sizes());
+    at_npu::native::OpPreparation::check_memory({self}, {result});
+    EXEC_NPU_CMD(aclnnTanh, self, result);
+    return result;
 }
 
 at::Tensor tanh(const at::Tensor& self) {

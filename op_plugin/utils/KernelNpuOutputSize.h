@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -359,5 +358,9 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> repeat_interleave_npu_output_si
 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> max_pool3d_output_size(const at::Tensor& self,
                                                                         at::IntArrayRef output_size);
+
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> diag_output_size(const at::Tensor& self,
+                                                                  int64_t diagonal);
+
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -38,10 +37,21 @@ at::Tensor &rotary_mul_nocheck(at::Tensor &y, const at::Tensor &x, const at::Ten
 tensor_list rotary_mul_backward_nocheck(at::Tensor &dx, at::Tensor &dr1, at::Tensor &dr2, const at::Tensor &x,
                                         const at::Tensor &r1, const at::Tensor &r2, const at::Tensor &dy)
 {
-    TORCH_CHECK(x.dim() == 4, "The dim of input tensor [x] shoule equal to four.");
-    TORCH_CHECK(r1.dim() == 4, "The dim of input tensor [r1] shoule equal to four.");
-    TORCH_CHECK(r2.dim() == 4, "The dim of input tensor [r2] shoule equal to four.");
-    if (x.sizes()[3] % 64 != 0) {
+    TORCH_CHECK(x.dim() == 4, "The dim of input tensor [x] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(r1.dim() == 4, "The dim of input tensor [r1] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(r2.dim() == 4, "The dim of input tensor [r2] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
+    bool check_support = true;
+    int64_t broadcast_dim_num = 1;
+    for (int64_t i = 0; i < x.dim(); i++) {
+        if (x.sizes()[i] != r1.sizes()[i]) {
+            broadcast_dim_num = broadcast_dim_num * x.sizes()[i];
+        }
+        if (broadcast_dim_num > 1024) {
+            check_support = false;
+            break;
+        }
+    }
+    if (x.sizes()[3] % 64 != 0 || check_support == false) {
         at::Tensor x_grad_mul = at::mul(x, dy);
         at::Tensor x1_grad_mul = at::mul(r1, dy);
         at::Tensor x2_grad_mul = at::mul(r2, dy);
@@ -54,9 +64,10 @@ tensor_list rotary_mul_backward_nocheck(at::Tensor &dx, at::Tensor &dr1, at::Ten
                 dims.emplace_back(i);
             }
         }
-        std::vector<at::Tensor> xq_chunk = x_grad_mul.chunk(2, -1);
-        at::Tensor xq_chunk_cat = at::cat({xq_chunk[1] * (-1), xq_chunk[0]}, 3);
-        dr2 = at::sum(xq_chunk_cat, dims, true);
+        std::vector<at::Tensor> x_chunk = x.chunk(2, -1);
+        at::Tensor xq_chunk_cat = at::cat({x_chunk[1] * (-1), x_chunk[0]}, 3);
+        at::Tensor dr2_result = at::mul(xq_chunk_cat, dy);
+        dr2 = at::sum(dr2_result, dims, true);
         dr1 = at::sum(x_grad_mul, dims, true);
     } else {
         if (r1.requires_grad() && r2.requires_grad()) {

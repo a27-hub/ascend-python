@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -45,7 +44,8 @@ at::Tensor npu_alloc_float_status(const at::Tensor& self) {
 
 at::Tensor npu_get_float_status(const at::Tensor& self, int64_t mode) {
     TORCH_CHECK((mode >= OVERFLOW_ORIGINAL_MODE && mode < OVERFLOW_UNDEFINED_MODE),
-        "mode only supported for ORIGINAL_MODE(0) DEBUG_MODE(1), but got mode:", mode);
+        "mode only supported for ORIGINAL_MODE(0) DEBUG_MODE(1), but got mode:", mode,
+        OPS_ERROR(ErrCode::PARAM));
 
     npu_op_command cmd;
     if (mode == OVERFLOW_ORIGINAL_MODE) {
@@ -76,7 +76,8 @@ at::Tensor npu_get_float_status(const at::Tensor& self, int64_t mode) {
 
 at::Tensor npu_clear_float_status(const at::Tensor& self, int64_t mode) {
     TORCH_CHECK((mode >= OVERFLOW_ORIGINAL_MODE && mode < OVERFLOW_UNDEFINED_MODE),
-        "mode only supported for ORIGINAL_MODE(0) DEBUG_MODE(1), but got mode:", mode);
+        "mode only supported for ORIGINAL_MODE(0) DEBUG_MODE(1), but got mode:", mode,
+        OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
     npu_op_command cmd;

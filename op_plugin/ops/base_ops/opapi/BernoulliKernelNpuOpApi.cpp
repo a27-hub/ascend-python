@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -15,7 +14,6 @@
 // limitations under the License.
 
 #include <climits>
-#include <ATen/NamedTensorUtils.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -49,9 +47,10 @@ at::Tensor& bernoulli_(at::Tensor& self, const at::Tensor& p, c10::optional<at::
 }
 
 at::Tensor bernoulli(const at::Tensor& self, c10::optional<at::Generator> gen) {
-  DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli(self, gen));
-  at::Tensor self_copy = npu_preparation::apply_tensor_without_format(self);
-  return op_api::bernoulli_(self_copy, self, gen);
+    DO_COMPATIBILITY(aclnnInplaceBernoulliTensor, acl_op::bernoulli(self, gen));
+    at::Tensor self_copy = npu_preparation::apply_tensor_without_format(self);
+    at::namedinference::propagate_names(self_copy, self);
+    return op_api::bernoulli_(self_copy, self, gen);
 }
 
 at::Tensor bernoulli(const at::Tensor& self, double p, c10::optional<at::Generator> gen) {

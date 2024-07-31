@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -91,7 +90,7 @@ at::Tensor& cumprod_(
       toString(self.scalar_type()),
       " and ",
       toString(dtype.value()),
-      ".");
+      "." + OPS_ERROR(ErrCode::TYPE));
   return acl_op::cumprod_out(self, dim, dtype, self);
 }
 

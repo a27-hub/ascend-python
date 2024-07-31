@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -41,47 +40,50 @@ static inline at::SmallVector<int64_t, SIZE> masked_select_npu_output_size(const
   return outputSize;
 }
 
-static at::Tensor exec_aclnn_masked_select(const at::Tensor& self, const at::Tensor& mask, at::Tensor& out) {
-  static auto opApiFuncAddr = GetOpApiFuncAddr("aclGetViewShape");
-  TORCH_CHECK(opApiFuncAddr != nullptr, "GetOpApiFuncAddr failed.");
-  using aclGetViewShapeFunc = int (*)(const aclTensor* tensor, int64_t** view_dims, uint64_t* view_dims_num);
-  auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
-  auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnMaskedSelect, self, mask, out);
-  int64_t* view_dims = nullptr;
-  uint64_t view_dim_num = 0;
-  auto ret = aclGetViewShape(npuAclParams.Get<2>(), &view_dims, &view_dim_num);
-  TORCH_CHECK(ret == OK, "aclGetViewShape failed");
-  at::SmallVector<int64_t, SIZE> outputShapeSize = {};
-  for (uint64_t i = 0; i < view_dim_num; i++) {
-    outputShapeSize.push_back(view_dims[i]);
-  }
-  out.resize_(outputShapeSize);
-  delete view_dims;
-  view_dims = nullptr;
-  return out;
+static at::Tensor exec_aclnn_masked_select(const at::Tensor& self, const at::Tensor& mask, at::Tensor& out)
+{
+    static auto opApiFuncAddr = GetOpApiFuncAddr("aclGetViewShape");
+    TORCH_CHECK(opApiFuncAddr != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::PTR));
+    using aclGetViewShapeFunc = int (*)(const aclTensor *tensor, int64_t **view_dims, uint64_t *view_dims_num);
+    auto aclGetViewShape = reinterpret_cast<aclGetViewShapeFunc>(opApiFuncAddr);
+    auto npuAclParams = EXEC_NPU_CMD_SYNC(aclnnMaskedSelect, self, mask, out);
+    int64_t *view_dims = nullptr;
+    uint64_t view_dim_num = 0;
+    auto ret = aclGetViewShape(npuAclParams.Get<2>(), &view_dims, &view_dim_num);
+    TORCH_CHECK(ret == OK, "aclGetViewShape failed", OPS_ERROR(ErrCode::ACL));
+    at::SmallVector<int64_t, SIZE> outputShapeSize = {};
+    for (uint64_t i = 0; i < view_dim_num; i++) {
+        outputShapeSize.push_back(view_dims[i]);
+    }
+    out.resize_(outputShapeSize);
+    delete[] view_dims;
+    view_dims = nullptr;
+    return out;
 }
 
 at::Tensor masked_select(const at::Tensor& self, const at::Tensor& mask) {
-  DO_COMPATIBILITY(aclnnMaskedSelect, acl_op::masked_select(self, mask));
+    at::namedinference::compute_broadcast_outnames(self, mask);
+    DO_COMPATIBILITY(aclnnMaskedSelect, acl_op::masked_select(self, mask));
 
-  auto outputSize = masked_select_npu_output_size(self, mask);
-  at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(self, outputSize);
-  return exec_aclnn_masked_select(self, mask, out);
+    auto outputSize = masked_select_npu_output_size(self, mask);
+    at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(self, outputSize);
+    return exec_aclnn_masked_select(self, mask, out);
 }
 
 at::Tensor& masked_select_out(const at::Tensor& self, const at::Tensor& mask,
                               at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnMaskedSelect, acl_op::masked_select_out(self, mask, result));
+    at::namedinference::compute_broadcast_outnames(self, mask);
+    DO_COMPATIBILITY(aclnnMaskedSelect, acl_op::masked_select_out(self, mask, result));
 
-  auto outputSize = masked_select_npu_output_size(self, mask);
-  at_npu::native::OpPreparation::check_tensor({self, mask}, result, self.scalar_type(), outputSize);
+    auto outputSize = masked_select_npu_output_size(self, mask);
+    at_npu::native::OpPreparation::check_tensor({self, mask}, result, self.scalar_type(), outputSize);
 
-  auto out = result.is_contiguous() ? result : result.contiguous();
+    auto out = result.is_contiguous() ? result : result.contiguous();
 
-  auto output = exec_aclnn_masked_select(self, mask, out);
-  if (!result.is_contiguous()) {
-    result.copy_(output);
-  }
-  return result;
+    auto output = exec_aclnn_masked_select(self, mask, out);
+    if (!result.is_contiguous()) {
+        result.copy_(output);
+    }
+    return result;
 }
 }  // namespace op_api

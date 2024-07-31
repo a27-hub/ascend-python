@@ -19,7 +19,8 @@ import stat
 import functools
 import hashlib
 from typing import (List, Dict, Optional, Set, Callable, Any,
-                    Union, TypeVar, Iterable)
+                    Union, TypeVar, Iterable, Tuple)
+from collections import defaultdict
 import yaml
 
 from codegen.code_template import CodeTemplate
@@ -227,7 +228,8 @@ def parse_native_yaml_struct(
 
 def gen_function_declaration(
     f: NativeFunction,
-) -> List[Optional[str]]:
+    backend_decalarations: Dict,
+):
     with native_function_manager(f):
         has_symint = False
         op_name = str(f.func.name.name)
@@ -239,18 +241,21 @@ def gen_function_declaration(
             op_name += "_out"
 
         sig = NativeSignature(f.func, prefix='', symint=has_symint)
-        ret = f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};"
-
-    return [ret]
+        sig_str = f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};"
+        backend_decalarations["op_api"].append(sig_str)
+        backend_decalarations["acl_op"].append(sig_str)
+        if f.sparse is not None:
+            op_name += "_sparse"
+            backend_decalarations["sparse"].append(f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};")
 
 
 def gen_return(
     f: NativeFunction,
 ) -> List[Optional[str]]:
+    ret = []
     with native_function_manager(f):
         has_symint = False
         op_name = str(f.func.name.name)
-        force_aclnn = f"at_npu::native::ForceAclnn::GetInstance().IsForceAclnnOp(\"{op_name}\")"
         global SYMINT_SET
         if str(f.func.name) in SYMINT_SET:
             op_name += "_symint"
@@ -274,35 +279,39 @@ def gen_return(
                 format_check += f" && at_npu::native::FormatHelper::IsOpInputBaseFormat({a.name})"
 
         if "op_api" in f.impl_ns and "acl_op" in f.impl_ns:
-            p = f"""{sig.defn(name=op_name)}{{
-    if (({force_aclnn} || at_npu::native::env::CheckJitDisable()){format_check}) {{
+            ret.append(f"""{sig.defn(name=op_name)}{{
+    if (at_npu::native::env::CheckJitDisable(){format_check}) {{
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         return acl_op::{impl_name}({args_exprs_str});
     }}
 }}
-"""
+""")
         elif "op_api" in f.impl_ns or "acl_op" in f.impl_ns:
             ns = f.impl_ns[0]
-            p = f"""{sig.defn(name=op_name)}{{
+            ret.append(f"""{sig.defn(name=op_name)}{{
     return {ns}::{impl_name}({args_exprs_str});
 }}
-"""
-        else:
-            raise AssertionError(f"unknown namespace {f.impl_ns}")
-
-    return [p]
+""")
+        if f.sparse is not None:
+            ret.append(f"""{sig.defn(name=op_name + "_sparse")}{{
+    return sparse::{impl_name}_sparse({args_exprs_str});
+}}
+""")
+    return ret
 
 
 def parse_native_yaml(
     path: str,
-) -> List[Optional[str]]:
+) -> Tuple[Dict[str, list], List[Optional[str]]]:
 
     with open(path, "r") as f:
         es = yaml.safe_load(f)
 
     res = parse_native_yaml_struct(es)
-    backend_declarations = sorted(set(concatMap(lambda f: gen_function_declaration(f), res)))
+    backend_declarations = defaultdict(list)
+    for f in res:
+        gen_function_declaration(f, backend_declarations)
     dispatch_registrations_body = sorted(set(concatMap(lambda f: gen_return(f), res)))
 
     return backend_declarations, dispatch_registrations_body

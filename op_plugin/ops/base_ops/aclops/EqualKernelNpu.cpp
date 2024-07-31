@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -31,7 +30,8 @@ bool equal(const at::Tensor& self, const at::Tensor& other) {
       self.scalar_type(),
       ", but got ",
       other.scalar_type(),
-      " for argument #2 'other' in call to equal_npu");
+      " for argument #2 'other' in call to equal_npu"
+      + OPS_ERROR(ErrCode::TYPE));
 
   at::Tensor result = npu_preparation::apply_tensor_with_format(
       {1},

@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -130,8 +129,8 @@ at::Tensor index_high_dims(const at::Tensor &self, std::vector<at::Tensor> indic
 
 at::Tensor index_common(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &orig)
 {
-    at::native::checkIndexTensorTypes(orig);
-    auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig);
+    bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(orig);
+    auto indices = op_plugin::AdvanceIndex::npu_expand_tensors(self, orig, needCast);
     auto broadcast_indices = op_plugin::AdvanceIndex::npu_broadcast_tensors(indices);
 
     // not to transpose at all scene

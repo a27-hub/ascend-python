@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -65,7 +64,7 @@ at::Tensor& fill_out_nocheck(at::Tensor& self, const at::Tensor& other) {
 at::Tensor& fill_(at::Tensor& self, const at::Tensor& other) {
   auto other_dim = other.dim();
   TORCH_CHECK(other_dim <= 1, "fill_ only supports 0 or 1 dimension value tensor but got tensor with ",
-      other_dim, " dimension.");
+      other_dim, " dimension." + OPS_ERROR(ErrCode::PARAM));
   npu_preparation::CheckMemory({self, other}, {self});
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);

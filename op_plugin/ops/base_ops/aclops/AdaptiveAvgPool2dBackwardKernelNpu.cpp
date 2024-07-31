@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -41,7 +40,8 @@ int64_t adaptive_avg_pool2d_backward_safe_size(const at::Tensor &self)
 at::Tensor &adaptive_avg_pool2d_backward_out_nocheck(at::Tensor &result, const at::Tensor &grad_output,
                                                      const at::Tensor &self)
 {
-    TORCH_CHECK(grad_output.dim() >= 2, "The grad_output should be at least 2D");
+    TORCH_CHECK(grad_output.dim() >= 2, "The grad_output should be at least 2D"
+        + OPS_ERROR(ErrCode::PARAM));
     if (grad_output.size(grad_output.dim() - 2) == 1 && grad_output.size(grad_output.dim() - 1) == 1) {
         result.fill_(1.0 / adaptive_avg_pool2d_backward_safe_size(self));
         result.mul_(grad_output);

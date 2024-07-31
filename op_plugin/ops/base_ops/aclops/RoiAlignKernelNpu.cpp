@@ -24,8 +24,8 @@ namespace {
 c10::SmallVector<int64_t, SIZE> roi_align_npu_output_size(const at::Tensor &self, const at::Tensor &rois,
                                                           int64_t pooled_height, int64_t pooled_width)
 {
-    TORCH_CHECK(rois.dim() >= 1, "The dim of input tensor [rois] is less than 1.");
-    TORCH_CHECK(self.dim() >= 2, "The dim of input tensor [self] is less than 2.");
+    TORCH_CHECK(rois.dim() >= 1, "The dim of input tensor [rois] is less than 1." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.dim() >= 2, "The dim of input tensor [self] is less than 2." + OPS_ERROR(ErrCode::PARAM));
     return {rois.size(0), self.size(1), pooled_height, pooled_width}; // {N, C, H1, W1}
 }
 

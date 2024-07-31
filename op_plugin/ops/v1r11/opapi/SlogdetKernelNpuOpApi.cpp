@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -23,19 +22,20 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> linalg_slogdet(const at::Tensor& self)
 {
-  DO_COMPATIBILITY(aclnnSlogdet, acl_op::linalg_slogdet(self));
-  // input dimension at least 2
-  TORCH_CHECK(self.ndimension() >= 2, "Expected nonempty least 2D tensor, but got a tensor with sizes ", self.dim());
-  // calculate the output size
-  auto output_size = op_infer::array_to_small_vector(self.sizes());
-  output_size.erase(output_size.end() - 2, output_size.end());
-  // construct the output tensor of the NPU
-  at::Tensor sign = npu_preparation::apply_tensor(self, output_size);
-  at::Tensor log = npu_preparation::apply_tensor(self, output_size);
-  // calculate the output result of the NPU
-  EXEC_NPU_CMD(aclnnSlogdet, self, sign, log);
+    DO_COMPATIBILITY(aclnnSlogdet, acl_op::linalg_slogdet(self));
+    // input dimension at least 2
+    TORCH_CHECK(self.ndimension() >= 2, "Expected nonempty least 2D tensor, but got a tensor with sizes ",
+                self.dim(), OPS_ERROR(ErrCode::PARAM));
+    // calculate the output size
+    auto output_size = op_infer::array_to_small_vector(self.sizes());
+    output_size.erase(output_size.end() - 2, output_size.end());
+    // construct the output tensor of the NPU
+    at::Tensor sign = npu_preparation::apply_tensor(self, output_size);
+    at::Tensor log = npu_preparation::apply_tensor(self, output_size);
+    // calculate the output result of the NPU
+    EXEC_NPU_CMD(aclnnSlogdet, self, sign, log);
 
-  return std::tie(sign, log);
+    return std::tie(sign, log);
 }
 
 std::tuple<at::Tensor &, at::Tensor &> linalg_slogdet_out(const at::Tensor& self,
@@ -49,4 +49,3 @@ std::tuple<at::Tensor &, at::Tensor &> linalg_slogdet_out(const at::Tensor& self
 }
 
 }  // namespace op_api
-

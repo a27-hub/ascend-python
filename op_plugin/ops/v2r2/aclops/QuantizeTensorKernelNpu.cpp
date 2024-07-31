@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -53,5 +52,19 @@ at::QScheme qscheme(const at::Tensor& self)
 at::Tensor dequantize(const at::Tensor& self)
 {
     return at::native::dequantize_quantized(self);
+}
+
+at::Tensor _empty_affine_quantized(
+    at::IntArrayRef size,
+    c10::optional<at::ScalarType> dtype,
+    c10::optional<at::Layout> layout,
+    c10::optional<at::Device> device,
+    c10::optional<bool> pin_memory,
+    double scale,
+    int64_t zero_point,
+    c10::optional<c10::MemoryFormat> memory_format)
+{
+    return at::native::empty_affine_quantized(
+        size, dtype, layout, device, pin_memory, scale, zero_point, memory_format);
 }
 } // namespace acl_op

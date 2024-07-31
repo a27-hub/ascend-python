@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -47,7 +46,7 @@ at::Tensor npu_ps_roi_pooling_backward_symint(const at::Tensor &output_grad, con
                                               c10::SymIntArrayRef input_size_symint)
 {
     at::IntArrayRef input_size = c10::asIntArrayRefUnchecked(input_size_symint);
-    TORCH_CHECK(input_size.size() >= 2, "The length of param 'input_size' must be greater than or equal to 2.");
+    TORCH_CHECK(input_size.size() >= 2, "The length of param 'input_size' must be greater than or equal to 2." + OPS_ERROR(ErrCode::PARAM));
     auto output_size = {rois.size(0), group_size * group_size * output_dim, input_size[0], input_size[1]};
 
     at::Tensor input_grad = npu_preparation::apply_tensor(output_grad, output_size);
