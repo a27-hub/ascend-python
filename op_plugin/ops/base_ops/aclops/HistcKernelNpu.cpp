@@ -35,6 +35,19 @@ at::Tensor &histc_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_
         .Run();
     return result;
 }
+
+at::Tensor &histogram_fixed_width(at::Tensor &result, const at::Tensor &self, at::Tensor &range, at::Tensor &nbins)
+{
+    at_npu::native::OpCommand cmd;
+    cmd.Name("HistogramFixedWidth")
+        .Input(self)
+        .Input(range)
+        .Input(nbins)
+        .Output(result)
+        .Attr("dtype", 3)
+        .Run();
+    return result;
+}
 } // namespace
 
 at::Tensor &histc_out(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max,
@@ -53,13 +66,24 @@ at::Tensor &histc_out(const at::Tensor &self, int64_t bins, const at::Scalar &mi
 
 at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max)
 {
-    TORCH_CHECK(self.dtype() == at::kInt || self.dtype() == at::kFloat || self.dtype() == at::kHalf,
-        "histc input only supported Int32, Float16, Float32, but got", self.dtype(),
-        OPS_ERROR(ErrCode::TYPE));
     bool is_fp = (self.dtype() == at::kInt) ? false : true;
+
     at::Tensor result =
-        npu_preparation::apply_tensor({bins}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);
-    histc_out_nocheck(result, self, bins, min, max);
+        npu_preparation::apply_tensor({bins}, self.options().dtype(at::kInt), self);
+
+    at::Tensor nbins = npu_preparation::apply_tensor({1}, self.options().dtype(at::kInt), self);
+
+    at::Tensor range = npu_preparation::apply_tensor({2}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);
+    nbins[0] = bins;
+    if (is_fp) {
+        range[0] = min.toFloat();
+        range[1] = max.toFloat();
+    } else {
+        range[0] = min.toInt();
+        range[1] = max.toInt();
+    }
+
+    histogram_fixed_width(result, self, range, nbins);
     return result;
 }
 } // namespace acl_op
