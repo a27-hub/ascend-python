@@ -4269,7 +4269,7 @@ next_tokens: Host侧的attribute, 用于指定参与计算的有效数据块, �
 input_layout: Host侧的attribute, 代表query、key、value的布局, 根据输入的Query、Key、Value的shape确定, 三维张量是BSH, 四维张量是BNSD, 默认值为BSH; 数据类型为string。
 num_key_value_heads: Host侧的attribute, kv的头数, 默认值为0, 表示与q的头数相同; 否则表示kv的头数, 需要能被q的头数(num_heads)整除; 数据类型为INT64。
 sparse_mode: Host侧的attribute, 针对noMask、leftUpCasual、rightDownCasual、band四类sparse场景, 新增可选属性sparse_mode(UINT64, 枚举), 对应枚举值分别为0、2、3、4。
-innerPrecise：Host侧的int，一共4种模式：0、1、2、3。一共两位bit位，第0位（bit0）表示高精度或者高性能选择，第1位（bit1）表示是否做行无效修正。数据类型支持：INT64。Q_S为1时该参数无效。综合约束请见约束与限制。
+innerPrecise：Host侧的int，一共4种模式：0、1、2、3。一共两位bit位，第0位（bit0）表示高精度或者高性能选择，第1位（bit1）表示是否做行无效修正。数据类型支持：INT64。Q_S>1时，建议该参数设置为2；Q_S为1时该参数无效。综合约束请见约束与限制。
     innerPrecise为0时，代表开启高精度模式，且不做行无效修正。
     innerPrecise为1时，代表高性能模式，且不做行无效修正。
     innerPrecise为2时，代表开启高精度模式，且做行无效修正。
