@@ -2279,7 +2279,14 @@ custom:
     impl_ns: op_api
   - func: npu_dynamic_quant(Tensor input, *, Tensor? smooth_scales=None) -> (Tensor, Tensor)
     impl_ns: op_api
-  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fake_ascend_quant(Tensor x, float scale, float offset) -> Tensor
+    impl_ns: acl_op
+  - func: npu_quantize_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor bias, Tensor scales, Tensor? zero_points, int dtype, int axis=-1, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor)
+    impl_ns: acl_op
+  - func: npu_dua_quantize_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor bias, Tensor scales1, Tensor scales2, Tensor? zero_points1, Tensor? zero_points2, int dtype, int axis=-1, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor)
+    impl_ns: acl_op
+  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias=None, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_add_layer_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias, Tensor? scales1, Tensor? scales2, Tensor? zero_points1, Tensor? zero_points2, int quant_mode=0, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     impl_ns: acl_op, op_api
   - func: npu_add_layer_norm_backward(Tensor? dy_opt, Tensor x1, Tensor x2, Tensor rstd, Tensor mean, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor, Tensor)
     impl_ns: acl_op, op_api

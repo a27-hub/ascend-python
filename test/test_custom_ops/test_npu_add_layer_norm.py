@@ -17,11 +17,11 @@ class AddLayerNormOutputParams:
 
 class TestNPUAddLayerNorm(TestCase):
     def supported_op_exec(self, x1, x2, gamma, beta):
-        if x1.dtype is not torch.float and x2.dtype is torch.float:
+        if x1.dtype != torch.float and x2.dtype == torch.float:
             x1_tensor = x1.to(torch.float)
         else:
             x1_tensor = x1
-        if x1.dtype is torch.float and x2.dtype is not torch.float:
+        if x1.dtype == torch.float and x2.dtype != torch.float:
             x2_tensor = x2.to(torch.float)
         else:
             x2_tensor = x2
@@ -80,11 +80,18 @@ class TestNPUAddLayerNorm(TestCase):
         supported_output = self.supported_op_exec(cpu_input_x1, cpu_input_x2, cpu_input_gamma, cpu_input_beta)
         custom_output = self.custom_op_exec(npu_input_x1, npu_input_x2, npu_input_gamma, npu_input_beta)
 
+<<<<<<< HEAD
         self.assertEqual(supported_output.y.dtype, "float32")
+=======
+>>>>>>> 3fd11242710634a9ae32318c53e4ca657e328487
         self.assertRtolEqual(supported_output.y, custom_output.y)
         self.assertRtolEqual(supported_output.mean, custom_output.mean)
         self.assertRtolEqual(supported_output.rstd, custom_output.rstd)
         self.assertRtolEqual(supported_output.x, custom_output.x)
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     run_tests()
+=======
+    run_tests()
+>>>>>>> 3fd11242710634a9ae32318c53e4ca657e328487
