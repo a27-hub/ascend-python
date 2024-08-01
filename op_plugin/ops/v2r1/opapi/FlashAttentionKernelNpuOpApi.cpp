@@ -412,6 +412,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
 
     at::Tensor format_query = format_trans(query);
     at::Tensor attention_score = OpPreparation::apply_tensor_without_format(format_query);
+    at::Tensor attention_score_no_keep = OpPreparation::apply_tensor_without_format(format_query);
+
     at::Tensor format_key = format_trans(key);
     at::Tensor format_value = format_trans(value);
 
@@ -456,13 +458,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
             ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
             input_layout_ptr, inner_precise, sparse_mode, softmax_max, softmax_sum,
-            softmax_out, attention_score);
+            attention_score_no_keep, attention_score);
     } else {
         EXEC_NPU_CMD(
             aclnnFlashAttentionScore, format_query, format_key, format_value,
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
             scale, keep_prob, pre_tockens, next_tockens, head_num, input_layout_ptr,
-            inner_precise, sparse_mode, softmax_max, softmax_sum, softmax_out, attention_score);
+            inner_precise, sparse_mode, softmax_max, softmax_sum, attention_score_no_keep, attention_score);
     }
 
     if (!sync) {
@@ -471,7 +473,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         npu_event.block(c10_npu::getCurrentSecondaryStream());
     }
 
-    return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
+    return std::make_tuple(attention_score, softmax_max, softmax_sum, attention_score_no_keep,
         seed, offset, numels);
 }
 
