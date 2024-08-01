@@ -33,8 +33,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_group_norm_silu(
     auto x_size = op_infer::array_to_small_vector(X.sizes());
     at::Tensor mean = npu_preparation::apply_tensor_without_format(X, {x_size[0], group});
     at::Tensor rstd = npu_preparation::apply_tensor_without_format(X, {x_size[0], group});
+    bool activate_silu = true;
 
-    EXEC_NPU_CMD(aclnnGroupNormSilu, X, gamma_opt, beta_opt, group, eps, y, mean, rstd);
+    EXEC_NPU_CMD(aclnnGroupNormSilu, X, gamma_opt, beta_opt, group, eps, activate_silu, y, mean, rstd);
     return std::make_tuple(y, mean, rstd);
 }
 
