@@ -2277,6 +2277,8 @@ custom:
     impl_ns: acl_op, op_api
   - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
     impl_ns: acl_op, op_api
+  - func: logit(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
+    impl_ns: acl_op, op_api
   - func: npu_rms_norm(Tensor self, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor)
     impl_ns: acl_op, op_api
     exposed: True
