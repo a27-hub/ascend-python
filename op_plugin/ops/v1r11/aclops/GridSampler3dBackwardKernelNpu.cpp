@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 
@@ -24,7 +25,10 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(
     const at::Tensor& grid,
     int64_t interpolation_mode,
     int64_t padding_mode,
-    bool align_corners) {
-  return grid_sampler3d_backward_common_nocheck(grad, input, grid, interpolation_mode, padding_mode, align_corners);
+    bool align_corners)
+{
+    TORCH_NPU_WARN_ONCE("GridSampler3DGrad doesn't meet accuracy for pytorch1.11 now when interpolation_mode is nearest,"
+                      "and it only meets accuracy for 2.x");
+    return grid_sampler3d_backward_common_nocheck(grad, input, grid, interpolation_mode, padding_mode, align_corners);
 }
 } // namespace acl_op

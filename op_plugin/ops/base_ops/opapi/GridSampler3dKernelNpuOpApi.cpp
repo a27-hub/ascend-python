@@ -23,6 +23,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor grid_sampler_3d(const at::Tensor& self, const at::Tensor& grid, int64_t interpolation_mode,
                            int64_t padding_mode, bool align_corners)
 {
+    TORCH_NPU_WARN_ONCE("GridSampler3D doesn't meet accuracy for pytorch1.11 now when interpolation_mode is nearest,"
+                        "and it only meets accuracy for 2.x");
     DO_COMPATIBILITY(aclnnGridSampler3D, acl_op::grid_sampler_3d(self, grid, interpolation_mode,
                                                                  padding_mode, align_corners));
     auto output_size = {self.size(0), self.size(1), grid.size(1), grid.size(2), grid.size(3)};

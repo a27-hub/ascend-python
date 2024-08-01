@@ -24,6 +24,8 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& gr
                                                             const at::Tensor& grid, int64_t interpolation_mode,
                                                             int64_t padding_mode, bool align_corners)
 {
+    TORCH_NPU_WARN_ONCE("GridSampler3DGrad doesn't meet accuracy for pytorch1.11 now when interpolation_mode is nearest,"
+                        "and it only meets accuracy for 2.x");
     DO_COMPATIBILITY(aclnnGridSampler3DBackward, acl_op::grid_sampler_3d_backward(grad, input, grid, interpolation_mode,
                                                                                   padding_mode, align_corners));
     at::Tensor dinput = npu_preparation::apply_tensor_without_format(input);

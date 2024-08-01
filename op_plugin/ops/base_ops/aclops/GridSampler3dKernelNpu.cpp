@@ -40,6 +40,8 @@ at::Tensor &grid_sampler_3d_npu_nocheck(at::Tensor &result, const at::Tensor &se
 at::Tensor grid_sampler_3d(const at::Tensor &self, const at::Tensor &grid, int64_t interpolation_mode,
                            int64_t padding_mode, bool align_corners)
 {
+    TORCH_NPU_WARN_ONCE("GridSampler3D doesn't meet accuracy for pytorch1.11 now when interpolation_mode is nearest,"
+                        "and it only meets accuracy for 2.x");
     TORCH_CHECK((0 <= interpolation_mode && interpolation_mode <= 2), "interpolation_mode must be in range [0~2]."
         + OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK((0 <= padding_mode && padding_mode <= 2), "padding_mode must be in range [0~2]."
