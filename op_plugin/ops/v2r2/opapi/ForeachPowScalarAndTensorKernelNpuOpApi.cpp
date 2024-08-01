@@ -49,6 +49,8 @@ void _split_and_exec_npu_cmd_pow_scalar(const at::Scalar& scalar, const at::Tens
 std::vector<at::Tensor> _foreach_pow(const at::Scalar& scalar, const at::TensorList exponent)
 {
     at::native::check_foreach_api_restrictions(exponent);
+    DO_COMPATIBILITY(aclnnForeachPowScalarAndTensor,
+                     at::native::foreach_scalar_pow_list_kernel_slow(scalar, exponent));
     if (!at::native::can_use_fast_route(exponent, scalar, true)) {
         return at::native::foreach_scalar_pow_list_kernel_slow(scalar, exponent);
     }

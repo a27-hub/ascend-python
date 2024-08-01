@@ -107,6 +107,8 @@ void _foreach_pow_(at::TensorList tensors1, at::TensorList tensors2)
 std::vector<at::Tensor> _foreach_pow(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachPowScalarList,
+                     at::native::foreach_tensor_pow_scalarlist_kernel_slow(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_pow_scalarlist_kernel_slow(tensors, scalars);
     }
@@ -126,6 +128,8 @@ std::vector<at::Tensor> _foreach_pow(at::TensorList tensors, at::ArrayRef<at::Sc
 void _foreach_pow_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachPowScalarList,
+                     at::native::foreach_tensor_pow_scalarlist_kernel_slow_(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         at::native::foreach_tensor_pow_scalarlist_kernel_slow_(tensors, scalars);
         return;

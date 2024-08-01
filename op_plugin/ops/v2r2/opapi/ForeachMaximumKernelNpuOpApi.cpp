@@ -51,7 +51,7 @@ std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors1, at::TensorList
     if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_clamp_min_list_kernel_slow(tensors1, tensors2);
     }
-  // construct the output tensorlist of the NPU
+    // construct the output tensorlist of the NPU
     auto scalar_type = tensors1[0].scalar_type();
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors1) {
@@ -133,6 +133,8 @@ void _split_and_exec_npu_cmd_max_scalar_list(at::TensorList& tensors1, at::Array
 std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors, const at::Scalar& scalar)
 {
     at::native::check_foreach_api_restrictions(tensors);
+    DO_COMPATIBILITY(aclnnForeachMaximumScalarList,
+                     at::native::foreach_tensor_clamp_min_scalar_kernel_slow(tensors, scalar));
     if (!at::native::can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow(tensors, scalar);
     }
@@ -153,6 +155,8 @@ std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors, const at::Scala
 void _foreach_maximum_(at::TensorList tensors, const at::Scalar& scalar)
 {
     at::native::check_foreach_api_restrictions(tensors);
+    DO_COMPATIBILITY(aclnnForeachMaximumScalarList,
+                     at::native::foreach_tensor_clamp_min_scalar_kernel_slow_(tensors, scalar));
     if (!at::native::can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow_(tensors, scalar);
     }
