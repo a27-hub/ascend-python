@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Huawei Technologies Co., Ltd
+// Copyright (c) 2023-2024 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -16,13 +16,23 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace acl_op {
-at::Tensor gelu_common_nocheck(const at::Tensor& self) {
-  at::Tensor result = at_npu::native::OpPreparation::apply_tensor(self);
-  at_npu::native::OpCommand cmd;
-  cmd.Name("Gelu")
-      .Input(self)
-      .Output(result)
-      .Run();
-  return result;
+at::Tensor gelu_common_nocheck(const at::Tensor &self)
+{
+    at::Tensor result = at_npu::native::OpPreparation::apply_tensor(self);
+    at_npu::native::OpCommand cmd;
+    cmd.Name("Gelu").Input(self).Output(result).Run();
+    return result;
+}
+
+at::Tensor gelu_v2_common_nocheck(const at::Tensor &self, c10::string_view approximate)
+{
+    at::Tensor result = at_npu::native::OpPreparation::apply_tensor(self);
+    at_npu::native::OpCommand cmd;
+    cmd.Name("GeluV2")
+        .Input(self)
+        .Attr<std::string>("approximate", std::string(approximate).data())
+        .Output(result)
+        .Run();
+    return result;
 }
 } // namespace acl_op
