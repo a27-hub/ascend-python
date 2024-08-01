@@ -15,6 +15,17 @@ class TestForeachAtan(TestCase):
         "bfloat16" : torch.bfloat16,
     }
 
+    def assert_equal_bfloat16(self, cpu_outs, npu_outs):
+        for cpu_out, npu_out in zip(cpu_outs, npu_outs):
+            if (cpu_out.shape != npu_out.shape):
+                self.fail("shape error")
+            if (cpu_out.dtype != npu_out.dtype):
+                self.fail("dtype error!")
+            result = torch.allclose(cpu_out, npu_out.cpu(), rtol=0.001, atol=0.001)
+            if not result:
+                self.fail("result error!")
+        return True
+    
     def create_tensors(self, tensor_nums, dtype):
         cpu_tensors = []
         npu_tensors = []
@@ -26,7 +37,6 @@ class TestForeachAtan(TestCase):
             npu_tensors.append(t.npu())
         return tuple(cpu_tensors), tuple(npu_tensors)
 
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_out_float32_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -36,7 +46,6 @@ class TestForeachAtan(TestCase):
 
             self.assertRtolEqual(cpu_output, npu_output)
     
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_out_float16_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -46,7 +55,6 @@ class TestForeachAtan(TestCase):
 
             self.assertRtolEqual(cpu_output, npu_output)
 
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_out_bfloat16_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -54,9 +62,8 @@ class TestForeachAtan(TestCase):
             cpu_output = torch._foreach_atan(cpu_tensors)
             npu_output = torch._foreach_atan(npu_tensors)
 
-            self.assertRtolEqual(cpu_output, npu_output)
+            self.assert_equal_bfloat16(cpu_output, npu_output)
 
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_inplace_float32_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -66,7 +73,6 @@ class TestForeachAtan(TestCase):
 
             self.assertRtolEqual(cpu_tensors, npu_tensors)
     
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_inplace_float16_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -76,7 +82,6 @@ class TestForeachAtan(TestCase):
 
             self.assertRtolEqual(cpu_tensors, npu_tensors)
 
-    @SupportedDevices(['Ascend910B'])
     def test_foreach_atan_inplace_bfloat16_shpae_tensor_num(self):
         tensor_num_list = [12, 62]
         for tensor_num in tensor_num_list :
@@ -84,7 +89,7 @@ class TestForeachAtan(TestCase):
             torch._foreach_atan_(cpu_tensors)
             torch._foreach_atan_(npu_tensors)
 
-            self.assertRtolEqual(cpu_tensors, npu_tensors)
+            self.assert_equal_bfloat16(cpu_tensors, npu_tensors)
 
 
 if __name__ == "__main__":
