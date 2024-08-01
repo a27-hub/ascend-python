@@ -29,6 +29,9 @@ std::tuple<at::Tensor, at::Tensor> grid_sampler_3d_backward(const at::Tensor& gr
     at::Tensor dinput = npu_preparation::apply_tensor_without_format(input);
     at::Tensor dgrid = npu_preparation::apply_tensor_without_format(grid);
     std::array<bool, 2> output_mask = {true, true};
+    if (interpolation_mode == 1) {
+        std::cout << "Warning: If interpolation_mode=1, pytorch1.11's precision may not meet the standard." << std::endl;
+    }
     EXEC_NPU_CMD(aclnnGridSampler3DBackward, grad, input, grid, interpolation_mode, padding_mode, align_corners,
                  output_mask, dinput, dgrid);
     return std::tuple<at::Tensor, at::Tensor>(dinput, dgrid);
