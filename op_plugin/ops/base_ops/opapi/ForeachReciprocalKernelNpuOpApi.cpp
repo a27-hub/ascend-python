@@ -49,6 +49,7 @@ void _split_and_exec_npu_cmd_reciprocal(const at::TensorList tensors1, at::Tenso
 void _foreach_reciprocal_(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachReciprocal, at::native::foreach_tensor_reciprocal_slow_(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_reciprocal_slow_(self);
     }
@@ -67,6 +68,7 @@ void _foreach_reciprocal_(const at::TensorList self)
 std::vector<at::Tensor> _foreach_reciprocal(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachReciprocal, at::native::foreach_tensor_reciprocal_slow(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_reciprocal_slow(self);
     }

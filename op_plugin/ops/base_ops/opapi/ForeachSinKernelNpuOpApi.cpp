@@ -44,6 +44,7 @@ void _split_and_exec_npu_cmd_sin(const at::TensorList tensors1, at::TensorList r
 void _foreach_sin_(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachSin, at::native::foreach_tensor_sin_slow_(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_sin_slow_(self);
     }
@@ -54,6 +55,7 @@ void _foreach_sin_(const at::TensorList self)
 std::vector<at::Tensor> _foreach_sin(const at::TensorList self)
 {
     at::native::check_foreach_api_restrictions(self);
+    DO_COMPATIBILITY(aclnnForeachSin, at::native::foreach_tensor_sin_slow(self));
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_sin_slow(self);
     }

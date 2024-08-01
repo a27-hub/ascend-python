@@ -111,6 +111,7 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList tensors, at::ArrayRef<at::Sc
 {
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachSubScalarList, at::native::foreach_tensor_sub_scalarlist_kernel_slow(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_sub_scalarlist_kernel_slow(tensors, scalars);
     }
@@ -131,6 +132,7 @@ void _foreach_sub_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
 {
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
+    DO_COMPATIBILITY(aclnnForeachSubScalarList, at::native::foreach_tensor_sub_scalarlist_kernel_slow_(tensors, scalars));
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         at::native::foreach_tensor_sub_scalarlist_kernel_slow_(tensors, scalars);
         return;
