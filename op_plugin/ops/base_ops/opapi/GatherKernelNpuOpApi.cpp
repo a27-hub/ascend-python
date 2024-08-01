@@ -20,6 +20,16 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace{
+bool check_optim(const at::Tensor& self, int64_t dim, const at::Tensor& index) {
+  if (index.dim() == 2 && index.stride(0) == 1 && index.stride(1) == 0 && dim == 0 && self.dim() == 2 &&
+      self.size(1) == index.size(1)) {
+      return true;
+    }
+  return false;
+}
+}
+
 at::Tensor& gather_out(
     const at::Tensor& self,
     int64_t dim,
@@ -33,7 +43,13 @@ at::Tensor& gather_out(
       result,
       self.scalar_type(),
       output_size);
-  EXEC_NPU_CMD(aclnnGather, self, dim, index, result);
+  if (!check_optim){
+    EXEC_NPU_CMD(aclnnGather, self, dim, index, result);
+  } else{
+    at::Tensor sub_index = index.select(1,0);
+    at::TensorList indices = {sub_index};
+    EXEC_NPU_CMD(aclnnIndex, self, indices, result);
+  }
   return result;
 }
 
@@ -44,14 +60,8 @@ at::Tensor& gather_out(
     bool sparse_grad,
     at::Tensor& result) {
   DO_COMPATIBILITY(aclnnGather, acl_op::gather_out(self, dim, index, sparse_grad, result));
-  auto output_size = index.sizes();
-  npu_preparation::check_tensor(
-      {self},
-      result,
-      self.scalar_type(),
-      output_size);
   const int64_t real_dim = dimname_to_position(self, dim);
-  EXEC_NPU_CMD(aclnnGather, self, real_dim, index, result);
+  op_api::gather_out(self, real_dim, index, sparse_grad, result);
   return result;
 }
 
@@ -63,7 +73,7 @@ at::Tensor gather(
   DO_COMPATIBILITY(aclnnGather, acl_op::gather(self, dim, index, sparse_grad));
   auto outputSize = index.sizes();
   at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputSize);
-  EXEC_NPU_CMD(aclnnGather, self, dim, index, result);
+  op_api::gather_out(self, dim, index, sparse_grad, result);
   return result;
 }
 
@@ -75,8 +85,7 @@ at::Tensor gather(
   DO_COMPATIBILITY(aclnnGather, acl_op::gather(self, dim, index, sparse_grad));
   auto outputSize = index.sizes();
   at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputSize);
-  const int64_t real_dim = dimname_to_position(self, dim);
-  EXEC_NPU_CMD(aclnnGather, self, real_dim, index, result);
+  op_api::gather_out(self, dim, index, sparse_grad, result);
   return result;
 }
 } // namespace op_api
