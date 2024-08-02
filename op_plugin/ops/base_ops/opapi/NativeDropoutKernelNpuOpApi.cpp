@@ -25,8 +25,18 @@ static const int64_t BIT_NUMBER = 128;
 static const int64_t UINT8_BIT_NUMBER = 8;
 
 std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p) {
-  DO_COMPATIBILITY(aclnnDropoutGenMaskV2, acl_op::_npu_dropout(self, p));
-  DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::_npu_dropout(self, p));
+  const uint64_t seed = 0;
+  const uint64_t offset = 0;
+  const at::Tensor optionalNoiseShape = nullptr;
+  bool isAscendC = false;
+
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910D1) {
+    DO_COMPATIBILITY(aclnnDropoutV3, acl_op::_npu_dropout(self, p));
+    isAscendC = true;
+  } else {
+    DO_COMPATIBILITY(aclnnDropoutGenMaskV2, acl_op::_npu_dropout(self, p));
+    DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::_npu_dropout(self, p));
+  }
 
   int64_t length = (self.numel() + BIT_NUMBER - 1) / BIT_NUMBER * BIT_NUMBER / UINT8_BIT_NUMBER;
   at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self);
@@ -51,8 +61,14 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
     auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
     // At present, the default value of random number may be very large,
     // which will cause overflow in graph mode, so we set seed = 0 to avoid it.
-    const uint64_t seed = pair.first;
-    const uint64_t offset = pair.second;
+    seed = pair.first;
+    offset = pair.second;
+
+    if (isAscendC) {
+        EXEC_NPU_CMD(aclnnDropoutV3, self, optionalNoiseShape, p, seed, offset, result, mask);
+        return std::tie(result, mask);
+    }
+
     aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
     EXEC_NPU_CMD(aclnnDropoutGenMaskV2, shapeArray, p, seed, offset, dataType, mask);
   }
