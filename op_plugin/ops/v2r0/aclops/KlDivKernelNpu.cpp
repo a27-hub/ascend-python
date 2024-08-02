@@ -34,7 +34,7 @@ at::Tensor npu_kl_div(
     at::Tensor result = reduction_str == "none" ?
         npu_preparation::apply_tensor(self) : npu_preparation::apply_tensor({}, self.options(), self);
   at_npu::native::OpCommand cmd;
-  cmd.Name("KLDiv")
+  cmd.Name("KLDivV2")
       .Input(self)
       .Input(target)
       .Output(result)
