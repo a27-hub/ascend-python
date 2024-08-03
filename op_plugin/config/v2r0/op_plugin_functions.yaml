@@ -540,6 +540,8 @@ official:
    impl_ns: acl_op, op_api
  - func: dropout(Tensor input, float p, bool train) -> Tensor
    impl_ns: acl_op
+ - func: dropout_(Tensor(a!) self, float p, bool train) -> Tensor(a!)
+   impl_ns: op_api
  - func: embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False) -> Tensor
    impl_ns: acl_op
  - func: embedding_backward(Tensor grad, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor
