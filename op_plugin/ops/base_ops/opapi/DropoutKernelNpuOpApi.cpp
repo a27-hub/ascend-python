@@ -20,7 +20,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-
 at::Tensor dropout(const at::Tensor& self, double p, bool train) {
   if (p == 0 || !train || self.numel() == 0) {
     return self;
@@ -30,5 +29,17 @@ at::Tensor dropout(const at::Tensor& self, double p, bool train) {
   }
   auto results = at_npu::native::custom_ops::_npu_dropout(self, p);
   return std::get<0>(results);
+}
+
+at::Tensor dropout_(const at::Tensor& self, double p, bool train) {
+  if (p == 0 || !train || self.numel() == 0) {
+    return self;
+  }
+  if (p == 1) {
+    return self.mul(at::zeros(self.sizes(), self.options()));
+  }
+  auto results = at_npu::native::custom_ops::_npu_dropout(self, p);
+  self.copy_(std::get<0>(results));
+  return self;
 }
 }  // namespace op_api

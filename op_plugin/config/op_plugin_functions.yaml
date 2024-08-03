@@ -1627,6 +1627,9 @@ official:
     acl_op: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5
 
+  - func: dropout_(Tensor(a!) self, float p, bool train) -> Tensor(a!)
+    op_api: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5
+
   - func: elu(Tensor self, Scalar alpha=1, Scalar scale=1, Scalar input_scale=1) -> Tensor
     acl_op: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5

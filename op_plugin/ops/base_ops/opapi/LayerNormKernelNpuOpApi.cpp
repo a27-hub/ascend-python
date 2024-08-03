@@ -17,6 +17,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/AccumulateType.h"
 
 namespace op_api {
 
@@ -45,7 +46,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
     const auto input_shape = input.sizes();
     const int64_t M =
         std::accumulate(input_shape.cbegin(), input_shape.cbegin() + begin_axis, 1LL, std::multiplies<int64_t>());
-    auto acc_type = input.scalar_type() == at::kDouble ? at::kDouble : at::kFloat;
+    auto acc_type = at_npu::toAccumulateType(input.scalar_type(), true);
 
     // shape and dtype of mean and rstd depend on M value and input dtype
     if (M <= 0) {
