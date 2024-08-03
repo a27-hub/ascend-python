@@ -1423,9 +1423,9 @@ official:
  - func: square.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op, op_api
  - func: scatter_.src(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor(a!)
-   impl_ns: acl_op
+   impl_ns: acl_op, op_api
  - func: scatter_.value(Tensor(a!) self, int dim, Tensor index, Scalar value) -> Tensor(a!)
-   impl_ns: acl_op
+   impl_ns: acl_op, op_api
  - func: scatter.src_out(Tensor self, int dim, Tensor index, Tensor src, *, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op, op_api
  - func: scatter.value_out(Tensor self, int dim, Tensor index, Scalar value, *, Tensor(a!) out) -> Tensor(a!)
@@ -1804,6 +1804,8 @@ official:
    impl_ns: acl_op, op_api
  - func: selu_(Tensor(a!) self) -> Tensor(a!)
    impl_ns: acl_op, op_api
+ - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2) -> Tensor[]
+   impl_ns: op_api
  - func: _foreach_sqrt(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_sqrt_(Tensor(a!)[] self) -> ()
@@ -1912,10 +1914,36 @@ official:
    impl_ns: op_api
  - func: _foreach_exp(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
+ - func: _foreach_expm1_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_expm1(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log1p_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log1p(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log10_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log10(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log2_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log2(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
  - func: _foreach_neg(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_neg_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
+ - func: _foreach_reciprocal_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_reciprocal(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_zero_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api 
  - func: view_as_real(Tensor(a) self) -> Tensor(a)
    impl_ns: acl_op
  - func: view_as_complex(Tensor(a) self) -> Tensor(a)
@@ -1925,6 +1953,50 @@ official:
  - func: _foreach_abs_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
  - func: _foreach_abs(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: isin.Tensor_Tensor_out(Tensor elements, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
+   impl_ns: op_api
+ - func: isin.Tensor_Tensor(Tensor elements, Tensor test_elements, *, bool assume_unique=False, bool invert=False) -> Tensor
+   impl_ns: op_api
+ - func: _foreach_erf(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_erf_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_erfc(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_erfc_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_acos_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_acos(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_asin_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_asin(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_atan_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_atan(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_cosh_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_cosh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_sin_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_sin(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_sinh_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_sinh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tan_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_tan(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tanh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tanh_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
 
 symint:
@@ -1942,41 +2014,8 @@ tocpu:
   - _fft_c2r.out
   - _fft_c2c
   - _fft_c2c.out
-  - _foreach_zero_
-  - _foreach_acos
-  - _foreach_acos_
-  - _foreach_asin
-  - _foreach_asin_
-  - _foreach_atan
-  - _foreach_atan_
-  - _foreach_cosh
-  - _foreach_cosh_
-  - _foreach_erf
-  - _foreach_erf_
-  - _foreach_erfc
-  - _foreach_erfc_
-  - _foreach_expm1
-  - _foreach_expm1_
-  - _foreach_log
-  - _foreach_log_
-  - _foreach_log10
-  - _foreach_log10_
-  - _foreach_log1p
-  - _foreach_log1p_
-  - _foreach_log2
-  - _foreach_log2_
-  - _foreach_tan
-  - _foreach_tan_
-  - _foreach_tanh
-  - _foreach_tanh_
-  - _foreach_sin
-  - _foreach_sin_
-  - _foreach_sinh
-  - _foreach_sinh_
   - _foreach_lgamma
   - _foreach_lgamma_
-  - _foreach_reciprocal
-  - _foreach_reciprocal_
   - _linalg_inv_out_helper_
   - _linalg_qr_helper
   - _logcumsumexp
@@ -2097,8 +2136,6 @@ unsupported:
   - conj_physical_
   - frexp.Tensor
   - frexp.Tensor_out
-  - isin.Tensor_Tensor_out
-  - isin.Tensor_Tensor
   - cholesky.out
   - cholesky
   - geqrf.a
@@ -2623,5 +2660,7 @@ custom:
     impl_ns: op_api
   - func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor
     impl_ns: acl_op
+  - func: _npu_silent_check_v2(Tensor val, Tensor(a!) input_grad, Tensor(b!) sfda, Tensor(c!) step, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2, int npu_asd_detect) -> Tensor
+    impl_ns: op_api
   - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor skip1, Tensor? skip2, Tensor bias, Tensor scales, Tensor expanded_src_to_dst_row, Tensor export_for_source_row) -> Tensor
     impl_ns: op_api

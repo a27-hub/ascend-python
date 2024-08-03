@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/NamedTensorUtils.h>
-
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -58,7 +56,7 @@ static at::Tensor exec_aclnn_masked_select(const at::Tensor& self, const at::Ten
         outputShapeSize.push_back(view_dims[i]);
     }
     out.resize_(outputShapeSize);
-    delete view_dims;
+    delete[] view_dims;
     view_dims = nullptr;
     return out;
 }

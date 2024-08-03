@@ -126,6 +126,8 @@ official:
    impl_ns: acl_op, op_api
  - func: _unique2(Tensor self, bool sorted=True, bool return_inverse=False, bool return_counts=False) -> (Tensor, Tensor, Tensor)
    impl_ns: acl_op, op_api
+ - func: _unique(Tensor self, bool sorted=True, bool return_inverse=False) -> (Tensor, Tensor)
+   impl_ns: acl_op, op_api
  - func: abs(Tensor self) -> Tensor
    impl_ns: acl_op, op_api
  - func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -265,6 +267,8 @@ official:
    impl_ns: acl_op, op_api
  - func: argsort.dimname(Tensor self, Dimname dim, bool descending=False) -> Tensor
    impl_ns: acl_op, op_api
+ - func: argsort.stable(Tensor self, bool stable=False, int dim=-1, bool descending=False) -> Tensor
+   impl_ns: op_api
  - func: asin(Tensor self) -> Tensor
    impl_ns: acl_op, op_api
  - func: asin.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -805,6 +809,10 @@ official:
    impl_ns: acl_op, op_api
  - func: isin.Scalar_Tensor_out(Scalar element, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op, op_api
+ - func: isin.Tensor_Tensor_out(Tensor elements, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
+   impl_ns: op_api
+ - func: isin.Tensor_Tensor(Tensor elements, Tensor test_elements, *, bool assume_unique=False, bool invert=False) -> Tensor
+   impl_ns: op_api
  - func: isposinf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op, op_api
  - func: isneginf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -1400,9 +1408,9 @@ official:
  - func: scaled_dot_product_attention(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None) -> Tensor
    impl_ns: op_api
  - func: scatter_.src(Tensor(a!) self, int dim, Tensor index, Tensor src) -> Tensor(a!)
-   impl_ns: acl_op
+   impl_ns: acl_op, op_api
  - func: scatter_.value(Tensor(a!) self, int dim, Tensor index, Scalar value) -> Tensor(a!)
-   impl_ns: acl_op
+   impl_ns: acl_op, op_api
  - func: scatter.src_out(Tensor self, int dim, Tensor index, Tensor src, *, Tensor(a!) out) -> Tensor(a!)
    impl_ns: acl_op, op_api
  - func: scatter.value_out(Tensor self, int dim, Tensor index, Scalar value, *, Tensor(a!) out) -> Tensor(a!)
@@ -1765,6 +1773,14 @@ official:
    impl_ns: acl_op, op_api
  - func: index_copy(Tensor self, int dim, Tensor index, Tensor source) -> Tensor
    impl_ns: acl_op, op_api
+ - func: _foreach_lerp_.Scalar(Tensor(a!)[] self, Tensor[] tensors1, Scalar weight) -> ()
+   impl_ns: op_api
+ - func: _foreach_lerp.Scalar(Tensor[] self, Tensor[] tensors1, Scalar weight) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_lerp_.List(Tensor(a!)[] self, Tensor[] tensors1, Tensor[] weights) -> ()
+   impl_ns: op_api
+ - func: _foreach_lerp.List(Tensor[] self, Tensor[] tensors1, Tensor[] weights) -> Tensor[]
+   impl_ns: op_api
  - func: _foreach_maximum.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_maximum_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
@@ -1780,6 +1796,8 @@ official:
  - func: _foreach_minimum.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_minimum_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
+   impl_ns: op_api
+ - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_sqrt(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
@@ -1889,6 +1907,8 @@ official:
    impl_ns: op_api
  - func: _foreach_pow_.ScalarList(Tensor(a!)[] self, Scalar[] exponent) -> ()
    impl_ns: op_api
+ - func: _foreach_pow.ScalarAndTensor(Scalar self, Tensor[] exponent) -> Tensor[]
+   impl_ns: op_api
  - func: _foreach_addcdiv_.ScalarList(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> ()
    impl_ns: op_api
  - func: _foreach_addcdiv.ScalarList(Tensor[] input, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> Tensor[]
@@ -1909,13 +1929,105 @@ official:
    impl_ns: op_api
  - func: _foreach_exp(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
+ - func: _foreach_expm1_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_expm1(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log1p_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log1p(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log10_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log10(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_log2_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_log2(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
  - func: _foreach_neg(Tensor[] tensors) -> Tensor[]
    impl_ns: op_api
  - func: _foreach_neg_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
+ - func: _foreach_reciprocal_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_reciprocal(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_zero_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_max.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_max_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_max.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_max_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_max.List(Tensor[] self, Tensor[] other) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_max_.List(Tensor(a!)[] self, Tensor[] other) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_min.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_min_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_min.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_min_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
+   impl_ns: op_api
+ - func: _foreach_clamp_min.List(Tensor[] self, Tensor[] other) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_clamp_min_.List(Tensor(a!)[] self, Tensor[] other) -> ()
+   impl_ns: op_api
  - func: _foreach_abs_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
  - func: _foreach_abs(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_copy_(Tensor(a!)[] self, Tensor[] src, bool non_blocking=False) -> ()
+   impl_ns: op_api
+ - func: _foreach_erf(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_erf_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_erfc(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_erfc_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_acos_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_acos(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_asin_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_asin(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_atan_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_atan(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_cosh_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_cosh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_sin_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_sin(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_sinh_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_sinh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tan_(Tensor(a!)[] self) -> ()
+   impl_ns: op_api
+ - func: _foreach_tan(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tanh(Tensor[] tensors) -> Tensor[]
+   impl_ns: op_api
+ - func: _foreach_tanh_(Tensor(a!)[] self) -> ()
    impl_ns: op_api
  - func: native_group_norm(Tensor input, Tensor? weight, Tensor? bias, int N, int C, int HxW, int group, float eps) -> (Tensor, Tensor, Tensor)
    impl_ns: acl_op, op_api
@@ -2492,6 +2604,8 @@ custom:
     exposed: True
   - func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor
     impl_ns: acl_op
+  - func: _npu_silent_check_v2(Tensor val, Tensor(a!) input_grad, Tensor(b!) sfda, Tensor(c!) step, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2, int npu_asd_detect) -> Tensor
+    impl_ns: op_api
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
     impl_ns: acl_op
   - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor skip1, Tensor? skip2, Tensor bias, Tensor scales, Tensor expanded_src_to_dst_row, Tensor export_for_source_row) -> Tensor
