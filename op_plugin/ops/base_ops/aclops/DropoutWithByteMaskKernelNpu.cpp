@@ -67,6 +67,34 @@ at::Tensor dropout_gen_byte_mask(const at::Tensor& self, at::Scalar prob) {
   return mask;
 }
 
+at::Tensor dropout_v3(at::Tensor& result, const at::Tensor& self, at::Scalar p) {
+  bool is_not_jit_compile = at_npu::native::env::CheckJitDisable();
+  int64_t numels = is_not_jit_compile ? c10::multiply_integers(desc_.storage_sizes_) : self.numel();
+  uint64_t length = (static_cast<uint64_t>(numels) + LENGTH_DATA_ALIGN - 1) / LENGTH_DATA_ALIGN * LENGTH_DATA_ALIGN;
+  at::Tensor mask = npu_preparation::apply_tensor_with_format(
+      {length / LENGTH_BOLCK_ALIGN},
+      self.options().dtype(at::kByte),
+      ACL_FORMAT_ND);
+
+  at_npu::native::OpCommand cmd;
+  const auto gen = at_npu::detail::getDefaultNPUGenerator();
+  auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(INCREMENT);
+  const int64_t seed = static_cast<int64_t>(pair.first);
+  const int64_t offset = static_cast<int64_t>(pair.second);
+  at::Tensor noiseShape = nullptr;
+
+  cmd.Name("DropOutV3")
+      .Input(self)
+      .Input(noiseShape)
+      .Input(p, self.scalar_type(), npu_compile_type::MEMORY_HOST_COMPILE_DEPENDENT)
+      .Input(at::Scalar(seed), at::ScalarType::Int)
+      .Input(at::Scalar(offset), at::ScalarType::Int)
+      .Output(result)
+      .Output(mask)
+      .Run();
+  return mask;
+}
+
 std::tuple<at::Tensor, at::Tensor> dropout_out_nocheck(
     at::Tensor result,
     const at::Tensor& self,
@@ -83,6 +111,13 @@ std::tuple<at::Tensor, at::Tensor> dropout_out_nocheck(
   double retain = 1. - p;
   at::Scalar prob = at::Scalar(retain);
   at::Tensor mask;
+
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910D1) {
+    prob = at::Scalar(p);
+    mask = dropout_v3(result, self, prob);
+    return std::tie(result, mask);
+  }
+
   auto original_stream = c10_npu::getCurrentNPUStream();
   {
     // During the life cycle of this raii instance, the calcu stream is set as the
