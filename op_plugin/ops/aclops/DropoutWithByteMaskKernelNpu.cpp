@@ -18,6 +18,8 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "torch_npu/csrc/core/npu/npu_log.h"
 
 namespace acl_op {
 using npu_utils = at_npu::native::NpuUtils;
@@ -25,6 +27,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_compile_type = at_npu::native::CompileType;
 
 namespace {
+const static int64_t LENGTH_DATA_ALIGN = 128;
+const static int64_t LENGTH_BOLCK_ALIGN = 8;
+const static int64_t INCREMENT = 10;
 at::Tensor& dropout_do_mask_with_byte_mask(
     at::Tensor& result,
     const at::Tensor& self,
@@ -68,36 +73,36 @@ at::Tensor dropout_gen_byte_mask(const at::Tensor& self, at::Scalar prob) {
 }
 
 std::tuple<at::Tensor, at::Tensor> dropout_out_nocheck(
-    at::Tensor result,
-    const at::Tensor& self,
-    double p) {
-  at::Tensor self_cp = npu_utils::format_contiguous(self);
-  TORCH_CHECK(
-      p >= 0 && p <= 1,
-      "dropout probability has to be between 0 and 1, but got ", p,
-      OPS_ERROR(ErrCode::VALUE));
-  TORCH_CHECK(
-      at::isFloatingType(self_cp.scalar_type()),
-      "dropout only supports floating-point dtypes" + OPS_ERROR(ErrCode::TYPE));
+    at::Tensor result, const at::Tensor& self, double p)
+{
+    at::Tensor self_cp = npu_utils::format_contiguous(self);
+    TORCH_CHECK(
+        p >= 0 && p <= 1,
+        "dropout probability has to be between 0 and 1, but got ", p,
+        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(
+        at::isFloatingType(self_cp.scalar_type()),
+        "dropout only supports floating-point dtypes" + OPS_ERROR(ErrCode::TYPE));
 
-  double retain = 1. - p;
-  at::Scalar prob = at::Scalar(retain);
-  at::Tensor mask;
-  auto original_stream = c10_npu::getCurrentNPUStream();
-  {
-    // During the life cycle of this raii instance, the calcu stream is set as the
-    // secondary stream, and tasks are distributed to the secondary stream. At the
-    // same time, according to the one-stream-one-pool principle, memory is also
-    // alloced from the pool of the secondary stream.
-    c10_npu::SecondaryStreamGuard guard(c10_npu::getCurrentSecondaryStream());
-    mask = dropout_gen_byte_mask(self_cp, prob);
-  }
-  // When tasks on multiple streams read and write the same block of memory,
-  // recordStream needs to be called to ensure the correctness of memory reuse.
-  c10_npu::NPUCachingAllocator::recordStream(mask.storage().data_ptr(), original_stream);
-  dropout_do_mask_with_byte_mask(result, self_cp, mask, prob);
+    double retain = 1. - p;
+    at::Scalar prob = at::Scalar(retain);
+    at::Tensor mask;
 
-  return std::tie(result, mask);
+    auto original_stream = c10_npu::getCurrentNPUStream();
+    {
+        // During the life cycle of this raii instance, the calcu stream is set as the
+        // secondary stream, and tasks are distributed to the secondary stream. At the
+        // same time, according to the one-stream-one-pool principle, memory is also
+        // alloced from the pool of the secondary stream.
+        c10_npu::SecondaryStreamGuard guard(c10_npu::getCurrentSecondaryStream());
+        mask = dropout_gen_byte_mask(self_cp, prob);
+    }
+    // When tasks on multiple streams read and write the same block of memory,
+    // recordStream needs to be called to ensure the correctness of memory reuse.
+    c10_npu::NPUCachingAllocator::recordStream(mask.storage().data_ptr(), original_stream);
+    dropout_do_mask_with_byte_mask(result, self_cp, mask, prob);
+
+    return std::tie(result, mask);
 }
 } // namespace
 
