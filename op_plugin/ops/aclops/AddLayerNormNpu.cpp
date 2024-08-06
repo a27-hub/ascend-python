@@ -48,7 +48,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_layer_norm(co
         .Input(x1, "x1")
         .Input(x2, "x2")
         .Input(gamma, "gamma")
-        .Input(beta, "beta")
+        .Input(beta, "beta");
+
     if (bias_local.defined()) {
         cmd.Input(bias_local);
     } else {
