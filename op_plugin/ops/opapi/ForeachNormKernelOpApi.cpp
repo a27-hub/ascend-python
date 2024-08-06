@@ -89,7 +89,12 @@ std::vector<at::Tensor> _foreach_norm(const at::TensorList self, const at::Scala
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_norm(self, scalar, result_);
-    return result;
+
+    std::vector<at::Tensor> scalar_tensors;
+    for (const at::Tensor &tensor : result) {
+        scalar_tensors.push_back(at::scalar_to_tensor(tensor.item()));
+    }
+    return scalar_tensors;
 }
 #endif
 }
