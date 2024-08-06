@@ -20,15 +20,15 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor isinf(const at::Tensor& self) {
+at::Tensor isinf(const at::Tensor& self) 
+{
+    // calculate the output size
+    auto output_size = self.sizes();
 
-  // calculate the output size
-  auto output_size = self.sizes();
+    auto out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
 
-  auto out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
-
-  // construct the output tensor of the NPU
-  EXEC_NPU_CMD(aclnnIsInf, self, out);
-  return out;
+    // construct the output tensor of the NPU
+    EXEC_NPU_CMD(aclnnIsInf, self, out);
+    eturn out;
 }
 }
