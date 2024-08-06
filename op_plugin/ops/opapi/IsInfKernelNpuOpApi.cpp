@@ -29,6 +29,6 @@ at::Tensor isinf(const at::Tensor& self)
 
     // construct the output tensor of the NPU
     EXEC_NPU_CMD(aclnnIsInf, self, out);
-    eturn out;
+    return out;
 }
 }
