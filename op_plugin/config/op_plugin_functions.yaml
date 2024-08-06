@@ -2753,30 +2753,61 @@ official:
   - func: inverse(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnInverse
 
   - func: inverse.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnInverse
 
   - func: isclose(Tensor self, Tensor other, float rtol=1e-05, float atol=1e-08, bool equal_nan=False) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: 'at::isFloatingType(self.scalar_type()) && equal_nan? self.sizes(): broadcast_ops_npu_output_size(self, other)'
+        dtype: at::kBool
+      exec: aclnnIsClose
 
   - func: isfinite(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: at::kBool
+      exec: aclnnIsFinite
 
   - func: isin.Scalar_Tensor_out(Scalar element, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
+        dtype: at::kBool
+      exec: aclnnIsInScalarTensor
 
   - func: isin.Tensor_Scalar(Tensor element, Scalar test_elements, *, bool assume_unique=False, bool invert=False) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: isin.Tensor_Scalar_out
 
   - func: isin.Tensor_Scalar_out(Tensor element, Scalar test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: element
+        dtype: at::kBool
+      exec: aclnnIsInTensorScalar
 
   - func: isneginf(Tensor self) -> Tensor
     acl_op: v2.0
@@ -2784,6 +2815,10 @@ official:
   - func: isneginf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnIsNegInf
 
   - func: isposinf(Tensor self) -> Tensor
     acl_op: v2.0
@@ -2791,6 +2826,10 @@ official:
   - func: isposinf.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnIsPosInf
 
   - func: im2col(Tensor self, int[2] kernel_size, int[2] dilation, int[2] padding, int[2] stride) -> Tensor
     acl_op: all_version
@@ -2811,6 +2850,13 @@ official:
   - func: kl_div(Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: 'reduction == at::Reduction::None
+              ? broadcast_ops_npu_output_size(self.sizes(), target.sizes())
+              : at::ArrayRef<int64_t>()'
+        dtype: at::native::result_type(self, target)
+      exec: aclnnKlDiv
 
   - func: kl_div_backward(Tensor grad_output, Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor
     acl_op: v1.11
@@ -2875,54 +2921,101 @@ official:
   - func: leaky_relu(Tensor self, Scalar negative_slope=0.01) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: leaky_relu.out
 
   - func: leaky_relu.out(Tensor self, Scalar negative_slope=0.01, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnLeakyRelu
 
   - func: leaky_relu_(Tensor(a!) self, Scalar negative_slope=0.01) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLeakyRelu
 
   - func: leaky_relu_backward(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnLeakyReluBackward
 
   - func: leaky_relu_backward.grad_input(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v1.11
     op_api: all_version
+    gen_opapi:
+      grad_input:
+        size: self
+      exec: aclnnLeakyReluBackward
 
   - func: lerp.Scalar(Tensor self, Tensor end, Scalar weight) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, end)
+        dtype: self
+      exec: aclnnLerps
 
   - func: lerp.Scalar_out(Tensor self, Tensor end, Scalar weight, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, end)
+      exec: aclnnLerps
 
   - func: lerp.Tensor(Tensor self, Tensor end, Tensor weight) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
+        dtype: self
+      exec: aclnnLerp
 
   - func: lerp.Tensor_out(Tensor self, Tensor end, Tensor weight, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
+      exec: aclnnLerp
 
   - func: lerp_.Scalar(Tensor(a!) self, Tensor end, Scalar weight) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLerps
 
   - func: lerp_.Tensor(Tensor(a!) self, Tensor end, Tensor weight) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLerp
 
   - func: linalg_cross(Tensor self, Tensor other, *, int dim=-1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: linalg_cross.out
 
   - func: linalg_cross.out(Tensor self, Tensor other, *, int dim=-1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: self
+      exec: aclnnLinalgCross
 
   - func: linalg_matrix_norm(Tensor self, Scalar ord, int[] dim=[-2,-1], bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
     acl_op: v2.1, v2.2, v2.3, v2.4, v2.5
@@ -3003,38 +3096,71 @@ official:
   - func: log10(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+      exec: aclnnLog10
 
   - func: log10.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnLog10
 
   - func: log10_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLog10
 
   - func: log1p(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+      exec: aclnnLog1p
 
   - func: log1p.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnLog1p
 
   - func: log1p_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLog1p
 
   - func: log2(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+      exec: aclnnLog2
 
   - func: log2.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnLog2
 
   - func: log2_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLog2
 
   - func: log_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
@@ -3051,10 +3177,17 @@ official:
   - func: log_sigmoid_backward(Tensor grad_output, Tensor self, Tensor buffer) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: log_sigmoid_backward.grad_input
 
   - func: log_sigmoid_backward.grad_input(Tensor grad_output, Tensor self, Tensor buffer, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      grad_input:
+        size: grad_output
+        dtype: grad_output
+      exec: aclnnLogSigmoidBackward
 
   - func: log_sigmoid_forward(Tensor self) -> (Tensor output, Tensor buffer)
     acl_op: all_version
@@ -3073,18 +3206,36 @@ official:
   - func: logaddexp(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: at::native::result_type(self, other)
+      exec: aclnnLogAddExp
 
   - func: logaddexp.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+      exec: aclnnLogAddExp
 
   - func: logaddexp2(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: at::native::result_type(self, other)
+      exec: aclnnLogAddExp2
 
   - func: logaddexp2.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+      exec: aclnnLogAddExp2
 
   - func: logdet(Tensor self) -> Tensor
     acl_op: v1.11
@@ -3093,26 +3244,50 @@ official:
   - func: logical_and(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: at::kBool
+      exec: aclnnLogicalAnd
 
   - func: logical_and.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+      exec: aclnnLogicalAnd
 
   - func: logical_and_(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLogicalAnd
 
   - func: logical_not(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: at::kBool
+        name: self
+      exec: aclnnLogicalNot
 
   - func: logical_not.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        name: self
+      exec: aclnnLogicalNot
 
   - func: logical_not_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceLogicalNot
 
   - func: logical_or(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
@@ -3129,10 +3304,19 @@ official:
   - func: logical_xor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: at::kBool
+      exec: aclnnLogicalXor
 
   - func: logical_xor.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+      exec: aclnnLogicalXor
 
   - func: logspace(Scalar start, Scalar end, int steps, float base=10.0, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
     acl_op: all_version
