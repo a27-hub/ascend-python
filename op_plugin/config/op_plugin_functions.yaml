@@ -513,11 +513,11 @@ official:
   - func: _foreach_clamp_max_.List(Tensor(a!)[] self, Tensor[] other) -> ()
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
-  - func: _foreach_clamp_max.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+  # - func: _foreach_clamp_max.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+  #   op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
-  - func: _foreach_clamp_max_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+  # - func: _foreach_clamp_max_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+  #   op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
   - func: _foreach_clamp_min.ScalarList(Tensor[] self, Scalar[] scalars) -> Tensor[]
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
@@ -531,11 +531,11 @@ official:
   - func: _foreach_clamp_min_.List(Tensor(a!)[] self, Tensor[] other) -> ()
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
-  - func: _foreach_clamp_min.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+  # - func: _foreach_clamp_min.Scalar(Tensor[] self, Scalar scalar) -> Tensor[]
+  #   op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
-  - func: _foreach_clamp_min_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+  # - func: _foreach_clamp_min_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
+  #   op_api: v2.1, v2.2, v2.3, v2.4, v2.5
 
   - func: _foreach_lerp_.Scalar(Tensor(a!)[] self, Tensor[] tensors1, Scalar weight) -> ()
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
@@ -573,8 +573,8 @@ official:
   - func: _foreach_log2(Tensor[] tensors) -> Tensor[]
     op_api: all_version
 
-  - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2) -> Tensor[]
-    op_api: v1.11, v2.1, v2.2, v2.3
+  # - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2) -> Tensor[]
+  #   op_api: v1.11, v2.1, v2.2, v2.3
 
   - func: _foreach_zero_(Tensor(a!)[] self) -> ()
     op_api: all_version
