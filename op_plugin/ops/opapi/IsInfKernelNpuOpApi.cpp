@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor isinf(const at::Tensor& self) 
+at::Tensor isinf(const at::Tensor& self)
 {
     // calculate the output size
     auto output_size = self.sizes();
