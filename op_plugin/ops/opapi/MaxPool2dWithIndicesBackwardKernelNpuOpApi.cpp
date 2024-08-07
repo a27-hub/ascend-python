@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include <ATen/native/Pool.h>
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
@@ -33,10 +34,16 @@ at::Tensor max_pool2d_with_indices_backward(
     DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                      acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                               stride, padding, dilation, ceil_mode, indices));
+    const int k_H = at::native::safe_downcast<int, int64_t>(kernel_size[0]);
+    const int k_W = kernel_size.size() == 1 ? k_H : at::native::safe_downcast<int, int64_t>(kernel_size[1]);
     at::Tensor grad_input = npu_preparation::apply_tensor_without_format(self);
-
-    EXEC_NPU_CMD(aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size,
-                 stride, padding, dilation, ceil_mode, grad_input);
+    if (k_H * k_W > 100) {
+        EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices, kernel_size,
+                     stride, padding, dilation, ceil_mode, grad_input);
+    } else {
+        EXEC_NPU_CMD(aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size,
+                     stride, padding, dilation, ceil_mode, grad_input);
+    }
     return grad_input;
 }
 
