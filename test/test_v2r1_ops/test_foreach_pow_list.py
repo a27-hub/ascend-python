@@ -13,7 +13,7 @@ class TestForeachPowList(TestCase):
         "float16" : torch.float16,
         "float32" : torch.float32,
         "int32" : torch.int32,
-        "bfloat16" : torch.bfloat16
+        "bfloat16" : torch.bfloat16,
     }
 
     def create_tensors(self, dtype, shapes):
