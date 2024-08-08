@@ -4116,34 +4116,63 @@ official:
   - func: pow.Scalar(Scalar self, Tensor exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: exponent
+        dtype: at::result_type(self, exponent)
+      exec: aclnnPowScalarTensor
 
   - func: pow.Scalar_out(Scalar self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: exponent
+      exec: aclnnPowScalarTensor
 
   - func: pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: pow.Tensor_Scalar_out
 
   - func: pow.Tensor_Scalar_out(Tensor self, Scalar exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: at::result_type(self, exponent)
+      exec: aclnnPowTensorScalar
 
   - func: pow.Tensor_Tensor(Tensor self, Tensor exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, exponent)
+        dtype: at::result_type(self, exponent)
+      exec: aclnnPowTensorTensor
 
   - func: pow.Tensor_Tensor_out(Tensor self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, exponent)
+      exec: aclnnPowTensorTensor
 
   - func: pow_.Scalar(Tensor(a!) self, Scalar exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplacePowTensorTensor
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
@@ -4240,114 +4269,216 @@ official:
   - func: reciprocal(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+      exec: aclnnReciprocal
 
   - func: reciprocal.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnReciprocal
 
   - func: reciprocal_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceReciprocal
 
   - func: reflection_pad1d(Tensor self, SymInt[2] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad1d.out
 
   - func: reflection_pad1d(Tensor self, int[2] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad1d.out
 
   - func: reflection_pad1d.out(Tensor self, SymInt[2] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: reflection_pad1d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad1d
 
   - func: reflection_pad1d.out(Tensor self, int[2] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: reflection_pad1d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad1d
 
   - func: reflection_pad1d_backward(Tensor grad_output, Tensor self, SymInt[2] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad1d_backward.grad_input
 
   - func: reflection_pad1d_backward(Tensor grad_output, Tensor self, int[2] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad1d_backward.grad_input
 
   - func: reflection_pad1d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[2] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad1dBackward
 
   - func: reflection_pad1d_backward.grad_input(Tensor grad_output, Tensor self, int[2] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad1dBackward
 
   - func: reflection_pad2d(Tensor self, SymInt[4] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad2d.out
 
   - func: reflection_pad2d(Tensor self, int[4] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad2d.out
 
   - func: reflection_pad2d.out(Tensor self, SymInt[4] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: reflection_pad2d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad2d
 
   - func: reflection_pad2d.out(Tensor self, int[4] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: reflection_pad2d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad2d
 
   - func: reflection_pad2d_backward(Tensor grad_output, Tensor self, SymInt[4] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad2d_backward.grad_input
 
   - func: reflection_pad2d_backward(Tensor grad_output, Tensor self, int[4] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad2d_backward.grad_input
 
   - func: reflection_pad2d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[4] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad2dBackward
 
   - func: reflection_pad2d_backward.grad_input(Tensor grad_output, Tensor self, int[4] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad2dBackward
 
   - func: reflection_pad3d(Tensor self, SymInt[6] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad3d.out
 
   - func: reflection_pad3d(Tensor self, int[6] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad3d.out
 
   - func: reflection_pad3d.out(Tensor self, SymInt[6] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: reflection_pad3d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad3d
 
   - func: reflection_pad3d.out(Tensor self, int[6] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: reflection_pad3d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReflectionPad3d
 
   - func: reflection_pad3d_backward(Tensor grad_output, Tensor self, SymInt[6] padding) -> Tensor
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: reflection_pad3d_backward.grad_input
 
   - func: reflection_pad3d_backward(Tensor grad_output, Tensor self, int[6] padding) -> Tensor
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: reflection_pad3d_backward.grad_input
 
   - func: reflection_pad3d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[6] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad3dBackward
 
   - func: reflection_pad3d_backward.grad_input(Tensor grad_output, Tensor self, int[6] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReflectionPad3dBackward
 
   - func: relu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnRelu
 
   - func: relu_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceRelu
 
   - func: remainder.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
@@ -4392,10 +4523,20 @@ official:
   - func: repeat(Tensor self, SymInt[] repeats) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: repeat_npu_output_size(self, repeats)
+        dtype: self
+      exec: aclnnRepeat
 
   - func: repeat(Tensor self, int[] repeats) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: repeat_npu_output_size(self, repeats)
+        dtype: self
+      exec: aclnnRepeat
 
   - func: repeat_interleave.self_Tensor(Tensor self, Tensor repeats, int? dim=None, *, SymInt? output_size=None) -> Tensor
     acl_op: v2.2, v2.3, v2.4, v2.5
@@ -4420,106 +4561,202 @@ official:
   - func: replication_pad1d(Tensor self, SymInt[2] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad1d.out
 
   - func: replication_pad1d(Tensor self, int[2] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad1d.out
 
   - func: replication_pad1d.out(Tensor self, SymInt[2] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: replication_pad1d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad1d
 
   - func: replication_pad1d.out(Tensor self, int[2] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: replication_pad1d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad1d
 
   - func: replication_pad1d_backward(Tensor grad_output, Tensor self, SymInt[2] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad1d_backward.grad_input
 
   - func: replication_pad1d_backward(Tensor grad_output, Tensor self, int[2] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad1d_backward.grad_input
 
   - func: replication_pad1d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[2] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad1dBackward
 
   - func: replication_pad1d_backward.grad_input(Tensor grad_output, Tensor self, int[2] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad1dBackward
 
   - func: replication_pad2d(Tensor self, SymInt[4] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad2d.out
 
   - func: replication_pad2d(Tensor self, int[4] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad2d.out
 
   - func: replication_pad2d.out(Tensor self, SymInt[4] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: replication_pad2d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad2d
 
   - func: replication_pad2d.out(Tensor self, int[4] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: replication_pad2d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad2d
 
   - func: replication_pad2d_backward(Tensor grad_output, Tensor self, SymInt[4] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad2d_backward.grad_input
 
   - func: replication_pad2d_backward(Tensor grad_output, Tensor self, int[4] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad2d_backward.grad_input
 
   - func: replication_pad2d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[4] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad2dBackward
 
   - func: replication_pad2d_backward.grad_input(Tensor grad_output, Tensor self, int[4] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad2dBackward
 
   - func: replication_pad3d(Tensor self, SymInt[6] padding) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad3d.out
 
   - func: replication_pad3d(Tensor self, int[6] padding) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad3d.out
 
   - func: replication_pad3d.out(Tensor self, SymInt[6] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: replication_pad3d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad3d
 
   - func: replication_pad3d.out(Tensor self, int[6] padding, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: replication_pad3d_npu_out_size(self, padding)
+        dtype: self
+      exec: aclnnReplicationPad3d
 
   - func: replication_pad3d_backward(Tensor grad_output, Tensor self, SymInt[6] padding) -> Tensor
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      structured_inherit: replication_pad3d_backward.grad_input
 
   - func: replication_pad3d_backward(Tensor grad_output, Tensor self, int[6] padding) -> Tensor
     op_api: v1.11
+    gen_opapi:
+      structured_inherit: replication_pad3d_backward.grad_input
 
   - func: replication_pad3d_backward.grad_input(Tensor grad_output, Tensor self, SymInt[6] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad3dBackward
 
   - func: replication_pad3d_backward.grad_input(Tensor grad_output, Tensor self, int[6] padding, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnReplicationPad3dBackward
 
   - func: roll(Tensor self, SymInt[1] shifts, int[1] dims=[]) -> Tensor
     acl_op: v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnRoll
 
   - func: roll(Tensor self, int[1] shifts, int[1] dims=[]) -> Tensor
     acl_op: v1.11, v2.0
     op_api: v1.11
+    gen_opapi:
+      grad_input:
+        size: self
+        dtype: self
+      exec: aclnnRoll
 
   - func: round(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      structured_inherit: round.out
 
   - func: round.decimals(Tensor self, *, int decimals) -> Tensor
     acl_op: all_version
@@ -4532,10 +4769,17 @@ official:
   - func: round.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnRound
 
   - func: round_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceRound
 
   - func: round_.decimals(Tensor(a!) self, *, int decimals) -> Tensor(a!)
     acl_op: all_version
@@ -4556,22 +4800,43 @@ official:
   - func: rsqrt(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
+      exec: aclnnRsqrt
 
   - func: rsqrt.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+      exec: aclnnRsqrt
 
   - func: rsqrt_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      exec: aclnnInplaceRsqrt
 
   - func: rsub.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: at::native::result_type(self, other)
+      exec: aclnnRsubs
 
   - func: rsub.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: broadcast_ops_npu_output_size(self, other)
+        dtype: at::native::result_type(self, other)
+      exec: aclnnRsub
 
   - func: scaled_dot_product_attention(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None) -> Tensor
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
@@ -5635,6 +5900,17 @@ custom:
   - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out0:
+        size: rms_norm_npu_output_size(x1, gamma)[0]
+        dtype: x1
+      out1:
+        size: rms_norm_npu_output_size(x1, gamma)[1]
+        dtype: at::kFloat
+      out2:
+        size: rms_norm_npu_output_size(x1, gamma)[0]
+        dtype: x1
+      exec: aclnnAddRmsNorm
 
   - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     op_api: all_version
@@ -5683,10 +5959,20 @@ custom:
   - func: npu_binary_cross_entropy_with_logits_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight=None, Tensor? pos_weight=None, int reduction=Mean) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+    gen_opapi:
+      out:
+        size: target
+        dtype: target
+      exec: aclnnBinaryCrossEntropyWithLogitsBackward
 
   - func: npu_binary_cross_entropy_with_logits_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight_opt, Tensor? pos_weight_opt, int reduction) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    gen_opapi:
+      out:
+        size: target
+        dtype: target
+      exec: aclnnBinaryCrossEntropyWithLogitsBackward
 
   - func: npu_bmmV2(Tensor self, Tensor mat2, int[] output_sizes) -> Tensor
     acl_op: all_version
@@ -5919,6 +6205,17 @@ custom:
 
   - func: npu_group_norm_silu(Tensor input, Tensor? weight, Tensor? bias, int group, float eps=0.00001) -> (Tensor, Tensor, Tensor)
     op_api: all_version
+    gen_opapi:
+      out0:
+        size: input
+        dtype: input
+      out1:
+        size: '{input.size(0), group}'
+        dtype: input
+      out2:
+        size: '{input.size(0), group}'
+        dtype: input
+      exec: aclnnGroupNormSilu
 
   - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[] bias, Tensor[] scale, Tensor[] offset, Tensor[] antiquant_scale, Tensor[] antiquant_offset, int[]? group_list=None, int? split_item=0, ScalarType? output_dtype=None) -> Tensor[]
     op_api: v1.11, v2.0
@@ -6006,6 +6303,11 @@ custom:
 
   - func: npu_masked_softmax_with_rel_pos_bias(Tensor x, Tensor? atten_mask, Tensor relative_pos_bias, float scale_value=1.0, int inner_precision_mode=0) -> Tensor
     op_api: all_version
+    gen_opapi:
+      out:
+        size: x
+        dtype: x
+      exec: aclnnMaskedSoftmaxWithRelPosBias
 
   - func: npu_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
     acl_op: all_version
@@ -6051,9 +6353,19 @@ custom:
 
   - func: npu_moe_compute_expert_tokens(Tensor sorted_expert_for_source_row, int num_expert) -> Tensor
     op_api: all_version
+    gen_opapi:
+      out:
+        size: '{num_expert}'
+        dtype: sorted_expert_for_source_row
+      exec: aclnnMoeComputeExpertTokens
 
   - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor skip1, Tensor? skip2, Tensor bias, Tensor scales, Tensor expanded_src_to_dst_row, Tensor export_for_source_row) -> Tensor
     op_api: all_version
+    gen_opapi:
+      out:
+        size: skip1
+        dtype: skip1
+      exec: aclnnMoeFinalizeRouting
 
   - func: npu_moe_gating_top_k_softmax(Tensor x, Tensor? finished=None, int k=1) -> (Tensor, Tensor, Tensor)
     op_api: all_version
