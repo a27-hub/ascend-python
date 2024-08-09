@@ -16,6 +16,7 @@
 #include <bitset>
 #include "op_plugin/utils/KernelNpuOutputSize.h"
 #include "op_plugin/utils/AdvancedIndex.h"
+#include "op_plugin/utils/OpUtils.h"
 #include "torch_npu/csrc/core/npu/NPUException.h"
 
 namespace op_infer {
@@ -1166,6 +1167,17 @@ c10::SmallVector<int64_t, SIZE> sum_npu_output_size(const at::Tensor &self, c10:
     return reduce_ops_npu_output_size(self, dim, keepdim);
 }
 
+c10::SmallVector<int64_t, N> swiglu_backward_infershape(const at::Tensor &x, int64_t dim)
+{
+    if (dim < 0) {
+        dim += x.sizes().size();
+    }
+    TORCH_CHECK(dim < x.sizes().size(), "dim out of range", dim, OPS_ERROR(ErrCode::PARAM));
+    auto output_sizes = op_infer::array_to_small_vector(x.sizes());
+    output_sizes[dim] /= 2;
+    return output_sizes;
+}
+
 c10::SmallVector<int64_t, SIZE> topk_npu_output_size(const at::Tensor &self, int64_t k, int64_t dim, bool largest,
                                                      bool sorted)
 {
@@ -1682,6 +1694,20 @@ c10::SmallVector<int64_t, SIZE> diag_output_size(const at::Tensor& self, int64_t
         TORCH_CHECK(-diagonal <= m,
                     "If the value is 2-dimensional tensor, the diagonal shoule be less than shape.Diagonal is ",
                     diagonal, OPS_ERROR(ErrCode::VALUE));
+    }
+    return shape;
+}
+
+c10::SmallVector<int64_t, SIZE> stack_output_size(at::TensorList tensors, int64_t dim)
+{
+    dim = op_plugin::utils::make_warp_dim(dim, tensors[0].dim() + 1);
+    at::SmallVector<int64_t, SIZE> shape;
+    for (int i = 0; i < dim; i++) {
+        shape.emplace_back(tensors[0].size(i));
+    }
+    shape.emplace_back(tensors.size());
+    for (int i = dim; i < tensors[0].dim(); i++) {
+        shape.emplace_back(tensors[0].size(i));
     }
     return shape;
 }
