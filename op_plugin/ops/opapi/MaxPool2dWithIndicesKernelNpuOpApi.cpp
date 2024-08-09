@@ -99,14 +99,19 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
          self.ndimension() == 4 ?
                 c10::SmallVector<int64_t, SIZE>({n_batch, n_input_plane, mask_H, mask_W * 32}) :
                 c10::SmallVector<int64_t, SIZE>({n_input_plane, mask_H, mask_W * 32});
-
-    at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, self.options());
-    at::Tensor indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(at::kChar));
-
-    EXEC_NPU_CMD(aclnnMaxPool2dWithMask, self, kernel_sizes,
-                 strides, paddings, dilations, ceil_mode, output, indices);
-
-    return std::tuple<at::Tensor, at::Tensor>(output, indices);
+    if (k_H * k_W > 100) {
+        at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, self.options());
+        at::Tensor indices = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kInt));
+        EXEC_NPU_CMD(aclnnMaxPool2dWithIndices, self, kernel_sizes,
+                     strides, paddings, dilations, ceil_mode, output, indices);
+        return std::tuple<at::Tensor, at::Tensor>(output, indices);
+    } else {
+        at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, self.options());
+        at::Tensor indices = npu_preparation::apply_tensor_without_format(indices_size, self.options().dtype(at::kChar));
+        EXEC_NPU_CMD(aclnnMaxPool2dWithMask, self, kernel_sizes,
+                     strides, paddings, dilations, ceil_mode, output, indices);
+        return std::tuple<at::Tensor, at::Tensor>(output, indices);
+    }
 }
 
 std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
