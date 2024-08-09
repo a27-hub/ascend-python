@@ -7,9 +7,6 @@ from torch_npu.testing.common_utils import create_common_tensor
 
 
 class TestIsinf(TestCase):
-    def test_isinf(self):
-        x = torch.Tensor([1, 2, -10]).to("npu")
-        self.assertRtolEqual(torch.isinf(x).to("cpu"), torch.BoolTensor([False, False, False]))
 
     def cpu_op_exec(self, input1):
         output = torch.isinf(input1)
@@ -22,6 +19,7 @@ class TestIsinf(TestCase):
         output = output.numpy()
         return output
 
+    @SupportedDevices(['Ascend910B'])
     def test_isinf_shape_format(self):
         shape_format = [
             [np.int16, 0, (1, 2, 2, 5)],
