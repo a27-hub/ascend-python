@@ -22,11 +22,21 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor grid_sampler_2d(const at::Tensor& self, const at::Tensor& grid, int64_t interpolation_mode,
                            int64_t padding_mode, bool align_corners) {
-  DO_COMPATIBILITY(aclnnGridSampler2D, acl_op::grid_sampler_2d(self, grid, interpolation_mode, padding_mode,
-                                                               align_corners));
-  auto output_size = {self.size(0), self.size(1), grid.size(1), grid.size(2)};
-  at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
-  EXEC_NPU_CMD(aclnnGridSampler2D, self, grid, interpolation_mode, padding_mode, align_corners, result);
-  return result;
+    auto aclnnGridSampleFuncAddr = GetOpApiFuncAddr("aclnnGridSample");
+    auto aclnnGridSampleGetWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnGridSampleGetWorkspaceSize");
+    if (getWorkspaceSizeFuncAddr == nullptr || opApiFuncAddr == nullptr) {
+        DO_COMPATIBILITY(aclnnGridSampler2D, acl_op::grid_sampler_2d(self, grid, interpolation_mode, padding_mode,
+                                                                     align_corners));
+        auto output_size = {self.size(0), self.size(1), grid.size(1), grid.size(2)};
+        at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
+        EXEC_NPU_CMD(aclnnGridSampler2D, self, grid, interpolation_mode, padding_mode, align_corners, result);
+    } else {
+        DO_COMPATIBILITY(aclnnGridSample, acl_op::grid_sampler_2d(self, grid, interpolation_mode, padding_mode,
+                                                                  align_corners));
+        auto output_size = {self.size(0), self.size(1), grid.size(1), grid.size(2)};
+        at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
+        EXEC_NPU_CMD(aclnnGridSample, self, grid, interpolation_mode, padding_mode, align_corners, 0, 1, result);
+    }
+    return result;
 }
 }
