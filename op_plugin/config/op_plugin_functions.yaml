@@ -4748,9 +4748,6 @@ custom:
     acl_op: all_version
     op_api: all_version
 
-  - func: npu_add_layer_norm_fake(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
-    acl_op: v1.11, v2.1
-
   - func: npu_fake_dynamic_quant(Tensor input, Tensor? smooth_scales) -> (Tensor, Tensor)
     acl_op: v1.11, v2.1
 
