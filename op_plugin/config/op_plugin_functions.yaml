@@ -191,6 +191,9 @@ official:
 
   - func: _fft_r2c.out(Tensor self, int[] dim, int normalization, bool onesided, *, Tensor(a!) out) -> Tensor(a!)
     op_api: v2.1
+  
+  - func: isinf(Tensor self) -> Tensor
+    op_api: all_version
 
   - func: _foreach_abs_(Tensor(a!)[] self) -> ()
     op_api: all_version
@@ -4282,6 +4285,21 @@ official:
   - func: upsample_bicubic2d.vec(Tensor input, int[]? output_size, bool align_corners, float[]? scale_factors) -> Tensor
     acl_op: v1.11
     op_api: v1.11
+
+  - func: _upsample_bicubic2d_aa(Tensor self, SymInt[2] output_size, bool align_corners, float? scales_h=None, float? scales_w=None) -> Tensor
+    op_api: all_version
+
+  - func: _upsample_bicubic2d_aa(Tensor self, int[2] output_size, bool align_corners, float? scales_h=None, float? scales_w=None) -> Tensor
+    op_api: all_version
+
+  - func: _upsample_bicubic2d_aa.out(Tensor self, SymInt[2] output_size, bool align_corners, float? scales_h=None, float? scales_w=None, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: all_version
+
+  - func: _upsample_bicubic2d_aa.out(Tensor self, int[2] output_size, bool align_corners, float? scales_h=None, float? scales_w=None, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: all_version
+
+  - func: _upsample_bicubic2d_aa.vec(Tensor input, int[]? output_size, bool align_corners, float[]? scale_factors) -> Tensor
+    op_api: all_version
 
   - func: upsample_bicubic2d_backward(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, bool align_corners, float? scales_h=None, float? scales_w=None) -> Tensor
     acl_op: v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
