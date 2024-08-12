@@ -76,20 +76,52 @@ static at::Tensor add_dest_output(const at::Tensor &self, const at::Tensor &othe
 
 at::Tensor add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
 {
-    DO_COMPATIBILITY(aclnnAdd, acl_op::add(self, other, alpha));
-    DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
-    alpha_check_npu(self.scalar_type(), alpha);
-    // calculate the output size
-    at::Tensor output_tensor = add_dest_output(self, other);
-    auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::ScalarType result_type = at::native::result_type(self, other);
-    at::Tensor self_cp = self_tensor_to_device(self, result_type, output_tensor.device());
-    // construct the output tensor of the NPU
-    at::Tensor result =
-        npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
-    // calculate the output result of the NPU
-    add_out_npu_nocheck(self_cp, other, alpha, result);
-    return result;
+    static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();
+    static const auto print_level = c10_npu::option::OptionsManager::GetPrintLevel();
+    if (task_queue_enable == 3) {
+        auto ts_1 = std::chrono::high_resolution_clock::now();
+        c10::Allocator *allocator = c10_npu::NPUCachingAllocator::get();
+        int64_t nelements = c10::multiply_integers(self.sizes());
+        auto dtype = self.dtype();
+        int64_t size_bytes = nelements * dtype.itemsize();
+        c10::intrusive_ptr<c10::StorageImpl> storage_impl = c10::make_intrusive<torch_npu::NPUStorageImpl>(
+            c10::StorageImpl::use_byte_size_t(),
+            size_bytes,
+            allocator->allocate(size_bytes),
+            allocator,
+            true);
+        at::Tensor result = at::detail::make_tensor<torch_npu::NPUTensorImpl>(storage_impl, dtype);
+        result.unsafeGetTensorImpl()->set_sizes_contiguous(self.sizes());
+        result.unsafeGetTensorImpl()->empty_tensor_restride(c10::MemoryFormat::Contiguous);
+        EXEC_NPU_CMD_V3(aclnnAdd, self, other, alpha, result);
+        auto ts_2 = std::chrono::high_resolution_clock::now();
+        if (print_level) {
+            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(ts_2 - ts_1);
+            std::cout << "Optimized add time: " << duration.count() << " ns." << std::endl;
+        }
+        return result;
+    }  else {
+        auto ts_1 = std::chrono::high_resolution_clock::now();
+        DO_COMPATIBILITY(aclnnAdd, acl_op::add(self, other, alpha));
+        DO_COMPATIBILITY(aclnnAdds, acl_op::add(self, other, alpha));
+        alpha_check_npu(self.scalar_type(), alpha);
+        // calculate the output size
+        at::Tensor output_tensor = add_dest_output(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::ScalarType result_type = at::native::result_type(self, other);
+        at::Tensor self_cp = self_tensor_to_device(self, result_type, output_tensor.device());
+        // construct the output tensor of the NPU
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
+        // calculate the output result of the NPU
+        add_out_npu_nocheck(self_cp, other, alpha, result);
+        auto ts_2 = std::chrono::high_resolution_clock::now();
+        if (print_level) {
+            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(ts_2 - ts_1);
+            std::cout << "Source add time: " << duration.count() << " ns." << std::endl;
+        }
+        return result;
+    }
 }
 
 at::Tensor add(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
