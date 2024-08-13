@@ -1164,7 +1164,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
             TORCH_CHECK(workspace_status == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg(),            \
-                        OPS_ERROR(ErrCode::ACL));                                                                 \
+                        OPS_ERROR(ErrCode::ACL));                                                                      \
             void *workspace_addr = nullptr;                                                                            \
             at::Tensor workspace_tensor;                                                                               \
             if (workspace_size != 0) {                                                                                 \
@@ -1174,7 +1174,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
             TORCH_CHECK(api_ret == 0, "call " #aclnn_api " failed, detail:", aclGetRecentErrMsg(),                     \
-                        OPS_ERROR(ErrCode::ACL));                                                                 \
+                        OPS_ERROR(ErrCode::ACL));                                                                      \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
             if (releaseMemFunc) {                                                                                      \
@@ -1186,8 +1186,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitCacheThreadLocal();                                                                                  \
             return api_ret;                                                                                            \
         };                                                                                                             \
-        at_npu::native::OpCommand cmd;                                                                                 \
-        cmd.RunV3(#aclnn_api, acl_call);                                                                               \
+        at_npu::native::OpCommand::RunV3(#aclnn_api, acl_call);                                                        \
     } while (false)
 
 #define EXEC_NPU_CMD(aclnn_api, ...)                                                                                   \
