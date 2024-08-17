@@ -71,7 +71,7 @@ symint:
 
 ### 适配代码实现
 
-当前支持适配`ACLOP`算子和`ACLNN`算子两类算子，`ACLOP`算子适配文件位于`op_plugin/ops/opapi`，`ACLNN`算子适配文件位于`op_plugin/ops/aclops`目录。一个算子所有版本的适配代码都在一个文件中，通过编译宏`VERSION_VXRX`来区分不同版本。
+当前支持适配`ACLOP`算子和`ACLNN`算子两类算子，`ACLOP`算子适配文件位于`op_plugin/ops/aclops`，`ACLNN`算子适配文件位于`op_plugin/ops/opapi`目录。一个算子所有版本的适配代码都在一个文件中，通过编译宏`VERSION_VXRX`来区分不同版本。
 
 #### ACLOP算子适配
 
@@ -346,7 +346,7 @@ Aten IR定义：
 
 - `name`: 输出结果涉及named tensor逻辑，可配置此字段，当前仅支持name和输入参数相同的配置。不涉及可忽略。
 
-- `exec`: 配置`EXEC_NPU_CMD`对应的参数，如果除aclnnname，其它参数顺序和Aten IR的顺序相同，可只配置aclnnname。以`abs`为例，`exec`字段可以配置成下面两种方式
+- `exec`: 配置`EXEC_NPU_CMD`对应的参数，如果除aclnnname（原函数可排除out参数），其它参数顺序和Aten IR的顺序相同，可只配置aclnnname。以`abs`为例，`exec`字段可以配置成下面两种方式
 ```
     - func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
       方式一：
