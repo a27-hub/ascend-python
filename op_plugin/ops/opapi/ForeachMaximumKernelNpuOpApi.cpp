@@ -186,6 +186,10 @@ std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors, const at::Scala
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow(tensors, scalar);
     }
+
+    DO_COMPATIBILITY(aclnnForeachMaximumScalar,
+                     at::native::foreach_tensor_clamp_min_scalar_kernel_slow(tensors, scalar));
+
     if (!at::native::can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow(tensors, scalar);
     }
@@ -211,6 +215,9 @@ void _foreach_maximum_(at::TensorList tensors, const at::Scalar& scalar)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow_(tensors, scalar);
     }
+
+    DO_COMPATIBILITY(aclnnForeachMaximumScalar,
+                     at::native::foreach_tensor_clamp_min_scalar_kernel_slow_(tensors, scalar));
 
     if (!at::native::can_use_fast_route(tensors, scalar, false)) {
         return at::native::foreach_tensor_clamp_min_scalar_kernel_slow_(tensors, scalar);
