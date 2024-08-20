@@ -14,6 +14,12 @@ official:
     acl_op: all_version
     op_api: all_version
 
+  - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2) -> Tensor[]
+    op_api: v1.11, v2.1, v2.2, v2.3
+
+  - func: _foreach_norm.Scalar(Tensor[] tensors, Scalar ord=2, ) -> Tensor[]
+    op_api: v2.4, v2.5
+
   - func: __irshift__.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
 
