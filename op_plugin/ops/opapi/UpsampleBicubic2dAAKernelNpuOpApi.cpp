@@ -34,9 +34,7 @@ at::Tensor& _upsample_bicubic2d_aa_out(const at::Tensor& self, at::IntArrayRef o
 {
     auto outputsize = op_infer::upsample_bicubic2d_npu_output_size(self, output_size);
     npu_preparation::check_tensor({self}, result, self, outputsize);
-    printf("_upsample_bicubic2d_aa_out start \n");
     upsample_bicubic2d_opapi(self, output_size, align_corners, scales_h, scales_w, result);
-    printf("_upsample_bicubic2d_aa_out end \n");
     return result;
 }
 
@@ -47,24 +45,8 @@ at::Tensor _upsample_bicubic2d_aa(const at::Tensor& self, at::IntArrayRef output
                      acl_op::upsample_bicubic2d(self, output_size, align_corners, scales_h, scales_w));
     auto outputsize = op_infer::upsample_bicubic2d_npu_output_size(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputsize);
-    printf("_upsample_bicubic2d_aa start \n");
     upsample_bicubic2d_opapi(self, output_size, align_corners, scales_h, scales_w, result);
-    printf("_upsample_bicubic2d_aa end \n");
     return result;
 }
-
-#if VERSION_BETWEEN(V1R11, V1R11)
-at::Tensor _upsample_bicubic2d_aa(const at::Tensor& self, c10::optional<at::IntArrayRef> output_size,
-                              bool align_corners, c10::optional<at::ArrayRef<double>> scale_factors)
-{
-    DO_COMPATIBILITY(aclnnUpsampleBicubic2d,
-                     acl_op::upsample_bicubic2d(self, output_size, align_corners, scale_factors));
-    auto osize = op_infer::upsample_infershape_with_scale(self.sizes(), output_size, scale_factors);
-    auto scales_h = op_plugin::utils::get_scale_value(scale_factors, 0);
-    auto scales_w = op_plugin::utils::get_scale_value(scale_factors, 1);
-    at::Tensor result = op_api::_upsample_bicubic2d_aa(self, osize, align_corners, scales_h, scales_w);
-    return result;
-}
-#endif
 
 } // namespace op_api
