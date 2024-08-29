@@ -18,33 +18,31 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+using npu_preparation = at_npu::native::OpPreparation;
 
-#if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-at::Tensor& polar_out(const at::Tensor& abs, const at::Tensor& angle, at::Tensor& result)
+at::Tensor &polar_out(const at::Tensor &abs, const at::Tensor &angle, at::Tensor &result)
 {
-    TORCH_WARN_ONCE(
-        "Warning: kernel [polar.out] is not supported by NPU currently. Now this kernel is running on CPU.");
-    auto abs_cpu = abs.cpu();
-    auto angle_cpu = angle.cpu();
-    auto result_cpu = result.cpu();
-    result_cpu = at::polar_out(result_cpu, abs_cpu, angle_cpu);
-
-    result.copy_(result_cpu.to(result.device()));
+    auto outputSize = op_infer::broadcast_ops_npu_output_size(abs, angle);
+    npu_preparation::check_tensor({abs}, result, result.scalar_type(), outputSize);
+    // calculate the output result of the NPU
+    EXEC_NPU_CMD(aclnnPolar, abs, angle, result);
     return result;
 }
 
-at::Tensor polar(const at::Tensor& abs, const at::Tensor& angle)
+at::Tensor polar(const at::Tensor &abs, const at::Tensor &angle)
 {
-    TORCH_WARN_ONCE(
-        "Warning: kernel [polar] is not supported by NPU currently. Now this kernel is running on CPU.");
-
-    auto abs_cpu = abs.cpu();
-    auto angle_cpu = angle.cpu();
-    at::Tensor result_cpu = at::polar(abs_cpu, angle_cpu);
-
-    at::Tensor result = result_cpu.to(abs.device());
+    at::ScalarType high_type = at::native::result_type(abs, angle);
+    if (high_type == at::ScalarType::Float) {
+        high_type = at::ScalarType::ComplexFloat;
+    } else if (high_type == at::ScalarType::Double) {
+        high_type = at::ScalarType::ComplexDouble;
+    } else if (high_type == at::ScalarType::Half) {
+        high_type = at::ScalarType::ComplexHalf;
+    }
+    auto outputSize = op_infer::broadcast_ops_npu_output_size(abs, angle);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, abs.options().dtype(high_type));
+    // calculate the output result of the NPU
+    EXEC_NPU_CMD(aclnnPolar, abs, angle, result);
     return result;
 }
-#endif
-
 } // namespace op_api
