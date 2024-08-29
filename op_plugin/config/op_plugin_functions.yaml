@@ -4293,10 +4293,10 @@ official:
       exec: aclnnInplacePowTensorTensor
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    op_api: all_version
 
   - func: polar.out(Tensor abs, Tensor angle, *, Tensor(a!) out) -> Tensor(a!)
-    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+    op_api: all_version
 
   - func: prelu(Tensor self, Tensor weight) -> Tensor
     acl_op: v1.11
@@ -7480,9 +7480,6 @@ tocpu:
     version: v1.11, v2.0
 
   - func: poisson
-    version: v1.11, v2.0
-
-  - func: polar.out
     version: v1.11, v2.0
 
   - func: polygamma.out
