@@ -5335,7 +5335,7 @@ custom:
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/MoeComputeExpertTokensKernelNpuOpApi.cpp
-  - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor skip1, Tensor? skip2, Tensor bias, Tensor scales, Tensor expanded_src_to_dst_row, Tensor export_for_source_row) -> Tensor
+  - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor
     impl_ns: op_api, op_api, op_api, op_api, op_api, op_api, op_api
     version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5
     kernel: opapi/MoeFinalizeRoutingKernelNpuOpApi.cpp
