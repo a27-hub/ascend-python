@@ -47,13 +47,20 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
                                     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
                                     at::IntArrayRef output_padding, int64_t groups)
 {
+    std::cout << "enter _calc_convolution" << std::endl;
     int64_t k = weight.ndimension();
     int64_t inputK = input.ndimension();
     int64_t dim = k - 2; // Subtract nonspatial dimensions: 2
     bool unBatch = false;
 
+
+    std::cout << "enter acl_op _convolution" << at_npu::native::env::CheckForbidInternalFormat() << std::endl;
+    std::cout << "enter acl_op _convolution" << at_npu::native::env::CheckJitDisable() << std::endl;
     // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable = False: turn on JitCompile
     if ((!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
+        std::cout << "enter acl_op _convolution" << at_npu::native::env::CheckForbidInternalFormat() << std::endl;
+        std::cout << "enter acl_op _convolution" << at_npu::native::env::CheckJitDisable() << std::endl;
+        std::cout << "enter acl_op _convolution" << std::endl;
         return acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups,
                                     false, false, false, false);
     }
