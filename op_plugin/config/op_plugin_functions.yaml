@@ -4766,9 +4766,6 @@ custom:
   - func: npu_add_layer_norm_fake(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: v1.11, v2.1
 
-  - func: npu_layer_norm_v4_fake(Tensor x, Tensor norm_shape, Tensor gamma, Tensor beta, float epsilon=1e-05) -> (Tensor, Tensor, Tensor)
-    acl_op: v1.11, v2.1
-
   - func: npu_add_layer_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias, Tensor? scales1, Tensor? scales2, Tensor? zero_points1, Tensor? zero_points2, int quant_mode=0, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: v1.11, v2.1
     op_api: v1.11, v2.1
