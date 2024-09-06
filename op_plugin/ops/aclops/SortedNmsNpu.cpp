@@ -36,7 +36,7 @@ at::Tensor npu_sorted_nms(const at::Tensor &boxes, const at::Tensor &sorted_scor
         .Input(iou_thr, "iou_threshold")
         .Input(score_thr, "score_threshold")
         .Output(selected_indices, "selected_indices")
-        .Attr("offset", static_cast<int32_t>(offset))
+        .Attr("offset", offset)
         .Run();
     return selected_indices;
 }
