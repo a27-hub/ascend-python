@@ -25,7 +25,7 @@ at::Tensor npu_sorted_nms(const at::Tensor &boxes, const at::Tensor &sorted_scor
     at::SmallVector<int64_t, SIZE> shape;
     shape.emplace_back(boxes.size(0));
 
-    at::Tensor selected_indices = npu_preparation::apply_tensor(shape, x1.options().dtype(at::kInt), x1);
+    at::Tensor selected_indices = npu_preparation::apply_tensor(shape, boxes.options().dtype(at::kInt), boxes);
 
     at_npu::native::OpCommand cmd;
     cmd.Name("SortedNMS")
