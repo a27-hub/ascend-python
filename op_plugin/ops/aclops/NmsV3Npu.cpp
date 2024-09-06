@@ -20,7 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_sorted_nms(const at::Tensor &boxes, const at::Tensor &sorted_scores, const at::Tensor &input_indices, const at::Tensor &max_output_size, const at::Tensor &iou_thr, const at::Tensor &score_thr, int64_t offset)
+at::Tensor npu_nms_v3(const at::Tensor &boxes, const at::Tensor &scores, const at::Tensor &max_output_size, const at::Tensor &iou_thr, const at::Tensor &score_thr, int64_t offset)
 {
     at::SmallVector<int64_t, SIZE> shape;
     shape.emplace_back(boxes.size(0));
@@ -28,10 +28,9 @@ at::Tensor npu_sorted_nms(const at::Tensor &boxes, const at::Tensor &sorted_scor
     at::Tensor selected_indices = npu_preparation::apply_tensor(shape, boxes.options().dtype(at::kInt), boxes);
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("SortedNMS")
+    cmd.Name("NonMaxSuppressionV3")
         .Input(boxes, "boxes")
-        .Input(sorted_scores, "sorted_scores")
-        .Input(input_indices, "input_indices")
+        .Input(scores, "scores")
         .Input(max_output_size, "max_output_size")
         .Input(iou_thr, "iou_threshold")
         .Input(score_thr, "score_threshold")
