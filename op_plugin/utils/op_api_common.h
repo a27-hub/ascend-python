@@ -1412,3 +1412,4 @@ private:
     }(#aclnn_api, #aclnn_api "GetWorkspaceSize", __VA_ARGS__)
 
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
+ 
