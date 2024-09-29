@@ -22,7 +22,7 @@ at::Tensor npu_swiglu_backward(const at::Tensor &grad_output, const at::Tensor &
 {
     at::Tensor result = at::empty(x.sizes(), x.options());
     at_npu::native::OpCommand cmd;
-    cmd.Name("SwiGluBackward")
+    cmd.Name("SwiGluGrad")
             .Input(grad_output)
             .Input(x)
             .Output(result)
