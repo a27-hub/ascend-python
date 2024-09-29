@@ -20,6 +20,7 @@
 #include "op_plugin/SparseOpsInterface.h"
 #include "torch_npu/csrc/framework/interface/EnvVariables.h"
 #include "torch_npu/csrc/framework/FormatHelper.h"
+#include "torch_npu/csrc/framework/OpHook.h"
 
 namespace ${namespace} {
 ${declarations}

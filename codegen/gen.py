@@ -278,8 +278,37 @@ def gen_return(
             if not isinstance(a.argument, TensorOptionsArguments) and argument.type.is_tensor_like():
                 format_check += f" && at_npu::native::FormatHelper::IsOpInputBaseFormat({a.name})"
 
+        if sig.returns_type().cpp_type() == "void":
+            void_op_api = f"""op_api::{impl_name}({args_exprs_str});
+            at_npu::native::OpHook::GetInstance().PostHook();
+            return;"""
+            void_acl_op = f"""acl_op::{impl_name}({args_exprs_str});
+            at_npu::native::OpHook::GetInstance().PostHook();
+            return;"""
+            void_ns = f"""{f.impl_ns[0]}::{impl_name}({args_exprs_str});
+        at_npu::native::OpHook::GetInstance().PostHook();
+        return;"""
+        else:
+            non_void_op_api = f"""{sig.returns_type().cpp_type()} res = op_api::{impl_name}({args_exprs_str});
+            at_npu::native::OpHook::GetInstance().PostHook(res);
+            return res;"""
+            non_void_acl_op = f"""{sig.returns_type().cpp_type()} res = acl_op::{impl_name}({args_exprs_str});
+            at_npu::native::OpHook::GetInstance().PostHook(res);
+            return res;"""
+            non_void_ns = f"""{sig.returns_type().cpp_type()} res = {f.impl_ns[0]}::{impl_name}({args_exprs_str});
+        at_npu::native::OpHook::GetInstance().PostHook(res);
+        return res;"""
+
         if "op_api" in f.impl_ns and "acl_op" in f.impl_ns:
             ret.append(f"""{sig.defn(name=op_name)}{{
+    if (at_npu::native::env::CheckOpHookEnable()) {{
+        at_npu::native::OpHook::GetInstance().PreHook(\"{impl_name}\", {args_exprs_str});
+        if (at_npu::native::env::CheckJitDisable(){format_check}) {{
+            {void_op_api if sig.returns_type().cpp_type() == "void" else non_void_op_api}
+        }} else {{
+            {void_acl_op if sig.returns_type().cpp_type() == "void" else non_void_acl_op}
+        }}
+    }}
     if (at_npu::native::env::CheckJitDisable(){format_check}) {{
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
@@ -290,6 +319,10 @@ def gen_return(
         elif "op_api" in f.impl_ns or "acl_op" in f.impl_ns:
             ns = f.impl_ns[0]
             ret.append(f"""{sig.defn(name=op_name)}{{
+    if (at_npu::native::env::CheckOpHookEnable()) {{
+        at_npu::native::OpHook::GetInstance().PreHook(\"{impl_name}\", {args_exprs_str});
+        {void_ns if sig.returns_type().cpp_type() == "void" else non_void_ns}
+    }}
     return {ns}::{impl_name}({args_exprs_str});
 }}
 """)
