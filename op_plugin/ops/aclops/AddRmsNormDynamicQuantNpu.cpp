@@ -26,8 +26,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_r
     const at::Tensor &gamma,
     const c10::optional<at::Tensor> &smooth1,
     const c10::optional<at::Tensor> &smooth2,
-    const c10::optional<at::Tensor> &group_idx1,
-    const c10::optional<at::Tensor> &group_idx2,
     double epsilon)
 {
     at::SmallVector<int64_t, SIZE> reduce_shape;
@@ -44,8 +42,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_r
 
     const at::Tensor& smooth_local1 = c10::value_or_else(smooth1, [] {return at::Tensor();});
     const at::Tensor& smooth_local2 = c10::value_or_else(smooth2, [] {return at::Tensor();});
-    const at::Tensor& group_idx_local1 = c10::value_or_else(group_idx1, [] {return at::Tensor();});
-    const at::Tensor& group_idx_local2 = c10::value_or_else(group_idx2, [] {return at::Tensor();});
 
     at_npu::native::OpCommand cmd;
     cmd.Name("AddRmsNormDynamicQuant")
@@ -63,17 +59,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_r
     } else {
         cmd.Input();
     }
-    if (group_idx_local1.defined()) {
-        cmd.Input(group_idx_local1);
-    } else {
-        cmd.Input();
-    }
-    if (group_idx_local2.defined()) {
-        cmd.Input(group_idx_local2);
-    } else {
-        cmd.Input();
-    }
-
     cmd.Output(y1, "y1")
     .Output(y2, "y2")
     .Output(x, "x")
