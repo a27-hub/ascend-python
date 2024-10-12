@@ -46,6 +46,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_r
     at::Tensor out_scale2 = npu_preparation::apply_tensor(reduce_shape, x1.options().dtype(at::kFloat), x1);
 
     EXEC_NPU_CMD(aclnnAddRmsNormDynamicQuant, x1, x2, gamma, smooth_local1, smooth_local2, epsilon, y1, y2, x, out_scale1, out_scale2);
-    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y1, y2, x, out_scale1, out_scale2);
+    return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(y1, y2, x, out_scale1, out_scale2);
 }
 } // namespace op_api
