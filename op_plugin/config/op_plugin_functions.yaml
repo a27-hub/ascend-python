@@ -397,16 +397,10 @@ official:
   - func: _foreach_mul.List(Tensor[] tensors1, Tensor[] tensors2) -> Tensor[]
     op_api: all_version
 
-  - func: _foreach_mul.Scalar(Tensor[] tensors, Scalar scalar) -> Tensor[]
-    op_api: all_version
-
   - func: _foreach_mul.ScalarList(Tensor[] tensors, Scalar[] scalars) -> Tensor[]
     op_api: all_version
 
   - func: _foreach_mul_.List(Tensor(a!)[] self, Tensor[] other) -> ()
-    op_api: all_version
-
-  - func: _foreach_mul_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
 
   - func: _foreach_mul_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
