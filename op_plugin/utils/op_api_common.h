@@ -38,6 +38,7 @@
 #include "torch_npu/csrc/flopcount/FlopCount.h"
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
 
+// empty pr for test
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
 typedef struct aclScalar aclScalar;
