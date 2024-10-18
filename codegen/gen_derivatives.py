@@ -17,6 +17,7 @@ def get_version(ver, all_version):
 
     return real_ver
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--version", )

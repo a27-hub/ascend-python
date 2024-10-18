@@ -5,20 +5,21 @@ import stat
 import yaml
 
 
-def get_version(item, type, all_version):
-    if item.get(type) is None:
+def get_version(item, func_type, all_version):
+    if item.get(func_type) is None:
         return []
 
-    if isinstance(item[type], list):
-        start_ver = all_version.index(item[type][0])
-        end_ver = -1 if item[type][1] == 'newest' else all_version.index(item[type][1])
+    if isinstance(item[func_type], list):
+        start_ver = all_version.index(item[func_type][0])
+        end_ver = -1 if item[func_type][1] == 'newest' else all_version.index(item[func_type][1])
         ver = all_version[start_ver:end_ver]
-    elif item[type] == 'all_version':
+    elif item[func_type] == 'all_version':
         ver = all_version
     else:
-        ver = item[type].split(', ')
+        ver = item[func_type].split(', ')
 
     return ver
+
 
 def main():
     parser = argparse.ArgumentParser()
