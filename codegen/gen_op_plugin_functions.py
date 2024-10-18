@@ -5,6 +5,21 @@ import stat
 import yaml
 
 
+def get_version(item, type, all_version):
+    if item.get(type) is None:
+        return []
+
+    if isinstance(item[type], list):
+        start_ver = all_version.index(item[type][0])
+        end_ver = -1 if item[type][1] == 'newest' else all_version.index(item[type][1])
+        ver = all_version[start_ver:end_ver]
+    elif item[type] == 'all_version':
+        ver = all_version
+    else:
+        ver = item[type].split(', ')
+
+    return ver
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', type=str, default=None, help='pytorch version')
@@ -32,9 +47,9 @@ def main():
         for item in old_yaml[key]:
             item.pop('gen_opapi', None)
 
-            acl_op_sup_ver = ', '.join(all_version) if item.get('acl_op', '') == 'all_version' else item.get('acl_op', '')
-            op_api_sup_ver = ', '.join(all_version) if item.get('op_api', '') == 'all_version' else item.get('op_api', '')
-            sparse = ', '.join(all_version) if item.get('sparse', '') == 'all_version' else item.get('sparse', '')
+            acl_op_sup_ver = get_version(item, 'acl_op', all_version)
+            op_api_sup_ver = get_version(item, 'op_api', all_version)
+            sparse = get_version(item, 'sparse', all_version)
             item.update({'acl_op':acl_op_sup_ver})
             item.update({'op_api':op_api_sup_ver})
             item.update({'sparse':sparse})
@@ -53,7 +68,7 @@ def main():
                     new_item['sparse'] = 'op_api'
                 else:
                     new_item.pop('sparse', None)
-                if version in item.get('exposed', '') or item.get('exposed', '') == 'all_version':
+                if version in get_version(item, 'exposed', all_version):
                     new_item['exposed'] = True
                 else:
                     new_item.pop('exposed', None)
