@@ -3036,7 +3036,6 @@ Atlas A2 训练系列产品
 
 调用示例:
 1.单算子调用：
-在单算子模式下不支持使能高带宽的x2数据排布，如果想追求极致性能，请使用图模式
 import torch
 import torch_npu
 import logging
@@ -3160,7 +3159,7 @@ bias = torch.randint(-1,1, (128,), dtype=torch.int32).npu()
 # Process scale from float32 to int64 offline to improve performance
 scale_1 = torch_npu.npu_trans_quant_param(scale, offset)
 model = torch.compile(cpu_model, backend=npu_backend, dynamic=False)
-npu_out = model(cpu_x1, cpu_x2_t_29, scale_1, offset, bias)
+npu_out = model(cpu_x1, cpu_x2_t_29, scale_1, offset, bias) 
 
 2.2.2 Atlas A2将非转置(batch,k,n)后转format
 import torch
