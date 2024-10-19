@@ -11,7 +11,7 @@ def get_version(item, func_type, all_version):
 
     if isinstance(item[func_type], list):
         start_ver = all_version.index(item[func_type][0])
-        end_ver = -1 if item[func_type][1] == 'newest' else all_version.index(item[func_type][1])
+        end_ver = None if item[func_type][1] == 'newest' else all_version.index(item[func_type][1])
         ver = all_version[start_ver:end_ver]
     elif item[func_type] == 'all_version':
         ver = all_version
