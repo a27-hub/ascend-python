@@ -3773,6 +3773,72 @@ model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=T
 )
 
 _add_torch_npu_docstr(
+    "npu_dynamic_quant",
+    """
+功能描述:
+为输入的张量进行per-token动态量化。
+
+计算公式：
+如果smooth_scales不存在：
+    scale = rowMax(abs(x)) / 127
+    y = round(x/sacle)
+如果smooth_scales存在：
+    scale = rowMax(abs(x×smooth_scales)) / 127
+    y = round(x/sacle)
+
+接口原型:
+npu_dynamic_quant(Tensor x, *, Tensor? smooth_scales=None) -> (Tensor, Tensor)
+
+
+参数说明:
+x：Device侧的Tensor类型，需要进行量化的源数据张量，必选输入，数据类型支持FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
+*: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值)。
+smooth_scales：Device侧的Tensor类型，对x进行scales的张量，可选输入，数据类型支持FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
+
+输出说明：
+两个Tensor类型的输出：
+
+第一个输出为Tensor，量化后的输出y，shape和输入x一致，数据类型支持INT8。
+第二个输出为Tensor，用于后面反量化的scale，shape为x剔除最后一维，数据类型支持FLOAT32。
+
+约束说明:
+- 输入x的维度必须大于1。
+- 输入smooth_scales必须是关键字传参，即调用接口时需要显式地写smooth_scales=xxx。
+
+支持的PyTorch版本:
+PyTorch 2.4.0
+PyTorch 2.3.1
+PyTorch 2.2.0
+PyTorch 2.1.0
+
+支持的型号:
+Atlas A2 训练系列产品
+
+调用示例:
+
+不带smooth_scales:
+import torch
+import torch_npu
+ 
+x = torch.rand((3, 3), dtype = torch.float16).to("npu")
+output, scale = torch_npu.npu_dynamic_quant(x)
+print(output)
+print(scale)
+
+带smooth_scales:
+import torch
+import torch_npu
+ 
+x = torch.rand((3, 3), dtype = torch.float16).to("npu")
+smooth_scales = torch.rand((3,), dtype = torch.float16).to("npu")
+output, scale = torch_npu.npu_dynamic_quant(x, smooth_scales=smooth_scales)
+print(output)
+print(scale)
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_mm_all_reduce_base",
     """
 功能描述:
