@@ -7,6 +7,19 @@ import yaml
 from codegen.utils import PathManager
 
 
+def get_version(ver, all_version):
+    if isinstance(ver, list):
+        start_ver = all_version.index(ver[0])
+        end_ver = None if ver[1] == 'newest' else all_version.index(ver[1])
+        real_ver = all_version[start_ver:end_ver]
+    elif ver == 'all_version':
+        real_ver = all_version
+    else:
+        real_ver = ver.split(', ')
+
+    return real_ver
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--version", )
@@ -23,10 +36,11 @@ def main():
     with open(source_yaml_path, 'r') as f:
         old_yaml = yaml.safe_load(f)
 
+    all_version = old_yaml['all_version']
     new_yaml = []
-    for item in old_yaml:
+    for item in old_yaml['backward']:
         new_item = item
-        if version in new_item['version']:
+        if version in get_version(new_item['version'], all_version):
             del new_item['version']
             new_yaml.append(new_item)
 
