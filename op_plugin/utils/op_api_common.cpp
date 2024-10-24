@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include "op_api_common.h"
 
+// empty pr for test
 thread_local char g_hash_buf[g_hash_buf_size];
 thread_local int g_hash_offset = 0;
 constexpr int g_rShift33Bits = 33;
