@@ -38,6 +38,7 @@
 #include "torch_npu/csrc/flopcount/FlopCount.h"
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
 
+// empty pr for test
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
 typedef struct aclScalar aclScalar;
@@ -1148,7 +1149,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
 #define EXEC_NPU_CMD(aclnn_api, ...)                                                                                   \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
-        if (task_queue_enable == 2) {                                                                                  \
+        if (true) {                                                                                  \
             EXEC_NPU_CMD_V2(aclnn_api, __VA_ARGS__);                                                                   \
         } else {                                                                                                       \
             EXEC_NPU_CMD_V1(aclnn_api, __VA_ARGS__);                                                                   \
@@ -1285,7 +1286,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
 #define EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnn_api, ...)                                                                   \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
-        if (task_queue_enable == 2) {                                                                                  \
+        if (true) {                                                                                  \
             EXEC_NPU_NO_FORMAT_CHECK_CMD_V2(aclnn_api, __VA_ARGS__);                                                   \
         } else {                                                                                                       \
             EXEC_NPU_NO_FORMAT_CHECK_CMD_V1(aclnn_api, __VA_ARGS__);                                                   \
