@@ -960,7 +960,11 @@ bool hit_cache_v2(
     g_hash_offset = 0;
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
+<<<<<<< HEAD
     if (g_hash_offset == 0) {
+=======
+    if (g_hash_offset == g_hash_buf_max_size) {
+>>>>>>> 692010a3 (fix hash v2 overflow issue of hit_cache_v2)
         setPTACacheHashKeyFunc(nullptr, 0);
     } else {
         setPTACacheHashKeyFunc(reinterpret_cast<uint8_t *>(g_hash_buf), g_hash_offset);
@@ -1365,6 +1369,10 @@ private:
         static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                                \
         static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");                   \
+<<<<<<< HEAD
+=======
+        static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");                                       \
+>>>>>>> 692010a3 (fix hash v2 overflow issue of hit_cache_v2)
         static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");                             \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " and ",              \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
@@ -1379,10 +1387,19 @@ private:
         ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                              \
         InitPTACacheThreadLocal initPTACacheThreadLocalFunc =                                                          \
             reinterpret_cast<InitPTACacheThreadLocal>(initPTACacheThreadLocalAddr);                                    \
+<<<<<<< HEAD
         SetPTACacheHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);           \
         if (initPTACacheThreadLocalFunc && setPTAHashKeyFunc) {                                                        \
             initPTACacheThreadLocalFunc();                                                                             \
             setPTAHashKeyFunc(nullptr, 0);                                                                             \
+=======
+        SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);                          \
+        SetPTACacheHashKey setPTACacheHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);      \
+        if (initPTACacheThreadLocalFunc && setPTAHashKeyFunc) {                                                        \
+            initPTACacheThreadLocalFunc();                                                                             \
+            setPTAHashKeyFunc(0);                                                                                      \
+            setPTACacheHashKeyFunc(nullptr, 0);                                                                        \
+>>>>>>> 692010a3 (fix hash v2 overflow issue of hit_cache_v2)
         }                                                                                                              \
         at_npu::native::SetDeterministic();                                                                            \
         if (initMemFunc) {                                                                                             \
