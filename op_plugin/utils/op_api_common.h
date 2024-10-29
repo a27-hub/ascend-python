@@ -872,8 +872,10 @@ typedef int (*InitHugeMemThreadLocal)(void *, bool);
 typedef void (*UnInitHugeMemThreadLocal)(void *, bool);
 typedef void (*ReleaseHugeMem)(void *, bool);
 typedef aclOpExecutor *(*PTAGetExecCache)(uint64_t, uint64_t *);
+typedef aclOpExecutor *(*PTAFindExecCache)(uint8_t *, size_t, uint64_t *);
 typedef void (*InitPTACacheThreadLocal)();
 typedef void (*SetPTAHashKey)(uint64_t);
+typedef void (*SetPTACacheHashKey)(uint8_t *, size_t);
 typedef bool (*CanUsePTACache)(const char *);
 typedef void (*UnInitPTACacheThreadLocal)();
 
@@ -938,16 +940,16 @@ template <typename ...Ts>
 bool hit_cache_v2(
     aclrtStream acl_stream, const char *aclnn_api, void *phrase2, const std::tuple<Ts...> &args, int* api_ret)
 {
-    static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
+    static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
-    static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");
+    static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");
     static const auto canUsePTACacheAddr = GetOpApiFuncAddr("CanUsePTACache");
-    PTAGetExecCache ptaGetExecCacheFunc = reinterpret_cast<PTAGetExecCache>(ptaGetExecCacheAddr);
+    PTAFindExecCache ptaFindExecCacheFunc = reinterpret_cast<PTAFindExecCache>(ptaFindExecCacheAddr);
     InitPTACacheThreadLocal initPTACacheThreadLocalFunc =
         reinterpret_cast<InitPTACacheThreadLocal>(initPTACacheThreadLocalAddr);
-    SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);
+    SetPTACacheHashKey setPTACacheHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);
     CanUsePTACache canUsePTACacheFunc = reinterpret_cast<CanUsePTACache>(canUsePTACacheAddr);
-    bool has_func = ptaGetExecCacheFunc && initPTACacheThreadLocalFunc && setPTAHashKeyFunc;
+    bool has_func = ptaFindExecCacheFunc && initPTACacheThreadLocalFunc && setPTACacheHashKeyFunc;
     bool can_use = canUsePTACacheFunc && canUsePTACacheFunc(aclnn_api);
     if (!has_func || !can_use) {
         return false;
@@ -958,9 +960,13 @@ bool hit_cache_v2(
     g_hash_offset = 0;
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
-    uint64_t hashId = calc_hash_id();
-    setPTAHashKeyFunc(hashId);
-    aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
+    if (g_hash_offset == 0) {
+        setPTACacheHashKeyFunc(nullptr, 0);
+    } else {
+        setPTACacheHashKeyFunc(reinterpret_cast<uint8_t *>(g_hash_buf), g_hash_offset);
+    }
+    aclOpExecutor *executor = ptaFindExecCacheFunc(reinterpret_cast<uint8_t *>(g_hash_buf),
+        g_hash_offset, workspace_size_addr);
     if (executor == nullptr) {
         return false;
     }
@@ -1148,7 +1154,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
 #define EXEC_NPU_CMD(aclnn_api, ...)                                                                                   \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
-        if (task_queue_enable == 2) {                                                                                  \
+        if (true) {                                                                                  \
             EXEC_NPU_CMD_V2(aclnn_api, __VA_ARGS__);                                                                   \
         } else {                                                                                                       \
             EXEC_NPU_CMD_V1(aclnn_api, __VA_ARGS__);                                                                   \
@@ -1226,7 +1232,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                                \
         static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");                   \
-        static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");                                       \
+        static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");                             \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
@@ -1241,10 +1247,10 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
             InitPTACacheThreadLocal initPTACacheThreadLocalFunc =                                                      \
                 reinterpret_cast<InitPTACacheThreadLocal>(initPTACacheThreadLocalAddr);                                \
-            SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);                      \
+            SetPTACacheHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);       \
             if (initPTACacheThreadLocalFunc && setPTAHashKeyFunc) {                                                    \
                 initPTACacheThreadLocalFunc();                                                                         \
-                setPTAHashKeyFunc(0);                                                                                  \
+                setPTAHashKeyFunc(nullptr, 0);                                                                         \
             }                                                                                                          \
             at_npu::native::SetDeterministic();                                                                        \
             if (initMemFunc) {                                                                                         \
@@ -1285,7 +1291,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
 #define EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnn_api, ...)                                                                   \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
-        if (task_queue_enable == 2) {                                                                                  \
+        if (true) {                                                                                  \
             EXEC_NPU_NO_FORMAT_CHECK_CMD_V2(aclnn_api, __VA_ARGS__);                                                   \
         } else {                                                                                                       \
             EXEC_NPU_NO_FORMAT_CHECK_CMD_V1(aclnn_api, __VA_ARGS__);                                                   \
@@ -1359,7 +1365,7 @@ private:
         static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                                \
         static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");                   \
-        static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");                                       \
+        static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");                             \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " and ",              \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
@@ -1373,10 +1379,10 @@ private:
         ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                              \
         InitPTACacheThreadLocal initPTACacheThreadLocalFunc =                                                          \
             reinterpret_cast<InitPTACacheThreadLocal>(initPTACacheThreadLocalAddr);                                    \
-        SetPTAHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTAHashKey>(setPTAHashKeyAddr);                          \
+        SetPTACacheHashKey setPTAHashKeyFunc = reinterpret_cast<SetPTACacheHashKey>(setPTACacheHashKeyAddr);           \
         if (initPTACacheThreadLocalFunc && setPTAHashKeyFunc) {                                                        \
             initPTACacheThreadLocalFunc();                                                                             \
-            setPTAHashKeyFunc(0);                                                                                      \
+            setPTAHashKeyFunc(nullptr, 0);                                                                             \
         }                                                                                                              \
         at_npu::native::SetDeterministic();                                                                            \
         if (initMemFunc) {                                                                                             \
