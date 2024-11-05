@@ -27,6 +27,7 @@ struct CellParams {
     CellParams(const at::Tensor &_w_ih, const at::Tensor &_w_hh) : w_ih(_w_ih), w_hh(_w_hh), b_ih({}), b_hh({}){};
     CellParams(const at::Tensor &_w_ih, const at::Tensor &_w_hh, const at::Tensor &_b_ih, const at::Tensor &_b_hh)
         : w_ih(_w_ih), w_hh(_w_hh), b_ih(_b_ih), b_hh(_b_hh){};
+    int tmp = 0;
     const at::Tensor &w_ih;
     const at::Tensor &w_hh;
     const at::Tensor &b_ih; /* optional */
@@ -207,6 +208,7 @@ std::tuple<at::Tensor, at::Tensor> apply_layer_stack(const at::Tensor &input,
         }
     } else {
         for (int64_t i = 0; i < params_size; i = i + 2) {
+            int tmp = 0;
             weights.emplace_back(CellParams((*(params_it + i)).first, (*(params_it + i)).second),
                                  CellParams((*(params_it + i + 1)).first, (*(params_it + i + 1)).second));
         }
@@ -240,6 +242,7 @@ std::tuple<at::Tensor, at::Tensor> apply_layer_stack(const at::Tensor &input, st
         }
     } else {
         for (int64_t i = 0; i < params_size; i = i + 2) {
+            int tmp = 0;
             weights.emplace_back(CellParams(*(params_it + i), *(params_it + i + 1)));
         }
     }
