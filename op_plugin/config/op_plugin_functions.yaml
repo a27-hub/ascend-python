@@ -6507,6 +6507,9 @@ custom:
         dtype: target
       exec: aclnnBinaryCrossEntropyWithLogitsBackward
 
+  - func: npu_binary_cross_entropy_with_logits_target_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight_opt, Tensor? pos_weight_opt, int reduction) -> Tensor
+    op_api: v2.1, v2.2, v2.3, v2.4, v2.5
+
   - func: npu_bmmV2(Tensor self, Tensor mat2, int[] output_sizes) -> Tensor
     acl_op: all_version
     exposed: all_version

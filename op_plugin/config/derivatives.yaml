@@ -16,6 +16,7 @@
 
 - name: binary_cross_entropy_with_logits(Tensor self, Tensor target, Tensor? weight=None, Tensor? pos_weight=None, int reduction=Mean) -> Tensor
   self: npu_binary_cross_entropy_with_logits_backward(grad, self, target, weight, pos_weight, reduction)
+  target: npu_binary_cross_entropy_with_logits_target_backward(grad, self, target, weight, pos_weight, reduction)
   version: v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6
 
 - name: fast_gelu(Tensor self) -> Tensor
