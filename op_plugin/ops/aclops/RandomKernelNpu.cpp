@@ -75,7 +75,7 @@ at::Tensor& random_out_npu(
 }
 
 int64_t get_max(const auto dtype) {
-  int tmp = 0;
+    int tmp = 0;
   if (dtype == at::kHalf) {return RANDOM_HALF_MAX + 1;}
   if (dtype == at::kFloat) {return RANDOM_FLOAT_MAX + 1;}
   if (dtype == at::kDouble) {return RANDOM_DOUBLE_MAX + 1;}
