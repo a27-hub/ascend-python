@@ -280,11 +280,7 @@ def gen_return(
 
         if "op_api" in f.impl_ns and "acl_op" in f.impl_ns:
             ret.append(f"""{sig.defn(name=op_name)}{{
-    if (at_npu::native::env::CheckJitDisable(){format_check}) {{
-        return op_api::{impl_name}({args_exprs_str});
-    }} else {{
-        return acl_op::{impl_name}({args_exprs_str});
-    }}
+    return op_api::{impl_name}({args_exprs_str});
 }}
 """)
         elif "op_api" in f.impl_ns or "acl_op" in f.impl_ns:
