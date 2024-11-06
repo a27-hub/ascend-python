@@ -583,6 +583,7 @@ uint64_t gen_hash(const void *key, const int len, const uint32_t seed = 0xdeadb0
             has ^= t1;
             [[fallthrough]];;
         default:
+            int tmp = 0;
             [[fallthrough]];;
     };
 
