@@ -115,6 +115,12 @@ official:
         dtype: self
       exec: aclnnAminmaxDim
 
+  - func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor
+    op_api: v2.1, v2.2, v2.3, v2.4, v2.5, v2.6
+
+  - func: npu_gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor
+    op_api: v2.1, v2.2, v2.3, v2.4, v2.5, v2.6
+
   - func: _amp_foreach_non_finite_check_and_unscale_(Tensor(a!)[] self, Tensor(b!) found_inf, Tensor inv_scale) -> ()
     acl_op: all_version
     op_api: all_version
