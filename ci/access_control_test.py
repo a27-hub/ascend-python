@@ -11,11 +11,19 @@ from pathlib import Path
 
 import torch_npu
 
-
 BASE_DIR = Path(__file__).absolute().parent.parent
 TEST_DIR = os.path.join(BASE_DIR, 'test')
 
 modify_file_hash = {}
+
+
+def get_test_torch_version_path():
+    torch_npu_version = torch_npu.__version__
+    version_list = torch_npu_version.split('.')
+    if len(version_list) > 2:
+        return f'test_v{version_list[0]}r{version_list[1]}_ops'
+    else:
+        raise RuntimeError("Invalid torch_npu version.")
 
 
 class AccurateTest(metaclass=ABCMeta):
@@ -45,7 +53,7 @@ class AccurateTest(metaclass=ABCMeta):
         test_custom_path = os.path.join(TEST_DIR, 'test_custom_ops')
         check_dir_path_readable(test_custom_path)
         ut_files = self.find_ut_by_regex(regex, test_custom_path)
-        
+
         version_path = get_test_torch_version_path()
         test_version_path = os.path.join(TEST_DIR, version_path)
         check_dir_path_readable(test_version_path)
@@ -66,6 +74,7 @@ class OpStrategy(AccurateTest):
     """
     Identifying the code of the adaptation layer.
     """
+
     def identify(self, modify_file):
         """
         By parsing the file name of the operator implementation file to obtain its unit test name, for example:
@@ -77,7 +86,7 @@ class OpStrategy(AccurateTest):
             the test file names that contain all of these keywords.
         """
         filename = Path(modify_file).name
-        if filename.find('KernelNpu') >= 0: 
+        if filename.find('KernelNpu') >= 0:
             feature_line = filename.split('KernelNpu')[0]
             features = re.findall('[A-Z][^A-Z]*', feature_line)
             regex = '*' + '*'.join([f"{feature.lower()}" for feature in features]) + '.py'
@@ -89,9 +98,10 @@ class DirectoryStrategy(AccurateTest):
     """
     Determine whether the modified files are test cases
     """
+
     def identify(self, modify_file, ut_files):
         is_test_file = str(Path(modify_file).parts[0]) == "test" \
-            and re.match("test_(.+).py", Path(modify_file).name)
+                       and re.match("test_(.+).py", Path(modify_file).name)
         version_path = get_test_torch_version_path()
         if is_test_file and str(Path(modify_file).parts[1]) in [version_path, "test_custom_ops", "test_base_ops"]:
             modify_file_path = os.path.join(BASE_DIR, modify_file)
@@ -108,7 +118,9 @@ class CoreTestStrategy(AccurateTest):
     Determine whether the core tests should be runned
     """
     block_list = ['test', 'docs']
-    core_test_cases = [str(i) for i in (BASE_DIR / 'test/test_npu').rglob('test_*.py')]
+    version_path = get_test_torch_version_path()
+    test_path = os.path.join('test', "test_base_ops", "core")
+    core_test_cases = [str(i) for i in (BASE_DIR / test_path).rglob('test_*.py')]
 
     def identify(self, modify_file):
         modified_module = str(Path(modify_file).parts[0])
@@ -136,6 +148,7 @@ class TestMgr():
         for modify_file in self.modify_files:
             DirectoryStrategy().identify(modify_file, self.test_files['ut_files'])
             self.test_files['ut_files'] += OpStrategy().identify(modify_file)
+            self.test_files['ut_files'] += CoreTestStrategy().identify(modify_file)
         for v in modify_file_hash.values():
             self.test_files['ut_files'].append(v)
         unique_files = sorted(set(self.test_files['ut_files']))
@@ -159,7 +172,7 @@ class TestMgr():
         print("ut files:")
         for ut_file in self.test_files['ut_files']:
             print(ut_file)
-    
+
     def print_op_ut_files(self):
         print("op ut files:")
         for op_ut_file in self.test_files['op_ut_files']:
@@ -171,9 +184,10 @@ def exec_ut(files):
     Execute the unit test file, and if there are any failures, identify
         the exceptions and print relevant information.
     """
+
     def get_op_name(ut_file):
         return ut_file.split('/')[-1].split('.')[0].lstrip('test_')
-    
+
     def get_ut_name(ut_file):
         return str(Path(ut_file).relative_to(TEST_DIR))[:-3]
 
@@ -260,15 +274,6 @@ def check_dir_path_readable(file_path):
         raise RuntimeError(f"Invalid path is a soft chain: {file_path}")
     if not os.access(file_path, os.R_OK):
         raise PermissionError(f"The path permission check filed: {file_path}")
-
-
-def get_test_torch_version_path():
-    torch_npu_version = torch_npu.__version__
-    version_list = torch_npu_version.split('.')
-    if len(version_list) > 2:
-        return f'test_v{version_list[0]}r{version_list[1]}_ops'
-    else:
-        raise RuntimeError("Invalid torch_npu version.")
 
 
 if __name__ == "__main__":
