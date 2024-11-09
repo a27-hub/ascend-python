@@ -71,8 +71,8 @@ class TestDynamicQuant(TestCase):
 
     def convert_int4_to_int8(self, x):
         x_uint8 = x.view(torch.uint8).view(-1, 1)
-        x_uint8_left = ((x_uint8 & 0xF0).view(torch.int8)>>4)
-        x_uint8_right = ((x_uint8 & 0x0F)<<4).view(torch.int8)>>4
+        x_uint8_left = ((x_uint8 & 0xF0).view(torch.int8) >> 4)
+        x_uint8_right = ((x_uint8 & 0x0F) << 4).view(torch.int8) >> 4
         x_int4 = torch.cat([x_uint8_right, x_uint8_left], dim=-1).contiguous()
         return x_int4
     
