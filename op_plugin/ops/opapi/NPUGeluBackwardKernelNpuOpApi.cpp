@@ -21,15 +21,13 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_gelu_backward(
-    const at::Tensor &grad_output, 
-    const at::Tensor &self,  
+    const at::Tensor &grad_output,
+    const at::Tensor &self,
     c10::string_view approximate)
 {
     std::string approximate_str = std::string(approximate);
 
     at::Tensor result = npu_preparation::apply_tensor_without_format(self);
-    std::cout << "lgyer op_api 28 line npu_gelu_backward approximate: " << approximate_str << std::endl;
-
     char *approximate_ptr = const_cast<char *>(approximate_str.c_str());
     EXEC_NPU_CMD(aclnnGeluBackwardV2, grad_output, self, approximate_ptr, result);
     return result;

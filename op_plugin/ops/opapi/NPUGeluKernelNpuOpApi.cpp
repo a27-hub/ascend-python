@@ -26,8 +26,6 @@ at::Tensor npu_gelu(const at::Tensor &self, c10::string_view approximate)
     std::string approximate_str = std::string(approximate);
 
     at::Tensor result = npu_preparation::apply_tensor_without_format(self);
-    std::cout << "lgyer op_api 28 line npu_gelu approximate: " << approximate_str << std::endl;
-
     int64_t approximate_mode = 0;
     if (approximate_str == "tanh") {
         approximate_mode = APPROXIMATE_TANH;
