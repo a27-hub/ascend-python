@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -22,6 +23,7 @@ constexpr static int64_t APPROXIMATE_TANH = 1;
 
 at::Tensor npu_gelu(const at::Tensor &self, c10::string_view approximate)
 {
+    DO_COMPATIBILITY(aclnnGeluV2, acl_op::gelu(self, approximate));
     std::string approximate_str = std::string(approximate);
     TORCH_CHECK(approximate_str == "tanh" || approximate_str == "none",
         "NPU error, approximate argument must be either none or tanh.", OPS_ERROR(ErrCode::PARAM));
