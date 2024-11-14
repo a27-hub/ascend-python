@@ -66,7 +66,7 @@ at::Tensor upsample_nearest_exact3d_grad_slow(const at::Tensor &grad_output, at:
 at::Tensor &_upsample_nearest_exact3d_backward_out(const at::Tensor &grad_output, at::IntArrayRef output_size, at::IntArrayRef input_size,
     c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w, at::Tensor &grad_input)
 {
-    DO_COMPATIBILITY(aclnnUpsampleNearestExact3dGrad,
+    DO_COMPATIBILITY(aclnnUpsampleNearestExact3dBackward,
         upsample_nearest_exact3d_grad_out_slow(grad_output, output_size, input_size, scales_d, scales_h, scales_w, grad_input));
 
     npu_preparation::check_tensor({grad_output}, grad_input, grad_output, input_size);
@@ -76,7 +76,7 @@ at::Tensor &_upsample_nearest_exact3d_backward_out(const at::Tensor &grad_output
     if (!checkNearestExact3dGradUseFast(grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input)) {
         return upsample_nearest_exact3d_grad_out_slow(grad_output, output_size, input_size, scales_d, scales_h, scales_w, grad_input);
     }
-    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dGrad, grad_output, output_size, input_size, scales_d, scales_h_attr, scales_w_attr, grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d, scales_h_attr, scales_w_attr, grad_input);
     return grad_input;
 }
 
@@ -84,7 +84,7 @@ at::Tensor _upsample_nearest_exact3d_backward(const at::Tensor &grad_output, at:
     c10::optional<double> scales_d, c10::optional<double> scales_h, c10::optional<double> scales_w)
 {
     DO_COMPATIBILITY(
-        aclnnUpsampleNearestExact3dGrad, upsample_nearest_exact3d_grad_slow(grad_output, output_size, input_size, scales_d, scales_h, scales_w));
+        aclnnUpsampleNearestExact3dBackward, upsample_nearest_exact3d_grad_slow(grad_output, output_size, input_size, scales_d, scales_h, scales_w));
 
     double scales_d_attr = scales_d.value_or(0);
     double scales_h_attr = scales_h.value_or(0);
@@ -93,7 +93,7 @@ at::Tensor _upsample_nearest_exact3d_backward(const at::Tensor &grad_output, at:
     if (!checkNearestExact3dGradUseFast(grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input)) {
         return upsample_nearest_exact3d_grad_slow(grad_output, output_size, input_size, scales_d, scales_h, scales_w);
     }
-    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dGrad, grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input);
+    EXEC_NPU_CMD(aclnnUpsampleNearestExact3dBackward, grad_output, output_size, input_size, scales_d_attr, scales_h_attr, scales_w_attr, grad_input);
     return grad_input;
 }
 
