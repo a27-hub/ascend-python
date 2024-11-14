@@ -18,6 +18,7 @@
 
 constexpr double MAX_SUPPORT_SCALE = 50.0;      // 最大缩放系数
 constexpr double NEAREST_MAX_SCALE = 100.0;     // 最近邻最大缩放系数
+constexpr double NEAREST_GRAD_MAX_SCALE = 0.01;     // 最近邻反向缩放系数
 constexpr double BILINEAR_MIN_SCALE = 0.02;     // 双线性最小缩放系数
 constexpr double BICUBIC_MIN_SCALE = 0.03;      // 双三次最小缩放系数
 constexpr int BICUBIC_MAX_SHAPE = 8192;         // 双三次最大shape
