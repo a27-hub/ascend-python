@@ -956,9 +956,7 @@ bool hit_cache_v2(
     uint64_t *workspace_size_addr = &workspace_size;
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
-    if (at_npu::native::IsAclrtSetSysParamOptExist()) {
-        add_param_to_buf_v2(deterministic_status);
-    }
+    add_param_to_buf_v2(deterministic_status);
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
     if (g_hash_offset == g_hash_buf_max_size) {
