@@ -263,16 +263,7 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachDivScalarV2, _foreach_div_v1_(self, scalar));
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, true)) {
-        return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
-    }
-    auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
-    _split_and_exec_npu_cmd_div_scalar(self, scalar, self, true);
+    _foreach_div_v1_(self, scalar);
 }
 
 std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scalar)
@@ -283,30 +274,6 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachDivScalarV2, _foreach_div_v1(self, scalar));
-    // Fallback
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, true)) {
-        return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
-    }
-
-    // Type Check
-    auto scalar_type = self[0].scalar_type();
-    if (scalar_type != at::ScalarType::Half && scalar_type != at::ScalarType::Float && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
-    }
-
-    std::vector<at::Tensor> result(self.size());
-    auto iterRes = result.data();
-    int i = 0;
-    for (const at::Tensor &tensor : self) {
-        auto output_size = op_infer::input_same_output_size(tensor);
-        iterRes[i++] = npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type));
-    }
-    at::TensorList result_ = at::TensorList(result);
-
-    _split_and_exec_npu_cmd_div_scalar(self, scalar, result_, false);
-
-    return result;
-}
+    return _foreach_div_v1(self, scalar);
 }  // namespace op_api
+}
