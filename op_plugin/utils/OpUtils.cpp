@@ -210,15 +210,6 @@ NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
     return names;
 }
 
-double compute_scale(bool align_corners, int64_t input_size, int64_t output_size, double scale)
-{
-    if (scale > 0.0) {
-        return 1.0 / scale ;
-    } else {
-        return output_size != 0 ? static_cast<double>(input_size) / output_size : 0;
-    }
-}
-
 /**
  * @brief 校验foreach的输入数据类型。
  * @param [in] tensorDtype: foreach算子输入的数据类型

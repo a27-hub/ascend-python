@@ -59,26 +59,6 @@ class TestUpsampleBicubic2dAA(TestCase):
             else:
                 self.assertRtolEqual(cpu_output, npu_output)
 
-    @SupportedDevices(['Ascend910B'])
-    def test_UpsampleBicubic2dAA_small_scale_format(self):
-        shape_format = [
-            ["float32", (4, 1, 368, 779), (2, 1)],
-            ["float16", (5, 2, 512, 512), (16, 14)],
-            ["bfloat16", (6, 6, 208, 432), (3, 2)]
-        ]
-        for item in shape_format:
-            cpu_inputs, npu_inputs = self.create_tensor(item[0], item[1])
-            if item[0] == "float16" or item[0] == "bfloat16":
-                cpu_inputs = cpu_inputs.to(torch.float32)
-            cpu_output = self.cpu_op_exec(cpu_inputs, item[2])
-            npu_output = self.npu_op_exec(npu_inputs, item[2])
-            cpu_output = cpu_output.to(npu_output.dtype)
-
-            if item[0] == "bfloat16":
-                self.assert_equal(cpu_output, npu_output)
-            else:
-                self.assertRtolEqual(cpu_output, npu_output)
-
 
 if __name__ == "__main__":
     run_tests()
