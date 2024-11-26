@@ -22,7 +22,6 @@
 
 namespace op_plugin {
 namespace utils {
-
 std::string get_reduction_str(int64_t reduction)
 {
   std::string reductionStr;
@@ -108,6 +107,22 @@ bool is_scalar_one(const c10::Scalar &scalar)
   } else {
     return false;
   }
+}
+
+bool isSocVersionInRange(c10_npu::SocVersion start)
+{
+    return c10_npu::GetSocVersion() >= start;
+}
+
+bool isSocVersionInRange(c10_npu::SocVersion start, c10_npu::SocVersion end)
+{
+    return c10_npu::GetSocVersion() >= start && c10_npu::GetSocVersion() <= end;
+}
+
+bool isSocVersionSupported()
+{
+    return isSocVersionInRange(c10_npu::SocVersion::Ascend910B1, c10_npu::SocVersion::Ascend910B4_1) ||
+           isSocVersionInRange(c10_npu::SocVersion::Ascend910_9391);
 }
 
 float get_scalar_float_value(const c10::Scalar &scalar)
@@ -219,6 +234,7 @@ double compute_scale(bool align_corners, int64_t input_size, int64_t output_size
         return output_size != 0 ? static_cast<double>(input_size) / output_size : 0;
     }
 }
+
 
 }  // namespace utils
 }  // namespace op_plugin
