@@ -39,7 +39,6 @@ OP_PLUGIN_HIDDEN at::ScalarType get_divide_result_type(const at::Tensor& self, c
 OP_PLUGIN_HIDDEN at::ScalarType get_divide_calculate_type(const at::Tensor& self, const at::Tensor& other);
 OP_PLUGIN_HIDDEN at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type);
 OP_PLUGIN_HIDDEN NameVector compute_names_npu(std::vector<at::Tensor> tensor_list);
-OP_PLUGIN_HIDDEN double compute_scale(bool align_corners, int64_t input_size, int64_t output_size, double scale);
 }  // namespace utils
 }  // namespace op_plugin
 
