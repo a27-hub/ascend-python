@@ -34,6 +34,8 @@ void _fused_adamw_(
     const c10::optional<at::Tensor>& grade_scale,
     const c10::optional<at::Tensor>& found_inf)
 {
+    TORCH_CHECK(!grade_scale.has_value() && !found_inf.has_value(), "grade_scale and found_inf are not supported.",
+                OPS_ERROR(ErrCode::NOT_SUPPORT));
     bool is_same_size = (self.size() == grads.size() &&
                        self.size() == exp_avgs.size() &&
                        self.size() == exp_avg_sqs.size() &&
@@ -41,7 +43,7 @@ void _fused_adamw_(
                        (max_exp_avg_sqs.size() == 0 ||
                        self.size() == max_exp_avg_sqs.size()));
     if (!is_same_size) {
-        TORCH_CHECK(false, "the size of tensor list should be same.");
+        TORCH_CHECK(false, "the size of tensor list should be same.", OPS_ERROR(ErrCode::PARAM));
     }
 
     float lr_cast = static_cast<float>(lr);
