@@ -5406,7 +5406,7 @@ official:
       exec: aclnnSoftshrinkBackward
 
   - func: sort(Tensor self, int dim=-1, bool descending=False) -> (Tensor values, Tensor indices)
-    acl_op: all_version
+    acl_op: [v2.1,newest]
     op_api: all_version
 
   - func: sort.dimname(Tensor self, Dimname dim, bool descending=False) -> (Tensor values, Tensor indices)
