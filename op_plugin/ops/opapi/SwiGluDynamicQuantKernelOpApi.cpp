@@ -40,6 +40,6 @@ std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     at::Tensor scale = npu_preparation::apply_tensor(reduce_shape, x.options().dtype(at::kFloat), x);
 
     EXEC_NPU_CMD(aclnnSwiGluDynamicQuant, x, smooth_local, group_idx_local, dim, core_num, y, scale);
-    return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(y, scale);
+    return std::tuple<at::Tensor, at::Tensor>(y, scale);
 }
 } // namespace op_api
