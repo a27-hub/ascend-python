@@ -19,7 +19,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
+std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     const at::Tensor &x,
     const c10::optional<at::Tensor> &smooth,
     const c10::optional<at::Tensor> &group_idx,
