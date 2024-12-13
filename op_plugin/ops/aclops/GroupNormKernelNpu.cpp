@@ -22,14 +22,9 @@ namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-inline bool is_support_group_norm_swish(const at::Tensor& X)
+inline bool is_support_group_norm_swish()
 {
-    // GroupNorm supports format NC1HWC0
-    if (npu_preparation::get_tensor_npu_format(X) == ACL_FORMAT_NC1HWC0) {
-        return false;
-    }
-
-    if ((c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
+    if ((c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
         (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4)) {
         return true;
@@ -80,7 +75,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_swish_out_npu(
     int64_t C)
 {
     at_npu::native::OpCommand cmd;
-    if (is_support_group_norm_swish(X)) {
+    if (is_support_group_norm_swish()) {
         cmd.Name("GroupNormSwish")
             .Input(X)
             .Input(gamma)
