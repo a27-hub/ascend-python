@@ -6478,9 +6478,6 @@ custom:
   - func: matmul_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
 
-  - func: npu_nms_v3(Tensor boxes, Tensor scores, Tensor max_output_size, Tensor iou_thr, Tensor score_thr, int offset) -> Tensor
-    acl_op: all_version
-
   - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias=None, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
