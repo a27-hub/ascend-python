@@ -53,7 +53,7 @@ std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
 
     cmd.Output(y, "y")
     .Output(scale, "scale")
-    .Attr("dst_type", 2)
+    .Attr("dst_type", ((int64_t)2))
     .Attr("dim", dim)
     .Attr("core_num", core_num)
     .Run();
