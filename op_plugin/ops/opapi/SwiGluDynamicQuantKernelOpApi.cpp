@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     const at::Tensor &x,
     const c10::optional<at::Tensor> &smooth,
     const c10::optional<at::Tensor> &group_idx,
@@ -38,8 +38,9 @@ std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
 
     at::Tensor y = npu_preparation::apply_tensor(x, x.options().dtype(at::kChar));
     at::Tensor scale = npu_preparation::apply_tensor(reduce_shape, x.options().dtype(at::kFloat), x);
+    at::Tensor test = npu_preparation::apply_tensor(x, x.options().dtype(at::kFloat));
 
-    EXEC_NPU_CMD(aclnnSwiGluDynamicQuant, x, smooth_local, group_idx_local, dim, core_num, y, scale);
-    return std::tuple<at::Tensor, at::Tensor>(y, scale);
+    EXEC_NPU_CMD(aclnnSwiGluDynamicQuant, x, smooth_local, group_idx_local, dim, core_num, y, scale, test);
+    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y, scale, test);
 }
 } // namespace op_api

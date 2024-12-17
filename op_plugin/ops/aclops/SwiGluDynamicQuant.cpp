@@ -19,7 +19,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     const at::Tensor &x,
     const c10::optional<at::Tensor> &smooth,
     const c10::optional<at::Tensor> &group_idx,
@@ -33,6 +33,7 @@ std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
 
     at::Tensor y = npu_preparation::apply_tensor(x, x.options().dtype(at::kChar));
     at::Tensor scale = npu_preparation::apply_tensor(reduce_shape, x.options().dtype(at::kFloat), x);
+    at::Tensor test = npu_preparation::apply_tensor(x, x.options().dtype(at::kFloat));
 
     const at::Tensor& smooth_local = c10::value_or_else(smooth, [] {return at::Tensor();});
     const at::Tensor& group_idx_local = c10::value_or_else(group_idx, [] {return at::Tensor();});
@@ -53,10 +54,11 @@ std::tuple<at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
 
     cmd.Output(y, "y")
     .Output(scale, "scale")
+    .Output(test, "testOut")
     .Attr("dst_type", ((int64_t)2))
     .Attr("dim", dim)
     .Attr("core_num", core_num)
     .Run();
-    return std::make_tuple(y, scale);
+    return std::make_tuple(y, scale, test);
 }
 } // namespace acl_op

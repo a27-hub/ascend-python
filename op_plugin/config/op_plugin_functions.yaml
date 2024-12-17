@@ -6509,7 +6509,7 @@ custom:
     acl_op: v1.11, v2.1
     op_api: v1.11, v2.1
 
-  - func: npu_swi_glu_dynamic_quant(Tensor x, Tensor? smooth=None, Tensor? group_idx=None, int dim=-1, int core_num=8) -> (Tensor, Tensor)
+  - func: npu_swi_glu_dynamic_quant(Tensor x, Tensor? smooth=None, Tensor? group_idx=None, int dim=-1, int core_num=8) -> (Tensor, Tensor, Tensor)
     acl_op: v2.1
     op_api: v2.1
 
