@@ -91,7 +91,7 @@ namespace op_api {
         auto second_dim = at::reshape(at::arange(0, prev_n * factor, prev_n, options), dim_shape);
 
         dim_shape = {1, 1, factor};
-        
+
         auto third_dim = at::reshape(at::arange(0, -factor, -1, options), dim_shape);
         third_dim = at::mul(third_dim, c10::pi<double_t> * 2 / (prev_n * factor));
 
@@ -105,7 +105,7 @@ namespace op_api {
         int64_t out_complex = ((plan_key.plan_mode == PlanMode::c2r) && (index == static_cast<int64_t>(factors.size() - 1))) ? static_cast<int64_t>(1) : static_cast<int64_t>(2);
         int64_t in_n = factor;
         int64_t in_complex = ((plan_key.plan_mode == PlanMode::r2c || plan_key.plan_mode == PlanMode::r2c_bothside) && (index == 0)) ? static_cast<int64_t>(1) : static_cast<int64_t>(2);
-        
+
         std::array<int64_t, 5> rotate_shape{prev_n, out_n, out_complex, in_complex, in_n};
         auto rotate_matrix = at::empty(rotate_shape, options);
         at::cos_outf(theta, triangle);
@@ -131,7 +131,7 @@ namespace op_api {
                 copy_quarter(rotate_matrix, triangle, prev_n, factor, in_n == factor, out_n == factor, true, 1, 0);
             }
         }
-        rotate_matrix = rotate_matrix.to(at::kFloat);
+        rotate_matrix = rotate_matrix.to(plan_key.scalar_dtype);
 
         // transpose dims
         std::vector<int64_t> split_shape(index + 4);
@@ -231,7 +231,11 @@ namespace op_api {
         TORCH_CHECK(plan_key.prb_size > 1, "prb_size must be greater than 1" + OPS_ERROR(ErrCode::PARAM));
 
         std::vector<int64_t> factors = factorize(plan_key.prb_size);
-        factors = merge(factors);
+        if (plan_key.prb_size <= 128) {
+            factors = {plan_key.prb_size};
+        } else {
+            factors = merge(factors);
+        }
 
         FFTPlanItem fftPlanItem{factors};
 
@@ -245,11 +249,11 @@ namespace op_api {
         return fftPlanItem;
     }
 
-    static LRUCache lruCache(3);
+    static LRUCache lruCache(10);
 
-    FFTPlanItem get_plan(int64_t prb_size, bool is_forward, PlanMode plan_mode)
+    FFTPlanItem get_plan(int64_t prb_size, bool is_forward, PlanMode plan_mode, at::ScalarType scalar_dtype)
     {
-        PlanKey plan_key{prb_size, is_forward, plan_mode};
+        PlanKey plan_key{prb_size, is_forward, plan_mode, scalar_dtype};
         return lruCache.get(plan_key);
     }
 
