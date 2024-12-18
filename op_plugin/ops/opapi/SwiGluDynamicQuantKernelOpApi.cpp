@@ -36,9 +36,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     }
     reduce_shape.emplace_back(1);
 
-    at::Tensor y = npu_preparation::apply_tensor(x, x.options().dtype(at::kChar));
+    at::SmallVector<int64_t, SIZE> glu_shape;
+    for (uint64_t index = 0; index < x.dim(); index++) {
+        glu_shape.emplace_back(x.size(index));
+    }
+    int64_t slice_dim = dim < 0 ? x.dim() + dim : dim;
+    glu_shape[slice_dim] /= 2;
+
+    at::Tensor y = npu_preparation::apply_tensor(glu_shape, x.options().dtype(at::kChar), x);
     at::Tensor scale = npu_preparation::apply_tensor(reduce_shape, x.options().dtype(at::kFloat), x);
-    at::Tensor test = npu_preparation::apply_tensor(x, x.options().dtype(at::kFloat));
+    at::Tensor test = npu_preparation::apply_tensor(glu_shape, x.options().dtype(at::kFloat), x);
 
     EXEC_NPU_CMD(aclnnSwiGluDynamicQuant, x, smooth_local, group_idx_local, dim, core_num, y, scale, test);
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y, scale, test);
