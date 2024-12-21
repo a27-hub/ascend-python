@@ -808,14 +808,6 @@ official:
         size: self
         dtype: self
       exec: aclnnMaskedScale, self, mask, scale, out
-  
-  - func: square(Tensor self) -> Tensor
-    op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnSquare, self, out
 
   - func: abs(Tensor self) -> Tensor
     acl_op: all_version
@@ -5487,7 +5479,12 @@ official:
 
   - func: square.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
-    op_api: v1.11
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnSquare, self, out
 
   - func: stack(Tensor[] tensors, int dim=0) -> Tensor
     acl_op: all_version
