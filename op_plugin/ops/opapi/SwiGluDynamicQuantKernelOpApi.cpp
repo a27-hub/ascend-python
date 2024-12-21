@@ -29,12 +29,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     const at::Tensor& group_idx_local = c10::value_or_else(group_idx, [] {return at::Tensor();});
 
     DO_COMPATIBILITY(aclnnSwiGluDynamicQuant, acl_op::npu_swi_glu_dynamic_quant(x, smooth_local, group_idx_local, dim, core_num));
-    
-    at::SmallVector<int64_t, SIZE> reduce_shape;
-    for (uint64_t index = 0; index < x.dim() - 1; index++) {
-        reduce_shape.emplace_back(x.size(index));
-    }
-    reduce_shape.emplace_back(1);
 
     at::SmallVector<int64_t, SIZE> glu_shape;
     for (uint64_t index = 0; index < x.dim(); index++) {
@@ -42,6 +36,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swi_glu_dynamic_quant(
     }
     int64_t slice_dim = dim < 0 ? x.dim() + dim : dim;
     glu_shape[slice_dim] /= 2;
+
+    at::SmallVector<int64_t, SIZE> reduce_shape;
+    for (uint64_t index = 0; index < glu_shape.dim() - 1; index++) {
+        reduce_shape.emplace_back(glu_shape.size(index));
+    }
+    reduce_shape.emplace_back(1);
 
     at::Tensor y = npu_preparation::apply_tensor(glu_shape, x.options().dtype(at::kChar), x);
     at::Tensor scale = npu_preparation::apply_tensor(reduce_shape, x.options().dtype(at::kFloat), x);
