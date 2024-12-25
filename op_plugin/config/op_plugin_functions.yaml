@@ -7031,6 +7031,10 @@ custom:
     op_api: all_version
     exposed: all_version
 
+  - func: npu_matmul_v5(Tensor x1, Tensor x2) -> Tensor
+    op_api: all_version
+    exposed: all_version
+
   - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, Tensor? offset=None, Tensor? bias=None, str? output_dtype=None) -> Tensor
     op_api: v2.0
 
