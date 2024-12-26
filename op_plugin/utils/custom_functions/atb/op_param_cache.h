@@ -57,6 +57,37 @@ struct HashOpParam<atb::infer::LinearParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::PagedAttentionParam> {
+    size_t operator()(const atb::infer::PagedAttentionParam& param) const {
+        size_t h = 0;
+        return h;
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
+    size_t operator()(const atb::infer::ReshapeAndCacheParam& param) const {
+        size_t h = 0;
+        return h;
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::RopeParam> {
+    size_t operator()(const atb::infer::RopeParam& param) const {
+        size_t h = 0;
+        return h;
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::SelfAttentionParam> {
+    size_t operator()(const atb::infer::SelfAttentionParam& param) const {
+        size_t h = 0;
+        return h;
+    }
+};
 
 template <typename T>
 size_t computeHash(const T& obj) {
@@ -64,6 +95,10 @@ size_t computeHash(const T& obj) {
 }
 
 template class OpParamCache<atb::infer::LinearParam>;
+template class OpParamCache<atb::infer::PagedAttentionParam>;
+template class OpParamCache<atb::infer::ReshapeAndCacheParam>;
+template class OpParamCache<atb::infer::RopeParam>;
+template class OpParamCache<atb::infer::SelfAttentionParam>;
 
 }
 
