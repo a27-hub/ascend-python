@@ -153,8 +153,8 @@ at::Tensor scaled_dot_product_attention(
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
                 (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
                 (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 ==0 &&
-                ((attn_mask.has_value() && attn_mask->dtype() == at::kBool && attn_mask->size(-2) == query.size(2) &&
-                attn_mask->size(-1) == key.size(2)) || !attn_mask.has_value()) &&
+                ((attn_mask.has_value() && attn_mask->dtype() == at::kBool && (attn_mask->dim() == 2 || attn_mask->dim() == 4) &&
+                attn_mask->size(-2) == query.size(2) && attn_mask->size(-1) == key.size(2)) || !attn_mask.has_value()) &&
                 (query.size(0) == key.size(0) && query.size(3) == key.size(3) && key.size(0) == value.size(0) &&
                 key.size(1) == value.size(1) && key.size(2) == value.size(2) && key.size(3) == value.size(3)) &&
                 (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= FIA_N_LIMIT) &&
