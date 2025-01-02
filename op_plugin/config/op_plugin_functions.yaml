@@ -6823,6 +6823,22 @@ custom:
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
 
+  - func: npu_gmm.Tensor(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor? group_list=None, int? group_type=0, int? group_list_type=0) -> Tensor[]
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+
+  - func: npu_gmm.List(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, int[]? group_list=None, int? group_type=0, int? group_list_type=0) -> Tensor[]
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+
+  - func: npu_quant_gmm(Tensor[] x, Tensor[] weight, Tensor[] scale, *, Tensor[]? offset=None, Tensor[]? per_token_scale=None, Tensor[]? bias=None, Tensor? group_list=None, int? group_list_type=0, int? output_dtype=None, int? act_type=0) -> Tensor[]
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+
+  - func: npu_weight_quant_gmm(Tensor[] x, Tensor[] weight, Tensor[] antiquant_scale, *, Tensor[]? antiquant_offset=None, Tensor[]? bias=None, Tensor? group_list=None, int? group_list_type=0, int? act_type=0) -> Tensor[]
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
+    
   - func: npu_gru(Tensor input, Tensor hx, Tensor weight_input, Tensor weight_hidden, Tensor bias_input, Tensor bias_hidden, Tensor seq_length, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     tags: nondeterministic_seeded
