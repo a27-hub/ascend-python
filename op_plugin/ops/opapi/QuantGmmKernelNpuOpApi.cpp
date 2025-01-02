@@ -5,22 +5,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-
-namespace {
-constexpr int SIZE = 8;
-
-c10::SmallVector<int64_t, SIZE> array_to_small_vector(c10::IntArrayRef shape)
-{
-    c10::SmallVector<int64_t, SIZE> small_shape;
-    for (size_t i = 0; i < shape.size(); ++i) {
-        small_shape.emplace_back(shape[i]);
-    }
-    return small_shape;
-}
-}
-
 #if VERSION_BETWEEN(v2R1, VERSION_NEWEST)
-
 std::vector<at::Tensor> npu_quant_gmm(const at::TensorList x,
                                       const at::TensorList weight,
                                       const at::TensorList scale,
@@ -57,7 +42,7 @@ std::vector<at::Tensor> npu_quant_gmm(const at::TensorList x,
     }
 
     size_t dim_num_w = weight[0].sizes().size();
-    auto output_size = array_to_small_vector({x[0].sizes()[0], weight[0].sizes()[dim_num_w - 1]});
+    auto output_size = op_infer::array_to_small_vector({x[0].sizes()[0], weight[0].sizes()[dim_num_w - 1]});
     std::vector<at::Tensor> y{at::empty(output_size, options)};
     at::TensorList result = at::TensorList(y);
     auto antiquant_scale = nullptr;
@@ -74,7 +59,6 @@ std::vector<at::Tensor> npu_quant_gmm(const at::TensorList x,
 
     return y;
 }
-
 #endif
 
 } // namespace op_api

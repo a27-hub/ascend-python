@@ -2,47 +2,27 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+namespace {
+    void _check_dims(size_t num_x, const at::TensorList &weight, size_t num_group_list)
+    {
+        size_t num_w = weight.size();
+        TORCH_CHECK(num_x > 0 && num_w > 0,
+            "Neither x nor weight could be empty.");
+        size_t dim_num_w = weight[0].sizes().size();
+        size_t dim_0_w = weight[0].sizes()[0];
+    }
+
+    void _create_new_tensor(std::vector<at::Tensor> &y, int64_t dim_m, int64_t dim_n, c10::TensorOptions options,
+                            int64_t group_type_value, int64_t num_group_list)
+    {
+        auto output_size = (2 == group_type_value) ? op_infer::array_to_small_vector({num_group_list, dim_m, dim_n})
+                                                : op_infer::array_to_small_vector({dim_m, dim_n});
+        y.emplace_back(at::empty(output_size, options));
+    }
+}
+
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-
-
-namespace {
-constexpr int SIZE = 8;
-
-c10::SmallVector<int64_t, SIZE> array_to_small_vector(c10::IntArrayRef shape)
-{
-    c10::SmallVector<int64_t, SIZE> small_shape;
-    for (size_t i = 0; i < shape.size(); ++i) {
-        small_shape.emplace_back(shape[i]);
-    }
-    return small_shape;
-}
-}
-
-void _check_dims(size_t num_x, const at::TensorList &weight, size_t num_group_list)
-{
-    size_t num_w = weight.size();
-    TORCH_CHECK(num_x > 0 && num_w > 0,
-        "Neither x nor weight could be empty.");
-    size_t dim_num_w = weight[0].sizes().size();
-    size_t dim_0_w = weight[0].sizes()[0];
-}
-
-void _create_new_tensor(std::vector<at::Tensor> &y, int64_t dim_m, int64_t dim_n, c10::TensorOptions options,
-                        int64_t group_type_value, int64_t num_group_list)
-{
-    auto output_size = (2 == group_type_value) ? array_to_small_vector({num_group_list, dim_m, dim_n})
-                                               : array_to_small_vector({dim_m, dim_n});
-    y.emplace_back(at::empty(output_size, options));
-}
-
-void _foreach_transpose(const at::TensorList &tensorList, std::vector<at::Tensor> &tensors)
-{
-    for (int i = 0; i< tensorList.size(); i++) {
-        at::Tensor tensor = tensorList[i].transpose(-1, -2);
-        tensors.emplace_back(tensor);
-    }
-}
 
 bool _is_transposed(at::Tensor &tensors)
 {
@@ -58,7 +38,6 @@ bool _is_transposed(at::Tensor &tensors)
 }
 
 #if VERSION_BETWEEN(v2R1, VERSION_NEWEST)
-
 std::vector<at::Tensor> npu_gmm(const at::TensorList x,
                                 const at::TensorList weight,
                                 const c10::optional<at::TensorList> bias,
@@ -138,7 +117,6 @@ std::vector<at::Tensor> npu_gmm(const at::TensorList x,
 
     return y;
 }
-
 #endif
 
 } // namespace op_api
