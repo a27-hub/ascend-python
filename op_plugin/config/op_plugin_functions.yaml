@@ -84,12 +84,24 @@ official:
 
   - func: _add_relu.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnAddRelu
 
   - func: _add_relu.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      exec: aclnnAddRelu
 
   - func: _add_relu_.Tensor(Tensor(a!) self, Tensor other, *, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+        exec: aclnnInplaceAddRelu
 
   - func: _aminmax(Tensor self) -> (Tensor, Tensor)
     acl_op: all_version
@@ -691,6 +703,7 @@ official:
 
   - func: _native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)
     acl_op: [v2.0, newest]
+    op_api: all_version
 
   - func: _nnpack_spatial_convolution(Tensor input, Tensor weight, Tensor? bias, SymInt[2] padding, int[2] stride=1) -> Tensor
     acl_op: [v2.0, newest]
@@ -1918,9 +1931,14 @@ official:
 
   - func: cumprod.out(Tensor self, int dim, *, ScalarType? dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
-
-  - func: cumprod_(Tensor(a!) self, int dim, *, ScalarType? dtype=None) -> Tensor(a!)
-    acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: 'dtype.has_value() ? dtype.value() : out.scalar_type()'
+      new_params:
+        dim_scalar: 'at::Scalar(dim)'
+      exec: aclnnCumprod, self, dim_scalar, dtype, out
 
   - func: cumprod_.dimname(Tensor(a!) self, Dimname dim, *, ScalarType? dtype=None) -> Tensor(a!)
     acl_op: all_version
@@ -3764,19 +3782,10 @@ official:
   - func: minimum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: broadcast_ops_npu_output_size(self, other)
-        dtype: at::result_type(self, other)
-      exec: aclnnMinimum
 
   - func: minimum.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: broadcast_ops_npu_output_size(self, other)
-      exec: aclnnMinimum
 
   - func: mish(Tensor self) -> Tensor
     acl_op: all_version
@@ -4561,19 +4570,16 @@ official:
       exec: aclnnReflectionPad2dBackward
 
   - func: reflection_pad3d(Tensor self, SymInt[6] padding) -> Tensor
-    acl_op: [v2.0, newest]
     op_api: [v2.0, newest]
     gen_opapi:
       structured_inherit: reflection_pad3d.out
 
   - func: reflection_pad3d(Tensor self, int[6] padding) -> Tensor
-    acl_op: v1.11
     op_api: v1.11
     gen_opapi:
       structured_inherit: reflection_pad3d.out
 
   - func: reflection_pad3d.out(Tensor self, SymInt[6] padding, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: [v2.0, newest]
     op_api: [v2.0, newest]
     gen_opapi:
       out:
@@ -4582,7 +4588,6 @@ official:
       exec: aclnnReflectionPad3d
 
   - func: reflection_pad3d.out(Tensor self, int[6] padding, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: v1.11
     op_api: v1.11
     gen_opapi:
       out:
@@ -4830,19 +4835,16 @@ official:
       exec: aclnnReplicationPad2dBackward
 
   - func: replication_pad3d(Tensor self, SymInt[6] padding) -> Tensor
-    acl_op: [v2.0, newest]
     op_api: [v2.0, newest]
     gen_opapi:
       structured_inherit: replication_pad3d.out
 
   - func: replication_pad3d(Tensor self, int[6] padding) -> Tensor
-    acl_op: v1.11
     op_api: v1.11
     gen_opapi:
       structured_inherit: replication_pad3d.out
 
   - func: replication_pad3d.out(Tensor self, SymInt[6] padding, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: [v2.0, newest]
     op_api: [v2.0, newest]
     gen_opapi:
       out:
@@ -4851,7 +4853,6 @@ official:
       exec: aclnnReplicationPad3d
 
   - func: replication_pad3d.out(Tensor self, int[6] padding, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: v1.11
     op_api: v1.11
     gen_opapi:
       out:
@@ -5058,21 +5059,6 @@ official:
         size: self
         dtype: 'out_int32 ? at::kInt : at::kLong'
       exec: aclnnSearchSorted, sorted_sequence, self, out_int32, right, sorter, out
-
-  - func: selu(Tensor self) -> Tensor
-    acl_op: all_version
-    op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnSelu
-
-  - func: selu_(Tensor(a!) self) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
-    gen_opapi:
-      exec: aclnnInplaceSelu
 
   - func: sgn(Tensor self) -> Tensor
     acl_op: all_version
@@ -5438,7 +5424,7 @@ official:
       exec: aclnnSoftshrinkBackward
 
   - func: sort(Tensor self, int dim=-1, bool descending=False) -> (Tensor values, Tensor indices)
-    acl_op: all_version
+    acl_op: [v2.1, newest]
     op_api: all_version
 
   - func: sort.dimname(Tensor self, Dimname dim, bool descending=False) -> (Tensor values, Tensor indices)
@@ -6157,25 +6143,25 @@ official:
     op_api: [v2.1, newest]
 
   - func: _upsample_nearest_exact1d_backward.grad_input(Tensor grad_output, int[1] output_size, int[3] input_size, float? scales=None, *, Tensor(a!) grad_input) -> Tensor(a!)
-    op_api: v1.11  
-  
+    op_api: v1.11
+
   - func: _upsample_nearest_exact1d_backward(Tensor grad_output, SymInt[1] output_size, SymInt[3] input_size, float? scales=None) -> Tensor
     op_api: [v2.1, newest]
 
   - func: _upsample_nearest_exact1d_backward(Tensor grad_output, int[1] output_size, int[3] input_size, float? scales=None) -> Tensor
-    op_api: v1.11  
+    op_api: v1.11
 
-  - func: _upsample_nearest_exact2d_backward.grad_input(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None, *, Tensor(a!) grad_input) -> Tensor(a!)  
+  - func: _upsample_nearest_exact2d_backward.grad_input(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: [v2.1, newest]
 
   - func: _upsample_nearest_exact2d_backward.grad_input(Tensor grad_output, int[2] output_size, int[4] input_size, float? scales_h=None, float? scales_w=None, *, Tensor(a!) grad_input) -> Tensor(a!)
-    op_api: v1.11  
-  
-  - func: _upsample_nearest_exact2d_backward(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None) -> Tensor     
+    op_api: v1.11
+
+  - func: _upsample_nearest_exact2d_backward(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None) -> Tensor
     op_api: [v2.1, newest]
-    
-  - func: _upsample_nearest_exact2d_backward(Tensor grad_output, int[2] output_size, int[4] input_size, float? scales_h=None, float? scales_w=None) -> Tensor     
-    op_api: v1.11    
+
+  - func: _upsample_nearest_exact2d_backward(Tensor grad_output, int[2] output_size, int[4] input_size, float? scales_h=None, float? scales_w=None) -> Tensor
+    op_api: v1.11
 
   - func: upsample_trilinear3d(Tensor self, SymInt[3] output_size, bool align_corners, float? scales_d=None, float? scales_h=None, float? scales_w=None) -> Tensor
     acl_op: [v2.0, newest]
@@ -6438,6 +6424,9 @@ custom:
   - func: _npu_silent_check_v2(Tensor val, Tensor(a!) input_grad, Tensor(b!) sfda, Tensor(c!) step, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2, int npu_asd_detect) -> Tensor
     op_api: all_version
 
+  - func: _npu_silent_check_v3(Tensor val, Tensor(a!) input_grad, Tensor(b!) step, Tensor(c!) max, Tensor(d!) avg, float c_thresh_l1, float c_thresh_l2, float betal, int npu_asd_detect) -> Tensor
+    op_api: all_version
+
   - func: batch_norm_gather_stats_update(Tensor input, Tensor mean, Tensor invstd, Tensor? running_mean, Tensor? running_var, float momentum, float eps, Tensor counts) -> (Tensor, Tensor)
     acl_op: all_version
 
@@ -6514,6 +6503,7 @@ custom:
 
   - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     op_api: all_version
+    exposed: all_version
 
   - func: npu_alloc_float_status(Tensor self) -> Tensor
     acl_op: all_version
@@ -6735,12 +6725,15 @@ custom:
 
   - func: npu_dynamic_quant(Tensor input, *, Tensor? smooth_scales=None, Tensor? group_index=None, ScalarType? dst_type=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
 
   - func: npu_dynamic_quant_asymmetric(Tensor input, *, Tensor? smooth_scales=None, Tensor? group_index=None, ScalarType? dst_type=None) -> (Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
 
   - func: npu_fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
+    exposed: all_version
 
   - func: npu_fast_gelu_backward(Tensor grad, Tensor self) -> Tensor
     acl_op: all_version
@@ -6809,6 +6802,7 @@ custom:
 
   - func: npu_group_norm_silu(Tensor input, Tensor? weight, Tensor? bias, int group, float eps=0.00001) -> (Tensor, Tensor, Tensor)
     op_api: all_version
+    exposed: all_version
     gen_opapi:
       out0:
         size: input
@@ -6944,13 +6938,15 @@ custom:
 
   - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, Tensor? pertoken_scale=None, Tensor? comm_quant_scale_1=None, Tensor? comm_quant_scale_2=None, int antiquant_group_size=0, int comm_turn=0) -> Tensor
     op_api: all_version
-    exposed: v1.11, v2.1, v2.4, v2.5, v2.6
+    exposed: all_version
 
   - func: npu_mm_reduce_scatter_base(Tensor self, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, int comm_turn=0) -> Tensor
     op_api: all_version
+    exposed: all_version
 
   - func: npu_moe_compute_expert_tokens(Tensor sorted_expert_for_source_row, int num_expert) -> Tensor
     op_api: all_version
+    exposed: all_version
     gen_opapi:
       out:
         size: '{num_expert}'
@@ -6959,12 +6955,15 @@ custom:
 
   - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor
     op_api: all_version
+    exposed: all_version
 
   - func: npu_moe_gating_top_k_softmax(Tensor x, Tensor? finished=None, int k=1) -> (Tensor, Tensor, Tensor)
     op_api: all_version
+    exposed: all_version
 
   - func: npu_moe_init_routing(Tensor x, Tensor row_idx, Tensor expert_idx, int active_num) -> (Tensor, Tensor, Tensor)
     op_api: all_version
+    exposed: all_version
 
   - func: npu_multi_head_attention(Tensor query, Tensor key, Tensor value, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor attn_mask, Tensor out_proj_weight, Tensor? query_bias, Tensor? key_bias, Tensor? value_bias, Tensor? out_proj_bias, Tensor? dropout_mask, int attn_head_num, int attn_dim_per_head, int src_len, int tgt_len, float dropout_prob, bool softmax_use_float) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
@@ -7023,6 +7022,7 @@ custom:
 
   - func: npu_prefetch(Tensor self, Tensor? dependency, int max_size, int offset=0) -> ()
     op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
 
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
     acl_op: [v2.1, newest]
@@ -7040,10 +7040,12 @@ custom:
 
   - func: npu_quant_scatter_(Tensor(a!) self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor(a!)
     op_api: all_version
+    exposed: all_version
 
   - func: npu_quantize(Tensor self, Tensor scales, Tensor? zero_points, ScalarType dtype, int axis=1, bool div_mode=True) -> Tensor
     acl_op: all_version
     op_api: all_version
+    exposed: all_version
 
   - func: npu_group_quant(Tensor x, Tensor scale, Tensor group_index, *, Tensor? offset=None, ScalarType? dst_dtype=None) -> Tensor
     op_api: all_version
@@ -7198,7 +7200,7 @@ custom:
 
   - func: npu_trans_quant_param(Tensor scale, Tensor? offset=None) -> Tensor
     op_api: all_version
-    exposed: v1.11, v2.0, v2.2, v2.3, v2.4, v2.5, v2.6
+    exposed: all_version
 
   - func: npu_transpose(Tensor self, int[] perm, bool require_contiguous=True) -> Tensor
     acl_op: all_version
@@ -7242,19 +7244,12 @@ custom:
   - func: scatter_update(Tensor self, Tensor indices, Tensor updates, int axis) -> Tensor
     acl_op: all_version
     op_api: all_version
+    exposed: all_version
 
   - func: scatter_update_(Tensor(a!) self, Tensor indices, Tensor updates, int axis) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-
-  - func: selu_backward(Tensor grad_output, Tensor result) -> Tensor
-    acl_op: all_version
-    op_api: all_version
-    gen_opapi:
-      grad_input:
-        size: grad_output
-        dtype: grad_output
-      exec: aclnnSeluBackward
+    exposed: all_version
 
   - func: slow_conv_transpose2d_backward(Tensor grad_output, Tensor self, Tensor weight, int[2] kernel_size, int[2] stride, int[2] padding, int[2] output_padding, int[2] dilation, bool[3] output_mask) -> (Tensor grad_input, Tensor grad_weight, Tensor grad_bias)
     acl_op: all_version

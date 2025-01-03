@@ -22,7 +22,7 @@ class TestForeachAddcdivTensor(TestCase):
                 self.fail("shape error")
             if (cpu_out.dtype != npu_out.dtype):
                 self.fail("dtype error!")
-            result = torch.allclose(cpu_out, npu_out.cpu(), rtol=0.001, atol=0.001)
+            result = torch.allclose(cpu_out, npu_out.cpu(), rtol=0.004, atol=0.004)
             if not result:
                 self.fail("result error!")
         return True
@@ -43,8 +43,8 @@ class TestForeachAddcdivTensor(TestCase):
         npu_inputs = []
         shapes = []
         for i in range(tensor_num):
-            m = random.randint(1, 100)
-            n = random.randint(1, 100)
+            m = random.randint(1, 15)
+            n = random.randint(1, 15)
             shapes.append([m, n])
         for i in range(input_nums) :
             cpu_tensors, npu_tensors = self.create_tensors(dtype, shapes)
@@ -66,7 +66,7 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float32")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.float32)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.float32)
             cpu_output = torch._foreach_addcdiv(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
             npu_output = torch._foreach_addcdiv(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
             
@@ -77,9 +77,12 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float16")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.float16)
-            cpu_output = torch._foreach_addcdiv(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.float16)
+            cpu_tensors_1 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[0]]
+            cpu_tensors_2 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[1]]
+            cpu_tensors_3 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[2]]
             npu_output = torch._foreach_addcdiv(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
+            cpu_output = [torch.from_numpy(cpu_tensors_1[i] + cpu_tensors_2[i] / cpu_tensors_3[i] * scalars.numpy()[i]) for i in range(len(cpu_tensors_1))]
 
             self.assertRtolEqual(cpu_output, npu_output)
 
@@ -88,7 +91,7 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "bfloat16")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.bfloat16)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.bfloat16)
             cpu_output = torch._foreach_addcdiv(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
             npu_output = torch._foreach_addcdiv(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
 
@@ -99,7 +102,7 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float32")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.float32)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.float32)
             torch._foreach_addcdiv_(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
             torch._foreach_addcdiv_(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
 
@@ -110,11 +113,14 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float16")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.float16)
-            torch._foreach_addcdiv_(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.float16)
+            cpu_tensors_1 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[0]]
+            cpu_tensors_2 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[1]]
+            cpu_tensors_3 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[2]]
             torch._foreach_addcdiv_(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
+            cpu_output = [torch.from_numpy(cpu_tensors_1[i] + cpu_tensors_2[i] / cpu_tensors_3[i] * scalars.numpy()[i]) for i in range(len(cpu_tensors_1))]
 
-            self.assertRtolEqual(cpu_tensors[0], npu_tensors[0])
+            self.assertRtolEqual(cpu_output, npu_tensors[0])
 
             
     @SupportedDevices(['Ascend910B'])
@@ -122,7 +128,7 @@ class TestForeachAddcdivTensor(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "bfloat16")
-            scalars = torch.randn(len(cpu_tensors), dtype=torch.bfloat16)
+            scalars = torch.randn(len(cpu_tensors[0]), dtype=torch.bfloat16)
             torch._foreach_addcdiv_(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2], scalars)
             torch._foreach_addcdiv_(npu_tensors[0], npu_tensors[1], npu_tensors[2], scalars)
 

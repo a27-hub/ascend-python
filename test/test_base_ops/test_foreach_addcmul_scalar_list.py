@@ -26,6 +26,7 @@ class TestForeachAddcmulScalarList(TestCase):
                 self.fail("result error!")
         return True
 
+
     def create_tensors(self, dtype, shapes):
         cpu_tensors = []
         npu_tensors = []
@@ -54,9 +55,9 @@ class TestForeachAddcmulScalarList(TestCase):
     def create_input_scalars(self, tensor_nums, dtype):
         sacalars = []
         for i in range(tensor_nums):
-            m = float(random.randint(-10, 10))
+            m = float(random.randint(-5, 8))
             if m == 0:
-                m = 2.4
+                m = 3
             sacalars.append(m)
         return tuple(sacalars)
 

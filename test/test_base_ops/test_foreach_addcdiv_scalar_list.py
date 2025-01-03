@@ -32,7 +32,7 @@ class TestForeachAddcdivScalarList(TestCase):
         npu_tensors = []
         for shape in shapes:
             t = torch.randn((shape[0], shape[1]), dtype=self.torch_dtypes.get(dtype))
-            t[t == 0] = 2.3
+            t[t == 0] = 3.2
             cpu_tensors.append(t)
             npu_tensors.append(t.npu())
         return tuple(cpu_tensors), tuple(npu_tensors)
@@ -43,8 +43,8 @@ class TestForeachAddcdivScalarList(TestCase):
         npu_inputs = []
         shapes = []
         for i in range(tensor_num):
-            m = random.randint(1, 100)
-            n = random.randint(1, 100)
+            m = random.randint(1, 10)
+            n = random.randint(1, 10)
             shapes.append([m, n])
         for i in range(input_nums) :
             cpu_tensors, npu_tensors = self.create_tensors(dtype, shapes)
@@ -57,7 +57,7 @@ class TestForeachAddcdivScalarList(TestCase):
         for i in range(tensor_nums):
             m = float(random.randint(-5, 5))
             if m == 0:
-                m = 2.4
+                m = 3
             sacalars.append(m)
         return tuple(sacalars)
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Huawei Technologies Co., Ltd
+// Copyright (c) 2024 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -13,23 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "op_plugin/AclOpsInterface.h"
-#include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/utils/op_api_common.h"
 
-namespace acl_op {
-using npu_preparation = at_npu::native::OpPreparation;
-
-at::Tensor& replication_pad3d_out(
+namespace op_api {
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     const at::Tensor& self,
-    at::IntArrayRef padding,
-    at::Tensor& result)
+    const c10::optional<at::Tensor>& weight_opt,
+    const c10::optional<at::Tensor>& bias_opt,
+    at::Tensor& running_mean_opt,
+    at::Tensor& running_var_opt,
+    bool train,
+    double momentum,
+    double eps)
 {
-    TORCH_CHECK(false, "replication_pad3d.out is not supported." + OPS_ERROR(ErrCode::NOT_SUPPORT))
+    return at::native_batch_norm(self, weight_opt, bias_opt, running_mean_opt, running_var_opt, train, momentum, eps);
 }
-
-at::Tensor replication_pad3d(const at::Tensor& self, at::IntArrayRef padding)
-{
-    TORCH_CHECK(false, "replication_pad3d.out is not supported." + OPS_ERROR(ErrCode::NOT_SUPPORT))
-}
-
-} // namespace acl_op
+}  // namespace op_api

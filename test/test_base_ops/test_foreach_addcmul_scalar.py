@@ -60,17 +60,15 @@ class TestForeachAddcmulScalar(TestCase):
             
             self.assertRtolEqual(cpu_output, npu_output)
 
+    @SupportedDevices(['Ascend910B'])
     def test_foreach_addcmul_scalar_out_float16_shpae_tensor_num(self):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float16")
-            cpu_tensors_1 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[0]]
-            cpu_tensors_2 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[1]]
-            cpu_tensors_3 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[2]]
-            cpu_output = [torch.from_numpy(cpu_tensors_1[i] + cpu_tensors_2[i] * cpu_tensors_3[i]) for i in range(len(cpu_tensors_1))]
+            cpu_output = torch._foreach_addcmul(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2])
             npu_output = torch._foreach_addcmul(npu_tensors[0], npu_tensors[1], npu_tensors[2])
 
-            self.assertRtolEqual(cpu_output, npu_output)
+            self.assert_equal_bfloat16(cpu_output, npu_output)
 
     @SupportedDevices(['Ascend910B'])
     def test_foreach_addcmul_scalar_out_bfloat16_shpae_tensor_num(self):
@@ -91,17 +89,15 @@ class TestForeachAddcmulScalar(TestCase):
 
             self.assertRtolEqual(cpu_tensors[0], npu_tensors[0])
 
+    @SupportedDevices(['Ascend910B'])
     def test_foreach_addcmul_scalar_inplace_float16_shpae_tensor_num(self):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float16")
-            cpu_tensors_1 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[0]]
-            cpu_tensors_2 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[1]]
-            cpu_tensors_3 = [cpu_tensor.numpy() for cpu_tensor in cpu_tensors[2]]
-            cpu_output = [torch.from_numpy(cpu_tensors_1[i] + cpu_tensors_2[i] * cpu_tensors_3[i]) for i in range(len(cpu_tensors_1))]
+            torch._foreach_addcmul_(cpu_tensors[0], cpu_tensors[1], cpu_tensors[2])
             torch._foreach_addcmul_(npu_tensors[0], npu_tensors[1], npu_tensors[2])
 
-            self.assertRtolEqual(cpu_output, npu_tensors[0])
+            self.assert_equal_bfloat16(cpu_tensors[0], npu_tensors[0])
             
     @SupportedDevices(['Ascend910B'])
     def test_foreach_addcmul_scalar_inplace_bfloat16_shpae_tensor_num(self):

@@ -18,40 +18,13 @@ TEST_DIR = os.path.join(BASE_DIR, 'test')
 modify_file_hash = {}
 
 not_support_in_910b = [
-    "test_v2r1_ops/test_foreach_addcmul_list",
-    "test_v2r1_ops/test_foreach_pow_scalar_list",
-    "test_v2r1_ops/test_foreach_pow_list",
     "test_custom_ops/test_incre_flash_attention",
-    "test_custom_ops/test_npu_quant_matmul",
     "test_custom_ops/test_npu_ffn",
-    "test_custom_ops/test_mm_reduce_scatter_base",
-    "test_custom_ops/test_all_gather_base_mm",
-    "test_base_ops/test_upsample_nearest3d",
-    "test_base_ops/test_foreach_addcmul_scalar_list",
-    "test_base_ops/test_gt",
-    "test_base_ops/test_nms_with_mask",
-    "test_base_ops/test_foreach_add_list",
-    "test_base_ops/test_upsample_nearest3d_backward",
     "test_base_ops/test_adaptive_max_pool2d_backward",
-    "test_base_ops/test_foreach_expm1",
-    "test_base_ops/test_im2col_backward",
-    "test_base_ops/test_sub_sample",
-    "test_base_ops/test_gru_backward",
     "test_base_ops/test_random",
-    "test_base_ops/test_foreach_addcdiv_scalar",
-    "test_base_ops/test_foreach_addcdiv_tensor",
-    "test_base_ops/test_avg_pool2d",
-    "test_base_ops/test_foreach_log1p",
-    "test_base_ops/test_ne",
-    "test_base_ops/test_deformable_conv2d",
-    "test_base_ops/test_le",
-    "test_base_ops/test_foreach_sub_list",
-    "test_base_ops/test_foreach_addcdiv_scalar_list",
+    "test_base_ops/test_im2col_backward",
     "test_base_ops/test_conv_transpose2d_backward",
     "test_base_ops/test_gru_true",
-    "test_base_ops/test_foreach_addcmul_scalar",
-    "test_base_ops/test_greater",
-    "test_base_ops/test_lt",
 ]
 
 
@@ -186,7 +159,7 @@ class TestMgr():
         if "Ascend910B" in torch_npu.npu.get_device_name():
             supported_ut_files = []
             for ut_file in exist_ut_file:
-                if ut_file.split('test/')[-1] in not_support_in_910b:
+                if ut_file.split('test/')[-1][:-3] in not_support_in_910b:
                     print(ut_file, "can not run in Ascend910B, skip it now.")
                 else:
                     supported_ut_files.append(ut_file)
