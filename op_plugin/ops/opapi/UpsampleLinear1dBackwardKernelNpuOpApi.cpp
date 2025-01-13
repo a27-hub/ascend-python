@@ -28,7 +28,7 @@ at::Tensor upsample_linear1d_backward(
     c10::optional<double> scales) {
   DO_COMPATIBILITY(aclnnUpsampleLinear1dBackward,
                    acl_op::upsample_linear1d_backward(grad_output, output_size, input_size, align_corners, scales));
-  double scales_attr = scales.value_or(1);
+  double scales_attr = scales.value_or(0);
 
   at::Tensor grad_input = npu_preparation::apply_tensor(grad_output, input_size);
 
@@ -50,7 +50,7 @@ at::Tensor upsample_linear1d_backward(
   auto osize = op_infer::upsample_infershape_with_scale(input_size, output_size, scale_factors);
   auto outputsize = at::IntArrayRef(osize);
   auto scales_l = op_plugin::utils::get_scale_value(scale_factors, 0);
-  double scales_l_attr = scales_l.value_or(1);
+  double scales_l_attr = scales_l.value_or(0);
 
   at::Tensor grad_input = npu_preparation::apply_tensor(grad_output, input_size);
 
