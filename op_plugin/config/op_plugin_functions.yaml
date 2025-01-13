@@ -7267,16 +7267,16 @@ custom:
   - func: npu_matmul_add_fp32(Tensor x, Tensor weight, Tensor(a!) C) -> ()
     op_api: all_version
 
-  - func: npu_pagedattention(Tensor query, Tensor keyCache, Tensor valueCache, Tensor blockTables, Tensor contextLens, Tensor(a!) attnOut) -> ()
+  - func: npu_pagedattention(Tensor query, Tensor keyCache, Tensor valueCache, int kvHeadNum, int headNum, float qkScale, Tensor blockTables, Tensor contextLens, Tensor(a!) attnOut) -> ()
     op_api: all_version
 
   - func: npu_reshapecache(Tensor key, Tensor value, Tensor(a!) keyCache, Tensor(a!) valueCache, Tensor slotMapping) -> ()
     op_api: all_version
 
-  - func: npu_selfattention(Tensor query, Tensor key, Tensor value, Tensor seqLen, Tensor(a!) out) -> ()
+  - func: npu_selfattention(Tensor query, Tensor key, Tensor value, Tensor mask, Tensor seqLen, float scale, int headNum, int kvHeadNum, Tensor(a!) out) -> ()
     op_api: all_version
 
-  - func: npu_rope(Tensor(a!) query, Tensor(a!) key, Tensor cos, Tensor sin, Tensor seqlen) -> ()
+  - func: npu_rope(Tensor positions, Tensor(a!) query, Tensor(a!) key, int head_size, Tensor cos_sin_cache, bool is_neox) -> ()
     op_api: all_version
 
 symint:

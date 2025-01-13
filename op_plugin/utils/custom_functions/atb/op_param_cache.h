@@ -61,6 +61,9 @@ template <>
 struct HashOpParam<atb::infer::PagedAttentionParam> {
     size_t operator()(const atb::infer::PagedAttentionParam& param) const {
         size_t h = 0;
+        h ^= std::hash<std::string>{}("kvHeadNum") ^ std::hash<int>{}(param.kvHeadNum);
+        h ^= std::hash<std::string>{}("headNum") ^ std::hash<int>{}(param.headNum); 
+        h ^= std::hash<std::string>{}("qkScale") ^ std::hash<int>{}(param.qkScale);
         return h;
     }
 };
@@ -76,7 +79,7 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
 template <>
 struct HashOpParam<atb::infer::RopeParam> {
     size_t operator()(const atb::infer::RopeParam& param) const {
-        size_t h = 0;
+        size_t h = std::hash<int64_t>{}(param.rotaryCoeff);
         return h;
     }
 };
@@ -85,6 +88,9 @@ template <>
 struct HashOpParam<atb::infer::SelfAttentionParam> {
     size_t operator()(const atb::infer::SelfAttentionParam& param) const {
         size_t h = 0;
+        h ^= std::hash<std::string>{}("headNum") ^ std::hash<int>{}(param.headNum);
+        h ^= std::hash<std::string>{}("kvHeadNum") ^ std::hash<int>{}(param.kvHeadNum); 
+        h ^= std::hash<std::string>{}("scale") ^ std::hash<int>{}(param.qkScale);
         return h;
     }
 };
