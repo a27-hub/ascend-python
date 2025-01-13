@@ -22,14 +22,14 @@ using namespace std;
 
 namespace op_api {
 using PagedAttentionParam = atb::infer::PagedAttentionParam;
-void npu_pagedattention(const at::Tensor &query, const at::Tensor &keyCache, const at::Tensor &valueCache, const at::Tensor &blockTables, const at::Tensor &contextLens, 
+void npu_pagedattention(const at::Tensor &query, const at::Tensor &keyCache, const at::Tensor &valueCache, const int64_t kvHeadNum, const int64_t headNum, const double qkScale, const at::Tensor &blockTables, const at::Tensor &contextLens, 
     at::Tensor & attnOut) 
 {
     OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
-    pagedparam.headNum = 24;
-    pagedparam.qkScale = 1.0;
-    pagedparam.kvHeadNum = 24;
+    pagedparam.headNum = headNum;
+    pagedparam.qkScale = qkScale;
+    pagedparam.kvHeadNum = kvHeadNum;
     pagedparam.maskType = atb::infer::PagedAttentionParam::UNDEFINED;
     pagedparam.batchRunStatusEnable = false;
     pagedparam.quantType = atb::infer::PagedAttentionParam::TYPE_QUANT_UNDEFINED;

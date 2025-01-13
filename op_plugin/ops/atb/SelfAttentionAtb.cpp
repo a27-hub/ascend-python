@@ -20,7 +20,7 @@
 using namespace std;
 namespace op_api {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-void npu_selfattention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &seqLen, 
+void npu_selfattention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &mask, const at::Tensor &seqLen, const double scale, const int64_t headNum, const int64_t kvHeadNum,
     at::Tensor & out) 
 {
     OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
@@ -30,16 +30,16 @@ void npu_selfattention(const at::Tensor &query, const at::Tensor &key, const at:
 	selfattentionparam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
 	selfattentionparam.kernelType = atb::infer::SelfAttentionParam::KERNELTYPE_DEFAULT;
 	selfattentionparam.clampType = atb::infer::SelfAttentionParam::CLAMP_TYPE_UNDEFINED;
-	selfattentionparam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_UNDEFINED;
+	selfattentionparam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_NORM;
 	selfattentionparam.kvcacheCfg = atb::infer::SelfAttentionParam::K_CACHE_V_CACHE;
 	selfattentionparam.scaleType = atb::infer::SelfAttentionParam::SCALE_TYPE_TOR;
 	selfattentionparam.quantType = atb::infer::SelfAttentionParam::TYPE_QUANT_UNDEFINED;
 	selfattentionparam.cacheType = atb::infer::SelfAttentionParam::CACHE_TYPE_NORM;
 	selfattentionparam.outDataType = ACL_DT_UNDEFINED;
-	selfattentionparam.headNum = 24;
-	selfattentionparam.kvHeadNum = 24;
+	selfattentionparam.headNum = headNum;
+	selfattentionparam.kvHeadNum = kvHeadNum;
 	selfattentionparam.qScale = 1;
-	selfattentionparam.qkScale = 1;
+	selfattentionparam.qkScale = scale;
 	selfattentionparam.batchRunStatusEnable = false;
 	selfattentionparam.isTriuMask = 0;
 	selfattentionparam.clampMin = 0;
@@ -52,6 +52,7 @@ void npu_selfattention(const at::Tensor &query, const at::Tensor &key, const at:
     parametter.Input(query)
 				.Input(key)
                 .Input(value)
+				.Input(mask)
 				.Input(seqLen)		
                 .Output(out);
     auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
