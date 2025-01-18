@@ -2089,14 +2089,6 @@ official:
     acl_op: v1.11
     op_api: v1.11
 
-  - func: embedding_backward(Tensor grad, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor
-    acl_op: [v2.0, newest]
-    op_api: [v2.1, newest]
-
-  - func: embedding_backward(Tensor grad, Tensor indices, int num_weights, int padding_idx, bool scale_grad_by_freq, bool sparse) -> Tensor
-    acl_op: v1.11
-    op_api: v1.11
-
   - func: embedding_dense_backward(Tensor grad_output, Tensor indices, SymInt num_weights, SymInt padding_idx, bool scale_grad_by_freq) -> Tensor
     acl_op: [v2.0, newest]
     op_api: [v2.1, newest]
