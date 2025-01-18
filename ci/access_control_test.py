@@ -18,12 +18,9 @@ TEST_DIR = os.path.join(BASE_DIR, 'test')
 modify_file_hash = {}
 
 not_support_in_910b = [
-    "test_custom_ops/test_incre_flash_attention",
     "test_custom_ops/test_npu_ffn",
     "test_base_ops/test_adaptive_max_pool2d_backward",
     "test_base_ops/test_random",
-    "test_base_ops/test_im2col_backward",
-    "test_base_ops/test_conv_transpose2d_backward",
     "test_base_ops/test_gru_true",
 ]
 
