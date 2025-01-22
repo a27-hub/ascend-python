@@ -43,13 +43,16 @@ namespace op_api {
         const int64_t prb_size;
         const bool is_forward;
         const PlanMode plan_mode;
-
-        PlanKey(int64_t size, bool inv, PlanMode plan_mode);
+        const at::ScalarType scalar_dtype;
+        PlanKey(int64_t size, bool inv, PlanMode mode, at::ScalarType dtype_);
     };
 
-    
-    inline PlanKey::PlanKey(int64_t size, bool inv, PlanMode mode) : prb_size(size), is_forward(inv), plan_mode(mode) {
-    }
+
+    inline PlanKey::PlanKey(int64_t size, bool inv, PlanMode mode, at::ScalarType dtype_)
+        : prb_size(size),
+          is_forward(inv),
+          plan_mode(mode),
+          scalar_dtype(dtype_) {}
 
     inline bool operator==(const PlanKey &one, const PlanKey &other)
     {
@@ -139,7 +142,7 @@ namespace op_api {
 
     FFTPlanItem make_plan(PlanKey &plan_key);
 
-    FFTPlanItem get_plan(int64_t prb_size, bool is_forward, PlanMode plan_mode);
+    FFTPlanItem get_plan(int64_t prb_size, bool is_forward, PlanMode plan_mode, at::ScalarType scalar_dtype);
 
 } // namespace op_api
 
