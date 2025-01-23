@@ -7198,6 +7198,9 @@ custom:
         dtype: self
       exec: aclnnSwiGluGrad
 
+  - func: npu_swiglu_quant(Tensor x, Tensor? quant_scale, Tensor? quant_offset, bool activate_left=False, int quant_mode=0) -> (Tensor, Tensor)
+    op_api: all_version
+
   - func: npu_trans_quant_param(Tensor scale, Tensor? offset=None) -> Tensor
     op_api: all_version
     exposed: all_version
