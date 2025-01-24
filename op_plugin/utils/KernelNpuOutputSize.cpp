@@ -82,9 +82,10 @@ std::bitset<64> make_dim_mask(c10::IntArrayRef dims, int64_t ndim)
     } else {
         for (int64_t dim : dims) {
             int64_t positive_dim = make_wrap_dim(dim, ndim);
-            TORCH_CHECK(positive_dim >= 0 && positive_dim < ndim, "Dimension out of range"
-                "(expect to be in range of [-", ndim, ", ", ndim,
-                "), but got ", dim, ".)", OPS_ERROR(ErrCode::PARAM));
+            int64_t min = ndim * -1;
+            int64_t max = ndim - 1;
+            TORCH_CHECK(min <= dim && dim <= max, "Dimension out of range (expected to be in range of [",
+                min, ", ", max, "], but got ", dim, ")", OPS_ERROR(ErrCode::PARAM));
             mask.set(positive_dim);
         }
     }
@@ -207,6 +208,8 @@ c10::SmallVector<int64_t, SIZE> avg_pool2d_npu_output_size(const at::Tensor &sel
                                    ((self_h + 2 * padding[0] - kernel_size[0]) / stride[0] + 1);
     int64_t kernel_w = ceil_mode ? (CeilDiv(self_w + 2 * padding[1] - kernel_size[1], stride[1]) + 1) :
                                    ((self_w + 2 * padding[1] - kernel_size[1]) / stride[1] + 1);
+    TORCH_CHECK(kernel_h > 0, "kernel_h has to be positive, but got ", kernel_h, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(kernel_w > 0, "kernel_w has to be positive, but got ", kernel_w, OPS_ERROR(ErrCode::VALUE));
 
     if (ceil_mode) {
         if ((kernel_h - 1) * stride[0] >= self_h + padding[0]) {
@@ -250,6 +253,9 @@ c10::SmallVector<int64_t, SIZE> avg_pool3d_npu_output_size(const at::Tensor &sel
                                    ((self_h + 2 * padding[1] - kernel_size[1]) / stride[1] + 1);
     int64_t kernel_w = ceil_mode ? (CeilDiv(self_w + 2 * padding[2] - kernel_size[2], stride[2]) + 1) :
                                    ((self_w + 2 * padding[2] - kernel_size[2]) / stride[2] + 1);
+    TORCH_CHECK(kernel_d > 0, "kernel_d has to be positive, but got ", kernel_d, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(kernel_h > 0, "kernel_h has to be positive, but got ", kernel_h, OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(kernel_w > 0, "kernel_w has to be positive, but got ", kernel_w, OPS_ERROR(ErrCode::VALUE));
 
     if (ceil_mode) {
         if ((kernel_d - 1) * stride[0] >= self_d + padding[0]) {
@@ -1520,6 +1526,8 @@ c10::SmallVector<int64_t, SIZE> infersize_arange(const at::Scalar& start, const 
     } else {
         if (step.toDouble() != 0) {
             double size_arange = std::ceil(static_cast<double>(end.toDouble() - start.toDouble()) / step.toDouble());
+            TORCH_CHECK(size_arange >= 0 && size_arange <= static_cast<double>(std::numeric_limits<int64_t>::max()),
+                "invalid size, possible overflow?")
             size_value = static_cast<int64_t>(size_arange);
         }
     }

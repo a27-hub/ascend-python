@@ -19,27 +19,12 @@ modify_file_hash = {}
 
 not_support_in_910b = [
     "test_custom_ops/test_incre_flash_attention",
-    "test_custom_ops/test_npu_quant_matmul",
     "test_custom_ops/test_npu_ffn",
-    "test_custom_ops/test_mm_reduce_scatter_base",
-    "test_custom_ops/test_all_gather_base_mm",
-    "test_base_ops/test_upsample_nearest3d",
-    "test_base_ops/test_gt",
-    "test_base_ops/test_nms_with_mask",
-    "test_base_ops/test_upsample_nearest3d_backward",
     "test_base_ops/test_adaptive_max_pool2d_backward",
-    "test_base_ops/test_im2col_backward",
-    "test_base_ops/test_sub_sample",
-    "test_base_ops/test_gru_backward",
     "test_base_ops/test_random",
-    "test_base_ops/test_avg_pool2d",
-    "test_base_ops/test_ne",
-    "test_base_ops/test_deformable_conv2d",
-    "test_base_ops/test_le",
+    "test_base_ops/test_im2col_backward",
     "test_base_ops/test_conv_transpose2d_backward",
     "test_base_ops/test_gru_true",
-    "test_base_ops/test_greater",
-    "test_base_ops/test_lt",
 ]
 
 
@@ -133,7 +118,7 @@ class CoreTestStrategy(AccurateTest):
     Determine whether the core tests should be runned
     """
     block_list = ['test', 'docs']
-    core_test_cases = [str(i) for i in (BASE_DIR / 'test/test_npu').rglob('test_*.py')]
+    core_test_cases = [str(i) for i in (BASE_DIR / 'test/core_tests').rglob('test_*.py')]
 
     def identify(self, modify_file):
         modified_module = str(Path(modify_file).parts[0])
@@ -161,6 +146,7 @@ class TestMgr():
         for modify_file in self.modify_files:
             DirectoryStrategy().identify(modify_file, self.test_files['ut_files'])
             self.test_files['ut_files'] += OpStrategy().identify(modify_file)
+            self.test_files['ut_files'] += CoreTestStrategy().identify(modify_file)
         for v in modify_file_hash.values():
             self.test_files['ut_files'].append(v)
         unique_files = sorted(set(self.test_files['ut_files']))
