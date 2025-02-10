@@ -46,6 +46,16 @@ struct HashOpParam<atb::infer::PagedAttentionParam> {
         h ^= std::hash<std::string>{}("kvHeadNum") ^ std::hash<int>{}(param.kvHeadNum);
         h ^= std::hash<std::string>{}("headNum") ^ std::hash<int>{}(param.headNum); 
         h ^= std::hash<std::string>{}("qkScale") ^ std::hash<int>{}(param.qkScale);
+        h ^= std::hash<std::string>{}("maskType") ^ std::hash<int>{}(param.maskType);
+        h ^= std::hash<std::string>{}("batchRunStatusEnable") ^ std::hash<bool>{}(param.batchRunStatusEnable);
+        h ^= std::hash<std::string>{}("quantType") ^ std::hash<int>{}(param.quantType);
+        h ^= std::hash<std::string>{}("outDataType") ^ std::hash<int>{}(param.outDataType);
+        h ^= std::hash<std::string>{}("hasQuantOffset") ^ std::hash<bool>{}(param.hasQuantOffset);
+        h ^= std::hash<std::string>{}("compressType") ^ std::hash<int>{}(param.compressType);
+        h ^= std::hash<std::string>{}("calcType") ^ std::hash<int>{}(param.calcType);
+        h ^= std::hash<std::string>{}("scaleType") ^ std::hash<int>{}(param.scaleType);
+        h ^= std::hash<std::string>{}("inputLayout") ^ std::hash<int>{}(param.inputLayout);
+        h ^= std::hash<std::string>{}("mlaVHeadSize") ^ std::hash<int>{}(param.mlaVHeadSize);
         return h;
     }
 };
@@ -80,6 +90,19 @@ struct HashOpParam<atb::infer::SelfAttentionParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::ElewiseParam> {
+    size_t operator()(const atb::infer::ElewiseParam& param) const {
+        size_t h = 0;
+        h ^= std::hash<std::string>{}("elewiseType") ^ std::hash<int>{}(param.elewiseType);
+        h ^= std::hash<std::string>{}("inputScale") ^ std::hash<int>{}(param.quantParam.inputScale); 
+        h ^= std::hash<std::string>{}("asymmetric") ^ std::hash<int>{}(param.quantParam.asymmetric);
+        h ^= std::hash<std::string>{}("inputOffset") ^ std::hash<int>{}(param.quantParam.inputOffset);
+        h ^= std::hash<std::string>{}("varAttr") ^ std::hash<int>{}(param.mulsParam.varAttr);
+        h ^= std::hash<std::string>{}("outTensorType") ^ std::hash<int>{}(param.outTensorType);
+        return h;
+    }
+};
 
 template <typename T>
 size_t computeHash(const T& obj) {
