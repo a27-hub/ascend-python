@@ -479,6 +479,83 @@ struct SelfAttentionParam {
     //!
     uint8_t rsv[64] = {0};
 };
+
+//!
+//! \struct ElewiseParam
+//!
+//! \brief 常用的逐元素数值计算集合
+//!
+//! ELEWISE_ADD、ELEWISE_MUL、ELEWISE_REALDIV、ELEWISE_SUB计算类型将会对输入进行广播后再进行指定操作。
+//! 输入x、y对应维度的对应值要求相同或至少其中一个为1
+//!
+struct ElewiseParam {
+    //!
+    //! \enum ElewiseType
+    //!
+    //! \brief 计算类型
+    //!
+    enum ElewiseType : int {
+        ELEWISE_UNDEFINED = 0,       //!< 默认值，未定义
+        ELEWISE_CAST,                //!< 数据类型转换
+        ELEWISE_MULS,                //!< 向量逐元素乘值
+        ELEWISE_COS,                 //!< 逐元素计算余弦值
+        ELEWISE_SIN,                 //!< 逐元素计算正弦值
+        ELEWISE_NEG,                 //!< 逐元素取相反数
+        ELEWISE_QUANT,               //!< 量化, 仅在Atlas 800I A2推理产品上支持
+        ELEWISE_LOGICAL_NOT,         //!< 逐元素逻辑非
+        ELEWISE_ADD,                 //!< 逐元素相加
+        ELEWISE_MUL,                 //!< 向量与向量逐元素相乘
+        ELEWISE_REALDIV,             //!< 向量与向量逐元素相除
+        ELEWISE_LOGICAL_AND,         //!< 逐元素逻辑与
+        ELEWISE_LOGICAL_OR,          //!< 逐元素逻辑或
+        ELEWISE_LESS,                //!< 逐元素判断是否小于
+        ELEWISE_GREATER,             //!< 逐元素判断是否大于
+        ELEWISE_SUB,                 //!< 逐元素相减
+        ELEWISE_EQUAL,               //!< 逐元素判断是否相等
+        ELEWISE_QUANT_PER_CHANNEL,   //!< 每个通道量化
+        ELEWISE_DEQUANT_PER_CHANNEL, //!< 每个通道反量化
+        ELEWISE_DYNAMIC_QUANT,       //!< 逐行动态量化
+        ELEWISE_TANH,                //!< 逐元素计算双曲正切值
+        ELEWISE_TYPE_MAX             //!< 边界值，仅用于判断是否出界，所有情况不能取该值
+    };
+
+    //! 量化（非每通道）所需参数
+    struct QuantParam {
+        //! 量化的步长
+        float inputScale = 1.0f;
+        //! 动态量化的是否为非对称量化
+        bool asymmetric = false; //!< false : symmetric，true : asymmetric
+        //! 量化的偏移度
+        int inputOffset = 0;
+        //!
+        //! \brief 预留参数
+        //!
+        uint8_t rsv[20] = {0};
+    };
+
+    //! 向量乘值所需参数
+    struct MulsParam {
+        //! 向量乘的值
+        float varAttr = 0.0f;
+        //!
+        //! \brief 预留参数
+        //!
+        uint8_t rsv[12] = {0};
+    };
+
+    //! 计算方式
+    ElewiseType elewiseType = ELEWISE_UNDEFINED;
+    //! 量化参数
+    QuantParam quantParam;
+    //! 乘值参数
+    MulsParam mulsParam;
+    //! 指定数据类型转换输出的数据类型
+    aclDataType outTensorType = ACL_DT_UNDEFINED;
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[8] = {0};
+};
 } // namespace infer
 } // namespace atb
 #endif

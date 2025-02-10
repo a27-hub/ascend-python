@@ -7267,7 +7267,10 @@ custom:
   - func: npu_matmul_add_fp32(Tensor x, Tensor weight, Tensor(a!) C) -> ()
     op_api: all_version
 
-  - func: npu_pagedattention(Tensor query, Tensor keyCache, Tensor valueCache, int kvHeadNum, int headNum, float qkScale, Tensor blockTables, Tensor contextLens, Tensor(a!) attnOut) -> ()
+  - func: npu_pagedattention(Tensor query, Tensor keyCache, Tensor valueCache, int kvHeadNum, int headNum, float qkScale, Tensor blockTables, Tensor contextLens, int maskType, bool batchRunStatusEnable, int quantType, int outDataType, bool hasQuantOffset, int compressType, int calcType, int scaleType, int inputLayout, int mlaVHeadSize, Tensor(a!) attnOut) -> ()
+    op_api: all_version
+
+  - func: npu_fa3(Tensor query, Tensor keyCache, Tensor valueCache, int kvHeadNum, int headNum, float qkScale, Tensor blockTables, Tensor contextLens, int maskType, bool batchRunStatusEnable, int quantType, int outDataType, bool hasQuantOffset, int compressType, int calcType, int scaleType, int inputLayout, int mlaVHeadSize, Tensor kDescale, Tensor vDescale, Tensor(a!) attnOut) -> ()
     op_api: all_version
 
   - func: npu_reshapecache(Tensor key, Tensor value, Tensor(a!) keyCache, Tensor(a!) valueCache, Tensor slotMapping) -> ()
@@ -7277,6 +7280,9 @@ custom:
     op_api: all_version
 
   - func: npu_rope(Tensor positions, Tensor(a!) query, Tensor(a!) key, int head_size, Tensor cos_sin_cache, bool is_neox) -> ()
+    op_api: all_version
+
+  - func: npu_quantpertensor(Tensor x, Tensor scale, Tensor offset, Tensor(a!) y, int elewiseType, float inputScale, bool asymmetric, int inputOffset, float varAttr, int outTensorType) -> ()
     op_api: all_version
 
 symint:
