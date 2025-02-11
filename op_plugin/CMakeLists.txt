@@ -8,13 +8,15 @@ FILE(GLOB _OPS_PLUGIN_SRCS
 
 FILE(GLOB _OPPLUGIN_BASE_OPS_SRCS
     ops/aclops/*.cpp
-    ops/opapi/*.cpp)
+    ops/opapi/*.cpp
+    ops/atb/*.cpp)
 
 FILE(GLOB _OPPLUGIN_UTILS_SRCS
     *.cpp
     utils/*.cpp
     utils/custom_functions/aclops/*.cpp
-    utils/custom_functions/opapi/*.cpp)
+    utils/custom_functions/opapi/*.cpp
+    utils/custom_functions/atb/*.cpp)
 
 LIST(APPEND OPS_PLUGIN_SRCS ${_OPS_PLUGIN_SRCS} ${_OPPLUGIN_BASE_OPS_SRCS} ${_OPPLUGIN_UTILS_SRCS})
 
