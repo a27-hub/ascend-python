@@ -33,9 +33,9 @@ at::Tensor npu_moe_distribute_combine(const at::Tensor &expand_x, const at::Tens
                                       int64_t expert_shard_type, int64_t shared_expert_rank_num,
                                       int64_t global_bs)
 {
-    TORCH_CHECK((expand_x.dim() == 2) && (expert_ids.dim() == 2), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
-                "dtype of x should be bfloat16 or float16, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
+    // TORCH_CHECK((expand_x.dim() == 2) && (expert_ids.dim() == 2), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
+    // TORCH_CHECK(((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
+    //             "dtype of x should be bfloat16 or float16, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
     auto expand_x_size = expand_x.sizes();
     auto expert_ids_size = expert_ids.sizes();
     
