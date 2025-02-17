@@ -7044,6 +7044,9 @@ custom:
     op_api: all_version
     exposed: all_version
 
+  - func: npu_flat_quant(Tensor x, Tensor kroneckerP1, Tensor kroneckerP2) -> (Tensor out, Tensor qScale)
+    op_api: all_version
+
   - func: npu_group_quant(Tensor x, Tensor scale, Tensor group_index, *, Tensor? offset=None, ScalarType? dst_dtype=None) -> Tensor
     op_api: all_version
 
