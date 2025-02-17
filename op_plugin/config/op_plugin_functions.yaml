@@ -196,6 +196,10 @@ official:
     op_api: [v2.1, newest]
     use_const_ref_for_mutable_tensors: true
 
+  - func: _conv_depthwise2d.out(Tensor self, Tensor weight, int[2] kernel_size, Tensor? bias, int[2] stride, SymInt[2] padding, int[2] dilation, *, Tensor(a!) out) -> Tensor(a!)
+    acl_op: newest
+    op_api: newest
+
   - func: _conv_depthwise2d.out(Tensor self, Tensor weight, int[2] kernel_size, Tensor? bias, int[2] stride, int[2] padding, int[2] dilation, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: v1.11
     op_api: v1.11
