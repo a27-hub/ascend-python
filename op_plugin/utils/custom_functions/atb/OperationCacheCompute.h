@@ -53,6 +53,20 @@ struct HashOpParam<atb::infer::LinearParam> {
 };
 
 
+template <>
+struct HashOpParam<atb::infer::GroupTopkParam> {
+    size_t operator()(const atb::infer::GroupTopkParam& param) const
+    {
+        size_t h = 0;
+        h ^= std::hash<std::string>{}("groupNum") ^ std::hash<int32_t>{}(param.groupNum);
+        h ^= std::hash<std::string>{}("k") ^ std::hash<int32_t>{}(param.k);
+        h ^= std::hash<std::string>{}("groupMultiFlag") ^ std::hash<uint16_t>{}(param.groupMultiFlag);
+        h ^= std::hash<std::string>{}("n") ^ std::hash<uint16_t>{}(param.n);
+        return h;
+    }
+};
+
+
 template <typename T>
 size_t computeHash(const T& obj)
 {
