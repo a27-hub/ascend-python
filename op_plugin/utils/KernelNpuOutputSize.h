@@ -383,5 +383,7 @@ OP_PLUGIN_HIDDEN at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_zloss_out
 OP_PLUGIN_HIDDEN at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(const at::Tensor &input,
                                                                                                  float lse_square_scale_for_zloss);
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> flat_quant_scale_output_size(const at::Tensor &self);
+
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE
