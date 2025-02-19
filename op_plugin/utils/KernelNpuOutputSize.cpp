@@ -1864,4 +1864,11 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
     return outputSize;
 }
 
+c10::SmallVector<int64_t, SIZE> flat_quant_scale_output_size(const at::Tensor &self)
+{
+    int64_t resultSize = self.size(0);
+    at::SmallVector<int64_t, SIZE> outputSize = {resultSize};
+    return outputSize;
+}
+
 } // namespace op_infer
