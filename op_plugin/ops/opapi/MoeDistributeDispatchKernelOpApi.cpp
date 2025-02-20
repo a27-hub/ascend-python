@@ -34,8 +34,6 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
     TORCH_CHECK((x.dim() == 2) && (expert_ids.dim() == 2), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((x.scalar_type() == at::kBFloat16 || (x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
                 "dtype of x should be bfloat16 or half, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((shared_expert_rank_num > 0) && (shared_expert_rank_num < ep_world_size),
-                "shared_expert_rank_num should be in (0, ep_world_size)", OPS_ERROR(ErrCode::PARAM));
     auto x_size = x.sizes();
     auto expert_ids_size = expert_ids.sizes();
 
@@ -58,7 +56,11 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
     } else {
         if (ep_rank_id >= ep_world_size - shared_expert_rank_num) {
             local_moe_expert_num = 1;
-            a = global_bs_real / shared_expert_rank_num;
+            if (shared_expert_rank_num == 0) {
+                a = global_bs_real;
+            } else {
+                a = global_bs_real / shared_expert_rank_num;
+            }
         } else {
             local_moe_expert_num = moe_expert_num / (ep_world_size - shared_expert_rank_num);
             a = global_bs_real * local_moe_expert_num;
