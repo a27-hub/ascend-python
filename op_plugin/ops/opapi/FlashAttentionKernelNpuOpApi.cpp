@@ -1192,7 +1192,8 @@ at::Tensor npu_prompt_flash_attention(
     int64_t pre_tokens, int64_t next_tokens,
     c10::string_view input_layout, int64_t num_key_value_heads,
     c10::OptionalIntArrayRef actual_seq_lengths_kv,
-    int64_t sparse_mode)
+    int64_t sparse_mode,
+    int64_t inner_precise)
 {
     // construct the output tensor of the NPU
     at::Tensor output;
@@ -1217,11 +1218,15 @@ at::Tensor npu_prompt_flash_attention(
     auto actSeqLen = actual_seq_lengths.value_or(at::IntArrayRef{});
     auto actSeqLenKv = actual_seq_lengths_kv.value_or(at::IntArrayRef{});
 
-    int64_t inner_precise = 1;
+    int64_t inner_precise_tmp = 1;
+    std::string input_layout_ori = std::string(input_layout);
+    if (input_layout_ori == "SH" || input_layout_ori == "BSH") {
+        inner_precise_tmp = inner_precise;
+    }
 
     // dispatch hostAPI
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnPromptFlashAttentionV3, query, key, value, pse_shift, atten_mask, actSeqLen, actSeqLenKv, deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2,
-                                 num_heads, scale_value, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, output);
+                                 num_heads, scale_value, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise_tmp, output);
     return output;
 }
 #endif
@@ -1590,7 +1595,8 @@ at::Tensor npu_prompt_flash_attention(
     int64_t pre_tokens, int64_t next_tokens,
     c10::string_view input_layout, int64_t num_key_value_heads,
     c10::OptionalIntArrayRef actual_seq_lengths_kv,
-    int64_t sparse_mode)
+    int64_t sparse_mode,
+    int64_t inner_precise)
 {
     // construct the output tensor of the NPU
     at::Tensor output;
@@ -1615,11 +1621,15 @@ at::Tensor npu_prompt_flash_attention(
     auto actSeqLen = actual_seq_lengths.value_or(at::IntArrayRef{});
     auto actSeqLenKv = actual_seq_lengths_kv.value_or(at::IntArrayRef{});
 
-    int64_t inner_precise = 1;
+    int64_t inner_precise_tmp = 1;
+    std::string input_layout_ori = std::string(input_layout);
+    if (input_layout_ori == "SH" || input_layout_ori == "BSH") {
+        inner_precise_tmp = inner_precise;
+    }
 
     // dispatch hostAPI
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnPromptFlashAttentionV3, query, key, value, pse_shift, atten_mask, actSeqLen, actSeqLenKv, deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2,
-                                 num_heads, scale_value, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, output);
+                                 num_heads, scale_value, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise_tmp, output);
     return output;
 }
 #endif
