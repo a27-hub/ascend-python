@@ -39,14 +39,14 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
     auto x_size = x.sizes();
     auto expert_ids_size = expert_ids.sizes();
 
-    int n = x_size[0];
-    int h = x_size[1];
-    int k = expert_ids_size[1];
+    int64_t n = x_size[0];
+    int64_t h = x_size[1];
+    int64_t k = expert_ids_size[1];
 
     bool shared_front = (expert_shard_type == 0) ? true : false;
-    int local_moe_expert_num = 0;
-    int global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
-    int a = 0;
+    int64_t local_moe_expert_num = 0;
+    int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
+    int64_t a = 0;
     if (shared_front) {
         if (ep_rank_id < shared_expert_rank_num) {
             local_moe_expert_num =  1;
