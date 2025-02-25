@@ -20,15 +20,14 @@ using namespace std;
 namespace atb {
 
 using RmsNormParam = atb::infer::RmsNormParam;
-void _npu_quant_rms_norm(const at::Tensor &x, 
-                                 const at::Tensor &gamma,
-                                 const at::Tensor &beta,
-                                 const at::Tensor &scale,
-                                 const at::Tensor &offset,
-                                 at::Tensor & output,
-                                 double eps)  
+void _npu_quant_rms_norm(const at::Tensor &x,
+                         const at::Tensor &gamma,
+                         const at::Tensor &beta,
+                         const at::Tensor &scale,
+                         const at::Tensor &offset,
+                         at::Tensor & output,
+                         double eps)
 {
-
     OpParamCache<RmsNormParam>& rmsnormParamCache = OpParamCache<RmsNormParam>::getInstance();
     RmsNormParam  rmsnormParam;
     rmsnormParam.layerType = atb::infer::RmsNormParam::RMS_NORM_NORM;
@@ -43,11 +42,9 @@ void _npu_quant_rms_norm(const at::Tensor &x,
                 .Input(offset)
                 .Output(output);
 
-    auto opRmsNorm = rmsnormParamCache.getOperation(rmsnormParam, "qRmsNormOperation");
-    RunAtbCmd(opRmsNorm, paramsetter, "qRmsNormOperation");
-
+    auto opRmsNorm = rmsnormParamCache.getOperation(rmsnormParam, "QuantRmsNormOperation");
+    RunAtbCmd(opRmsNorm, paramsetter, "QuantRmsNormOperation");
     return;
-
 }
 
 namespace {
