@@ -71,7 +71,8 @@ struct HashOpParam {
 
 template <>
 struct HashOpParam<atb::infer::RmsNormParam> {
-    void operator()(const atb::infer::RmsNormParam& param) const {
+    void operator()(const atb::infer::RmsNormParam& param) const
+    {
         add_param_to_buf("epsilon", param.normParam.epsilon);
         add_param_to_buf("layerType", param.layerType);
         add_param_to_buf("quantType", param.normParam.quantType);
