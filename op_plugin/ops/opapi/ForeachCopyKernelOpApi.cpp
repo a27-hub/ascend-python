@@ -68,7 +68,8 @@ bool check_tensor_dtype_spport_base(const at::TensorList src)
         return true;
     }
     if (src[0].scalar_type() == at::ScalarType::Char || src[0].scalar_type() == at::ScalarType::Byte || src[0].scalar_type() == at::ScalarType::BFloat16 ||
-        src[0].scalar_type() == at::ScalarType::Float || src[0].scalar_type() == at::ScalarType::Half) {
+        src[0].scalar_type() == at::ScalarType::Float || src[0].scalar_type() == at::ScalarType::Half || src[0].scalar_type() == at::ScalarType::Long ||
+        src[0].scalar_type() == at::ScalarType::Double || src[0].scalar_type() == at::ScalarType::Bool) {
         return true;
     }
     return false;
