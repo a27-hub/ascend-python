@@ -36,8 +36,7 @@ inline void validate_sdpa_input(
     const at::Tensor &value,
     const c10::optional<at::Tensor> &attn_mask,
     double dropout_p,
-    bool is_causal,
-    c10::optional<double> scale)
+    bool is_causal)
 {
     TORCH_CHECK(query.dtype() == key.dtype() && query.dtype() == value.dtype(),
         "Expected query, key, and value to have the same dtype, but got query.dtype: ",
@@ -120,8 +119,9 @@ at::Tensor scaled_dot_product_attention(
     bool is_causal,
     c10::optional<double> scale)
 {
-    validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale);
-    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
+    validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal);
+    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 ||
+        query.scalar_type() == at::kFloat) &&
         ((attn_mask.has_value() && attn_mask->dtype() == at::kBool) || !attn_mask.has_value()) &&
         query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
@@ -152,19 +152,20 @@ at::Tensor scaled_dot_product_attention(
     } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
                 (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
-                (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 ==0 &&
+                (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 == 0 &&
                 ((attn_mask.has_value() && attn_mask->dtype() == at::kBool && attn_mask->size(-2) == query.size(2) &&
                 attn_mask->size(-1) == key.size(2)) || !attn_mask.has_value()) &&
                 (query.size(0) == key.size(0) && query.size(3) == key.size(3) && key.size(0) == value.size(0) &&
                 key.size(1) == value.size(1) && key.size(2) == value.size(2) && key.size(3) == value.size(3)) &&
-                (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= FIA_N_LIMIT) &&
-                (key.size(1) != 0 && query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) <= 64) &&
-                c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+                (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT &&
+                key.size(1) <= FIA_N_LIMIT) && (key.size(1) != 0 && query.size(1) % key.size(1) == 0 &&
+                query.size(1) / key.size(1) <= 64) && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
                 /* The implementation of the NPU Fused Infer Attention operator constraints:
                 1. It only supports the type of fp16 or bf16, and dim = BNSD_DIM
                 2. The shape [B, N1, S1, D] of the query is suppported, where B <= B_LIMIT, N1 <= FIA_N_LIMIT,
                     D <= D_LIMIT and must be a positive integer multiple of 16.
-                3. The shape of the key and value should be the same, and dim = BNSD_DIM. For GQA, the key shape is [B, N2, S2, D],
+                3. The shape of the key and value should be the same, and dim = BNSD_DIM.
+                    For GQA, the key shape is [B, N2, S2, D],
                     where 0 < N2 <= FIA_N_LIMIT, N1 is a positive integer multiple of N2 and N1/N2 <= 64.
                 4. The attn_mask supports only the bool data type, and shpae[-2] = S1, shpae[-1] = S2.
                 5. It only supports SocVersion after Ascend910B1. */
@@ -185,12 +186,12 @@ at::Tensor scaled_dot_product_attention(
                 int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
                 c10::optional<at::Tensor> nulltensor = c10::nullopt;
                 at::OptionalSymIntArrayRef nulllen = c10::nullopt;
-                auto output =
-                    at_npu::native::custom_ops::npu_fused_infer_attention_score(query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulllen, nulltensor, nulltensor, head_num, input_scale.as_float_unchecked(),
-                                                                                TOKEN_MAX, next_tockens, input_layout, head_num_kv, sparse_mode, inner_precise, 0, 0, 0, 0, false);
+                auto output = at_npu::native::custom_ops::npu_fused_infer_attention_score(
+                    query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor, nulltensor, nulltensor,
+                    nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
+                    nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulllen, nulltensor, nulltensor,
+                    head_num, input_scale.as_float_unchecked(), TOKEN_MAX, next_tockens, input_layout, head_num_kv,
+                    sparse_mode, inner_precise, 0, 0, 0, 0, false);
 
                 return std::get<0>(output);
     }
@@ -212,8 +213,9 @@ at::Tensor scaled_dot_product_attention(
     c10::optional<double> scale,
     bool enable_gqa)
 {
-    validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale);
-    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
+    validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal);
+    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 ||
+        query.scalar_type() == at::kFloat) &&
         ((attn_mask.has_value() && attn_mask->dtype() == at::kBool) || !attn_mask.has_value()) &&
         query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
@@ -249,14 +251,15 @@ at::Tensor scaled_dot_product_attention(
                 attn_mask->size(-1) == key.size(2)) || !attn_mask.has_value()) &&
                 (query.size(0) == key.size(0) && query.size(3) == key.size(3) && key.size(0) == value.size(0) &&
                 key.size(1) == value.size(1) && key.size(2) == value.size(2) && key.size(3) == value.size(3)) &&
-                (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= FIA_N_LIMIT) &&
-                (key.size(1) != 0 && query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) <= 64) &&
-                c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
+                (query.size(0) <= B_LIMIT && query.size(1) <= FIA_N_LIMIT && query.size(3) <= D_LIMIT &&
+                key.size(1) <= FIA_N_LIMIT) && (key.size(1) != 0 && query.size(1) % key.size(1) == 0 &&
+                query.size(1) / key.size(1) <= 64) && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
                 /* The implementation of the NPU Fused Infer Attention operator constraints:
                 1. It only supports the type of fp16 or bf16, and dim = BNSD_DIM
                 2. The shape [B, N1, S1, D] of the query is suppported, where B <= B_LIMIT, N1 <= FIA_N_LIMIT,
                     D <= D_LIMIT and must be a positive integer multiple of 16.
-                3. The shape of the key and value should be the same, and dim = BNSD_DIM. For GQA, the key shape is [B, N2, S2, D],
+                3. The shape of the key and value should be the same, and dim = BNSD_DIM.
+                    For GQA, the key shape is [B, N2, S2, D],
                     where 0 < N2 <= FIA_N_LIMIT, N1 is a positive integer multiple of N2 and N1/N2 <= 64.
                 4. The attn_mask supports only the bool data type, and shpae[-2] = S1, shpae[-1] = S2.
                 5. It only supports SocVersion after Ascend910B1. */
@@ -277,12 +280,13 @@ at::Tensor scaled_dot_product_attention(
                 int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
                 c10::optional<at::Tensor> nulltensor = c10::nullopt;
                 at::OptionalSymIntArrayRef nulllen = c10::nullopt;
-                auto output =
-                    at_npu::native::custom_ops::npu_fused_infer_attention_score(query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
-                                                                                nulltensor, nulltensor, nulltensor, nulllen, nulltensor, nulltensor, head_num, input_scale.as_float_unchecked(),
-                                                                                TOKEN_MAX, next_tockens, input_layout, head_num_kv, sparse_mode, inner_precise, 0, 0, 0, 0, false);
+                auto output = at_npu::native::custom_ops::npu_fused_infer_attention_score(
+                    query, key, value, nulltensor, atten_mask, nulllen, nulllen, nulltensor,
+                    nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
+                    nulltensor, nulltensor, nulltensor, nulltensor, nulltensor, nulltensor,
+                    nulltensor, nulltensor, nulltensor, nulllen, nulltensor, nulltensor,
+                    head_num, input_scale.as_float_unchecked(), TOKEN_MAX, next_tockens, input_layout, head_num_kv,
+                    sparse_mode, inner_precise, 0, 0, 0, 0, false);
 
                 return std::get<0>(output);
     }
