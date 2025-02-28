@@ -29,9 +29,10 @@ at::Tensor npu_moe_distribute_combine(const at::Tensor &expand_x, const at::Tens
                                       c10::string_view group_ep, int64_t ep_world_size, int64_t ep_rank_id,
                                       int64_t moe_expert_num,
                                       const c10::optional<at::Tensor> &tp_send_counts,
+                                      const c10::optional<at::Tensor> &x_active_mask,
                                       c10::string_view group_tp, int64_t tp_world_size, int64_t tp_rank_id,
-                                      int64_t expert_shard_type, int64_t shared_expert_rank_num,
-                                      int64_t global_bs)
+                                      int64_t expert_shard_type, int64_t shared_expert_num, 
+                                      int64_t shared_expert_rank_num, int64_t global_bs)
 {
     TORCH_CHECK((expand_x.dim() == 2) && (expert_ids.dim() == 2), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
@@ -47,11 +48,10 @@ at::Tensor npu_moe_distribute_combine(const at::Tensor &expand_x, const at::Tens
     std::string group_tp_str = std::string(group_tp);
     char *group_tp_ptr = const_cast<char *>(group_tp_str.c_str());
     at::Tensor output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
-    EXEC_NPU_CMD(aclnnMoeDistributeCombine, expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, tp_send_counts,
-        group_ep_ptr, ep_world_size, ep_rank_id,
-        moe_expert_num,
-        group_tp_ptr, tp_world_size, tp_rank_id,
-        expert_shard_type, shared_expert_rank_num, global_bs_real, output);
+    EXEC_NPU_CMD(aclnnMoeDistributeCombine, expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, tp_send_counts, x_active_mask,
+        group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num,
+        group_tp_ptr, tp_world_size, tp_rank_id, expert_shard_type,
+        shared_expert_num, shared_expert_rank_num, global_bs_real, output);
     return output;
 }
 }
