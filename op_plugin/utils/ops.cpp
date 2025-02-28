@@ -25,5 +25,6 @@ at::Tensor npu_dropout_gen_mask(const at::Tensor &self, at::IntArrayRef size, do
     const c10::OptionalDeviceGuard device_guard(device_of(self));
     return op_plugin::_npu_dropout_gen_mask(self, size, p, seed, offset, parallel, sync);
 }
+
 }  // namespace native
 }  // namespace at_npu
