@@ -33,6 +33,7 @@ class TestQuantRmsNorm(TestCase):
 
         return output
 
+    @SupportedDevices(["Ascend910B"])
     def test_quant_int8_rms_norm(self):
         torch.manual_seed(12)
         x = torch.randn(4, 1, 128).half()
