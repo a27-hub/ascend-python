@@ -40,13 +40,14 @@ class TestMoeDistributeDispatch(TestCase):
     def _test_npu_moe_distribute_dispatch(cls, rank, input_list):
         expt_token_list, x1_list, x2_list, topk1_list, topk2_list, ep_world_size, tp_world_size, globalBS,\
             sharedExpertRankNum, moeExpertNum, h, init_pg, c2p, p2c = input_list
-        if rank % tp_world_size == 0:
-            x = x1_list[rank // tp_world_size]
-            topk = topk1_list[rank // tp_world_size]
+        tp_world_size_2 = 2
+        if rank % tp_world_size_2 == 0:
+            x = x1_list[rank // tp_world_size_2]
+            topk = topk1_list[rank // tp_world_size_2]
         else:
-            x = x2_list[rank // tp_world_size]
-            topk = topk2_list[rank // tp_world_size]
-        pg, ep_group, tp_group = init_pg(rank, ep_world_size * tp_world_size, ep_world_size, tp_world_size)
+            x = x2_list[rank // tp_world_size_2]
+            topk = topk2_list[rank // tp_world_size_2]
+        pg, ep_group, tp_group = init_pg(rank, ep_world_size * tp_world_size_2, ep_world_size, tp_world_size_2)
         ep_hcomm_name = ep_group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
         tp_hcomm_name = tp_group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
 
@@ -56,17 +57,17 @@ class TestMoeDistributeDispatch(TestCase):
                                                            expert_ids=topk,
                                                            group_ep=ep_hcomm_name,
                                                            ep_world_size=ep_world_size,
-                                                           ep_rank_id=int(rank // tp_world_size),
+                                                           ep_rank_id=int(rank // tp_world_size_2),
                                                            moe_expert_num=moeExpertNum,
                                                            scales=None,
                                                            group_tp=tp_hcomm_name,
                                                            tp_world_size=tp_world_size,
-                                                           tp_rank_id=int(rank % tp_world_size),
+                                                           tp_rank_id=int(rank % tp_world_size) if tp_world_size != 1 else 0,
                                                            expert_shard_type=0,
                                                            shared_expert_rank_num=sharedExpertRankNum,
                                                            quant_mode=0,
                                                            global_bs=globalBS)
-        if rank // tp_world_size < sharedExpertRankNum:
+        if rank // tp_world_size_2 < sharedExpertRankNum:
             A = int(globalBS // sharedExpertRankNum)
         else:
             local = int(moeExpertNum // (ep_world_size - sharedExpertRankNum))
@@ -79,11 +80,12 @@ class TestMoeDistributeDispatch(TestCase):
         expt_out_list, expt_token_list, x1_list, x2_list, topk1_list, topk2_list, ep_world_size, tp_world_size, globalBS,\
             sharedExpertRankNum, moeExpertNum, h = input_list
         ctx = mp.get_context('spawn')
-        c2p = ctx.Queue(ep_world_size * tp_world_size)
-        p2c = ctx.Queue(ep_world_size * tp_world_size)
+        tp_world_size_2 = 2 
+        c2p = ctx.Queue(ep_world_size * tp_world_size_2)
+        p2c = ctx.Queue(ep_world_size * tp_world_size_2)
         ps = []
 
-        for i in range(ep_world_size * tp_world_size):
+        for i in range(ep_world_size * tp_wotp_world_size_2rld_size):
             p = ctx.Process(
                 target=f,
                 args=(i, [expt_token_list, x1_list, x2_list, topk1_list, topk2_list, ep_world_size, tp_world_size,
@@ -91,12 +93,12 @@ class TestMoeDistributeDispatch(TestCase):
             p.start()
             ps.append(p)
 
-        for _ in range(ep_world_size * tp_world_size):
+        for _ in range(ep_world_size * tp_world_size_2):
             rank, output = c2p.get()
             self.assertEqual(output, expt_out_list[rank],
                              ("rank {} Expect receive tensor {} but got {}.").format(rank, expt_out_list[rank], output))
         
-        for _ in range(ep_world_size * tp_world_size):
+        for _ in range(ep_world_size * tp_world_size_2):
             p2c.put(0)
 
         for p in ps:
@@ -134,9 +136,10 @@ class TestMoeDistributeDispatch(TestCase):
                 tmp_list.append(x1[(bs * (i + (j + 1) * sharedExpertRankNum)):(bs * (i + (j + 1) * sharedExpertRankNum + 1)), :])
             tmp_list = torch.cat(tmp_list, dim=0).to(torch.float16)
             shared_list.append(tmp_list)
-        shared_x1 = torch.cat(shared_list, dim=0)
-        token1 = torch.cat((torch.tensor(shared_tokens), torch.bincount(expand_expert1)))
-        token2 = torch.cat((torch.tensor(shared_tokens), torch.bincount(expand_expert2)))
+        if sharedExpertRankNum != 0:
+            shared_x1 = torch.cat(shared_list, dim=0)
+        token1 = torch.cat((torch.tensor(shared_tokens), torch.bincount(expand_expert1, minlength=moeExpertNum)))
+        token2 = torch.cat((torch.tensor(shared_tokens), torch.bincount(expand_expert2, minlength=moeExpertNum)))
         shared_list = []
         for i in range(sharedExpertRankNum):
             tmp_list = []
@@ -145,9 +148,13 @@ class TestMoeDistributeDispatch(TestCase):
                 tmp_list.append(x2[(bs * (i + (j + 1) * sharedExpertRankNum)):(bs * (i + (j + 1) * sharedExpertRankNum + 1)), :])
             tmp_list = torch.cat(tmp_list, dim=0).to(torch.float16)
             shared_list.append(tmp_list)
-        shared_x2 = torch.cat(shared_list, dim=0)
-        golden_expandX1 = torch.cat((shared_x1, expandX1)).view(-1, h)
-        golden_expandX2 = torch.cat((shared_x2, expandX2)).view(-1, h)
+        if sharedExpertRankNum != 0:
+            shared_x2 = torch.cat(shared_list, dim=0)
+            golden_expandX1 = torch.cat((shared_x1, expandX1)).view(-1, h)
+            golden_expandX2 = torch.cat((shared_x2, expandX2)).view(-1, h)
+        else:
+            golden_expandX1 = expandX1.view(-1, h)
+            golden_expandX2 = expandX2.view(-1, h)
         
         sums1 = 0
         sums2 = 0
@@ -160,10 +167,17 @@ class TestMoeDistributeDispatch(TestCase):
             start2 = sums2
             end2 = sums2 + int(token2[i])
             sums2 = end2
-            out_list.append(torch.cat((golden_expandX1[start1:end1, :], golden_expandX2[start2:end2, :])))
-            out_list.append(torch.cat((golden_expandX2[start2:end2, :], golden_expandX1[start1:end1, :])))
-            token_list.append(int(token1[i]) + int(token2[i]))
-            token_list.append(int(token1[i]) + int(token2[i]))
+            if tp_world_size == 2:
+                out_list.append(torch.cat((golden_expandX1[start1:end1, :], golden_expandX2[start2:end2, :])))
+                out_list.append(torch.cat((golden_expandX2[start2:end2, :], golden_expandX1[start1:end1, :])))
+                token_list.append(int(token1[i]) + int(token2[i]))
+                token_list.append(int(token1[i]) + int(token2[i]))
+            else:
+                out_list.append(golden_expandX1[start1:end1, :])
+                out_list.append(golden_expandX2[start2:end2, :])
+                token_list.append(int(token1[i]))
+                token_list.append(int(token2[i]))
+
         return out_list, token_list
 
     @skipIfUnsupportMultiNPU(16)
@@ -171,13 +185,16 @@ class TestMoeDistributeDispatch(TestCase):
     def test_npu_moe_distribute_dispatch(self):
         ep_world_size = 8
         tp_world_size = 2
+        tp_world_size_1 = 1
         world_size = ep_world_size * tp_world_size
         bs = 8
         h = 7168
         k = 7
-        sharedExpertRankNum = 1
-        moeExpertNum = 7
-        globalBS = bs * ep_world_size
+        shared_expert_rank_num_1 = 1
+        moe_expert_num_7 = 7
+        shared_expert_rank_num_0 = 0
+        moe_expert_num_8 = 8
+        global_bs = bs * ep_world_size
         dtype = np.float16
         data_format = -1
         topk = torch.tile(torch.arange(k), (bs,)).int().view(-1, k)
@@ -194,11 +211,24 @@ class TestMoeDistributeDispatch(TestCase):
             x2_list.append(x2)
             topk1_list.append(topk)
             topk2_list.append(topk)
-        expt_out_list, expt_token_list = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
-                                                            globalBS, sharedExpertRankNum, moeExpertNum, ep_world_size)
+        expt_out_list_1, expt_token_list_1 = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
+                                                            global_bs, shared_expert_rank_num_1, moe_expert_num_7, ep_world_size, tp_world_size)
+        expt_out_list_2, expt_token_list_2 = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
+                                                            global_bs, shared_expert_rank_num_0, moe_expert_num_8, ep_world_size, tp_world_size)
+
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch,
-                TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list, expt_token_list, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size, globalBS, sharedExpertRankNum, moeExpertNum, h])
+                TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_1, expt_token_list_1, x1_list, x2_list, topk1_list,
+                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
+        self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch,
+                TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_2, expt_token_list_2, x1_list, x2_list, topk1_list,
+                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
+        
+        expt_out_list_3, expt_token_list_3 = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
+                                                    global_bs, shared_expert_rank_num_1, moe_expert_num_7, ep_world_size, tp_world_size_1)
+        self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch,
+                TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_3, expt_token_list_3, x1_list, x2_list, topk1_list,
+                topk2_list, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
+
 
 
 if __name__ == '__main__':

@@ -666,7 +666,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'half_to_float? at::kFloat: self.scalar_type()'
+        dtype: 'half_to_float? at::kFloat : self.scalar_type()'
       exec: aclnnLogSoftmax, self, dim, out
 
   - func: _log_softmax.out(Tensor self, int dim, bool half_to_float, *, Tensor(a!) out) -> Tensor(a!)
@@ -730,7 +730,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: '(half_to_float == true) ? at::ScalarType::Float : self.scalar_type()'
+        dtype: 'half_to_float ? at::ScalarType::Float : self.scalar_type()'
       exec: aclnnSoftmax, self, dim, out
 
   - func: _softmax.out(Tensor self, int dim, bool half_to_float, *, Tensor(a!) out) -> Tensor(a!)
@@ -1208,7 +1208,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat: self.scalar_type()'
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
         name: self
       exec: aclnnAsin
 
@@ -1256,7 +1256,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
         name: self
       exec: aclnnAtan
 
@@ -1293,7 +1293,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
       exec: aclnnAtanh
 
   - func: atanh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -1430,7 +1430,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: 'reduction == at::Reduction::None? self.sizes(): at::ArrayRef<int64_t>()'
+        size: 'reduction == at::Reduction::None ? self.sizes() : at::ArrayRef<int64_t>()'
         dtype: self
       exec: aclnnBinaryCrossEntropy
 
@@ -1846,7 +1846,7 @@ official:
     gen_opapi:
       resutl:
         size: self
-        dtype: 'isIntegralType(self.scalar_type(), true)? at::kFloat: self.scalar_type()'
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::kFloat : self.scalar_type()'
       exec: aclnnCos
 
   - func: cos.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -1941,6 +1941,7 @@ official:
   - func: ctc_loss.Tensor(Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, int blank=0, int reduction=Mean, bool zero_infinity=False) -> Tensor
     acl_op: all_version
     op_api: all_version
+    device_check: NoCheck
 
   - func: cumprod(Tensor self, int dim, *, ScalarType? dtype=None) -> Tensor
     acl_op: v2.0
@@ -2234,7 +2235,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long)? at::kFloat: self.scalar_type()'
+        dtype: '(self.scalar_type() == at::ScalarType::Bool || self.scalar_type() == at::ScalarType::Long) ? at::kFloat : self.scalar_type()'
       exec: aclnnExp
 
   - func: exp.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -2251,7 +2252,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'isIntegralType(self.scalar_type(), true) ? at::ScalarType::Float: self.scalar_type()'
+        dtype: 'isIntegralType(self.scalar_type(), true) ? at::ScalarType::Float : self.scalar_type()'
       exec: aclnnExp2
 
   - func: exp2.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -2280,7 +2281,7 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: 'isFloatingType(self.scalar_type())? self.scalar_type(): at::kFloat'
+        dtype: 'isFloatingType(self.scalar_type()) ? self.scalar_type() : at::kFloat'
       exec: aclnnExpm1
 
   - func: expm1.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
@@ -2912,7 +2913,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: 'at::isFloatingType(self.scalar_type()) && equal_nan? self.sizes(): broadcast_ops_npu_output_size(self, other)'
+        size: 'at::isFloatingType(self.scalar_type()) && equal_nan ? self.sizes() : broadcast_ops_npu_output_size(self, other)'
         dtype: at::kBool
       exec: aclnnIsClose
 
@@ -3482,6 +3483,7 @@ official:
 
   - func: lstm.data(Tensor data, Tensor batch_sizes, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    device_check: NoCheck
 
   - func: lstm.input(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
@@ -3961,11 +3963,11 @@ official:
         size: input
         dtype: input
       out1:
-        size: 'training? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}: c10::SmallVector<int64_t, op_infer::SIZE>{0}'
-        dtype: 'training? at::kFloat: input.scalar_type()'
+        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        dtype: 'training ? at::kFloat : input.scalar_type()'
       out2:
-        size: 'training? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}: c10::SmallVector<int64_t, op_infer::SIZE>{0}'
-        dtype: 'training? at::kFloat: input.scalar_type()'
+        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        dtype: 'training ? at::kFloat : input.scalar_type()'
       exec: aclnnBatchNorm
 
   - func: native_batch_norm.out(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, *, Tensor(a!) out, Tensor(b!) save_mean, Tensor(c!) save_invstd) -> (Tensor(a!), Tensor(b!), Tensor(c!))
@@ -6590,6 +6592,7 @@ custom:
   - func: npu_broadcast.out(Tensor self, int[] size, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     exposed: all_version
+    device_check: NoCheck
 
   - func: npu_ciou(Tensor self, Tensor gtboxes, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> Tensor
     acl_op: all_version
@@ -6885,9 +6888,11 @@ custom:
   - func: npu_lstm_data(Tensor input, Tensor batch_sizes, Tensor weight, Tensor bias, Tensor seq_mask, Tensor h, Tensor c, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first, bool flag_seq, bool direction) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     tags: nondeterministic_seeded
+    device_check: NoCheck
 
   - func: npu_lstm_data_backward(Tensor? grady_opt, Tensor? gradh_opt, Tensor? gradc_opt, Tensor input, Tensor batch_sizes, Tensor weight, Tensor bias, Tensor init_h, Tensor init_c, Tensor y, Tensor h, Tensor c, Tensor i, Tensor j, Tensor f, Tensor o, Tensor tanhc, bool flag_direction) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
+    device_check: NoCheck
 
   - func: npu_masked_fill_range(Tensor self, Tensor start, Tensor end, Tensor value, int axis=-1) -> Tensor
     acl_op: all_version
@@ -6934,6 +6939,10 @@ custom:
 
   - func: npu_mish_backward(Tensor grad, Tensor input) -> Tensor
     acl_op: all_version
+
+  - func: npu_mla_prolog(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_cq=None, Tensor? dequant_scale_qc_qr=None, Tensor? dequant_scale_ckv_kr=None, Tensor? quant_scale_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="BNSD") -> (Tensor, Tensor, Tensor, Tensor)
+    acl_op: [v2.1, newest]
+    exposed: [v2.1, newest]
 
   - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, Tensor? pertoken_scale=None, Tensor? comm_quant_scale_1=None, Tensor? comm_quant_scale_2=None, int antiquant_group_size=0, int comm_turn=0) -> Tensor
     op_api: all_version
@@ -7220,6 +7229,9 @@ custom:
     op_api: all_version
 
   - func: npu_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, int[3] size_splits, *, Tensor? offset_k=None, Tensor? offset_v=None, int quant_mode=0, str input_layout="BSND", bool kv_output=False, str cache_mode="contiguous") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+  
+  - func: npu_dequant_bias(Tensor x, Tensor weight_scale, Tensor? activation_scale, Tensor? bias, *, ScalarType? output_dtype=None) -> Tensor
     op_api: all_version
 
   - func: npu_trans_quant_param(Tensor scale, Tensor? offset=None) -> Tensor

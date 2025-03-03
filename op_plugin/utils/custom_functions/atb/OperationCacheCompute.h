@@ -79,6 +79,48 @@ struct HashOpParam<atb::infer::RmsNormParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::GroupTopkParam> {
+    void operator()(const atb::infer::GroupTopkParam& param) const
+    {
+        add_param_to_buf("groupNum", param.groupNum);
+        add_param_to_buf("k", param.k);
+        add_param_to_buf("groupMultiFlag", param.groupMultiFlag);
+        add_param_to_buf("n", param.n);
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::PagedAttentionParam> {
+    void operator()(const atb::infer::PagedAttentionParam& param) const
+    {
+        add_param_to_buf("num_kv_heads", param.kvHeadNum);
+        add_param_to_buf("num_heads", param.headNum);
+        add_param_to_buf("scale_value", param.qkScale);
+        add_param_to_buf("quant_type", param.quantType);
+        add_param_to_buf("outdata_type", param.outDataType);
+        add_param_to_buf("mla_vheadsize", param.mlaVHeadSize);
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::SelfAttentionParam> {
+    void operator()(const atb::infer::SelfAttentionParam& param) const
+    {
+        add_param_to_buf("num_kv_heads", param.kvHeadNum);
+        add_param_to_buf("num_heads", param.headNum);
+        add_param_to_buf("scale_value", param.qkScale);
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::RopeParam> {
+    void operator()(const atb::infer::RopeParam& param) const
+    {
+        add_param_to_buf("rotaryCoeff", param.rotaryCoeff);
+    }
+};
+
 template <typename T>
 uint64_t computeHash(const T& obj)
 {
