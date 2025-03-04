@@ -854,6 +854,14 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     else:
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
 
+@impl(m, "npu_transpose_batchmatmul")
+def npu_transpose_batchmatmul_meta(input_, weight, scale=None):
+    dimm = input_.size(0)
+    dimn = weight.size(0)
+    if scale is None:
+        return input_.new_empty((dimm, dimn))
+    else:
+        return input_.new_empty((dimm, dimn), dtype=torch.int8)
 
 @impl(m, "npu_trans_quant_param")
 def npu_trans_quant_param_meta(scale, offset=None):
