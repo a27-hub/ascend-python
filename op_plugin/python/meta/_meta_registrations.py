@@ -1229,3 +1229,14 @@ def npu_dequant_bias_meta(x, weight_scale, activation_scale, bias, output_dtype=
         raise RuntimeError("Only supported output_dtype is float16 and bfloat16" + ops_error(ErrCode.NOT_SUPPORT))
     return torch.empty_like(x, dtype=output_dtype)
 
+@impl(m, "npu_dequant_swiglu_quant")
+def npu_dequant_swiglu_quant_meta(x, weight_scale, activation_scale, bias, quant_scale,
+                                  quant_offset, group_index, activate_left=False, quant_mode=0):
+    y_size = []
+    scale_size = []
+    for i in range(x.dim() - 1):
+        y_size.append(x.size(i))
+        scale_size.append(x.size(i))
+    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
+    return (torch.empty(y_size, dtype=torch.int8, device=x.device),
+            torch.empty(scale_size, dtype=torch.float32, device=x.device))
