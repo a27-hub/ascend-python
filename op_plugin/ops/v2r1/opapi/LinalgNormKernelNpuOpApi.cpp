@@ -35,6 +35,8 @@ at::Tensor linalg_vector_norm(
     bool keepdim,
     at::optional<at::ScalarType> opt_dtype)
 {
+    std::cout << "====in, device: " << self.device() << " va(hexadecimal): 0x" << std::hex << self.data_ptr() << " pa(hexadecimal): 0x" << std::hex << self.storage().data_ptr() << std::endl;
+    std::cout << "====in, size: " << self.sizes() << " strides: " << self.strides() << "storage_offset" << self.storage_offset() << std::endl;
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype);
     }
@@ -44,6 +46,8 @@ at::Tensor linalg_vector_norm(
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
     auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(dtype));
+    std::cout << "====out, device: " << self.device() << " va(hexadecimal): 0x" << std::hex << self.data_ptr() << " pa(hexadecimal): 0x" << std::hex << self.storage().data_ptr() << std::endl;
+    std::cout << "====out, size: " << self.sizes() << " strides: " << self.strides() << "storage_offset" << self.storage_offset() << std::endl;
     EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, out);
     return out;
 }
@@ -56,6 +60,8 @@ at::Tensor& linalg_vector_norm_out(
     at::optional<at::ScalarType> opt_dtype,
     at::Tensor& result)
 {
+    std::cout << "****in, device: " << self.device() << " va(hexadecimal): 0x" << std::hex << self.data_ptr() << " pa(hexadecimal): 0x" << std::hex << self.storage().data_ptr() << std::endl;
+    std::cout << "****in, size: " << self.sizes() << " strides: " << self.strides() << "storage_offset" << self.storage_offset() << std::endl;
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
@@ -70,6 +76,8 @@ at::Tensor& linalg_vector_norm_out(
         dtype,
         output_size);
 
+    std::cout << "****out, device: " << self.device() << " va(hexadecimal): 0x" << std::hex << self.data_ptr() << " pa(hexadecimal): 0x" << std::hex << self.storage().data_ptr() << std::endl;
+    std::cout << "****out, size: " << self.sizes() << " strides: " << self.strides() << "storage_offset" << self.storage_offset() << std::endl;
     EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, result);
     return result;
 }
