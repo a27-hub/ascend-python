@@ -39,7 +39,8 @@ std::vector<at::Tensor> _foreach_addcdiv_v1(const at::TensorList input,
     result.reserve(input.size());
     for (const at::Tensor &tensor : input) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(npu_preparation::apply_tensor_without_format(
+            output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     at::Tensor scalar_tensor = npu_preparation::copy_scalar_to_device(scalar, input[0].scalar_type(),
@@ -95,7 +96,7 @@ void _split_and_exec_npu_cmd_addcdiv_scalar(const at::TensorList input,
         EXEC_NPU_CMD(aclnnForeachAddcdivScalarV2, temp_input, temp_tensors1, temp_tensors2, scalar_, temp_result);
     }
     size_t remaining_count = tensor_count % max_tensor_count;
-    if (remaining_count) {
+    if (remaining_count > 0) {
         at::TensorList temp_input(input.data() + loop_time * max_tensor_count, remaining_count);
         at::TensorList temp_tensors1(tensors1.data() + loop_time * max_tensor_count, remaining_count);
         at::TensorList temp_tensors2(tensors2.data() + loop_time * max_tensor_count, remaining_count);
@@ -127,7 +128,8 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     result.reserve(input.size());
     for (const at::Tensor &tensor : input) {
         auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
+        result.push_back(npu_preparation::apply_tensor_without_format(
+            output_size, tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_addcdiv_scalar(input, tensors1, tensors2, scalar, result_, false);

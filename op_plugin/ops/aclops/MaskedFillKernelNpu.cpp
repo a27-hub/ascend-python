@@ -22,7 +22,12 @@ using npu_utils = at_npu::native::NpuUtils;
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& mask, const at::Tensor& value)
+at::Tensor& masked_fill_out_npu_nocheck(
+    at::Tensor& result,
+    const at::Tensor& self,
+    const at::Tensor& mask,
+    const at::Tensor& value)
+
 {
     at::Tensor mask_bool = mask;
     int64_t dim_of_self = self.dim();
@@ -53,7 +58,11 @@ at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& se
     return result;
 }
 
-at::Tensor& masked_fill_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Tensor& mask, at::Scalar value)
+at::Tensor& masked_fill_out_npu_nocheck(
+    at::Tensor& result,
+    const at::Tensor& self,
+    const at::Tensor& mask,
+    at::Scalar value)
 {
     at::Tensor mask_bool = mask;
     int64_t dim_of_self = self.dim();
