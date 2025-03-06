@@ -873,14 +873,6 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None, per
     if scale is None:
         return input_.new_empty((M, batchM, N), dtype=torch.float16)
     else:
-        torch._check(
-            scale.dim() == 3,
-            lambda:"scale need to be 3" + ops_error(ErrCode.TYPE),
-        )
-        torch._check(
-            scale.dtype == torch.int64 or scale.dtype == torch.uint64 or,
-            lambda: "scale's dtype should be int64, but scale.dtype is " + str(scale.dtype) + ops_error(ErrCode.TYPE),
-        )
         return input_.new_empty((M, batchM, N), dtype=torch.int8)
 
 @impl(m, "npu_trans_quant_param")
