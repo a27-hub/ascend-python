@@ -20,10 +20,10 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_transpose_batchmatmul(
-    const at::Tensor &input, const at::Tensor &weight
+    const at::Tensor &input, const at::Tensor &weight,
     const c10::optional<at::Tensor> &bias, const c10::optional<at::Tensor> &scale,
     c10::OptionalIntArrayRef perm_x1,c10::OptionalIntArrayRef perm_x2,
-    c10::OptionalIntArrayRef perm_x3,
+    c10::OptionalIntArrayRef perm_y
     )
 {
     at::Tensor result;
