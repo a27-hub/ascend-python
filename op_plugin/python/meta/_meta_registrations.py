@@ -855,14 +855,10 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
 
 @impl(m, "npu_transpose_batchmatmul")
-def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None, perm_x1=None, perm_x2=None, perm_y=None):
+def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None, perm_x1=[0,1,2], perm_x2=[0,1,2], perm_y=[0,1,2]):
     torch._check(
         input_.dim() == 3 and  weight.dim() == 3,
         lambda:"input_dim_num need to be 3" + ops_error(ErrCode.TYPE),
-    )
-    torch._check(
-             (perm_x1 == None or perm_x2 == None or perm_y == None),
-            lambda:"perm_x1 perm_x2 perm_y should not to be none" + ops_error(ErrCode.TYPE),
     )
     M = input_.size(0)
     batchM = input_.size(1)
