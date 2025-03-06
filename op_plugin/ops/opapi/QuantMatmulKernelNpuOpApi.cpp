@@ -93,11 +93,12 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
     }
 
     bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
+    bool is_a8w4 = x1.dtype() != at::kInt && x2.dtype() == at::kInt;
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
     auto x1_k_dim = x1.size(x1_dim_num - 1);
-    auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
+    auto x2_n_dim = ((is_a4w4 || is_a8w4) && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
     auto x2_k_dim = x2.size(x2_dim_num - LAST_SECOND_DIM_INDEX);
 
     std::vector<uint64_t> batch_record;
@@ -160,11 +161,12 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
                             c10::optional<c10::string_view> output_dtype)
 {
     bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
+    bool is_a8w4 = x1.dtype() != at::kInt && x2.dtype() == at::kInt;
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
     auto x1_k_dim = x1.size(x1_dim_num - 1);
-    auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
+    auto x2_n_dim = ((is_a4w4 || is_a8w4) && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
     auto x2_k_dim = x2.size(x2_dim_num - 2);
 
     std::vector<uint64_t> batch_record;

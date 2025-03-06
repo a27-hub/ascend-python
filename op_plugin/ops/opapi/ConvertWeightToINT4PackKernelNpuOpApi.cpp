@@ -20,7 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t INT4_NUMS_IN_INT32 = 8;
-const int64_t WEIGHT_SHAPE_SIZE = 2;
+const int64_t MIN_WEIGHT_SHAPE_SIZE = 2;
+const int64_t MAX_WEIGHT_SHAPE_SIZE = 6;
 const int64_t CUBE_BLOCK_SIZE = 16;
 const int64_t C0_SIZE_INT32 = 8;
 
@@ -44,31 +45,40 @@ void convert_to_int4_pack(const std::vector<int32_t>& weight_data, std::vector<i
 
 void trans_nd_to_nz(std::vector<int32_t>& weight_array, uint64_t k, uint64_t n)
 {
-    uint64_t k1 = (k + CUBE_BLOCK_SIZE - 1) / CUBE_BLOCK_SIZE;
-    int64_t weight_nz_size = op_infer::CeilDiv(k, CUBE_BLOCK_SIZE) *
-                           op_infer::CeilDiv(n, C0_SIZE_INT32) * CUBE_BLOCK_SIZE * C0_SIZE_INT32;
+    uint64_t k1 = op_infer::CeilDiv(k, CUBE_BLOCK_SIZE);
+    uint64_t n1 = op_infer::CeilDiv(n, C0_SIZE_INT32);
+    uint64_t batch = weight_array.size() / (k * n);
+    uint64_t weight_nz_size = batch * n1 * k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32;
     std::vector<int32_t> weight_nz_array(weight_nz_size, 0);
 
     // (k, n) -> (n1, k1, k0, n0)
     // (k, n) -> (ceil_div(n, 8), ceil_div(k, 16), 16, 8)
-    for (size_t idx = 0; idx < weight_array.size(); ++idx) {
+    for (size_t out_idx = 0; out_idx < weight_array.size(); ++out_idx) {
+        size_t idx_b = out_idx / (k * n);
+        size_t idx = out_idx % (k * n);
         size_t idx_k = idx / n;
         size_t idx_n = idx % n;
         size_t idx_k0 = idx_k % CUBE_BLOCK_SIZE;
         size_t idx_k1 = idx_k / CUBE_BLOCK_SIZE;
         size_t idx_n0 = idx_n % C0_SIZE_INT32;
         size_t idx_n1 = idx_n / C0_SIZE_INT32;
-        weight_nz_array[idx_n1 * k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32 + idx_k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32 +
-            idx_k0 * C0_SIZE_INT32 + idx_n0] = weight_array[idx];
+        size_t new_idx = idx_b * n1 * k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32 +
+                         idx_n1 * k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32 +
+                         idx_k1 * CUBE_BLOCK_SIZE * C0_SIZE_INT32 +
+                         idx_k0 * C0_SIZE_INT32 +
+                         idx_n0;
+        weight_nz_array[new_idx] = weight_array[out_idx];
     }
-    weight_array = weight_nz_array;
+    // Using std::swap to efficiently exchange contents
+    weight_array.swap(weight_nz_array);
 }
 
 inline void int4pack_params_check(const at::Tensor &weight)
 {
     TORCH_CHECK(weight.is_contiguous(), "weight should be contiguous", OPS_ERROR(ErrCode::PARAM));
     auto weight_dim_num = weight.dim();
-    TORCH_CHECK(weight_dim_num == WEIGHT_SHAPE_SIZE, "weight shape only support dim num 2, but it is ",
+    TORCH_CHECK(weight_dim_num >= MIN_WEIGHT_SHAPE_SIZE && weight_dim_num <= MAX_WEIGHT_SHAPE_SIZE,
+                "weight shape only support dim num between 2 and 6, but it is ",
                 weight_dim_num, OPS_ERROR(ErrCode::PARAM));
 
     auto weight_dtype = weight.dtype();
@@ -101,14 +111,22 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     std::vector<int32_t> weight_data(weight_cpu.data_ptr<int32_t>(), weight_cpu.data_ptr<int32_t>() + weight_cpu.numel());
     // store 8 int4 numbers in sequence into an int32
     std::vector<int32_t> weight_int4pack_data(weight_data.size() / INT4_NUMS_IN_INT32, 0);
-    std::vector<int64_t> weight_int4pack_shape = {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32};
+    
+    // Keep preceding dimensions unchanged
+    std::vector<int64_t> weight_int4pack_shape(weight_cpu.sizes().begin(), weight_cpu.sizes().end());
+    weight_int4pack_shape[weight_dim_num - 1] = weight_last_dim / INT4_NUMS_IN_INT32;
 
     convert_to_int4_pack(weight_data, weight_int4pack_data);
 
     if (is_weight_nz) {
         trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
-        weight_int4pack_shape = {op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32),
-                               op_infer::CeilDiv(weight_first_dim, CUBE_BLOCK_SIZE), CUBE_BLOCK_SIZE, C0_SIZE_INT32};
+        // Convert last two dimensions to 4 dimensions for NZ format
+        weight_int4pack_shape.resize(weight_dim_num + 2);
+        std::copy(weight_cpu.sizes().begin(), weight_cpu.sizes().end() - 2, weight_int4pack_shape.begin());
+        weight_int4pack_shape[weight_dim_num - 2] = op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32);
+        weight_int4pack_shape[weight_dim_num - 1] = op_infer::CeilDiv(weight_first_dim, CUBE_BLOCK_SIZE);
+        weight_int4pack_shape[weight_dim_num] = CUBE_BLOCK_SIZE;
+        weight_int4pack_shape[weight_dim_num + 1] = C0_SIZE_INT32;
     }
 
     c10::TensorOptions options_cpu = weight_cpu.options().dtype(at::kInt);
@@ -129,10 +147,21 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
         auto &out_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(result);
         out_desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
         out_desc.origin_format_ = ACL_FORMAT_ND;
-        out_desc.base_sizes_ = {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32};
-        out_desc.base_strides_ = {weight_last_dim / INT4_NUMS_IN_INT32, 1};
-        result.set_(result.storage(), 0, {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32},
-            {weight_last_dim / INT4_NUMS_IN_INT32, 1});
+        
+        // Set base_sizes to modify only the last two dimensions
+        std::vector<int64_t> base_sizes(weight_cpu.sizes().begin(), weight_cpu.sizes().end());
+        base_sizes[weight_dim_num - 1] = weight_last_dim / INT4_NUMS_IN_INT32;
+        out_desc.base_sizes_ = base_sizes;
+        
+        // Compute base_strides
+        std::vector<int64_t> base_strides(weight_dim_num);
+        base_strides[weight_dim_num - 1] = 1;
+        for (int64_t i = weight_dim_num - 2; i >= 0; i--) {
+            base_strides[i] = base_strides[i + 1] * base_sizes[i + 1];
+        }
+        out_desc.base_strides_ = base_strides;
+        
+        result.set_(result.storage(), 0, base_sizes, base_strides);
     } else {
         result.copy_(weight_int4_pack_cpu);
     }
