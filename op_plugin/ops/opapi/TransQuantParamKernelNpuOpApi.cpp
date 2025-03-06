@@ -19,7 +19,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_trans_quant_param(const at::Tensor &scale, const c10::optional<at::Tensor> &offset, int64_t round_mode)
+at::Tensor npu_trans_quant_param(const at::Tensor &scale, const c10::optional<at::Tensor> &offset,
+                                 c10::optional<int64_t> round_mode)
 {
     auto scale_dim_num = scale.dim();
     const at::Tensor &offset_real = offset.value_or(at::Tensor());
