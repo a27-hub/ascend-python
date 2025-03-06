@@ -19,6 +19,17 @@ class TestUpsamleNearest2D(TestCase):
         output = output.numpy()
         return output
 
+    def cpu_op_scale_exec(self, input1, scale):
+        output = torch.nn.functional.interpolate(input1, scale_factor=scale, mode="nearest")
+        output = output.numpy()
+        return output
+
+    def npu_op_scale_exec(self, input1, scale):
+        output = torch.nn.functional.interpolate(input1, scale_factor=scale, mode="nearest")
+        output = output.to("cpu")
+        output = output.numpy()
+        return output
+
     def test_upsample_nearest2d_shape_format(self):
         shape_format = [
             [[np.float32, 0, (5, 3, 6, 4)], [10, 10]],
@@ -35,6 +46,24 @@ class TestUpsamleNearest2D(TestCase):
             size = item[1]
             cpu_output = self.cpu_op_exec(cpu_input, size)
             npu_output = self.npu_op_exec(npu_input, size)
+            cpu_output = cpu_output.astype(npu_output.dtype)
+            self.assertRtolEqual(cpu_output, npu_output)
+    
+    def test_upsample_nearest2d_shape_format_scale(self):
+        shape_format = [
+            [[np.float32, 0, (5, 3, 6, 4)], (2, 2)],
+            [[np.float16, 0, (5, 3, 6, 4)], (2, 2)],
+            [[np.float32, 0, (2, 3, 2, 4)], (2, 2)],
+            [[np.float16, -1, (2, 3, 2, 3)], (2, 2)]
+        ]
+
+        for item in shape_format:
+            cpu_input, npu_input = create_common_tensor(item[0], 0, 50)
+            if cpu_input.dtype == torch.float16:
+                cpu_input = cpu_input.to(torch.float32)
+
+            cpu_output = self.cpu_op_scale_exec(cpu_input, item[1])
+            npu_output = self.npu_op_scale_exec(npu_input, item[1])
             cpu_output = cpu_output.astype(npu_output.dtype)
             self.assertRtolEqual(cpu_output, npu_output)
 

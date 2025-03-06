@@ -73,8 +73,8 @@ at::Tensor &upsample_nearest2d_out(
                      op_api::upsample_nearest2d_old_out(self, output_size, scales_h, scales_w, result));
     at::SmallVector<int64_t, SIZE> outputSize = upsample_nearest2d_output_size_npu(self, output_size);
     npu_preparation::check_tensor({self}, result, self, outputSize);
-    float scale_h = static_cast<float>(scales_h.value_or(-1.0));
-    float scale_w = static_cast<float>(scales_w.value_or(-1.0));
+    double scale_h = scales_h.value_or(-1.0);
+    double scale_w = scales_w.value_or(-1.0);
     EXEC_NPU_CMD(aclnnUpsampleNearest2dV2, self, output_size, scale_h, scale_w, result);
     return result;
 }
@@ -86,8 +86,8 @@ at::Tensor upsample_nearest2d(
     c10::optional<double> scales_w)
 {
     DO_COMPATIBILITY(aclnnUpsampleNearest2dV2, op_api::upsample_nearest2d_old(self, output_size, scales_h, scales_w));
-    float scale_h = static_cast<float>(scales_h.value_or(-1.0));
-    float scale_w = static_cast<float>(scales_w.value_or(-1.0));
+    double scale_h = scales_h.value_or(-1.0);
+    double scale_w = scales_w.value_or(-1.0);
     at::SmallVector<int64_t, SIZE> outputSize = upsample_nearest2d_output_size_npu(self, output_size);
     at::Tensor result = npu_preparation::apply_tensor_without_format(self, outputSize);
     EXEC_NPU_CMD(aclnnUpsampleNearest2dV2, self, output_size, scale_h, scale_w, result);
