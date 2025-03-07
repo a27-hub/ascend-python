@@ -26,7 +26,7 @@ at::Tensor npu_transpose_batchmatmul(
     c10::OptionalIntArrayRef perm_y
     )
 {
-    at::Tensor result;
+    at::Tensor result = nullptr;
     return result;
 }
 }
