@@ -32,7 +32,7 @@ at::Tensor npu_trans_quant_param(const at::Tensor &scale, const c10::optional<at
     }
     c10::TensorOptions options = scale.options().dtype(at::kLong);
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
-    EXEC_NPU_CMD(aclnnTransQuantParamV2, scale, offset_real, result);
+    EXEC_NPU_CMD(aclnnTransQuantParamV3, scale, offset_real, round_mode, result);
     return result;
 }
 }
