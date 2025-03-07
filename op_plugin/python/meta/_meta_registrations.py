@@ -859,6 +859,26 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     else:
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
 
+@impl(m, "npu_transpose_batchmatmul")
+def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None, perm_x1=[0,1,2], perm_x2=[0,1,2], perm_y=[0,1,2]):
+    torch._check(
+        input_.dim() == 3 and  weight.dim() == 3,
+        lambda:"input_dim_num need to be 3" + ops_error(ErrCode.TYPE),
+    )
+    M = input_.size(0)
+    batchM = input_.size(1)
+    Ka = input_.size(2)
+    batchN = weight.size(0)
+    Kb = weight.size(1)
+    N = weight.size(2)
+    torch._check(
+        (batchM == batchN and Ka == Kb),
+        lambda:"batchM need to be equeal batchM" + ops_error(ErrCode.TYPE),
+    )
+    if scale is None:
+        return input_.new_empty((M, batchM, N), dtype=torch.float16)
+    else:
+        return input_.new_empty((M, batchM, N), dtype=torch.int8)
 
 @impl(m, "npu_trans_quant_param")
 def npu_trans_quant_param_meta(scale, offset=None):
@@ -1087,7 +1107,6 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             lambda: "bias shape should equal to cout, but now bias shape is " + str(bias_shape[0]) + ", and cout is " +
                     str(weight_shape[0]) + ops_error(ErrCode.VALUE),
         )
-
     def check_attrs():
         pads_dim = len(pads)
         strides_dim = len(strides)
