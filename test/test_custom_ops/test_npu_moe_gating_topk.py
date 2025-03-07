@@ -51,7 +51,7 @@ class TestNpuMoeGatingTopK(TestCase):
         else:
             out = None
 
-        y = torch.tensor(y, dtype = dtype)
+        y = torch.tensor(y, dtype=dtype)
         return y, indices.astype(numpy.int32), out
 
     @SupportedDevices(['Ascend910B'])
