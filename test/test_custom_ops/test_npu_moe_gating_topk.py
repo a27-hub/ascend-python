@@ -5,6 +5,7 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
+
 class TestNpuMoeGatingTopK(TestCase):
     def moe_gating_top_k_numpy(self, x: torch.tensor, k: int, *, bias: torch.tensor = None, k_group: int = 1, group_count: int = 1,
                             group_select_mode: int = 0, renorm: int = 0, norm_type: int = 0, out_flag: bool = False,
@@ -51,7 +52,6 @@ class TestNpuMoeGatingTopK(TestCase):
             out = None
 
         y = torch.tensor(y, dtype = dtype)
-
         return y, indices.astype(numpy.int32), out
 
     @SupportedDevices(['Ascend910B'])
@@ -98,7 +98,7 @@ class TestNpuMoeGatingTopK(TestCase):
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
 
-        self.assertRtolEqual(y,y_npu.cpu())
+        self.assertRtolEqual(y, y_npu.cpu())
         self.assertRtolEqual(expert_idx, expert_idx_npu.cpu().numpy())
 
     @SupportedDevices(['Ascend910B'])
@@ -153,8 +153,8 @@ class TestNpuMoeGatingTopK(TestCase):
         x = numpy.random.uniform(-2, 2, (128, 256)).astype(numpy.float32)
         bias = numpy.random.uniform(-2, 2, (256,)).astype(numpy.float32)
 
-        x_tensor = torch.tensor(x,dtype=torch.bfloat16)
-        bias_tensor = torch.tensor(bias,dtype=torch.bfloat16)
+        x_tensor = torch.tensor(x, dtype=torch.bfloat16)
+        bias_tensor = torch.tensor(bias, dtype=torch.bfloat16)
 
         k = 16
         k_group = 4
@@ -192,7 +192,7 @@ class TestNpuMoeGatingTopK(TestCase):
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
 
-        self.assertRtolEqual(y,y_npu.cpu())
+        self.assertRtolEqual(y, y_npu.cpu())
         self.assertRtolEqual(expert_idx, expert_idx_npu.cpu().numpy())
 
 if __name__ == "__main__":
