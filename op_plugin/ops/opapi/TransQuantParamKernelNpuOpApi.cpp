@@ -30,9 +30,12 @@ at::Tensor npu_trans_quant_param(const at::Tensor &scale, const c10::optional<at
         output_size = op_infer::array_to_small_vector((scale.size(0) > offset_real.size(0)) ?
                                                        scale.sizes() : offset_real.sizes());
     }
+    int64_t round_mode_value = round_mode.value_or(0);
+    TORCH_CHECK(round_mode_value == 0 || round_mode_value == 1, "round_mode must be 0 or 1. but now is ",
+                round_mode_value);
     c10::TensorOptions options = scale.options().dtype(at::kLong);
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
-    EXEC_NPU_CMD(aclnnTransQuantParamV3, scale, offset_real, round_mode, result);
+    EXEC_NPU_CMD(aclnnTransQuantParamV3, scale, offset_real, round_mode_value, result);
     return result;
 }
 }
