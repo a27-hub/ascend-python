@@ -48,6 +48,21 @@ class TestNpuInterleaveRope(TestCase):
         # compare
         self.assertRtolEqual(out_cpu, out_npu.cpu())
 
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_interleave_rope_2(self, device="npu"):
+        x = torch.randn(32, 32, 1, 64, dtype = torch.bfloat16)
+        cos = torch.randn(32, 1, 1, 64, dtype = torch.bfloat16)
+        sin = torch.randn(32, 1, 1, 64, dtype = torch.bfloat16)
+
+        # benchmark
+        out_cpu = self.interleave_rope_numpy(x, cos, sin)
+
+        # test
+        out_npu = torch_npu.npu_interleave_rope(x.npu(), cos.npu(), sin.npu())
+
+        # compare
+        self.assertRtolEqual(out_cpu, out_npu.cpu())
+
 
 if __name__ == "__main__":
     run_tests()
