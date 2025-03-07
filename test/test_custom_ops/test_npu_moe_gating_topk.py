@@ -5,8 +5,6 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
-
-
 class TestNpuMoeGatingTopK(TestCase):
     def moe_gating_top_k_numpy(self, x: torch.tensor, k: int, *, bias: torch.tensor = None, k_group: int = 1, group_count: int = 1,
                             group_select_mode: int = 0, renorm: int = 0, norm_type: int = 0, out_flag: bool = False,
@@ -35,9 +33,9 @@ class TestNpuMoeGatingTopK(TestCase):
                 group_x = numpy.partition(x, -2, axis=-1)[..., -2:].sum(axis=-1)
         indices = numpy.argsort(-group_x, axis=-1, kind='stable')[:, :k_group]  # Indices of top-k_group
 
-        mask = numpy.ones((x.shape[0], group_count), dtype=bool)  # 创建全 1 的掩码
-        mask[numpy.arange(x.shape[0])[:, None], indices] = False  # 在指定索引处设置为 False
-        x = numpy.where(mask[..., None], float('-inf'), x)  # 用 -inf 填充掩码为 True 的位置
+        mask = numpy.ones((x.shape[0], group_count), dtype=bool)  # Create a mask with all 1
+        mask[numpy.arange(x.shape[0])[:, None], indices] = False  # Set to false at the indices
+        x = numpy.where(mask[..., None], float('-inf'), x)  # Fill with -inf when mask value is true
         x = x.reshape(x.shape[0], -1)
 
         indices = numpy.argsort(-x, axis=-1, kind='stable')
@@ -58,14 +56,11 @@ class TestNpuMoeGatingTopK(TestCase):
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_gating_topk_1(self, device="npu"):
-        print("************************** test_npu_moe_gating_topk_1 begin **************************\n")
         x = numpy.random.uniform(-2, 2, (8, 256)).astype(numpy.float32)
         bias = numpy.random.uniform(-2, 2, (256,)).astype(numpy.float32)
 
         x_tensor = torch.tensor(x, dtype=torch.float32)
         bias_tensor = torch.tensor(bias, dtype=torch.float32)
-        # bias = None
-        # bias_tensor = None
 
         k = 6
         k_group = 4
@@ -77,7 +72,6 @@ class TestNpuMoeGatingTopK(TestCase):
         routed_scaling_factor = 1.0
         eps = 1e-20
 
-        #标杆
         y, expert_idx, out = self.moe_gating_top_k_numpy(
             x_tensor,
             k,
@@ -90,14 +84,7 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** golden begin**************************\n")
-        print("y is: \n", y)
-        print("expert_idx is: \n", expert_idx)
-        # print("out is: \n", out)
-        print("************************** golden end **************************\n\n\n")
 
-
-        #测试算子
         y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(
             x_tensor.npu(),
             k,
@@ -110,27 +97,17 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** totest begin **************************\n")
-        print("y_npu is: \n", y_npu.cpu())
-        print("expert_idx_npu is: \n", expert_idx_npu.cpu().numpy())
-        # print("out_npu is: \n", out_npu.cpu().numpy())
-        print("************************** totest end **************************\n\n\n")
 
-        #预期值比较
         self.assertRtolEqual(y,y_npu.cpu())
         self.assertRtolEqual(expert_idx, expert_idx_npu.cpu().numpy())
-        # self.assertRtolEqual(out, out_npu.cpu().numpy())
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_gating_topk_2(self, device="npu"):
-        print("************************** test_npu_moe_gating_topk_2 begin **************************\n")
         x = numpy.random.uniform(-2, 2, (1002, 256)).astype(numpy.float32)
         bias = numpy.random.uniform(-2, 2, (256,)).astype(numpy.float32)
 
         x_tensor = torch.tensor(x, dtype=torch.float16)
         bias_tensor = torch.tensor(bias, dtype=torch.float16)
-        # bias = None
-        # bias_tensor = None
 
         k = 1
         k_group = 4
@@ -142,7 +119,6 @@ class TestNpuMoeGatingTopK(TestCase):
         routed_scaling_factor = 1.0
         eps = 1e-20
 
-        #标杆
         y, expert_idx, out = self.moe_gating_top_k_numpy(
             x_tensor,
             k,
@@ -155,14 +131,7 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** golden begin**************************\n")
-        print("y is: \n", y)
-        print("expert_idx is: \n", expert_idx)
-        # print("out is: \n", out)
-        print("************************** golden end **************************\n\n\n")
 
-
-        #测试算子
         y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(
             x_tensor.npu(),
             k,
@@ -175,27 +144,17 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** totest begin **************************\n")
-        print("y_npu is: \n", y_npu.cpu())
-        print("expert_idx_npu is: \n", expert_idx_npu.cpu().numpy())
-        # print("out_npu is: \n", out_npu.cpu().numpy())
-        print("************************** totest end **************************\n\n\n")
 
-        #预期值比较
         self.assertRtolEqual(y, y_npu.cpu())
         self.assertRtolEqual(expert_idx, expert_idx_npu.cpu().numpy())
-        # self.assertRtolEqual(out, out_npu.cpu().numpy())
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_gating_topk_3(self, device="npu"):
-        print("************************** test_npu_moe_gating_topk_3 begin **************************\n")
         x = numpy.random.uniform(-2, 2, (128, 256)).astype(numpy.float32)
         bias = numpy.random.uniform(-2, 2, (256,)).astype(numpy.float32)
 
         x_tensor = torch.tensor(x,dtype=torch.bfloat16)
         bias_tensor = torch.tensor(bias,dtype=torch.bfloat16)
-        # bias = None
-        # bias_tensor = None
 
         k = 16
         k_group = 4
@@ -207,7 +166,6 @@ class TestNpuMoeGatingTopK(TestCase):
         routed_scaling_factor = 1.0
         eps = 1e-20
 
-        #标杆
         y, expert_idx, out = self.moe_gating_top_k_numpy(
             x_tensor,
             k,
@@ -220,14 +178,7 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** golden begin**************************\n")
-        print("y is: \n", y)
-        print("expert_idx is: \n", expert_idx)
-        # print("out is: \n", out)
-        print("************************** golden end **************************\n\n\n")
 
-
-        #测试算子
         y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(
             x_tensor.npu(),
             k,
@@ -240,16 +191,9 @@ class TestNpuMoeGatingTopK(TestCase):
             out_flag=out_flag,
             routed_scaling_factor=routed_scaling_factor,
             eps=eps)
-        print("************************** totest begin **************************\n")
-        print("y_npu is: \n", y_npu.cpu())
-        print("expert_idx_npu is: \n", expert_idx_npu.cpu().numpy())
-        # print("out_npu is: \n", out_npu.cpu().numpy())
-        print("************************** totest end **************************\n\n\n")
 
-        #预期值比较
         self.assertRtolEqual(y,y_npu.cpu())
         self.assertRtolEqual(expert_idx, expert_idx_npu.cpu().numpy())
-        # self.assertRtolEqual(out, out_npu.cpu().numpy())
 
 if __name__ == "__main__":
     run_tests()
