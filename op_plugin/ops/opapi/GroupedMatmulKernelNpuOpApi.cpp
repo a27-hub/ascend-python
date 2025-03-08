@@ -82,6 +82,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                            const at::TensorList antiquant_offset,
                                            c10::optional<at::IntArrayRef> group_list,
                                            c10::optional<int64_t> split_item,
+                                           c10::optional<at::IntArrayRef> tuning_config,
                                            c10::optional<at::ScalarType> output_dtype)
 {
     auto num_x = x.size();
@@ -150,6 +151,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                            const at::TensorList antiquant_offset,
                                            at::OptionalIntArrayRef group_list,
                                            c10::optional<int64_t> split_item,
+                                           c10::OptionalIntArrayRef tuning_config,
                                            c10::optional<at::ScalarType> output_dtype)
 {
     auto num_x = x.size();
