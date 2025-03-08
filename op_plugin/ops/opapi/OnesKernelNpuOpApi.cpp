@@ -29,18 +29,17 @@ at::Tensor& ones_out(at::IntArrayRef size, at::Tensor& result) {
 }
 
 at::Tensor ones(at::IntArrayRef size,
-                c10::optional<at::ScalarType> dtype_opt,
-                c10::optional<at::Layout> layout_opt,
-                c10::optional<at::Device> device_opt,
-                c10::optional<bool> pin_memory_opt) {
-  DO_COMPATIBILITY(aclnnInplaceOne, acl_op::ones(size, dtype_opt, layout_opt,
-                                                 device_opt, pin_memory_opt));
-  auto device = device_or_default(device_opt);
+                c10::optional<at::ScalarType> dtype,
+                c10::optional<at::Layout> layout,
+                c10::optional<at::Device> device,
+                c10::optional<bool> pin_memory) {
+  DO_COMPATIBILITY(aclnnInplaceOne, acl_op::ones(size, dtype, layout, device, pin_memory));
+  auto device = device_or_default(device);
   at::TensorOptions option;
-  option = option.dtype(dtype_opt)
-                 .layout(layout_opt)
+  option = option.dtype(dtype)
+                 .layout(layout)
                  .device(device)
-                .pinned_memory(pin_memory_opt);
+                .pinned_memory(pin_memory);
   at::Tensor result = npu_preparation::apply_tensor_without_format(size, option);
   EXEC_NPU_CMD(aclnnInplaceOne, result);
   return result;
@@ -48,18 +47,17 @@ at::Tensor ones(at::IntArrayRef size,
 
 at::Tensor ones(at::IntArrayRef size,
                 c10::optional<at::DimnameList> names,
-                c10::optional<at::ScalarType> dtype_opt,
-                c10::optional<at::Layout> layout_opt,
-                c10::optional<at::Device> device_opt,
-                c10::optional<bool> pin_memory_opt) {
-    DO_COMPATIBILITY(aclnnInplaceOne, acl_op::ones(size, names, dtype_opt, layout_opt,
-                                                   device_opt, pin_memory_opt));
-    auto device =  device_or_default(device_opt);
+                c10::optional<at::ScalarType> dtype,
+                c10::optional<at::Layout> layout,
+                c10::optional<at::Device> device,
+                c10::optional<bool> pin_memory) {
+    DO_COMPATIBILITY(aclnnInplaceOne, acl_op::ones(size, names, dtype, layout, device, pin_memory));
+    auto device =  device_or_default(device);
     at::TensorOptions option;
-    option = option.dtype(dtype_opt)
-                    .layout(layout_opt)
+    option = option.dtype(dtype)
+                    .layout(layout)
                     .device(device)
-                    .pinned_memory(pin_memory_opt);
+                    .pinned_memory(pin_memory);
     at::Tensor result = npu_preparation::apply_tensor_without_format(size, option);
     EXEC_NPU_CMD(aclnnInplaceOne, result);
     auto maybe_name = names.value_or(at::ArrayRef<at::Dimname>{});

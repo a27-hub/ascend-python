@@ -97,14 +97,14 @@ tensor_list3 layer_norm_backward_npu_support(const at::Tensor &d_y, const at::Te
 }
 } // namespace
 
-tensor_list3 native_layer_norm_backward(const at::Tensor &d_y, const at::Tensor &X, at::IntArrayRef normalized_shape,
-                                        const at::Tensor &mean, const at::Tensor &variance,
-                                        const c10::optional<at::Tensor> &gamma, const c10::optional<at::Tensor> &beta,
+tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Tensor &input, at::IntArrayRef normalized_shape,
+                                        const at::Tensor &mean, const at::Tensor &rstd,
+                                        const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias,
                                         std::array<bool, 3> output_mask)
 {
     const int normalized_ndim = static_cast<int>(normalized_shape.size());
-    const auto input_shape = X.sizes();
-    const auto input_ndim = X.dim();
+    const auto input_shape = input.sizes();
+    const auto input_ndim = input.dim();
 
     TORCH_CHECK(
         (input_ndim >= normalized_ndim && input_shape.slice(input_ndim - normalized_ndim).equals(normalized_shape)),
@@ -116,14 +116,14 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &d_y, const at::Tensor 
     const int64_t M =
         std::accumulate(input_shape.cbegin(), input_shape.cbegin() + axis, 1LL, std::multiplies<int64_t>());
     const int64_t N = std::accumulate(input_shape.cbegin() + axis, input_shape.cend(), 1LL, std::multiplies<int64_t>());
-    return layer_norm_backward_npu_support(d_y, X, mean, variance, gamma, M, N, output_mask);
+    return layer_norm_backward_npu_support(grad_out, input, mean, rstd, weight, M, N, output_mask);
 }
 
-tensor_list3 npu_layernorm_grad(const at::Tensor &d_y, const at::Tensor &X, at::IntArrayRef normalized_shape,
-                                const at::Tensor &mean, const at::Tensor &variance,
-                                const c10::optional<at::Tensor> &gamma, const c10::optional<at::Tensor> &beta)
+tensor_list3 npu_layernorm_grad(const at::Tensor &grad_out, const at::Tensor &input, at::IntArrayRef normalized_shape,
+                                const at::Tensor &mean, const at::Tensor &rstd,
+                                const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &bias)
 {
     std::array<bool, 3> output_mask = {true, true, true};
-    return acl_op::native_layer_norm_backward(d_y, X, normalized_shape, mean, variance, gamma, beta, output_mask);
+    return acl_op::native_layer_norm_backward(grad_out, input, normalized_shape, mean, rstd, weight, bias, output_mask);
 }
 } // namespace acl_op
