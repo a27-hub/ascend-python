@@ -76,99 +76,99 @@ void _split_and_exec_npu_cmd_pow_scalarlist(at::TensorList &tensors1, at::ArrayR
     }
 }
 
-std::vector<at::Tensor> _foreach_pow(at::TensorList tensors1, at::TensorList tensors2)
+std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::TensorList exponent)
 {
-    DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow(tensors1, tensors2));
+    DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
-        return at::native::foreach_tensor_pow_list_kernel_slow(tensors1, tensors2);
+        return at::native::foreach_tensor_pow_list_kernel_slow(self, exponent);
     }
 
-    at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
-        return at::native::foreach_tensor_pow_list_kernel_slow(tensors1, tensors2);
+    at::native::check_foreach_api_restrictions(self, exponent);
+    if (!at::native::can_use_fast_route(self, exponent, true)) {
+        return at::native::foreach_tensor_pow_list_kernel_slow(self, exponent);
     }
 
     // construct the output tensorlist of the NPU
-    auto scalar_type = tensors1[0].scalar_type();
+    auto scalar_type = self[0].scalar_type();
     std::vector<at::Tensor> result;
-    for (const at::Tensor &tensor : tensors1) {
+    for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
         result.push_back(npu_preparation::apply_tensor_without_format(output_size,
                                                                       tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
 
-    _split_and_exec_npu_cmd_pow(tensors1, tensors2, result_, false);
+    _split_and_exec_npu_cmd_pow(self, exponent, result_, false);
 
     return result;
 }
 
-void _foreach_pow_(at::TensorList tensors1, at::TensorList tensors2)
+void _foreach_pow_(at::TensorList self, at::TensorList exponent)
 {
-    DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow_(tensors1, tensors2));
+    DO_COMPATIBILITY(aclnnForeachPowList, at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
-        return at::native::foreach_tensor_pow_list_kernel_slow_(tensors1, tensors2);
+        return at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent);
     }
 
-    at::native::check_foreach_api_restrictions(tensors1, tensors2);
-    if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
-        return at::native::foreach_tensor_pow_list_kernel_slow_(tensors1, tensors2);
+    at::native::check_foreach_api_restrictions(self, exponent);
+    if (!at::native::can_use_fast_route(self, exponent, true)) {
+        return at::native::foreach_tensor_pow_list_kernel_slow_(self, exponent);
     }
 
-    _split_and_exec_npu_cmd_pow(tensors1, tensors2, tensors1, true);
+    _split_and_exec_npu_cmd_pow(self, exponent, self, true);
     return;
 }
 
-std::vector<at::Tensor> _foreach_pow(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
+std::vector<at::Tensor> _foreach_pow(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
 {
-    DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow(tensors, scalars));
+    DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
-        return at::native::foreach_tensor_pow_scalarlist_kernel_slow(tensors, scalars);
+        return at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, exponent);
     }
 
-    at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, true)) {
-        return at::native::foreach_tensor_pow_scalarlist_kernel_slow(tensors, scalars);
+    at::native::check_foreach_api_restrictions(self, exponent);
+    if (!at::native::can_use_fast_route(self, exponent, true)) {
+        return at::native::foreach_tensor_pow_scalarlist_kernel_slow(self, scaexponentlars);
     }
 
-    auto scalar_type = tensors[0].scalar_type();
+    auto scalar_type = self[0].scalar_type();
     std::vector<at::Tensor> result;
-    for (const at::Tensor &tensor : tensors) {
+    for (const at::Tensor &tensor : self) {
         auto output_size = op_infer::input_same_output_size(tensor);
         result.push_back(npu_preparation::apply_tensor_without_format(output_size,
                                                                       tensor.options().dtype(scalar_type)));
     }
     at::TensorList result_ = at::TensorList(result);
-    _split_and_exec_npu_cmd_pow_scalarlist(tensors, scalars, result_, false);
+    _split_and_exec_npu_cmd_pow_scalarlist(self, exponent, result_, false);
     return result;
 }
 
-void _foreach_pow_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
+void _foreach_pow_(at::TensorList self, at::ArrayRef<at::Scalar> exponent)
 {
-    DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow_(tensors, scalars));
+    DO_COMPATIBILITY(aclnnForeachPowScalarList, at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent));
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out) {
-        return at::native::foreach_tensor_pow_scalarlist_kernel_slow_(tensors, scalars);
+        return at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent);
     }
 
-    at::native::check_foreach_api_restrictions(tensors, scalars);
-    if (!at::native::can_use_fast_route(tensors, scalars, true)) {
-        at::native::foreach_tensor_pow_scalarlist_kernel_slow_(tensors, scalars);
+    at::native::check_foreach_api_restrictions(self, exponent);
+    if (!at::native::can_use_fast_route(self, exponent, true)) {
+        at::native::foreach_tensor_pow_scalarlist_kernel_slow_(self, exponent);
         return;
     }
 
-    _split_and_exec_npu_cmd_pow_scalarlist(tensors, scalars, tensors, true);
+    _split_and_exec_npu_cmd_pow_scalarlist(self, exponent, self, true);
 }
 #endif
 

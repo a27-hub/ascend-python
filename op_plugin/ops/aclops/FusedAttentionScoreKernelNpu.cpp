@@ -25,8 +25,7 @@ using npu_compile_type = at_npu::native::CompileType;
 
 namespace {
 std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> fused_attention_score_infer_shape(
-    const at::Tensor& query_layer,
-    const at::Tensor& attention_mask) {
+    const at::Tensor& query_layer) {
   c10::SmallVector<int64_t, SIZE> attention_score_output_shape = {
       query_layer.size(0) * query_layer.size(2), query_layer.size(1) * query_layer.size(3)};
   c10::SmallVector<int64_t, SIZE> softmax_output_shape = {
@@ -78,7 +77,7 @@ std::tuple<at::Tensor&, at::Tensor&> npu_fused_attention_score_nocheck(
       .Input(drop_mask)
       .Output(attention_score)
       .Output(softmax_output)
-      .Attr("keep_prob", (float)keep_prob)
+      .Attr("keep_prob", static_cast<float>(keep_prob))
       .Attr("query_transpose", query_transpose)
       .Attr("key_transpose", key_transpose)
       .Attr("bmm_score_transpose_a", bmm_score_transpose_a)
@@ -119,7 +118,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_fused_attention_score_backwar
       .Output(value_dw)
       .Output(query_dx)
       .Output(key_dw)
-      .Attr("keep_prob", (float)keep_prob)
+      .Attr("keep_prob", static_cast<float>(keep_prob))
       .Attr("query_transpose", query_transpose)
       .Attr("key_transpose", key_transpose)
       .Attr("value_transpose", value_transpose)
@@ -168,7 +167,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_fused_attention_score_fwd(
     bool bmm_score_transpose_b,
     bool value_transpose,
     bool dx_transpose) {
-  auto output_sizes = fused_attention_score_infer_shape(query_layer, attention_mask);
+  auto output_sizes = fused_attention_score_infer_shape(query_layer);
   at::Tensor attention_score = npu_preparation::apply_tensor(query_layer, std::get<0>(output_sizes));
   at::Tensor softmax_output = npu_preparation::apply_tensor(query_layer, std::get<1>(output_sizes));
   at::Tensor drop_mask;
@@ -216,7 +215,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_fused_attention_score_grad(
         .Output(value_dw)
         .Output(query_dx)
         .Output(key_dw)
-        .Attr("keep_prob", (float)keep_prob)
+        .Attr("keep_prob", static_cast<float>(keep_prob))
         .Attr("query_transpose", query_transpose)
         .Attr("key_transpose", key_transpose)
         .Attr("value_transpose", value_transpose)
