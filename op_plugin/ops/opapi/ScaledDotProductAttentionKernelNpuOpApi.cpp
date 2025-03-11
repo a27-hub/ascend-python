@@ -122,8 +122,8 @@ at::Tensor scaled_dot_product_attention(
 {
     validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale);
     if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
-        ((attn_mask.has_value() && attn_mask->dtype() == at::kBool) || !attn_mask.has_value()) &&
-        query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
+        ((attn_mask.has_value() && attn_mask->dtype() == at::kBool && (attn_mask->dim() == 2 || attn_mask->dim() == 4)) ||
+        !attn_mask.has_value()) && query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
         query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) > 0 &&
         c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
