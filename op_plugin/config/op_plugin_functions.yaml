@@ -7357,6 +7357,10 @@ custom:
     gen_opapi:
       exec: aclnnAdvanceStep
 
+  - func: npu_set_freq(Tensor freq) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
 symint:
   - func: embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False) -> Tensor
     acl_op: [v2.0, newest]
