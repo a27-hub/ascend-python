@@ -31,18 +31,6 @@ at::Tensor& double_custom_out_nocheck(at::Tensor& result, const at::Tensor& self
 }
 }
 
-at::Tensor& double_custom_out(const at::Tensor& self, at::Tensor& result) {
-  npu_preparation::CheckOut({self}, result, self);
-  if (!npu_utils::check_match(&result)) {
-    at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-    double_custom_out_nocheck(contiguous_result, self);
-    npu_utils::format_fresh_view(result, contiguous_result);
-  } else {
-    double_custom_out_nocheck(result, self);
-  }
-  return result;
-}
-
 at::Tensor double_custom(const at::Tensor& self) {
   auto output_size = op_infer::infershape_for_elewise(self);
   at::Tensor result = npu_preparation::apply_tensor(self, output_size);
