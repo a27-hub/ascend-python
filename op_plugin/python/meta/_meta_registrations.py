@@ -1234,3 +1234,6 @@ def npu_dequant_bias_meta(x, weight_scale, activation_scale, bias, output_dtype=
         raise RuntimeError("Only supported output_dtype is float16 and bfloat16" + ops_error(ErrCode.NOT_SUPPORT))
     return torch.empty_like(x, dtype=output_dtype)
 
+@impl(m, "double_custom")
+def double_custom_meta(x):
+    return torch.empty_like(x, dtype=x.dtype)
