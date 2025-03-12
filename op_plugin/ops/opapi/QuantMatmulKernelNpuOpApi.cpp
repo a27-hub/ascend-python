@@ -92,8 +92,8 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
                     OPS_ERROR(ErrCode::PARAM));
     }
 
-    bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
-    bool is_a8w4 = x1.dtype() != at::kInt && x2.dtype() == at::kInt;
+    bool is_a4w4 = (x1.dtype() == at::kInt) && (x2.dtype() == at::kInt);
+    bool is_a8w4 = (x1.dtype() == at::kChar) && (x2.dtype() == at::kInt);
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();

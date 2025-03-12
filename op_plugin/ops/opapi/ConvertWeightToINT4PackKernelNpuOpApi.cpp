@@ -120,7 +120,7 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
 
     if (is_weight_nz) {
         trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
-        // Convert last two dimensions to 4 dimensions for NZ format
+        // Convert last 2 dimensions to 4 dimensions for NZ format
         weight_int4pack_shape.resize(weight_dim_num + 2);
         std::copy(weight_cpu.sizes().begin(), weight_cpu.sizes().end() - 2, weight_int4pack_shape.begin());
         weight_int4pack_shape[weight_dim_num - 2] = op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32);
