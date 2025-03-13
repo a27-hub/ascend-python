@@ -94,23 +94,7 @@ std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachAddScalarV2, _foreach_add_v1(self, scalar));
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, false)) {
-        return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
-    }
-    auto scalar_type = self[0].scalar_type();
-
-    std::vector<at::Tensor> result;
-    result.reserve(self.size());
-    for (const at::Tensor &tensor : self) {
-        auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
-    }
-    at::TensorList result_ = at::TensorList(result);
-    _split_and_exec_npu_cmd_add_scalar(self, scalar, result_, false);
-
-    return result;
+    return _foreach_add_v1(self, scalar);
 }
 
 void _foreach_add_(const at::TensorList self, const at::Scalar& scalar)
@@ -121,12 +105,6 @@ void _foreach_add_(const at::TensorList self, const at::Scalar& scalar)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachAddScalarV2, _foreach_add_v1_(self, scalar));
-    at::native::check_foreach_api_restrictions(self);
-    if (!at::native::can_use_fast_route(self, scalar, false)) {
-        return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
-    }
-
-    _split_and_exec_npu_cmd_add_scalar(self, scalar, self, true);
+    _foreach_add_v1_(self, scalar);
 }
 }

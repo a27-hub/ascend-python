@@ -115,24 +115,8 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensors1, tensors2, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachAddcdivScalarV2, _foreach_addcdiv_v1(input, tensors1, tensors2, scalar));
-    at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
-        at::native::has_integral_tensor(input, true)) {
-        return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensors1, tensors2, scalar);
-    }
-    auto scalar_type = input[0].scalar_type();
 
-    std::vector<at::Tensor> result;
-    result.reserve(input.size());
-    for (const at::Tensor &tensor : input) {
-        auto output_size = op_infer::input_same_output_size(tensor);
-        result.push_back(npu_preparation::apply_tensor_without_format(output_size, tensor.options().dtype(scalar_type)));
-    }
-    at::TensorList result_ = at::TensorList(result);
-    _split_and_exec_npu_cmd_addcdiv_scalar(input, tensors1, tensors2, scalar, result_, false);
-
-    return result;
+    return _foreach_addcdiv_v1(input, tensors1, tensors2, scalar);
 }
 
 void _foreach_addcdiv_(const at::TensorList input,
@@ -146,13 +130,6 @@ void _foreach_addcdiv_(const at::TensorList input,
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcdiv_scalar_slow_(input, tensors1, tensors2, scalar);
     }
-    DO_COMPATIBILITY(aclnnForeachAddcdivScalarV2, _foreach_addcdiv_v1_(input, tensors1, tensors2, scalar));
-    at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
-    if (!at::native::can_use_fast_route({input, tensors1, tensors2}, scalar) ||
-        at::native::has_integral_tensor(input, true)) {
-        return at::native::foreach_tensor_addcdiv_scalar_slow_(input, tensors1, tensors2, scalar);
-    }
-
-    _split_and_exec_npu_cmd_addcdiv_scalar(input, tensors1, tensors2, scalar, input, true);
+    _foreach_addcdiv_v1_(input, tensors1, tensors2, scalar);
 }
 }
