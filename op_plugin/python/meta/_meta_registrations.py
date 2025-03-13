@@ -36,9 +36,9 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
 
 
 @impl(m, "npu_mla_prolog")
-def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, 
-                   rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_cq=None, 
-                   dequant_scale_qc_qr=None, dequant_scale_ckv_kr=None, quant_scale_cq=None, 
+def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
+                   rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_cq=None,
+                   dequant_scale_qc_qr=None, dequant_scale_ckv_kr=None, quant_scale_cq=None,
                    rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, cache_mode="BNSD"):
     query_shape = []
     query_shape.append(token_x.size(0))
@@ -514,7 +514,7 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
-                            antiquant_offset=None, per_token_scale=None, group_list=None, 
+                            antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
                             split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None):
     y = []
@@ -731,7 +731,7 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
                 output_dtype == torch.bfloat16,
                 lambda: "When bias dtype is float32 and pertoken not given, output_dtype must be bfloat16, but it is " +
                         str(output_dtype) + ops_error(ErrCode.TYPE),
-            )   
+            )
 
 
 def quant_matmul_dtype_check(*args):
@@ -859,13 +859,37 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     else:
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
 
+@impl(m, "npu_transpose_batchmatmul")
+def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None, perm_x1=[0,1,2], perm_x2=[0,1,2], perm_y=[0,1,2]):
+    torch._check(
+        input_.dim() == 3 and  weight.dim() == 3,
+        lambda:"input_dim_num need to be 3" + ops_error(ErrCode.TYPE),
+    )
+    M = input_.size(0)
+    batchM = input_.size(1)
+    Ka = input_.size(2)
+    batchN = weight.size(0)
+    Kb = weight.size(1)
+    N = weight.size(2)
+    torch._check(
+        (batchM == batchN and Ka == Kb),
+        lambda:"batchM need to be equeal batchM" + ops_error(ErrCode.TYPE),
+    )
+    if scale is None:
+        return input_.new_empty((M, batchM, N), dtype=torch.float16)
+    else:
+        return input_.new_empty((M, batchM, N), dtype=torch.int8)
 
 @impl(m, "npu_trans_quant_param")
-def npu_trans_quant_param_meta(scale, offset=None):
+def npu_trans_quant_param_meta(scale, offset=None, round_mode=0):
     scale_dim_num = scale.dim()
     torch._check(
         scale_dim_num == 1 or (scale_dim_num == 2 and scale.size(0) == 1),
         lambda: "the scale shape support only (1, ) and (1, n)" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        round_mode == 0 or round_mode == 1,
+        lambda: "round_mode should be 0 or 1, but round_mode is " + int(round_mode) + ops_error(ErrCode.VALUE),
     )
     output_shape = scale.size()
     if scale_dim_num == 1:
@@ -993,6 +1017,28 @@ def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1):
     return (torch.empty_like(query, dtype=query.dtype), torch.empty_like(key, dtype=key.dtype))
 
 
+@impl(m, "npu_kv_rmsnorm_rope_cache")
+def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
+                                   c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, epsilon=1e-5,
+                                   cache_mode='Norm', is_output_kv=False):
+    if kv.dim() != 4:
+        raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
+    if gamma.dim() != 1:
+        raise RuntimeError("1D tensor expected for input gamma" + ops_error(ErrCode.PARAM))
+    if cos.dim() != 4:
+        raise RuntimeError("4D tensor expected for input cos" + ops_error(ErrCode.PARAM))
+    k_rope_size = []
+    c_kv_size = []
+    for i in range(kv.dim() - 1):
+        k_rope_size.append(kv.size(i))
+        c_kv_size.append(kv.size(i))
+    k_rope_size.append(cos.size(3))
+    c_kv_size.append(gamma.size(0))
+    return (torch.empty_like(k_cache), torch.empty_like(ckv_cache),
+            torch.empty(k_rope_size, dtype=k_cache.dtype, device=k_cache.device),
+            torch.empty(c_kv_size, dtype=ckv_cache.dtype, device=ckv_cache.device))
+
+
 @impl(m, "npu_quant_conv2d")
 def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
                      groups=1, offset_x=0, round_mode='rint', output_dtype=None, bias=None, offset=None):
@@ -1065,7 +1111,6 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             lambda: "bias shape should equal to cout, but now bias shape is " + str(bias_shape[0]) + ", and cout is " +
                     str(weight_shape[0]) + ops_error(ErrCode.VALUE),
         )
-
     def check_attrs():
         pads_dim = len(pads)
         strides_dim = len(strides)
@@ -1157,6 +1202,27 @@ def npu_prefetch_meta(self, dependency, max_size, offset=0):
     )
 
 
+@impl(m, "npu_moe_gating_top_k")
+def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20):
+    x_dim = x.dim()
+    torch._check(
+        x_dim == 2,
+        lambda: "the x shape support only 2d)" + ops_error(ErrCode.VALUE),
+    )
+    if bias is not None:
+        bias_dim = bias.dim()
+        torch._check(
+            bias_dim == 1,
+            lambda: "the bias shape support only 1d)" + ops_error(ErrCode.VALUE),
+        )
+    y_dim_list = [x.size(0), k]
+    expert_idx_dim_list = [x.size(0), k]
+    y2_dim_list = [x.size(0), x.size(1)]
+    return (x.new_empty(tuple(y_dim_list), dtype=x.dtype),
+            x.new_empty(tuple(expert_idx_dim_list), dtype=torch.int32),
+            x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
+
+
 @impl(m, "npu_swiglu")
 def npu_swiglu_meta(x, dim=-1):
     output_size = []
@@ -1210,8 +1276,8 @@ def rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=False):
 
 @impl(m, "npu_dequant_rope_quant_kvcache")
 def npu_dequant_rope_quant_kvcache_meta(x, cos, sin, k_cache, v_cache, indices, scale_k, scale_v, size_splits, *,
-                                        offset_k=None, offset_v=None, weight_scale=None, activation_scale=None, 
-                                        bias=None, quant_mode=0, input_layout="BSND", kv_output=False, 
+                                        offset_k=None, offset_v=None, weight_scale=None, activation_scale=None,
+                                        bias=None, quant_mode=0, input_layout="BSND", kv_output=False,
                                         cache_mode="contiguous"):
     torch._check(
         x.dtype == torch.int32,
@@ -1225,6 +1291,17 @@ def npu_rope_quant_kvcache_meta(x, cos, sin, k_cache, v_cache, indices, scale_k,
                                 offset_v=None, quant_mode=0, input_layout="BSND", kv_output=False, cache_mode="contiguous"):
     return rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=kv_output)
 
+@impl(m, "npu_dequant_swiglu_quant")
+def npu_dequant_swiglu_quant_meta(x, weight_scale, activation_scale, bias, quant_scale,
+                                  quant_offset, group_index, activate_left=False, quant_mode=0):
+    y_size = []
+    scale_size = []
+    for i in range(x.dim() - 1):
+        y_size.append(x.size(i))
+        scale_size.append(x.size(i))
+    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
+    return (torch.empty(y_size, dtype=torch.int8, device=x.device),
+            torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
 @impl(m, "npu_dequant_bias")
 def npu_dequant_bias_meta(x, weight_scale, activation_scale, bias, output_dtype=None):
@@ -1234,3 +1311,6 @@ def npu_dequant_bias_meta(x, weight_scale, activation_scale, bias, output_dtype=
         raise RuntimeError("Only supported output_dtype is float16 and bfloat16" + ops_error(ErrCode.NOT_SUPPORT))
     return torch.empty_like(x, dtype=output_dtype)
 
+@impl(m, "npu_interleave_rope")
+def npu_interleave_rope_meta(x, cos, sin):
+    return torch.empty_like(x)
