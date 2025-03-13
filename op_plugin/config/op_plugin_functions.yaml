@@ -6365,6 +6365,16 @@ custom:
   - func: _amp_foreach_non_finite_check(Tensor[] scaled_grads) -> bool
     acl_op: all_version
 
+  - func: double_custom(Tensor self) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+        name: self
+      exec: aclnnDoubleCustom, self, out
+
   - func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor
     op_api: [v2.1, newest]
 
