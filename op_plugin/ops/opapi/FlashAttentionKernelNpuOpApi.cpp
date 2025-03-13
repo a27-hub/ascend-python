@@ -95,16 +95,7 @@ at::Tensor dropout_gen_mask_impl(const at::Tensor &query, double keep_prob, int6
     at::Tensor mask = OpPreparation::apply_tensor_without_format(at::IntArrayRef{length}, options.dtype(at::kByte));
     c10::SmallVector<int64_t, SIZE> shapeSize = {numels};
     at::IntArrayRef shapeArray = at::IntArrayRef(shapeSize);
-    double prob;
-    at::Scalar probScalar;
-    if (query.scalar_type() == at::kHalf) {
-        probScalar = at::Scalar(at::Half(1.0)- at::Half(keep_prob));
-    } else if (query.scalar_type() == at::kBFloat16) {
-        probScalar = at::Scalar(at::BFloat16(1.0)- at::BFloat16(keep_prob));
-    } else {
-        probScalar = at::Scalar(float(1.0)- float(keep_prob));
-    }
-    prob = probScalar.toDouble();
+    double prob = double(1.0) - keep_prob;
     aclDataType probDataType = at_npu::native::OpPreparation::convert_to_acl_data_type(query.scalar_type());
     DO_COMPATIBILITY(aclnnDropoutGenMaskV2, stateless_dropout_gen_mask_aclop(query, keep_prob, seed, offset, numels, mask));
     EXEC_NPU_CMD(aclnnDropoutGenMaskV2, shapeArray, prob, seed, offset, probDataType, mask);
