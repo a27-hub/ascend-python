@@ -993,6 +993,13 @@ def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1):
     return (torch.empty_like(query, dtype=query.dtype), torch.empty_like(key, dtype=key.dtype))
 
 
+@impl(m, "npu_kv_rmsnorm_rope_cache")
+def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
+                                   c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, epsilon=1e-5,
+                                   cache_mode='Norm', is_output_kv=False):
+    return torch.empty_like(k_cache), torch.empty_like(ckv_cache), torch.empty_like(k_cache), torch.empty_like(ckv_cache)
+
+
 @impl(m, "npu_quant_conv2d")
 def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
                      groups=1, offset_x=0, round_mode='rint', output_dtype=None, bias=None, offset=None):
