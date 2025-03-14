@@ -6793,7 +6793,7 @@ custom:
         dtype: input
       exec: aclnnGroupNormSilu
 
-  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[] bias, Tensor[] scale, Tensor[] offset, Tensor[] antiquant_scale, Tensor[] antiquant_offset, int[]? group_list=None, int? split_item=0, int[]? tuning_config=None, ScalarType? output_dtype=None) -> Tensor[]
+  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[] bias, Tensor[] scale, Tensor[] offset, Tensor[] antiquant_scale, Tensor[] antiquant_offset, int[]? group_list=None, int? split_item=0, ScalarType? output_dtype=None) -> Tensor[]
     op_api: v1.11, v2.0
     exposed: v1.11, v2.0
 
