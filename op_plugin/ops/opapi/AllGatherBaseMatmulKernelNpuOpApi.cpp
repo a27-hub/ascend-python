@@ -35,12 +35,9 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size_gather(const at
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self, const at::Tensor &x2,
                                                                       c10::string_view hcom, int64_t world_size,
-                                                                      const c10::optional<at::Tensor> &scale_inv1,
-                                                                      const c10::optional<at::Tensor> &scale_inv2,
                                                                       const c10::optional<at::Tensor> &bias,
-                                                                      const c10::optional<at::Tensor> &scale, int64_t gather_index,
-                                                                      bool gather_output, int64_t comm_turn, bool amax_output,
-                                                                      int64_t y_dtype)
+                                                                      int64_t gather_index,
+                                                                      bool gather_output, int64_t comm_turn)
 {
     TORCH_CHECK(world_size == 2 || world_size == 4 || world_size == 8,
                 "world_size should be 2 or 4 or 8, but the actual value is ", world_size, OPS_ERROR(ErrCode::PARAM));
@@ -57,27 +54,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::
         out_gather = at_npu::native::OpPreparation::apply_tensor_without_format(out_gather_size, self.options());
     }
 
-    at::Tensor amax = at::empty({0}, self.options());
-    if (amax_output) {
-        amax = at_npu::native::OpPreparation::apply_tensor_without_format({1}, self.options());
-    }
-    const at::Tensor &scale_inv1_real = scale_inv1.value_or(at::Tensor());
-    const at::Tensor &scale_inv2_real = scale_inv1.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
-    const at::Tensor &scale_real = scale_inv1.value_or(at::Tensor());
 
     char *hcom_ptr = const_cast<char *>(hcom.data());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
-    if (!(scale_inv1.has_value() && scale_inv2.has_value())) {
-        EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, bias_real,
-                hcom_ptr, gather_index, comm_turn, stream_mode, out_gather_mm, out_gather);
-    } else {
-        EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, scale_inv1_real, scale_inv2_real, bias_real, scale_real
-                hcom_ptr, gather_index, comm_turn, stream_mode, out_gather_mm, out_gather, amax, y_dtype);
-    }
 
+    EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, bias_real,
+                    hcom_ptr, gather_index, comm_turn, stream_mode, out_gather_mm, out_gather);
 
     FLOP_COUNT(FlopCounter::all_gather_mm_flop, self, x2, world_size, gather_index);
-    return std::tie(out_gather_mm, out_gather, amax);
+    return std::tie(out_gather_mm, out_gather);
 }
 }
