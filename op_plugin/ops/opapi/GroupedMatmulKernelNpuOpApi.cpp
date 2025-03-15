@@ -292,11 +292,12 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     int64_t group_type_value = group_type.value_or(-1);
     int64_t group_list_type_value = group_list_type.value_or(0);
     int64_t act_type_value = act_type.value_or(0);
+    auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
 
     EXEC_NPU_CMD(aclnnGroupedMatmulV5, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
                  antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real, activation_quant_scale_real,
                  activation_quant_offset_real, split_item_value, group_type_value, group_list_type_value, act_type_value,
-                 result, act_out, tuning_config, dynamic_quant_scale_out);
+                 tuning_config_real, result, act_out, dynamic_quant_scale_out);
 
     return y;
 }
