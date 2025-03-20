@@ -144,13 +144,13 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> batch_norm_backward_impl(
         mean, invstd, train, eps);
 
     if (grad_input_mask[0]) {
-      if (!train) {
-        batch_norm_backward_infer_nocheck(grad_input, grad_weight, grad_bias, grad_out, self, weight, running_mean,
-            running_var, mean, invstd, train, eps);
-      } else {
-        batch_norm_backward_training_reduce_nocheck(grad_input, grad_weight, grad_bias, grad_out, self, weight,
-            running_mean, running_var, mean, invstd, train, eps);
-      }
+        if (!train) {
+            batch_norm_backward_infer_nocheck(grad_input, grad_weight, grad_bias, grad_out, self, weight, running_mean,
+                running_var, mean, invstd, train, eps);
+        } else {
+            batch_norm_backward_training_reduce_nocheck(grad_input, grad_weight, grad_bias, grad_out, self, weight,
+                running_mean, running_var, mean, invstd, train, eps);
+        }
     }
 
     return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&>(grad_input, grad_weight, grad_bias);
@@ -180,25 +180,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
     c10::SmallVector<int64_t, N> self_shape = op_infer::array_to_small_vector(self.sizes());
 
     if (grad_out.dim() <= 4) {
-      c10::SmallVector<int64_t, N> nchw_shape(self_shape);
-      nchw_shape.resize(4, 1);
-      self_reshape = self.reshape(nchw_shape);
-      grad_out_reshape = grad_out.reshape(nchw_shape);
+        c10::SmallVector<int64_t, N> nchw_shape(self_shape);
+        nchw_shape.resize(4, 1);
+        self_reshape = self.reshape(nchw_shape);
+        grad_out_reshape = grad_out.reshape(nchw_shape);
     } else if (train && grad_out.dim() == 5) {
-      // Use 3D BN ops for training, merging axes is not required.
-      self_reshape = self;
-      grad_out_reshape = grad_out;
+        // Use 3D BN ops for training, merging axes is not required.
+        self_reshape = self;
+        grad_out_reshape = grad_out;
     } else {
-      // Infering uses 2dInfer Op, case no matched 3DInfer Op
-      // ncdhw -> ndchw
-      self_reshape = self.permute({0, 2, 1, 3, 4});
-      grad_out_reshape = grad_out.permute({0, 2, 1, 3, 4});
-      // nchw=(n*d, c, h, w)
-      c10::SmallVector<int64_t, N> nchw_shape =
-          {self_shape[0] * self_shape[2], self_shape[1], self_shape[3], self_shape[4]};
-      // ndchw -> nchw
-      self_reshape = self_reshape.reshape(nchw_shape);
-      grad_out_reshape = grad_out_reshape.reshape(nchw_shape);
+        // Infering uses 2dInfer Op, case no matched 3DInfer Op
+        // ncdhw -> ndchw
+        self_reshape = self.permute({0, 2, 1, 3, 4});
+        grad_out_reshape = grad_out.permute({0, 2, 1, 3, 4});
+        // nchw=(n*d, c, h, w)
+        c10::SmallVector<int64_t, N> nchw_shape =
+            {self_shape[0] * self_shape[2], self_shape[1], self_shape[3], self_shape[4]};
+        // ndchw -> nchw
+        self_reshape = self_reshape.reshape(nchw_shape);
+        grad_out_reshape = grad_out_reshape.reshape(nchw_shape);
     }
 
     int64_t dim_c = self_reshape.size(1);
@@ -230,35 +230,35 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
     at::Tensor undefine_grad_bias;
 
     if (grad_input_mask[0]) {
-      if (!train && self.dim() == 5) {
-        // NCHW -> NDCHW ->NCDHW
-        std::swap(self_shape[1], self_shape[2]);
-        grad_input = grad_input.view(self_shape);
-        grad_input = npu_utils::format_contiguous(grad_input);
-        grad_input = grad_input.permute({0, 2, 1, 3, 4}).clone();
-      } else if (self.dim() < 5) {
-        grad_input = grad_input.view(self_shape);
-        grad_input = npu_utils::format_contiguous(grad_input);
-      }
+        if (!train && self.dim() == 5) {
+            // NCHW -> NDCHW ->NCDHW
+            std::swap(self_shape[1], self_shape[2]);
+            grad_input = grad_input.view(self_shape);
+            grad_input = npu_utils::format_contiguous(grad_input);
+            grad_input = grad_input.permute({0, 2, 1, 3, 4}).clone();
+        } else if (self.dim() < 5) {
+            grad_input = grad_input.view(self_shape);
+            grad_input = npu_utils::format_contiguous(grad_input);
+        }
     } else {
-      grad_input = undefine_grad_input;
+        grad_input = undefine_grad_input;
     }
 
     if (!grad_input_mask[1]) {
-      grad_weight = undefine_grad_weight;
+        grad_weight = undefine_grad_weight;
     }
 
     if (!grad_input_mask[2]) {
-      grad_bias = undefine_grad_bias;
+        grad_bias = undefine_grad_bias;
     }
 
     if (grad_weight.defined()) {
-      auto weight_format = npu_preparation::get_tensor_npu_format(weight);
-      auto grad_weight_format = npu_preparation::get_tensor_npu_format(grad_weight);
-      if (grad_weight_format == ACL_FORMAT_NC1HWC0 && weight_format == ACL_FORMAT_ND) {
-        npu_format_helper::unsafe_format_cast(grad_weight, ACL_FORMAT_NC1HWC0, ACL_FORMAT_ND);
-        npu_format_helper::unsafe_format_cast(grad_bias, ACL_FORMAT_NC1HWC0, ACL_FORMAT_ND);
-      }
+        auto weight_format = npu_preparation::get_tensor_npu_format(weight);
+        auto grad_weight_format = npu_preparation::get_tensor_npu_format(grad_weight);
+        if (grad_weight_format == ACL_FORMAT_NC1HWC0 && weight_format == ACL_FORMAT_ND) {
+            npu_format_helper::unsafe_format_cast(grad_weight, ACL_FORMAT_NC1HWC0, ACL_FORMAT_ND);
+            npu_format_helper::unsafe_format_cast(grad_bias, ACL_FORMAT_NC1HWC0, ACL_FORMAT_ND);
+        }
     }
 
     return std::make_tuple(grad_input, grad_weight, grad_bias);

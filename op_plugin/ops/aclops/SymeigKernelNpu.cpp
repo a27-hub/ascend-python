@@ -29,7 +29,7 @@ std::tuple<at::Tensor, at::Tensor> _symeig_helper(
     auto eigvals = at::empty(self_sizes, self.options());
 
     if (self.numel() == 0) {
-      return std::tuple<at::Tensor, at::Tensor>(eigvals, at::empty_like(self, LEGACY_CONTIGUOUS_MEMORY_FORMAT));
+        return std::tuple<at::Tensor, at::Tensor>(eigvals, at::empty_like(self, LEGACY_CONTIGUOUS_MEMORY_FORMAT));
     }
 
     auto self_working_copy = self.clone();
@@ -42,9 +42,9 @@ std::tuple<at::Tensor, at::Tensor> _symeig_helper(
         .Run();
 
     if (eigenvectors) {
-      return std::tuple<at::Tensor, at::Tensor>(eigvals, self_working_copy);
+        return std::tuple<at::Tensor, at::Tensor>(eigvals, self_working_copy);
     } else {
-      return std::tuple<at::Tensor, at::Tensor>(eigvals, at::empty({0}, self.options()));
+        return std::tuple<at::Tensor, at::Tensor>(eigvals, at::empty({0}, self.options()));
     }
 }
 #endif

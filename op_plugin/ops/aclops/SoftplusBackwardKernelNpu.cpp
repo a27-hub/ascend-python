@@ -33,11 +33,11 @@ at::Tensor& softplus_backward_out(
         grad_input,
         self);
     if (!npu_utils::check_match(&grad_input)) {
-      at::Tensor contiguous_result = npu_utils::format_contiguous(grad_input);
-      softplus_backward_out_common_nocheck(contiguous_result, grad_output, self, beta, threshold);
-      npu_utils::format_fresh_view(grad_input, contiguous_result);
+        at::Tensor contiguous_result = npu_utils::format_contiguous(grad_input);
+        softplus_backward_out_common_nocheck(contiguous_result, grad_output, self, beta, threshold);
+        npu_utils::format_fresh_view(grad_input, contiguous_result);
     } else {
-      softplus_backward_out_common_nocheck(grad_input, grad_output, self, beta, threshold);
+        softplus_backward_out_common_nocheck(grad_input, grad_output, self, beta, threshold);
     }
     return grad_input;
 }
