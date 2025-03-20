@@ -23,14 +23,17 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace{
+constexpr float INT_MAX_F = static_cast<float>(INT_MAX);
+constexpr float INT_MIN_F = static_cast<float>(INT_MIN);
+
 float calculate_p(c10::optional<at::Scalar> p)
 {
     if (p.has_value()) {
         float val = op_plugin::utils::get_scalar_float_value(p.value());
         if (val == INFINITY) {
-            return static_cast<float>(INT_MAX); // p = inf
+            return INT_MAX_F; // p = inf
         } else if (val == -INFINITY) {
-            return static_cast<float>(INT_MIN); // p = -inf
+            return INT_MIN_F; // p = -inf
         } else {
             return p.value().toFloat();
         }
@@ -41,7 +44,8 @@ float calculate_p(c10::optional<at::Scalar> p)
 
 inline bool check_use_aclop(float pfloat)
 {
-    if (pfloat != 0.0 && pfloat != 1.0 && pfloat != 2.0 && pfloat != 3.0) {
+    if (pfloat != 0.0 && pfloat != 1.0 && pfloat != 2.0 && pfloat != 3.0 &&
+        pfloat != INT_MAX_F && pfloat != INT_MIN_F) {
         return true;
     }
     return false;

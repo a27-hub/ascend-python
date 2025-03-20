@@ -21,10 +21,25 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-inline bool check_use_aclop(const at::Scalar& scalar_ord)
+constexpr float INT_MAX_F = static_cast<float>(INT_MAX);
+constexpr float INT_MIN_F = static_cast<float>(INT_MIN);
+
+float calculate_ord(const at::Scalar& scalar_ord)
 {
     float val = op_plugin::utils::get_scalar_float_value(scalar_ord);
-    return val != 0.0 && val != 1.0 && val != 2.0 && val != 3.0;
+    if (val == INFINITY) {
+        return INT_MAX_F; // p = inf
+    } else if (val == -INFINITY) {
+        return INT_MIN_F; // p = -inf
+    } else {
+        return val;
+    }
+}
+
+inline bool check_use_aclop(const at::Scalar& scalar_ord)
+{
+    float val = calculate_ord(scalar_ord);
+    return val != 0.0 && val != 1.0 && val != 2.0 && val != 3.0 && val != INT_MAX_F && val != INT_MIN_F;
 }
 }
 
