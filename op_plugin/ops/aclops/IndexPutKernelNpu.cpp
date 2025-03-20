@@ -288,6 +288,7 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
             (index_output_size != value_shape) ? acl_op::npu_broadcast(value_copy, index_output_size) : value_copy;
         index_put_aicore(self_copy, indices_expand, masks, bool_mask, value_broadcast, accumulate);
     }
+    
     self.copy_(self_copy);
     return self;
 }
