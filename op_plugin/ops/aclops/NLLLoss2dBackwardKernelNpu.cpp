@@ -50,7 +50,7 @@ at::Tensor &nll_loss2d_backward_out(const at::Tensor &grad_output, const at::Ten
 {
     at::Tensor weight_ = c10::value_or_else(weight, [] { return at::Tensor(); });
     at::Tensor weight_tensor = at::ones(self.size(1), self.options());
-    if (weight.defined()) {
+    if (weight_.defined()) {
         weight_tensor = npu_utils::format_contiguous(weight_);
     }
 
