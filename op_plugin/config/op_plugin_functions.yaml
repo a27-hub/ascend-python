@@ -7402,7 +7402,7 @@ custom:
     gen_opapi:
       exec: aclnnSoftmax, self, dim, self
 
-  - func: npu_attn_softmax_backward(Tensor self, Tensor grad_output, Tensor values) -> Tensor
+  - func: npu_attn_softmax_backward_(Tensor(a!) self, Tensor grad_output, Tensor values) -> Tensor(a!)
     op_api: all_version
 
 symint:

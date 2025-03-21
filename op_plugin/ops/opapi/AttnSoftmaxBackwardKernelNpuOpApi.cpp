@@ -21,7 +21,7 @@ namespace op_api {
 
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_attn_softmax_backward(const at::Tensor &self, const at::Tensor &grad_output, const at::Tensor &values)
+at::Tensor &npu_attn_softmax_backward(const at::Tensor &self, const at::Tensor &grad_output, const at::Tensor &values)
 {
     // allow dicrease precision
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
@@ -32,8 +32,7 @@ at::Tensor npu_attn_softmax_backward(const at::Tensor &self, const at::Tensor &g
     EXEC_NPU_CMD(aclnnMatmul, grad_output, values_tmp, matmul_result, cube_math_type);
 
     int64_t dim = -1;
-    at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options());
-    EXEC_NPU_CMD(aclnnSoftmaxBackward, matmul_result, self, dim, result);
-    return result;
+    EXEC_NPU_CMD(aclnnSoftmaxBackward, matmul_result, self, dim, self);
+    return self;
 }
 }
