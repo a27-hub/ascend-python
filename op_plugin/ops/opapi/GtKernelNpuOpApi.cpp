@@ -58,6 +58,11 @@ at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 }
 
 at::Tensor gt(const at::Tensor& self, const at::Tensor& other) {
+    if (npu_preparation::IsCPUScalar(other)) {
+        return op_api::gt(self, other.item());
+    } else if (npu_preparation::IsCPUScalar(self)) {
+        return op_api::lt(other, self.item());
+    }
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt(self, other));
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -66,12 +71,7 @@ at::Tensor gt(const at::Tensor& self, const at::Tensor& other) {
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
 
     // calculate the output result of the NPU
-    if (npu_preparation::IsCPUScalar(other)) {
-        const at::Scalar other_scalar = other.item();
-        EXEC_NPU_CMD(aclnnGtScalar, self, other_scalar, result);
-    } else {
-        EXEC_NPU_CMD(aclnnGtTensor, self, other, result);
-    }
+    EXEC_NPU_CMD(aclnnGtTensor, self, other, result);
     return result;
 }
 
