@@ -24,7 +24,8 @@ at::Tensor softmax(const at::Tensor& self, int64_t dim, c10::optional<at::Scalar
   DO_COMPATIBILITY(aclnnSoftmax, acl_op::softmax(self, dim, dtype));
   auto result = [&]() {
     at::NoNamesGuard guard;
-    at::Tensor converted = dtype.has_value() ? at_npu::native::custom_ops::npu_dtype_cast(self, dtype.value()) : self;
+    at::Tensor converted = dtype.has_value() && self.scalar_type() != dtype ?
+                           at_npu::native::custom_ops::npu_dtype_cast(self, dtype.value()) : self;
     return at::_softmax(converted, dim, false);
   }();
   at::namedinference::propagate_names(result, self);
