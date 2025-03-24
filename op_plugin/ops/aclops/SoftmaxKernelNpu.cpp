@@ -42,7 +42,7 @@ at::Tensor softmax(
     int64_t dim,
     c10::optional<at::ScalarType> dtype)
 {
-    auto result = [&]() {
+    auto result = [self, dim, dtype]() {
         at::NoNamesGuard guard;
         at::Tensor converted = dtype.has_value() ? at_npu::native::custom_ops::npu_dtype_cast(self, dtype.value()) : self;
         return at::_softmax(converted, dim, false);
