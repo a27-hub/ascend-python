@@ -1,4 +1,3 @@
-import unittest
 import torch
 import numpy as np
 import torch_npu
@@ -61,7 +60,6 @@ class TestNPUFlatQuant(TestCase):
         out, quantScale = torch_npu.npu_kronecker_quant(input_x, input_p1, input_p2, clip_ratio)
         return self.tensor_int32_to_int8(out.to("cpu")).numpy(), quantScale.to("cpu").numpy()
 
-    @unittest.skip("skip test_npu_kronecker_quant_float16 now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_float16(self):
         datainfo = DataInfo(1, 1, (16, 7, 16), (7, 7), (16, 16), torch.float16)
@@ -71,7 +69,6 @@ class TestNPUFlatQuant(TestCase):
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
         
-    @unittest.skip("skip test_npu_kronecker_quant_bfloat16 now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_bfloat16(self):
         datainfo = DataInfo(1, 1, (16, 56, 16), (56, 56), (16, 16), torch.bfloat16)
@@ -81,7 +78,6 @@ class TestNPUFlatQuant(TestCase):
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_float16_ratio now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_float16_ratio(self):
         datainfo = DataInfo(1, 1, (16, 8, 32), (8, 8), (32, 32), torch.float16)
@@ -91,7 +87,6 @@ class TestNPUFlatQuant(TestCase):
         self.assertRtolEqual(golden_out, npu_out)
         self.assertRtolEqual(golden_scale, npu_scale)
 
-    @unittest.skip("skip test_npu_kronecker_quant_bfloat16_ratio now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_kronecker_quant_bfloat16_ratio(self):
         datainfo = DataInfo(1, 1, (16, 3, 64), (3, 3), (64, 64), torch.bfloat16)
