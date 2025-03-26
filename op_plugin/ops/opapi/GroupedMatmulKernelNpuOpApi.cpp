@@ -15,12 +15,15 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpAdapter.h"
 
 namespace op_api {
 const static int64_t IN_NOT_SPLIT_OUT_NOT_SPLIT = 0;
 const static int64_t IN_SPLIT_OUT_NOT_SPLIT = 1;
 const static int64_t IN_NOT_SPLIT_OUT_SPLIT = 2;
 const static int64_t IN_SPLIT_OUT_SPLIT = 3;
+const static int64_t MAX_DIM_NUM = 5;
+
 using npu_preparation = at_npu::native::OpPreparation;
 
 void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_group_list)
@@ -46,6 +49,56 @@ void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_
                         "Actual lengths: x [", num_x, "], weight [", num_weight, "]." + OPS_ERROR(ErrCode::PARAM));
         }
     }
+}
+
+inline aclTensor *torch_tensor_to_acl_tensor(const at::Tensor &at_tensor) {
+    static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
+    if (aclCreateTensor == nullptr) {
+        return nullptr;
+    }
+
+    if (!at_tensor.defined()) {
+        return nullptr;
+    }
+    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
+        "Expected all tensors to be on the same device. "
+        "Expected NPU tensor, please check whether the input tensor device is correct.",
+        OPS_ERROR(ErrCode::TYPE));
+    at::ScalarType scalar_data_type = at_tensor.scalar_type();
+    aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
+    c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
+    // if acl_data_type is ACL_STRING, storageDims is empty.
+    if (acl_data_type != ACL_STRING) {
+        TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+            OPS_ERROR(ErrCode::VALUE));
+        storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+    }
+
+    const auto dimNum = at_tensor.sizes().size();
+    aclFormat format = ACL_FORMAT_ND;
+    if (at_npu::native::custom_ops::get_npu_format(at_tensor) == ACL_FORMAT_FRACTAL_NZ) {
+        format = ACL_FORMAT_FRACTAL_NZ;
+    }
+    auto acl_tensor =
+        aclCreateTensor(at_tensor.sizes().data(), at_tensor.sizes().size(), acl_data_type, at_tensor.strides().data(),
+                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                        const_cast<void *>(at_tensor.storage().data()));
+    return acl_tensor;
+}
+
+inline aclTensorList *CreateNewTensorList(const at::TensorList &at_tensor_list)
+{
+    static const auto aclCreateTensorList = GET_OP_API_FUNC(aclCreateTensorList);
+    if (aclCreateTensorList == nullptr) {
+        return nullptr;
+    }
+
+    std::vector<const aclTensor *> tensor_list(at_tensor_list.size());
+    for (size_t i = 0; i < at_tensor_list.size(); i++) {
+        tensor_list[i] = torch_tensor_to_acl_tensor(at_tensor_list[i]);
+    }
+    auto acl_tensor_list = aclCreateTensorList(tensor_list.data(), tensor_list.size());
+    return acl_tensor_list;
 }
 
 void create_new_tensor_multi_dim(std::vector<at::Tensor> &y, const at::Tensor &x_i, size_t n,
@@ -125,8 +178,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         }
     }
     at::TensorList result = at::TensorList(y);
+    auto new_weight = CreateNewTensorList(weight);
 
-    EXEC_NPU_CMD(aclnnGroupedMatmul, x, weight, bias, scale, offset, antiquant_scale,
+    EXEC_NPU_CMD(aclnnGroupedMatmul, x, new_weight, bias, scale, offset, antiquant_scale,
                  antiquant_offset, group_list_real, split_item_value, result);
 
     return y;
@@ -187,8 +241,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         }
     }
     at::TensorList result = at::TensorList(y);
+    auto new_weight = CreateNewTensorList(weight);
 
-    EXEC_NPU_CMD(aclnnGroupedMatmul, x, weight, bias, scale, offset, antiquant_scale,
+    EXEC_NPU_CMD(aclnnGroupedMatmul, x, new_weight, bias, scale, offset, antiquant_scale,
                  antiquant_offset, group_list_real, split_item_value, result);
 
     return y;
@@ -292,8 +347,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     int64_t group_type_value = group_type.value_or(-1);
     int64_t group_list_type_value = group_list_type.value_or(0);
     int64_t act_type_value = act_type.value_or(0);
+    auto new_weight = CreateNewTensorList(weight);
 
-    EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
+    EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, new_weight, bias_real, scale_real, offset_real, antiquant_scale_real,
                  antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
                  activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
                  group_list_type_value, act_type_value, result, act_out, dynamic_quant_scale_out);
@@ -375,7 +431,9 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     auto offset_real = offset.value_or(at::TensorList());
     auto antiquant_scale_real = antiquant_scale.value_or(at::TensorList());
     auto antiquant_offset_real = antiquant_offset.value_or(at::TensorList());
-    EXEC_NPU_CMD(aclnnGroupedMatmul, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
+    auto new_weight = CreateNewTensorList(weight);
+
+    EXEC_NPU_CMD(aclnnGroupedMatmul, x, new_weight, bias_real, scale_real, offset_real, antiquant_scale_real,
                  antiquant_offset_real, group_list_real, split_item_value, result);
 
     return y;
