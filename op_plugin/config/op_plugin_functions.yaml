@@ -6487,6 +6487,14 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNorm
 
+  - func: npu_alltoallv_grouped_matmul_base(Tensor gmm_x, Tensor gmm_weight, Tensor expert_token_num, Tensor? mm_x=None, Tensor? mm_weight=None, str group, int ep_world_size, int[] send_counts=[], int[] recv_counts=[], bool trans_gmm_weight=False, bool trans_mm_weight=False, bool all_gather_flag=False, bool all_to_all_flag=False) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+  
+  - func: npu_grouped_matmul_alltoallv_base(Tensor gmm_x, Tensor gmm_weight, Tensor expert_token_num, Tensor? mm_x=None, Tensor? mm_weight=None, str group, int ep_world_size, int[] send_counts=[], int[] recv_counts=[], bool trans_gmm_weight=False, bool trans_mm_weight=False, bool all_gather_flag=False, bool gmm_out_flag=False) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version  
+    
   - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     op_api: all_version
     exposed: all_version
