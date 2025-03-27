@@ -69,7 +69,7 @@ at::Tensor fft_ifftshift(const at::Tensor& self, at::OptionalIntArrayRef dim)
         shift[i] = (x_sizes[dim_[i]] + 1) / 2;
     }
 
-    if (x.scalar_type() == at::ScalarType::ComplexFloat) {
+    if (self.scalar_type() == at::ScalarType::ComplexFloat) {
         auto res = self.view(self.sizes());
         auto *impl = res.unsafeGetTensorImpl();
         impl->set_storage_and_dtype(res.storage(), c10::scalarTypeToTypeMeta(at::ScalarType::Long));
