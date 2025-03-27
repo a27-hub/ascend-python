@@ -464,7 +464,7 @@ def npu_masked_softmax_with_rel_pos_bias_meta(x, atten_mask, relative_pos_bias, 
 
 @impl(m, "npu_moe_distribute_dispatch")
 def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0,
-                                     tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0):
+                                     tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1):
     n = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
