@@ -127,13 +127,8 @@ def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
     out_m = math.floor(self.size(0) / world_size)
     return self.new_empty(out_m, x2.size(1))
 
-<<<<<<< HEAD
 @impl(m, "npu_alltoallv_gmm")
 def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
-=======
-@impl(m, "npu_alltoallv_grouped_matmul_base")
-def npu_alltoallv_grouped_matmul_base_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
->>>>>>> 7b47a20c07b78b7cd7bf98500f0066a2813108a6
                                            mm_weight=None, group='', ep_world_size=0, send_counts=[],
                                            recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
                                            all_gather_flag=False, all_to_all_flag=False):
@@ -141,11 +136,8 @@ def npu_alltoallv_grouped_matmul_base_meta(gmm_x, gmm_weight, expert_token_num, 
         ep_world_size = 1
     out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
-<<<<<<< HEAD
     if trans_gmm_weight:
         out_y = gmm_weight.size(1)
-=======
->>>>>>> 7b47a20c07b78b7cd7bf98500f0066a2813108a6
     out_mm_x = 0
     out_mm_y = 0
     all_to_all_x = 0
