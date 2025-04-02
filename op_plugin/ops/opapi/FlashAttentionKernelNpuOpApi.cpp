@@ -21,6 +21,8 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+const int FIRST_ELEMENT = 0;
+const int SECOND_ELEMENT = 1;
 const int THIRD_ELEMENT = 2;
 const int FORTH_ELEMENT = 3;
 const int DIMENSION_3D = 3;
@@ -1303,13 +1305,23 @@ at::Tensor npu_prompt_flash_attention(
     c10::OptionalIntArrayRef actual_seq_lengths_kv,
     int64_t sparse_mode)
 {
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D, "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D, "The shapes of the input key should be 3 or 4 dimensional, but got ",
+        key.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D, "The shapes of the input value should be 3 or 4 dimensional, but got ",
+        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
     // construct the output tensor of the NPU
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
-            {query.size(0), query.size(THIRD_ELEMENT), query.size(1), query.size(FORTH_ELEMENT)},
+            {query.size(FIRST_ELEMENT), query.size(THIRD_ELEMENT), query.size(SECOND_ELEMENT), value.size(FORTH_ELEMENT)},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "BNSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format(
+            {query.size(FIRST_ELEMENT), query.size(SECOND_ELEMENT), query.size(THIRD_ELEMENT), value.size(FORTH_ELEMENT)},
             query.options().dtype(query.dtype()));
     }
 
@@ -1740,13 +1752,23 @@ at::Tensor npu_prompt_flash_attention(
     c10::OptionalIntArrayRef actual_seq_lengths_kv,
     int64_t sparse_mode)
 {
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D, "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D, "The shapes of the input key should be 3 or 4 dimensional, but got ",
+        key.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D, "The shapes of the input value should be 3 or 4 dimensional, but got ",
+        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
     // construct the output tensor of the NPU
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
-            {query.size(0), query.size(THIRD_ELEMENT), query.size(1), query.size(FORTH_ELEMENT)},
+            {query.size(FIRST_ELEMENT), query.size(THIRD_ELEMENT), query.size(SECOND_ELEMENT), value.size(FORTH_ELEMENT)},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "BNSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format(
+            {query.size(FIRST_ELEMENT), query.size(SECOND_ELEMENT), query.size(THIRD_ELEMENT), value.size(FORTH_ELEMENT)},
             query.options().dtype(query.dtype()));
     }
 
