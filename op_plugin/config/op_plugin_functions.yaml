@@ -930,32 +930,15 @@ official:
 
   - func: adaptive_max_pool3d.out(Tensor self, int[3] output_size, *, Tensor(a!) out, Tensor(b!) indices) -> (Tensor(a!), Tensor(b!))
     op_api: all_version
-    gen_opapi:
-      out:
-        size: max_pool3d_output_size(self, output_size)
-        dtype: self
-      indices:
-        size: max_pool3d_output_size(self, output_size)
-        dtype: at::kInt
-      exec: aclnnAdaptiveMaxPool3d
 
   - func: adaptive_max_pool3d(Tensor self, int[3] output_size) -> (Tensor, Tensor)
     op_api: all_version
-    gen_opapi:
-      structured_inherit: adaptive_max_pool3d.out
 
   - func: adaptive_max_pool3d_backward.grad_input(Tensor grad_output, Tensor self, Tensor indices, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: all_version
-    gen_opapi:
-      grad_input:
-        size: self
-        dtype: grad_output
-      exec: aclnnAdaptiveMaxPool3dBackward
 
   - func: adaptive_max_pool3d_backward(Tensor grad_output, Tensor self, Tensor indices) -> Tensor
     op_api: all_version
-    gen_opapi:
-      structured_inherit: adaptive_max_pool3d_backward.grad_input
 
   - func: add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
     acl_op: all_version
@@ -6946,7 +6929,6 @@ custom:
 
   - func: npu_mla_prolog(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="BNSD") -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: [v2.1, newest]
-    exposed: [v2.1, newest]
 
   - func: npu_mm_all_reduce_base(Tensor x1, Tensor x2, str hcom, *, str reduce_op='sum', Tensor? bias=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? x3=None, Tensor? dequant_scale=None, Tensor? pertoken_scale=None, Tensor? comm_quant_scale_1=None, Tensor? comm_quant_scale_2=None, int antiquant_group_size=0, int comm_turn=0) -> Tensor
     op_api: all_version
@@ -6977,7 +6959,7 @@ custom:
     op_api: all_version
     exposed: all_version
 
-  - func: npu_moe_distribute_dispatch(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_moe_distribute_dispatch(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
   - func: npu_moe_distribute_combine(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0) -> Tensor
@@ -7140,12 +7122,12 @@ custom:
     acl_op: all_version
     op_api: all_version
 
-  - func: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, int mode=0) -> Tensor
+  - func: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, str rotary_mode='half') -> Tensor
     acl_op: all_version
     op_api: all_version
     exposed: all_version
 
-  - func: npu_rotary_mul_backward(Tensor grad, Tensor self, Tensor r1, Tensor r2, int mode=0) -> (Tensor, Tensor, Tensor)
+  - func: npu_rotary_mul_backward(Tensor grad, Tensor self, Tensor r1, Tensor r2, str rotary_mode='half') -> (Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
 
