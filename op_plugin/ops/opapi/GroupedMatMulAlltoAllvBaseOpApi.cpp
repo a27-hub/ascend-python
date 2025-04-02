@@ -18,7 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-    void check_gmm_all_to_all_v_param(const at::Tensor &gmm_x, const at::Tensor &gmm_weight, const at::Tensor &expert_token_num,
+    void check_gmm_alltoallv_param(const at::Tensor &gmm_x, const at::Tensor &gmm_weight, const at::Tensor &expert_token_num,
                             const c10::optional<at::Tensor> &mm_x, const c10::optional<at::Tensor> &mm_weight)
     {
         TORCH_CHECK(gmm_x.dim() == 2,
@@ -54,7 +54,7 @@ namespace op_api {
                                                                                         at::IntArrayRef send_counts, at::IntArrayRef recv_counts, bool trans_gmm_weight,
                                                                                         bool trans_mm_weight, bool all_gather_flag, bool gmm_out_flag)
     {
-        check_gmm_all_to_all_v_param(gmm_x, gmm_weight, expert_token_num, mm_x, mm_weight);
+        check_gmm_alltoallv_param(gmm_x, gmm_weight, expert_token_num, mm_x, mm_weight);
         at::Tensor y {nullptr};
         at::Tensor mm_y {nullptr};
         at::Tensor all_gather_out {nullptr};
