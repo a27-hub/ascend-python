@@ -129,9 +129,9 @@ def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
 
 @impl(m, "npu_alltoallv_gmm")
 def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
-                                           mm_weight=None, group='', ep_world_size=0, send_counts=[],
-                                           recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
-                                           all_gather_flag=False, all_to_all_flag=False):
+                        mm_weight=None, group='', ep_world_size=0, send_counts=[],
+                        recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
+                        ll_gather_flag=False, all_to_all_flag=False):
     if ep_world_size <= 0:
         ep_world_size = 1
     out_x = sum(recv_counts)
@@ -167,9 +167,9 @@ def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
 
 @impl(m, "npu_gmm_alltoallv")
 def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
-                                           mm_weight=None, group='', ep_world_size=0, send_counts=[],
-                                           recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
-                                           all_gather_flag=False, gmm_out_flag=False):
+                        mm_weight=None, group='', ep_world_size=0, send_counts=[],
+                        recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
+                        all_gather_flag=False, gmm_out_flag=False):
     if ep_world_size <= 0:
         ep_world_size = 1
     out_x = sum(recv_counts)
