@@ -49,10 +49,10 @@ namespace op_api {
     }
 
     std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_gmm_alltoallv(const at::Tensor &gmm_x, const at::Tensor &gmm_weight,
-                                                                                        const at::Tensor &expert_token_num, const c10::optional<at::Tensor> &mm_x,
-                                                                                        const c10::optional<at::Tensor> &mm_weight, c10::string_view group, int64_t ep_world_size,
-                                                                                        at::IntArrayRef send_counts, at::IntArrayRef recv_counts, bool trans_gmm_weight,
-                                                                                        bool trans_mm_weight, bool all_gather_flag, bool gmm_out_flag)
+                                                                            const at::Tensor &expert_token_num, const c10::optional<at::Tensor> &mm_x,
+                                                                            const c10::optional<at::Tensor> &mm_weight, c10::string_view group, int64_t ep_world_size,
+                                                                            at::IntArrayRef send_counts, at::IntArrayRef recv_counts, bool trans_gmm_weight,
+                                                                            bool trans_mm_weight, bool all_gather_flag, bool gmm_out_flag)
     {
         check_gmm_alltoallv_param(gmm_x, gmm_weight, expert_token_num, mm_x, mm_weight);
         at::Tensor y {nullptr};
