@@ -10,7 +10,7 @@ from torch_npu.testing.common_utils import create_common_tensor, SupportedDevice
 
 class TestNpuMoeReRouting(TestCase):
     def moe_re_routing_torch(self, tokens: torch.tensor, expert_token_num_per_rank: torch.tensor,
-                             *, per_token_scales: torch.torch = None, expert_token_num_type: int = 1,
+                             *, per_token_scales: torch.tensor = None, expert_token_num_type: int = 1,
                              idx_type: int = 0) -> tuple:
         token_num, token_length = tokens.shape
         rank_num, expert_num = expert_token_num_per_rank.shape
