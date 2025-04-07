@@ -5,8 +5,8 @@ import random
 import copy
 import torch
 import torch_npu
-import torch_npu.testing.testcase import TestCase, run_tests
-import torch_npu.testing.common_utils import creat_common_tensor, SupportedDevices
+from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
 class TestNpuMoeReRouting(TestCase):
     def moe_re_routing_torch(self, tokens: torch.tensor, expert_token_num_per_rank: torch.tensor,
@@ -81,16 +81,14 @@ class TestNpuMoeReRouting(TestCase):
             expert_token_num_per_rank,
             per_token_scales=per_token_scales,
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
             per_tokens_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         self.assertRtolEqual(permute_tokens, permute_tokens_npu.cpu())
         self.assertRtolEqual(permute_per_token_scales, permute_per_token_scales_npu.cpu())
@@ -128,16 +126,14 @@ class TestNpuMoeReRouting(TestCase):
             expert_token_num_per_rank,
             per_token_scales=per_token_scales,
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
             per_tokens_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         self.assertRtolEqual(permute_tokens, permute_tokens_npu.cpu())
         self.assertRtolEqual(permute_per_token_scales, permute_per_token_scales_npu.cpu())
@@ -175,16 +171,14 @@ class TestNpuMoeReRouting(TestCase):
             expert_token_num_per_rank,
             per_token_scales=per_token_scales,
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
             per_tokens_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
-            idx_type=idx_type
-        )
+            idx_type=idx_type)
 
         self.assertRtolEqual(permute_tokens, permute_tokens_npu.cpu())
         self.assertRtolEqual(permute_per_token_scales, permute_per_token_scales_npu.cpu())
