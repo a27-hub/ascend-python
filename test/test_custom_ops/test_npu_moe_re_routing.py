@@ -86,7 +86,7 @@ class TestNpuMoeReRouting(TestCase):
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
-            per_tokens_scales=per_token_scales.npu(),
+            per_token_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
             idx_type=idx_type)
 
@@ -131,7 +131,7 @@ class TestNpuMoeReRouting(TestCase):
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
-            per_tokens_scales=per_token_scales.npu(),
+            per_token_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
             idx_type=idx_type)
 
@@ -176,7 +176,7 @@ class TestNpuMoeReRouting(TestCase):
         permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = torch_npu.npu_moe_re_routing(
             tokens.npu(),
             expert_token_num_per_rank.npu(),
-            per_tokens_scales=per_token_scales.npu(),
+            per_token_scales=per_token_scales.npu(),
             expert_token_num_type=expert_token_num_type,
             idx_type=idx_type)
 
