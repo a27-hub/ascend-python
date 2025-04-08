@@ -1110,7 +1110,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_fusion_attention_v4(
-    const at::Tensor &query, const at::Tensor &query_rope, const at::Tensor &key,const at::Tensor &key_rope,
+    const at::Tensor &query, const at::Tensor &query_rope, const at::Tensor &key, const at::Tensor &key_rope,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
     const c10::optional<at::Tensor> &atten_mask,
@@ -1241,8 +1241,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     int64_t seed;
     int64_t offset;
     int64_t numels;
-        //check
-    for(size_t i = 0; i < ac_seq_qlen.size(); i++){
+    for(size_t i = 0; i < ac_seq_qlen.size(); i++) {
         TORCH_CHECK(ac_seq_qlen[i] <= 1000000 && ac_seq_kvlen[i] <= 1000000, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
     }
     
