@@ -32,6 +32,7 @@ const static int FLASH_THRESHOLD = 512;
 const static int64_t SOFTMAXMAX_LAST_DIMSHAPE = 8;
 const static int64_t PFA_SPARSE_HIGH_PRECISION_NO_MASK = 10;
 const static int64_t PFA_SPARSE_HIGH_PRECISION_BAND = 14;
+const static int64_t MAX_SEQ_LEN = 1000000;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -1241,8 +1242,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     int64_t seed;
     int64_t offset;
     int64_t numels;
-    for(size_t i = 0; i < ac_seq_qlen.size(); i++) {
-        TORCH_CHECK(ac_seq_qlen[i] <= 1000000 && ac_seq_kvlen[i] <= 1000000, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
+    for (size_t i = 0; i < ac_seq_qlen.size(); i++) {
+        TORCH_CHECK(ac_seq_qlen[i] <= MAX_SEQ_LEN && ac_seq_kvlen[i] <= MAX_SEQ_LEN, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
     }
     
     if (input_layout_str == "TND" && ac_seq_qlen.size() == ac_seq_kvlen.size()) {
@@ -2071,9 +2072,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     int64_t seed;
     int64_t offset;
     int64_t numels;
-        //check
-    for(size_t i = 0; i < ac_seq_qlen.size(); i++){
-        TORCH_CHECK(ac_seq_qlen[i] <= 1000000 && ac_seq_kvlen[i] <= 1000000, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
+    for (size_t i = 0; i < ac_seq_qlen.size(); i++) {
+        TORCH_CHECK(ac_seq_qlen[i] <= MAX_SEQ_LEN && ac_seq_kvlen[i] <= MAX_SEQ_LEN, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
     }
     
     if (input_layout_str == "TND" && ac_seq_qlen.size() == ac_seq_kvlen.size()) {
@@ -2903,9 +2903,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     int64_t seed;
     int64_t offset;
     int64_t numels;
-        //check
-    for(size_t i = 0; i < ac_seq_qlen.size(); i++){
-        TORCH_CHECK(ac_seq_qlen[i] <= 1000000 && ac_seq_kvlen[i] <= 1000000, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
+    for (size_t i = 0; i < ac_seq_qlen.size(); i++) {
+        TORCH_CHECK(ac_seq_qlen[i] <= MAX_SEQ_LEN && ac_seq_kvlen[i] <= MAX_SEQ_LEN, "The sequence length should not greater than 1M, but got q", ac_seq_qlen[i],"kv", ac_seq_kvlen[i]);
     }
     
     if (input_layout_str == "TND" && ac_seq_qlen.size() == ac_seq_kvlen.size()) {
