@@ -201,7 +201,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         N = query.size(1)
         S1 = query.size(2)
     if input_layout == "BNSD":
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        if value.dim() == 3:
+            tempQN = int(query.size(1)) if num_heads == 0 else num_heads
+            tempVN = tempQN if num_key_value_heads == 0 else num_key_value_heads
+            torch._check(
+                (tempVN != 0),
+                    lambda: "Q layout is BNSD, KV layout is BBH, num_key_value_heads can not be 0!" + ops_error(ErrCode.VALUE),
+            )
+            tempVD = int(int(value.size(2)) / tempVN)
+            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), tempVD], dtype=query.dtype, device='meta')
+        else:
+            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3)], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -220,19 +230,30 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         B = 1
         N = query.size(0)
         S1 = query.size(1)
+    if input_layout == "TND":
+        tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if quant_scale2 is not None:
         if (softmax_lse_flag == True):
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
+            if input_layout == "TND":
+                return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([query.size(0), num_heads, 1], dtype=torch.float32, device='meta'))
+            else:
+                return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
             return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         if (softmax_lse_flag == True):
-            return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
+            if input_layout == "TND":
+                return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([query.size(0), num_heads, 1], dtype=torch.float32, device='meta'))
+            else:
+                return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
             return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([1], dtype=torch.float32, device='meta'))
     else:
         if (softmax_lse_flag == True):
-            return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
+            if input_layout == "TND":
+                return (torch.empty_like(tmp_out), torch.empty([query.size(0), num_heads, 1], dtype=torch.float32, device='meta'))
+            else:
+                return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
             return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
 

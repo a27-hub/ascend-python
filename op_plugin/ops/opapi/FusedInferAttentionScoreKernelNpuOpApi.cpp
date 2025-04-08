@@ -80,8 +80,22 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
         batchSize = query.size(0);
         qsSize = query.size(1);
     } else if (input_layout_str == "BNSD") {
+        if (value.dim() == 3) {
+            int64_t tempQN = (num_heads == 0) ? query.size(1) : num_heads;
+            int64_t tempKVN = (num_key_value_heads == 0) ? tempQN : num_key_value_heads;
+            TORCH_CHECK(tempKVN != 0, "Q layout is BNSD, KV layout is BBH, num_key_value_heads can not be 0!", OPS_ERROR(ErrCode::PARAM));
+            int64_t tempVD = value.size(2) / tempKVN;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), tempVD},
+                query.options().dtype(query.dtype()));
+        } else {
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), value.size(3)},
+                query.options().dtype(query.dtype()));
+        }
         batchSize = query.size(0);
         qsSize = query.size(2);
+    } else if (input_layout_str == "TND") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), value.size(2)},
+            query.options().dtype(query.dtype()));
     }
     if (quant_scale2.has_value()) {
         output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), c10::dtype(c10::ScalarType::Char));
@@ -104,10 +118,16 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     auto actSeqLenPrefix = c10::asIntArrayRefUnchecked(actSeqLenPrefixMiddle);
 
     // construct softmax_lse tensor
-    at::Tensor softmax_lse = npu_preparation::apply_tensor_without_format(
-        {batchSize, num_heads, qsSize, 1}, c10::dtype(c10::ScalarType::Float));
+    at::Tensor softmax_lse;
+    if (input_layout_str == "TND") {
+        softmax_lse = npu_preparation::apply_tensor_without_format({query.size(0), num_heads, 1},
+            c10::dtype(c10::ScalarType::Float));
+    } else {
+        softmax_lse = npu_preparation::apply_tensor_without_format({batchSize, num_heads, qsSize, 1},
+            c10::dtype(c10::ScalarType::Float));
+    }
 
-    if (!softmax_lse_flag) {
+    if (softmax_lse_flag != true) {
         softmax_lse = npu_preparation::apply_tensor_without_format({1}, c10::dtype(c10::ScalarType::Float));
     }
     // dispatch hostAPI
