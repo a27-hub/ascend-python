@@ -288,3 +288,7 @@ backward:
   output_differentiability: [true, false, true, false]
   input: npu_cross_entropy_loss_backward(grads[0], result1, target, weight, grads[1], result3, reduction, ignore_index, label_smoothing, lse_square_scale_for_zloss)
   version: all_version
+
+- name: npu_add_custom(Tensor x, Tensor y) -> Tensor
+  x, y: npu_add_custom_backward(grad)
+  version: all_version

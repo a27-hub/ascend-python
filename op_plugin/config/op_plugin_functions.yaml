@@ -6345,6 +6345,12 @@ official:
     op_api: [v2.1, newest]
 
 custom:
+  - func: npu_add_custom(Tensor x, Tensor y) -> Tensor
+    op_api: all_version
+
+  - func: npu_add_custom_backward(Tensor grad) -> (Tensor, Tensor)
+    op_api: all_version
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
@@ -6502,7 +6508,7 @@ custom:
 
   - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH') -> (Tensor, Tensor)
     op_api: all_version
-  
+
   - func: npu_kv_rmsnorm_rope_cache(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 

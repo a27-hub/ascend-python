@@ -1603,3 +1603,13 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(permute_per_token_scales_size, dtype=torch.float32, device=tokens.device),
             torch.empty(permute_token_idx_size, dtype=torch.int32, device=tokens.device),
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
+
+
+@impl(m, "npu_add_custom")
+def npu_add_custom_meta(x, y):
+    return torch.empty_like(x)
+
+
+@impl(m, "npu_add_custom_backward")
+def npu_add_custom_backward_meta(grad):
+    return torch.empty_like(grad)
