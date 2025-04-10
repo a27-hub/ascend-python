@@ -133,6 +133,81 @@ def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
     out_m = math.floor(self.size(0) / world_size)
     return self.new_empty(out_m, x2.size(1))
 
+@impl(m, "npu_alltoallv_gmm")
+def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
+                        mm_weight=None, group='', ep_world_size=0, send_counts=[],
+                        recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
+                        ll_gather_flag=False, all_to_all_flag=False):
+    if ep_world_size <= 0:
+        ep_world_size = 1
+    out_x = sum(recv_counts)
+    out_y = gmm_weight.size(2)
+    if trans_gmm_weight:
+        out_y = gmm_weight.size(1)
+    out_mm_x = 0
+    out_mm_y = 0
+    all_to_all_x = 0
+    all_to_all_y = 0
+    all_gather_x = 0
+    all_gather_y = 0
+    gmm_y = None
+    mm_y = None
+    all_gather_out = None
+    all_to_all_out = None
+    if mm_x != None:
+        out_mm_x = mm_x.size(0)
+        out_mm_y = mm_weight.size(1)
+        if trans_mm_weight:
+            out_mm_y = mm_weight.size(0)
+        mm_y = torch.empty([out_mm_x, out_mm_y], dtype=mm_x.dtype, device='meta')
+    if all_to_all_flag:
+        all_to_all_x = out_x
+        all_to_all_y = gmm_x.size(1)
+        all_to_all_out = torch.empty([all_to_all_x, all_to_all_y], dtype=gmm_x.dtype, device='meta')
+    if all_gather_flag:
+        all_gather_x = ep_world_size
+        all_gather_y = gmm_weight.size(0) * ep_world_size
+        all_gather_out = torch.empty([all_gather_x, all_gather_y], dtype=expert_token_num.dtype, device='meta')
+    gmm_y = torch.empty([out_x, out_y], dtype=gmm_x.dtype, device='meta')
+    return (gmm_y, mm_y, all_gather_out, all_to_all_out)
+
+@impl(m, "npu_gmm_alltoallv")
+def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, expert_token_num, mm_x=None,
+                        mm_weight=None, group='', ep_world_size=0, send_counts=[],
+                        recv_counts=[], trans_gmm_weight=False, trans_mm_weight=False,
+                        all_gather_flag=False, gmm_out_flag=False):
+    if ep_world_size <= 0:
+        ep_world_size = 1
+    out_x = sum(recv_counts)
+    out_y = gmm_weight.size(2)
+    if trans_gmm_weight:
+        out_y = gmm_weight.size(1)
+    out_mm_x = 0
+    out_mm_y = 0
+    all_gather_x = 0
+    all_gather_y = 0
+    gmm_out_x = 0
+    gmm_out_y = 0
+    y = None
+    mm_y = None
+    all_gather_out = None
+    gmm_out = None
+    if mm_x != None:
+        out_mm_x = mm_x.size(0)
+        out_mm_y = mm_weight.size(1)
+        if trans_mm_weight:
+            out_mm_y = mm_weight.size(0)
+        mm_y = torch.empty([out_mm_x, out_mm_y], dtype=mm_x.dtype, device='meta')
+    if all_gather_flag:
+        all_gather_x = ep_world_size
+        all_gather_y = gmm_weight.size(0) * ep_world_size
+        all_gather_out = torch.empty([all_gather_x, all_gather_y], dtype=expert_token_num.dtype, device='meta')
+    if gmm_out_flag:
+        gmm_out_x = gmm_x.size(0)
+        gmm_out_y = out_y
+        gmm_out = torch.empty([gmm_out_x, gmm_out_y], dtype=gmm_x.dtype, device='meta')
+    y = torch.empty([out_x, out_y], dtype=gmm_x.dtype, device='meta')
+    return (y, mm_y, all_gather_out, gmm_out)
 
 @impl(m, "npu_all_gather_base_mm")
 def npu_all_gather_base_mm_meta(self, x2, hcom, world_size, bias=None,
