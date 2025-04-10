@@ -30,6 +30,7 @@ at::Tensor& batch_norm_elemt_out(const at::Tensor& input, const c10::optional<at
     const at::Tensor& weight_value = c10::value_or_else(weight, [] { return at::Tensor(); });
     npu_preparation::check_tensor({input, weight_value, bias_value, mean, invstd}, out, input);
     EXEC_NPU_CMD(aclnnBatchNormElemt, input, weight_value, bias_value, mean, invstd, eps, out);
+
     return out;
 }
 
