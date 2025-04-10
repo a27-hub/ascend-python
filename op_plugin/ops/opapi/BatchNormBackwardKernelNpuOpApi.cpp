@@ -24,7 +24,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& self, const c10::optional<at::Tensor>& weight_opt,
     const c10::optional<at::Tensor>& running_mean_opt, const c10::optional<at::Tensor>& running_var_opt,
     const c10::optional<at::Tensor>& save_mean_opt, const c10::optional<at::Tensor>& save_invstd_opt, bool train,
-    double eps, std::array<bool, 3> grad_input_mask) {
+    double eps, std::array<bool, 3> grad_input_mask)
+{
   DO_COMPATIBILITY(aclnnBatchNormBackward,
                    acl_op::native_batch_norm_backward(grad_out, self, weight_opt, running_mean_opt, running_var_opt,
                                                       save_mean_opt, save_invstd_opt, train, eps, grad_input_mask));
