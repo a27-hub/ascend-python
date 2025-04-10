@@ -87,7 +87,7 @@ namespace op_api
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         const char *group_ptr = (char *)group.data();
-        EXEC_NPU_CMD(aclnnAlltoallvGmm, gmm_x,
+        EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
                      gmm_x,
                      gmm_weight,
                      send_count_tensor_real,
@@ -104,6 +104,6 @@ namespace op_api
                      gmm_y,
                      mm_y,
                      permute_out);
-        return std::make_tuple(gmm_y, mm_y, permute_out);
+        return std::tie(gmm_y, mm_y, permute_out);
     }
 } // namespace op_api

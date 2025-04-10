@@ -72,13 +72,13 @@ namespace op_api
             int64_t n2 = trans_mm_weight ? mm_weight_value.size(0) : mm_weight_value.size(1);
             mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bs, n2}, mm_x_value.options());
         }
-        y = at_npu::native::OpPreparation::apply_tensor_without_format({bsk, n1}, gmm_x.options());
+        auto y = at_npu::native::OpPreparation::apply_tensor_without_format({bsk, n1}, gmm_x.options());
         const at::Tensor &mm_x_real = mm_x.value_or(at::Tensor());
         const at::Tensor &mm_weight_real = mm_weight.value_or(at::Tensor());
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         const char *group_ptr = (char *)group.data();
-        EXEC_NPU_CMD(aclnnGmmAlltoallv,
+        EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllv,
                      gmm_x,
                      gmm_weight,
                      send_count_tensor_real,
