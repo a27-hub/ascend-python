@@ -135,7 +135,7 @@ def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
 
 @impl(m, "npu_gmm_alltoallv")
 def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, group, ep_world_size, send_counts,
-                        recv_counts, send_counts_tensor=None,
+                        recv_counts, *, send_counts_tensor=None,
                         recv_counts_tensor=None, mm_x=None,
                         mm_weight=None, trans_gmm_weight=False,
                         trans_mm_weight=False):
@@ -160,7 +160,7 @@ def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, group, ep_world_size, send_counts,
 
 @impl(m, "npu_alltoallv_gmm")
 def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, group, ep_world_size, send_counts,
-                        recv_counts, send_counts_tensor=None,
+                        recv_counts, *, send_counts_tensor=None,
                         recv_counts_tensor=None, mm_x=None,
                         mm_weight=None, trans_gmm_weight=False,
                         trans_mm_weight=False, permute_out_flag=False):
