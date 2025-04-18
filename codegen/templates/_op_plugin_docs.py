@@ -3586,6 +3586,8 @@ Device侧的TensorList类型输出，代表GroupedMatmul的计算结果，当spl
     - x为BFLOAT16、weight为INT8、bias为FLOAT32、scale为空，offset为空，antiquant_scale为BFLOAT16、antiquant_offset为BFLOAT16、output_dtype为BFLOAT16；
 7. 对于实际无bias的场景，在PyTorch 1.11与2.0版本中，须手动指定“bias=[]”；在PyTorch 2.1及更高的版本中，可以直接不指定bias参数。scale、offset、antiquantScale、antiquantOffset四个参数在不同PyTorch版本中的约束与bias相同。
 output_dtype的数据类型当前只支持None，或者与输入x的数据类型相同。
+如果传入group_list，group_list必须为非负递增数列，group_list长度不能为1。
+每一个matmul中k轴的值必须小于65536。
 
 支持的型号:
 Atlas A2 训练系列产品
@@ -4196,6 +4198,7 @@ output_dtype： ScalarType类型，可选参数，该参数只在量化场景生
 有专家时，专家数据的总数需要与x的M保持一致。
 激活层为geglu/swiglu/reglu时，仅支持无专家分组时的FLOAT16高性能场景（FLOAT16场景指类型为Tensor的必选参数数据类型都为FLOAT16的场景），且N1=2*K2。
 激活层为gelu/fastgelu/relu/silu时，支持有专家或无专家分组的FLOAT16高精度及高性能场景，BFLOAT16场景，量化场景及伪量化场景，且N1=K2。
+所有场景下需满足K1=N2, K1<65536, K2<65536。
 非量化场景不能输入量化参数和伪量化参数，量化场景不能输入伪量化参数，伪量化场景不能输入量化参数。
 量化场景参数类型：x为INT8、weight为INT8、bias为INT32、scale为FLOAT32、offset为FLOAT32，其余参数类型根据y不同分两种情况：
     y为FLOAT16，deqScale支持数据类型：UINT64、INT64、FLOAT32。
@@ -4247,7 +4250,7 @@ class MyModel(torch.nn.Module):
 cpu_model = MyModel()
 cpu_x = torch.randn((1954, 2560),device='npu',dtype=torch.float16)
 cpu_weight1 = torch.randn((16, 2560, 5120),device='npu',dtype=torch.float16)
-cpu_weight2 = torch.randn((16, 5120, 200),device='npu',dtype=torch.float16)
+cpu_weight2 = torch.randn((16, 5120, 2560),device='npu',dtype=torch.float16)
 activation = "fastgelu"
 expert = [227, 62, 78, 126, 178, 27, 122, 1, 19, 182, 166, 118, 66, 217, 122, 243]
 model = cpu_model.npu()
