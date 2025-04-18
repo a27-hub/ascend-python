@@ -3239,7 +3239,6 @@ Atlas A2 训练系列产品
 
 调用示例:
 1.单算子调用：
-在单算子模式下不支持使能高带宽的x2数据排布，如果想追求极致性能，请使用图模式
 import torch
 import torch_npu
 import logging
