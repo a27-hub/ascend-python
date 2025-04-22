@@ -44,6 +44,7 @@ namespace op_api {
         at::Tensor next_layer_id = npu_preparation::apply_tensor_without_format(next_layer_id_size, token_data.options().dtype(at::kInt));
 
         EXEC_NPU_CMD(aclnnAttentionWorkerCombine, token_data, expert_scales, layer_id,
+            hidden_size, token_dtype,
             y, next_layer_id);
 
         return std::tie(y, next_layer_id);

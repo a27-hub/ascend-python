@@ -1636,7 +1636,7 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
 
 @impl(m, "npu_attention_worker_combine")
 # def npu_attention_worker_combine(schedule_context, expert_scales, layer_id, hidden_size, token_dtype):
-def npu_attention_worker_combine(token_data, expert_scales, layer_id, hidden_size=0, token_dtype=0):
+def npu_attention_worker_combine(token_data, expert_scales, layer_id, hidden_size, token_dtype):
     y_size = []
     next_layer_id_size = []
     y_size.append(expert_scales.size(0))
@@ -1647,5 +1647,5 @@ def npu_attention_worker_combine(token_data, expert_scales, layer_id, hidden_siz
         y_dtype = torch.bfloat16
     # return (torch.empty(y_size, dtype=y_dtype, device=schedule_context.device),
     #         torch.empty(next_layer_id_size, dtype=torch.int32, device=schedule_context.device))
-        return (torch.empty(y_size, dtype=y_dtype, device=token_data.device),
+    return (torch.empty(y_size, dtype=y_dtype, device=token_data.device),
             torch.empty(next_layer_id_size, dtype=torch.int32, device=token_data.device))
