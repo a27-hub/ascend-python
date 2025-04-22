@@ -50,6 +50,7 @@ std::tuple<at::Tensor, at::Tensor> _unique(
     // Need to use delete[] to release memory to avoid memory leakage!
     delete[] view_dims;
     view_dims = nullptr;
+
     return std::tuple<at::Tensor, at::Tensor>(y, y_inverse);
 }
 #endif
