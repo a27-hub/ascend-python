@@ -6487,6 +6487,10 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNormCast
 
+  - func: npu_add_rms_norm_backward(Tensor dy, Tensor x, Tensor rstd, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor)
+    acl_op: all_version
+    op_api: all_version
+
   - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     op_api: all_version
     exposed: all_version
