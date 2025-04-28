@@ -303,14 +303,14 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnGroupedMatmulV5");
     if (getWorkspaceSizeFuncAddr == nullptr || opApiFuncAddr == nullptr) {
         EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-                 antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
-                 activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
-                 group_list_type_value, act_type_value, result, act_out, dynamic_quant_scale_out);
+            antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+            activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
+            group_list_type_value, act_type_value, result, act_out, dynamic_quant_scale_out);
     } else {
         EXEC_NPU_CMD(aclnnGroupedMatmulV5, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-                 antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
-                 activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
-                 group_list_type_value, act_type_value, tuning_config_real, result, act_out, dynamic_quant_scale_out);
+            antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+            activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
+            group_list_type_value, act_type_value, tuning_config_real, result, act_out, dynamic_quant_scale_out);
     }
     return y;
 }
