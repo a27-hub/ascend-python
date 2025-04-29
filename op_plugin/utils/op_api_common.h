@@ -66,16 +66,6 @@ typedef int (*_aclDestroyBoolArray)(const aclBoolArray *array);
 typedef int (*_aclDestroyTensorList)(const aclTensorList *array);
 typedef int (*_aclDestroyScalarList)(const aclScalarList *array);
 
-typedef struct {
-    const at::Tensor& tensor_;
-    aclDataType dtype;
-} TensorWrapper;
-
-typedef struct {
-    const at::TensorList& tensor_list_;
-    aclDataType dtype;
-} TensorListWrapper;
-
 using OpApiFunc = int (*)(void *, uint64_t, aclOpExecutor *, const aclrtStream);
 
 constexpr int g_hash_buf_size = 8192;

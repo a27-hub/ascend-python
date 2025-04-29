@@ -21,6 +21,16 @@
 
 #include "op_plugin/utils/OpAdapter.h"
 
+typedef struct {
+    const at::Tensor& tensor_;
+    aclDataType dtype;
+} TensorWrapper;
+
+typedef struct {
+    const at::TensorList& tensor_list_;
+    aclDataType dtype;
+} TensorListWrapper;
+
 namespace op_plugin {
 namespace logging {
 const static size_t SHOW_LIMIT = 20;
@@ -250,6 +260,58 @@ inline std::string convert_info(char* char_value)
     return ss.str();
 }
 
+inline std::string convert_info(const TensorWrapper &tensor_r)
+{
+    const at::Tensor &at_tensor = tensor_r.tensor_;
+    std::stringstream ss;
+    if (!at_tensor.defined()) {
+        ss << "Undefined Tensor!" << "\n";
+        return ss.str();
+    }
+
+    if (at_tensor.dim() == 0) {
+        if (torch_npu::utils::is_npu(at_tensor)) {
+            ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
+            std::string res = ss.str();
+            replace_and_append_newline(res);
+            return res;
+        } else {
+            ss << "CPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
+            std::string res = ss.str();
+            replace_and_append_newline(res);
+            return res;
+        }
+    }
+
+    ss << "Tensor size: "
+       << at_tensor.sizes()
+       << ", stride: "
+       << at_tensor.strides()
+       << ", offset: "
+       << at_tensor.storage_offset()
+       << ", dtype: "
+       << at_tensor.dtype()
+       << ", device ID: "
+       << static_cast<int>(at_tensor.device().index())
+       << "\n";
+
+    return ss.str();
+}
+
+inline std::string convert_info(const TensorListWrapper &tensor_list_wrapper)
+{
+    const at::TensorList &at_tensor_list = tensor_list_wrapper.tensor_list_;
+    std::stringstream ss;
+    if (at_tensor_list.size() == 0) {
+        ss << "Empty TensorList" << "\n";
+        return ss.str();
+    } else {
+        ss << "TensorList size: " << at_tensor_list.size()
+           << ", first tensor of tensorlist: " << convert_info(at_tensor_list[0]);
+        return ss.str();
+    }
+}
+
 template <typename T> T convert_info(T value)
 {
     return value;
@@ -377,6 +439,54 @@ inline std::string convert_debug_info(float float_value)
 }
 
 inline std::string convert_debug_info(char* char_value)
+{
+    std::string ss("");
+    return ss;
+}
+
+inline std::string convert_debug_info(const TensorWrapper &tensor_r)
+{
+    const at::Tensor &at_tensor = tensor_r.tensor_;
+    std::stringstream ss;
+    if (!at_tensor.defined()) {
+        ss << "Undefined Tensor!" << "\n";
+        return ss.str();
+    }
+
+    if (torch_npu::utils::is_npu(at_tensor)) {
+        int64_t tensor_format = at_npu::native::custom_ops::get_npu_format(at_tensor);
+        if (at_tensor.dim() == 0) {
+            ss << "NPU scalar Tensor: " << at_tensor << ", npu_format: " << tensor_format;
+        } else {
+            // To cpu to avoid using aclnnMin/aclnnMax/aclnnMean.
+            // To float to avoid problems caused by non-floating-point types, such as int.
+            at::Tensor cpu_tensor;
+            if (at_tensor.is_floating_point() || at_tensor.is_complex()) {
+                cpu_tensor = at_tensor.cpu();
+            } else {
+                cpu_tensor = at_tensor.cpu().to(at::kFloat);
+            }
+            ss << "Tensor min: "
+               << cpu_tensor.min()
+               << ", max: "
+               << cpu_tensor.max()
+               << ", mean: "
+               << cpu_tensor.mean()
+               << ", npu_format: "
+               << tensor_format;
+        }
+        std::string res = ss.str();
+        replace_and_append_newline(res);
+        return res;
+    } else {
+        ss << "CPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
+        std::string res = ss.str();
+        replace_and_append_newline(res);
+        return res;
+    }
+}
+
+inline std::string convert_debug_info(const TensorListWrapper &tensor_list_wrapper)
 {
     std::string ss("");
     return ss;
