@@ -17,6 +17,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
+#include "torch_npu/csrc/transformer_engine/Init.h"
 
 namespace op_api {
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
@@ -116,22 +117,25 @@ void CheckNpuSpecialDtype(const at::Tensor& x1, const at::Tensor& x2,
 {
     TORCH_CHECK(!(x1_dtype.has_value() && x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) &&
                   x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1) &&
-                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8)),
-                    "x1_dtype not supported, only support torch_npu.hifloat8(290), torch_npu.float4_e2m1(296), torch_npu.float4_e1m2(297), but got ",
-                    x1_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8) &&
+                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E5M2) &&
+                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E4M3FN)),
+                    "x1_dtype not supported, only support torch_npu.hifloat8, torch_npu.float8_e5m2, "
+                    "torch_npu.float8_e4m3fn, torch_npu.float4_e2m1, torch_npu.float4_e1m2, but got ",
+                    torch_npu::te::TeDataTypeToString(x1_dtype.value()), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!(x2_dtype.has_value() && x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) &&
                   x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1) &&
                   x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8)),
-                    "x2_dtype not supported, only support torch_npu.hifloat8(290), torch_npu.float4_e2m1(296), torch_npu.float4_e1m2(297), but got ",
-                    x2_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+                    "x2_dtype not supported, only support torch_npu.hifloat8, torch_npu.float4_e2m1, torch_npu.float4_e1m2, but got ",
+                    torch_npu::te::TeDataTypeToString(x2_dtype.value()), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!(pertoken_scale_dtype.has_value() &&
                   pertoken_scale_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E8M0)),
-                    "pertoken_scale_dtype not supported, only support torch_npu.float8_e8m0(293), but got ",
-                    pertoken_scale_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+                    "pertoken_scale_dtype not supported, only support torch_npu.float8_e8m0, but got ",
+                    torch_npu::te::TeDataTypeToString(pertoken_scale_dtype.value()), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!(scale_dtype.has_value() &&
                   scale_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E8M0)),
-                    "scale_dtype not supported, only support torch_npu.float8_e8m0(293), but got ", scale_dtype.value(),
-                    OPS_ERROR(ErrCode::PARAM));
+                    "scale_dtype not supported, only support torch_npu.float8_e8m0, but got ",
+                    torch_npu::te::TeDataTypeToString(scale_dtype.value()), OPS_ERROR(ErrCode::PARAM));
     if (x1_dtype.has_value()) {
         TORCH_CHECK(x1.itemsize() == 1,
                     "when x1_dtype is set, x1 must be a 1 byte dtype tensor, but got x1 dtype:",
@@ -173,18 +177,14 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
                     OPS_ERROR(ErrCode::PARAM));
     }
     CheckNpuSpecialDtype(x1, x2, scale, pertoken_scale, x1_dtype, x2_dtype, pertoken_scale_dtype, scale_dtype);
-    bool use_aclnn_v5 =x1_dtype.has_value() || (x1.dtype() != at::kInt && x1.dtype() != at::kChar);
     bool is_w4 = x2_dtype.has_value() ?
         (x2_dtype.value() == static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) ||
         x2_dtype.value() == static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1)) : false;
-    bool use_aclnn_v6 = is_w4 && !x1_dtype.has_value() && (x1.dtype() == at::kFloat8_e5m2 || x1.dtype() == at::kFloat8_e4m3fn);
-    if (use_aclnn_v6) {
-        const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV6GetWorkspaceSize");
-        const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV6");
-        TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr,
-                    "x1, x2 dtype no suppported, please upgrade CANN.",
-                    OPS_ERROR(ErrCode::PARAM));
-    } else if (use_aclnn_v5) {
+    bool is_a8w4 =
+        is_w4 && !x1_dtype.has_value() && (x1.dtype() == at::kFloat8_e5m2 || x1.dtype() == at::kFloat8_e4m3fn);
+
+    bool use_aclnn_v5 = x1_dtype.has_value() || (x1.dtype() != at::kInt && x1.dtype() != at::kChar) || is_a8w4;
+    if (use_aclnn_v5) {
         const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV5GetWorkspaceSize");
         const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV5");
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr,
@@ -253,27 +253,11 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
                          transpose1, transpose2, result);
         }
     } else {
-        if (use_aclnn_v6) {
-            at::Tensor* y_scale = nullptr;
-            at::Tensor* x1_offset = nullptr;
-            at::Tensor* x2_offset = nullptr;
-            at::Tensor* y_offset = nullptr;
-            at::Tensor* x2_table = nullptr;
-            int64_t group_size = 32;
-            int32_t computeType = -1;
-            TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value()) ?
-                torch_npu::te::GetAclDataType(x2_dtype.value()) :
-                npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
-            TensorWrapper x1_scale_wrapper = {pertoken_scale.value(), (pertoken_scale_dtype.has_value()) ?
-                torch_npu::te::GetAclDataType(pertoken_scale_dtype.value()) :
-                npu_preparation::convert_to_acl_data_type(pertoken_scale.value().scalar_type())};
-            TensorWrapper x2_scale_wrapper = {scale, (scale_dtype.has_value()) ?
-                torch_npu::te::GetAclDataType(scale_dtype.value()) :
-                npu_preparation::convert_to_acl_data_type(scale.scalar_type())};
-            EXEC_NPU_CMD(aclnnQuantMatmulV6, x1, x2_wrapper, bias_real, x1_scale_wrapper, x2_scale_wrapper, y_scale, x1_offset,
-                x2_offset, y_offset, x2_table, computeType, transpose1, transpose2, group_size, result);
-        } else if (use_aclnn_v5) {
-            at::Tensor y_scale = at::empty({0}, options);
+        if (use_aclnn_v5) {
+            at::Tensor y_scale;
+            if (!is_a8w4) {
+                y_scale = at::empty({0}, options);
+            }
             at::Tensor x1_offset = at::empty({0}, options);
             at::Tensor y_offset = at::empty({0}, options);
             TensorWrapper x1_wrapper = {x1, (x1_dtype.has_value()) ?
