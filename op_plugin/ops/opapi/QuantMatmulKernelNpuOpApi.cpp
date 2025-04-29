@@ -78,20 +78,119 @@ uint64_t infer_out_batch_shape(const at::Tensor &x1, const at::Tensor &x2, std::
     return batch_val;
 }
 
+int64_t CheckAndGetGroups(at::IntArrayRef group_size_list, const at::Tensor& x1, const at::Tensor& x2,
+                          const at::Tensor& scale, const c10::optional<at::Tensor>& pertoken_scale)
+{
+    int64_t groups = 0;
+    if (group_size_list.empty()) {
+        return groups;
+    }
+    size_t group_dim = group_size_list.size();
+    static const uint64_t group_max = 65535UL; // group_m, group_n, group_k 不能超过16位能表示的最大值
+    if (group_dim != 3) {
+        TORCH_CHECK(false,
+            "Invalid group_sizes, group_sizes only support three-dimensional, actual is %d",
+            group_dim);
+        return -1;
+    }
+    int64_t group_m = static_cast<int64_t>(group_size_list[0]);
+    int64_t group_n = static_cast<int64_t>(group_size_list[1]);
+    int64_t group_k = static_cast<int64_t>(group_size_list[2]);
+    if (group_m > group_max || group_n > group_max || group_k > group_max) {
+        TORCH_CHECK(false, "Invalid group param, group can not large than 65535");
+        return -1;
+    }
+    if (group_m < 0 || group_n < 0 || group_k < 0) {
+        TORCH_CHECK(false, "Invalid group param, group can not small than 0");
+        return -1;
+    }
+    groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << 32) + (static_cast<uint64_t>(group_n) << 16) +
+                                  static_cast<uint64_t>(group_k));
+    return groups;
+}
+
+void CheckNpuSpecialDtype(const at::Tensor& x1, const at::Tensor& x2,
+                          const at::Tensor& scale, const c10::optional<at::Tensor>& pertoken_scale,
+                          c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
+                          c10::optional<int64_t> pertoken_scale_dtype, c10::optional<int64_t> scale_dtype)
+{
+    TORCH_CHECK(!(x1_dtype.has_value() && x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) &&
+                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1) &&
+                  x1_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8)),
+                    "x1_dtype not supported, only support torch_npu.hifloat8(290), torch_npu.float4_e2m1(296), torch_npu.float4_e1m2(297), but got ",
+                    x1_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!(x2_dtype.has_value() && x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) &&
+                  x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1) &&
+                  x2_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8)),
+                    "x2_dtype not supported, only support torch_npu.hifloat8(290), torch_npu.float4_e2m1(296), torch_npu.float4_e1m2(297), but got ",
+                    x2_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!(pertoken_scale_dtype.has_value() &&
+                  pertoken_scale_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E8M0)),
+                    "pertoken_scale_dtype not supported, only support torch_npu.float8_e8m0(293), but got ",
+                    pertoken_scale_dtype.value(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!(scale_dtype.has_value() &&
+                  scale_dtype.value() != static_cast<int>(torch_npu::te::DType::TE_FLOAT8_E8M0)),
+                    "scale_dtype not supported, only support torch_npu.float8_e8m0(293), but got ", scale_dtype.value(),
+                    OPS_ERROR(ErrCode::PARAM));
+    if (x1_dtype.has_value()) {
+        TORCH_CHECK(x1.itemsize() == 1,
+                    "when x1_dtype is set, x1 must be a 1 byte dtype tensor, but got x1 dtype:",
+                    x1.dtype(), OPS_ERROR(ErrCode::PARAM));
+    }
+    if (x2_dtype.has_value()) {
+        TORCH_CHECK(x2.itemsize() == 1,
+                    "when x2_dtype is set, x2 must be a 1 byte dtype tensor, but got x2 dtype:",
+                    x2.dtype(), OPS_ERROR(ErrCode::PARAM));
+    }
+    if (scale_dtype.has_value()) {
+        TORCH_CHECK(scale.itemsize() == 1,
+                    "when scale_dtype is set, scale must be a 1 byte dtype tensor, but got scale dtype:",
+                    scale.dtype(), OPS_ERROR(ErrCode::PARAM));
+    }
+    if (pertoken_scale_dtype.has_value()) {
+        TORCH_CHECK(pertoken_scale.has_value(), "when pertoken_scale_dtype is set, but pertoken_scale is null",
+                    OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(pertoken_scale.value().itemsize() == 1,
+                    "when pertoken_scale_dtype is set, pertoken_scale must be a 1 byte dtype tensor, but got pertoken_scale dtype:",
+                    pertoken_scale.value().dtype(), OPS_ERROR(ErrCode::PARAM));
+    }
+}
+
 #if VERSION_BETWEEN(V1R11, V1R11) || VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at::Tensor& scale,
                             const c10::optional<at::Tensor>& offset, const c10::optional<at::Tensor>& pertoken_scale,
-                            const c10::optional<at::Tensor>& bias, c10::optional<at::ScalarType> output_dtype)
+                            const c10::optional<at::Tensor>& bias, c10::optional<int64_t> output_dtype,
+                            c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
+                            c10::optional<int64_t> pertoken_scale_dtype, c10::optional<int64_t> scale_dtype,
+                            at::OptionalIntArrayRef group_sizes)
 {
     if (is_nz_format(x2)) {
         const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulWeightNzGetWorkspaceSize");
         const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulWeightNz");
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr,
-                    "Get aclnnQuantMatmulWeightNz or aclnnQuantMatmulWeightNzGetWorkspaceSize faild, only "
+                    "Get aclnnQuantMatmulWeightNz or aclnnQuantMatmulWeightNzGetWorkspaceSize failed, only "
                     "aclnnQuantMatmulWeightNz support X2's format is nz, please upgrade CANN.",
                     OPS_ERROR(ErrCode::PARAM));
     }
-
+    CheckNpuSpecialDtype(x1, x2, scale, pertoken_scale, x1_dtype, x2_dtype, pertoken_scale_dtype, scale_dtype);
+    bool use_aclnn_v5 =x1_dtype.has_value() || (x1.dtype() != at::kInt && x1.dtype() != at::kChar);
+    bool is_w4 = x2_dtype.has_value() ?
+        (x2_dtype.value() == static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E1M2) ||
+        x2_dtype.value() == static_cast<int>(torch_npu::te::DType::TE_FLOAT4_E2M1)) : false;
+    bool use_aclnn_v6 = is_w4 && !x1_dtype.has_value() && (x1.dtype() == at::kFloat8_e5m2 || x1.dtype() == at::kFloat8_e4m3fn);
+    if (use_aclnn_v6) {
+        const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV6GetWorkspaceSize");
+        const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV6");
+        TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr,
+                    "x1, x2 dtype no suppported, please upgrade CANN.",
+                    OPS_ERROR(ErrCode::PARAM));
+    } else if (use_aclnn_v5) {
+        const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV5GetWorkspaceSize");
+        const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnQuantMatmulV5");
+        TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr,
+                    "x1, x2 dtype no suppported, please upgrade CANN.",
+                    OPS_ERROR(ErrCode::PARAM));
+    }
     bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
@@ -110,10 +209,12 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
         output_size[i] = static_cast<int64_t>(batch_record[i]);
     }
     c10::TensorOptions options;
+    aclDataType output_acltype = ACL_INT8;
     if (!output_dtype.has_value()) {
         options = x1.options().dtype(at::kChar);
     } else {
-        options = x1.options().dtype(output_dtype.value());
+        output_acltype = torch_npu::te::GetAclDataType(output_dtype.value());
+        options = x1.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
@@ -122,29 +223,80 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     bool transpose1 = false;
     bool transpose2 = false;
-
-    if (scale.dtype() == at::kFloat && !pertoken_scale.has_value() && output_dtype != at::kBFloat16 &&
-        output_dtype != at::kInt) {
+    auto group_size_list = group_sizes.value_or(at::IntArrayRef{});
+    int64_t group_size = CheckAndGetGroups(group_size_list, x1, x2, scale, pertoken_scale);
+    TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
+    if (scale.dtype() == at::kFloat && !pertoken_scale.has_value() &&
+        (output_acltype != ACL_BF16 || use_aclnn_v5) && output_acltype != ACL_INT32) {
         const at::Tensor quant_param = op_api::npu_trans_quant_param(scale, offset);
-        if (!is_a4w4 && is_nz_format(x2)) {
-            at::Tensor yscale = at::empty({0}, options);
-            at::Tensor x1Offset = at::empty({0}, options);
-            at::Tensor yOffset = at::empty({0}, options);
-            int64_t groupSize = 0;
-            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, quant_param, yscale, x1Offset,
-                         offset_real, yOffset, bias_real, transpose1, transpose2, groupSize, result);
+        if (use_aclnn_v5) {
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            TensorWrapper x1_wrapper = {x1, (x1_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(x1_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(x1.scalar_type())};
+            TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(x2_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
+            TensorWrapper result_wrapper = {result, output_acltype};
+            EXEC_NPU_CMD(aclnnQuantMatmulV5, x1_wrapper, x2_wrapper, pertoken_scale_real, quant_param, y_scale, x1_offset,
+                         offset_real, y_offset, bias_real, transpose1, transpose2, group_size, result_wrapper);
+        } else if (!is_a4w4 && is_nz_format(x2)) {
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, quant_param, y_scale, x1_offset,
+                         offset_real, y_offset, bias_real, transpose1, transpose2, group_size, result);
         } else {
             EXEC_NPU_CMD(aclnnQuantMatmulV4, x1, x2, quant_param, offset_real, pertoken_scale_real, bias_real,
                          transpose1, transpose2, result);
         }
     } else {
-        if (!is_a4w4 && is_nz_format(x2)) {
-            at::Tensor yscale = at::empty({0}, options);
-            at::Tensor x1Offset = at::empty({0}, options);
-            at::Tensor yOffset = at::empty({0}, options);
-            int64_t groupSize = 0;
-            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, scale, yscale, x1Offset, offset_real,
-                         yOffset, bias_real, transpose1, transpose2, groupSize, result);
+        if (use_aclnn_v6) {
+            at::Tensor* y_scale = nullptr;
+            at::Tensor* x1_offset = nullptr;
+            at::Tensor* x2_offset = nullptr;
+            at::Tensor* y_offset = nullptr;
+            at::Tensor* x2_table = nullptr;
+            int64_t group_size = 32;
+            int32_t computeType = -1;
+            TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(x2_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
+            TensorWrapper x1_scale_wrapper = {pertoken_scale.value(), (pertoken_scale_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(pertoken_scale_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(pertoken_scale.value().scalar_type())};
+            TensorWrapper x2_scale_wrapper = {scale, (scale_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(scale_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(scale.scalar_type())};
+            EXEC_NPU_CMD(aclnnQuantMatmulV6, x1, x2_wrapper, bias_real, x1_scale_wrapper, x2_scale_wrapper, y_scale, x1_offset,
+                x2_offset, y_offset, x2_table, computeType, transpose1, transpose2, group_size, result);
+        } else if (use_aclnn_v5) {
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            TensorWrapper x1_wrapper = {x1, (x1_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(x1_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(x1.scalar_type())};
+            TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(x2_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
+            TensorWrapper x1_scale_wrapper = {pertoken_scale.value(), (pertoken_scale_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(pertoken_scale_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(pertoken_scale.value().scalar_type())};
+            TensorWrapper x2_scale_wrapper = {scale, (scale_dtype.has_value()) ?
+                torch_npu::te::GetAclDataType(scale_dtype.value()) :
+                npu_preparation::convert_to_acl_data_type(scale.scalar_type())};
+            TensorWrapper result_wrapper = {result, output_acltype};
+            EXEC_NPU_CMD(aclnnQuantMatmulV5, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, y_scale, x1_offset, offset_real,
+                         y_offset, bias_real, transpose1, transpose2, group_size, result_wrapper);
+        } else if (!is_a4w4 && is_nz_format(x2)) {
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, scale, y_scale, x1_offset, offset_real,
+                         y_offset, bias_real, transpose1, transpose2, group_size, result);
         } else {
             EXEC_NPU_CMD(aclnnQuantMatmulV4, x1, x2, scale, offset_real, pertoken_scale_real, bias_real,
                          transpose1, transpose2, result);
@@ -194,12 +346,12 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
     if (scale.dtype() == at::kFloat) {
         const at::Tensor quant_param = op_api::npu_trans_quant_param(scale, offset);
         if (!is_a4w4 && is_nz_format(x2)) {
-            at::Tensor x1scale = at::empty({0}, options);
-            at::Tensor yscale = at::empty({0}, options);
-            at::Tensor x1Offset = at::empty({0}, options);
-            at::Tensor yOffset = at::empty({0}, options);
-            int64_t groupSize = 0;
-            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, x1scale, quant_param, yscale, x1Offset, offset_real, yOffset,
+            at::Tensor x1_scale = at::empty({0}, options);
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            int64_t group_size = 0;
+            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, x1_scale, quant_param, y_scale, x1_offset, offset_real, y_offset,
                          bias_real, transpose1, transpose2, 0, result);
         } else {
             EXEC_NPU_CMD(
@@ -215,12 +367,12 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
         }
     } else {
         if (!is_a4w4 && is_nz_format(x2)) {
-            at::Tensor x1scale = at::empty({0}, options);
-            at::Tensor yscale = at::empty({0}, options);
-            at::Tensor x1Offset = at::empty({0}, options);
-            at::Tensor yOffset = at::empty({0}, options);
-            int64_t groupSize = 0;
-            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, x1scale, scale, yscale, x1Offset, offset_real, yOffset,
+            at::Tensor x1_scale = at::empty({0}, options);
+            at::Tensor y_scale = at::empty({0}, options);
+            at::Tensor x1_offset = at::empty({0}, options);
+            at::Tensor y_offset = at::empty({0}, options);
+            int64_t group_size = 0;
+            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, x1_scale, scale, y_scale, x1_offset, offset_real, y_offset,
                          bias_real, transpose1, transpose2, 0, result);
         } else {
             EXEC_NPU_CMD(aclnnQuantMatmulV3, x1, x2, scale, offset_real, bias_real, transpose1, transpose2, result);

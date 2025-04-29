@@ -37,6 +37,7 @@
 #include "torch_npu/csrc/aten/NPUNativeFunctions.h"
 #include "torch_npu/csrc/flopcount/FlopCount.h"
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
+#include "torch_npu/csrc/transformer_engine/Init.h"
 
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
@@ -64,6 +65,16 @@ typedef int (*_aclDestroyFloatArray)(const aclFloatArray *array);
 typedef int (*_aclDestroyBoolArray)(const aclBoolArray *array);
 typedef int (*_aclDestroyTensorList)(const aclTensorList *array);
 typedef int (*_aclDestroyScalarList)(const aclScalarList *array);
+
+typedef struct {
+    const at::Tensor& tensor_;
+    aclDataType dtype;
+} TensorWrapper;
+
+typedef struct {
+    const at::TensorList& tensor_list_;
+    aclDataType dtype;
+} TensorListWrapper;
 
 using OpApiFunc = int (*)(void *, uint64_t, aclOpExecutor *, const aclrtStream);
 
@@ -383,6 +394,100 @@ inline aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar)
 inline aclDataType ConvertType(const at::ScalarType scalarType)
 {
     return at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
+}
+
+inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
+{
+    static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
+    if (aclCreateTensor == nullptr)
+    {
+        return nullptr;
+    }
+
+    const at::Tensor &at_tensor = tensor_r.tensor_;
+
+    if (!at_tensor.defined())
+    {
+        return nullptr;
+    }
+    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
+                "Expected all tensors to be on the same device. "
+                "Expected NPU tensor, please check whether the input tensor device is correct.",
+                OPS_ERROR(ErrCode::TYPE));
+
+    aclDataType acl_data_type = tensor_r.dtype;
+    c10::SmallVector<int64_t, 5> storageDims;
+    c10::SmallVector<int64_t, 5> wrapperStride = op_infer::array_to_small_vector(at_tensor.strides());
+    c10::SmallVector<int64_t, 5> wrapperShape = op_infer::array_to_small_vector(at_tensor.sizes());
+    // if acl_data_type is ACL_STRING, storageDims is empty.
+    if (acl_data_type != ACL_STRING)
+    {
+        TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+                    OPS_ERROR(ErrCode::VALUE));
+        if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+
+            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * 2);
+            if (at_tensor.sizes().size() == 1) {
+                wrapperShape[0] = wrapperShape[0] * 2;
+            } else if (at_tensor.sizes().size() > 1 && wrapperStride[at_tensor.sizes().size() - 1] == 1) {
+                wrapperStride[at_tensor.sizes().size() - 2] = wrapperStride[at_tensor.sizes().size() - 2] * 2;
+                for (auto i = 0; i < at_tensor.sizes().size() - 2; i++) {
+                    wrapperStride[i] = wrapperStride[i] * 2;
+                }
+                wrapperShape[at_tensor.sizes().size() - 1] = wrapperShape[at_tensor.sizes().size() - 1] * 2;
+            } else if (at_tensor.sizes().size() > 1 && wrapperStride[at_tensor.sizes().size() - 2] == 1) {
+                wrapperStride[at_tensor.sizes().size() - 1] = wrapperStride[at_tensor.sizes().size() - 1] * 2;
+                for (auto i = 0; i < at_tensor.sizes().size() - 2; i++) {
+                    wrapperStride[i] = wrapperStride[i] * 2;
+                }
+                wrapperShape[at_tensor.sizes().size() - 2] = wrapperShape[at_tensor.sizes().size() - 2] * 2;
+            } else {
+                TORCH_CHECK(true, "unsupported tensor warrper strides in 4-bit dtype.",
+                    OPS_ERROR(ErrCode::VALUE));
+            }
+        } else {
+            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+        }
+    }
+
+    const auto dimNum = at_tensor.sizes().size();
+    aclFormat format = ACL_FORMAT_ND;
+    switch (dimNum)
+    {
+    case 3:
+        format = ACL_FORMAT_NCL;
+        break;
+    case 4:
+        format = ACL_FORMAT_NCHW;
+        break;
+    case 5:
+        format = ACL_FORMAT_NCDHW;
+        break;
+    default:
+        format = ACL_FORMAT_ND;
+    }
+
+    auto acl_tensor =
+        aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
+                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                        const_cast<void *>(at_tensor.storage().data()));
+    return acl_tensor;
+}
+
+inline aclTensorList *ConvertType(const TensorListWrapper &tensor_list_wrapper)
+{
+    static const auto aclCreateTensorList = GET_OP_API_FUNC(aclCreateTensorList);
+    if (aclCreateTensorList == nullptr) {
+        return nullptr;
+    }
+
+    std::vector<const aclTensor *> tensor_list(tensor_list_wrapper.tensor_list_.size());
+    for (size_t i = 0; i < tensor_list.size(); i++) {
+        tensor_list[i] = ConvertType(TensorWrapper{
+            tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
+    }
+    auto acl_tensor_list = aclCreateTensorList(tensor_list.data(), tensor_list.size());
+    return acl_tensor_list;
 }
 
 template <typename T> T ConvertType(T value)

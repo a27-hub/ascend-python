@@ -1,0 +1,59 @@
+// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// All rights reserved.
+//
+// Licensed under the BSD 3-Clause License  (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://opensource.org/licenses/BSD-3-Clause
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/op_api_common.h"
+
+namespace op_api {
+using npu_preparation = at_npu::native::OpPreparation;
+namespace {
+constexpr int64_t BLOCK_SIZE_BASE_NUM = 32;
+constexpr int64_t BLOCK_SIZE_MAX_NUM = 1024;
+}; // namespace
+
+std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
+    const at::Tensor &input,
+    const int64_t axis,
+    c10::string_view round_mode,
+    int64_t dst_type,
+    int64_t block_size)
+{
+    at::Tensor y, mxscale;
+    auto y_shape = op_infer::array_to_small_vector(input.sizes());
+    auto mxscale_shape = op_infer::array_to_small_vector(input.sizes());
+    TORCH_CHECK(axis >= -1 * input.dim() && axis < input.dim(),
+        "Param (axis) is out of input dimension range" + OPS_ERROR(ErrCode::PARAM));
+    int64_t axis_change = axis < 0 ? axis + input.dim() : axis;
+    TORCH_CHECK(input.size(axis_change) > 0, 
+        "Param (input) has an empty dim" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(block_size % BLOCK_SIZE_BASE_NUM == 0 && block_size > 0 && block_size <= BLOCK_SIZE_MAX_NUM,
+        "Param (block_size) must be divisible by 32 and no greater than 1024, greater than 0" + OPS_ERROR(ErrCode::PARAM));
+    mxscale_shape[axis_change] = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
+    char *round_mode_ptr = const_cast<char *>(round_mode.data());
+
+    // prepare for empty output tensor
+    aclDataType y_acltype = torch_npu::te::GetAclDataType(dst_type);
+    at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+    y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
+    mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
+
+    TensorWrapper y_wrapper = {y, y_acltype};
+    TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
+    EXEC_NPU_CMD(aclnnDynamicMxQuant, input, axis, round_mode_ptr, y_acltype, block_size, y_wrapper, mxscale_wrapper);
+    return std::make_tuple(y, mxscale);
+}
+
+} // namespace op_api

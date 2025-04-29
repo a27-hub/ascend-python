@@ -1628,6 +1628,33 @@ c10::SmallVector<int64_t, SIZE> ger_output_size(const at::Tensor &self, const at
     return output_size;
 }
 
+c10::SmallVector<int64_t, SIZE> dequant_swiglu_quant_output_size_0(const at::Tensor &x)
+{
+    auto x_shape = array_to_small_vector(x.sizes());
+    auto x_dim_num = x.dim();
+
+    c10::SmallVector<int64_t, SIZE> y_shape;
+    for (int64_t i = 0; i < x_dim_num - 1; i++) {
+        y_shape.emplace_back(x_shape[i]);
+    }
+
+    y_shape.emplace_back(x_shape[x_dim_num - 1] / 2);
+    return y_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> dequant_swiglu_quant_output_size_1(const at::Tensor &x)
+{
+    auto x_shape = array_to_small_vector(x.sizes());
+    auto x_dim_num = x.dim();
+
+    c10::SmallVector<int64_t, SIZE> scale_shape;
+    for (int64_t i = 0; i < x_dim_num - 1; i++) {
+        scale_shape.emplace_back(x_shape[i]);
+    }
+
+    return scale_shape;
+}
+
 // infer output shape for int repeats case
 c10::SmallVector<int64_t, SIZE> repeat_interleave_npu_output_size_opapi(const at::Tensor &self, int64_t repeats,
                                                                         c10::optional<int64_t> dim)

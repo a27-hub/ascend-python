@@ -21,7 +21,8 @@ set -e
 CUR_DIR=$(dirname $(readlink -f $0))
 PY_VERSION='3.8' # Default supported python version is 3.8
 PYTORCH_VERSION='master' # Default supported PyTorch branch is master
-DEFAULT_SCRIPT_ARGS_NUM_MAX=2 # Default max supported input parameters
+PYTORCH_DAVID_PATH='https://gitee.com/yanpengquan07/PTA_David.git'
+DEFAULT_SCRIPT_ARGS_NUM_MAX=3 # Default max supported input parameters
 
 # Parse arguments inside script
 function parse_script_args() {
@@ -107,7 +108,7 @@ function main()
         if [ -d ${BUILD_PATH} ]; then
             rm -r ${BUILD_PATH}
         fi
-        git clone -b ${PYTORCH_VERSION} https://gitee.com/ascend/pytorch.git ${PYTORCH_PATH}
+        git clone -b ${PYTORCH_VERSION} ${PYTORCH_DAVID_PATH} ${PYTORCH_PATH}
     fi
     checkout_pytorch_branch
 

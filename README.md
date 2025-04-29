@@ -33,7 +33,7 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
    ```
    执行编译构建，当前支持torch_npu 2.1/2.3/2.4/2.5/2.6/master版本
    ```
-   bash ci/build.sh --python=3.8 --pytorch=v2.1.0
+   bash ci/build.sh --python=3.8 --pytorch=v2.1.0 --pytorch_david_path=https://gitee.com/yanpengquan07/PTA_David.git
    ```
    请注意，编译时gcc版本遵循如下约束：
    arm架构下推荐使用gcc 10.2, x86架构下推荐使用gcc 9.3.1; 2.6及之后版本的编译推荐使用gcc 11.2.1

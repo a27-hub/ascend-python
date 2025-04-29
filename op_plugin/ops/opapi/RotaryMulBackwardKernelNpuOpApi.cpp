@@ -44,8 +44,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(
     const at::Tensor& r2,
     c10::string_view rotary_mode)
 {
-    TORCH_CHECK(rotary_mode == "half" || rotary_mode == "interleave",
-        "The rotary_mode of npu_rotary_mul_backward should be half or interleave, but got ", rotary_mode,
+    TORCH_CHECK(rotary_mode == "half" || rotary_mode == "interleave" || rotary_mode == "quarter" || rotary_mode == "interleave-half",
+        "The rotary_mode of npu_rotary_mul_backward should be half, interleave, quarter or interleave-half, but got ", rotary_mode,
         OPS_ERROR(ErrCode::PARAM));
     DO_COMPATIBILITY(aclnnRotaryPositionEmbeddingGrad, acl_op::npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode));
     int64_t mode = op_plugin::utils::get_rotary_mode(rotary_mode);
@@ -56,13 +56,30 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(
     at::Tensor dcos = npu_preparation::apply_tensor_without_format(r1.sizes(), self.options());
     at::Tensor dsin = npu_preparation::apply_tensor_without_format(r2.sizes(), self.options());
     bool isMixDataType = isRotaryMulBackwardMixDtypeSupport(grad, self, r1, r2);
+    at::Tensor empty;
     if (isMixDataType) {
         at::Tensor gradCast = npu_dtype_cast_impl_op_api(grad, self.scalar_type());
         at::Tensor cosCast = npu_dtype_cast_impl_op_api(r1, self.scalar_type());
         at::Tensor sinCast = npu_dtype_cast_impl_op_api(r2, self.scalar_type());
-        EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingGrad, gradCast, cosCast, sinCast, self, mode, dx, dcos, dsin);
+        EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingGrad,
+            gradCast,
+            cosCast,
+            sinCast,
+            (r1.requires_grad() || r2.requires_grad()) ? self : empty,
+            mode,
+            dx,
+            dcos,
+            dsin);
     } else {
-        EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingGrad, grad, r1, r2, self, mode, dx, dcos, dsin);
+        EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingGrad,
+            grad,
+            r1,
+            r2,
+            (r1.requires_grad() || r2.requires_grad()) ? self : empty,
+            mode,
+            dx,
+            dcos,
+            dsin);
     }
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(dx, dcos, dsin);
 }

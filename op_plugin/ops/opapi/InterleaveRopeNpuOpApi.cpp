@@ -16,18 +16,23 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
 namespace op_api
 {
     using npu_preparation = at_npu::native::OpPreparation;
-
+    const int64_t MODE_INTERLEAVE = 3;
     at::Tensor npu_interleave_rope(
         const at::Tensor &x,
         const at::Tensor &cos,
         const at::Tensor &sin)
     {
         at::Tensor out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-        EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9591) {
+            EXEC_NPU_CMD(aclnnRotaryPositionEmbedding, x, cos, sin, MODE_INTERLEAVE, out);
+        } else {
+            EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
+        }
         return out;
     }
 } // namespace op_api

@@ -168,7 +168,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
-    c10::TensorOptions options = x[0].options().dtype(output_dtype.value_or(x[0].scalar_type()));
+    c10::TensorOptions options = x[0].options().dtype(
+        output_dtype.has_value()
+            ? npu_preparation::convert_to_scalar_type(torch_npu::te::GetAclDataType(output_dtype.value()))
+            : x[0].scalar_type());
 
     if (IN_NOT_SPLIT_OUT_NOT_SPLIT == split_item_value || IN_SPLIT_OUT_NOT_SPLIT == split_item_value) {
         if (num_group_list > 0) {
@@ -227,12 +230,11 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                            c10::optional<int64_t> group_type,
                                            c10::optional<int64_t> group_list_type,
                                            c10::optional<int64_t> act_type,
-                                           c10::optional<at::ScalarType> output_dtype)
-// func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None,
-// Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None,
-// Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input,
-// Tensor[]? activation_quant_offset, Tensor[]? activation_quant_offset, int? split_item=0,
-// int? group_type=-1, int? group_list_type=0, int? act_type=0, ScalarType? output_dtype=None) -> Tensor[]
+                                           c10::optional<int64_t> output_dtype,
+                                           c10::optional<int64_t> x_dtype,
+                                           c10::optional<int64_t> weight_dtype,
+                                           c10::optional<int64_t> scale_dtype,
+                                           c10::optional<int64_t> per_token_scale_dtype)
 {
     if (!check_aclnn_kernel_available("aclnnGroupedMatmulV4")) {
         TORCH_CHECK(!group_list.has_value(),
@@ -247,7 +249,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         check_dims(split_item_value, num_x, num_weight, num_group_list);
 
         std::vector<at::Tensor> y;
-        c10::TensorOptions options = x[0].options().dtype(output_dtype.value_or(x[0].scalar_type()));
+        c10::TensorOptions options = x[0].options().dtype(
+            output_dtype.has_value()
+            ? npu_preparation::convert_to_scalar_type(torch_npu::te::GetAclDataType(output_dtype.value()))
+            : x[0].scalar_type());
 
         if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
             y.reserve(num_x);
@@ -276,6 +281,27 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         return y;
     }
 
+    if (x_dtype.has_value()) {
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
+                    "The optional parameter x_dtype only supports hifloat8 when passed in, but now is ",
+                    x_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (weight_dtype.has_value()) {
+        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
+                   "The optional parameter weight_dtype only supports hifloat8 when passed in, but now is ",
+                   weight_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (scale_dtype.has_value()) {
+        TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
+                  "The optional parameter scale_dtype only supports float8_e8m0 when passed in, but now is ",
+                  scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (per_token_scale_dtype.has_value()) {
+        TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
+                 "The optional parameter per_token_scale_dtype only supports float8_e8m0 when passed in, but now is ",
+                 per_token_scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+
     auto num_x = x.size();
     bool singleWeight = weight.size() == 1 && weight[0].sizes().size() == 3;
     auto num_weight = singleWeight ? static_cast<size_t>(weight[0].size(0)) : static_cast<size_t>(weight.size());
@@ -285,12 +311,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
-    c10::TensorOptions options;
-    if (x[0].scalar_type() == at::ScalarType::Char) {
-        options = x[0].options().dtype(output_dtype.value_or(at::ScalarType::Half));
-    } else {
-        options = x[0].options().dtype(output_dtype.value_or(x[0].scalar_type()));
-    }
+    c10::TensorOptions options = x[0].options().dtype(
+        output_dtype.has_value()
+            ? npu_preparation::convert_to_scalar_type(torch_npu::te::GetAclDataType(output_dtype.value()))
+            : x[0].scalar_type());
 
     size_t dim_num_w = weight[0].sizes().size();
     size_t n0 = static_cast<size_t>(weight[0].size(dim_num_w - 1));
@@ -352,8 +376,22 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     int64_t group_list_type_value = group_list_type.value_or(0);
     int64_t act_type_value = act_type.value_or(0);
 
-    EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-                 antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+    TensorListWrapper x_wrapper = {x,
+        x_dtype.has_value() ? torch_npu::te::GetAclDataType(x_dtype.value())
+                            : npu_preparation::convert_to_acl_data_type(x[0].scalar_type())};
+    TensorListWrapper weight_wrapper = {weight,
+        weight_dtype.has_value() ? torch_npu::te::GetAclDataType(weight_dtype.value())
+                                 : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+    TensorListWrapper scale_wrapper = {scale_real,
+        scale_dtype.has_value() ? torch_npu::te::GetAclDataType(scale_dtype.value())
+                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type())};
+    TensorListWrapper per_token_scale_wrapper = {per_token_scale_real,
+        per_token_scale_dtype.has_value()
+            ? torch_npu::te::GetAclDataType(per_token_scale_dtype.value())
+            : npu_preparation::convert_to_acl_data_type(per_token_scale_real[0].scalar_type())};
+
+    EXEC_NPU_CMD(aclnnGroupedMatmulV4, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
+                 antiquant_offset_real, per_token_scale_wrapper, group_list_real, activation_input_real,
                  activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
                  group_list_type_value, act_type_value, result, act_out, dynamic_quant_scale_out);
 
@@ -383,8 +421,28 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                            c10::optional<int64_t> group_type,
                                            c10::optional<int64_t> group_list_type,
                                            c10::optional<int64_t> act_type,
-                                           c10::optional<at::ScalarType> output_dtype)
+                                           c10::optional<int64_t> output_dtype,
+                                           c10::optional<int64_t> x_dtype,
+                                           c10::optional<int64_t> weight_dtype,
+                                           c10::optional<int64_t> scale_dtype,
+                                           c10::optional<int64_t> per_token_scale_dtype)
 {
+    if (x_dtype.has_value()) {
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
+                    "The optional parameter x_dtype only supports hifloat8 when passed in, but now is ",
+                    x_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (weight_dtype.has_value()) {
+        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
+                   "The optional parameter weight_dtype only supports hifloat8 when passed in, but now is ",
+                   weight_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (scale_dtype.has_value()) {
+        TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
+                  "The optional parameter scale_dtype only supports float8_e8m0 when passed in, but now is ",
+                  scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+
     auto num_x = x.size();
     auto num_weight = weight.size();
     auto group_list_real = group_list.value_or(at::IntArrayRef{});
@@ -393,7 +451,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
-    c10::TensorOptions options = x[0].options().dtype(output_dtype.value_or(x[0].scalar_type()));
+    c10::TensorOptions options = x[0].options().dtype(
+        output_dtype.has_value()
+            ? npu_preparation::convert_to_scalar_type(torch_npu::te::GetAclDataType(output_dtype.value()))
+            : x[0].scalar_type());
 
     if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
         if (num_group_list > 0) {
@@ -432,7 +493,17 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     auto offset_real = offset.value_or(at::TensorList());
     auto antiquant_scale_real = antiquant_scale.value_or(at::TensorList());
     auto antiquant_offset_real = antiquant_offset.value_or(at::TensorList());
-    EXEC_NPU_CMD(aclnnGroupedMatmul, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
+
+    TensorListWrapper x_wrapper = {x,
+        x_dtype.has_value() ? torch_npu::te::GetAclDataType(x_dtype.value())
+                            : npu_preparation::convert_to_acl_data_type(x[0].scalar_type())};
+    TensorListWrapper weight_wrapper = {weight,
+        weight_dtype.has_value() ? torch_npu::te::GetAclDataType(weight_dtype.value())
+                                 : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+    TensorListWrapper scale_wrapper = {scale_real,
+        scale_dtype.has_value() ? torch_npu::te::GetAclDataType(scale_dtype.value())
+                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type())};
+    EXEC_NPU_CMD(aclnnGroupedMatmul, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
                  antiquant_offset_real, group_list_real, split_item_value, result);
 
     return y;

@@ -274,6 +274,7 @@ def gen_return(
         format_display = []
         place_holder = []
         format_for_args = []
+        is_ascend910_95_version = "c10_npu::IsAscend910_95Version()"
         for a in sig.arguments():
             argument = a.argument
             if isinstance(a.argument, SelfArgument):
@@ -291,7 +292,7 @@ def gen_return(
 {"".join(format_for_args)}
     ASCEND_LOGI("{impl_name} exec with jit compile: %d{"".join(place_holder)}",
                 !is_jit_disable{"".join(format_display)});
-    if (is_jit_disable{"".join(format_check)}) {{
+    if ({is_ascend910_95_version} || (is_jit_disable{"".join(format_check)})) {{
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         return acl_op::{impl_name}({args_exprs_str});

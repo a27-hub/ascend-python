@@ -27,7 +27,7 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
                                         const c10::optional<at::Tensor> &quant_offset,
                                         const c10::optional<at::Tensor> &bias,
                                         int64_t antiquant_group_size,
-                                        int64_t inner_precise)
+                                        int64_t inner_precise, c10::optional<int64_t> weight_dtype)
 {
     bool trans_weight = op_plugin::utils::is_transpose_last_two_dims(weight);
     auto x_dim_num = x.dim();
@@ -84,19 +84,27 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
         quant_scale.has_value() ? x.options().dtype(at::kChar) : x.options().dtype(x.scalar_type());
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
+    if (weight_dtype.has_value()){
+        TORCH_CHECK(weight_dtype.value() == static_cast<int>(torch_npu::te::DType::TE_HIFLOAT8),
+                "weight_dtype only support torch_npu.hifloat8.", OPS_ERROR(ErrCode::PARAM));
+    }
+
+    TensorWrapper weight_wrapper = {weight, (weight_dtype.has_value()) ?
+        torch_npu::te::GetAclDataType(weight_dtype.value()) :
+        npu_preparation::convert_to_acl_data_type(weight.scalar_type())};
     if (quant_scale.has_value() && quant_scale_real.dtype() == at::kFloat) {
         auto quant_scale_output_size = op_infer::array_to_small_vector(quant_scale_real.sizes());
         c10::TensorOptions quant_scale_options = quant_scale_real.options().dtype(at::kLong);
         at::Tensor quant_scale_result = npu_preparation::apply_tensor_without_format(quant_scale_output_size,
                                                                                      quant_scale_options);
         EXEC_NPU_CMD(aclnnTransQuantParamV2, quant_scale_real, quant_offset_real, quant_scale_result);
-        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight, antiquant_scale, antiquant_offset_real,
+        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
                      quant_scale_result, quant_offset_real, bias_real, antiquant_group_size_real, result);
     } else if (inner_precise == 1) { // 1: high performance mode
-        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV3, x, weight, antiquant_scale, antiquant_offset_real, quant_scale_real,
+        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV3, x, weight_wrapper, antiquant_scale, antiquant_offset_real, quant_scale_real,
                      quant_offset_real, bias_real, antiquant_group_size_real, inner_precise, result);
     } else {
-        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight, antiquant_scale, antiquant_offset_real, quant_scale_real,
+        EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulV2, x, weight_wrapper, antiquant_scale, antiquant_offset_real, quant_scale_real,
                      quant_offset_real, bias_real, antiquant_group_size_real, result);
     }
 
