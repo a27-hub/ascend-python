@@ -292,8 +292,6 @@ class TestGroupedMatmul(TestCase):
         weight_clone = [weight1.clone().npu()]
         bias_clone = [bias1.clone().npu()]
         group_list_npu = torch.tensor(group_list, dtype=torch.int64).npu()
-        tuning_config_npu = torch.tensor(tuning_config, dtype=torch.int64).npu()
-        
 
         supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list, split_item=split_item)
         custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list_npu,
