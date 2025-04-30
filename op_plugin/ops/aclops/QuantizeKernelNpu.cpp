@@ -113,7 +113,9 @@ at::Tensor npu_quantize(
             scales.sizes()[0] == zero_points.sizes()[0],
             "Scales' size should be equal to zero points' size." + OPS_ERROR(ErrCode::PARAM));
     }
-    TORCH_CHECK(axis <= self.sizes().size() - 1, "Unexpected value of axis." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        axis >= 0 && axis <= self.sizes().size() - 1, 
+        "Axis should be in range [-rank(x), rank(x) - 1]." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
         scales.sizes()[0] == self.sizes()[axis],
         "Length of scales must equal to the specified dimension." + OPS_ERROR(ErrCode::PARAM));
