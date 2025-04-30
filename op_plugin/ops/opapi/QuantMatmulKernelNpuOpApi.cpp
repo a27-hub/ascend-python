@@ -17,7 +17,6 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
-#include "torch_npu/csrc/transformer_engine/Init.h"
 
 namespace op_api {
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
