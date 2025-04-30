@@ -529,14 +529,52 @@ def npu_gelu_backward_meta(grad, self, *, approximate="none"):
     return torch.empty_like(self)
 
 
-@impl(m, "npu_dtype_cast")
-def npu_dtype_cast_meta(self, dtype):
-    return torch.empty_like(self, dtype=dtype)
+def npu_dtype_cast_meta(self, dtype, input_dtype=None):
+    dim_num = self.dim()
+    input_shape = []
+    for dim in range(dim_num):
+        input_shape.append(self.size(dim))
 
+    # 296 is torch_npu.float4_e2m1 and 297 is torch_npu.float4_e1m2
+    if input_dtype == 296 or input_dtype == 297:
+        input_shape[-1] *= 2
+    
+    if dtype == 296 or dtype == 297:
+        if input_shape[-1] % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " \
+                                "unless input dtype is also float4_e2m1 or float4_e1m2" +
+                               ops_error(ErrCode.PARAM))
+        input_shape[-1] /= 2
+    if dtype == torch_npu.hifloat8 or dtype == 296 or dtype == 297:
+        output = self.new_empty(input_shape, dtype=torch.uint8)
+    else:
+        output = self.new_empty(input_shape, dtype=dtype)
+    return output
 
-@impl(m, "npu_dtype_cast_backward")
-def npu_dtype_cast_backward_meta(self, dtype):
-    return torch.empty_like(self, dtype=dtype)
+def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None):
+    dim_num = self.dim()
+    input_shape = []
+    for dim in range(dim_num):
+        input_shape.append(self.size(dim))
+
+    # 296 is torch_npu.float4_e2m1 and 297 is torch_npu.float4_e1m2
+    if grad_dtype == 296 or grad_dtype == 297:
+        input_shape[-1] *= 2
+    
+    if input_dtype == 296 or input_dtype == 297:
+        if input_shape[-1] % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " \
+                                "unless input dtype is also float4_e2m1 or float4_e1m2" +
+                               ops_error(ErrCode.PARAM))
+        input_shape[-1] /= 2
+
+    if input_dtype == torch_npu.hifloat8 or input_dtype == 296 or input_dtype == 297:
+        output = self.new_empty(input_shape, dtype=torch.uint8)
+    else:
+        output = self.new_empty(input_shape, dtype=dtype)
+    return output
 
 
 @impl(m, "npu_bmmV2")

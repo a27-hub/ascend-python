@@ -406,7 +406,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_convolution_backward(const at
     }
     // Note:weight.grad should be equal weight
     if (std::get<1>(output).defined()) {
-        std::get<1>(output) = at_npu::native::custom_ops::npu_dtype_cast(std::get<1>(output), weight.scalar_type());
+        std::get<1>(output) = at_npu::native::custom_ops::_npu_dtype_cast(std::get<1>(output), weight.scalar_type());
     }
     return output;
 }
@@ -929,7 +929,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_convolution_backward(
   }
   // Note:weight.grad should be equal weight
   if (std::get<1>(output).defined()) {
-    std::get<1>(output) = at_npu::native::custom_ops::npu_dtype_cast(std::get<1>(output), weight.scalar_type());
+    std::get<1>(output) = at_npu::native::custom_ops::_npu_dtype_cast(std::get<1>(output), weight.scalar_type());
   }
   return output;
 }
@@ -1427,7 +1427,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_convolution_backward(
   }
   // Note:weight.grad should be equal weight
   if (std::get<1>(output).defined()) {
-    std::get<1>(output) = at_npu::native::custom_ops::npu_dtype_cast(std::get<1>(output), weight.scalar_type());
+    std::get<1>(output) = at_npu::native::custom_ops::_npu_dtype_cast(std::get<1>(output), weight.scalar_type());
   }
   return output;
 }
@@ -1969,7 +1969,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_convolution_backward(
     }
     // Note:weight.grad should be equal weight
     if (std::get<1>(output).defined()) {
-        std::get<1>(output) = at_npu::native::custom_ops::npu_dtype_cast(std::get<1>(output), weight.scalar_type());
+        std::get<1>(output) = at_npu::native::custom_ops::_npu_dtype_cast(std::get<1>(output), weight.scalar_type());
     }
     return output;
 }

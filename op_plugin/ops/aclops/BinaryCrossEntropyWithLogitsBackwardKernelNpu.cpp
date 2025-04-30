@@ -36,7 +36,7 @@ at::Tensor binary_cross_entropy_with_logits_backward(
     if (weight.defined()) {
         weight_tensor = npu_utils::format_contiguous(weight);
         weight_tensor = (weight_tensor.scalar_type() != self.scalar_type()) ?
-            at_npu::native::custom_ops::npu_dtype_cast(weight_tensor, self.scalar_type()) : weight_tensor;
+            at_npu::native::custom_ops::_npu_dtype_cast(weight_tensor, self.scalar_type()) : weight_tensor;
     } else {
         weight_tensor = at::ones(self.sizes(), self.options());
     }
@@ -45,7 +45,7 @@ at::Tensor binary_cross_entropy_with_logits_backward(
     if (pos_weight.defined()) {
         pos_weight_tensor = npu_utils::format_contiguous(pos_weight);
         pos_weight_tensor = (pos_weight_tensor.scalar_type() != self.scalar_type()) ?
-            at_npu::native::custom_ops::npu_dtype_cast(pos_weight_tensor, self.scalar_type()) : pos_weight_tensor;
+            at_npu::native::custom_ops::_npu_dtype_cast(pos_weight_tensor, self.scalar_type()) : pos_weight_tensor;
     } else {
         pos_weight_tensor = at::ones(self.sizes(), self.options());
     }

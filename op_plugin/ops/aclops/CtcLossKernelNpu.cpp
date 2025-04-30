@@ -29,7 +29,7 @@ std::tuple<at::Tensor, at::Tensor> _ctc_loss(const at::Tensor &log_probs, const 
                 OPS_ERROR(ErrCode::PARAM));
     at::Tensor log_probs_cast = log_probs;
     if (log_probs.scalar_type() == at::kHalf) {
-        log_probs_cast = at_npu::native::custom_ops::npu_dtype_cast(log_probs_cast, at::kFloat);
+        log_probs_cast = at_npu::native::custom_ops::_npu_dtype_cast(log_probs_cast, at::kFloat);
     }
 
     auto input_lengths_tensor = at::tensor(input_lengths_list, targets.options());
@@ -70,8 +70,8 @@ std::tuple<at::Tensor, at::Tensor> _ctc_loss(const at::Tensor &log_probs, const 
         .Run();
 
     if (log_probs.scalar_type() == at::kHalf) {
-        neg_log_likelihood = at_npu::native::custom_ops::npu_dtype_cast(neg_log_likelihood, at::kHalf);
-        log_alpha = at_npu::native::custom_ops::npu_dtype_cast(log_alpha, at::kHalf);
+        neg_log_likelihood = at_npu::native::custom_ops::_npu_dtype_cast(neg_log_likelihood, at::kHalf);
+        log_alpha = at_npu::native::custom_ops::_npu_dtype_cast(log_alpha, at::kHalf);
     }
 
     return std::tie(neg_log_likelihood, log_alpha);

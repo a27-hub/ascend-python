@@ -53,7 +53,7 @@ at::Tensor& cumprod_out(
   }
 
   at::Tensor self_cp = self.scalar_type() == dst_type ? self :
-      at_npu::native::custom_ops::npu_dtype_cast(self, dst_type);
+      at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
   npu_preparation::CheckOut(
       {self_cp},
       result,
@@ -101,7 +101,7 @@ at::Tensor cumprod(
     const at::Tensor& self,
     int64_t dim,
     c10::optional<at::ScalarType> dtype) {
-  at::Tensor self_cast = dtype.has_value() ? at_npu::native::custom_ops::npu_dtype_cast(self, dtype.value()) : self;
+  at::Tensor self_cast = dtype.has_value() ? at_npu::native::custom_ops::_npu_dtype_cast(self, dtype.value()) : self;
   at::Tensor result = npu_preparation::apply_tensor(self_cast);
   cumprod_out_nocheck(result, self_cast, dim);
   return result;

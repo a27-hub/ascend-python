@@ -112,13 +112,22 @@ backward:
   self, x1: npu_dropout_with_add_softmax_backward(grad, result0, result1, alpha, prob, dim)
   version: [v1.11, newest]
 
-- name: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
-  self: npu_dtype_cast_backward(grad, self.scalar_type())
+- name: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor
+  self: npu_dtype_cast_backward(grad, self.scalar_type(), dtype, input_dtype)
+  output_differentiability: [true]
+  version: [v1.11, newest]
+
+- name: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
+  self: _npu_dtype_cast_backward(grad, self.scalar_type())
   output_differentiability: [isDifferentiableType(dtype)]
   version: [v1.11, newest]
 
-- name: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
-  self: npu_dtype_cast_backward(grad, self.scalar_type())
+- name: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor
+  self: npu_dtype_cast_backward(grad, self.scalar_type(), dtype, input_dtype)
+  version: v2.0
+
+- name: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
+  self: _npu_dtype_cast_backward(grad, self.scalar_type())
   version: v2.0
 
 - name: npu_flash_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=1, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)

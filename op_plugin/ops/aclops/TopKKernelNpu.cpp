@@ -105,7 +105,7 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
       at::ScalarType::Long,
       output_size);
 
-  at::Tensor indices_cp = at_npu::native::custom_ops::npu_dtype_cast(indices, at::kInt);
+  at::Tensor indices_cp = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::kInt);
   bool values_match = npu_utils::check_match(&values);
   bool indices_match = npu_utils::check_match(&indices_cp);
   if (!(values_match && indices_match)) {
@@ -122,7 +122,7 @@ std::tuple<at::Tensor&, at::Tensor&> topk_out(
     topk_out_npu_nocheck(values, indices_cp, self_cp, k, dim, largest, sorted);
   }
   // indices dtype transform Int64
-  indices = at_npu::native::custom_ops::npu_dtype_cast(indices, at::kLong);
+  indices = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::kLong);
   indices.copy_(indices_cp);
   return std::tie(values, indices);
 }
@@ -141,7 +141,7 @@ std::tuple<at::Tensor, at::Tensor> topk(
   topk_out_npu_nocheck(values, indices, self_cp, k, dim, largest, sorted);
 
   // indices dtype transform Int64
-  indices = at_npu::native::custom_ops::npu_dtype_cast(indices, at::kLong);
+  indices = at_npu::native::custom_ops::_npu_dtype_cast(indices, at::kLong);
 
   return std::tie(values, indices);
 }
