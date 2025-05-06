@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Huawei Technologies Co., Ltd
+// Copyright (c) 2025 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License");
@@ -22,6 +22,7 @@ const static int64_t IN_SPLIT_OUT_NOT_SPLIT = 1;
 const static int64_t IN_NOT_SPLIT_OUT_SPLIT = 2;
 const static int64_t IN_SPLIT_OUT_SPLIT = 3;
 const static int64_t INT4_NUMS_IN_INT32 = 8;
+const static int64_t SPLIT_K = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
 void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_group_list)
@@ -50,7 +51,7 @@ void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_
 }
 
 void create_new_tensor_multi_dim(std::vector<at::Tensor> &y, const at::Tensor &x_i, size_t n,
-                                 c10::TensorOptions options)
+                                 const c10::TensorOptions &options)
 {
     auto x_sizes = x_i.sizes();
     std::vector<int64_t> y_sizes(x_sizes.begin(), x_sizes.end());
@@ -60,7 +61,7 @@ void create_new_tensor_multi_dim(std::vector<at::Tensor> &y, const at::Tensor &x
     y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
 }
 
-void create_new_tensor(std::vector<at::Tensor> &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
+void create_new_tensor(std::vector<at::Tensor> &y, size_t dim_m, size_t dim_n, const c10::TensorOptions &options)
 {
     auto output_size = op_infer::array_to_small_vector({dim_m, dim_n});
     y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
@@ -71,6 +72,13 @@ void calculate_dim_m(size_t& dim_m, size_t num_x, const at::TensorList x)
     for (size_t i = 0; i < num_x; i++) {
         dim_m += x[i].sizes()[0];
     }
+}
+
+void create_new_tensor_batch(std::vector<at::Tensor> &y, size_t batch, size_t dim_m, size_t dim_n,
+                             const c10::TensorOptions &options)
+{
+    auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
+    y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
 }
 
 #if VERSION_BETWEEN(V1R11, V1R11)
@@ -308,6 +316,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     auto group_list_real = group_list.value_or(at::Tensor());
     auto num_group_list = group_list_real.size(0);
     int64_t split_item_value = split_item.value_or(0);
+    int64_t group_type_value = group_type.value_or(-1);
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
@@ -354,9 +363,14 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                 create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, dim_m, n0, options);
         } else if (num_x == 1) {
-            weight[0].dtype() == at::ScalarType::Int ?
-                create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
-                create_new_tensor(y, x[0].size(0), n0, options);
+            if (group_type_value == SPLIT_K) {
+                create_new_tensor_batch(y, num_group_list, x[0].size(0), n0, options);
+            } else {
+                weight[0].dtype() == at::ScalarType::Int ?
+                    create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
+                    create_new_tensor(y, x[0].size(0), n0, options);
+            }
+
         }
     }
     at::TensorList result = at::TensorList(y);
@@ -372,7 +386,6 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     auto activation_quant_offset_real = activation_quant_offset.value_or(at::TensorList());
     auto act_out = at::TensorList();
     auto dynamic_quant_scale_out = at::TensorList();
-    int64_t group_type_value = group_type.value_or(-1);
     int64_t group_list_type_value = group_list_type.value_or(0);
     int64_t act_type_value = act_type.value_or(0);
 
