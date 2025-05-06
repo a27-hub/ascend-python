@@ -21,8 +21,7 @@ namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
 
     std::tuple<at::Tensor, at::Tensor> npu_attention_worker_combine(
-        // const at::Tensor &schedule_context,
-        const at::Tensor &token_data,
+        const at::Tensor &schedule_context,
         const at::Tensor &expert_scales,
         const at::Tensor &layer_id,
         int64_t hidden_size,
@@ -40,10 +39,10 @@ namespace op_api {
             y_dtype = at::kBFloat16;
         }
 
-        at::Tensor y = npu_preparation::apply_tensor_without_format(y_size, token_data.options().dtype(y_dtype));
-        at::Tensor next_layer_id = npu_preparation::apply_tensor_without_format(next_layer_id_size, token_data.options().dtype(at::kInt));
+        at::Tensor y = npu_preparation::apply_tensor_without_format(y_size, schedule_context.options().dtype(y_dtype));
+        at::Tensor next_layer_id = npu_preparation::apply_tensor_without_format(next_layer_id_size, schedule_context.options().dtype(at::kInt));
 
-        EXEC_NPU_CMD(aclnnAttentionWorkerCombine, token_data, expert_scales, layer_id,
+        EXEC_NPU_CMD(aclnnAttentionWorkerCombine, schedule_context, expert_scales, layer_id,
             hidden_size, token_dtype,
             y, next_layer_id);
 
