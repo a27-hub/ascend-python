@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <bitset>
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "torch_npu/csrc/core/npu/NPUException.h"
 #include "op_plugin/utils/AdvancedIndex.h"
 #include "op_plugin/utils/OpUtils.h"
