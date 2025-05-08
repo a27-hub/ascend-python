@@ -710,6 +710,17 @@ if torch.__version__ >= '2.3.1':
         return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
 
 
+@impl(m, "npu_scatter_pa_kv_cache.value")
+def npu_scatter_pa_kv_cache_value_meta(key, value, slot_mapping, *, compress_lens=None, compress_seq_offsets=None,
+                                       seq_lens=None, out=None):
+    if out is None:
+        out = []
+    if len(out) == 2:
+        return (out[0], out[1])
+    else:
+        raise RuntimeError("The input of out must be two elements: (key_cache, value_cache).")
+
+
 @impl(m, "npu_dropout_backward")
 def npu_dropout_backward_meta(grad_output, mask, p):
     return torch.empty_like(grad_output, dtype=grad_output.dtype)
