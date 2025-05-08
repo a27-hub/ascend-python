@@ -1491,9 +1491,21 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
         )
 
         torch._check(
-            input_shape[1] == weight_shape[1],
-            lambda: "input cin should equal to weight cin, but now input cin is " + str(input_shape[1]) + ", and weight cin is "
-                    + str(weight_shape[1]) + ops_error(ErrCode.VALUE),
+            input_shape[1] == weight_shape[1] * groups,
+            lambda: "input cin should equal to weight cin * groups, but now input cin is " + str(input_shape[1]) +
+                    ", weight cin is " + str(weight_shape[1]) + ", and groups is " + str(groups) + ops_error(ErrCode.VALUE),
+        )
+
+        torch._check(
+            input_shape[1] % groups == 0,
+            lambda: "input cin should be an integer multiple of groups, but now input cin is " + str(input_shape[1]) +
+                    ", and groups is " + str(groups) + ops_error(ErrCode.VALUE),
+        )
+
+        torch._check(
+            weight_shape[0] % groups == 0,
+            lambda: "cout should be an integer multiple of groups, but now cout is " + str(weight_shape[0]) +
+                    ", and groups is " + str(groups) + ops_error(ErrCode.VALUE),
         )
 
         torch._check(
@@ -1504,9 +1516,11 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
 
     def check_basic_inputs_dtype():
         torch._check(
-            input_.dtype == torch.int8 and weight.dtype == torch.int8,
-            lambda: "input's dtype and weight's dtype should be int8, but input.dtype is " + str(input_.dtype) + ", and weight.dtype is " +
-                    str(weight.dtype) + ops_error(ErrCode.TYPE),
+            ((input_.dtype == torch.int8 and weight.dtype == torch.int8) or
+            (input_.dtype == torch.bits8 and weight.dtype == torch.bits8) or
+            (input_.dtype == torch.float8_e4m3fn and weight.dtype == torch.float8_e4m3fn)),
+            lambda: "input's dtype and weight's dtype should be int8 or hifloat8 or float8_e4m3fn, but input.dtype is " +
+                    str(input_.dtype) + ", and weight.dtype is " + str(weight.dtype) + ops_error(ErrCode.TYPE),
         )
 
         torch._check(
@@ -1514,10 +1528,18 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             lambda: "scale's dtype should be int64, but scale.dtype is " + str(scale.dtype) + ops_error(ErrCode.TYPE),
         )
 
-        torch._check(
-            output_dtype == torch.float16,
-            lambda: "output dtype should be float16, but now dtype is " + str(output_dtype) + ops_error(ErrCode.TYPE),
-        )
+        if input_.dtype == torch.int8:
+            torch._check(
+                output_dtype == torch.float16,
+                lambda: "output dtype should be float16 when input dtype is int8, but now dtype is " + str(output_dtype) +
+                        ops_error(ErrCode.TYPE),
+            )
+        elif (input_.dtype == torch.bits8 or input_.dtype == torch.float8_e4m3fn):
+            torch._check(
+                (output_dtype == torch.float16 or output_dtype == torch.bfloat16 or output_dtype == torch.float32),
+                lambda: "output dtype should be float16 or bfloat16 or float32 when input dtype is hifloat8 or float8_e4m3fn, " + 
+                        "but now dtype is " + str(output_dtype) + ops_error(ErrCode.TYPE),
+            )
 
     def check_bias_dim_shape_dtype():
         bias_dim = bias.dim()
@@ -1527,10 +1549,18 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             lambda: "bias dim is not equal to 1, but now bias dim is " + str(bias_dim) + ops_error(ErrCode.VALUE),
         )
 
-        torch._check(
-            bias.dtype == torch.int32,
-            lambda: "bias' dtype should be int32, but bias.dtype is " + str(input_.dtype) + ops_error(ErrCode.VALUE),
-        )
+        if input_.dtype == torch.int8:
+            torch._check(
+                bias.dtype == torch.int32,
+                lambda: "bias' dtype should be int32 when input dtype is int8, but bias.dtype is " + str(input_.dtype) +
+                        ops_error(ErrCode.TYPE),
+            )
+        elif (input_.dtype == torch.bits8 or input_.dtype == torch.float8_e4m3fn):
+            torch._check(
+                bias.dtype == torch.float32,
+                lambda: "bias' dtype should be float32 when input dtype is hifloat8 or float8_e4m3fn, but bias.dtype is " +
+                        str(input_.dtype) + ops_error(ErrCode.TYPE),
+            )
 
         torch._check(
             bias_shape[0] == weight_shape[0],
@@ -1564,8 +1594,8 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
                     + str(dilations[1]) + ops_error(ErrCode.VALUE),
         )
         torch._check(
-            groups == 1,
-            lambda: "groups should be 1, but now " + str(groups) + ops_error(ErrCode.VALUE),
+            groups >= 1,
+            lambda: "groups should large than 0, but now " + str(groups) + ops_error(ErrCode.VALUE),
         )
         torch._check(
             offset_x <= 127 and offset_x >= -128,
@@ -1589,7 +1619,8 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
 
     torch._check(
         hout > 0 and wout > 0,
-        lambda: "ho, wo should larger than 0, but now ho is " + str(hout) + ", and wo is " + str(wout) + ops_error(ErrCode.VALUE),
+        lambda: "ho, wo should larger than 0, but now ho is " + str(hout) + ", and wo is " + str(wout) +
+                ops_error(ErrCode.VALUE),
     )
 
     output_dim_list = [nout, cout, hout, wout]
