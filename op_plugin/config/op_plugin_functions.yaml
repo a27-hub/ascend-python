@@ -7530,6 +7530,10 @@ symint:
 
   - func: zeros(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
     acl_op: [v2.1, newest]
+  
+  - func: npu_moe_init_routing(Tensor x, Tensor row_idx, Tensor expert_idx, SymInt active_num) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+
 tocpu:
   - func: _cholesky_helper
     version: v1.11, v2.0
