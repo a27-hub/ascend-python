@@ -1472,7 +1472,7 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
 
 
 @impl(m, "npu_apply_rotary_pos_emb")
-def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1):
+def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1, rotary_mode='half'):
     return (torch.empty_like(query, dtype=query.dtype), torch.empty_like(key, dtype=key.dtype))
 
 
