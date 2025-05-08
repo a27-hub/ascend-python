@@ -1213,7 +1213,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitCacheThreadLocal();                                                                                  \
             return api_ret;                                                                                            \
         });                                                                                                            \
-        at_npu::native::OpCommand::FasterRunApi(#aclnn_api, &acl_call);                                                \
+        at_npu::native::OpCommand::FasterRunApi(#aclnn_api, acl_call);                                                \
     } while (false)
 
 #define EXEC_NPU_CMD(aclnn_api, ...)                                                                                   \
@@ -1410,7 +1410,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitCacheThreadLocal();                                                                                  \
             return api_ret;                                                                                            \
         });                                                                                                            \
-        at_npu::native::OpCommand::FasterRunApi(#aclnn_api, &acl_call);                                                \
+        at_npu::native::OpCommand::FasterRunApi(#aclnn_api, acl_call);                                                \
     } while (false)
 
 #define EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnn_api, ...)                                                                   \
@@ -1538,7 +1538,7 @@ private:
                         OPS_ERROR(ErrCode::ACL));                                                                      \
             return api_ret;                                                                                            \
         });                                                                                                            \
-        at_npu::native::OpCommand::FasterRunApi(apiName, &acl_call, true);                                             \
+        at_npu::native::OpCommand::FasterRunApi(apiName, acl_call, true);                                             \
         UnInitCacheThreadLocal();                                                                                      \
         return ConvertedParams<decltype(converted_params)>(std::move(converted_params),                                \
                                                            releaseMemFunc, unInitMemFunc);                             \
