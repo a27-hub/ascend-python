@@ -141,6 +141,7 @@ template <>
 struct HashOpParam<atb::infer::RingAttentionParam> {
     void operator()(const atb::infer::RingAttentionParam& param) const
     {
+        add_param_to_buf("calcType", param.calcType);
         add_param_to_buf("headNum", param.headNum);
         add_param_to_buf("kvHeadNum", param.kvHeadNum);
         add_param_to_buf("qkScale", param.qkScale);

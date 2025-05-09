@@ -752,10 +752,8 @@ struct RingAttentionParam {
   //!
   //! \brief 计算类型
   enum CalcType : int {
-    UNDEFINED = 0,  //!< 默认值
-    FIRST,          //!< 首卡场景，无prev_lse，prev_o传入，生成softmaxLse输出
-    MIDDLE,  //!< 非首末卡场景，有prev_lse，prev_o传入，生成softmaxLse输出
-    LAST,    //!< 末卡场景，有prev_lse，prev_o传入，无softmaxLse输出
+    CALC_TYPE_DEFAULT = 0, // 默认，非首卡场景，有prev_lse，prev_o传入，生成softmaxLse输出
+    CALC_TYPE_FIRST_RING,  // 首卡场景，无prev_lse，prev_o传入，生成softmaxLse输出
   };
 
   //!
@@ -779,7 +777,7 @@ struct RingAttentionParam {
   };
 
   //! 计算类型
-  CalcType calcType = CalcType::UNDEFINED;
+  CalcType calcType = CalcType::CALC_TYPE_DEFAULT;
   //! query头大小, 需大于0
   int32_t headNum = 0;
   //! kv头数量, 该值需要用户根据使用的模型实际情况传入
