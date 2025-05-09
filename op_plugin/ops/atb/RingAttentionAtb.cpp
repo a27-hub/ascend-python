@@ -21,7 +21,7 @@ using RingAttentionParam = atb::infer::RingAttentionParam;
 void _npu_ring_attention(const at::Tensor &query, const at::Tensor &key,
                          const at::Tensor &value, const at::Tensor &mask,
                          const at::Tensor &seq_len, int64_t head_num,
-                         int64_t kv_head_num, float qk_scale,
+                         int64_t kv_head_num, double qk_scale,
                          const at::Tensor &prev_out, const at::Tensor &prev_lse,
                          at::Tensor &output, at::Tensor &softmax_lse) {
   const c10::OptionalDeviceGuard device_guard(device_of(query));

@@ -801,7 +801,7 @@ struct RingAttentionParam {
   //! \brief 预留参数
   //!
   uint8_t rsv[64] = {0};
-}
+};
 
 } // namespace infer
 } // namespace atb
