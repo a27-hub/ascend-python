@@ -21,10 +21,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-const int DIM_0 = 0;
-const int DIM_1 = 1;
-const int DIM_2 = 2;
-const int DIM_3 = 3;
 const int THIRD_ELEMENT = 2;
 const int FORTH_ELEMENT = 3;
 const int DIMENSION_3D = 3;
@@ -32,10 +28,7 @@ const int DIMENSION_4D = 4;
 const int LAYOUT_MAX_LENGTH = 20;
 const double EPSILON = 1e-9;
 const int64_t LENGTH_BIAS = 32;
-const static int FLASH_THRESHOLD = 512;
 const static int64_t SOFTMAXMAX_LAST_DIMSHAPE = 8;
-const static int64_t PFA_SPARSE_HIGH_PRECISION_NO_MASK = 10;
-const static int64_t PFA_SPARSE_HIGH_PRECISION_BAND = 14;
 const static int64_t MAX_SEQUENCE_LENGTH = 1000000;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
