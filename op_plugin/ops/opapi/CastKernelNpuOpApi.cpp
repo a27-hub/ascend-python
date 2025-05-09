@@ -23,29 +23,16 @@ namespace op_api {
 namespace{
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t FP4_IN_UINT8_NUM = 2;
-constexpr int64_t DTYPE_NUM_FOR_HIFLOAT8 = 290;     // 34 + 256
-constexpr int64_t DTYPE_NUM_FOR_FLOAT4_E2M1 = 296;  // 40 + 256
-constexpr int64_t DTYPE_NUM_FOR_FLOAT4_E1M2 = 297;  // 41 + 256
-
-static std::initializer_list<int64_t> GE_UNSURPPORT_LIST = {
-    DTYPE_NUM_FOR_HIFLOAT8, DTYPE_NUM_FOR_FLOAT4_E2M1, DTYPE_NUM_FOR_FLOAT4_E1M2
-};
-
-static std::map<int64_t, aclDataType> SPECIAL_DTYPE_TO_ACL_DATATYPE = {
-    {DTYPE_NUM_FOR_FLOAT4_E1M2, ACL_FLOAT4_E1M2}, 
-    {DTYPE_NUM_FOR_FLOAT4_E2M1, ACL_FLOAT4_E2M1},
-    {DTYPE_NUM_FOR_HIFLOAT8, ACL_HIFLOAT8}
-};
 
 at::Tensor npu_dtype_cast_impl_op_api(
     const at::Tensor& self, 
     int64_t dtype, 
     c10::optional<int64_t> input_dtype) {
-
     // check if input dtype is valid
     int64_t input_dtype_tocheck = input_dtype.has_value() ? input_dtype.value() : static_cast<int64_t>(self.scalar_type());
-    bool special_output_type = std::find(GE_UNSURPPORT_LIST.begin(), GE_UNSURPPORT_LIST.end(), dtype) != GE_UNSURPPORT_LIST.end();
-    
+    bool special_output_type = (dtype == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8) ||
+                                dtype == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E2M1) ||
+                                dtype == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E1M2));
     at::SmallVector<int64_t, op_infer::SIZE> input_shape;
     at::SmallVector<int64_t, op_infer::SIZE> output_shape;
     int32_t input_dim = self.dim();
@@ -54,19 +41,19 @@ at::Tensor npu_dtype_cast_impl_op_api(
         input_shape.push_back(self.size(index));
         output_shape.push_back(self.size(index));
     }
-    // if input shape is float4(loaded by torch.uint8), 
-    // the last dim of input shape must be counted as doubled the original)
-    if (input_dtype_tocheck == DTYPE_NUM_FOR_FLOAT4_E1M2 || input_dtype_tocheck == DTYPE_NUM_FOR_FLOAT4_E2M1) {
-        input_shape.push_back(self.size(index) * 2);
+    if (input_dtype_tocheck == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E2M1) ||
+        input_dtype_tocheck == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E1M2)) {
+        input_shape.push_back(self.size(index) * FP4_IN_UINT8_NUM);
     } else {
         input_shape.push_back(self.size(index));
     }
-
-    // float4 shape check
-    if (dtype == DTYPE_NUM_FOR_FLOAT4_E1M2 || dtype == DTYPE_NUM_FOR_FLOAT4_E2M1) {
+  
+  // float4 shape check
+    if (dtype == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E1M2) ||
+        dtype == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E2M1)) {
         TORCH_CHECK(input_shape[index] % FP4_IN_UINT8_NUM == 0, 
                     "The last dim input shape must be divisible by 2 if "
-                    "output dtype is torch.float4_e2m1 or torch.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
+                    "output dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
         output_shape.push_back(input_shape[index] / FP4_IN_UINT8_NUM);
     } else {
         output_shape.push_back(input_shape[index]);
@@ -75,7 +62,7 @@ at::Tensor npu_dtype_cast_impl_op_api(
     aclDataType output_acltype;
     if (special_output_type) {
         output_tensor = npu_preparation::apply_tensor_without_format(output_shape, c10::ScalarType::Byte);
-        output_acltype = SPECIAL_DTYPE_TO_ACL_DATATYPE[dtype];
+        output_acltype = torch_npu::te::GetAclDataType(dtype);
     } else {
         output_acltype = torch_npu::te::GetAclDataType(dtype);
         at::ScalarType c10_scalar_dtype = npu_preparation::convert_to_scalar_type(output_acltype);
@@ -99,8 +86,12 @@ at::Tensor npu_dtype_cast(
 
 at::Tensor _npu_dtype_cast( const at::Tensor& self, at::ScalarType dtype) {
     DO_COMPATIBILITY(aclnnCast, acl_op::_npu_dtype_cast(self, dtype));
-    c10::optional<int64_t> input_dtype = c10::nullopt;
-    return npu_dtype_cast_impl_op_api(self, static_cast<int64_t>(dtype), input_dtype);
+    if (self.dtype() == dtype) {
+        return self.clone();
+    }
+    at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(dtype));
+    EXEC_NPU_CMD(aclnnCast, self, dtype, result);
+    return result;
 }
 
 at::Tensor npu_dtype_cast_backward(
