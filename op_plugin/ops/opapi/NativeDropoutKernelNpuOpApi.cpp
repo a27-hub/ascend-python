@@ -32,7 +32,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
     uint64_t offset = 0;
     bool isEnableV3 = false;
 
-    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
         isEnableV3 = true;
         DO_COMPATIBILITY(aclnnDropoutV3, acl_op::_npu_dropout(self, p));
     } else {

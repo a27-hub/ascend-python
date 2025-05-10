@@ -555,7 +555,7 @@ at::Tensor dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, doub
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
         seed = static_cast<int64_t>(pair.first);
         offset = static_cast<int64_t>(pair.second);
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
             drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
@@ -630,7 +630,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
 
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
@@ -737,7 +737,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
@@ -904,7 +904,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     softmax_out = at::empty({0}, query.options());
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
@@ -963,7 +963,7 @@ at::Tensor dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, doub
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
         seed = static_cast<int64_t>(pair.first);
         offset = static_cast<int64_t>(pair.second);
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
             drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
@@ -1038,7 +1038,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
 
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
@@ -1175,7 +1175,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
 
     char* input_layout_ptr = const_cast<char *>(input_layout.c_str());
 
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
@@ -1279,7 +1279,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
@@ -1366,7 +1366,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += 32;
     at::Tensor drop_mask;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
@@ -1532,7 +1532,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     softmax_out = at::empty({0}, query.options());
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
@@ -1732,7 +1732,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
             query.options().dtype(at::kFloat)); // [T, N, 8]
     }
     char* input_layout_ptr = const_cast<char *>(input_layout_str.c_str());
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
@@ -1850,7 +1850,7 @@ at::Tensor dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, doub
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
         seed = static_cast<int64_t>(pair.first);
         offset = static_cast<int64_t>(pair.second);
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
             drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
@@ -1925,7 +1925,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
 
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
@@ -2062,7 +2062,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     }
     char* input_layout_ptr = const_cast<char *>(input_layout.c_str());
 
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
@@ -2167,7 +2167,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
@@ -2254,7 +2254,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += 32;
     at::Tensor drop_mask;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
@@ -2420,7 +2420,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     softmax_out = at::empty({0}, query.options());
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
@@ -2619,7 +2619,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
             query.options().dtype(at::kFloat)); // [T, N, 8]
     }
     char* input_layout_ptr = const_cast<char *>(input_layout_str.c_str());
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,

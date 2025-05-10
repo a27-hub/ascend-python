@@ -95,7 +95,7 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
     int64_t mask_H = kernel_sizes[0] * kernel_sizes[1];
     int64_t mask_W = (op_infer::CeilDiv(output_height * output_width, BLOCKSIZE) + 1);
     c10::SmallVector<int64_t, SIZE> indices_size;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_9591) {
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         // 5HD format return the indices with mask, dtype int8,size should be muls 16*2
         indices_size = self.ndimension() == 4 ?
             c10::SmallVector<int64_t, SIZE>({n_batch, n_input_plane, mask_H, mask_W * 32}) :
