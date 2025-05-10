@@ -35,7 +35,8 @@ p (Float) - 丢弃概率。
 >>> input = torch.tensor([1.,2.,3.,4.]).npu()
 >>> input
 tensor([1., 2., 3., 4.], device='npu:0')
->>> prob = 0.3>>> output, mask = torch_npu._npu_dropout(input, prob)
+>>> prob = 0.3
+>>> output, mask = torch_npu._npu_dropout(input, prob)
 >>> output
 tensor([0.0000, 2.8571, 0.0000, 0.0000], device='npu:0')
 >>> mask
@@ -62,7 +63,7 @@ copy_memory_仅支持NPU张量。copy_memory_的输入张量应具有相同的dt
 示例
 >>> a=torch.IntTensor([0,  0, -1]).npu()
 >>> b=torch.IntTensor([1, 1, 1]).npu()
->>> a.copy_memory_(b)
+>>> torch_npu.copy_memory_(a, b) 
 tensor([1, 1, 1], device='npu:0', dtype=torch.int32)
 """
 )
@@ -494,7 +495,8 @@ stds3 (Float, 默认值：[1.0,1.0,1.0,1.0]) -index。 "deltas" = "deltas" x "st
 >>> anchor_box = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> ground_truth_box = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, 0, 0, 0, 0, 0.1, 0.1, 0.2, 0.2)
->>> outputtensor([[13.3281, 13.3281,  0.0000,  0.0000],
+>>> output
+tensor([[13.3281, 13.3281,  0.0000,  0.0000],
         [13.3281,  6.6641,  0.0000, -5.4922]], device='npu:0')
 """
 )
@@ -2398,7 +2400,8 @@ off_value (Scalar，默认值为0) - 当indices[j] != i时输出中的填充值�
 示例
 >>> a=torch.IntTensor([5, 3, 2, 1]).npu()
 >>> b=torch_npu.npu_one_hot(a, depth=5)
->>> btensor([[0., 0., 0., 0., 0.],
+>>> b
+tensor([[0., 0., 0., 0., 0.],
         [0., 0., 0., 1., 0.],
         [0., 0., 1., 0., 0.],
         [0., 1., 0., 0., 0.]], device='npu:0')
@@ -2449,7 +2452,8 @@ output_dim (Int32) - 指定输出通道数。必须大于0。
                       [[[ 9]], [[10]], [[11]], [[12]],
                       [[13]], [[14]], [[15]], [[16]]]], dtype = torch.float16).npu()
 >>> out = torch_npu.npu_ps_roi_pooling(x, roi, 0.5, 2, 2)
->>> outtensor([[[[0., 0.],
+>>> out
+tensor([[[[0., 0.],
           [0., 0.]],
         [[0., 0.],
           [0., 0.]]],
@@ -2506,8 +2510,8 @@ mask (Tensor) - 1D张量, 确定对应index是否有效。
 示例
 >>> x = torch.tensor([1, 0, 1, 0], dtype=torch.bool).to("npu")
 >>> result, mask = torch_npu.npu_random_choice_with_mask(x, 2, 1, 0)
->>> resulttensor([[0],
-        [2]], device='npu:0', dtype=torch.int32)
+>>> result
+tensor([[0], [2]], device='npu:0', dtype=torch.int32)
 >>> mask
 tensor([True, True], device='npu:0')
 """
@@ -3037,7 +3041,8 @@ c1_len (Scalar) - “y”的C1 len。该值必须小于“x1”和“x2”中C1�
 示例
 >>> a=torch.tensor([[[[[1.]]]]]).npu()
 >>> b=torch_npu.npu_stride_add(a, a, 0, 0, 1)
->>> btensor([[[[[2.]]],
+>>> b
+tensor([[[[[2.]]],
         [[[0.]]],
         [[[0.]]],
         [[[0.]]],
