@@ -340,6 +340,13 @@ struct GroupTopkParam {
     uint8_t rsv[12] = {0};
 };
 
+struct PagedCacheLoadParam {
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[64] = {0};
+};
+
 //!
 //! \brief PagedAttention.
 //!
