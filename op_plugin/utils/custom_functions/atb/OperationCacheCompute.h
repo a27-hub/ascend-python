@@ -149,6 +149,13 @@ struct HashOpParam<atb::infer::RingAttentionParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::PagedCacheLoadParam> {
+    void operator()(const atb::infer::PagedCacheLoadParam& param) const
+    {
+    }
+};
+
 template <typename T>
 uint64_t computeHash(const T& obj)
 {
