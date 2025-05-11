@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 #include <acl/acl.h>
 
