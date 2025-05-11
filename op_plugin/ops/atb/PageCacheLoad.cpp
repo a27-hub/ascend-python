@@ -18,7 +18,7 @@ using namespace std;
 
 namespace atb {
 using PagedCacheLoadParam = atb::infer::PagedCacheLoadParam;
-void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor &value_cache_tensor, const at::Tensor &block_table_tensor, const at::Tensor &context_lens, const at::Tensor &key, const at::Tensor &value, const at::Tensor &out_key_tensor, const at::Tensor &out_value_tensor)
+void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor &value_cache_tensor, const at::Tensor &block_table_tensor, const at::Tensor &context_lens, const at::Tensor &key, const at::Tensor &value, at::Tensor &out_key_tensor, at::Tensor &out_value_tensor)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(key_cache_tensor));
     OpParamCache<PagedCacheLoadParam>& pagedCacheLoadParamCache = OpParamCache<PagedCacheLoadParam>::getInstance();
