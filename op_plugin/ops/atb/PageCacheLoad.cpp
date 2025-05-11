@@ -38,8 +38,10 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
     // pagedparam.mlaVHeadSize = 0;
 
     ParamSetter paramsetter;
-    paramsetter.Input(key_cache_tensor)
-        .Input(value_cache_tensor)
+    at::Tensor key_cache_nz = at_npu::native::custom_ops::npu_format_cast(key_cache_tensor, ACL_FORMAT_FRACTAL_NZ)
+    at::Tensor value_cache_nz = at_npu::native::custom_ops::npu_format_cast(value_cache_tensor, ACL_FORMAT_FRACTAL_NZ)
+    paramsetter.Input(key_cache_nz)
+        .Input(value_cache_nz)
         .Input(block_table_tensor)
         .Input(context_lens)
         .Input(key)
