@@ -6540,7 +6540,7 @@ custom:
 
   - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH') -> (Tensor, Tensor)
     op_api: all_version
-  
+
   - func: npu_kv_rmsnorm_rope_cache(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
@@ -7459,7 +7459,7 @@ custom:
     exposed: all_version
     gen_opapi:
       exec: aclnnAdvanceStep
-  
+
   - func: npu_grouped_matmul_add_(Tensor(a!) self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2) -> Tensor(a!)
     op_api: all_version
     gen_opapi:
@@ -7474,6 +7474,108 @@ custom:
 
   - func: npu_attn_softmax_backward_(Tensor(a!) self, Tensor grad_output, Tensor values) -> Tensor(a!)
     op_api: all_version
+
+  - func: npu_nsa_compress(Tensor input, Tensor weight, int compress_block_size, int compress_stride, int act_seqlen_type, *, Tensor? act_seqlen=None, str layout='TND') -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: input
+        dtype: input
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.data())'
+      exec: aclnnNsaCompress, input, weight, act_seqlen, layout_ptr, compress_block_size, compress_stride, act_seqlen_type, out
+
+  - func: npu_nsa_compress_grad(Tensor grad, Tensor input, Tensor weight, int compress_block_size, int compress_stride, int act_seqlen_type, *, Tensor? act_seqlen=None, str layout='TND') -> (Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      input_grad:
+        size: input
+        dtype: input
+      weight_grad:
+        size: weight
+        dtype: weight
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.data())'
+      exec: aclnnNsaCompressGrad, grad, input, weight, act_seqlen, layout_ptr, compress_block_size, compress_stride, act_seqlen_type, input_grad, weight_grad
+
+  - func: npu_nsa_compress_attention(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, str layout, int sparse_mode, int compress_block_size, int compress_stride, int select_block_size, int select_block_count, *, Tensor? atten_mask, int[]? actual_seq_q_len=None, int[]? actual_cmp_seq_kv_len=None, int[]? actual_sel_seq_kv_len=None, int[]? topk_mask=None) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      attention_out:
+        size: query
+        dtype: query
+      topk_indices_out:
+        size: '{query.size(0), key.size(1), select_block_count}'
+        dtype: at::kInt
+      softmax_max_out:
+        size: '{query.size(0), query.size(1), 8L}'
+        dtype: at::kFloat
+      softmax_sum_out:
+        size: '{query.size(0), query.size(1), 8L}'
+        dtype: at::kFloat
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.data())'
+      exec: aclnnNsaCompressAttention, query, key, value, atten_mask, actual_seq_q_len, actual_cmp_seq_kv_len, actual_sel_seq_kv_len, topk_mask, scale_value, head_num, layout_ptr, sparse_mode, compress_block_size, compress_stride, select_block_size, select_block_count, softmax_max_out, softmax_sum_out, attention_out, topk_indices_out
+
+  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_heads_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, int sparse_mode, *, Tensor? atten_mask, Tensor? block_table, int[]? actual_seq_q_len=None, int[]? actual_cmp_seq_kv_len=None, int[]? actual_sel_seq_kv_len=None, Tensor? topk_mask=None, str? layout='TND') -> (Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: query
+        dtype: query
+      topk_indices_out:
+        size: '{key.size(0), key_value_heads_num, select_block_count}'
+        dtype: query
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.value().data())'
+      exec: aclnnNsaCompressAttentionInfer, query, key, value, atten_mask, block_table, actual_seq_q_len, actual_cmp_seq_kv_len, actual_sel_seq_kv_len, topk_mask, layout_ptr, scale_value, head_num, key_value_heads_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, sparse_mode, out, topk_indices_out
+
+  - func: npu_nsa_select_attention(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int num_heads, str layout, int select_block_size, int select_block_count, int sparse_mode, *, Tensor? atten_mask=None, int[]? actual_seq_q_len=None, int[]? actual_seq_kv_len=None) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      attention_out:
+        size: query
+        dtype: query
+      softmax_max_out:
+        size: query
+        dtype: at::kFloat
+      softmax_sum_out:
+        size: query
+        dtype: at::kFloat
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.data())'
+      exec: aclnnNsaSelectAttention, query, key, value, topk_indices, atten_mask, actual_seq_q_len, actual_seq_kv_len, scale_value, num_heads, layout_ptr, select_block_size, select_block_count, sparse_mode, softmax_max_out, softmax_sum_out, attention_out
+
+  - func: npu_nsa_select_attention_grad(Tensor grad, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_max, Tensor softmax_sum, Tensor topk_indices, float scale_value, int num_heads, str layout, int select_block_size, int select_block_count, int sparse_mode, *, int[]? actual_seq_q_len=None, int[]? actual_seq_kv_len=None, Tensor? atten_mask=None) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      query_grad:
+        size: query
+        dtype: query
+      key_grad:
+        size: key
+        dtype: key
+      value_grad:
+        size: value
+        dtype: value
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.data())'
+      exec: aclnnNsaSelectedAttentionGrad, query, key, value, attention_out, grad, softmax_max, softmax_sum, topk_indices, actual_seq_q_len, actual_seq_kv_len, atten_mask, scale_value, select_block_size, select_block_count, num_heads, layout_ptr, sparse_mode, query_grad, key_grad, value_grad
+
+  # - func: npu_nsa_compress_with_cache(Tensor input, Tensor weight, Tensor slot_mapping, int compress_block_size, int compress_stride, int act_seq_len_type, int page_block_size, *, Tensor(a!) out, Tensor act_seq_len, Tensor block_table, str? layout='TND') -> Tensor(a!)
+  #   op_api: all_version
+  #   gen_opapi:
+  #     exec: aclnnNsaCompressWithCache, input, weight, slot_mapping, act_seq_len, block_table, layout, compress_block_size, compress_stride, act_seq_len_type, page_block_size, out
+
+  - func: npu_nsa_select_attention_infer(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int num_heads, int num_key_value_heads, int select_block_size, int select_block_count, int page_block_size, int sparse_mode, *, Tensor? atten_mask, Tensor? block_table, Tensor? act_seq_q_len, Tensor? act_seq_kv_len, str? layout='TND') -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: query
+        dtype: query
+      new_params:
+        layout_ptr: 'const_cast<char *>(layout.value().data())'
+      exec: aclnnNsaSelectAttentionInfer, query, key, value, topk_indices, atten_mask, block_table, act_seq_q_len, act_seq_kv_len, layout_ptr, num_heads, num_key_value_heads, select_block_size, select_block_count, page_block_size, scale_value, sparse_mode, out
 
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
