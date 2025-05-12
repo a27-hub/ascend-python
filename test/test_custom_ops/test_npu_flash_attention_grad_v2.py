@@ -69,7 +69,7 @@ class TestNPUFlashAttentionV2(TestCase):
         x_max = x_max.expand(1, 32, 128, 8).npu()
         x_sum = x_sum.expand(1, 32, 128, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        dq, dk, dv, dpse, dq_rope, dk_rope = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
         self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
 
 if __name__ == "__main__":
