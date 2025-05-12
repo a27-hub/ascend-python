@@ -51,7 +51,10 @@ at::Tensor addcdiv(const at::Tensor& self, const at::Tensor& tensor1, const at::
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     auto input_size = op_infer::broadcast_ops_npu_output_size(self, tensor1);
     auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2.sizes());
-    at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_size);
+    auto tmp_type = at::native::result_type(tensor1, tensor2);
+    at::Tensor tmp = at::empty({0}, tensor1.options().dtype(tmp_type));
+    auto result_type = at::native::result_type(self, tmp);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, result_type);
 
     EXEC_NPU_CMD(aclnnAddcdiv, self, tensor1, tensor2, value, result);
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
