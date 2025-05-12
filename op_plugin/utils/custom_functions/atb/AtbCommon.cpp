@@ -49,7 +49,7 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
         tensor.hostData = atTensor.data_ptr();
     } else {
         tensor.deviceData = atTensor.data_ptr();
-        tensor.desc.format = static_cast<aclFormat>(atTensor.desc.format)
+        tensor.desc.format = static_cast<aclFormat>(at_npu::native::get_npu_format(atTensor));
     }
 
     tensor.desc.shape.dimNum = atTensor.sizes().size();
