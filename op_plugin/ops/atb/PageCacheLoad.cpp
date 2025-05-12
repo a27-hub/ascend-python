@@ -38,8 +38,8 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
     // pagedparam.mlaVHeadSize = 0;
 
     ParamSetter paramsetter;
-    paramsetter.Input(key_cache_tensor)
-        .Input(value_cache_tensor)
+    paramsetter.Input(key_cache_tensor, true)
+        .Input(value_cache_tensor, true)
         .Input(block_table_tensor)
         .Input(context_lens)
         .Input(key)
