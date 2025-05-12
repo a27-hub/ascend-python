@@ -45,13 +45,11 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
     TORCH_CHECK(atTensor.is_contiguous(), "atTensor is not contiguous");
     atb::Tensor tensor;
     tensor.desc.format = ACL_FORMAT_ND;
-    if (torch_npu::utils::is_npu(tensor)) {
-        tensor.desc.format = static_cast<aclFormat>(at_npu::native::get_npu_format(atTensor));
-    }
     if (atTensor.device().type() == at::kCPU) {
         tensor.hostData = atTensor.data_ptr();
     } else {
         tensor.deviceData = atTensor.data_ptr();
+        tensor.desc.format = static_cast<aclFormat>(at_npu::native::get_npu_format(atTensor));
     }
 
     tensor.desc.shape.dimNum = atTensor.sizes().size();
