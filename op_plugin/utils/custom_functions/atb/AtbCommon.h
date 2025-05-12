@@ -21,14 +21,14 @@
 
 namespace atb {
 
-atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor);
+atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor, aclFormat format = ACL_FORMAT_ND);
 atb::Context* GetContext(aclrtStream stream);
 at::Tensor GetWorkspaceTensor(uint64_t workspaceSize, aclrtStream stream);
 uint64_t OperationSetup(atb::VariantPack variantPack, atb::Operation *operation, atb::Context* contextPtr);
 class ParamSetter {
 public:
-    ParamSetter& Input(const at::Tensor &tensor);
-    ParamSetter& Input(const c10::optional<at::Tensor> &tensor);
+    ParamSetter& Input(const at::Tensor &tensor, bool transparent = false);
+    ParamSetter& Input(const c10::optional<at::Tensor> &tensor, bool transparent = false);
     ParamSetter& Output(at::Tensor &tensor);
     atb::VariantPack variantPack;
 };
