@@ -397,11 +397,13 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                  : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
     TensorListWrapper scale_wrapper = {scale_real,
         scale_dtype.has_value() ? torch_npu::te::GetAclDataType(scale_dtype.value())
-                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type())};
+                                : (scale_real.empty() ? aclDataType::ACL_UINT64
+                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type()))};
     TensorListWrapper per_token_scale_wrapper = {per_token_scale_real,
         per_token_scale_dtype.has_value()
             ? torch_npu::te::GetAclDataType(per_token_scale_dtype.value())
-            : npu_preparation::convert_to_acl_data_type(per_token_scale_real[0].scalar_type())};
+            : (per_token_scale_real.empty() ? aclDataType::ACL_FLOAT
+            : npu_preparation::convert_to_acl_data_type(per_token_scale_real[0].scalar_type()))};
 
     EXEC_NPU_CMD(aclnnGroupedMatmulV4, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
                  antiquant_offset_real, per_token_scale_wrapper, group_list_real, activation_input_real,
@@ -515,7 +517,8 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                  : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
     TensorListWrapper scale_wrapper = {scale_real,
         scale_dtype.has_value() ? torch_npu::te::GetAclDataType(scale_dtype.value())
-                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type())};
+                                : (scale_real.empty() ? aclDataType::ACL_UINT64
+                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type()))};
     EXEC_NPU_CMD(aclnnGroupedMatmul, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
                  antiquant_offset_real, group_list_real, split_item_value, result);
 
