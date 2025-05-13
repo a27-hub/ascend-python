@@ -48,7 +48,7 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor, aclFormat format)
         tensor.desc.format = ACL_FORMAT_ND;
         tensor.hostData = atTensor.data_ptr();
     } else {
-        tensor.desc.format = format
+        tensor.desc.format = format;
         tensor.deviceData = atTensor.data_ptr();
     }
 
