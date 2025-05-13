@@ -1151,7 +1151,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     at::Tensor dv;
     at::Tensor dpse;
 
-    if (d_scale_q.has_value()) {
+    if (format_query.dtype() == at::ScalarType::Float8_e4m3fn || format_query.dtype() == at::ScalarType::Float8_e5m2) {
         if (out_dtype == 0) {
             dq = OpPreparation::apply_tensor_without_format(format_query.sizes(), format_query.options().dtype(at::kHalf));
             dk = OpPreparation::apply_tensor_without_format(format_key.sizes(), format_key.options().dtype(at::kHalf));
@@ -1170,6 +1170,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
             } else {
                 dpse = at::empty({0}, query.options().dtype(at::kBFloat16));
             }
+        }
+    } else {
+        dq = OpPreparation::apply_tensor_without_format(format_query);
+        dk = OpPreparation::apply_tensor_without_format(format_key);
+        dv = OpPreparation::apply_tensor_without_format(format_value);
+        if (format_pse.defined()) {
+            dpse = OpPreparation::apply_tensor_without_format(format_pse);
+        } else {
+            dpse = at::empty({0}, query.options());
         }
     }
 
@@ -2039,7 +2048,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     at::Tensor dv;
     at::Tensor dpse;
 
-    if (d_scale_q.has_value()) {
+    if (format_query.dtype() == at::ScalarType::Float8_e4m3fn || format_query.dtype() == at::ScalarType::Float8_e5m2) {
         if (out_dtype == 0) {
             dq = OpPreparation::apply_tensor_without_format(format_query.sizes(), format_query.options().dtype(at::kHalf));
             dk = OpPreparation::apply_tensor_without_format(format_key.sizes(), format_key.options().dtype(at::kHalf));
@@ -2059,7 +2068,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 dpse = at::empty({0}, query.options().dtype(at::kBFloat16));
             }
         }
+    } else {
+        dq = OpPreparation::apply_tensor_without_format(format_query);
+        dk = OpPreparation::apply_tensor_without_format(format_key);
+        dv = OpPreparation::apply_tensor_without_format(format_value);
+        if (format_pse.defined()) {
+            dpse = OpPreparation::apply_tensor_without_format(format_pse);
+        } else {
+            dpse = at::empty({0}, query.options());
+        }
     }
+
     char* input_layout_ptr = const_cast<char *>(input_layout.c_str());
 
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
