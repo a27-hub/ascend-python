@@ -21,6 +21,7 @@ API_LIST = [
     '_npu_paged_attention_splitfuse',
     '_npu_flash_attention_qlens',
     '_npu_ring_attention',
+    '_npu_ring_attention_ring',
 ]
 
 
