@@ -34,6 +34,7 @@ void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_bl
     if (non_blocking) {
         EXEC_NPU_CMD(aclnnForeachCopy, src, dst);
     } else {
+        OP_LOG(aclnnForeachCopy, "EXEC_NPU_CMD_SYNC", src, dst);
         EXEC_NPU_CMD_SYNC(aclnnForeachCopy, src, dst);
     }
 }
@@ -74,6 +75,9 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     if (src[0].scalar_type() == at::ScalarType::Char || src[0].scalar_type() == at::ScalarType::Byte ||
         src[0].scalar_type() == at::ScalarType::BFloat16 ||
         src[0].scalar_type() == at::ScalarType::Float || src[0].scalar_type() == at::ScalarType::Half) {
+        return true;
+    } else if (op_plugin::utils::is_gte_cann_version_810rc1() && (src[0].scalar_type() == at::ScalarType::Long ||
+            src[0].scalar_type() == at::ScalarType::Double || src[0].scalar_type() == at::ScalarType::Bool)) {
         return true;
     }
     return false;

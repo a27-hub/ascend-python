@@ -786,7 +786,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
     tp_recv_counts = x.new_empty(tuple([tp_world_size]), dtype=torch.int32)
     expand_scales = x.new_empty(tuple([0]), dtype=torch.float32)
     if expert_scales is not None:
-        ep_recv_cnt_num = ep_world_size * local_moe_expert_num + n * 2 * k * (ep_world_size / 8)
+        ep_recv_cnt_num = ep_world_size * local_moe_expert_num + global_bs_real * 2 * k * (ep_world_size // 8)
         ep_recv_counts = x.new_empty(tuple([ep_recv_cnt_num]), dtype=torch.int32)
         expand_scales = x.new_empty(tuple([a]), dtype=torch.float32)
     return (expand_x, dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales)
@@ -826,7 +826,7 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
                             antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
-                            split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None):
+                            split_item=0, group_type=-1, group_list_type=0, act_type=0, tuning_config=None, output_dtype=None):
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
@@ -1300,6 +1300,30 @@ def npu_quant_grouped_matmul_dequant_meta(x, quantized_weight, weight_scale, gro
         lambda: "weight_scale shape[1] not equal to quantized_weight shape[1]" + ops_error(ErrCode.VALUE),
     )
     return torch.empty((x.shape[0], weight_scale.shape[1]), dtype=x.dtype, device='meta')
+
+
+@impl(m, "npu_transpose_batchmatmul")
+def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
+                                   perm_x1=None, perm_x2=None, perm_y=None,
+                                   batch_split_factor=1):
+    perm_x1 = perm_x1 or [0, 1, 2]
+    perm_x2 = perm_x2 or [0, 1, 2]
+    perm_y = perm_y or [0, 1, 2]
+    M = input_.size(perm_x1.index(1))
+    batchM = input_.size(perm_x1.index(0))
+    Ka = input_.size(perm_x1.index(2))
+    batchN = weight.size(perm_x2.index(0))
+    Kb = weight.size(perm_x2.index(1))
+    N = weight.size(perm_x2.index(2))
+    if scale is None:
+        dtype = torch.float16
+    else:
+        dtype = torch.int8
+    if batch_split_factor > 1:
+        dim_list = (batch_split_factor, M, batchM * N // batch_split_factor)
+    else:
+        dim_list = (M, batchM, N)
+    return input_.new_empty(dim_list, dtype=dtype)
 
 
 @impl(m, "npu_trans_quant_param")

@@ -1690,13 +1690,41 @@ torch_npu.npu_hans_encode(input, statistic, reshuff, out=(pdf, mantissa, fixed, 
 对输入张量基于概率密度分布（PDF）进行无损压缩
 
 参数说明
-input (Tensor) - 待压缩张量；数据类型：float32, bfloat16, float16；格式：ND；输入numel必须为64倍数且大于等于32768；
-statistic (Bool，默认值为False) - 标志是否重新统计PDF
-reshuff (Bool，默认值为False) - 标志是否将多核压缩的fixed的编码结果连续化
-pdf （Tensor） - 输入张量的概率密度分布；数据类型: int32；格式：ND； 输入shape为(1,256)。
-mantissa （Tensor） - 输入张量的尾数部分；数据类型: float32, bfloat16, float16；格式：ND。
-fixed （Tensor） - 输入张量压缩后的定长部分；数据类型: float32, bfloat16, float16；格式：ND。 
-var （Tensor） - 输入张量压缩后的变长部分；数据类型: float32, bfloat16, float16；格式：ND。 
+input: Device侧的Tensor类型，表示输入的待压缩张量；数据类型支持FLOAT16、FLOAT32、BFLOAT16类型；输入Shape无限制，数据元素大小仅支持64的倍数且大于等于32768。
+statistic: bool类型，控制是否重新统计pdf（概率密度分布）；设置为True时会重新统计输入input指数位字节的概率密度分布并覆盖pdf，设置为False时会使用输入的pdf进行压缩；默认值为False；
+reshuff: bool类型，控制是否将fixed中多核压缩的结果连续化；限制为fixed大小大于等于压缩上界时候才能使用，详细见约束。设置为True则将多核压缩的结果连续化，设置为False时则不做处理；设置为True时var参数失效；该参数需同步传入解码；默认值为False；
+
+输出说明
+pdf：Device侧的Tensor类型，表示input指数位字节的概率密度分布，数据类型为INT32，shape为[1, 256]，其中每一个元素的值表示其对应索引，在input中出现的次数；当statistic设置为True时会统计输入input指数位的pdf并覆盖原有pdf，设置为False时会使用当前输入的pdf进行压缩；
+mantissa：可为Device侧的Tensor类型、或Host侧内存通过虚拟内存映射至Deive，表示input输入的尾数部分；数据类型与input保持一致；输入Shape无限制，输入大小见约束。
+fixed：Device侧的Tensor类型，表示input指数位字节压缩的定长部分，一般由上层应用设定固定容量的空间来存储压缩结果；数据类型与input保持一致；输入Shape无限制，输入大小见约束。
+var：可为Device侧的Tensor类型、或Host侧内存通过虚拟内存映射至Deive，表示input指数位字节压缩的变长部分，一般由上层应用设定容量大小；数据类型与input保持一致；输入Shape无限制，输入大小见约束。
+
+约束说明
+输入input的元素数量为64的倍数且大于等于32768。
+pdf的shape为[1, 256]，数据类型为INT32。
+mantissa.numel() * mantissa.element_size() = input.numel() * (input.element_size() – 1)，尾数的大小可根据input输入的类型和大小严格计算。
+fixed.numel() * fixed.element_size() >= 512，即fixed的大小必须大于512Byte来存储压缩的元信息。
+fixed.numel() * fixed.element_size() + var.numel() * var.element_size() >= input.numel() + input.numel() / 64 + 8448 * 当前硬件Vector核数，即fixed与var的空间大小总和必须大于压缩上界。
+如果reshuff为True，则fixed.numel() * fixed.element_size() 需要大于input.numel() + input.numel() / 64 + 8448 * 硬件vector核数，即保证压缩结果同时存在于fixed上，fixed的大小需大于等于压缩上界。
+
+支持的型号
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例
+import torch
+import torch_npu
+data_shape = (4096, 512)
+statistic = True
+reshuff = False
+input_tensor = torch.randn(data_shape, dtype=dtype).npu()
+pdf = torch.zeros(256, dtype=torch.int32).npu()
+mantissa_numel = input_tensor.numel() * (input_tensor.element_size() - 1)
+mantissa =  torch.zeros(mantissa_numel // input_tensor.element_size(), dtype=input_tensor.dtype).npu()
+fixed = torch.zeros(input_tensor.numel(), dtype=input_tensor.dtype).npu()
+var = torch.zeros(input_tensor.numel(), dtype=input_tensor.dtype).npu()
+pdf, mantissa, fixed, var = torch_npu.npu_hans_encode(input_tensor, statistic, reshuff, out=(pdf, mantissa, fixed, var))
 """
 )
 
@@ -1706,15 +1734,42 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_hans_decode( mantissa, fixed, var, pdf, reshuff, out=out)
 功能描述
-对压缩后的张量基于概率密度分布（PDF）进行无损解压缩
+基于概率密度分布（PDF）对压缩后的结果进行无损解压缩
 
-参数说明
-mantissa （Tensor） - 压缩张量的尾数部分；数据类型: float32, bfloat16, float16；格式：ND。 
-fixed （Tensor） - 张量压缩后的定长部分；数据类型: float32, bfloat16, float16；格式：ND。 
-var （Tensor） - 张量压缩后的变长部分；数据类型: float32, bfloat16, float16；格式：ND。 
-pdf （Tensor） - 原张量的概率密度分布；数据类型: int32；格式：ND。输入shape为(1,256)。
-reshuff (Bool，默认值为False) - 标志是否曾将多核压缩的fixed的编码结果连续化。
-out （Tensor） - 恢复后的张量；数据类型: float32, bfloat16, float16；格式：ND。 
+参数说明（包括 类型、默认值、含义、参数使用限制）
+mantissa：可为Device侧的Tensor类型、或Host侧内存通过虚拟内存映射至Deive，表示压缩前张量的尾数部分。数据类型支持FLOAT16、FLOAT32、BFLOAT16类型；输入Shape无限制，为npu_hans_encode的输出。
+fixed：Device侧的Tensor类型，表示压缩前张量的指数位字节压缩的定长部分；数据类型与input保持一致；数据类型支持FLOAT16、FLOAT32、BFLOAT16类型；输入Shape无限制，为npu_hans_encode的输出。
+var：可为Device侧的Tensor类型、或Host侧内存通过虚拟内存映射至Deive，表示压缩前张量的指数位字节压缩的变长部分。数据类型支持FLOAT16、FLOAT32、BFLOAT16类型；输入Shape无限制，为npu_hans_encode的输出。
+pdf：Device侧的Tensor类型，表示压缩时采用的概率密度分布，数据类型为INT32，shape为[1, 256]。
+reshuff: bool类型，表示在压缩时是否将fixed中多核压缩的结果进行了连续化，设置为True则表示已将多核压缩的结果连续化，设置为False时则表示没有将fixed压缩的结果连续化；默认值为False。
+
+输出说明
+out：Device侧的Tensor类型，表示解压缩后的张量，数据类型与mantissa等输入一致，Shape无限制，大小详见约束；
+
+约束说明
+输出out的元素数量为64的倍数且大于等于32768。
+pdf的shape为[1, 256]，数据类型为INT32。
+mantissa.numel() * mantissa.element_size() = out.numel() * (out.element_size() – 1)。
+
+支持的型号
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例
+import torch
+import torch_npu
+data_shape = (4096, 512)
+statistic = True
+reshuff = False
+input_tensor = torch.randn(data_shape, dtype=dtype).npu()
+recover = torch.zeros(data_shape, dtype=dtype).npu()
+pdf = torch.zeros(256, dtype=torch.int32).npu()
+mantissa_numel = input_tensor.numel() * (input_tensor.element_size() - 1)
+mantissa =  torch.zeros(mantissa_numel // input_tensor.element_size(), dtype=input_tensor.dtype).npu()
+fixed = torch.zeros(input_tensor.numel(), dtype=input_tensor.dtype).npu()
+var = torch.zeros(input_tensor.numel(), dtype=input_tensor.dtype).npu()
+pdf, mantissa, fixed, var = torch_npu.npu_hans_encode(input_tensor, statistic, reshuff, out=(pdf, mantissa, fixed, var))
+recover = torch_npu.npu_hans_decode(mantissa, fixed, var, pdf, reshuff, out=recover)
 """
 )
 
@@ -3852,6 +3907,73 @@ cpu_antiquantoffset = cpu_antiquantoffset.transpose(-1, -2)
 model = NPUQuantizedLinearA16W8(cpu_weight.npu(), cpu_antiquantscale.npu(), cpu_antiquantoffset.npu())
 model = torch.compile(model, backend=npu_backend, dynamic=True)
 out = model(cpu_x.npu())
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_transpose_batchmatmul",
+    """
+功能描述: 
+该接口用于实现矩阵乘计算输入和输出的transpose操作。
+
+接口原型: 
+torch_npu.npu_transpose_batchmatmul(Tensor input, Tensor weight, *, Tensor? bias=None, Tensor? scale=None, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
+
+参数说明: 
+- input(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的左矩阵。数据类型支持float32、float16、bfloat16，数据格式支持ND。
+- weight(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的右矩阵。数据类型支持float32、float16、bfloat16，数据格式支持ND。
+- bias(Tensor, 计算输入): 可选参数, 一个1D的Device侧Tensor输入，矩阵计算的bias参数。数据类型支持float32、float16、bfloat16，数据格式支持ND。
+- scale(Tensor, 计算输入): 可选参数, 一个1D的Device侧Tensor输入，矩阵计算量化参数。数据类型支持int64、uint64，数据格式支持ND。
+- perm_x1(ListInt, 计算输入): 可选参数, int类型列表，将input在矩阵乘之前排列成[B, M, K]。
+- perm_x2(ListInt, 计算输入): 可选参数, int类型列表，将weight在矩阵乘之前排列成[B, K, N]。
+- perm_y(ListInt, 计算输入): 可选参数, int类型列表，将y在矩阵乘后重新排列。
+- batch_split_factor(Int, 计算输入): 可选参数，声明output_batch的系数，默认是1。
+- y(Tensor, 计算输出): 一个3D的Tensor，输出数据类型支持float32、float16、int8、bfloat16。
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品
+Atlas A3 推理系列产品
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+M, K, N, Batch = 32, 512, 128, 32
+x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+scale = torch.rand((Batch * N, ), dtype=torch.float32)
+scale = torch_npu.npu_trans_quant_param(scale.npu(), round_mode=1)
+y = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2.npu(), scale=scale.npu(),
+                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+
+# 图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x1, x2, scale):
+        scale = torch_npu.npu_trans_quant_param(scale, round_mode=1)
+        output = torch_npu.npu_transpose_batchmatmul(x1, x2, scale=scale,
+                                                     perm_x1=(1, 0, 2), perm_x2=(0, 1, 2),
+                                                     perm_y=(1, 0, 2))
+        return output
+
+M, K, N, Batch = 32, 512, 128, 32
+x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+scale = torch.rand((Batch * N, ), dtype=torch.float32)
+
+model = Model().npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False)
+y = model(x1.npu(), x2.npu(), scale.npu())
 """
 )
 
