@@ -10,9 +10,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include <acl/acl.h>
+
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
-#include <acl/acl.h>
 
 using namespace std;
 
@@ -23,19 +24,6 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
     const c10::OptionalDeviceGuard device_guard(device_of(key_cache_tensor));
     OpParamCache<PagedCacheLoadParam>& pagedCacheLoadParamCache = OpParamCache<PagedCacheLoadParam>::getInstance();
     PagedCacheLoadParam pagedparam;
-    // pagedparam.headNum = num_heads;
-    // pagedparam.qkScale = scale_value;
-    // pagedparam.kvHeadNum = num_kv_heads;
-    // pagedparam.maskType = PagedAttentionParam::UNDEFINED;
-    // pagedparam.batchRunStatusEnable = false;
-    // pagedparam.quantType = PagedAttentionParam::TYPE_QUANT_UNDEFINED;
-    // pagedparam.outDataType = ACL_DT_UNDEFINED;
-    // pagedparam.hasQuantOffset = false;
-    // pagedparam.compressType = PagedAttentionParam::COMPRESS_TYPE_UNDEFINED;
-    // pagedparam.calcType = PagedAttentionParam::CALC_TYPE_UNDEFINED;
-    // pagedparam.scaleType = PagedAttentionParam::SCALE_TYPE_TOR;
-    // pagedparam.inputLayout = atb::infer::TYPE_BSND;
-    // pagedparam.mlaVHeadSize = 0;
 
     ParamSetter paramsetter;
     paramsetter.Input(key_cache_tensor, true)
