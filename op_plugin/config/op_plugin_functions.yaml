@@ -6727,7 +6727,7 @@ custom:
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
 
-  - func: npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode="rint", int dst_type=40, int block_size=32) -> (Tensor, Tensor)
+  - func: npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode="rint", int dst_type=296, int block_size=32) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
 
