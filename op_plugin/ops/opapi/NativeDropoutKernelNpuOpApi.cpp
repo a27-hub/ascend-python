@@ -33,6 +33,11 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
   at::Tensor mask;
 
   auto original_stream = c10_npu::getCurrentNPUStream();
+  auto secondary_Stream = c10_npu::getCurrentSecondaryStream();
+  c10_npu::NPUEvent npu_event;
+  npu_event.record(original_stream);
+  npu_event.block(secondary_Stream);
+
   {
     // During the life cycle of this raii instance, the calcu stream is set as the
     // secondary stream, and tasks are distributed to the secondary stream. At the
