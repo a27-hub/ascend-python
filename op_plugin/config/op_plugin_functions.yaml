@@ -6353,9 +6353,24 @@ custom:
 
   - func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor
     op_api: [v2.1, newest]
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      new_params:
+        approximate_mode: 'npu_gelu_approximate_mode(approximate)'
+      exec: aclnnGeluV2, self, approximate_mode, out
 
   - func: npu_gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor
     op_api: [v2.1, newest]
+    gen_opapi:
+      out:
+        size: 'broadcast_ops_npu_output_size(grad_output, self)'
+        dtype: 'at::native::result_type(grad_output, self)'
+      new_params:
+        approximate_str: 'npu_gelu_approximate_str(approximate)'
+        approximate_ptr: 'const_cast<char *>(approximate_str.c_str())'
+      exec: aclnnGeluBackwardV2, grad_output, self, approximate_ptr, out
 
   - func: _conv_depthwise2d_backward(Tensor grad_output, Tensor self, Tensor weight, int[2] kernel_size, int[2] stride, int[2] padding, int[2] dilation, bool[2] output_mask) -> (Tensor grad_input, Tensor grad_weight)
     acl_op: all_version
@@ -6486,6 +6501,14 @@ custom:
         size: rms_norm_npu_output_size(x1, gamma)[0]
         dtype: x1
       exec: aclnnAddRmsNormCast
+
+  - func: npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+
+  - func: npu_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False) -> (Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
 
   - func: npu_all_gather_base_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
     op_api: all_version
@@ -6811,7 +6834,7 @@ custom:
     op_api: v1.11, v2.0
     exposed: v1.11, v2.0
 
-  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None, Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None, Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input=None, Tensor[]? activation_quant_scale=None, Tensor[]? activation_quant_offset=None, int? split_item=0, int? group_type=-1, int? group_list_type=0, int? act_type=0, ScalarType? output_dtype=None) -> Tensor[]
+  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None, Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None, Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input=None, Tensor[]? activation_quant_scale=None, Tensor[]? activation_quant_offset=None, int? split_item=0, int? group_type=-1, int? group_list_type=0, int? act_type=0, int[]? tuning_config=None, ScalarType? output_dtype=None) -> Tensor[]
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
 
@@ -7131,6 +7154,13 @@ custom:
 
   - func: npu_group_quant(Tensor x, Tensor scale, Tensor group_index, *, Tensor? offset=None, ScalarType? dst_dtype=None) -> Tensor
     op_api: all_version
+    gen_opapi:
+      out:
+        size: 'npu_group_quant_out_size(x, dst_dtype)'
+        dtype: dst_type
+      new_params:
+        dst_type: npu_group_quant_dst_type(dst_dtype)
+      exec: aclnnGroupQuant, x, scale, group_index, offset, dst_type, out
 
   - func: npu_random_choice_with_mask(Tensor x, int count=256, int seed=0, int seed2=0) -> (Tensor, Tensor)
     acl_op: all_version
@@ -7327,6 +7357,10 @@ custom:
     acl_op: all_version
 
   - func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0, int inner_precise=0) -> Tensor
+    op_api: all_version
+    exposed: all_version
+
+  - func: npu_transpose_batchmatmul(Tensor input, Tensor weight, *, Tensor? bias=None, Tensor? scale=None, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
     op_api: all_version
     exposed: all_version
 

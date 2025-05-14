@@ -36,7 +36,7 @@ class TestGroupedMatmul(TestCase):
         return y
 
     def supported_op_exec(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
-                          antiquantOffset=None, group_list=None, split_item=0):
+                          antiquantOffset=None, group_list=None, split_item=0, tuning_config=None):
         x_split = []
         if split_item == 0 or split_item == 2:
             x_split = x
@@ -65,7 +65,7 @@ class TestGroupedMatmul(TestCase):
         return int_value
 
     def custom_op_exec(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
-                       antiquantOffset=None, group_list=None, split_item=0, group_type=None):
+                       antiquantOffset=None, group_list=None, split_item=0, group_type=None, tuning_config=None):
         if group_type is not None:
             return torch_npu.npu_grouped_matmul(x, weight, bias=bias, scale=scale, offset=offset,
                                                 antiquant_scale=antiquantScale, antiquant_offset=antiquantOffset,
@@ -274,6 +274,28 @@ class TestGroupedMatmul(TestCase):
         custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list_npu,
                                             split_item=split_item, group_type=0)
 
+        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_5(self): # 单多单
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(1792, 256), dtype=torch.float16)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(3, 256, 128), dtype=torch.float16)
+        weight = [weight1[0], weight1[1], weight1[2]]
+        bias1 = torch.normal(mean=0., std=0.1, size=(3, 128), dtype=torch.float16)
+        bias = [bias1[0], bias1[1], bias1[2]]
+        group_list = [256, 1280, 1792]
+        split_item = 3
+
+        x_clone = [x1.clone().npu()]
+        weight_clone = [weight1.clone().npu()]
+        bias_clone = [bias1.clone().npu()]
+        group_list_npu = torch.tensor(group_list, dtype=torch.int64).npu()
+
+        supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list, split_item=split_item, tuning_config = [1792])
+        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list_npu,
+                                            split_item=split_item, group_type=0, tuning_config = [1792])
         self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
 
     @unittest.skip("skip test_npu_grouped_matmul_antiquant_0 now")
@@ -491,6 +513,100 @@ class TestGroupedMatmul(TestCase):
         diff = np.isclose(array1, array2, 0.005, 0.005, equal_nan=True)
         compare = np.sum(diff == True) / len(diff)
         self.assertTrue(compare >= 0.995)
+    
+    @unittest.skip("Skipping test_npu_grouped_matmul_A8W4 for now")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_A8W4(self):
+        # pylint:disable = huawei-too-many-arguments
+        def non_quant_golden(x, weight, scale, perTokenScale, groupList, bias):
+            groupNum, k, n = weight.shape
+            quantGroupNum = scale.shape[1]
+            index = np.cumsum(groupList)
+            xSplit = np.split(x, index * 2, axis=0)
+            perTokenScaleSplit = np.split(perTokenScale, index, axis=0)
+            weightGroup = weight.reshape(groupNum, quantGroupNum, k // quantGroupNum, n).astype(np.int32)
+            mmOuts = []
+            atomic = np.float16
+            for i in range(groupNum):
+                xi = xSplit[i].reshape(-1, quantGroupNum, k // quantGroupNum).astype(np.int32)
+                mmi = np.zeros([xi.shape[0], n], dtype=atomic)
+                for j in range(quantGroupNum):
+                    mm = np.matmul(xi[:, j, :], weightGroup[i, j, ...])
+                    mm = mm.astype(np.float32) * scale[i, j].reshape(1, -1)
+                    mmi = (mmi.astype(atomic) + mm.astype(atomic)).astype(atomic)
+
+                mmi = mmi.reshape(-1, 2, n).astype(np.float32)
+                mmi = mmi[:, 0, :] * 16 + mmi[:, 1, :] + bias[i].reshape(1, n)
+                mmi = mmi * perTokenScaleSplit[i]
+                mmOuts.append(mmi)
+            golden = np.concatenate(mmOuts, axis=0)
+            golden_tensor = torch.from_numpy(golden)
+            return golden_tensor.to(torch.float16)
+
+        # pylint:disable = huawei-too-many-arguments
+        def gmm_a8w4_golden(x_in, weight_in, bias_in, scale_in, groupList_in, perTokenScale_in):
+            weightNz = weight_in.astype(np.int8)
+            groupNum = groupList_in.shape[0]
+            m = x_in.shape[0]
+            k = x_in.shape[1]
+            n = scale_in.shape[2]
+
+            weight = weightNz.reshape(groupNum, k, n)
+            xC12 = np.concatenate([x_in.reshape(m, 1, k) // 16, (x_in.reshape(m, 1, k) & 0x0F) - 8], axis=1).reshape(m * 2, k)
+            scaleUint32 = scale_in.astype(np.uint32)
+            scaleUint32.dtype = np.float32
+            out = non_quant_golden(xC12, weight, scaleUint32, perTokenScale_in, groupList_in, bias_in)
+            return out
+
+        E = 8
+        M = 768
+        K = 7168
+        N = 4096
+        quantGroupSize = 256
+
+        x = torch.randint(-5, 5, (M, K), device="npu").to(torch.int8)
+        # A8W4 will inplace change the value of x.
+        x_copy = x.clone()
+        weight = torch.randint(-5, 5, (E, K, N), dtype=torch.int32, device="npu")
+        weight_quant = torch_npu.npu_quantize(weight.to(torch.float32), torch.tensor([1.]).npu(), None, torch.quint4x2, -1, False)
+        bias = torch.zeros((E, N), dtype=torch.float32, device="npu").uniform_(-5, 5)
+        scale_np = np.random.normal(0, 0.01, (E, 1, N)).astype(np.float32)
+        perGroupScale = np.ones([E, K//quantGroupSize, N]).astype(np.float32)
+        scaleUint32 = (scale_np * perGroupScale).astype(np.float16).astype(np.float32)
+        scaleUint32.dtype = np.uint32
+        scaleUint64 = np.zeros((E, K//quantGroupSize, N*2), dtype=np.uint32)
+        scaleUint64[...,::2] = scaleUint32
+        scaleUint64.dtype = np.int64
+        scale = torch.from_numpy(scaleUint64).npu()
+        groupList = torch.zeros((E,), dtype=torch.int64, device="npu").fill_(1)
+        perTokenScale = torch.zeros((M,1), dtype=torch.float32, device="npu").uniform_()
+
+        out = torch_npu.npu_grouped_matmul([x], [weight_quant], bias=[bias], scale=[scale], offset=None, antiquant_scale=None,
+                                           antiquant_offset=None, per_token_scale=[perTokenScale], group_list=groupList,
+                                           activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
+                                           split_item=3, group_type=0, group_list_type=1, act_type=0, output_dtype=torch.float16)
+
+        x_in = x_copy.cpu().numpy()
+        weight_in = weight.cpu().numpy()
+        bias_in = bias.cpu().numpy()
+        scale_in = scaleUint64
+        groupList_in = groupList.cpu().numpy()
+        perTokenScale_in = perTokenScale.cpu().numpy()
+
+        out_golden = gmm_a8w4_golden(x_in=x_in, weight_in=weight_in, bias_in=bias_in,
+                                     scale_in=scale_in, groupList_in=groupList_in, perTokenScale_in=perTokenScale_in)
+
+        out_shape = out[0].shape
+        golden_shape = out_golden.shape
+        
+        out_dim1 = out_shape[1]
+        
+        golden_dim0 = golden_shape[0]
+        golden_dim1 = golden_shape[1]
+        
+        self.assertEqual(out_dim1, golden_dim1)
+        self.assertEqual(out[0][:golden_dim0, :], out_golden.npu())
+
 
 if __name__ == "__main__":
     run_tests()

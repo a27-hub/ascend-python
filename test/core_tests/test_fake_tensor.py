@@ -1189,8 +1189,6 @@ class TestIncreFlashAttention(TestCase):
             v.requires_grad = True
             res = torch.ops.npu.npu_incre_flash_attention(q, k, v)
 
-            print("q.shape: ", q.shape)
-            print("res.shape: ", res.shape)
             self.assertTrue(q.shape == res.shape)
 
     def test_incre_flash_attention_int8_in(self):
@@ -1200,8 +1198,6 @@ class TestIncreFlashAttention(TestCase):
             v = torch.randint(1, 40, (1, 128), dtype=torch.int8).npu()
             res = torch.ops.npu.npu_incre_flash_attention(q, k, v)
 
-            print("q.shape: ", q.shape)
-            print("res.shape: ", res.shape)
             self.assertTrue(q.shape == res.shape)
             self.assertTrue(res.dtype == torch.half)
 
@@ -1219,8 +1215,6 @@ class TestIncreFlashAttention(TestCase):
             res = torch.ops.npu.npu_incre_flash_attention(q, k, v, actual_seq_lengths=actual_seq,
                                                           kv_padding_size=kv_padding_size)
 
-            print("q.shape: ", q.shape)
-            print("res.shape: ", res.shape)
             self.assertTrue(q.shape == res.shape)
 
 
@@ -1333,8 +1327,6 @@ class TestPromptFlashAttention(TestCase):
             v.requires_grad = True
             res = torch.ops.npu.npu_prompt_flash_attention(q, k, v)
 
-            print("q.shape: ", q.shape)
-            print("res.shape: ", res.shape)
             self.assertTrue(q.shape == res.shape)
 
 
@@ -1427,8 +1419,6 @@ class TestMaskedSoftmaxWithRelPosBias(TestCase):
             atten_mask.requires_grad = True
             relative_pos_bias.requires_grad = True
             res = torch.ops.npu.npu_masked_softmax_with_rel_pos_bias(x, atten_mask, relative_pos_bias)
-            print("x.shape: ", x.shape)
-            print("res.shape: ", res.shape)
             self.assertTrue(x.shape == res.shape)
 
 
@@ -1971,7 +1961,7 @@ class TestQuantMatmul(TestCase):
             expect_ret_fp16 = torch.randint(-1, 1, (1, 1, 100), dtype=torch.float16).npu()
             bias_fp32 = torch.randint(-1, 1, (1, 1, 100), dtype=torch.float32).npu()
             pertoken_scale = torch.randn(1, dtype=torch.float32).npu()
-            res_fp16 = torch_npu.npu_quant_matmul(x1, x2, scale, offset=None, pertoken_scale=pertoken_scale, 
+            res_fp16 = torch_npu.npu_quant_matmul(x1, x2, scale, offset=None, pertoken_scale=pertoken_scale,
                                                   bias=bias_fp32, output_dtype=torch.float16)
             self.assertTrue(expect_ret_fp16.shape == res_fp16.shape)
             self.assertTrue(expect_ret_fp16.dtype == res_fp16.dtype)
@@ -2075,6 +2065,52 @@ class TestMoeFinalizeRouting(TestCase):
             self.assertTrue(result.dtype == skip1.dtype)
 
 
+class TestGMMFinalizeRouting(TestCase):
+    def test_npu_grouped_matmul_finalise_routing_meta(self):
+        with FakeTensorMode():
+            m, k, n, batch, topK, group_num = 576, 2048, 7168, 72, 8, 8
+            x = torch.randint(-10, 10, (m, k), dtype=torch.int8)
+            weight = torch.randint(-10, 10, (group_num, k, n), dtype=torch.int8)
+            scale = torch.normal(0, 0.01, (group_num, n), dtype=torch.float32)
+            pertoken_scale = torch.normal(0, 0.01, (m, ), dtype=torch.float32)
+            group_list = torch.tensor([batch] * group_num, dtype=torch.float32)
+            logit_ori = torch.normal(0, 0.1, (batch, group_num), dtype=torch.float32)
+            routing = torch.argsort(logit_ori, 1)[:, -topK:]
+            shared_input = torch.normal(0, 0.1, (batch // 4, n), dtype=torch.bfloat16)
+            logit = torch.nn.functional.softmax(
+                logit_ori[torch.arange(batch).reshape(-1, 1).repeat(1, topK), routing],
+                dim=1,
+                dtype=torch.float32
+            ).reshape(m)
+            row_index = (torch.argsort(routing.reshape(-1)) // topK).to(torch.int64)
+            shared_input_offset = batch // 2
+            output_bs = batch
+            result = torch_npu.npu_grouped_matmul_finalize_routing(
+                x.npu(), weight.npu(), group_list.npu(), scale=scale.npu(),
+                pertoken_scale=pertoken_scale.npu(), shared_input=shared_input.npu(),
+                logit=logit.npu(), row_index=row_index.npu(),
+                shared_input_offset=shared_input_offset, output_bs=output_bs
+            ).to("cpu")
+            expect_ret = torch.normal(0, 0.1, (output_bs, n), dtype=torch.float32)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+
+class TestTransposeBatchMatmul(TestCase):
+    @unittest.skip("skip test_npu_transpose_batchmatmul")
+    def test_npu_transpose_batchmatmul_meta(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+            scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.int64)
+            result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2.npu(), scale=scale.npu(),
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randn((M, Batch, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+
 class TestNpuPrefetch(TestCase):
     def test_npu_prefetch(self):
         with FakeTensorMode():
@@ -2088,6 +2124,57 @@ class TestNpuPrefetch(TestCase):
                 torch_npu.npu_prefetch(input1, None, 10, -1)
             exception = cm.exception
             self.assertEqual(str(exception), "The offset should be nonnegative, but got -1.")
+
+
+class TestMoeDistributeDispatch(TestCase):
+    def test_moe_distribute_dispatchA2(self):
+        with FakeTensorMode():
+            quant_mode = 2
+            ep_world_size = 16
+            tp_world_size = 0
+            world_size = ep_world_size
+            bs = 8
+            h = 7168
+            k = 8
+            sharedExpertRankNum = 0
+            moeExpertNum = 16
+            global_bs = bs * ep_world_size
+            expert_num_per_rank = 1
+            total_expert_num = world_size * expert_num_per_rank
+
+            local_moe_expert_num = moeExpertNum // ep_world_size
+            a = global_bs * min(local_moe_expert_num, k)
+
+            ep_recv_cnt_num = ep_world_size * local_moe_expert_num + global_bs * 2 * k * (ep_world_size // 8)
+
+            x = torch.randn(bs, h).to(torch.bfloat16)
+            expert_ids = torch.randn(bs, k).to(torch.int32)
+            scales = torch.randn(total_expert_num, h).to(torch.float32)
+            expert_scales = torch.randn(bs, k).to(torch.float32)
+            result = torch_npu.npu_moe_distribute_dispatch(x, expert_ids, "group_ep", ep_world_size, 0, moeExpertNum, scales=scales, x_active_mask=None, expert_scales=expert_scales, group_tp="", tp_world_size=0,
+                                                           tp_rank_id=0, expert_shard_type=0, shared_expert_num=0, shared_expert_rank_num=sharedExpertRankNum, quant_mode=quant_mode, global_bs=global_bs, expert_token_nums_type=1)
+            self.assertEqual(result[0].shape[0], a)
+            self.assertEqual(result[0].shape[1], h)
+            self.assertEqual(result[0].dtype, torch.int8)
+
+            self.assertEqual(result[1].shape[0], a)
+            self.assertEqual(result[1].dtype, torch.float32)
+
+            self.assertEqual(result[2].shape[0], bs * k)
+            self.assertEqual(result[2].dtype, torch.int32)
+
+            self.assertEqual(result[3].shape[0], local_moe_expert_num)
+            self.assertEqual(result[3].dtype, torch.int64)
+
+            self.assertEqual(result[4].shape[0], ep_recv_cnt_num)
+            self.assertEqual(result[4].dtype, torch.int32)
+
+            self.assertEqual(result[5].shape[0], tp_world_size)
+            self.assertEqual(result[5].dtype, torch.int32)
+
+            self.assertEqual(result[6].shape[0], a)
+            self.assertEqual(result[6].dtype, torch.float32)
+
 
 
 instantiate_parametrized_tests(FakeTensorTest)
