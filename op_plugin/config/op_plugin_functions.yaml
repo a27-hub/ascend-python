@@ -7328,7 +7328,7 @@ custom:
     acl_op: all_version
     exposed: all_version
   
-  - func: npu_fused_matmul(Tensor c_input, Tensor weight, *, Tensor? v_input=None, Tensor? bias=None, str fused_op_type="", bool enable_hf32=False) -> Tensor
+  - func: npu_fused_matmul(Tensor x, Tensor weight, *, Tensor? bias=None, Tensor? y=None, str fused_op_type=None,  bool enable_hf32=False) -> Tensor
     op_api: all_version
     exposed: all_version
 

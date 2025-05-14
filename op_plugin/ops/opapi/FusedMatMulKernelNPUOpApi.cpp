@@ -20,8 +20,8 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor npu_fused_matmul(
-    const at::Tensor &c_input, const at::Tensor &weight,
-    const c10::optional<at::Tensor> &v_input, const c10::optional<at::Tensor> &bias,
+    const at::Tensor &x, const at::Tensor &weight,
+    const c10::optional<at::Tensor> &bias, const c10::optional<at::Tensor> &y,
     c10::string_view fused_op_type, bool enable_hf32
     )
 {
