@@ -573,14 +573,25 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
                                 "the last dim of input must be divisible by 2, " \
                                 "unless input dtype is also float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-        input_shape[-1] /= 2
+        input_shape[-1] //= 2
     # torch_npu.hifloat8, torch_npu.float4_e2m1, torch_npu.float4_e1m2
     if dtype in [290, 296, 297]:
         output = self.new_empty(input_shape, dtype=torch.uint8)
     else:
-        output = self.new_empty(input_shape, dtype=dtype)
+        output_dst_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dtype)
+        if output_dst_dtype is not None:
+            output = self.new_empty(input_shape, dtype=output_dst_dtype)
+        else:
+            raise RuntimeError("Not supported output dtype is " + str(output_dst_dtype))
     return output
 
+@impl(m, "_npu_dtype_cast")
+def _npu_dtype_cast_meta(self, dtype):
+    return torch.empty_like(self, dtype=dtype)
+
+@impl(m, "_npu_dtype_cast_backward")
+def _npu_dtype_cast_backward_meta(self, dtype):
+    return torch.empty_like(self, dtype=dtype)
 
 @impl(m, "npu_dtype_cast_backward")
 def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None):
