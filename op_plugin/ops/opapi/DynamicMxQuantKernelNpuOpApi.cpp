@@ -22,6 +22,8 @@ using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 constexpr int64_t BLOCK_SIZE_BASE_NUM = 32;
 constexpr int64_t BLOCK_SIZE_MAX_NUM = 1024;
+constexpr int64_t ALIGN_NUM = 2;
+constexpr int64_t FP4_IN_UINT8_NUM = 2;
 }; // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
@@ -45,11 +47,24 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
     // prepare for empty output tensor
-    aclDataType y_acltype = torch_npu::te::GetAclDataType(dst_type);
-    at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
-    y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
-    mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
+    aclDataType y_acltype;
+    bool special_output_type = (dst_type == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E2M1) ||
+                                dst_type == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT4_E1M2));
+    if (special_output_type) {
+        int64_t last_dim_val = y_shape[input.dim() - 1];
+        TORCH_CHECK(last_dim_val % FP4_IN_UINT8_NUM == 0, 
+                    "The last dim input shape must be divisible by 2 if "
+                    "output dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
+        y_shape[input.dim() - 1] = last_dim_val / FP4_IN_UINT8_NUM;
+        y = npu_preparation::apply_tensor_without_format(y_shape, c10::ScalarType::Byte);
+        y_acltype = torch_npu::te::GetAclDataType(dst_type);
+    } else {
+        y_acltype = torch_npu::te::GetAclDataType(dst_type);
+        at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+        y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
+    }
 
+    mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
     EXEC_NPU_CMD(aclnnDynamicMxQuant, input, axis, round_mode_ptr, y_acltype, block_size, y_wrapper, mxscale_wrapper);
