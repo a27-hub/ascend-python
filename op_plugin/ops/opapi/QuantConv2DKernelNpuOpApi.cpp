@@ -76,8 +76,11 @@ at::Tensor npu_quant_conv2d_out(const at::Tensor& input, const at::Tensor& weigh
 
     auto output = npu_preparation::apply_tensor_without_format(out_size, options);
 
-    EXEC_NPU_CMD(aclnnQuantConvolution, input, weight, scale, bias, strides, pads, dilations, groups,
-                 offset_x, round_mode_ptr, output);
+    bool transposed = false; // transposed is not used in npu
+    c10::IntArrayRef outputPadding; // outputPadding is not used in npu
+
+    EXEC_NPU_CMD(aclnnQuantConvolution, input, weight, bias, scale, offset, strides, pads, dilations, transposed,
+                 outputPadding, groups, offset_x, round_mode_ptr, output);
 
     return output;
 }
