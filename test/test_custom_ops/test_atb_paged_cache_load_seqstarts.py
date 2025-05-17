@@ -19,6 +19,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
         )
 
     def _gather_cache_torch(
+        self,
         src_cache: torch.Tensor,  # [NUM_BLOCKS, BLOCK_SIZE, HEAD, ENTRIES]
         dst: torch.Tensor,  # [TOT_TOKENS, ENTRIES]
         block_table: torch.Tensor,  # [BATCH, BLOCK_INDICES]
@@ -84,15 +85,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
                 ].squeeze(1)
 
     @SupportedDevices(["Ascend910B"])
-    def test_atb_paged_cache_load(
-        self,
-        kv_lora_rank,
-        qk_rope_head_dim,
-        block_size,
-        num_blocks,
-        max_seq_len,
-        batch_size,
-    ):
+    def test_atb_paged_cache_load(self):
         kv_lora_rank = 512
         qk_rope_head_dim = 64
         block_size = 16
@@ -129,7 +122,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
         )
 
         # gather_cache_torch(src_cache, expected, block_table, cu_seq_lens, batch_size, seq_starts)
-        self.gather_cache_torch(
+        self._gather_cache_torch(
             src_cache, expected, block_table, cu_seq_lens, batch_size, seq_starts
         )
 
