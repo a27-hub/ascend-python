@@ -245,6 +245,7 @@ class TestRingAttention(TestCase):
             head_dim_v,
             batch_size,
             block_size,
+            max_seqlen_pad,
         )
 
         num_tokens = cache_seqlens.sum().item()
@@ -253,12 +254,15 @@ class TestRingAttention(TestCase):
         )
         lse_npu = torch.empty(num_tokens, num_heads_q, dtype=dtype, device=device)
 
+        query = q.view(batch_size, num_heads_q, head_dim)
+        seq_lens_query = torch.ones(batch_size, dtype=torch.int32, device=device)
+        seq_lens = torch.stack([seq_lens_query, cache_seqlens], dim=0).cpu()
         torch_npu._npu_ring_attention(
-            q,
+            query,
             key,
             value,
             masks,
-            cache_seqlens,
+            seq_lens,
             num_heads_q,
             num_heads_kv,
             1.0,
