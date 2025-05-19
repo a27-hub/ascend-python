@@ -30,7 +30,7 @@ at::Tensor FormatTrans(const at::Tensor &at_tensor)
 }
 
 
-atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor, aclFormat format)
+atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
 {
     static std::map<at::ScalarType, aclDataType> dtypeMap = {
         {at::ScalarType::Bool, ACL_BOOL},   {at::ScalarType::Byte, ACL_UINT8},
@@ -44,12 +44,12 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor, aclFormat format)
 
     TORCH_CHECK(atTensor.is_contiguous(), "atTensor is not contiguous");
     atb::Tensor tensor;
+    tensor.desc.format = ACL_FORMAT_ND;
     if (atTensor.device().type() == at::kCPU) {
-        tensor.desc.format = ACL_FORMAT_ND;
         tensor.hostData = atTensor.data_ptr();
     } else {
-        tensor.desc.format = format;
         tensor.deviceData = atTensor.data_ptr();
+        tensor.desc.format = static_cast<aclFormat>(at_npu::native::get_npu_format(atTensor));
     }
 
     tensor.desc.shape.dimNum = atTensor.sizes().size();
@@ -86,36 +86,31 @@ void RunAtbCmd(atb::Operation *op, const ParamSetter &paramsetter, const std::st
 }
 
 
-ParamSetter& ParamSetter::Input(const at::Tensor &tensor, bool transparent)
+ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
 {
     if (!tensor.defined()) {
         variantPack.inTensors.push_back(atb::Tensor());
         return *this;
     }
     at::Tensor newTensor = tensor;
-    if (torch_npu::utils::is_npu(newTensor) && !transparent) {
-        newTensor = FormatTrans(tensor);
-    }
 
     if (!newTensor.is_contiguous()) {
         newTensor = newTensor.contiguous();
     }
-    aclFormat format = transparent ? static_cast<aclFormat>(at_npu::native::get_npu_format(newTensor))
-                                      : ACL_FORMAT_ND;
-    auto AtTensor = AtTensor2AtbTensor(newTensor, format);
+    auto AtTensor = AtTensor2AtbTensor(newTensor);
 
     variantPack.inTensors.push_back(AtTensor);
     return *this;
 }
 
 
-ParamSetter& ParamSetter::Input(const c10::optional<at::Tensor> &tensor, bool transparent)
+ParamSetter& ParamSetter::Input(const c10::optional<at::Tensor> &tensor)
 {
     if (!tensor.has_value()) {
         variantPack.inTensors.push_back(atb::Tensor());
         return *this;
     }
-    return Input(tensor.value(), transparent);
+    return Input(tensor.value());
 }
 
 
