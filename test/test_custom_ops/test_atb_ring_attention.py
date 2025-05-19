@@ -56,7 +56,7 @@ class TestRingAttention(TestCase):
             seq_len = cache_seqlens[i].item()
 
             # Get query for this batch
-            q_i = q[i]  # [1, h_q, d]
+            q_i = q[i]  # [s_q=1, h_q, d]
 
             # Get block indices for this batch
             num_blocks_needed = (seq_len + block_size - 1) // block_size
@@ -91,7 +91,54 @@ class TestRingAttention(TestCase):
                 "nhk,khd->nhd", attn_weights, v_i
             )  # [1, h_q, head_dim_v]
 
+        # out: [b, 1, h_q, head_dim_v]
+        # lse: [b, h_q, 1]
         return out, lse
+
+    def get_key_value_from_cache(
+        self,
+        key_cache: torch.Tensor,
+        seq_lens: torch.Tensor,
+        block_table: torch.Tensor,
+        head_num_q: int,
+        head_dim_qk: int,
+        head_dim_v: int,
+        batch_size: int,
+        block_size: int,
+        max_seq_len: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        num_tokens = seq_lens.sum().item()
+        key = torch.empty((num_tokens, head_num_q, head_dim_qk), dtype=key_cache.dtype)
+        value = torch.empty((num_tokens, head_num_q, head_dim_v), dtype=key_cache.dtype)
+
+        token_acc = 0
+        masks = torch.empty((batch_size, max_seq_len, max_seq_len), dtype=torch.float16)
+
+        for i in range(batch_size):
+            seq_len = seq_lens[i].item()
+
+            num_blocks_needed = (seq_len + block_size - 1) // block_size
+            block_indices = block_table[i, :num_blocks_needed]
+
+            key_i = key_cache[block_indices]  # [num_blocks_needed, block_size, 1, d]
+            key_i = key_i.view(-1, 1, head_dim_qk)[
+                :seq_len
+            ]  # [seq_len, 1, head_dim_qk=576]
+
+            key_i = key_i.repeat_interleave(
+                head_num_q, dim=1
+            )  # [seq_len, head_num_q, head_dim_qk]
+
+            value_i = key_i[..., :head_dim_v]  # [seq_len, head_num_q, head_dim_qk]
+
+            key[token_acc : token_acc + seq_len] = key_i
+            value[token_acc : token_acc + seq_len] = value_i
+            masks[i, :seq_len, :seq_len] = 1.0
+            token_acc += seq_len
+
+        # key: [num_tokens, head_num_q, head_dim_qk]
+        # value: [num_tokens, head_num_q, head_dim_v]
+        return key, value, masks
 
     # https://github.com/vllm-project/vllm/blob/79a1d25bbd09420ad7d8631671a70cbcaf496cfb/tests/kernels/attention/test_merge_attn_states.py#L15
     def merge_attn_states_torch(
@@ -187,6 +234,36 @@ class TestRingAttention(TestCase):
             head_dim_v=head_dim_v,
             softmax_scale=scale,
             causal=causal,
+        )
+
+        key, value, masks = self.get_key_value_from_cache(
+            k_cache,
+            cache_seqlens,
+            block_table,
+            num_heads_q,
+            head_dim,
+            head_dim_v,
+            batch_size,
+            block_size,
+        )
+
+        num_tokens = cache_seqlens.sum().item()
+        out_npu = torch.empty(
+            num_tokens, num_heads_q, head_dim_v, dtype=dtype, device=device
+        )
+        lse_npu = torch.empty(num_tokens, num_heads_q, dtype=dtype, device=device)
+
+        torch_npu._npu_ring_attention(
+            q,
+            key,
+            value,
+            masks,
+            cache_seqlens,
+            num_heads_q,
+            num_heads_kv,
+            1.0,
+            out_npu,
+            lse_npu,
         )
 
         print(out_torch.shape, lse_torch.shape)
