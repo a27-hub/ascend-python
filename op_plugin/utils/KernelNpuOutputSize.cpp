@@ -1914,14 +1914,13 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& inpu
     int64_t compress_kv_num = 0;
     int64_t pre_seqlen = 0;
     c10::SmallVector<int64_t, SIZE> output_shape;
-
     auto act_seqlen_type_value = act_seqlen_type.value_or(0);
-
     if (act_seqlen_type_value == 0) {
         auto act_seqlen_value = act_seqlen.value();
         for (size_t i = 0; i < act_seqlen_value.size(); i++) {
             int64_t cur_seq_len = act_seqlen_value[i] - pre_seqlen;
             if (cur_seq_len >= compress_block_size) {
+                TORCH_CHECK(compress_stride > 0, "compress_stride must be greater than 0." + OPS_ERROR(ErrCode::VALUE));
                 compress_kv_num += (cur_seq_len - compress_block_size + compress_stride) / compress_stride;
             }
             pre_seqlen += cur_seq_len;
