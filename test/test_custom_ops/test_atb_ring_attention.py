@@ -248,11 +248,10 @@ class TestRingAttention(TestCase):
             max_seqlen_pad,
         )
 
-        num_tokens = cache_seqlens.sum().item()
         out_npu = torch.empty(
-            num_tokens, num_heads_q, head_dim_v, dtype=dtype, device=device
+            batch_size, num_heads_q, head_dim_v, dtype=dtype, device=device
         )
-        lse_npu = torch.empty(num_tokens, num_heads_q, dtype=dtype, device=device)
+        lse_npu = torch.empty(batch_size, num_heads_q, dtype=dtype, device=device)
 
         query = q.view(batch_size, num_heads_q, head_dim)
         seq_lens_query = torch.ones(batch_size, dtype=torch.int32, device=device)
