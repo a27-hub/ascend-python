@@ -1926,8 +1926,8 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& inpu
             pre_seqlen += cur_seq_len;
         }
         output_shape.push_back(compress_kv_num);
-        output_shape.push_back(input.size(1));
-        output_shape.push_back(input.size(2));
+        output_shape.push_back(input.size(NPU_NSA_COMPRESS_INPUT_DIM_SECOND));
+        output_shape.push_back(input.size(NPU_NSA_COMPRESS_INPUT_DIM_THIRD));
     }
     return output_shape;
 }

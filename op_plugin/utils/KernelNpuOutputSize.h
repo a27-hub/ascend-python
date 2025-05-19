@@ -29,6 +29,8 @@ const int N = 32;
 // npu tensor max size
 const int SIZE = 8;
 const int INT4_NUMS_IN_INT32_SPACE = 8;
+const int NPU_NSA_COMPRESS_INPUT_DIM_SECOND = 1;
+const int NPU_NSA_COMPRESS_INPUT_DIM_THIRD = 2;
 
 using tuple_array_vector = std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::SmallVector<int64_t, SIZE>>;
 using tuple_vector = std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>>;
