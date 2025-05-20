@@ -376,7 +376,7 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             x.new_empty(tuple(expert_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
 
-
+@impl(m, "npu_fused_infer_attention_score.tensor")
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
                                     dequant_scale1=None, quant_scale1=None, dequant_scale2=None, quant_scale2=None,
@@ -396,7 +396,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         N = query.size(1)
         S1 = query.size(2)
     if input_layout == "BNSD":
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        if value.dim() == 3:
+            tempQN = int(query.size(1)) if num_heads == 0 else num_heads
+            tempVN = tempQN if num_key_value_heads == 0 else num_key_value_heads
+            torch._check(
+                (tempVN != 0),
+                    lambda: "Q layout is BNSD, KV layout is BBH, num_key_value_heads can not be 0!" + ops_error(ErrCode.VALUE),
+            )
+            tempVD = int(int(value.size(2)) / tempVN)
+            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), tempVD], dtype=query.dtype, device='meta')
+        else:
+            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3)], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -416,8 +426,10 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         N = query.size(0)
         S1 = query.size(1)
     if input_layout == "TND":
-        tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
-
+        if block_table is not None:
+            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        else:
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if quant_scale2 is not None:
         if (softmax_lse_flag == True):
             if input_layout == "TND":
