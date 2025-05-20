@@ -218,18 +218,22 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
 
     const auto dimNum = at_tensor.sizes().size();
     aclFormat format = ACL_FORMAT_ND;
-    switch (dimNum) {
-        case NCL_DIM_NUM:
-            format = ACL_FORMAT_NCL;
-            break;
-        case NCHW_DIM_NUM:
-            format = ACL_FORMAT_NCHW;
-            break;
-        case NCDHW_DIM_NUM:
-            format = ACL_FORMAT_NCDHW;
-            break;
-        default:
-            format = ACL_FORMAT_ND;
+    if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
+        format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
+    } else {
+        switch (dimNum) {
+            case NCL_DIM_NUM:
+                format = ACL_FORMAT_NCL;
+                break;
+            case NCHW_DIM_NUM:
+                format = ACL_FORMAT_NCHW;
+                break;
+            case NCDHW_DIM_NUM:
+                format = ACL_FORMAT_NCDHW;
+                break;
+            default:
+                format = ACL_FORMAT_ND;
+        }
     }
 
     if (at_npu::native::OpPreparation::is_scalar_wrapped_to_tensor(at_tensor)) {
