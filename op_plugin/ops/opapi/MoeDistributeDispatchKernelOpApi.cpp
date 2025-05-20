@@ -90,7 +90,8 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
         dynamic_scales = npu_preparation::apply_tensor_without_format({a * tp_world_size}, x.options().dtype(at::kFloat));
     }
     
-    at::Tensor expand_idx = npu_preparation::apply_tensor_without_format({std::max(n * k, a * 3)}, x.options().dtype(at::kInt));
+    // a2使用bs * k; a3使用 a * 3, 使用三元组标识token信息
+    at::Tensor expand_idx = npu_preparation::apply_tensor_without_format({std::max(n * k, a * 3)}, x.options().dtype(at::kInt)); // expand_idx维度取n*k与a*3三元组最大
     at::Tensor expert_token_nums = npu_preparation::apply_tensor_without_format({local_moe_expert_num}, x.options().dtype(at::kLong));
     at::Tensor ep_recv_counts = npu_preparation::apply_tensor_without_format({ep_recv_cnt_num}, x.options().dtype(at::kInt));
     at::Tensor tp_recv_counts = npu_preparation::apply_tensor_without_format({tp_world_size}, x.options().dtype(at::kInt));
