@@ -354,5 +354,20 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(cons
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype);
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> expanded_x_output_size(const at::Tensor& x,
+                                                                        const at::Tensor& expert_idx,
+                                                                        int64_t active_num,
+                                                                        int64_t expert_capacity,
+                                                                        int64_t expert_num,
+                                                                        int64_t drop_pad_mode);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> expanded_row_idx_output_size(const at::Tensor& x,
+                                                                              const at::Tensor& expert_idx);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> expert_tokenscount_output_size(int64_t expert_num,
+                                                                                int64_t drop_pad_mode,
+                                                                                int64_t expert_tokens_count_or_cumsum_flag);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> expert_tokens_before_capacity_output_size(int64_t expert_num,
+                                                                                           int64_t drop_pad_mode,
+                                                                                           bool expert_tokens_before_capacity_flag);
+
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE

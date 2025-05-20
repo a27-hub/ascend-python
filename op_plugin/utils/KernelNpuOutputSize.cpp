@@ -1909,4 +1909,72 @@ c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c1
     return output_shape;
 }
 
+c10::SmallVector<int64_t, SIZE> expanded_x_output_size(
+    const at::Tensor& x,
+    const at::Tensor& expert_idx,
+    int64_t active_num,
+    int64_t expert_capacity,
+    int64_t expert_num,
+    int64_t drop_pad_mode)
+{
+    at::SmallVector<int64_t, SIZE> output_size;
+    auto x_size = x.sizes();
+    auto expert_idx_size = expert_idx.sizes();
+    int64_t k = expert_idx_size[1];
+    int64_t num_rows = x_size[0];
+    int64_t h = x_size[1];
+
+    if (drop_pad_mode == 1) {
+        // 模式Drop/Pad: [expertNum, expertCapacity, h]
+        output_size = {expert_num, expert_capacity, h};
+    } else if (drop_pad_mode == 0 && active_num == 0) {
+        // 模式Dropless: [num_rows * k, h]
+        output_size = {num_rows * k, h};
+    } else if (drop_pad_mode == 0 && active_num > 0) {
+        // 模式Active: [min(num_rows * k, active_num), h]
+        int64_t dim_zero = std::min(active_num, num_rows * k);
+        output_size = {dim_zero, h};
+    }
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> expanded_row_idx_output_size(
+    const at::Tensor& x,
+    const at::Tensor& expert_idx)
+{
+    at::SmallVector<int64_t, SIZE> output_size;
+    int64_t num_rows = x.size(0);
+    int64_t k = expert_idx.size(1);
+    output_size = {num_rows * k};
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> expert_tokenscount_output_size(
+    int64_t expert_num,
+    int64_t drop_pad_mode,
+    int64_t expert_tokens_count_or_cumsum_flag)
+{
+    at::SmallVector<int64_t, SIZE> output_size;
+    if (expert_tokens_count_or_cumsum_flag != 0 && drop_pad_mode == 0) {
+        output_size = {expert_num};
+    } else {
+        output_size = {};
+    }
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> expert_tokens_before_capacity_output_size(
+    int64_t expert_num,
+    int64_t drop_pad_mode,
+    bool expert_tokens_before_capacity_flag)
+{
+    at::SmallVector<int64_t, SIZE> output_size;
+    if (expert_tokens_before_capacity_flag == true && drop_pad_mode == 1) {
+        output_size = {expert_num};
+    } else {
+        output_size = {};
+    }
+    return output_size;
+}
+
 } // namespace op_infer
