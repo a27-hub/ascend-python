@@ -7094,6 +7094,7 @@ custom:
   - func: npu_prefetch(Tensor self, Tensor? dependency, int max_size, int offset=0) -> ()
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
+    internal_format_opapi: [v2.1, newest]
 
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
     acl_op: [v2.1, newest]
