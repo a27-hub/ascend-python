@@ -1255,21 +1255,21 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4)
     quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes)
     quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
-    if output_dtype == torch.float16:
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
-    elif output_dtype == torch.bfloat16:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.bfloat16)
-    elif output_dtype == torch.float32:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float32)
-    elif output_dtype == torch.int32:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int32)
-    elif output_dtype == torch.float8_e5m2:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e5m2)
-    elif output_dtype == torch.float8_e4m3fn:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e4m3fn)
-    elif output_dtype == torch.bits8:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.bits8)
-    elif output_dtype is None or output_dtype == torch.int8:
+    elif output_dtype is None or output_dtype == TORCH_DTYPE_MAP[torch.int8]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int8)
     else:
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
@@ -1660,7 +1660,7 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
         elif (input_.dtype == torch.bits8 or input_.dtype == torch.float8_e4m3fn):
             torch._check(
                 (output_dtype == torch.float16 or output_dtype == torch.bfloat16 or output_dtype == torch.float32),
-                lambda: "output dtype should be float16 or bfloat16 or float32 when input dtype is hifloat8 or float8_e4m3fn, " + 
+                lambda: "output dtype should be float16 or bfloat16 or float32 when input dtype is hifloat8 or float8_e4m3fn, " +
                         "but now dtype is " + str(output_dtype) + ops_error(ErrCode.TYPE),
             )
 
