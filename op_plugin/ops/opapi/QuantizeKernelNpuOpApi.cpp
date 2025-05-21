@@ -35,6 +35,14 @@ static std::map<int64_t, at::ScalarType> QUANTIZE_SUPPORT_MAP = {
     {static_cast<int64_t>(at::kFloat8_e4m3fn), at::ScalarType::Float8_e4m3fn},
     {static_cast<int64_t>(at::kFloat8_e5m2), at::ScalarType::Float8_e5m2}, 
     {TYPE_NUM_FOR_HIFLOAT8, at::ScalarType::Byte}};
+
+static std::initializer_list<int64_t> ASCEND_QUANT_V2_SUPPORT_LIST = {
+    static_cast<int64_t>(at::kChar),
+    static_cast<int64_t>(at::kQInt8),
+    static_cast<int64_t>(at::ScalarType::QUInt4x2),
+    static_cast<int64_t>(at::kFloat8_e4m3fn),
+    static_cast<int64_t>(at::kFloat8_e5m2),
+    TYPE_NUM_FOR_HIFLOAT8};
 };
 
 at::Tensor npu_quantize_by_kernel(
@@ -76,6 +84,10 @@ at::Tensor npu_quantize_by_ascend_quant(
     at::ScalarType scalarDtype = at::ScalarType::Undefined;
     aclDataType yAclType = ACL_INT8;
     at::Tensor result;
+
+    TORCH_CHECK(std::find(ASCEND_QUANT_V2_SUPPORT_LIST.begin(), ASCEND_QUANT_V2_SUPPORT_LIST.end(), dtype) !=
+        ASCEND_QUANT_V2_SUPPORT_LIST.end(),
+        "Param (dtype) must be Int8, QInt8, QUInt4x2, HiFloat8, Float8_e4m3fn, Float8_e5m2" + OPS_ERROR(ErrCode::TYPE));
 
     if (dtype == static_cast<int64_t>(at::kQInt8)) {
         yAclType = ACL_INT8;
