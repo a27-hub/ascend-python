@@ -29,10 +29,20 @@ TORCH_DTYPE_MAP = {
 TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP = {
     0: torch.uint8,
     1: torch.int8,
+    2: torch.int16,
     3: torch.int32,
+    4: torch.int64,
+    5: torch.float16,
+    6: torch.float32,
+    7: torch.float64,
+    8: torch.complex32,
+    9: torch.complex64,
+    10: torch.complex128,
+    11: torch.bool,
     12: torch.qint8,
     13: torch.quint8,
     14: torch.qint32,
+    15: torch.bfloat16,
     16: torch.quint4x2,
     23: torch.float8_e5m2,
     24: torch.float8_e4m3fn,
@@ -582,7 +592,9 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
         if output_dst_dtype is not None:
             output = self.new_empty(input_shape, dtype=output_dst_dtype)
         else:
-            raise RuntimeError("Not supported output dtype is " + str(output_dst_dtype))
+            raise RuntimeError("Parameter(dtype) enum value:{} not found in " \
+                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) + 
+                ops_error(ErrCode.PARAM))
     return output
 
 @impl(m, "_npu_dtype_cast")
