@@ -88,6 +88,137 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
 }
 
+std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const c10::optional<at::Tensor> &pse_shift,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &actual_seq_lengths,
+    const c10::optional<at::Tensor> &actual_seq_lengths_kv,
+    const c10::optional<at::Tensor> &dequant_scale1,
+    const c10::optional<at::Tensor> &quant_scale1,
+    const c10::optional<at::Tensor> &dequant_scale2,
+    const c10::optional<at::Tensor> &quant_scale2,
+    const c10::optional<at::Tensor> &quant_offset2,
+    const c10::optional<at::Tensor> &antiquant_scale,
+    const c10::optional<at::Tensor> &antiquant_offset,
+    const c10::optional<at::Tensor> &key_antiquant_scale,
+    const c10::optional<at::Tensor> &key_antiquant_offset,
+    const c10::optional<at::Tensor> &value_antiquant_scale,
+    const c10::optional<at::Tensor> &value_antiquant_offset,
+    const c10::optional<at::Tensor> &block_table,
+    const c10::optional<at::Tensor> &query_padding_size,
+    const c10::optional<at::Tensor> &kv_padding_size,
+    const c10::optional<at::Tensor> &key_shared_prefix,
+    const c10::optional<at::Tensor> &value_shared_prefix,
+    const c10::optional<at::Tensor> &actual_shared_prefix_len,
+    const c10::optional<at::Tensor> &query_rope,
+    const c10::optional<at::Tensor> &key_rope,
+    const c10::optional<at::Tensor> &key_rope_antiquant_scale,
+    int64_t num_heads, double scale,
+    int64_t pre_tokens, int64_t next_tokens,
+    c10::string_view input_layout, int64_t num_key_value_heads,
+    int64_t sparse_mode, int64_t inner_precise,
+    int64_t block_size, int64_t antiquant_mode,
+    int64_t key_antiquant_mode, int64_t value_antiquant_mode,
+    bool softmax_lse_flag)
+{
+    // construct the output tensor
+    at::Tensor output;
+    int64_t batchSize = 1;
+    int64_t qsSize = 1;
+    at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
+    // construct the output tensor
+    std::string input_layout_str = std::string(input_layout);
+    if (input_layout_str == "BNSD_BSND") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(2), query.size(1), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "BNSD_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(1), query.size(0), query.size(2), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "BSND_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(2), query.size(0), query.size(1), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSH_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({num_heads, query.size(0), query.size(1), query.size(2) / num_heads},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "TND_NTD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(1), query.size(0), query.size(2)},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "NSD") {
+        batchSize = 1;
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSH") {
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSND") {
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BNSD") {
+        if (value.dim() == 3) {
+            int64_t tempQN = (num_heads == 0) ? query.size(1) : num_heads;
+            int64_t tempKVN = (num_key_value_heads == 0) ? tempQN : num_key_value_heads;
+            TORCH_CHECK(tempKVN != 0, "Q layout is BNSD, KV layout is BBH, num_key_value_heads can not be 0!", OPS_ERROR(ErrCode::PARAM));
+            int64_t tempVD = value.size(2) / tempKVN;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), tempVD},
+                query.options().dtype(query.dtype()));
+        } else {
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), value.size(3)},
+                query.options().dtype(query.dtype()));
+        }
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "TND") {
+        if (block_table.has_value()) { // PA场景
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2)},
+                query.options().dtype(query.dtype()));
+        } else {
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), value.size(2)},
+                query.options().dtype(query.dtype()));
+        }
+    }
+    if (quant_scale2.has_value()) {
+        output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), c10::dtype(c10::ScalarType::Char));
+    } else if (query.dtype() == at::kChar) {
+        output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), c10::dtype(c10::ScalarType::Half));
+    } else {
+        output = npu_preparation::apply_tensor_without_format(tmp_output);
+    }
+
+    // convert str
+    char *input_layout_ptr = const_cast<char *>(input_layout_str.c_str());
+
+    at::TensorList valueTensors = value;
+    at::TensorList keyTensors = key;
+
+    // construct softmax_lse tensor
+    at::Tensor softmax_lse;
+    if (input_layout_str == "TND") {
+        softmax_lse = npu_preparation::apply_tensor_without_format({query.size(0), num_heads, 1},
+            c10::dtype(c10::ScalarType::Float));
+    } else {
+        softmax_lse = npu_preparation::apply_tensor_without_format({batchSize, num_heads, qsSize, 1},
+            c10::dtype(c10::ScalarType::Float));
+    }
+
+    if (softmax_lse_flag != true) {
+        softmax_lse = npu_preparation::apply_tensor_without_format({1}, c10::dtype(c10::ScalarType::Float));
+    }
+    // dispatch hostAPI
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+        quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
+        value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+        num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
+    return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
+}
+
 std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const c10::optional<at::Tensor> &pse_shift,
@@ -122,15 +253,77 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     int64_t key_antiquant_mode, int64_t value_antiquant_mode,
     bool softmax_lse_flag)
 {
+    // construct the output tensor
+    at::Tensor output;
+    int64_t batchSize = 1;
+    int64_t qsSize = 1;
+    at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     // convert str
     std::string input_layout_str = std::string(input_layout);
 
     // construct the output tensor
-    std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, value, input_layout_str,
-                                                                                        quant_scale2, num_heads,
-                                                                                        softmax_lse_flag);
-    at::Tensor output = std::get<0>(fia_output);
-    at::Tensor softmax_lse = std::get<1>(fia_output);
+    if (input_layout_str == "BNSD_BSND") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(2), query.size(1), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "BNSD_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(1), query.size(0), query.size(2), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "BSND_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(2), query.size(0), query.size(1), query.size(3)},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSH_NBSD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({num_heads, query.size(0), query.size(1), query.size(2) / num_heads},
+            query.options().dtype(query.dtype()));
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "TND_NTD") {
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(1), query.size(0), query.size(2)},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "NSD") {
+        batchSize = 1;
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSH") {
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BSND") {
+        batchSize = query.size(0);
+        qsSize = query.size(1);
+    } else if (input_layout_str == "BNSD") {
+        if (value.dim() == 3) {
+            int64_t tempQN = (num_heads == 0) ? query.size(1) : num_heads;
+            int64_t tempKVN = (num_key_value_heads == 0) ? tempQN : num_key_value_heads;
+            TORCH_CHECK(tempKVN != 0, "Q layout is BNSD, KV layout is BBH, num_key_value_heads can not be 0!", OPS_ERROR(ErrCode::PARAM));
+            int64_t tempVD = value.size(2) / tempKVN;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), tempVD},
+                query.options().dtype(query.dtype()));
+        } else {
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2), value.size(3)},
+                query.options().dtype(query.dtype()));
+        }
+        batchSize = query.size(0);
+        qsSize = query.size(2);
+    } else if (input_layout_str == "TND") {
+        if (block_table.has_value()) { // PA场景
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), query.size(2)},
+                query.options().dtype(query.dtype()));
+        } else {
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(0), query.size(1), value.size(2)},
+                query.options().dtype(query.dtype()));
+        }
+    }
+    if (quant_scale2.has_value()) {
+        output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), c10::dtype(c10::ScalarType::Char));
+    } else if (query.dtype() == at::kChar) {
+        output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), c10::dtype(c10::ScalarType::Half));
+    } else {
+        output = npu_preparation::apply_tensor_without_format(tmp_output);
+    }
 
     char *input_layout_ptr = const_cast<char *>(input_layout_str.c_str());
 
@@ -142,6 +335,20 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     auto actSeqLenKv = c10::asIntArrayRefUnchecked(actSeqLenKvMiddle);
     auto actSeqLenPrefixMiddle = actual_shared_prefix_len.value_or(at::ArrayRef<c10::SymInt>{});
     auto actSeqLenPrefix = c10::asIntArrayRefUnchecked(actSeqLenPrefixMiddle);
+
+    // construct softmax_lse tensor
+    at::Tensor softmax_lse;
+    if (input_layout_str == "TND") {
+        softmax_lse = npu_preparation::apply_tensor_without_format({query.size(0), num_heads, 1},
+            c10::dtype(c10::ScalarType::Float));
+    } else {
+        softmax_lse = npu_preparation::apply_tensor_without_format({batchSize, num_heads, qsSize, 1},
+            c10::dtype(c10::ScalarType::Float));
+    }
+
+    if (softmax_lse_flag != true) {
+        softmax_lse = npu_preparation::apply_tensor_without_format({1}, c10::dtype(c10::ScalarType::Float));
+    }
 
     // dispatch hostAPI
     if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
