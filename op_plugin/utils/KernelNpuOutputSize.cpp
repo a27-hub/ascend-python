@@ -1909,4 +1909,60 @@ c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c1
     return output_shape;
 }
 
+c10::SmallVector<int64_t, SIZE> expanded_x_output_size(
+    const at::Tensor& x,
+    const at::Tensor& expert_idx,
+    int64_t active_num,
+    int64_t expertCapacity,
+    int64_t expertNum,
+    int64_t dropPadMode)
+{
+    at::SmallVector<int64_t, SIZE> outputSize;
+    auto x_size = x.sizes();
+    auto expert_idx_size = expert_idx.sizes();
+    int64_t k = expert_idx_size[1];
+    int64_t num_rows = x_size[0];
+    int64_t h = x_size[1];
+
+    if (dropPadMode == 1) {
+        // 模式Drop/Pad: [expertNum, expertCapacity, h]
+        outputSize = {expertNum, expertCapacity, h};
+    } else if (dropPadMode == 0 && active_num == 0) {
+        // 模式Dropless: [num_rows * k, h]
+        outputSize = {num_rows * k, h};
+    } else if (dropPadMode == 0 && active_num > 0) {
+        // 模式Active: [min(num_rows * k, active_num), h]
+        int64_t dim_zero = std::min(active_num, num_rows * k);
+        outputSize = {dim_zero, h};
+    }
+    return outputSize;
+}
+
+c10::SmallVector<int64_t, SIZE> expanded_row_idx_output_size(
+    const at::Tensor& x,
+    const at::Tensor& expert_idx)
+{
+    at::SmallVector<int64_t, SIZE> outputSize;
+    int64_t num_rows = x.size(0);
+    int64_t k = expert_idx.size(1);
+    outputSize = {num_rows * k};
+    return outputSize;
+}
+
+c10::SmallVector<int64_t, SIZE> expert_tokenscount_output_size(
+    int64_t expertNum)
+{
+    at::SmallVector<int64_t, SIZE> outputSize;
+    outputSize = {expertNum};
+    return outputSize;
+}
+
+c10::SmallVector<int64_t, SIZE> expert_tokens_before_capacity_output_size(
+    int64_t expertNum)
+{
+    at::SmallVector<int64_t, SIZE> outputSize;
+    outputSize = {expertNum};
+    return outputSize;
+}
+
 } // namespace op_infer

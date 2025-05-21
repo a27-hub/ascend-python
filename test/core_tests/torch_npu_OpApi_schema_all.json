@@ -571,6 +571,9 @@
   "func: npu_moe_init_routing(Tensor x, Tensor row_idx, Tensor expert_idx, int active_num) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_moe_init_routingV2(Tensor x, Tensor expert_idx, int active_num, int expertCapacity, int expertNum, int dropPadMode, int expertTokensCountOrCumsumFlag, bool expertTokensBeforeCapacityFlag) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_moe_gating_top_k_softmax(Tensor x, Tensor? finished=None, int k=1) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
