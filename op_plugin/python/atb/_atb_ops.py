@@ -26,7 +26,9 @@ API_LIST = [
 ]
 
 
-ATB_API_LIST = []
+ATB_API_LIST = [
+    '_npu_mla',
+]
 
 ATB_MODULE_NAME = 'atb'
 ATB_MODULE = types.ModuleType(ATB_MODULE_NAME)
