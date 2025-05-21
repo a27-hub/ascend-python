@@ -7505,6 +7505,10 @@ custom:
   - func: npu_attn_softmax_backward_(Tensor(a!) self, Tensor grad_output, Tensor values) -> Tensor(a!)
     op_api: all_version
 
+  - func: npu_set_freq(Tensor freq) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
