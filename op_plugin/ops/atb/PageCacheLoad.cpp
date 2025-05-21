@@ -19,7 +19,7 @@ using namespace std;
 
 namespace atb {
 using PagedCacheLoadParam = atb::infer::PagedCacheLoadParam;
-void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor &value_cache_tensor, const at::Tensor &block_table_tensor, const at::Tensor &context_lens, at::Tensor &key, at::Tensor &value)
+void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor &value_cache_tensor, const at::Tensor &block_table_tensor, const at::Tensor &context_lens, const at::Tensor &seq_starts, at::Tensor &key, at::Tensor &value)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(key_cache_tensor));
     OpParamCache<PagedCacheLoadParam>& pagedCacheLoadParamCache = OpParamCache<PagedCacheLoadParam>::getInstance();
@@ -32,6 +32,7 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
         .Input(context_lens)
         .Input(key)
         .Input(value)
+        .Input(seq_starts)
         .Output(key)
         .Output(value);
     auto opPaged = pagedCacheLoadParamCache.getOperation(pagedparam, "PagedCacheLoadOperation");
@@ -43,7 +44,7 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_paged_cache_load(Tensor key_cache_tensor, Tensor value_cache_tensor, Tensor block_table_tensor, Tensor context_lens, Tensor(a!) out_key_tensor, Tensor(b!) out_value_tensor) -> ()");
+    m.def("_npu_paged_cache_load(Tensor key_cache_tensor, Tensor value_cache_tensor, Tensor block_table_tensor, Tensor context_lens, Tensor seq_starts, Tensor(a!) out_key_tensor, Tensor(b!) out_value_tensor) -> ()");
 }
 }
 
