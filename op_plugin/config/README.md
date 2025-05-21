@@ -132,7 +132,7 @@ at::Tensor abs(const at::Tensor& self) {
 // abs_ api实现函数，参数与torch api一致。该接口为inplace操作，即输出结果存放在输入tensor中。
 at::Tensor& abs_(at::Tensor& self) {
     // 调用out接口，避免因self作为输出时，非连续场景下，直调ACLOP算子结果出错。
-    return acl_op::abs_out(self, self);
+    acl_op::abs_out(self, self);
     return self;
 }
 } // namespace acl_op
