@@ -65,7 +65,6 @@ at::Tensor npu_fused_matmul(
                     bias_second_dim, " and n dim is ", x2_n_dim);
     }
     EXEC_NPU_CMD(aclnnFusedMatmul, x, weight, bias_real, y_real, result, fused_op_type,cubemathtype);
-    at::Tensor result = nullptr;
     return result;
 }
 }
