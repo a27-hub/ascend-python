@@ -94,6 +94,9 @@ ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
         return *this;
     }
     at::Tensor newTensor = tensor;
+    if (torch_npu::utils::is_npu(newTensor)) {
+        newTensor = FormatTrans(tensor);
+    }
 
     if (!newTensor.is_contiguous()) {
         newTensor = newTensor.contiguous();
