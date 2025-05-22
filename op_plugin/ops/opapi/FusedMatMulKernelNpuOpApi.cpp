@@ -23,9 +23,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor npu_fused_matmul(
     const at::Tensor &x, const at::Tensor &weight,
     const c10::optional<at::Tensor> &bias, const c10::optional<at::Tensor> &y,
-    c10::string_view fused_op_type, bool enable_hf32
+    c10::string_view fused_op_type
     )
-{.
+{
     auto x1_dim_num = x.dim();
     TORCH_CHECK(x1_dim_num == X_DIM, "x1 shape dim num should be 2, but it is ",
                 x1_dim_num);
@@ -46,7 +46,9 @@ at::Tensor npu_fused_matmul(
                                                                              x1.dtype());
     const at::Tensor &y_real = y.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
-    int8_t cubemathtype = 1;
+    bool transpose_x1 = false;
+    bool transpose_x2 = false;
+    bool enable_hf32 = false;
     if (y.has_value()) 
     {
         auto y_dim_num = y_real.dim();
@@ -64,7 +66,7 @@ at::Tensor npu_fused_matmul(
         TORCH_CHECK(bias_second_dim == x2_n_dim, "second dim should be equal to n, but bias_second_dim is ",
                     bias_second_dim, " and n dim is ", x2_n_dim);
     }
-    EXEC_NPU_CMD(aclnnFusedMatmul, x, weight, bias_real, y_real, result, fused_op_type,cubemathtype);
+    EXEC_NPU_CMD(aclnnFusedMatmul, x, weight, bias_real, y_real, transpose_x1, transpose_x2, enable_hf32, fused_op_type, result);
     return result;
 }
 }
