@@ -869,7 +869,7 @@ def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):
         return (torch.empty_like(self, dtype=self.dtype), gemma.new_empty((N, group), dtype=gemma.dtype), beta.new_empty((N, group), dtype=beta.dtype))
 
 @impl(m, "npu_fused_matmul")
-def npu_fused_matmul_meta(x, weight, *, bias=None, y=None, fused_op_type=None, enable_hf32=False):
+def npu_fused_matmul_meta(x, weight, *, bias=None, x3=None, fused_op_type=''):
     torch._check(
         x.dtype == weight.dtype,
         lambda: "x's type and weight's type should be same, but x.dtype is " + str(x.dtype) + " and weight.dtype is " +
@@ -888,10 +888,10 @@ def npu_fused_matmul_meta(x, weight, *, bias=None, y=None, fused_op_type=None, e
         Ka == kb,
         lambda: "ka and Kb should be the same" + ops_error(ErrCode.TYPE),
     )     
-    if y is not None:
+    if x3 is not None:
         torch._check(
-        y in input_supported_list,
-        lambda: "y type supported for bfloat16, float16, but y is " + str(y.dtype) + ops_error(ErrCode.TYPE),
+        x3 in input_supported_list,
+        lambda: "x3 type supported for bfloat16, float16, but x3 is " + str(x3.dtype) + ops_error(ErrCode.TYPE),
         )
     bias_dtype_supported_list = [torch.bfloat16, torch.float16, torch.float32]
     if bias is not None:
@@ -907,12 +907,12 @@ def npu_fused_matmul_meta(x, weight, *, bias=None, y=None, fused_op_type=None, e
         )
         if fused_op_type == "gelu_erf" or fused_op_type == "gelu_tanh":
             torch._check(
-                y is None,
+                x3 is None,
                 lambda: "there is no y for gelu_erf and gelu_tanh"  + ops_error(ErrCode.TYPE),
         )
         if fused_op_type == "add" or fused_op_type == "mul":
             torch._check(
-                y is not None,
+                x3 is not None,
                 lambda: "there must have y for add and mul"  + ops_error(ErrCode.TYPE),
             )
     return torch.empty_like((M, N), dtype=x.dtype)
