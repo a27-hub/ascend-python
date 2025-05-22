@@ -25,7 +25,7 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
     OpParamCache<PagedCacheLoadParam>& pagedCacheLoadParamCache = OpParamCache<PagedCacheLoadParam>::getInstance();
     PagedCacheLoadParam pagedparam;
     pagedparam.kvCacheType = PagedCacheLoadParam::PAGED_CACHE_LOAD_ND;
-    pagedparam.cuSeqLens = false;
+    pagedparam.cuSeqLens = true;
     pagedparam.hasSeqStarts = true;
 
     ParamSetter paramsetter;
