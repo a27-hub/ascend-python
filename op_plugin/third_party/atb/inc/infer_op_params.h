@@ -750,62 +750,67 @@ struct ElewiseParam {
 };
 
 //!
-//! \struct RingAttentionParam
+//! \struct RingMLAParam
 //!
-//! \warning 仅Atlas 800I A2/A3推理产品支持该算子
-struct RingAttentionParam {
-  //!
-  //! \enum CalcType
-  //!
-  //! \brief 计算类型
-  enum CalcType : int {
-    CALC_TYPE_DEFAULT = 0, // 默认，非首卡场景，有prev_lse，prev_o传入，生成softmaxLse输出
-    CALC_TYPE_FIRST_RING,  // 首卡场景，无prev_lse，prev_o传入，生成softmaxLse输出
-  };
+//! \warning 仅Atlas 800I/T A2/A3推理产品支持该算子
+//!
+struct RingMLAParam {
+    //!
+    //! \enum CalcType
+    //!
+    //! \brief 计算类型
+    //!
+    enum CalcType : int {
+        CALC_TYPE_DEFAULT = 0, // 默认，非首末卡场景，有prev_lse, prev_o传入，生成softmaxLse输出
+        CALC_TYPE_FIRST_RING,  // 首卡场景，无prev_lse, prev_o传入，生成softmaxLse输出
+        CALC_TYPE_MAX          // 边界值，仅用于判断是否出界，所有情况不能取该值
+    };
+    //!
+    //! \enum KernelType
+    //!
+    //! \brief 算子内核精度类型
+    //!
+    enum KernelType : int {
+        KERNELTYPE_DEFAULT = 0,   //!< i:float16, bmm:float16, o:float16
+        KERNELTYPE_HIGH_PRECISION //!< i:float16, bmm:float, o:float16
+    };
 
-  //!
-  //! \enum KernelType
-  //!
-  //! \brief 算子内核精度类型
-  //!
-  enum KernelType : int {
-    KERNELTYPE_DEFAULT = 0,    //!< i:float16, bmm:float16, o:float16
-    KERNELTYPE_HIGH_PRECISION  //!< i:float16, bmm:float, o:float16
-  };
+    //!
+    //! \enum MaskType
+    //!
+    //! \brief mask类型
+    //!
+    enum MaskType : int {
+        NO_MASK = 0,    //!< 默认值，全0mask
+        MASK_TYPE_TRIU, //!< 上三角mask
+    };
 
-  //!
-  //! \enum MaskType
-  //!
-  //! \brief mask类型
-  //!
-  enum MaskType : int {
-    NO_MASK = 0,     //!< 默认值，全0mask
-    MASK_TYPE_TRIU,  //!< 上三角mask
-  };
+    //! 计算类型
+    CalcType calcType = CalcType::CALC_TYPE_DEFAULT;
 
-  //! 计算类型
-  CalcType calcType = CalcType::CALC_TYPE_DEFAULT;
-  //! query头大小, 需大于0
-  int32_t headNum = 0;
-  //! kv头数量, 该值需要用户根据使用的模型实际情况传入
-  //! kvHeadNum =
-  //! 0时，keyCache的k_head_num，valueCache的v_head_num与query的num_heads一致，均为num_heads的数值
-  //! kvHeadNum != 0时，keyCache的k_head_num，
-  //! valueCache的v_head_num与kvHeadNum值相同
-  int32_t kvHeadNum = 0;
-  //! 算子tor值, 在Q*K^T后乘
-  float qkScale = 1;
-  //! 内核精度类型
-  KernelType kernelType = KernelType::KERNELTYPE_HIGH_PRECISION;
-  //! mask类型
-  MaskType maskType = MaskType::MASK_TYPE_TRIU;
-  //! 数据排布格式默认为BSND
-  InputLayout inputLayout = TYPE_BSND;
+    //! query头大小, 需大于0
+    int32_t headNum = 0;
+    //! kv头数量, 该值需要用户根据使用的模型实际情况传入
+    //! kvHeadNum = 0时，keyCache的k_head_num，valueCache的v_head_num与query的num_heads一致，均为num_heads的数值
+    //! kvHeadNum != 0时，keyCache的k_head_num， valueCache的v_head_num与kvHeadNum值相同
+    int32_t kvHeadNum = 0;
 
-  //!
-  //! \brief 预留参数
-  //!
-  uint8_t rsv[64] = {0};
+    //! 算子tor值, 在Q*K^T后乘
+    float qkScale = 1;
+
+    //! 内核精度类型
+    KernelType kernelType = KernelType::KERNELTYPE_HIGH_PRECISION; // 预留
+
+    //! mask类型
+    MaskType maskType = MaskType::MASK_TYPE_TRIU;
+
+    //! 数据排布格式默认为BSND
+    InputLayout inputLayout = InputLayout::TYPE_BSND;
+
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[64] = {0};
 };
 
 } // namespace infer

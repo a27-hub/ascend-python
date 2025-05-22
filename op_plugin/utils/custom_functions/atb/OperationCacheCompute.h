@@ -138,14 +138,13 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
 };
 
 template <>
-struct HashOpParam<atb::infer::RingAttentionParam> {
-    void operator()(const atb::infer::RingAttentionParam& param) const
+struct HashOpParam<atb::infer::RingMLAParam> {
+    void operator()(const atb::infer::RingMLAParam& param) const
     {
         add_param_to_buf("calcType", param.calcType);
         add_param_to_buf("headNum", param.headNum);
         add_param_to_buf("kvHeadNum", param.kvHeadNum);
         add_param_to_buf("qkScale", param.qkScale);
-        add_param_to_buf("calcType", param.calcType);
     }
 };
 
