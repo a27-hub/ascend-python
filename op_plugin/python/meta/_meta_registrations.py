@@ -620,7 +620,7 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
                                 "the last dim of input must be divisible by 2, " \
                                 "unless input dtype is also float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-        input_shape[-1] /= 2
+        input_shape[-1] //= 2
     # torch_npu.hifloat8, torch_npu.float4_e2m1, torch_npu.float4_e1m2
     if input_dtype in [290, 296, 297]:
         output = self.new_empty(input_shape, dtype=torch.uint8)
