@@ -43,7 +43,9 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
         "Param (input) has an empty dim" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(block_size % BLOCK_SIZE_BASE_NUM == 0 && block_size > 0 && block_size <= BLOCK_SIZE_MAX_NUM,
         "Param (block_size) must be divisible by 32 and no greater than 1024, greater than 0" + OPS_ERROR(ErrCode::PARAM));
-    mxscale_shape[axis_change] = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
+    int64_t dim_size = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
+    dim_size += dim_size % ALIGN_NUM;
+    mxscale_shape[axis_change] = dim_size;
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
     // prepare for empty output tensor

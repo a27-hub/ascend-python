@@ -3532,8 +3532,8 @@ _add_torch_npu_docstr(
         - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，y的输出tensor数据类型为torch.float8_e5m2。
         - 当dst_type为torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，y的输出tensor数据类型为torch.float8_e4m3fn。
         - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，y的输出tensor数据类型为torch.uint8，查看具体值需要通过en_dtypes库的方法转换。
-    - mxscale：Tensor类型，表示每个分组对应的量化尺度，真是的数据类型为torch_npu.float8_e8m0，shape在axis轴上为x对应轴除以blocksize向上取整，
-        即mxscale.shape[axis] = ceil(x.shape[axis] / blocksize)，其余维度与x保持一致。
+    - mxscale：Tensor类型，表示每个分组对应的量化尺度，真是的数据类型为torch_npu.float8_e8m0，shape在axis轴上为x对应轴除以blocksize向上取整，并对其进行偶数pad，pad填充值为0，
+        即mxscale.shape[axis] = (ceil(x.shape[axis] / blocksize) + (ceil(x.shape[axis] / blocksize)) % 2)，其余维度与x保持一致。
 
 约束说明:
     - 参数block_size仅支持32的倍数，不能为0，且不能大于1024。

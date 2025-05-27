@@ -1525,13 +1525,25 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
                            ops_error(ErrCode.PARAM))
     for dim in range(dim_num):
         mxscale_shape.append(input_dummy.size(dim))
-    mxscale_shape[axis] = int(math.ceil(mxscale_shape[axis] / block_size))
-    if dst_type == torch.float8_e5m2 or dst_type == 291:
+    dim_size =  int(math.ceil(mxscale_shape[axis] / block_size))
+    dim_size += dim_size % 2
+    mxscale_shape[axis] = dim_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == 291:
         output = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
-    elif dst_type == torch.float8_e4m3fn or dst_type == 292:
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == 292:
         output = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
     else: # float4_e2m1, float4_e1m2
-        output = torch.empty_like(input_dummy, dtype=torch.uint8)
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        output_shape = []
+        for dim in range(dim_num - 1):
+            output_shape.append(input_dummy.size(dim))
+        output_shape.append(input_dummy.size(dim_num - 1) // 2)
+        output = input_dummy.new_empty(output_shape, dtype=torch.uint8)
     mxscale = input_dummy.new_empty(mxscale_shape, dtype=torch.uint8)
     return (output, mxscale)
 
