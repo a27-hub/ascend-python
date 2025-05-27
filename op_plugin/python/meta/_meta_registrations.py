@@ -833,6 +833,11 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
     return expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
 
 
+@impl(m, "npu_distribute_barrier")
+def npu_distribute_barrier_meta(x_ref, group, world_size):
+    return torch.empty_like(x_ref)
+
+
 @impl(m, "npu_ffn")
 def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None,
                  bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None,
