@@ -41,8 +41,8 @@ at::Tensor npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at
     int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
 
     at::Tensor output_expand_x, quant_expand_x;
-    output_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(expand_x.scalar_type());
-    quant_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(at::kHalf);
+    output_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(expand_x.scalar_type()));
+    quant_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(at::kHalf));
 
     EXEC_NPU_CMD(aclnnMoeDistributeCombineSetup, expand_x, ep_send_counts, group_ep_ptr, ep_world_size, ep_rank_id,
         moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type,
