@@ -44,15 +44,15 @@ at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const
     int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
 
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
-    at::Tensor output;
+    at::Tensor x;
     if (expand_x.scalar_type() != at::kInt) {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
+        x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
     } else {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf));
+        x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf));
     }
     EXEC_NPU_CMD(aclnnMoeDistributeCombineTeardown, expand_x, expert_ids, expand_idx, expert_scales, quant_expand_x, x_active_mask,
                  shared_expert_x, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num,
-                 shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type, output);
-    return output;
+                 shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type, x);
+    return x;
 }
 }

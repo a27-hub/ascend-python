@@ -32,13 +32,21 @@ at::Tensor npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at
     TORCH_CHECK(expand_x.dim() == 2, "The expand_x should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt),
                 "dtype of expand_x should be bfloat16, float16 or int.", OPS_ERROR(ErrCode::PARAM));
-    auto expand_x_size = expand_x.sizes();
+
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
 
-    at::Tensor quant_expand_x;
+    auto expand_x_size = expand_x.sizes();
+    int64_t n = expand_x_size[0];
+    int64_t h = expand_x_size[1];
+    int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
+
+    at::Tensor output_expand_x, quant_expand_x;
+    output_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type());
+    quant_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf);
 
     EXEC_NPU_CMD(aclnnMoeDistributeCombineSetup, expand_x, ep_send_counts, group_ep_ptr, ep_world_size, ep_rank_id,
-        moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs, comm_quant_mode, comm_type, output);
-    return expand_x, quant_expand_x;
+        moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type,
+        output_expand_x, quant_expand_x);
+    return std::tie(output_expand_x, quant_expand_x);
 }
 }
