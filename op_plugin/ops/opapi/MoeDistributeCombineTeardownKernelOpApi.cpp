@@ -46,9 +46,9 @@ at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
     at::Tensor x;
     if (expand_x.scalar_type() != at::kInt) {
-        x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
+        x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(expand_x.scalar_type()));
     } else {
-        x = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf));
+        x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(at::kHalf));
     }
     EXEC_NPU_CMD(aclnnMoeDistributeCombineTeardown, expand_x, expert_ids, expand_idx, expert_scales, quant_expand_x, x_active_mask,
                  shared_expert_x, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num,
