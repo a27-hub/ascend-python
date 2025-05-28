@@ -836,10 +836,10 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 @impl(m, "npu_moe_distribute_combine_setup")
 def npu_moe_distribute_combine_setup_meta(expand_x, ep_send_counts, group_ep, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, 
                                           global_bs=0, comm_quant_mode=0, comm_type=0):
-    dim_list = []
-    dim_list.append(expand_x.size(1))
+    n = expand_x.size(0)
+    h = expand_x.size(1)
 
-    return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), quant_expand_x)
+    return (expand_x.new_empty(tuple([n, h]), dtype=expand_x.dtype), expand_x.new_empty(tuple([n, h]), dtype=torch.int8))
 
 
 @impl(m, "npu_moe_distribute_combine_teardown")
@@ -850,7 +850,7 @@ def npu_moe_distribute_combine_teardown_meta(expand_x, expert_ids, expand_idx, e
     dim_list.append(expert_ids.size(0))
     dim_list.append(expand_x.size(1))
 
-    return x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
+    return expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
 
 
 @impl(m, "npu_ffn")
