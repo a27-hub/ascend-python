@@ -20,7 +20,7 @@
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
     using npu_utils = at_npu::native::NpuUtils;
-    using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
+    using tensor_list = std::tuple<at::Tensor, at::Tensor>;
     const int DIM_TWO = 2;
 
 at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const at::Tensor &expert_ids,
