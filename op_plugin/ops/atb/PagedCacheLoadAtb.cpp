@@ -15,12 +15,11 @@
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 
 namespace atb {
-at::Tensor &_npu_paged_cache_load(const at::Tensor &key_cache,
-                                  const at::Tensor &value_cache,
-                                  const at::Tensor &block_table,
-                                  const at::Tensor &context_lens,
-                                  at::Tensor &key, at::Tensor &value,
-                                  at::Tensor &seq_starts) {
+at::Tensor &_npu_paged_cache_load(
+    const at::Tensor &key_cache, const at::Tensor &value_cache,
+    const at::Tensor &block_table, const at::Tensor &context_lens,
+    at::Tensor &key, at::Tensor &value, at::Tensor &seq_starts,
+    int64_t kv_cache_cfg, bool is_seq_lens_cumsum_mode, bool has_seq_starts) {
   const c10::OptionalDeviceGuard device_guard(device_of(key_cache));
   EXEC_ATB_CMD(AtbCacheLoad, key_cache, value_cache, block_table, context_lens,
                key, value, seq_starts);
@@ -30,8 +29,9 @@ namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m) {
   m.def(
       "_npu_paged_cache_load(Tensor key_cache, Tensor value_cache, Tensor "
-      "block_table, Tensor context_lens, Tensor seq_starts, Tensor(a!) key, "
-      "Tensor(b!)value) -> ()");
+      "block_table, Tensor context_lens, Tensor(a!) key, Tensor(b!)value, "
+      "Tensor? seq_starts=None, int kv_cache_cfg=0, bool "
+      "is_seq_lens_cumsum_mode=false, bool has_seq_starts=false ) -> ()");
 }
 }  // namespace
 
