@@ -397,6 +397,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                                     actual_shared_prefix_len=None, query_rope=None, key_rope=None, key_rope_antiquant_scale=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, inner_precise=0, block_size=0, antiquant_mode=0,
                                     softmax_lse_flag=False, key_antiquant_mode=0, value_antiquant_mode=0):
+    # 禁止单独修改此函数，请同步修改torchair中actual seq length为device tensor的接口
     tmp_out = torch.empty_like(query, dtype=query.dtype, device='meta')
     B = 1
     N = 1
