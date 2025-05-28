@@ -833,6 +833,26 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
     return expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
 
 
+@impl(m, "npu_moe_distribute_combine_setup")
+def npu_moe_distribute_combine_setup_meta(expand_x, ep_send_counts, group_ep, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, 
+                                          global_bs=0, comm_quant_mode=0, comm_type=0):
+    dim_list = []
+    dim_list.append(expand_x.size(1))
+
+    return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), quant_expand_x)
+
+
+@impl(m, "npu_moe_distribute_combine_teardown")
+def npu_moe_distribute_combine_teardown_meta(expand_x, expert_ids, expand_idx, expert_scales, quant_expand_x, group_ep, ep_world_size, ep_rank_id, moe_expert_num, x_active_mask=None,
+                                             shared_expert_x=None, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0):
+    
+    dim_list = []
+    dim_list.append(expert_ids.size(0))
+    dim_list.append(expand_x.size(1))
+
+    return x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
+
+
 @impl(m, "npu_ffn")
 def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None,
                  bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None,
