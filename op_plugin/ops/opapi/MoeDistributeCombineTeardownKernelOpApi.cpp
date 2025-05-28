@@ -19,8 +19,6 @@
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
-    using npu_utils = at_npu::native::NpuUtils;
-    using tensor_list = std::tuple<at::Tensor, at::Tensor>;
     const int DIM_TWO = 2;
 
 at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const at::Tensor &expert_ids,
@@ -33,7 +31,7 @@ at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const
                                                int64_t shared_expert_num, int64_t shared_expert_rank_num,
                                                int64_t global_bs, int64_t comm_quant_mode, int64_t comm_type)
 {
-    TORCH_CHECK((expand_x.dim() == 2) && (expert_ids.dim() == 2), "The expert_x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((expand_x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The expert_x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt)) && (expert_ids.scalar_type() == at::kInt),
                 "dtype of expand_x should be bfloat16, float16 or int, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
     auto expand_x_size = expand_x.sizes();
