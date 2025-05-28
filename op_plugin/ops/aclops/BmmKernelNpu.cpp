@@ -118,7 +118,7 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
 
     bmm_out_nocheck(result, self, mat2);
     if (need_nd_out) {
-        result = at_npu::native::custom_ops::npu_format_cast(result, ACL_FORMAT_ND);
+        result = at_npu::native::custom_ops::npu_format_cast(result, ACL_FORMAT_ND, c10::nullopt);
     }
     return result;
 }

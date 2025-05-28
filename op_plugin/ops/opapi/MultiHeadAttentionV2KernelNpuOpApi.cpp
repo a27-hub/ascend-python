@@ -47,7 +47,7 @@ at::Tensor tensor_format_trans(const at::Tensor &at_tensor)
             "Expected all tensors to be on the same device. "
             "Expected NPU tensor, please check whether the input tensor device is correct.",
             OPS_ERROR(ErrCode::TYPE));
-        return custom_ops::npu_format_cast(at_tensor, ACL_FORMAT_ND);
+        return custom_ops::npu_format_cast(at_tensor, ACL_FORMAT_ND, c10::nullopt);
     }
     return at_tensor;
 }

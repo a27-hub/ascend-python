@@ -36,11 +36,13 @@ tensor_list1 batch_norm_gather_stats_with_counts_npu_impl(at::Tensor &mean_all, 
     auto running_mean_dtype = running_mean.scalar_type();
     at::Tensor running_mean_val = at_npu::native::custom_ops::_npu_dtype_cast(
         at_npu::native::custom_ops::npu_format_cast(
-            (running_mean.defined() ? running_mean.unsqueeze(0) : at::zeros({1, dim_c}, options)), ACL_FORMAT_ND),
+            (running_mean.defined() ? running_mean.unsqueeze(0) : at::zeros({1, dim_c}, options)), ACL_FORMAT_ND,
+            c10::nullopt),
         at::kFloat);
     at::Tensor running_var_val = at_npu::native::custom_ops::_npu_dtype_cast(
         at_npu::native::custom_ops::npu_format_cast(
-            (running_var.defined() ? running_var.unsqueeze(0) : at::ones({1, dim_c}, options)), ACL_FORMAT_ND),
+            (running_var.defined() ? running_var.unsqueeze(0) : at::ones({1, dim_c}, options)), ACL_FORMAT_ND,
+            c10::nullopt),
         at::kFloat);
     std::vector<int64_t> axes = {0};
     at::Tensor counts_tensor = at_npu::native::custom_ops::_npu_dtype_cast(counts, mean_cp.scalar_type());

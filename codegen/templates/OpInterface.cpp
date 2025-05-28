@@ -18,6 +18,7 @@
 #include "torch_npu/csrc/framework/FormatHelper.h"
 #include "torch_npu/csrc/core/npu/npu_log.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
+#include "torch_npu/csrc/core/npu/NPUException.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/SparseOpsInterface.h"

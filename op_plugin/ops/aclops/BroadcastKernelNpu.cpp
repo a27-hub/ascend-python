@@ -54,7 +54,7 @@ at::Tensor npu_broadcast(const at::Tensor& self, at::IntArrayRef size)
         self_cp = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kInt);
         if (!npu_format_helper::IsBaseFormatType(self_cp)) {
             auto format = npu_format_helper::GetBaseFormat(self_cp);
-            at_npu::native::custom_ops::npu_format_cast_(self_cp, format);
+            at_npu::native::custom_ops::npu_format_cast_(self_cp, format, c10::nullopt);
         }
         result = npu_preparation::apply_tensor(self_cp, size);
         npu_broadcast_out_nocheck(result, self_cp, size);
@@ -62,7 +62,7 @@ at::Tensor npu_broadcast(const at::Tensor& self, at::IntArrayRef size)
     } else {
         if (!npu_format_helper::IsBaseFormatType(self)) {
             auto format = npu_format_helper::GetBaseFormat(self);
-            self_cp = at_npu::native::custom_ops::npu_format_cast(self, format);
+            self_cp = at_npu::native::custom_ops::npu_format_cast(self, format, c10::nullopt);
         } else {
             self_cp = self;
         }

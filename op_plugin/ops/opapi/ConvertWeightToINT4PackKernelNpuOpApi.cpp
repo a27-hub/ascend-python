@@ -93,7 +93,7 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     at::Tensor weight_nd;
     bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ);
     if (is_weight_nz) {
-        weight_nd = at_npu::native::custom_ops::npu_format_cast(weight, ACL_FORMAT_ND);
+        weight_nd = at_npu::native::custom_ops::npu_format_cast(weight, ACL_FORMAT_ND, c10::nullopt);
     }
 
     // trans nd to nz on cpu, because the c0 size of int32(int4pack) fractal_nz is 8, which is not support yet on npu

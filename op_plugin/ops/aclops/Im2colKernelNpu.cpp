@@ -92,7 +92,7 @@ at::Tensor& im2col_out_nocheck(at::Tensor& result, const at::Tensor& self, at::I
     c10::SmallVector<int64_t, N> pads_size = {padding_4d[0], padding_4d[1], padding_4d[2], padding_4d[3]};
     string padding_mode = "CALCULATED";
     at::Tensor self_op = (npu_preparation::get_tensor_npu_format(self) == ACL_FORMAT_ND) ?
-        at_npu::native::custom_ops::npu_format_cast(self, ACL_FORMAT_NCHW) : self;
+        at_npu::native::custom_ops::npu_format_cast(self, ACL_FORMAT_NCHW, c10::nullopt) : self;
     at_npu::native::OpCommand cmd;
     cmd.Name("Im2col")
         .Input(self_op, "x")

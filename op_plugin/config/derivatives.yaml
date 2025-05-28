@@ -18,7 +18,7 @@ backward:
   self: npu_dropout_backward(grad, result1, p)
   version: [v1.11, newest]
 
-- name: _npu_format_cast(Tensor self, int acl_format) -> Tensor
+- name: _npu_format_cast(Tensor self, int acl_format, int? customize_dtype=None) -> Tensor
   self: grad
   version: [v1.11, newest]
 
