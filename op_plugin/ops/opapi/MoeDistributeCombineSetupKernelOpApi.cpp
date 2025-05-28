@@ -23,7 +23,7 @@ namespace op_api {
     using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
     const int DIM_TWO = 2;
 
-at::Tensor npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at::Tensor &ep_send_counts,
+tensor_list npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at::Tensor &ep_send_counts,
                                       c10::string_view group_ep, int64_t ep_world_size, int64_t ep_rank_id,
                                       int64_t moe_expert_num, int64_t expert_shard_type,
                                       int64_t shared_expert_num, int64_t shared_expert_rank_num,
@@ -40,9 +40,8 @@ at::Tensor npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at
     int64_t h = expand_x_size[1];
     int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
 
-    at::Tensor output_expand_x, quant_expand_x;
-    output_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(expand_x.scalar_type()));
-    quant_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(at::kHalf));
+    at::Tensor output_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(expand_x.scalar_type()));
+    at::Tensor quant_expand_x = npu_preparation::apply_tensor_without_format({n, h}, expand_x.options().dtype(at::kHalf));
 
     EXEC_NPU_CMD(aclnnMoeDistributeCombineSetup, expand_x, ep_send_counts, group_ep_ptr, ep_world_size, ep_rank_id,
         moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type,
