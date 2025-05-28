@@ -47,8 +47,6 @@ at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const
     at::Tensor output;
     if (expand_x.scalar_type() != at::kInt) {
         output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
-    } else if (out_dtype == 0) {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kBFloat16));
     } else {
         output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf));
     }

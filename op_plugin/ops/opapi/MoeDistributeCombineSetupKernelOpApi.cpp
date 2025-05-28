@@ -33,22 +33,12 @@ at::Tensor npu_moe_distribute_combine_setup(const at::Tensor &expand_x, const at
     TORCH_CHECK((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt),
                 "dtype of expand_x should be bfloat16, float16 or int.", OPS_ERROR(ErrCode::PARAM));
     auto expand_x_size = expand_x.sizes();
-
-    int64_t n = expert_ids_size[0];
-    int64_t h = expand_x_size[1];
-    int64_t global_bs_real = (global_bs == 0) ? (n * ep_world_size) : global_bs;
-
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
-    at::Tensor output;
-    if (expand_x.scalar_type() != at::kInt) {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(expand_x.scalar_type()));
-    } else if (out_dtype == 0) {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kBFloat16));
-    } else {
-        output = npu_preparation::apply_tensor_without_format({n, h}, expert_ids.options().dtype(at::kHalf));
-    }
+
+    at::Tensor quant_expand_x;
+
     EXEC_NPU_CMD(aclnnMoeDistributeCombineSetup, expand_x, ep_send_counts, group_ep_ptr, ep_world_size, ep_rank_id,
-        moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, comm_quant_mode, comm_type, output);
-    return output;
+        moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs, comm_quant_mode, comm_type, output);
+    return expand_x, quant_expand_x;
 }
 }
