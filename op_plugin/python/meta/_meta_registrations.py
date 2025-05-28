@@ -1548,28 +1548,28 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
     return (output, mxscale)
 
 @impl(m, "npu_grouped_dynamic_mx_quant")
-def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, block_size=32):
+def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32):
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
-        raise RuntimeError("Input x must be 2-dimensional, got dimNum" + 
+        raise RuntimeError("Input x must be 2-dimensional, got dimNum " + 
                             str(x.dim()) + ops_error(ErrCode.VALUE))
     if group_index.dim() != 1:
-        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum" + 
+        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " + 
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
     # zero division protection
-    if block_size != 32:
-        raise RuntimeError("Parameter block_size only supports 32,  got " + 
-                            str(block_size) + ops_error(ErrCode.PARAM))
-    mxscale_shape = [x.shape[0] // 2 // block_size + group_index.shape[0], x.shape[-1] * 2]
+    if blocksize != 32:
+        raise RuntimeError("Parameter blocksize only supports 32,  got " + 
+                            str(blocksize) + ops_error(ErrCode.PARAM))
+    mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1] * 2]
 
     if TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type) == torch.float8_e5m2:
         output = torch.empty_like(x, dtype=torch.float8_e5m2)
     elif TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type) == torch.float8_e4m3fn:
         output = torch.empty_like(x, dtype=torch.float8_e4m3fn)
     else:
-        raise RuntimeError("Parameter dst_type only supports torch.float8_e5m2, torch.float8_e4m3fn, "
-                           "got" + str(dst_type) + ops_error(ErrCode.PARAM))
+        raise RuntimeError("Parameter dst_type only supports torch.float8_e5m2(23), torch.float8_e4m3fn(24), "
+                           "got " + str(dst_type) + ops_error(ErrCode.PARAM))
     mxscale = x.new_empty(mxscale_shape, dtype=torch.uint8)
     return (output, mxscale)
 

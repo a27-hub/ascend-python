@@ -3615,7 +3615,7 @@ _add_torch_npu_docstr(
     计算公式同npu_dynamic_mx_quant，仅需要考虑每个group单独处理。
 
 接口原型:
-    def npu_grouped_dynamic_mx_quant(Tensor input, Tensor group_index, *, str round_mode="rint", int dst_type=23, int block_size=32)
+    def npu_grouped_dynamic_mx_quant(Tensor input, Tensor group_index, *, str round_mode="rint", int dst_type=23, int blocksize=32)
     注：23为torch.float8_e5m2的枚举值。
 
 参数说明:
@@ -3625,15 +3625,15 @@ _add_torch_npu_docstr(
         - 当dst_type为torch.float8_e5m2，torch.float8_e4m3fn，仅支持"rint"。
     - dst_type：int类型的属性，指定输出y的数据类型，默认值为23（即torch.float8_e5m2），支持取值
         torch.float8_e5m2，torch.float8_e4m3fn。
-    - block_size：int类型的属性，指定每次量化的元素个数，默认值为32。当前仅支持32。
+    - blocksize：int类型的属性，指定每次量化的元素个数，默认值为32。当前仅支持32。
 
 输出说明：
     - y：Tensor类型，输入x量化后的对应结果，数据类型由参数dst_type指定，支持torch.float8_e5m2，torch.float8_e4m3fn。shape与输入一致。
     - mxscale：Tensor类型，表示每个分组对应的量化尺度，真实的数据类型为torch_npu.float8_e8m0，实际输出的数据类型为torch.uint8。
-        如果x的shape为[m, n]，group_index的shape为[g]，则mxscale的shape为[m / (block_size * 2) + g, n * 2]。
+        如果x的shape为[m, n]，group_index的shape为[g]，则mxscale的shape为[m / (blocksize * 2) + g, n * 2]。
 
 约束说明:
-    - 参数block_size仅支持32。
+    - 参数blocksize仅支持32。
     - 该接口支持图模式（目前仅支持Pytorch 2.1 版本）。
     - 输出的mxscale的tensor实际输出的数据类型为torch.uint8，查看float8_e8m0的具体值需要通过en_dtypes库的方法转换。
 
@@ -3650,7 +3650,7 @@ import numpy as np
 # generate inputs
 x = torch.randn((32,128), dtype=torch.float16).npu()
 group_index = torch.tensor([32], dtype=torch.int32).npu()
-y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, block_size=32)
+y, mxscale = torch_npu.npu_grouped_dynamic_mx_quant(x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, blocksize=32)
 
 
 2. 图模式调用
@@ -3662,9 +3662,9 @@ import numpy as np
 class NetModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-    def forward(self, x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, block_size=32):
+    def forward(self, x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, blocksize=32):
         return torch_npu.npu_grouped_dynamic_mx_quant(
-            x, group_index, round_mode=round_mode, dst_type=dst_type, block_size=block_size)
+            x, group_index, round_mode=round_mode, dst_type=dst_type, blocksize=blocksize)
 
 # generate inputs
 x = torch.randn((32,128), dtype=torch.float16).npu()
@@ -3673,7 +3673,7 @@ model = NetModel()
 config = torchair.CompilerConfig()
 npu_backend = torchair.get_npu_backend(compiler_config=config)
 model = torch.compile(model, backend=npu_backend, dynamic=True)
-y, mxscale = model(x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, block_size=32)
+y, mxscale = model(x, group_index, round_mode="rint", dst_type=torch.float8_e5m2, blocksize=32)
 print("y:============", y.shape, y.cpu())
 print("mxscale:============", mxscale.shape, mxscale.cpu())
 

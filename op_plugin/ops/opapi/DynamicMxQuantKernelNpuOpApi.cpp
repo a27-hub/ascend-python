@@ -39,8 +39,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     TORCH_CHECK(axis >= -1 * input.dim() && axis < input.dim(),
         "Param (axis) is out of input dimension range" + OPS_ERROR(ErrCode::PARAM));
     int64_t axis_change = axis < 0 ? axis + input.dim() : axis;
-    TORCH_CHECK(input.size(axis_change) > 0, 
-        "Param (input) has an empty dim" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(block_size % BLOCK_SIZE_BASE_NUM == 0 && block_size > 0 && block_size <= BLOCK_SIZE_MAX_NUM,
         "Param (block_size) must be divisible by 32 and no greater than 1024, greater than 0" + OPS_ERROR(ErrCode::PARAM));
     int64_t dim_size = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
