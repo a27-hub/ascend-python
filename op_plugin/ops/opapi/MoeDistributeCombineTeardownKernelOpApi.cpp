@@ -23,13 +23,13 @@ namespace op_api {
 
 at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const at::Tensor &expert_ids,
                                                const at::Tensor &expand_idx, const at::Tensor &expert_scales,
-                                               int8_t quant_expand_x,
+                                               int8_t quant_expand_x, c10::string_view group_ep, int64_t ep_world_size,
+                                               int64_t ep_rank_id, int64_t moe_expert_num,
                                                const c10::optional<at::Tensor> &x_active_mask,
                                                const c10::optional<at::Tensor> &shared_expert_x,
-                                               c10::string_view group_ep, int64_t ep_world_size, int64_t ep_rank_id,
-                                               int64_t moe_expert_num, int64_t expert_shard_type,
-                                               int64_t shared_expert_num, int64_t shared_expert_rank_num,
-                                               int64_t global_bs, int64_t comm_quant_mode, int64_t comm_type)
+                                               int64_t expert_shard_type, int64_t shared_expert_num,
+                                               int64_t shared_expert_rank_num, int64_t global_bs,
+                                               int64_t comm_quant_mode, int64_t comm_type)
 {
     TORCH_CHECK((expand_x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The expert_x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(((expand_x.scalar_type() == at::kBFloat16) || (expand_x.scalar_type() == at::kHalf) || (expand_x.scalar_type() == at::kInt)) && (expert_ids.scalar_type() == at::kInt),
