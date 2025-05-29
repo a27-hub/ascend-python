@@ -1,5 +1,6 @@
 import math
 import torch
+import torch_npu
 from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
@@ -593,7 +594,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
             output = self.new_empty(input_shape, dtype=output_dst_dtype)
         else:
             raise RuntimeError("Parameter(dtype) enum value:{} not found in " \
-                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) + 
+                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) +
                 ops_error(ErrCode.PARAM))
     return output
 
@@ -1136,6 +1137,41 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
             lambda: "Bias dtype cannot be float16 when pertoken not given." + ops_error(ErrCode.TYPE),
         )
 
+def quant_matmul_extra_dtype_check(*args):
+    x1, x2, scale, pertoken_scale, x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype = args
+    if x1_dtype is not None:
+        npu_qmm_check(x1_dtype == torch_npu.float4_e2m1 \
+                      or x1_dtype == torch_npu.float4_e1m2 or x1_dtype == torch_npu.hifloat8,
+                      "The x1_dtype supported for torch_npu.float4_e2m1, \
+                       torch_npu.float4_e1m2, torch_npu.hifloat8, but x1_dtype is " + \
+                      str(x2_dtype) + ops_error(ErrCode.TYPE) + ".")
+        npu_qmm_check(x1.element_size() == 1,
+                      "When x1_dtype is not None, x1 must be a 1 byte tensor, but the byte size of x1 is" + \
+                      str(x1.element_size()) + ops_error(ErrCode.TYPE) + ".")
+    if x2_dtype is not None:
+        npu_qmm_check(x2_dtype == torch_npu.float4_e2m1 \
+                      or x2_dtype == torch_npu.float4_e1m2 or x2_dtype == torch_npu.hifloat8,
+                      "The x1_dtype supported for torch_npu.float4_e2m1, \
+                       torch_npu.float4_e1m2, torch_npu.hifloat8, but x1_dtype is " + \
+                      str(x2_dtype) + ops_error(ErrCode.TYPE) + ".")
+        npu_qmm_check(x2.element_size() == 1,
+                      "When x2_dtype is not None, x2 must be a 1 byte tensor, but the byte size of x2 is" + \
+                      str(x2.element_size()) + ops_error(ErrCode.TYPE) + ".")
+    if scale_dtype is not None:
+        npu_qmm_check(scale_dtype == torch_npu.float8_e8m0 ,
+                      "The scale_dtype supported for torch_npu.float8_e8m0, but scale_dtype is " + \
+                      str(scale_dtype) + ops_error(ErrCode.TYPE) + ".")
+        npu_qmm_check(scale.element_size() == 1,
+                      "When scale_dtype is not None, scale must be a 1 byte tensor, but the byte size of scale is" + \
+                      str(scale.element_size()) + ops_error(ErrCode.TYPE) + ".")
+    if pertoken_scale_dtype is not None:
+        npu_qmm_check(pertoken_scale_dtype == torch_npu.float8_e8m0 ,
+                      "The pertoken_scale_dtype supported for torch_npu.float8_e8m0, but pertoken_scale_dtype is " + \
+                      str(pertoken_scale_dtype) + ops_error(ErrCode.TYPE) + ".")
+        npu_qmm_check(pertoken_scale.element_size() == 1,
+                      "When pertoken_scale_dtype is not None, pertoken_scale must be a 1 byte tensor, \
+                       but the byte size of pertoken_scale is" + \
+                      str(pertoken_scale.element_size()) + ops_error(ErrCode.TYPE) + ".")
 
 def quant_matmul_dtype_check(*args):
     _, _, _, offset, pertoken_scale, bias, output_dtype, _ = args
@@ -1168,30 +1204,32 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
 
 
 def quant_matmul_group_sizes_check(*args):
-    x1, x2, scale, pertoken_scale, group_sizes = args
+    x1, x2, scale, pertoken_scale, group_sizes, x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype = args
     if group_sizes is None:
         return
-    npu_qmm_check(len(group_sizes) == 3, "group_sizes's length must be 3, please check group_sizes's length")
-    if x1.dtype == torch.int8 and x2.dtype == torch.int8:
+    npu_qmm_check(len(group_sizes) == 3, "group_sizes's length must be 3, please check group_sizes's length.")
+    if x1_dtype is None and x2_dtype is None and x1.dtype == torch.int8 and x2.dtype == torch.int8:
         npu_qmm_check(
             (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0),
-            "when the dtype of input is int8, group_sizes's value must be 0, please check group_sizes's value")
+            "when the dtype of input is int8, group_sizes's value must be 0, please check group_sizes's value.")
     if pertoken_scale is None:
         npu_qmm_check(group_sizes[0] == 0 or group_sizes[1] == 0 or group_sizes[2] == 0,
-        "when the pertoken_scale is None, group_sizes's value must be 0, please check group_sizes's value")
+        "when the pertoken_scale is None, group_sizes's value must be 0, please check group_sizes's value.")
     group_input_dtype_lst = [torch.uint8, torch.bits8, torch.float8_e4m3fn, torch.float8_e5m2]
     group_scale_dtype_lst = [torch.float32]
     has_group = (group_sizes[0] > 1 or group_sizes[1] > 1 or group_sizes[2] > 1)
     if group_sizes is not None and has_group:
         npu_qmm_check(
-            scale.dtype in group_scale_dtype_lst or pertoken_scale.dtype in group_scale_dtype_lst,
-            "When group_sizes's value is not 0, dtype of scale and pertoken_scale must be float32, but " +
-                    "scale's dtype is " + str(scale.dtype) + " pertoken_scale's dtype is " + str(pertoken_scale.dtype))
+            (scale_dtype is not None and pertoken_scale_dtype is not None) or \
+            (scale.dtype in group_scale_dtype_lst or pertoken_scale.dtype in group_scale_dtype_lst),
+            "When group_sizes's value is not 0, scale_dtype and pertoken_scale_dtype are None, dtype of scale \
+and pertoken_scale must be both float32, but " + "scale's dtype is " + str(scale.dtype) + \
+            " pertoken_scale's dtype is " + str(pertoken_scale.dtype) + ".")
         npu_qmm_check(
-            x1.dtype in group_input_dtype_lst or x2.dtype in group_input_dtype_lst,
-            "When group_sizes's value is not 0, dtype of input must be uint8, float8_e4m3fn, float8_e5m2 or"
-            " int32, but x1's dtype is " + str(x1.dtype) + " x2's dtype is " + str(x2.dtype),
-        )
+            (x1_dtype is not None and x2_dtype is not None) or \
+            (x1.dtype in group_input_dtype_lst or x2.dtype in group_input_dtype_lst),
+            "When group_sizes's value is not 0, x1_dtype and x2_dtype are None, dtype of input must be uint8, \
+float8_e4m3fn, float8_e5m2 or int32, but x1's dtype is " + str(x1.dtype) + " x2's dtype is " + str(x2.dtype) + ".")
         if group_sizes[0] > 1:
             npu_qmm_check(pertoken_scale.dim() >= 2 and
                           pertoken_scale.size(pertoken_scale.dim() - 2) == math.ceil(x1.size(x1.dim() - 2) /
@@ -1203,14 +1241,6 @@ def quant_matmul_group_sizes_check(*args):
                  "When group_sizes[1] > 1, group_sizes[1] must be equal to group_sizes[2] and must be equal to 128"
             )
         if group_sizes[2] > 1:
-            npu_qmm_check((pertoken_scale.dim() >= 2 and
-                          pertoken_scale.size(pertoken_scale.dim() - 1) == math.ceil(x1.size(x1.dim() - 1) /
-                                                                                     group_sizes[2]) and
-                          scale.dim() >= 2 and scale.size(scale.dim() - 2) == math.ceil(x2.size(x2.dim() - 2) /
-                                                                                        group_sizes[2])),
-                "When group_sizes[1] > 1, ceil(k_dim of input / group_sizes[1]) must be equal to" +
-                " pertoken_scale's size(-1) and scale's size(-2)"
-            )
             group_k_support_lst = [32, 128]
             npu_qmm_check(group_sizes[2] in group_k_support_lst,
                 "When group_sizes[2] > 1, group_sizes[2] must be equal to 32 or 128, but group_sizes[2] is " +
@@ -1264,8 +1294,11 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                 lambda:"when bias dim is 3, out dim need to be 3" + ops_error(ErrCode.TYPE),
             )
         bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2)
+    quant_matmul_extra_dtype_check(x1, x2, scale, pertoken_scale,
+                                   x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype)
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4)
-    quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes)
+    quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes,
+                                   x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype)
     quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
     if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
@@ -1279,7 +1312,7 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e5m2)
     elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e4m3fn)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8]:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8] or output_dtype == torch_npu.hifloat8:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.bits8)
     elif output_dtype is None or output_dtype == TORCH_DTYPE_MAP[torch.int8]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int8)
