@@ -23,7 +23,7 @@ namespace op_api {
 
 at::Tensor npu_moe_distribute_combine_teardown(const at::Tensor &expand_x, const at::Tensor &expert_ids,
                                                const at::Tensor &expand_idx, const at::Tensor &expert_scales,
-                                               int8_t quant_expand_x, c10::string_view group_ep, int64_t ep_world_size,
+                                               const at::Tensor quant_expand_x, c10::string_view group_ep, int64_t ep_world_size,
                                                int64_t ep_rank_id, int64_t moe_expert_num,
                                                const c10::optional<at::Tensor> &x_active_mask,
                                                const c10::optional<at::Tensor> &shared_expert_x,
