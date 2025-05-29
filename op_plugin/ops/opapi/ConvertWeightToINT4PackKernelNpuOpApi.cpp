@@ -16,6 +16,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -91,13 +92,18 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     auto weight_last_dim = weight.size(weight_dim_num - 1);
     int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
     at::Tensor weight_nd;
-    bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ);
-    if (is_weight_nz) {
+    at::Tensor weight_cpu;
+    bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
+    // Ascend910_95 only pack, nz does not modify c0 size
+    bool nz_only_pack = c10_npu::IsAscend910_95Version();
+    // trans nd to nz on cpu, because the c0 size of int32(int4pack) fractal_nz is 8, which is not support yet on npu
+    if (is_weight_nz && !nz_only_pack) {
         weight_nd = at_npu::native::custom_ops::npu_format_cast(weight, ACL_FORMAT_ND, c10::nullopt);
+        weight_cpu = weight_nd.to("cpu");
+    } else {
+        weight_cpu = weight.to("cpu");
     }
 
-    // trans nd to nz on cpu, because the c0 size of int32(int4pack) fractal_nz is 8, which is not support yet on npu
-    at::Tensor weight_cpu = is_weight_nz ? weight_nd.to("cpu") : weight.to("cpu");
     std::vector<int32_t> weight_data(weight_cpu.data_ptr<int32_t>(), weight_cpu.data_ptr<int32_t>() + weight_cpu.numel());
     // store 8 int4 numbers in sequence into an int32
     std::vector<int32_t> weight_int4pack_data(weight_data.size() / INT4_NUMS_IN_INT32, 0);
@@ -106,9 +112,25 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     convert_to_int4_pack(weight_data, weight_int4pack_data);
 
     if (is_weight_nz) {
-        trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
-        weight_int4pack_shape = {op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32),
+        if (!nz_only_pack) {
+            trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
+            weight_int4pack_shape = {op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32),
                                op_infer::CeilDiv(weight_first_dim, CUBE_BLOCK_SIZE), CUBE_BLOCK_SIZE, C0_SIZE_INT32};
+        } else {
+            auto storage_shape = torch_npu::NPUBridge::GetNpuStorageImpl(weight)->npu_desc_.storage_sizes_;
+            auto dim_num = storage_shape.size();
+            TORCH_CHECK(dim_num > 1, "nz storage shape dim should be greater than 1", OPS_ERROR(ErrCode::PARAM));
+            if (dim_num > 1) {
+                weight_int4pack_shape = {};
+                for (auto data : storage_shape) {
+                    weight_int4pack_shape.push_back(data);
+                }
+
+                // after pack, last dim divide by 8
+                weight_int4pack_shape[dim_num - 1] = op_infer::CeilDiv(
+                    weight_int4pack_shape[dim_num - 1], INT4_NUMS_IN_INT32);
+            }
+        }
     }
 
     c10::TensorOptions options_cpu = weight_cpu.options().dtype(at::kInt);
