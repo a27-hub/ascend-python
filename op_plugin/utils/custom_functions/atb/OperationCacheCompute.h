@@ -145,6 +145,7 @@ struct HashOpParam<atb::infer::RingMLAParam> {
         add_param_to_buf("headNum", param.headNum);
         add_param_to_buf("kvHeadNum", param.kvHeadNum);
         add_param_to_buf("qkScale", param.qkScale);
+        add_param_to_buf("maskType", param.maskType);
     }
 };
 

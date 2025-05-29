@@ -20,7 +20,8 @@ namespace atb {
 using RingMLAParam = atb::infer::RingMLAParam;
 void _npu_ring_mla(const at::Tensor &query_nope, const at::Tensor &query_rope,
                    const at::Tensor &key_nope, const at::Tensor &key_rope,
-                   const at::Tensor &value, const at::Tensor &mask,
+                   const at::Tensor &value,
+                   const c10::optional<at::Tensor> &mask,
                    const at::Tensor &seq_len, int64_t head_num,
                    int64_t kv_head_num, double qk_scale, at::Tensor &output,
                    at::Tensor &softmax_lse) {
@@ -30,6 +31,8 @@ void _npu_ring_mla(const at::Tensor &query_nope, const at::Tensor &query_rope,
 
   RingMLAParam ringMLAParam;
   ringMLAParam.calcType = RingMLAParam::CALC_TYPE_FIRST_RING;
+  ringMLAParam.maskType =
+      mask.has_value() ? RingMLAParam::MASK_TYPE_TRIU : RingMLAParam::NO_MASK;
   ringMLAParam.headNum = head_num;
   ringMLAParam.kvHeadNum = kv_head_num;
   ringMLAParam.qkScale = qk_scale;
@@ -56,7 +59,7 @@ namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m) {
   m.def(
       "_npu_ring_mla(Tensor query_nope, Tensor query_rope, Tensor "
-      "key_nope, Tensor key_rope, Tensor value, Tensor mask, Tensor seq_len, "
+      "key_nope, Tensor key_rope, Tensor value, *, Tensor? mask=None, Tensor seq_len, "
       "int head_num, int kv_head_num, float qk_scale, Tensor(a!) output, "
       "Tensor(b!) softmax_lse) -> ()");
 }
