@@ -752,15 +752,14 @@ def scatter_nd_update__meta(self, indices, updates):
     return self
 
 
-if torch.__version__ >= '2.3.1':
-    @impl(m, "npu_geglu")
-    def npu_geglu_meta(self, dim, approximate, activate_left=False):
-        return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
+@impl(m, "npu_geglu")
+def npu_geglu_meta(self, dim=-1, approximate=1, activate_left=False):
+    return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
 
 
-    @impl(m, "npu_geglu_grad")
-    def npu_geglu_backward_meta(grad_output, self, gelu, dim, approximate, activate_left=False):
-        return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
+@impl(m, "npu_geglu_grad")
+def npu_geglu_backward_meta(grad_output, self, gelu, dim, approximate, activate_left=False):
+    return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
 
 
 @impl(m, "npu_scatter_pa_kv_cache.value")
