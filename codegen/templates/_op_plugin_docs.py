@@ -197,6 +197,101 @@ x = torch.from_numpy(data_var).to(torch.float32)
 y =npu_mode(x).cpu().numpy()
 """
 )
+_add_torch_npu_docstr(
+    "npu_fused_matmul",
+    """
+功能描述
+算子功能: 矩阵乘与通用向量计算融合。 
+计算公式
+## 功能描述
+
+- 算子功能： 矩阵乘与通用向量计算融合。
+- 计算公式： 
+
+$$
+y = OP((x * x2 + bias), x3)
+$$
+
+OP类型由fusedOpType输入定义,支持如下：
+1.add  y = (x *x2 + bias) + x3
+
+2.mul  y = (x *x2 + bias) * x3
+
+3.gelu_tanh  y = gelu_tanh(x *x2 + bias)
+
+4.gelu_erf  y = gelu_erf(x *x2 + bias)
+
+
+该公式支持: 昇腾910_95处理器
+
+接口原型
+torch_npu.npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+
+参数说明
+x1: Tensor类型, 即公式中的x. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维. 
+x2: Tensor类型, 即公式中的x2. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维.
+bias: Tensor类型, 可选，即公式中的bias. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维. 当前暂不支持。
+x3: Tensor类型, 可选，即公式中的x3. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维。
+gelu_tanh/gelu_erf为空, add/mul需要输入.
+输出说明
+一个Tensor类型的输出, 代表融合算子的计算结果. 
+
+约束说明
+该接口支持静态入图模式. 
+该接口支持单算子直调脚本。 
+x1输入不能含有None.
+x2输入不能含有None 
+
+支持的PyTorch版本
+PyTorch 2.4
+PyTorch 2.3
+PyTorch 2.2
+PyTorch 2.1
+
+
+示例
+单算子调用
+import os
+import torch
+import torch_npu
+import numpy as np
+M K N = 128, 1, 16
+x1 = torch.randn((M, N), dtype=torch.float16)
+x2 = torch.randn((K, N), dtype=torch.float16)
+bias =None
+x3 = torch.randn((M, N), dtype=torch.float16)
+fused_op_type="add"
+y=torch_npu.npu_fused_matmul(x1.npu(),x2.npu(), bias=bias, x3=x3.npu(),fused_op_type=fused_op_type)
+
+图模式调用
+import os
+import torch
+import torch_npu
+import numpy as np
+import torch.nn as nn
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+os.environ["ENABLE_ACLNN"] = "false"
+torch_npu.npu.set_compile_mode(jit_compile=True)
+class FusedMatMulModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x1, x2, x3, bias=None, fused_op_type=fused_op_type): 
+        y = torch_npu.npu_fused_matmul(x1, x2, bias=bias, x3=x3, fused_op_type=fused_op_type)
+        return y
+
+model = FusedMatmulModel()
+model = model.npu()
+model = torch.compile(model, fullgraph=True, backend=executor("npu"), dynamic=False)
+x1 = torch.randn((M, N), dtype=torch.float16)
+x2 = torch.randn((K, N), dtype=torch.float16)
+bias =None
+x3 = torch.randn((M, N), dtype=torch.float16)
+fused_op_type="add"
+output = model( x1, x2, x3, None, fused_op_type)
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_alloc_float_status",

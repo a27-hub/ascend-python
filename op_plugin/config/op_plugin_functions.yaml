@@ -7099,6 +7099,10 @@ custom:
     op_api: v2.0
     internal_format_opapi: v2.0
 
+  - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+    op_api: all_version
+    exposed: all_version
+
   - func: npu_quant_matmul_dequant(Tensor x, Tensor quantized_weight, Tensor weight_scale, *, Tensor? bias=None, Tensor? x_scale=None, Tensor? x_offset=None, Tensor? smooth_scale=None, str? quant_mode='pertoken') -> Tensor
     op_api: all_version
     gen_opapi:
