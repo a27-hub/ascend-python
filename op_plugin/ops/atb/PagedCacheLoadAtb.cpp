@@ -29,7 +29,7 @@ std::tuple<at::Tensor &, at::Tensor &> &npu_paged_cache_load(
   EXEC_ATB_CMD(AtbCacheLoad, key_cache, value_cache, block_table, context_lens,
                key, value, seq_starts, kv_cache_cfg, cumsum, has_seq_starts);
 
-  return std::tuple<at::Tensor &, at::Tensor &>(key, value);
+  return std::forward_as_tuple(key, value);
 }
 
 namespace {
