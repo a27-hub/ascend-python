@@ -15,13 +15,11 @@
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 
 namespace atb {
-at::Tensor &npu_paged_cache_load(const at::Tensor &key_cache,
-                                 const at::Tensor &value_cache,
-                                 const at::Tensor &block_table,
-                                 const at::Tensor &context_lens,
-                                 const c10::optional<at::Tensor> &seq_starts,
-                                 bool cumsum, at::Tensor &key,
-                                 at::Tensor &value) {
+std::tuple<at::Tensor &, at::Tensor &> &npu_paged_cache_load(
+    const at::Tensor &key_cache, const at::Tensor &value_cache,
+    const at::Tensor &block_table, const at::Tensor &context_lens,
+    const c10::optional<at::Tensor> &seq_starts, bool cumsum, at::Tensor &key,
+    at::Tensor &value) {
   auto key_cache_format = at_npu::native::get_npu_format(key_cache);
   bool has_seq_starts = seq_starts.has_value() && seq_starts.value().defined();
   int8_t kv_cache_cfg = key_cache_format == aclFormat::ACL_FORMAT_ND ? 1 : 0;
@@ -30,6 +28,8 @@ at::Tensor &npu_paged_cache_load(const at::Tensor &key_cache,
 
   EXEC_ATB_CMD(AtbCacheLoad, key_cache, value_cache, block_table, context_lens,
                key, value, seq_starts, kv_cache_cfg, cumsum, has_seq_starts);
+
+  return std::tuple<at::Tensor &, at::Tensor &>(key, value);
 }
 
 namespace {
