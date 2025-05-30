@@ -874,6 +874,17 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
         return x.new_empty(tuple(dim_list))
 
 
+def gmm_get_dtype(output_dtype):
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
+        return torch.float16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
+        return torch.bfloat16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
+        return torch.float32
+    else:
+        raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
+
+
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
@@ -884,6 +895,7 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
+    output_dtype = gmm_get_dtype(output_dtype)
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if split_item == 0:
@@ -1585,14 +1597,14 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
-        raise RuntimeError("Input x must be 2-dimensional, got dimNum " + 
+        raise RuntimeError("Input x must be 2-dimensional, got dimNum " +
                             str(x.dim()) + ops_error(ErrCode.VALUE))
     if group_index.dim() != 1:
-        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " + 
+        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " +
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
     # zero division protection
     if blocksize != 32:
-        raise RuntimeError("Parameter blocksize only supports 32,  got " + 
+        raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1] * 2]
 
@@ -1742,7 +1754,7 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
         elif (input_.dtype == torch.bits8 or input_.dtype == torch.float8_e4m3fn):
             torch._check(
                 (output_dtype == torch.float16 or output_dtype == torch.bfloat16 or output_dtype == torch.float32),
-                lambda: "output dtype should be float16 or bfloat16 or float32 when input dtype is hifloat8 or float8_e4m3fn, " +
+                lambda: "output dtype should be float16, bfloat16 or float32 when input dtype is hifloat8 or float8_e4m3fn, " +
                         "but now dtype is " + str(output_dtype) + ops_error(ErrCode.TYPE),
             )
 
