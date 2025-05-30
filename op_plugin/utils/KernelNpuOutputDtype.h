@@ -24,6 +24,8 @@ namespace op_infer {
 
 OP_PLUGIN_HIDDEN at::ScalarType angle_out_dtype(const at::Tensor& self);
 OP_PLUGIN_HIDDEN at::ScalarType polar_out_dtype(const at::Tensor& abs, const at::Tensor& angle);
+OP_PLUGIN_HIDDEN at::ScalarType clamp_out_dtype(const at::Tensor& self, const c10::optional<at::Tensor>& min, const c10::optional<at::Tensor>& max);
+OP_PLUGIN_HIDDEN at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optional<at::Scalar>& min, const c10::optional<at::Scalar>& max);
 
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_DTYPE
