@@ -876,7 +876,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
         outDtype = torch.int8
     local_moe_expert_num = int(local_moe_expert_num)
 
-    expand_idx = x.new_empty(tuple([n * k]), dtype=torch.int32)
+    expand_idx = x.new_empty(tuple([max(n * k, a * 3)]), dtype=torch.int32)
     if tp_world_size == 0:
         expand_x = x.new_empty(tuple([a, h]), dtype=outDtype)
         dynamic_scales = x.new_empty(tuple([a]), dtype=torch.float32)
