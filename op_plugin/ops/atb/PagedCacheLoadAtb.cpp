@@ -15,7 +15,7 @@
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 
 namespace atb {
-std::tuple<at::Tensor &, at::Tensor &> npu_paged_cache_load(
+std::tuple<at::Tensor &, at::Tensor &> npu_paged_cache_load_out(
     const at::Tensor &key_cache, const at::Tensor &value_cache,
     const at::Tensor &block_table, const at::Tensor &context_lens,
     const c10::optional<at::Tensor> &seq_starts, bool cumsum, at::Tensor &key,
@@ -49,7 +49,7 @@ TORCH_LIBRARY_FRAGMENT(atb, m) {
 
 namespace {
 TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
-  m.impl("npu_paged_cache_load", TORCH_FN(atb::npu_paged_cache_load));
+  m.impl("npu_paged_cache_load.out", TORCH_FN(atb::npu_paged_cache_load_out));
 }
 }  // namespace
 }  // namespace atb
