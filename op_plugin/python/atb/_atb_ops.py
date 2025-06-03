@@ -26,7 +26,11 @@ API_LIST = [
 ]
 
 
-ATB_API_LIST = []
+ATB_API_LIST = [
+    '_npu_paged_attention_v2',
+    '_npu_flash_attention_v2',
+    '_npu_flash_attention_prefix_v2',
+]
 
 ATB_MODULE_NAME = 'atb'
 ATB_MODULE = types.ModuleType(ATB_MODULE_NAME)
