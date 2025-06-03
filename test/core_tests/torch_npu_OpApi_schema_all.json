@@ -3742,6 +3742,30 @@
   "func: _upsample_nearest_exact2d.out(Tensor self, SymInt[3] output_size, float? scales_h=None, float? scales_w=None, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
+  "func: npu_nsa_compress(Tensor input, Tensor weight, int compress_block_size, int compress_stride, *, int[]? actual_seq_len=None) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_compress_grad(Tensor grad, Tensor input, Tensor weight, int compress_block_size, int compress_stride, *, int[]? actual_seq_len=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_compress_infer.cache(Tensor input, Tensor weight, Tensor slot_mapping, int compress_block_size, int compress_stride, int page_block_size, *, Tensor? block_table=None, int[]? actual_seq_len=None, Tensor(a!) cache) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_compress_attention(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int compress_block_size, int compress_stride, int select_block_size, int select_block_count, *, Tensor? topk_mask=None, Tensor? atten_mask=None, int[]? actual_seq_qlen=None, int[]? actual_cmp_seq_kvlen=None, int[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, int[]? actual_seq_qlen=None, int[]? actual_cmp_seq_kvlen=None, int[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_select_attention(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_select_attention_grad(Tensor grad, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_max, Tensor softmax_sum, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_nsa_select_attention_infer(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, str layout='BSND', Tensor? atten_mask=None, Tensor? block_table=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: _upsample_nearest_exact2d_backward.grad_input(Tensor grad_output, SymInt[2] output_size, SymInt[4] input_size, float? scales_h=None, float? scales_w=None, *, Tensor(a!) grad_input) -> Tensor(a!)": {
     "version": ["all_version"]
   },
