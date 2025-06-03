@@ -46,9 +46,9 @@ at::Tensor npu_fused_matmul(
     TORCH_CHECK(x1_k_dim == x2_k_dim, "The k of x1 and x2 should be equal. but x1_k_dim is ",
                 x1_k_dim, ", x2_k_dim is ", x2_k_dim);
     auto output_size = op_infer::array_to_small_vector(x.sizes());
-    output_size[x1.dim() - 1] = x2.size(1);
+    output_size[x.dim() - 1] = x2.size(1);
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size,
-                                                                             x1.dtype());
+                                                                             x.dtype());
     const at::Tensor &x3_real = x3.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     if (x3.has_value()) 
@@ -56,7 +56,7 @@ at::Tensor npu_fused_matmul(
         auto x3_dim_num = x3_real.dim();
         TORCH_CHECK(x3_dim_num == X_DIM, "The x3 dim num should be 2. but x3_dim_num is ", x3_dim_num);
         auto x3_first_dim_value = x3_real.size(0);
-        auto x3_second_dim_value == x3_real.size(1);
+        auto x3_second_dim_value = x3_real.size(1);
         TORCH_CHECK(x3_first_dim_value == x1_m_dim || x3_second_dim_value == x2_n_dim,
                     "x3_first_dim should be same as x1_m_dim, x3_second_dim should be same as x2_n_dim");
     }
@@ -67,7 +67,7 @@ at::Tensor npu_fused_matmul(
                 "the len of fused_op_type is bigger than the default");
     strcpy(fused_type, std::string(fused_op_type).c_str());
 
-    EXEC_NPU_CMD(aclnnFusedMatmul, x, x2, bias_real, y_real, fused_type, cube_math_type, result);
+    EXEC_NPU_CMD(aclnnFusedMatmul, x, x2, bias_real, x3_real, fused_type, cube_math_type, result);
     return result;
 }
 }
