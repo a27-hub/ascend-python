@@ -26,8 +26,9 @@ std::tuple<at::Tensor &, at::Tensor &> npu_paged_cache_load_out(
 
   const c10::OptionalDeviceGuard device_guard(device_of(key_cache));
 
-  EXEC_ATB_CMD(AtbCacheLoad, key_cache, value_cache, block_table, context_lens,
-               key, value, seq_starts, kv_cache_cfg, cumsum, has_seq_starts);
+  EXEC_ATB_CMD(AtbPagedCacheLoad, key_cache, value_cache, block_table,
+               context_lens, key, value, seq_starts, kv_cache_cfg, cumsum,
+               has_seq_starts);
 
   return std::forward_as_tuple(key, value);
 }
@@ -37,13 +38,13 @@ TORCH_LIBRARY_FRAGMENT(atb, m) {
   m.def(
       "npu_paged_cache_load.out(Tensor key_cache, Tensor value_cache, Tensor "
       "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
-      "cumsum=false, Tensor(a!) key, Tensor(b!)value) -> (Tensor(a!), "
+      "cumsum=False, Tensor(a!) key, Tensor(b!) value) -> (Tensor(a!), "
       "Tensor(b!))");
 
   m.def(
       "npu_paged_cache_load(Tensor key_cache, Tensor value_cache, Tensor "
       "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
-      "cumsum=false) -> (Tensor, Tensor)");
+      "cumsum=False) -> (Tensor, Tensor)");
 }
 }  // namespace
 
