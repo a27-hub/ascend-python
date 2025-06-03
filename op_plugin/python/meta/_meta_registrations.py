@@ -1884,6 +1884,12 @@ def npu_gather_backward__meta(grad, self_size, dim, index, sparse_grad):
     return torch.empty(self_size, dtype=grad.dtype, device=grad.device)
 
 
+@impl(m, "npu_get_slots")
+def npu_get_slots_meta(seq_len, kv_cache_len, block_table, page_size=128, token_num=1):
+    y_size = [token_num]
+    return torch.empty(y_size, dtype=torch.int32, device=seq_len.device)
+
+
 @impl(m, "npu_moe_re_routing")
 def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=None, expert_token_num_type=1, idx_type=0):
     permute_tokens_size = []
