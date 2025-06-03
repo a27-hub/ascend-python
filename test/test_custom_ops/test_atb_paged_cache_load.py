@@ -143,9 +143,9 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             cached_k_pe,
             block_table,
             seq_len_tensor.int(),
-            seq_starts,
-            kv_c,
-            k_pe,
+            seq_starts=seq_starts,
+            key=kv_c,
+            value=k_pe,
         )
 
         torch_npu_result = torch.cat([kv_c, k_pe], dim=2).view(total_tokens, -1)
