@@ -353,6 +353,8 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_out_size(const at::Tensor &tokens, const at::Tensor &indices, c10::optional<int64_t> num_out_tokens);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tensor& permuted_tokens, const at::Tensor &sorted_indices, c10::optional<at::Tensor>& probs);
 
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE

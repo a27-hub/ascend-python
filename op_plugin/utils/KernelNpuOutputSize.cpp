@@ -1909,4 +1909,38 @@ c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c1
     return output_shape;
 }
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_out_size(const at::Tensor &tokens, const at::Tensor &indices, c10::optional<int64_t> num_out_tokens)
+{
+    const static int DIMS = 2;
+    const static int MIN_DIMS = 1;
+    TORCH_CHECK(tokens.dim() == DIMS,
+                "The dims of input tokens should be 2 dimensional, but got ", tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(indices.dim() == DIMS || indices.dim() == MIN_DIMS,
+                "The dims of input indices should be 2 or 1 dimensional, but got ", indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    int64_t num_out_tokens_value = num_out_tokens.value_or(0);
+    int64_t flatten_size = indices.numel();
+    int64_t actual_num_out_tokens = (num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size;
+    c10::SmallVector<int64_t, SIZE> output_shape(actual_num_out_tokens, tokens.size(1));
+    return output_shape;
+}
+
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tensor& permuted_tokens, const at::Tensor &sorted_indices, c10::optional<at::Tensor>& probs)
+{
+    const static int64_t DEFAULT_TOPK = 1;
+    const static int DIMS = 2;
+    const static int MIN_DIMS = 1;
+    if (probs.has_value()) {
+            TORCH_CHECK(probs.value().dim() == DIMS,
+                        "The dims of input probs should be 2 dimensional, but got ", probs.value().dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    }
+    TORCH_CHECK(permuted_tokens.dim() == DIMS,
+            "The dims of input permuted_tokens should be 2 dimensional, but got ", permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(sorted_indices.dim() == MIN_DIMS,
+                "The dims of input sorted_indices should be 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    
+    int64_t topk = probs.has_value() ? probs.value().size(1) : DEFAULT_TOPK;
+    c10::SmallVector<int64_t, SIZE> output_shape(sorted_indices.size(0) / topk, permuted_tokens.size(-1));
+    return output_shape
+}
+
 } // namespace op_infer
