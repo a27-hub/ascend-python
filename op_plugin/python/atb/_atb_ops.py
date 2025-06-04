@@ -28,6 +28,7 @@ API_LIST = [
 
 ATB_API_LIST = [
     'npu_paged_cache_load',
+    'npu_multi_head_latent_attention'
 ]
 
 ATB_MODULE_NAME = 'atb'

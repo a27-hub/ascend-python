@@ -39,6 +39,7 @@
 #include "torch_npu/csrc/aten/NPUNativeFunctions.h"
 #include "torch_npu/csrc/flopcount/FlopCount.h"
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
@@ -212,27 +213,37 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
     at::ScalarType scalar_data_type = at_tensor.scalar_type();
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
-    // if acl_data_type is ACL_STRING, storageDims is empty.
-    if (acl_data_type != ACL_STRING) {
-        TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
-            OPS_ERROR(ErrCode::VALUE));
-        storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
-    }
 
     const auto dimNum = at_tensor.sizes().size();
     aclFormat format = ACL_FORMAT_ND;
-    switch (dimNum) {
-        case NCL_DIM_NUM:
-            format = ACL_FORMAT_NCL;
-            break;
-        case NCHW_DIM_NUM:
-            format = ACL_FORMAT_NCHW;
-            break;
-        case NCDHW_DIM_NUM:
-            format = ACL_FORMAT_NCDHW;
-            break;
-        default:
-            format = ACL_FORMAT_ND;
+    if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
+        format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+                        OPS_ERROR(ErrCode::VALUE));
+            storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
+        }
+    } else {
+        switch (dimNum) {
+            case NCL_DIM_NUM:
+                format = ACL_FORMAT_NCL;
+                break;
+            case NCHW_DIM_NUM:
+                format = ACL_FORMAT_NCHW;
+                break;
+            case NCDHW_DIM_NUM:
+                format = ACL_FORMAT_NCDHW;
+                break;
+            default:
+                format = ACL_FORMAT_ND;
+        }
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+                        OPS_ERROR(ErrCode::VALUE));
+            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+        }
     }
 
     if (at_npu::native::OpPreparation::is_scalar_wrapped_to_tensor(at_tensor)) {
@@ -300,6 +311,17 @@ inline aclIntArray *ConvertType(const at::IntArrayRef &at_array)
         return nullptr;
     }
     auto array = aclCreateIntArray(at_array.data(), at_array.size());
+    return array;
+}
+
+inline aclIntArray *ConvertType(const at::ArrayRef<c10::SymInt> &at_array)
+{
+    static const auto aclCreateIntArray = GET_OP_API_FUNC(aclCreateIntArray);
+    if (aclCreateIntArray == nullptr) {
+        return nullptr;
+    }
+    auto int_array = c10::asIntArrayRefUnchecked(at_array);
+    auto array = aclCreateIntArray(int_array.data(), int_array.size());
     return array;
 }
 
@@ -373,6 +395,15 @@ inline aclIntArray *ConvertType(const c10::optional<at::IntArrayRef> &opt_array)
     return nullptr;
 }
 
+inline aclIntArray *ConvertType(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
+{
+    if (opt_array.has_value()) {
+        return ConvertType(opt_array.value());
+    }
+
+    return nullptr;
+}
+
 inline aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar)
 {
     if (opt_scalar.has_value()) {
@@ -395,19 +426,21 @@ template <typename T> T ConvertType(T value)
 struct TensorStruct {
     void *data_ptr = nullptr;       // at_tensor.storage().data()
     at::ScalarType scalar_type;     // at_tensor.scalar_type()
+    aclFormat acl_format;
     size_t nbytes;                  // at_tensor.storage().nbytes()
     size_t itemsize;                // at_tensor.itemsize()
     int64_t storage_offset;         // at_tensor.storage_offset()
     std::vector<int64_t> sizes;     // at_tensor.sizes()
     std::vector<int64_t> strides;   // at_tensor.strides()
+    std::vector<int64_t> storage_sizes;
 
     TensorStruct(
-        void *data_ptr_, at::ScalarType scalar_type_,
+        void *data_ptr_, at::ScalarType scalar_type_, aclFormat acl_format_,
         size_t nbytes_, size_t itemsize_, int64_t storage_offset_,
-        at::IntArrayRef sizes_, at::IntArrayRef strides_
-    ) : data_ptr(data_ptr_), scalar_type(scalar_type_),
+        at::IntArrayRef sizes_, at::IntArrayRef strides_, at::IntArrayRef storage_sizes_
+    ) : data_ptr(data_ptr_), scalar_type(scalar_type_), acl_format(acl_format_),
         nbytes(nbytes_), itemsize(itemsize_), storage_offset(storage_offset_),
-        sizes(sizes_.vec()), strides(strides_.vec())
+        sizes(sizes_.vec()), strides(strides_.vec()), storage_sizes(storage_sizes_.vec())
     {
     }
 };
@@ -426,27 +459,37 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
     at::ScalarType scalar_data_type = (*at_tensor).scalar_type;
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
-    // if acl_data_type is ACL_STRING, storageDims is empty.
-    if (acl_data_type != ACL_STRING) {
-        TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
-                    OPS_ERROR(ErrCode::VALUE));
-        storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
-    }
 
     const auto dimNum = (*at_tensor).sizes.size();
     aclFormat format = ACL_FORMAT_ND;
-    switch (dimNum) {
-        case NCL_DIM_NUM:
-            format = ACL_FORMAT_NCL;
-            break;
-        case NCHW_DIM_NUM:
-            format = ACL_FORMAT_NCHW;
-            break;
-        case NCDHW_DIM_NUM:
-            format = ACL_FORMAT_NCDHW;
-            break;
-        default:
-            format = ACL_FORMAT_ND;
+    if (!at_npu::native::FormatHelper::IsBaseFormatType((*at_tensor).acl_format)) {
+        format = (*at_tensor).acl_format;
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
+                        OPS_ERROR(ErrCode::VALUE));
+            storageDims = (*at_tensor).storage_sizes;
+        }
+    } else {
+        switch (dimNum) {
+            case NCL_DIM_NUM:
+                format = ACL_FORMAT_NCL;
+                break;
+            case NCHW_DIM_NUM:
+                format = ACL_FORMAT_NCHW;
+                break;
+            case NCDHW_DIM_NUM:
+                format = ACL_FORMAT_NCDHW;
+                break;
+            default:
+                format = ACL_FORMAT_ND;
+        }
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
+                        OPS_ERROR(ErrCode::VALUE));
+            storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
+        }
     }
 
     auto acl_tensor = aclCreateTensor(
@@ -467,11 +510,13 @@ inline TensorStructPtr CopyTypeV2(const at::Tensor &at_tensor)
     return std::make_shared<TensorStruct>(
         const_cast<void *>(at_tensor.storage().data()),
         at_tensor.scalar_type(),
+        torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_,
         at_tensor.storage().nbytes(),
         at_tensor.itemsize(),
         at_tensor.storage_offset(),
         at_tensor.sizes(),
-        at_tensor.strides());
+        at_tensor.strides(),
+        torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_);
 }
 
 inline aclScalar *ConvertTypeV2(const at::Scalar &at_scalar)
@@ -530,6 +575,12 @@ inline aclIntArray *ConvertTypeV2(const std::vector<int64_t> &int_list)
 inline std::vector<int64_t> CopyTypeV2(const at::IntArrayRef &at_array)
 {
     return at_array.vec();
+}
+
+inline std::vector<int64_t> CopyTypeV2(const at::ArrayRef<c10::SymInt> &at_array)
+{
+    auto int_array = c10::asIntArrayRefUnchecked(at_array);
+    return int_array.vec();
 }
 
 template <std::size_t N> inline aclBoolArray *ConvertTypeV2(const std::array<bool, N> &value)
@@ -632,6 +683,15 @@ inline aclIntArray *ConvertTypeV2(const c10::optional<std::vector<int64_t>> &opt
 }
 
 inline c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::optional<at::IntArrayRef> &opt_array)
+{
+    if (opt_array.has_value()) {
+        return CopyTypeV2(opt_array.value());
+    }
+
+    return c10::nullopt;
+}
+
+inline c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalArrayRef<c10::SymInt> &opt_array)
 {
     if (opt_array.has_value()) {
         return CopyTypeV2(opt_array.value());
@@ -812,11 +872,13 @@ template <typename T> void add_param_to_buf(const T &value)
 void add_param_to_buf(const at::Tensor &);
 void add_param_to_buf(const at::Scalar &);
 void add_param_to_buf(const at::IntArrayRef &);
+void add_param_to_buf(const at::ArrayRef<c10::SymInt> &);
 void add_param_to_buf(const at::ArrayRef<bool> &);
 void add_param_to_buf(const at::TensorList &);
 void add_param_to_buf(const at::ArrayRef<at::Scalar> &);
 void add_param_to_buf(const c10::optional<at::Tensor> &);
 void add_param_to_buf(const c10::optional<at::IntArrayRef> &);
+void add_param_to_buf(const c10::OptionalArrayRef<c10::SymInt> &);
 void add_param_to_buf(const c10::optional<at::Scalar> &);
 void add_param_to_buf(const at::ScalarType);
 void add_param_to_buf(const string &);
