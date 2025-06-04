@@ -7505,6 +7505,14 @@ custom:
   - func: npu_attn_softmax_backward_(Tensor(a!) self, Tensor grad_output, Tensor values) -> Tensor(a!)
     op_api: all_version
 
+  - func: npu_top_k_top_p(Tensor logits, Tensor p, Tensor k) -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: logits
+        dtype: logits
+      exec: aclnnApplyTopKTopP
+
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
