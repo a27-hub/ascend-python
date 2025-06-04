@@ -121,7 +121,9 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             0, max_start + 1, (batch_size,), dtype=torch.int32, device=device
         )
 
-        # gather_cache_torch(src_cache, expected, block_table, cu_seq_lens, batch_size, seq_starts)
+        self._gather_cache_torch(
+            src_cache, expected, block_table, cu_seq_lens, batch_size, seq_starts
+        )
         kv_c = torch.empty(
             (total_tokens, 1, kv_lora_rank), dtype=torch.float16, device=device
         )
