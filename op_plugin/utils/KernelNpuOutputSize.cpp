@@ -1909,6 +1909,25 @@ c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c1
     return output_shape;
 }
 
+c10::SmallVector<int64_t, SIZE> npu_gather_sparse_index_out_size(const at::Tensor& input, const at::Tensor& index)
+{
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (input.dim() == 0) {
+        output_shape = op_infer::array_to_small_vector(input.sizes());
+        return output_shape;
+    }
+
+    int64_t npu_tensor_dim_limit = 8;
+    TORCH_CHECK((input.dim() + index.dim() - 1 <= npu_tensor_dim_limit),
+                "input.dim() + index.dim() - 1 must not greater than 8." + OPS_ERROR(ErrCode::PARAM));
+    auto size_input = input.sizes();
+    auto size_index = index.sizes();
+    output_shape.insert(output_shape.end(), size_index.begin(), size_index.end());
+    output_shape.insert(output_shape.end(), size_input.begin() + 1, size_input.end());
+
+    return output_shape;
+}
+
 c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& input, c10::optional<int64_t> actual_seq_len_type, at::OptionalIntArrayRef actual_seq_len, int64_t compress_block_size, int64_t compress_stride)
 {
     int64_t compress_kv_num = 0;
@@ -1930,6 +1949,23 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& inpu
         output_shape.push_back(input.size(NPU_NSA_COMPRESS_INPUT_DIM_THIRD));
     }
     return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_nsa_select_attention_infer_out_size(const at::Tensor& query, const at::Tensor& value, int64_t head_num, int64_t key_value_head_num, c10::string_view layout)
+{
+    std::string input_layout = std::string(layout);
+    TORCH_CHECK(input_layout == "BSH" || input_layout == "BSND", "layout only support BSH or BSND now.", OPS_ERROR(ErrCode::PARAM));
+
+    at::SmallVector<int64_t, SIZE> output_size;
+    if (input_layout == "BSH") {
+        TORCH_CHECK(key_value_head_num >0, "key_value_head_num must be greater than 0." + OPS_ERROR(ErrCode::VALUE));
+        auto key_head_dim = value.size(DIM_2) / key_value_head_num;
+        output_size = {query.size(DIM_0), query.size(DIM_1), head_num * key_head_dim};
+    } else {
+        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), value.size(DIM_3)};
+    }
+
+    return output_size;
 }
 
 } // namespace op_infer

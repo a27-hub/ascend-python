@@ -53,7 +53,6 @@ class TestMoeDistributeDispatch(TestCase):
 
         x = x.npu()
         topk = topk.npu()
-
         out, _, _, _, _, _, _ = torch_npu.npu_moe_distribute_dispatch(x=x,
                                                            expert_ids=topk,
                                                            group_ep=ep_hcomm_name,
@@ -70,11 +69,10 @@ class TestMoeDistributeDispatch(TestCase):
                                                            global_bs=globalBS)
 
         if tp_world_size == 1:
-            _ = torch_npu.npu_distribute_barrier(
+            _ = torch_npu._npu_distribute_barrier(
                 x_ref=x,
                 group=ep_hcomm_name,
-                world_size=ep_world_size
-            )
+                world_size=ep_world_size)
 
         if rank // tp_world_size_2 < sharedExpertRankNum:
             A = int(globalBS // sharedExpertRankNum)
