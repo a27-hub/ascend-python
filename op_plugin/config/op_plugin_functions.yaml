@@ -6363,6 +6363,34 @@ official:
   - func: isin.Tensor_Tensor_out(Tensor elements, Tensor test_elements, *, bool assume_unique=False, bool invert=False, Tensor(a!) out) -> Tensor(a!)
     op_api: [v2.1, newest]
 
+  - func: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      permuted_tokens:
+        size: 'npu_moe_token_permute_out_size(tokens, indices, num_out_tokens)'
+        type: tokens
+      sorted_indices:
+        size: '{indices.numel()}'
+        type: at::kInt
+      new_params:
+        num_out_tokens_value: 'num_out_tokens.value_or(0)'
+        flatten_size: 'indices.numel()'
+        actual_num_out_tokens: '(num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size'
+        padded_mode_value: 'padded_mode.value_or(false)'
+      exec: aclnnMoeTokenPermute, tokens, indices, actual_num_out_tokens, padded_mode_value, permuted_tokens, sorted_indices
+
+  - func: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape) -> Tensor
+    op_api: [v2.1, newest]
+    gen_opapi:
+      unpermuted_tokens:
+        size: 'npu_moe_token_unpermute_out_size(permuted_tokens, sorted_indices, probs)'
+        type: permuted_tokens
+      new_params:
+        restore_shape_value: 'restore_shape.value_or({1})'
+        padded_mode_value: 'padded_mode.value_or(false)'
+        
+      exec: aclnnMoeTokenUnpermute, permuted_tokens, sorted_indices, probs, padded_mode_value, restore_shape_value, unpermuted_tokens
+
 custom:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
