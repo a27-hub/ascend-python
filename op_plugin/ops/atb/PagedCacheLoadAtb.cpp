@@ -19,7 +19,7 @@ std::tuple<at::Tensor &, at::Tensor &> npu_paged_cache_load_out(
     const at::Tensor &key_cache, const at::Tensor &value_cache,
     const at::Tensor &block_table, const at::Tensor &context_lens,
     const c10::optional<at::Tensor> &seq_starts, bool cumsum, at::Tensor &key,
-    at::Tensor &value) 
+    at::Tensor &value)
 {
     auto key_cache_format = at_npu::native::get_npu_format(key_cache);
     bool has_seq_starts =
