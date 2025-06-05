@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+import unittest
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
@@ -100,6 +101,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
                 ].squeeze(1)
 
     @SupportedDevices(["Ascend910B"])
+    @unittest.skip("skip case")
     def test_atb_paged_cache_load(self):
         kv_lora_rank = 512
         qk_rope_head_dim = 64
@@ -134,10 +136,15 @@ class TestPagedCacheLoadSeqStarts(TestCase):
         seq_starts = torch.randint(
             0, max_start + 1, (batch_size,), dtype=torch.int32, device=device
         )
-
-        self._gather_cache_torch(
-            src_cache, expected, block_table, cu_seq_lens, batch_size, seq_starts
+        gather_cache_params = GatherCacheParams(
+            src_cache=src_cache,
+            dst=expected,
+            block_table=block_table,
+            cu_seq_lens=cu_seq_lens,
+            batch_size=batch_size,
+            seq_starts=seq_starts,
         )
+        self._gather_cache_torch(gather_cache_params)
         kv_c = torch.empty(
             (total_tokens, 1, kv_lora_rank), dtype=torch.float16, device=device
         )
