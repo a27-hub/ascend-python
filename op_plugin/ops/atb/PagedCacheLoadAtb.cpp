@@ -19,38 +19,39 @@ std::tuple<at::Tensor &, at::Tensor &> npu_paged_cache_load_out(
     const at::Tensor &key_cache, const at::Tensor &value_cache,
     const at::Tensor &block_table, const at::Tensor &context_lens,
     const c10::optional<at::Tensor> &seq_starts, bool cumsum, at::Tensor &key,
-    at::Tensor &value) {
-  auto key_cache_format = at_npu::native::get_npu_format(key_cache);
-  bool has_seq_starts = seq_starts.has_value() && seq_starts.value().defined();
-  int8_t kv_cache_cfg = key_cache_format == aclFormat::ACL_FORMAT_ND ? 1 : 0;
+    at::Tensor &value) 
+{
+    auto key_cache_format = at_npu::native::get_npu_format(key_cache);
+    bool has_seq_starts =
+        seq_starts.has_value() && seq_starts.value().defined();
+    int8_t kv_cache_cfg = key_cache_format == aclFormat::ACL_FORMAT_ND ? 1 : 0;
 
-  const c10::OptionalDeviceGuard device_guard(device_of(key_cache));
+    const c10::OptionalDeviceGuard device_guard(device_of(key_cache));
 
-  EXEC_ATB_CMD(AtbPagedCacheLoad, key_cache, value_cache, block_table,
-               context_lens, key, value, seq_starts, kv_cache_cfg, cumsum,
-               has_seq_starts);
+    EXEC_ATB_CMD(AtbPagedCacheLoad, key_cache, value_cache, block_table,
+                 context_lens, key, value, seq_starts, kv_cache_cfg, cumsum,
+                 has_seq_starts);
 
-  return std::forward_as_tuple(key, value);
+    return std::forward_as_tuple(key, value);
 }
 
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m) {
-  m.def(
-      "npu_paged_cache_load.out(Tensor key_cache, Tensor value_cache, Tensor "
-      "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
-      "cumsum=False, Tensor(a!) key, Tensor(b!) value) -> (Tensor(a!), "
-      "Tensor(b!))");
+    m.def(
+        "npu_paged_cache_load.out(Tensor key_cache, Tensor value_cache, Tensor "
+        "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
+        "cumsum=False, Tensor(a!) key, Tensor(b!) value) -> (Tensor(a!), Tensor(b!))");
 
-  m.def(
-      "npu_paged_cache_load(Tensor key_cache, Tensor value_cache, Tensor "
-      "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
-      "cumsum=False) -> (Tensor, Tensor)");
+    m.def(
+        "npu_paged_cache_load(Tensor key_cache, Tensor value_cache, Tensor "
+        "block_table, Tensor context_lens, *, Tensor? seq_starts=None, bool "
+        "cumsum=False) -> (Tensor, Tensor)");
 }
 }  // namespace
 
 namespace {
 TORCH_LIBRARY_IMPL(atb, PrivateUse1, m) {
-  m.impl("npu_paged_cache_load.out", TORCH_FN(atb::npu_paged_cache_load_out));
+    m.impl("npu_paged_cache_load.out", TORCH_FN(atb::npu_paged_cache_load_out));
 }
 }  // namespace
 }  // namespace atb

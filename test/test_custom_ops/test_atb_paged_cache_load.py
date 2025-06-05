@@ -1,8 +1,20 @@
+from dataclasses import dataclass
+from typing import Optional
+
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
-from typing import Optional
+
+
+@dataclass
+class GatherCacheParams:
+    src_cache: torch.Tensor  # [NUM_BLOCKS, BLOCK_SIZE, HEAD, ENTRIES]
+    dst: torch.Tensor  # [TOT_TOKENS, ENTRIES]
+    block_table: torch.Tensor  # [BATCH, BLOCK_INDICES]
+    cu_seq_lens: torch.Tensor  # [BATCH+1]
+    batch_size: int
+    seq_starts: Optional[torch.Tensor] = None  # Optional: [BATCH]
 
 
 class TestPagedCacheLoadSeqStarts(TestCase):
@@ -20,12 +32,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
 
     def _gather_cache_torch(
         self,
-        src_cache: torch.Tensor,  # [NUM_BLOCKS, BLOCK_SIZE, HEAD, ENTRIES]
-        dst: torch.Tensor,  # [TOT_TOKENS, ENTRIES]
-        block_table: torch.Tensor,  # [BATCH, BLOCK_INDICES]
-        cu_seq_lens: torch.Tensor,  # [BATCH+1]
-        batch_size: int,
-        seq_starts: Optional[torch.Tensor] = None,  # Optional: [BATCH]
+        gather_cache_params: GatherCacheParams,
     ) -> None:
         """
         Gather sequence data from source cache to destination tensor
@@ -37,6 +44,14 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             batch_size: Batch size
             seq_starts: Optional, starting offsets for each batch [BATCH]
         """
+        (src_cache, dst, block_table, cu_seq_lens, batch_size, seq_starts) = (
+            gather_cache_params.src_cache,
+            gather_cache_params.dst,
+            gather_cache_params.block_table,
+            gather_cache_params.cu_seq_lens,
+            gather_cache_params.batch_size,
+            gather_cache_params.seq_starts,
+        )
         # Basic parameter checks
         assert src_cache.dtype == dst.dtype, "src_cache and dst must have same dtype"
         assert block_table.dtype == torch.int32, "block_table must be int32"
@@ -65,7 +80,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
                 offset = seq_starts[bid].item() // block_size
 
             # Get block table for current batch
-            batch_block_table = block_table[bid, offset : offset + tot_blocks]
+            batch_block_table = block_table[bid, offset: offset + tot_blocks]
             # Calculate complete blocks and last partial block
             full_blocks = tot_blocks - 1 if seq_len % block_size else tot_blocks
             partial_block_size = seq_len % block_size if seq_len % block_size else 0
@@ -74,13 +89,13 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             for i in range(full_blocks):
                 block_id = batch_block_table[i].item()
                 # Copy entire block, remove HEAD dimension
-                dst[dst_start : dst_start + block_size] = src_cache[block_id].squeeze(1)
+                dst[dst_start: dst_start + block_size] = src_cache[block_id].squeeze(1)
                 dst_start += block_size
 
             # Handle last incomplete block
             if partial_block_size > 0:
                 block_id = batch_block_table[full_blocks].item()
-                dst[dst_start : dst_start + partial_block_size] = src_cache[
+                dst[dst_start: dst_start + partial_block_size] = src_cache[
                     block_id, :partial_block_size
                 ].squeeze(1)
 
@@ -103,7 +118,6 @@ class TestPagedCacheLoadSeqStarts(TestCase):
         cu_seq_lens[0] = 0
         cu_seq_lens[1:] = seq_len_tensor.cumsum(dim=0).to(dtype=torch.int32)
 
-        # tot_blocks_tensor = (seq_len_tensor + block_size - 1) // block_size
         block_table = torch.empty(
             (batch_size, num_blocks), dtype=torch.int32, device=device
         )
