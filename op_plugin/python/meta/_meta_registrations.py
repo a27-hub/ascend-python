@@ -905,6 +905,28 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
     return expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
 
 
+@impl(m, "npu_moe_distribute_combine_setup")
+def npu_moe_distribute_combine_setup_meta(expand_x, ep_send_counts, group_ep, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, 
+                                          global_bs=0, comm_quant_mode=0, comm_type=0):
+    n = expand_x.size(0)
+    h = expand_x.size(1)
+    output_expand_x = expand_x.new_empty(tuple([n, h]), dtype=expand_x.dtype)
+    quant_expand_x = expand_x.new_empty(tuple([n, h]), dtype=torch.int8)
+
+    return (output_expand_x, quant_expand_x)
+
+
+@impl(m, "npu_moe_distribute_combine_teardown")
+def npu_moe_distribute_combine_teardown_meta(expand_x, expert_ids, expand_idx, expert_scales, quant_expand_x, group_ep, ep_world_size, ep_rank_id, moe_expert_num, x_active_mask=None,
+                                             shared_expert_x=None, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0):
+
+    dim_list = []
+    dim_list.append(expert_ids.size(0))
+    dim_list.append(expand_x.size(1))
+    x = expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
+
+    return x
+
 @impl(m, "npu_moe_distribute_combine_add_rms_norm")
 def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
                                     tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0,
