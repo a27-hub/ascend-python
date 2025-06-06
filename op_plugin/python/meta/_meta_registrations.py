@@ -213,7 +213,7 @@ def npu_fused_matmul_meta(x, x2, *, bias=None, x3=None, fused_op_type=''):
     torch._check(
         ka == kb,
         lambda: "ka and kb should be the same" + ops_error(ErrCode.TYPE),
-    )     
+    )
     if x3 is not None:
         torch._check(
         x3.dtype in input_supported_list,
@@ -936,7 +936,16 @@ def gmm_get_dtype(output_dtype):
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
                             antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
-                            split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None):
+                            split_item=0, group_type=-1, group_list_type=0, act_type=0, output_dtype=None,
+                            x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None):
+    torch._check(
+        x_dtype is None and weight_dtype is None,
+        lambda: "x_dtype and weight_dtype are not supported for grouped matmul for now",
+    )
+    torch._check(
+        scale_dtype is None and per_token_scale_dtype is None,
+        lambda: "scale_dtype and per_token_scale_dtype are not supported for grouped matmul for now",
+    )
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
