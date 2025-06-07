@@ -128,6 +128,32 @@ at::Tensor slow_conv_transpose2d(const at::Tensor &input, const at::Tensor &weig
     return _calc_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
 }
 
+at::Tensor _calc_conv_transpose(const at::Tensor &input, const at::Tensor &weight, 
+                                 const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
+                                 at::IntArrayRef padding, at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation)
+{
+    const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
+    bool transposed = true;
+    DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
+                                                            output_padding, groups, false, false, false, false));
+
+    return _calc_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+}
+
+at::Tensor conv_transpose2d(const at::Tensor &input, const at::Tensor &weight, 
+                                 const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
+                                 at::IntArrayRef padding, at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation)
+{
+    return _calc_conv_transpose(input, weight, bias_opt, stride, padding, output_padding, groups, dilation);
+}
+
+at::Tensor conv_transpose3d(const at::Tensor &input, const at::Tensor &weight, 
+                                 const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
+                                 at::IntArrayRef padding, at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation)
+{
+    return _calc_conv_transpose(input, weight, bias_opt, stride, padding, output_padding, groups, dilation);
+}
+
 at::Tensor &slow_conv_transpose2d_out(const at::Tensor &input, const at::Tensor &weight, at::IntArrayRef kernel_size,
                                       const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
                                       at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation,
