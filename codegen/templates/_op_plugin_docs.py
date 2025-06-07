@@ -255,8 +255,8 @@ import os
 import torch
 import torch_npu
 import numpy as np
-M K N = 128, 1, 16
-x1 = torch.randn((M, N), dtype=torch.float16)
+M, K, N = 128, 1, 16
+x1 = torch.randn((M, K), dtype=torch.float16)
 x2 = torch.randn((K, N), dtype=torch.float16)
 bias =None
 x3 = torch.randn((M, N), dtype=torch.float16)
@@ -273,7 +273,7 @@ import torchair as tng
 from torchair.configs.compiler_config import CompilerConfig
 
 os.environ["ENABLE_ACLNN"] = "false"
-torch_npu.npu.set_compile_mode(jit_compile=True)
+torch_npu.npu.set_compile_mode(jit_compile=False)
 class FusedMatMulModel(nn.Module):
     def __init__(self):
         super().__init__()
