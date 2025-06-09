@@ -418,6 +418,83 @@ inline aclDataType ConvertType(const at::ScalarType scalarType)
     return at_npu::native::OpPreparation::convert_to_acl_data_type(scalarType);
 }
 
+inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
+{
+    static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
+    if (aclCreateTensor == nullptr) {
+        return nullptr;
+    }
+
+    const at::Tensor &at_tensor = tensor_r.tensor_;
+
+    if (!at_tensor.defined()) {
+        return nullptr;
+    }
+    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
+        "Expected all tensors to be on the same device. "
+        "Expected NPU tensor, please check whether the input tensor device is correct.",
+        OPS_ERROR(ErrCode::TYPE));
+
+    aclDataType acl_data_type = tensor_r.dtype;
+    c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperStride = op_infer::array_to_small_vector(at_tensor.strides());
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperShape = op_infer::array_to_small_vector(at_tensor.sizes());
+
+    const auto dimNum = at_tensor.sizes().size();
+    aclFormat format = ACL_FORMAT_ND;
+    if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(at_tensor)) {
+        format = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.npu_format_;
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+                OPS_ERROR(ErrCode::VALUE));
+            storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
+        }
+    } else {
+        switch (dimNum) {
+            case NCL_DIM_NUM:
+                format = ACL_FORMAT_NCL;
+                break;
+            case NCHW_DIM_NUM:
+                format = ACL_FORMAT_NCHW;
+                break;
+            case NCDHW_DIM_NUM:
+                format = ACL_FORMAT_NCDHW;
+                break;
+            default:
+                format = ACL_FORMAT_ND;
+        }
+        // if acl_data_type is ACL_STRING, storageDims is empty.
+        if (acl_data_type != ACL_STRING) {
+            TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
+                        OPS_ERROR(ErrCode::VALUE));
+            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+        }
+    }
+
+    auto acl_tensor =
+        aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
+                        at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                        const_cast<void *>(at_tensor.storage().data()));
+    return acl_tensor;
+}
+
+inline aclTensorList *ConvertType(const TensorListWrapper &tensor_list_wrapper)
+{
+    static const auto aclCreateTensorList = GET_OP_API_FUNC(aclCreateTensorList);
+    if (aclCreateTensorList == nullptr) {
+        return nullptr;
+    }
+
+    std::vector<const aclTensor *> tensor_list(tensor_list_wrapper.tensor_list_.size());
+    for (size_t i = 0; i < tensor_list.size(); i++) {
+        tensor_list[i] = ConvertType(TensorWrapper{
+            tensor_list_wrapper.tensor_list_[i], tensor_list_wrapper.dtype});
+    }
+    auto acl_tensor_list = aclCreateTensorList(tensor_list.data(), tensor_list.size());
+    return acl_tensor_list;
+}
+
 template <typename T> T ConvertType(T value)
 {
     return value;
@@ -884,6 +961,8 @@ void add_param_to_buf(const at::ScalarType);
 void add_param_to_buf(const string &);
 void add_param_to_buf(char *);
 void add_param_to_buf(const char *);
+void add_param_to_buf(const TensorWrapper &tensor_r);
+void add_param_to_buf(const TensorListWrapper &tensor_list_wrapper);
 void add_param_to_buf();
 
 template <typename T, typename... Args> void add_param_to_buf(const T &arg, Args &...args)
