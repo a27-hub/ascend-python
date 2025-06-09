@@ -45,9 +45,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     c10::optional<int64_t> group_list_type
     )
 {
-    TORCH_CHECK(is_nz_format(w),
-                "only support w's format is nz, please upgrade CANN.",
-                OPS_ERROR(ErrCode::PARAM));
+    bool is_weight_nz = is_nz_format(w);
     TORCH_CHECK(group_list_type == 1,
                 "only support group_list_type's value is 1.",
                 OPS_ERROR(ErrCode::PARAM));
@@ -78,7 +76,12 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         output_bs_real = x_m_dim;
     }
     output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
-    output_size[x_dim_num - 1] = w_n_dim;
+    if (w.dtype() == at::kInt) {
+        output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
+    } else {
+        output_size[x_dim_num - 1] = w_n_dim;
+    }
+    
 
     const at::Tensor &scale_real = scale.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
@@ -124,8 +127,14 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     int64_t dtype_real = 0;
 
-    EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNz, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real,
+    if (is_weight_nz) {
+        EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNz, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real,
                  logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
+    } else {
+        EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRouting, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real,
+                 logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
+    }
+
     return result;
 }
 
