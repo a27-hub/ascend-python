@@ -34,6 +34,7 @@ ATB_API_LIST = [
     '_npu_flash_attention_prefix_v2',
     'npu_fused_add_topk_div',
     'npu_ring_mla',
+    'npu_mla_preprocess',
 ]
 
 ATB_MODULE_NAME = 'atb'
