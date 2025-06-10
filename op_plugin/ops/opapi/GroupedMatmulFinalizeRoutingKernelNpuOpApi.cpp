@@ -81,7 +81,6 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     } else {
         output_size[x_dim_num - 1] = w_n_dim;
     }
-    
 
     const at::Tensor &scale_real = scale.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
@@ -129,10 +128,10 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     if (is_weight_nz) {
         EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNz, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real,
-                 logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
+                     logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
     } else {
         EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRouting, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real,
-                 logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
+                     logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
     }
 
     return result;
