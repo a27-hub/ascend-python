@@ -36,6 +36,10 @@ ATB_API_LIST = [
     'npu_ring_mla',
     'npu_self_attention_prefix_encoder',
     'npu_mla_preprocess',
+    '_npu_all_gather_matmul',
+    '_npu_matmul_reduce_scatter',
+    '_npu_alltoallv_all_gather_gmm',
+    '_npu_gmm_reduce_scatter_alltoallv',
 ]
 
 ATB_MODULE_NAME = 'atb'

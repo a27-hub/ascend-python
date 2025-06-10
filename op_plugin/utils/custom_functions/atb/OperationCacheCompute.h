@@ -146,6 +146,28 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::LinearParallelParam> {
+    void operator()(const atb::infer::LinearParallelParam& param) const
+    {
+        add_param_to_buf("transWeight", param.transWeight);
+        add_param_to_buf("rank", param.rank);
+        add_param_to_buf("rankSize", param.rankSize);
+        add_param_to_buf("rankRoot", param.rankRoot);
+        add_param_to_buf("hasResidual", param.hasResidual);
+        add_param_to_buf("backend", param.backend);
+        add_param_to_buf("commMode", param.commMode);
+        add_param_to_buf("type", param.type);
+        add_param_to_buf("keepIntermediate", param.keepIntermediate);
+        add_param_to_buf("commDomain", param.commDomain);
+        add_param_to_buf("quantType", param.quantType);
+        add_param_to_buf("outDataType", param.outDataType);
+        add_param_to_buf("localExpertNums", param.moeInfo.localExpertNums);
+        add_param_to_buf("epSize", param.moeInfo.epSize);
+        add_param_to_buf("tpSize", param.moeInfo.tpSize);
+    }
+};
+
 template <typename T>
 uint64_t computeHash(const T& obj)
 {
