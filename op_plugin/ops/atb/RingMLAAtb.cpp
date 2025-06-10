@@ -81,7 +81,7 @@ void _npu_ring_mla(const at::Tensor &q_nope, const at::Tensor &q_rope,
   ringMLAParam.qkScale = qk_scale_float;
   ringMLAParam.kernelType = static_cast<RingMLAParam::KernelType>(kernel_type);
   ringMLAParam.inputLayout =
-      static_cast<RingMLAParam::InputLayout>(input_layout);
+      static_cast<atb::infer::InputLayout>(input_layout);
 
   ParamSetter paramsetter;
   paramsetter.Input(q_nope)
