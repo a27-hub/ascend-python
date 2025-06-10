@@ -17,6 +17,17 @@
 
 using namespace std;
 namespace atb {
+template <typename MapType>
+inline int get_op_mode(const MapType &mode_map,
+                       c10::optional<c10::string_view> mode_opt,
+                       c10::string_view default_mode, const char *mode_name) {
+  c10::string_view mode_str = mode_opt.value_or(default_mode);
+  auto it = mode_map.find(mode_str);
+  TORCH_CHECK(it != mode_map.end(), "Unsupported ", mode_name, " value: '",
+              mode_str, "'");
+  return it->second;
+}
+
 using RingMLAParam = atb::infer::RingMLAParam;
 namespace {
 std::unordered_map<c10::string_view, int> kernel_type_map = {
@@ -35,15 +46,14 @@ std::tuple<int, int, int, int> get_ring_mode(
     c10::optional<c10::string_view> mask_type_opt,
     c10::optional<c10::string_view> input_layout_opt,
     c10::optional<c10::string_view> calc_type_opt) {
-  int kernel_type =
-      atb::utils::get_op_mode(kernel_type_map, kernel_type_opt,
-                              "kernel_type_high_precision", "kernel_type");
-  int mask_type = atb::utils::get_op_mode(mask_type_map, mask_type_opt,
-                                          "no_mask", "mask_type");
-  int input_layout = atb::utils::get_op_mode(input_layout_map, input_layout_opt,
-                                             "type_bsnd", "input_layout");
-  int calc_type = atb::utils::get_op_mode(calc_type_map, calc_type_opt,
-                                          "calc_type_first_ring", "calc_type");
+  int kernel_type = get_op_mode(kernel_type_map, kernel_type_opt,
+                                "kernel_type_high_precision", "kernel_type");
+  int mask_type =
+      get_op_mode(mask_type_map, mask_type_opt, "no_mask", "mask_type");
+  int input_layout = get_op_mode(input_layout_map, input_layout_opt,
+                                 "type_bsnd", "input_layout");
+  int calc_type = get_op_mode(calc_type_map, calc_type_opt,
+                              "calc_type_first_ring", "calc_type");
 
   return std::make_tuple(kernel_type, mask_type, input_layout, calc_type);
 }
@@ -80,8 +90,7 @@ void _npu_ring_mla(const at::Tensor &q_nope, const at::Tensor &q_rope,
   ringMLAParam.kvHeadNum = kv_head_num;
   ringMLAParam.qkScale = qk_scale_float;
   ringMLAParam.kernelType = static_cast<RingMLAParam::KernelType>(kernel_type);
-  ringMLAParam.inputLayout =
-      static_cast<atb::infer::InputLayout>(input_layout);
+  ringMLAParam.inputLayout = static_cast<atb::infer::InputLayout>(input_layout);
 
   ParamSetter paramsetter;
   paramsetter.Input(q_nope)
