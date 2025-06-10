@@ -22,7 +22,6 @@ API_LIST = [
     '_npu_flash_attention_qlens',
     '_npu_paged_cache_load',
     '_npu_ring_mla',
-    '_npu_ring_mla_ring',
 ]
 
 
