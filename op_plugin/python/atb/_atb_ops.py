@@ -20,6 +20,7 @@ API_LIST = [
     '_npu_flash_attention_unpad',
     '_npu_paged_attention_splitfuse',
     '_npu_flash_attention_qlens',
+    '_npu_topk_topp_sampling',
 ]
 
 
