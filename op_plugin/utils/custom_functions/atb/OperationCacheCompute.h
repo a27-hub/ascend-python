@@ -87,7 +87,7 @@ struct HashOpParam<atb::infer::TopkToppSamplingParam> {
         add_param_to_buf("randSeeds", param.randSeeds);
         add_param_to_buf("randSeed", param.randSeed);
         add_param_to_buf("topk", param.topk);
-	add_param_to_buf("logProbsSize", param.logProbsSize);
+	    add_param_to_buf("logProbsSize", param.logProbsSize);
     }
 };
 
