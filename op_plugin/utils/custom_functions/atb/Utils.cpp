@@ -83,4 +83,3 @@ aclFormat GetFormatForAtb(const at::Tensor &at_tensor)
 }
 }  // namespace utils
 }  // namespace atb
-ß
