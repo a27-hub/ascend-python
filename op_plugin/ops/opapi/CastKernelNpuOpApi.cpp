@@ -27,6 +27,7 @@ at::Tensor npu_dtype_cast_impl_op_api(const at::Tensor& self, at::ScalarType dty
     if (self.dtype() == dtype) {
         return self.clone();
     }
+
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(),
                                                                      self.options().dtype(dtype));
