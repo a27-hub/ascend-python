@@ -86,7 +86,7 @@ int64_t CheckAndGetGroups(at::IntArrayRef group_size_list, const at::Tensor& x1,
         return groups;
     }
     size_t group_dim = group_size_list.size();
-    static const uint64_t group_max = 65535UL; // group_m, group_n, group_k 不能超过16位能表示的最大值
+    static const int64_t group_max = 65535L; // group_m, group_n, group_k 不能超过16位能表示的最大值
     if (group_dim != 3) {
         TORCH_CHECK(false,
             "Invalid group_sizes, group_sizes only support three-dimensional, actual is %d",
