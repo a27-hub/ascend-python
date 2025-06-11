@@ -25,14 +25,19 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor);
 atb::Context* GetContext(aclrtStream stream);
 at::Tensor GetWorkspaceTensor(uint64_t workspaceSize, aclrtStream stream);
 uint64_t OperationSetup(atb::VariantPack variantPack, atb::Operation *operation, atb::Context* contextPtr);
+
+struct TensorMaintainer {
+    c10::SmallVector<at::Tensor, N> contiguous_tensors;     // npu tensors' life should be maintain when uncontiguous to contiguous.
+    c10::SmallVector<at::Tensor, N> cpu_tensors;            // cpu tensors' life should be maintain in taskqueue.
+};
+
 class ParamSetter {
 public:
     ParamSetter& Input(const at::Tensor &tensor);
     ParamSetter& Input(const c10::optional<at::Tensor> &tensor);
     ParamSetter& Output(at::Tensor &tensor);
     atb::VariantPack variantPack;
-private:
-    c10::SmallVector<at::Tensor, N> tensorMaintainer;
+    TensorMaintainer tensorMaintainer; // Maintain the life of tensors.
 };
 
 class ContextManager {

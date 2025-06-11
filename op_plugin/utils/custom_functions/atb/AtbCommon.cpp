@@ -71,7 +71,8 @@ void RunAtbCmd(atb::Operation *op, const ParamSetter &paramsetter, const std::st
 {
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
     atb::VariantPack variantPack = paramsetter.variantPack;
-    auto acl_call = [op, variantPack, stream]() -> int {
+    const c10::SmallVector<at::Tensor, N>& cpu_tensors = paramsetter.tensorMaintainer.cpu_tensors;
+    auto acl_call = [op, variantPack, stream, cpu_tensors]() -> int {
         auto contextPtr = GetContext(stream);
         uint64_t workspaceSize = OperationSetup(variantPack, op, contextPtr);
         at::Tensor workspaceTensor;
@@ -93,18 +94,19 @@ ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
         variantPack.inTensors.push_back(atb::Tensor());
         return *this;
     }
-    at::Tensor newTensor = tensor;
+
+    at::Tensor newTensor = tensor.contiguous();;
     if (torch_npu::utils::is_npu(newTensor)) {
         newTensor = FormatTrans(tensor);
-    }
-
-    if (!newTensor.is_contiguous()) {
-        newTensor = newTensor.contiguous();
     }
     auto AtTensor = AtTensor2AtbTensor(newTensor);
 
     variantPack.inTensors.push_back(AtTensor);
-    tensorMaintainer.emplace_back(std::move(newTensor));
+    if (newTensor.device().type() == at::kCPU) {
+        tensorMaintainer.cpu_tensors.emplace_back(std::move(newTensor));
+    } else {
+        tensorMaintainer.contiguous_tensors.emplace_back(std::move(newTensor));
+    }
     return *this;
 }
 
