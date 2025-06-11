@@ -59,8 +59,8 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
         changeDScale = changeDForInt32;
     }
     // fp4 伪装成 uint8
-    if (torch_npu::te::GetAclDataType(value_dtype.value()) == aclDataType::ACL_FLOAT4_E1M2 ||
-        torch_npu::te::GetAclDataType(value_dtype.value()) == aclDataType::ACL_FLOAT4_E2M1)
+    if (value_dtype.has_value() && (torch_npu::te::GetAclDataType(value_dtype.value()) == aclDataType::ACL_FLOAT4_E1M2 ||
+        torch_npu::te::GetAclDataType(value_dtype.value()) == aclDataType::ACL_FLOAT4_E2M1))
     {
         changeDScale = changeDForFP4;
     }
