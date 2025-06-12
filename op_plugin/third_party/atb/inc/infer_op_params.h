@@ -340,6 +340,34 @@ struct GroupTopkParam {
     uint8_t rsv[12] = {0};
 };
 
+struct PagedCacheLoadParam {
+    //!
+    //! \enum KvCacheType
+    //!
+    //! \brief KvCache配置
+    //!
+    //! \note 默认值为K_CACHE_V_CACHE(0)，传入key_cache和value_cache
+    //!
+    enum KvCacheType : int8_t {
+        PAGED_CACHE_LOAD_ND = 0, //!< 默认值,传入key_cache和value_cache,且为ND格式
+        PAGED_CACHE_LOAD_NZ,    //!< 传入key_cache和value_cache,且为NZ格式
+    };
+    //! KvCacheType 配置
+    KvCacheType kvCacheType = PAGED_CACHE_LOAD_ND;
+    //!
+    //! \brief 是否使用batch输入为累加和模式
+    //!
+    bool cuSeqLens = false;
+    //!
+    //! \brief 是否提供batch在blocktable中对应起始位置
+    //!
+    bool hasSeqStarts = false;
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[61] = {0};
+};
+
 //!
 //! \brief PagedAttention.
 //!

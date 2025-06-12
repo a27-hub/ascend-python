@@ -46,6 +46,7 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
     atb::Tensor tensor;
     tensor.desc.format = ACL_FORMAT_ND;
     if (atTensor.device().type() == at::kCPU) {
+
         tensor.hostData = atTensor.data_ptr();
     } else {
         tensor.deviceData = atTensor.data_ptr();
@@ -69,16 +70,17 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
 void RunAtbCmd(atb::Operation *op, const ParamSetter &paramsetter, const std::string &name)
 {
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
-    auto acl_call = [=]() -> int {
+    atb::VariantPack variantPack = paramsetter.variantPack;
+    auto acl_call = [op, variantPack, stream]() -> int {
         auto contextPtr = GetContext(stream);
-        uint64_t workspaceSize = OperationSetup(paramsetter.variantPack, op, contextPtr);
+        uint64_t workspaceSize = OperationSetup(variantPack, op, contextPtr);
         at::Tensor workspaceTensor;
         void *workspacePtr = nullptr;
         if (workspaceSize != 0) {
             workspaceTensor = GetWorkspaceTensor(workspaceSize, stream);
             workspacePtr = const_cast<void *>(workspaceTensor.storage().data());
         }
-        auto st = op->Execute(paramsetter.variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
     at_npu::native::OpCommand::RunOpApi(name, acl_call);
@@ -102,6 +104,7 @@ ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
     auto AtTensor = AtTensor2AtbTensor(newTensor);
 
     variantPack.inTensors.push_back(AtTensor);
+    tensorMaintainer.emplace_back(std::move(newTensor));
     return *this;
 }
 

@@ -20,7 +20,7 @@
 #include "op_plugin/utils/custom_functions/atb/OperationCreate.h"
 
 namespace atb {
-
+const int N = 32;
 atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor);
 atb::Context* GetContext(aclrtStream stream);
 at::Tensor GetWorkspaceTensor(uint64_t workspaceSize, aclrtStream stream);
@@ -31,6 +31,8 @@ public:
     ParamSetter& Input(const c10::optional<at::Tensor> &tensor);
     ParamSetter& Output(at::Tensor &tensor);
     atb::VariantPack variantPack;
+private:
+    c10::SmallVector<at::Tensor, N> tensorMaintainer;
 };
 
 class ContextManager {
