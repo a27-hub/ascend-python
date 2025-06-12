@@ -41,6 +41,16 @@ class TestFusedInferAttentionScore(TestCase):
         scale = 1 / 0.0078125
         return torch_npu.npu_fused_infer_attention_score(
             query, key, value, num_heads=32, input_layout="TND", scale=scale, pre_tokens=65535, next_tokens=65535, softmax_lse_flag=softmax_lse_flag)
+
+    def custom_op_exec_ntd_tnd(self, query, key, value, head_dim, softmax_lse_flag):
+        scale = 1 / 0.0078125
+        return torch_npu.npu_fused_infer_attention_score(
+            query, key, value, num_heads=32, input_layout="NTD_TND", scale=scale, pre_tokens=65535, next_tokens=65535, softmax_lse_flag=softmax_lse_flag)
+
+    def custom_op_exec_tnd_ntd(self, query, key, value, head_dim, softmax_lse_flag):
+        scale = 1 / 0.0078125
+        return torch_npu.npu_fused_infer_attention_score(
+            query, key, value, num_heads=32, input_layout="TND_NTD", scale=scale, pre_tokens=65535, next_tokens=65535, softmax_lse_flag=softmax_lse_flag)
     
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
@@ -131,11 +141,23 @@ class TestFusedInferAttentionScore(TestCase):
 
         head_dim = 512
         softmax_lse_flag = True
-        scale = 1 / 0.0078125
-        custom_output = torch_npu.npu_fused_infer_attention_score(
-            query, key, value, num_heads=32, input_layout="TND_NTD", scale=scale, pre_tokens=65535,
-            next_tokens=65535, softmax_lse_flag=softmax_lse_flag)
+        supported_output, lse_out = self.supported_op_exec(query, key, value, head_dim, 1, 32, 1, softmax_lse_flag)
+        custom_output = self.custom_op_exec_tnd_ntd(query, key, value, head_dim, True)
+        attention_output = custom_output[0]
+        softmaxlse_output = custom_output[1]
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_fused_infer_attention_score_ntd_tnd(self, device="npu"):
+        query = torch.randn(1, 32, 1, 128, dtype=torch.float16).npu()
+        key = torch.randn(1, 32, 2048, 128, dtype=torch.float16).npu()
+        value = torch.randn(1, 32, 2048, 128, dtype=torch.float16).npu()
+
+        head_dim = 128
+        softmax_lse_flag = True
+
+        supported_output, lse_out = self.supported_op_exec(query, key, value, head_dim, 1, 32, 1, softmax_lse_flag)
+        custom_output = self.custom_op_exec_ntd_tnd(query, key, value, head_dim, True)
         attention_output = custom_output[0]
         softmaxlse_output = custom_output[1]
 
