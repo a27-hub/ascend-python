@@ -47,7 +47,7 @@ void _npu_paged_cache_load(const at::Tensor &key_cache_tensor, const at::Tensor 
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_paged_cache_load(Tensor key_cache_tensor, Tensor value_cache_tensor, Tensor block_table_tensor, Tensor context_lens, Tensor seq_starts, Tensor(a!) out_key_tensor, Tensor(b!) out_value_tensor) -> ()");
+    m.def("_npu_paged_cache_load(Tensor key_cache_tensor, Tensor value_cache_tensor, Tensor block_table_tensor, Tensor context_lens, Tensor seq_starts, Tensor(a!) key, Tensor(b!) value) -> ()");
 }
 }
 
