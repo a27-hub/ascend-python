@@ -81,6 +81,11 @@ void create_new_tensor_batch(std::vector<at::Tensor> &y, size_t batch, size_t di
     y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
 }
 
+const std::string GmmTypeToString(int64_t input_type) {
+    return torch_npu::te::IsTEDType(input_type) ?
+               torch_npu::te::TeDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
+}
+
 #if VERSION_BETWEEN(V1R11, V1R11)
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
@@ -291,23 +296,23 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 
     if (x_dtype.has_value()) {
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
-                    "The optional parameter x_dtype only supports hifloat8 when passed in, but now is ",
-                    x_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter x_dtype only supports hifloat8 or None, but now is ",
+                    GmmTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
-                   "The optional parameter weight_dtype only supports hifloat8 when passed in, but now is ",
-                   weight_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                   "The optional parameter weight_dtype only supports hifloat8 or None, but now is ",
+                   GmmTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (scale_dtype.has_value()) {
         TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
-                  "The optional parameter scale_dtype only supports float8_e8m0 when passed in, but now is ",
-                  scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                  "The optional parameter scale_dtype only supports float8_e8m0 or None, but now is ",
+                  GmmTypeToString(scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (per_token_scale_dtype.has_value()) {
         TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
-                 "The optional parameter per_token_scale_dtype only supports float8_e8m0 when passed in, but now is ",
-                 per_token_scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                 "The optional parameter per_token_scale_dtype only supports float8_e8m0 or None, but now is ",
+                 GmmTypeToString(per_token_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     auto num_x = x.size();
@@ -444,18 +449,23 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 {
     if (x_dtype.has_value()) {
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
-                    "The optional parameter x_dtype only supports hifloat8 when passed in, but now is ",
-                    x_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter x_dtype only supports hifloat8 or None, but now is ",
+                    GmmTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_HIFLOAT8),
-                   "The optional parameter weight_dtype only supports hifloat8 when passed in, but now is ",
-                   weight_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                   "The optional parameter weight_dtype only supports hifloat8 or None, but now is ",
+                   GmmTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (scale_dtype.has_value()) {
         TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
-                  "The optional parameter scale_dtype only supports float8_e8m0 when passed in, but now is ",
-                  scale_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                  "The optional parameter scale_dtype only supports float8_e8m0 or None, but now is ",
+                  GmmTypeToString(scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (per_token_scale_dtype.has_value()) {
+        TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(torch_npu::te::DType::TE_FLOAT8_E8M0),
+                  "The optional parameter per_token_scale_dtype only supports float8_e8m0 or None, but now is ",
+                  GmmTypeToString(per_token_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     auto num_x = x.size();
