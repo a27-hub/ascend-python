@@ -22,7 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor npu_index_with_tensor(const at::Tensor &x, const at::Tensor &indices0, const at::Tensor &indices1)
 {
-    auto indices0_size = indices1.sizes();
+    auto indices1_size = indices1.sizes();
     int n = indices1_size[0];
     int k = indices1_size[1];
     at::Tensor y = npu_preparation::apply_tensor_without_format(x, {n, k});
