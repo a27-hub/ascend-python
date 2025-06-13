@@ -310,7 +310,7 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 def npu_npu_index_with_tensor_meta(x, indices0, indices1):
     n = indices1.size(0)
     k = indices1.size(1)
-    return torch.new_empty(tuple([n, k], dtype=torch.int32))
+    return x.new_empty(tuple([n, k]), dtype=torch.int32)
 
 
 @impl(m, "npu_moe_init_routing_v2")
