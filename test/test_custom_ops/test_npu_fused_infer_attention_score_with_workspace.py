@@ -37,6 +37,10 @@ class TestFusedInferAttentionScoreWithWorkspace(TestCase):
         workspace = torch_npu._npu_fused_infer_attention_score_get_max_workspace(
             query, key, value, num_heads=32, input_layout="BNSD", scale=scale, pre_tokens=65535, next_tokens=65535,
             softmax_lse_flag=softmax_lse_flag)
+        workspace_size = torch_npu._npu_fused_infer_attention_score_get_max_workspace_size(
+            query, key, value, num_heads=32, input_layout="BNSD", scale=scale, pre_tokens=65535, next_tokens=65535,
+            softmax_lse_flag=softmax_lse_flag)
+        self.assertEqual(workspace.size(), workspace_size)
 
         attention_out = torch.randn(query.size(), dtype=torch.float16).npu()
         if softmax_lse_flag:
