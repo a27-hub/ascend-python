@@ -374,7 +374,7 @@ int64_t _npu_fused_infer_attention_score_get_max_workspace_size_symint(
 
     // construct the output tensor
     std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, value, input_layout_str,
-                                                                                        quant_scale2, num_heads,
+                                                                                        quant_scale2, block_table, num_heads,
                                                                                         softmax_lse_flag);
     at::Tensor output = std::get<0>(fia_output);
     at::Tensor softmax_lse = std::get<1>(fia_output);
