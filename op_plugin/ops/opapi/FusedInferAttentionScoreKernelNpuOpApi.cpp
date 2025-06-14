@@ -336,7 +336,7 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
     return workspace_tensor;
 }
 
-uint64_t _npu_fused_infer_attention_score_get_max_workspace_size_symint(
+int64_t _npu_fused_infer_attention_score_get_max_workspace_size_symint(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const c10::optional<at::Tensor> &pse_shift,
     const c10::optional<at::Tensor> &atten_mask,
@@ -401,7 +401,7 @@ uint64_t _npu_fused_infer_attention_score_get_max_workspace_size_symint(
         quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
         value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
         num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
-    return workspace_tensor;
+    return static_cast<int64_t>(workspace_size);
 }
 #endif
 } // namespace op_api
