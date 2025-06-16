@@ -265,9 +265,9 @@ at::Tensor npu_quant_matmul(const at::Tensor& x1, const at::Tensor& x2, const at
             TensorWrapper x2_wrapper = {x2, (x2_dtype.has_value()) ?
                 torch_npu::te::GetAclDataType(x2_dtype.value()) :
                 npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
-            TensorWrapper x1_scale_wrapper = {pertoken_scale.value(), (pertoken_scale_dtype.has_value()) ?
+            TensorWrapper x1_scale_wrapper = {pertoken_scale_real, (pertoken_scale_dtype.has_value()) ?
                 torch_npu::te::GetAclDataType(pertoken_scale_dtype.value()) :
-                npu_preparation::convert_to_acl_data_type(pertoken_scale.value().scalar_type())};
+                npu_preparation::convert_to_acl_data_type(pertoken_scale_real.scalar_type())};
             TensorWrapper x2_scale_wrapper = {scale, (scale_dtype.has_value()) ?
                 torch_npu::te::GetAclDataType(scale_dtype.value()) :
                 npu_preparation::convert_to_acl_data_type(scale.scalar_type())};
