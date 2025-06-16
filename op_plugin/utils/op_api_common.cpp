@@ -392,8 +392,8 @@ void add_param_to_buf_v2(TensorStructPtr at_tensor)
     // view shape
     MEMCPY_TO_BUF((*at_tensor).sizes.data(), static_cast<int64_t>((*at_tensor).sizes.size() * sizeof(int64_t)));
     // data type
-    auto st = (*at_tensor).scalar_type;
-    MEMCPY_TO_BUF(&st, sizeof(st));
+    auto acl_data_type = (*at_tensor).acl_type;
+    MEMCPY_TO_BUF(&acl_data_type, sizeof(acl_data_type));
     // seperator
     MEMCPY_TO_BUF(",", 1);
     // strides
@@ -402,7 +402,6 @@ void add_param_to_buf_v2(TensorStructPtr at_tensor)
     auto so = (*at_tensor).storage_offset;
     MEMCPY_TO_BUF(&so, sizeof(so));
     // storage shape
-    aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(st);
     c10::SmallVector<int64_t, 5> storageDims;
     if (acl_data_type != ACL_STRING) {
         TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
