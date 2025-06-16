@@ -1080,13 +1080,14 @@ tensor([[[[0.0000, 0.0639, 0.0000,  ..., 0.0000, 0.0000, 0.0000],
 _add_torch_npu_docstr(
     "npu_dtype_cast",
     """
-torch_npu.npu_dtype_cast(input, dtype) -> Tensor
+torch_npu.npu_dtype_cast(input, dtype, input_dtype=None) -> Tensor
 功能描述
 执行张量数据类型(dtype)转换。支持FakeTensor模式。
 
 参数说明
 input (Tensor) - 输入张量。
-dtype (torch.dtype) - 返回张量的目标数据类型。
+dtype (int) - 返回张量的目标数据类型。
+input_dtype (int) - 输入张量的数据类型， 默认值为None。为None时，采用输入张量原本的数据类型。
 示例
 示例一：
 

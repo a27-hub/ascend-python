@@ -394,7 +394,10 @@
   "func: npu_bmmV2(Tensor self, Tensor mat2, int[] output_sizes) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor": {
+  "func: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_silu(Tensor self) -> Tensor": {
@@ -502,7 +505,10 @@
   "func: npu_scaled_masked_softmax_backward(Tensor y_grad, Tensor y, Tensor mask, Scalar scale, bool fixed_triu_mask) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
+  "func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype, int? grad_dtype=None, int? input_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_binary_cross_entropy_with_logits_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight_opt, Tensor? pos_weight_opt, int reduction) -> Tensor": {
