@@ -6411,6 +6411,14 @@ custom:
     op_api: all_version
     tags: nondeterministic_seeded
 
+  - func: _npu_dropout_gen_mask_v2(Tensor(a!) self, int[] size, float p, *, bool? parallel=True, bool? sync=None) -> (Tensor, Tensor)
+    op_api: all_version
+    tags: nondeterministic_seeded
+
+  - func: _npu_dropout_gen_mask_v3(Tensor(a!) bitmask, int[] size, float p, int seed, int offset) -> ()
+    op_api: all_version
+    tags: nondeterministic_seeded
+
   - func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor
     acl_op: all_version
 
