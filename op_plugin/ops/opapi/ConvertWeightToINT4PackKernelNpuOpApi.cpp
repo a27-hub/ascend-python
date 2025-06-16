@@ -24,6 +24,26 @@ const int64_t INT4_NUMS_IN_INT32 = 8;
 const int64_t WEIGHT_SHAPE_SIZE = 2;
 const int64_t CUBE_BLOCK_SIZE = 16;
 const int64_t C0_SIZE_INT32 = 8;
+const uint32_t FP32_TO_FP4_MASK = 0xFFC00000;
+const std::unordered_map<uint32_t, uint32_t> FP32_BIT_TO_FP4_E2M1 = {
+    {0x00000000, 0b0000}, // 0.0
+    {0x3F000000, 0b0001}, // 0.5
+    {0x3F800000, 0b0010}, // 1.0
+    {0x3FC00000, 0b0011}, // 1.5
+    {0x40000000, 0b0100}, // 2.0
+    {0x40400000, 0b0101}, // 3.0
+    {0x40800000, 0b0110}, // 4.0
+    {0x40C00000, 0b0111}, // 6.0
+
+    {0x80000000, 0b1000}, // -0.0
+    {0xBF000000, 0b1001}, // -0.5
+    {0xBF800000, 0b1010}, // -1.0
+    {0xBFC00000, 0b1011}, // -1.5
+    {0xC0000000, 0b1100}, // -2.0
+    {0xC0400000, 0b1101}, // -3.0
+    {0xC0800000, 0b1110}, // -4.0
+    {0xC0C00000, 0b1111}, // -6.0
+};
 
 void convert_to_int4_pack(const std::vector<int32_t>& weight_data, std::vector<int32_t>& weight_int4pack_data)
 {
@@ -40,6 +60,34 @@ void convert_to_int4_pack(const std::vector<int32_t>& weight_data, std::vector<i
 
         weight_int4pack_data[i] = (a & 0xF) | (b & 0xF) << 4 | (c & 0xF) << 8 | (d & 0xF) << 12 |
                                 (e & 0xF) << 16 | (f & 0xF) << 20 | (g & 0xF) << 24 | (h & 0xF) << 28;
+    }
+}
+
+uint32_t convert_fp32_to_fp4_e2m1(int32_t data)
+{
+    uint32_t fp32_bits = data & FP32_TO_FP4_MASK;
+    auto it = FP32_BIT_TO_FP4_E2M1.find(fp32_bits);
+    if (it != FP32_BIT_TO_FP4_E2M1.end()) {
+        return it->second;
+    }
+    return 0b0000;
+}
+
+void convert_to_fp4_pack(const std::vector<int32_t> &weight_data, std::vector<int32_t> &weight_fp4pack_data)
+{
+    size_t n = weight_fp4pack_data.size();
+    for (size_t i = 0; i < n; ++i) {
+        uint32_t num1 = convert_fp32_to_fp4_e2m1(weight_data[i * 8]);
+        uint32_t num2 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 1]);
+        uint32_t num3 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 2]);
+        uint32_t num4 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 3]);
+        uint32_t num5 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 4]);
+        uint32_t num6 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 5]);
+        uint32_t num7 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 6]);
+        uint32_t num8 = convert_fp32_to_fp4_e2m1(weight_data[i * 8 + 7]);
+
+        weight_fp4pack_data[i] = (num1 & 0xF) | (num2 & 0xF) << 4 | (num3 & 0xF) << 8 | (num4 & 0xF) << 12 |
+                                 (num5 & 0xF) << 16 | (num6 & 0xF) << 20 | (num7 & 0xF) << 24 | (num8 & 0xF) << 28;
     }
 }
 
@@ -73,8 +121,8 @@ inline void int4pack_params_check(const at::Tensor &weight)
                 weight_dim_num, OPS_ERROR(ErrCode::PARAM));
 
     auto weight_dtype = weight.dtype();
-    TORCH_CHECK(weight_dtype == at::kInt, "weight dtype only support int32, but it is ", weight_dtype,
-                OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(weight_dtype == at::kInt || weight_dtype == at::kFloat,
+        "weight dtype only support int32 and float32, but it is ", weight_dtype, OPS_ERROR(ErrCode::TYPE));
 
     auto weight_first_dim = weight.size(weight_dim_num - 2);
     auto weight_last_dim = weight.size(weight_dim_num - 1);
@@ -84,27 +132,126 @@ inline void int4pack_params_check(const at::Tensor &weight)
                 weight_last_dim, OPS_ERROR(ErrCode::PARAM));
 }
 
+int64_t get_element_size(const at::Tensor &tensor)
+{
+    int64_t shape_size = 1;
+    for (auto idx = 0; idx < tensor.dim(); ++idx) {
+        shape_size *= tensor.size(idx);
+    }
+    return shape_size;
+}
+
+at::Tensor npu_convert_weight_to_int4pack_910_95(const at::Tensor &weight)
+{
+    // 1）int32（int4）ND/NZ
+    // 2）float32（float4_e2m1）ND/NZ
+
+    auto weight_dim_num = weight.dim();
+    auto weight_first_dim = weight.size(weight_dim_num - 2);
+    auto weight_last_dim = weight.size(weight_dim_num - 1);
+    int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
+    bool weight_nz_flag = (weight_format == ACL_FORMAT_FRACTAL_NZ) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
+    int64_t weight_elem_size = get_element_size(weight);
+    int64_t weight_bytes = weight_elem_size * sizeof(int32_t);
+
+    // device to host
+    at::Tensor weight_cpu;
+    std::vector<int32_t> weight_data(weight_elem_size, 0);
+    if (weight_nz_flag) {
+        c10_npu::NPUStream stream = c10_npu::getCurrentNPUStream();
+        OPS_CHECK_ERROR(c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream));
+        TORCH_CHECK(weight.storage().unsafeGetStorageImpl() != nullptr, "Failed to get weight storage pointer",
+            OPS_ERROR(ErrCode::PARAM));
+        NPU_CHECK_ERROR(aclrtMemcpy(weight_data.data(), weight_bytes, weight.storage().unsafeGetStorageImpl()->data(),
+            weight_bytes, ACL_MEMCPY_DEVICE_TO_HOST));
+    } else {
+        weight_cpu = weight.to("cpu");
+        if (weight.dtype() == at::kInt) {
+            weight_data = std::vector<int32_t>(
+                weight_cpu.data_ptr<int32_t>(), weight_cpu.data_ptr<int32_t>() + weight_cpu.numel());
+        } else {
+            std::vector<float> weight_data_f32(
+                weight_cpu.data_ptr<float>(), weight_cpu.data_ptr<float>() + weight_cpu.numel());
+            weight_data.resize(weight_data_f32.size(), 0);
+            std::memcpy(weight_data.data(), weight_data_f32.data(), weight_data_f32.size() * sizeof(float));
+        }
+    }
+
+    // pack
+    std::vector<int32_t> packed_weight(weight_data.size() / INT4_NUMS_IN_INT32, 0);
+    if (weight.dtype() == at::kInt) {
+        // store 8 int4 numbers in sequence into an int32
+        convert_to_int4_pack(weight_data, packed_weight);
+    } else {
+        // store 8 fp4_e2m1 numbers in sequence into an float32
+        convert_to_fp4_pack(weight_data, packed_weight);
+    }
+
+    // update packed shape, last dim is divided by 8
+    std::vector<int64_t> weight_packed_shape;
+    if (weight_nz_flag) {
+        auto storage_shape = torch_npu::NPUBridge::GetNpuStorageImpl(weight)->npu_desc_.storage_sizes_;
+        auto dim_num = storage_shape.size();
+        TORCH_CHECK(dim_num > 1, "nz storage shape dim should be greater than 1", OPS_ERROR(ErrCode::PARAM));
+        for (auto data : storage_shape) {
+            weight_packed_shape.push_back(data);
+        }
+        weight_packed_shape[dim_num - 1] = op_infer::CeilDiv(weight_packed_shape[dim_num - 1], INT4_NUMS_IN_INT32);
+    } else {
+        weight_packed_shape = {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32};
+    }
+
+    // host to device
+    auto weight_packed_vec = op_infer::array_to_small_vector(weight_packed_shape);
+    c10::TensorOptions weight_packed_option = weight.options().dtype(weight.dtype());
+    at::Tensor weight_packed_npu =
+        npu_preparation::apply_tensor_without_format(weight_packed_vec, weight_packed_option);
+    if (weight_nz_flag) {
+        // copy_ does not support internal format, use aclrtMemcpy instead
+        c10_npu::NPUStream stream = c10_npu::getCurrentNPUStream();
+        OPS_CHECK_ERROR(c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream));
+        TORCH_CHECK(weight_packed_npu.storage().unsafeGetStorageImpl() != nullptr,
+            "Failed to get weight_packed_npu storage pointer", OPS_ERROR(ErrCode::PARAM));
+        int64_t weight_packed_bytes = get_element_size(weight_packed_npu) * sizeof(int32_t);
+        NPU_CHECK_ERROR(aclrtMemcpy(const_cast<void *>(weight_packed_npu.storage().unsafeGetStorageImpl()->data()),
+            weight_packed_bytes, packed_weight.data(), weight_packed_bytes, ACL_MEMCPY_HOST_TO_DEVICE));
+
+        auto &weight_packed_npu_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(weight_packed_npu);
+        weight_packed_npu_desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
+        weight_packed_npu_desc.origin_format_ = ACL_FORMAT_ND;
+        weight_packed_npu_desc.base_sizes_ = {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32};
+        weight_packed_npu_desc.base_strides_ = {weight_last_dim / INT4_NUMS_IN_INT32, 1};
+        weight_packed_npu.set_(weight_packed_npu.storage(), 0, {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32},
+            {weight_last_dim / INT4_NUMS_IN_INT32, 1});
+    } else {
+        c10::TensorOptions options_cpu = weight_cpu.options().dtype(weight.dtype());
+        at::Tensor weight_packed_cpu = at::from_blob(packed_weight.data(), weight_packed_shape, options_cpu);
+        weight_packed_npu.copy_(weight_packed_cpu);
+    }
+
+    return weight_packed_npu;
+}
+
 at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inner_k_tiles)
 {
     int4pack_params_check(weight);
+    if (c10_npu::IsAscend910_95Version()) {
+        return npu_convert_weight_to_int4pack_910_95(weight);
+    }
     auto weight_dim_num = weight.dim();
     auto weight_first_dim = weight.size(weight_dim_num - 2);
     auto weight_last_dim = weight.size(weight_dim_num - 1);
     int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
     at::Tensor weight_nd;
-    at::Tensor weight_cpu;
-    bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) || (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_16);
-    // Ascend910_95 only pack, nz does not modify c0 size
-    bool nz_only_pack = c10_npu::IsAscend910_95Version();
-    // trans nd to nz on cpu, because the c0 size of int32(int4pack) fractal_nz is 8, which is not support yet on npu
-    if (is_weight_nz && !nz_only_pack) {
+    bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ);
+    if (is_weight_nz) {
         weight_nd = at_npu::native::custom_ops::npu_format_cast(weight, ACL_FORMAT_ND, c10::nullopt);
-        weight_cpu = weight_nd.to("cpu");
-    } else {
-        weight_cpu = weight.to("cpu");
     }
 
-    std::vector<int32_t> weight_data(weight_cpu.data_ptr<int32_t>(), weight_cpu.data_ptr<int32_t>() + weight_cpu.numel());
+    // trans nd to nz on cpu, because the c0 size of int32(int4pack) fractal_nz is 8, which is not support yet on npu
+    at::Tensor weight_cpu = is_weight_nz ? weight_nd.to("cpu") : weight.to("cpu");
+    std::vector<int32_t> weight_data(
+        weight_cpu.data_ptr<int32_t>(), weight_cpu.data_ptr<int32_t>() + weight_cpu.numel());
     // store 8 int4 numbers in sequence into an int32
     std::vector<int32_t> weight_int4pack_data(weight_data.size() / INT4_NUMS_IN_INT32, 0);
     std::vector<int64_t> weight_int4pack_shape = {weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32};
@@ -112,25 +259,9 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     convert_to_int4_pack(weight_data, weight_int4pack_data);
 
     if (is_weight_nz) {
-        if (!nz_only_pack) {
-            trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
-            weight_int4pack_shape = {op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32),
+        trans_nd_to_nz(weight_int4pack_data, weight_first_dim, weight_last_dim / INT4_NUMS_IN_INT32);
+        weight_int4pack_shape = {op_infer::CeilDiv(weight_last_dim / INT4_NUMS_IN_INT32, C0_SIZE_INT32),
                                op_infer::CeilDiv(weight_first_dim, CUBE_BLOCK_SIZE), CUBE_BLOCK_SIZE, C0_SIZE_INT32};
-        } else {
-            auto storage_shape = torch_npu::NPUBridge::GetNpuStorageImpl(weight)->npu_desc_.storage_sizes_;
-            auto dim_num = storage_shape.size();
-            TORCH_CHECK(dim_num > 1, "nz storage shape dim should be greater than 1", OPS_ERROR(ErrCode::PARAM));
-            if (dim_num > 1) {
-                weight_int4pack_shape = {};
-                for (auto data : storage_shape) {
-                    weight_int4pack_shape.push_back(data);
-                }
-
-                // after pack, last dim divide by 8
-                weight_int4pack_shape[dim_num - 1] = op_infer::CeilDiv(
-                    weight_int4pack_shape[dim_num - 1], INT4_NUMS_IN_INT32);
-            }
-        }
     }
 
     c10::TensorOptions options_cpu = weight_cpu.options().dtype(at::kInt);
