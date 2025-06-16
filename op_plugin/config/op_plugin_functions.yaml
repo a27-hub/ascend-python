@@ -6772,14 +6772,22 @@ custom:
   - func: npu_dropout_with_add_softmax_backward(Tensor grad, Tensor mask, Tensor softmax_out, Scalar alpha, float prob, int dim) -> (Tensor, Tensor)
     acl_op: all_version
 
-  - func: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
+  - func: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
+  - func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
 
   - func: npu_dtype_cast_(Tensor(a!) self, Tensor src) -> Tensor(a!)
     acl_op: all_version
 
-  - func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor
+  - func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype, int? grad_dtype=None, int? input_dtype=None) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
+  - func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
 
