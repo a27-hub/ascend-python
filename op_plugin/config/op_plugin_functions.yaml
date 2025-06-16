@@ -6690,6 +6690,7 @@ custom:
 
   - func: npu_dropout_gen_mask(int[] size, float p, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
     acl_op: all_version
+    op_api: all_version
     tags: nondeterministic_seeded
     dispatch:
       CompositeExplicitAutograd: npu_dropout_gen_mask
