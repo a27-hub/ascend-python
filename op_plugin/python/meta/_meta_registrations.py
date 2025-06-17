@@ -16,6 +16,10 @@ m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
 
 
+@impl(m,"npu_mrope")
+def npu_mrope_forward(positions,query,key,cos_sin_cache,head_size,*,mrope_section=None,rotary_mode='half'):
+    return(torch.empty_like(query),torch.empty_like(key))
+
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
     return (torch.empty_like(self), torch.empty_like(other))
