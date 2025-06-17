@@ -1637,3 +1637,11 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(permute_per_token_scales_size, dtype=torch.float32, device=tokens.device),
             torch.empty(permute_token_idx_size, dtype=torch.int32, device=tokens.device),
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
+
+@impl(m, "npu_grouped_matmul_swiglu_quant")
+def npu_grouped_matmul_swiglu_quant(x, weight, group_list, weight_scale, x_scale):
+    n = weight.shape[2]
+    m = x.shape[0]
+    output_shape = torch.empty((m, n//2), dtype = torch.int8, device = "meta")
+    output_scale_shape = torch.empty((m), dtype = torch.float32, device = "meta")
+    return output_shape, output_scale_shape
