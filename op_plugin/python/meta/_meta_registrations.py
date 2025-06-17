@@ -91,10 +91,8 @@ def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_d
 
     query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
     query_rope = torch.empty(query_rope_shape, dtype=rope_sin.dtype, device='meta')
-    kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
-    kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
 
-    return (query, query_rope, kv_cache_out, kr_cache_out)
+    return (query, query_rope, kv_cache, kr_cache)
 
 
 @impl(m, "npu_mla_prolog_v2")
@@ -164,10 +162,8 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
-    kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
-    kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
 
-    return (query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope)
+    return (query, query_rope, kv_cache, kr_cache, dequant_scale_q_nope)
 
 if "2.1" in torch.__version__:
     @impl(m, "npu_prompt_flash_attention")
