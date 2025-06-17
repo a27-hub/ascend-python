@@ -468,7 +468,7 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
                     }
                     wrapperShape[at_tensor.sizes().size() - 2] = wrapperShape[at_tensor.sizes().size() - 2] * 2;
                 } else {
-                    TORCH_CHECK(true, "unsupported tensor warrper strides in 4-bit dtype.",
+                    TORCH_CHECK(false, "unsupported tensor warrper strides in 4-bit dtype.",
                         OPS_ERROR(ErrCode::VALUE));
                 }
             } else {
