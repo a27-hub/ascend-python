@@ -1937,6 +1937,105 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(x[0].shape[0] == res[0].shape[0])
             self.assertTrue(w[0].shape[2] == res[0].shape[1])
 
+    def test_npu_grouped_matmul_meta_5(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(0, 10, (256, 256), dtype=torch.int8).npu()
+            x2 = torch.randint(0, 10, (1024, 256), dtype=torch.int8).npu()
+            x3 = torch.randint(0, 10, (512, 1024), dtype=torch.int8).npu()
+            x = [x1, x2, x3]
+            w1 = torch.randint(0, 10, (256, 256), dtype=torch.int32).npu()
+            w2 = torch.randint(0, 10, (256, 1024), dtype=torch.int32).npu()
+            w3 = torch.randint(0, 10, (1024, 128), dtype=torch.int32).npu()
+            w = [w1, w2, w3]
+            b1 = torch.randn(256, dtype=torch.float16).npu()
+            b2 = torch.randn(1024, dtype=torch.float16).npu()
+            b3 = torch.randn(128, dtype=torch.float16).npu()
+            b = [b1, b2, b3]
+            group_list = None
+            split_item = 0
+
+            res = torch_npu.npu_grouped_matmul(x, w, bias=b, group_list=group_list, split_item=split_item)
+            self.assertTrue(x[0].shape[0] == res[0].shape[0])
+            self.assertTrue(x[1].shape[0] == res[1].shape[0])
+            self.assertTrue(x[2].shape[0] == res[2].shape[0])
+            self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
+            self.assertTrue((w[1].shape[1] * 8) == res[1].shape[1])
+            self.assertTrue((w[2].shape[1] * 8) == res[2].shape[1])
+
+    def test_npu_grouped_matmul_meta_6(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(0, 10, (1792, 1024), dtype=torch.int8).npu()
+            x = [x1]
+            w1 = torch.randint(0, 10, (1024, 256), dtype=torch.int32).npu()
+            w2 = torch.randint(0, 10, (1024, 1024), dtype=torch.int32).npu()
+            w3 = torch.randint(0, 10, (1024, 128), dtype=torch.int32).npu()
+            w = [w1, w2, w3]
+            b1 = torch.randn(256, dtype=torch.float16).npu()
+            b2 = torch.randn(1024, dtype=torch.float16).npu()
+            b3 = torch.randn(128, dtype=torch.float16).npu()
+            b = [b1, b2, b3]
+            group_list = [256, 1280, 1792]
+            split_item = 1
+
+            res = torch_npu.npu_grouped_matmul(x, w, bias=b, group_list=group_list, split_item=split_item)
+            self.assertTrue(group_list[0] == res[0].shape[0])
+            self.assertTrue(group_list[1] - group_list[0] == res[1].shape[0])
+            self.assertTrue(group_list[2] - group_list[1] == res[2].shape[0])
+            self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
+            self.assertTrue((w[1].shape[1] * 8) == res[1].shape[1])
+            self.assertTrue((w[2].shape[1] * 8) == res[2].shape[1])
+
+    def test_npu_grouped_matmul_meta_7(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(0, 10, (256, 256), dtype=torch.int8).npu()
+            x2 = torch.randint(0, 10, (1024, 256), dtype=torch.int8).npu()
+            x3 = torch.randint(0, 10, (512, 1024), dtype=torch.int8).npu()
+
+            x = [x1, x2, x3]
+            w1 = torch.randint(0, 10, (256, 256), dtype=torch.int32).npu()
+            w2 = torch.randint(0, 10, (256, 1024), dtype=torch.int32).npu()
+            w3 = torch.randint(0, 10, (1024, 128), dtype=torch.int32).npu()
+
+            w = [w1, w2, w3]
+            b1 = torch.randn(256, dtype=torch.float16).npu()
+            b2 = torch.randn(256, dtype=torch.float16).npu()
+            b3 = torch.randn(256, dtype=torch.float16).npu()
+            b = [b1, b2, b3]
+            group_list = None
+            split_item = 2
+
+            res = torch_npu.npu_grouped_matmul(x, w, bias=b, group_list=group_list, split_item=split_item)
+            dim0 = 0
+            for xi in x:
+                dim0 += xi.shape[0]
+            self.assertTrue(dim0 == res[0].shape[0])
+            self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
+
+    def test_npu_grouped_matmul_meta_8(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(0, 10, (1792, 1024), dtype=torch.int8).npu()
+
+            x = [x1]
+            w1 = torch.randint(0, 10, (1024, 256), dtype=torch.int32).npu()
+            w2 = torch.randint(0, 10, (1024, 256), dtype=torch.int32).npu()
+            w3 = torch.randint(0, 10, (1024, 256), dtype=torch.int32).npu()
+
+            w = [w1, w2, w3]
+            b1 = torch.randn(256, dtype=torch.float16).npu()
+            b2 = torch.randn(256, dtype=torch.float16).npu()
+            b3 = torch.randn(256, dtype=torch.float16).npu()
+            b = [b1, b2, b3]
+            group_list = [256, 1280, 1792]
+            split_item = 3
+
+            res = torch_npu.npu_grouped_matmul(x, w, bias=b, group_list=group_list, split_item=split_item)
+            self.assertTrue(x[0].shape[0] == res[0].shape[0])
+            self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
+
 
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
@@ -2098,7 +2197,7 @@ class TestGMMFinalizeRouting(TestCase):
 
 class TestTransposeBatchMatmul(TestCase):
     @unittest.skip("skip test_npu_transpose_batchmatmul")
-    def test_npu_transpose_batchmatmul_meta(self):
+    def test_npu_transpose_batchmatmul_meta_1(self):
         with FakeTensorMode():
             M, K, N, Batch = 32, 512, 128, 16
             x1 = torch.randn((M, Batch, K), dtype=torch.float16)
@@ -2106,7 +2205,33 @@ class TestTransposeBatchMatmul(TestCase):
             scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.int64)
             result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2.npu(), scale=scale.npu(),
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.int8)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+    @unittest.skip("skip test_npu_transpose_batchmatmul")
+    def test_npu_transpose_batchmatmul_meta_2(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+            result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2.npu(),
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
             expect_ret = torch.randn((M, Batch, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+    @unittest.skip("skip test_npu_transpose_batchmatmul")
+    def test_npu_transpose_batchmatmul_meta_3(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            batch_split_factor = 4
+            x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+            result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2.npu(), scale=None,
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2],
+                                                        batch_split_factor=batch_split_factor)
+            expect_ret = torch.randn((batch_split_factor, M, Batch * N // batch_split_factor), dtype=torch.float16)
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
@@ -2176,6 +2301,88 @@ class TestMoeDistributeDispatch(TestCase):
             self.assertEqual(result[6].dtype, torch.float32)
 
 
+class TestMoeDistributeCombineAddRmsNorm(TestCase):
+    def test_moe_distribute_combine_add_rms_norm(self):
+        with FakeTensorMode():
+            expand_x = torch.randn(32, 7168).to(torch.bfloat16)
+            expert_ids = torch.randn(32, 8).to(torch.int32)
+            expand_idx = torch.randn(32, 8).to(torch.int32)
+            ep_send_counts = torch.randn(8).to(torch.int32)
+            expert_scales = torch.randn(32, 8).to(torch.float32)
+            residual_x = torch.randn(32, 1, 7168).to(torch.bfloat16)
+            gamma = torch.randn(7168).to(torch.bfloat16)
+            ep_world_size = 16
+            ep_rank_id = 0
+            moe_expert_num = 16
+
+            result = torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x=expand_x, expert_ids=expert_ids, 
+            expand_idx=expand_idx, ep_send_counts=ep_send_counts, expert_scales=expert_scales, 
+            residual_x=residual_x, gamma=gamma, group_ep="groupe_ep", ep_world_size=ep_world_size, 
+            ep_rank_id=ep_rank_id, moe_expert_num=moe_expert_num)
+
+            self.assertEqual(result[0].shape[0], 32)
+            self.assertEqual(result[0].shape[1], 1)
+            self.assertEqual(result[0].shape[2], 7168)
+            self.assertEqual(result[0].dtype, torch.bfloat16)
+
+            self.assertEqual(result[1].shape[0], 32)
+            self.assertEqual(result[1].shape[1], 1)
+            self.assertEqual(result[1].shape[2], 1)
+            self.assertEqual(result[1].dtype, torch.float32)
+
+            self.assertEqual(result[2].shape[0], 32)
+            self.assertEqual(result[2].shape[1], 1)
+            self.assertEqual(result[2].shape[2], 7168)
+            self.assertEqual(result[2].dtype, torch.bfloat16)
+
+
+class TestAddRmsNormQuant(TestCase):
+    def test_npu_add_rms_norm_quant(self):
+        with FakeTensorMode():
+            x1 = torch.randn([2, 16], dtype=torch.float16).npu()
+            x2 = torch.randn([2, 16], dtype=torch.float16).npu()
+            gamma = torch.randn([16, ], dtype=torch.float16).npu()
+            scales1 = torch.randn([16, ], dtype=torch.float32).npu()
+            zero_points1 = torch.randint(-10, 10, [16, ], dtype=torch.int32).npu()
+            y1, y2, x_out = torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1)
+            self.assertTrue(y1.shape == x1.shape)
+            self.assertTrue(y1.dtype == torch.int8)
+            self.assertTrue(y2.shape == x1.shape)
+            self.assertTrue(y2.dtype == torch.int8)
+            self.assertTrue(x_out.shape == x1.shape)
+            self.assertTrue(x_out.dtype == x1.dtype)
+
+            x1 = torch.randn([2, 16], dtype=torch.bfloat16).npu()
+            x2 = torch.randn([2, 16], dtype=torch.bfloat16).npu()
+            gamma = torch.randn([16, ], dtype=torch.bfloat16).npu()
+            scales1 = torch.randn([16, ], dtype=torch.bfloat16).npu()
+            zero_points1 = torch.randn([16, ], dtype=torch.bfloat16).npu()
+            y1, y2, x_out = torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1)
+            self.assertTrue(y1.shape == x1.shape)
+            self.assertTrue(y1.dtype == torch.int8)
+            self.assertTrue(y2.shape == x1.shape)
+            self.assertTrue(y2.dtype == torch.int8)
+            self.assertTrue(x_out.shape == x1.shape)
+            self.assertTrue(x_out.dtype == x1.dtype)
+
+
+class TestMoeEPLBUpdateExpert(TestCase):
+    def test_moe_eplb_update_expert(self):
+        with FakeTensorMode():
+            world_size = 8
+            local_rank_id = 0
+            bs = 32
+            k = 8
+            f = 4
+            moe_expert_num = 256
+            expert_ids = torch.randn(bs, k).to(torch.int32)
+            eplb_table = torch.randn(moe_expert_num, f).to(torch.int32)
+            result = torch_npu.npu_moe_eplb_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
+            local_rank_id=local_rank_id, world_size=world_size, balance_mode=0)
+
+            self.assertEqual(result.shape[0], 32)
+            self.assertEqual(result.shape[1], 8)
+            self.assertEqual(result.dtype, torch.int32)
 
 instantiate_parametrized_tests(FakeTensorTest)
 instantiate_device_type_tests(FakeTensorOpInfoTest, globals(), only_for="cpu")

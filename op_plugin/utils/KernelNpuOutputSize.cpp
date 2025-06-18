@@ -1895,6 +1895,32 @@ c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, co
     return output_size;
 }
 
+c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::Tensor &input, const at::Tensor &weight, const at::Tensor &scale_real,
+                                                                      at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, int32_t batch_split_factor_value)
+{
+    c10::SmallVector<int64_t, SIZE> output_size;
+    auto input_dim_num = input.dim();
+    auto weight_dim_num = weight.dim();
+    constexpr int EXPECTED_DIM = 3;
+
+    TORCH_CHECK(input_dim_num == EXPECTED_DIM && weight_dim_num == EXPECTED_DIM,
+                "input dim is ", input_dim_num, "but expected is ", EXPECTED_DIM,
+                "weight dim is ", weight_dim_num, "but expected is ", EXPECTED_DIM, OPS_ERROR(ErrCode::PARAM));
+
+    auto m_dim = input.size(perm_x1_real[1]);
+    auto batch_dim = input.size(perm_x1_real[0]);
+    auto n_dim = weight.size(perm_x2_real[2]);
+
+    output_size = {m_dim, batch_dim, n_dim};
+    if (scale_real.defined()) {
+        output_size = {m_dim, 1, batch_dim * n_dim};
+    }
+    if (batch_split_factor_value > 1) {
+        output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
+    }
+    return output_size;
+}
+
 c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype)
 {
     at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Char;});
@@ -1966,6 +1992,39 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_select_attention_infer_out_size(const at
     }
 
     return output_size;
+}
+
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_out_size(const at::Tensor &tokens, const at::Tensor &indices, c10::optional<int64_t> num_out_tokens)
+{
+    TORCH_CHECK(tokens.dim() == DIM_2,
+                "The dims of input tokens should be 2 dimensional, but got ", tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(indices.dim() == DIM_1 || indices.dim() == DIM_2,
+                "The dims of input indices should be 2 or 1 dimensional, but got ", indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    int64_t num_out_tokens_value = num_out_tokens.value_or(0);
+    int64_t flatten_size = indices.numel();
+    int64_t actual_num_out_tokens = (num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size;
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    output_shape = {actual_num_out_tokens, tokens.size(1)};
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tensor& permuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor>& probs)
+{
+    const static int64_t DEFAULT_TOPK = 1;
+    if (probs.has_value()) {
+            TORCH_CHECK(probs.value().dim() == DIM_2,
+                        "The dims of input probs should be 2 dimensional, but got ", probs.value().dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    }
+    TORCH_CHECK(permuted_tokens.dim() == DIM_2,
+                "The dims of input permuted_tokens should be 2 dimensional, but got ", permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(sorted_indices.dim() == DIM_1,
+                "The dims of input sorted_indices should be 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    
+    int64_t topk = probs.has_value() ? probs.value().size(1) : DEFAULT_TOPK;
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    output_shape = {sorted_indices.size(0) / topk, permuted_tokens.size(-1)};
+    return output_shape;
 }
 
 } // namespace op_infer

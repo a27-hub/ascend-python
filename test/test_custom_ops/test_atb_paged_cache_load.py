@@ -92,7 +92,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
                 offset = seq_starts[bid].item() // block_size
 
             # Get block table for current batch
-            batch_block_table = block_table[bid, offset : offset + tot_blocks]
+            batch_block_table = block_table[bid, offset: offset + tot_blocks]
             # Calculate complete blocks and last partial block
             full_blocks = tot_blocks - 1 if seq_len % block_size else tot_blocks
             partial_block_size = seq_len % block_size if seq_len % block_size else 0
@@ -101,7 +101,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             for i in range(full_blocks):
                 block_id = batch_block_table[i].item()
                 # Copy entire block, remove HEAD dimension
-                dst[dst_start : dst_start + block_size] = src_cache[block_id].squeeze(1)
+                dst[dst_start: dst_start + block_size] = src_cache[block_id].squeeze(1)
                 dst_start += block_size
 
             # Handle last incomplete block

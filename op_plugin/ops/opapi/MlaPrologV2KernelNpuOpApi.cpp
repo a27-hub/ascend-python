@@ -30,13 +30,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
-    TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3,but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, ".\n", OPS_ERROR(ErrCode::PARAM));
 
     auto weight_uk_dim = weight_uk.dim();
-    TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3,but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, ".\n", OPS_ERROR(ErrCode::PARAM));
 
     auto rope_sin_dim = rope_sin.dim();
-    TORCH_CHECK(rope_sin_dim == 2 || rope_sin_dim == 3, "rope_sin dim num should be 2 or 3,but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(rope_sin_dim == 2 || rope_sin_dim == 3, "rope_sin dim num should be 2 or 3, but the actual value is ", rope_sin_dim, ".\n", OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor query;
     at::Tensor query_rope;
@@ -69,7 +69,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     EXEC_NPU_CMD(aclnnMlaPrologV2WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
         rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
         dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
-        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode, query, query_rope, dequant_scale_q_nope);
+        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query, query_rope, dequant_scale_q_nope);
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, kv_cache, kr_cache, dequant_scale_q_nope);
 }

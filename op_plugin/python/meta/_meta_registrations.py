@@ -341,8 +341,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "drop_pad_mode is None or invalid. must be in [0, 1]"
     )
     torch._check(
-        expert_tokens_num_type is not None and isinstance(expert_tokens_num_type, int) and expert_tokens_num_type in [0, 1],
-        lambda: "expert_tokens_num_type is None or invalid. must be in [0, 1]"
+        expert_tokens_num_type is not None and isinstance(expert_tokens_num_type, int) and expert_tokens_num_type in [0, 1, 2],
+        lambda: "expert_tokens_num_type is None or invalid. must be in [0, 1, 2]"
     )
     torch._check(
         quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1],
@@ -411,8 +411,13 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dim_list = [bs * k, h]
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
-    expert_token_cumsum_or_count_dim_list = [expert_range_length]
     expanded_scale_dim_list = [bs * k]
+    
+    if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
+        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+    elif (expert_tokens_num_type == 2): # 2: key_value
+        expert_token_cumsum_or_count_dim_list = [expert_num, 2]
+    
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -520,6 +525,8 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
     if input_layout == "TND_NTD":
         tmp_out = torch.empty([query.size(1), query.size(0), query.size(2)], dtype=query.dtype, device='meta')
+    if input_layout == "NTD_TND":
+        tmp_out = torch.empty([query.size(1), query.size(0), value.size(2)], dtype=query.dtype, device='meta')
     if quant_scale2 is not None:
         if (softmax_lse_flag == True):
             if input_layout == "TND" or input_layout == "TND_NTD":
@@ -529,17 +536,24 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         else:
             return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
+        out_dtype = torch.half
+        if query_rope is not None:
+            out_dtype = query_rope.dtype
         if (softmax_lse_flag == True):
             if input_layout == "TND" or input_layout == "TND_NTD":
-                return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([query.size(0), num_heads, 1], dtype=torch.float32, device='meta'))
+                return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([query.size(0), num_heads, 1], \
+                    dtype=torch.float32, device='meta'))
             else:
-                return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
+                return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([B, N, S1, 1], dtype=torch.float32, \
+                    device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.half), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([1], dtype=torch.float32, device='meta'))
     else:
         if (softmax_lse_flag == True):
             if input_layout == "TND" or input_layout == "TND_NTD":
                 return (torch.empty_like(tmp_out), torch.empty([query.size(0), num_heads, 1], dtype=torch.float32, device='meta'))
+            elif input_layout == "NTD_TND":
+                return (torch.empty_like(tmp_out), torch.empty([query.size(1), num_heads, 1], dtype=torch.float32, device='meta'))
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
@@ -836,36 +850,31 @@ def npu_masked_softmax_with_rel_pos_bias_meta(x, atten_mask, relative_pos_bias, 
 @impl(m, "npu_moe_distribute_dispatch")
 def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0,
                                      tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1):
-    n = x.size(0)
+    bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
 
-    shared_front = 0
+    shared_front = (expert_shard_type == 0)
     outDtype = x.dtype
-    if expert_shard_type == 0:
-        shared_front = 1
 
     local_moe_expert_num = 0
     global_bs_real = 0
     if global_bs == 0:
-        global_bs_real = n * ep_world_size
+        global_bs_real = bs * ep_world_size
     else:
         global_bs_real = global_bs
     a = 0
-    if shared_front == 1:
+    rank_num_per_shared_expert = -1
+    if ((shared_expert_num != 0) and ((shared_expert_rank_num // shared_expert_num) != 0)):
+        rank_num_per_shared_expert = shared_expert_rank_num // shared_expert_num
+    if shared_front:
         if ep_rank_id < shared_expert_rank_num:
             local_moe_expert_num = 1
-            a = global_bs_real // shared_expert_rank_num
+            a = global_bs_real // rank_num_per_shared_expert
         else:
             local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
             a = global_bs_real * min(local_moe_expert_num, k)
-    else:
-        if ep_rank_id >= ep_world_size - shared_expert_rank_num:
-            local_moe_expert_num = 1
-            a = global_bs_real // shared_expert_rank_num
-        else:
-            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
-            a = global_bs_real * min(local_moe_expert_num, k)
+
     ep_recv_cnt_num = 0
     if tp_world_size == 2:
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num * tp_world_size
@@ -876,21 +885,21 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
         outDtype = torch.int8
     local_moe_expert_num = int(local_moe_expert_num)
 
-    expand_idx = x.new_empty(tuple([max(n * k, a * 128)]), dtype=torch.int32)
+    expand_idx = x.new_empty((max(bs * k, a * 128)), dtype=torch.int32)
     if tp_world_size == 0:
-        expand_x = x.new_empty(tuple([a, h]), dtype=outDtype)
-        dynamic_scales = x.new_empty(tuple([a]), dtype=torch.float32)
+        expand_x = x.new_empty((a, h), dtype=outDtype)
+        dynamic_scales = x.new_empty((a), dtype=torch.float32)
     else:
-        expand_x = x.new_empty(tuple([a * tp_world_size, h]), dtype=outDtype)
-        dynamic_scales = x.new_empty(tuple([a * tp_world_size]), dtype=torch.float32)
-    expert_token_nums = x.new_empty(tuple([local_moe_expert_num]), dtype=torch.int64)
-    ep_recv_counts = x.new_empty(tuple([ep_recv_cnt_num]), dtype=torch.int32)
-    tp_recv_counts = x.new_empty(tuple([tp_world_size]), dtype=torch.int32)
-    expand_scales = x.new_empty(tuple([0]), dtype=torch.float32)
+        expand_x = x.new_empty((a * tp_world_size, h), dtype=outDtype)
+        dynamic_scales = x.new_empty((a * tp_world_size), dtype=torch.float32)
+    expert_token_nums = x.new_empty((local_moe_expert_num), dtype=torch.int64)
+    ep_recv_counts = x.new_empty((ep_recv_cnt_num), dtype=torch.int32)
+    tp_recv_counts = x.new_empty((tp_world_size), dtype=torch.int32)
+    expand_scales = x.new_empty((0), dtype=torch.float32)
     if expert_scales is not None:
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num + global_bs_real * 2 * k * (ep_world_size // 8)
-        ep_recv_counts = x.new_empty(tuple([ep_recv_cnt_num]), dtype=torch.int32)
-        expand_scales = x.new_empty(tuple([a]), dtype=torch.float32)
+        ep_recv_counts = x.new_empty((ep_recv_cnt_num), dtype=torch.int32)
+        expand_scales = x.new_empty((a), dtype=torch.float32)
     return (expand_x, dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales)
 
 
@@ -898,31 +907,39 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
 def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
                                     tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0,
                                     tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0):
-    dim_list = []
-    dim_list.append(expert_ids.size(0))
-    dim_list.append(expand_x.size(1))
+    dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
-    return expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype)
+    return expand_x.new_empty(dim_tuple)
 
 
 @impl(m, "npu_moe_distribute_combine_add_rms_norm")
 def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
                                     tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0,
-                                    tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, commAlg="", norm_eps=0):
+                                    tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, comm_alg="", norm_eps=0):
     dim_list = []
     dim_list.append(expert_ids.size(0))
+    dim_list.append(1)
     dim_list.append(expand_x.size(1))
     dim_list2 = []
     dim_list2.append(expert_ids.size(0))
     dim_list2.append(1)
     dim_list2.append(1)
 
-    return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), expand_x.new_empty(tuple(dim_list2), dtype=expand_x.dtype), expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype))
+    return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), expand_x.new_empty(tuple(dim_list2), dtype=torch.float32), expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype))
 
 
 @impl(m, "_npu_distribute_barrier")
 def _npu_distribute_barrier(x_ref, group, world_size):
     return torch.empty_like(x_ref)
+
+
+@impl(m, "npu_moe_eplb_update_expert")
+def npu_moe_eplb_update_expert_meta(expert_ids, eplb_table, local_ranke_id, world_size, balance_mode=0):
+    dim_list = []
+    dim_list.append(expert_ids.size(0))
+    dim_list.append(expert_ids.size(1))
+
+    return expert_ids.new_empty(tuple(dim_list), dtype=expert_ids.dtype)
 
 
 @impl(m, "npu_ffn")
@@ -953,28 +970,35 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
+    INT4_IN_INT32 = 8
+
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if split_item == 0:
         for i in range(num_x):
             ni = n if singleWeight else weight[i].shape[1]
-            y.append(x[i].new_empty((*x[i].shape[:-1], ni), dtype=output_dtype))
+            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+            y.append(x[i].new_empty((*x[i].shape[:-1], dim_n), dtype=output_dtype))
     elif split_item == 1:
         num_group_list = group_list.shape[0] if isinstance(group_list, torch.Tensor) else len(group_list)
         pre_offset = group_list[0]
-        y.append(x[0].new_empty((pre_offset, n), dtype=output_dtype))
+        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+        y.append(x[0].new_empty((pre_offset, dim_n), dtype=output_dtype))
         for i in range(1, num_group_list):
             ni = n if singleWeight else weight[i].shape[1]
             cur_offset = group_list[i]
-            y.append(x[0].new_empty((cur_offset - pre_offset, ni), dtype=output_dtype))
+            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+            y.append(x[0].new_empty((cur_offset - pre_offset, dim_n), dtype=output_dtype))
             pre_offset = cur_offset
     elif split_item == 2:
         dim_m = 0
+        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
         for i in range(num_x):
             dim_m += x[i].shape[0]
-        y.append(x[0].new_empty((dim_m, n), dtype=output_dtype))
+        y.append(x[0].new_empty((dim_m, dim_n), dtype=output_dtype))
     elif split_item == 3:
-        y.append(x[0].new_empty((x[0].shape[0], n), dtype=output_dtype))
+        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+        y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
 
     return y
 
@@ -1433,18 +1457,14 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
     perm_y = perm_y or [0, 1, 2]
     M = input_.size(perm_x1.index(1))
     batchM = input_.size(perm_x1.index(0))
-    Ka = input_.size(perm_x1.index(2))
-    batchN = weight.size(perm_x2.index(0))
-    Kb = weight.size(perm_x2.index(1))
     N = weight.size(perm_x2.index(2))
-    if scale is None:
-        dtype = torch.float16
-    else:
+    dim_list = (M, batchM, N)
+    dtype = torch.float16
+    if scale is not None:
         dtype = torch.int8
+        dim_list = (M, 1, batchM * N)
     if batch_split_factor > 1:
         dim_list = (batch_split_factor, M, batchM * N // batch_split_factor)
-    else:
-        dim_list = (M, batchM, N)
     return input_.new_empty(dim_list, dtype=dtype)
 
 
@@ -1919,3 +1939,27 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(permute_per_token_scales_size, dtype=torch.float32, device=tokens.device),
             torch.empty(permute_token_idx_size, dtype=torch.int32, device=tokens.device),
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
+
+
+
+@impl(m, "npu_add_rms_norm_quant")
+def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True):
+    torch._check(
+        scales2 is None,
+        lambda: f"scales2 should be None, but got {scales2}.",
+        )
+    torch._check(
+        zero_points2 is None,
+        lambda: f"zero_points2 should be None, but got {zero_points2}.",
+        )
+    torch._check(
+        axis == -1,
+        lambda: f"axis should be -1, but got {axis}.",
+        )
+    torch._check(
+        div_mode is True,
+        lambda: f"div_mode should be True, but got {div_mode}.",
+        )
+    return (torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))

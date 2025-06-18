@@ -35,7 +35,8 @@ p (Float) - 丢弃概率。
 >>> input = torch.tensor([1.,2.,3.,4.]).npu()
 >>> input
 tensor([1., 2., 3., 4.], device='npu:0')
->>> prob = 0.3>>> output, mask = torch_npu._npu_dropout(input, prob)
+>>> prob = 0.3
+>>> output, mask = torch_npu._npu_dropout(input, prob)
 >>> output
 tensor([0.0000, 2.8571, 0.0000, 0.0000], device='npu:0')
 >>> mask
@@ -62,7 +63,7 @@ copy_memory_仅支持NPU张量。copy_memory_的输入张量应具有相同的dt
 示例
 >>> a=torch.IntTensor([0,  0, -1]).npu()
 >>> b=torch.IntTensor([1, 1, 1]).npu()
->>> a.copy_memory_(b)
+>>> torch_npu.copy_memory_(a, b) 
 tensor([1, 1, 1], device='npu:0', dtype=torch.int32)
 """
 )
@@ -564,7 +565,8 @@ stds3 (Float, 默认值：[1.0,1.0,1.0,1.0]) -index。 "deltas" = "deltas" x "st
 >>> anchor_box = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> ground_truth_box = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, 0, 0, 0, 0, 0.1, 0.1, 0.2, 0.2)
->>> outputtensor([[13.3281, 13.3281,  0.0000,  0.0000],
+>>> output
+tensor([[13.3281, 13.3281,  0.0000,  0.0000],
         [13.3281,  6.6641,  0.0000, -5.4922]], device='npu:0')
 """
 )
@@ -2468,7 +2470,8 @@ off_value (Scalar，默认值为0) - 当indices[j] != i时输出中的填充值�
 示例
 >>> a=torch.IntTensor([5, 3, 2, 1]).npu()
 >>> b=torch_npu.npu_one_hot(a, depth=5)
->>> btensor([[0., 0., 0., 0., 0.],
+>>> b
+tensor([[0., 0., 0., 0., 0.],
         [0., 0., 0., 1., 0.],
         [0., 0., 1., 0., 0.],
         [0., 1., 0., 0., 0.]], device='npu:0')
@@ -2519,7 +2522,8 @@ output_dim (Int32) - 指定输出通道数。必须大于0。
                       [[[ 9]], [[10]], [[11]], [[12]],
                       [[13]], [[14]], [[15]], [[16]]]], dtype = torch.float16).npu()
 >>> out = torch_npu.npu_ps_roi_pooling(x, roi, 0.5, 2, 2)
->>> outtensor([[[[0., 0.],
+>>> out
+tensor([[[[0., 0.],
           [0., 0.]],
         [[0., 0.],
           [0., 0.]]],
@@ -2576,8 +2580,8 @@ mask (Tensor) - 1D张量, 确定对应index是否有效。
 示例
 >>> x = torch.tensor([1, 0, 1, 0], dtype=torch.bool).to("npu")
 >>> result, mask = torch_npu.npu_random_choice_with_mask(x, 2, 1, 0)
->>> resulttensor([[0],
-        [2]], device='npu:0', dtype=torch.int32)
+>>> result
+tensor([[0], [2]], device='npu:0', dtype=torch.int32)
 >>> mask
 tensor([True, True], device='npu:0')
 """
@@ -3110,7 +3114,8 @@ c1_len (Scalar) - “y”的C1 len。该值必须小于“x1”和“x2”中C1�
 示例
 >>> a=torch.tensor([[[[[1.]]]]]).npu()
 >>> b=torch_npu.npu_stride_add(a, a, 0, 0, 1)
->>> btensor([[[[[2.]]],
+>>> b
+tensor([[[[[2.]]],
         [[[0.]]],
         [[[0.]]],
         [[[0.]]],
@@ -4479,7 +4484,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(Tensor x, Tensor weight, Tensor gr
 - scale(Tensor, 计算输入): 可选参数，一个2D的Device侧Tensor输入，矩阵计算反量化参数，对应weight矩阵，per-channel量化方式，不支持非连续的Tensor。数据类型支持float32，数据格式支持ND，维度为(e,n)，n支持2048、7168、7680。
 - bias(Tensor, 计算输入): 可选参数，一个2D的Device侧Tensor输入，矩阵计算的bias参数，不支持非连续的Tensor。数据类型支持float32，数据格式支持ND。
 - pertoken_scale(Tensor, 计算输入): 可选参数，一个1DD的Device侧Tensor输入，矩阵计算的反量化参数，对应x矩阵，per-token量化方式，不支持非连续的Tensor。数据类型支持float32，数据格式支持ND，维度为(m,)。
-- shared_input(Tensor, 计算输入): 可选参数，一个2D的Device侧Tensor输入，moe计算中共享专家的输出，需要与moe专家的输出进行combine操作，不支持非连续的Tensor。数据类型支持bfloat16、float16，数据格式支持ND，维度为(batch/dp,n)，batch/dp取值范围[1, 2*1024]，batch取值范围[1, 16*1024]。
+- shared_input(Tensor, 计算输入): 可选参数，一个2D的Device侧Tensor输入，moe计算中共享专家的输出，需要与moe专家的输出进行combine操作，不支持非连续的Tensor。数据类型支持bfloat16，数据格式支持ND，维度为(batch/dp,n)，batch/dp取值范围[1, 2*1024]，batch取值范围[1, 16*1024]。
 - logit(Tensor, 计算输入): 可选参数，一个1D的Device侧Tensor输入，moe专家对各个token的logit大小，矩阵乘的计算输出与该logit做乘法，然后索引进行combine，不支持非连续的Tensor。数据类型支持float32，数据格式支持ND，维度为(m,)。
 - row_index(Tensor*, 计算输入): 可选参数，一个1D的Device侧Tensor输入，moe专家输出按照该rowIndex进行combine，其中的值即为combine做scatter add的索引，不支持非连续的Tensor。数据类型支持int32、int64，数据格式支持ND，维度为(m,)。
 - dtype(torch.dtype, 计算输入): 可选参数，指定GroupedMatMul计算的输出类型。枚举值含义：0表示float32，1表示float16，2表示bfloat16。默认值为0。
@@ -4487,7 +4492,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(Tensor x, Tensor weight, Tensor gr
 - shared_input_offset(int, 计算输入): 可选参数，共享专家输出在总输出中的偏移。默认值为0.
 - output_bs(int, 计算输入): 可选参数，输出的最高维大小。默认值为0。
 - group_list_type(int, 计算输入): 可选参数，GroupedMatMul的分组模式，0为cumsum模式，1为count模式，默认为1。
-- y(Tensor, 计算输出): 2D的Tensor，不支持非连续的Tensor，输出的数据类型固定为FLOAT32。
+- y(Tensor, 计算输出): 2D的Tensor，不支持非连续的Tensor，输出的数据类型固定为float32，维度为(batch, n)。
 
 支持的芯片型号：
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
@@ -4498,10 +4503,8 @@ Atlas A3 推理系列产品
 import numpy as np
 import torch
 import torch_npu
-import tensorflow as tf
 from scipy.special import softmax
 
-bfloat16 = tf.bfloat16.as_numpy_dtype
 m, k, n = 576, 2048, 7168
 batch = 72
 topK = 8
@@ -4540,7 +4543,6 @@ import numpy as np
 import torch
 import torch_npu
 import torchair as tng
-import tensorflow as tf
 from scipy.special import softmax
 from torchair.configs.compiler_config import CompilerConfig
 
@@ -4556,7 +4558,6 @@ class Model(torch.nn.Module):
                     logit=logit, row_index=row_index, shared_input_offset=shared_input_offset, output_bs=output_bs)
         return output
 
-bfloat16 = tf.bfloat16.as_numpy_dtype
 m, k, n = 576, 2048, 7168
 batch = 72
 topK = 8
@@ -6505,6 +6506,7 @@ kr_cache：Tensor类型，表示Key的位置编码输出到kvCache中的Tensor�
 
 支持的芯片型号:
 Atlas A2 训练系列产品
+Atlas A3 训练系列产品
 
 调用示例:
 # 单算子调用方式
@@ -6658,11 +6660,11 @@ _add_torch_npu_docstr(
 torch_npu.npu_mla_prolog_v2(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明:
-token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x。shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x。shape支持2维和3维，dtype支持bfloat16和int8，数据格式支持ND格式。
+weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
 weight_uq_qr：Tensor类型，表示用于计算Query的上采样权重矩阵和Query的位置编码权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
 weight_uk：Tensor类型，表示用于计算Key的上采样权重。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
-weight_dkv_kr：Tensor类型，表示用于计算Key的下采样权重矩阵和Key的位置编码权重矩阵。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+weight_dkv_kr：Tensor类型，表示用于计算Key的下采样权重矩阵和Key的位置编码权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
 rmsnorm_gamma_cq：Tensor类型，表示用于计算Query的rmsnorm中的gamma参数，对应计算Query的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
 rmsnorm_gamma_ckv：Tensor类型，表示用于计算Key的rmsnorm中的gamma参数，对应计算Key的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
 rope_sin：Tensor类型，表示用于计算旋转位置编码的正弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
@@ -6682,14 +6684,15 @@ rmsnorm_epsilon_ckv：Double类型，表示用于计算Key额时rmsnorm中的ϵ�
 cache_mode：String类型，用于表示kv_cache的模式，支持"PA_BSND","PA_NZ"，可选入参，不传入时默认值为"PA_BSND"。
 
 输出说明：
-query：Tensor类型，表示Query的输出tensor。其shape支持3维和4维，dtype支持bfloat16，数据格式支持ND格式。
+query：Tensor类型，表示Query的输出tensor。其shape支持3维和4维，dtype支持bfloat16和int8，数据格式支持ND格式。
 queryRope：Tensor类型，表示Query位置编码的输出tensor。其shape支持3维和4维，dtype支持bfloat16，数据格式支持ND格式。
 kv_cache：Tensor类型，表示Key输出到kv_cache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
 kr_cache：Tensor类型，表示Key的位置编码输出到kv_cache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-dequant_scale_q_nope: Tensor类型，query为量化输出的场景下，表示query的反量化参数。其shape支持3维，dtype支持float，数据格式支持ND格式。
+dequant_scale_q_nope: Tensor类型，表示Query的输出tensor的反量化参数。当token_x为int8类型且quant_scale_ckv传入值（即不传none）时，其shape为3维；其他情况下，返回shape为(1)全0的Tensor。dtype支持float，数据格式支持ND格式。
 
 支持的芯片型号:
 Atlas A2 训练系列产品
+Atlas A3 训练系列产品
 
 调用示例:
 # 单算子调用方式
@@ -7513,6 +7516,143 @@ print(expanded_expert_idx)
 )
 
 _add_torch_npu_docstr(
+    "npu_moe_init_routing_v2",
+    """
+算子功能：MoE（Mixture of Expert）的routing计算，根据3.28 torch_npu.npu_moe_gating_top_k_softmax的计算结果做routing处理，支持不量化和动态量化模式。
+
+接口原型
+torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=0, int[2] active_expert_range=[], int row_idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
+参数说明
+    x：Tensor类型，表示MoE的输入即token特征输入，要求为2D的Tensor，shape为(NUM_ROWS, H)，H代表每个Token的长度。数据类型支持float16、bfloat16、float32、int8，数据格式要求为ND。
+    expert_idx：Tensor类型，表示torch_npu.npu_moe_gating_top_k_softmax输出每一行特征对应的K个处理专家，要求是2D的Tensor，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持int32，数据格式要求为ND。
+    scale：Tensor类型，可选参数，用于计算量化结果的参数。数据类型支持float32，数据格式要求为ND。如果不输入表示计算时不使用scale，且输出expanded_scale中的值未定义。
+        非量化场景下，如果输入则要求为1D的Tensor，shape为(NUM_ROWS,)。
+        动态quant场景下，如果输入则要求为2D的Tensor，shape为(expert_end-expert_start, H)。
+    offset：Tensor类型，可选参数，用于计算量化结果的偏移值。数据类型支持float32，数据格式要求为ND。
+        在非量化场景下不输入。
+        动态quant场景下不输入。
+    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，当前入参校验需大于等于0。当前未使用，校验需等于NUM_ROWS*K。
+    expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
+    expert_num：int类型，表示专家数。expert_tokens_num_type为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
+    drop_pad_mode：int类型，表示是否为drop_pad场景，取值为0和1。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
+    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值 。当前仅支持1和2。
+    expert_tokens_num_flag：bool类型，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
+    quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。x数据类型为int8时仅支持-1，不可再量化。
+    active_expert_range：int类型长度为2的数组，表示活跃expert的范围。数组内值为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间，左闭右开。要求值大于等于0，并且expert_end不大于expert_num。
+    row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。性能模板下仅支持1。
+输出说明
+    expanded_x：Tensor类型，根据expert_idx进行扩展过的特征，要求是2D的Tensor，shape为(NUM_ROWS*K, H)。非量化场景下数据类型同x；量化场景下数据类型支持int8。数据格式要求为ND。前available_idx_num*H个元素为有效数据，其余由row_idx_type决定。其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值未定义。
+    expanded_row_idx：Tensor类型，expanded_x和x的映射关系， 要求是1D的Tensor，shape为(NUM_ROWS*K, )，数据类型支持int32，数据格式要求为ND。前available_idx_num个元素为有效数据，其余无效数据由row_idx_type决定，其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。row_idx_type为0时，无效数据由-1填充；row_idx_type为1时，无效数据未初始化。
+    expert_token_cumsum_or_count：Tensor类型。在expert_tokens_num_type为1的场景下，要求是1D的Tensor，表示active_expert_range范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在expert_tokens_num_type为2的场景下，要求是2D的Tensor，shape为(expert_num, 2)，表示active_expert_range范围内token总数为非0的expert，以及对应expert处理token的总数；expert id在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持int64，数据格式要求为ND。
+    expanded_scale：Tensor类型，数据类型支持float32，数据格式要求为ND。令available_idx_num为active_expert_range范围的元素的个数。
+        非量化场景下，即quant_mode为-1，shape为(NUM_ROWS*H*K, )。当scale未输入时，输出值未定义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num*H个元素为有效数据，其余为无效数据。
+        动态quant场景下，即quant_mode为1，输出量化计算过程中scale的中间值，shape为(NUM_ROWS*K)。当scale未输入时，输出值未定义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num个元素为有效数据，其余为无效数据，若x的输入类型为int8，输出值未定义。
+约束说明
+    该接口支持推理场景下使用。
+    该接口支持图模式（PyTorch 2.1版本）。
+    不支持静态量化模式。
+    该算子支持两种性能模板，进入两种性能模板需要分别额外满足以下条件，不满足条件则进入通用模板：
+    进入低时延性能模板需要同时满足以下条件：
+        x、expert_idx、scale输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
+        x数据类型要求：bfloat16
+        属性要求：active_expert_range=[0,256]、 quant_mode=1、expert_tokens_num_type=2
+    进入大batch性能模板需要同时满足以下条件：
+        NUM_ROWS范围为[1920, 4608]
+        K=8
+        expert_end-expert_start<=256
+
+支持的PyTorch版本
+PyTorch 2.6
+PyTorch 2.5
+PyTorch 2.3
+PyTorch 2.1
+支持的型号
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+    Atlas A3 训练系列产品/Atlas A3 推理系列产品
+调用示例
+    单算子模式调用
+import torch 
+import torch_npu 
+ 
+bs = 1 
+h = 613 
+k = 475 
+active_num = 475 
+expert_capacity = -1 
+expert_num = 226 
+drop_pad_mode = 0 
+expert_tokens_num_type = 1 
+expert_tokens_num_flag = True 
+quant_mode = -1 
+active_expert_range = [23, 35] 
+row_idx_type = 0 
+ 
+x = torch.randn((bs, h), dtype=torch.float32).npu() 
+expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu() 
+scale = torch.randn((bs,), dtype=torch.float32).npu() 
+offset = None 
+ 
+expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2( 
+                x, expert_idx, scale=scale, offset=offset, 
+                active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
+                expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag, 
+                active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
+    图模式调用
+import torch 
+import torch.nn as nn 
+import torch_npu 
+import torchair as tng 
+from torchair.configs.compiler_config import CompilerConfig 
+ 
+config = CompilerConfig() 
+npu_backend = tng.get_npu_backend(compiler_config=config) 
+ 
+class MoeInitRoutingV2Model(nn.Module): 
+    def __init__(self): 
+        super().__init__() 
+ 
+    def forward(self, x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, 
+                expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, 
+                quant_mode=0, active_expert_range=0, row_idx_type=0): 
+        return torch.ops.npu.npu_moe_init_routing_v2(x, expert_idx, scale=scale, offset=offset, 
+                active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
+                expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag, 
+                active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type) 
+ 
+def main(): 
+    bs = 1 
+    h = 613 
+    k = 475 
+ 
+    active_num = 475 
+    expert_capacity = -1 
+    expert_num = 226 
+    drop_pad_mode = 0 
+    expert_tokens_num_type = 1 
+    expert_tokens_num_flag = True 
+    quant_mode = -1 
+    active_expert_range = [23, 35] 
+    row_idx_type = 0 
+ 
+    x = torch.randn((bs, h), dtype=torch.float32).npu() 
+    expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu() 
+    scale = torch.randn((bs,), dtype=torch.float32).npu() 
+    offset = None 
+ 
+    moe_init_routing_v2_model = MoeInitRoutingV2Model().npu() 
+    moe_init_routing_v2_model = torch.compile(moe_init_routing_v2_model, backend=npu_backend, dynamic=False) 
+    expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = moe_init_routing_v2_model(x, 
+                                    expert_idx, scale=scale, offset=offset, active_num=active_num, 
+                                    expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
+                                    expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag, 
+                                    active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type) 
+ 
+if __name__ == '__main__': 
+    main()
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_prefetch",
     """
 接口原型：
@@ -8196,6 +8336,75 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+    "npu_grouped_matmul_swiglu_quant",
+    """
+torch_npu.npu_grouped_matmul_swiglu_quant(Tensor x, Tensor weight, Tensor group_list, Tensor weight_scale, Tensor x_scale, *, Tensor? bias=None, Tensor? offset=None) -> (Tensor, Tensor, Tensor)
+功能描述
+aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模型使用，对比小算子做性能优化。
+
+参数说明
+x（Tensor）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。
+weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持INT8，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
+group_list （Tensor）：输入，指示每个分组参与计算的Token个数，公式中的grouplist，Device侧的aclTensor。shape支持1维，长度需与weight的首轴维度相等，数据类型支持INT64，数据格式支持ND，支持非连续的Tensor。
+weight_scale （Tensor）：输入，右矩阵的量化因子，公式中的w_scale，Device侧的aclTensor。shape支持2维，首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴相同，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
+x_scale （Tensor）：输入，左矩阵的量化因子，公式中的x_scale，Device侧的aclTensor。shape支持1维，长度需与x的首轴维度相等，数据类型支持FLOAT，数据格式支持ND，支持非连续的Tensor。
+bias（可选，暂不支持，Tensor）：输入，矩阵乘计算的偏移值，公式中的bias，shape支持2维，数据类型支持INT32，预留输入，暂不支持。
+offset（可选，暂不支持，Tensor）：输入，per-channel非对称反量化的偏移，公式中的offset，shape支持2维，数据类型支持Float，预留输入，暂不支持。
+
+输出说明
+group_list指导了输入和输出中的有效值范围，该数值由前置算子得到，动态变化。应根据group_list，对结果中脏数据做截断处理，即有效数据截至到group_list[-1]，即：output[:groupList[-1],:],output_scale[:groupList[-1]]
+output（Tensor）：输出的量化结果，公式中的Q，Device侧的aclTensor。数据类型支持INT8，shape支持2维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
+output_scale（Tensor）：输出的量化因子，公式中的Q_scale，Device侧的aclTensor。数据类型支持FLOAT，shape支持1维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
+output_offset（预留输出，暂不支持，Tensor）：输出的非对称量化的偏移，公式中的Q_offset，Device侧的aclTensor，shape支持1维，数据类型支持FLOAT。
+
+支持的型号
+A2训练、推理系列产品
+A3训练、推理系列产品
+
+调用示例
+import torch
+import torch_npu
+import numpy as np
+
+def generate_non_decreasing_sequence(length, upper_limit):
+    # 生成随机增量
+    random_increments = torch.randint(1, 128, (length,), dtype=torch.int64)  # 避免零增量
+    # 累加生成非递减序列
+    sequence = torch.cumsum(random_increments, dim=0)
+    # 确保最后一个元素不超过上限
+    if sequence[-1] > upper_limit:
+        # 线性缩放以确保总和不超过上限
+        scale_factor = upper_limit / sequence[-1].item()
+        sequence = (sequence * scale_factor).to(torch.int64)
+        for i in range(1, length):
+            if sequence[i] <= sequence[i-1]:
+                sequence[i] = sequence[i-1] + 1
+    return sequence
+
+def gen_input_data(E=16, M=512, K=7168, N=4096):
+    x = torch.randint(-128, 127, (M, K), dtype=torch.int8).npu()
+    weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8).npu()
+    weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
+    weight_scale = torch.randn(E, N, dtype=torch.float32).npu()
+    x_scale = torch.randn(M, dtype=torch.float32).npu()
+    group_list = generate_non_decreasing_sequence(E, M).npu()
+    output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
+        x, weight_npu, group_list, weight_scale, x_scale,
+        bias=None,
+        offset=None
+    )
+    return output, output_scale, output_offset
+
+def main():
+    output, output_scale, output_offset = gen_input_data()
+
+if __name__ == "__main__":
+    main()
+
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_gmm_alltoallv",
     """
 接口原型：
@@ -8290,6 +8499,326 @@ if __name__ == "__main__":
 """
 )
 
+
+_add_torch_npu_docstr(
+    "npu_nsa_compress",
+    """
+torch_npu.npu_nsa_compress(input, weight, compress_block_size, compress_stride, actual_seq_len=None)
+功能描述
+实现Native Sparse Attention算法中训练场景下的压缩功能。
+
+参数说明
+input(Tensor)：必选参数，待压缩张量，shape支持[T,N,D]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+weight(Tensor)：必选参数，压缩的权重，shape支持[compress_block_size, N]，weight和input的shape满足broadcast关系，数据类型支持bfloat16、float16，数据类型与input保持一致，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+compress_block_size(int)：必选参数，压缩滑窗的大小。
+compress_stride(int)：必选参数，两次压缩滑窗间隔大小。
+actual_seq_len(list[int])：必选参数，长度表示query有多少个batch，值表示各batch的token长度的前缀和，例如，actual_seq_len[0]=s0,actual_seq_len[1]=s0+s1，...，actual_seq_len[-1]=T。
+
+输出说明
+代表压缩后的结果。
+
+约束说明
+compress_block_size和compress_stride必须是16的整数倍，并且compress_block_size大于等于compress_stride。
+input的第2维（D）必须是16的整数倍。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> import numpy as np
+>>> actual_seq_len = np.random.randint(0, 100, [48])
+>>> actual_seq_len = np.cumsum(actual_seq_len).astype(np.int64)
+>>> head_num = 4
+>>> head_dim = 128
+>>> compress_block_size = 16
+>>> compress_stride = 16
+>>> input = torch.randn(actual_seq_len[-1], head_num, head_dim, dtype=torch.float16).npu()
+>>> weight = torch.randn(compress_block_size, head_num, dtype=torch.float16).npu()
+>>> torch_npu.npu_nsa_compress(input, weight, compress_block_size, compress_stride, actual_seq_len=actual_seq_len)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_compress_infer",
+    """
+torch_npu.npu_nsa_compress_infer(input, weight, slot_mapping, compress_block_size, compress_stride, page_block_size, block_table=None, actual_seq_len=None, cache)
+功能描述
+Native Sparse Attention算法中推理场景下，实现对KV压缩的计算。
+
+参数说明
+input(Tensor)：必选输入，待压缩张量，shape支持[block_num,page_block_size,head_num,head_dim]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+weight(Tensor)：必选输入，压缩的权重，shape支持[compress_block_size, head_num]，weight和input的shape满足broadcast关系，数据类型支持bfloat16、float16，数据类型与input保持一致，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+slot_mapping(Tensor)：必选输入，表示每个batch尾部压缩数据存储的位置的索引，shape支持[batch_num]，数据类型支持int32，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+compress_block_size(int)：必选输入，压缩滑窗的大小。
+compress_stride(int)：必选输入，两次压缩滑窗间隔大小。
+page_block_size(int)：必选输入，page_attention场景下page的block_size大小。
+block_table(Tensor)：可选输入，page_attention场景下kv缓存使用的block映射表，不支持非连续的Tensor。
+actual_seq_len(list[int])：必选输入，表示每个batch对应的token的长度。
+cache(Tensor)：必选输入，推理场景下的kv缓存，支持非连续的Tensor，不支持空Tensor。
+
+输出说明
+代表对KV压缩计算后的结果。
+
+约束说明
+compress_block_size和compress_stride必须是16的整数倍，并且compress_block_size>=compress_stride，且compress_block_size小于128。
+page_block_size只支持64和128。
+head_dim必须是16的整数倍，head_num小于64。
+slot_mapping里的值无重复，否则会导致计算结果不稳定。
+block_table里的值小于block_num。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> input = torch.randn(1, 128, 1, 192, dtype=torch.float16).npu()
+>>> weight = torch.randn(32, 1, dtype=torch.float16).npu()
+>>> slot_mapping = torch.randn([1]).int().npu()
+>>> compress_block_size = 32
+>>> compress_stride = 16
+>>> page_block_size = 128
+>>> act_seq_lens = [43]
+>>> block_table = torch.randn([1, 1]).int().npu()
+>>> cache = torch.zeros([1, 1, 192],dtype=torch.float16).npu()
+>>> torch_npu.npu_nsa_compress_infer(input, weight,slot_mapping,compress_block_size,compress_stride,page_block_size,actual_seq_len=act_seq_lens,block_table=block_table,cache=cache)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_compress_attention",
+    """
+torch_npu.npu_nsa_compress_attention(query, key, value, scale_value, head_num, compress_block_size, compress_stride, select_block_size, select_block_count, topk_mask=None, atten_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
+功能描述
+实现Native Sparse Attention算法中训练场景下的压缩注意力功能。
+
+参数说明
+query(Tensor)：必选参数，shape支持[T,N,D]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+key(Tensor)：必选参数，shape支持[T,N2,D]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+value(Tensor)：必选参数，shape支持[T,N2,D2]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+scale_value(double)：必选参数，表示缩放系数。
+head_num(int)：必选参数，表示query的head个数。
+compress_block_size(int)：必选参数，压缩滑窗的大小。
+compress_stride(int)：必选参数，两次压缩滑窗间隔大小。
+select_block_size(int)：必选参数，表示select窗口的大小。
+select_block_count(int)：必选参数，表示select窗口的数量。
+topk_mask(Tensor)：可选参数，shape支持[S,S]，SS分别是max_sq和max_skv，数据类型支持bool。
+atten_mask(Tensor)：可选参数，取值为1代表该位不参与计算（不生效），为0代表该位参与计算，数据类型支持bool，数据格式支持ND，输入shape类型支持[S,S]格式，SS分别是maxSq和maxSkv。
+actual_seq_qlen(list[int])：必选参数，长度表示query有多少个batch，值表示各batch的token长度的前缀和，例如，actual_seq_qlen[0]=s0,actual_seq_qlen[1]=s0+s1，...，actual_seq_qlen[-1]=T。
+actual_cmp_seq_kvlen(list[int])：必选参数，长度表示compress attention的key或value有多少个batch，值表示各batch的token长度的前缀和，例如，actual_cmp_seq_kvlen[0]=s0,actual_cmp_seq_kvlen[1]=s0+s1，...，actual_cmp_seq_kvlen[-1]=T。
+actual_sel_seq_kvlen(list[int])：必选参数，长度表示select attention的key/value有多少个batch，值表示各batch的token长度的前缀和，例如，actual_sel_seq_kvlen[0]=s0,actual_sel_seq_kvlen[1]=s0+s1，...，actual_sel_seq_kvlen[-1]=T。
+
+输出说明
+Tensor：代表压缩注意力attention的结果。
+Tensor：代表选择出的topk。
+Tensor：代表softmax计算的max中间结果，用于反向计算。
+Tensor：代表softmax计算的sum中间结果，用于反向计算。
+
+约束说明
+compress_block_size、compress_stride和select_block_size必须是16的整数倍，并且compress_block_size大于等于compress_stride。
+query、key、value的数据类型必须一致，同时layout必须一致。
+query的第2维必须等于key的第2维，并且key的第2维必须大于等于value的第2维。
+query、key、value的batchsize必须相等。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> query = torch.randn(65536, 64, 192, dtype=torch.bfloat16).npu()
+>>> key = torch.randn(4096, 4, 192, dtype=torch.bfloat16).npu()
+>>> value = torch.randn(4096, 4, 128, dtype=torch.bfloat16).npu()
+>>> scale_value = 1 / (192 0.5)
+>>> head_num = 64
+>>> compress_block_size = 32
+>>> compress_stride = 16
+>>> select_block_size = 64
+>>> select_block_count = 16
+>>> actual_seq_qlen = [65536]
+>>> actual_cmp_seq_kvlen = [4096]
+>>> actual_sel_seq_kvlen = [1024]
+>>> torch_npu.npu_nsa_compress_attention(query, key, value, scale_value, head_num, compress_block_size, compress_stride, select_block_size, select_block_count, actual_seq_qlen=actual_seq_qlen, actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=actual_sel_seq_kvlen)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_compress_attention_infer",
+    """
+torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
+功能描述
+Native Sparse Attention算法中推理场景下，实现对KV压缩的计算。
+
+参数说明
+input(Tensor)：必选输入，待压缩张量，shape支持[block_num,page_block_size,head_num,head_dim]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+weight(Tensor)：必选输入，压缩的权重，shape支持[compress_block_size, head_num],weight和input的shape满足broadcast关系，数据类型支持bfloat16、float16，数据类型与input保持一致，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+slot_mapping(Tensor)：必选输入，表示每个batch尾部压缩数据存储的位置的索引，shape支持[batch_num]，数据类型支持int32，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+compress_block_size(int)：必选输入，压缩滑窗的大小。
+compress_stride(int)：必选输入，两次压缩滑窗间隔大小。
+page_block_size(int)：必选输入，page_attention场景下page的block_size大小。
+block_table(Tensor)：可选输入，page_attention场景下kv缓存使用的block映射表，不支持非连续的Tensor。
+actual_seq_len(list[int])：必选输入，表示每个batch对应的token的长度。
+cache(Tensor)：必选输入，推理场景下的kv缓存，支持非连续的Tensor，不支持空Tensor。
+
+输出说明
+代表对KV压缩计算后的结果。
+
+约束说明
+compress_block_size和compress_stride必须是16的整数倍，并且compress_block_size>=compress_stride，且compress_block_size小于128。
+page_block_size只支持64和128。
+head_dim必须是16的整数倍，head_num小于64。
+slot_mapping里的值无重复，否则会导致计算结果不稳定。
+block_table里的值小于block_num。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> input = torch.randn(1, 128, 1, 192, dtype=torch.float16).npu()
+>>> weight = torch.randn(32, 1, dtype=torch.float16).npu()
+>>> slot_mapping = torch.randn([1]).int().npu()
+>>> compress_block_size = 32
+>>> compress_stride = 16
+>>> page_block_size = 128
+>>> act_seq_lens = [43]
+>>> block_table = torch.randn([1, 1]).int().npu()
+>>> cache = torch.zeros([1, 1, 192],dtype=torch.float16).npu()
+>>> torch_npu.npu_nsa_compress_infer(input, weight,slot_mapping,compress_block_size,compress_stride,page_block_size,actual_seq_len=act_seq_lens,block_table=block_table,cache=cache)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_select_attention",
+    """
+torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None)
+功能描述
+实现Native Sparse Attention算法中训练场景下选择注意力的计算。
+
+参数说明
+query(Tensor)：必选参数，shape支持[T1,N1,D1]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+key(Tensor)：必选参数，shape支持[T2,N2,D1]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+value(Tensor)：必选参数，shape支持[T2,N2,D2]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+topk_indices(Tensor)：必选参数，shape为[T1, N2, select_block_count]，数据类型支持int32，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
+scale_value(double)：必选参数，表示缩放系数。
+head_num(int)：必选参数，表示单卡的head个数，即query的N1轴长度。
+select_block_size(int)：必选参数，表示select窗口的大小。
+select_block_count(int)：必选参数，表示select窗口的数量。
+atten_mask(Tensor)：可选参数，当前暂不支持。
+actual_seq_qlen(list[int])：必选参数，长度表示query有多少个batch，值表示各batch的token长度的前缀和，例如，actual_seq_qlen[0]=s0,actual_seq_qlen[1]=s0+s1，...，actual_seq_qlen[-1]=T1。
+actual_seq_kvlen(list[int])：必选参数，，长度表示key或value有多少个batch，值表示各batch的token长度的前缀和，例如，actual_seq_kvlen[0]=s0,actual_seq_kvlen[1]=s0+s1，...，actual_seq_kvlen[-1]=T2。
+
+输出说明
+Tensor：代表经过选择后的注意力attention结果。
+Tensor：代表softmax计算的max中间结果，用于反向计算。
+Tensor：代表softmax计算的sum中间结果，用于反向计算。
+
+约束说明
+query、key、value的数据类型必须一致，同时layout必须一致。
+query的第2维（D1）必须等于key的第2维，并且key的第2维（D1）必须大于等于value的第2维（D2）。
+query和key第2维（D1）只支持192，value的第2维（D2）只支持128。
+select_block_size目前仅支持64，select_block_count仅支持16。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> import numpy as np
+>>> query = torch.randn(256, 16, 192, dtype=torch.float16).npu()
+>>> key = torch.randn(3072, 4, 192, dtype=torch.float16).npu()
+>>> value = torch.randn(3072, 4, 128, dtype=torch.float16).int().npu()
+>>> topk_indices = torch.randn(256, 4, 16).int().npu()
+>>> scale_value = 1.0
+>>> head_num = 16
+>>> select_block_size = 64
+>>> select_block_count = 16
+>>> atten_mask = torch.randn(512, 2048).bool().npu()
+>>> actual_seq_qlen = [128, 256]
+>>> actual_seq_kvlen = [2048, 3072]
+>>> torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_select_attention_infer",
+    """
+torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, layout='BSND', atten_mask=None, block_table=None, actual_seq_qlen=None, actual_seq_kvlen=None)
+功能描述
+Native Sparse Attention算法中推理场景下，实现选择注意力的计算。
+
+参数说明
+query (Tensor)：必选输入，shape支持3维或者4维，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+key (Tensor)：必选输入，shape支持3维或者4维，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+value (Tensor)：必选输入，shape支持3维或者4维，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+topk_indices (Tensor)：必选输入，shape为[batch_size, key_value_head_num, select_block_count]，数据类型支持int32，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor。
+scale_value (double)：必选输入，表示缩放系数。
+head_num (int)：必选输入，表示query的head个数。
+key_value_head_num (int)：必选输入，表示key或者value的head个数。
+select_block_size (int)：必选输入，表示选择窗口的大小。
+select_block_count (int)：必选输入，表示选择窗口的数量。
+page_block_size(int)：必选输入，page_attention场景下page的block_size大小。
+atten_mask (Tensor)：可选输入，当前暂不支持。
+block_table(Tensor)：可选输入，page_attention场景下kv缓存使用的block映射表，数据类型支持int32，不支持非连续的Tensor，不支持空tensor。
+layout(str)：可选输入，表示输入的数据排布格式，支持BSH、BSND，默认为BSND。
+actual_seq_qlen(list[int])：可选输入，当前暂不支持。
+actual_seq_kvlen(list[int])：必选输入，表示key或value每个S的长度。
+
+输出说明
+代表经过选择后的注意力结果。
+
+约束说明
+query的数据排布格式中，B即Batch，S即Seq-Length，N（Head-Num）表示多头数、D（Head-Dim）表示隐藏层最小的单元尺寸，且满足D=H/N。key和value的数据排布格式当前（paged attention场景）支持(block_num, block_size, H)或(block_num, block_size, N, D)，H（Head-Size）表示隐藏层的大小，H = N * D。
+
+参数query中的N和head_num值相等，key、value的N和key_value_head_num值相等，并且head_num是key_value_head_num的倍数关系。
+参数query中的D和key的D(H/key_value_head_num)值相等。
+query，key，value输入，功能使用限制如下：
+  支持B轴小于等于3072；
+  支持query的N轴与key/value的N轴（H/D）小于等于128；
+  支持query的N轴与key/value的N轴（H/D）的比值小于等于128，且能够被128整除；
+  支持query与key的D轴小于等于192；
+  支持value的D轴小于等于128；
+  支持query与key的D轴大于等于value的D轴；
+  支持query与key的block_size小于等于128且被16整除；
+  仅支持query的S轴等于1。
+  仅支持key/value的S轴小于等于8192。
+  仅支持select_block_size、page_block_size取值为16的整数倍。
+  selectBlockCount上限满足select_block_count * select_block_size <= MaxKvSeqlen，MaxKvSeqlen = Max(actual_seq_kvlen)。
+
+支持的型号
+Atlas A2训练系列产品
+
+调用示例
+>>> import torch
+>>> import torch_npu
+>>> query = torch.randn(17, 1, 126, 192, dtype=torch.float16).npu()
+>>> key = torch.randn(187, 128, 9, 192, dtype=torch.float16).npu()
+>>> value = torch.randn(187, 128, 9, 128, dtype=torch.float16).npu()
+>>> topk_indices = torch.randn(17, 9, 21).int().npu()
+>>> scale_value = 2.0
+>>> head_num = 126
+>>> key_value_head_num = 9
+>>> select_block_size = 64
+>>> select_block_count = 21
+>>> page_block_size = 128
+>>> block_table = torch.randn(17, 11).int().npu()
+>>> actual_seq_qlen = [1]
+>>> actual_kv_seqlen = [1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328, 1328]
+>>> layout = 'BSND'
+>>> torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+"""
+)
+
+
 _add_torch_npu_docstr(
     "npu_gather_sparse_index",
     """
@@ -8330,3 +8859,124 @@ out = torch_npu.npu_gather_sparse_index(inputs, index)
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_moe_eplb_update_expert",
+    """
+torch_npu.npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int local_rank_id, int world_size, *, int balance_mode=0) -> Tensor
+
+功能描述
+完成冗余专家部署场景下每个token的topK个专家逻辑卡号到物理卡号的映射。
+
+参数说明
+    expertIds：Device侧的Tensor，表示输入，每个token的topK个专家索引，要求为一个2D的Tensor，shape为 (Bs, K)。数据格式支持ND,数据类型支持INT32。
+    eplbTable：Device侧的Tensor，表示输入，逻辑专家到物理专家的映射表，外部调用者需保证输入Tensor的值正确：每行第一列为行号对应逻辑专家部署的实例数count，值需大于等于1，每行[1, count]列为对应实例的卡号，取值范围[0, moe_expert_num)，Device侧的Tensor，要求是一个2D的Tensor。数据类型支持INT32，数据格式支持ND。shape为 (moeExperNum, F)。
+    localRankId：int类型，计算输入，本卡Id，数据类型支持INT64。取值支持[0, worldSize)。同一个通信域中各卡的localRankId不重复。
+    worldSize：int类型，计算输入，通信域Size，数据类型支持INT64，取值区间[2, 384]。
+    balanceMode: int类型，计算输入，均衡规则，传入0时按照rank进行分发，数据类型支持INT64，当前只支持传入0。
+
+输出说明
+    balancedExpertIds：Device侧的Tensor，表示输出，映射后每个token的topK个专家所在物理卡的卡号，要求是一个2D的Tensor，shape为（Bs，K），数据类型、数据格式与expertIds保持一致。
+
+支持的型号
+Atlas A3训练系列产品
+
+调用示例
+import os
+import math
+import numpy as np
+import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
+import torch_npu
+
+from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
+
+
+class TestMoeEPLBUpdateExpert(TestCase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bs = 128
+        self.k = 8
+        self.log_ep_size = 256
+        self.pyh_ep_size = 8
+        self.F = 5
+        self.world_size = 8
+        self.expert_ids = []
+        self.eplb_table = []
+        self.balanced_expert_ids = []
+        self.gen_exp_result()
+
+    @classmethod
+    def _init_dist_hccl(cls, rank, world_size):
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = '50000'
+        os.environ['HCCL_WHITELIST_DISABLE'] = '1'
+        torch_npu.npu.set_device(rank)
+        dist.init_process_group(backend='hccl', world_size=world_size, rank=rank)
+        return dist
+
+    @classmethod
+    def _test_npu_moe_eplb_update_expert(cls, rank_id, input_list):
+        expert_ids, eplb_table, world_size, init_pg, c2p, p2c = input_list
+        _ = init_pg(rank_id, world_size)
+        out = torch_npu.npu_moe_eplb_update_expert(expert_ids=expert_ids.npu(),
+                                                   eplb_table=eplb_table.npu(),
+                                                   local_rank_id=rank_id,
+                                                   world_size=world_size,
+                                                   balance_mode=0)
+        c2p.put((rank_id, out.cpu()))
+        p2c.get()
+    
+    def gen_exp_result(self):
+        for rank_id in range(self.world_size):
+            eplb_table = np.zeros((self.log_ep_size, self.F - 1))
+            count_cloumn = np.random.randint(1, self.F, size=(self.log_ep_size, 1))
+            all_ranks = np.arange(self.pyh_ep_size)
+            for i in range(self.log_ep_size):
+                np.random.shuffle(all_ranks)
+                for j in range(count_cloumn[i][0]):
+                    eplb_table[i][j] = all_ranks[j]
+            _expert_ids = torch.from_numpy(np.random.randint(low=0, high=self.log_ep_size, size=(self.bs, self.k))).to(torch.int64)
+            _eplb_table = torch.from_numpy(np.hstack((count_cloumn, eplb_table))).to(torch.int32)
+            self.expert_ids.append(_expert_ids)
+            self.eplb_table.append(_eplb_table)
+            _balanced_expert_ids = np.zeros((self.bs, self.k))
+            for i in range(self.bs):
+                for j in range(self.k):
+                    log_ep_id = _expert_ids[i][j]
+                    mod_val = math.ceil(self.world_size / _eplb_table[log_ep_id][0])
+                    phy_ep_id = _eplb_table[log_ep_id][(rank_id // mod_val) + 1]
+                    _balanced_expert_ids[i][j] = phy_ep_id
+            self.balanced_expert_ids.append(torch.from_numpy(_balanced_expert_ids).to(torch.int64))
+
+    @SupportedDevices(['Ascend910_'])
+    def test_npu_moe_eplb_update_expert(self):
+        ctx = mp.get_context('spawn')
+        c2p = ctx.Queue(self.world_size)
+        p2c = ctx.Queue(self.world_size)
+        ps = []
+
+        for rank_id in range(self.world_size):
+            p = ctx.Process(
+                target=self._test_npu_moe_eplb_update_expert,
+                args=(rank_id, [self.expert_ids[rank_id], self.eplb_table[rank_id], self.world_size, self._init_dist_hccl, c2p, p2c]))
+            p.start()
+            ps.append(p)
+
+        for _ in range(self.world_size):
+            rank_id, output = c2p.get()
+            self.assertEqual(output, self.balanced_expert_ids[rank_id],
+                             ("rank {} Expect receive tensor {} but got {}.").format(rank_id, self.balanced_expert_ids[rank_id], output))
+
+        for _ in range(self.world_size):
+            p2c.put(0)
+
+        for p in ps:
+            p.join()
+
+
+if __name__ == '__main__':
+    run_tests()
+"""
+)
