@@ -28,11 +28,7 @@ namespace op_api
         const at::Tensor &sin)
     {
         at::Tensor out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
-            EXEC_NPU_CMD(aclnnRotaryPositionEmbedding, x, cos, sin, MODE_INTERLEAVE, out);
-        } else {
-            EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
-        }
+        EXEC_NPU_CMD(aclnnInterleaveRope, x, cos, sin, out);
         return out;
     }
 } // namespace op_api
