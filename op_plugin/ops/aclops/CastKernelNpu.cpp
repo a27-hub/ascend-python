@@ -36,6 +36,7 @@ at::Tensor& cast_nocheck(at::Tensor& result, const at::Tensor& self)
     return result;
 }
 
+
 at::Tensor npu_dtype_cast_impl(const at::Tensor& self, at::ScalarType dtype)
 {
     if (self.dtype() == dtype) {
