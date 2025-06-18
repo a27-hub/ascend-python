@@ -28,6 +28,7 @@ class TestPagedCacheLoadParams:
     batch_size: int
     device: str
 
+
 @dataclass
 class PreparedData:
     expected: torch.Tensor
