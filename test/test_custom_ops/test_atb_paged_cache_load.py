@@ -28,6 +28,15 @@ class TestPagedCacheLoadParams:
     batch_size: int
     device: str
 
+@dataclass
+class PreparedData:
+    expected: torch.Tensor
+    seq_len_tensor: torch.Tensor
+    block_table: torch.Tensor
+    seq_starts: Optional[torch.Tensor]
+    cached_kv_c: torch.Tensor
+    cached_k_pe: torch.Tensor
+
 
 class TestPagedCacheLoadSeqStarts(TestCase):
 
@@ -107,7 +116,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             # Handle last incomplete block
             if partial_block_size > 0:
                 block_id = batch_block_table[full_blocks].item()
-                dst[dst_start : dst_start + partial_block_size] = src_cache[
+                dst[dst_start: dst_start + partial_block_size] = src_cache[
                     block_id, :partial_block_size
                 ].squeeze(1)
 
@@ -165,7 +174,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             torch.float16
         )
 
-        return (
+        return PreparedData(
             expected,
             seq_len_tensor,
             block_table,
@@ -193,6 +202,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             batch_size=batch_size,
             device=device,
         )
+        prepared_data = self._prepare_data(test_params)
         (
             expected,
             seq_len_tensor,
@@ -200,7 +210,14 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             seq_starts,
             cached_kv_c,
             cached_k_pe,
-        ) = self._prepare_data(test_params)
+        ) = (
+            prepared_data.expected,
+            prepared_data.seq_len_tensor,
+            prepared_data.block_table,
+            prepared_data.seq_starts,
+            prepared_data.cached_kv_c,
+            prepared_data.cached_k_pe,
+        )
 
         total_tokens = seq_len_tensor.sum()
 
@@ -243,6 +260,7 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             batch_size=batch_size,
             device=device,
         )
+        prepared_data = self._prepare_data(test_params)
         (
             expected,
             seq_len_tensor,
@@ -250,7 +268,14 @@ class TestPagedCacheLoadSeqStarts(TestCase):
             seq_starts,
             cached_kv_c,
             cached_k_pe,
-        ) = self._prepare_data(test_params)
+        ) = (
+            prepared_data.expected,
+            prepared_data.seq_len_tensor,
+            prepared_data.block_table,
+            prepared_data.seq_starts,
+            prepared_data.cached_kv_c,
+            prepared_data.cached_k_pe,
+        )
 
         total_tokens = seq_len_tensor.sum()
 
