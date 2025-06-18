@@ -39,7 +39,7 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     TORCH_CHECK(!(std::min(x_dim_num, weight_dim_num) > MINIMUM_SHAPE_SIZE && x_dim_num != weight_dim_num),
                 "x dim is not the same as weight dim", OPS_ERROR(ErrCode::PARAM));
     auto x_k_dim = x.size(x_dim_num - 1);
-    auto weight_k_dim = (weight.dtype() == at::kInt && trans_weight) ?
+    auto weight_k_dim = ((weight.dtype() == at::kInt || weight.dtype() == at::kFloat) && trans_weight) ?
                         weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE) * INT4_NUMS_IN_INT32 :
                         weight.size(weight_dim_num - MINIMUM_SHAPE_SIZE);
     TORCH_CHECK(x_k_dim == weight_k_dim, "The k of x and weight should be equal. but x_k_dim is ", x_k_dim,
