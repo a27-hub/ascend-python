@@ -924,9 +924,18 @@ official:
 
   - func: adaptive_max_pool2d_backward(Tensor grad_output, Tensor self, Tensor indices) -> Tensor
     acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnAdaptiveMaxPool2dBackward
 
   - func: adaptive_max_pool2d_backward.grad_input(Tensor grad_output, Tensor self, Tensor indices, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: all_version
+    op_api: all_version
+    gen_opapi:
+      exec: aclnnAdaptiveMaxPool2dBackward
 
   - func: adaptive_max_pool3d.out(Tensor self, int[3] output_size, *, Tensor(a!) out, Tensor(b!) indices) -> (Tensor(a!), Tensor(b!))
     op_api: all_version
@@ -1630,7 +1639,10 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      structured_inherit: clamp.out
+      out:
+        size: self
+        dtype: clamp_scalar_out_dtype(self, min, max)
+      exec: aclnnClamp
 
   - func: clamp.Tensor(Tensor self, Tensor? min=None, Tensor? max=None) -> Tensor
     acl_op: all_version
@@ -1638,7 +1650,7 @@ official:
     gen_opapi:
       out:
         size: clamp_npu_output_size(self, min, max)
-        dtype: self
+        dtype: clamp_out_dtype(self, min, max)
       exec: aclnnClampTensor
 
   - func: clamp.Tensor_out(Tensor self, Tensor? min=None, Tensor? max=None, *, Tensor(a!) out) -> Tensor(a!)
@@ -1655,7 +1667,6 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: self
       exec: aclnnClamp
 
   - func: clamp_(Tensor(a!) self, Scalar? min=None, Scalar? max=None) -> Tensor(a!)
@@ -1674,7 +1685,10 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      structured_inherit: clamp_max.out
+      out:
+        size: self
+        dtype: at::native::result_type(self, max)
+      exec: aclnnClampMax
 
   - func: clamp_max.Tensor(Tensor self, Tensor max) -> Tensor
     acl_op: all_version
@@ -1682,7 +1696,7 @@ official:
     gen_opapi:
       out:
         size: op_infer::broadcast_ops_npu_output_size(self, max)
-        dtype: self
+        dtype: at::native::result_type(self, max)
       exec: aclnnClampMaxTensor
 
   - func: clamp_max.Tensor_out(Tensor self, Tensor max, *, Tensor(a!) out) -> Tensor(a!)
@@ -1699,7 +1713,6 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: self
       exec: aclnnClampMax
 
   - func: clamp_max_(Tensor(a!) self, Scalar max) -> Tensor(a!)
@@ -1718,21 +1731,26 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      structured_inherit: clamp_min.out
+      out:
+        size: self
+        dtype: at::native::result_type(self, min)
+      exec: aclnnClampMin
 
   - func: clamp_min.Tensor(Tensor self, Tensor min) -> Tensor
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      structured_inherit: clamp_min.Tensor_out
+      out:
+        size: op_infer::broadcast_ops_npu_output_size(self, min)
+        dtype: at::native::result_type(self, min)
+      exec: aclnnClampMinTensor
 
   - func: clamp_min.Tensor_out(Tensor self, Tensor min, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     gen_opapi:
       out:
-        size: self
-        dtype: self
+        size: op_infer::broadcast_ops_npu_output_size(self, min)
       exec: aclnnClampMinTensor
 
   - func: clamp_min.out(Tensor self, Scalar min, *, Tensor(a!) out) -> Tensor(a!)
@@ -1741,7 +1759,6 @@ official:
     gen_opapi:
       out:
         size: self
-        dtype: self
       exec: aclnnClampMin
 
   - func: clamp_min_(Tensor(a!) self, Scalar min) -> Tensor(a!)
@@ -6776,10 +6793,18 @@ custom:
     acl_op: all_version
     op_api: all_version
 
+  - func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
   - func: npu_dtype_cast_(Tensor(a!) self, Tensor src) -> Tensor(a!)
     acl_op: all_version
 
   - func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+
+  - func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
 
@@ -7166,7 +7191,7 @@ custom:
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
     acl_op: [v2.1, newest]
 
-  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None) -> Tensor
+  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None, SymInt[]? group_sizes=None) -> Tensor
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
@@ -7438,13 +7463,15 @@ custom:
     exposed: all_version
     gen_opapi:
       out:
-        size: 'npu_transpose_batchmatmul_output_size(input, weight, scale_real, perm_x1_real, perm_x2_real, batch_split_factor_value)'
-        dtype: 'scale_real.defined() ? at::ScalarType::Char : at::ScalarType::Half'
+        size: 'npu_transpose_batchmatmul_output_size(input, weight, scale_real, perm_x1_real, perm_x2_real, perm_y_real, batch_split_factor_value)'
+        dtype: 'scale_real.defined() ? at::ScalarType::Char : input.scalar_type()'
       new_params:
+        default_perm_x: 'std::vector<int64_t>{0, 1, 2}'
+        default_perm_y: 'std::vector<int64_t>{1, 0, 2}'
         scale_real: 'scale.value_or(at::Tensor())'
-        perm_x1_real: 'perm_x1.value_or(at::IntArrayRef{0, 1, 2})'
-        perm_x2_real: 'perm_x2.value_or(at::IntArrayRef{0, 1, 2})'
-        perm_y_real: 'perm_y.value_or(at::IntArrayRef{0, 1, 2})'
+        perm_x1_real: 'perm_x1.value_or(at::IntArrayRef(default_perm_x))'
+        perm_x2_real: 'perm_x2.value_or(at::IntArrayRef(default_perm_x))'
+        perm_y_real: 'perm_y.value_or(at::IntArrayRef(default_perm_y))'
         batch_split_factor_value: 'static_cast<int32_t>(batch_split_factor.value_or(1))'
         cubeMathType: 'npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32())'
       exec: aclnnTransposeBatchMatMul, input, weight, bias, scale_real, perm_x1_real, perm_x2_real, perm_y_real, cubeMathType, batch_split_factor_value, out
@@ -7818,6 +7845,10 @@ symint:
 
   - func: zeros(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
     acl_op: [v2.1, newest]
+
+  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None, SymInt[]? group_sizes=None) -> Tensor
+    op_api: all_version
+
 tocpu:
   - func: _cholesky_helper
     version: v1.11, v2.0

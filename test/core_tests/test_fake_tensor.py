@@ -2080,6 +2080,18 @@ class TestQuantMatmul(TestCase):
             res = torch_npu.npu_quant_matmul(x1, x2, scale, offset=None, bias=bias, output_dtype=torch.float16)
             self.assertTrue(expect_ret.shape == res.shape)
             self.assertTrue(expect_ret.dtype == res.dtype)
+            
+            x1 = torch.randint(-8, 8, (1, 8192), dtype=torch.int8).npu()
+            x2 = torch.randint(-8, 8, (8192, 128), dtype=torch.int32).npu()
+            expect_ret = torch.randn([1, 128 * 8], dtype=torch.float16).npu()
+            y_offset = torch.randn([128 * 8, ], dtype=torch.float32).npu()
+            x1_scale = torch.randn([1, 1], dtype=torch.float32).npu()
+            x2_scale = torch.randint(1, 3, [8192 // 256, 128 * 8], dtype=torch.int64).npu()
+            group_size_list = [0, 0, 256]
+            res = torch_npu.npu_quant_matmul(x1, x2, x2_scale, offset=y_offset, pertoken_scale=x1_scale,
+                                             bias=None, output_dtype=torch.float16, group_sizes=group_size_list)
+            self.assertTrue(expect_ret.shape == res.shape)
+            self.assertTrue(expect_ret.dtype == res.dtype)
 
 
 class TestTranQuantParam(TestCase):
@@ -2385,6 +2397,65 @@ class TestMoeEPLBUpdateExpert(TestCase):
             self.assertEqual(result.dtype, torch.int32)
 
 
+class TestNpuMropeMeta(TestCase):
+    def test_npu_mrope_meta(self):
+        with FakeTensorMode():
+            dtype = torch.bfloat16
+            rotary_mode = 'half'
+            num_tokens = 8
+            num_q_heads = 8
+            head_size = 128
+            mrope_section = [0, 0, 0]
+            num_kv_heads = num_q_heads
+            max_seq_len = num_tokens
+            rotary_dim = head_size
+            positions = torch.arange(num_tokens, dtype=torch.int64)
+            query = torch.randn(num_tokens, num_q_heads * head_size, dtype=dtype)
+            key = torch.rand(num_tokens, num_kv_heads * head_size, dtype=dtype)
+            cos_sin_cache = torch.rand(max_seq_len, rotary_dim, dtype=dtype)
+
+            positions_npu = positions.npu()
+            query_npu = query.npu()
+            key_npu = key.npu()
+            cos_sin_cache_npu = cos_sin_cache.npu()
+
+            query_out, key_out = torch_npu.npu_mrope(
+                positions_npu,
+                query_npu,
+                key_npu,
+                cos_sin_cache_npu,
+                head_size,
+                mrope_section=mrope_section,
+                rotary_mode=rotary_mode,
+            )
+
+            self.assertEqual(query_out.shape, query_npu.shape)
+            self.assertEqual(query_out.dtype, query_npu.dtype)
+            self.assertEqual(key_out.shape, key_npu.shape)
+            self.assertEqual(key_out.dtype, key_npu.dtype)
+
+
+class TestNpuFormatCastMeta(TestCase):
+    def test_npu_format_cast_meta(self):
+        with FakeTensorMode():
+            x = torch.rand(2, 3, 4, 5).npu()
+            x1 = torch_npu.npu_format_cast(x, 29)
+            self.assertEqual(x.shape, x1.shape)
+            self.assertEqual(x.dtype, x1.dtype)
+
+
+class TestGatherSparseIndex(TestCase):
+    def test_npu_gather_sparse_index(self):
+        with FakeTensorMode():
+            inputs = torch.randn([16, 32], dtype=torch.float32).npu()
+            index = torch.randint(0, 16, [4, 8]).npu()
+            expect_ret = torch.randn([4, 8, 32], dtype=torch.float32).npu()
+            result = torch_npu.npu_gather_sparse_index(inputs, index)
+
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+
 class TestNpuTopKTopP(TestCase):
     def test_npu_top_k_top_p_meta(self):
         vocab_size = 152064
@@ -2398,6 +2469,7 @@ class TestNpuTopKTopP(TestCase):
             out_npu = torch_npu.npu_top_k_top_p(logits.npu(), p.npu(), k.npu())
             self.assertEqual(out_npu.dtype, dtype)
             self.assertEqual(out_npu.shape, logits.shape)
+
 
 class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
     def test_npu_moe_token_permute_unpermute_meta(self):

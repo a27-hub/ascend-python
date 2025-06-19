@@ -35,7 +35,8 @@ p (Float) - 丢弃概率。
 >>> input = torch.tensor([1.,2.,3.,4.]).npu()
 >>> input
 tensor([1., 2., 3., 4.], device='npu:0')
->>> prob = 0.3>>> output, mask = torch_npu._npu_dropout(input, prob)
+>>> prob = 0.3
+>>> output, mask = torch_npu._npu_dropout(input, prob)
 >>> output
 tensor([0.0000, 2.8571, 0.0000, 0.0000], device='npu:0')
 >>> mask
@@ -62,7 +63,7 @@ copy_memory_仅支持NPU张量。copy_memory_的输入张量应具有相同的dt
 示例
 >>> a=torch.IntTensor([0,  0, -1]).npu()
 >>> b=torch.IntTensor([1, 1, 1]).npu()
->>> a.copy_memory_(b)
+>>> torch_npu.copy_memory_(a, b) 
 tensor([1, 1, 1], device='npu:0', dtype=torch.int32)
 """
 )
@@ -564,7 +565,8 @@ stds3 (Float, 默认值：[1.0,1.0,1.0,1.0]) -index。 "deltas" = "deltas" x "st
 >>> anchor_box = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> ground_truth_box = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, 0, 0, 0, 0, 0.1, 0.1, 0.2, 0.2)
->>> outputtensor([[13.3281, 13.3281,  0.0000,  0.0000],
+>>> output
+tensor([[13.3281, 13.3281,  0.0000,  0.0000],
         [13.3281,  6.6641,  0.0000, -5.4922]], device='npu:0')
 """
 )
@@ -2468,7 +2470,8 @@ off_value (Scalar，默认值为0) - 当indices[j] != i时输出中的填充值�
 示例
 >>> a=torch.IntTensor([5, 3, 2, 1]).npu()
 >>> b=torch_npu.npu_one_hot(a, depth=5)
->>> btensor([[0., 0., 0., 0., 0.],
+>>> b
+tensor([[0., 0., 0., 0., 0.],
         [0., 0., 0., 1., 0.],
         [0., 0., 1., 0., 0.],
         [0., 1., 0., 0., 0.]], device='npu:0')
@@ -2519,7 +2522,8 @@ output_dim (Int32) - 指定输出通道数。必须大于0。
                       [[[ 9]], [[10]], [[11]], [[12]],
                       [[13]], [[14]], [[15]], [[16]]]], dtype = torch.float16).npu()
 >>> out = torch_npu.npu_ps_roi_pooling(x, roi, 0.5, 2, 2)
->>> outtensor([[[[0., 0.],
+>>> out
+tensor([[[[0., 0.],
           [0., 0.]],
         [[0., 0.],
           [0., 0.]]],
@@ -2576,8 +2580,8 @@ mask (Tensor) - 1D张量, 确定对应index是否有效。
 示例
 >>> x = torch.tensor([1, 0, 1, 0], dtype=torch.bool).to("npu")
 >>> result, mask = torch_npu.npu_random_choice_with_mask(x, 2, 1, 0)
->>> resulttensor([[0],
-        [2]], device='npu:0', dtype=torch.int32)
+>>> result
+tensor([[0], [2]], device='npu:0', dtype=torch.int32)
 >>> mask
 tensor([True, True], device='npu:0')
 """
@@ -3110,7 +3114,8 @@ c1_len (Scalar) - “y”的C1 len。该值必须小于“x1”和“x2”中C1�
 示例
 >>> a=torch.tensor([[[[[1.]]]]]).npu()
 >>> b=torch_npu.npu_stride_add(a, a, 0, 0, 1)
->>> btensor([[[[[2.]]],
+>>> b
+tensor([[[[[2.]]],
         [[[0.]]],
         [[[0.]]],
         [[[0.]]],
@@ -7518,34 +7523,44 @@ _add_torch_npu_docstr(
 接口原型
 torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=0, int[2] active_expert_range=[], int row_idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
 参数说明
-    x：Tensor类型，表示MoE的输入即token特征输入，要求为2D的Tensor，shape为(NUM_ROWS, H)。数据类型支持float16、bfloat16、float32、int8，数据格式要求为ND。
-    expert_idx：Tensor类型，表示3.28 torch_npu.npu_moe_gating_top_k_softmax输出每一行特征对应的K个处理专家，要求是2D的Tensor，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持int32，数据格式要求为ND。
-    scale：Tensor类型，可选参数，用于计算量化结果的参数。数据类型支持float32，数据格式要求为ND。
-    非量化场景下，如果不输入表示计算时不使用scale，且输出expanded_scale中的值未定义；如果输入则要求为1D的Tensor，shape为(NUM_ROWS,)。
-    动态quant场景下，如果不输入表示计算时不使用scale，且输出expanded_scale中的值未定义；如果输入则要求为2D的Tensor，shape为(expert_end-expert_start, H)。
+    x：Tensor类型，表示MoE的输入即token特征输入，要求为2D的Tensor，shape为(NUM_ROWS, H)，H代表每个Token的长度。数据类型支持float16、bfloat16、float32、int8，数据格式要求为ND。
+    expert_idx：Tensor类型，表示torch_npu.npu_moe_gating_top_k_softmax输出每一行特征对应的K个处理专家，要求是2D的Tensor，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持int32，数据格式要求为ND。
+    scale：Tensor类型，可选参数，用于计算量化结果的参数。数据类型支持float32，数据格式要求为ND。如果不输入表示计算时不使用scale，且输出expanded_scale中的值未定义。
+        非量化场景下，如果输入则要求为1D的Tensor，shape为(NUM_ROWS,)。
+        动态quant场景下，如果输入则要求为2D的Tensor，shape为(expert_end-expert_start, H)。
     offset：Tensor类型，可选参数，用于计算量化结果的偏移值。数据类型支持float32，数据格式要求为ND。
-    在非量化场景下不输入。
-    动态quant场景下不输入。
-    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，取值大于等于0。
-    expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。只有dropless场景下才会校验此输入。
+        在非量化场景下不输入。
+        动态quant场景下不输入。
+    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，当前入参校验需大于等于0。当前未使用，校验需等于NUM_ROWS*K。
+    expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
     expert_num：int类型，表示专家数。expert_tokens_num_type为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
-    drop_pad_mode：int类型，表示是否为Drop/Pad场景。0表示非Drop/Pad场景，该场景下不校验expert_capacity。
-    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式 ；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值 。当前仅支持1和2。
+    drop_pad_mode：int类型，表示是否为drop_pad场景，取值为0和1。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
+    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值 。当前仅支持1和2。
     expert_tokens_num_flag：bool类型，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
-    quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化（默认值，但当前版本暂不支持），-1表示不量化场景；1表示动态quant场景。
-    active_expert_range：int类型数组，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于expert_num。
-    row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。
+    quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。x数据类型为int8时仅支持-1，不可再量化。
+    active_expert_range：int类型长度为2的数组，表示活跃expert的范围。数组内值为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间，左闭右开。要求值大于等于0，并且expert_end不大于expert_num。
+    row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。性能模板下仅支持1。
 输出说明
-    expanded_x：Tensor类型，根据expert_idx进行扩展过的特征，要求是2D的Tensor，shape为(NUM_ROWS*K, H)。非量化场景下数据类型同x；量化场景下数据类型支持int8。数据格式要求为ND。
-    expanded_row_idx：Tensor类型，expanded_x和x的映射关系， 要求是1D的Tensor，shape为(NUM_ROWS*K, )，数据类型支持int32，数据格式要求为ND。
-    expert_token_cumsum_or_count：Tensor类型。在expert_tokens_num_type为1的场景下，要求是1D的Tensor，表示active_expert_range范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在expert_tokens_num_type为2的场景下，要求是2D的Tensor，shape为(activate_expert_num,  expert_token_count)，表示active_expert_range范围内token总数为非0的expert，以及对应expert处理token的总数 。数据类型支持int64，数据格式要求为ND。
-    expanded_scale：Tensor类型，数据类型支持float32，数据格式要求为ND。
-    非量化场景下，当scale未输入时，输出值未定义。当scale输入时，输出表示一个1D的Tensor，shape为(NUM_ROWS*H*K,)。
-    动态quant场景下，输出量化计算过程中scale的中间值，当scale未输入时，输出值未定义，输出表示一个1D的Tensor，shape为(NUM_ROWS *K)。
+    expanded_x：Tensor类型，根据expert_idx进行扩展过的特征，要求是2D的Tensor，shape为(NUM_ROWS*K, H)。非量化场景下数据类型同x；量化场景下数据类型支持int8。数据格式要求为ND。前available_idx_num*H个元素为有效数据，其余由row_idx_type决定。其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值未定义。
+    expanded_row_idx：Tensor类型，expanded_x和x的映射关系， 要求是1D的Tensor，shape为(NUM_ROWS*K, )，数据类型支持int32，数据格式要求为ND。前available_idx_num个元素为有效数据，其余无效数据由row_idx_type决定，其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。row_idx_type为0时，无效数据由-1填充；row_idx_type为1时，无效数据未初始化。
+    expert_token_cumsum_or_count：Tensor类型。在expert_tokens_num_type为1的场景下，要求是1D的Tensor，表示active_expert_range范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在expert_tokens_num_type为2的场景下，要求是2D的Tensor，shape为(expert_num, 2)，表示active_expert_range范围内token总数为非0的expert，以及对应expert处理token的总数；expert id在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持int64，数据格式要求为ND。
+    expanded_scale：Tensor类型，数据类型支持float32，数据格式要求为ND。令available_idx_num为active_expert_range范围的元素的个数。
+        非量化场景下，即quant_mode为-1，shape为(NUM_ROWS*H*K, )。当scale未输入时，输出值未定义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num*H个元素为有效数据，其余为无效数据。
+        动态quant场景下，即quant_mode为1，输出量化计算过程中scale的中间值，shape为(NUM_ROWS*K)。当scale未输入时，输出值未定义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num个元素为有效数据，其余为无效数据，若x的输入类型为int8，输出值未定义。
 约束说明
     该接口支持推理场景下使用。
     该接口支持图模式（PyTorch 2.1版本）。
     不支持静态量化模式。
+    该算子支持两种性能模板，进入两种性能模板需要分别额外满足以下条件，不满足条件则进入通用模板：
+    进入低时延性能模板需要同时满足以下条件：
+        x、expert_idx、scale输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
+        x数据类型要求：bfloat16
+        属性要求：active_expert_range=[0,256]、 quant_mode=1、expert_tokens_num_type=2
+    进入大batch性能模板需要同时满足以下条件：
+        NUM_ROWS范围为[1920, 4608]
+        K=8
+        expert_end-expert_start<=256
+
 支持的PyTorch版本
 PyTorch 2.6
 PyTorch 2.5
@@ -8333,13 +8348,14 @@ weight（Tensor）：输入，权重矩阵，公式中的W，Device侧的aclTens
 group_list （Tensor）：输入，指示每个分组参与计算的Token个数，公式中的grouplist，Device侧的aclTensor。shape支持1维，长度需与weight的首轴维度相等，数据类型支持INT64，数据格式支持ND，支持非连续的Tensor。
 weight_scale （Tensor）：输入，右矩阵的量化因子，公式中的w_scale，Device侧的aclTensor。shape支持2维，首轴长度需与weight的首轴维度相等，尾轴长度需要与weight还原为ND格式的尾轴相同，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
 x_scale （Tensor）：输入，左矩阵的量化因子，公式中的x_scale，Device侧的aclTensor。shape支持1维，长度需与x的首轴维度相等，数据类型支持FLOAT，数据格式支持ND，支持非连续的Tensor。
-bias（可选，Tensor）：输入，矩阵乘计算的偏移值，公式中的bias，shape支持2维，数据类型支持INT32，预留输入，暂不支持，需要传空指针。
-offset（可选，Tensor）：输入，per-channel非对称反量化的偏移，公式中的offset，shape支持2维，数据类型支持Float，预留输入，暂不支持，需要传空指针。
+bias（可选，暂不支持，Tensor）：输入，矩阵乘计算的偏移值，公式中的bias，shape支持2维，数据类型支持INT32，预留输入，暂不支持。
+offset（可选，暂不支持，Tensor）：输入，per-channel非对称反量化的偏移，公式中的offset，shape支持2维，数据类型支持Float，预留输入，暂不支持。
 
 输出说明
+group_list指导了输入和输出中的有效值范围，该数值由前置算子得到，动态变化。应根据group_list，对结果中脏数据做截断处理，即有效数据截至到group_list[-1]，即：output[:groupList[-1],:],output_scale[:groupList[-1]]
 output（Tensor）：输出的量化结果，公式中的Q，Device侧的aclTensor。数据类型支持INT8，shape支持2维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
 output_scale（Tensor）：输出的量化因子，公式中的Q_scale，Device侧的aclTensor。数据类型支持FLOAT，shape支持1维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
-output_offset（Tensor）：输出的非对称量化的偏移，公式中的Q_offset，Device侧的aclTensor，shape支持1维，数据类型支持FLOAT，预留输出，暂不支持，需要传空指针
+output_offset（预留输出，暂不支持，Tensor）：输出的非对称量化的偏移，公式中的Q_offset，Device侧的aclTensor，shape支持1维，数据类型支持FLOAT。
 
 支持的型号
 A2训练、推理系列产品
