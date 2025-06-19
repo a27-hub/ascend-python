@@ -21,7 +21,7 @@ std::tuple<at::Tensor, at::Tensor> fused_add_topk_div(
     )
 {
     int64_t  a = x.sizes().data()[0];
-    at::Tensor y = at::empty({a, k}, x.options());
+    at::Tensor y = at::empty({a, k}, at::TensorOptions().dtype(at::kFloat).device(x.options().device()));
     at::Tensor indices = at::empty({a, k}, at::TensorOptions().dtype(at::kInt).device(x.options().device()));
 
     EXEC_NPU_CMD(aclnnFusedAddTopkDiv, x, add_num, mapping_num, mapping_table, group_num, group_topk, n, k, activate_type, is_norm, enable_expert_mapping, scale, y, indices);
