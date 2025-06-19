@@ -11,6 +11,10 @@ BIT_NUMBER = 128
 UINT8_BIT_NUMBER = 8
 INPUTS_DIM_LIMIT_QUANTCONV2D = 4
 ATTR_DIM_LIMIT_QUANTCONV2D = 2
+DIM_0 = 0
+DIM_1 = 1
+DIM_2 = 2
+DIM_3 = 3
 #meta register implementation
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
@@ -50,44 +54,44 @@ def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_d
 
     token_x_dim = token_x.dim()
     torch._check(
-        token_x_dim == 2 or token_x_dim == 3,
+        token_x_dim == DIM_2 or token_x_dim == DIM_3,
         lambda: "token_x dim num should be 2 or 3,but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
     )
 
     weight_uk_dim = weight_uk.dim()
     torch._check(
-        weight_uk_dim == 3,
+        weight_uk_dim == DIM_3,
         lambda: "weight_uk dim num should be 3,but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
     )
 
     rope_sin_dim = rope_sin.dim()
     torch._check(
-        rope_sin_dim == 2 or rope_sin_dim == 3,
+        rope_sin_dim == DIM_2 or rope_sin_dim == DIM_3,
         lambda: "rope_sin dim num should be 2 or 3,but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
     )
 
-    if token_x_dim == 3:
+    if token_x_dim == DIM_3:
         query_shape = []
-        query_shape.append(token_x.size(0))
-        query_shape.append(token_x.size(1))
-        query_shape.append(weight_uk.size(0))
-        query_shape.append(weight_uk.size(2))
+        query_shape.append(token_x.size(DIM_0))
+        query_shape.append(token_x.size(DIM_1))
+        query_shape.append(weight_uk.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_2))
 
         query_rope_shape = []
-        query_rope_shape.append(token_x.size(0))
-        query_rope_shape.append(token_x.size(1))
-        query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(token_x.size(DIM_0))
+        query_rope_shape.append(token_x.size(DIM_1))
+        query_rope_shape.append(weight_uk.size(DIM_0))
+        query_rope_shape.append(rope_sin.size(DIM_2))
     else:
         query_shape = []
-        query_shape.append(token_x.size(0))
-        query_shape.append(weight_uk.size(0))
-        query_shape.append(weight_uk.size(2))
+        query_shape.append(token_x.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_2))
 
         query_rope_shape = []
-        query_rope_shape.append(token_x.size(0))
-        query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(token_x.size(DIM_0))
+        query_rope_shape.append(weight_uk.size(DIM_0))
+        query_rope_shape.append(rope_sin.size(DIM_1))
 
     query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
     query_rope = torch.empty(query_rope_shape, dtype=rope_sin.dtype, device='meta')
@@ -105,54 +109,54 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     token_x_dim = token_x.dim()
     torch._check(
-        token_x_dim == 2 or token_x_dim == 3,
+        token_x_dim == DIM_2 or token_x_dim == DIM_3,
         lambda: "token_x dim num should be 2 or 3,but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
     )
 
     weight_uk_dim = weight_uk.dim()
     torch._check(
-        weight_uk_dim == 3,
+        weight_uk_dim == DIM_3,
         lambda: "weight_uk dim num should be 3,but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
     )
 
     rope_sin_dim = rope_sin.dim()
     torch._check(
-        rope_sin_dim == 2 or rope_sin_dim == 3,
+        rope_sin_dim == DIM_2 or rope_sin_dim == DIM_3,
         lambda: "rope_sin dim num should be 2 or 3,but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
     )
 
-    if token_x_dim == 3:
+    if token_x_dim == DIM_3:
         query_shape = []
-        query_shape.append(token_x.size(0))
-        query_shape.append(token_x.size(1))
-        query_shape.append(weight_uk.size(0))
-        query_shape.append(weight_uk.size(2))
+        query_shape.append(token_x.size(DIM_0))
+        query_shape.append(token_x.size(DIM_1))
+        query_shape.append(weight_uk.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_2))
 
         query_rope_shape = []
-        query_rope_shape.append(token_x.size(0))
-        query_rope_shape.append(token_x.size(1))
-        query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(token_x.size(DIM_0))
+        query_rope_shape.append(token_x.size(DIM_1))
+        query_rope_shape.append(weight_uk.size(DIM_0))
+        query_rope_shape.append(rope_sin.size(DIM_2))
 
         dequant_scale_q_nope_shape = []
-        dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
-        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(token_x.size(DIM_0) * token_x.size(DIM_1))
+        dequant_scale_q_nope_shape.append(weight_uk.size(DIM_0)) # support pertoken-head dynamic antiquant
         dequant_scale_q_nope_shape.append(1)
 
     else:
         query_shape = []
-        query_shape.append(token_x.size(0))
-        query_shape.append(weight_uk.size(0))
-        query_shape.append(weight_uk.size(2))
+        query_shape.append(token_x.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_0))
+        query_shape.append(weight_uk.size(DIM_2))
 
         query_rope_shape = []
-        query_rope_shape.append(token_x.size(0))
-        query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(token_x.size(DIM_0))
+        query_rope_shape.append(weight_uk.size(DIM_0))
+        query_rope_shape.append(rope_sin.size(DIM_1))
 
         dequant_scale_q_nope_shape = []
-        dequant_scale_q_nope_shape.append(token_x.size(0))
-        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(token_x.size(DIM_0))
+        dequant_scale_q_nope_shape.append(weight_uk.size(DIM_0)) # support pertoken-head dynamic antiquant
         dequant_scale_q_nope_shape.append(1)
 
     # kvcache量化
