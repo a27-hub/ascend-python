@@ -1095,7 +1095,9 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     return x.new_empty((dim_m, dim_n), dtype=x.dtype)
 
 
-def bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2):
+def bias_shape_check(x2, bias, batch_val, info):
+    is_a4w4 = info['is_a4w4']
+    x2_n_dim = info['x2_n_dim']
     bias_dim_num = bias.dim()
     if is_a4w4:
         torch._check(
@@ -1107,8 +1109,6 @@ def bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2):
             bias_dim_num == 1 or bias_dim_num == 3,
             lambda: "bias_dim_num should be 1 or 3 when x1's dtype is int8, please check bias dim num " + ops_error(ErrCode.VALUE),
         )
-    x2_dim_num = x2.dim()
-    x2_n_dim = x2.size(x2_dim_num - 1) * 8 if (is_a4w4 and not transpose_x2) else x2.size(x2_dim_num - 1)
     bias_first_dim = bias.size(0)
     if bias_dim_num == 1:
         torch._check(
@@ -1133,7 +1133,11 @@ def bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2):
 
 
 def quant_matmul_shape_check(*args):
-    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2 = args
+    x1, x2, scale, offset, pertoken_scale, info = args
+    is_a4w4 = info['is_a4w4']
+    is_a8w4 = info['is_a8w4']
+    transpose_x2 = info['transpose_x2']
+    x2_n_dim = info['x2_n_dim']
     X_MAX_DIM = 6
     X_MIN_DIM = 2
     INT4_IN_INT32 = 8
@@ -1142,7 +1146,6 @@ def quant_matmul_shape_check(*args):
     x1_m_dim = x1.size(x1_dim_num - 2)
     x1_k_dim = x1.size(x1_dim_num - 1)
     x2_k_dim = x2.size(x2_dim_num - 2)
-    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if (is_a4w4 and not transpose_x2) else x2.size(x2_dim_num - 1)
     torch._check(
         x1_dim_num >= X_MIN_DIM and x1_dim_num <= X_MAX_DIM,
         lambda: "x1 dim num should be 2 ~ 6, please check x1 dim num" + ops_error(ErrCode.VALUE),
@@ -1151,6 +1154,11 @@ def quant_matmul_shape_check(*args):
         torch._check(
             x1_k_dim * INT4_IN_INT32 == x2_k_dim,
             lambda: "k dim of x2 should be 8 multiple of k dim of x1, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
+        )
+    elif is_a8w4 and transpose_x2:
+        torch._check(
+            x1_k_dim == x2_k_dim * INT4_IN_INT32,
+            lambda: "k dim of x1 should be 8 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
         )
     else:
         torch._check(
@@ -1245,8 +1253,8 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
 def quant_matmul_dtype_check(*args):
     x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4 = args
     torch._check(
-        x1.dtype == x2.dtype,
-        lambda: "x1's type and x2's type should be same, but x1.dtype is " + str(x1.dtype) + " and x2.dtype is " +
+        (x1.dtype == x2.dtype) or (x1.dtype == torch.int8 and x2.dtype == torch.int32),
+        lambda: "x1's type and x2's type should be same or s8s4, but x1.dtype is " + str(x1.dtype) + " and x2.dtype is " +
                 str(x2.dtype) + ops_error(ErrCode.TYPE),
     )
     input_dtype_supported_list = [torch.int8, torch.int32]
@@ -1329,6 +1337,7 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     shape_short = x2 if x1_dim_num > x2_dim_num else x1
     vaild_offset = out_dim_num - min(x1_dim_num, x2_dim_num)
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
+    is_a8w4 = x1.dtype == torch.int8 and x2.dtype == torch.int32
     dim_list = []
     for i in range(0, out_dim_num - 2):
         short_dim = 1 if i < vaild_offset else shape_short.size(i - vaild_offset)
@@ -1341,19 +1350,25 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         batch_val = batch_val * cur_batch_val
         dim_list.append(cur_batch_val)
     dimm = x1.size(x1.dim() - 2)
-    transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
+    transpose_x2 = not x2.is_contiguous()
 
-    dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32 if (is_a4w4 and not transpose_x2) else x2.size(x2.dim() - 1)
+    dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32 if ((is_a4w4 or is_a8w4) and not transpose_x2) else x2.size(x2.dim() - 1)
     dim_list.append(dimm)
     dim_list.append(dimn)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2)
+    info = {
+        'is_a4w4': is_a4w4,
+        'is_a8w4': is_a8w4,
+        'transpose_x2': transpose_x2,
+        'x2_n_dim': dimn
+    }
+    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, info)
     if bias is not None:
         if bias.dim() == 3:
             torch._check(
                 len(dim_list) == 3,
                 lambda:"when bias dim is 3, out dim need to be 3" + ops_error(ErrCode.TYPE),
             )
-        bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2)
+        bias_shape_check(x2, bias, batch_val, info)
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4)
     quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
     if output_dtype == torch.float16:
