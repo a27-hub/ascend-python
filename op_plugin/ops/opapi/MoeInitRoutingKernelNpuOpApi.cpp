@@ -60,4 +60,10 @@ tensor_list npu_moe_init_routing(const at::Tensor &x, const at::Tensor &row_idx,
     return std::tie(expanded_x, expanded_row_idx, expanded_expert_idx);
 }
 
+tensor_list npu_moe_init_routing_symint(const at::Tensor &x, const at::Tensor &row_idx, const at::Tensor &expert_idx, c10::SymInt active_num)
+{
+    int64_t active_num_int = active_num.expect_int();
+    return npu_moe_init_routing(x, row_idx, expert_idx, active_num_int);
+}
+
 }
