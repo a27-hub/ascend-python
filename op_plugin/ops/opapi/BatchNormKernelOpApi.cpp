@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
@@ -27,5 +26,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _native_batch_norm_legit(
     double eps)
 {
     return at::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
+}
+
+at::Tensor batch_norm(
+    const at::Tensor& input,
+    const c10::optional<at::Tensor>& weight,
+    const c10::optional<at::Tensor>& bias,
+    const c10::optional<at::Tensor>& running_mean,
+    const c10::optional<at::Tensor>& running_var,
+    bool training,
+    double momentum,
+    double eps,
+    bool cudnn_enabled)
+{
+    return std::get<0>(at::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps));
 }
 }  // namespace op_api
