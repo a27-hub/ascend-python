@@ -574,7 +574,7 @@ at::Tensor &conv_transpose3d_backward_weight_out_nocheck(at::Tensor &grad_weight
   std::array<bool, 3> output_mask = {false, true, false};
   at::IntArrayRef input_size = weight.sizes();
   c10::optional<at::IntArrayRef> bias_sizes_opt = {grad_output.size(1)};
-  bool transposed = false;
+  bool transposed = true;
 
   auto result = convolution_backward(grad_output,
       input,
@@ -654,6 +654,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward(con
       groups,
       output_mask);
   return std::tie(grad_input, grad_weight, grad_bias);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose3d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
 }
 #endif
 }
