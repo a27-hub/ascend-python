@@ -410,15 +410,9 @@ at::Tensor &conv_transpose2d_backward_input_out_nocheck(at::Tensor &grad_input, 
       "dilation has to contain more than 2 elements, but got ",
       dilation.size(),
       OPS_ERROR(ErrCode::PARAM));
-  // constructs the input and output NPUTensorDesc
-  c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
-  c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
-  c10::SmallVector<int64_t, N> dilations = {1, 1, dilation[0], dilation[1]};
-  c10::SmallVector<int64_t, N> output_paddings = {output_padding[0], output_padding[0], output_padding[1], output_padding[1]};
-  string data_format = "NCHW";
   const c10::optional<at::Tensor> bias = at::Tensor();
   grad_input =
-      _calc_convolution(grad_output, weight, bias, strides_size, paddings, dilations, false, output_paddings, groups);
+      _calc_convolution(grad_output, weight, bias, stride, padding, dilation, false, output_padding, groups);
   return grad_input;
 }
 
@@ -438,14 +432,8 @@ at::Tensor &conv_transpose2d_backward_weight_out_nocheck(at::Tensor &grad_weight
       "dilation has to contain more than 2 elements, but got ",
       dilation.size(),
       OPS_ERROR(ErrCode::PARAM));
-  c10::SmallVector<int64_t, N> dimList = op_infer::array_to_small_vector(weight.sizes());
-  c10::SmallVector<int64_t, N> strides_size = {1, 1, stride[0], stride[1]};
-  c10::SmallVector<int64_t, N> paddings = {padding[0], padding[0], padding[1], padding[1]};
-  c10::SmallVector<int64_t, N> dilations = {1, 1, dilation[0], dilation[1]};
-  string data_format = "NCHW";
-
   c10::optional<at::IntArrayRef> bias_sizes_opt = {grad_output.size(1)};
-  bool transposed = false;
+  bool transposed = true;
   std::array<bool, 3> output_mask = {false, true, false};
 
   auto result = convolution_backward(grad_output,
