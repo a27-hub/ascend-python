@@ -244,14 +244,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     if (format_query_rope.defined() && format_key_rope.defined()) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
-                aclnnFlashAttentionUnpaddingScoreGradV4, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
+                aclnnFlashAttentionUnpaddingScoreGradV3, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val,
                 scale_value, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise, sparse_mode, pse_type,
                 dq, dq_rope, dk, dk_rope, dv, dpse);
         } else {
             EXEC_NPU_CMD(
-                aclnnFlashAttentionScoreGradV4, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
+                aclnnFlashAttentionScoreGradV3, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, q_start_idx_val, kv_start_idx_val, scale_value, keep_prob,
                 pre_tokens, next_tokens, head_num, input_layout_char, inner_precise, sparse_mode, pse_type, dq, dq_rope, dk, dk_rope, dv, dpse);
@@ -566,14 +566,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     if (format_query_rope.defined() && format_key_rope.defined()) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
             EXEC_NPU_CMD(
-                aclnnFlashAttentionVarLenScoreV4, format_query, format_query_rope, format_key, format_key_rope, format_value,
+                aclnnFlashAttentionVarLenScoreV3, format_query, format_query_rope, format_key, format_key_rope, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
                 ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num,
                 input_layout_char, inner_precise, sparse_mode, pse_type, softmax_max, softmax_sum,
                 softmax_out, attention_score);
         } else {
             EXEC_NPU_CMD(
-                aclnnFlashAttentionScoreV4, format_query, format_query_rope, format_key, format_key_rope, format_value,
+                aclnnFlashAttentionScoreV3, format_query, format_query_rope, format_key, format_key_rope, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN, q_start_idx_val, kv_start_idx_val,
                 scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
                 sparse_mode, pse_type, softmax_max, softmax_sum, softmax_out, attention_score);
