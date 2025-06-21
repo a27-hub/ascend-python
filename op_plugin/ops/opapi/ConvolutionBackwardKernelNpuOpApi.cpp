@@ -656,6 +656,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward(con
   return std::tie(grad_input, grad_weight, grad_bias);
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose2d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose2d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_symint(const at::Tensor &input,
     const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
     at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
