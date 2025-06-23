@@ -3401,6 +3401,7 @@ official:
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::kBool
+        name: self, other
       exec: aclnnLogicalAnd
 
   - func: logical_and.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
@@ -3409,12 +3410,15 @@ official:
     gen_opapi:
       out:
         size: broadcast_ops_npu_output_size(self, other)
+        name: self, other
       exec: aclnnLogicalAnd
 
   - func: logical_and_(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      self: 
+        name: self, other
       exec: aclnnInplaceLogicalAnd
 
   - func: logical_not(Tensor self) -> Tensor
@@ -3461,6 +3465,7 @@ official:
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::kBool
+        name: self, other
       exec: aclnnLogicalXor
 
   - func: logical_xor.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
@@ -3469,6 +3474,7 @@ official:
     gen_opapi:
       out:
         size: broadcast_ops_npu_output_size(self, other)
+        name: self, other
       exec: aclnnLogicalXor
 
   - func: logspace(Scalar start, Scalar end, int steps, float base=10.0, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
@@ -4289,6 +4295,7 @@ official:
       out:
         size: exponent
         dtype: at::result_type(self, exponent)
+        name: exponent
       exec: aclnnPowScalarTensor
 
   - func: pow.Scalar_out(Scalar self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
@@ -4297,6 +4304,7 @@ official:
     gen_opapi:
       out:
         size: exponent
+        name: exponent
       exec: aclnnPowScalarTensor
 
   - func: pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor
@@ -4312,6 +4320,7 @@ official:
       out:
         size: self
         dtype: at::result_type(self, exponent)
+        name: self
       exec: aclnnPowTensorScalar
 
   - func: pow.Tensor_Tensor(Tensor self, Tensor exponent) -> Tensor
@@ -4321,6 +4330,7 @@ official:
       out:
         size: broadcast_ops_npu_output_size(self, exponent)
         dtype: at::result_type(self, exponent)
+        name: self, exponent
       exec: aclnnPowTensorTensor
 
   - func: pow.Tensor_Tensor_out(Tensor self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
@@ -4329,6 +4339,7 @@ official:
     gen_opapi:
       out:
         size: broadcast_ops_npu_output_size(self, exponent)
+        name: self, exponent
       exec: aclnnPowTensorTensor
 
   - func: pow_.Scalar(Tensor(a!) self, Scalar exponent) -> Tensor(a!)
@@ -4341,6 +4352,8 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      self: 
+        name: self, exponent
       exec: aclnnInplacePowTensorTensor
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
