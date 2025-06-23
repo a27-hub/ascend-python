@@ -377,15 +377,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward(
     return std::tie(grad_input, grad_weight, grad_bias);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_symint(const at::Tensor &input,
-    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
-    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
-{
-  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
-  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
-  return npu_conv_transpose3d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
-}
-
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_convolution_transpose_backward(
     const at::Tensor &input, const at::Tensor &grad, const at::Tensor &weight, at::IntArrayRef padding,
     at::IntArrayRef output_padding, at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups,
@@ -421,4 +412,24 @@ at::Tensor npu_convolution_transpose(const at::Tensor &input, const at::Tensor &
 
     return convolution_transpose_kernel_nocheck(input, weight, bias, padding, output_padding, stride, dilation, groups);
 }
+
+#if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose2d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose2d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose3d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
+}
+#endif
 } // namespace acl_op
