@@ -1122,6 +1122,54 @@ def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):
     else:
         return (torch.empty_like(self, dtype=self.dtype), gemma.new_empty((N, group), dtype=gemma.dtype), beta.new_empty((N, group), dtype=beta.dtype))
 
+@impl(m, "npu_fused_matmul")
+def npu_fused_matmul_meta(x, weight, *, bias=None, x3=None, fused_op_type=''):
+    torch._check(
+        x.dtype == weight.dtype,
+        lambda: "x's type and weight's type should be same, but x.dtype is " + str(x.dtype) + " and weight.dtype is " +
+                str(weight.dtype) + ops_error(ErrCode.TYPE),
+    )
+    input_supported_list = [torch.bfloat16, torch.float16]
+    torch._check(
+        x in input_supported_list,
+        lambda: "x type supported for bfloat16, float16, but x type is " + str(x.dtype) + ops_error(ErrCode.TYPE),
+    )
+    M = x.size(0)
+    Ka = x.size(1)
+    kb = weight.size(0)
+    N = weight.size(1)
+    torch._check(
+        Ka == kb,
+        lambda: "ka and Kb should be the same" + ops_error(ErrCode.TYPE),
+    )     
+    if x3 is not None:
+        torch._check(
+        x3 in input_supported_list,
+        lambda: "x3 type supported for bfloat16, float16, but x3 is " + str(x3.dtype) + ops_error(ErrCode.TYPE),
+        )
+    bias_dtype_supported_list = [torch.bfloat16, torch.float16, torch.float32]
+    if bias is not None:
+        torch._check(
+        bias in bias_dtype_supported_list,
+        lambda: "bias type supported for bfloat16, float16, float32, but bias type is " + str(bias.dtype) + ops_error(ErrCode.TYPE),
+        )
+    op_type_supported_list = ["add", "mul", "gelu_erf", "gelu_tanh"]
+    if fused_op_type is not None:
+        torch._check(
+            fused_op_type in op_type_supported_list,
+            lambda: "fused_op_type supported for add, mul, gelu_erf and gelu_tanh, but fused_op_type is " + str(fused_op_type) + ops_error(ErrCode.TYPE),
+        )
+        if fused_op_type == "gelu_erf" or fused_op_type == "gelu_tanh":
+            torch._check(
+                x3 is None,
+                lambda: "there is no y for gelu_erf and gelu_tanh"  + ops_error(ErrCode.TYPE),
+        )
+        if fused_op_type == "add" or fused_op_type == "mul":
+            torch._check(
+                x3 is not None,
+                lambda: "there must have y for add and mul"  + ops_error(ErrCode.TYPE),
+            )
+    return torch.empty_like((M, N), dtype=x.dtype)
 
 @impl(m, "npu_mm_all_reduce_base")
 def npu_mm_all_reduce_base_forward(x1, x2, hcom, reduce_op='sum', bias=None, antiquant_scale=None,
