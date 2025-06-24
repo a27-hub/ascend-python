@@ -1667,8 +1667,8 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
 def npu_trans_quant_param_meta(scale, offset=None, round_mode=0):
     scale_dim_num = scale.dim()
     torch._check(
-        scale_dim_num == 1 or (scale_dim_num == 2 and scale.size(0) == 1),
-        lambda: "the scale shape support only (1, ) and (1, n)" + ops_error(ErrCode.VALUE),
+        scale_dim_num == 1 or scale_dim_num == 2,
+        lambda: "The scale shape dim num must be 1 or 2, but actual is " + int(scale_dim_num) + ops_error(ErrCode.VALUE),
     )
     torch._check(
         round_mode == 0 or round_mode == 1,
