@@ -18,6 +18,8 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+const int MIN_ELEMENT_3D = 3;
+
 using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list3 = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 
@@ -310,6 +312,354 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> convolution_backward(
                                                                           output_padding, groups, output_mask));
   return _calc_convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                     transposed, output_padding, groups, output_mask);
+}
+
+static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &weight,
+    const c10::optional<at::Tensor> &bias, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    bool transposed, at::IntArrayRef output_padding, int64_t groups)
+{
+  int64_t k = weight.ndimension();
+  int64_t inputK = input.ndimension();
+  int64_t dim = k - 2;  // Subtract nonspatial dimensions: 2
+  bool unBatch = false;
+
+  bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
+  bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
+  // CheckForbidInternalFormat = False: turn on private formatCheckJitDisable = False: turn on JitCompile
+  ASCEND_LOGI("_calc_convolution exec with jit compile: %d, allow internal format: %d",
+      is_jit_enable,
+      is_allow_internel_format);
+  if ((is_allow_internel_format || is_jit_enable)) {
+        return acl_op::_convolution(input,
+            weight,
+            bias,
+            stride,
+            padding,
+            dilation,
+            transposed,
+            output_padding,
+            groups,
+            false,
+            false,
+            false,
+            false);
+  }
+  // Conv1D: 1, Conv2D: 2, Conv3D: 3
+  if (dim != 1 && dim != 2 && dim != 3) {
+        return at::Tensor();
+  }
+
+  c10::SmallVector<int64_t, op_infer::N> stride_expand = expand_dim_if_needed(stride, "stride", dim);
+  stride = at::IntArrayRef(stride_expand);
+
+  c10::SmallVector<int64_t, op_infer::N> padding_expand = expand_dim_if_needed(padding, "padding", dim);
+  padding = at::IntArrayRef(padding_expand);
+
+  c10::SmallVector<int64_t, op_infer::N> dilation_expand = expand_dim_if_needed(dilation, "dilation", dim);
+  dilation = at::IntArrayRef(dilation_expand);
+
+  c10::SmallVector<int64_t, op_infer::N> output_padding_expend = expand_dim_if_needed(output_padding, "output_padding", dim);
+  output_padding = at::IntArrayRef(output_padding_expend);
+
+  c10::SmallVector<int64_t, SIZE> out_size;
+
+  out_size = op_infer::conv_npu_output_size(
+      input, weight, bias, padding, output_padding, stride, dilation, groups, transposed);
+
+  auto output = npu_preparation::apply_tensor_without_format(out_size, input.options());
+  int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
+  EXEC_NPU_CMD(aclnnConvolution,
+      input,
+      weight,
+      bias,
+      stride,
+      padding,
+      dilation,
+      transposed,
+      output_padding,
+      groups,
+      output,
+      cube_math_type);
+
+  // input dim = 3 while conv2D: 2
+  if (dim == 2 && inputK == 3) {
+        c10::SmallVector<int64_t, SIZE> squeeze_size = {output.size(1), output.size(2), output.size(3)};
+        output.resize_(squeeze_size);
+
+        c10::SmallVector<int64_t, SIZE> squeeze_size_input = {input.size(1), input.size(2), input.size(3)};
+        input.resize_(squeeze_size_input);
+  }
+
+  FLOP_COUNT(FlopCounter::conv_flop, input, weight, transposed, output);
+  return output;
+}
+
+at::Tensor &conv_transpose2d_backward_input_out_nocheck(at::Tensor &grad_input, const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups)
+{
+  TORCH_CHECK(stride.size() >= 2,
+      "stride has to contain more than 2 elements, but got ",
+      stride.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(padding.size() >= 2,
+      "padding has to contain more than 2 elements, but got ",
+      padding.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(dilation.size() >= 2,
+      "dilation has to contain more than 2 elements, but got ",
+      dilation.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  const c10::optional<at::Tensor> bias = at::Tensor();
+  grad_input =
+      _calc_convolution(grad_output, weight, bias, stride, padding, dilation, false, output_padding, groups);
+  return grad_input;
+}
+
+at::Tensor &conv_transpose2d_backward_weight_out_nocheck(at::Tensor &grad_weight, const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups)
+{
+  TORCH_CHECK(stride.size() >= 2,
+      "stride has to contain more than 2 elements, but got ",
+      stride.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(padding.size() >= 2,
+      "padding has to contain more than 2 elements, but got ",
+      padding.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(dilation.size() >= 2,
+      "dilation has to contain more than 2 elements, but got ",
+      dilation.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  c10::optional<at::IntArrayRef> bias_sizes_opt = {grad_output.size(1)};
+  bool transposed = true;
+  std::array<bool, 3> output_mask = {false, true, false};
+
+  auto result = convolution_backward(grad_output,
+      input,
+      weight,
+      bias_sizes_opt,
+      stride,
+      padding,
+      dilation,
+      transposed,
+      output_padding,
+      groups,
+      output_mask);
+  grad_weight = std::get<1>(result);
+  return grad_weight;
+}
+
+at::Tensor &conv_transpose2d_backward_bias_out_nocheck(at::Tensor &grad_bias, const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups)
+{
+  TORCH_CHECK(grad_output.dim() >= 2,
+      "grad_output has to be more than 2D, but got Tensor of dimension ",
+      grad_output.dim(),
+      OPS_ERROR(ErrCode::PARAM));
+  at::Tensor grad_view = grad_output.contiguous().view({grad_output.size(0), grad_output.size(1), -1});
+  op_api::sum_out(grad_view, c10::SmallVector<int64_t, N>{0, 2}, false, grad_view.scalar_type(), grad_bias);
+  return grad_bias;
+}
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> conv_transpose2d_backward_out_nocheck(at::Tensor &grad_input,
+    at::Tensor &grad_weight, at::Tensor &grad_bias, const at::Tensor &input, const at::Tensor &grad_output,
+    const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef stride,
+    at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  if (output_mask[0]) {
+        conv_transpose2d_backward_input_out_nocheck(
+            grad_input, input, grad_output, weight, padding, output_padding, stride, dilation, groups);
+  }
+  if (output_mask[1]) {
+        conv_transpose2d_backward_weight_out_nocheck(
+            grad_weight, input, grad_output, weight, padding, output_padding, stride, dilation, groups);
+  }
+  if (output_mask[2]) {
+        conv_transpose2d_backward_bias_out_nocheck(
+            grad_bias, input, grad_output, weight, padding, output_padding, stride, dilation, groups);
+  }
+  return std::tie(grad_input, grad_weight, grad_bias);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose2d_backward(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::Tensor grad_input;
+  at::Tensor grad_weight;
+  at::Tensor grad_bias;
+
+  if (output_mask[0]) {
+        int64_t grad_input_format = input.dtype() == at::kHalf ? ACL_FORMAT_NC1HWC0 : ACL_FORMAT_ND;
+        grad_input = npu_preparation::apply_tensor_with_format(input, grad_input_format);
+  }
+  if (output_mask[1]) {
+        grad_weight = npu_preparation::apply_tensor_with_format(
+            weight.sizes(), weight.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(weight));
+  }
+  if (output_mask[2]) {
+        grad_bias =
+            npu_preparation::apply_tensor_with_format({grad_output.size(1)}, grad_output.options(), ACL_FORMAT_NCHW);
+  }
+
+  conv_transpose2d_backward_out_nocheck(grad_input,
+      grad_weight,
+      grad_bias,
+      input,
+      grad_output,
+      weight,
+      padding,
+      output_padding,
+      stride,
+      dilation,
+      groups,
+      output_mask);
+  return std::tie(grad_input, grad_weight, grad_bias);
+}
+
+at::Tensor &conv_transpose3d_backward_input_out_nocheck(at::Tensor &grad_input, const at::Tensor &grad_output,
+    const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef stride,
+    at::IntArrayRef dilation, int64_t groups)
+{
+  TORCH_CHECK(stride.size() >= MIN_ELEMENT_3D,
+      "stride has to contain more than 3 elements, but got ",
+      stride.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(padding.size() >= MIN_ELEMENT_3D,
+      "padding has to contain more than 3 elements, but got ",
+      padding.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(dilation.size() >= MIN_ELEMENT_3D,
+      "dilation has to contain more than 3 elements, but got ",
+      dilation.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  const c10::optional<at::Tensor> bias = at::Tensor();
+  grad_input =
+      _calc_convolution(grad_output, weight, bias, stride, padding, dilation, false, output_padding, groups);
+  return grad_input;
+}
+
+at::Tensor &conv_transpose3d_backward_weight_out_nocheck(at::Tensor &grad_weight, const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups)
+{
+  TORCH_CHECK(stride.size() >= MIN_ELEMENT_3D,
+      "stride has to contain more than 3 elements, but got ",
+      stride.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(padding.size() >= MIN_ELEMENT_3D,
+      "padding has to contain more than 3 elements, but got ",
+      padding.size(),
+      OPS_ERROR(ErrCode::PARAM));
+  TORCH_CHECK(dilation.size() >= MIN_ELEMENT_3D,
+      "dilation has to contain more than 3 elements, but got ",
+      dilation.size(),
+      OPS_ERROR(ErrCode::PARAM));
+
+  std::array<bool, 3> output_mask = {false, true, false};
+  at::IntArrayRef input_size = weight.sizes();
+  c10::optional<at::IntArrayRef> bias_sizes_opt = {grad_output.size(1)};
+  bool transposed = true;
+
+  auto result = convolution_backward(grad_output,
+      input,
+      weight,
+      bias_sizes_opt,
+      stride,
+      padding,
+      dilation,
+      transposed,
+      output_padding,
+      groups,
+      output_mask);
+  grad_weight = std::get<1>(result);
+  return grad_weight;
+}
+
+at::Tensor &conv_transpose3d_backward_bias_out_nocheck(at::Tensor &grad_bias, const at::Tensor &grad_output)
+{
+  TORCH_CHECK(grad_output.dim() >= MIN_ELEMENT_3D,
+      "grad_output has to be more than 3D, but got Tensor of dimension ",
+      grad_output.dim(),
+      OPS_ERROR(ErrCode::PARAM));
+  at::Tensor gradView =
+      grad_output.contiguous().view({grad_output.size(0), grad_output.size(1), grad_output.size(2), -1});
+  op_api::sum_out(gradView, c10::SmallVector<int64_t, N>{0, 2, 3}, false, gradView.scalar_type(), grad_bias);
+  return grad_bias;
+}
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &> conv_transpose3d_backward_out_nocheck(at::Tensor &grad_input,
+    at::Tensor &grad_weight, at::Tensor &grad_bias, const at::Tensor &input, const at::Tensor &grad_output,
+    const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef stride,
+    at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  if (output_mask[0]) {
+        conv_transpose3d_backward_input_out_nocheck(
+            grad_input, grad_output, weight, padding, output_padding, stride, dilation, groups);
+  }
+  if (output_mask[1]) {
+        conv_transpose3d_backward_weight_out_nocheck(
+            grad_weight, input, grad_output, weight, padding, output_padding, stride, dilation, groups);
+  }
+  if (output_mask[2]) {
+        conv_transpose3d_backward_bias_out_nocheck(grad_bias, grad_output);
+  }
+  return std::tie(grad_input, grad_weight, grad_bias);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, at::IntArrayRef padding, at::IntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::Tensor grad_input;
+  at::Tensor grad_weight;
+  at::Tensor grad_bias;
+
+  if (output_mask[0]) {
+        grad_input = npu_preparation::apply_tensor_with_format(input, ACL_FORMAT_NDC1HWC0);
+  }
+  if (output_mask[1]) {
+        grad_weight = npu_preparation::apply_tensor_with_format(
+            weight.sizes(), weight.options().dtype(at::kFloat), npu_preparation::get_tensor_npu_format(weight));
+  }
+  if (output_mask[2]) {
+        grad_bias =
+            npu_preparation::apply_tensor_with_format({grad_output.size(1)}, grad_output.options(), ACL_FORMAT_NCDHW);
+  }
+  conv_transpose3d_backward_out_nocheck(grad_input,
+      grad_weight,
+      grad_bias,
+      input,
+      grad_output,
+      weight,
+      padding,
+      output_padding,
+      stride,
+      dilation,
+      groups,
+      output_mask);
+  return std::tie(grad_input, grad_weight, grad_bias);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose2d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose2d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_symint(const at::Tensor &input,
+    const at::Tensor &grad_output, const at::Tensor &weight, c10::SymIntArrayRef padding, c10::SymIntArrayRef output_padding,
+    at::IntArrayRef stride, at::IntArrayRef dilation, int64_t groups, std::array<bool, 3> output_mask)
+{
+  at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+  at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+  return npu_conv_transpose3d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
 }
 #endif
 }
