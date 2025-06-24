@@ -130,8 +130,8 @@
 -   **group\_type \(int\)**：代表需要分组的轴。数据类型支持torch.int32。
     -   group\_list输入类型为List\[int\]时仅支持传入None。
 
-    -   group\_list输入类型为torch.Tensor时，若矩阵乘为C\[m,n\]=A\[m,k\]xB\[k,n\]，group\_type支持的枚举值为：-1代表不分组；0代表m轴分组；1代表n轴分组，2代表k轴分组。
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前支持取-1、0、2。
+    -   group\_list输入类型为torch.Tensor时，若矩阵乘为C\[m,n\]=A\[m,k\]xB\[k,n\]，group\_type支持的枚举值为：-1代表不分组；0代表m轴分组；1代表n轴分组。
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前支持取-1、0。
         -   <term>Atlas 推理系列产品</term>：当前只支持取0。
 
 -   **group\_list\_type \(int\)**：代表group\_list的表达形式。数据类型支持torch.int32。
@@ -742,15 +742,6 @@
             <td class="cellrowborder" valign="top" width="18.34%" headers="mcps1.1.5.1.3 "><p id="zh-cn_topic_0000002262888689_p164775185016"><a name="zh-cn_topic_0000002262888689_p164775185016"></a><a name="zh-cn_topic_0000002262888689_p164775185016"></a>x和weight为多张量，y为单张量。每组矩阵乘法的结果连续存放在同一个张量中。</p>
             </td>
             <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol24442412194"></a><a name="zh-cn_topic_0000002262888689_ol24442412194"></a><ol id="zh-cn_topic_0000002262888689_ol24442412194"><li>仅支持split_item为2或3。</li><li>x、weight、y中tensor需为2维。</li><li>weight中每个tensor的N轴必须相等。</li><li>若传入group_list，当group_list_type为0时，group_list的差值需与x中tensor的第一维一一对应，当group_list_type为1时，group_list的数值需与x中tensor的第一维一一对应，且长度最大为128。</li><li>支持weight转置，但weight中每个tensor是否转置需保持统一。</li><li>x不支持转置。</li></ol>
-            </td>
-            </tr>
-            <tr id="zh-cn_topic_0000002262888689_row154442410192"><td class="cellrowborder" valign="top" width="10.23%" headers="mcps1.1.5.1.1 "><p id="zh-cn_topic_0000002262888689_p14444447199"><a name="zh-cn_topic_0000002262888689_p14444447199"></a><a name="zh-cn_topic_0000002262888689_p14444447199"></a>2</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="8.780000000000001%" headers="mcps1.1.5.1.2 "><p id="zh-cn_topic_0000002262888689_p944417471914"><a name="zh-cn_topic_0000002262888689_p944417471914"></a><a name="zh-cn_topic_0000002262888689_p944417471914"></a>单单单</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="18.34%" headers="mcps1.1.5.1.3 "><p id="zh-cn_topic_0000002262888689_p144441648197"><a name="zh-cn_topic_0000002262888689_p144441648197"></a><a name="zh-cn_topic_0000002262888689_p144441648197"></a>x、weight与y均为单张量</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><ol id="zh-cn_topic_0000002262888689_ol044416401911"><li>仅支持split_item为2或3。</li><li>x、weight中tensor需为2维，y中tensor需为3维。</li><li>必须传group_list，且当group_list_type为0时，最后一个值与x中tensor的第二维相等，当group_list_type为1时，数值的总和与x中tensor的第二维相等。</li><li>group_list第1维最大支持1024，即最多支持1024个group。</li><li>x必须转置，weight不能转置。</li></ol>
             </td>
             </tr>
             </tbody>
