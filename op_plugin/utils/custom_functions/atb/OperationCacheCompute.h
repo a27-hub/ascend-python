@@ -83,11 +83,7 @@ template <>
 struct HashOpParam<atb::infer::TopkToppSamplingParam> {
     void operator()(const atb::infer::TopkToppSamplingParam& param) const
     {
-        add_param_to_buf("topkToppSamplingType", param.topkToppSamplingType);
-        add_param_to_buf("randSeeds", param.randSeeds);
-        add_param_to_buf("randSeed", param.randSeed);
-        add_param_to_buf("topk", param.topk);
-	    add_param_to_buf("logProbsSize", param.logProbsSize);
+        add_param_to_buf("randSeeds", param.randSeeds.size());
     }
 };
 
