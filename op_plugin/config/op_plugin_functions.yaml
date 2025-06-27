@@ -1000,14 +1000,17 @@ official:
   - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    internal_format_opapi: all_version
 
   - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    internal_format_opapi: all_version
 
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    internal_format_opapi: all_version
 
   - func: addmv(Tensor self, Tensor mat, Tensor vec, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
@@ -3521,10 +3524,12 @@ official:
   - func: matmul(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: [v2.1, newest]
+    internal_format_opapi: all_version
 
   - func: matmul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: [v2.1, newest]
+    internal_format_opapi: all_version
 
   - func: matmul_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
     acl_op: [v2.0, newest]
