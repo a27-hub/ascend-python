@@ -146,6 +146,16 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
     }
 };
 
+template <>
+struct HashOpParam<atb::infer::LinearParallelParam> {
+    void operator()(const atb::infer::LinearParallelParam& param) const
+    {
+        add_param_to_buf("quantType", param.quantType);
+        add_param_to_buf("type", param.type);
+        // add_param_to_buf("quantType", param.normParam.quantType);
+    }
+};
+
 template <typename T>
 uint64_t computeHash(const T& obj)
 {
