@@ -6649,6 +6649,9 @@ custom:
     op_api: all_version
     exposed: all_version
 
+  - func: npu_all_gather_quant_mm(Tensor self, Tensor x2, str hcom, int world_size, *, Tensor? scale_inv1=None, Tensor? scale_inv2=None, Tensor? bias=None, Tensor? scale=None, int gather_index=0, bool gather_output=True, int comm_turn=0, bool amax_output=False, int y_dtype=0) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+
   - func: npu_alloc_float_status(Tensor self) -> Tensor
     acl_op: all_version
     exposed: all_version

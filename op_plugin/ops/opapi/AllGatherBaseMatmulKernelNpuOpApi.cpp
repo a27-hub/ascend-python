@@ -33,10 +33,11 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size_gather(const at
     return {gather_out.size(0) * world_size, gather_out.size(1)};
 }
 
-std::tuple<at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self, const at::Tensor &x2,
-                                                          c10::string_view hcom, int64_t world_size,
-                                                          const c10::optional<at::Tensor> &bias, int64_t gather_index,
-                                                          bool gather_output, int64_t comm_turn)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self, const at::Tensor &x2,
+                                                                      c10::string_view hcom, int64_t world_size,
+                                                                      const c10::optional<at::Tensor> &bias,
+                                                                      int64_t gather_index,
+                                                                      bool gather_output, int64_t comm_turn)
 {
     TORCH_CHECK(world_size == 2 || world_size == 4 || world_size == 8 || world_size == 16 || world_size == 32,
                 "world_size should be in [2, 4, 8, 16, 32], but the actual value is ", world_size, "."
@@ -53,11 +54,14 @@ std::tuple<at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self
     if (gather_output) {
         out_gather = at_npu::native::OpPreparation::apply_tensor_without_format(out_gather_size, self.options());
     }
+
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
+
     char *hcom_ptr = const_cast<char *>(hcom.data());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
-    EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, bias_real, hcom_ptr, gather_index, comm_turn, stream_mode,
-                 out_gather_mm, out_gather);
+
+    EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, bias_real,
+                    hcom_ptr, gather_index, comm_turn, stream_mode, out_gather_mm, out_gather);
 
     FLOP_COUNT(FlopCounter::all_gather_mm_flop, self, x2, world_size, gather_index);
     return std::tie(out_gather_mm, out_gather);
