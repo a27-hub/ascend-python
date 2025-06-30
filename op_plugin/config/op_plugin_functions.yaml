@@ -3591,7 +3591,7 @@ official:
   - func: matmul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: [v2.1, newest]
-
+  
   - func: matmul_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
     acl_op: [v2.0, newest]
     op_api: [v2.1, newest]
@@ -3735,6 +3735,10 @@ official:
     gen_opapi:
       exec: aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size, stride, padding, dilation, ceil_mode, grad_input
 
+  
+  - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+    op_api: all_version
+  
   - func: max_pool3d_with_indices(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, int[3] dilation=1, bool ceil_mode=False) -> (Tensor, Tensor)
     acl_op: all_version
     op_api: all_version

@@ -213,6 +213,74 @@ def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
     out_m = math.floor(self.size(0) / world_size)
     return self.new_empty(out_m, x2.size(1))
 
+@impl(m, "npu_fused_matmul")
+def npu_fused_matmul_meta(x, x2, *, bias=None, x3=None, fused_op_type=''):
+    torch._check(
+        x is not None,
+        lambda: "x must not be None, please input some value" + ops_error(ErrCode.TYPE),
+    )
+    torch._check(
+        x2 is not None,
+        lambda: "x2 must not be None, please input some value" + ops_error(ErrCode.TYPE),
+    )
+
+    torch._check(
+        x.dtype == x2.dtype,
+        lambda: "x's type and x2's type should be same, but x.dtype is " + str(x.dtype) + " and x2.dtype is " +
+                str(x2.dtype) + ops_error(ErrCode.TYPE),
+    )
+    input_supported_list = [torch.bfloat16, torch.float16]
+    torch._check(
+        x.dtype in input_supported_list,
+        lambda: "x type supported for bfloat16, float16, but x type is " + str(x.dtype) + ops_error(ErrCode.TYPE),
+    )
+    x_dim = x.dim()
+    torch._check(
+        x_dim == 2,
+        lambda: "x dim num should be 2,but the actual value is " + str(x_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    x2_dim = x2.dim()
+    torch._check(
+        x2_dim == 2,
+        lambda: "x2 dim num should be 2,but the actual value is " + str(x2_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    m = x.size(0)
+    ka = x.size(1)
+    kb = x2.size(0)
+    n = x2.size(1)
+    torch._check(
+        ka == kb,
+        lambda: "ka and kb should be the same" + ops_error(ErrCode.TYPE),
+    )     
+    if x3 is not None:
+        torch._check(
+        x3.dtype in input_supported_list,
+        lambda: "x3 type supported for bfloat16, float16, but x3 is " + str(x3.dtype) + ops_error(ErrCode.TYPE),
+        )
+    torch._check(
+        bias is None,
+        lambda: "sorry, but x3 type is not supported right now" + ops_error(ErrCode.TYPE),
+        )
+    op_type_supported_list = ["add", "mul", "gelu_erf", "gelu_tanh"]
+    if fused_op_type != '':
+        torch._check(
+            fused_op_type in op_type_supported_list,
+            lambda: "fused_op_type supported for add, mul, gelu_erf and gelu_tanh, but fused_op_type is " + str(fused_op_type) + ops_error(ErrCode.TYPE),
+        )
+        if fused_op_type == "gelu_erf" or fused_op_type == "gelu_tanh":
+            torch._check(
+                x3 is None,
+                lambda: "there is no x3 for gelu_erf and gelu_tanh"  + ops_error(ErrCode.TYPE),
+        )
+        if fused_op_type == "add" or fused_op_type == "mul":
+            torch._check(
+                x3 is not None,
+                lambda: "there must have x3 for add and mul"  + ops_error(ErrCode.TYPE),
+            )
+    result = torch.empty((m,n), dtype=x.dtype, device= 'meta')
+    return torch.empty_like(result, dtype=x.dtype)
 
 @impl(m, "npu_gmm_alltoallv")
 def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
