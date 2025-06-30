@@ -17,6 +17,17 @@ ATTR_DIM_LIMIT_QUANTCONV2D = 2
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
 
+TORCH_DTYPE_MAP = {
+    torch.float16: 5,
+    torch.bfloat16: 15,
+    torch.float32: 6,
+    torch.float8_e5m2: 23,
+    torch.float8_e4m3fn: 24,
+    torch.bits8: 21,
+    torch.int8: 1,
+    torch.int32: 3,
+}
+
 
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
@@ -1131,7 +1142,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1640,7 +1651,7 @@ def quant_matmul_dtype_check(*args):
             )
         if output_dtype is not None:
             torch._check(
-                output_dtype == torch.float16 or output_dtype == torch.bfloat16,
+                output_dtype == TORCH_DTYPE_MAP[torch.float16] or output_dtype == TORCH_DTYPE_MAP[torch.bfloat16],
                 lambda: f"output_dtype's type should be torch.int32 or torch.bfloat16 in A8W4, \
                     but output_dtype.dtype is {str(output_dtype)} {ops_error(ErrCode.TYPE)}",
             )

@@ -267,8 +267,8 @@ at::Tensor npu_quant_matmul_symint(const at::Tensor &x1, const at::Tensor &x2, c
             at::Tensor y_scale = at::empty({0}, options);
             at::Tensor x1_offset = at::empty({0}, options);
             at::Tensor y_offset = at::empty({0}, options);
-            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, scale, y_scale, x1_offset, offset_real,
-                         y_offset, bias_real, transpose1, transpose2, group_size, result);
+            EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1, x2, pertoken_scale_real, quant_param, y_scale, x1_offset,
+                         offset_real, y_offset, bias_real, transpose1, transpose2, group_size, result);
         } else {
             EXEC_NPU_CMD(aclnnQuantMatmulV4, x1, x2, scale, offset_real, pertoken_scale_real, bias_real, transpose1,
                          transpose2, result);
@@ -297,7 +297,7 @@ at::Tensor npu_quant_matmul_symint(const at::Tensor &x1, const at::Tensor &x2, c
                     : aclDataType::ACL_FLOAT;
             TensorWrapper x1_scale_wrapper = {pertoken_scale_real,
                                               (pertoken_scale_dtype.has_value())
-                                                  ? c10::GetAclDataType(pertoken_scale_dtype.value())
+                                                  ? c10_npu::GetAclDataType(pertoken_scale_dtype.value())
                                                   : pertoken_scale_tensor_dtype};
             TensorWrapper x2_scale_wrapper = {
                 scale, (scale_dtype.has_value()) ? c10_npu::GetAclDataType(scale_dtype.value())
