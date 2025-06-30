@@ -83,6 +83,8 @@ constexpr int64_t MAX_DIM_NUM = 5;
 constexpr int64_t NCL_DIM_NUM = 3;
 constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
+constexpr int64_t FP4_IN_INT8 = 2;
+constexpr int64_t PENULTIMATE_DIM = 2;
 }
 
 std::string real_path(const std::string &path);
@@ -469,7 +471,33 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
+                if (at_tensor.sizes().size() == 1) {
+                    wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
+                } else if (at_tensor.sizes().size() > 1 && wrapperStride[at_tensor.sizes().size() - 1] == 1) {
+                    wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                        wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                    for (auto i = 0; i < at_tensor.sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[at_tensor.sizes().size() - 1] =
+                        wrapperShape[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                } else if (at_tensor.sizes().size() > 1 &&
+                           wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] == 1) {
+                    wrapperStride[at_tensor.sizes().size() - 1] =
+                        wrapperStride[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                    for (auto i = 0; i < at_tensor.sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                        wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                } else {
+                    TORCH_CHECK(false, "unsupported tensor warrper strides in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
+                }
+            } else {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            }
         }
     }
 
@@ -565,7 +593,33 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+                storageDims.push_back((*at_tensor).storage().nbytes() / (*at_tensor).itemsize() * FP4_IN_INT8);
+                if ((*at_tensor).sizes().size() == 1) {
+                    wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
+                } else if ((*at_tensor).sizes().size() > 1 && wrapperStride[(*at_tensor).sizes().size() - 1] == 1) {
+                    wrapperStride[(*at_tensor).sizes().size() - PENULTIMATE_DIM] =
+                        wrapperStride[(*at_tensor).sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                    for (auto i = 0; i < (*at_tensor).sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[(*at_tensor).sizes().size() - 1] =
+                        wrapperShape[(*at_tensor).sizes().size() - 1] * FP4_IN_INT8;
+                } else if ((*at_tensor).sizes().size() > 1 &&
+                           wrapperStride[(*at_tensor).sizes().size() - PENULTIMATE_DIM] == 1) {
+                    wrapperStride[(*at_tensor).sizes().size() - 1] =
+                        wrapperStride[(*at_tensor).sizes().size() - 1] * FP4_IN_INT8;
+                    for (auto i = 0; i < (*at_tensor).sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[(*at_tensor).sizes().size() - PENULTIMATE_DIM] =
+                        wrapperShape[(*at_tensor).sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                } else {
+                    TORCH_CHECK(false, "unsupported tensor warrper strides in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
+                }
+            } else {
+                storageDims.push_back((*at_tensor).storage().nbytes() / (*at_tensor).itemsize());
+            }
         }
     }
 
