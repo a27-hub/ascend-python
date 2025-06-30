@@ -7109,8 +7109,16 @@ custom:
   - func: npu_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
     acl_op: all_version
     exposed: all_version
+  
+  - func: npu_test_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
+    acl_op: all_version
+    exposed: all_version
 
   - func: npu_max.names_dim(Tensor self, Dimname dim, bool keepdim=False) -> (Tensor values, Tensor indices)
+    acl_op: all_version
+    exposed: all_version
+
+  - func: npu_test_max.names_dim(Tensor self, Dimname dim, bool keepdim=False) -> (Tensor values, Tensor indices)
     acl_op: all_version
     exposed: all_version
 
