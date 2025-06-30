@@ -20,17 +20,22 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& lt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt_out(self, other, result));
-  auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
+    DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt_out(self, other, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+    auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
-  at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
+    at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
 
-  EXEC_NPU_CMD(aclnnLtTensor, self, other, result);
-  return result;
+    EXEC_NPU_CMD(aclnnLtTensor, self, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+    return result;
 }
 
 at::Tensor lt(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt(self, other));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
@@ -45,31 +50,34 @@ at::Tensor lt(const at::Tensor& self, const at::Tensor& other) {
     } else {
         EXEC_NPU_CMD(aclnnLtTensor, self, other, result);
     }
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
 at::Tensor& lt_out(const at::Tensor &self, const at::Scalar& other, at::Tensor &result)
 {
-  DO_COMPATIBILITY(aclnnLtScalar, acl_op::lt_out(self, other, result));
-  auto outputSize = self.sizes();
-  at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
+    DO_COMPATIBILITY(aclnnLtScalar, acl_op::lt_out(self, other, result));
+    auto outputSize = self.sizes();
+    at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
 
-  EXEC_NPU_CMD(aclnnLtScalar, self, other, result);
-  return result;
+    EXEC_NPU_CMD(aclnnLtScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
+    return result;
 }
 
 at::Tensor lt(const at::Tensor &self, const at::Scalar& other)
 {
-  DO_COMPATIBILITY(aclnnLtScalar, acl_op::lt(self, other));
-  // calculate the output size
-  auto outputSize = op_infer::input_same_output_size(self);
-  // construct the output tensor of the NPU
-  at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(outputSize,
-                                                                                 self.options().dtype(at::kBool));
+    DO_COMPATIBILITY(aclnnLtScalar, acl_op::lt(self, other));
+    // calculate the output size
+    auto outputSize = op_infer::input_same_output_size(self);
+    // construct the output tensor of the NPU
+    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(outputSize,
+                                                                                   self.options().dtype(at::kBool));
 
-  // calculate the output result of the NPU
-  EXEC_NPU_CMD(aclnnLtScalar, self, other, result);
-  return result;
+    // calculate the output result of the NPU
+    EXEC_NPU_CMD(aclnnLtScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
+    return result;
 }
 
 at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) {
