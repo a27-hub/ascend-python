@@ -79,6 +79,8 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
 {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub_out(self, other, alpha, result));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub_out(self, other, alpha, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
@@ -86,6 +88,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
     npu_preparation::check_tensor({self}, result, result, output_size);
     npu_preparation::check_memory({self, other}, {result});
     sub_out_npu_nocheck(self_converted, other, alpha, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -93,6 +96,8 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
 {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub(self, other, alpha));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     at::Tensor output_tensor = sub_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -100,6 +105,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
     at::Tensor self_converted = self_tensor_to_device(self, result_type, output_tensor.device());
     auto result = npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
     sub_out_npu_nocheck(self_converted, other, alpha, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -111,6 +117,7 @@ at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar
     at::ScalarType result_type = at::native::result_type(self, other);
     auto result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(result_type));
     EXEC_NPU_CMD(aclnnSubs, self, other, alpha, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 
@@ -118,9 +125,12 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
 {
     DO_COMPATIBILITY(aclnnInplaceSub, acl_op::sub_(self, other, alpha));
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     npu_preparation::check_memory({self, other}, {self});
     inplace_sub_out_npu_no_check(self, other, alpha);
+    at::namedinference::propagate_names_if_nonempty(self, maybe_names);
     return self;
 }
 
