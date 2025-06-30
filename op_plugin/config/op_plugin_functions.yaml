@@ -134,6 +134,9 @@ official:
   - func: _amp_update_scale_(Tensor(a!) self, Tensor(b!) growth_tracker, Tensor found_inf, float growth_factor, float backoff_factor, int growth_interval) -> Tensor(a!)
     op_api: all_version
 
+  - func: convolution3d_quant(Tensor input, Tensor weight, Tensor? bias, Tensor? scale, Tensor? offset, Tensor? pertokenScaleOptional, int[] stride, int[] padding, int[] dilation, bool transposed, int[] output_padding, int groups, int offsetx) -> Tensor
+    op_api: all_version
+
   - func: _batch_norm_impl_index(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> (Tensor, Tensor, Tensor, Tensor, int)
     acl_op: all_version
 
