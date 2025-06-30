@@ -22,6 +22,7 @@ const static int64_t IN_SPLIT_OUT_NOT_SPLIT = 1;
 const static int64_t IN_NOT_SPLIT_OUT_SPLIT = 2;
 const static int64_t IN_SPLIT_OUT_SPLIT = 3;
 const static int64_t INT4_NUMS_IN_INT32 = 8;
+const static int64_t SPLIT_K = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
 void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_group_list)
@@ -71,6 +72,18 @@ void calculate_dim_m(size_t& dim_m, size_t num_x, const at::TensorList x)
     for (size_t i = 0; i < num_x; i++) {
         dim_m += x[i].sizes()[0];
     }
+}
+
+void create_new_tensor_batch(std::vector<at::Tensor> &y, size_t batch, size_t dim_m, size_t dim_n,
+                             const c10::TensorOptions &options)
+{
+    auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
+    y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
+}
+
+const std::string GmmTypeToString(int64_t input_type) {
+    return c10_npu::IsCustomDType(input_type) ?
+               c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
 }
 
 #if VERSION_BETWEEN(V1R11, V1R11)
@@ -228,7 +241,11 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                                            c10::optional<int64_t> group_list_type,
                                            c10::optional<int64_t> act_type,
                                            const c10::OptionalIntArrayRef tuning_config,
-                                           c10::optional<at::ScalarType> output_dtype)
+                                           c10::optional<int64_t> output_dtype,
+                                           c10::optional<int64_t> x_dtype,
+                                           c10::optional<int64_t> weight_dtype,
+                                           c10::optional<int64_t> scale_dtype,
+                                           c10::optional<int64_t> per_token_scale_dtype)
 // func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None,
 // Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None,
 // Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input,
@@ -253,7 +270,10 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         check_dims(split_item_value, num_x, num_weight, num_group_list);
 
         std::vector<at::Tensor> y;
-        c10::TensorOptions options = x[0].options().dtype(output_dtype.value_or(x[0].scalar_type()));
+        c10::TensorOptions options = x[0].options().dtype(
+            output_dtype.has_value()
+            ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(output_dtype.value()))
+            : x[0].scalar_type());
 
         if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
             y.reserve(num_x);
@@ -282,12 +302,34 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         return y;
     }
 
+    if (x_dtype.has_value()) {
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
+                    "The optional parameter x_dtype only supports hifloat8 or None, but now is ",
+                    GmmTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (weight_dtype.has_value()) {
+        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
+                   "The optional parameter weight_dtype only supports hifloat8 or None, but now is ",
+                   GmmTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (scale_dtype.has_value()) {
+        TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
+                  "The optional parameter scale_dtype only supports float8_e8m0 or None, but now is ",
+                  GmmTypeToString(scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+    if (per_token_scale_dtype.has_value()) {
+        TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
+                 "The optional parameter per_token_scale_dtype only supports float8_e8m0 or None, but now is ",
+                 GmmTypeToString(per_token_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+
     auto num_x = x.size();
     bool singleWeight = weight.size() == 1 && weight[0].sizes().size() == 3;
     auto num_weight = singleWeight ? static_cast<size_t>(weight[0].size(0)) : static_cast<size_t>(weight.size());
     auto group_list_real = group_list.value_or(at::Tensor());
     auto num_group_list = group_list_real.size(0);
     int64_t split_item_value = split_item.value_or(0);
+    int64_t group_type_value = group_type.value_or(-1);
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
@@ -331,9 +373,16 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                 create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, dim_m, n0, options);
         } else if (num_x == 1) {
-            weight[0].dtype() == at::ScalarType::Int ?
-                create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
-                create_new_tensor(y, x[0].size(0), n0, options);
+            if (group_type_value == SPLIT_K) {
+                weight[0].dtype() == at::ScalarType::Int ?
+                    create_new_tensor_batch(y, num_group_list, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
+                    create_new_tensor_batch(y, num_group_list, x[0].size(0), n0, options);
+            } else {
+                weight[0].dtype() == at::ScalarType::Int ?
+                    create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
+                    create_new_tensor(y, x[0].size(0), n0, options);
+            }
+
         }
     }
     at::TensorList result = at::TensorList(y);
@@ -353,6 +402,22 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     int64_t act_type_value = act_type.value_or(0);
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
 
+    TensorListWrapper x_wrapper = {x,
+        x_dtype.has_value() ? c10_npu::GetAclDataType(x_dtype.value())
+                            : npu_preparation::convert_to_acl_data_type(x[0].scalar_type())};
+    TensorListWrapper weight_wrapper = {weight,
+        weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
+                                 : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+    TensorListWrapper scale_wrapper = {scale_real,
+        scale_dtype.has_value() ? c10_npu::GetAclDataType(scale_dtype.value())
+                                : (scale_real.empty() ? aclDataType::ACL_UINT64
+                                : npu_preparation::convert_to_acl_data_type(scale_real[0].scalar_type()))};
+    TensorListWrapper per_token_scale_wrapper = {per_token_scale_real,
+        per_token_scale_dtype.has_value()
+            ? c10_npu::GetAclDataType(per_token_scale_dtype.value())
+            : (per_token_scale_real.empty() ? aclDataType::ACL_FLOAT
+            : npu_preparation::convert_to_acl_data_type(per_token_scale_real[0].scalar_type()))};
+
     const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[0]) == ACL_FORMAT_FRACTAL_NZ;
     if (is_weight_nz) {
         static const bool is_weight_nz_available = check_aclnn_kernel_available("aclnnGroupedMatmulWeightNz");
@@ -361,22 +426,25 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                     "do not support with this format. Please try to update the version of CANN."
                     + OPS_ERROR(ErrCode::PARAM));
         int64_t quant_per_group_size = 0;
-        EXEC_NPU_CMD(aclnnGroupedMatmulWeightNz, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-            antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+        EXEC_NPU_CMD(aclnnGroupedMatmulWeightNz, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
+            antiquant_offset_real, per_token_scale_wrapper, group_list_real, activation_input_real,
             activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
             group_list_type_value, act_type_value, tuning_config_real, quant_per_group_size,
             result, act_out, dynamic_quant_scale_out);
         return y;
     }
     static const bool is_grouped_matmul_V5_available = check_aclnn_kernel_available("aclnnGroupedMatmulV5");
-    if (!is_grouped_matmul_V5_available) {
-        EXEC_NPU_CMD(aclnnGroupedMatmulV4, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-            antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+    static const bool dtypeValid = x[0].scalar_type() != at::ScalarType::Float8_e5m2 &&
+                                   x[0].scalar_type() != at::ScalarType::Float8_e4m3fn &&
+                                   !x_dtype.has_value() && !weight_dtype.has_value();
+    if (!is_grouped_matmul_V5_available || !dtypeValid) {
+        EXEC_NPU_CMD(aclnnGroupedMatmulV4, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
+            antiquant_offset_real, per_token_scale_wrapper, group_list_real, activation_input_real,
             activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
             group_list_type_value, act_type_value, result, act_out, dynamic_quant_scale_out);
     } else {
-        EXEC_NPU_CMD(aclnnGroupedMatmulV5, x, weight, bias_real, scale_real, offset_real, antiquant_scale_real,
-            antiquant_offset_real, per_token_scale_real, group_list_real, activation_input_real,
+        EXEC_NPU_CMD(aclnnGroupedMatmulV5, x_wrapper, weight_wrapper, bias_real, scale_wrapper, offset_real, antiquant_scale_real,
+            antiquant_offset_real, per_token_scale_wrapper, group_list_real, activation_input_real,
             activation_quant_scale_real, activation_quant_offset_real, split_item_value, group_type_value,
             group_list_type_value, act_type_value, tuning_config_real, result, act_out, dynamic_quant_scale_out);
     }
