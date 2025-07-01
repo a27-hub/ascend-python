@@ -297,7 +297,7 @@ at::Tensor npu_quant_matmul_symint(const at::Tensor &x1, const at::Tensor &x2, c
                     : aclDataType::ACL_FLOAT;
             TensorWrapper x1_scale_wrapper = {pertoken_scale_real,
                                               (pertoken_scale_dtype.has_value())
-                                                  ? c10::GetAclDataType(pertoken_scale_dtype.value())
+                                                  ? c10_npu::GetAclDataType(pertoken_scale_dtype.value())
                                                   : pertoken_scale_tensor_dtype};
             TensorWrapper x2_scale_wrapper = {
                 scale, (scale_dtype.has_value()) ? c10_npu::GetAclDataType(scale_dtype.value())
