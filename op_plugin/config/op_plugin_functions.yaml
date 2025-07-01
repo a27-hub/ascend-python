@@ -3734,10 +3734,6 @@ official:
     op_api: all_version
     gen_opapi:
       exec: aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size, stride, padding, dilation, ceil_mode, grad_input
-
-  
-  - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
-    op_api: all_version
   
   - func: max_pool3d_with_indices(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, int[3] dilation=1, bool ceil_mode=False) -> (Tensor, Tensor)
     acl_op: all_version
@@ -7254,6 +7250,9 @@ custom:
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
+
+  - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+    op_api: all_version
 
   - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, Tensor? offset=None, Tensor? bias=None, str? output_dtype=None) -> Tensor
     op_api: v2.0
