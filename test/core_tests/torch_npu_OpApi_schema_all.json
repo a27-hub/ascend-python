@@ -3784,6 +3784,9 @@
   "func: npu_gelu(Tensor self, *, str approximate='none') -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_gelu_quant(Tensor self, *, Tensor? input_scale=None, Tensor? input_offset=None, str approximate='none', str quant_mode='dynamic', int? dst_type=None, str round_mode='rint') -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_group_norm_swish(Tensor input, int num_groups, Tensor weight, Tensor bias, float? eps=1e-5, float? swish_scale=1.0) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
