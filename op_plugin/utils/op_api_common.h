@@ -39,6 +39,7 @@
 #include "torch_npu/csrc/aten/NPUNativeFunctions.h"
 #include "torch_npu/csrc/flopcount/FlopCount.h"
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
+#include "torch_npu/csrc/custom_dtype/Init.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 typedef struct aclOpExecutor aclOpExecutor;
