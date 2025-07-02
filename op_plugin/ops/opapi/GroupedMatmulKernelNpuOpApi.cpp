@@ -28,10 +28,6 @@ void check_dims(int64_t split_item, size_t num_x, size_t num_weight, size_t num_
 {
     TORCH_CHECK(num_x > 0 && num_weight > 0,
                 "Invalid inputs: neither x nor weight could be empty." + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(split_item == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item == IN_SPLIT_OUT_NOT_SPLIT ||
-                split_item == IN_NOT_SPLIT_OUT_SPLIT || split_item == IN_SPLIT_OUT_SPLIT,
-                "Invalid value of split_item [", split_item, "], which should only be one of 0/1/2/3."
-                + OPS_ERROR(ErrCode::PARAM));
     if (split_item == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item == IN_SPLIT_OUT_NOT_SPLIT) {
         if (num_group_list > 0) {
             TORCH_CHECK(num_x == 1 && num_weight == num_group_list, "Invalid inputs. "
@@ -70,6 +66,22 @@ void calculate_dim_m(size_t& dim_m, size_t num_x, const at::TensorList x)
 {
     for (size_t i = 0; i < num_x; i++) {
         dim_m += x[i].sizes()[0];
+    }
+}
+
+int64_t infer_group_type_value(c10::optional<int64_t> group_type, int64_t split_item_value)
+{
+    TORCH_CHECK(split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT ||
+                split_item_value == IN_NOT_SPLIT_OUT_SPLIT || split_item_value == IN_SPLIT_OUT_SPLIT,
+                "Invalid value of split_item [", split_item_value, "], which should only be one of 0/1/2/3."
+                + OPS_ERROR(ErrCode::PARAM));
+    if (!group_type.has_value()) {
+        TORCH_NPU_WARN_ONCE(
+            "Input param group_type of npu_grouped_matmul is None, which actually requires passing manually. "
+            "Currently torch_npu will automatically select group_type, but this may be deprecated in the future.");
+        return (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) ? -1 : 0;
+    } else {
+        return group_type.value();
     }
 }
 
@@ -235,7 +247,8 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
 // Tensor[]? activation_quant_offset, Tensor[]? activation_quant_offset, int? split_item=0,
 // int? group_type=-1, int? group_list_type=0, int? act_type=0, ScalarType? output_dtype=None) -> Tensor[]
 {
-    int64_t group_type_value = group_type.value_or(-1);
+    int64_t split_item_value = split_item.value_or(0);
+    int64_t group_type_value = infer_group_type_value(group_type, split_item_value);
     TORCH_CHECK(group_type_value == -1 || group_type_value == 0,
                 "group_type currently only support -1 and 0, current value is ",
                 group_type_value, OPS_ERROR(ErrCode::VALUE));
@@ -249,7 +262,6 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         auto num_weight = weight.size();
         auto group_list_real = at::IntArrayRef{};
         size_t num_group_list = 0;
-        int64_t split_item_value = split_item.value_or(0);
         check_dims(split_item_value, num_x, num_weight, num_group_list);
 
         std::vector<at::Tensor> y;
@@ -287,7 +299,6 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     auto num_weight = singleWeight ? static_cast<size_t>(weight[0].size(0)) : static_cast<size_t>(weight.size());
     auto group_list_real = group_list.value_or(at::Tensor());
     auto num_group_list = group_list_real.size(0);
-    int64_t split_item_value = split_item.value_or(0);
     check_dims(split_item_value, num_x, num_weight, num_group_list);
 
     std::vector<at::Tensor> y;
