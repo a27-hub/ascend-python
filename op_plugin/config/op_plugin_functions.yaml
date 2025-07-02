@@ -3448,7 +3448,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      self: 
+      self:
         name: self, other
       exec: aclnnInplaceLogicalAnd
 
@@ -4384,7 +4384,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      self: 
+      self:
         name: self, exponent
       exec: aclnnInplacePowTensorTensor
 
@@ -6997,7 +6997,7 @@ custom:
     op_api: v1.11, v2.0
     exposed: v1.11, v2.0
 
-  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None, Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None, Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input=None, Tensor[]? activation_quant_scale=None, Tensor[]? activation_quant_offset=None, int? split_item=0, int? group_type=-1, int? group_list_type=0, int? act_type=0, int[]? tuning_config=None, ScalarType? output_dtype=None) -> Tensor[]
+  - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[]? bias=None, Tensor[]? scale=None, Tensor[]? offset=None, Tensor[]? antiquant_scale=None, Tensor[]? antiquant_offset=None, Tensor[]? per_token_scale=None, Tensor? group_list=None, Tensor[]? activation_input=None, Tensor[]? activation_quant_scale=None, Tensor[]? activation_quant_offset=None, int? split_item=0, int? group_type=-1, int? group_list_type=0, int? act_type=0, int[]? tuning_config=None, int? output_dtype=None, int? x_dtype=None, int? weight_dtype=None, int? scale_dtype=None, int? per_token_scale_dtype=None) -> Tensor[]
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
@@ -7270,7 +7270,7 @@ custom:
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
     acl_op: [v2.1, newest]
 
-  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None, SymInt[]? group_sizes=None) -> Tensor
+  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? pertoken_scale_dtype=None, int? scale_dtype=None, SymInt[]? group_sizes=None, Tensor? y_scale=None) -> Tensor
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
@@ -7532,7 +7532,7 @@ custom:
   - func: npu_view_copy(Tensor(a!) self, Tensor other, bool non_blocking) -> Tensor(a!)
     acl_op: all_version
 
-  - func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0, int inner_precise=0) -> Tensor
+  - func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0, int inner_precise=0, int? weight_dtype=None) -> Tensor
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
@@ -7938,7 +7938,7 @@ symint:
   - func: zeros(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
     acl_op: [v2.1, newest]
 
-  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None, SymInt[]? group_sizes=None) -> Tensor
+  - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? pertoken_scale_dtype=None, int? scale_dtype=None, SymInt[]? group_sizes=None, Tensor? y_scale=None) -> Tensor
     op_api: all_version
 
 tocpu:

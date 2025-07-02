@@ -1,5 +1,6 @@
 import math
 import torch
+import torch_npu
 from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
@@ -16,6 +17,16 @@ ATTR_DIM_LIMIT_QUANTCONV2D = 2
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
 
+TORCH_DTYPE_MAP = {
+    torch.float16: 5,
+    torch.bfloat16: 15,
+    torch.float32: 6,
+    torch.float8_e5m2: 23,
+    torch.float8_e4m3fn: 24,
+    torch.bits8: 21,
+    torch.int8: 1,
+    torch.int32: 3,
+}
 
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
@@ -430,12 +441,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -595,7 +606,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -1239,21 +1250,49 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
     else:
         return x.new_empty(tuple(dim_list))
 
+def gmm_get_dtype(output_dtype):
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
+        return torch.float16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
+        return torch.bfloat16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
+        return torch.float32
+    else:
+        raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
+
+def gmm_scale_dtype_check(scale_dtype, per_token_scale_dtype):
+    if scale_dtype is not None:
+        torch._check(
+            scale_dtype == torch_npu.float8_e8m0,
+            lambda: "scale_dtype is only supported float8_e8m0 for now, but it is " + str(scale_dtype),
+        )
+    if per_token_scale_dtype is not None:
+        torch._check(
+            per_token_scale_dtype == torch_npu.float8_e8m0,
+            lambda: "per_token_scale_dtype is only supported float8_e8m0 for now, but it is " + str(per_token_scale_dtype),
+        )
 
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
                             antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
-                            split_item=0, group_type=-1, group_list_type=0, act_type=0, tuning_config=None, output_dtype=None):
+                            split_item=0, group_type=-1, group_list_type=0, act_type=0, tuning_config=None,
+                            output_dtype=None, x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None):
     torch._check(
         group_type == -1 or group_type == 0,
         lambda: f"group_type only support -1 and 0, but got {group_type} {ops_error(ErrCode.VALUE)}",
     )
+    torch._check(
+        x_dtype is None and weight_dtype is None,
+        lambda: "x_dtype and weight_dtype are not supported for grouped matmul for now",
+    )
+    gmm_scale_dtype_check(scale_dtype, per_token_scale_dtype)
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
+    output_dtype = gmm_get_dtype(output_dtype)
     INT4_IN_INT32 = 8
 
     if num_x > 0 and output_dtype is None:
@@ -1373,7 +1412,7 @@ def npu_mm_all_reduce_base_forward(x1, x2, hcom, reduce_op='sum', bias=None, ant
 @impl(m, "npu_weight_quant_batchmatmul")
 def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None, quant_offset=None, bias=None, antiquant_group_size=0, inner_precise=0):
     dim_m = x.size(0)
-    if weight.dtype == torch.int32 and weight.is_contiguous():
+    if (weight.dtype == torch.int32 or weight.dtype == torch.float32) and weight.is_contiguous():
         dim_n = weight.size(1) * 8
     else:
         dim_n = weight.size(1)
@@ -1420,17 +1459,18 @@ def bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2):
 
 
 def quant_matmul_shape_check(*args):
-    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4 = args
+    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes = args
     X_MAX_DIM = 6
     X_MIN_DIM = 2
     INT4_IN_INT32 = 8
+    FP4_IN_INT8 = 2
     GROUP_SIZE_A8W4 = 256
     x1_dim_num = x1.dim()
     x2_dim_num = x2.dim()
     x1_m_dim = x1.size(x1_dim_num - 2)
     x1_k_dim = x1.size(x1_dim_num - 1)
     x2_k_dim = x2.size(x2_dim_num - 2)
-    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if ((is_a4w4 and not transpose_x2) or is_a8w4) else x2.size(x2_dim_num - 1)
+    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if ((is_a4w4 and not transpose_x2) or is_a8w4_int) else x2.size(x2_dim_num - 1)
     torch._check(
         x1_dim_num >= X_MIN_DIM and x1_dim_num <= X_MAX_DIM,
         lambda: f"x1 dim num should be 2 ~ 6, please check x1 dim num {ops_error(ErrCode.VALUE)}",
@@ -1440,6 +1480,11 @@ def quant_matmul_shape_check(*args):
             x1_k_dim * INT4_IN_INT32 == x2_k_dim,
             lambda: f"k dim of x2 should be 8 multiple of k dim of x1, \
                 please check k dim of x1 and x2 {ops_error(ErrCode.VALUE)}",
+        )
+    elif is_a8w4_float:
+        torch._check(
+            x1_k_dim == x2_k_dim * FP4_IN_INT8,
+            lambda: "a8w4_float nd only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
         )
     else:
         torch._check(
@@ -1472,54 +1517,49 @@ def quant_matmul_shape_check(*args):
             lambda: f"the offset 1st dim value must be 1 or x2 n dim value, \
                 please check offset 1st dim value {ops_error(ErrCode.VALUE)}",
         )
-    if pertoken_scale is not None:
-        pertoken_scale_dim_num = pertoken_scale.dim()
-        if is_a8w4:
+    if group_sizes is None:
+        if pertoken_scale is not None:
+            pertoken_scale_dim_num = pertoken_scale.dim()
+            if is_a8w4_int:
+                torch._check(
+                    pertoken_scale_dim_num == 2,
+                    lambda: f"the pertoken_scale dim num must be 2, please check scale dim num {ops_error(ErrCode.VALUE)}",
+                )
+            else:
+                torch._check(
+                    pertoken_scale_dim_num == 1,
+                    lambda: f"the pertoken_scale dim num must be 1, please check scale dim num {ops_error(ErrCode.VALUE)}",
+                )
+
+        scale_dim_num = scale.dim()
+        if is_a8w4_int:
             torch._check(
-                pertoken_scale_dim_num == 2,
-                lambda: f"the pertoken_scale dim num must be 2, please check scale dim num {ops_error(ErrCode.VALUE)}",
+                scale_dim_num == 2,
+                lambda: f"the scale dim num must be 2, please check scale dim num {ops_error(ErrCode.VALUE)}",
+            )
+            scale_first_dim = scale.size(0)
+            torch._check(
+                scale_first_dim == x1_k_dim // GROUP_SIZE_A8W4,
+                lambda: f"the scale 1st dim value must equal to x1 k dim divide 256, \
+                    please check scale 1st dim value {ops_error(ErrCode.VALUE)}",
+            )
+            scale_last_dim = scale.size(1)
+            torch._check(
+                scale_last_dim == x2_n_dim,
+                lambda: f"the scale last dim value must equal to x2 n dim value, \
+                    please check scale last dim value {ops_error(ErrCode.VALUE)}",
             )
         else:
             torch._check(
-                pertoken_scale_dim_num == 1,
-                lambda: f"the pertoken_scale dim num must be 1, please check scale dim num {ops_error(ErrCode.VALUE)}",
+                scale_dim_num == 1,
+                lambda: f"the scale dim num must be 1, please check scale dim num {ops_error(ErrCode.VALUE)}",
             )
-        pertoken_scale_first_dim = pertoken_scale.size(0)
-        torch._check(
-            pertoken_scale_first_dim == x1_m_dim,
-            lambda: f"the pertoken_scale 1st dim value must be x1 m dim value, \
-                please check scale 1st dim value {ops_error(ErrCode.VALUE)}",
-        )
-
-    scale_dim_num = scale.dim()
-    if is_a8w4:
-        torch._check(
-            scale_dim_num == 2,
-            lambda: f"the scale dim num must be 2, please check scale dim num {ops_error(ErrCode.VALUE)}",
-        )
-        scale_first_dim = scale.size(0)
-        torch._check(
-            scale_first_dim == x1_k_dim // GROUP_SIZE_A8W4,
-            lambda: f"the scale 1st dim value must equal to x1 k dim divide 256, \
-                please check scale 1st dim value {ops_error(ErrCode.VALUE)}",
-        )
-        scale_last_dim = scale.size(1)
-        torch._check(
-            scale_last_dim == x2_n_dim,
-            lambda: f"the scale last dim value must equal to x2 n dim value, \
-                please check scale last dim value {ops_error(ErrCode.VALUE)}",
-        )
-    else:
-        torch._check(
-            scale_dim_num == 1,
-            lambda: f"the scale dim num must be 1, please check scale dim num {ops_error(ErrCode.VALUE)}",
-        )
-        scale_first_dim = scale.size(0)
-        torch._check(
-            scale_first_dim == 1 or scale_first_dim == x2_n_dim,
-            lambda: f"the scale 1st dim value must be 1 or x2 n dim value, \
-                please check scale 1st dim value {ops_error(ErrCode.VALUE)}",
-        )
+            scale_first_dim = scale.size(0)
+            torch._check(
+                scale_first_dim == 1 or scale_first_dim == x2_n_dim,
+                lambda: f"the scale 1st dim value must be 1 or x2 n dim value, \
+                    please check scale 1st dim value {ops_error(ErrCode.VALUE)}",
+            )
 
 
 def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
@@ -1530,11 +1570,11 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
     )
     if bias.dtype == torch.bfloat16:
         torch._check(
-            output_dtype == torch.bfloat16,
+            output_dtype == TORCH_DTYPE_MAP[torch.bfloat16],
             lambda: "When bias dtype is bfloat16, output_dtype must be bfloat16, but it is " +
                     str(output_dtype) + ops_error(ErrCode.TYPE),
         )
-    if output_dtype == torch.int32:
+    if output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         torch._check(
             bias.dtype == torch.int32,
             lambda: "When output_dtype dtype is int32, bias_dtype must be int32, but it is " +
@@ -1543,7 +1583,7 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
     if pertoken_scale is not None:
         if bias.dtype == torch.float16:
             torch._check(
-                output_dtype == torch.float16,
+                output_dtype == TORCH_DTYPE_MAP[torch.float16],
                 lambda: "When bias dtype is float16 and pertoken is given, output_dtype must be float16, but it is " +
                         str(output_dtype) + ops_error(ErrCode.TYPE),
             )
@@ -1552,17 +1592,59 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
             bias.dtype != torch.float16,
             lambda: "Bias dtype cannot be float16 when pertoken not given." + ops_error(ErrCode.TYPE),
         )
-        if bias.dtype == torch.float32:
-            torch._check(
-                output_dtype == torch.bfloat16,
-                lambda: "When bias dtype is float32 and pertoken not given, output_dtype must be bfloat16, but it is " +
-                        str(output_dtype) + ops_error(ErrCode.TYPE),
-            )
+
+
+def quant_matmul_extra_dtype_check(*args):
+    x1, x2, scale, pertoken_scale, x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype = args
+    if x1_dtype is not None:
+        torch._check(
+            x1_dtype == torch_npu.float4_e2m1 or x1_dtype == torch_npu.float4_e1m2 or x1_dtype == torch_npu.hifloat8,
+            lambda: "The x1_dtype supported for torch_npu.float4_e2m1, torch_npu.float4_e1m2, torch_npu.hifloat8, but x1_dtype is " +
+                    str(x2_dtype) + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            x1.element_size() == 1,
+            lambda: "When x1_dtype is not None, x1 must be a 1 byte tensor, but the byte size of x1 is" +
+                    str(x1.element_size()) + ops_error(ErrCode.TYPE),
+        )
+    if x2_dtype is not None:
+        torch._check(
+            x2_dtype == torch_npu.float4_e2m1 or x2_dtype == torch_npu.float4_e1m2 or x2_dtype == torch_npu.hifloat8,
+            lambda: "The x1_dtype supported for torch_npu.float4_e2m1, torch_npu.float4_e1m2, torch_npu.hifloat8, but x1_dtype is " +
+                    str(x2_dtype) + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            x2.element_size() == 1,
+            lambda: "When x2_dtype is not None, x2 must be a 1 byte tensor, but the byte size of x2 is" +
+                    str(x2.element_size()) + ops_error(ErrCode.TYPE),
+        )
+    if scale_dtype is not None:
+        torch._check(
+            scale_dtype == torch_npu.float8_e8m0,
+            lambda: "The scale_dtype supported for torch_npu.float8_e8m0, but scale_dtype is " +
+                    str(scale_dtype) + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            scale.element_size() == 1,
+            lambda: "When scale_dtype is not None, scale must be a 1 byte tensor, but the byte size of scale is" +
+                    str(scale.element_size()) + ops_error(ErrCode.TYPE),
+        )
+    if pertoken_scale_dtype is not None:
+        torch._check(
+            pertoken_scale_dtype == torch_npu.float8_e8m0,
+            lambda: "The pertoken_scale_dtype supported for torch_npu.float8_e8m0, but pertoken_scale_dtype is " +
+                    str(pertoken_scale_dtype) + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            pertoken_scale.element_size() == 1,
+            lambda: "When pertoken_scale_dtype is not None, pertoken_scale must be a 1 byte tensor, but the byte size of pertoken_scale is" +
+                    str(pertoken_scale.element_size()) + ops_error(ErrCode.TYPE),
+        )
 
 
 def quant_matmul_dtype_check(*args):
-    x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4 = args
-    if is_a8w4:
+    x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale = args
+    if is_a8w4_int:
         torch._check(
             x1.dtype == torch.int8,
             lambda: f"x1's type should be torch.int8 in A8W4, but x1.dtype is {str(x1.dtype)} {ops_error(ErrCode.TYPE)}",
@@ -1601,84 +1683,113 @@ def quant_matmul_dtype_check(*args):
                     but output_dtype.dtype is {str(output_dtype)} {ops_error(ErrCode.TYPE)}",
             )
     else:
-        torch._check(
-            x1.dtype == x2.dtype,
-            lambda: f"x1's type and x2's type should be same, \
-                but x1.dtype is {str(x1.dtype)} and x2.dtype is {str(x2.dtype)} {ops_error(ErrCode.TYPE)}",
-        )
-        input_dtype_supported_list = [torch.int8, torch.int32]
-        torch._check(
-            x1.dtype in input_dtype_supported_list,
-            lambda: f"input's type supported for int8 and int32, but now is {str(x1.dtype)} {ops_error(ErrCode.TYPE)}",
-        )
-        scale_dtype_supported_list = [torch.float32, torch.int64, torch.bfloat16]
-        torch._check(
-            scale.dtype in scale_dtype_supported_list,
-            lambda: f"scale's type supported for float32, int64 and bfloat16, \
-                but scale.dtype is {str(scale.dtype)} {ops_error(ErrCode.TYPE)}",
-        )
         if offset is not None:
             torch._check(
                 offset.dtype == torch.float32,
-                lambda: f"offset's type supported for float32, \
-                    but offset.dtype is {str(offset.dtype)} {ops_error(ErrCode.TYPE)}",
-            )
-        if pertoken_scale is not None:
-            torch._check(
-                pertoken_scale.dtype == torch.float32,
-                lambda: f"pertoken_scale's type supported for float32, \
-                    but pertoken_scale.dtype is {str(offset.dtype)} {ops_error(ErrCode.TYPE)}",
+                lambda: "offset's type supported for float32, but offset.dtype is " + str(offset.dtype) + ops_error(ErrCode.TYPE),
             )
         if bias is not None:
             quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype)
+        if is_a8w4_float and y_scale is not None:
+            torch._check(
+                y_scale.dtype == torch.int64,
+                lambda: "y_scale's type supported for int64, but y_scale.dtype is " + str(y_scale.dtype) + ops_error(ErrCode.TYPE),
+            )
 
 
 def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4):
     if scale.dtype == torch.bfloat16:
         torch._check(
-            output_dtype in [torch.bfloat16, torch.int32],
+            output_dtype in [TORCH_DTYPE_MAP[torch.bfloat16], TORCH_DTYPE_MAP[torch.int32]],
             lambda: "When scale's dtype is bfloat16, output_dtype must be bfloat16 or int32, but output_dtype is " +
                     str(output_dtype) + ops_error(ErrCode.TYPE),
         )
-    if output_dtype == torch.bfloat16:
-        torch._check(
-            scale.dtype == torch.bfloat16 or scale.dtype == torch.float32,
-            lambda: "When output_dtype is bfloat16, scale's dtype must be bfloat16 or float32, but scale's dtype is " +
-                    str(scale.dtype) + ops_error(ErrCode.TYPE),
-        )
-    if output_dtype == torch.int32:
+    if output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         torch._check(
             scale.dtype in [torch.bfloat16, torch.float32],
             lambda: "When output_dtype is int32, scale's dtype must be bfloat16 or float32, but scale's dtype is " +
                     str(scale.dtype) + ops_error(ErrCode.TYPE),
         )
-    if offset is not None:
+    if is_a4w4:
         torch._check(
-            output_dtype is None or output_dtype == torch.int8,
-            lambda: "offset only exists when output_dtype is int8, but output_dtype is " + str(output_dtype) + ops_error(ErrCode.TYPE),
-        )
-    if pertoken_scale is not None:
-        if output_dtype == torch.float16:
-            torch._check(
-                scale.dtype == torch.float32,
-                lambda: "When output_dtype is float16 and pertoken_scale is not none, scale's dtype must be float32, but scale's dtype is " +
-                        str(scale.dtype) + ops_error(ErrCode.TYPE),
-            )
-        torch._check(
-            output_dtype == torch.float16 or output_dtype == torch.bfloat16,
-            lambda: "When pertoken_scale is not none, output_dtype must be float16 or bfloat16, but output_dtype is " +
-                    str(output_dtype) + ops_error(ErrCode.TYPE),
-        )
-    if is_a4w4 and pertoken_scale is None:
-        torch._check(
-            output_dtype == torch.float16,
+            output_dtype == TORCH_DTYPE_MAP[torch.float16],
             lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
                     str(output_dtype) + ops_error(ErrCode.TYPE),
         )
 
 
+def quant_matmul_group_sizes_check(*args):
+    x1, x2, scale, pertoken_scale, group_sizes, x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype, is_a8w4_float = args
+    if group_sizes is None:
+        return
+    torch._check(
+        len(group_sizes) == 3,
+        lambda: "group_sizes's length must be 3, please check group_sizes's length" + ops_error(ErrCode.VALUE),
+    )
+    if is_a8w4_float:
+        torch._check(
+            (group_sizes[0] == 0 and group_sizes[1] == 0 and group_sizes[2] == 32),
+            lambda: "when the dtype of input is A8W4, group_sizes's value must be 0,0,32, please check group_sizes's value" + ops_error(ErrCode.VALUE),
+        )
+        return
+    is_a8w8_int = x1_dtype is None and x2_dtype is None and x1.dtype == torch.int8 and x2.dtype == torch.int8
+    if is_a8w8_int:
+        torch._check(
+            (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0),
+            lambda: "when the dtype of input is int8, group_sizes's value must be 0, please check group_sizes's value" + ops_error(ErrCode.VALUE),
+        )
+    if pertoken_scale is None:
+        torch._check(
+            group_sizes[0] == 0 or group_sizes[1] == 0 or group_sizes[2] == 0,
+            lambda: "when the pertoken_scale is None, group_sizes's value must be 0, please check group_sizes's value" + ops_error(ErrCode.VALUE),
+        )
+    group_input_dtype_lst = [torch.uint8, torch.bits8, torch.float8_e4m3fn, torch.float8_e5m2]
+    group_scale_dtype_lst = [torch.float32]
+    has_group = (group_sizes[0] > 1 or group_sizes[1] > 1 or group_sizes[2] > 1)
+    if group_sizes is not None and has_group:
+        torch._check(
+            (scale_dtype is not None and pertoken_scale_dtype is not None) or (scale.dtype in group_scale_dtype_lst or pertoken_scale.dtype in group_scale_dtype_lst),
+            lambda: "When group_sizes's value is not 0, scale_dtype and pertoken_scale_dtype are None, dtype of scale and pertoken_scale must be both float32, but " +
+                    "scale's dtype is " + str(scale.dtype) + " pertoken_scale's dtype is " + str(pertoken_scale.dtype) + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            (x1_dtype is not None and x2_dtype is not None) or (x1.dtype in group_input_dtype_lst or x2.dtype in group_input_dtype_lst),
+            lambda: "When group_sizes's value is not 0, x1_dtype and x2_dtype are None, dtype of input must be uint8, float8_e4m3fn, float8_e5m2 or int32, but x1's dtype is " +
+                    str(x1.dtype) + " x2's dtype is " + str(x2.dtype) + ops_error(ErrCode.TYPE),
+        )
+        if group_sizes[0] > 1:
+            torch._check(
+                pertoken_scale.dim() >= 2 and pertoken_scale.size(pertoken_scale.dim() - 2) == math.ceil(x1.size(x1.dim() - 2) / group_sizes[0]),
+                lambda: "When group_sizes[0] > 1, ceil(x1.size(-2) / group_sizes[0]) must be equal to " +
+                        "pertoken_scale's size(-2), please check your input" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                group_sizes[1] == group_sizes[0] and group_sizes[1] == 128,
+                lambda: "When group_sizes[1] > 1, group_sizes[1] must be equal to group_sizes[2] and must be equal to 128" + ops_error(ErrCode.VALUE),
+            )
+        if group_sizes[2] > 1:
+            group_k_support_lst = [32, 128]
+            torch._check(
+                group_sizes[2] in group_k_support_lst,
+                lambda: "When group_sizes[2] > 1, group_sizes[2] must be equal to 32 or 128, but group_sizes[2] is " +
+                        str(group_sizes[2]) + ops_error(ErrCode.VALUE),
+            )
+        if group_sizes[1] > 1:
+            torch._check(
+                scale.dim() >= 2 and scale.size(scale.dim() - 1) == math.ceil(x2.size(x2.dim() - 1) / group_sizes[1]),
+                lambda: "When group_sizes[2] > 1, ceil(x2.size(-1) / group_sizes[2]) must be equal to scale's size(-1), " +
+                        "please check your input" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                group_sizes[1] == group_sizes[2] and group_sizes[1] == 128,
+                lambda: "When group_sizes[1] > 1, group_sizes[1] must be equal to group_sizes[2] and must be equal to 128" + ops_error(ErrCode.VALUE),
+            )
+
+
 @impl(m, "npu_quant_matmul")
-def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, output_dtype=None, group_sizes=None):
+def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, output_dtype=None,
+                          x1_dtype=None, x2_dtype=None, pertoken_scale_dtype=None, scale_dtype=None,
+                          group_sizes=None, y_scale=None):
     INT4_IN_INT32 = 8
     batch_val = 1
     x1_dim_num = x1.dim()
@@ -1688,9 +1799,10 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     shape_short = x2 if x1_dim_num > x2_dim_num else x1
     vaild_offset = out_dim_num - min(x1_dim_num, x2_dim_num)
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
-    is_a8w4 = x1.dtype == torch.int8 and x2.dtype == torch.int32
+    is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
+    is_a8w4_float = x1.dtype == torch.float8_e4m3fn and x2_dtype == torch_npu.float4_e2m1
     dim_list = []
-    if is_a8w4:
+    if is_a8w4_int:
         dim_list = [x1.shape[0], x2.shape[1] * INT4_IN_INT32]
         transpose_x2 = False
     else:
@@ -1718,15 +1830,28 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                 )
             bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2)
         quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
-    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4)
-    if output_dtype == torch.float16:
+        quant_matmul_extra_dtype_check(x1, x2, scale, pertoken_scale,
+                                   x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype)
+        quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes,
+                                    x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype, is_a8w4_float)
+    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
+    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
+
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
-    elif output_dtype == torch.bfloat16:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.bfloat16)
-    elif output_dtype == torch.int32:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
+        return shape_long.new_empty(tuple(dim_list), dtype=torch.float32)
+    elif output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int32)
-    elif output_dtype is None or output_dtype == torch.int8:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2]:
+        return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e5m2)
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
+        return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e4m3fn)
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8] or output_dtype == torch_npu.hifloat8:
+        return shape_long.new_empty(tuple(dim_list), dtype=torch.bits8)
+    elif output_dtype is None or output_dtype == TORCH_DTYPE_MAP[torch.int8]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int8)
     else:
         raise RuntimeError("Not supportted output dtype is " + str(output_dtype))
@@ -1866,8 +1991,8 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
 def npu_trans_quant_param_meta(scale, offset=None, round_mode=0):
     scale_dim_num = scale.dim()
     torch._check(
-        scale_dim_num == 1 or (scale_dim_num == 2 and scale.size(0) == 1),
-        lambda: "the scale shape support only (1, ) and (1, n)" + ops_error(ErrCode.VALUE),
+        scale_dim_num == 1 or scale_dim_num == 2,
+        lambda: "The scale shape dim num must be 1 or 2, but actual is " + int(scale_dim_num) + ops_error(ErrCode.VALUE),
     )
     torch._check(
         round_mode == 0 or round_mode == 1,
@@ -2392,7 +2517,7 @@ def npu_gather_sparse_index(inputs, index):
 
     for i in range(1, input_dim):
         output_size.append(input_size[i])
-    
+
     return torch.empty(output_size, dtype=inputs.dtype, device=inputs.device)
 
 
@@ -2427,9 +2552,9 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
