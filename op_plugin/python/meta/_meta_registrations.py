@@ -27,6 +27,7 @@ TORCH_DTYPE_MAP = {
     torch.int32: 3,
 }
 
+
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
     return (torch.empty_like(self), torch.empty_like(other))
@@ -1140,7 +1141,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1249,6 +1250,7 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
     else:
         return x.new_empty(tuple(dim_list))
 
+
 def gmm_get_dtype(output_dtype):
     if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
         return torch.float16
@@ -1258,6 +1260,7 @@ def gmm_get_dtype(output_dtype):
         return torch.float32
     else:
         raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
+
 
 def gmm_scale_dtype_check(scale_dtype, per_token_scale_dtype):
     if scale_dtype is not None:
@@ -1270,6 +1273,8 @@ def gmm_scale_dtype_check(scale_dtype, per_token_scale_dtype):
             per_token_scale_dtype == torch_npu.float8_e8m0,
             lambda: "per_token_scale_dtype is only supported float8_e8m0 for now, but it is " + str(per_token_scale_dtype),
         )
+
+
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,

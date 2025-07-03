@@ -81,7 +81,8 @@ void create_new_tensor_batch(std::vector<at::Tensor> &y, size_t batch, size_t di
     y.emplace_back(npu_preparation::apply_tensor_without_format(output_size, options));
 }
 
-const std::string GmmTypeToString(int64_t input_type) {
+const std::string GmmTypeToString(int64_t input_type)
+{
     return c10_npu::IsCustomDType(input_type) ?
                c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
 }
@@ -311,18 +312,18 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     }
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                   "The optional parameter weight_dtype only supports hifloat8 or None, but now is ",
-                   GmmTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter weight_dtype only supports hifloat8 or None, but now is ",
+                    GmmTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (scale_dtype.has_value()) {
         TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                  "The optional parameter scale_dtype only supports float8_e8m0 or None, but now is ",
-                  GmmTypeToString(scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter scale_dtype only supports float8_e8m0 or None, but now is ",
+                    GmmTypeToString(scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (per_token_scale_dtype.has_value()) {
         TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                 "The optional parameter per_token_scale_dtype only supports float8_e8m0 or None, but now is ",
-                 GmmTypeToString(per_token_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter per_token_scale_dtype only supports float8_e8m0 or None, but now is ",
+                    GmmTypeToString(per_token_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     auto num_x = x.size();
@@ -386,7 +387,6 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                     create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
                     create_new_tensor(y, x[0].size(0), n0, options);
             }
-
         }
     }
     at::TensorList result = at::TensorList(y);
