@@ -101,6 +101,9 @@ at::Tensor& mean_out(const at::Tensor& self, at::OptionalIntArrayRef dim, bool k
     }
     // reduecshape
     auto outputSize = op_infer::reduce_ops_npu_output_size(self, dimArray, keepdim);
+    if (!out.sizes().equals(outputSize)) {
+        out.resize_(outputSize);
+    }
     at_npu::native::OpPreparation::check_tensor({self}, out, out.scalar_type(), outputSize);
 
     EXEC_NPU_CMD(aclnnMean, self, dimArray, keepdim, dstType, out);

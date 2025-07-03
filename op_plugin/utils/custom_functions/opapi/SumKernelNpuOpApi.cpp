@@ -29,6 +29,9 @@ at::Tensor &sum_out_common_nocheck(const at::Tensor &self,
     DO_COMPATIBILITY(aclnnReduceSum, acl_op::sum_out(self, dim, keepdim, dtype, result));
     auto output_size = op_infer::sum_npu_output_size(self, dim, keepdim);
     auto res_type = dtype.has_value() ? dtype.value() : result.scalar_type();
+    if (!result.sizes().equals(output_size)) {
+        result.resize_(output_size);
+    }
     npu_preparation::check_tensor({self}, result, res_type, output_size);
 
     EXEC_NPU_CMD(aclnnReduceSum, self, dim, keepdim, res_type, result);
