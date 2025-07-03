@@ -32,6 +32,10 @@ at::Tensor& addcdiv_out(const at::Tensor& self, const at::Tensor& tensor1, const
     TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
         " can't be cast to the desired output type ", result_type, OPS_ERROR(ErrCode::TYPE));
 
+    auto input_size = op_infer::broadcast_ops_npu_output_size(self, tensor1);
+    auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2.sizes());
+    npu_preparation::check_tensor({self}, result, self, output_size);
+
     DO_COMPATIBILITY(aclnnAddcdiv, acl_op::addcdiv_out(self, tensor1, tensor2, value, result));
     std::vector<at::Tensor> tensor_list = {self, tensor1, tensor2};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
