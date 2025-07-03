@@ -101,7 +101,7 @@ class TestQuantMatmul(TestCase):
         supported_output = torch.matmul(x1.to(torch.int32), x2.to(torch.int32)) * scale
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale.npu(), output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.01)
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_bf16_nz(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
@@ -113,7 +113,7 @@ class TestQuantMatmul(TestCase):
         x2_nz = torch_npu.npu_format_cast(x2_clone.npu().contiguous(), 29)
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_nz.npu(), scale.npu(), output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.01)
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_fp16_nz(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
@@ -203,7 +203,6 @@ class TestQuantMatmul(TestCase):
             cmp = self.ref_compare(golden_out_tensor, out_tensor, 2 ** -7 if ksize < 2048 else 2**-6)
         return eb and cmp
 
-    @unittest.skip("skip test_npu_quant_matmul_A8W4")
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_A8W4_float16(self):
         M = 1
@@ -232,8 +231,7 @@ class TestQuantMatmul(TestCase):
                                          groupList=group_size_list, bias=y_offset, output_dtype=torch.float16)
 
         self.assertTrue(self.golden_compare(npu_out.cpu(), cpu_out, K))
-    
-    @unittest.skip("skip test_npu_quant_matmul_A8W4")
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_A8W4_bfloat16(self):
         M = 1
