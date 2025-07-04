@@ -62,11 +62,11 @@ torch_npu.npu_top_k_top_p(logits, p, k) -> torch.Tensor
 ## 返回值说明
 `Tensor`
 
-表示过滤后的数据。数据类型支持`float32`、`float16`和`bfloat16`，数据类型与logits一致，shape支持2维且需要与logits一致，支持非连续Tensor，数据格式支持ND
+表示过滤后的数据。数据类型支持`float32`、`float16`和`bfloat16`，数据类型与`logits`一致，shape支持2维且需要与`logits`一致，支持非连续Tensor，数据格式支持ND。
 
 ## 约束说明
 
-- 在输入`logits`第二维大于1024场景下平均性能优于小算子实现，建议在`logits`第二维大于1024场景下使用该接口
+在输入`logits`第二维大于1024场景下平均性能优于小算子实现，建议在`logits`第二维大于1024场景下使用该接口。
 
 
 ## 调用示例
