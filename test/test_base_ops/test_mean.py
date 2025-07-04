@@ -31,6 +31,24 @@ class TestMean(TestCase):
             cpu_output = self.cpu_op_exec(cpu_input, dtype=item[-1])
             npu_output = self.npu_op_exec(npu_input, dtype=item[-1])
             self.assertRtolEqual(cpu_output, npu_output)
+    
+    def test_mean_out(self):
+        inputs = torch.randn([3, 3])
+        inputs_npu = inputs.npu()
+        out_tensor = torch.zeros_like(inputs)
+        out_tensor_npu = out_tensor.npu()
+        cpu_out = torch.mean(inputs, dim=0, keepdim=True, out=out_tensor)
+        npu_out = torch.mean(inputs_npu, dim=0, keepdim=True, out=out_tensor_npu)
+        self.assertRtolEqual(cpu_out, npu_out)
+    
+    def test_sum_out_diff_size(self):
+        inputs = torch.randn([1, 1])
+        inputs_npu = inputs.npu()
+        out_tensor = torch.zeros([3, 3])
+        out_tensor_npu = out_tensor.npu()
+        cpu_out = torch.sum(inputs, dim=0, keepdim=True, out=out_tensor)
+        npu_out = torch.sum(inputs_npu, dim=0, keepdim=True, out=out_tensor_npu)
+        self.assertRtolEqual(cpu_out, npu_out)
 
 
 if __name__ == "__main__":
