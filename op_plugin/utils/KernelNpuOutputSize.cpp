@@ -166,13 +166,14 @@ c10::SmallVector<int64_t, SIZE> adaptive_avg_pool3d_npu_output_size(const at::Te
             " with dimension ",
             i,
             " being "
-            "empty");
+            "empty",
+            OPS_ERROR(ErrCode::PARAM));
     }
 
     TORCH_CHECK(
         (self.ndimension() == DIM_4D || self.ndimension() == DIM_5D),
         "adaptive_avg_pool3d(): Expected 4D or 5D tensor, but got ",
-        self.sizes());
+        self.sizes(), OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(output_size.size() > 2, "output_size length should greater than 2, "
         "but got the output_size length is ", output_size.size(), OPS_ERROR(ErrCode::PARAM));
