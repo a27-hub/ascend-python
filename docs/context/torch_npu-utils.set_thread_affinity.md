@@ -31,7 +31,7 @@ torch_npu.utils.set_thread_affinity(core_range: List[int] = None)
 
 ## 约束说明
 
-该接口需要环境变量`CPU_AFFINITY_CONF`的mode设置为1或2时才生效。
+该接口需要环境变量`CPU_AFFINITY_CONF`的mode设置为1或2时才生效，一般在拉起子线程的位置前使用，指定子线程的绑核方式或绑核区间。推荐和torch_npu.utils.reset_thread_affinity配套使用。
 
 
 ## 调用示例
@@ -42,9 +42,11 @@ torch_npu.utils.set_thread_affinity(core_range: List[int] = None)
 >>> import threading
 >>>
 >>> def run_thread():
-...   torch_npu.utils.set_thread_affinity([12, 19])
+...   print("This is a child thread.")
 >>>
+>>> torch_npu.utils.set_thread_affinity([12, 19])
 >>> child_thread = threading.Thread(target=run_thread)
 >>> child_thread.start()
+>>> torch_npu.utils.reset_thread_affinity()
 >>> child_thread.join()
 ```
