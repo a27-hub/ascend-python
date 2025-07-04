@@ -23,8 +23,8 @@ const int IDX_1 = 1;
 const int IDX_2 = 2;
 const int MIN_ELEMENT_3D = 3;
 const int CONV2D_ATTR_SIZE = 2;
-const int CONV3D_ATTR_SIZE = 3
-const int OUTPUT_MASK_SIZE = 3
+const int CONV3D_ATTR_SIZE = 3;
+const int OUTPUT_MASK_SIZE = 3;
 
 using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list3 = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
@@ -667,6 +667,28 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_conv_transpose3d_backward_sym
     at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
     at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
     return npu_conv_transpose3d_backward(input, grad_output, weight, padding_ref, output_padding_ref, stride, dilation, groups, output_mask);
+}
+#endif
+
+#if VERSION_BETWEEN(V2R1, V2R1)
+// length of output_mask is 3
+std::tuple<at::Tensor, at::Tensor, at::Tensor> convolution_backward(
+    const at::Tensor& grad_output,
+    const at::Tensor& input,
+    const at::Tensor& weight,
+    const at::OptionalIntArrayRef bias_sizes_opt,
+    at::IntArrayRef stride,
+    c10::SymIntArrayRef padding,
+    at::IntArrayRef dilation,
+    bool transposed,
+    c10::SymIntArrayRef output_padding,
+    int64_t groups,
+    std::array<bool, OUTPUT_MASK_SIZE> output_mask)
+{
+    at::IntArrayRef padding_ref = c10::asIntArrayRefUnchecked(padding);
+    at::IntArrayRef output_padding_ref = c10::asIntArrayRefUnchecked(output_padding);
+    return op_api::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding_ref, dilation,
+        transposed, output_padding_ref, groups, output_mask);
 }
 #endif
 }

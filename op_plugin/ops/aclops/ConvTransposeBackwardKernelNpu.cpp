@@ -27,8 +27,8 @@ const int CONV2D_INPUT_DIM_SIZE = 4;
 const int CONV3D_INPUT_DIM_SIZE = 5;
 const int MIN_ELEMENT_3D = 3;
 const int CONV2D_ATTR_SIZE = 2;
-const int CONV3D_ATTR_SIZE = 3
-const int OUTPUT_MASK_SIZE = 3
+const int CONV3D_ATTR_SIZE = 3;
+const int OUTPUT_MASK_SIZE = 3;
 const int KERNEL_DIMENSION = 2;
 const int PADDING_SIZE = 2;
 
