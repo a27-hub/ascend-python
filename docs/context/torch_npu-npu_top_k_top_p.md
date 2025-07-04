@@ -55,14 +55,14 @@ torch_npu.npu_top_k_top_p(logits, p, k) -> torch.Tensor
 
 ## 参数说明
 
-- **logits** (`Tensor`)：必选参数，张量，数据类型支持`flot32`、`float16`和`bfloat16`，数据格式支持ND，支持非连续的Tensor，维数支持2维。
-- **p** (`Tensor`)：必选参数，表示`top-k`张量，值域为`[0, 1]`，数据类型支持`flot32`、`float16`和`bfloat16`，数据类型需要与logits一致，shape支持1维且需要与logits的第一维相同，数据格式支持ND，支持非连续的Tensor。
+- **logits** (`Tensor`)：必选参数，张量，数据类型支持`float32`、`float16`和`bfloat16`，数据格式支持ND，支持非连续的Tensor，维数支持2维。
+- **p** (`Tensor`)：必选参数，表示`top-k`张量，值域为`[0, 1]`，数据类型支持`float32`、`float16`和`bfloat16`，数据类型需要与logits一致，shape支持1维且需要与logits的第一维相同，数据格式支持ND，支持非连续的Tensor。
 - **k** (`Tensor`)：必选参数，表示`top-k`的阈值张量，值域为`[1, 1024]`，且最大值需要小于等于logits.size(1)，数据类型支持`int32`，shape支持1维且需要与logits的第一维相同，数据格式支持ND，支持非连续的Tensor。
 
 ## 返回值说明
 `Tensor`
 
-表示过滤后的数据。数据类型支持`flot32`、`float16`和`bfloat16`，数据类型与logits一致，shape支持2维且需要与logits一致，支持非连续Tensor，数据格式支持ND
+表示过滤后的数据。数据类型支持`float32`、`float16`和`bfloat16`，数据类型与logits一致，shape支持2维且需要与logits一致，支持非连续Tensor，数据格式支持ND
 
 ## 约束说明
 
