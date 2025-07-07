@@ -9,31 +9,31 @@
 
         ![](./figures/zh-cn_formulaimage_0000002262918025.png)
 
-    -   perchannel、pertensor量化场景 \(公式2\)：
+    -   perchannel、pertensor量化场景（公式2）：
 
         ![](./figures/zh-cn_formulaimage_0000002331514405.png)
 
-        -   x为torch.int8输入，bias为torch.int32输入 \(公式2-1\)：
+        -   x为torch.int8输入，bias为torch.int32输入（公式2-1）：
 
             ![](./figures/zh-cn_formulaimage_0000002330304749.png)
 
-        -   x为torch.int8输入，bias为torch.bfloat16、torch.float16、torch.float32输入，无offset \(公式2-2\)：
+        -   x为torch.int8输入，bias为torch.bfloat16、torch.float16、torch.float32输入，无offset（公式2-2）：
 
             ![](./figures/zh-cn_formulaimage_0000002296388208.png)
 
-    -   pertoken、pertensor+pertensor、pertensor+perchannel量化场景 \(公式3\)：
+    -   pertoken、pertensor+pertensor、pertensor+perchannel量化场景（公式3）：
 
         ![](./figures/zh-cn_formulaimage_0000002228564948.png)
 
-        -   x为torch.int8输入，bias为torch.int32输入 \(公式3-1\)：
+        -   x为torch.int8输入，bias为torch.int32输入（公式3-1）：
 
             ![](./figures/zh-cn_formulaimage_0000002330394453.png)
 
-        -   x为torch.int8输入，bias为torch.bfloat16，torch.float16，torch.float32输入\(公式3-2\)：
+        -   x为torch.int8输入，bias为torch.bfloat16，torch.float16，torch.float32输入（公式3-2）：
 
             ![](./figures/zh-cn_formulaimage_0000002296235560.png)
 
-    -   伪量化场景 \(公式4\)：
+    -   伪量化场景（公式4）：
 
         ![](./figures/zh-cn_formulaimage_0000002262918029.png)
 
@@ -758,7 +758,7 @@
             </td>
             <td class="cellrowborder" valign="top" width="18.34%" headers="mcps1.1.5.1.3 "><p id="zh-cn_topic_0000002262888689_p144441648197"><a name="zh-cn_topic_0000002262888689_p144441648197"></a><a name="zh-cn_topic_0000002262888689_p144441648197"></a>x、weight与y均为单张量</p>
             </td>
-            <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><ol id="zh-cn_topic_0000002262888689_ol044416401911"><li>仅支持split_item为2或3。</li><li>x、weight中tensor需为2维，y中tensor需为3维。</li><li>必须传group_list，且当group_list_type为0时，最后一个值与x中tensor的第二维相等，当group_list_type为1时，数值的总和与x中tensor的第二维相等，当group_list_type为2时，第二列数值的总和与x中tensor的第二维相等。</li><li>group_list第1维最大支持1024， 即最多支持1024个group。</li><li>x必须转置，weight不能转置。</li></ol>
+            <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><ol id="zh-cn_topic_0000002262888689_ol044416401911"><li>仅支持split_item为2或3。</li><li>x、weight中tensor需为2维，y中tensor需为3维。</li><li>必须传group_list，且当group_list_type为0时，最后一个值与x中tensor的第二维相等，当group_list_type为1时，数值的总和与x中tensor的第二维相等，当group_list_type为2时，第二列数值的总和与x中tensor的第二维相等。</li><li>group_list第1维最大支持1024，即最多支持1024个group。</li><li>x必须转置，weight不能转置。</li></ol>
             </td>
             </tr>
             </tbody>
