@@ -24,8 +24,8 @@ using npu_utils = at_npu::native::NpuUtils;
 namespace {
 at::SmallVector<int64_t, SIZE> where_npu_output_size(const at::Tensor& condition) {
   int64_t dim = condition.dim();
-  at::Tensor boolSelf = at_npu::native::custom_ops::npu_dtype_cast(condition, at::ScalarType::Bool);
-  at::Tensor intSelf = at_npu::native::custom_ops::npu_dtype_cast(boolSelf, at::ScalarType::Int);
+  at::Tensor boolSelf = at_npu::native::custom_ops::_npu_dtype_cast(condition, at::ScalarType::Bool);
+  at::Tensor intSelf = at_npu::native::custom_ops::_npu_dtype_cast(boolSelf, at::ScalarType::Int);
   at::Tensor cout_nonzero_self = at::sum(intSelf, at::ScalarType::Int);
   int64_t nonzero_num = cout_nonzero_self.item().toInt();
   at::SmallVector<int64_t, SIZE> output_size = {nonzero_num, dim};
@@ -40,7 +40,7 @@ std::vector<at::Tensor> where(const at::Tensor& condition) {
         at_npu::native::custom_ops::npu_format_cast(format_cast_of_condition, ACL_FORMAT_ND);
   }
   if (condition.scalar_type() == at::ScalarType::Half) {
-    format_cast_of_condition = at_npu::native::custom_ops::npu_dtype_cast(format_cast_of_condition, at::ScalarType::Float);
+    format_cast_of_condition = at_npu::native::custom_ops::_npu_dtype_cast(format_cast_of_condition, at::ScalarType::Float);
   }
 
   auto output_size = where_npu_output_size(format_cast_of_condition);
@@ -98,8 +98,8 @@ at::Tensor &where_out(const at::Tensor &condition, const at::Tensor &self, const
     std::tie(b_condition, b_self, b_other) = npu_expand_outplace(condition, self, other, "where_npu");
     if (self.dtype() != other.dtype()) {
         auto result_type = at::native::result_type(self, other);
-        b_self = at_npu::native::custom_ops::npu_dtype_cast(b_self, result_type);
-        b_other = at_npu::native::custom_ops::npu_dtype_cast(b_other, result_type);
+        b_self = at_npu::native::custom_ops::_npu_dtype_cast(b_self, result_type);
+        b_other = at_npu::native::custom_ops::_npu_dtype_cast(b_other, result_type);
     }
     npu_preparation::CheckOut({condition, self, other}, out, b_self);
     if (!npu_utils::check_match(&out)) {
