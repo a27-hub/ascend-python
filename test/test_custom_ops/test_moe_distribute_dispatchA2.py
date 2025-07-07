@@ -115,7 +115,7 @@ class TestMoeDistributeDispatch(TestCase):
         expand_idx = torch.zeros(size=(global_bs, k)).to(torch.int32)
         bs_cumsum = 0
         for rank_id in range(ep_world_size):
-            curr_rank_bs = bs_list ? bs_list[rank_id] : bs
+            curr_rank_bs = bs_list[rank_id] if bs_list else bs
             expert_ids_per_rank = expert_ids_input[rank_id].view(-1)
             unique_expert, inverse_indices = torch.unique(expert_ids_per_rank, sorted=True, return_inverse=True)
             valid_expert_token_num_per_rank = torch.bincount(inverse_indices)
@@ -173,7 +173,7 @@ class TestMoeDistributeDispatch(TestCase):
             dynamic_scales_npu = npu_result[1][0 : golden_actual_tokens.item()]
             self.assertRtolEqual(dynamic_scales_golden, dynamic_scales_npu, 0.001)
 
-        curr_rank_bs = bs_list ? bs_list[rank_id] : bs
+        curr_rank_bs = bs_list[rank_id] if bs_list else bs
         bs_cumsum = 0
         for i in range(rank_id):
             bs_cumsum = bs_cumsum + bs_list[rank_id]
