@@ -72,11 +72,11 @@ torch_npu.npu_moe_distribute_combine(Tensor expand_x, Tensor expert_ids, Tensor 
 
 -   shared\_expert\_num：int类型，表示共享专家数量，一个共享专家可以复制部署到多个卡上。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：暂不支持该参数，使用默认值即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, 4\]，0表示无共享专家，默认值为0。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, 4\]。
 
 -   shared\_expert\_rank\_num：int类型，可选参数，表示共享专家卡数量。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：不支持共享专家，传0即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, ep\_world\_size-1\)。取0表示无共享专家，不取0需满足ep\_world\_size%shared\_expert\_rank\_num=0。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, ep\_world\_size\)。为0时需要满足shared\_expert\_num为0或1，不为0时需满足shared\_expert\_rank\_num%shared\_expert\_num=0。
 
 -   global\_bs：int类型，可选参数，表示EP域全局的batch size大小。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当每个rank的BS不同时，传入256\*ep\_world\_size；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
@@ -106,7 +106,7 @@ x：Tensor类型，表示处理后的token， 要求是2D的Tensor，shape为\(B
 
     -   H：表示hidden size隐藏层大小。
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：取值范围\(0, 7168\]，且保证是32的整数倍。
-        -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[1024, 7168\]。
+        -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[1024, 8192\]。
 
     -   BS：表示待发送的token数量。
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：取值范围为0<BS≤256。
