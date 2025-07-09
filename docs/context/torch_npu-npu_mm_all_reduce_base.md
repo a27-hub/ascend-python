@@ -32,7 +32,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 - **antiquant_offset** (`Tensor`)：可选输入，伪量化场景对`x2`进行去量化的系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和`antiquant_scale`保持一致。
 - **x3** (`Tensor`)：可选输入，matmul计算后的偏移。
   
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和输出`output`保持一致。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和输出`output`保持一致。
   
 - **dequant_scale** (`Tensor`)：可选输入，matmul计算后的去量化系数。数据类型支持`int64`、`uint64`、`bfloat16`、`float32`；数据格式支持$ND$。
     - per-tensor场景：shape为$[1]$。
@@ -40,7 +40,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 
 - **pertoken_scale** (`Tensor`)：可选输入，matmul计算后的per-token去量化系数。
   
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`。当`x1`为$[m,k]$时`pertoken_scale` shape为$[m]$；当`x1`为$[b, s, k]$时`pertoken_scale` shape为$[b*s]$。
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`。当`x1`为$[m,k]$时`pertoken_scale` shape为$[m]$；当`x1`为$[b, s, k]$时`pertoken_scale` shape为$[b*s]$。
   
 - **comm_quant_scale_1** (`Tensor`)：可选输入，alltoall通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
 - **comm_quant_scale_2** (`Tensor`)：可选输入，allgather通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
