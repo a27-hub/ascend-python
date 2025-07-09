@@ -182,7 +182,7 @@ class TestMoeDistributeDispatch(TestCase):
             expand_idx_golden = golden_tensor_list[2][bs_cumsum:(bs_cumsum + curr_rank_bs), :]
             expand_idx_npu = npu_result[2][0: curr_rank_bs * k].view(curr_rank_bs, k)
         else:
-            expand_idx_golden = golden_tensor_list[2][(bs*rank_id):(bs*(rank_id + 1)), :]
+            expand_idx_golden = golden_tensor_list[2][bs * rank_id:bs * (rank_id + 1), :]
             expand_idx_npu = npu_result[2][0: bs * k].view(bs, k)
 
         self.assertEqual(expand_idx_golden, expand_idx_npu,
