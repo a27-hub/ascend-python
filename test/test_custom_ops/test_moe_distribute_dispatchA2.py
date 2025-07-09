@@ -51,7 +51,7 @@ from torch_npu.testing.common_distributed import skipIfUnsupportMultiNPU
 # 4. 双机同时执行脚本即可
 
 class TestMoeDistributeDispatch(TestCase):
-    def chunk_tensor(self, tensor, num_chunks, chunk_size=[]):
+    def chunk_tensor(self, tensor, num_chunks, chunk_size=None):
         dim0_size = tensor.size(0)
         if chunk_size:
             if dim0_size % sum(chunk_size) != 0:
@@ -86,7 +86,7 @@ class TestMoeDistributeDispatch(TestCase):
         else:
             return None
 
-    def gen_dispatch_golden(self, x, expert_ids, scales, has_scale, k, quant_mode, global_bs, ep_world_size, bs, total_expert_num, expert_num_per_rank, bs_list=[]):
+    def gen_dispatch_golden(self, x, expert_ids, scales, has_scale, k, quant_mode, global_bs, ep_world_size, bs, total_expert_num, expert_num_per_rank, bs_list=None):
         expand_x = torch.repeat_interleave(x, k, dim=0)
         if has_scale:
             expand_x = expand_x.to(torch.float32)
@@ -124,7 +124,7 @@ class TestMoeDistributeDispatch(TestCase):
             for i, value in enumerate(unique_expert):
                 indices = (expert_ids_per_rank == value).nonzero(as_tuple=True)[0]
                 expand_idx_per_rank[indices] = torch.arange(0, valid_expert_token_num_per_rank[i]).to(torch.int32)
-                expand_idx[bs_cumsum : (bs_cumsum + curr_rank_bs), :] = expand_idx_per_rank.view(curr_rank_bs, k)
+                expand_idx[bs_cumsum:(bs_cumsum + curr_rank_bs), :] = expand_idx_per_rank.view(curr_rank_bs, k)
             bs_cumsum = bs_cumsum + curr_rank_bs
 
         vaild_expert_token_nums = torch.bincount(expert_ids).to(torch.int32)
@@ -154,7 +154,7 @@ class TestMoeDistributeDispatch(TestCase):
 
         return [expand_x_sorted, dynamic_scales_sorted, expand_idx, expert_tokens_num_cumsum, ep_recv_counts_cumsum, None], actual_tokens
 
-    def golden_compare(self, rank_id, golden_tensor_list, golden_actual_tokens_cumsum, npu_result, quant_mode, bs, k, bs_list=[]):
+    def golden_compare(self, rank_id, golden_tensor_list, golden_actual_tokens_cumsum, npu_result, quant_mode, bs, k, bs_list=None):
         result = []
         start_offset_in_golden = golden_actual_tokens_cumsum[rank_id - 1].item() if rank_id > 0 else 0
         end_offset_in_golden = golden_actual_tokens_cumsum[rank_id].item()
@@ -179,10 +179,10 @@ class TestMoeDistributeDispatch(TestCase):
             bs_cumsum = 0
             for i in range(rank_id):
                 bs_cumsum = bs_cumsum + bs_list[i]
-            expand_idx_golden = golden_tensor_list[2][bs_cumsum : (bs_cumsum + curr_rank_bs), :]
+            expand_idx_golden = golden_tensor_list[2][bs_cumsum:(bs_cumsum + curr_rank_bs), :]
             expand_idx_npu = npu_result[2][0: curr_rank_bs * k].view(curr_rank_bs, k)
         else:
-            expand_idx_golden = golden_tensor_list[2][bs * rank_id : bs * (rank_id + 1), :]
+            expand_idx_golden = golden_tensor_list[2][(bs*rank_id):(bs*(rank_id + 1)), :]
             expand_idx_npu = npu_result[2][0: bs * k].view(bs, k)
 
         self.assertEqual(expand_idx_golden, expand_idx_npu,
@@ -293,7 +293,6 @@ class TestMoeDistributeDispatch(TestCase):
         k = 8
         sharedExpertRankNum = 0
         moeExpertNum = 16
-        # global_bs = bs * ep_world_size
         global_bs = int(sum(bs_list))
         expert_num_per_rank = int(moeExpertNum / world_size)
         total_expert_num = int(world_size * expert_num_per_rank)
