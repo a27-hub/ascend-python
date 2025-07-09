@@ -43,8 +43,9 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     TORCH_CHECK(block_size % BLOCK_SIZE_BASE_NUM == 0 && block_size > 0 && block_size <= BLOCK_SIZE_MAX_NUM,
         "Param (block_size) must be divisible by 32 and no greater than 1024, greater than 0" + OPS_ERROR(ErrCode::PARAM));
     int64_t dim_size = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
-    dim_size += dim_size % ALIGN_NUM;
+    dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
     mxscale_shape[axis_change] = dim_size;
+    mxscale_shape.emplace_back(ALIGN_NUM);
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
     // prepare for empty output tensor
