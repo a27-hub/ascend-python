@@ -65,7 +65,6 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
     if (dim != 1 && dim != 2 && dim != 3) {
         return at::Tensor();
     }
-
     c10::SmallVector<int64_t, op_infer::N> stride_expand = expand_dim(stride, "stride", dim);
     stride = at::IntArrayRef(stride_expand);
 
