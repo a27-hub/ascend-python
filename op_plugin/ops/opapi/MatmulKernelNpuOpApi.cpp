@@ -17,6 +17,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
 
 namespace op_api {
@@ -24,24 +25,6 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int8_t ALLOW_FP32_DOWN_PRECISION = 1;
 const int8_t KEEP_DTYPE = 0;
-static const size_t TWO_DIM = 2;
-
-static bool is_nz_format(const at::Tensor &mat2)
-{
-    const torch_npu::NPUStorageDesc &tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(mat2)->npu_desc_;
-    return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ;
-}
-
-static bool is_two_tensor_base_format(const at::Tensor &self, const at::Tensor &mat2)
-{
-    return at_npu::native::FormatHelper::IsOpInputBaseFormat(self) &&
-           at_npu::native::FormatHelper::IsOpInputBaseFormat(mat2);
-}
-
-static inline bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
-{
-    return is_nz_format(mat2) && !is_nz_format(self);
-}
 
 static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
@@ -103,7 +86,7 @@ static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self,
     // allow dicrease precision
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     // matmul & matmul_out have processed the aclop scenario
-    if (is_nd_nz_format(self, mat2)) {
+    if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
     } else {
         EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
@@ -123,30 +106,7 @@ at::Tensor matmul_forward(const at::Tensor &self, const at::Tensor &mat2)
 
 at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
-    if (is_two_tensor_base_format(tensor1, tensor2)) {
-        DO_COMPATIBILITY(aclnnMatmul, acl_op::matmul(tensor1, tensor2));
-    } else {
-        if (is_nd_nz_format(tensor1, tensor2)) {
-            DO_COMPATIBILITY(aclnnMatmulWeightNz, acl_op::matmul(tensor1, tensor2));
-        } else {
-            // set default to aclop when not aclnnOnly
-            // because internal_format_opapi changed to all_version
-            if (!c10_npu::IsAclnnOnly()) {
-                return acl_op::matmul(tensor1, tensor2);
-            }
-            // throw exception when only support aclnn
-            const torch_npu::NPUStorageDesc &tensor_desc1 = torch_npu::NPUBridge::GetNpuStorageImpl(tensor1)->npu_desc_;
-            const torch_npu::NPUStorageDesc &tensor_desc2 = torch_npu::NPUBridge::GetNpuStorageImpl(tensor2)->npu_desc_;
-            TORCH_CHECK(false,
-                "matmul got not support format in current device: ",
-                "(",
-                tensor_desc1.npu_format_,
-                ", ",
-                tensor_desc2.npu_format_,
-                ")",
-                OPS_ERROR(ErrCode::PARAM));
-        }
-    }
+    DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMatmul, tensor1, tensor2, acl_op::matmul(tensor1, tensor2));
     // aclnn
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
     auto result = matmul_forward(tensor1, tensor2);
@@ -156,30 +116,8 @@ at::Tensor matmul(const at::Tensor &tensor1, const at::Tensor &tensor2)
 
 at::Tensor &matmul_out(const at::Tensor &tensor1, const at::Tensor &tensor2, at::Tensor &result)
 {
-    if (is_two_tensor_base_format(tensor1, tensor2)) {
-        DO_COMPATIBILITY(aclnnMatmul, acl_op::matmul_out(tensor1, tensor2, result));
-    } else {
-        if (is_nd_nz_format(tensor1, tensor2)) {
-            DO_COMPATIBILITY(aclnnMatmulWeightNz, acl_op::matmul_out(tensor1, tensor2, result));
-        } else {
-            // set default to aclop when not aclnnOnly
-            // because internal_format_opapi changed to all_version
-            if (!c10_npu::IsAclnnOnly()) {
-                return acl_op::matmul_out(tensor1, tensor2, result);
-            }
-            // throw exception when only support aclnn
-            const torch_npu::NPUStorageDesc &tensor_desc1 = torch_npu::NPUBridge::GetNpuStorageImpl(tensor1)->npu_desc_;
-            const torch_npu::NPUStorageDesc &tensor_desc2 = torch_npu::NPUBridge::GetNpuStorageImpl(tensor2)->npu_desc_;
-            TORCH_CHECK(false,
-                "matmul got not support format in current device: ",
-                "(",
-                tensor_desc1.npu_format_,
-                ", ",
-                tensor_desc2.npu_format_,
-                ")",
-                OPS_ERROR(ErrCode::PARAM));
-        }
-    }
+    DO_MATMUL_COMPATIBILITY(
+        aclnnMatmulWeightNz, aclnnMatmul, tensor1, tensor2, acl_op::matmul_out(tensor1, tensor2, result));
     // aclnn
     auto maybe_outnames = at::namedinference::compute_matmul_outnames(tensor1, tensor2);
     // matmul_out don't support backward
