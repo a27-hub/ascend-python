@@ -80,7 +80,7 @@ std::tuple<at::Tensor, at::Tensor> _unique(
     bool return_inverse)
 {
     const at::Tensor self = self_op.scalar_type() == at::kHalf ?
-        at_npu::native::custom_ops::npu_dtype_cast(self_op, at::kFloat) : self_op;
+        at_npu::native::custom_ops::_npu_dtype_cast(self_op, at::kFloat) : self_op;
     if (self.numel() == 0) {
         at::Tensor result = npu_preparation::apply_tensor(self, {0});
         at::Tensor y_inverse = npu_preparation::apply_tensor({0}, self.options().dtype(at::kLong), self);
@@ -93,7 +93,7 @@ std::tuple<at::Tensor, at::Tensor> _unique(
 
     _unique_out_npu(y, y_inverse, self, sorted, return_inverse);
     if (self_op.scalar_type() == at::kHalf) {
-        y = at_npu::native::custom_ops::npu_dtype_cast(y, at::kHalf);
+        y = at_npu::native::custom_ops::_npu_dtype_cast(y, at::kHalf);
     }
     return std::tuple<at::Tensor, at::Tensor>(y, y_inverse);
 }
