@@ -546,7 +546,6 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Tensor通过<code>record_stream</code>在内存池上添加的已被stream使用的标记后，可以通过该接口移除该标记。</p>
 </td>
 </tr>
-
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_gather_sparse_index.md">torch_npu.npu_gather_sparse_index</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>从输入Tensor的指定维度，按照<code>index</code>中的下标序号提取元素，保存到输出Tensor中。</p>
