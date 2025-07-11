@@ -120,6 +120,8 @@
         -   [torch_npu.npu_gather_sparse_index](./context/torch_npu-npu_gather_sparse_index.md)
         -   [torch_npu.npu_moe_distribute_combine](./context/torch_npu-npu_moe_distribute_combine.md)
         -   [torch_npu.npu_moe_distribute_dispatch](./context/torch_npu-npu_moe_distribute_dispatch.md)
+        -   [torch_npu.npu_moe_distribute_combine_v2](./context/torch_npu-npu_moe_distribute_combine_v2.md)
+        -   [torch_npu.npu_moe_distribute_dispatch_v2](./context/torch_npu-npu_moe_distribute_dispatch_v2.md)
         -   [torch_npu.npu_moe_gating_top_k](./context/torch_npu-npu_moe_gating_top_k.md)
         -   [torch_npu.npu_moe_init_routing_v2](./context/torch_npu-npu_moe_init_routing_v2.md)
         -   [torch_npu.npu_dequant_swiglu_quant](./context/torch_npu-npu_dequant_swiglu_quant.md)
@@ -282,6 +284,7 @@
         -   [（beta）torch_npu.utils.is_combined_tensor_valid](./context/（beta）torch_npu-utils-is_combined_tensor_valid.md)
         -   [（beta）torch_npu.utils.FlopsCounter](./context/（beta）torch_npu-utils-FlopsCounter.md)
         -   [torch_npu.utils.set_thread_affinity](./context/torch_npu-utils.set_thread_affinity.md)
+        -   [torch_npu.utils.reset_thread_affinity](./context/torch_npu-utils.reset_thread_affinity.md)
 
     -   [Distributed](./context/Distributed.md)
         -   [Distributed接口列表](./context/Distributed接口列表.md)
