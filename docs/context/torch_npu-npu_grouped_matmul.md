@@ -745,16 +745,6 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             </td>
             <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol24442412194"></a><a name="zh-cn_topic_0000002262888689_ol24442412194"></a><ol id="zh-cn_topic_0000002262888689_ol24442412194"><li>仅支持<code>split_item</code>为2或3。</li><li><code>x</code>、<code>weight</code>、<code>y</code>中tensor需为2维。</li><li><code>weight</code>中每个tensor的N轴必须相等。</li><li>若传入<code>group_list</code>，当<code>group_list_type</code>为0时，<code>group_list</code>的差值需与<code>x</code>中tensor的第一维一一对应，当<code>group_list_type</code>为1时，<code>group_list</code>的数值需与<code>x</code>中tensor的第一维一一对应且长度最大为128，当<code>group_list_type</code>为2时，<code>group_list</code>第二列的数值需与<code>x</code>中tensor的第一维一一对应且长度最大为128。</li><li>支持<code>weight</code>转置，但<code>weight</code>中每个tensor是否转置需保持统一。</li><li><code>x</code>不支持转置。</li></ol>
             </td>
-            </tr>
-            <tr id="zh-cn_topic_0000002262888689_row154442410192"><td class="cellrowborder" valign="top" width="10.23%" headers="mcps1.1.5.1.1 "><p id="zh-cn_topic_0000002262888689_p14444447199"><a name="zh-cn_topic_0000002262888689_p14444447199"></a><a name="zh-cn_topic_0000002262888689_p14444447199"></a>2</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="8.780000000000001%" headers="mcps1.1.5.1.2 "><p id="zh-cn_topic_0000002262888689_p944417471914"><a name="zh-cn_topic_0000002262888689_p944417471914"></a><a name="zh-cn_topic_0000002262888689_p944417471914"></a>单单单</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="18.34%" headers="mcps1.1.5.1.3 "><p id="zh-cn_topic_0000002262888689_p144441648197"><a name="zh-cn_topic_0000002262888689_p144441648197"></a><a name="zh-cn_topic_0000002262888689_p144441648197"></a><code>x</code>、<code>weight</code>与<code>y</code>均为单张量</p>
-            </td>
-            <td class="cellrowborder" valign="top" width="62.64999999999999%" headers="mcps1.1.5.1.4 "><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><a name="zh-cn_topic_0000002262888689_ol044416401911"></a><ol id="zh-cn_topic_0000002262888689_ol044416401911"><li>仅支持<code>split_item</code>为2或3。</li><li><code>x</code>、<code>weight</code>中tensor需为2维，<code>y</code>中tensor需为3维。</li><li>必须传<code>group_list</code>，且当<code>group_list_type</code>为0时，最后一个值与x中tensor的第二维相等，当<code>group_list_type</code>为1时，数值的总和与<code>x</code>中tensor的第二维相等，当<code>group_list_type</code>为2时，第二列数值的总和与x中tensor的第二维相等。</li><li><code>group_list</code>第1维最大支持1024，即最多支持1024个group。</li><li><code>x</code>必须转置，<code>weight</code>不能转置。</li></ol>
-            </td>
-            </tr>
             </tbody>
             </table>
 
@@ -818,7 +808,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
     
     group_list = None
     split_item = 0
-    npu_out = torch_npu.npu_grouped_matmul(x, weight, bias=bias, group_list=group_list, split_item=split_item)
+    npu_out = torch_npu.npu_grouped_matmul(x, weight, bias=bias, group_list=group_list, split_item=split_item, group_type=-1)
     ```
 
 -   图模式调用
@@ -839,7 +829,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
                 super().__init__()
             
             def forward(self, x, weight):
-                return torch_npu.npu_grouped_matmul(x, weight)
+                return torch_npu.npu_grouped_matmul(x, weight, group_type=-1)
         
         def main():
             x1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
