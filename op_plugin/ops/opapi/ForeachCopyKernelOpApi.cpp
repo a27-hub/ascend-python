@@ -31,11 +31,7 @@ using npu_calcu_util = at_npu::native::CalcuOpUtil;
 
 void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
-    if (non_blocking) {
-        EXEC_NPU_CMD(aclnnForeachCopy, src, dst);
-    } else {
-        EXEC_NPU_CMD_SYNC(aclnnForeachCopy, src, dst);
-    }
+    EXEC_NPU_CMD(aclnnForeachCopy, src, dst);
 }
 
 void split_and_exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
