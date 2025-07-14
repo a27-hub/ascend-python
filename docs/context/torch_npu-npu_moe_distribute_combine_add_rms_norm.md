@@ -101,7 +101,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(Tensor expand_x, Tensor expert
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[1024, 7168\]，且保证是32的整数倍。
 
     -   BS：表示待发送的token数量。
-        -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512**。**
+        -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512。
 
     -   K：表示选取topK个专家，取值范围为0<K≤8同时满足0<K≤moe\_expert\_num。
     -   local\_expert\_num：表示本卡专家数量。
