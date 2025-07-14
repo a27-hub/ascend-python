@@ -6992,17 +6992,6 @@ custom:
   - func: npu_group_norm_silu(Tensor input, Tensor? weight, Tensor? bias, int group, float eps=0.00001) -> (Tensor, Tensor, Tensor)
     op_api: all_version
     exposed: all_version
-    gen_opapi:
-      out0:
-        size: input
-        dtype: input
-      out1:
-        size: '{input.size(0), group}'
-        dtype: input
-      out2:
-        size: '{input.size(0), group}'
-        dtype: input
-      exec: aclnnGroupNormSilu
 
   - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[] bias, Tensor[] scale, Tensor[] offset, Tensor[] antiquant_scale, Tensor[] antiquant_offset, int[]? group_list=None, int? split_item=0, ScalarType? output_dtype=None) -> Tensor[]
     op_api: v1.11, v2.0
