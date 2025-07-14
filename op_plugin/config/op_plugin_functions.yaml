@@ -7344,6 +7344,15 @@ custom:
         clip_ratio_attr: clip_ratio.value_or(1.0)
       exec: aclnnFlatQuant, x, kronecker_p1, kronecker_p2, clip_ratio_attr, out, quant_scale
 
+  - func: npu_ada_layer_norm(Tensor x, Tensor scale, Tensor shift, Tensor? weight, Tensor? bias, float? epsilon=None) -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: x
+        dtype: x
+      new_params:
+        epsilon_attr: epsilon.value_or(1e-5)
+      exec: aclnnAdaLayerNorm, x, scale, shift, weight, bias, epsilon_attr, out
 
   - func: npu_group_quant(Tensor x, Tensor scale, Tensor group_index, *, Tensor? offset=None, ScalarType? dst_dtype=None) -> Tensor
     op_api: all_version
