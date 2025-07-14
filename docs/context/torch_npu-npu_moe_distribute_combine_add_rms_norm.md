@@ -52,10 +52,10 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(Tensor expand_x, Tensor expert
 
 -   **x\_active\_mask**（Tensor）：**预留参数，暂未使用，使用默认值即可。**
 -   **activation\_scale**（Tensor）：**预留参数，暂未使用，使用默认值即可。**
--   **weight\_scale（Tensor）**：**预留参数，暂未使用，使用默认值即可。**
+-   **weight\_scale**（Tensor）：**预留参数，暂未使用，使用默认值即可。**
 -   **group\_list**（Tensor）：**预留参数，暂未使用，使用默认值即可。**
--   **expand\_scales（Tensor）**：可选参数，对应torch\_npu.npu\_moe\_distribute\_dispatch的expand\_scales输出。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可**。**
+-   **expand\_scales**（Tensor）：可选参数，对应torch\_npu.npu\_moe\_distribute\_dispatch的expand\_scales输出。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可。
 
 -   **shared\_expert\_x**（Tensor）：可选参数，数据类型需与expand\_x保持一致。仅在共享专家卡数量shared\_expert\_rank\_num为0的场景下使用，表示共享专家token，在combine时需要加上。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型需与expand\_x保持一致，shape为\[BS, H\]。
@@ -72,7 +72,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(Tensor expand_x, Tensor expert
 -   **expert\_shard\_type**（int）：可选参数，表示共享专家卡排布类型。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前仅支持0，表示共享专家卡排在MoE专家卡前面。
 
--   **shared\_expert\_num（int）**：可选参数，表示共享专家数量，一个共享专家可以复制部署到多个卡上。**预留参数，暂未使用，仅支持默认值0。**
+-   **shared\_expert\_num**（int）：可选参数，表示共享专家数量，一个共享专家可以复制部署到多个卡上。**预留参数，暂未使用，仅支持默认值0。**
 -   **shared\_expert\_rank\_num**（int）：可选参数，表示共享专家卡数量。**预留参数，暂未使用，仅支持默认值0。**
 -   **global\_bs**（int）：可选参数，表示EP域全局的batch size大小。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size，其中max\_bs表示表示单rank BS最大值；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
