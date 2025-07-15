@@ -15,11 +15,11 @@ torch_npu.contrib.function.npu_diou(boxes1, boxes2, trans=True, is_cross=False, 
 
 ## 参数说明
 
-- boxes1 (Tensor) - 格式为xywh、shape为(4, n)的预测检测框。
-- boxes2 (Tensor) - 相应的gt检测框，shape为(4, n)。
-- trans (Bool，默认值为True) - 是否有偏移。
-- is_cross (Bool，默认值为False) - box1和box2之间是否有交叉操作。
-- mode (Int，默认值为0) - 选择DIoU的计算方式。
+- **boxes1** (`Tensor`) - 格式为xywh、shape为(4, n)的预测检测框。
+- **boxes2** (`Tensor`) - 相应的gt检测框，shape为(4, n)。
+- **trans** (`Bool`，默认值为True) - 是否有偏移。
+- **is_cross** (`Bool`，默认值为False) - box1和box2之间是否有交叉操作。
+- **mode** (`Int`，默认值为0) - 选择DIoU的计算方式。
 
 ## 输出说明
 
