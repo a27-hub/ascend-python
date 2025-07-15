@@ -47,7 +47,7 @@ $$
 
 **input**(`Tensor`)：输入张量，数据维度仅支持2维。数据类型支持`float32`, `float16`, `bfloat16`, `int64`, `int32`, `int16`，`int8`, `uint8`, `bool`, `float64`, `complex64`, `complex128`。
 
-**index**(`torch.Tensor`)：包含目标元素下标序号的张量。数据维度不超过7维。数据类型支持`int64`, `int32`。取值范围$[0, input.shape[0] - 1]$, 不支持负数索引。
+**index**(`Tensor`)：包含目标元素下标序号的张量。数据维度不超过7维。数据类型支持`int64`, `int32`。取值范围$[0, input.shape[0] - 1]$, 不支持负数索引。
 
 ## 输出说明
 
