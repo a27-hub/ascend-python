@@ -522,6 +522,7 @@ struct TensorStruct {
     {
     }
 };
+
 using TensorStructPtr = std::shared_ptr<TensorStruct>;
 
 inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)

@@ -28,6 +28,7 @@ at::Tensor& cast_nocheck(at::Tensor& result, const at::Tensor& self)
 {
     int64_t dst_data_type = calcu_op_util::ConvertToAclDataType(result.scalar_type());
     at_npu::native::OpCommand cmd;
+
     cmd.Name("Cast")
         .Input(self)
         .Output(result)
