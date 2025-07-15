@@ -45,9 +45,9 @@ $$
 
 ## 参数说明
 
-**input**(`torch.Tensor`):输入张量，数据维度仅支持2维。数据类型支持`torch.float32`, `torch.float16`, `torch.bfloat16`, `torch.int64`, `torch.int32`, `torch.int16`，`torch.int8`, `torch.uint8`, `torch.bool`, `torch.float64`, `torch.complex64`, `torch.complex128`。
+**input**(`torch.Tensor`)：输入张量，数据维度仅支持2维。数据类型支持`torch.float32`, `torch.float16`, `torch.bfloat16`, `torch.int64`, `torch.int32`, `torch.int16`，`torch.int8`, `torch.uint8`, `torch.bool`, `torch.float64`, `torch.complex64`, `torch.complex128`。
 
-**index**(`torch.Tensor`):包含目标元素下标序号的张量。数据维度不超过7维。数据类型支持`torch.int64`, `torch.int32`。取值范围$[0, input.shape[0] - 1]$, 不支持负数索引。
+**index**(`torch.Tensor`)：包含目标元素下标序号的张量。数据维度不超过7维。数据类型支持`torch.int64`, `torch.int32`。取值范围$[0, input.shape[0] - 1]$, 不支持负数索引。
 
 ## 输出说明
 

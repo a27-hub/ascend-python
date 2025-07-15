@@ -28,12 +28,9 @@ torch_npu.npu_all_gather_base_mm(Tensor input, Tensor x2, str hcom, int world_si
 -   gather\_output：bool类型，表示是否需要gather输出。默认值true。
 -   comm\_turn：int类型，表示rank间通信切分粒度，默认值：0，表示默认的切分方式。**当前版本仅支持输入0。**
 
-## 输出说明<a name="zh-cn_topic_0000001694916914_section15236153161410"></a>
-
-两个输出，均为Tensor类型：\(Tensor, Tensor\)
-
--   第一个输出是allgather+matmul的结果。
--   第二个输出是allgather的结果。
+## 返回值说明<a name="zh-cn_topic_0000001694916914_section15236153161410"></a>
+-   Tensor：第一个输出是allgather+matmul的结果。
+-   Tensor：第二个输出是allgather的结果。
 
 ## 约束说明<a name="zh-cn_topic_0000001694916914_section19106152201519"></a>
 
