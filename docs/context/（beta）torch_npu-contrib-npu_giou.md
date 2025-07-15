@@ -6,7 +6,7 @@
 ## 函数原型
 
 ```
-torch_npu.contrib.npu_giou(boxes1,boxes2,is_permuted=True)
+torch_npu.contrib.npu_giou(boxes1, boxes2, is_permuted=True)
 ```
 
 ## 功能说明
