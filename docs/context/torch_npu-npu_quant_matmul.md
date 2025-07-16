@@ -255,8 +255,7 @@ npu_quant_matmul(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, 
 ## 调用示例
 
 - 单算子调用
-    
-    `int8`类型输入场景：
+    - `int8`类型输入场景：
 
         ```python
         >>> import torch
