@@ -3922,9 +3922,9 @@ _add_torch_npu_docstr(
 功能描述:
     目的数据类型为float4、float8的动态混合精度量化。在指定的axis轴上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后这组数每一个除以mxscale，
 计算公式：
-    - 将输入x在axis维度上按k = blocksize个数分子，一组k个数 \{\{V_i\}_{i=1~k}\} 动态量化为 \{mxscale_i, \{P_i\}_{i=1~k}\}，k=blocksize。
+    - 将输入input在axis维度上按k = blocksize个数分子，一组k个数 \{\{V_i\}_{i=1~k}\} 动态量化为 \{mxscale_i, \{P_i\}_{i=1~k}\}，k=blocksize。
     1. share_exp = floor(log_2(max_i(|V_i|))) - emax
-    2. mxscale = 2^{shape_exp}
+    2. mxscale = 2^{share_exp}
     3. P_i = cast_to_dst_type(V_i / mxscale_i, round_mode), i from 1 to blocksize
     - 量化后的P_i按对应的V_i的位置组成输出yOut，mxscale按对应的axis维度上的分组著称输出mxscaleOut。
     - emax：对应的数据类型的最大正则数的指数位
@@ -3939,7 +3939,7 @@ _add_torch_npu_docstr(
     注：296为torch_npu.float4_e2m1。
 
 参数说明:
-    - input：Tensor类型，需要量化的数据，数据类型支持torch.float16，torch.bfloat16，shape支持1~8维度。
+    - input：Tensor类型，需要量化的数据，数据类型支持torch.float16，torch.bfloat16，shape支持1~7维度。
     - axis：int类型的属性，公式中的axis，量化发生的轴，取值范围为[-D, D-1]，D为input的shape的维数。
     - round_mode：string类型的属性，指定量化结果cast到输出y的数据类型的模式，默认值"rint"。
         - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，支持"rint", "floor", "round"。
@@ -3948,21 +3948,27 @@ _add_torch_npu_docstr(
         torch.float8_e5m2，torch_npu.float8_e5m2时，torch.float8_e4m3fn，torch_npu.float8_e4m3fn。
     - block_size：int类型的属性，指定每次量化的元素个数，默认值为32。仅支持32的倍数，不能为0，且不能大于1024。
 输出说明：
-    - y：Tensor类型，输入x量化后的对应结果，数据类型有参数dst_type指定，shape与输入一致。
+    - y：Tensor类型，输入input量化后的对应结果，数据类型有参数dst_type指定，shape与输入一致。
         - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，y的输出tensor数据类型为torch.float8_e5m2。
         - 当dst_type为torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，y的输出tensor数据类型为torch.float8_e4m3fn。
         - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，y的输出tensor数据类型为torch.uint8，查看具体值需要通过en_dtypes库的方法转换。
-    - mxscale：Tensor类型，表示每个分组对应的量化尺度，真是的数据类型为torch_npu.float8_e8m0，shape在axis轴上为x对应轴除以blocksize向上取整，并对其进行偶数pad，pad填充值为0，
-        即mxscale.shape[axis] = (ceil(x.shape[axis] / blocksize) + (ceil(x.shape[axis] / blocksize)) % 2)，其余维度与x保持一致。
+    - mxscale：Tensor类型，表示每个分组对应的量化尺度，支持的数据类型为torch_npu.float8_e8m0，shape在axis轴上为x对应轴除以blocksize向上取整，并对其进行偶数pad，pad填充值为0，
+        当axis为非尾轴时，mxscale输出需要对每两行数据交织处理。
 
 约束说明:
     - 参数block_size仅支持32的倍数，不能为0，且不能大于1024。
-    - 输出的目标类型为float4时，x的最后一维必须为偶数。
-    - 该接口支持涂抹式（目前仅支持Pytorch 2.1 版本）。
+    - 输出的目标类型为float4时，input的最后一维必须为偶数。
+    - 该接口支持图模式（目前仅支持Pytorch 2.1 版本）。
     - 指定输出y的Tensor实际数据类型为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，y的输出tensor数据类型为torch.uint8，查看具体值需要通过en_dtypes库的方法转换。
     - 输出的mxscale的tensor实际数据类型为torch.uint8，查看float8_e8m0的具体值需要通过en_dtypes库的方法转换。
     - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，支持"rint", "floor", "round"。
     - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，仅支持"rint"。
+    - 关于input、mxscale的shape关系说明如下：
+        1. mxscale.dim = input.dim + 1。
+        2. axis_change = axis if axis >= 0 else axis + input.dim
+        3. mxscale.shape[axis_change] = (ceil(input.shape[axis] / blocksize) + 2 - 1) / 2。
+        4. mxscale.shape[-1] = 2。
+        5. 其他维度与输入input一致。
 支持的型号:
   昇腾910_95 AI处理器
 
@@ -4034,12 +4040,12 @@ _add_torch_npu_docstr(
     计算公式同npu_dynamic_mx_quant，仅需要考虑每个group单独处理。
 
 接口原型:
-    def npu_grouped_dynamic_mx_quant(Tensor input, Tensor group_index, *, str round_mode="rint", int dst_type=23, int blocksize=32)
+    def npu_grouped_dynamic_mx_quant(Tensor x, Tensor group_index, *, str round_mode="rint", int dst_type=23, int blocksize=32)
     注：23为torch.float8_e5m2的枚举值。
 
 参数说明:
     - x：Tensor类型，需要量化的数据，数据类型支持torch.float16，torch.bfloat16，shape仅支持2维度。
-    - group_index：Tensor类型，量化分组索引的起始值，数据类型支持torch.int32，shape仅支持1维度，其中的元素必须必须非负且非递减，最后一个元素与x的第一维大小一致。
+    - group_index：Tensor类型，量化分组索引的起始值，数据类型支持torch.int32，shape仅支持1维度，其中的元素必须非负且非递减，最后一个元素与x的第一维大小一致。
     - round_mode：string类型的属性，指定量化结果cast到输出y的数据类型的模式，默认值"rint"。
         - 当dst_type为torch.float8_e5m2，torch.float8_e4m3fn，仅支持"rint"。
     - dst_type：int类型的属性，指定输出y的数据类型，默认值为23（即torch.float8_e5m2），支持取值
