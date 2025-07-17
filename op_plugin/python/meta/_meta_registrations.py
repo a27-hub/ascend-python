@@ -2499,11 +2499,14 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
     if not (block_size % 32 == 0 and block_size > 0 and block_size <= 1024):
         raise RuntimeError("Parameter block_size must be divisible by 32 and no greater than 1024, greater than 0" +
                            ops_error(ErrCode.PARAM))
+    axis_change = axis if axis >= 0 else axis + dim_num
     for dim in range(dim_num):
         mxscale_shape.append(input_dummy.size(dim))
-    dim_size = int(math.ceil(mxscale_shape[axis] / block_size))
-    dim_size += dim_size % 2
-    mxscale_shape[axis] = dim_size
+    mxscale_shape.append(2)
+
+    dim_size = int(math.ceil(mxscale_shape[axis_change] / block_size))
+    dim_size = (dim_size + 2 - 1) // 2
+    mxscale_shape[axis_change] = dim_size
 
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
     if torch_dtype == torch.float8_e5m2 or dst_type == 291:
