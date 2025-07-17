@@ -19,7 +19,7 @@ torch_npu.npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tens
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：不支持共享专家场景。
 
 -   expert\_ids：Tensor类型，每个token的topK个专家索引，要求为2D的Tensor，shape为\(BS, K\)。数据类型支持int32，数据格式为ND，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的expert\_ids输入，张量里value取值范围为\[0, moe\_expert\_num\)，且同一行中的K个value不能重复。
--   expand\_idx：Tensor类型，表示给同一专家发送的token个数，要求是1D的Tensor。数据类型支持int32，数据格式为ND，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的expand\_idx输出。
+-   assist\_info\_for\_combine：Tensor类型，表示给同一专家发送的token个数，要求是1D的Tensor。数据类型支持int32，数据格式为ND，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的assist\_info\_for\_combine输出。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：要求shape为\(BS \* K, \)。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求shape为\(A \* 128, \)。
 
