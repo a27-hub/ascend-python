@@ -37,13 +37,15 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     at::Tensor mxscale;
     auto y_shape = op_infer::array_to_small_vector(input.sizes());
     auto mxscale_shape = op_infer::array_to_small_vector(input.sizes());
+    mxscale_shape.emplace_back(ALIGN_NUM);
+
     TORCH_CHECK(axis >= -1 * input.dim() && axis < input.dim(),
         "Param (axis) is out of input dimension range" + OPS_ERROR(ErrCode::PARAM));
     int64_t axis_change = axis < 0 ? axis + input.dim() : axis;
     TORCH_CHECK(block_size % BLOCK_SIZE_BASE_NUM == 0 && block_size > 0 && block_size <= BLOCK_SIZE_MAX_NUM,
         "Param (block_size) must be divisible by 32 and no greater than 1024, greater than 0" + OPS_ERROR(ErrCode::PARAM));
     int64_t dim_size = op_infer::CeilDiv(mxscale_shape[axis_change], block_size);
-    dim_size += dim_size % ALIGN_NUM;
+    dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
     mxscale_shape[axis_change] = dim_size;
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
