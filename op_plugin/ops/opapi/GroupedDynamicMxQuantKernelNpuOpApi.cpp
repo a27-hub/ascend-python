@@ -46,13 +46,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
                 dst_type, OPS_ERROR(ErrCode::PARAM));
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     auto mxscale_shape = op_infer::array_to_small_vector(x.sizes());
+    mxscale_shape.emplace_back(NUM_TWO);
 
     TORCH_CHECK(blocksize == BLOCKSIZE_BASE_NUM,
         "Parameter blocksize must be 32, got ", blocksize, OPS_ERROR(ErrCode::PARAM));
     // if x shape is [m, n], group_index shape is [g] (without initial 0 and ends with m),
-    // then mxscale shape is [m / (blocksize * 2) + g, n * 2]
+    // then mxscale shape is [m / (blocksize * 2) + g, n, 2]
     mxscale_shape[0] = mxscale_shape[0] / blocksize / NUM_TWO + group_index.sizes()[0];
-    mxscale_shape[1] = mxscale_shape[1] * NUM_TWO;
 
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
     // prepare for empty output tensor
