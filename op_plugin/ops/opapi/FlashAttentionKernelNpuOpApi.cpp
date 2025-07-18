@@ -1312,13 +1312,43 @@ at::Tensor npu_prompt_flash_attention(
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
+    TORCH_CHECK(num_heads > 0, "num_heads should be greater than 0, but the actual value is ",
+        num_heads, OPS_ERROR(ErrCode::VALUE));
+    if (num_key_value_heads == 0) {
+        num_key_value_heads = num_heads;
+    }
+    int64_t changeDScale = 1;
+    int64_t changeDForInt32 = 8;
+    // int4 伪装成 int32
+    if (value.scalar_type() == at::kInt) {
+        changeDScale = changeDForInt32;
+    }
     if (input_layout_str == "BNSD_BSND") {
+        int64_t outputD = value.size(DIM_3) * changeDScale;
+        outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
         tmp_output = OpPreparation::apply_tensor_without_format(
-            {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
+            {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), outputD},
             query.options().dtype(query.dtype()));
     } else if (input_layout_str == "TND") {
+        int64_t outputD = value.size(DIM_2) * changeDScale;
+        outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
         tmp_output = OpPreparation::apply_tensor_without_format(
-            {query.size(DIM_0), query.size(DIM_1), value.size(DIM_2)},
+            {query.size(DIM_0), query.size(DIM_1), outputD},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "BSH") {
+        int64_t outputH = value.size(DIM_2) / num_key_value_heads * num_heads * changeDScale;
+        outputH = (outputH == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputH;
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), outputH},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "BSND") {
+        int64_t outputD = value.size(DIM_3) * changeDScale;
+        outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
+            query.options().dtype(query.dtype()));
+    } else if (input_layout_str == "BNSD") {
+        int64_t outputD = value.size(DIM_3) * changeDScale;
+        outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
             query.options().dtype(query.dtype()));
     }
 
