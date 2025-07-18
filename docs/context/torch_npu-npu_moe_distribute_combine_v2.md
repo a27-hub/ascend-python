@@ -3,6 +3,10 @@
 ## 功能说明<a name="zh-cn_topic_0000002168254826_section14441124184110"></a>
 
 -   算子功能：先进行reduce\_scatterv通信，再进行alltoallv通信，最后将接收的数据整合（乘权重再相加）。需与[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)配套使用，相当于按npu\_moe\_distribute\_dispatch\_v2算子收集数据的路径原路返回。
+-   相较于[torch\_npu.npu\_moe\_distribute\_combine](torch_npu-npu_moe_distribute_combine.md)接口，该接口变更如下：
+    -   输入了更详细的token信息，辅助npu\_moe\_distribute\_combine\_v2高效的进行全卡同步，因此原接口中shape为(BS \* K,)的expand_idx入参替换为shape为(A \* 128,)的assist\_info\_for\_combine;
+    -   新增shared\_expert\_x可选入参，支持在shared\_expert\_num为0时，由用户输入共享专家计算后的token;
+    -   移除了activation\_scale、weight\_scale、group\_list三个未使用的预置参数;
 -   计算公式：
 
     ![](./figures/zh-cn_formulaimage_0000002308687254.png)
