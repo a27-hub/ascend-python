@@ -7213,6 +7213,7 @@ custom:
 
   - func: npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int local_rank_id, int world_size, *, int balance_mode=0) -> Tensor
     op_api: all_version
+    exposed: all_version
     gen_opapi:
       out:
         size: expert_ids
@@ -7400,7 +7401,6 @@ custom:
 
   - func: npu_mrope(Tensor positions, Tensor query, Tensor key, Tensor cos_sin_cache, int head_size, *, int[]? mrope_section=None, str? rotary_mode='half') -> (Tensor, Tensor)
     op_api: all_version
-    exposed: all_version
     gen_opapi:
       query_out:
         size: query
@@ -7847,6 +7847,7 @@ custom:
 
   - func: npu_top_k_top_p(Tensor logits, Tensor p, Tensor k) -> Tensor
     op_api: all_version
+    exposed: all_version
     gen_opapi:
       out:
         size: logits
