@@ -468,12 +468,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -633,7 +633,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -984,7 +984,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-    
+
     if dtype == 296 or dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1000,7 +1000,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
             output = self.new_empty(input_shape, dtype=output_dst_dtype)
         else:
             raise RuntimeError("Parameter(dtype) enum value:{} not found in " \
-                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) + 
+                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) +
                 ops_error(ErrCode.PARAM))
     return output
 
@@ -1028,7 +1028,7 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-        
+
     if input_dtype == 296 or input_dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1219,7 +1219,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1329,20 +1329,49 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
         return x.new_empty(tuple(dim_list))
 
 
+def gmm_get_dtype(output_dtype):
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
+        return torch.float16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
+        return torch.bfloat16
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
+        return torch.float32
+    elif not output_dtype:
+        return output_dtype
+    else:
+        raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
+
+
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
                             antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
-                            split_item=0, group_type=None, group_list_type=0, act_type=0, tuning_config=None, output_dtype=None):
+                            split_item=0, group_type=None, group_list_type=0, act_type=0, tuning_config=None,
+                            output_dtype=None, x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None):
     torch._check(
         group_type == -1 or group_type == 0,
         lambda: f"group_type only support -1 and 0, but got {group_type} {ops_error(ErrCode.VALUE)}",
     )
+    torch._check(
+        x_dtype is None and weight_dtype is None,
+        lambda: "x_dtype and weight_dtype are not supported for grouped matmul for now",
+    )
+    if scale_dtype is not None:
+        torch._check(
+            scale_dtype == torch_npu.float8_e8m0,
+            lambda: "scale_dtype is only supported float8_e8m0 for now, but it is " + str(scale_dtype),
+        )
+    if per_token_scale_dtype is not None:
+        torch._check(
+            per_token_scale_dtype == torch_npu.float8_e8m0,
+            lambda: "per_token_scale_dtype is only supported float8_e8m0 for now, but it is " + str(per_token_scale_dtype),
+        )
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
+    output_dtype = gmm_get_dtype(output_dtype)
     INT4_IN_INT32 = 8
 
     if num_x > 0 and output_dtype is None:
@@ -1962,8 +1991,8 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
 def npu_trans_quant_param_meta(scale, offset=None, round_mode=0):
     scale_dim_num = scale.dim()
     torch._check(
-        scale_dim_num == 1 or (scale_dim_num == 2 and scale.size(0) == 1),
-        lambda: "the scale shape support only (1, ) and (1, n)" + ops_error(ErrCode.VALUE),
+        scale_dim_num == 1 or scale_dim_num == 2,
+        lambda: "The scale shape dim num must be 1 or 2, but actual is " + int(scale_dim_num) + ops_error(ErrCode.VALUE),
     )
     torch._check(
         round_mode == 0 or round_mode == 1,
@@ -2144,14 +2173,14 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
-        raise RuntimeError("Input x must be 2-dimensional, got dimNum " + 
+        raise RuntimeError("Input x must be 2-dimensional, got dimNum " +
                             str(x.dim()) + ops_error(ErrCode.VALUE))
     if group_index.dim() != 1:
-        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " + 
+        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " +
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
     # zero division protection
     if blocksize != 32:
-        raise RuntimeError("Parameter blocksize only supports 32,  got " + 
+        raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1] * 2]
 
@@ -2323,7 +2352,7 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             )
         elif (input_.dtype == torch.float8_e4m3fn):
             torch._check(
-                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or 
+                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.bfloat16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.float32]),
                 lambda: "output_dtype should be one of "
@@ -2660,7 +2689,7 @@ def npu_gather_sparse_index(inputs, index):
 
     for i in range(1, input_dim):
         output_size.append(input_size[i])
-    
+
     return torch.empty(output_size, dtype=inputs.dtype, device=inputs.device)
 
 
@@ -2695,11 +2724,11 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 

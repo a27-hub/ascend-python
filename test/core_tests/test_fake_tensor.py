@@ -2051,6 +2051,23 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(x[0].shape[0] == res[0].shape[0])
             self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
 
+    def test_npu_grouped_matmul_meta_910_95_fp8_1(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            x = [x1, ]
+            w1 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            w = [w1, ]
+            group_list = torch.tensor([16, ]).to(torch.int64).npu()
+            split_item = 2
+            scale1 = torch.randint(2, 3, size=(1, 32), dtype=torch.int64).npu()
+            scale = [scale1, ]
+            res = torch_npu.npu_grouped_matmul(x, w, bias=None, scale=scale, group_list=group_list, split_item=split_item, group_type=0, output_dtype=torch.float16)
+            dim0 = x1.shape[0]
+            dim1 = w1.shape[2]
+            self.assertTrue(dim0 == res[0].shape[0])
+            self.assertTrue(dim1 == res[0].shape[1])
+
 
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
@@ -2095,7 +2112,7 @@ class TestQuantMatmul(TestCase):
             res = torch_npu.npu_quant_matmul(x1, x2, scale, offset=None, bias=bias, output_dtype=torch.float16)
             self.assertTrue(expect_ret.shape == res.shape)
             self.assertTrue(expect_ret.dtype == res.dtype)
-            
+
             x1 = torch.randint(-8, 8, (1, 8192), dtype=torch.int8).npu()
             x2 = torch.randint(-8, 8, (8192, 128), dtype=torch.int32).npu()
             expect_ret = torch.randn([1, 128 * 8], dtype=torch.float16).npu()
@@ -2382,9 +2399,9 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             ep_rank_id = 0
             moe_expert_num = 16
 
-            result = torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x=expand_x, expert_ids=expert_ids, 
-            expand_idx=expand_idx, ep_send_counts=ep_send_counts, expert_scales=expert_scales, 
-            residual_x=residual_x, gamma=gamma, group_ep="groupe_ep", ep_world_size=ep_world_size, 
+            result = torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x=expand_x, expert_ids=expert_ids,
+            expand_idx=expand_idx, ep_send_counts=ep_send_counts, expert_scales=expert_scales,
+            residual_x=residual_x, gamma=gamma, group_ep="groupe_ep", ep_world_size=ep_world_size,
             ep_rank_id=ep_rank_id, moe_expert_num=moe_expert_num)
 
             self.assertEqual(result[0].shape[0], 32)
