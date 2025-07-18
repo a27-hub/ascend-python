@@ -7003,10 +7003,10 @@ custom:
         dtype: input
       out1:
         size: '{input.size(0), group}'
-        dtype: input
+        dtype: npu_group_norm_silu_dst_type(input, weight, bias)
       out2:
         size: '{input.size(0), group}'
-        dtype: input
+        dtype: npu_group_norm_silu_dst_type(input, weight, bias)
       exec: aclnnGroupNormSilu
 
   - func: npu_grouped_matmul(Tensor[] x, Tensor[] weight, *, Tensor[] bias, Tensor[] scale, Tensor[] offset, Tensor[] antiquant_scale, Tensor[] antiquant_offset, int[]? group_list=None, int? split_item=0, ScalarType? output_dtype=None) -> Tensor[]
