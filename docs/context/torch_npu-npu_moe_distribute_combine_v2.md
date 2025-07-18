@@ -3,6 +3,10 @@
 ## 功能说明<a name="zh-cn_topic_0000002168254826_section14441124184110"></a>
 
 -   算子功能：先进行reduce\_scatterv通信，再进行alltoallv通信，最后将接收的数据整合（乘权重再相加）。需与[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)配套使用，相当于按npu\_moe\_distribute\_dispatch\_v2算子收集数据的路径原路返回。
+-   相较于[torch\_npu.npu\_moe\_distribute\_combine](torch_npu-npu_moe_distribute_combine.md)接口，该接口变更如下：
+    -   输入了更详细的token信息，辅助npu\_moe\_distribute\_combine\_v2高效的进行全卡同步，因此原接口中shape为(BS \* K,)的expand_idx入参替换为shape为(A \* 128,)的assist\_info\_for\_combine;
+    -   新增shared\_expert\_x可选入参，支持在shared\_expert\_num为0时，由用户输入共享专家计算后的token;
+    -   移除了activation\_scale、weight\_scale、group\_list三个未使用的预置参数;
 -   计算公式：
 
     ![](./figures/zh-cn_formulaimage_0000002308687254.png)
@@ -22,7 +26,7 @@ torch_npu.npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tens
 -   assist\_info\_for\_combine：Tensor类型，表示给同一专家发送的token个数，要求是1D的Tensor，shape为\(A \* 128, \)。数据类型支持int32，数据格式为ND，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的assist\_info\_for\_combine输出。
 
 -   ep\_send\_counts：Tensor类型，表示本卡每个专家发给EP（Expert Parallelism）域每个卡的数据量，要求是1D的Tensor。数据类型支持int32，数据格式为ND，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的ep\_recv\_counts输出。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：要求shape为\(moe\_expert\_num+2\*global\_bs\*K\*server\_num, \)，global\_bs传入0时此处应当将其按照bs\*ep\_world\_size计算。。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：要求shape为\(moe\_expert\_num+2\*global\_bs\*K\*server\_num, \)，global\_bs传入0时此处应当将其按照bs\*ep\_world\_size计算。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求shape为\(ep\_world\_size\*max\(tp\_world\_size, 1\)\*local\_expert\_num, \)。
 
 -   expert\_scales：Tensor类型，表示每个token的topK个专家的权重，要求是2D的Tensor，shape为\(BS, K\)，其中共享专家不需要乘权重系数，直接相加即可。数据类型支持float，数据格式为ND，支持非连续的Tensor。
