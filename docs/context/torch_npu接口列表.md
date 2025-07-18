@@ -351,7 +351,7 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p18198201124816"><a name="p18198201124816"></a><a name="p18198201124816"></a>将原生CrossEntropyLoss中的log_softmax和nll_loss融合，降低计算时使用的内存。接口允许计算zloss。</p>
 </td>
 </tr>
-<tr id="row724843692712"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p162481336102714"><a name="p162481336102714"></a><a name="p162481336102714"></a><a href="torch_npu-npu_advance_step_flashattn.md">（beta）torch_npu.npu_advance_step_flashattn</a></p>
+<tr id="row724843692712"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p162481336102714"><a name="p162481336102714"></a><a name="p162481336102714"></a><a href="（beta）torch_npu-npu_advance_step_flashattn.md">torch_npu.npu_advance_step_flashattn</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p13248936102717"><a name="p13248936102717"></a><a name="p13248936102717"></a>在NPU上实现vLLM库中advance_step_flashattn的功能，在每个生成步骤中原地更新input_tokens，input_positions，seq_lens和slot_mapping。</p>
 </td>
