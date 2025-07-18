@@ -6967,7 +6967,7 @@ dequant_scale_w_gate1：Tensor类型，预留参数，暂未使用，使用默�
 dequant_scale_w_sim_gate1：Tensor类型，预留参数，暂未使用，使用默认值即可。
 dequant_scale_w_o：Tensor类型，表示用于计算 attention post 的恢复为 hidden states 的权重矩阵的反量化因子，其shape支持2维，dtype 支持 float32，数据格式支持ND格式。
 smooth_scales_w_o：Tensor类型，表示用于计算 attention post 的恢复为 hidden states 的权重矩阵量化的 smooth 因子，其shape支持2维，dtype 支持 float32，数据格式支持ND格式。
-atten_mask(Tensor)：可选参数，取值为1代表该位不参与计算（不生效），为0代表该位参与计算，数据类型支持bool，数据格式支持ND，输入shape类型支持[S,S]格式，SS分别是maxSq和maxSkv。
+atten_mask：Tensor类型，预留参数，暂未使用，使用默认值即可。
 epsilon_cq：Float类型，表示用于计算Query的rmsnorm中的ϵ参数，对应计算Query的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
 epsilon_ckv：Float类型，表示用于计算Key额时rmsnorm中的ϵ参数，对应计算Key的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
 cache_mode：String类型，用于表示kvCache的模式，支持"PA_BSND","PA_NZ"，用户不特意指定时可传入默认值"PA_BSND"。
