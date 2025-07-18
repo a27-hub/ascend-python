@@ -137,8 +137,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog(
         query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, token_x.options().dtype(token_x.dtype()));
     }
-    at::Tensor kv_cache_out = npu_preparation::apply_tensor_without_format(kv_cache);
-    at::Tensor kr_cache_out = npu_preparation::apply_tensor_without_format(kr_cache);
+    at::Tensor kv_cache_out = kv_cache;
+    at::Tensor kr_cache_out = kr_cache;
 
     // optional inputs tensor
     const at::Tensor& dequant_scale_x = c10::value_or_else(dequant_scale_x_opt, [] { return at::Tensor(); });
