@@ -35,6 +35,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
     scale_shape[0] = op_infer::CeilDiv(scale_shape[0], row_block_size);
     scale_shape[1] = op_infer::CeilDiv(scale_shape[1], col_block_size);
 
+    ASCEND_LOGI("[npu_dynamic_block_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
     at::ScalarType dtype = npu_preparation::convert_to_scalar_type(y_acltype);
 
@@ -43,6 +44,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
 
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
+    ASCEND_LOGI("[npu_dynamic_block_quant]: Setting aclTensor y dtype to: %s",
+                at_npu::native::AclDataTypeToString(y_acltype).c_str());
     TensorWrapper y_wrapper = {y, y_acltype};
     EXEC_NPU_CMD(aclnnDynamicBlockQuant, x, min_scale, round_mode_ptr, y_acltype,
                  row_block_size, col_block_size, y_wrapper, scale);
