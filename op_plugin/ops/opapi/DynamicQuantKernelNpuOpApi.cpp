@@ -55,13 +55,19 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant_v0(
         TORCH_CHECK(input.size(index) % INT4_IN_INT32_NUM == 0,
                     "Input shape last dim must be divded by 8 when int4 quantization" + OPS_ERROR(ErrCode::PARAM));
         scale_size.push_back(input.size(index) / INT4_IN_INT32_NUM);
+        ASCEND_LOGI("[npu_dynamic_quant]: Parameter(dst_type) is torch.quint4x2, setting aclTensor yOut dtype to: %s",
+                    at_npu::native::AclDataTypeToString(aclDataType::ACL_INT32).c_str());
         output = npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Int));
         y_acltype = aclDataType::ACL_INT32;
     } else if (!dst_type.has_value()) { // 默认INT8
+        ASCEND_LOGI("[npu_dynamic_quant]: Parameter(dst_type) is None, setting aclTensor yOut dtype to: %s",
+                    at_npu::native::AclDataTypeToString(aclDataType::ACL_INT8).c_str());
         output = npu_preparation::apply_tensor_without_format(input.sizes(), c10::dtype(c10::ScalarType::Char));
         y_acltype = aclDataType::ACL_INT8;
     } else {
+        ASCEND_LOGI("[npu_dynamic_quant]: Getting aclTensor yOut dtype by Parameter(dst_type): %ld", dst_type.value());
         y_acltype = c10_npu::GetAclDataType(dst_type.value());
+        ASCEND_LOGI("[npu_dynamic_quant]: Setting aclTensor yOut dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
         output = npu_preparation::apply_tensor_without_format(input.sizes(), c10::dtype(scalar_dtype));
     }

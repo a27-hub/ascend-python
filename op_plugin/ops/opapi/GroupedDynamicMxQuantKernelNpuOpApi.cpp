@@ -39,6 +39,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
                 "Group_index dimNum should be 1, got ", group_index.sizes().size(), OPS_ERROR(ErrCode::VALUE));
     at::Tensor y;
     at::Tensor mxscale;
+    ASCEND_LOGI("[npu_grouped_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
     TORCH_CHECK((y_acltype == aclDataType::ACL_FLOAT8_E5M2 || y_acltype == aclDataType::ACL_FLOAT8_E4M3FN),
                 "Parameter dst_type only supports torch.float8_e5m2(23), torch.float8_e4m3fn(24), got ",
@@ -59,6 +60,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
     y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
     mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
 
+    ASCEND_LOGI("[npu_grouped_dynamic_mx_quant]: Setting aclTensor y dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
     EXEC_NPU_CMD(aclnnGroupedDynamicMxQuant, x, group_index, round_mode_ptr, y_acltype, blocksize, y_wrapper, mxscale_wrapper);

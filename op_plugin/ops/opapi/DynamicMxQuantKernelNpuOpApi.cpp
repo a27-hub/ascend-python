@@ -51,6 +51,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     aclDataType y_acltype;
     bool special_output_type = (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                                 dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
+    ASCEND_LOGI("[npu_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     if (special_output_type) {
         int64_t last_dim_val = y_shape[input.dim() - 1];
         TORCH_CHECK(last_dim_val % FP4_IN_UINT8_NUM == 0,
@@ -64,6 +65,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
         y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
     }
+    ASCEND_LOGI("[npu_dynamic_mx_quant]: Setting aclTensor y dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());
 
     mxscale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(at::ScalarType::Byte));
     TensorWrapper y_wrapper = {y, y_acltype};
