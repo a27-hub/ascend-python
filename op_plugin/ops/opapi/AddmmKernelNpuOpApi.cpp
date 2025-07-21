@@ -28,12 +28,15 @@ at::Tensor &addmm_out(
     const at::Scalar &alpha,
     at::Tensor &out)
 {
-    DO_COMPATIBILITY(aclnnAddmm, acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
+    DO_MATMUL_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, mat1, mat2, acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     npu_preparation::check_tensor({self, mat1, mat2}, out, out.scalar_type(), output_size);
-    EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, out, cube_math_type);
-
+    if (op_plugin::utils::is_nd_nz_format(mat1, mat2)) {
+        EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
+    } else {
+        EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, out, cube_math_type);
+    }
     auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
     at::namedinference::propagate_names_if_nonempty(out, names);
 
@@ -47,12 +50,15 @@ at::Tensor addmm(
     const at::Scalar &beta,
     const at::Scalar &alpha)
 {
-    DO_COMPATIBILITY(aclnnAddmm, acl_op::addmm(self, mat1, mat2, beta, alpha));
+    DO_MATMUL_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, mat1, mat2, acl_op::addmm(self, mat1, mat2, beta, alpha));
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
-    EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
-
+    if (op_plugin::utils::is_nd_nz_format(mat1, mat2)) {
+        EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
+    } else {
+        EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
+    }
     auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
     at::namedinference::propagate_names_if_nonempty(result, names);
     FLOP_COUNT(FlopCounter::addmm_flop, mat1, mat2);
