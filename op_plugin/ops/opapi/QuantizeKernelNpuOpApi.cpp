@@ -86,14 +86,20 @@ at::Tensor npu_quantize_by_ascend_quant(
         "Param (dtype) must be Int8, QInt8, QUInt4x2, HiFloat8, Float8_e4m3fn, Float8_e5m2" + OPS_ERROR(ErrCode::TYPE));
 
     if (dtype == static_cast<int64_t>(at::kQInt8)) {
+        ASCEND_LOGI("[npu_quantize]: Parameter(dtype) is torch.qint8, setting aclTensor out dtype to: %s",
+                    at_npu::native::AclDataTypeToString(aclDataType::ACL_INT8).c_str());
         yAclType = ACL_INT8;
         scalarDtype = at::ScalarType::Char;
     } else if (dtype == static_cast<int64_t>(at::ScalarType::QUInt4x2)) {
         // int4 pack to int32
+        ASCEND_LOGI("[npu_quantize]: Parameter(dtype) is torch.quint4x2, setting aclTensor out dtype to: %s",
+                    at_npu::native::AclDataTypeToString(aclDataType::ACL_INT32).c_str());
         yAclType = ACL_INT32;
         scalarDtype = at::ScalarType::Int;
     } else {
+        ASCEND_LOGI("[npu_quantize]: Getting aclTensor out dtype by Parameter(dtype): %ld", dtype);
         yAclType = c10_npu::GetAclDataType(dtype);
+        ASCEND_LOGI("[npu_quantize]: Setting aclTensor out to: %s", at_npu::native::AclDataTypeToString(yAclType).c_str());
         scalarDtype = npu_preparation::convert_to_scalar_type(yAclType);
     }
 
