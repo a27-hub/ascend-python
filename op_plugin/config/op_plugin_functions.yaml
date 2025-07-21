@@ -7794,6 +7794,10 @@ custom:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermute, permuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, unpermuted_tokens
 
+  - func: npu_mla_preprocess(Tensor input, Tensor gamma0, Tensor beta0, Tensor quantScale0, Tensor quantOffset0, Tensor wdqkv, Tensor deScale0, Tensor bias0, Tensor gamma1, Tensor beta1, Tensor quantScale1, Tensor quantOffset1, Tensor wuq, Tensor deScale1, Tensor bias1, Tensor gamma2, Tensor cos, Tensor sin, Tensor wuk, Tensor kvCache, Tensor kvCacheRope, Tensor slotmapping, Tensor ctkvScale, Tensor qNopeScale, int N, int headNum, int cacheMode, int quantMode) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
+
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version

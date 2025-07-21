@@ -178,6 +178,48 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     return (query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope)
 
+@impl(m, "npu_mla_preprocess")
+def npu_mla_preprocess_forward(input, gamma0, beta0, quantScale0, quantOffset0, wdqkv, deScale0,
+                            bias0, gamma1, beta1, quantScale1, quantOffset1, wuq, deScale1, bias1,
+                            gamma2, cos, sin, wuk, kvCache, kvCacheRope, slotmapping, ctkvScale, qNopeScale,
+                            N, headNum, cacheMode, quantMode):
+    qOut0_shape = []
+    kvCacheOut0_shape = list(kvCache.shape)
+    qOut1_shape = []
+    kvCacheOut1_shape = list(kvCacheRope.shape)
+    qOut0_shape.append(input.size(0))
+    qOut0_shape.append(int(deScale1.size(0) / 192))
+    qOut1_shape.append(input.size(0))
+    qOut1_shape.append(int(deScale1.size(0) / 192))
+    qOut1_shape.append(64)
+    qOut1 = torch.empty(qOut1_shape, dtype=input.dtype, device='meta')
+
+    if cacheMode == 1:
+        qOut0_shape.append(512)
+        qOut0 = torch.empty(qOut0_shape, dtype=input.dtype, device='meta')
+        kvCacheOut0 = torch.empty(kvCacheOut0_shape, dtype=input.dtype, device='meta')
+        kvCacheOut1 = torch.empty(kvCacheOut1_shape, dtype=input.dtype, device='meta')
+        return qOut0, kvCacheOut0, qOut1, kvCacheOut1
+    elif cacheMode == 2:
+        qOut0_shape.append(512)
+        qOut0 = torch.empty(qOut0_shape, dtype=torch.int8, device='meta')
+        kvCacheOut0 = torch.empty(kvCacheOut0_shape, dtype=torch.int8, device='meta')
+        kvCacheOut1 = torch.empty(kvCacheOut1_shape, dtype=input.dtype, device='meta')
+        return qOut0, kvCacheOut0, qOut1, kvCacheOut1
+    elif cacheMode == 3:
+        qOut0_shape.append(512)
+        qOut0 = torch.empty(qOut0_shape, dtype=input.dtype, device='meta')
+        kvCacheOut0 = torch.empty(kvCacheOut0_shape, dtype=input.dtype, device='meta')
+        kvCacheOut1 = torch.empty(kvCacheOut1_shape, dtype=input.dtype, device='meta')
+        return qOut0, kvCacheOut0, qOut1, kvCacheOut1
+
+    qOut0_shape.append(576)
+    qOut0 = torch.empty(qOut0_shape, dtype=input.dtype, device='meta')
+    kvCacheOut0 = torch.empty(kvCacheOut0_shape, dtype=input.dtype, device='meta')
+    qOut1 = torch.tensor([], dtype=input.dtype, device='meta')
+    kvCacheOut1 = torch.tensor([], dtype=input.dtype, device='meta')
+    return (qOut0, kvCacheOut0, qOut1, kvCacheOut1)
+
 if "2.1" in torch.__version__:
     @impl(m, "npu_prompt_flash_attention")
     def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147473647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
