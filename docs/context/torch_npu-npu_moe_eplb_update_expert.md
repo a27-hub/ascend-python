@@ -60,7 +60,11 @@ torch_npu.npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int l
     -   BS：表示batch sequence size，即本卡最终输出的token数量，取值范围为0<BS≤512。
     -   K：表示选取topK个专家，取值范围为0<K≤16同时满足0<K≤moe\_expert\_num。
     -   moe\_expert\_num：表示MoE专家数，取值范围\(0, 512\]。
-    -   F：表示输入映射表的列数，第一列为各行号对应MoE专家部署的实例个数（取值\>0），后F-1列为该MoE专家部署的实例编号，取值范围\[0, world\_size\*moe\_expert\_per\_rank\)。
+    -   F：表示输入映射表的列数，eplb_table的第一列为各行号对应MoE专家部署的实例个数（取值\>0），后F-1列为该MoE专家部署的实例编号；由于每张卡上至少部署一个实例，最多部署4个冗余实例，且每个moe专家至少部署一个实例，所以每张卡部署的实例个数取值范围为\[1, moe\_expert\_num\/world\_size\+4\]，eplb_table的第一列为moe专家部署实例的个数，故F的取值范围\[2, moe\_expert\_num\/world\_size+5]。
+-   每个moe专家至少部署一个实例，部署的实例总数需大于等于moe专家数，即moe\_expert\_num≤place\_per\_rank*world\_size。
+-   每张卡部署的moe专家实例个数，即place\_per\_rank需一致，每个moe专家至少部署一个实例，且每张卡最多部署4个冗余专家实例，所以place\_per\_rank的取值范围为\[moe\_expert\_num\/world\_size\, moe\_expert\_num\/world\_size\+4\]。
+-   moe专家数大于等于卡数，即world\_size\≤moe\_expert\_num。
+-   moe专家数需可以被卡数整除，即moe\_expert\_num\%world\_size=0。
 
 ## 调用示例<a name="zh-cn_topic_0000002366611733_section14459801435"></a>
 
