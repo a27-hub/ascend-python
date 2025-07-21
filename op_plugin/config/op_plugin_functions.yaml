@@ -7145,7 +7145,12 @@ custom:
 
   - func: npu_mish_backward(Tensor grad, Tensor input) -> Tensor
     acl_op: all_version
-
+  
+  - func: npu_nsa(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor gamma_cq, Tensor gamma_ckv, Tensor prolog_sin, Tensor prolog_cos, Tensor cache_index, Tensor cmp_cache_index, Tensor kv_cache, Tensor kr_cache, Tensor cmp_kv_cache, Tensor cmp_kr_cache, Tensor block_table, Tensor cmp_block_table, Tensor act_seqs, Tensor act_cmp_seqs, Tensor weight_mlp_k1, Tensor weight_mlp_v1, Tensor weight_mlp_k2, Tensor weight_mlp_v2, Tensor mlp_sin, Tensor mlp_cos, Tensor weight_avg_k, Tensor weight_avg_v, Tensor weight_gate1, Tensor weight_gate2, Tensor weight_sim_gate1, Tensor weight_uv, Tensor weight_o, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? smooth_scales_cq=None, Tensor? dequant_scale_w_gate1=None, Tensor? dequant_scale_w_sim_gate1=None, Tensor? dequant_scale_w_o=None, Tensor? smooth_scales_w_o=None, Tensor? atten_mask=None, float epsilon_cq=1e-05, float epsilon_ckv=1e-05, str cache_mode="PA_BSND", int block_size=128, float softmax_scale=1.0, str cmp_mode="mlp", int slc_block_size=64, int cmp_block_size=32, int cmp_stride=16, int front=1, int near=2, int k=16, int win=512, str gate_mode="standard", int sparse_mode=-1) -> Tensor[]
+    acl_op: [v2.1, newest]
+    exposed: [v2.1, newest]
+    internal_format_opapi: [v2.1, newest]
+    
   - func: npu_mla_prolog(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: [v2.1, newest]
     exposed: [v2.1, newest]
