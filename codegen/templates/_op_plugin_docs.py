@@ -5309,7 +5309,7 @@ x1、x2不支持为空tensor.
 comm_quant_scale_1, comm_quant_scale_2的shape应保持一致, dtype与输出的dtype保持一致, 且只在全量化场景支持. 
 全量化场景: m取值范围均为[1, 2147483647], x1、x2的最后一维范围为[1, 65535], 即k的取值范围为[1, 65535]、仅当x2(shape=[n,k])为转置时n可以大于65535. 
 伪量化场景: m取值范围均为[1, 2147483647], k、n的取值范围为[1, 65535]. 
-一个模型中的通算融合MC2算子, 仅支持相同通信域. 
+Atlas A2 训练系列产品: 一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
 在长序列场景, 随着b/s或者m的增大, 可能出现内存不足或者计算超时. 
 不同场景下数据类型支持情况: 
 表1 非量化场景产品型号
@@ -7120,7 +7120,7 @@ _add_torch_npu_docstr(
     "npu_mla_prolog_v2",
     """
 功能描述:
-推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分为四路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache。
+推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分五路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache；第五路是输出query经过DynamicQuant后得到的量化参数。
 
 接口原型:
 torch_npu.npu_mla_prolog_v2(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
@@ -7377,7 +7377,7 @@ comm_turn: int类型, 表示rank间通信切分粒度, 默认值: 0, 表示默�
 Atlas A2 训练系列产品支持2、4、8卡,  支持hccs链路all mesh组网(每张卡和其它卡两两相连). 
 Atlas A3 训练系列产品支持2、4、8、16卡,  支持hccs链路double ring组网(多张卡按顺序组成一个圈, 每张卡只和左右卡相连). 
 input不支持输入转置后的tensor, x2转置后输入, 需要满足shape的第一维大小与x1的最后一维相同, 满足matmul的计算条件. 
-一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
+Atlas A2 训练系列产品: 一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
 
 支持的PyTorch版本
 PyTorch 2.1
@@ -7590,7 +7590,7 @@ m轴需要整除world_size.
 Atlas A2 训练系列产品支持2、4、8卡,  支持hccs链路all mesh组网(每张卡和其它卡两两相连). 
 Atlas A3 训练系列产品支持2、4、8、16卡,  支持hccs链路double ring组网(多张卡按顺序组成一个圈, 每张卡只和左右卡相连). 
 input不支持输入转置后的tensor, x2转置后输入, 需要满足shape的第一维大小与input的最后一维相同, 满足matmul的计算条件. 
-一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
+Atlas A2 训练系列产品: 一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
 
 支持的PyTorch版本
 PyTorch 2.1
@@ -9132,9 +9132,9 @@ torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_
 Native Sparse Attention算法中推理场景下，实现对KV压缩的计算。
 
 参数说明
-query(Tensor)：必选输入，shape支持3维输入，数据排布格式支持TND，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
-key(Tensor)：必选输入，shape支持3维输入，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
-value(Tensor)：必选输入，shape支持3维输入，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
+query(Tensor)：必选输入，shape支持3维输入，为[batch, key_value_head_num * group_size, head_size_qk]，数据排布格式支持TND，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
+key(Tensor)：必选输入，shape支持3维输入，为[block_num, page_block_size, head_size_qk * key_value_head_num]，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
+value(Tensor)：必选输入，shape支持3维输入，为[block_num, page_block_size, head_size_v * key_value_head_num]，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
 scale_value(double)：必选输入，表示缩放系数。
 head_num(int)：必选输入，表示query的head个数。
 key_value_head_num(int)：必选输入，表示key或者value的head个数。
@@ -9154,14 +9154,33 @@ actual_sel_seq_kvlen(list[int])：可选输入，当前不支持。
 代表对KV压缩计算后的结果。
 
 约束说明
-1. compress_block_size、compress_stride、select_block_size必须是16的整数倍，且compress_block_size >= compress_stride , select_block_size >= compress_block_size , select_block_size % compress_stride == 0,
-2. compress_block_size =16,32,64 ; compress_stride =16,32,64; select_block_size=16,32,64
-3. query、key、value的D：headSize必须满足(headSizeQK >= headSizeVO ; headSizeQK<=192; headSizeVO<=128)
-4. 输入的query的format仅支持TND，query的seqlen默认为1且不支持配置其他值，此时T的值与batch相等；key/value的format仅支持[numblocks, blocksize, H], 其中key的H = key_value_head_num * headSizeQK，value的H = key_value_head_num * headSizeVO
-5. actual_cmp_seq_kvlen<=8k
-6. head_num%key_value_head_num=0, groupSize=head_num/key_value_head_num,  groupSize<=128, 128%groupSize == 0
-7. pageBlockSize <=128 & pageBlockSize %16 ==0
-8. 设压缩前的最大kv序列长度NoCmpKvSeqlenCeil =（cmpKvSeqlen - 1）* compressBlockStride + compress_block_size，需要满足NoCmpKvSeqlenCeil / select_block_size <= 4096，且需要满足select_block_count <= NoCmpKvSeqlenCeil / select_block_size
+- query的数据排布格式中，T代表B（Batch）与S（Seq-Length）合轴后的结果、N（Head-Num）表示多头数、D（Head-Dim）表示隐藏层最小的单元尺寸，且满足D=H/N。
+- key和value的数据排布格式当前（paged attention）支持（block_num, block_size, H），H（Head-Size）表示隐藏层的大小，H=N∗D。
+- 参数query中的N和head_num值相等，key、value的N和key_value_head_num值相等，并且head_num是key_value_head_num的倍数关系。
+- 参数query中的D和key的D(H/key_value_head_num)值相等。
+- 参数query中的B、block_table的B、actual_cmp_seq_kvlen的shape值相等，B取值范围1-20。
+- 参数key中的block_num和参数value中的block_num值相等。
+- 参数key中的block_size、参数value中的block_size和page_block_size值相等。
+- query，key，value输入，功能使用限制如下：
+  -  支持query的N轴必须是key/value的N轴（H/D）的整数倍。
+  -  支持query的N轴与key/value的N轴（H/D）的比值小于等于128，且128是group的整数倍。
+  -  支持query与Key的D轴小于等于192，scale_value取值D^-0.5。
+  -  支持value的D轴小于等于128。
+  -  支持query与Key的D轴大于等于value的D轴。
+  -  支持key与value的block_size小于等于128，且是16的整数倍。
+  -  仅支持query的S轴等于1。
+  -  仅支持paged attention。
+  -  仅支持key/value的S轴小于等于8192。
+  -  仅支持compress_block_size取值16、32、64。
+  -  仅支持compress_stride取值16、32、64。
+  -  仅支持select_block_size取值16、32、64。
+  -  仅支持compress_block_size大于等于compress_stride , select_block_size大于等于compress_block_size , select_block_size是compress_stride的整数倍。
+  -  压缩前的kv_seq_len的上限可以表示为：no_cmp_kv_seq_len_ceil = (cmp_kv_seq_len − 1) ∗ compress_block_stride + compress_block_size，需要满足no_cmp_kv_seq_len_ceil / select_block_size <= 4096，且需要满足select_block_count <= no_cmp_kv_seq_len_ceil / select_block_size。
+  -  block_size第2维的取值需满足公式(max(cmp_kv_seq_len) + page_block_size - 1) // page_block_size。
+  -  block_num的取值需满足公式B * (max(cmp_kv_seq_len) + page_block_size - 1) // page_block_size。
+  -  block_table的取值范围需满足[0, block_num]。
+  -  query，key，value的数据类型需保持一致。
+  -  actual_cmp_seq_kvlen的取值范围为[128, 4096]。
 
 支持的型号
 Atlas A2训练系列产品
@@ -9199,7 +9218,7 @@ query(Tensor)：必选参数，shape支持[T1,N1,D1]，数据类型支持bfloat1
 key(Tensor)：必选参数，shape支持[T2,N2,D1]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
 value(Tensor)：必选参数，shape支持[T2,N2,D2]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
 topk_indices(Tensor)：必选参数，shape为[T1, N2, select_block_count]，数据类型支持int32，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
-scale_value(double)：必选参数，表示缩放系数。
+scale_value(double)：必选参数，表示缩放系数，一般设置为D^-0.5。
 head_num(int)：必选参数，表示单卡的head个数，即query的N1轴长度。
 select_block_size(int)：必选参数，表示select窗口的大小。
 select_block_count(int)：必选参数，表示select窗口的数量。
@@ -9217,8 +9236,9 @@ Tensor：代表softmax计算的sum中间结果，用于反向计算。
 2. 输入query、key、value的D（head_dim）必须满足D_q == D_k，D_k >= D_v。
 3. 输入query、key、value的数据类型必须一致。
 4. 输入query、key、value的input_layout必须一致，且只支持TND。
-5. select_block_size目前仅支持64，与此对应的select_block_count为16。                                                                                            
-6. 支持输入query的N和key/value的N不相等，但必须成比例关系，即N_q / N_kv必须是非0整数，称为G（group），且需满足G <=32。                                                                                                                                                                                                                                                                                                                                                                                
+5. select_block_size目前仅支持64，与此对应的select_block_count为16。
+6. topk_indices必须大于等于0且小于等于B对应的S2 / 64。
+7. 支持输入query的N和key/value的N不相等，但必须成比例关系，即N_q / N_kv必须是非0整数，称为G（group），且需满足G <= 32
 - B（batchsize）：取值范围为1\~65536。
 - N（head_num）：取值范围为1\~128。
 - G（group）：取值范围为1\~32。
@@ -9313,7 +9333,7 @@ Atlas A2训练系列产品
 >>> actual_seq_qlen = None
 >>> actual_seq_kvlen = [82] * query.size(0)
 >>> atten_mask = None
->>> torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, page_block_size, layout=layout, atten_mask=atten_mask, block_table=block_table, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+>>> torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, layout=layout, atten_mask=atten_mask, block_table=block_table, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
 """
 )
 
