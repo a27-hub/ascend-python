@@ -2081,13 +2081,15 @@ def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_typ
 
 
 @impl(m, "npu_dynamic_quant")
-def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1):
+def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1, quant_mode="pertoken"):
     # default dst_type 1 is the enum of torch.int8
     dim_num = input_dummy.dim()
     scale_shape = []
     for dim in range(dim_num - 1):
         scale_shape.append(input_dummy.size(dim))
     scale = input_dummy.new_empty(scale_shape, dtype=torch.float32)
+    if quant_mode == "pertensor":
+        scale = input_dummy.new_empty([1], dtype=torch.float32)
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
     if torch_dtype == torch.quint4x2:
         if input_dummy.size(dim_num - 1) % 8:
@@ -2096,7 +2098,7 @@ def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_
         scale_shape.append(input_dummy.size(dim_num - 1) // 8)
         output = input_dummy.new_empty(scale_shape, dtype=torch.int32)
     elif dst_type == 290:           # torch_npu.hifloat8
-        output = torch.empty_like(input_dummy, dtype=torch.bits8)
+        output = torch.empty_like(input_dummy, dtype=torch.uint8)
     elif torch_dtype == torch.float8_e5m2:
         output = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
     elif torch_dtype == torch.float8_e4m3fn:
@@ -2107,7 +2109,7 @@ def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_
 
 
 @impl(m, "npu_dynamic_quant_asymmetric")
-def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1):
+def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1, quant_mode="pertoken"):
     # default dst_type 1 is the enum of torch.int8
     dim_num = input_dummy.dim()
     scale_offset_shape = []
@@ -2115,6 +2117,9 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
         scale_offset_shape.append(input_dummy.size(dim))
     scale = input_dummy.new_empty(scale_offset_shape, dtype=torch.float32)
     offset = input_dummy.new_empty(scale_offset_shape, dtype=torch.float32)
+    if quant_mode == "pertensor":
+        scale = input_dummy.new_empty([1], dtype=torch.float32)
+        offset = input_dummy.new_empty([1], dtype=torch.float32)
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
     if torch_dtype == torch.quint4x2:
         if input_dummy.size(dim_num - 1) % 8:
@@ -2123,7 +2128,7 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
         scale_offset_shape.append(input_dummy.size(dim_num - 1) // 8)
         output = input_dummy.new_empty(scale_offset_shape, dtype=torch.int32)
     elif dst_type == 290:           # torch_npu.hifloat8
-        output = torch.empty_like(input_dummy, dtype=torch.bits8)
+        output = torch.empty_like(input_dummy, dtype=torch.uint8)
     elif torch_dtype == torch.float8_e5m2:
         output = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
     elif torch_dtype == torch.float8_e4m3fn:
