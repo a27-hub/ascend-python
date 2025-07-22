@@ -114,11 +114,11 @@ bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
     return dim_tensor1 == 2 && dim_tensor2 == 2 && is_nz_format(mat2) && !is_nz_format(self);
 }
 
-bool is_three_tensor_base_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2)
+bool is_three_tensor_base_format(const at::Tensor &input0, const at::Tensor &input1, const at::Tensor &input2)
 {
-    return at_npu::native::FormatHelper::IsOpInputBaseFormat(self) &&
-           at_npu::native::FormatHelper::IsOpInputBaseFormat(mat1) &&
-           at_npu::native::FormatHelper::IsOpInputBaseFormat(mat2);
+    return at_npu::native::FormatHelper::IsOpInputBaseFormat(input0) &&
+           at_npu::native::FormatHelper::IsOpInputBaseFormat(input1) &&
+           at_npu::native::FormatHelper::IsOpInputBaseFormat(input2);
 }
 
 bool is_nd_nd_nz_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2)
