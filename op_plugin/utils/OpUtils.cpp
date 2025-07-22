@@ -114,6 +114,23 @@ bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
     return dim_tensor1 == 2 && dim_tensor2 == 2 && is_nz_format(mat2) && !is_nz_format(self);
 }
 
+bool is_three_tensor_base_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2)
+{
+    return at_npu::native::FormatHelper::IsOpInputBaseFormat(self) &&
+           at_npu::native::FormatHelper::IsOpInputBaseFormat(mat1) &&
+           at_npu::native::FormatHelper::IsOpInputBaseFormat(mat2);
+}
+
+bool is_nd_nd_nz_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2)
+{
+    auto dim_tensor0 = self.dim();
+    auto dim_tensor1 = mat1.dim();
+    auto dim_tensor2 = mat2.dim();
+    // only support (n,) or (1, n) bias + 2D ND * 2D NZ
+    return (dim_tensor0 == 2 || dim_tensor0 == 1)  && dim_tensor1 == 2 && dim_tensor2 == 2 &&
+           !is_nz_format(self) && !is_nz_format(mat1) && is_nz_format(mat2);
+}
+
 bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2)
 {
     const static int64_t kInnerAxisMinLimit = 128;

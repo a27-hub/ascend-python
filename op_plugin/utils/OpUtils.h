@@ -48,6 +48,8 @@ OP_PLUGIN_HIDDEN int64_t make_warp_dim(int64_t dim, int64_t dim_post_expr);
 OP_PLUGIN_HIDDEN bool is_neox_style(std::string rotary_mode);
 OP_PLUGIN_HIDDEN bool is_transpose_last_two_dims(const at::Tensor &tensor);
 OP_PLUGIN_HIDDEN bool is_two_tensor_base_format(const at::Tensor &self, const at::Tensor &mat2);
+OP_PLUGIN_HIDDEN bool is_three_tensor_base_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2);
+OP_PLUGIN_HIDDEN bool is_nd_nd_nz_format(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nz_format(const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2);

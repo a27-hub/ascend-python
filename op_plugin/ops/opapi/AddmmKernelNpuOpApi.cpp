@@ -17,6 +17,40 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+#define DO_ADDMM_COMPATIBILITY(aclnn_nz_api, aclnn_nd_api, input0, input1, input2, aclop_func_call)          \
+    do {                                                                                                     \
+        if (op_plugin::utils::is_three_tensor_base_format(input0, input1, input2)) {                         \
+            DO_COMPATIBILITY(aclnn_nd_api, aclop_func_call);                                                 \
+        } else {                                                                                             \
+            static bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&    \
+                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||    \
+                                         (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);      \
+            if (op_plugin::utils::is_nd_nd_nz_format(input0, input1, input2) && is_support_soc) {            \
+                DO_COMPATIBILITY(aclnn_nz_api, aclop_func_call);                                             \
+            } else {                                                                                         \
+                if (!c10_npu::IsAclnnOnly()) {                                                               \
+                    return aclop_func_call;                                                                  \
+                }                                                                                            \
+                const torch_npu::NPUStorageDesc &tensor_desc0 =                                              \
+                    torch_npu::NPUBridge::GetNpuStorageImpl(input0)->npu_desc_;                              \
+                const torch_npu::NPUStorageDesc &tensor_desc1 =                                              \
+                    torch_npu::NPUBridge::GetNpuStorageImpl(input1)->npu_desc_;                              \
+                const torch_npu::NPUStorageDesc &tensor_desc2 =                                              \
+                    torch_npu::NPUBridge::GetNpuStorageImpl(input2)->npu_desc_;                              \
+                TORCH_CHECK(false,                                                                           \
+                    "matmul got not support format in current device: ",                                     \
+                    "(",                                                                                     \
+                    tensor_desc0.npu_format_,                                                                \
+                    ", ",                                                                                    \
+                    tensor_desc1.npu_format_,                                                                \
+                    ", ",                                                                                    \
+                    tensor_desc2.npu_format_,                                                                \
+                    ")",                                                                                     \
+                    OPS_ERROR(ErrCode::PARAM));                                                              \
+            }                                                                                                \
+        }                                                                                                    \
+    } while (0)
+
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -28,11 +62,12 @@ at::Tensor &addmm_out(
     const at::Scalar &alpha,
     at::Tensor &out)
 {
-    DO_MATMUL_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, mat1, mat2, acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
+    DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
+                           acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     npu_preparation::check_tensor({self, mat1, mat2}, out, out.scalar_type(), output_size);
-    if (op_plugin::utils::is_nd_nz_format(mat1, mat2)) {
+    if (op_plugin::utils::is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
     } else {
         EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, out, cube_math_type);
@@ -50,11 +85,12 @@ at::Tensor addmm(
     const at::Scalar &beta,
     const at::Scalar &alpha)
 {
-    DO_MATMUL_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, mat1, mat2, acl_op::addmm(self, mat1, mat2, beta, alpha));
+    DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
+                           acl_op::addmm(self, mat1, mat2, beta, alpha));
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
-    if (op_plugin::utils::is_nd_nz_format(mat1, mat2)) {
+    if (op_plugin::utils::is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
     } else {
         EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
