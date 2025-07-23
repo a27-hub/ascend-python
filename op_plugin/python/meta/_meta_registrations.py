@@ -324,6 +324,13 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     return (x.new_empty(tuple(expanded_x_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)))
 
 
+@impl(m, "npu_index_with_tensor")
+def npu_npu_index_with_tensor_meta(x, indices0, indices1):
+    n = indices1.size(0)
+    k = indices1.size(1)
+    return x.new_empty(tuple([n, k]), dtype=torch.int32)
+
+
 @impl(m, "npu_moe_init_routing_v2")
 def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=0, active_expert_range=[], row_idx_type=0):
     x_dim = x.dim()
