@@ -51,5 +51,25 @@ class TestNPUConvertWeightToINT4Pack(TestCase):
 
         self.assertRtolEqual(supported_output.to(torch.float16), custom_output, 0.001)
 
+    @SupportedDevices(['Ascend910_95'])
+    def test_npu_convert_weight_to_int4pack2(self, device="npu"):
+        torch.manual_seed(0)
+        m = 128
+        k = 64
+        n = 64
+
+        cpu_x = torch.randn((m, k), dtype=torch.float16)
+        cpu_weight = torch.randint(low=-8, high=8, size=(k, n), dtype=torch.int32)
+        cpu_antiquantscale = torch.randn((1, n), dtype=torch.float16)
+        cpu_antiquantoffset = torch.randn((1, n), dtype=torch.float16)
+        weight_int4 = torch_npu.npu_convert_weight_to_int4pack(cpu_weight.npu())
+
+        supported_output = self.supported_op_exec(
+            cpu_x, cpu_weight, cpu_antiquantscale, cpu_antiquantoffset)
+        custom_output = self.custom_op_exec(
+            cpu_x.npu(), weight_int4.npu(), cpu_antiquantscale.npu(), cpu_antiquantoffset.npu())
+
+        self.assertRtolEqual(supported_output.to(torch.float16), custom_output, 0.001)
+
 if __name__ == "__main__":
     run_tests()
