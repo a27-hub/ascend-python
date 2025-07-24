@@ -1040,6 +1040,31 @@ def npu_gelu_backward_meta(grad, self, *, approximate="none"):
     return torch.empty_like(self)
 
 
+@impl(m, "npu_gelu_quant")
+def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None, 
+                        approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
+    if not (quant_mode == "dynamic" or quant_mode == "static"):
+        raise RuntimeError("Parameter(quant_mode) must be 'dynamic' or 'static', got " + quant_mode + ops_error(ErrCode.VALUE))
+
+    out_scale = None
+    if quant_mode == "static":
+        if input_scale is None:
+            raise RuntimeError("input_scale cannot be None when quant_mode is 'static'.")
+    else:
+        # infer out_scale shape
+        out_scale_shape = self.shape[:-1]
+        out_scale = self.new_empty(out_scale_shape, dtype=torch.float32)
+
+    y_dst_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type)
+    if dst_type is not None:
+        y = torch.empty_like(self, dtype=y_dst_dtype)
+    else:
+        raise RuntimeError("Parameter(dst_type) enum value:{} not found in " \
+                            "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dst_type) +
+                            ops_error(ErrCode.PARAM))
+    return (y, out_scale)
+
+
 @impl(m, "npu_dtype_cast")
 def npu_dtype_cast_meta(self, dtype, input_dtype=None):
     dim_num = self.dim()
