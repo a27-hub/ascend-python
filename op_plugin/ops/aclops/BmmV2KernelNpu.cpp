@@ -16,7 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
-
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
@@ -88,11 +88,15 @@ at::Tensor pure_bmm_v2(const at::Tensor &self, const at::Tensor &mat2,
 {
     auto tensor1 = self.dim() == 1 ? self.view({1, self.size(0)}) : self;
     auto tensor2 = mat2.dim() == 1 ? mat2.view({mat2.size(0), 1}) : mat2;
-
-    at::Tensor result =
+    at::Tensor result;
+    if (c10_npu::IsAclnnOnly()) {
+        result = npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_ND);
+    } else {
+        result =
         (tensor1.scalar_type() == at::ScalarType::Half) ?
             npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_FRACTAL_NZ, true) :
             npu_preparation::apply_tensor_with_format(output_size, tensor1.options(), ACL_FORMAT_ND);
+    }
 
     at::Tensor contiguous_self = tensor1;
     at::Tensor contiguous_mat2 = tensor2;

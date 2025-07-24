@@ -7283,6 +7283,10 @@ custom:
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
+  
+  - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+    op_api: all_version
+    exposed: all_version
 
   - func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, Tensor? offset=None, Tensor? bias=None, str? output_dtype=None) -> Tensor
     op_api: v2.0
