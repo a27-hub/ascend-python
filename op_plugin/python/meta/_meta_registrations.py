@@ -2305,6 +2305,19 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=No
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 
+@impl(m, "npu_add_rms_norm_dynamic_quant")
+def npu_add_rms_norm_dynamic_quant(
+    x1, x2, gamma, smooth1=None, smooth2=None, epsilon=1e-06
+):
+    return (
+        torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+        torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+        torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
+        torch.empty((x1.size(0),), dtype=torch.float32, device=x1.device),
+        torch.empty((x1.size(0),), dtype=torch.float32, device=x1.device),
+    )
+
+
 @impl(m, "npu_gather_sparse_index")
 def npu_gather_sparse_index(inputs, index):
     output_dim = inputs.dim() + index.dim() - 1
