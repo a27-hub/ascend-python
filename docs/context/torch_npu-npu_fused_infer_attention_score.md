@@ -44,7 +44,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 
 -   actual\_seq\_lengths：int类型数组，代表不同Batch中query的有效seqlen，数据类型支持int64。如果不指定seqlen可以传入None，表示和query的shape的s长度相同。
 
-    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     限制：该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen。seqlen的传入长度为1时，每个Batch使用相同seqlen；传入长度大于等于Batch时取seqlen的前Batch个数。其他长度不支持。当query的input\_layout为TND时，该入参必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和，因此后一个元素的值必须大于等于前一个元素的值，且不能出现负值。
 
@@ -84,7 +84,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
     >**说明：**<br> 
     >注意排布格式带下划线时，下划线左边表示输入query的layout，下划线右边表示输出output的格式，算子内部会进行layout转换。
 
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持BSH、BSND、BNSD、BNSD\_BSND（输入为BNSD时，输出格式为BSND，仅支持Q\_S大于1）、BSH\_NBSD、BSND\_NBSD、BNSD\_NBSD（输出格式为NBSD时，仅支持Q\_S大于1且小于等于16）、TND、TND\_NTD、NTD\_TND（TND相关场景综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)）。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持BSH、BSND、BNSD、BNSD\_BSND（输入为BNSD时，输出格式为BSND，仅支持Q\_S大于1）、BSH\_NBSD、BSND\_NBSD、BNSD\_NBSD（输出格式为NBSD时，仅支持Q\_S大于1且小于等于16）、TND、TND\_NTD、NTD\_TND（TND相关场景综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)）。
 
     其中BNSD\_BSND含义指当输入为BNSD，输出格式为BSND，仅支持Q\_S大于1。
 
@@ -110,12 +110,12 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 -   block\_size：整型，PageAttention中KV存储每个block中最大的token个数，默认为0，数据类型支持int64。
 -   antiquant\_mode：整型，表示伪量化方式，传入0时表示为per-channel（per-channel包含per-tensor），传入1时表示per-token。用户不特意指定时可传入默认值0。
     
-    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时该参数无效；Q\_S等于1时传入0和1之外的其他值会执行异常。
+    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时该参数无效；Q\_S等于1时传入0和1之外的其他值会执行异常。
     
 -   softmax\_lse\_flag：布尔型，表示是否输出softmax\_lse，支持S轴外切（增加输出）。true表示输出softmax\_lse，false表示不输出；用户不特意指定时可传入默认值false。
 -   key\_antiquant\_mode：整型，表示key的伪量化方式。用户不特意指定时可传入默认值0，取值除了key\_antiquant\_mode为0并且value\_antiquant\_mode为1的场景外，需要与value\_antiquant\_mode一致。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
-    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时仅支持传入值为0、1，Q\_S等于1时支持取值0、1、2、3、4、5。
+    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时仅支持传入值为0、1，Q\_S等于1时支持取值0、1、2、3、4、5。
 
     -   key\_antiquant\_mode为0时，代表per-channel模式（per-channel包含per-tensor）。
     -   key\_antiquant\_mode为1时，代表per-token模式。
@@ -126,7 +126,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 
 -   value\_antiquant\_mode：整型，表示value的伪量化方式，模式编号与key\_antiquant\_mode一致。用户不特意指定时可传入默认值0，取值除了key\_antiquant\_mode为0并且value\_antiquant\_mode为1的场景外，需要与key\_antiquant\_mode一致。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
     
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时仅支持传入值为0、1；Q\_S等于1时支持取值0、1、2、3、4、5。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：Q\_S大于等于2时仅支持传入值为0、1；Q\_S等于1时支持取值0、1、2、3、4、5。
 
 ## 输出说明<a name="zh-cn_topic_0000001832267082_section22231435517"></a>
 
@@ -171,10 +171,10 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
     -   key\_rope的数据类型、数据格式与key一致。
     -   query\_rope和key\_rope要求同时配置或同时不配置，不支持只配置其中一个。
     -   当query\_rope和key\_rope非空时，支持如下特性：
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的d只支持512、128；
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的d只支持512、128；
         -   当query的d等于512时：
             -   sparse：Q\_S等于1时只支持sparse=0且不传mask，Q\_S大于1时只支持sparse=3且传入mask；
-            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
+            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
                 - query\_rope配置时要求query的s为1-16、n为32、64、128，query\_rope的shape中d为64，其余维度与query一致；
                 - key\_rope配置时要求key的n为1，d为512，keyRope的shape中d为64，其余维度与key一致；
                 - 支持key、value、keyRope的input\_layout格式为ND或NZ。当input\_layout为NZ时，输入参数key和value的格式为\[blockNum, N, D/16, blockSize, 16\]；
@@ -183,7 +183,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
                 - 不支持开启SoftMaxLse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
         -   当query的d等于128时：
-            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
+            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
 
                 - inputLayout：TND、NTD\_TND。  
                 
@@ -240,15 +240,15 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 
         -   query、key、value输入类型包含int8时，D轴需要32对齐；输入类型全为float16、bfloat16时，D轴需16对齐。
         -   D轴限制：
-            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query、key、value输入类型包含int8时，D轴需要32对齐；query、key、value或attentionOut类型包含INT4时，D轴需要64对齐；输入类型全为float16、bfloat16时，D轴需16对齐。
+            -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query、key、value输入类型包含int8时，D轴需要32对齐；query、key、value或attentionOut类型包含INT4时，D轴需要64对齐；输入类型全为float16、bfloat16时，D轴需16对齐。
 
     -   actual\_seq\_lengths：
     
-        <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于query中对应batch的Sequence Length。seqlen的传入长度为1时，每个Batch使用相同seqlen；传入长度大于等于Batch时取seqlen的前Batch个数。其他长度不支持。当query的inputLayout为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+        <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于query中对应batch的Sequence Length。seqlen的传入长度为1时，每个Batch使用相同seqlen；传入长度大于等于Batch时取seqlen的前Batch个数。其他长度不支持。当query的inputLayout为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
         
     -   actual\_seq\_lengths\_kv：
     
-        <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于key/value中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当key/value的inputLayout为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+        <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于key/value中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当key/value的inputLayout为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
         
     -   参数sparse\_mode当前仅支持值为0、1、2、3、4的场景，取其它值时会报错。
         
@@ -313,7 +313,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
         -   key\_antiquant\_mode和value\_antiquant\_mode取值需要保持一致。
         -   key\_antiquant\_scale和value\_antiquant\_scale要么都为空，要么都不为空；key\_antiquant\_offset和value\_antiquant\_offset要么都为空，要么都不为空。
         -   key\_antiquant\_scale和value\_antiquant\_scale都不为空时，其shape需要保持一致；key\_antiquant\_offset和value\_antiquant\_offset都不为空时，其shape需要保持一致。  
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
             -   仅支持per-token和per-channel模式，per-token模式下要求两个参数的shape均为\(B, S\)，数据类型固定为float32；per-channel模式下要求两个参数的shape为（N，D），\(N, D\)，\(H\)，数据类型固定为bfloat16。
             -   key\_antiquant\_scale与value\_antiquant\_scale非空场景，要求query的s小于等于16；要求query的dtype为bfloat16，key、value的dtype为int8，输出的dtype为bfloat16；不支持tensorlist、左padding、page attention、prefix特性。
     
@@ -361,15 +361,15 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 
     -   actual\_seq\_lengths：
     
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当query的inputLayout不为TND时，Q\_S为1时该参数无效。当query的inputLayout为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当query的inputLayout不为TND时，Q\_S为1时该参数无效。当query的inputLayout为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
         
     -   actual\_seq\_lengths\_kv：
     
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于key/value中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当key/value的inputLayout为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于key/value中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当key/value的inputLayout为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
         
     -   page attention场景：
         -   使能必要条件是block\_table存在且有效，同时key、value是按照block\_table中的索引在一片连续内存中排布，在该场景下key、value的input\_layout参数无效。
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
             -   支持key、value数据类型为float16、bfloat16、int8。
             -   不支持Q为bfloat16、float16、key、value为int4（int32）的场景。
     
@@ -386,7 +386,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
         -   kvCache的搬运起点计算公式为：Smax-kv\_padding\_size-actual\_seq\_lengths。kvCache的搬运终点计算公式为：Smax-kv\_padding\_size。其中kvCache的搬运起点或终点小于0时，返回数据结果为全0。
         -   kv\_padding\_size小于0时将被置为0。
         -   使能需要同时存在actual\_seq\_lengths参数，否则默认为kv右padding场景。
-        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：kv左padding场景不支持Q为bfloat16/float16、KV为int4（int32）的场景。
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：kv左padding场景不支持Q为bfloat16/float16、KV为int4（int32）的场景。
     
     -   kv伪量化参数分离：
         -   除了key\_antiquant\_mode为0并且value\_antiquant\_mode为1的场景外，key\_antiquant\_mode和value\_antiquant\_mode取值需要保持一致。   
