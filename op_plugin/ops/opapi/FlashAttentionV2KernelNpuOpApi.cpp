@@ -31,9 +31,6 @@ const double EPSILON = 1e-9;
 const int64_t LENGTH_BIAS = 32;
 const static int64_t SOFTMAXMAX_LAST_DIMSHAPE = 8;
 const static int64_t MAX_SEQUENCE_LENGTH = 1000000;
-const static int64_t DEFAULT_PSE_TYPE = 1;
-const static int64_t DEFAULT_OUT_DTYPE = 0;
-const static auto DEFAULT_START_IDX = at::IntArrayRef{};
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -687,11 +684,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
     } else {
         EXEC_NPU_CMD(
-            aclnnFlashAttentionScoreV3, format_query, format_key, format_value,
+            aclnnFlashAttentionScoreVX, format_query, format_key, format_value,
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_query_rope, format_key_rope,
-            format_d_scale_q, format_d_scale_k, format_d_scale_v, prefixN, ac_seq_qlen, ac_seq_kvlen, DEFAULT_START_IDX,
-            DEFAULT_START_IDX, scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
-            sparse_mode, out_dtype, DEFAULT_PSE_TYPE, seed, offset, softmax_max, softmax_sum, softmax_out, attention_score);
+            format_d_scale_q, format_d_scale_k, format_d_scale_v, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val,
+            kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
+            sparse_mode, out_dtype, pse_type, seed, offset, softmax_max, softmax_sum, softmax_out, attention_score);
     }
 
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
