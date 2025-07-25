@@ -853,8 +853,9 @@ def npu_fused_infer_attention_v2_forward(query, key, value, *, query_rope=None, 
             token_x_dim == 3,
             lambda: "Layout TND, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            output_d = int(value.size(2) / num_key_value_heads)
+            tmp_out = torch.empty([query.size(0), query.size(1), output_d], dtype=query.dtype, device='meta')
         else:
             tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
