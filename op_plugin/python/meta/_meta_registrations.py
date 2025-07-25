@@ -2109,6 +2109,19 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
             torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
             torch.empty(c_kv_size, dtype=kv.dtype, device=kv.device))
 
+@impl(m, "npu_rope_qk_rms_norm_k_store_kv_cache")
+def npu_rope_qk_rms_norm_k_store_kv_cache(qkv, sin, cos, gamma, k_scale, v_scale, index,
+    k_cache, v_cache, *, epsilon=1e-5, q_head_num=10, kv_head_num=1):
+    if qkv.dim() != 3:
+        raise RuntimeError("3D tensor expected for input qkv" + ops_error(ErrCode.PARAM))
+    q_size = []
+    q_size.append(qkv.size(0))
+    q_size.append(qkv.size(1))
+    head_dim = k_cache.size(2)
+    q_size.append(q_head_num * head_dim)
+    return (torch.empty(q_size, dtype=qkv.dtype, device=qkv.device),
+            torch.empty_like(k_cache), torch.empty_like(v_cache))
+
 
 @impl(m, "npu_apply_rotary_pos_emb")
 def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1, rotary_mode='half'):
