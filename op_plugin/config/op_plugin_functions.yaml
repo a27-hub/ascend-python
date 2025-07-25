@@ -6407,6 +6407,9 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
+  - func: npu_split_with_size(Tensor self, int[] split_size, int dim) -> Tensor[]
+    op_api: all_version
+
   - func: fused_add_topk_div(Tensor x, Tensor add_num, Tensor mapping_num, Tensor mapping_table, int group_num, int group_topk, int n, int k, int activate_type, bool is_norm, bool enable_expert_mapping, float scale) -> (Tensor y, Tensor indices)
     op_api: all_version
     
