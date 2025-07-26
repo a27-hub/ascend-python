@@ -3760,7 +3760,7 @@ _add_torch_npu_docstr(
 输出说明：
     - y：Tensor类型，输入x量化后的对应结果，数据类型由参数dst_type指定，支持torch.float8_e5m2，torch.float8_e4m3fn。shape与输入一致。
     - mxscale：Tensor类型，表示每个分组对应的量化尺度，真实的数据类型为torch_npu.float8_e8m0，实际输出的数据类型为torch.uint8。
-        如果x的shape为[m, n]，group_index的shape为[g]，则mxscale的shape为[m / (blocksize * 2) + g, n * 2]。
+        如果x的shape为[m, n]，group_index的shape为[g]，则mxscale的shape为[m / (blocksize * 2) + g, n, 2]。
 约束说明:
     - 参数blocksize仅支持32。
     - 该接口支持图模式（目前仅支持Pytorch 2.1 版本）。

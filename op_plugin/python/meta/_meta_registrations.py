@@ -2465,7 +2465,7 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if blocksize != 32:
         raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
-    mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1] * 2]
+    mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1], 2]
 
     if TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type) == torch.float8_e5m2:
         output = torch.empty_like(x, dtype=torch.float8_e5m2)
