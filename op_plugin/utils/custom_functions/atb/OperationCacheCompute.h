@@ -80,6 +80,14 @@ struct HashOpParam<atb::infer::RmsNormParam> {
 };
 
 template <>
+struct HashOpParam<atb::infer::TopkToppSamplingParam> {
+    void operator()(const atb::infer::TopkToppSamplingParam& param) const
+    {
+        add_param_to_buf("randSeeds", param.randSeeds.size());
+    }
+};
+
+template <>
 struct HashOpParam<atb::infer::GroupTopkParam> {
     void operator()(const atb::infer::GroupTopkParam& param) const
     {
@@ -134,6 +142,25 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
     {
         add_param_to_buf("compressType", param.compressType);
         add_param_to_buf("kvCacheCfg", param.kvCacheCfg);
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::RingMLAParam> {
+    void operator()(const atb::infer::RingMLAParam& param) const
+    {
+        add_param_to_buf("calcType", param.calcType);
+        add_param_to_buf("headNum", param.headNum);
+        add_param_to_buf("kvHeadNum", param.kvHeadNum);
+        add_param_to_buf("qkScale", param.qkScale);
+        add_param_to_buf("maskType", param.maskType);
+    }
+};
+
+template <>
+struct HashOpParam<atb::infer::PagedCacheLoadParam> {
+    void operator()(const atb::infer::PagedCacheLoadParam& param) const
+    {
     }
 };
 

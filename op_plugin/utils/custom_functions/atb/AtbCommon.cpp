@@ -46,6 +46,7 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
     atb::Tensor tensor;
     tensor.desc.format = ACL_FORMAT_ND;
     if (atTensor.device().type() == at::kCPU) {
+
         tensor.hostData = atTensor.data_ptr();
     } else {
         tensor.deviceData = atTensor.data_ptr();
@@ -69,16 +70,18 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor atTensor)
 void RunAtbCmd(atb::Operation *op, const ParamSetter &paramsetter, const std::string &name)
 {
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
-    auto acl_call = [=]() -> int {
+    atb::VariantPack variantPack = paramsetter.variantPack;
+    const c10::SmallVector<at::Tensor, N>& cpu_tensors = paramsetter.tensorMaintainer.cpu_tensors;
+    auto acl_call = [op, variantPack, stream, cpu_tensors]() -> int {
         auto contextPtr = GetContext(stream);
-        uint64_t workspaceSize = OperationSetup(paramsetter.variantPack, op, contextPtr);
+        uint64_t workspaceSize = OperationSetup(variantPack, op, contextPtr);
         at::Tensor workspaceTensor;
         void *workspacePtr = nullptr;
         if (workspaceSize != 0) {
             workspaceTensor = GetWorkspaceTensor(workspaceSize, stream);
             workspacePtr = const_cast<void *>(workspaceTensor.storage().data());
         }
-        auto st = op->Execute(paramsetter.variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
     at_npu::native::OpCommand::RunOpApi(name, acl_call);
@@ -91,17 +94,24 @@ ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
         variantPack.inTensors.push_back(atb::Tensor());
         return *this;
     }
+
     at::Tensor newTensor = tensor;
     if (torch_npu::utils::is_npu(newTensor)) {
         newTensor = FormatTrans(tensor);
     }
-
     if (!newTensor.is_contiguous()) {
         newTensor = newTensor.contiguous();
     }
-    auto AtTensor = AtTensor2AtbTensor(newTensor);
-
-    variantPack.inTensors.push_back(AtTensor);
+    atb::Tensor atb_tensor;
+    if (newTensor.device().type() == at::kCPU) {
+        auto tensor_clone = newTensor.clone();
+        atb_tensor = AtTensor2AtbTensor(tensor_clone);
+        tensorMaintainer.cpu_tensors.emplace_back(std::move(tensor_clone));
+    } else {
+        atb_tensor = AtTensor2AtbTensor(newTensor);
+        tensorMaintainer.contiguous_tensors.emplace_back(std::move(newTensor));
+    }
+    variantPack.inTensors.push_back(atb_tensor);
     return *this;
 }
 
