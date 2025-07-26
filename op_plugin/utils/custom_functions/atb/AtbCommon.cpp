@@ -102,14 +102,19 @@ ParamSetter& ParamSetter::Input(const at::Tensor &tensor)
     if (!newTensor.is_contiguous()) {
         newTensor = newTensor.contiguous();
     }
-    auto AtTensor = AtTensor2AtbTensor(newTensor);
-
-    variantPack.inTensors.push_back(AtTensor);
+    //auto AtTensor = AtTensor2AtbTensor(newTensor);
+    //variantPack.inTensors.push_back(AtTensor);
+    atb::Tensor atb_tensor;
     if (newTensor.device().type() == at::kCPU) {
-        tensorMaintainer.cpu_tensors.emplace_back(std::move(newTensor));
+        //tensorMaintainer.cpu_tensors.emplace_back(std::move(newTensor));
+	auto tensor_clone = newTensor.clone();
+        atb_tensor = AtTensor2AtbTensor(tensor_clone);
+        tensorMaintainer.cpu_tensors.emplace_back(std::move(tensor_clone));
     } else {
-        tensorMaintainer.contiguous_tensors.emplace_back(std::move(newTensor));
+	atb_tensor = AtTensor2AtbTensor(newTensor);
+	tensorMaintainer.contiguous_tensors.emplace_back(std::move(newTensor));
     }
+    variantPack.inTensors.push_back(atb_tensor);
     return *this;
 }
 
