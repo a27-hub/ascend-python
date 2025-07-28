@@ -322,6 +322,7 @@ backward:
 - name: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
   permuted_tokens, probs: npu_moe_token_unpermute_grad(permuted_tokens, grad, sorted_indices, probs, padded_mode, restore_shape)
   version: [v2.1, newest]
+
 - name: inverse(Tensor self) -> Tensor
   self: -at::matmul(result.mH(), at::matmul(grad, result.mH()))
   version: all_version
