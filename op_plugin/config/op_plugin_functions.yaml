@@ -6351,11 +6351,11 @@ custom:
         trans: 'true'
       exec: aclnnQuantGroupedMatmulDequant, x, quantized_weight, weight_scale, group_list, bias, x_scale, x_offset, smooth_scale, quant_mode_attr, trans, out
 
-  - func: npu_quant_scatter(Tensor self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor
+  - func: npu_quant_scatter(Tensor self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update', int? dst_type=None, str? round_mode='rint') -> Tensor
     op_api: all_version
     exposed: all_version
 
-  - func: npu_quant_scatter_(Tensor(a!) self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor(a!)
+  - func: npu_quant_scatter_(Tensor(a!) self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update', int? dst_type=None, str? round_mode='rint') -> Tensor(a!)
     op_api: all_version
     exposed: all_version
 
