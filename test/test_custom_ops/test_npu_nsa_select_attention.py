@@ -65,18 +65,17 @@ class TestNpuCompress(TestCase):
         raise RuntimeError(f"BS_index is greater than max(actual_seq_len).")
 
     @staticmethod
-    def set_atten_mask(qk, currentS1, topK_index, G, block_count, block_size):
-        qk_ = qk.reshape(G, block_count, block_size)
+    def set_atten_mask(qk, currentS1, topK_index, block_count, block_size):
         diag_index = currentS1 // block_size
         saveNum = currentS1 % block_size + 1
         mask_value = -np.inf
         for i in range(block_count):
             if (topK_index[i] == diag_index):
-                qk_[:, i, saveNum:] = mask_value
+                qk[:, i, saveNum:] = mask_value
                 continue
             if (topK_index[i] > diag_index):
-                qk_[:, i] = mask_value
-        return qk_.reshape(G,-1)
+                qk[:, i] = mask_value
+        return qk
 
     # pylint:disable = huawei-too-many-arguments
     def cpu_op_exec(self, query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask, actual_seq_qlen, actual_seq_kvlen):
@@ -131,7 +130,9 @@ class TestNpuCompress(TestCase):
                     selectedK = selectedK.reshape(block_count * block_size, QKD)
                     qk_ = torch.matmul(query_reshaped[bs1_index, n2_index, :, :], selectedK.transpose(-1, -2)) # (G, block_count * block_size)
                     if atten_mask is not None:
-                        qk_ = self.set_atten_mask(qk_, s1_index, topk_index_, G, block_count, block_size)
+                        qk_ = qk_.reshape(G, block_count, block_size)
+                        qk_ = self.set_atten_mask(qk_, s1_index, topk_index_, block_count, block_size)
+                        qk_ = qk_.reshape(G, -1)
                     qk_ = torch.mul(qk_, scalar_value)
                     softmax_res, x_max, x_sum = softmax_torch(qk_)
                     selectedV = torch.index_select(value_reshaped[start_block_index:end_block_index, :, n2_index, :], 0, topk_index_) # (block_count, block_size, VD)
@@ -219,6 +220,7 @@ class TestNpuCompress(TestCase):
         actual_seq_kvlen = [48]
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen)
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_3(self):
         batch = 5
