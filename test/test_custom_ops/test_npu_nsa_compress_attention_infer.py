@@ -369,7 +369,7 @@ class TestNpuCompressAttentionInfer(TestCase):
     def npu_op_exec(self, query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, layout, block_table, atten_mask, topk_mask, actual_seq_qlen, actual_cmp_seq_kvlen, actual_sel_seq_kvlen):
         output = torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, 
                                                             select_block_size, select_block_count, page_block_size, 
-                                                            compress_block_size, compress_stride, layout = layout, block_table=block_table, 
+                                                            compress_block_size, compress_stride, layout=layout, block_table=block_table, 
                                                             atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
                                                             actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None)
         return output
