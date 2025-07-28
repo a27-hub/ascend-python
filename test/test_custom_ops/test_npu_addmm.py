@@ -163,7 +163,7 @@ class TestAddmm(TestCase):
         npu_transpose_output = self.npu_op_transpose_exec(npu_input1, npu_input2, npu_input3, scalar1, scalar2)
         cpu_transpose_output = cpu_transpose_output.astype(npu_transpose_output.dtype)
 
-        self.assertRtolEqual(cpu_transpose_output, npu_transpose_output, prec=1.e-3, prec16=1.e-3)
+        self.assertRtolEqual(cpu_transpose_output, npu_transpose_output)
 
 
 if __name__ == "__main__":
