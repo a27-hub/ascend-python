@@ -31,7 +31,8 @@ at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& indices)
 {
     at::Tensor grad_input;
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
+    static const bool is_support_nd_out = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95;
+    if (is_support_nd_out) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
@@ -63,7 +64,8 @@ at::Tensor& max_pool2d_with_indices_backward_out(
     const at::Tensor& indices,
     at::Tensor& grad_input)
 {
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
+    static const bool is_support_nd_out = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95;
+    if (is_support_nd_out) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));
