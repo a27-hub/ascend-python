@@ -209,6 +209,7 @@ class TestNpuCompress(TestCase):
                                                    actual_seq_qlen, actual_seq_kvlen)
 
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_2(self):
         query = torch.randn([1, 115, 192], dtype=torch.float16)
@@ -221,6 +222,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_3(self):
         batch = 5
@@ -234,6 +236,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_1(self):
         query = torch.randn([130, 2, 192], dtype=torch.float16)
@@ -247,6 +250,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_1(self):
         query = torch.randn([130, 2, 192], dtype=torch.float16)
@@ -260,6 +264,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_2(self):
         query = torch.randn([50, 4, 192], dtype=torch.float16)
@@ -273,7 +278,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
-
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_3(self):
         query = torch.randn([100, 32, 192], dtype=torch.float16)
@@ -287,6 +292,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_4(self):
         query = torch.randn([100, 32, 192], dtype=torch.float16)
@@ -300,6 +306,7 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_nsa_select_attention_mask_5(self):
         query = torch.randn([1, 2, 192], dtype=torch.float16)
