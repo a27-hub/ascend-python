@@ -43,7 +43,7 @@ x1（计算输入）：Tensor类型，数据格式支持ND，shape最少是2维�
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持float32、int64、bfloat16。
 
 - offset（变量）：Tensor类型，量化计算的offset。可选参数。数据类型支持float32，数据格式支持ND，shape需要是1维(t,)，t=1或n，其中n与weight的n一致。
-- pertoken_scale（变量）：Tensor类型，可选参数，量化计算的pertoken。数据类型支持float32，数据格式支持ND，shape需要是1维(m,)，其中m与x1的m一致。Atlas 推理系列产品当前不支持pertoken_scale。
+- pertoken_scale（变量）：Tensor类型，可选参数，量化计算的pertoken。数据类型支持float32，数据格式支持ND，shape需要是1维(m,)，其中m与x1的m一致。<term>Atlas 推理系列产品</term>当前不支持pertoken_scale。
 - bias（变量）：Tensor类型，可选参数。矩阵乘中的bias。数据格式支持ND，shape支持1维(n,)或3维(batch, 1, n)，n与weight的n一致，同时batch值需要等于x1，weight broadcast后推导出的batch值。当输出为2、4、5、6维情况下，bias shape为1维；当输出为3维情况下，bias shape为1维或3维。
     - <term>Atlas 推理系列产品</term>：数据类型支持int32。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持int32、bfloat16、float16、float32。
