@@ -141,7 +141,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
                     "not suppoert tuning_config, Please try to update your CANN version.");
             }
             EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNz, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real, logit_real,
-                     row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
+                         row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
         }
         return result;
     }
