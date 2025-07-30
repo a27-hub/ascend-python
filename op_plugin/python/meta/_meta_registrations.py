@@ -2396,7 +2396,7 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
     output_shape = torch.empty([batch_size, n // 2], dtype=torch.int8, device=x.device)
     output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
     output_offset_shape = torch.empty([], dtype=torch.float32, device=x.device)
-    return output_shape, output_scale_shape, output_offset_shape
+    return output_shape, output_scale_shape
 
 @impl(m, "npu_split_with_size")
 def npu_split_with_size_meta(x, split_sizes, dim):
