@@ -290,6 +290,113 @@ struct LinearParam {
     uint8_t rsv[23] = {0};
 };
 
+//!
+//! \struct LinearParallelParam
+//!
+//! \brief 通信计算并行算子,该算子功能为linear和通信算子组合
+//!
+//! 通信和计算是并行处理，和串行相比存在大幅度性能提升.
+//!
+//! \see LinearParam,AllReduceParam,AllGatherParam
+//!
+struct LinearParallelParam {
+    //!
+    //! \enum ParallelType
+    //!
+    //! \brief 通信类型
+    //!
+    enum ParallelType : int {
+        UNDEFINED = -1,                       //!< 默认值
+        LINEAR_ALL_REDUCE = 0,                //!< linear+AllReduce
+        LINEAR_REDUCE_SCATTER = 1,            //!< linear+reduce_scatter
+        ALL_GATHER_LINEAR = 2,                //!< AllGather+linear
+        PURE_LINEAR = 3,                      //!< linear
+        ALL_GATHER_LINEAR_REDUCE_SCATTER = 4, //!< AllGather+linear+reduce_scatter
+        ALLTOALLVC_ALL_GATHER_GMM = 5,        //!< AllToAllvc+AllGather+GroupMatmul
+        GMM_REDUCE_SCATTER_ALLTOALLVC = 6,    //!< GroupMatmul+ReduceScatter+AllToAllvc
+        MAX = 7,                              //!< 枚举类型最大值
+    };
+    //!
+    //! \enum QuantType
+    //!
+    //! \brief QuantType类型
+    //!
+    enum QuantType : int {
+        QUANT_TYPE_UNDEFINED = -1,  //!< 默认值
+        QUANT_TYPE_UNQUANT = -1,    //!< 默认值
+        QUANT_TYPE_PER_TENSOR = 0,  //!< 对整个张量进行量化
+        QUANT_TYPE_PER_CHANNEL = 1, //!< 对张量中每个channel分别进行量化
+        QUANT_TYPE_PER_GROUP = 2,   //!< 将张量按quantGroupSize划分后，分别进行量化
+        QUANT_TYPE_PER_TOKEN = 3,   //!< 对张量中每个token分别进行量化
+        QUANT_TYPE_MAX = 4,         //!< 枚举类型最大值
+    };
+    //! \brief 权重是否需要转置，默认为true。
+    bool transWeight = true;
+    //! \brief 当前卡所属通信编号.
+    int rank = 0;
+    //! \brief 通信的卡的数量
+    int rankSize = 0;
+    //! \brief 主通信编号
+    int rankRoot = 0;
+    //! \brief 是否叠加残差。配置为false时不叠加残差，为true时叠加残差。默认不叠加残差。
+    bool hasResidual = false;
+    //! \brief 通信后端指示。支持"hccl"，"lccl"，"lcoc"。
+    std::string backend = "hccl";
+    //! \brief HCCL通信域接口获取的地址指针，仅当"hcclComm"不为nullptr时可用。
+    HcclComm hcclComm = nullptr;
+    //! \brief 通信模式，CommMode类型枚举值
+    CommMode commMode = COMM_MULTI_PROCESS;
+    //! \brief 集群信息的配置文件路径，适用单机以及多机通信场景，当前仅支持hccl后端场景。
+    std::string rankTableFile;
+    //! \brief 权重并行类型。
+    ParallelType type = LINEAR_ALL_REDUCE;
+    //! \brief 是否返回中间结果，仅在使用ALL_GATHER_LINEAR时生效。
+    bool keepIntermediate = false;
+    //! \brief 量化类型。
+    QuantType quantType = QUANT_TYPE_UNQUANT;
+    //! \brief 量化类型为QUANT_TYPE_PER_GROUP时生效。
+    int32_t quantGroupSize = 0;
+    //!
+    //! 若为浮点linear，参数outDataType配置为ACL_DT_UNDEFINED，表示输出tensor的数据类型与输入tensor一致,
+    //! 若为量化linear，输出tensor的数据类型与输入tensor不一致，则参数outDataType配置为用户预期输出tensor的数据类型,
+    //! 如ACL_FLOAT16/ACL_BF16
+    aclDataType outDataType = ACL_DT_UNDEFINED;
+    //! \brief 通信device组用通信域名标识，多通信域时使用。
+    //! 当backend为"lccl"时，commMode为多进程时，commDomain需要设置为0-63的数字。
+    //! commMode为多线程时，不支持确定性计算，"LCCL_DETERMINISTIC"需要为0或者false。
+    //! LCCL在多进程/多线程多通信域并发场景下，"LCCL_PARALLEL"需要设置为1或者true。
+    //! 多通信域并行功能使用结束后，"LCCL_PARALLEL"需要设置为0或者false，否则会导致基础场景性能下降。
+    std::string commDomain;
+    //! \brief AllGather_Matmul_ReduceScatter算子参数结构体
+    struct TwoDimTPInfo {
+        //! \brief 表示ag轴卡数，规定x轴方向是非连续卡号
+        uint16_t agDim = 0;
+        //! \brief 表示rs轴卡数，规定y轴方向是连续卡号
+        uint16_t rsDim = 0;
+        //! \brief 是否沿着内轴进行allgather通信
+        uint8_t innerDimIsAg = 1;
+        //! \brief 填充满8字节
+        uint8_t rsv[3] = {0};
+    };
+    //! \brief AllGather_Matmul_ReduceScatter算子参数
+    TwoDimTPInfo twoDimTPInfo;
+    //! \brief Moe 算子参数结构体
+    struct MoeInfo {
+        //! \brief MOE场景，每个NPU处理的expert数量
+        int16_t localExpertNums = 1;
+        //! \brief MOE场景，EP通信域大小
+        int8_t epSize = 1;
+        //! \brief MOE场景，TP通信域大小
+        int8_t tpSize = 1;
+    };
+    //! \brief AllGather_Matmul_ReduceScatter算子参数
+    MoeInfo moeInfo;
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[52] = {0};
+};
+
 struct GroupTopkParam {
     //!
     //! \brief 每个token分组数量。注：“专家总数”为inTensor0Desc.shape.dims[1]的值。
