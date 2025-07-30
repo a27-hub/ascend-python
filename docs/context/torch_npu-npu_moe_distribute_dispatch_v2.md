@@ -3,6 +3,9 @@
 ## 功能说明<a name="zh-cn_topic_0000002203575833_section14441124184110"></a>
 
 -   算子功能：需与[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)配套使用，完成MoE的并行部署下的token dispatch\_v2与combine\_v2。对token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor  Parallelism）域的allgatherv通信（可选）。
+-   算子功能：需与[torch\_npu.npu\_moe\_distribute\_combine](torch_npu-npu_moe_distribute_combine_v2.md)配套使用，完成MoE的并行部署下的token dispatch与combine。对Token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor  Parallelism）域的allgatherv通信（可选）。
+-   相较于[torch\_npu.npu\_moe\_distribute\_dispatch](torch_npu-npu_moe_distribute_dispatch.md)接口，该接口变更如下：
+    -   输出了更详细的token信息，辅助CombineV2系列算子高效的进行全卡同步，因此原接口中的shape为(BS \* K,)的expand\_idx出参替换为shape为(A \* 128,)的assist\_info\_for\_combine;
 -   计算公式：
     -   如果quant\_mode !=2（非动态量化）
 
