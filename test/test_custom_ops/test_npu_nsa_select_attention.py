@@ -13,6 +13,7 @@
 
 import itertools
 import random
+import unittest
 import numpy as np
 import torch
 import torch_npu
