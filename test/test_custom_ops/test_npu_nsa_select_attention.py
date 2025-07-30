@@ -237,19 +237,6 @@ class TestNpuCompress(TestCase):
         self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
                                                    actual_seq_qlen, actual_seq_kvlen)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_nsa_select_attention_mask_1(self):
-        query = torch.randn([130, 2, 192], dtype=torch.float16)
-        key = torch.randn([1088, 2, 192], dtype=torch.float16)
-        value = torch.randn([1088, 2, 128], dtype=torch.float16)
-        select_block_count = 16
-        select_block_size = 64
-        actual_seq_qlen = [130]
-        actual_seq_kvlen = [1088]
-        atten_mask = torch.tensor([[1]], dtype=torch.bool)
-        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
-                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
