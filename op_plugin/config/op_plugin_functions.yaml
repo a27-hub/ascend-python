@@ -7201,6 +7201,17 @@ custom:
   - func: npu_scatter_nd_update_(Tensor(a!) self, Tensor indices, Tensor updates) -> Tensor(a!)
     op_api: all_version
     exposed: all_version
+  
+  - func: npu_scatter_pa_kv_cache.value(Tensor key, Tensor value, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str cache_mode='Norm', Tensor(a!) key_cache, Tensor(b!) value_cache) -> (Tensor(a!) key_value, Tensor(b!) value_cache)
+    op_api: all_version
+    gen_opapi:
+      key_cache:
+        size: key_cache
+        dtype: key_cache
+      value_cache:
+        size: value_cache
+        dtype: value_cache
+      exec: aclnnScatterPaKvCache
 
   - func: npu_sign_bits_pack(Tensor self, int size) -> Tensor
     acl_op: all_version

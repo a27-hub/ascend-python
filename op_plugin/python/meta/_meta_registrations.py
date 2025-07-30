@@ -588,6 +588,17 @@ def scatter_nd_update__meta(self, indices, updates):
     return self
 
 
+@impl(m, "npu_scatter_pa_kv_cache.value")
+def npu_scatter_pa_kv_cache_value_meta(key, value, slot_mapping, *, compress_lens=None, compress_seq_offsets=None,
+                                       seq_lens=None, cache_mode='Norm', out=None):
+    if out is None:
+        out = []
+    if len(out) == 2:
+        return (torch.empty_like(out[0], dtype=out[0].dtype), torch.empty_like(out[1], dtype=out[1].dtype))
+    else:
+        raise RuntimeError("The input of out must be two elements: (key_cache, value_cache).")
+
+
 if torch.__version__ >= '2.3.1':
     @impl(m, "npu_geglu")
     def npu_geglu_meta(self, dim, approximate, activate_left=False):
