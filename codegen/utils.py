@@ -307,3 +307,4 @@ def get_version(ver, all_version):
         real_ver = ver.split(', ') if ', ' in ver else ver.split(',')
 
     return real_ver
+# test
