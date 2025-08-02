@@ -21,120 +21,121 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
+const int DIMENSION_3D = 3;
 at::Tensor& npu_nsa_nocheck(
-const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
-const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& gamma_cq,
-const at::Tensor& gamma_ckv, const at::Tensor& prolog_sin, const at::Tensor& prolog_cos,
-const at::Tensor& cache_index, const at::Tensor& cmp_cache_index, const at::Tensor& kv_cache,
-const at::Tensor& kr_cache, const at::Tensor& cmp_kv_cache, const at::Tensor& cmp_kr_cache,
-const at::Tensor& block_table, const at::Tensor& cmp_block_table, const at::Tensor& act_seqs,
-const at::Tensor& act_cmp_seqs, const at::Tensor& weight_mlp_k1, const at::Tensor& weight_mlp_v1,
-const at::Tensor& weight_mlp_k2, const at::Tensor& weight_mlp_v2, const at::Tensor& mlp_sin,
-const at::Tensor& mlp_cos, const at::Tensor& weight_avg_k, const at::Tensor& weight_avg_v,
-const at::Tensor& weight_gate1, const at::Tensor& weight_gate2, const at::Tensor& weight_sim_gate1,
-const at::Tensor& weight_uv, const at::Tensor& weight_o, const at::Tensor& dequant_scale_x,
-const at::Tensor& dequant_scale_w_dq, const at::Tensor& dequant_scale_w_uq_qr,
-const at::Tensor& dequant_scale_w_dkv_kr, const at::Tensor& smooth_scales_cq,
-const at::Tensor& dequant_scale_w_gate1, const at::Tensor& dequant_scale_w_sim_gate1,
-const at::Tensor& dequant_scale_w_o, const at::Tensor& smooth_scales_w_o, const at::Tensor& atten_mask,
-double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode, int64_t block_size, double softmax_scale,
-c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size, int64_t cmp_stride, int64_t front,
-int64_t near, int64_t k, int64_t win, c10::string_view gate_mode, int64_t sparse_mode, at::Tensor& nsa_out)
-{
-at_npu::native::OpCommand cmd;
-cmd.Name("Nsa")
-.Input(token_x, "token_x")
-.Input(weight_dq, "weight_dq")
-.Input(weight_uq_qr, "weight_uq_qr")
-.Input(weight_uk, "weight_uk")
-.Input(weight_dkv_kr, "weight_dkv_kr")
-.Input(gamma_cq, "gamma_cq")
-.Input(gamma_ckv, "gamma_ckv")
-.Input(prolog_sin, "prolog_sin")
-.Input(prolog_cos, "prolog_cos")
-.Input(cache_index, "cache_index")
-.Input(cmp_cache_index, "cmp_cache_index")
-.Input(kv_cache, "kv_cache")
-.Input(kr_cache, "kr_cache")
-.Input(cmp_kv_cache, "cmp_kv_cache")
-.Input(cmp_kr_cache, "cmp_kr_cache")
-.Input(block_table, "block_table")
-.Input(cmp_block_table, "cmp_block_table")
-.Input(act_seqs, "act_seqs")
-.Input(act_cmp_seqs, "act_cmp_seqs")
-.Input(weight_mlp_k1, "weight_mlp_k1")
-.Input(weight_mlp_v1, "weight_mlp_v1")
-.Input(weight_mlp_k2, "weight_mlp_k2")
-.Input(weight_mlp_v2, "weight_mlp_v2")
-.Input(mlp_sin, "mlp_sin")
-.Input(mlp_cos, "mlp_cos")
-.Input(weight_avg_k, "weight_avg_k")
-.Input(weight_avg_v, "weight_avg_v")
-.Input(weight_gate1, "weight_gate1")
-.Input(weight_gate2, "weight_gate2")
-.Input(weight_sim_gate1, "weight_sim_gate1")
-.Input(weight_uv, "weight_uv")
-.Input(weight_o, "weight_o");
+    const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
+    const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& gamma_cq,
+    const at::Tensor& gamma_ckv, const at::Tensor& prolog_sin, const at::Tensor& prolog_cos,
+    const at::Tensor& cache_index, const at::Tensor& cmp_cache_index, const at::Tensor& kv_cache,
+    const at::Tensor& kr_cache, const at::Tensor& cmp_kv_cache, const at::Tensor& cmp_kr_cache,
+    const at::Tensor& block_table, const at::Tensor& cmp_block_table, const at::Tensor& act_seqs,
+    const at::Tensor& act_cmp_seqs, const at::Tensor& weight_mlp_k1, const at::Tensor& weight_mlp_v1,
+    const at::Tensor& weight_mlp_k2, const at::Tensor& weight_mlp_v2, const at::Tensor& mlp_sin,
+    const at::Tensor& mlp_cos, const at::Tensor& weight_avg_k, const at::Tensor& weight_avg_v,
+    const at::Tensor& weight_gate1, const at::Tensor& weight_gate2, const at::Tensor& weight_sim_gate1,
+    const at::Tensor& weight_uv, const at::Tensor& weight_o, const at::Tensor& dequant_scale_x,
+    const at::Tensor& dequant_scale_w_dq, const at::Tensor& dequant_scale_w_uq_qr,
+    const at::Tensor& dequant_scale_w_dkv_kr, const at::Tensor& smooth_scales_cq,
+    const at::Tensor& dequant_scale_w_gate1, const at::Tensor& dequant_scale_w_sim_gate1,
+    const at::Tensor& dequant_scale_w_o, const at::Tensor& smooth_scales_w_o, const at::Tensor& atten_mask,
+    double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode, int64_t block_size, double softmax_scale,
+    c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size, int64_t cmp_stride, int64_t front,
+    int64_t near, int64_t k, int64_t win, c10::string_view gate_mode, int64_t sparse_mode, at::Tensor& nsa_out)
+  {
+    at_npu::native::OpCommand cmd;
+    cmd.Name("Nsa")
+        .Input(token_x, "token_x")
+        .Input(weight_dq, "weight_dq")
+        .Input(weight_uq_qr, "weight_uq_qr")
+        .Input(weight_uk, "weight_uk")
+        .Input(weight_dkv_kr, "weight_dkv_kr")
+        .Input(gamma_cq, "gamma_cq")
+        .Input(gamma_ckv, "gamma_ckv")
+        .Input(prolog_sin, "prolog_sin")
+        .Input(prolog_cos, "prolog_cos")
+        .Input(cache_index, "cache_index")
+        .Input(cmp_cache_index, "cmp_cache_index")
+        .Input(kv_cache, "kv_cache")
+        .Input(kr_cache, "kr_cache")
+        .Input(cmp_kv_cache, "cmp_kv_cache")
+        .Input(cmp_kr_cache, "cmp_kr_cache")
+        .Input(block_table, "block_table")
+        .Input(cmp_block_table, "cmp_block_table")
+        .Input(act_seqs, "act_seqs")
+        .Input(act_cmp_seqs, "act_cmp_seqs")
+        .Input(weight_mlp_k1, "weight_mlp_k1")
+        .Input(weight_mlp_v1, "weight_mlp_v1")
+        .Input(weight_mlp_k2, "weight_mlp_k2")
+        .Input(weight_mlp_v2, "weight_mlp_v2")
+        .Input(mlp_sin, "mlp_sin")
+        .Input(mlp_cos, "mlp_cos")
+        .Input(weight_avg_k, "weight_avg_k")
+        .Input(weight_avg_v, "weight_avg_v")
+        .Input(weight_gate1, "weight_gate1")
+        .Input(weight_gate2, "weight_gate2")
+        .Input(weight_sim_gate1, "weight_sim_gate1")
+        .Input(weight_uv, "weight_uv")
+        .Input(weight_o, "weight_o");
 
-if (dequant_scale_x.defined()) {
-    cmd.Input(dequant_scale_x, "dequant_scale_x");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_x.defined()) {
+        cmd.Input(dequant_scale_x, "dequant_scale_x");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_dq.defined()) {
-    cmd.Input(dequant_scale_w_dq, "dequant_scale_w_dq");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_dq.defined()) {
+        cmd.Input(dequant_scale_w_dq, "dequant_scale_w_dq");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_uq_qr.defined()) {
-    cmd.Input(dequant_scale_w_uq_qr, "dequant_scale_w_uq_qr");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_uq_qr.defined()) {
+        cmd.Input(dequant_scale_w_uq_qr, "dequant_scale_w_uq_qr");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_dkv_kr.defined()) {
-    cmd.Input(dequant_scale_w_dkv_kr, "dequant_scale_w_dkv_kr");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_dkv_kr.defined()) {
+        cmd.Input(dequant_scale_w_dkv_kr, "dequant_scale_w_dkv_kr");
+    } else {
+        cmd.Input();
+    }
 
-if (smooth_scales_cq.defined()) {
-    cmd.Input(smooth_scales_cq, "smooth_scales_cq");
-} else {
-    cmd.Input();
-}
+    if (smooth_scales_cq.defined()) {
+        cmd.Input(smooth_scales_cq, "smooth_scales_cq");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_gate1.defined()) {
-    cmd.Input(dequant_scale_w_gate1, "dequant_scale_w_gate1");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_gate1.defined()) {
+        cmd.Input(dequant_scale_w_gate1, "dequant_scale_w_gate1");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_sim_gate1.defined()) {
-    cmd.Input(dequant_scale_w_sim_gate1, "dequant_scale_w_sim_gate1");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_sim_gate1.defined()) {
+        cmd.Input(dequant_scale_w_sim_gate1, "dequant_scale_w_sim_gate1");
+    } else {
+        cmd.Input();
+    }
 
-if (dequant_scale_w_o.defined()) {
-    cmd.Input(dequant_scale_w_o, "dequant_scale_w_o");
-} else {
-    cmd.Input();
-}
+    if (dequant_scale_w_o.defined()) {
+        cmd.Input(dequant_scale_w_o, "dequant_scale_w_o");
+    } else {
+        cmd.Input();
+    }
 
-if (smooth_scales_w_o.defined()) {
-    cmd.Input(smooth_scales_w_o, "smooth_scales_w_o");
-} else {
-    cmd.Input();
-}
+    if (smooth_scales_w_o.defined()) {
+        cmd.Input(smooth_scales_w_o, "smooth_scales_w_o");
+    } else {
+        cmd.Input();
+    }
 
-if (atten_mask.defined()) {
-    cmd.Input(atten_mask, "atten_mask");
-} else {
-    cmd.Input();
-}
+    if (atten_mask.defined()) {
+        cmd.Input(atten_mask, "atten_mask");
+    } else {
+        cmd.Input();
+    }
 
 cmd.Output(nsa_out, "nsa_out")
     .Attr("epsilon_cq", static_cast<float>(epsilon_cq))
@@ -158,37 +159,37 @@ return nsa_out;
 } // namespace
 
 std::vectorat::Tensor npu_nsa(
-const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
-const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& gamma_cq,
-const at::Tensor& gamma_ckv, const at::Tensor& prolog_sin, const at::Tensor& prolog_cos,
-const at::Tensor& cache_index, const at::Tensor& cmp_cache_index, const at::Tensor& kv_cache,
-const at::Tensor& kr_cache, const at::Tensor& cmp_kv_cache, const at::Tensor& cmp_kr_cache,
-const at::Tensor& block_table, const at::Tensor& cmp_block_table, const at::Tensor& act_seqs,
-const at::Tensor& act_cmp_seqs, const at::Tensor& weight_mlp_k1, const at::Tensor& weight_mlp_v1,
-const at::Tensor& weight_mlp_k2, const at::Tensor& weight_mlp_v2, const at::Tensor& mlp_sin,
-const at::Tensor& mlp_cos, const at::Tensor& weight_avg_k, const at::Tensor& weight_avg_v,
-const at::Tensor& weight_gate1, const at::Tensor& weight_gate2, const at::Tensor& weight_sim_gate1,
-const at::Tensor& weight_uv, const at::Tensor& weight_o, const c10::optionalat::Tensor& dequant_scale_x,
-const c10::optionalat::Tensor& dequant_scale_w_dq, const c10::optionalat::Tensor& dequant_scale_w_uq_qr,
-const c10::optionalat::Tensor& dequant_scale_w_dkv_kr, const c10::optionalat::Tensor& smooth_scales_cq,
-const c10::optionalat::Tensor& dequant_scale_w_gate1, const c10::optionalat::Tensor& dequant_scale_w_sim_gate1,
-const c10::optionalat::Tensor& dequant_scale_w_o, const c10::optionalat::Tensor& smooth_scales_w_o,
-const c10::optionalat::Tensor& atten_mask, double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode,
-int64_t block_size, double softmax_scale, c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size,
-int64_t cmp_stride, int64_t front, int64_t near, int64_t k, int64_t win, c10::string_view gate_mode,
-int64_t sparse_mode)
+    const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
+    const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& gamma_cq,
+    const at::Tensor& gamma_ckv, const at::Tensor& prolog_sin, const at::Tensor& prolog_cos,
+    const at::Tensor& cache_index, const at::Tensor& cmp_cache_index, const at::Tensor& kv_cache,
+    const at::Tensor& kr_cache, const at::Tensor& cmp_kv_cache, const at::Tensor& cmp_kr_cache,
+    const at::Tensor& block_table, const at::Tensor& cmp_block_table, const at::Tensor& act_seqs,
+    const at::Tensor& act_cmp_seqs, const at::Tensor& weight_mlp_k1, const at::Tensor& weight_mlp_v1,
+    const at::Tensor& weight_mlp_k2, const at::Tensor& weight_mlp_v2, const at::Tensor& mlp_sin,
+    const at::Tensor& mlp_cos, const at::Tensor& weight_avg_k, const at::Tensor& weight_avg_v,
+    const at::Tensor& weight_gate1, const at::Tensor& weight_gate2, const at::Tensor& weight_sim_gate1,
+    const at::Tensor& weight_uv, const at::Tensor& weight_o, const c10::optionalat::Tensor& dequant_scale_x,
+    const c10::optionalat::Tensor& dequant_scale_w_dq, const c10::optionalat::Tensor& dequant_scale_w_uq_qr,
+    const c10::optionalat::Tensor& dequant_scale_w_dkv_kr, const c10::optionalat::Tensor& smooth_scales_cq,
+    const c10::optionalat::Tensor& dequant_scale_w_gate1, const c10::optionalat::Tensor& dequant_scale_w_sim_gate1,
+    const c10::optionalat::Tensor& dequant_scale_w_o, const c10::optionalat::Tensor& smooth_scales_w_o,
+    const c10::optionalat::Tensor& atten_mask, double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode,
+    int64_t block_size, double softmax_scale, c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size,
+    int64_t cmp_stride, int64_t front, int64_t near, int64_t k, int64_t win, c10::string_view gate_mode,
+    int64_t sparse_mode)
 {
 std::map<std::string, at::Tensor> mMap = {
-{"token_x", token_x}, {"weight_dq", weight_dq}, {"weight_uq_qr", weight_uq_qr}, {"weight_uk", weight_uk},
-{"weight_dkv_kr", weight_dkv_kr}, {"gamma_cq", gamma_cq}, {"gamma_ckv", gamma_ckv}, {"prolog_sin", prolog_sin},
-{"prolog_cos", prolog_cos}, {"cache_index", cache_index}, {"cmp_cache_index", cmp_cache_index},
-{"kv_cache", kv_cache}, {"kr_cache", kr_cache}, {"cmp_kv_cache", cmp_kv_cache}, {"cmp_kr_cache", cmp_kr_cache},
-{"block_table", block_table}, {"cmp_block_table", cmp_block_table}, {"act_seqs", act_seqs},
-{"act_cmp_seqs", act_cmp_seqs}, {"weight_mlp_k1", weight_mlp_k1}, {"weight_mlp_v1", weight_mlp_v1},
-{"weight_mlp_k2", weight_mlp_k2}, {"weight_mlp_v2", weight_mlp_v2}, {"mlp_sin", mlp_sin}, {"mlp_cos", mlp_cos},
-{"weight_avg_k", weight_avg_k}, {"weight_avg_v", weight_avg_v}, {"weight_gate1", weight_gate1},
-{"weight_gate2", weight_gate2}, {"weight_sim_gate1", weight_sim_gate1}, {"weight_uv", weight_uv},
-{"weight_o", weight_o}};
+    {"token_x", token_x}, {"weight_dq", weight_dq}, {"weight_uq_qr", weight_uq_qr}, {"weight_uk", weight_uk},
+    {"weight_dkv_kr", weight_dkv_kr}, {"gamma_cq", gamma_cq}, {"gamma_ckv", gamma_ckv}, {"prolog_sin", prolog_sin},
+    {"prolog_cos", prolog_cos}, {"cache_index", cache_index}, {"cmp_cache_index", cmp_cache_index},
+    {"kv_cache", kv_cache}, {"kr_cache", kr_cache}, {"cmp_kv_cache", cmp_kv_cache}, {"cmp_kr_cache", cmp_kr_cache},
+    {"block_table", block_table}, {"cmp_block_table", cmp_block_table}, {"act_seqs", act_seqs},
+    {"act_cmp_seqs", act_cmp_seqs}, {"weight_mlp_k1", weight_mlp_k1}, {"weight_mlp_v1", weight_mlp_v1},
+    {"weight_mlp_k2", weight_mlp_k2}, {"weight_mlp_v2", weight_mlp_v2}, {"mlp_sin", mlp_sin}, {"mlp_cos", mlp_cos},
+    {"weight_avg_k", weight_avg_k}, {"weight_avg_v", weight_avg_v}, {"weight_gate1", weight_gate1},
+    {"weight_gate2", weight_gate2}, {"weight_sim_gate1", weight_sim_gate1}, {"weight_uv", weight_uv},
+    {"weight_o", weight_o}};
 
 for (auto item : mMap) {
     TORCH_CHECK(item.second.numel() > 0, item.first.c_str(), " should not be null, but the actual value is null",
@@ -198,16 +199,16 @@ for (auto item : mMap) {
 // construct the output tensor
 // 暂时只支持3 dims
 auto token_x_dim = token_x.dim();
-TORCH_CHECK(token_x_dim == 3, "token_x dim num should be 3,but the actual value is ", token_x_dim,
+TORCH_CHECK(token_x_dim == DIMENSION_3D, "token_x dim num should be 3,but the actual value is ", token_x_dim,
             OPS_ERROR(ErrCode::PARAM));
 
 auto weight_uk_dim = weight_uk.dim();
-TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3,but the actual value is ", weight_uk_dim,
+TORCH_CHECK(weight_uk_dim == DIMENSION_3D, "weight_uk dim num should be 3,but the actual value is ", weight_uk_dim,
             OPS_ERROR(ErrCode::PARAM));
 
 // 暂且只支持3 dims
 auto prolog_sin_dim = prolog_sin.dim();
-TORCH_CHECK(prolog_sin_dim == 3, "prolog_sin dim num should be 3,but the actual value is ", prolog_sin_dim,
+TORCH_CHECK(prolog_sin_dim == DIMENSION_3D, "prolog_sin dim num should be 3,but the actual value is ", prolog_sin_dim,
             OPS_ERROR(ErrCode::PARAM));
 
 at::Tensor nsa_out = npu_preparation::apply_tensor_without_format(token_x);
