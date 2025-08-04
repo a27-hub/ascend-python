@@ -157,7 +157,7 @@ return nsa_out;
 }
 } // namespace
 
-std::vectorat::Tensor npu_nsa(
+std::vector<at::Tensor> npu_nsa(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
     const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& gamma_cq,
     const at::Tensor& gamma_ckv, const at::Tensor& prolog_sin, const at::Tensor& prolog_cos,
@@ -168,12 +168,12 @@ std::vectorat::Tensor npu_nsa(
     const at::Tensor& weight_mlp_k2, const at::Tensor& weight_mlp_v2, const at::Tensor& mlp_sin,
     const at::Tensor& mlp_cos, const at::Tensor& weight_avg_k, const at::Tensor& weight_avg_v,
     const at::Tensor& weight_gate1, const at::Tensor& weight_gate2, const at::Tensor& weight_sim_gate1,
-    const at::Tensor& weight_uv, const at::Tensor& weight_o, const c10::optionalat::Tensor& dequant_scale_x,
-    const c10::optionalat::Tensor& dequant_scale_w_dq, const c10::optionalat::Tensor& dequant_scale_w_uq_qr,
-    const c10::optionalat::Tensor& dequant_scale_w_dkv_kr, const c10::optionalat::Tensor& smooth_scales_cq,
-    const c10::optionalat::Tensor& dequant_scale_w_gate1, const c10::optionalat::Tensor& dequant_scale_w_sim_gate1,
-    const c10::optionalat::Tensor& dequant_scale_w_o, const c10::optionalat::Tensor& smooth_scales_w_o,
-    const c10::optionalat::Tensor& atten_mask, double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode,
+    const at::Tensor& weight_uv, const at::Tensor& weight_o, const c10::optional<at::Tensor>& dequant_scale_x,
+    const c10::optional<at::Tensor>& dequant_scale_w_dq, const c10::optional<at::Tensor>& dequant_scale_w_uq_qr,
+    const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& smooth_scales_cq,
+    const c10::optional<at::Tensor>& dequant_scale_w_gate1, const c10::optional<at::Tensor>& dequant_scale_w_sim_gate1,
+    const c10::optional<at::Tensor>& dequant_scale_w_o, const c10::optional<at::Tensor>& smooth_scales_w_o,
+    const c10::optional<at::Tensor>& atten_mask, double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode,
     int64_t block_size, double softmax_scale, c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size,
     int64_t cmp_stride, int64_t front, int64_t near, int64_t k, int64_t win, c10::string_view gate_mode,
     int64_t sparse_mode)
