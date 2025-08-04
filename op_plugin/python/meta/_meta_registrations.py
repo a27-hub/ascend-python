@@ -59,16 +59,16 @@ def npu_nsa_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, 
     torch._check(
         token_x_dim == 3,
         lambda: "token_x dim num should be 3,but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
-)
+    )
 
-nsa_out_shape = []
-nsa_out_shape.append(token_x.size(0))
-nsa_out_shape.append(token_x.size(1))
-nsa_out_shape.append(token_x.size(2))
+    nsa_out_shape = []
+    nsa_out_shape.append(token_x.size(0))
+    nsa_out_shape.append(token_x.size(1))
+    nsa_out_shape.append(token_x.size(2))
 
-nsa_out = torch.empty(nsa_out_shape, dtype=token_x.dtype, device='meta')
+    nsa_out = torch.empty(nsa_out_shape, dtype=token_x.dtype, device='meta')
+    return (nsa_out,)
 
-return (nsa_out,)
 
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
