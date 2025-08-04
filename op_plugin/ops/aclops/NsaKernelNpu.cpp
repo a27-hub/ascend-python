@@ -40,7 +40,8 @@ at::Tensor& npu_nsa_nocheck(
     const at::Tensor& dequant_scale_w_o, const at::Tensor& smooth_scales_w_o, const at::Tensor& atten_mask,
     double epsilon_cq, double epsilon_ckv, c10::string_view cache_mode, int64_t block_size, double softmax_scale,
     c10::string_view cmp_mode, int64_t slc_block_size, int64_t cmp_block_size, int64_t cmp_stride, int64_t front,
-    int64_t near, int64_t k, int64_t win, c10::string_view gate_mode, int64_t sparse_mode, at::Tensor& nsa_out) {
+    int64_t near, int64_t k, int64_t win, c10::string_view gate_mode, int64_t sparse_mode, at::Tensor& nsa_out)
+    {
     at_npu::native::OpCommand cmd;
     cmd.Name("Nsa")
         .Input(token_x, "token_x")

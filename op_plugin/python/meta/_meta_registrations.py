@@ -46,15 +46,7 @@ smooth_scales_cq=None, dequant_scale_w_gate1=None, dequant_scale_w_sim_gate1=Non
 dequant_scale_w_o=None, smooth_scales_w_o=None, atten_mask=None, epsilon_cq=1e-5, epsilon_ckv=1e-5,
 cache_mode="PA_BSND", block_size=128, softmax_scale=1.0, cmp_mode="mlp", slc_block_size=64,
 cmp_block_size=32, cmp_stride=16, front=1, near=2, k=16, win=512, gate_mode="standard", sparse_mode=-1):
-require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk,
-    "weight_dkv_kr": weight_dkv_kr, "gamma_cq": gamma_cq, "gamma_ckv": gamma_ckv, "prolog_sin": prolog_sin,
-    "prolog_cos": prolog_cos, "cache_index": cache_index, "cmp_cache_index": cmp_cache_index,
-    "kv_cache": kv_cache, "kr_cache": kr_cache, "cmp_kv_cache": cmp_kv_cache, "cmp_kr_cache": cmp_kr_cache,
-    "block_table": block_table, "cmp_block_table": cmp_block_table, "act_seqs": act_seqs, "act_cmp_seqs": act_cmp_seqs,
-    "weight_mlp_k1": weight_mlp_k1, "weight_mlp_v1": weight_mlp_v1, "weight_mlp_k2": weight_mlp_k2,
-    "weight_mlp_v2": weight_mlp_v2, "mlp_sin": mlp_sin, "mlp_cos": mlp_cos, "weight_avg_k": weight_avg_k,
-    "weight_avg_v": weight_avg_v, "weight_gate1": weight_gate1, "weight_gate2": weight_gate2,
-    "weight_sim_gate1": weight_sim_gate1, "weight_uv": weight_uv, "weight_o": weight_o}
+require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "gamma_cq": gamma_cq, "gamma_ckv": gamma_ckv, "prolog_sin": prolog_sin, "prolog_cos": prolog_cos, "cache_index": cache_index, "cmp_cache_index": cmp_cache_index, "kv_cache": kv_cache, "kr_cache": kr_cache, "cmp_kv_cache": cmp_kv_cache, "cmp_kr_cache": cmp_kr_cache, "block_table": block_table, "cmp_block_table": cmp_block_table, "act_seqs": act_seqs, "act_cmp_seqs": act_cmp_seqs, "weight_mlp_k1": weight_mlp_k1, "weight_mlp_v1": weight_mlp_v1, "weight_mlp_k2": weight_mlp_k2, "weight_mlp_v2": weight_mlp_v2, "mlp_sin": mlp_sin, "mlp_cos": mlp_cos, "weight_avg_k": weight_avg_k, "weight_avg_v": weight_avg_v, "weight_gate1": weight_gate1, "weight_gate2": weight_gate2, "weight_sim_gate1": weight_sim_gate1, "weight_uv": weight_uv, "weight_o": weight_o}
 
 for item_name, item in require_param.items():
     torch._check(
