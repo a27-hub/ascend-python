@@ -53,6 +53,9 @@ std::tuple<at::Tensor, at::Tensor> npu_gelu_quant(
     std::string approximate_str = std::string(approximate.data());
     std::string quant_mode_str = std::string(quant_mode.data());
     std::string round_mode_str = std::string(round_mode.data());
+    const char* approximate_char = approximate_str.c_str();
+    const char* quant_mode_char = quant_mode_str.c_str();
+    const char* round_mode_char = round_mode_str.c_str();
     bool quant_mode_valid = (quant_mode_str == "dynamic" || quant_mode_str == "static");
     TORCH_CHECK(quant_mode_valid,
                 "Parameter quant_mode must be 'dynamic' or 'static', got: " + quant_mode_str + OPS_ERROR(ErrCode::PARAM));
@@ -65,10 +68,12 @@ std::tuple<at::Tensor, at::Tensor> npu_gelu_quant(
         }
         out_scale = npu_preparation::apply_tensor_without_format(scale_shape, c10::dtype(c10::ScalarType::Float));
         TensorWrapper out_scale_wrapper = {out_scale, aclDataType::ACL_FLOAT};
-        EXEC_NPU_CMD(aclnnGeluQuant, self, input_scale_value, input_offset_value, approximate_str, quant_mode_str, round_mode_str, y_acltype, y_wrapper, out_scale_wrapper);
+        EXEC_NPU_CMD(aclnnGeluQuant, self, input_scale_value, input_offset_value,
+                     approximate_char, quant_mode_char, round_mode_char, y_acltype, y_wrapper, out_scale_wrapper);
         return std::make_tuple(y, out_scale);
     } else {
-        EXEC_NPU_CMD(aclnnGeluQuant, self, input_scale_value, input_offset_value, approximate_str, quant_mode_str, round_mode_str, y_acltype, y_wrapper, out_scale);
+        EXEC_NPU_CMD(aclnnGeluQuant, self, input_scale_value, input_offset_value,
+                     approximate_char, quant_mode_char, round_mode_char, y_acltype, y_wrapper, out_scale);
         return std::make_tuple(y, out_scale);
     }
 }
