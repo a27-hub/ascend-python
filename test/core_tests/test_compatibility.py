@@ -187,11 +187,11 @@ class TestOpApiCompatibility(TestCase):
                      "Skipping test for these torch versions.")
     def test_op_api_compatibility(self):
         failure_list = []
-
+        print("HYQ HYQ test_op_api_compatibility 1")
         with open(get_file_path_2(os.path.dirname(os.path.dirname(__file__)),
                                   'allowlist_for_publicAPI.json')) as json_file:
             allow_dict = json.load(json_file)
-
+        print("HYQ HYQ test_op_api_compatibility 2")
         # load torch_npu_OpApi_schema_all.json
         base_schema = {}
         version_tag = _get_test_torch_version()
@@ -211,7 +211,7 @@ class TestOpApiCompatibility(TestCase):
                     if func_name not in base_schema:
                         base_schema[func_name] = dict()
                         base_schema[func_name]["signature"] = signature
-
+        print("HYQ HYQ test_op_api_compatibility 3")
         content = {}
 
         def test_module(modname):
@@ -221,6 +221,7 @@ class TestOpApiCompatibility(TestCase):
                                     "torch_npu.dynamo.torchair.core._torchair"]:
                     return
                 mod = importlib.import_module(modname)
+                print("HYQ HYQ test_op_api_compatibility 4")
             except Exception:
                 # It is ok to ignore here as we have a test above that ensures
                 # this should never happen
@@ -228,7 +229,7 @@ class TestOpApiCompatibility(TestCase):
 
             if not self._is_mod_public(modname):
                 return
-
+            print("HYQ HYQ test_op_api_compatibility 5")
             def check_one_element(elem, modname, mod, *, is_public):
                 obj = getattr(mod, elem)
                 if not (isinstance(obj, (Callable, torch.dtype)) or inspect.isclass(obj)):
@@ -243,27 +244,32 @@ class TestOpApiCompatibility(TestCase):
                 if (modname in allow_dict and elem in allow_dict[modname]) or elem in torch_npu.__all__:
                     api_str = f"{modname}.{elem}"
                     api_signature(obj, api_str, content, base_schema, failure_list)
-
+                    print("HYQ HYQ " + failure_list)
+            print("HYQ HYQ test_op_api_compatibility 6")
             if hasattr(mod, '__all__'):
                 public_api = mod.__all__
                 all_api = dir(mod)
                 for elem in all_api:
                     check_one_element(elem, modname, mod, is_public=elem in public_api)
+                    print("HYQ HYQ test_op_api_compatibility 7")
             else:
                 all_api = dir(mod)
                 for elem in all_api:
                     if not elem.startswith('_'):
                         check_one_element(elem, modname, mod, is_public=True)
+                        print("HYQ HYQ test_op_api_compatibility 18")
 
         for modname in _find_all_importables(torch_npu):
             test_module(modname)
-
+        print("HYQ HYQ test_op_api_compatibility 9")
         test_module('torch_npu')
 
         base_funcs = base_schema.keys()
         now_funcs = content.keys()
         self._deleted_apis(base_funcs, now_funcs, failure_list)
+        print("HYQ HYQ " + failure_list)
         self._newly_apis(base_funcs, now_funcs, failure_list, content)
+        print("HYQ HYQ " + failure_list)
 
         msg = "All the APIs below do not meet the compatibility guidelines. "
         msg += "If the change timeline has been reached, you can modify the torch_npu_OpApi_schema_all.json to make it OK."
