@@ -39,4 +39,3 @@ torch.npu.set_device(0)
 torch_npu.npu.stop_device(0)
 ```
 
-
