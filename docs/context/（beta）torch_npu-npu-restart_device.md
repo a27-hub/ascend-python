@@ -6,7 +6,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu.restart_device(device_id: int, rebuild_all_resource: bool = False) -> None
+torch_npu.npu.restart_device(device_id: int, rebuild_all_resource: bool = False) -> int
 ```
 
 ## 功能说明
@@ -16,7 +16,7 @@ torch_npu.npu.restart_device(device_id: int, rebuild_all_resource: bool = False)
 ## 参数说明
 
 - “device_id”(int)需要处理的device id。
-- “rebuild_all_resource”(bool)，是一个保留参数，在当前接口中没有实际的功能。
+- “rebuild_all_resource”(bool)，是一个保留参数，在当前接口中没有实际的功能。git
 
 ## 输入说明
 
