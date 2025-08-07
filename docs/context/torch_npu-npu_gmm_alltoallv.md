@@ -52,8 +52,8 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
 -   **ep\_world\_size**（`int`）：必选参数，EP通信域size，取值支持8、16、32、64。
 -   **send\_counts**（`List[int]`）：必选参数，表示发送给其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。
 -   **recv\_counts**（`List[int]`）：必选参数，表示接收其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。
--   **send\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep_world_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
--   **recv\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep_world_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
+-   **send\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep\_world\_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
+-   **recv\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep\_world\_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
 -   **mm\_x**（`Tensor`）：可选参数，共享专家MatMul计算中的左矩阵。当需要融合共享专家矩阵计算时，该参数必选，支持2维，shape为$(BS, H2)$。
 -   **mm\_weight**（`Tensor`）：可选参数，共享专家MatMul计算中的右矩阵。当需要融合共享专家矩阵计算时，该参数必选，支持2维，shape为$(H2, N2)$。
 -   **trans\_gmm\_weight**（`bool`）：可选参数，GroupedMatMul的右矩阵是否需要转置，true表示需要转置，false表示不转置。
