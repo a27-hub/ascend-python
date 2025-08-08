@@ -5311,35 +5311,44 @@ _add_torch_npu_docstr(
 先将updates进行量化, 然后将updates中的值按指定的轴axis和索引indices更新input中的值, 并将结果保存到输出tensor, input本身的数据不变. 
 
 接口原型:
-torch_npu.npu_quant_scatter(Tensor input, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor
+torch_npu.npu_quant_scatter(Tensor input, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=-2, int quant_axis=-1, str reduce='update', int? dst_type=None, str? round_mode='rint') -> Tensor
 
 参数说明:
-input: Tensor类型, 必选输入, 源数据张量, 数据类型支持int8, 数据格式支持ND, 支持非连续的Tensor, 维数只能是3~8维. 
-indices: Tensor类型, 必选输入, 索引张量, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
-updates: Tensor类型, 必选输入, 更新数据张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持float16. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、float16. 
-quant_scales: Tensor类型, 必选输入, 量化缩放张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持float32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、float32. 
-quant_zero_points: Tensor类型, 可选输入, 量化偏移张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持int32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、int32. 
-axis: int类型, 可选参数, updates上用来更新的轴, 默认值为0. 
-quant_axis: int类型, 可选参数, updates上用来量化的轴, 默认值为1. 
-reduce: 字符串类型, 可选参数, 表示数据操作方式; 当前只支持'update', 即更新操作. 
+- input: Tensor类型, 必选输入, 源数据张量, 数据格式支持ND, 支持非连续的Tensor, 维数只能是3~8维. 
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持int8.
+ - 昇腾910_95 AI处理器: 数据类型支持int8、float8_e5m2、float8_e4m3fn、hifloat8.
+- indices: Tensor类型, 必选输入, 索引张量, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
+- updates: Tensor类型, 必选输入, 更新数据张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持float16. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、float16. 
+- quant_scales: Tensor类型, 必选输入, 量化缩放张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持float32. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、float32. 
+- quant_zero_points: Tensor类型, 可选输入, 量化偏移张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持int32. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、int32. 
+- axis: int类型, 可选参数, updates上用来更新的轴, 默认值为-2. 
+- quant_axis: int类型, 可选参数, updates上用来量化的轴, 默认值为-1. 
+- reduce: 字符串类型, 可选参数, 表示数据操作方式; 当前只支持'update', 即更新操作. 
+- dst_type：int类型，可选参数，指定input的数据类型，默认值为None（实际采用torch.int8作为目标量化类）.
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8.
+ - 昇腾910_95 AI处理器：支持取值torch.int8、torch_npu.hifloat8、torch.float8_e5m2、torch.float8_e4m3fn.
+- round_mode：string类型可选属性，表示最终cast到量化输出的舍入模式。默认值为'rint'.
+ - 当dst_type为torch.int8，torch.float8_e5m2，torch.float8_e4m3fn时，支持'rint'.
+ - 当dst_type为torch_npu.hifloat8时，支持'round'，'hybrid'.
 
 输出说明:
 一个Tensor类型的输出, 代表input被更新后的结果. 
 
 约束说明:
-该接口支持图模式. 
-indices的维数只能是1维或者2维; 如果是2维, 其第2维的大小必须是2; 不支持索引越界, 索引越界不校验; indices映射的input数据段不能重合, 若重合则会因为多核并发原因导致多次执行结果不一样. 
-updates的维数需要与input的维数一样; 其第1维的大小等于indices的第1维的大小, 且不大于input的第1维的大小; 其axis轴的大小不大于input的axis轴的大小; 其余维度的大小要跟input对应维度的大小相等; 其最后一维的大小必须32B对齐. 
-quant_scales的元素个数需要等于updates在quant_axis轴的大小. 
-quant_zero_points的元素个数需要等于updates在quant_axis轴的大小. 
-axis不能为updates的第1维或最后1维. 
-quant_axis只能为updates的最后1维. 
+- 该接口支持图模式(PyTorch 2.1版本). 
+- indices的维数只能是1维或者2维; 如果是2维, 其第2维的大小必须是2; 不支持索引越界, 索引越界不校验; indices映射的input数据段不能重合, 若重合则会因为多核并发原因导致多次执行结果不一样. 
+- updates的维数需要与input的维数一样; 其第1维的大小等于indices的第1维的大小, 且不大于input的第1维的大小; 其axis轴的大小不大于input的axis轴的大小; 其余维度的大小要跟input对应维度大小相等.
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品：其最后一维的大小必须32B对齐.
+- quant_scales的元素个数需要等于updates在quant_axis轴的大小. 
+- quant_zero_points的元素个数需要等于updates在quant_axis轴的大小. 
+- axis不能为updates的第1维或最后1维. 
+- quant_axis只能为updates的最后1维. 
 
 支持的PyTorch版本
 PyTorch 2.4
@@ -5349,6 +5358,7 @@ PyTorch 2.1
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
 Atlas 推理系列产品
+昇腾910_95 AI处理器
 
 调用示例:
 单算子模式调用
@@ -5491,35 +5501,44 @@ _add_torch_npu_docstr(
 先将updates进行量化, 然后将updates中的值按指定的轴axis和索引indices更新input中的值, input中的数据被改变. 
 
 接口原型:
-torch_npu.npu_quant_scatter_(Tensor(a!) input, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor(a!)
+torch_npu.npu_quant_scatter_(Tensor(a!) input, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=-2, int quant_axis=-1, str reduce='update', int? dst_type=None, str? round_mode='rint') -> Tensor(a!)
 
 参数说明:
-input: Tensor类型, 必选输入, 源数据张量, 数据类型支持int8, 数据格式支持ND, 支持非连续的Tensor, 维数只能是3~8维. 
-indices: Tensor类型, 必选输入, 索引张量, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
-updates: Tensor类型, 必选输入, 更新数据张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持float16. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、float16. 
-quant_scales: Tensor类型, 必选输入, 量化缩放张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持float32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、float32. 
-quant_zero_points: Tensor类型, 可选输入, 量化偏移张量, 数据格式支持ND, 支持非连续的Tensor. 
-Atlas 推理系列产品: 数据类型支持int32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持bfloat16、int32. 
-axis: int类型, 可选参数, updates上用来更新的轴, 默认值为0. 
-quant_axis: int类型, 可选参数, updates上用来量化的轴, 默认值为1. 
-reduce: 字符串类型, 可选参数, 表示数据操作方式; 当前只支持'update', 即更新操作. 
+- input: Tensor类型, 必选输入, 源数据张量, 数据格式支持ND, 支持非连续的Tensor, 维数只能是3~8维. 
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持int8.
+ - 昇腾910_95 AI处理器: 数据类型支持int8、float8_e5m2、float8_e4m3fn、hifloat8.
+- indices: Tensor类型, 必选输入, 索引张量, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
+- updates: Tensor类型, 必选输入, 更新数据张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持float16. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、float16. 
+- quant_scales: Tensor类型, 必选输入, 量化缩放张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持float32. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、float32. 
+- quant_zero_points: Tensor类型, 可选输入, 量化偏移张量, 数据格式支持ND, 支持非连续的Tensor. 
+ - Atlas 推理系列产品: 数据类型支持int32. 
+ - Atlas A2 训练系列产品/Atlas 800I A2 推理产品、昇腾910_95 AI处理器: 数据类型支持bfloat16、int32. 
+- axis: int类型, 可选参数, updates上用来更新的轴, 默认值为-2. 
+- quant_axis: int类型, 可选参数, updates上用来量化的轴, 默认值为-1. 
+- reduce: 字符串类型, 可选参数, 表示数据操作方式; 当前只支持'update', 即更新操作. 
+- dst_type：int类型，可选参数，指定input的数据类型，默认值为None（实际采用torch.int8作为目标量化类）.
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8.
+ - 昇腾910_95 AI处理器：支持取值torch.int8、torch_npu.hifloat8、torch.float8_e5m2、torch.float8_e4m3fn.
+- round_mode：string类型可选属性，表示最终cast到量化输出的舍入模式。默认值为'rint'.
+ - 当dst_type为torch.int8，torch.float8_e5m2，torch.float8_e4m3fn时，支持'rint'.
+ - 当dst_type为torch_npu.hifloat8时，支持'round'，'hybrid'.
 
 输出说明:
 一个Tensor类型的输出, 代表input被更新后的结果. 
 
 约束说明:
-该接口支持图模式. 
-indices的维数只能是1维或者2维; 如果是2维, 其第2维的大小必须是2; 不支持索引越界, 索引越界不校验; indices映射的input数据段不能重合, 若重合则会因为多核并发原因导致多次执行结果不一样. 
-updates的维数需要与input的维数一样; 其第1维的大小等于indices的第1维的大小, 且不大于input的第1维的大小; 其axis轴的大小不大于input的axis轴的大小; 其余维度的大小要跟input对应维度大小相等; 其最后一维的大小必须32B对齐. 
-quant_scales的元素个数需要等于updates在quant_axis轴的大小. 
-quant_zero_points的元素个数需要等于updates在quant_axis轴的大小. 
-axis不能为updates的第1维或最后1维. 
-quant_axis只能为updates的最后1维. 
+- 该接口支持图模式(PyTorch 2.1版本). 
+- indices的维数只能是1维或者2维; 如果是2维, 其第2维的大小必须是2; 不支持索引越界, 索引越界不校验; indices映射的input数据段不能重合, 若重合则会因为多核并发原因导致多次执行结果不一样. 
+- updates的维数需要与input的维数一样; 其第1维的大小等于indices的第1维的大小, 且不大于input的第1维的大小; 其axis轴的大小不大于input的axis轴的大小; 其余维度的大小要跟input对应维度大小相等.
+ - Atlas 推理系列产品、Atlas A2 训练系列产品/Atlas 800I A2 推理产品：其最后一维的大小必须32B对齐.
+- quant_scales的元素个数需要等于updates在quant_axis轴的大小. 
+- quant_zero_points的元素个数需要等于updates在quant_axis轴的大小. 
+- axis不能为updates的第1维或最后1维. 
+- quant_axis只能为updates的最后1维. 
 
 支持的PyTorch版本
 PyTorch 2.4
@@ -5529,6 +5548,7 @@ PyTorch 2.1
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
 Atlas 推理系列产品
+昇腾910_95 AI处理器
 
 调用示例:
 单算子模式调用

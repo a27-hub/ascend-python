@@ -39,6 +39,8 @@ at::Tensor npu_quant_scatter(
     bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2");
     if (isAclnnQuantScatterV2Available) {
         aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
+        TORCH_CHECK(self_acltype == aclDataType::ACL_INT8 || self_acltype == aclDataType::ACL_HIFLOAT8 || self_acltype == aclDataType::ACL_FLOAT8_E5M2 || self_acltype == aclDataType::ACL_FLOAT8_E4M3FN,
+            "dst_type only support 'torch.int8', 'torch.float8_e5m2', 'torch.float8_e4m3fn', 'torch_npu.hifloat8', but got ", c10_npu::CustomDataTypeToString(dst_type.value()), OPS_ERROR(ErrCode::PARAM));
         char* round_mode_str = "rint";
         if (round_mode.has_value()) {
             round_mode_str = const_cast<char *>(round_mode.value().data());
@@ -69,6 +71,8 @@ at::Tensor& npu_quant_scatter_(
     bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2");
     if (isAclnnQuantScatterV2Available) {
         aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
+        TORCH_CHECK(self_acltype == aclDataType::ACL_INT8 || self_acltype == aclDataType::ACL_HIFLOAT8 || self_acltype == aclDataType::ACL_FLOAT8_E5M2 || self_acltype == aclDataType::ACL_FLOAT8_E4M3FN,
+            "dst_type only support 'torch.int8', 'torch.float8_e5m2', 'torch.float8_e4m3fn', 'torch_npu.hifloat8', but got ", c10_npu::CustomDataTypeToString(dst_type.value()), OPS_ERROR(ErrCode::PARAM));
         char* round_mode_str = "rint";
         if (round_mode.has_value()) {
             round_mode_str = const_cast<char *>(round_mode.value().data());
