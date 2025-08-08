@@ -138,7 +138,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         } else {
             if (tuning_config.has_value()) {
                 TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::npu_grouped_matmul_finalize_routing is "
-                    "not suppoert tuning_config, Please try to update your CANN version.");
+                    "not support tuning_config, Please try to update your CANN version.");
             }
             EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingWeightNz, x, w, scale_real, bias_real, pertoken_scale_real, group_list, shared_input_real, logit_real,
                          row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW, group_list_type_real, result);
@@ -154,7 +154,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     } else {
         if (tuning_config.has_value()) {
             TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::npu_grouped_matmul_finalize_routing is "
-                "not suppoert tuning_config, Please try to update your CANN version.");
+                "not support tuning_config, Please try to update your CANN version.");
         }
         EXEC_NPU_CMD(aclnnGroupedMatmulFinalizeRoutingV2, x, w, scale_real, bias_real, offset_real, antiquant_scale_real, antiquant_offset_real, pertoken_scale_real,
                      group_list, shared_input_real, logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW,
