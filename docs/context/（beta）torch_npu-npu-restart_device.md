@@ -6,21 +6,23 @@
 ## 函数原型
 
 ```
-torch_npu.npu.restart_device(device_id: int, rebuild_all_resource: bool = False) -> None
+torch_npu.npu.restart_device(device_id: int）-> int
 ```
 
 ## 功能说明
 
-恢复对应device上的状态，后续在此device上可以继续进行计算执行。
+停止对应device上的计算，对于没有执行的计算进行清除，后续在此device上执行计算会报错。
 
 ## 参数说明
 
-- “device_id”(int)需要处理的device id。
-- “rebuild_all_resource”(bool)，是一个保留参数，在当前接口中没有实际的功能。
+“device_id”(int)需要处理的device id。
 
 ## 输入说明
 
-要确保是一个有效的device，这个device可以是被stop过的也可以是没有被stop。
+要确保是一个有效的device。
+
+## 输出说明
+返回值为int，代表执行结果，0表示执行成功，1表示执行失败。
 
 ## 支持的型号
 
@@ -34,6 +36,5 @@ import torch
 import torch_npu  
 torch.npu.set_device(0) 
 torch_npu.npu.stop_device(0)
-torch_npu.npu.restart_device(0)
 ```
 
