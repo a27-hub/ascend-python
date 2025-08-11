@@ -587,7 +587,7 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
     }
 
     auto acl_tensor = aclCreateTensor(
-        (*at_tensor).sizes.data(), (*at_tensor).sizes.size(), acl_data_type, (*at_tensor).strides.data(),
+        wrapperShape.data(), (*at_tensor).sizes.size(), acl_data_type, wrapperStride.data(),
         (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
     return acl_tensor;
 }
