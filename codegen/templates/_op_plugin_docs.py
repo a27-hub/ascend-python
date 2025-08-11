@@ -5870,6 +5870,7 @@ sparse_mode为2时, 代表leftUpCausal模式的mask, 需要传入优化后的att
 sparse_mode为3时, 代表rightDownCausal模式的mask, 均对应以左顶点为划分的下三角场景, 需要传入优化后的atten_mask矩阵(2048*2048). 
 sparse_mode为4时, 代表band模式的mask, 需要传入优化后的atten_mask矩阵(2048*2048). 
 sparse_mode为5、6、7、8时, 分别代表prefix、global、dilated、block_local, 均暂不支持. 用户不特意指定时可传入默认值0.
+sparse_mode为0、1时, 不支持传入的mask中, 参与计算部分存在整行为1的情况.
 
 输出说明
 atten_out: Tensor类型, 计算的最终结果, shape与query保持一致. 
