@@ -1,8 +1,20 @@
 # torch_npu.npu.change_current_allocator
 
-## 定义文件
+## 产品支持情况
 
-torch_npu/npu/memory.py
+| 产品                                                      | 是否支持 |
+| --------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品</term>                        |    √     |
+| <term>Atlas A2 训练系列产品</term>                        |    √     |
+| <term>Atlas 推理系列产品</term>                           |    √     |
+| <term>Atlas 训练系列产品</term>                           |    √     |
+
+
+
+## 功能说明
+
+更改使用的内存分配器。
+
 
 ## 函数原型
 
@@ -10,9 +22,9 @@ torch_npu/npu/memory.py
 torch_npu.npu.change_current_allocator(allocator) -> None
 ```
 
-## 功能说明
+## 定义文件
 
-更改使用的内存分配器。
+torch_npu/npu/memory.py
 
 ## 参数说明
 
@@ -22,12 +34,6 @@ torch_npu.npu.change_current_allocator(allocator) -> None
 
 如果内存分配器已被初始化，函数调用失败。
 
-## 支持的型号
-
-- <term> Atlas 训练系列产品</term> 
-- <term> Atlas A2 训练系列产品</term> 
-- <term> Atlas A3 训练系列产品</term> 
-- <term> Atlas 推理系列产品</term>
 
 ## 调用示例
 
