@@ -3,9 +3,6 @@
 //
 // Licensed under the BSD 3-Clause License  (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://opensource.org/licenses/BSD-3-Clause
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,7 +72,7 @@ at::Tensor npu_quant_matmul_reduce_sum(
     c10::IntArrayRef dims = {0};
     bool keep_dims = false;
     EXEC_NPU_CMD(aclnnQuantMatmulReduceSumWeightNz,
-                 x1, x2, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, bias, 
+                 x1, x2, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, bias,
                  transpose_x1, transpose_x2, group_size, dims, keep_dims, result);
     return result;
 }

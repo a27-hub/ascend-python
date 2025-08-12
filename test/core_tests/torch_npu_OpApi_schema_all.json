@@ -1098,7 +1098,7 @@
     "version": ["all_version"]
   },
   "func: npu_quant_matmul_reduce_sum(Tensor x1, Tensor x2, *, Tensor? x1_scale=None, Tensor? x2_scale=None) -> Tensor": {
-    "Version": ["all_version"]
+    "version": ["all_version"]
   },
   "func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0) -> Tensor": {
     "version": ["all_version"]

@@ -89,7 +89,7 @@ class TestGroupedMatmulAdd(TestCase):
         # --- Calculation ---
         custom_out = torch_npu.npu_quant_matmul_reduce_sum(x_nd_npu, w_nz_npu, x1_scale=x1_scale, x2_scale=x2_scale)
 
-        self.assertTrue(compare_cv(golden_fp32, golden_bf16, custom_out))
+        self.assertTrue(compare_cv(golden_fp32, golden_bf16, custom_out.cpu()))
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_reduce_sum_02(self):
@@ -121,9 +121,9 @@ class TestGroupedMatmulAdd(TestCase):
         x1_scale = pertoken_scale.to(device)
 
         # --- Calculation ---
-        custom_out = torch_npu.npu_qbmm_reduce_sum(x_nd_npu, w_nz_npu, x1_scale=x1_scale, x2_scale=x2_scale)
+        custom_out = torch_npu.npu_quant_matmul_reduce_sum(x_nd_npu, w_nz_npu, x1_scale=x1_scale, x2_scale=x2_scale)
 
-        self.assertTrue(compare_cv(golden_fp32, golden_bf16, custom_out))
+        self.assertTrue(compare_cv(golden_fp32, golden_bf16, custom_out.cpu()))
 
 
 if __name__ == "__main__":
