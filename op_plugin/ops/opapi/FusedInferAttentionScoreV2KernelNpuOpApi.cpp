@@ -146,15 +146,27 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
     at::Tensor softmax_lse;
     if (input_layout_str == "TND") {
         if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_0), num_query_heads, 1},
-            c10::dtype(c10::ScalarType::Float));
+            if (query.size(DIM_2) == 0) {
+                softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_0), num_query_heads, 0},
+                    c10::dtype(c10::ScalarType::Float));
+            } else {
+                softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_0), num_query_heads, 1},
+                    c10::dtype(c10::ScalarType::Float));
+            }
         } else {
             softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), 1},
-            c10::dtype(c10::ScalarType::Float));
+                c10::dtype(c10::ScalarType::Float));
         }
     } else if (input_layout_str == "NTD_TND") {
-        softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 1},
-            c10::dtype(c10::ScalarType::Float));
+        if (block_table.has_value()) {
+            if (query.size(DIM_2) == 0) {
+                softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 0},
+                    c10::dtype(c10::ScalarType::Float));
+            }
+        } else {
+            softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 1},
+                c10::dtype(c10::ScalarType::Float));
+        }
     } else {
         softmax_lse = npu_preparation::apply_tensor_without_format({batchSize, num_query_heads, qsSize, 1},
             c10::dtype(c10::ScalarType::Float));
