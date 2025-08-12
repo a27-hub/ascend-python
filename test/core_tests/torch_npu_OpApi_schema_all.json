@@ -893,7 +893,10 @@
   "func: npu_bmmV2(Tensor self, Tensor mat2, int[] output_sizes) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor": {
+  "func: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_silu(Tensor self) -> Tensor": {
@@ -1010,7 +1013,10 @@
   "func: npu_scaled_masked_softmax_backward(Tensor y_grad, Tensor y, Tensor mask, Scalar scale, bool fixed_triu_mask) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
+  "func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype, int? grad_dtype=None, int? input_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_binary_cross_entropy_with_logits_backward(Tensor grad_output, Tensor self, Tensor target, Tensor? weight_opt, Tensor? pos_weight_opt, int reduction) -> Tensor": {
@@ -1115,7 +1121,7 @@
   "func: _npu_dropout_gen_mask.Tensor(Tensor self, int[] size, float p, int seed, int offset, *, bool? parallel=True, bool? sync=None) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_quantize(Tensor self, Tensor scales, Tensor? zero_points, ScalarType dtype, int axis=1, bool div_mode=True) -> Tensor": {
+  "func: npu_quantize(Tensor self, Tensor scales, Tensor? zero_points, int dtype, int axis=1, bool div_mode=True) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_anti_quant(Tensor x, Tensor scale, *, Tensor? offset=None, ScalarType? dst_dtype=None, ScalarType? src_dtype=None) -> Tensor": {
@@ -3980,7 +3986,7 @@
   "func: _npu_silent_check_v2(Tensor val, Tensor(a!) input_grad, Tensor(b!) sfda, Tensor(c!) step, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2, int npu_asd_detect) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_dynamic_quant_asymmetric(Tensor input, *, Tensor? smooth_scales=None, Tensor? group_index=None, ScalarType? dst_type=None) -> (Tensor, Tensor, Tensor)": {
+  "func: npu_dynamic_quant_asymmetric(Tensor input, *, Tensor? smooth_scales=None, Tensor? group_index=None, int? dst_type=None) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_prefetch(Tensor self, Tensor? dependency, int max_size, int offset=0) -> ()": {

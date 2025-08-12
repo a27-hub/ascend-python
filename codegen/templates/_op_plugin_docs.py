@@ -1082,13 +1082,14 @@ tensor([[[[0.0000, 0.0639, 0.0000,  ..., 0.0000, 0.0000, 0.0000],
 _add_torch_npu_docstr(
     "npu_dtype_cast",
     """
-torch_npu.npu_dtype_cast(input, dtype) -> Tensor
+torch_npu.npu_dtype_cast(input, dtype, input_dtype=None) -> Tensor
 功能描述
 执行张量数据类型(dtype)转换。支持FakeTensor模式。
 
 参数说明
 input (Tensor) - 输入张量。
-dtype (torch.dtype) - 返回张量的目标数据类型。
+dtype (int) - 返回张量的目标数据类型。
+input_dtype (int) - 输入张量的数据类型， 默认值为None。为None时，采用输入张量原本的数据类型。
 示例
 示例一：
 
@@ -3360,14 +3361,14 @@ y=round(x×smooth_scales/scale)
 owMax表示求一行的最大值, DTYPE_MAX表示常量, 是y输出对应的数据类型的最大值. 
 
 接口原型:
-torch_npu.npu_dynamic_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? group_index=None, ScalarType? dst_type=None) ->(Tensor, Tensor)
+torch_npu.npu_dynamic_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? group_index=None, int? dst_type=None) ->(Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 需要进行量化的源数据张量, 必选输入, 数据类型支持torch.float16、torch.bfloat16, 数据格式支持ND, 支持非连续的Tensor. 输入x的维度必须大于1. 进行int4量化时, 要求x形状的最后一维是8的整数倍. 
 smooth_scales: Tensor类型, 对x进行scales的张量, 可选输入, 数据类型支持torch.float16、torch.bfloat16, 数据格式支持ND, 支持非连续的Tensor. shape必须是1维, 和x的最后一维相等. 
 单算子模式: smooth_scales的dtype必须和x保持一致. 
 group_index: Tensor类型, 对smooth_scales进行分组的下标, 可选输入, 仅在MoE场景下生效. 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
-dst_type: ScalarType类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理. 
+dst_type: int类型，用于选择进行INT8/INT4/FLOAT8_E5M2/FLOAT8_E4M3FN/HIFLOAT8量化，可选输入，输入值只能是torch.int8，torch.quint4x2，torch.float8_e5m2，torch.float8_e4m3fn，torch_npu.hifloat8，默认为INT8量化。
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8、torch.quint4x2. 
 Atlas A3 训练系列产品: 支持取值torch.int8、torch.quint4x2. 
 
@@ -3550,7 +3551,131 @@ print(out)
 print(scale)
 print(offset)
 """
+
+
 )
+
+_add_torch_npu_docstr(
+    "npu_dynamic_mx_quant",
+    """
+功能描述:
+    目的数据类型为float4、float8的动态对此量化。在给定的轴上，根据每blocksize个数，计算出这组数对于的量化尺度mxscale作为输出mxscaleOut的队友部分，然后这组书每一个除以mxscale，
+    根据round_mode转换到对应的dst_type，得到量化结果y作为yOut的对应部分。
+
+计算公式：
+    - 将输入x在axis维度上按k = blocksize个数分子，一组k个数 \{\{V_i\}_{i=1~k}\} 动态量化为 \{mxscale_i, \{P_i\}_{i=1~k}\}，k=blocksize。
+    1. share_exp = floor(log_2(max_i(|V_i|))) - emax
+    2. mxscale = 2^{shape_exp}
+    3. P_i = cast_to_dst_type(V_i / mxscale_i, round_mode), i from 1 to blocksize
+    - 量化后的P_i按对应的V_i的位置组成输出yOut，mxscale按对应的axis维度上的分组著称输出mxscaleOut。
+    - emax：对应的数据类型的最大正则数的指数位
+    |DataType       |emax   |
+    |FLOAT4_E2M1    |2      |
+    |FLOAT4_E1M2    |0      |
+    |FLOAT8_E4M3FN  |8      |
+    |FLOAT8_E5M2    |15     |
+
+接口原型:
+    def npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode="rint", int dst_type=296, int block_size=32)
+    注：296为torch_npu.float4_e2m1。
+
+参数说明:
+    - input：Tensor类型，需要量化的数据，数据类型支持torch.float16，torch.bfloat16，shape支持1~8维度。
+    - axis：int类型的属性，公式中的axis，量化发生的轴，取值范围为[-D, D-1]，D为input的shape的维数。
+    - round_mode：string类型的属性，指定量化结果cast到输出y的数据类型的模式，默认值"rint"。
+        - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，支持"rint", "floor", "round"。
+        - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，仅支持"rint"。
+    - dst_type：int类型的属性，指定输出y的数据类型，默认值为296（即torch_npu.float4_e2m1），支持取值torch_npu.float4_e2m1，torch_npu.float4_e1m2，
+        torch.float8_e5m2，torch_npu.float8_e5m2时，torch.float8_e4m3fn，torch_npu.float8_e4m3fn。
+    - block_size：int类型的属性，指定每次量化的元素个数，默认值为32。仅支持32的倍数，不能为0，且不能大于1024。
+输出说明：
+    - y：Tensor类型，输入x量化后的对应结果，数据类型有参数dst_type指定，shape与输入一致。
+        - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，y的输出tensor数据类型为torch.float8_e5m2。
+        - 当dst_type为torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，y的输出tensor数据类型为torch.float8_e4m3fn。
+        - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，y的输出tensor数据类型为torch.uint8，查看具体值需要通过en_dtypes库的方法转换。
+    - mxscale：Tensor类型，表示每个分组对应的量化尺度，真是的数据类型为torch_npu.float8_e8m0，shape在axis轴上为x对应轴除以blocksize向上取整，并对其进行偶数pad，pad填充值为0，
+        即mxscale.shape[axis] = (ceil(x.shape[axis] / blocksize) + (ceil(x.shape[axis] / blocksize)) % 2)，其余维度与x保持一致。
+
+约束说明:
+    - 参数block_size仅支持32的倍数，不能为0，且不能大于1024。
+    - 输出的目标类型为float4时，x的最后一维必须为偶数。
+    - 该接口支持涂抹式（目前仅支持Pytorch 2.1 版本）。
+    - 指定输出y的Tensor实际数据类型为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，y的输出tensor数据类型为torch.uint8，查看具体值需要通过en_dtypes库的方法转换。
+    - 输出的mxscale的tensor实际数据类型为torch.uint8，查看float8_e8m0的具体值需要通过en_dtypes库的方法转换。
+    - 当dst_type为torch_npu.float4_e2m1，torch_npu.float4_e1m2时，支持"rint", "floor", "round"。
+    - 当dst_type为torch.float8_e5m2，torch_npu.float8_e5m2时，torch.float8_e4m3fn，torch_npu.float8_e4m3fn时，仅支持"rint"。
+支持的型号:
+  昇腾910_95 AI处理器
+
+调用示例:
+1. 单算子调用
+
+import torch
+import torch_npu
+import en_dtypes
+
+def dynamic_mx_quant_test(x_dtype, dst_type):
+    # 构造x tensor
+    x = torch.randn((16,256), dtype=x_dtype).npu()
+    y_tmp, mxscale = torch_npu.npu_dynamic_mx_quant(x, axis=-1, dst_type=dst_type, block_size=32)
+    if dst_type == torch_npu.float4_e2m1:
+        y = y_tmp.cpu().numpy().astype(en_dtypes.float4_e2m1)
+    elif dst_type == torch_npu.float4_e1m2:
+        y = y_tmp.cpu().numpy().astype(en_dtypes.float4_e1m2)
+    else:
+        y = y_tmp.cpu()
+    mxscale = mxscale.cpu().numpy().astype(en_dtypes.float8_e8m0)
+    print("DynamicMxQuant result:")
+    print("x:\n", x)
+    print("y:\n", y)
+    print("mxscale:\n", mxscale)
+
+if __name__ == "__main__":
+    dynamic_mx_quant_test(torch.float16, torch.float8_e5m2)
+
+
+2. 图模式调用
+import torch
+import torch_npu
+import torchair
+import torch._dynamo
+import en_dtypes
+
+os.environ['bits8'] = 'hif8'
+
+class DynamicMxQuantModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x, axis=-1, round_mode='rint', dst_type=torch_npu.float4_e2m1, block_size=32):
+        return torch_npu.npu_dynamic_mx_quant(x, axis=axis, round_mode=round_mode, dst_type=dst_type, block_size=block_size)
+
+def dynamic_mx_quant_test(x_dtype, dst_type):
+    # 构造x tensor
+    x = torch.randn((16,256), dtype=x_dtype).npu()
+    model = DynamicMxQuantModel()
+    model.to('npu')
+    config = torchair.CompilerConfig()
+    npu_backend = torchair.get_npu_backend(compiler_config=config)
+    model = torch.compile(model, backend=npu_backend, dynamic=True)
+    y_tmp, mxscale = model(x, axis=-1, dst_type=dst_type, block_size=32)
+    if dst_type == torch_npu.float4_e2m1:
+        y = y_tmp.cpu().numpy().astype(en_dtypes.float4_e2m1)
+    elif dst_type == torch_npu.float4_e1m2:
+        y = y_tmp.cpu().numpy().astype(en_dtypes.float4_e1m2)
+    else:
+        y = y_tmp.cpu()
+    mxscale = mxscale.cpu().numpy().astype(en_dtypes.float8_e8m0)
+    print("DynamicMxQuant result:")
+    print("x:\n", x)
+    print("y:\n", y)
+    print("mxscale:\n", mxscale)
+
+if __name__ == "__main__":
+    dynamic_mx_quant_test(torch.float16, torch.float8_e5m2)
+    
+"""
+)
+
 
 _add_torch_npu_docstr(
     "npu_quant_matmul",
@@ -8302,7 +8427,7 @@ _add_torch_npu_docstr(
     "npu_quantize",
     """
 接口原型：
-torch_npu.npu_quantize(Tensor input, Tensor scales, Tensor? zero_points, ScalarType dtype, int axis=1, bool div_mode=True) -> Tensor
+torch_npu.npu_quantize(Tensor input, Tensor scales, Tensor? zero_points, int dtype, int axis=1, bool div_mode=True) -> Tensor
 
 功能描述
 算子功能: 对输入的张量进行量化处理. 
@@ -8315,27 +8440,27 @@ input: Tensor类型, 需要进行量化的源数据张量, 数据格式支持ND,
 Atlas 推理系列产品: 数据类型支持float、float16. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、float16、bfloat16. 
 scales: Tensor类型, 对input进行scales的张量, 必选输入: 
-div_mode为True时
-Atlas 推理系列产品: 数据类型支持float. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、bfloat16. 
-div_mode为False时, 数据格式支持ND, 支持非连续的Tensor. 支持1维或多维(1维时, 对应轴的大小需要与input中第axis维相等或等于1; 多维时, scales的shape需要与input的shape维度相等, 除axis指定的维度, 其他维度为1, axis指定的维度必须和input对应的维度相等或等于1). 
-Atlas 推理系列产品: 数据类型支持float、float16. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、float16、bfloat16. 
+    div_mode为True时
+    Atlas 推理系列产品: 数据类型支持float. 
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、bfloat16. 
+    div_mode为False时, 数据格式支持ND, 支持非连续的Tensor. 支持1维或多维(1维时, 对应轴的大小需要与input中第axis维相等或等于1; 多维时, scales的shape需要与input的shape维度相等, 除axis指定的维度, 其他维度为1, axis指定的维度必须和input对应的维度相等或等于1). 
+    Atlas 推理系列产品: 数据类型支持float、float16. 
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、float16、bfloat16. 
 zero_points: Tensor类型, 对input进行offset的张量, 可选输入. 
-div_mode为True时
-Atlas 推理系列产品: 数据类型支持int8、uint8、int32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持int8、uint8、int32、bfloat16. 
-div_mode为False时, 数据格式支持ND, 支持非连续的Tensor. 支持1维或多维(1维时, 对应轴的大小需要与input中第axis维相等或等于1; 多维时, scales的shape需要与input维度相等, 除axis指定的维度, 其他维度为1, axis指定的维度必须和input对应的维度相等). zero_points的shape和dtype需要和scales一致. 
-Atlas 推理系列产品: 数据类型支持float、float16. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、float16、bfloat16. 
+    div_mode为True时
+    Atlas 推理系列产品: 数据类型支持int8、uint8、int32. 
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持int8、uint8、int32、bfloat16. 
+    div_mode为False时, 数据格式支持ND, 支持非连续的Tensor. 支持1维或多维(1维时, 对应轴的大小需要与input中第axis维相等或等于1; 多维时, scales的shape需要与input维度相等, 除axis指定的维度, 其他维度为1, axis指定的维度必须和input对应的维度相等). zero_points的shape和dtype需要和scales一致. 
+    Atlas 推理系列产品: 数据类型支持float、float16. 
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float、float16、bfloat16. 
 dtype: ScalarType类型int类型, 指定输出参数的类型. 
-div_mode为True时, 
-Atlas 推理系列产品: 类型支持torch.qint8、torch.quint8、torch.int32. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 类型支持torch.qint8、torch.quint8、torch.int32. 
-div_mode为False时, 类型支持torch.qint8、torch.quint4x2. 如果dtype为torch.quint4x2时, 输出tensor类型为int32, 由8个int4拼接. 
+    div_mode为True时, 
+    Atlas 推理系列产品: 类型支持torch.qint8、torch.quint8、torch.int32. 
+    Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 类型支持torch.qint8、torch.quint8、torch.int32. 
+    div_mode为False时, 类型支持torch.qint8、torch.quint4x2. 如果dtype为torch.quint4x2时, 输出tensor类型为int32, 由8个int4拼接. 
 axis: int类型, 量化的elemwise轴,  其他的轴做broadcast, 默认值为1. 
-div_mode为False时, axis取值范围是[-2, +∞)且指定的轴不能超过输入input的维度数. 如果axis=-2, 代表量化的elemwise轴是输入input的倒数第二根轴; 如果axis大于-2, 量化的elemwise轴是输入的最后一根轴. 
-div_mode: 布尔类型, 表示计算scales模式. 当div_mode为True时, 表示用除法计算scales; div_mode为False时, 表示用乘法计算scales, 默认值为True. 
+    div_mode为False时, axis取值范围是[-2, +∞)且指定的轴不能超过输入input的维度数. 如果axis=-2, 代表量化的elemwise轴是输入input的倒数第二根轴; 如果axis大于-2, 量化的elemwise轴是输入的最后一根轴. 
+    div_mode: 布尔类型, 表示计算scales模式. 当div_mode为True时, 表示用除法计算scales; div_mode为False时, 表示用乘法计算scales, 默认值为True. 
 
 输出说明
 y: Tensor类型, 公式中的输出, 输出大小与input一致. 数据类型由参数dtype指定, 如果参数dtype为torch.quint4x2, 输出的dtype是torch.int32, shape的最后一维是输入shape最后一维的1/8, shape其他维度和输入一致. 
