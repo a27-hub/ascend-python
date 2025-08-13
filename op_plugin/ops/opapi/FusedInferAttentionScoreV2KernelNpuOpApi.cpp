@@ -29,6 +29,9 @@ const static int64_t DIM_1 = 1;
 const static int64_t DIM_2 = 2;
 const static int64_t DIM_3 = 3;
 const static int64_t DIM_4 = 4;
+const static int64_t PA_BBH_DIMS = 3;
+const static int64_t PA_BNBD_DIMS = 4;
+const static int64_t PA_NZ_DIMS = 5;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -89,15 +92,15 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
     } else if (input_layout_str == "TND") {
         int64_t kv_dim = value.dim();
         if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            if (kv_dim == 3) {
+            if (kv_dim == PA_BBH_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) / num_key_value_heads},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == 4) {
+            } else if (kv_dim == PA_BNBD_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_3)},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == 5) {
+            } else if (kv_dim == PA_NZ_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) * value.size(DIM_4)},
                     query.options().dtype(query.dtype()));
@@ -113,15 +116,15 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
             kv_dim = query.dim();
         }
         if (block_table.has_value()) {
-            if (kv_dim == 3) {
+            if (kv_dim == PA_BBH_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) / num_key_value_heads},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == 4) {
+            } else if (kv_dim == PA_BNBD_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_3)},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == 5) {
+            } else if (kv_dim == PA_NZ_DIMS) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) * value.size(DIM_4)},
                     query.options().dtype(query.dtype()));
