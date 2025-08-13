@@ -6345,6 +6345,18 @@ official:
     op_api: [v2.1, newest]
 
 custom:
+  - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_ks, Tensor top_ps, Tensor q, Float eps=1e-8, Bool is_need_logits=False) -> (Tensor, Tensor)
+    acl_op: all_version
+    op_api: all_version
+    gen_opapi: # ? how to define size and dtype for returns (need help)
+      logits_select_idx:
+        size: self
+        dtype: self
+      logits_top_kp_select:
+        size: self
+        dtype: self
+      exec: aclnnTopKTopPSample
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 

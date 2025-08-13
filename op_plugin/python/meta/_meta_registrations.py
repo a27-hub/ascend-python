@@ -1633,3 +1633,8 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(permute_per_token_scales_size, dtype=torch.float32, device=tokens.device),
             torch.empty(permute_token_idx_size, dtype=torch.int32, device=tokens.device),
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
+            
+@impl(m, "npu_top_k_top_p_sample")
+def npu_top_k_top_p_sample_meta(logits, top_ks, top_ps, q, eps=1e-8, is_need_logits=False):
+    # ?: how to code the return sizes and types? (need help)
+    return torch.empty(self_size, dtype=grad.dtype, device=grad.device)
