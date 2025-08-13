@@ -86,6 +86,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_2);
     } else if (input_layout_str == "TND") {
+        int64_t kv_dim = value.dim();
         if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             if (kv_dim == 3) {
                 tmp_output = OpPreparation::apply_tensor_without_format(
