@@ -1,14 +1,26 @@
 # （beta）torch_npu.npu.utils.npu_check_overflow
 
+
+## 产品支持情况
+
+| 产品                                                      | 是否支持 |
+| --------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品</term>                        |    √     |
+| <term>Atlas A2 训练系列产品</term>                        |    √     |
+| <term>Atlas 推理系列产品</term>                           |    √     |
+| <term>Atlas 训练系列产品</term>                           |    √     |
+
+## 功能说明
+
+检测梯度是否溢出，INF_NAN模式下检测输入Tensor是否溢出；饱和模式通过检查硬件溢出标志位判断是否溢出。
+
 ## 函数原型
 
 ```
 torch_npu.npu.utils.npu_check_overflow(grad) -> bool
 ```
 
-## 功能说明
 
-检测梯度是否溢出，INF_NAN模式下检测输入Tensor是否溢出；饱和模式通过检查硬件溢出标志位判断是否溢出。
 
 ## 参数说明
 
@@ -18,12 +30,6 @@ torch_npu.npu.utils.npu_check_overflow(grad) -> bool
 
 True溢出，False未溢出。
 
-## 支持的型号
-
-- <term>Atlas 训练系列产品</term>
-- <term>Atlas A2 训练系列产品</term>
-- <term>Atlas A3 训练系列产品</term>
-- <term>Atlas 推理系列产品</term>
 
 ## 调用示例
 

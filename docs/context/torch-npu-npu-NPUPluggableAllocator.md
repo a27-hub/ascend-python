@@ -1,8 +1,28 @@
 # torch_npu.npu.NPUPluggableAllocator
 
+
+## 产品支持情况
+
+| 产品                                                      | 是否支持 |
+| --------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品</term>                        |    √     |
+| <term>Atlas A2 训练系列产品</term>                        |    √     |
+| <term>Atlas 推理系列产品</term>                           |    √     |
+| <term>Atlas 训练系列产品</term>                           |    √     |
+
+
+
+
+## 功能说明
+
+从so文件加载的NPU内存分配器。
 ## 定义文件
 
 torch_npu/npu/memory.py
+
+
+
+
 
 ## 函数原型
 
@@ -10,9 +30,6 @@ torch_npu/npu/memory.py
 torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name)
 ```
 
-## 功能说明
-
-从so文件加载的NPU内存分配器。
 
 ## 参数说明
 
@@ -26,12 +43,7 @@ alloc_fn_name内存申请函数名必须与c/c++文件中函数名一致。
 
 free_fn_name内存释放函数名必须与c/c++文件中函数名一致。
 
-## 支持的型号
 
-- <term> Atlas 训练系列产品</term> 
-- <term> Atlas A2 训练系列产品</term> 
-- <term> Atlas A3 训练系列产品</term> 
-- <term> Atlas 推理系列产品</term>
 
 ## 调用示例
 
