@@ -56,6 +56,7 @@ def compare_cv(golden: torch.Tensor, golden_high_type: torch.Tensor, actual: tor
 
 class TestGroupedMatmulAdd(TestCase):
 
+    @unittest.skip('Skip until cann package after 20240813 is used.')
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_reduce_sum_01(self):
         B, M, K, N = 8, 2048, 1024, 7168
@@ -91,6 +92,7 @@ class TestGroupedMatmulAdd(TestCase):
 
         self.assertTrue(compare_cv(golden_fp32, golden_bf16, custom_out.cpu()))
 
+    @unittest.skip('Skip until cann package after 20240813 is used.')
     @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_reduce_sum_02(self):
         B, M, K, N = 16, 1024, 1024, 7168
