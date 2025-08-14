@@ -9399,6 +9399,149 @@ Atlas A2训练系列产品
 """
 )
 
+_add_torch_npu_docstr(
+    "_npu_nsa_compress_attention_infer_get_max_workspace",
+    """
+功能描述:
+算子功能：用于npu_nsa_compress_attention_infer算子aclgraph入图场景，获取最大workspace size并创建一个此size大小的tensor。
+
+接口原型:
+_npu_nsa_compress_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *,str layout='TND', Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None) -> Tensor
+
+参数说明:
+输入与npu_nsa_compress_attention_infer一致
+输出类型为Tensor, 由aclnnNsaCompressAttentionInferGetMaxWorkspaceSize返回最大的Size，返回创建的workspace tensor。
+
+约束说明:
+参数query中的N和numHeads值相等，key、value的N和numKeyValueHeads值相等，并且numHeads是numKeyValueHeads的倍数关系。
+参数query中的D和key的D(H/numKeyValueHeads)值相等，value的D(H/numKeyValueHeads)和output的D值相等。
+参数query中的B是[1, 10000]区间内的整数。
+参数query中的B与blockTable中的B与actualCmpKvSeqLenOptional数组的长度相等。
+参数key中的numBlocks和参数value中的numBlocks值相等。
+参数key中的blockSize、参数value中的blockSize和pageBlockSize值相等。
+query，key，value输入，功能使用限制如下：
+支持query的N轴必须是key/value的N轴（H/D）的整数倍。
+支持query的N轴与key/value的N轴（H/D）的比值（即GQA中的group大小）小于等于128，且128是group的整数倍。
+支持query与Key的D轴小于等于192。
+支持value的D轴小于等于128。
+支持query与Key的D轴大于等于value的D轴。
+支持key与value的blockSize小于等于128，且是16的整数倍。
+仅支持query的S轴等于1。
+仅支持paged attention。
+仅支持key/value的S轴小于等于8192。
+仅支持compressBlockSize取值16、32、48、64、80、96、112、118。
+仅支持compressBlockStride取值16、32、48、64。
+仅支持selectBlockSize取值16、32、48、64、80、96、112、118。
+仅支持compressBlockSize大于等于compressBlockStride , selectBlockSize大于等于compressBlockSize , selectBlockSize是compressBlockStride的整数倍。
+压缩前的kvSeqlen的上限可以表示为：NoCmpKvSeqlenCeil =（cmpKvSeqlen - 1）* compressBlockStride + compressBlockSize，需要满足NoCmpKvSeqlenCeil / selectBlockSize <= 4096，且需要满足selectBlockCount <= NoCmpKvSeqlenCeil / selectBlockSize。
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+    batch_size = 10
+    Seq = 1
+    head_num = 4
+    key_value_head_num = 2
+    head_dim = 8
+    seq_length = 512
+    hidden_dim = head_num * head_dim 
+    page_block_size = 32
+    block_table = torch.tensor([[ 1] * ((seq_length + page_block_size - 1) // page_block_size)]*batch_size, device="npu").int()
+    head_dim_vo = 6
+    query = torch.randn([batch_size * Seq, head_num, head_dim], dtype=torch.float16, device="npu")
+    key = torch.randn([batch_size*5, page_block_size, key_value_head_num * head_dim], dtype=torch.float16, device="npu")
+    value = torch.randn([batch_size*5, page_block_size, key_value_head_num * head_dim_vo], dtype=torch.float16, device="npu")
+    scale_value = 0.01
+
+    select_block_size = 64
+    select_block_count = 8
+
+    compress_block_size = 32
+    compress_stride = 16
+
+    actual_cmp_seq_kvlen = [95] * batch_size
+    atten_mask = None
+    topk_mask = None
+    actual_seq_qlen = None
+    actual_sel_seq_kvlen = None
+
+
+    res = torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, 
+                                                        select_block_size, select_block_count, page_block_size, 
+                                                        compress_block_size, compress_stride, block_table=block_table, 
+                                                        atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
+                                                        actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None)
+
+    # 入图方式
+    g = torch.npu.NPUGraph()
+    event = torch.npu.ExternalEvent()
+    update_stream = torch.npu.Stream()
+    output = None 
+    topKOutput = None
+    handle = None
+    workspace = torch_npu._npu_nsa_compress_attention_infer_get_max_workspace(query, key, value, scale_value, head_num, key_value_head_num, 
+                                                        select_block_size, select_block_count, page_block_size, 
+                                                        compress_block_size, compress_stride, block_table=block_table, 
+                                                        atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
+                                                        actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None)
+
+    with torch.npu.graph(g):
+        stream = torch.npu.current_stream()
+        output = torch.empty((batch_size, head_num, head_dim_vo), dtype=torch.float16, device="npu")
+        topKOutput = torch.empty((batch_size, key_value_head_num, select_block_count), dtype=torch.int32, device="npu")
+        event.wait(stream)
+        event.reset(stream)
+        torch.npu.graph_task_group_begin(stream)
+        torch_npu.npu_nsa_compress_attention_infer.out(query, key, value, scale_value, head_num, key_value_head_num, 
+                                                        select_block_size, select_block_count, page_block_size, 
+                                                        compress_block_size, compress_stride, atten_mask=None, block_table=block_table,
+                                                        topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, 
+                                                        actual_sel_seq_kvlen=None, workspace = workspace, out=[output, topKOutput])
+        handle = torch.npu.graph_task_group_end(stream)
+
+    with torch.npu.stream(update_stream):
+        torch.npu.graph_task_update_begin(update_stream, handle)
+        torch_npu.npu_nsa_compress_attention_infer.out(query, key, value, scale_value, head_num, key_value_head_num, 
+                                                        select_block_size, select_block_count, page_block_size, 
+                                                        compress_block_size, compress_stride, atten_mask=None, block_table=block_table,
+                                                        topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, 
+                                                        actual_sel_seq_kvlen=None, workspace = workspace, out=[output, topKOutput])
+        torch.npu.graph_task_update_end(update_stream)
+        event.record(update_stream)
+    g.replay()
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_nsa_compress_attention_infer.out",
+"""
+功能描述:
+算子功能：npu_nsa_compress_attention_infer.out算子实现，可用于aclgraph入图场景（需传入workspace tensor），输入参数相比npu_nsa_compress_attention_infer增加workspace、output、topKOutput。
+
+
+接口原型:
+npu_nsa_compress_attention_infer.out(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, str layout='TND', Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None, Tensor? workspace=None, Tensor(a!) output, Tensor(b!) topKOutput) -> (Tensor(a!), Tensor(b!))
+
+参数说明:
+在npu_nsa_compress_attention_infer的基础上增加下面三个参数：
+workspace(可选): 一维Device侧的Input Tensor，数据类型与Query一致；
+output（aclTensor*，计算输出）: Device侧的aclTensor，attention的输出，数据格式支持ND。数据类型支持FLOAT16、BFLOAT16。
+topKOutput（aclTensor*，计算输出）: Device侧的aclTensor，topK的输出，数据格式支持ND，数据类型支持INT32。
+
+约束说明:
+参考npu_nsa_compress_attention_infer算子的约束说明
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例及入图方式:
+参考_npu_nsa_compress_attention_infer_get_max_workspace算子的说明文档
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_nsa_select_attention",
@@ -9531,6 +9674,139 @@ Atlas A2训练系列产品
 """
 )
 
+_add_torch_npu_docstr(
+    "_npu_nsa_select_attention_infer_get_max_workspace",
+    """
+功能描述:
+算子功能：用于npu_nsa_select_attention_infer算子aclgraph入图场景，获取最大workspace size并创建一个此size大小的tensor。
+
+接口原型:
+_npu_nsa_select_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, str la		yout='BSND', Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
+
+参数说明:
+输入与npu_nsa_select_attention_infer一致
+输出类型为Tensor, 由aclnnNsaSelectedAttentionInferGetMaxWorkspaceSize返回最大的Size，返回创建的workspace tensor。
+
+约束说明:
+参数query中的N和numHeads值相等，key、value的N和numKeyValueHeads值相等，并且numHeads是numKeyValueHeads的倍数关系。
+参数query中的D和key的D(H/numKeyValueHeads)值相等，value的D(H/numKeyValueHeads)和output的D值相等。
+query，key，value输入，功能使用限制如下：
+支持B轴小于等于3072；
+支持key/value的N轴小于等于256；
+支持query的N轴与key/value的N轴（H/D）的比值（即GQA中的group大小）小于等于16；
+支持query与Key的D轴等于192；
+支持value的D轴等于128；
+支持Key与Value的blockSize等于64或128；
+仅支持query的S轴等于1。
+仅支持paged attention。
+仅支持selectBlockSize取值为16的整数倍，最大支持到128。
+selectBlockCount上限满足selectBlockCount * selectBlockSize <= MaxKvSeqlen，MaxKvSeqlen = Max(actualSelKvSeqLenOptional)。
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+    batch_size=2
+    kv_seqlen= 128
+    page_block_size=128
+    num_key_value_heads=2
+    num_heads= 32
+    selected_block_size=64
+    actual_seq_kvlen=[kv_seqlen]*batch_size
+    max_k_seqlen=max(actual_seq_kvlen)
+    layout="BSND"
+    select_block_count = 2
+    atten_mask = None
+    scale_value=0.0721
+    g=4
+    d1 = 192
+    d2 = 128
+    actual_seq_qlen = [1]*batch_size
+    max_num_blocks_per_seq = math.ceil(max_k_seqlen / page_block_size)
+    block_table = torch.tensor([[ 1] * ((max_k_seqlen + page_block_size - 1) // page_block_size)]*batch_size, device="npu").int()
+    query = torch.randn([batch_size ,1, num_heads, d1], dtype=torch.float16, device="npu")
+    key = torch.randn([batch_size*max_num_blocks_per_seq, page_block_size, num_key_value_heads , d1], dtype=torch.float16, device="npu")
+    value = torch.randn([batch_size*max_num_blocks_per_seq, page_block_size, num_key_value_heads , d2], dtype=torch.float16, device="npu")
+    topk_indices =torch.tensor([[[ 0, -1],[ 0, -1]],
+                    [[ 1, -1],[ 1, -1]]
+                    ],dtype=torch.int32, device = 'npu')
+
+
+    res = torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, num_heads, 
+                                                    num_key_value_heads, selected_block_size, select_block_count, 
+                                                    page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                    block_table=block_table, actual_seq_qlen=actual_seq_qlen, 
+                                                    actual_seq_kvlen=actual_seq_kvlen)
+    # 入图方式
+    g = torch.npu.NPUGraph()
+    event = torch.npu.ExternalEvent()
+    update_stream = torch.npu.Stream()
+    output = None
+    handle = None
+    workspace = torch_npu._npu_nsa_select_attention_infer_get_max_workspace(query, key, value, topk_indices, scale_value, num_heads, 
+                                                    num_key_value_heads, selected_block_size, select_block_count, 
+                                                    page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                    block_table=block_table, actual_seq_qlen=actual_seq_qlen, 
+                                                    actual_seq_kvlen=actual_seq_kvlen)
+    size_in_bytes = workspace.numel() * workspace.element_size()
+    print(f"{size_in_bytes / 1024 / 1024:.2f} MB, ==============success====================")  # 转换为 MB
+
+    with torch.npu.graph(g):
+        stream = torch.npu.current_stream()
+        output = torch.empty((batch_size, 1, num_heads , d2), dtype=torch.float16, device="npu")
+        event.wait(stream)
+        event.reset(stream)
+        torch.npu.graph_task_group_begin(stream)
+        torch_npu.npu_nsa_select_attention_infer.out(query, key, value, topk_indices, scale_value, num_heads, 
+                                                    num_key_value_heads, selected_block_size, select_block_count, 
+                                                    page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                    block_table=block_table, actual_seq_qlen=actual_seq_qlen, 
+                                                    actual_seq_kvlen=actual_seq_kvlen, workspace = workspace, output=output)
+        handle = torch.npu.graph_task_group_end(stream)
+        print("success empty")
+    
+    with torch.npu.stream(update_stream):
+        torch.npu.graph_task_update_begin(update_stream, handle)
+        torch_npu.npu_nsa_select_attention_infer.out(query, key, value, topk_indices, scale_value, num_heads, 
+                                                    num_key_value_heads, selected_block_size, select_block_count, 
+                                                    page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                    block_table=block_table, actual_seq_qlen=actual_seq_qlen, 
+                                                    actual_seq_kvlen=actual_seq_kvlen, workspace = workspace, output=output)
+        torch.npu.graph_task_update_end(update_stream)
+        event.record(update_stream)
+        print("success updata process")
+
+    g.replay()
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_nsa_select_attention_infer.out",
+    """
+功能描述:
+算子功能：npu_nsa_select_attention_infer.out算子实现，可用于aclgraph入图场景（需传入workspace tensor），输入参数相比npu_nsa_select_attention_infer增加workspace、output。
+
+
+接口原型:
+npu_nsa_select_attention_infer.out(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, str layout='BSND', Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? workspace=None, Tensor(a!) output) -> Tensor(a!)
+
+参数说明:
+在npu_nsa_select_attention_infer的基础上增加下面两个参数：
+workspace(可选): 一维Device侧的Input Tensor，数据类型与Query一致；
+output（aclTensor*，计算输出）: Device侧的aclTensor，attention的输出，数据格式支持ND。数据类型支持FLOAT16、BFLOAT16。
+
+约束说明:
+参考npu_nsa_select_attention_infer算子的约束说明
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例及入图方式:
+参考_npu_nsa_select_attention_infer_get_max_workspace算子说明文档
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_gather_sparse_index",
