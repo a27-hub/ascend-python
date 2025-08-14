@@ -7783,22 +7783,13 @@ custom:
         sparse_mode: '1L'
       exec: aclnnNsaCompressAttention, query, key, value, atten_mask, topk_mask, actual_seq_qlen_value, actual_cmp_seq_kvlen_value, actual_sel_seq_kvlen_value, scale_value, head_num, layout, sparse_mode, compress_block_size, compress_stride, select_block_size, select_block_count, softmax_max_out, softmax_sum_out, attention_out, topk_indices_out
 
-  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, str layout='TND', Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, int[]? actual_seq_qlen=None, int[]? actual_cmp_seq_kvlen=None, int[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)
+  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='TND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)
     op_api: all_version
-    gen_opapi:
-      out:
-        size: 'npu_nsa_compress_attention_infer_out_size(query, value, key_value_head_num, layout)'
-        dtype: query
-      topk_indices_out:
-        size: 'npu_nsa_compress_attention_infer_topk_out_size(query, key_value_head_num, select_block_count, layout)'
-        dtype: at::kInt
-      new_params:
-        layout_attr: 'const_cast<char *>(layout.data())'
-        actual_seq_qlen_value: 'actual_seq_qlen.value_or(at::IntArrayRef{})'
-        actual_cmp_seq_kvlen_value: 'actual_cmp_seq_kvlen.value_or(at::IntArrayRef{})'
-        actual_sel_seq_kvlen_value: 'actual_sel_seq_kvlen.value_or(at::IntArrayRef{})'
-        sparse_mode: '0L'
-      exec: aclnnNsaCompressAttentionInfer, query, key, value, atten_mask, block_table, actual_seq_qlen_value, actual_cmp_seq_kvlen_value, actual_sel_seq_kvlen_value, topk_mask, head_num, key_value_head_num, select_block_size, select_block_count, compress_block_size, compress_stride, scale_value, layout_attr, page_block_size, sparse_mode, out, topk_indices_out
+    internal_format_opapi: all_version
+
+  - func: _npu_nsa_compress_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='TND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
 
   - func: npu_nsa_select_attention(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> (Tensor, Tensor, Tensor)
     op_api: all_version
@@ -7838,18 +7829,13 @@ custom:
         sparse_mode: '2L'
       exec: aclnnNsaSelectedAttentionGrad, query, key, value, attention_out, grad, softmax_max, softmax_sum, topk_indices, actual_seq_qlen_value, actual_seq_kvlen_value, atten_mask, scale_value, select_block_size, select_block_count, head_num, layout, sparse_mode, query_grad, key_grad, value_grad
 
-  - func: npu_nsa_select_attention_infer(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, str layout='BSND', Tensor? atten_mask=None, Tensor? block_table=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> Tensor
+  - func: npu_nsa_select_attention_infer(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='BSND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
     op_api: all_version
-    gen_opapi:
-      out:
-        size: 'npu_nsa_select_attention_infer_out_size(query, value, head_num, key_value_head_num, layout)'
-        dtype: query
-      new_params:
-        layout_ptr: 'const_cast<char *>(layout.data())'
-        sparse_mode: '0L'
-        actual_seq_qlen_value: 'actual_seq_qlen.value_or(at::IntArrayRef{})'
-        actual_seq_kvlen_value: 'actual_seq_kvlen.value_or(at::IntArrayRef{})'
-      exec: aclnnNsaSelectedAttentionInfer, query, key, value, topk_indices, atten_mask, block_table, actual_seq_qlen_value, actual_seq_kvlen_value, layout_ptr, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, scale_value, sparse_mode, out
+    internal_format_opapi: all_version
+
+  - func: _npu_nsa_select_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='BSND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
 
   - func: npu_top_k_top_p(Tensor logits, Tensor p, Tensor k) -> Tensor
     op_api: all_version
@@ -7965,6 +7951,22 @@ symint:
 
   - func: npu_min_backward(Tensor grad, int dim, Tensor indices, SymInt[] sizes, bool keepdim) -> Tensor
     acl_op: [v2.0, newest]
+
+  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='TND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
+
+  - func: _npu_nsa_compress_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='TND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_cmp_seq_kvlen=None, SymInt[]? actual_sel_seq_kvlen=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+
+  - func: npu_nsa_select_attention_infer(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='BSND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+
+  - func: _npu_nsa_select_attention_infer_get_max_workspace(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, *, Tensor? query_rope=None, Tensor? key_rope=None, str layout='BSND', int sparse_mode=0, Tensor? atten_mask=None, Tensor? block_table=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
 
   - func: npu_ps_roi_pooling_backward(Tensor output_grad, Tensor rois, float spatial_scale, int group_size, int output_dim, SymInt[] input_size) -> Tensor
     acl_op: [v2.0, newest]
