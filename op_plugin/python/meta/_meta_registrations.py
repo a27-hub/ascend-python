@@ -799,6 +799,30 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
 
 
+@impl(m, "npu_nsa_select_attention_infer")
+def npu_nsa_select_attention_infer_forward(query, key, value, topk_indices, scale_value, head_num, key_value_head_num, select_block_size, select_block_count,
+                                          page_block_size, *, query_rope=None, key_rope=None, layout='BSND', sparse_mode=0, atten_mask=None, block_table=None, actual_seq_qlen=None, actual_seq_kvlen=None):
+    if layout == "TND":
+        key_head_dim = value.size(2) / key_value_head_num
+        out = torch.empty([query.size(0), query.size(1), head_num * key_head_dim], dtype=query.dtype, device='meta')
+    if layout == "BSND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3)], dtype=query.dtype, device='meta')
+    return out
+
+
+@impl(m, "npu_nsa_compress_attention_infer")
+def npu_nsa_compress_attention_infer_forward(query,  key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size,
+                                           compress_block_size, compress_stride, *, query_rope=None, key_rope=None, layout='TND', sparse_mode=0, atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None,
+                                           actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None):
+    if layout == "TND":
+        out = torch.empty([query.size(0), query.size(1), value.size(2) / key_value_head_num;], dtype=query.dtype, device='meta')
+        topk_indices_out = torch.empty([query.size(0), key_value_head_num, select_block_count], dtype=torch.int32, device='meta')
+    if layout == "BSND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3)], dtype=query.dtype, device='meta')
+        topk_indices_out = torch.empty([query.size(0), query.size(1), key_value_head_num, select_block_count], dtype=torch.int32, device='meta')
+    return (out, topk_indices_out)
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
