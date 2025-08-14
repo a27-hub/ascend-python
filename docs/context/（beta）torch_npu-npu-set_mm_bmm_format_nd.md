@@ -23,4 +23,3 @@ torch_npu.npu.set_mm_bmm_format_nd(bool)
 ```python
 >>>torch_npu.npu.set_mm_bmm_format_nd(True)
 ```
-

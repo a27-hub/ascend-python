@@ -46,30 +46,30 @@ torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("
 ## 调用示例<a name="section14459801435"></a>
 
 ```python
->>> import torch
->>> import torch_npu
->>> import torch.multiprocessing as mp
->>> import os
->>> from torch.distributed.distributed_c10d import _get_default_group
->>> import torch.distributed as dist
->>> def example(rank, world_size):
-        torch.npu.set_device("npu:" + str(rank))
-        dist.init_process_group("hccl", rank=rank, world_size=world_size)
-        default_pg = _get_default_group()
-        if torch.__version__ > '2.0':
-            hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
-        else:
-            hcomm_info = default_pg.get_hccl_comm_name(rank)
-        print(hcomm_info)
->>> def main():
-        world_size = 2
-        mp.spawn(example,
-             args=(world_size, ),
-             nprocs=world_size,
-             join=True)
->>> if __name__ == "__main__":
-        os.environ["MASTER_ADDR"] = "localhost"
-        os.environ["MASTER_PORT"] = "29505"
-        main()
+import torch
+import torch_npu
+import torch.multiprocessing as mp
+import os
+from torch.distributed.distributed_c10d import _get_default_group
+import torch.distributed as dist
+def example(rank, world_size):
+    torch.npu.set_device("npu:" + str(rank))
+    dist.init_process_group("hccl", rank=rank, world_size=world_size)
+    default_pg = _get_default_group()
+    if torch.__version__ > '2.0':
+        hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+    else:
+        hcomm_info = default_pg.get_hccl_comm_name(rank)
+    print(hcomm_info)
+def main():
+    world_size = 2
+    mp.spawn(example,
+            args=(world_size, ),
+            nprocs=world_size,
+            join=True)
+if __name__ == "__main__":
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "29505"
+    main()
 ```
 
