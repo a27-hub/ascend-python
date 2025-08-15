@@ -1267,6 +1267,16 @@ c10::SmallVector<int64_t, SIZE> topk_npu_output_size(const at::Tensor &self, int
     return shape;
 }
 
+c10::SmallVector<int64_t, SIZE> topk_topp_sample_npu_output_size(const at::Tensor &self, int64_t k, int64_t dim)
+{
+    int64_t wrap_dim = make_wrap_dim(dim, self.dim());
+    auto shape = array_to_small_vector(self.sizes());
+    if (shape.size() > 0) {
+        shape[wrap_dim] = k;
+    }
+    return shape;
+}
+
 c10::SmallVector<int64_t, SIZE> transpose_npu_output_size(const at::Tensor &self, c10::IntArrayRef perm)
 {
     auto sizes = self.sizes();
