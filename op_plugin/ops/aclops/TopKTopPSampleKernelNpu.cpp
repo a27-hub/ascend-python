@@ -28,7 +28,10 @@ std::tuple<at::Tensor, at::Tensor> topk_topp_sample_nocheck(
     const at::Tensor& top_ps,
     const at::Tensor& q,
     float eps,
-    bool is_need_logits) 
+    bool is_need_logits,
+    at::Tensor& logits_select_idx,
+    at::Tensor& logits_top_kp_select,
+) 
 {
   at_npu::native::OpCommand cmd;
   cmd.Name("TopKTopPSample")
@@ -37,12 +40,12 @@ std::tuple<at::Tensor, at::Tensor> topk_topp_sample_nocheck(
       .Input(top_ps)
       .Input(q)
       .Output(logits_select_idx)
-      .Output(logits_select_idx)
+      .Output(logits_top_kp_select)
       .Attr("eps", eps)
       .Attr("is_need_logits", is_need_logits)
       .Run();
 
-  return std::tie(logits_select_idx, logits_select_idx);
+  return std::tie(logits_select_idx, logits_top_kp_select);
 }
 } // namespace
 
@@ -61,7 +64,7 @@ std::tuple<at::Tensor, at::Tensor> topk_topp_sample(
   at::Tensor logits_top_kp_select = npu_preparation::apply_tensor(self_cp, logits_top_kp_select_size);
   at::Tensor logits_select_idx = npu_preparation::apply_tensor_with_format(
       logits_select_idx_size, self_cp.options().dtype(at::kLong), ACL_FORMAT_ND);
-  topk_topp_sample_nocheck(logits, top_ks, top_ps, q, eps, is_need_logits);
+  topk_topp_sample_nocheck(logits, top_ks, top_ps, q, eps, is_need_logits, logits_select_idx, logits_top_kp_select);
 
   // logits_select_idx dtype transform Int64
   logits_select_idx = at_npu::native::custom_ops::npu_dtype_cast(logits_select_idx, at::kLong);
