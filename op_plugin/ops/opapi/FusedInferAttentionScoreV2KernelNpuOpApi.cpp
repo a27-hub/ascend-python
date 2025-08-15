@@ -173,7 +173,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
                     c10::dtype(c10::ScalarType::Float));
             } else {
                 softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 1},
-                c10::dtype(c10::ScalarType::Float));
+                    c10::dtype(c10::ScalarType::Float));
             }
         } else {
             softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 1},
