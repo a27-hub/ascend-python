@@ -40,7 +40,7 @@ std::tuple<at::Tensor, at::Tensor> topk_topp_sample(
     }else{
         logits_top_kp_select = npu_preparation::apply_tensor_without_format(logits_top_kp_select_size, logits.options());
     }
-    if (logits.dim() == 0 && top_ks == 0 && top_ps == 0 && q.dim() == 0) {
+    if (logits.dim() == 0 && top_ks.dim() == 0 && top_ps.dim() == 0 && q.dim() == 0) {
         logits_select_idx = at::zeros_like(top_ks);
         return std::tuple<at::Tensor, at::Tensor>(logits_select_idx, logits_top_kp_select);
     }
