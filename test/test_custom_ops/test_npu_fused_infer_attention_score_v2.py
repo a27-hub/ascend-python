@@ -40,22 +40,6 @@ class TestFusedInferAttentionV2(TestCase):
         attn_output1 = torch.matmul(attn_weights1, past_value)
         attn_output1 = attn_output1.transpose(0, 1)
         return attn_output1
-    
-    def supported_op_exec_pa(self, query_states1, past_key, past_value, head_dim, B, N, S, return_softmax_lse):
-        attn_weights1 = torch.matmul(query_states1, past_key.transpose(2, 3)) / 0.0078125
-        if return_softmax_lse:
-            softmax_res, softmax_sum, softmax_max = self.softmax(attn_weights1)
-            lse = np.log(softmax_sum) + softmax_max
-        else:
-            lse = np.zeros([B, N, S, 1], np.float32)
-            attn_weights1 = torch.max(attn_weights1, torch.full(
-                (1, 1), torch.finfo(attn_weights1.dtype).min, device=attn_weights1.device))
-            attn_weights1 = torch.nn.functional.softmax(attn_weights1, dim=-1, dtype=torch.float32).to(query_states1.dtype)
-
-        attn_output1 = torch.matmul(attn_weights1, past_value)
-        key_cache = past_key.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
-        past_value = past_value.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
-        return attn_output1, lse, key_cache, value_cache
 
     def custom_op_exec(self, query, key, value, head_dim, return_softmax_lse):
         softmax_scale = 1 / 0.0078125
@@ -155,7 +139,10 @@ class TestFusedInferAttentionV2(TestCase):
         head_dim = 128
         return_softmax_lse = True
 
-        supported_output, lse_out, key_cache, value_cache = self.supported_op_exec_pa(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
+        supported_output, lse_out = self.supported_op_exec(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
+        key_cache = key.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
+        value_cache = value.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
+
         custom_output = self.custom_op_exec_tnd_pa(query, key_cache, value_cache, head_dim, return_softmax_lse, block_table)
         attention_output = custom_output[0]
 
