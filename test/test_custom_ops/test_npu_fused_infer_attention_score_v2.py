@@ -146,6 +146,7 @@ class TestFusedInferAttentionV2(TestCase):
         custom_output = self.custom_op_exec_tnd_pa(query, key_cache, value_cache, return_softmax_lse, block_table)
         golden_output = supported_output[0]
         attention_output = custom_output[0]
+        self.assertRtolEqual(golden_output, attention_out, prec=0.000001, prec16=0.000001)
 
 if __name__ == "__main__":
     run_tests()
