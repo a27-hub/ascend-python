@@ -828,6 +828,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                 if block_table is not None: 
                     if (query.size(2) == 0):
                         return (torch.empty_like(tmp_out), torch.empty([query.size(1), query.size(0), 0], dtype=torch.float32, device='meta'))
+                    return (torch.empty_like(tmp_out), torch.empty([query.size(1), query.size(0), 1], dtype=torch.float32, device='meta'))
                 return (torch.empty_like(tmp_out), torch.empty([query.size(1), query.size(0), 1], dtype=torch.float32, device='meta'))
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
