@@ -53,7 +53,7 @@ class TestFusedInferAttentionV2(TestCase):
             query, key, value, num_query_heads=32, input_layout="TND", softmax_scale=softmax_scale,
             pre_tokens=65535, next_tokens=65535, return_softmax_lse=return_softmax_lse)
     
-    def custom_op_exec_tnd_pa(self, query, key, value, head_dim, return_softmax_lse, block_table):
+    def custom_op_exec_tnd_pa(self, query, key, value, return_softmax_lse, block_table):
         softmax_scale = 1 / 0.0078125
         return torch_npu.npu_fused_infer_attention_score_v2(
             query, key, value, num_query_heads=1, input_layout="TND", softmax_scale=softmax_scale,
@@ -139,11 +139,12 @@ class TestFusedInferAttentionV2(TestCase):
         head_dim = 128
         return_softmax_lse = True
 
-        supported_output, lse_out = self.supported_op_exec(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
+        supported_output = self.supported_op_exec(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
         key_cache = key.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
         value_cache = value.reshape(1, 1, 128, 8, 16).transpose(0, 1, 3, 2, 4)
 
-        custom_output = self.custom_op_exec_tnd_pa(query, key_cache, value_cache, head_dim, return_softmax_lse, block_table)
+        custom_output = self.custom_op_exec_tnd_pa(query, key_cache, value_cache, return_softmax_lse, block_table)
+        golden_output = supported_output[0]
         attention_output = custom_output[0]
 
 if __name__ == "__main__":
