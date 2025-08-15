@@ -155,8 +155,8 @@ class TestFusedInferAttentionV2(TestCase):
         head_dim = 128
         return_softmax_lse = True
 
-        supported_output, lse_out = self.supported_op_exec_pa(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
-        custom_output = self.custom_op_exec_tnd_pa(query, key, value, head_dim, return_softmax_lse, block_table)
+        supported_output, lse_out, key_cache, value_cache = self.supported_op_exec_pa(query, key, value, head_dim, 1, 1, 128, return_softmax_lse)
+        custom_output = self.custom_op_exec_tnd_pa(query, key_cache, value_cache, head_dim, return_softmax_lse, block_table)
         attention_output = custom_output[0]
 
 if __name__ == "__main__":
