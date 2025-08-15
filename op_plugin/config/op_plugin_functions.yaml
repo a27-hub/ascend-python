@@ -6483,7 +6483,7 @@ custom:
     gen_opapi:
       logits_select_idx:
         size: top_ks
-        dtype: kLong # int64
+        dtype: at::kLong # int64
       logits_top_kp_select:
         size: logits
         dtype: q # float32
