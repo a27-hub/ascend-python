@@ -1322,6 +1322,13 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
         group_type == -1 or group_type == 0,
         lambda: f"group_type only support -1 and 0, but got {group_type} {ops_error(ErrCode.VALUE)}",
     )
+
+    if weight[0].dtype == torch.int32:
+        torch._check(
+            bias is None,
+            lambda: f"When input x is int32, bias should be None",
+        )
+
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
