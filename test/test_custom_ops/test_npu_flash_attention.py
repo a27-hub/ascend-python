@@ -49,6 +49,7 @@ def tsoftmax_grad(dp, softmax_res):
     return res
 
 
+# pylint:disable = huawei-too-many-arguments
 def tbackward(dx, q, k, v, softmax_res, scale):
     drop_res = softmax_res.permute(0, 1, 3, 2)
     dv = torch.matmul(drop_res, dx)
@@ -140,6 +141,7 @@ class TestNPUFlashAttention(TestCase):
                 dk_golden[cu_seqlens_k[i]:cu_seqlens_k[i + 1]] = rearrange(dki_golden, '1 n s d -> s n d')
                 dv_golden[cu_seqlens_k[i]:cu_seqlens_k[i + 1]] = rearrange(dvi_golden, '1 n s d -> s n d')
 
+        # pylint:disable=too-many-return-values
         return (out_golden.detach(), x_max_tnd.detach().reshape(S1, N1, 8), x_sum_tnd.detach().reshape(S1, N1, 8),
                 dx.detach(), dq_golden.detach(), dk_golden.detach(), dv_golden.detach())
 
