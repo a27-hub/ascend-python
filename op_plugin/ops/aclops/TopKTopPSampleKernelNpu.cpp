@@ -30,7 +30,7 @@ std::tuple<at::Tensor, at::Tensor> topk_topp_sample_nocheck(
     float eps,
     bool is_need_logits,
     at::Tensor& logits_select_idx,
-    at::Tensor& logits_top_kp_select,
+    at::Tensor& logits_top_kp_select
 ) 
 {
   at_npu::native::OpCommand cmd;
