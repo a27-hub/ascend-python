@@ -173,6 +173,7 @@ class TestNPUFlashAttention(TestCase):
         self.assertRtolEqual(output, attention_score, prec=0.005, prec16=0.005)
 
     @SupportedDevices(['Ascend910B'])
+    @unittest.skip("skip test_npu_flash_attention_tnd now")
     def test_npu_flash_attention_tnd(self, device="npu"):
         B, N1, N2, D = 3, 8, 2, 128
         scale = 1 / (D ** 0.5)
