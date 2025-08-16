@@ -21,8 +21,8 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 >- Q_S表示query shape中的S，KV_S表示key和value shape中的S，N表示num\_query\_heads。
 
 -   query：Tensor类型，attention结构的Query输入，不支持非连续的Tensor，数据格式支持ND。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持float16、bfloat16。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持float16、bfloat16。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持float16、bfloat16、int8。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持float16、bfloat16、int8。
 
 -   key：Tensor类型，attention结构的Key输入，不支持非连续的Tensor，数据格式支持ND。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持float16、bfloat16、int8、int4（int32）。
