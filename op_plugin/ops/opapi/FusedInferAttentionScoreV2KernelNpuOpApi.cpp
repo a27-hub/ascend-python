@@ -42,7 +42,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
     const c10::optional<at::Tensor> &quant_scale_out,
     const c10::optional<at::Tensor> &block_table,
     int64_t num_query_heads,
-    int64_t num_key_value_heads,
+    int64_t num_key_value_heads, // 增加kvhead用于计算BBH情况下的D
     bool return_softmax_lse,
     const c10::optional<at::Tensor> &query_rope)
 {
@@ -92,15 +92,15 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
     } else if (input_layout_str == "TND") {
         int64_t kv_dim = value.dim();
         if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            if (kv_dim == PA_BBH_DIMS) {
+            if (kv_dim == PA_BBH_DIMS) { // BBH的情况下，D = H / N
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_0), query.size(DIM_1), value.size(DIM_2) / num_key_value_heads},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == PA_BNBD_DIMS) {
+            } else if (kv_dim == PA_BNBD_DIMS) { // BNBD情况下取D
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_0), query.size(DIM_1), value.size(DIM_3)},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == PA_NZ_DIMS) {
+            } else if (kv_dim == PA_NZ_DIMS) { // blockNum, N, D / 16, blockSize, 16取DIM2*DIM4
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_0), query.size(DIM_1), value.size(DIM_2) * value.size(DIM_4)},
                     query.options().dtype(query.dtype()));
@@ -119,16 +119,16 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
         if (kv_dim == 0) {
             kv_dim = query.dim();
         }
-        if (block_table.has_value()) {
-            if (kv_dim == PA_BBH_DIMS) {
+        if (block_table.has_value()) { // pa场景
+            if (kv_dim == PA_BBH_DIMS) { // BBH的情况下，D = H / N
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) / num_key_value_heads},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == PA_BNBD_DIMS) {
+            } else if (kv_dim == PA_BNBD_DIMS) { // BNBD情况下取D
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_3)},
                     query.options().dtype(query.dtype()));
-            } else if (kv_dim == PA_NZ_DIMS) {
+            } else if (kv_dim == PA_NZ_DIMS) { // blockNum, N, D / 16, blockSize, 16取DIM2*DIM4
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2) * value.size(DIM_4)},
                     query.options().dtype(query.dtype()));
@@ -159,7 +159,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
     at::Tensor softmax_lse;
     if (input_layout_str == "TND") {
         if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            if (query.size(DIM_2) == 0) {
+            if (query.size(DIM_2) == 0) { // 增加softmax lse的情况下，可能存在空tensor的分支
                 softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_0), num_query_heads, 0},
                     c10::dtype(c10::ScalarType::Float));
             } else {
@@ -171,8 +171,8 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
                 c10::dtype(c10::ScalarType::Float));
         }
     } else if (input_layout_str == "NTD_TND") {
-        if (block_table.has_value()) {
-            if (query.size(DIM_2) == 0) {
+        if (block_table.has_value()) { // pa场景
+            if (query.size(DIM_2) == 0) { // 增加softmax lse的情况下，可能存在空tensor的分支
                 softmax_lse = npu_preparation::apply_tensor_without_format({query.size(DIM_1), query.size(DIM_0), 0},
                     c10::dtype(c10::ScalarType::Float));
             } else {
