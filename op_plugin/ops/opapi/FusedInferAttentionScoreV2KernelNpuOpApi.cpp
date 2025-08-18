@@ -103,8 +103,6 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
             } else if (kv_dim == PA_NZ_DIMS) { // blockNum, N, D / 16, blockSize, 16取DIM2*DIM4
                 tmp_output = OpPreparation::apply_tensor_without_format(
                     {query.size(DIM_0), query.size(DIM_1), value.size(DIM_2) * value.size(DIM_4)},
-
-
                     query.options().dtype(query.dtype()));
             } else {
                 tmp_output = OpPreparation::apply_tensor_without_format(
