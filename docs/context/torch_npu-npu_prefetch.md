@@ -1,8 +1,16 @@
 # torch_npu.npu_prefetch
 
+
+## 产品支持情况
+
+| 产品                                                         | 是否支持 |
+| ------------------------------------------------------------ | :------: |
+|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>            |    √     |
+
+ 
 ## 功能说明
 
-提供网络weight预取功能，将需要预取的权重搬到L2 Cache中。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果基于用户对并行的处理。
+- 提供网络(`weight`)预取功能，将需要预取的权重搬到L2 Cache中。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果基于用户对并行的处理。
 
 ## 函数原型
 
@@ -17,7 +25,7 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> ()
 - **max_size** (`int`)：取值需大于0，表示权重预取的最大size，超过预取权重的size时，会设置为权重的最大size。数据类型为`int32`、`int64`。
 - **offset** (`int`)：默认值0，取值大于等于0，表示权重预取内存地址偏移，不允许超过权重地址范围。数据类型为`int32`、`int64`。
 
-## 返回值
+## 返回值说明
 
 无
 
@@ -25,9 +33,7 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> ()
 
 该接口支持图模式（PyTorch 2.1版本）。
 
-## 支持的型号
 
-<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
 
 ## 调用示例
 

@@ -1,8 +1,17 @@
 # torch_npu.npu_convert_weight_to_int4pack
 
+## 产品支持情况
+
+| 产品                                                         | 是否支持 |
+| ------------------------------------------------------------ | :------: |
+|<term>Atlas A3 训练系列产品</term>            |    √     |
+|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √    |
+|<term>Atlas A3 推理系列产品</term>                                       |    √     |
+|
+
 ## 功能说明
 
-将`int32`类型的输入tensor打包为`int4`存放，每8个`int4`数据通过一个`int32`数据承载，并进行交叠排放。
+将`int32`类型的输入（`tensor`)打包为`int4`存放，每8个`int4`数据通过一个`int32`数据承载，并进行交叠排放。
 
 ## 函数原型
 
@@ -25,10 +34,6 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
 - 该接口支持推理场景下使用。
 - 该接口支持图模式（PyTorch 2.1版本）。
 
-## 支持的型号
-
-- <term> Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> 
-- <term> Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> 
 
 ## 调用示例
 
