@@ -2571,6 +2571,7 @@ def npu_moe_token_permute_grad_meta(tokens, grad_permuted_tokens, indices, sorte
     N, D = tokens.shape
     return torch.empty((N, D), dtype=tokens.dtype, device=tokens.device)
 
+
 @impl(m, "npu_moe_token_unpermute_grad")
 def npu_moe_token_unpermute_grad_meta(permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs=None, padded_mode=False, restore_shape=None):
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
