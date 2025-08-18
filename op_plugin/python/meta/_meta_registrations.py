@@ -2575,7 +2575,5 @@ def npu_moe_token_unpermute_with_routing_map_grad(unpermuted_tokens_grad, out_in
 
 @impl(m, "npu_top_k_top_p_sample")
 def npu_top_k_top_p_sample(logits, top_ks, top_ps, q, eps=1e-8, is_need_logits=False):
-    # using torch.empty_like
     return (torch.empty_like(top_ks, dtype=torch.int64),
-            torch.empty_like(logits, dtype=q.dtype)
-    )
+            torch.empty_like(logits, dtype=q.dtype))
