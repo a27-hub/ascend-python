@@ -20,7 +20,7 @@ torch_npu.npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value
 >**说明：**<br>
 >
 >- query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示隐藏层的大小、N（Head Num）表示多头数、D（Head Dim）表示隐藏层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
->- Q_S表示query shape中的S，KV_S表示key和value shape中的S，N表示num\_query\_heads。
+>- Q_S和S1表示query shape中的S，KV_S和S2表示key和value shape中的S，N表示num\_query\_heads。
 
 -   **query** (`Tensor`)：必选参数。attention结构的Query输入，不支持非连续的Tensor，数据格式支持ND。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持float16、bfloat16。

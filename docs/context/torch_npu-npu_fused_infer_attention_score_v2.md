@@ -17,7 +17,7 @@
     Attention(Q,K,V)=Softmax(\frac{QK^T}{\sqrt{d}})V
     $$
 
-    其中$Q$和$K^T$的乘积代表输入$x$的注意力，为避免该值变得过大，通常除以$d$的开根号进行缩放，并对每行进行softmax归一化，与$V$相乘后得到一个$n*d$的矩阵。
+    其中$Q$和$K^T$的乘积代表输入$x$的注意力，$d$代表$Q$，$K$矩阵的列数，即向量维度。为避免该值变得过大，通常除以$d$的开根号进行缩放，并对每行进行softmax归一化，与$V$相乘后得到一个$n*d$的矩阵，$n$为输出矩阵的行数，也等于$Q$矩阵的行数。
 
 ## 函数原型<a name="zh-cn_topic_0000001832267082_section45077510411"></a>
 
@@ -297,10 +297,10 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         -   dequant\_scale\_key和dequant\_scale\_value要么都为空，要么都不为空；dequant\_offset\_key和dequant\_offset\_value要么都为空，要么都不为空。
         -   dequant\_scale\_key和dequant\_scale\_value都不为空时，其shape需要保持一致；dequant\_offset\_key和dequant\_offset\_value都不为空时，其shape需要保持一致。  
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：   
-            -   仅支持per-token和per-channel模式，per-token模式下要求两个参数的shape均为\(B, S\)，数据类型固定为float32；per-channel模式下要求两个参数的shape为（N, D），\(N, D\)，\(H\)，数据类型固定为bfloat16。
+            -   仅支持per-token和per-channel模式，per-token模式下要求两个参数的shape均为\(B, S\)，数据类型固定为float32；per-channel模式下要求两个参数的shape为（N, D），\(N, D\)，\(H\)，数据类型固定为bfloat16，N为KV矩阵的N，S为KV_S，H为N*D。
             -   dequant\_scale\_key与dequant\_scale\_value非空场景，要求query的s小于等于16；要求query的dtype为bfloat16，key、value的dtype为int8，输出的dtype为bfloat16；不支持tensorlist、page attention特性。
         
-        -   管理scale/offset的量化模式如下：
+        -   管理scale/offset的量化模式如下，N为KV矩阵的N，S为KV_S，H为N*D：
         
             >**说明：**<br> 
             >注意scale、offset具体指dequant\_scale\_key、dequant\_scale\_key、dequant\_offset\_value、dequant\_offset\_value参数。
@@ -369,7 +369,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         -   dequant\_scale\_key和dequant\_scale\_value要么都为空，要么都不为空；dequant\_offset\_key和dequant\_offset\_value要么都为空，要么都不为空。
         -   dequant\_scale\_key和dequant\_scale\_value都不为空时，除了key\_quant\_mode为0并且value\_quant\_mode为1的场景外，其shape需要保持一致；dequant\_offset\_key和dequant\_offset\_value都不为空时，除了key\_quant\_mode为0并且value\_quant\_mode为1的场景外，其shape需要保持一致。
         -   int4（int32）伪量化场景不支持后量化。
-        -   管理scale/offset的量化模式如下：
+        -   管理scale/offset的量化模式如下，N为KV矩阵的N，S为KV_S，H为N*D：
     
             >**说明：**<br> 
             >注意scale、offset两个参数指dequant\_scale\_key、dequant\_scale\_key、dequant\_offset\_value、dequant\_offset\_value。
