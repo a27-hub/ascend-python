@@ -193,7 +193,6 @@ class TestNPUFlashAttention(TestCase):
 
         attention_score_golden, softmax_max_golden, softmax_sum_golden, dx, dq_golden, dk_golden, dv_golden = (
             self.supported_op_exec_with_softmax_out_tnd(q, k, v, dy, seqlens_list_q, seqlens_list_k))
-        torch.npu.synchronize()
 
         q = q.to(device)
         k = k.to(device)
@@ -209,7 +208,6 @@ class TestNPUFlashAttention(TestCase):
             actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
             actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
             softmax_layout="TND")
-        torch.npu.synchronize()
 
         attention_score_npu = result[0]
         softmax_max_npu = result[1]

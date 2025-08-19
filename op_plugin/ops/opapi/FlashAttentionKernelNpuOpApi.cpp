@@ -1008,7 +1008,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
         std::string softmax_layout_str = std::string(softmax_layout);
-        if (softmax_layout_str == "TND" && check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV4")) {
+        static const bool is_fa_grad_V4_available =
+            check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV4");
+        if (softmax_layout_str == "TND" && is_fa_grad_V4_available) {
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
@@ -1019,6 +1021,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
                 inner_precise, sparse_mode, dq, dk, dv, dpse, softmax_layout_char);
         } else {
+            TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
+                OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
@@ -1293,8 +1297,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     softmax_out = at::empty({0}, query.options());
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
-        if (softmax_layout_str == "TND" && check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4")) {
+        if (softmax_layout_str == "TND" && is_fa_V4_available) {
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
@@ -1305,6 +1310,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
                 input_layout_char, inner_precise, sparse_mode, softmax_layout_char, softmax_max, softmax_sum,
                 softmax_out, attention_score);
         } else {
+            TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
+                OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
@@ -1488,7 +1495,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
         std::string softmax_layout_str = std::string(softmax_layout);
-        if (softmax_layout_str == "TND" && check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV4")) {
+        static const bool is_fa_grad_V4_available =
+            check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV4");
+        if (softmax_layout_str == "TND" && is_fa_grad_V4_available) {
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
@@ -1499,6 +1508,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
                 inner_precise, sparse_mode, dq, dk, dv, dpse, softmax_layout_char);
         } else {
+            TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
+                OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
@@ -1774,8 +1785,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     softmax_out = at::empty({0}, query.options());
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
-        if (softmax_layout_str == "TND" && check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4")) {
+        if (softmax_layout_str == "TND" && is_fa_V4_available) {
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
@@ -1786,6 +1798,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
                 input_layout_char, inner_precise, sparse_mode, softmax_layout_char, softmax_max, softmax_sum,
                 softmax_out, attention_score);
         } else {
+            TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
+                OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
