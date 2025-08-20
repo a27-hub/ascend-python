@@ -2631,3 +2631,23 @@ def npu_moe_token_unpermute_with_routing_map_grad(unpermuted_tokens_grad, out_in
         return permuted_tokens_grad_out, probs_grad_out
     else:
         return permuted_tokens_grad_out, None
+
+
+@impl(m, "npu_gather_selection_kv_cache")
+def npu_gather_selection_kv_cache_meta(selection_k_rope, selection_kv_cache, selection_kv_block_table,
+                                               selection_kv_block_status, selection_topk_indices, full_k_rope,
+                                               full_kv_cache, full_kv_block_table, full_kv_actual_seq, full_q_actual_seq,
+                                               *, selection_topk_block_size=64):
+    selection_kv_actual_seq_size = [selection_kv_block_table.size(0)]
+    return (torch.empty(selection_kv_actual_seq_size, dtype=selection_kv_block_table.dtype, device=selection_kv_block_table.device))
+
+
+@impl(m, "npu_gather_selection_kv_cache_functional")
+def npu_gather_selection_kv_cache_functional_meta(selection_k_rope, selection_kv_cache, selection_kv_block_table,
+                                               selection_kv_block_status, selection_topk_indices, full_k_rope,
+                                               full_kv_cache, full_kv_block_table, full_kv_actual_seq, full_q_actual_seq,
+                                               *, selection_topk_block_size=64):
+    selection_kv_actual_seq_size = [selection_kv_block_table.size(0)]
+    return (torch.empty(selection_kv_actual_seq_size, dtype=selection_kv_block_table.dtype, device=selection_kv_block_table.device),
+            torch.empty_like(selection_k_rope), torch.empty_like(selection_kv_cache), torch.empty_like(selection_kv_block_table),
+            torch.empty_like(selection_kv_block_status))
