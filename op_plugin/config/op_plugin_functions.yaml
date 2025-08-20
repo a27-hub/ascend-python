@@ -205,9 +205,6 @@ official:
     op_api: v1.11
     use_const_ref_for_mutable_tensors: true
 
-  - func: _dim_arange(Tensor like, int dim) -> Tensor
-    acl_op: all_version
-
   - func: _embedding_bag(Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
