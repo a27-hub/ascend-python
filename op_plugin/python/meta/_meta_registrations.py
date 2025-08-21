@@ -2456,6 +2456,26 @@ def npu_gather_backward__meta(grad, self_size, dim, index, sparse_grad):
     return torch.empty(self_size, dtype=grad.dtype, device=grad.device)
 
 
+@impl(m, "ffn_worker_scheduler_")
+def ffn_worker_scheduler__meta(self, *, sync_group_size=1, execute_mode=1):
+    return self
+
+
+@impl(m, "attention_worker_scheduler_")
+def attention_worker_scheduler__meta(self):
+    return self
+
+
+@impl(m, "ffn_worker_scheduler")
+def ffn_worker_scheduler_meta(self, *, sync_group_size=1, execute_mode=1):
+    return torch.empty_like(self)
+
+
+@impl(m, "attention_worker_scheduler")
+def attention_worker_scheduler_meta(self):
+    return torch.empty_like(self)
+
+
 @impl(m, "npu_moe_token_permute_with_routing_map")
 def npu_moe_token_permute_with_routing_map_meta(tokens, routing_map, *, probs=None, num_out_tokens=None, drop_and_pad=False):
     if num_out_tokens is None:
