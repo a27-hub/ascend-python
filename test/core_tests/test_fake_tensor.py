@@ -1355,7 +1355,18 @@ class TestFusedInferAttentionV2(TestCase):
             q.requires_grad = True
             k.requires_grad = True
             v.requires_grad = True
-            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_v2(q, k, v)
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(q, k, v)
+
+            self.assertTrue(q.shape == atten_out.shape)
+
+    @unittest.skipIf("2.1" not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testFusedInferAttentionV2Pa(self):
+        with FakeTensorMode():
+            q = torch.randn(128, 1, 128, dtype=torch.bfloat16).npu()
+            k = torch.randn(1, 1, 8, 128, 16, dtype=torch.bfloat16).npu()
+            v = torch.randn(1, 1, 8, 128, 16, dtype=torch.bfloat16).npu()
+            block_table = torch.randint(0, 10, (1, 1), dtype=torch.int32).npu()
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(q, k, v, block_table=block_table)
 
             self.assertTrue(q.shape == atten_out.shape)
 
@@ -2109,6 +2120,20 @@ class TestQuantMatmul(TestCase):
             self.assertTrue(expect_ret.dtype == res.dtype)
 
 
+class TestQuantMatmulReduceSum(TestCase):
+    def test_quant_matmul_reduce_sum(self):
+        with FakeTensorMode():
+            b, m, n, k = (2, 3, 4, 5)
+            x1 = torch.randint(-1, 1, (b, m, k), dtype=torch.int8).npu()
+            x2 = torch.randint(-1, 1, (b, k, n), dtype=torch.int8).npu()
+            x1_scale = torch.ones((b, m), dtype=torch.float32).npu()
+            x2_scale = torch.ones((n,), dtype=torch.bfloat16).npu()
+            y = torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=x1_scale, x2_scale=x2_scale)
+            self.assertTrue(y.shape[0] == m)
+            self.assertTrue(y.shape[1] == n)
+            self.assertTrue(y.dtype == torch.bfloat16)
+
+
 class TestTranQuantParam(TestCase):
     def test_npu_trans_quant_param_meta(self):
         with FakeTensorMode():
@@ -2473,23 +2498,35 @@ class TestAddRmsNormQuant(TestCase):
             self.assertTrue(x_out.dtype == x1.dtype)
 
 
-class TestMoeEPLBUpdateExpert(TestCase):
-    def test_moe_eplb_update_expert(self):
+class TestMoeUpdateExpert(TestCase):
+    def test_moe_update_expert(self):
         with FakeTensorMode():
+            dtype = torch.bfloat16
             world_size = 8
             local_rank_id = 0
+            balance_mode = 0
             bs = 32
             k = 8
             f = 4
             moe_expert_num = 256
             expert_ids = torch.randn(bs, k).to(torch.int32)
             eplb_table = torch.randn(moe_expert_num, f).to(torch.int32)
-            result = torch_npu.npu_moe_eplb_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
-            local_rank_id=local_rank_id, world_size=world_size, balance_mode=0)
+            expert_scales = torch.sort(torch.rand(bs, k, dtype=dtype), dim=-1, descending=True).values
+            pruning_threshold = torch.rand(k, dtype=dtype)
+            num_true = np.random.randint(0, bs + 1)
+            active_mask_arr = np.concatenate([np.ones(num_true, dtype=bool), np.zeros(bs - num_true, dtype=bool)])
+            active_mask = torch.from_numpy(active_mask_arr).to(torch.bool)
+            result = torch_npu.npu_moe_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
+            expert_scales=expert_scales, pruning_threshold=pruning_threshold, active_mask=active_mask,
+            local_rank_id=local_rank_id, world_size=world_size, balance_mode=balance_mode)
 
-            self.assertEqual(result.shape[0], 32)
-            self.assertEqual(result.shape[1], 8)
-            self.assertEqual(result.dtype, torch.int32)
+            self.assertEqual(result[0].shape[0], 32)
+            self.assertEqual(result[0].shape[1], 8)
+            self.assertEqual(result[0].dtype, torch.int32)
+
+            self.assertEqual(result[1].shape[0], 32)
+            self.assertEqual(result[1].shape[1], 8)
+            self.assertEqual(result[1].dtype, torch.bool)
 
 
 class TestNpuMropeMeta(TestCase):
@@ -2640,6 +2677,43 @@ class TestNpuMoeUnpermuteWithRoutingMap(TestCase):
                 self.assertEqual(unpermuted_tokens.dtype, permuted_tokens_npu.dtype)
                 self.assertEqual(unpermuted_tokens.shape[0], restore_shape[0])
                 self.assertEqual(unpermuted_tokens.shape[1], restore_shape[1])
+
+
+class TestNpuMoeTokenPermuteWithRoutingMap(TestCase):
+    def test_npu_moe_token_permute_with_routing_map_meta(self):
+        with FakeTensorMode():
+            x = torch.randn((3, 4), dtype=torch.float)
+            x.requires_grad = True
+            routing_map = torch.tensor([[True, True], [True, True], [True, True]], dtype=torch.bool)
+            numtoken = 6
+            padMode = True
+            probs = torch.randn([3, 2], dtype=torch.float)
+            probs.requires_grad = True
+            x_npu = x.npu().detach()
+            x_npu.requires_grad = True
+            routing_map_npu = routing_map.npu()
+            probs_npu = probs.npu().detach()
+            probs_npu.requires_grad = True
+
+            out_token = numtoken // routing_map.size(1) * routing_map.size(1)
+            output0 = torch.empty(out_token, x_npu.size(1), dtype=x_npu.dtype, device=x_npu.device)
+            output1 = torch.empty(out_token, dtype=probs_npu.dtype, device=probs_npu.device)
+            output2 = torch.empty(out_token, dtype=torch.int32, device=x_npu.device)
+
+            x1, x2, x3 = torch_npu.npu_moe_token_permute_with_routing_map(x_npu, routing_map_npu, probs=probs_npu, num_out_tokens=numtoken, drop_and_pad=padMode)
+            self.assertEqual(x1.dtype, output0.dtype)
+            self.assertEqual(x2.dtype, output1.dtype)
+            self.assertEqual(x3.dtype, output2.dtype)
+            self.assertEqual(x1.shape, output0.shape)
+            self.assertEqual(x2.shape, output1.shape)
+            self.assertEqual(x3.shape, output2.shape)
+            (x1.sum() + x2.sum()).backward()
+            output0 = torch.empty_like(x_npu)
+            output1 = torch.empty_like(probs)
+            self.assertEqual(x_npu.grad.dtype, output0.dtype)
+            self.assertEqual(probs_npu.grad.dtype, output1.dtype)
+            self.assertEqual(x_npu.grad.shape, x_npu.shape)
+            self.assertEqual(probs_npu.grad.shape, probs_npu.shape)
 
 
 instantiate_parametrized_tests(FakeTensorTest)

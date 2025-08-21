@@ -2,7 +2,7 @@
   "op_api: torch_npu.npu_gemma_rms_norm(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_fused_infer_attention_v2(*args, **kwargs)": {
+  "op_api: torch_npu.npu_fused_infer_attention_score_v2(*args, **kwargs)": {
     "version": ["v2.1"]
   },
   "op_api: torch_npu.npu_moe_init_routing(*args, **kwargs)": {
@@ -71,7 +71,7 @@
   "op_api: torch_npu.npu_gmm_alltoallv(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_moe_eplb_update_expert(*args, **kwargs)": {
+  "op_api: torch_npu.npu_moe_update_expert(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_mrope(*args, **kwargs)": {
@@ -284,7 +284,7 @@
   "op_api: torch_npu.npu_moe_distribute_combine_add_rms_norm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
-  "op_api: torch_npu.npu_moe_eplb_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+  "op_api: torch_npu.npu_moe_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_mrope(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -315,6 +315,12 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_quant_matmul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_quant_matmul_reduce_sum(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_quant_matmul_reduce_sum(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_quant_scatter(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -356,10 +362,10 @@
   "func: npu_quant_matmul_dequant(Tensor x, Tensor quantized_weight, Tensor weight_scale, *, Tensor? bias=None, Tensor? x_scale=None, Tensor? x_offset=None, Tensor? smooth_scale=None, str? quant_mode='pertoken') -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0) -> Tensor": {
+  "func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, str comm_alg=\"\") -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_moe_distribute_dispatch_v2(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
+  "func: npu_moe_distribute_dispatch_v2(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1, str comm_alg=\"\") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False) -> (Tensor, Tensor)": {
@@ -437,6 +443,9 @@
   "func: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_moe_token_unpermute_grad(Tensor permuted_tokens, Tensor grad_unpermuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: index_copy.out(Tensor self, int dim, Tensor index, Tensor source, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
@@ -455,7 +464,7 @@
   "func: npu_kv_rmsnorm_rope_cache(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int local_rank_id, int world_size, *, int balance_mode=0) -> Tensor": {
+  "func: npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor? expert_scales=None, Tensor? pruning_threshold=None, Tensor? active_mask=None, int local_rank_id=-1, int world_size=-1, int balance_mode=0) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_quant_grouped_matmul_dequant(Tensor x, Tensor quantized_weight, Tensor weight_scale, Tensor group_list, *, Tensor? bias=None, Tensor? x_scale=None, Tensor? x_offset=None, Tensor? smooth_scale=None, str? quant_mode='pertoken') -> Tensor": {
@@ -480,6 +489,9 @@
     "version": ["all_version"]
   },
   "func: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_attn_softmax_(Tensor(a!) self) -> Tensor(a!)": {
@@ -992,13 +1004,13 @@
   "func: _npu_fused_infer_attention_score_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, SymInt[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, int key_antiquant_mode=0, int value_antiquant_mode=0, bool softmax_lse_flag=False) -> Tensor": {
     "version": ["all_version"]
   },
-    "func: npu_fused_infer_attention_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)": {
+    "func: npu_fused_infer_attention_score_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_fused_infer_attention_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))": {
+  "func: npu_fused_infer_attention_score_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))": {
     "version": ["all_version"]
   },
-  "func: _npu_fused_infer_attention_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor": {
+  "func: _npu_fused_infer_attention_score_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_incre_flash_attention(Tensor query, Tensor key, Tensor value, *, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? pse_shift=None, SymInt[]? actual_seq_lengths=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? block_table=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? kv_padding_size=None, int num_heads=1, float scale_value=1.0, str input_layout=\"BSH\", int num_key_value_heads=0, int block_size=0, int inner_precise=1) -> Tensor": {
@@ -1082,12 +1094,6 @@
   "func: npu_quant_scatter_(Tensor(a!) self, Tensor indices, Tensor updates, Tensor quant_scales, Tensor? quant_zero_points=None, int axis=0, int quant_axis=1, str reduce='update') -> Tensor(a!)": {
     "version": ["all_version"]
   },
-  "func: npu_multi_head_attention_v2(Tensor query, Tensor key, Tensor value, Tensor? atten_mask=None, Tensor? alibi_mask=None, float scale=1.0, int head_num=1, str input_layout=\"BNSD\", float keep_prob=1., int pre_tokens=2147483647, int next_tokens=1, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, int, int, int)": {
-    "version": ["all_version"]
-  },
-  "func: npu_multi_head_attention_v2_grad(Tensor attention_score_grad, Tensor query, Tensor key, Tensor value, Tensor softmax_log_max_sum, Tensor attention_score, Tensor? atten_mask=None, Tensor? alibi_mask=None, float scale=1.0, int head_num=1, str input_layout=\"BNSD\", float keep_prob=1., int pre_tokens=2147483647, int next_tokens=1, int seed=0, int offset=0, int numels=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
   "func: npu_masked_softmax_with_rel_pos_bias(Tensor x, Tensor? atten_mask, Tensor relative_pos_bias, float scale_value=1.0, int inner_precision_mode=0) -> Tensor": {
     "version": ["all_version"]
   },
@@ -1107,6 +1113,9 @@
     "version": ["all_version"]
   },
   "func: npu_grouped_matmul_finalize_routing(Tensor x, Tensor w, Tensor group_list, *, Tensor? scale=None, Tensor? bias=None, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? shared_input=None, Tensor? logit=None, Tensor? row_index=None, ScalarType? dtype=None, float? shared_input_weight=1.0, int? shared_input_offset=0, int? output_bs=0, int? group_list_type=1, int[]? tuning_config=None) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_quant_matmul_reduce_sum(Tensor x1, Tensor x2, *, Tensor? x1_scale=None, Tensor? x2_scale=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0) -> Tensor": {
@@ -1218,12 +1227,6 @@
     "version": ["all_version"]
   },
   "func: _amp_foreach_non_finite_check_and_unscale_(Tensor(a!)[] self, Tensor(b!) found_inf, Tensor inv_scale) -> ()": {
-    "version": ["all_version"]
-  },
-  "func: _batch_norm_impl_index(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> (Tensor, Tensor, Tensor, Tensor, int)": {
-    "version": ["all_version"]
-  },
-  "func: _batch_norm_impl_index_backward(int impl_index, Tensor input, Tensor grad_output, Tensor? weight, Tensor? running_mean, Tensor? running_var, Tensor? save_mean, Tensor? save_var_transform, bool train, float eps, bool[3] output_mask, Tensor reservedSpace) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: _cdist_backward(Tensor grad, Tensor x1, Tensor x2, float p, Tensor cdist) -> Tensor": {
@@ -1605,9 +1608,6 @@
     "version": ["all_version"]
   },
   "func: baddbmm_(Tensor(a!) self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)": {
-    "version": ["all_version"]
-  },
-  "func: batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> Tensor": {
     "version": ["all_version"]
   },
   "func: batch_norm_backward_elemt(Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor? weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count) -> Tensor": {
@@ -2913,6 +2913,15 @@
     "version": ["all_version"]
   },
   "func: normal_(Tensor(a!) self, float mean=0, float std=1, *, Generator? generator=None) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: obfuscation_initialize(int hidden_size, int tp_rank, int cmd, *, ScalarType? data_type=None, int? model_obf_seed_id=0, int? data_obf_seed_id=0, int? thread_num=0, float? obf_coefficient=1.0) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: obfuscation_finalize(Tensor fd_to_close) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: obfuscation_calculate(Tensor fd, Tensor x, Tensor param, *, float? obf_coefficient=1.0) -> Tensor": {
     "version": ["all_version"]
   },
   "func: one_hot(Tensor self, int num_classes=-1) -> Tensor": {
@@ -4237,6 +4246,9 @@
   },
   "func: scaled_dot_product_attention(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None, bool enable_gqa=False) -> Tensor": {
     "version": ["v2.5", "newest"]
+  },
+  "func: unfold_backward(Tensor grad_in, SymInt[] input_sizes, int dim, int size, int step) -> Tensor": {
+    "version": ["all_version"]
   },
   "func: npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"] 
