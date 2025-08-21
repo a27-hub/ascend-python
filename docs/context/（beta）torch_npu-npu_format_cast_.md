@@ -8,20 +8,25 @@
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
+
+
+## 功能说明
+
+原地修改`self`张量格式，与`src`格式保持一致。`src`，即`source tensor`，源张量。
+
+
+
 ## 函数原型
 
 ```
 torch_npu.npu_format_cast_(self, src) -> Tensor
 ```
 
-## 功能说明
-
-原地修改(`self`)张量格式，与(`src`)格式保持一致。(`src`)，即(`source tensor`)，源张量。
 
 ## 参数说明
 
-- self (`Tensor`)：输入张量。
-- src (`Tensor，int`)：目标格式。数据格式具体可参考《CANN AscendCL应用软件开发指南 (Python)》中“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/API/appdevgapi/aclpythondevg_01_0914.html">aclFormat</a>”章节。此处需输入数字，例如2，即代表ACL_FORMAT_ND格式。数据排布格式具体可参考《CANN Ascend C算子开发指南》中的“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0099.html">数据排布格式”</a>章节。
+- **self** (`Tensor`)：输入张量。
+- **src** (`Tensor，int`)：目标格式。数据格式具体可参考《CANN AscendCL应用软件开发指南 (Python)》中“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/API/appdevgapi/aclpythondevg_01_0914.html">aclFormat</a>”章节。此处需输入数字，例如2，即代表ACL_FORMAT_ND格式。数据排布格式具体可参考《CANN Ascend C算子开发指南》中的“<a href="https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0099.html">数据排布格式”</a>章节。
 
 
 ## 调用示例

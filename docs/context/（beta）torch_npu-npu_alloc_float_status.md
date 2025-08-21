@@ -8,11 +8,9 @@
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
-
-
 ## 功能说明
 
-为溢出检测模式申请（`tensor`)作为入参。
+为溢出检测模式申请`tensor`作为入参。
 
 
 ## 函数原型
@@ -24,7 +22,7 @@ torch_npu.npu_alloc_float_status(self) -> Tensor
 
 ## 参数说明
 
-self (`Tensor`)：任何张量。
+**self** (`Tensor`)：任何张量。
 
 
 

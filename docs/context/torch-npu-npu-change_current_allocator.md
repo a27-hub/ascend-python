@@ -30,11 +30,11 @@ torch_npu.npu.change_current_allocator(allocator) -> None
 
 ## 参数说明
 
-- **allocator** (`torch_npu.npu.memory._NPUAllocator`)：要设置为使用的内存分配器。
+ **allocator** (`torch_npu.npu.memory._NPUAllocator`)：要设置为使用的内存分配器。
 
 ## 约束说明
 
-- 如果内存分配器已被初始化，函数调用失败。
+如果内存分配器已被初始化，函数调用失败。
 
 
 
@@ -65,11 +65,9 @@ npu_tensor = torch.zeros(10, device='npu')
 #include <sys/types.h>
 #include <iostream>
 #include <torch/extension.h>
- 
 #include "third_party/acl/inc/acl/acl_base.h"
 #include "third_party/acl/inc/acl/acl_rt.h"
 #include "torch_npu/csrc/core/npu/NPUCachingAllocator.h"
- 
 extern "C" {
  
 void* my_malloc(ssize_t size, int device, aclrtStream stream)

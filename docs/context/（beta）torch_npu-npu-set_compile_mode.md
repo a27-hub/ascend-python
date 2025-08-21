@@ -21,8 +21,7 @@ torch_npu.npu.set_compile_mode(jit_compile = bool)
 ```
 ## 参数说明
 
-- **jit_compile**（`jit_compile=True`)：时是非二进制模式
-- **jit_compile**（`jit_compile=False`)：时是二进制模式。
+jit_compile：jit_compile=True时是非二进制模式，jit_compile=False时是二进制模式。
 
 >**说明：**<br>
 >- Atlas 训练系列产品/Atlas 推理系列产品默认为jit_compile=True，即非二进制模式。
@@ -32,6 +31,6 @@ torch_npu.npu.set_compile_mode(jit_compile = bool)
 ## 调用示例
 
 ```python
->>>torch_npu.npu.set_compile_mode(jit_compile=False)
+>>> torch_npu.npu.set_compile_mode(jit_compile=False)
 ```
 

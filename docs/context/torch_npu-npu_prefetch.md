@@ -10,7 +10,7 @@
  
 ## 功能说明
 
-- 提供网络(`weight`)预取功能，将需要预取的权重搬到L2 Cache中。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果基于用户对并行的处理。
+提供网络`weight`预取功能，将需要预取的权重搬到L2 Cache中。尤其在做较大`Tensor`的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果基于用户对并行的处理。
 
 ## 函数原型
 
@@ -21,7 +21,7 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> ()
 ## 参数说明
 
 - **input** (`Tensor`)：表示需要预取的权重，不做数据处理，与数据类型和数据格式无关；输入不能含有空指针。
-- **dependency** (`Tensor`)：表示开始预取的节点，单算子下不生效可为`None`，图模式下不可为`None`；不做数据处理，与数据类型和数据格式无关。
+- **dependency** (`Tensor`)：表示开始预取的节点，单算子下不生效可为None，图模式下不可为None；不做数据处理，与数据类型和数据格式无关。
 - **max_size** (`int`)：取值需大于0，表示权重预取的最大size，超过预取权重的size时，会设置为权重的最大size。数据类型为`int32`、`int64`。
 - **offset** (`int`)：默认值0，取值大于等于0，表示权重预取内存地址偏移，不允许超过权重地址范围。数据类型为`int32`、`int64`。
 
@@ -31,7 +31,7 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> ()
 
 ## 约束说明
 
-该接口支持图模式（PyTorch 2.1版本）。
+该接口支持图模式（PyTorch 2.0 版本）。
 
 
 

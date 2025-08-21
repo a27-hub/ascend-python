@@ -24,7 +24,7 @@ torch_npu.npu.aclnn.version(): -> None
 
 ## 约束说明
 
-当前(`aclnn`)暂时不支持查询版本，默认返回None。待(`aclnn`)支持后可以返回正确版本信息。
+当前`aclnn`暂时不支持查询版本，默认返回None。待`aclnn`支持后可以返回正确版本信息。
 
 
 ## 调用示例

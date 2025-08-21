@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置或者默认数据类型torch.float16。
+在amp场景获取设备支持的数据类型，该`dtype`由torch_npu.npu.set_autocast_dtype设置或者默认数据类型torch.float16。
 
 
 ## 函数原型
@@ -23,7 +23,6 @@ torch_npu.npu.get_autocast_dtype()
 ```
 ## 返回值说明
 
-（`torch.dtype`)
-
+`torch.dtype`
 
 
