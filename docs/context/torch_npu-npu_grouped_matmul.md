@@ -13,37 +13,40 @@
 -   API功能：`npu_grouped_matmul`是一种对多个矩阵乘法（matmul）操作进行分组计算的高效方法。该API实现了对多个矩阵乘法操作的批量处理，通过将具有相同形状或相似形状的矩阵乘法操作组合在一起，减少内存访问开销和计算资源的浪费，从而提高计算效率。
 
 -   计算公式：
+
+     公式中$@$符号表示矩阵乘法，$\times$符号表示矩阵Hadamard乘积：
+
     -   非量化场景（公式1）：
 
-        $y_i = x_i \times weight_i + bias_i$
+        $y_i = x_i @ weight_i + bias_i$
 
     -   perchannel、pertensor量化场景（公式2）：
 
-        $y_i = (x_i \times weight_i) \times scale_i + offset_i$
+        $y_i = (x_i @ weight_i) \times scale_i + offset_i$
 
         -   `x`为`int8`输入，`bias`为`int32`输入（公式2-1）：
 
-            $y_i = (x_i \times weight_i + bias_i) \times scale_i + offset_i$
+            $y_i = (x_i @ weight_i + bias_i) \times scale_i + offset_i$
 
         -   `x`为`int8`输入，`bias`为`bfloat16`、`float16`、`float32`输入，无offset（公式2-2）：
 
-            $y_i = (x_i \times weight_i) \times scale_i + bias_i$
+            $y_i = (x_i @ weight_i) \times scale_i + bias_i$
 
     -   pertoken、pertensor+pertensor、pertensor+perchannel量化场景（公式3）：
 
-        $y_i = (x_i \times weight_i + bias_i) \times scale_i \times pertokenscale_i$
+        $y_i = (x_i @ weight_i + bias_i) \times scale_i \times pertokenscale_i$
 
         -   `x`为`int8`输入，bias为`int32`输入（公式3-1）：
 
-            $y_i = (x_i \times weight_i + bias_i) \times scale_i \times pertokenscale_i$
+            $y_i = (x_i @ weight_i + bias_i) \times scale_i \times pertokenscale_i$
 
         -   `x`为`int8`输入，`bias`为`bfloat16`，`float16`，`float32`输入（公式3-2）：
 
-            $y_i = (x_i \times weight_i) \times scale_i \times pertokenscale_i + bias_i$
+            $y_i = (x_i @ weight_i) \times scale_i \times pertokenscale_i + bias_i$
 
     -   伪量化场景（公式4）：
 
-        $y_i = x_i \times (weight_i + antiquant\_offset_i) \times antiquant\_scale_i + bias_i$
+        $y_i = x_i @ (weight_i + antiquant\_offset_i) \times antiquant\_scale_i + bias_i$
 
 ## 函数原型<a name="zh-cn_topic_0000002262888689_section87878612417"></a>
 ```
