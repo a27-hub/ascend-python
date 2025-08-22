@@ -9,7 +9,7 @@
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
 ```
-torch_npu.npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+torch_npu.npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000001742717129_section112637109429"></a>
@@ -122,6 +122,7 @@ torch_npu.npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_
 
 -   gen\_mask\_parallel：布尔型，DSA生成dropout随机数向量mask的控制开关。默认值为True：同AI Core计算并行；设为False：同AI Core计算串行。
 -   sync：布尔型，DSA生成dropout随机数向量mask的控制开关。默认值为False：dropout mask异步生成；设为True：dropout mask同步生成。
+-   softmax_layout: string类型，可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input\_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
 
 ## 输出说明<a name="zh-cn_topic_0000001742717129_section22231435517"></a>
 
@@ -363,7 +364,7 @@ QK<sup>T</sup>矩阵在atten\_mask为True的位置会被遮蔽，效果如下：
     >-   基于sparse\_mode=3进行外切产生的band模式的sparse的参数应符合以下条件：
     >    -   pre\_tockens \>= last\_Skv。
     >    -   next\_tockens <= 0。
-    >    -   当前模可选参数持可选输入pse。
+    >    -   当前模式下不支持可选输入pse。
 
 -   当sparse\_mode为8时，表示varlen且为长序列外切场景；用户需要确保外切前为使用sparse\_mode 2的场景；当前mode下用户需要设置pre\_tockens和next\_tockens（起点为右下顶点），且需要保证参数正确，否则会存在精度问题。
 
@@ -378,6 +379,6 @@ QK<sup>T</sup>矩阵在atten\_mask为True的位置会被遮蔽，效果如下：
     >-   如果配置sparse\_mode=8，但实际只存在一个batch，用户需按照band模式的要求来配置参数；sparse\_mode=8时，用户需要输入2048x2048的下三角mask作为该融合算子的输入。
     >-   基于sparse\_mode=2进行外切产生的band模式的sparse的参数应符合以下条件：
     >    -   pre\_tockens \>= first\_Skv。
-    >    -   next\_tockens范围无约束，根据实际情况进行配可选参数
-    >    -   模式下不支持可选输入pse。
+    >    -   next\_tockens范围无约束，根据实际情况进行配置。
+    >    -   当前模式下不支持可选输入pse。
 

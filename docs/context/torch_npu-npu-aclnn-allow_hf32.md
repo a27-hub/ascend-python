@@ -16,7 +16,7 @@ bool类型，开启和关闭hf32属性的支持。
 
 ## 输出说明
 
-返回bool类型，返回当前allow_hf32是否开启，默认值为true。
+返回bool类型，返回当前allow_hf32是否开启，默认值为True。
 
 ## 支持的型号
 
@@ -30,15 +30,15 @@ bool类型，开启和关闭hf32属性的支持。
 ```python
 >>> import torch
 >>>import torch_npu
->>> res = torch.npu.aclnn.allow_hf32
+>>> res = torch_npu.npu.aclnn.allow_hf32
 >>> res
 True
->>> torch.npu.aclnn.allow_hf32 = False
->>> res = torch.npu.aclnn.allow_hf32
+>>> torch_npu.npu.aclnn.allow_hf32 = False
+>>> res = torch_npu.npu.aclnn.allow_hf32
 >>> res
 False
->>> torch.npu.aclnn.allow_hf32 = True
->>> res = torch.npu.aclnn.allow_hf32
+>>> torch_npu.npu.aclnn.allow_hf32 = True
+>>> res = torch_npu.npu.aclnn.allow_hf32
 >>> res
 True
 ```

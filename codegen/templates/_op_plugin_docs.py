@@ -1207,7 +1207,7 @@ $y=Softmax(Mask(scale*(pse+query*key^{T}),atten_mask),keep_prob)$
 $attention=Dropout(y)*value$
 
 接口原型
-torch_npu.npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+torch_npu.npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
 
 参数说明
 query: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
@@ -1231,6 +1231,7 @@ actual_seq_qlen: int类型数组, 可选参数, varlen场景时需要传入此�
 actual_seq_kvlen: int类型数组, 可选参数, varlen场景时需要传入此参数. 表示key/value每个S的累加和长度. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
 比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_kvlen传: 2 4 6 8 10. 
 sparse_mode: 整型, 表示sparse的模式, 可选参数. 数据类型支持int64, 默认值为0, 支持配置值为0、1、2、3、4、5、6、7、8. 当整网的atten_mask都相同且shape小于2048*2048时, 建议使用defaultMask模式, 来减少内存使用量. 综合约束请见约束说明. 
+softmax_layout: string类型，可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input\_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
 表1 sparse_mode不同取值场景说明
 sparse_mode
 0: defaultMask模式. 
@@ -3170,7 +3171,7 @@ torch_npu.npu_transpose(self, perm, require_contiguous=True) -> Tensor
 参数说明
 self (Tensor) - 输入张量。
 perm (ListInt) - 对应维度排列。
-require_contiguous(Bool，默认值为True) - 用户是否显式指定npu_contiguous算子适配需要对输入Tensor做转连续。默认为False，低性能模式。用户明确知道输入Tensor为连续Tensor或转置Tensor时，才能设置为True使用高性能模式。
+require_contiguous(Bool，默认值为True) - 用户是否需要对输入Tensor做转连续。设置为False时，表示不对输入Tensor做转连续。用户明确输入Tensor为连续Tensor或转置Tensor时，才能设置为True。
 示例
 >>> x = torch.randn(2, 3, 5).npu()
 >>> x.shape
@@ -3550,6 +3551,96 @@ print(out)
 print(scale)
 print(offset)
 """
+)
+
+_add_torch_npu_docstr(
+    "npu_quant_matmul_reduce_sum",
+    """
+功能描述：完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出
+
+计算公式：
+  out = torch.zeros(m, n)
+  for i in range(batch):
+    out += (x1[i, ...] @ x2[i, ...]) * x1Scale[i, :, None] * x2Scale[None, :]
+
+函数原型:
+  npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -> Tensor
+
+参数说明:
+- x1: Tensor类型，必选参数，对应公式中的x1。数据类型支持`int8`，数据格式支持ND，shape支持3维，形状为（batch, m, k）。
+- x2: Tensor类型，必选参数，对应公式中的x2。数据类型支持`int8`，数据格式支持NZ，shape支持3维，形状为（batch, k, n）。
+- x1_scale: Tensor类型，必选关键字参数。对应公式中的x1Scale。数据类型支持`float32`，数据格式支持ND，shape支持2维，形状为（batch, m）。
+- x2_scale: Tensor类型，必选关键字参数。数据类型支持`bfloat16`，数据格式支持ND，shape支持1维，形状为（n,）。
+
+输出说明:
+out: Tensor类型，算子的计算结果。输出的数据类型为`bfloat16`，数据格式为ND，shape为2维，形状为(m, n)。
+
+约束说明:
+- 该接口支持推理场景下使用。
+- 该接口支持静态图模式（PyTorch 2.1版本及以上）。
+- 传入的x1、x2、x1_scale、x2_scale不能是空。
+- 输入和输出支持以下数据类型组合：
+  | x1   | w2   | x1Scale | x2Scale  | out      |
+  |------|------|---------|----------|----------|
+  | int8 | int8 | float32 | bfloat16 | bfloat16 |
+
+支持的PyTorch版本:
+PyTorch2.1及以上
+
+支持的型号:
+- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+- Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+- 单算子调用
+    import torch
+    import torch_npu
+
+    b,m,k,n = (2,3,4,5)
+    x1 = torch.ones((b, m, k), dtype=torch.int8).npu()
+    x2_nd = torch.ones((b, k, n), dtype=torch.int8).npu()
+    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)
+    x1_scale = torch.ones((b, m), dtype=torch.float32).npu()
+    x2_scale = torch.ones((n,), dtype=torch.bfloat16).npu()
+    y = torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=x1_scale, x2_scale=x2_scale)
+- 图模式调用
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.ge_concrete_graph import ge_apis as ge
+    from torchair.configs.compiler_config import CompilerConfig
+    import logging
+    from torchair.core.utils import logger
+
+    logger.setLevel(logging.DEBUG)
+    import os
+    import numpy as np
+
+    # "ENABLE_ACLNN"是否使能走aclnn, true: 回调走aclnn, false: 在线编译
+    os.environ["ENABLE_ACLNN"] = "false"
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+
+    class MyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+ 
+        def forward(self, x1, x2, scale, pertoken_scale):
+            return torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=pertoken_scale, x2_scale=scale)
+
+    cpu_model = MyModel()
+    model = cpu_model.npu()
+    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False)
+
+    b,m,k,n = (2,3,4,5)
+    x1 = torch.ones((b, m, k), dtype=torch.int8).npu()
+    x2_nd = torch.ones((b, k, n), dtype=torch.int8).npu()
+    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)
+    pertoken_scale = torch.ones((b, m), dtype=torch.float32).npu()
+    scale = torch.ones((n,), dtype=torch.bfloat16).npu()
+    npu_out = model(x1, x2, scale, pertoken_scale)
+    print(npu_out)
+    """
 )
 
 _add_torch_npu_docstr(
@@ -5178,6 +5269,230 @@ print(npu_mode(tensor_x.npu(), tensor_indices.npu(), tensor_update.npu()))
 )
 
 _add_torch_npu_docstr(
+    "npu_scatter_pa_kv_cache",
+    """
+功能描述:
+-   更新KvCache中指定位置的key和value。
+
+-   输入输出支持以下场景：
+    - 场景一：
+        key:[batch, num_head, k_head_size]
+        value:[batch, num_head, v_head_size]
+        key_cache:[num_blocks, num_head * k_head_size // last_dim_k, block_size, last_dim_k]
+        value_cache:[num_blocks, num_head * v_head_size // last_dim_k, block_size, last_dim_k]
+        slot_mapping:[batch]
+
+    - 场景二：
+        key:[batch*seq_len, num_head, k_head_size]
+        value:[batch*seq_len, num_head, v_head_size]
+        keyCache:[num_blocks, block_size, num_head, k_head_size]
+        valueCache:[num_blocks, block_size, num_head, v_head_size]
+        slotMapping:[batch * seq_len]
+
+    其中k_head_size与v_head_size 可以不同，也可以相同。
+    
+    - 场景三：
+        key:[batch, seq_len, num_head, k_head_size]
+        value:[batch, seq_len, num_head, v_head_size]
+        key_cache:[num_blocks, block_size, 1, k_head_size]
+        value_cache:[num_blocks, block_size, 1, k_head_size]
+        slot_mapping:[batch, num_head]
+        compress_lens:[batch, num_head]
+        seq_lens:[batch]
+        compress_seq_offsets:[batch * num_head]
+
+    - 上述场景根据构造的参数来区别，符合第一种入参构造走场景一，符合第二种构造走场景二，符合第三种构造走场景三。
+        场景一、场景二没有compress_lens、seq_lens、compress_seq_offsets这三个可选参数。
+
+接口原型:
+torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()
+
+参数说明:
+-   key（Tensor）：必选参数。表示待更新的key值，当前step多个token的key，支持3维或4维。数据类型支持float16、float、bfloat16、int8、uint8、int16、uint16、int32、uint32、hifloat8、float8_e5m2、float8_e4m3fn，数据格式支持ND。
+-   value（Tensor）：必选参数，表示待更新的value值，当前step多个token的value，支持3维或4维，数据类型和数据格式与key保持一致。
+-   key_cache（Tensor）：必选参数，表示需要更新的key cache，当前layer的key cache，只支持4维，数据类型和数据格式与key保持一致。
+-   value_cache（Tensor）：必选参数，表示需要更新的value cache，当前layer的value cache。只支持4维，数据类型和数据格式与key保持一致。
+-   slot_mapping（Tensor）：必选参数，表示每个token key或value在cache中的存储偏移，数据类型支持int32和int64，数据格式支持ND。
+-   compress_lens（Tensor）：可选参数，表示压缩量，数据类型与slot_mapping一致，数据格式支持ND。
+-   compress_seq_offsets（Tensor）：可选参数，表示每个batch每个head的压缩起点，数据类型与slot_mapping一致，数据格式支持ND。
+-   seq_lens（Tensor）：可选参数，表示每个batch的实际seqLens，数据类型与slot_mapping一致，数据格式支持ND。。
+
+输出说明：
+-   key_cache（Tensor）：表示Key输出到kv_cache中的Tensor（本质in-place更新）。
+-   value_cache（Tensor）：表示value输出到kv_cache中的Tensor（本质in-place更新）。
+
+约束说明:
+-   输入参数不支持非连续；
+-   key、value、key_cache、value_cache的数据类型必须一致；
+-   slot_mapping、compress_lens、compress_seq_offset、seq_lens的数据类型必须一致；
+-   slot_mapping的值范围[0,num_blocks*block_size-1]，且slot_mapping内的元素值保证不重复，重复时不保证正确性；
+-   当key和value都是3维，则key和value的前两维shape必须相同；
+-   当key和value都是4维，则key和value的前三维shape必须相同，且key_cache和value_cache的第三维必须是1；
+-   当key和value是4维时，compress_lens、seq_lens为必选参数；当key和value是3维时，compress_lens、compress_seq_offsets、seq_lens为可选参数；
+-   当key和value都是4维时，slot_mapping是二维，且slot_mapping的第一维值等于key的第一维为batch，slot_mapping的第二维值等于key的第三维为num_head(对应场景三)；
+-   当key和value都是4维时，seq_lens是一维，且seq_lens的值等于key的第一维为batch(对应场景三)；
+-   seq_lens和compress_lens里面的每个元素值必须满足公式：reduceSum(seq_lens[i] - compress_lens[i]) <= num_blocks * block_size (对应场景三);
+
+支持的芯片型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件: 仅支持场景一
+昇腾910_95 AI处理器：仅支持场景二、三
+
+调用示例:
+# 单算子调用方式
+import numpy as np
+import torch
+import torch_npu
+
+# 生成随机数据, 并发送到npu
+bs = 16
+num_head = 4
+k_head_size = 32
+v_head_size = 64
+num_blocks = 2
+lastDim_k = 16
+block_size = 32
+
+key = np.random.randn(bs, num_head, k_head_size).astype(np.float16)
+value = np.random.randn(bs, num_head, v_head_size).astype(np.float16)
+key_cache = np.random.randn(
+    num_blocks, num_head * k_head_size // lastDim_k, block_size, lastDim_k).astype(np.float16)
+value_cache = np.zeros(
+    (num_blocks, num_head * v_head_size // lastDim_k, block_si ze, lastDim_k)).astype(np.float16)
+slot_mapping = np.random.choice(num_blocks * block_size, bs, replace=False).astype(np.int32)
+
+key_npu = torch.from_numpy(key).npu()
+value_npu = torch.from_numpy(value).npu()
+key_cache_npu = torch.from_numpy(key_cache).npu()
+value_cache_npu = torch.from_numpy(value_cache).npu()
+key_cache_npu_cast = torch_npu.npu_format_cast(key_cache_npu.contiguous(), 29)
+value_cache_npu_cast = torch_npu.npu_format_cast(value_cache_npu.contiguous(), 29)
+slot_mapping_npu = torch.from_numpy(slot_mapping).npu()
+
+# 调用ScatterPaKvCache算子
+torch_npu.npu_scatter_pa_kv_cache(key_npu, value_npu, key_cache_npu_cast, value_cache_npu_cast, slot_mapping_npu)
+
+# 执行上述代码，打印key_cache_npu_cast或value_cache_npu_cast输出类似如下
+tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
+        [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
+        ...,
+        [[ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]],
+        ...,
+        [[ 1.8271,  1.4551,  1.3154,  ...,  1.9854,  1.4365,  1.0732],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]],
+        ...,
+        [[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 1.9492,  1.6455,  1.6504,  ...,  1.5957,  1.6201,  1.4385],
+        [ 0.0742,  0.1982,  0.8945,  ...,  0.4912,  0.6753,  0.1120],
+        ...,
+        [[ 0.1113,  0.6255,  0.7686,  ...,  0.0247,  0.2490,  0.6909],
+        [ 0.4312,  0.7954,  0.7339,  ...,  0.1154,  0.6440,  0.3342],
+        [ 0.9570,  0.2869,  0.6489,  ...,  0.7451,  0.0234,  0.8843]],
+        ...,
+        [[ 1.8271,  1.4551,  1.3154,  ...,  1.9854,  1.4365,  1.0732],
+        [ 1.9492,  1.6455,  1.6504,  ...,  1.5957,  1.6201,  1.4385],
+        [ 0.0742,  0.1982,  0.8945,  ...,  0.4912,  0.6753,  0.1120]]]]
+    device='npu:0', dtype=torch.float16)
+
+# 入图方式
+import numpy as np
+import torch
+import torch_npu
+
+import torchair as tng
+from torchair.ge_concrete_graph import ge_apis as ge
+from torchair.configs.compiler_config import CompilerConfig
+import torch._dynamo
+TORCHDYNAMO_VERBOSE=1
+TORCH_LOGS="+dynamo"
+
+# 支持入图的打印宏
+import logging
+from torchair.core.utils import logger
+logger.setLevel(logging.DEBUG)
+config = CompilerConfig()
+config.aoe_config.aoe_mode = "2"
+config.debug.graph_dump.type = "pbtxt"
+npu_backend = tng.get_npu_backend(compiler_config=config)
+from torch.library import Library, impl
+
+# 数据生成
+bs = 16
+num_head = 4
+k_head_size = 32
+v_head_size = 64
+num_blocks = 2
+lastDim_k = 16
+block_size = 32
+
+class Model(torch.nn.Module):
+    def init(self):
+        super().init()
+
+    def forward(self, key, value, slot_mapping, key_cache, value_cache):
+            torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mapping)
+
+if name=="main":
+    torch_npu.npu.set_device(0)
+
+    key = np.random.randn(bs, num_head, k_head_size).astype(np.float16)
+    value = np.random.randn(bs, num_head, v_head_size).astype(np.float16)
+    key_cache = np.random.randn(
+        num_blocks, num_head * k_head_size // lastDim_k, block_size, lastDim_k).astype(np.float16)
+    value_cache = np.zeros(
+        (num_blocks, num_head * v_head_size // lastDim_k, block_size, lastDim_k)).astype(np.float16)
+    slot_mapping = np.random.choice(num_blocks * block_size, bs, replace=False).astype(np.int32)
+
+    key_npu = torch.from_numpy(key).npu()
+    value_npu = torch.from_numpy(value).npu()
+    key_cache_npu = torch.from_numpy(key_cache).npu()
+    value_cache_npu = torch.from_numpy(value_cache).npu()
+    key_cache_npu_cast = torch_npu.npu_format_cast(key_cache_npu.contiguous(), 29)
+    value_cache_npu_cast = torch_npu.npu_format_cast(value_cache_npu.contiguous(), 29)
+    slot_mapping_npu = torch.from_numpy(slot_mapping).npu()
+
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+
+    cpu_model = Model().npu()
+    # 图模式调用
+    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model(key_npu, value_npu, slot_mapping_npu, key_cache_npu_cast, value_cache_npu_cast)
+
+
+# 执行上述代码，打印key_cache_npu_cast或value_cache_npu_cast输出类似如下
+tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
+        [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
+        ...,
+        [[ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]],
+        ...,
+        [[ 1.8271,  1.4551,  1.3154,  ...,  1.9854,  1.4365,  1.0732],
+        [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
+        [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]],
+        ...,
+        [[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
+        [ 1.9492,  1.6455,  1.6504,  ...,  1.5957,  1.6201,  1.4385],
+        [ 0.0742,  0.1982,  0.8945,  ...,  0.4912,  0.6753,  0.1120],
+        ...,
+        [[ 0.1113,  0.6255,  0.7686,  ...,  0.0247,  0.2490,  0.6909],
+        [ 0.4312,  0.7954,  0.7339,  ...,  0.1154,  0.6440,  0.3342],
+        [ 0.9570,  0.2869,  0.6489,  ...,  0.7451,  0.0234,  0.8843]],
+        ...,
+        [[ 1.8271,  1.4551,  1.3154,  ...,  1.9854,  1.4365,  1.0732],
+        [ 1.9492,  1.6455,  1.6504,  ...,  1.5957,  1.6201,  1.4385],
+        [ 0.0742,  0.1982,  0.8945,  ...,  0.4912,  0.6753,  0.1120]]]]
+    device='npu:0', dtype=torch.float16)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_anti_quant",
     """
 功能描述:
@@ -6050,8 +6365,8 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float1
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(int32). 
 *: 代表其之前的变量是位置相关, 需要按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, N, Q_S, KV_S)或(1, N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
-Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, N, 1, KV_S)或(1, N, 1, KV_S), 其中N为num_heads, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
 Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
 Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
@@ -6061,7 +6376,7 @@ actual_seq_lengths_kv: int类型数组, 代表不同Batch中key/value的有效se
 dequant_scale1: Tensor类型, 数据类型支持uint64、float32. 数据格式支持ND, 表示BMM1后面的反量化因子, 支持per-tensor. 如不使用该功能时传入None. 
 quant_scale1: Tensor类型, 数据类型支持float32. 数据格式支持ND, 表示BMM2前面的量化因子, 支持per-tensor. 如不使用该功能时可传入None, 综合约束请见约束说明. 
 dequant_scale2: Tensor类型, 数据类型支持uint64、float32. 数据格式支持ND, 表示BMM2后面的反量化因子, 支持per-tensor. 如不使用该功能时传入None. 
-quant_scale2: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化因子, 支持per-tensor、per-channel. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32 . per-channel格式, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于N*D(建议输出layout为BSH时, quant_scale2shape传入(1, 1, H)或(H,); 输出为BNSD时, 建议传入(1, N, 1, D)或(N, D); 输出为BSND时, 建议传入(1, 1, N, D)或(N, D)). 如不使用该功能时可传入None, 综合约束请见约束说明. 
+quant_scale2: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化因子, 支持per-tensor、per-channel. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32 . per-channel格式, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于Q_N*D(建议输出layout为BSH时, quant_scale2shape传入(1, 1, H)或(H,); 输出为BNSD时, 建议传入(1, Q_N, 1, D)或(Q_N, D); 输出为BSND时, 建议传入(1, 1, Q_N, D)或(Q_N, D)). 如不使用该功能时可传入None, 综合约束请见约束说明. 
 quant_offset2: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化偏移, 支持per-tensor、per-channel. 若传入quant_offset2, 需保证其类型和shape信息与quantScale2 一致. 如不使用该功能时可传入None, 综合约束请见约束说明. 
 antiquant_scale: Tensor类型, 数据类型支持float16、bfloat16. 数据格式支持ND, 表示伪量化因子, 支持per-tensor、per-channel, Q_S为1时只支持per-channel, Q_S大于等于2时只支持float16, 如不使用该功能时可传入None, 综合约束请见约束说明. 
 antiquant_offset: Tensor类型, 数据类型支持float16、bfloat16. 数据格式支持ND, 表示伪量化偏移, 支持per-tensor、per-channel, Q_S为1时只支持per-channel, Q_S大于等于2时只支持float16, 如不使用该功能时可传入None, 综合约束请见约束说明. 
@@ -6079,8 +6394,8 @@ value_antiquant_offset: Tensor类型, 数据类型支持float16、bfloat16、flo
 key_shared_prefix: Tensor类型, attention结构中Key的系统前缀部分的参数, 数据类型支持float16、bfloat16、int8, 不支持非连续的Tensor, 数据格式支持ND. 综合约束请见约束说明. 
 value_shared_prefix: Tensor类型, attention结构中Value的系统前缀部分的输入, 数据类型支持float16、bfloat16、int8, 不支持非连续的Tensor, 数据格式支持ND. 综合约束请见约束说明. 
 actual_shared_prefix_len: Tensor类型, 代表key_shared_prefix/value_shared_prefix的有效Sequence Length. 数据类型支持: int64. 如果不指定seqlen可以传入None, 表示和key_shared_prefix/value_shared_prefix的s长度相同. 限制: 该入参中的有效Sequence Length应该不大于key_shared_prefix/value_shared_prefix中的Sequence Length. 
-query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 仅支持Q_S等于1-16, 其余场景该参数无效. 
-key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 仅支持Q_S等于1-16, 其余场景该参数无效. 
+query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
+key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 key_rope_antiquant_scale: Tensor类型, 预留参数, 暂未使用, 使用默认值即可. 表示MLA(Multi-head Latent Attention)结构中的key Rope对应的反量化因子, 支持per-channel, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND, D维度与key_rope的D维度保持一致. 仅支持Q_S等于1-16, 其余场景该参数无效. 
 num_heads: 整型, 代表query的head个数, 数据类型支持int64, 在BNSD场景下, 需要与shape中的query的N轴shape值相同, 否则执行异常. 
 scale: 浮点型, 公式中d开根号的倒数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float. 数据类型与query的数据类型需满足数据类型推导规则. 用户不特意指定时可传入默认值1.0. 
@@ -6122,7 +6437,7 @@ Atlas A3 训练系列产品: 支持取值0、1、2、3、4、5.
 
 输出说明
 attention_out: Tensor类型, 公式中的输出, 数据类型支持float16、bfloat16、int8. 数据格式支持ND. 限制: 当input_layout为BNSD_BSND时, 输入query的shape是BNSD, 输出shape为BSND; 其余情况该参数的shape需要与入参query的shape保持一致. 
-softmaxLse: Tensor类型, ring attention算法对query乘key的结果, 先取max得到softmax_max. query乘key的结果减去softmax_max, 再取exp, 最后取sum, 得到softmax_sum, 最后对softmax_sum取log, 再加上softmax_max得到的结果. 数据类型支持float32, softmax_lse_flag为True时, 一般情况下, 输出shape为(B, N, Q_S, 1)的Tensor, 当input_layout为TND时, 输出shape为(T,N,1)的Tensor; softmax_lse_flag为False时, 则输出shape为[1]的值为0的Tensor. 
+softmaxLse: Tensor类型, ring attention算法对query乘key的结果, 先取max得到softmax_max. query乘key的结果减去softmax_max, 再取exp, 最后取sum, 得到softmax_sum, 最后对softmax_sum取log, 再加上softmax_max得到的结果. 数据类型支持float32, softmax_lse_flag为True时, 一般情况下, 输出shape为(B, Q_N, Q_S, 1)的Tensor, 当input_layout为TND时, 输出shape为(T,Q_N,1)的Tensor; softmax_lse_flag为False时, 则输出shape为[1]的值为0的Tensor. 
 
 约束说明:
 该接口支持推理场景下使用. 
@@ -6137,9 +6452,9 @@ int8量化相关入参数量与输入、输出数据格式的综合限制:
 入参quant_offset2和quant_scale2支持per-tensor或per-channel格式, 数据类型支持float32、bfloat16. 
 antiquant_scale和antiquant_offset参数约束: 
 支持per-channel、per-tensor和per-token三种模式: 
-per-channel模式: 两个参数BNSD场景下shape为(2, N, 1, D), BSND场景下shape为(2, N, D), BSH场景下shape为(2, H), N为num_key_value_heads. 参数数据类型和query数据类型相同, antiquant_mode置0, 当key、value数据类型为int8时支持. 
+per-channel模式: 两个参数BNSD场景下shape为(2, KV_N, 1, D), BSND场景下shape为(2, KV_N, D), BSH场景下shape为(2, H). 参数数据类型和query数据类型相同, antiquant_mode置0, 当key、value数据类型为int8时支持. 
 per-tensor模式: 两个参数的shape均为(2,), 数据类型和query数据类型相同, antiquant_mode置0, 当key、value数据类型为int8时支持. 
-per-token模式: 两个参数的shape均为(2, B, S), 数据类型固定为float32, antiquant_mode置1, 当key、value数据类型为int8时支持. 
+per-token模式: 两个参数的shape均为(2, B, KV_S), 数据类型固定为float32, antiquant_mode置1, 当key、value数据类型为int8时支持. 
 算子运行在何种模式根据参数的shape进行判断, dim为1时运行per-tensor模式, 否则运行per-channel模式. 
 支持对称量化和非对称量化: 
 非对称量化模式下, antiquant_scale和antiquant_offset参数需同时存在. 
@@ -6150,8 +6465,8 @@ key_rope的数据类型、数据格式与key一致, 配置时要求key的N为1, 
 query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个. 
 当query_rope和key_rope非空时, 支持如下特性: 
 sparse: Q_S等于1时只支持sparse=0且不传mask, Q_S大于1时只支持sparse=3且传入mask; 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, N, D/16, blockSize, 16]. 
-Atlas A3 训练系列产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, N, D/16, blockSize, 16]. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
+Atlas A3 训练系列产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A3 训练系列产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
@@ -6189,7 +6504,7 @@ page attention场景下, block_table必须为二维, 第一维长度需等于B, 
 page atte两种格式和float32/bfloat1ntion场景下, 不支持输入query为int8的场景. 
 page attention使能场景下, 以下场景输入需满足KV_S>=maxBlockNumPerSeq*blockSize: 
 传入attenMask时, 如mask shape为 (B, 1, Q_S, KV_S). 
-传入pseShift时, 如pseShift shape为(B, N, Q_S, KV_S). 
+传入pseShift时, 如pseShift shape为(B, Q_N, Q_S, KV_S). 
 query左padding场景: 
 query左padding场景query的搬运起点计算公式为: Q_S-query_padding_size-actual_seq_lengths. query的搬运终点计算公式为: Q_S-query_padding_size. 其中query的搬运起点不能小于0, 终点不能大于Q_S, 否则结果将不符合预期. 
 query左padding场景kv_padding_size小于0时将被置为0. 
@@ -6200,7 +6515,7 @@ kv左padding场景key和value的搬运起点计算公式为: KV_S-kv_padding_siz
 kv左padding场景kv_padding_size小于0时将被置为0. 
 kv左padding场景需要与actual_seq_lengths_kv参数一起使能, 否则默认为kv右padding场景. 
 kv左padding场景不支持PageAttention, 不能与block_table参数一起使能. 
-入参quant_scale2和quant_offset2支持per-tensor、per-channel量化, 支持float32、bfloat16类型. 若传入quant_offset2, 需保证其类型和shape信息与quant_scale2一致. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32. per-channel场景下, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于N*D. 当输出layout为BSH时, quant_scale2 shape建议传入(1, 1, H)或(H,); 当输出layout为BNSD时, 建议传入(1, N, 1, D)或(N, D); 当输出为BSND时, 建议传入(1, 1, N, D)或(N, D). 
+入参quant_scale2和quant_offset2支持per-tensor、per-channel量化, 支持float32、bfloat16类型. 若传入quant_offset2, 需保证其类型和shape信息与quant_scale2一致. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32. per-channel场景下, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于N*D. 当输出layout为BSH时, quant_scale2 shape建议传入(1, 1, H)或(H,); 当输出layout为BNSD时, 建议传入(1, Q_N, 1, D)或(Q_N, D); 当输出为BSND时, 建议传入(1, 1, Q_N, D)或(Q_N, D). 
 输出为int8, quant_scale2和quant_offset2为per-channel时, 暂不支持左padding、Ring Attention或者D非32Byte对齐的场景. 
 输出为int8时, 暂不支持sparse为band且preTokens/nextTokens为负数. 
 pse_shift功能使用限制如下: 
@@ -6226,7 +6541,7 @@ kv伪量化参数分离:
 key_antiquant_mode和value_antiquant_mode需要保持一致. 
 key_antiquant_scale和value_antiquant_scale要么都为空, 要么都不为空; key_antiquant_offset和value_antiquant_offset要么都为空, 要么都不为空. 
 key_antiquant_scale和value_antiquant_scale都不为空时, 其shape需要保持一致; key_antiquant_offset和value_antiquant_offset都不为空时, 其shape需要保持一致. 
-仅支持per-token模式, 且该模式下要求两个参数的shape均为(B, S), 数据类型固定为float32. 
+仅支持per-token模式, 且该模式下要求两个参数的shape均为(B, KV_S), 数据类型固定为float32. 
 当伪量化参数和KV分离量化参数同时传入时, 以KV分离量化参数为准. 
 key_antiquant_scale与value_antiquant_scale非空场景, 要求query的s小于等于16. 
 key_antiquant_scale与value_antiquant_scale非空场景, 要求query的dtype为bfloat16, key、value的dtype为int8, 输出的dtype为bfloat16. 
@@ -6268,14 +6583,14 @@ int4(int32)伪量化场景不支持后量化.
 管理scale/offset的量化模式如下: 
 注意scale、offset两个参数指key_antiquant_scale、key_antiquant_scale、value_antiquant_offset、value_antiquant_offset. 
 场景下scale和offset条件
-per-channel模式: 两个参数shape支持(1, N, 1, D), (1, N, D), (1, H), 数据类型和query数据类型相同. 
+per-channel模式: 两个参数shape支持(1, KV_N, 1, D), (1, KV_N, D), (1, H), 数据类型和query数据类型相同. 
 per-tensor模式: 两个参数的shape均为(1,), 数据类型和query数据类型相同. 
-per-token模式: 两个参数的shape均为(1, B, S), 数据类型固定为float32. 
-per-tensor叠加per-head模式: 两个参数的shape均为(N,), 数据类型和query数据类型相同. 
-per-token叠加per-head模式: 两个参数的shape均为(B, N, S), 数据类型固定为float32. 
+per-token模式: 两个参数的shape均为(1, B, KV_S), 数据类型固定为float32. 
+per-tensor叠加per-head模式: 两个参数的shape均为(KV_N,), 数据类型和query数据类型相同. 
+per-token叠加per-head模式: 两个参数的shape均为(B, KV_N, KV_S), 数据类型固定为float32. 
 per-token叠加使用page attention模式: 两个参数的shape均为(blocknum, blocksize), 数据类型固定为float32. 
-per-token叠加per head并使用page attention模式: 两个参数的shape均为(blocknum, N, blocksize), 数据类型固定为float32. 
-key支持per-channel叠加value支持per-token模式: 对于key支持per-channel, 两个参数的shape可支持(1, N, 1, D)、(1, N, D)、(1, H), 且参数数据类型和query数据类型相同. 对于value支持per-token, 两个参数的shape均为(1, B, S)并且数据类型固定为float32. 
+per-token叠加per head并使用page attention模式: 两个参数的shape均为(blocknum, KV_N, blocksize), 数据类型固定为float32. 
+key支持per-channel叠加value支持per-token模式: 对于key支持per-channel, 两个参数的shape可支持(1, KV_N, 1, D)、(1, KV_N, D)、(1, H), 且参数数据类型和query数据类型相同. 对于value支持per-token, 两个参数的shape均为(1, B, KV_S)并且数据类型固定为float32. 
 场景下key和value条件
 per-channel模式: Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 当key、value数据类型为int4(int32)或int8时支持. Atlas A3 训练系列产品: 当key、value数据类型为int4(int32)或int8时支持. 
 per-tensor模式: Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 当key、value数据类型为int8时支持. Atlas A3 训练系列产品: 当key、value数据类型为int8时支持. 
@@ -6490,7 +6805,7 @@ tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 )
 
 _add_torch_npu_docstr(
-    "npu_fused_infer_attention_v2",
+    "npu_fused_infer_attention_score_v2",
     """
 功能描述:
 算子功能: 适配增量&全量推理场景的FlashAttention算子, 既可以支持全量计算场景(PromptFlashAttention), 也可支持增量计算场景(IncreFlashAttention). 当Query矩阵的S为1, 进入IncreFlashAttention分支, 其余场景进入PromptFlashAttention分支. 
@@ -6498,7 +6813,7 @@ _add_torch_npu_docstr(
 attention_out = softmax(softmax_scale*(query*key)+atten_mask)*value
 
 接口原型:
-torch_npu.npu_fused_infer_attention_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
+torch_npu.npu_fused_infer_attention_score_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
 
 参数说明:
 query、key、value数据排布格式支持从多种维度解读, 其中B(Batch)表示输入样本批量大小、S(Seq-Length)表示输入样本序列长度、H(Head-Size)表示隐藏层的大小、N(Head-Num)表示多头数、D(Head-Dim)表示隐藏层最小的单元尺寸, 且满足D=H/N、T表示所有Batch输入样本序列长度的累加和. 
@@ -6510,11 +6825,11 @@ value: Tensor类型, attention结构的Value输入, 不支持非连续的Tensor,
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float16、bfloat16、int8、int4(int32). 
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(int32). 
 *: 代表其之前的变量是位置相关, 需要按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
-query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 仅支持Q_S等于1-16, 其余场景该参数无效. 
-key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 仅支持Q_S等于1-16, 其余场景该参数无效. 
+query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
+key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, N, Q_S, KV_S)或(1, N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
-Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, N, 1, KV_S)或(1, N, 1, KV_S), 其中N为num_query_heads, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
 Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
 Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
@@ -6522,7 +6837,7 @@ Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S).
 actual_seq_qlen: int类型数组, 代表不同Batch中query的有效seqlen, 数据类型支持int64. 如果不指定seqlen可以传入None, 表示和query的shape的s长度相同. 限制: 该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen, Q_S为1时该参数无效. seqlen的传入长度为1时, 每个Batch使用相同seqlen; 传入长度大于等于Batch时取seqlen的前Batch个数. 其他长度不支持. 当query的input_layout为TND时, 该入参必须传入, 且以该入参元素的数量作为Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 actual_seq_kvlen: int类型数组, 代表不同Batch中key/value的有效seqlenKv, 数据类型支持int64. 如果不指定None, 表示和key/value的shape的S长度相同. 不同O_S值有不同的约束, 具体参见约束说明. 
 block_table: Tensor类型, 数据类型支持int32. 数据格式支持ND. 表示PageAttention中KV存储使用的block映射表, 如不使用该功能可传入None. 
-dequant_scale_query: Tensor类型. 数据格式支持ND, query的反量化参数. 如不使用该功能时可传入None, 综合约束请见约束说明. 仅支持per-token叠加per-head.
+dequant_scale_query: Tensor类型. 数据格式支持ND, query的反量化参数. 仅支持per-token叠加per-head. 如不使用该功能时可传入None, 综合约束请见约束说明.
 dequant_scale_key: Tensor类型. 数据格式支持ND, kv伪量化参数分离时表示key的反量化因子. 如不使用该功能时可传入None, 综合约束请见约束说明. 通常支持per-channel、per-tensor、per-token、per-tensor叠加per-head、per-token叠加per-head、per-token叠加使用page attention模式管理scale、per-token叠加per head并使用page attention模式管理scale. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float16、bfloat16、float32. 
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、float32. 
@@ -6532,16 +6847,16 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float1
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、float32. 
 dequant_offset_value: Tensor类型, 数据类型支持float16、bfloat16、float32. 数据格式支持ND, kv伪量化参数分离时表示value的反量化偏移, 支持per-channel、per-tensor、per-token、per-tensor叠加per-head、per-token叠加per-head、per-token叠加使用page attention模式管理offset、per-token叠加per head并使用page attention模式管理offset. Q_S大于等于2时仅支持per-token模式, 如不使用该功能时可传入None, 综合约束请见约束说明. 
 dequant_scale_key_rope: Tensor类型, 预留参数, 暂未使用, 使用默认值即可. 表示MLA(Multi-head Latent Attention)结构中的key Rope对应的反量化因子, 支持per-channel, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND, D维度与key_rope的D维度保持一致. 仅支持Q_S等于1-16, 其余场景该参数无效. 
-quant_scale_out: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化因子, 支持per-tensor、per-channel. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32 . per-channel格式, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于N*D(建议输出layout为BSH时, quant_scale2shape传入(1, 1, H)或(H,); 输出为BNSD时, 建议传入(1, N, 1, D)或(N, D); 输出为BSND时, 建议传入(1, 1, N, D)或(N, D)). 如不使用该功能时可传入None, 综合约束请见约束说明. 
-quant_offset_out: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化偏移, 支持per-tensor、per-channel. 若传入quant_offset2, 需保证其类型和shape信息与quantScale2 一致. 如不使用该功能时可传入None, 综合约束请见约束说明. 
+quant_scale_out: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化因子, 支持per-tensor、per-channel. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32 . per-channel格式, 当输出layout为BSH时, 要求quant_scale2所有维度的乘积等于H; 其他layout要求乘积等于Q_N*D(建议输出layout为BSH时, quant_scale2shape传入(1, 1, H)或(H,); 输出为BNSD时, 建议传入(1, Q_N, 1, D)或(Q_N, D); 输出为BSND时, 建议传入(1, 1, Q_N, D)或(Q_N, D)). 如不使用该功能时可传入None, 综合约束请见约束说明. 
+quant_offset_out: Tensor类型, 数据类型支持float32、bfloat16. 数据格式支持ND, 表示输出的量化偏移, 支持per-tensor、per-channel. 若传入quant_offset_out, 需保证其类型和shape信息与quant_scale_out 一致. 如不使用该功能时可传入None, 综合约束请见约束说明. 
 num_query_heads: 整型, 代表query的head个数, 数据类型支持int64, 在BNSD场景下, 需要与shape中的query的N轴shape值相同, 否则执行异常. 
 num_key_value_heads: 整型, 代表key、value中head个数, 用于支持GQA(Grouped-Query Attention, 分组查询注意力)场景, 数据类型支持int64. 用户不特意指定时可传入默认值0, 表示key/value和query的head个数相等, 需要满足num_query_heads整除num_key_value_heads, num_query_heads与num_key_value_heads的比值不能大于64. 在BSND、BNSD、BNSD_BSND(仅支持Q_S大于1)场景下, 还需要与shape中的key/value的N轴shape值相同, 否则执行异常. 
 softmax_scale: 浮点型, 公式中d开根号的倒数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float. 数据类型与query的数据类型需满足数据类型推导规则. 用户不特意指定时可传入默认值1.0. 
 pre_tokens: 整型, 用于稀疏计算, 表示attention需要和前几个Token计算关联, 数据类型支持int64. 用户不特意指定时可传入默认值2147483647, Q_S为1时该参数无效. 
 next_tokens: 整型, 用于稀疏计算, 表示attention需要和后几个Token计算关联. 数据类型支持int64. 用户不特意指定时可传入默认值2147483647, Q_S为1时该参数无效. 
 input_layout: 字符串类型, 用于标识输入query、key、value的数据排布格式, 用户不特意指定时可传入默认值"BSH". 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
-Atlas A3 训练系列产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持tensorlist、pse、page attention、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
+Atlas A3 训练系列产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持tensorlist、pse、page attention、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
 其中BNSD_BSND含义指当输入为BNSD, 输出格式为BSND, 仅支持Q_S大于1. 
 sparse_mode: 整型, 表示sparse的模式. 数据类型支持int64. Q_S为1且不带rope输入时该参数无效. 
 sparse_mode为0时, 代表defaultMask模式, 如果atten_mask未传入则不做mask操作, 忽略pre_tokens和next_tokens(内部赋值为INT_MAX); 如果传入, 则需要传入完整的atten_mask矩阵(S1*S2), 表示pre_tokens和next_tokens之间的部分需要计算. 
@@ -6551,7 +6866,7 @@ sparse_mode为3时, 代表rightDownCausal模式的mask, 对应以右顶点为划
 sparse_mode为4时, 代表band模式的mask, 需要传入优化后的atten_mask矩阵(2048*2048). 
 sparse_mode为5、6、7、8时, 分别代表prefix、global、dilated、block_local, 均暂不支持. 用户不特意指定时可传入默认值0. 综合约束请见约束说明. 
 block_size: 整型, PageAttention中KV存储每个block中最大的token个数, 默认为0, 数据类型支持int64. 
-query_quant_mode: 整型, 表示query的伪量化方式.仅支持mode为3时, 代表per-token叠加per-head模式. 
+query_quant_mode: 整型, 表示query的伪量化方式。仅支持传入3，代表模式3：代表per-token叠加per-head模式.
 key_quant_mode: 整型, 表示key的伪量化方式. Q_S大于等于2时仅支持传入值为1, 用户不特意指定时可传入默认值0, 取值除了key_quant_mode为0并且value_quant_mode为1的场景外, 需要与value_quant_mode一致. 综合约束请见约束说明. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值0、1、2、3、4、5. 
 Atlas A3 训练系列产品: 支持取值0、1、2、3、4、5. 
@@ -6571,21 +6886,21 @@ inner_precise为2时, 代表开启高精度模式, 且做行无效修正.
 inner_precise为3时, 代表高性能模式, 且做行无效修正. 
 bfloat16和int8不区分高精度和高性能, 行无效修正对float16、bfloat16和int8均生效. 当前0、1为保留配置值, 当计算过程中“参与计算的mask部分”存在某整行全为1的情况时, 精度可能会有损失. 此时可以尝试将该参数配置为2或3来使能行无效功能以提升精度, 但是该配置会导致性能下降.
 return_softmax_lse: 布尔型, 表示是否输出softmax_lse, 支持S轴外切(增加输出). true表示输出softmax_lse, false表示不输出; 用户不特意指定时可传入默认值false. 
-query_dtype: 整型, 表示query的数据类型，当前版本不生效.
-key_dtype: 整型, 表示key的数据类型，当前版本不生效.
-value_dtype: 整型, 表示value的数据类型，当前版本不生效.
-query_rope_dtyp: 整型, 表示query_repo的数据类型，当前版本不生效.
-key_rope_dtype: 整型, 表示key_rope的数据类型，当前版本不生效.
-key_shared_prefix_dtype: 整型, 表示key_shared_prefix的数据类型，当前版本不生效.
-value_shared_prefix_dtype: 整型, 表示value_shared_prefix的数据类型，当前版本不生效.
-dequant_scale_query_dtype: 整型, 表示dequant_scale_query的数据类型，当前版本不生效.
-dequant_scale_key_dtype: 整型, 表示dequant_scale_key的数据类型，当前版本不生效.
-dequant_scale_value_dtype: 整型, 表示dequant_scale_value的数据类型，当前版本不生效.
-dequant_scale_key_rope_dtype: 整型, 表示dequant_scale_key_rope的数据类型，当前版本不生效.
+query_dtype: 整型, 表示query的数据类型，预留参数，暂未使用，使用默认值即可.
+key_dtype: 整型, 表示key的数据类型，预留参数，暂未使用，使用默认值即可.
+value_dtype: 整型, 表示value的数据类型，预留参数，暂未使用，使用默认值即可.
+query_rope_dtyp: 整型, 表示query_repo的数据类型，预留参数，暂未使用，使用默认值即可.
+key_rope_dtype: 整型, 表示key_rope的数据类型，预留参数，暂未使用，使用默认值即可.
+key_shared_prefix_dtype: 整型, 表示key_shared_prefix的数据类型，预留参数，暂未使用，使用默认值即可.
+value_shared_prefix_dtype: 整型, 表示value_shared_prefix的数据类型，预留参数，暂未使用，使用默认值即可.
+dequant_scale_query_dtype: 整型, 表示dequant_scale_query的数据类型，预留参数，暂未使用，使用默认值即可.
+dequant_scale_key_dtype: 整型, 表示dequant_scale_key的数据类型，预留参数，暂未使用，使用默认值即可.
+dequant_scale_value_dtype: 整型, 表示dequant_scale_value的数据类型，预留参数，暂未使用，使用默认值即可.
+dequant_scale_key_rope_dtype: 整型, 表示dequant_scale_key_rope的数据类型，预留参数，暂未使用，使用默认值即可.
 
 输出说明
-attention_out: Tensor类型, 公式中的输出, 数据类型支持float16、bfloat16、int8. 数据格式支持ND. 限制: 当input_layout为BNSD_BSND时, 输入query的shape是BNSD, 输出shape为BSND; 其余情况该参数的shape需要与入参query的shape保持一致. 
-softmaxLse: Tensor类型, ring attention算法对query乘key的结果, 先取max得到softmax_max. query乘key的结果减去softmax_max, 再取exp, 最后取sum, 得到softmax_sum, 最后对softmax_sum取log, 再加上softmax_max得到的结果. 数据类型支持float32, return_softmax_lse为True时, 一般情况下, 输出shape为(B, N, Q_S, 1)的Tensor, 当input_layout为TND时, 输出shape为(T,N,1)的Tensor; return_softmax_lse为False时, 则输出shape为[1]的值为0的Tensor. 
+attention_out: Tensor类型, 公式中的输出, 数据类型支持float16、bfloat16、int8. 数据格式支持ND. 限制：该入参的D维度与value的D保持一致，其余维度需要与入参query的shape保持一致. 
+softmaxLse: Tensor类型, ring attention算法对query乘key的结果, 先取max得到softmax_max. query乘key的结果减去softmax_max, 再取exp, 最后取sum, 得到softmax_sum, 最后对softmax_sum取log, 再加上softmax_max得到的结果. 数据类型支持float32, return_softmax_lse为True时, 一般情况下, 输出shape为(B, Q_N, Q_S, 1)的Tensor, 当input_layout为TND时, 输出shape为(T,Q_N,1)的Tensor; return_softmax_lse为False时, 则输出shape为[1]的值为0的Tensor. 
 
 约束说明:
 该接口支持推理场景下使用. 
@@ -6593,30 +6908,74 @@ softmaxLse: Tensor类型, ring attention算法对query乘key的结果, 先取max
 该接口与PyTorch配合使用时, 需要保证CANN相关包与PyTorch相关包的版本匹配. 
 入参为空的处理: 算子内部需要判断参数query是否为空, 如果是空则直接返回. 参数query不为空Tensor, 参数key、value为空tensor(即S2为0), 则填充全零的对应shape的输出(填充attention_out). attention_out为空Tensor时, 框架会处理. 
 参数key、value中对应tensor的shape需要完全一致; 非连续场景下key、value的tensorlist中的batch只能为1, 个数等于query的B, N和D需要相等. 
-int8量化相关入参数量与输入、输出数据格式的综合限制: 
-输入为int8, 输出为int8的场景: 入参quant_scale_out需要存在, quant_offset_out可选, 不传时默认为0. 
-输入为int8, 输出为float16的场景: 若存在入参quant_offset_out或quant_scale_out(即不为None), 则报错并返回. 
-输入全为float16或bfloat16, 输出为int8的场景: 入参quant_scale_out需存在, quant_offset_out可选, 不传时默认为0. 
+int8量化相关入参数量与输出数据格式的综合限制: 
+输出为int8的场景: 入参quant_scale_out需要存在, quant_offset_out可选, 不传时默认为0. 
+输出为float16的场景: 若存在入参quant_offset_out或quant_scale_out(即不为None), 则报错并返回. 
 入参quant_offset_out和quant_scale_out支持per-tensor或per-channel格式, 数据类型支持float32、bfloat16. 
-query_rope和key_rope参数约束: 
-query_rope的数据类型、数据格式与query一致, 配置时要求query的S为1-16、N为32、64、128, D为512, shape中B、N、S与query一致, D为64. 
-key_rope的数据类型、数据格式与key一致, 配置时要求key的N为1, D为512, key_rope的shape中B、N、S与key一致, D为64. 
-query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个. 
-当query_rope和key_rope非空时, 支持如下特性: 
-sparse: Q_S等于1时只支持sparse=0且不传mask, Q_S大于1时只支持sparse=3且传入mask; 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, N, D/16, blockSize, 16]. 
-Atlas A3 训练系列产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, N, D/16, blockSize, 16]. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
-Atlas A3 训练系列产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
-Atlas A3 训练系列产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
-TND场景下query、key、value输入的综合限制: 
-T小于等于65536;
-N等于8/16/32/64/128, 且Q_N、K_N、V_N相等;
-Q_D、K_D等于192, V_D等于128/192;
-数据类型仅支持BFLOAT16; 
-sparse模式仅支持sparse=0且不传mask, 或sparse=3且传入mask; 
-当sparse=3时, 要求每个batch单独的actual_seq_qlen < actual_seq_kvlen. 
+query_rope和key_rope输入时即为MLA场景，参数约束如下：
+query_rope的数据类型、数据格式与query一致。
+key_rope的数据类型、数据格式与key一致。
+query_rope和key_rope要求同时配置或同时不配置，不支持只配置其中一个。
+当query_rope和key_rope非空时，支持如下特性：
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产品：query的d只支持512、128；
+当query的d等于512时：
+sparse：Q_S等于1时只支持sparse=0且不传mask，Q_S大于1时只支持sparse=3且传入mask；
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产品约束如下：
+query_rope配置时要求query的s为1-16、n为32、64、128，query_rope的shape中d为64，其余维度与query一致；
+key_rope配置时要求key的n为1，d为512，keyRope的shape中d为64，其余维度与key一致；
+支持key、value、keyRope的input_layout格式为ND或NZ。当input_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]，数据类型为int8时，输入参数key和value的格式为[blockNum, KV_N, D/32, blockSize, 32]；
+input_layout形状支持BSH、BSND、BNSD、BNSD_NBSD、BSND_NBSD、BSH_NBSD、TND、TND_NTD，当数据格式为NZ时input_layout不支持BNSD、BNSD_NBSD。
+该场景下，必须开启PageAttention，此时block_size支持16、128，其中数据格式为NZ时block_size不支持配置16。
+不支持开启SoftMaxLse、tensorlist、pse、伪量化、后量化。
+支持全量化场景，即输入query/key/value全为int8，query_rope和key_rope为bfloat16，输出为bfloat16的场景：
+入参dequant_scale_query、dequant_scale_key、dequant_scale_value需要同时存在，且其数据类型仅支持FP32。
+不支持传入quant_scale_out、quant_offset_out、dequant_offset_key、dequant_offset_value（即不为nullptr），否则报错并返回。
+query_quant_mode仅支持per-token叠加per-head模式，key_quant_mode和value_quant_mode仅支持per-tensor模式。
+支持key、value、keyRope的input_layout格式为NZ。
+当query的d等于128时：
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产品约束如下：
+inputLayout：TND、NTD_TND。  
+query_rope配置时要求query_rope的shape中d为64，其余维度与query一致。  
+keyRope配置时要求keyRope的shape中d为64，其余维度与key一致。  
+不支持tensorlist、pse、page attention、伪量化、全量化、后量化。
+其余约束同TND、NTD_TND场景下的综合限制保持一致。
+TND、TND_NTD、NTD_TND场景下query、key、value输入的综合限制：
+T小于等于1M;
+sparse模式仅支持sparse=0且不传mask，或sparse=3且传入mask；
+actual_seq_qlen和actual_seq_kvlen必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的Sequence Length和，因此后一个元素的值必须大于等于前一个元素的值；
+当query的d等于512时：
+支持TND、TND_NTD;
+必须开启page attention，此时actual_seq_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV_S；
+支持query每个batch的s为1-16；
+要求query的n为32/64/128，key、value的n为1；
+要求query_rope和keyRope不等于空，query_rope和keyRope的d为64；
+不支持开启SoftMaxLse、tensorlist、pse、伪量化、全量化、后量化。
+
+当query的d不等于512时：
+当query_rope和key_rope为空时：TND场景，要求Q_D、K_D、V_D等于128，或者Q_D、K_D等于192，V_D等于128/192；NTD_TND场景，要求Q_D、K_D等于128/192，V_D等于128。当query_rope和key_rope不为空时，要求Q_D、K_D、V_D等于128；
+Q_N、K_N、V_N：需要满足K_N、V_N相等，Q_N整除K_N，Q_N与K_N的比值不能大于64；
+支持TND、NTD_TND；
+数据类型仅支持BFLOAT16；
+当sparse=3时，要求每个batch单独的actual_seq_qlen<actual_seq_kvlen；
+不支持tensorlist、pse、page attention、伪量化、全量化、后量化；
+不支持图模式配置Tiling调度优化（tiling_schedule_optimize=True）、reduce-overhead执行模式（config.mode="reduce-overhead"）。
+actual_seq_qlen和actual_seq_kvlen的元素个数不大于4096。
+
+GQA伪量化场景下KV为NZ格式时的参数约束如下：
+支持per-channel和per-token模式，query数据类型固定为bfloat16，key&value固定为int8；query&key&value的D仅支持128；query Sequence Length仅支持1-16；
+input_layout仅支持BSH、BSND、BNSD；
+仅支持page_attention场景，blockSize仅支持128或512；
+key&value仅支持NZ输入，输入格式为[blockNum, KV_N, D/32, blockSize, 32]；
+dequant_scale_key和dequant_scale_value的dtype：per-channel模式下，仅支持bfloat16类型；per-token模式下，仅支持float32类型；
+dequant_scale_key和dequant_scale_value的shape：per-channel模式下，当layout为BSH时，必须传入[H]；layout为BNSD时，必须传入[KV_N,1,D]；输出为BSND时，必须传入[KV_N, D]；per-token模式下，必须传入[B,KV_S]，S需要大于等于blockTable的第二维*blockSize；
+仅支持KV分离；
+仅支持高性能模式；
+当MTP等于0时，支持sparse_mode=0且不传mask；当MTP大于0、小于16时，支持sparse_mode=3且传入优化后的atten_mask矩阵，atten_mask矩阵shape必须传入（2048*2048）；
+不支持配置dequant_offset_key和dequant_offset_value;
+不支持配置query_rope和key_rope；
+不支持左padding、tensorlist、pse、prefix、后量化；
+num_query_heads与num_key_value_heads支持组合有(10,1)、(64,8)、(80,8)、(128,16)。
+
 当Q_S大于1时: 
 query、key、value输入, 功能使用限制如下: 
 支持B轴小于等于65536, D轴32byte不对齐时仅支持到128. 
@@ -6629,23 +6988,22 @@ B=1, Q_N=10, Q_S=2097152, D=512, KV_N=1, KV_S=2097152.
 query、key、value输入类型包含int8时, D轴需要32对齐; 输入类型全为float16、bfloat16时, D轴需16对齐. 
 actual_seq_kvlen: 该参数传入时应为非负数, 在input_layout不同时, 其含义与拦截条件不同: 一般情况下, 该入参为可选入参, 该入参中每个Batch的有效seqlenKv应该不大于key/value中对应Batch的seqlenKv. 当本参数的传入长度为1时, 每个Batch使用相同seqlenKv; 传入长度大于等于Batch时取seqlenKv的前Batch个数. 其他长度不支持. 当key/value的input_layout为TND时, 该入参必须传入, 且该入参元素的数量等于Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlenKv和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 参数sparse_mode当前仅支持值为0、1、2、3、4的场景, 取其它值时会报错. 
-sparse_mode=0时, atten_mask如果为None, 或者在左padding场景传入atten_mask, 则忽略入参pre_tokens、next_tokens(内部赋值为INT_MAX). 
+sparse_mode=0时, atten_mask如果为None, 则忽略入参pre_tokens、next_tokens(内部赋值为INT_MAX). 
 sparse_mode=2、3、4时, atten_mask的shape需要为(S, S)或(1, S, S)或(1, 1, S, S), 其中S的值需要固定为2048, 且需要用户保证传入的atten_mask为下三角, 不传入atten_mask或者传入的shape不正确报错. 
 sparse_mode=1、2、3的场景忽略入参pre_tokens、next_tokens并按照相关规则赋值. 
-kvCache反量化的合成参数场景仅支持int8反量化到float16. 入参key、value的data range的data range乘积范围在(-1, 1)内, 高性能模式可以保证精度, 否则需要开启高精度模式来保证精度. 
 page attention场景:
 page attention的使能必要条件是block_table存在且有效, 同时key、value是按照block_table中的索引在一片连续内存中排布, 支持key、value数据类型为float16、bfloat16、int8. 在该场景下key、value的input_layout参数无效. block_table中填充的是blockid, 当前不会对blockid的合法性进行校验, 需用户自行保证. 
 block_size是用户自定义的参数, 该参数的取值会影响page attention的性能, 在使能page attention场景下, block_size最小为128, 最大为512, 且要求是128的倍数. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
 page attention场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且KV_N*D超过65535时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小KV_N)或调整kv cache排布格式为(blocknum, KV_N, blocksize, D)解决. 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_kvlen和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
-page attention不支持伪量化场景, 不支持tensorlist场景, 不支持左padding场景. 
+page attention不支持伪量化场景, 不支持tensorlist场景. 
 page attention场景下, 必须传入actual_seq_kvlen. 
 page attention场景下, block_table必须为二维, 第一维长度需等于B, 第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为不同batch中最大actual_seq_kvlen对应的block数量). 
-page atte两种格式和float32/bfloat1ntion场景下, 不支持输入query为int8的场景. 
+page attention场景下，支持两种格式和float32/bfloat16，不支持输入query为int8的场景。
 page attention使能场景下, 以下场景输入需满足KV_S>=maxBlockNumPerSeq*blockSize: 
 传入attenMask时, 如mask shape为 (B, 1, Q_S, KV_S). 
-传入pseShift时, 如pseShift shape为(B, N, Q_S, KV_S). 
-入参quant_scale_out和quant_offset_out支持per-tensor、per-channel量化, 支持float32、bfloat16类型. 若传入quant_offset_out, 需保证其类型和shape信息与quant_scale_out一致. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32. per-channel场景下, 当输出layout为BSH时, 要求quant_scale_out所有维度的乘积等于H; 其他layout要求乘积等于N*D. 当输出layout为BSH时, quant_scale_out shape建议传入(1, 1, H)或(H,); 当输出layout为BNSD时, 建议传入(1, N, 1, D)或(N, D); 当输出为BSND时, 建议传入(1, 1, N, D)或(N, D). 
-输出为int8, quant_scale_out和quant_offset_out为per-channel时, 暂不支持左padding、Ring Attention或者D非32Byte对齐的场景. 
+传入pseShift时, 如pseShift shape为(B, Q_N, Q_S, KV_S). 
+入参quant_scale_out和quant_offset_out支持per-tensor、per-channel量化, 支持float32、bfloat16类型. 若传入quant_offset_out, 需保证其类型和shape信息与quant_scale_out一致. 当输入为bfloat16时, 同时支持float32和bfloat16 , 否则仅支持float32. per-channel场景下, 当输出layout为BSH时, 要求quant_scale_out所有维度的乘积等于H; 其他layout要求乘积等于Q_N*D. 当输出layout为BSH时, quant_scale_out shape建议传入(1, 1, H)或(H,); 当输出layout为BNSD时, 建议传入(1, Q_N, 1, D)或(Q_N, D); 当输出为BSND时, 建议传入(1, 1, Q_N, D)或(Q_N, D). 
+输出为int8, quant_scale_out和quant_offset_out为per-channel时, 暂不支持Ring Attention或者D非32Byte对齐的场景. 
 输出为int8时, 暂不支持sparse为band且preTokens/nextTokens为负数. 
 pse_shift功能使用限制如下: 
 支持query数据类型为float16或bfloat16或int8场景下使用该功能. 
@@ -6658,19 +7016,19 @@ sparse_mode=3, 每个batch actual_seq_kvlen-actual_seq_qlen<0, 满足拦截条�
 sparse_mode=4, pre_tokens<0或每个batch next_tokens+actual_seq_kvlen-actual_seq_qlen<0时, 满足拦截条件. 
 kv伪量化参数分离: 
 key_quant_mode和value_quant_mode需要保持一致. 
-key_antiquant_scale和value_antiquant_scale要么都为空, 要么都不为空; key_antiquant_offset和value_antiquant_offset要么都为空, 要么都不为空. 
-key_antiquant_scale和value_antiquant_scale都不为空时, 其shape需要保持一致; key_antiquant_offset和value_antiquant_offset都不为空时, 其shape需要保持一致. 
-仅支持per-token模式, 且该模式下要求两个参数的shape均为(B, S), 数据类型固定为float32. 
+dequant_scale_key和dequant_scale_value要么都为空, 要么都不为空; dequant_offset_key和dequant_offset_value要么都为空, 要么都不为空. 
+dequant_scale_key和dequant_scale_value都不为空时, 其shape需要保持一致; dequant_offset_key和dequant_offset_value都不为空时, 其shape需要保持一致. 
+仅支持per-token和per-channel模式，per-token模式下要求两个参数的shape均为(B, KV_S)，数据类型固定为float32；per-channel模式下要求两个参数的shape为（KV_N, D），(KV_N, D)，(H)，数据类型固定为bfloat16,H为KV_N*D.
 当伪量化参数和KV分离量化参数同时传入时, 以KV分离量化参数为准. 
-key_antiquant_scale与value_antiquant_scale非空场景, 要求query的s小于等于16. 
-key_antiquant_scale与value_antiquant_scale非空场景, 要求query的dtype为bfloat16, key、value的dtype为int8, 输出的dtype为bfloat16. 
-key_antiquant_scale与value_antiquant_scale非空场景, 不支持tensorlist、左padding、page attention、prefix特性. 
+dequant_scale_key与dequant_scale_value非空场景, 要求query的s小于等于16. 
+dequant_scale_key与dequant_scale_value非空场景, 要求query的dtype为bfloat16, key、value的dtype为int8, 输出的dtype为bfloat16. 
+dequant_scale_key与dequant_scale_value非空场景, 不支持tensorlist、page attention特性. 
 当Q_S等于1时: 
 query、key、value输入, 功能使用限制如下: 
 支持B轴小于等于65536, 支持N轴小于等于256, 支持S轴小于等于262144, 支持D轴小于等于512. 
 query、key、value输入类型均为int8的场景暂不支持. 
 在int4(int32)伪量化场景下, PyTorch入图调用仅支持KV int4拼接成int32输入(建议通过dynamicQuant生成int4格式的数据, 因为dynamicQuant就是一个int32包括8个int4). 
-在int4(int32)伪量化场景下, 若KV int4拼接成int32输入, 那么KV的N、D或者H是实际值的八分之一(prefix同理). 并且, int4伪量化仅支持D 64对齐(int32支持D 8对齐). 
+在int4(int32)伪量化场景下, 若KV int4拼接成int32输入, 那么KV的N、D或者H是实际值的八分之一. 并且, int4伪量化仅支持D 64对齐(int32支持D 8对齐). 
 actual_seq_kvlen: 该参数应为非负数, 在input_layout不同时, 其含义与拦截条件不同: 一般情况下, 该入参为可选入参, 该入参中每个Batch的有效Sequence Length应该不大于key/value中对应Batch的seqlenKv. 当本参数的传入长度为1时, 每个Batch使用相同seqlenKv; 传入长度大于等于Batch时取seqlenKv的前Batch个数. 其他长度不支持. 当input_layout为TND时, 该入参必须传入, 在非PA场景下, 第b个值表示前b个Batch的S轴累加长度, 其值应递增(大于等于前一个值)排列, 且该入参元素的数量代表总Batch数, 在PA场景下, 其长度等于key/value的Batch值, 代表每个Batch的实际长度, 值不大于KV_S. 
 page attention场景: 
 使能必要条件是block_table存在且有效, 同时key、value是按照block_table中的索引在一片连续内存中排布, 在该场景下key、value的input_layout参数无效. 
@@ -6684,26 +7042,25 @@ page attention场景下, blockTable必须为二维, 第一维长度需等于B, �
 page attention场景下, 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_kvlen和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
 page attention场景下, kv cache排布为(blocknum, KV_N, blocksize, D)时性能通常优于kv cache排布为(blocknum, blocksize, H)时的性能, 建议优先选择(blocknum, KV_N, blocksize, D)格式. 
 page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
-page attention不支持左padding场景. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
 kv伪量化参数分离: 
 除了key_quant_mode为0并且value_quant_mode为1的场景外, key_quant_mode和value_quant_mode取值需要保持一致. 
-key_antiquant_scale和value_antiquant_scale要么都为空, 要么都不为空; key_antiquant_offset和value_antiquant_offset要么都为空, 要么都不为空. 
-key_antiquant_scale和value_antiquant_scale都不为空时, 除了key_quant_mode为0并且value_quant_mode为1的场景外, 其shape需要保持一致; key_antiquant_offset和value_antiquant_offset都不为空时, 除了key_quant_mode为0并且value_quant_mode为1的场景外, 其shape需要保持一致. 
+dequant_scale_key和dequant_scale_value要么都为空, 要么都不为空; dequant_offset_key和dequant_offset_value要么都为空, 要么都不为空. 
+dequant_scale_key和dequant_scale_value都不为空时, 除了key_quant_mode为0并且value_quant_mode为1的场景外, 其shape需要保持一致; dequant_offset_key和dequant_offset_value都不为空时, 除了key_quant_mode为0并且value_quant_mode为1的场景外, 其shape需要保持一致. 
 int4(int32)伪量化场景不支持后量化. 
 管理scale/offset的量化模式如下: 
-注意scale、offset两个参数指key_antiquant_scale、key_antiquant_scale、value_antiquant_offset、value_antiquant_offset. 
+注意scale、offset两个参数指dequant_scale_key、dequant_scale_key、dequant_offset_value、dequant_offset_value. 
 场景下scale和offset条件
-per-channel模式: 两个参数shape支持(1, N, 1, D), (1, N, D), (1, H), 数据类型和query数据类型相同. 
+per-channel模式: 两个参数shape支持(1, KV_N, 1, D), (1, KV_N, D), (1, H), 数据类型和query数据类型相同. 
 per-tensor模式: 两个参数的shape均为(1,), 数据类型和query数据类型相同. 
-per-token模式: 两个参数的shape均为(1, B, S), 数据类型固定为float32. 
-per-tensor叠加per-head模式: 两个参数的shape均为(N,), 数据类型和query数据类型相同. 
-per-token叠加per-head模式: 两个参数的shape均为(B, N, S), 数据类型固定为float32. 
+per-token模式: 两个参数的shape均为(1, B, KV_S), 数据类型固定为float32. 
+per-tensor叠加per-head模式: 两个参数的shape均为(KV_N,), 数据类型和query数据类型相同. 
+per-token叠加per-head模式: 两个参数的shape均为(B, KV_N, KV_S), 数据类型固定为float32. 
 per-token叠加使用page attention模式: 两个参数的shape均为(blocknum, blocksize), 数据类型固定为float32. 
-per-token叠加per head并使用page attention模式: 两个参数的shape均为(blocknum, N, blocksize), 数据类型固定为float32. 
-key支持per-channel叠加value支持per-token模式: 对于key支持per-channel, 两个参数的shape可支持(1, N, 1, D)、(1, N, D)、(1, H), 且参数数据类型和query数据类型相同. 对于value支持per-token, 两个参数的shape均为(1, B, S)并且数据类型固定为float32. 
+per-token叠加per head并使用page attention模式: 两个参数的shape均为(blocknum, KV_N, blocksize), 数据类型固定为float32. 
+key支持per-channel叠加value支持per-token模式: 对于key支持per-channel, 两个参数的shape可支持(1, KV_N, 1, D)、(1, KV_N, D)、(1, H), 且参数数据类型和query数据类型相同. 对于value支持per-token, 两个参数的shape均为(1, B, KV_S)并且数据类型固定为float32. 
 场景下key和value条件
 per-channel模式: Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 当key、value数据类型为int4(int32)或int8时支持. Atlas A3 训练系列产品: 当key、value数据类型为int4(int32)或int8时支持. 
 per-tensor模式: Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 当key、value数据类型为int8时支持. Atlas A3 训练系列产品: 当key、value数据类型为int8时支持. 
@@ -6740,7 +7097,7 @@ actseqlen = [164]
 actseqlenkv = [1024]
 
 # 调用FIA算子
-out, _ = torch_npu.npu_fused_infer_attention_v2(q, k, v, 
+out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, 
 actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
 num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
 
@@ -6784,13 +7141,13 @@ class Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
     def forward(self):
-        return torch_npu.npu_fused_infer_attention_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        return torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
 def MetaInfershape():
     with torch.no_grad():
         model = Model()
         model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
         graph_output = model()
-    single_op = torch_npu.npu_fused_infer_attention_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+    single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
     print("single op output with mask:", single_op[0], single_op[0].shape)
     print("graph output with mask:", graph_output[0], graph_output[0].shape)
 if __name__ == "__main__":
@@ -6818,16 +7175,16 @@ graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.
 )
 
 _add_torch_npu_docstr(
-    "_npu_fused_infer_attention_v2_get_max_workspace",
+    "_npu_fused_infer_attention_score_v2_get_max_workspace",
     """
 功能描述:
-算子功能：用于npu_fused_infer_attention_v2算子aclgraph tilling下沉场景，获取最大workspace size并创建一个此size大小的tensor。
+算子功能：用于npu_fused_infer_attention_score_v2算子aclgraph tilling下沉场景，获取最大workspace size并创建一个此size大小的tensor。
 
 接口原型:
-torch_npu._npu_fused_infer_attention_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
+torch_npu._npu_fused_infer_attention_score_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
 
 参数说明:
-输入与npu_fused_infer_attention_v2一致
+输入与npu_fused_infer_attention_score_v2一致
 输出类型为Tensor, 由aclnnFusedInferAttentionScoreV4GetMaxWorkspaceSize返回最大的Size，返回创建的workspace tensor。
 
 约束说明:
@@ -6850,7 +7207,7 @@ v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
 softmax_scale = 1/math.sqrt(128.0)
 
 # 调用FIA算子
-out = torch_npu._npu_fused_infer_attention_v2_get_max_workspace(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
+out = torch_npu._npu_fused_infer_attention_score_v2_get_max_workspace(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
 
 # 执行上述代码的输出类似如下
 tensor([0., 0., ..., 0., 0., 0.],
@@ -6862,17 +7219,17 @@ tensor([0., 0., ..., 0., 0., 0.],
 )
 
 _add_torch_npu_docstr(
-    "npu_fused_infer_attention_v2.out",
+    "npu_fused_infer_attention_score_v2.out",
     """
 功能描述:
-算子功能：npu_fused_infer_attention_v2.out算子实现，可用于aclgraph tilling下沉场景（需传入workspace tensor），输入参数相比npu_fused_infer_attention_v2增加workspace、attention_out、softmax_lse。
+算子功能：npu_fused_infer_attention_score_v2.out算子实现，可用于aclgraph tilling下沉场景（需传入workspace tensor），输入参数相比npu_fused_infer_attention_score_v2增加workspace、attention_out、softmax_lse。
 计算公式：atten_out = softmax(softmax_scale*(query*key)+atten_mask)*value
 
 接口原型:
-torch_npu.npu_fused_infer_attention_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
+torch_npu.npu_fused_infer_attention_score_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
 
 参数说明:
-在torch_npu.npu_fused_infer_attention_v2的基础上增加下面三个参数：
+在torch_npu.npu_fused_infer_attention_score_v2的基础上增加下面三个参数：
 workspace(可选): 一维Device侧的Input Tensor，数据类型与Query一致；
 attention_out（aclTensor*，计算输出）: 计算的最终结果Attention output tensor, shape与Query一致；
 softmax_lse（aclTensor*，计算输出）: 也是一个输出结果，当前预留，暂不支持；
@@ -6900,7 +7257,7 @@ softmax_lse = torch.randn(1, dtype=torch.float16).npu()
 softmax_scale = 1/math.sqrt(128.0)
 
 # 调用FIA算子
-out = torch_npu.npu_fused_infer_attention_v2.out(q, k, v, workspace=workspace, out=[output, softmax_lse], num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
+out = torch_npu.npu_fused_infer_attention_score_v2.out(q, k, v, workspace=workspace, out=[output, softmax_lse], num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
 
 # 执行上述代码的输出output类似如下
 tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -6927,34 +7284,70 @@ _add_torch_npu_docstr(
 torch_npu.npu_mla_prolog(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> (Tensor, Tensor, Tensor, Tensor)
 
 参数说明:
-token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x。shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵，WDQ 。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
-weight_uq_qr：Tensor类型，表示用于计算Query的上采样权重矩阵和Query的位置编码权重矩阵，WUQ和WQR 。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
-weight_uk：Tensor类型，表示用于计算Key的上采样权重，WUK。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
-weight_dkv_kr：Tensor类型，表示用于计算Key的下采样权重矩阵和Key的位置编码权重矩阵。Device侧的aclTensor。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
-rmsnorm_gamma_cq：Tensor类型，表示用于计算Query的rmsnorm中的gamma参数，对应计算Query的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
-rmsnorm_gamma_ckv：Tensor类型，表示用于计算Key的rmsnorm中的gamma参数，对应计算Key的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
-rope_sin：Tensor类型，表示用于计算旋转位置编码的正弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-rope_cos：Tensor类型，表示用于计算旋转位置编码的余弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-cache_index：Tensor类型，表示用于存储kvCache和krCache的索引。其shape支持1维和2维，dtype支持int64，数据格式支持ND格式。
-kv_cache：Tensor类型，表示用于cache索引的aclTensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-kr_cache：Tensor类型，表示用于key位置编码的cache。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-dequant_scale_x：Tensor类型，预留参数，暂未使用，使用默认值即可。
-dequant_scale_w_dq：Tensor类型，预留参数，暂未使用，使用默认值即可。
-dequant_scale_w_uq_qr：Tensor类型，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化算法为per-channel。其shape支持2维，dtype支持float，数据格式支持ND格式。
-dequant_scale_w_dkv_kr：Tensor类型，预留参数，暂未使用，使用默认值即可。
-quant_scale_ckv：Tensor类型，用于输出到KVCache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
-quant_scale_ckr：Tensor类型，用于输出到KRCache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
-smooth_scales_cq：Tensor类型，用于对RmsNormCq输出做动态量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
-rmsnorm_epsilon_cq：Double类型，表示用于计算Query的rmsnorm中的ϵ参数，对应计算Query的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
-rmsnorm_epsilon_ckv：Double类型，表示用于计算Key额时rmsnorm中的ϵ参数，对应计算Key的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
-cache_mode：String类型，用于表示kvCache的模式，支持"PA_BSND","PA_NZ"，其用户不特意指定时可传入默认值"PA_BSND"。
+-   token_x（Tensor）：必选参数，对应公式中x。shape支持2维和3维，格式为(T, He)和(B, S, He)，dtype支持bfloat16，数据格式支持ND。
+-   weight_dq（Tensor）：必选参数，表示计算Query的下采样权重矩阵，即公式中W<sup>DQ</sup>。shape支持2维，格式为(He, Hcq)，dtype支持bfloat16，数据格式支持FRACTAL_NZ（可通过torch_npu.npu_format_cast将ND格式转为FRACTAL_NZ格式）。
+-   weight_uq_qr（Tensor）：必选参数，表示计算Query的上采样权重矩阵和Query的位置编码权重矩阵，即公式中W<sup>UQ</sup>和W<sup>QR</sup>。shape支持2维，格式为(Hcq, N*(D+Dr))，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ。
+    -   当weight_uq_qr为int8类型时，weight_uq_qr是一个per-tensor的量化后的输入，表示当前为部分量化场景。
+
+        此时若kv_cache、kr_cache为bfloat16类型，对应kv_cache_out、kr_cache_out为非量化输出，此时dequant_scale_w_uq_qr字段必须传入，smooth_scales_cq字段可选传入。
+
+        此时若kv_cache、kr_cache为int8类型，对应kv_cache_out、kr_cache_out为量化输出，此时dequant_scale_w_uq_qr、quant_scale_ckv、quant_scale_ckr字段必须传入，smooth_scales_cq字段可选传入。
+
+    -   当weight_uq_qr为bfloat16类型时，表示当前为非量化场景。
+
+        此时dequant_scale_w_uq_qr、quant_scale_ckv、quant_scale_ckr、smooth_scales_cq字段不能传入（即为none）。
+
+-   weight_uk（Tensor）：必选参数，表示计算Key的上采样权重，即公式中W<sup>UK</sup>。shape支持3维，格式为(N, D, Hckv)，dtype支持bfloat16，数据格式支持ND。
+-   weight_dkv_kr（Tensor）：必选参数，表示计算Key的下采样权重矩阵和Key的位置编码权重矩阵，即公式中W<sup>DKV</sup>和W<sup>KR</sup>。shape支持2维，格式为(He, Hckv+Dr)，dtype支持bfloat16，数据格式支持FRACTAL_NZ。
+-   rmsnorm_gamma_cq（Tensor）：必选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hcq,)，dtype支持bfloat16，数据格式支持ND。
+-   rmsnorm_gamma_ckv（Tensor）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hckv,)，dtype支持bfloat16，数据格式支持ND。
+-   rope_sin（Tensor）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   rope_cos（Tensor）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   cache_index（Tensor）：必选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T,)和(B, S)，dtype支持int64，数据格式支持ND。
+    - cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
+-   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   dequant_scale_x（Tensor）：预留参数，暂未使用，使用默认值即可。
+-   dequant_scale_w_dq（Tensor）：预留参数，暂未使用，使用默认值即可。
+-   dequant_scale_w_uq_qr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化参数维per-channel。shape支持2维，格式为(1, N*(D+Dr))，dtype支持float，数据格式支持ND。
+-   dequant_scale_w_dkv_kr（Tensor）：预留参数，暂未使用，使用默认值即可。
+-   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
+-   quant_scale_ckr（Tensor）：可选参数，用于对输出到kr_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Dr)，dtype支持float，数据格式支持ND。
+-   smooth_scales_cq（Tensor）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
+-   rmsnorm_epsilon_cq（float）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
+-   rmsnorm_epsilon_ckv（float）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
+-   cache_mode（str）：可选参数，表示kvCache的模式，支持"PA_BSND"、"PA_NZ"，其用户不特意指定时可传入默认值“PA_BSND”。
+
 
 输出说明：
-query：Tensor类型，表示Query的输出tensor。其shape支持3维和4维，dtype支持bfloat16，数据格式支持ND格式。
-queryRope：Tensor类型，表示Query位置编码的输出tensor。其shape支持3维和4维，dtype支持bfloat16，数据格式支持ND格式。
-kv_cache：Tensor类型，表示Key输出到kvCache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-kr_cache：Tensor类型，表示Key的位置编码输出到kvCache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
+-   query（Tensor）：表示Query的输出Tensor，即公式中q<sup>N</sup>。shape支持3维和4维，格式为(T, N, Hckv)和(B, S, N, Hckv)，dtype支持bfloat16，数据格式支持ND。
+-   query_rope（Tensor）：表示Query位置编码的输出Tensor，即公式中q<sup>R</sup>。shape支持3维和4维，格式为(T, N, Dr)和(B, S, N, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   kv_cache_out（Tensor）：表示Key输出到kv_cache中的Tensor（本质in-place更新），即公式中k<sup>C</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kr_cache_out（Tensor）：表示Key的位置编码输出到kr_cache中的Tensor（本质in-place更新），即公式中k<sup>R</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+
+约束说明:
+-   该接口支持推理场景下使用。
+-   该接口支持图模式（PyTorch 2.1版本）。
+-   接口参数中shape格式字段含义：
+    -   B：Batch表示输入样本批量大小，取值范围为0~65536。
+    -   S：Seq-Length表示输入样本序列长度，取值范围为0~16。
+    -   He：Head-Size表示隐藏层的大小，取值为7168。
+
+    -   Hcq：q低秩矩阵维度，取值为1536。
+    -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
+
+    -   Hckv：kv低秩矩阵维度，取值为512。
+    -   D：qk不含位置编码维度，取值为128。
+    -   Dr：qk位置编码维度，取值为64。
+    -   Nkv：kv的head数，取值为1。
+    -   BlockNum：PagedAttention场景下的块数，取值为计算B*Skv/BlockSize的值后再向上取整，其中Skv表示kv的序列长度，该值允许取0。
+    -   BlockSize：PagedAttention场景下的块大小，取值范围为16、128。
+    -   T：BS合轴后的大小，取值范围：0~1048576。注：若采用BS合轴，此时token_x、rope_sin、rope_cos均为2维，cache_index为1维，query、query_rope为3维。
+-   shape约束
+    -   B、S、T、Skv值允许一个或多个取0，即Shape与B、S、T、Skv值相关的入参允许传入空Tensor，其余入参不支持传入空Tensor。
+        -   如果B、S、T取值为0，则query、query_rope输出空Tensor，kv_cache、kr_cache、kv_cache_out、kr_cache_out不更新。
+        -   如果Skv取值为0，则query、query_rope正常计算，kv_cache、kr_cache、kv_cache_out、kr_cache_out不更新，即输出空Tensor。
+
 
 支持的芯片型号:
 Atlas A2 训练系列产品
@@ -7127,35 +7520,62 @@ _add_torch_npu_docstr(
 torch_npu.npu_mla_prolog_v2(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明:
-token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x。shape支持2维和3维，dtype支持bfloat16和int8，数据格式支持ND格式。
-weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
-weight_uq_qr：Tensor类型，表示用于计算Query的上采样权重矩阵和Query的位置编码权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
-weight_uk：Tensor类型，表示用于计算Key的上采样权重。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
-weight_dkv_kr：Tensor类型，表示用于计算Key的下采样权重矩阵和Key的位置编码权重矩阵。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
-rmsnorm_gamma_cq：Tensor类型，表示用于计算Query的rmsnorm中的gamma参数，对应计算Query的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
-rmsnorm_gamma_ckv：Tensor类型，表示用于计算Key的rmsnorm中的gamma参数，对应计算Key的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
-rope_sin：Tensor类型，表示用于计算旋转位置编码的正弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-rope_cos：Tensor类型，表示用于计算旋转位置编码的余弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
-cache_index：Tensor类型，表示用于存储kv_cache和kr_cache的索引。其shape支持1维和2维，dtype支持int64，数据格式支持ND格式。
-kv_cache：Tensor类型，表示用于cache索引的aclTensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-kr_cache：Tensor类型，表示用于key位置编码的cache。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-dequant_scale_x：Tensor类型，用于输入token_x为int8类型时，进行下采样后进行反量化操作时的参数，tokenX量化方式为per-token。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-dequant_scale_w_dq：Tensor类型，用于输入token_x为int8类型时，进行下采样后进行反量化操作时的参数，tokenX量化方式为per-channel。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-dequant_scale_w_uq_qr：Tensor类型，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化算法为per-channel。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-dequant_scale_w_dkv_kr：Tensor类型，用于输入token_x为int8类型时，MatmulCkvKr后进行量化操作时的参数。其shape支持2维，dtype支持FLOAT，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-quant_scale_ckv：Tensor类型，用于输出到kv_cache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-quant_scale_ckr：Tensor类型，用于输出到kr_cache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-smooth_scales_cq：Tensor类型，用于对RmsNormCq输出做动态量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。可选入参，如不使用该功能时可不传或传入None。
-rmsnorm_epsilon_cq：Double类型，表示用于计算Query的rmsnorm中的ϵ参数，对应计算Query的rmsNorm中的ϵ，可选入参，不传入时默认值为1e-05。
-rmsnorm_epsilon_ckv：Double类型，表示用于计算Key额时rmsnorm中的ϵ参数，对应计算Key的rmsNorm中的ϵ，可选入参，不传入时默认值为1e-05。
-cache_mode：String类型，用于表示kv_cache的模式，支持"PA_BSND","PA_NZ"，可选入参，不传入时默认值为"PA_BSND"。
+-   token_x（Tensor）：必选参数，对应公式中x。shape支持2维和3维，格式为(T, He)和(B, S, He)，dtype支持bfloat16和int8，数据格式支持ND。
+-   weight_dq（Tensor）：必选参数，表示计算Query的下采样权重矩阵，即公式中W<sup>DQ</sup>。shape支持2维，格式为(He, Hcq)，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ（可通过torch_npu.npu_format_cast将ND格式转为FRACTAL_NZ格式）。
+-   weight_uq_qr（Tensor）：必选参数，表示计算Query的上采样权重矩阵和Query的位置编码权重矩阵，即公式中W<sup>UQ</sup>和W<sup>QR</sup>。shape支持2维，格式为(Hcq, N*(D+Dr))，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ。
+-   weight_uk（Tensor）：必选参数，表示计算Key的上采样权重，即公式中W<sup>UK</sup>。shape支持3维，格式为(N, D, Hckv)，dtype支持bfloat16，数据格式支持ND。
+-   weight_dkv_kr（Tensor）：必选参数，表示计算Key的下采样权重矩阵和Key的位置编码权重矩阵，即公式中W<sup>DKV</sup>和W<sup>KR</sup>。shape支持2维，格式为(He, Hckv+Dr)，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ。
+-   rmsnorm_gamma_cq（Tensor）：必选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hcq,)，dtype支持bfloat16，数据格式支持ND。
+-   rmsnorm_gamma_ckv（Tensor）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hckv,)，dtype支持bfloat16，数据格式支持ND。
+-   rope_sin（Tensor）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   rope_cos（Tensor）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   cache_index（Tensor）：必选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
+    - cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
+-   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   dequant_scale_x（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为pertoken。其shape支持2维，格式为(T, 1)和(BS, 1)，dtype支持float，数据格式支持ND。
+-   dequant_scale_w_dq（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为perchannel。其shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
+-   dequant_scale_w_uq_qr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化参数维perchannel。shape支持2维，格式为(1, N*(D+Dr))，dtype支持float，数据格式支持ND。
+-   dequant_scale_w_dkv_kr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化算法为perchannel。其shape支持2维，格式为(1, Hckv+Dr)，dtype支持float，数据格式支持ND。
+-   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
+-   quant_scale_ckr（Tensor）：可选参数，用于对输出到kr_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Dr)，dtype支持float，数据格式支持ND。
+-   smooth_scales_cq（Tensor）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
+-   rmsnorm_epsilon_cq（float）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
+-   rmsnorm_epsilon_ckv（float）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
+-   cache_mode（str）：可选参数，表示kvCache的模式，支持"PA_BSND"、"PA_NZ"，其用户不特意指定时可传入默认值“PA_BSND”。
 
 输出说明：
-query：Tensor类型，表示Query的输出tensor。其shape支持3维和4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-queryRope：Tensor类型，表示Query位置编码的输出tensor。其shape支持3维和4维，dtype支持bfloat16，数据格式支持ND格式。
-kv_cache：Tensor类型，表示Key输出到kv_cache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-kr_cache：Tensor类型，表示Key的位置编码输出到kv_cache中的Tensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
-dequant_scale_q_nope: Tensor类型，表示Query的输出tensor的反量化参数。当token_x为int8类型且quant_scale_ckv传入值（即不传none）时，其shape为3维；其他情况下，返回shape为(1)全0的Tensor。dtype支持float，数据格式支持ND格式。
+-   query（Tensor）：表示Query的输出Tensor，即公式中q<sup>N</sup>。shape支持3维和4维，格式为(T, N, Hckv)和(B, S, N, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   query_rope（Tensor）：表示Query位置编码的输出Tensor，即公式中q<sup>R</sup>。shape支持3维和4维，格式为(T, N, Dr)和(B, S, N, Dr)，dtype支持bfloat16，数据格式支持ND。
+-   kv_cache_out（Tensor）：表示Key输出到kv_cache中的Tensor（本质in-place更新），即公式中k<sup>C</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kr_cache_out（Tensor）：表示Key的位置编码输出到kr_cache中的Tensor（本质in-place更新），即公式中k<sup>R</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   dequant_scale_q_nope（Tensor）：表示Query的输出Tensor的反量化参数。其shape支持1维和3维，全量化kv_cache量化场景下，其shape为(T, N, 1)和(B*S, N, 1)；其他场景下，其shape为(1)，dtype支持float，数据格式支持ND。
+
+约束说明:
+-   该接口支持推理场景下使用。
+-   该接口支持图模式（PyTorch 2.1版本）。
+-   接口参数中shape格式字段含义：
+    -   B：Batch表示输入样本批量大小，取值范围为0~65536。
+    -   S：Seq-Length表示输入样本序列长度，取值范围为0~16。
+    -   He：Head-Size表示隐藏层的大小，取值为7168。
+
+    -   Hcq：q低秩矩阵维度，取值为1536。
+    -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
+
+    -   Hckv：kv低秩矩阵维度，取值为512。
+    -   D：qk不含位置编码维度，取值为128。
+    -   Dr：qk位置编码维度，取值为64。
+    -   Nkv：kv的head数，取值为1。
+    -   BlockNum：PagedAttention场景下的块数，取值为计算B*Skv/BlockSize的值后再向上取整，其中Skv表示kv的序列长度，该值允许取0。
+    -   BlockSize：PagedAttention场景下的块大小，取值范围为16、128。
+    -   T：BS合轴后的大小，取值范围：0~1048576。
+
+-   shape约束：
+    -   若token_x的维度采用BS合轴，即(T, He)，则rope_sin和rope_cos的shape为(T, Dr)，cache_index的shape为(T,)，dequant_scale_x的shape为(T, 1)，query的shape为(T, N, Hckv)，query_rope的shape为(T, N, Dr)。全量化kv_cache量化场景下，dequant_scale_q_nope的shape为(T, N, 1)，其他场景下dequant_scale_q_nope的shape为(1)。
+    -   若token_x的维度不采用BS合轴，即(B, S, He)，则rope_sin和rope_cos的shape为(B, S, Dr)，cache_index的shape为(B, S)，dequant_scale_x的shape为(B*S, 1)，query的shape为(B, S, N, Hckv)，query_rope的shape为(B, S, N, Dr)。全量化kv_cache量化场景下，dequant_scale_q_nope的shape为(B*S, N, 1)，其他场景下dequant_scale_q_nope的shape为(1)。
+    -   B、S、T、Skv值允许一个或多个取0，即Shape与B、S、T、Skv值相关的入参允许传入空Tensor，其余入参不支持传入空Tensor。
+        -   如果B、S、T取值为0，则query、query_rope、dequant_scale_q_nope输出空Tensor，kv_cache、kr_cache、kv_cache_out、kr_cache_out不更新。
+        -   如果Skv取值为0，则query、query_rope、dequant_scale_q_nope正常计算，kv_cache、kr_cache、kv_cache_out、kr_cache_out不更新，即输出空Tensor。
 
 支持的芯片型号:
 Atlas A2 训练系列产品
@@ -9128,12 +9548,12 @@ Atlas A2训练系列产品
 _add_torch_npu_docstr(
     "npu_nsa_compress_attention_infer",
     """
-torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
+torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, layout='TND', atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
 功能描述
 Native Sparse Attention算法中推理场景下，实现对KV压缩的计算。
 
 参数说明
-query(Tensor)：必选输入，shape支持3维输入，为[batch, key_value_head_num * group_size, head_size_qk]，数据排布格式支持TND，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
+query(Tensor)：必选输入，layout为TND时，shape支持3维输入，为[batch, key_value_head_num * group_size, head_size_qk]，layout为BSND时，shape支持4维输入，为[batch, query_seq_len, key_value_head_num * group_size, head_size_qk]，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
 key(Tensor)：必选输入，shape支持3维输入，为[block_num, page_block_size, head_size_qk * key_value_head_num]，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
 value(Tensor)：必选输入，shape支持3维输入，为[block_num, page_block_size, head_size_v * key_value_head_num]，数据类型支持bfloat16、float16，数据格式支持ND，不支持非连续的Tensor，不支持空Tensor，不支持inf，nan。
 scale_value(double)：必选输入，表示缩放系数。
@@ -9144,6 +9564,7 @@ select_block_count(int)：必选输入，表示选择窗口的数量。
 page_block_size**(int)：必选输入，page_attention场景下page的block_size大小。
 compress_block_size**(int)：必选输入，压缩滑窗的大小。
 compress_stride**(int)：必选输入，两次压缩滑窗间隔大小。
+layout(str)：可选输入，表示输入的数据排布格式，支持TND、BSND，默认为TND。
 atten_mask(Tensor)：可选输入，当前不支持。
 block_table**(Tensor)：可选输入，shape支持2维输入，数据类型支持‘int32’，page_attention场景下kv缓存使用的block映射表，不支持非连续的Tensor，不支持空tensor，不支持inf，nan。
 topk_mask**(Tensor)：可选输入，当前不支持。
@@ -9172,9 +9593,9 @@ actual_sel_seq_kvlen(list[int])：可选输入，当前不支持。
   -  仅支持query的S轴等于1。
   -  仅支持paged attention。
   -  仅支持key/value的S轴小于等于8192。
-  -  仅支持compress_block_size取值16、32、64。
-  -  仅支持compress_stride取值16、32、64。
-  -  仅支持select_block_size取值16、32、64。
+  -  仅支持compress_block_size取值16、32、48、64、80、96、112、118。
+  -  仅支持compress_stride取值16、32、48、64。
+  -  仅支持select_block_size取值16、32、48、64、80、96、112、118。
   -  仅支持compress_block_size大于等于compress_stride , select_block_size大于等于compress_block_size , select_block_size是compress_stride的整数倍。
   -  压缩前的kv_seq_len的上限可以表示为：no_cmp_kv_seq_len_ceil = (cmp_kv_seq_len − 1) ∗ compress_block_stride + compress_block_size，需要满足no_cmp_kv_seq_len_ceil / select_block_size <= 4096，且需要满足select_block_count <= no_cmp_kv_seq_len_ceil / select_block_size。
   -  block_size第2维的取值需满足公式(max(cmp_kv_seq_len) + page_block_size - 1) // page_block_size。
@@ -9289,7 +9710,7 @@ select_block_count (int)：必选输入，表示选择窗口的数量。
 page_block_size(int)：必选输入，page_attention场景下page的block_size大小。
 atten_mask (Tensor)：可选输入，当前暂不支持。
 block_table(Tensor)：可选输入，page_attention场景下kv缓存使用的block映射表，数据类型支持int32，不支持非连续的Tensor，不支持空tensor。
-layout(str)：可选输入，表示输入的数据排布格式，支持BSH、BSND，默认为BSND。
+layout(str)：可选输入，表示输入的数据排布格式，支持BSH、BSND、TND，默认为BSND。
 actual_seq_qlen(list[int])：可选输入，当前暂不支持。
 actual_seq_kvlen(list[int])：必选输入，表示key或value每个S的长度。
 
@@ -9379,23 +9800,29 @@ out = torch_npu.npu_gather_sparse_index(inputs, index)
 """
 )
 
+
 _add_torch_npu_docstr(
-    "npu_moe_eplb_update_expert",
+    "npu_moe_update_expert",
     """
-torch_npu.npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int local_rank_id, int world_size, *, int balance_mode=0) -> Tensor
+torch_npu.npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor? expert_scales=None, Tensor? pruning_threshold=None, Tensor? active_mask=None, int local_rank_id=-1, int world_size=-1, int balance_mode=0) -> (Tensor, Tensor)
 
 功能描述
 完成冗余专家部署场景下每个token的topK个专家逻辑卡号到物理卡号的映射。
+支持根据阈值对token发送的topK个专家进行剪枝
 
 参数说明
-    expertIds：Device侧的Tensor，表示输入，每个token的topK个专家索引，要求为一个2D的Tensor，shape为 (Bs, K)。数据格式支持ND,数据类型支持INT32。
-    eplbTable：Device侧的Tensor，表示输入，逻辑专家到物理专家的映射表，外部调用者需保证输入Tensor的值正确：每行第一列为行号对应逻辑专家部署的实例数count，值需大于等于1，每行[1, count]列为对应实例的卡号，取值范围[0, moe_expert_num)，Device侧的Tensor，要求是一个2D的Tensor。数据类型支持INT32，数据格式支持ND。shape为 (moeExperNum, F)。
-    localRankId：int类型，计算输入，本卡Id，数据类型支持INT64。取值支持[0, worldSize)。同一个通信域中各卡的localRankId不重复。
-    worldSize：int类型，计算输入，通信域Size，数据类型支持INT64，取值区间[2, 384]。
-    balanceMode: int类型，计算输入，均衡规则，传入0时按照rank进行分发，数据类型支持INT64，当前只支持传入0。
-
+    expert_ids：每个token的topK个专家索引，Device侧的Tensor，要求为一个2D的Tensor，shape为 (BS, K)。数据类型支持INT32，INT64，数据格式要求为ND，支持非连续的Tensor。
+    eplb_table：逻辑专家到物理专家的映射表，外部调用者需保证输入Tensor的值正确：每行第一列为行号对应逻辑专家部署的实例数count，值需大于等于1，每行[1, count]列为对应实例的卡号，取值范围[0, moe_expert_num)，Device侧的Tensor，要求是一个2D的Tensor，shape为(moe_expert_num, F)。数据类型支持INT32，数据格式要求为ND，支持非连续的Tensor。其中F表示输入映射表的列数，第一列为各行号对应Moe专家部署的实例个数（值>0），后F-1列为该Moe专家部署的物理卡号，取值范围[2, world_size+1]。
+    expert_scales：每个token的topK个专家的scale权重，用户需保证scale在token内部按照降序排列，可选择传入有效数据或空指针，该参数传入有效数据时，pruning_threshold也需要传入有效数据。Device侧的Tensor，要求是一个2D的Tensor，shape为 (BS, K)。数据类型支持FP16、BF16、FLOAT，数据格式要求为ND，支持非连续的Tensor。
+    pruning_threshold：专家scale权重的最小阈值，当某个token对应的某个topK专家scale小于阈值时，该token将对该专家进行剪枝，即token不发送至该专家处理，可选择传入有效数据或空指针，该参数传入有效数据时，expert_scales也需要传入有效数据。Device侧的Tensor，要求是一个1D或2D的Tensor，shape为(K,)或(1, K)。数据类型支持FLOAT，数据格式要求为ND，支持非连续的Tensor。
+    active_mask:表示token是否参与通信，可选择传入有效数据或空指针。传入有效数据时，expert_scales、pruning_threshold也必须传入有效数据，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true}为非法输入；传入空指针时是表示所有token都会参与通信。Device侧的Tensor，要求是一个1D的Tensor，shape为(BS,)。数据类型支持bool，数据格式要求为ND，支持非连续的Tensor。
+    local_rank_id：本卡ID，数据类型支持INT64，当balance_mode设置0时，本属性取值范围为[0, world_ize)。
+    world_size：通信域size，数据类型支持INT64，当balance_mode设置0时，本属性取值范围为[2, 768]
+    balance_mode：均衡规则，数据类型支持INT64，取值支持0和1，0表示用local_rank_id进行负载均衡，1表示使用token_id进行负载均衡。当本属性取值为0时，local_rank_id和world_size必须传入有效值。
+    
 输出说明
-    balancedExpertIds：Device侧的Tensor，表示输出，映射后每个token的topK个专家所在物理卡的卡号，要求是一个2D的Tensor，shape为（Bs，K），数据类型、数据格式与expertIds保持一致。
+    balanced_expert_ids：映射后每个token的topK个专家所在物理卡的卡号，Device侧的Tensor，要求是一个2D的Tensor，shape为(BS, K)，数据类型、数据格式与expert_ids保持一致。
+    balanced_active_mask：剪枝后的active_mask，当expert_scales、pruning_threshold传入有效数据时该输出有效。Device侧的Tensor，要求是一个2的Tensor，shape为(BS, K)，数据类型支持BOOL，数据格式要求为ND，支持非连续的Tensor。
 
 支持的型号
 Atlas A3训练系列产品
@@ -9413,7 +9840,7 @@ from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
 
-class TestMoeEPLBUpdateExpert(TestCase):
+class TestMoeUpdateExpert(TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bs = 128
@@ -9421,10 +9848,16 @@ class TestMoeEPLBUpdateExpert(TestCase):
         self.log_ep_size = 256
         self.pyh_ep_size = 8
         self.F = 5
+        self.is_pruning = True
         self.world_size = 8
+        self.balance_mode = 0
         self.expert_ids = []
         self.eplb_table = []
+        self.expert_scales = []
+        self.pruning_threshold = []
+        self.active_mask = []
         self.balanced_expert_ids = []
+        self.balanced_active_mask = []
         self.gen_exp_result()
 
     @classmethod
@@ -9437,41 +9870,77 @@ class TestMoeEPLBUpdateExpert(TestCase):
         return dist
 
     @classmethod
-    def _test_npu_moe_eplb_update_expert(cls, rank_id, input_list):
-        expert_ids, eplb_table, world_size, init_pg, c2p, p2c = input_list
+    def _test_npu_moe_update_expert(cls, rank_id, input_list):
+        expert_ids, eplb_table, world_size, expert_scales, pruning_threshold, active_mask, balance_mode, init_pg, c2p, p2c = input_list
         _ = init_pg(rank_id, world_size)
-        out = torch_npu.npu_moe_eplb_update_expert(expert_ids=expert_ids.npu(),
+        out_expert_idx, out_mask = torch_npu.npu_moe_update_expert(expert_ids=expert_ids.npu(),
                                                    eplb_table=eplb_table.npu(),
                                                    local_rank_id=rank_id,
                                                    world_size=world_size,
-                                                   balance_mode=0)
-        c2p.put((rank_id, out.cpu()))
+                                                   expert_scales=expert_scales.npu(),
+                                                   pruning_threshold=pruning_threshold.npu(),
+                                                   active_mask=active_mask.npu(),
+                                                   balance_mode=balance_mode)
+        c2p.put((rank_id, out_expert_idx.cpu(), out_mask.cpu()))
         p2c.get()
     
     def gen_exp_result(self):
         for rank_id in range(self.world_size):
             eplb_table = np.zeros((self.log_ep_size, self.F - 1))
-            count_cloumn = np.random.randint(1, self.F, size=(self.log_ep_size, 1))
+            count_column = np.random.randint(1, self.F, size=(self.log_ep_size, 1))
             all_ranks = np.arange(self.pyh_ep_size)
             for i in range(self.log_ep_size):
                 np.random.shuffle(all_ranks)
-                for j in range(count_cloumn[i][0]):
+                for j in range(count_column[i][0]):
                     eplb_table[i][j] = all_ranks[j]
-            _expert_ids = torch.from_numpy(np.random.randint(low=0, high=self.log_ep_size, size=(self.bs, self.k))).to(torch.int64)
-            _eplb_table = torch.from_numpy(np.hstack((count_cloumn, eplb_table))).to(torch.int32)
-            self.expert_ids.append(_expert_ids)
-            self.eplb_table.append(_eplb_table)
-            _balanced_expert_ids = np.zeros((self.bs, self.k))
+            eplb_table = np.hstack((count_column, eplb_table))
+
+            expert_ids = np.random.randint(low=0, high=self.log_ep_size, size=(self.bs, self.k))
+            if self.is_pruning:
+                expert_scales = -np.sort(-np.random.uniform(low=0, high=0.25, size=(self.bs, self.k)), axis=1)
+                pruning_threshold = np.random.uniform(low=0, high=0.15, size=(1, self.k))
+                num_true = np.random.randint(0, self.bs + 1)
+                active_mask = np.concatenate([np.ones(num_true, dtype=bool), np.zeros(self.bs - num_true, dtype=bool)])
+            eplb_table_tensor = torch.from_numpy(eplb_table).to(torch.int32)
+            self.eplb_table.append(eplb_table_tensor)
+            expert_ids_tensor = torch.from_numpy(expert_ids).to(torch.int32)
+            self.expert_ids.append(expert_ids_tensor)
+            if self.is_pruning:
+                expert_scales_tensor = torch.from_numpy(expert_scales).to(torch.float32)
+                self.expert_scales.append(expert_scales_tensor)
+                pruning_threshold_tensor = torch.from_numpy(pruning_threshold).to(torch.float32)
+                self.pruning_threshold.append(pruning_threshold_tensor)
+                active_mask_tensor = torch.from_numpy(active_mask).to(torch.bool)
+                self.active_mask.append(active_mask_tensor)
+
+            balanced_expert_ids = np.zeros((self.bs, self.k))
+            if self.is_pruning:
+                balanced_active_mask = np.zeros((self.bs, self.k))
+
             for i in range(self.bs):
                 for j in range(self.k):
-                    log_ep_id = _expert_ids[i][j]
-                    mod_val = math.ceil(self.world_size / _eplb_table[log_ep_id][0])
-                    phy_ep_id = _eplb_table[log_ep_id][(rank_id // mod_val) + 1]
-                    _balanced_expert_ids[i][j] = phy_ep_id
-            self.balanced_expert_ids.append(torch.from_numpy(_balanced_expert_ids).to(torch.int64))
+                    log_ep_id = expert_ids_tensor[i][j]
+                    if self.balance_mode == 0:
+                        mod_val = math.ceil(self.world_size / eplb_table_tensor[log_ep_id][0].item())
+                        phy_ep_id = eplb_table_tensor[log_ep_id][(rank_id // mod_val) + 1]
+                        balanced_expert_ids[i][j] = phy_ep_id
+                    if self.balance_mode == 1:
+                        phy_ep_id = eplb_table_tensor[log_ep_id][(i % eplb_table_tensor[log_ep_id][0].item()) + 1]
+                        balanced_expert_ids[i][j] = phy_ep_id
+                    if self.is_pruning:
+                        if not active_mask_tensor[i]:
+                            balanced_active_mask[i][j] = 0
+                        else:
+                            if expert_scales_tensor[i][j] < pruning_threshold_tensor[0][j] * sum(expert_scales_tensor[i]):
+                                balanced_active_mask[i][j] = 0
+                            else:
+                                balanced_active_mask[i][j] = 1
+            self.balanced_expert_ids.append(torch.from_numpy(balanced_expert_ids).to(torch.int64))
+            self.balanced_active_mask.append(torch.from_numpy(balanced_active_mask).to(torch.bool))        
+
 
     @SupportedDevices(['Ascend910_'])
-    def test_npu_moe_eplb_update_expert(self):
+    def test_npu_moe_update_expert(self):
         ctx = mp.get_context('spawn')
         c2p = ctx.Queue(self.world_size)
         p2c = ctx.Queue(self.world_size)
@@ -9479,15 +9948,19 @@ class TestMoeEPLBUpdateExpert(TestCase):
 
         for rank_id in range(self.world_size):
             p = ctx.Process(
-                target=self._test_npu_moe_eplb_update_expert,
-                args=(rank_id, [self.expert_ids[rank_id], self.eplb_table[rank_id], self.world_size, self._init_dist_hccl, c2p, p2c]))
+                target=self._test_npu_moe_update_expert,
+                args=(rank_id, [self.expert_ids[rank_id], self.eplb_table[rank_id], self.world_size, 
+                                self.expert_scales[rank_id], self.pruning_threshold[rank_id], self.active_mask[rank_id],
+                                self.balance_mode, self._init_dist_hccl, c2p, p2c]))
             p.start()
             ps.append(p)
 
         for _ in range(self.world_size):
-            rank_id, output = c2p.get()
-            self.assertEqual(output, self.balanced_expert_ids[rank_id],
-                             ("rank {} Expect receive tensor {} but got {}.").format(rank_id, self.balanced_expert_ids[rank_id], output))
+            rank_id, output_0, output_1 = c2p.get()
+            self.assertEqual(output_0, self.balanced_expert_ids[rank_id],
+                             ("rank {} Expect receive tensor {} but got {}.").format(rank_id, self.balanced_expert_ids[rank_id], output_0))
+            self.assertEqual(output_1, self.balanced_active_mask[rank_id],
+                             ("rank {} Expect receive tensor {} but got {}.").format(rank_id, self.balanced_active_mask[rank_id], output_1))
 
         for _ in range(self.world_size):
             p2c.put(0)
@@ -9671,5 +10144,137 @@ indices = torch.tensor([[0, 4], [4, 3], [4, 2], [1, 1]]).npu()
 probs = torch.ones_like(indices) / 2
 
 unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "obfuscation_initialize",
+    """
+功能描述: 
+该接口用于完成PMCC模型混淆引擎的资源初始化。
+
+接口原型: 
+torch_npu.obfuscation_initialize(int hidden_size, int tp_rank, int cmd, int data_type, int model_obf_seed_id, int data_obf_seed_id, int thread_num, float obf_coefficient) -> Tensor
+
+参数说明: 
+- hidden_size(Int, 计算输入): 必选参数,隐藏层的维度,数据类型为int32,支持输入范围为1-10000,仅在cmd设置为1或2时需要填写有效值,否则填0。
+- tp_rank(Int, 计算输入): 必选参数, 张量并行TP Rank,数据类型为int32,支持输入范围为0-1024,仅在cmd设置为1或2时需要填写有效值,否则填0。
+- cmd(Int, 计算输入): 必选参数, setup指令编号,在{1, 2, 3}中选择,设置为1时进行浮点推理模式资源初始化、为2时进行量化推理模式资源初始化,设置为3时进行资源释放。数据类型为int32。
+- data_type(Int, 计算输入): 可选参数, 代表Tensor数据类型的编号,数据类型为INT32,仅在cmd设置为1或2时需要填写有效值,否则填0。
+    昇腾310P AI处理器:在{0, 1}中选择,0表示ACL_FLOAT、1表示ACL_FLOAT16
+    昇腾910B AI处理器:在{0, 1, 27}中选择,0表示ACL_FLOAT、1表示ACL_FLOAT16、27表示ACL_BF16
+- model_obf_seed_id(Int, 计算输入): 可选参数, 模型混淆因子id,用于TA从TEE KMC查询模型混淆因子,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
+- data_obf_seed_id(Int, 计算输入): 必选参数, 数据混淆因子id,用于TA从TEE KMC查询数据混淆因子,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
+- thread_num(Int, 计算输入): 可选参数, CA/TA进行混淆处理使用的线程数。在{1, 2, 3, 4, 5, 6}中选择,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
+- obf_coefficient(Float, 计算输入): 可选参数,混淆系数,数据类型为float,支持输入范围为0-1,默认值1.0。
+- fd(Tensor, 计算输出): socket连接符,1D,shape为(1),int32。
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas 推理系列产品
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+device = "npu:0"
+hidden_size = int(3584)
+cmd = 1
+data_type = torch.bfloat16
+model_obf_seed = 0
+data_obf_seed = 0
+thread_num = 4
+tp_rank = 0
+i = 0
+hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
+obf_cft = 1.0
+fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "obfuscation_finalize",
+    """
+功能描述: 
+该接口用于完成PMCC模型混淆引擎的资源释放。
+
+接口原型: 
+torch_npu.obfuscation_finalize(Tensor fd_to_close) -> Tensor
+
+参数说明: 
+- fd_to_close(Tensor, 计算输入): 填写本算子初始化时返回的fd。数据类型为int32。
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas 推理系列产品
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+device = "npu:0"
+hidden_size = int(3584)
+cmd = 1
+data_type = torch.bfloat16
+model_obf_seed = 0
+data_obf_seed = 0
+thread_num = 4
+tp_rank = 0
+i = 0
+hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
+obf_cft = 1.0
+fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+torch_npu.obfuscation_finalize(fd)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "obfuscation_calculate",
+    """
+功能描述: 
+该接口用于实现矩阵乘计算输入和输出的transpose操作。
+
+接口原型: 
+torch_npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
+
+参数说明: 
+- fd(Tensor, 计算输入): 必选参数,待关闭的socket连接符,cmd为3时,填写本算子在cmd为1时返回的fd,否则填0,数据类型为int32。
+- x(Tensor, 计算输入): 必选参数,待混淆处理的Tensor输入,数据类型如下,对Tensor维度不作限制,Shape为( , *, ... , hiddenSize),即最后一维的size是hiddenSize。数据格式支持ND。
+    昇腾310P AI处理器: Tensor数据类型支持ACL_FLOAT、 ACL_FLOAT16            torch.float16 / torch.float32 / torch.bfloat16
+    昇腾910B AI处理器: Tensor数据类型支持ACL_FLOAT、 ACL_FLOAT16、ACL_BF16
+- param(Tensor, 计算输入): 必选参数,预留的参数字段,Tensor数据类型为int32。
+- obf_coefficient(Float, 计算输入): 可选参数,混淆系数,数据类型为float,支持输入范围为0-1,默认值1.0。
+- y(Tensor, 计算输出): 混淆处理后的张量,输出数据类型及Shape与x相同。
+
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas 推理系列产品
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+device = "npu:0"
+hidden_size = int(3584)
+cmd = 1
+data_type = torch.bfloat16
+model_obf_seed = 0
+data_obf_seed = 0
+thread_num = 4
+tp_rank = 0
+i = 0
+hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
+obf_cft = 1.0
+fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+param = torch.tensor([3584], device=device)
+x_obf_out = torch_npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
+
 """
 )

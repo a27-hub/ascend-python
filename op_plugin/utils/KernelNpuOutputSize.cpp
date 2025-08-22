@@ -2014,16 +2014,52 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& inpu
     return output_shape;
 }
 
+c10::SmallVector<int64_t, SIZE> npu_nsa_compress_attention_infer_out_size(const at::Tensor& query, const at::Tensor& value, int64_t key_value_head_num, c10::string_view layout)
+{
+    std::string input_layout = std::string(layout);
+    TORCH_CHECK(input_layout == "TND" || input_layout == "BSND", "layout only support TND or BSND now.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key_value_head_num >0, "key_value_head_num must be greater than 0." + OPS_ERROR(ErrCode::VALUE));
+    auto head_size_vo = value.size(DIM_2) / key_value_head_num;
+
+    at::SmallVector<int64_t, SIZE> output_size;
+    if (input_layout == "TND") {
+        output_size = {query.size(DIM_0), query.size(DIM_1), head_size_vo};
+    } else {
+        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), head_size_vo};
+    }
+
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_nsa_compress_attention_infer_topk_out_size(const at::Tensor& query, int64_t key_value_head_num, int64_t select_block_count, c10::string_view layout)
+{
+    std::string input_layout = std::string(layout);
+    TORCH_CHECK(input_layout == "TND" || input_layout == "BSND", "layout only support TND or BSND now.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key_value_head_num >0, "key_value_head_num must be greater than 0." + OPS_ERROR(ErrCode::VALUE));
+
+    at::SmallVector<int64_t, SIZE> output_size;
+    if (input_layout == "TND") {
+        output_size = {query.size(DIM_0), key_value_head_num, select_block_count};
+    } else {
+        output_size = {query.size(DIM_0), query.size(DIM_1), key_value_head_num, select_block_count};
+    }
+
+    return output_size;
+}
+
 c10::SmallVector<int64_t, SIZE> npu_nsa_select_attention_infer_out_size(const at::Tensor& query, const at::Tensor& value, int64_t head_num, int64_t key_value_head_num, c10::string_view layout)
 {
     std::string input_layout = std::string(layout);
-    TORCH_CHECK(input_layout == "BSH" || input_layout == "BSND", "layout only support BSH or BSND now.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(input_layout == "BSH" || input_layout == "BSND" || input_layout == "TND", "layout only support BSH or BSND or TND now.", OPS_ERROR(ErrCode::PARAM));
 
     at::SmallVector<int64_t, SIZE> output_size;
     if (input_layout == "BSH") {
         TORCH_CHECK(key_value_head_num >0, "key_value_head_num must be greater than 0." + OPS_ERROR(ErrCode::VALUE));
         auto key_head_dim = value.size(DIM_2) / key_value_head_num;
         output_size = {query.size(DIM_0), query.size(DIM_1), head_num * key_head_dim};
+    } else if (input_layout == "TND") {
+        auto key_head_dim = value.size(DIM_2) / key_value_head_num;
+        output_size = {query.size(DIM_0), query.size(DIM_1), key_head_dim};
     } else {
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), value.size(DIM_3)};
     }
@@ -2049,7 +2085,7 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_out_size(const at::Tensor 
 c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tensor& permuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor>& probs)
 {
     const static int64_t DEFAULT_TOPK = 1;
-    if (probs.has_value()) {
+    if (probs.has_value() && probs.value().defined()) {
             TORCH_CHECK(probs.value().dim() == DIM_2,
                         "The dims of input probs should be 2 dimensional, but got ", probs.value().dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
     }
@@ -2062,6 +2098,45 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tenso
     c10::SmallVector<int64_t, SIZE> output_shape;
     output_shape = {sorted_indices.size(0) / topk, permuted_tokens.size(-1)};
     return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_grad_out_size(const at::Tensor &tokens, const at::Tensor &grad_permuted_tokens, const at::Tensor &indices, const at::Tensor &sorted_indices)
+{
+    TORCH_CHECK(tokens.dim() == DIM_2,
+                "The dims of input tokens should be 2 dimensional, but got ", tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(grad_permuted_tokens.dim() == DIM_2,
+                "The dims of input grad_permuted_tokens should be 2 dimensional, but got ", grad_permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(indices.dim() == DIM_1 || indices.dim() == DIM_2,
+                "The dims of input indices should be 2 or 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(sorted_indices.dim() == DIM_1 || sorted_indices.dim() == DIM_2,
+                "The dims of input sorted_indices should be 2 or 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    int64_t num_tokens = tokens.size(0);
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    output_shape = {num_tokens, grad_permuted_tokens.size(1)};
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_permuted_tokens_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
+{
+    TORCH_CHECK(permuted_tokens.dim() == DIM_2,
+                "permuted_tokens should be 2D (got ", permuted_tokens.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(grad_unpermuted_tokens.dim() == DIM_2,
+                "grad_unpermuted_tokens should be 2D (got ", grad_unpermuted_tokens.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(sorted_indices.dim() == DIM_1,
+                "sorted_indices should be 1D (got ", sorted_indices.dim(), "D)." + OPS_ERROR(ErrCode::PARAM));
+    return {permuted_tokens.size(0), permuted_tokens.size(1)};
+}
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_probs_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs)
+{
+    if (probs.has_value() && probs.value().defined()) {
+        TORCH_CHECK(probs.value().dim() == DIM_2,
+                    "The dims of input probs should be 2 dimensional, but got ", probs.value().dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+        auto& probs_tensor = probs.value();
+        return {probs_tensor.size(0), probs_tensor.size(1)};
+    } else {
+        return {};
+    }
 }
 
 } // namespace op_infer

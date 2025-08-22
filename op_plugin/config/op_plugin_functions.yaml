@@ -1,4 +1,4 @@
-all_version: [v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8]
+all_version: [v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9]
 official:
   - func: __ilshift__.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
@@ -133,12 +133,6 @@ official:
 
   - func: _amp_update_scale_(Tensor(a!) self, Tensor(b!) growth_tracker, Tensor found_inf, float growth_factor, float backoff_factor, int growth_interval) -> Tensor(a!)
     op_api: all_version
-
-  - func: _batch_norm_impl_index(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> (Tensor, Tensor, Tensor, Tensor, int)
-    acl_op: all_version
-
-  - func: _batch_norm_impl_index_backward(int impl_index, Tensor input, Tensor grad_output, Tensor? weight, Tensor? running_mean, Tensor? running_var, Tensor? save_mean, Tensor? save_var_transform, bool train, float eps, bool[3] output_mask, Tensor reservedSpace) -> (Tensor, Tensor, Tensor)
-    acl_op: all_version
 
   - func: _cat(Tensor[] tensors, int dim=0) -> Tensor
     acl_op: v1.11
@@ -1009,10 +1003,12 @@ official:
   - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    internal_format_opapi: all_version
 
   - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    internal_format_opapi: all_version
 
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
@@ -1345,10 +1341,6 @@ official:
     op_api: all_version
 
   - func: baddbmm_(Tensor(a!) self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
-
-  - func: batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, bool cudnn_enabled) -> Tensor
     acl_op: all_version
     op_api: all_version
 
@@ -6467,6 +6459,9 @@ official:
   - func: _thnn_fused_gru_cell(Tensor input_gates, Tensor hidden_gates, Tensor hx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor)
     op_api: [v2.5, newest]
 
+  - func: unfold_backward(Tensor grad_in, SymInt[] input_sizes, int dim, int size, int step) -> Tensor
+    op_api: [v2.1, newest]
+
 autograd:
   - func: _thnn_fused_gru_cell(Tensor input_gates, Tensor hidden_gates, Tensor hx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor)
     op_api: [v2.5, newest]
@@ -6881,6 +6876,7 @@ custom:
 
   - func: npu_dtype_cast_(Tensor(a!) self, Tensor src) -> Tensor(a!)
     acl_op: all_version
+    device_check: NoCheck
 
   - func: npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor
     acl_op: all_version
@@ -6941,24 +6937,24 @@ custom:
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fused_infer_attention_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
+  - func: npu_fused_infer_attention_score_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
     exposed: v2.1
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fused_infer_attention_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
+  - func: npu_fused_infer_attention_score_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: _npu_fused_infer_attention_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
+  - func: _npu_fused_infer_attention_score_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+  - func: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
     op_api: [v2.0, newest]
     exposed: [v2.0, newest]
 
-  - func: npu_fusion_attention_grad(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fusion_attention_grad(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.0, newest]
 
   - func: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
@@ -7208,25 +7204,29 @@ custom:
   - func: npu_moe_distribute_dispatch(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
-  - func: npu_moe_distribute_dispatch_v2(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_moe_distribute_dispatch_v2(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1, str comm_alg="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
   - func: npu_moe_distribute_combine(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0) -> Tensor
     op_api: all_version
 
-  - func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0) -> Tensor
+  - func: npu_moe_distribute_combine_v2(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp="", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, str comm_alg="") -> Tensor
     op_api: all_version
 
   - func: _npu_distribute_barrier(Tensor x_ref, str group, int world_size) -> Tensor
     op_api: all_version
 
-  - func: npu_moe_eplb_update_expert(Tensor expert_ids, Tensor eplb_table, int local_rank_id, int world_size, *, int balance_mode=0) -> Tensor
+  - func: npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor? expert_scales=None, Tensor? pruning_threshold=None, Tensor? active_mask=None, int local_rank_id=-1, int world_size=-1, int balance_mode=0) -> (Tensor, Tensor)
     op_api: all_version
     gen_opapi:
-      out:
+      out_balanced_expert_ids:
         size: expert_ids
         dtype: expert_ids
-      exec: aclnnMoeEPLBUpdateExpert
+      out_balanced_active_mask:
+        size: '{expert_ids.size(0), expert_ids.size(1)}'
+        dtype: at::kBool
+      exec: aclnnMoeUpdateExpert
+    exposed: all_version
 
 
   - func: npu_moe_re_routing(Tensor tokens, Tensor expert_token_num_per_rank, *, Tensor? per_token_scales=None, int expert_token_num_type=1, int idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
@@ -7242,12 +7242,6 @@ custom:
 
   - func: npu_multi_head_attention_backward(Tensor query, Tensor key, Tensor value, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor out_proj_weight, Tensor? query_bias, Tensor? key_bias, Tensor? value_bias, Tensor? out_proj_bias, Tensor query_res, Tensor key_res, Tensor value_res, Tensor attn_scores, Tensor attn_res, Tensor context, Tensor y_grad, Tensor dropout_mask, int attn_head_num, int attn_dim_per_head, int src_len, int tgt_len, float dropout_prob, bool softmax_use_float) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
-
-  - func: npu_multi_head_attention_v2(Tensor query, Tensor key, Tensor value, Tensor? atten_mask=None, Tensor? alibi_mask=None, float scale=1.0, int head_num=1, str input_layout="BNSD", float keep_prob=1., int pre_tokens=2147483647, int next_tokens=1, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, int, int, int)
-    op_api: all_version
-
-  - func: npu_multi_head_attention_v2_grad(Tensor attention_score_grad, Tensor query, Tensor key, Tensor value, Tensor softmax_log_max_sum, Tensor attention_score, Tensor? atten_mask=None, Tensor? alibi_mask=None, float scale=1.0, int head_num=1, str input_layout="BNSD", float keep_prob=1., int pre_tokens=2147483647, int next_tokens=1, int seed=0, int offset=0, int numels=0, bool gen_mask_parallel=True, bool sync=False) -> (Tensor, Tensor, Tensor)
-    op_api: all_version
 
   - func: npu_nms_rotated(Tensor self, Tensor scores, float iou_threshold, float scores_threshold=0, int max_output_size=-1, int mode=0) -> (Tensor, Tensor)
     acl_op: all_version
@@ -7291,6 +7285,11 @@ custom:
   - func: npu_prefetch(Tensor self, Tensor? dependency, int max_size, int offset=0) -> ()
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
+    internal_format_opapi: all_version
+
+  - func: npu_quant_matmul_reduce_sum(Tensor x1, Tensor x2, *, Tensor? x1_scale=None, Tensor? x2_scale=None) -> Tensor
+    op_api: all_version
+    exposed: all_version
     internal_format_opapi: all_version
 
   - func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', ScalarType? output_dtype=None, Tensor? bias=None, Tensor? offset=None) -> Tensor
@@ -7460,6 +7459,15 @@ custom:
     op_api: all_version
     exposed: all_version
 
+  - func: npu_scatter_pa_kv_cache_functional(Tensor key, Tensor value, Tensor key_cache, Tensor value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> (Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
+
+  - func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()
+    op_api: all_version
+    internal_format_opapi: all_version
+    exposed: all_version
+
   - func: npu_sign_bits_pack(Tensor self, int size) -> Tensor
     acl_op: all_version
     exposed: all_version
@@ -7584,6 +7592,18 @@ custom:
   - func: npu_yolo_boxes_encode(Tensor self, Tensor gt_bboxes, Tensor stride, bool performance_mode=False) -> Tensor
     acl_op: all_version
     exposed: all_version
+
+  - func: obfuscation_initialize(int hidden_size, int tp_rank, int cmd, *, ScalarType? data_type=None, int? model_obf_seed_id=0, int? data_obf_seed_id=0, int? thread_num=0, float? obf_coefficient=1.0) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+    dispatch:
+      CompositeExplicitAutograd: obfuscation_initialize
+
+  - func: obfuscation_finalize(Tensor fd_to_close) -> Tensor
+    op_api: all_version
+
+  - func: obfuscation_calculate(Tensor fd, Tensor x, Tensor param, *, float? obf_coefficient=1.0) -> Tensor
+    op_api: all_version
 
   - func: one_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
@@ -7786,22 +7806,22 @@ custom:
         sparse_mode: '1L'
       exec: aclnnNsaCompressAttention, query, key, value, atten_mask, topk_mask, actual_seq_qlen_value, actual_cmp_seq_kvlen_value, actual_sel_seq_kvlen_value, scale_value, head_num, layout, sparse_mode, compress_block_size, compress_stride, select_block_size, select_block_count, softmax_max_out, softmax_sum_out, attention_out, topk_indices_out
 
-  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, int[]? actual_seq_qlen=None, int[]? actual_cmp_seq_kvlen=None, int[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)
+  - func: npu_nsa_compress_attention_infer(Tensor query, Tensor key, Tensor value, float scale_value, int head_num, int key_value_head_num, int select_block_size, int select_block_count, int page_block_size, int compress_block_size, int compress_stride, *, str layout='TND', Tensor? atten_mask=None, Tensor? block_table=None, Tensor? topk_mask=None, int[]? actual_seq_qlen=None, int[]? actual_cmp_seq_kvlen=None, int[]? actual_sel_seq_kvlen=None) -> (Tensor, Tensor)
     op_api: all_version
     gen_opapi:
       out:
-        size: '{query.size(0), query.size(1), value.size(2) / key_value_head_num}'
+        size: 'npu_nsa_compress_attention_infer_out_size(query, value, key_value_head_num, layout)'
         dtype: query
       topk_indices_out:
-        size: '{query.size(0), key_value_head_num, select_block_count}'
+        size: 'npu_nsa_compress_attention_infer_topk_out_size(query, key_value_head_num, select_block_count, layout)'
         dtype: at::kInt
       new_params:
-        layout: '"TND"'
+        layout_attr: 'const_cast<char *>(layout.data())'
         actual_seq_qlen_value: 'actual_seq_qlen.value_or(at::IntArrayRef{})'
         actual_cmp_seq_kvlen_value: 'actual_cmp_seq_kvlen.value_or(at::IntArrayRef{})'
         actual_sel_seq_kvlen_value: 'actual_sel_seq_kvlen.value_or(at::IntArrayRef{})'
         sparse_mode: '0L'
-      exec: aclnnNsaCompressAttentionInfer, query, key, value, atten_mask, block_table, actual_seq_qlen_value, actual_cmp_seq_kvlen_value, actual_sel_seq_kvlen_value, topk_mask, head_num, key_value_head_num, select_block_size, select_block_count, compress_block_size, compress_stride, scale_value, layout, page_block_size, sparse_mode, out, topk_indices_out
+      exec: aclnnNsaCompressAttentionInfer, query, key, value, atten_mask, block_table, actual_seq_qlen_value, actual_cmp_seq_kvlen_value, actual_sel_seq_kvlen_value, topk_mask, head_num, key_value_head_num, select_block_size, select_block_count, compress_block_size, compress_stride, scale_value, layout_attr, page_block_size, sparse_mode, out, topk_indices_out
 
   - func: npu_nsa_select_attention(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None) -> (Tensor, Tensor, Tensor)
     op_api: all_version
@@ -7877,6 +7897,16 @@ custom:
         actual_num_out_tokens: '(num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size'
       exec: aclnnMoeTokenPermute, tokens, indices, actual_num_out_tokens, padded_mode, permuted_tokens, sorted_indices
 
+  - func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor
+    op_api: [v2.1, newest]
+    gen_opapi:
+      grad_tokens:
+        size: 'npu_moe_token_permute_grad_out_size(tokens, grad_permuted_tokens, indices, sorted_indices)'
+        dtype: tokens
+      new_params: 
+        num_topK: '(indices.dim() == 1) ? 1 : indices.size(1)'
+      exec: aclnnMoeTokenPermuteGrad, grad_permuted_tokens, sorted_indices, num_topK, padded_mode, grad_tokens
+  
   - func: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
     op_api: [v2.1, newest]
     gen_opapi:
@@ -7886,6 +7916,19 @@ custom:
       new_params:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermute, permuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, unpermuted_tokens
+
+  - func: npu_moe_token_unpermute_grad(Tensor permuted_tokens, Tensor grad_unpermuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor, Tensor)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      grad_permuted_tokens:
+        size: 'npu_moe_token_unpermute_grad_permuted_tokens_out_size(permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs)'
+        dtype: permuted_tokens
+      grad_probs:
+        size: 'npu_moe_token_unpermute_grad_probs_out_size(permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs)'
+        dtype: grad_unpermuted_tokens
+      new_params:
+        restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
+      exec: aclnnMoeTokenUnpermuteGrad, permuted_tokens, grad_unpermuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, grad_permuted_tokens, grad_probs
 
   - func: npu_moe_token_unpermute_with_routing_map(Tensor permuted_tokens, Tensor sorted_indices, int[] restore_shape, *, Tensor? probs=None, Tensor? routing_map=None, bool drop_and_pad=False) -> Tensor
     op_api: [v2.1, newest]
@@ -7925,15 +7968,15 @@ symint:
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fused_infer_attention_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
+  - func: npu_fused_infer_attention_score_v2(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fused_infer_attention_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
+  - func: npu_fused_infer_attention_score_v2.out(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: _npu_fused_infer_attention_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
+  - func: _npu_fused_infer_attention_score_v2_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? block_table=None, Tensor? dequant_scale_query=None, Tensor? dequant_scale_key=None, Tensor? dequant_offset_key=None, Tensor? dequant_scale_value=None, Tensor? dequant_offset_value=None, Tensor? dequant_scale_key_rope=None, Tensor? quant_scale_out=None, Tensor? quant_offset_out=None, int num_query_heads=1, int num_key_value_heads=0, float softmax_scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int sparse_mode=0, int block_size=0, int query_quant_mode=0, int key_quant_mode=0, int value_quant_mode=0, int inner_precise=0, bool return_softmax_lse=False, int? query_dtype=None, int? key_dtype=None, int? value_dtype=None, int? query_rope_dtype=None, int? key_rope_dtype=None, int? key_shared_prefix_dtype=None, int? value_shared_prefix_dtype=None, int? dequant_scale_query_dtype=None, int? dequant_scale_key_dtype=None, int? dequant_scale_value_dtype=None, int? dequant_scale_key_rope_dtype=None) -> Tensor
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
