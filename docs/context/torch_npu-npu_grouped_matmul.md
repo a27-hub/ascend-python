@@ -46,7 +46,7 @@
 
     -   伪量化场景（公式4）：
 
-        $y_i = x_i @ (weight_i + antiquant\_offset_i) \times antiquant\_scale_i + bias_i$
+        $y_i = x_i @ ((weight_i + antiquant\_offset_i) \times antiquant\_scale_i) + bias_i$
 
 ## 函数原型<a name="zh-cn_topic_0000002262888689_section87878612417"></a>
 ```
