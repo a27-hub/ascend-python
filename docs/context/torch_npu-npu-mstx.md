@@ -1,10 +1,10 @@
 # torch_npu.npu.mstx
 
-## 函数原型
+## 产品支持情况
 
-```
-torch_npu.npu.mstx()
-```
+- <term> Atlas 训练系列产品</term> 
+- <term> Atlas A2 训练系列产品</term> 
+- <term> Atlas A3 训练系列产品</term>
 
 ## 功能说明
 
@@ -12,9 +12,12 @@ torch_npu.npu.mstx()
 
 用于为[torch_npu.profiler._ExperimentalConfig](torch_npu-profiler-_ExperimentalConfig.md)的msprof_tx提供打点接口调用。
 
-## 支持的型号
+## 函数原型
 
-- <term> Atlas 训练系列产品</term> 
-- <term> Atlas A2 训练系列产品</term> 
-- <term> Atlas A3 训练系列产品</term>
+```
+torch_npu.npu.mstx()
+```
 
+## 返回值说明
+
+无
