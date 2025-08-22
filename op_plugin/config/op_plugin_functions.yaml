@@ -6467,6 +6467,17 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
+  - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_ks, Tensor top_ps, Tensor q, float eps=1e-8, bool is_need_logits=False) -> (Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      logits_select_idx:
+        size: top_ks
+        dtype: at::kLong
+      logits_top_kp_select:
+        size: logits
+        dtype: q
+      exec: aclnnTopKTopPSample
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
