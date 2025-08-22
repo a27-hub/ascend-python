@@ -1808,14 +1808,24 @@ official:
     acl_op: all_version
     op_api: all_version
 
+  - func: conv_transpose2d.input(Tensor input, Tensor weight, Tensor? bias=None, SymInt[2] stride=1, SymInt[2] padding=0, SymInt[2] output_padding=0, SymInt groups=1, SymInt[2] dilation=1) -> Tensor
+    acl_op: [v2.2, newest]
+    op_api: [v2.2, newest]
+
   - func: conv_transpose2d.input(Tensor input, Tensor weight, Tensor? bias=None, int[2] stride=1, SymInt[2] padding=0, SymInt[2] output_padding=0, int groups=1, int[2] dilation=1) -> Tensor
-    acl_op: [v2.1, newest]
+    acl_op: v2.1
+    op_api: v2.1
 
   - func: conv_transpose2d.input(Tensor input, Tensor weight, Tensor? bias=None, int[2] stride=1, int[2] padding=0, int[2] output_padding=0, int groups=1, int[2] dilation=1) -> Tensor
     acl_op: v1.11, v2.0
 
+  - func: conv_transpose3d.input(Tensor input, Tensor weight, Tensor? bias=None, SymInt[3] stride=1, SymInt[3] padding=0, SymInt[3] output_padding=0, SymInt groups=1, SymInt[3] dilation=1) -> Tensor
+    acl_op: [v2.2, newest]
+    op_api: [v2.2, newest]
+
   - func: conv_transpose3d.input(Tensor input, Tensor weight, Tensor? bias=None, int[3] stride=1, SymInt[3] padding=0, SymInt[3] output_padding=0, int groups=1, int[3] dilation=1) -> Tensor
-    acl_op: [v2.1, newest]
+    acl_op: v2.1
+    op_api: v2.1
 
   - func: conv_transpose3d.input(Tensor input, Tensor weight, Tensor? bias=None, int[3] stride=1, int[3] padding=0, int[3] output_padding=0, int groups=1, int[3] dilation=1) -> Tensor
     acl_op: v1.11, v2.0
@@ -1828,9 +1838,13 @@ official:
     acl_op: v1.11
     op_api: v1.11
 
+  - func: convolution_backward(Tensor grad_output, Tensor input, Tensor weight, SymInt[]? bias_sizes, SymInt[] stride, SymInt[] padding, SymInt[] dilation, bool transposed, SymInt[] output_padding, SymInt groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.2, newest]
+    op_api: [v2.2, newest]
+
   - func: convolution_backward(Tensor grad_output, Tensor input, Tensor weight, SymInt[]? bias_sizes, int[] stride, SymInt[] padding, int[] dilation, bool transposed, SymInt[] output_padding, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
-    acl_op: [v2.0, newest]
-    op_api: [v2.1, newest]
+    acl_op: v2.1
+    op_api: v2.1
 
   - func: convolution_backward(Tensor grad_output, Tensor input, Tensor weight, int[]? bias_sizes, int[] stride, int[] padding, int[] dilation, bool transposed, int[] output_padding, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
     acl_op: v1.11
@@ -6793,11 +6807,19 @@ custom:
   - func: npu_conv_transpose2d(Tensor input, Tensor weight, Tensor? bias, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups) -> Tensor
     acl_op: all_version
 
+  - func: npu_conv_transpose2d_backward(Tensor input, Tensor grad_output, Tensor weight, SymInt[] padding, SymInt[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.0, newest]
+    op_api: [v2.1, newest]
+
   - func: npu_conv_transpose2d_backward(Tensor input, Tensor grad_output, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
-    acl_op: all_version
+    acl_op: v1.11
+
+  - func: npu_conv_transpose3d_backward(Tensor input, Tensor grad_output, Tensor weight, SymInt[] padding, SymInt[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.0, newest]
+    op_api: [v2.1, newest]
 
   - func: npu_conv_transpose3d_backward(Tensor input, Tensor grad_output, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
-    acl_op: all_version
+    acl_op: v1.11
 
   - func: npu_convert_weight_to_int4pack(Tensor weight, int inner_k_tiles=0) -> Tensor
     op_api: all_version
@@ -7937,6 +7959,18 @@ custom:
     op_api: [v2.1, newest]
 
 symint:
+  - func: convolution_backward(Tensor grad_output, Tensor input, Tensor weight, SymInt[]? bias_sizes, int[] stride, SymInt[] padding, int[] dilation, bool transposed, SymInt[] output_padding, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: v2.1
+    op_api: v2.1
+
+  - func: npu_conv_transpose2d_backward(Tensor input, Tensor grad_output, Tensor weight, SymInt[] padding, SymInt[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.0, newest]
+    op_api: [v2.1, newest]
+
+  - func: npu_conv_transpose3d_backward(Tensor input, Tensor grad_output, Tensor weight, SymInt[] padding, SymInt[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
+    acl_op: [v2.0, newest]
+    op_api: [v2.1, newest]
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
