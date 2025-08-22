@@ -37,7 +37,7 @@ namespace op_api {
                                               const c10::optional <at::Tensor> &scale,
                                               const c10::optional <at::Tensor> &offset,
                                               int64_t active_num, int64_t expert_capacity, int64_t expert_num,
-                                              int64_t drop_pad_mode, int64_t expert_tokens_count_or_cumsum_flag,
+                                              int64_t drop_pad_mode, int64_t expert_tokens_num_mode,
                                               bool expert_tokens_before_capacity_flag, int64_t quant_mode)
     {
         TORCH_CHECK(x.dim() == DIM_TWO, "The x should be 2D");
@@ -119,7 +119,7 @@ namespace op_api {
         at::Tensor dynamic_quant_scale = npu_preparation::apply_tensor_without_format({bs * k},
                                                                                  x.options().dtype(at::kFloat));
         EXEC_NPU_CMD(aclnnMoeInitRoutingQuantV2, x, expert_idx, p_scale, p_offset,
-                     active_num, expert_capacity, expert_num, drop_pad_mode, expert_tokens_count_or_cumsum_flag,
+                     active_num, expert_capacity, expert_num, drop_pad_mode, expert_tokens_num_mode,
                      expert_tokens_before_capacity_flag, quant_mode, 
                      expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity, dynamic_quant_scale);
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity, dynamic_quant_scale);
