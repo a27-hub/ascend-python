@@ -21,7 +21,7 @@ TP切分场景下，实现`allgather`和`matmul`的融合，实现通信和计�
 ## 函数原型<a name="zh-cn_topic_0000001694916914_section776431568"></a>
 
 ```
-torch_npu.npu_all_gather_base_mm( input, x2,  hcom, int world_size, *,  bias=None,  gather_index=0, bool gather_output=True, comm_turn=0) -> (Tensor, Tensor)
+torch_npu.npu_all_gather_base_mm( input, x2,  hcom, world_size, *,  bias=None,  gather_index=0, bool gather_output=True, comm_turn=0) -> (Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000001694916914_section112637109429"></a>
