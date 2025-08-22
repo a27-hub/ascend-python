@@ -847,7 +847,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
-                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False):
+                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout=""):
     B = query.size(0)
     N = head_num
     S1 = query.size(2)
@@ -883,7 +883,7 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
 def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, scale_value=1.0,
                                   keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=0, offset=0,
-                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False):
+                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout=""):
     dq = torch.empty_like(query, dtype=query.dtype, device='meta')
     dk = torch.empty_like(key, dtype=query.dtype, device='meta')
     dv = torch.empty_like(value, dtype=query.dtype, device='meta')
@@ -1120,6 +1120,18 @@ def scatter_nd_update__meta(self, indices, updates):
     return self
 
 
+@impl(m, "npu_scatter_pa_kv_cache_functional")
+def npu_scatter_pa_kv_cache_functional_meta(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None,
+    compress_seq_offsets=None, seq_lens=None):
+    return (torch.empty_like(key_cache, dtype=key_cache.dtype), torch.empty_like(value_cache, dtype=value_cache.dtype))
+
+
+@impl(m, "npu_scatter_pa_kv_cache")
+def npu_scatter_pa_kv_cache_meta(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None,
+    compress_seq_offsets=None, seq_lens=None):
+    return
+
+
 if torch.__version__ >= '2.3.1':
     @impl(m, "npu_geglu")
     def npu_geglu_meta(self, dim, approximate, activate_left=False):
@@ -1204,7 +1216,7 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
 
 @impl(m, "npu_moe_distribute_dispatch_v2")
 def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0,
-                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1):
+                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1, comm_alg=""):
     torch._check(
         (ep_rank_id >= 0) and (ep_rank_id < ep_world_size),
         lambda: (
@@ -1303,7 +1315,7 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 @impl(m, "npu_moe_distribute_combine_v2")
 def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
                                        tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0, 
-                                       tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0):
+                                       tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg=""):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
     return expand_x.new_empty(dim_tuple)
@@ -1434,10 +1446,10 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
 
     scene1 = False
     scene2 = False
-    scene1 = (scale is not None and pertoken_scale is not None and
+    scene1 = (scale is not None and
               group_list is not None and shared_input is not None and
               logit is not None and row_index is not None)
-    scene2 = (scale is not None and pertoken_scale is not None and
+    scene2 = (scale is not None and
               group_list is not None and shared_input is None and
               logit is None and row_index is not None)
     torch._check(
@@ -1799,6 +1811,16 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
             lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
                     str(output_dtype) + ops_error(ErrCode.TYPE),
         )
+
+
+@impl(m, "obfuscation_calculate")
+def obfuscation_calculate_meta(fd, x, param, cmd):
+    return torch.empty_like(x)
+
+
+@impl(m, "obfuscation_finalize")
+def obfuscation_finalize_meta(fd_to_close):
+    return torch.empty_like(fd_to_close)
 
 
 @impl(m, "npu_quant_matmul")
