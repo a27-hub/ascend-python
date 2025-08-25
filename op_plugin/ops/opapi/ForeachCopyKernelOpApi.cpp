@@ -20,6 +20,8 @@
 #include "op_plugin/utils/custom_functions/opapi/ForeachConstants.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/AclOpsInterface.h"
+#include "third_party/acl/inc/acl/acl_rt.h"
+#include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 
 namespace op_api {
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
@@ -78,6 +80,97 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     return false;
 }
 
+bool check_tensor_support_batch(const at::TensorList dst, const at::TensorList src) {
+    // 校验2个字符串长度
+    if (dst.size() == 0 || src.size() == 0) {
+        return false;
+    }
+    const auto expected_dst_device_type = dst[0].device().type();
+    const auto expected_src_device_type = src[0].device().type();
+
+    for (size_t i = 0; i < dst.size(); ++i) {
+        at::Tensor dst_tensor = dst[i];
+        if (expected_dst_device_type != dst_tensor.device().type()) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < src.size(); ++i) {
+        at::Tensor src_tensor = src[i];
+        if (expected_src_device_type != src_tensor.device().type()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
+    size_t count = dst.size();
+    void *dsts_tensor_address_list[count];
+    void *src_tensor_address_list[count];
+    size_t dsts_tensor_mem_size_list[count];
+    size_t src_tensor_mem_size_list[count];
+    size_t attrsIdxs[count];
+    TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
+                " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
+    aclrtMemcpyBatchAttr aclrtMemcpyBatchAttrs[count];
+    for (size_t i = 0; i < dst.size(); ++i) {
+        aclrtMemcpyBatchAttr attr;
+        aclrtMemLocation dstLoc;
+        aclrtMemLocation srcLoc;
+        at::Tensor dst_tensor = dst[i];
+        at::Tensor src_tensor = src[i];
+        // 获取 Tensor 的地址
+        void *self_dataPtr = dst_tensor.data_ptr();
+        void *src_dataPtr = src_tensor.data_ptr();
+        src_tensor_address_list[i] = src_dataPtr;
+        dsts_tensor_address_list[i] = self_dataPtr;
+        // 计算 Tensor 的内存大小
+        size_t memory_size = static_cast<size_t>(dst_tensor.numel() * dst_tensor.element_size());
+        dsts_tensor_mem_size_list[i] = memory_size;
+        size_t src_memory_size = static_cast<size_t>(src_tensor.numel() * src_tensor.element_size());
+        src_tensor_mem_size_list[i] = src_memory_size;
+        attrsIdxs[i] = i;
+        // 判断哪个是d哪个是h
+        if (dst_tensor.device().type() == c10::DeviceType::PrivateUse1) {
+            int npu_device_index = dst_tensor.device().index();
+            dstLoc.id = npu_device_index;
+            dstLoc.type = aclrtMemLocationType::ACL_MEM_LOCATION_TYPE_DEVICE;
+            attr.dstLoc = dstLoc;
+            srcLoc.type = aclrtMemLocationType::ACL_MEM_LOCATION_TYPE_HOST;
+            attr.srcLoc = srcLoc;
+        };
+        if (src_tensor.device().type() == c10::DeviceType::PrivateUse1) {
+            int npu_device_index = src_tensor.device().index();
+            srcLoc.id = npu_device_index;
+            srcLoc.type = aclrtMemLocationType::ACL_MEM_LOCATION_TYPE_DEVICE;
+            attr.srcLoc = srcLoc;
+            dstLoc.type = aclrtMemLocationType::ACL_MEM_LOCATION_TYPE_HOST;
+            attr.dstLoc = dstLoc;
+        }
+        constexpr uint32_t rsvMaxSize = sizeof(aclrtMemcpyBatchAttr::rsv) / sizeof(uint8_t);
+        for (uint32_t i = 0U; i < rsvMaxSize; i++) {
+            attr.rsv[i] = 0U;
+        }
+        aclrtMemcpyBatchAttrs[i] = attr;
+    }
+    size_t failIdx = SIZE_MAX;
+    auto ret = ACL_RT_SUCCESS;
+    if (non_blocking) {
+        auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
+        ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts_tensor_address_list, dsts_tensor_mem_size_list, src_tensor_address_list,
+                                    src_tensor_mem_size_list, count, aclrtMemcpyBatchAttrs, attrsIdxs, count, &failIdx,
+                                    acl_stream);
+    } else {
+        ret = c10_npu::acl::AclrtMemcpyBatch(dsts_tensor_address_list, dsts_tensor_mem_size_list, src_tensor_address_list,
+                               src_tensor_mem_size_list, count, aclrtMemcpyBatchAttrs, attrsIdxs, count, &failIdx);
+    }
+    if (ret != ACL_RT_SUCCESS) {
+        ASCEND_LOGW("Failed to copy tensor using memcpyBatch. We will use the kernel slow to copy the tensor.", ret);
+        return false;
+    };
+    return true;
+}
+
 void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
 {
     DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
@@ -86,6 +179,10 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
     if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
+         // 同一个方向
+        if (check_tensor_support_batch(self, src) && memcpyBatch(self, src, non_blocking)){
+            return;
+        }
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 
