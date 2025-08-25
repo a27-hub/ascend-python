@@ -46,14 +46,14 @@ torch_npu.npu.enable_deterministic_with_backward(tensor) -> Tensor
 >>> import torch
 >>> import torch.nn as nn
 >>> import torch_npu
->>> import torchair as tng
->>> from torchair.configs.compiler_config import CompilerConfig
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
 
->>> config = CompilerConfig()
+config = CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
 
 
->>> class TorchairSt(unittest.TestCase):
+class TorchairSt(unittest.TestCase):
         def test_enable_to_disable_deterministic_algorithms(self):
         target_dtype = torch.float16
 
@@ -86,7 +86,7 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
         self.assertEqual(False, torch.are_deterministic_algorithms_enabled())
 
 
->>> if __name__ == "__main__":
+if __name__ == "__main__":
     unittest.main()
 
 # 执行上述代码的输出类似如下：
