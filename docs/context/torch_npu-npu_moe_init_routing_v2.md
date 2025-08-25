@@ -54,22 +54,24 @@ torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=
 
 -   active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，当前入参校验需大于等于0。当前未使用，校验需等于NUM_ROWS\*K。
 -   expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
--   expert_num：int类型，表示专家数。expert_tokens_num_type为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
+-   expert_num：int类型，表示专家数。expert_tokens_num_type为key_value模式时，取值范围为(0, 5120]；其他模式取值范围为(0, 10240]。
 -   drop_pad_mode：int类型，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
 -   expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。当前仅支持1和2。
 -   expert_tokens_num_flag：bool类型，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
 -   quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化（默认值，但当前版本暂不支持），-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。
--   active_expert_range：int类型数组，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于expert_num。
--   row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。当前仅支持-1和1。
+-   active_expert_range：int类型数组，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end)，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于expert_num。
+-   row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。
 
 ## 输出说明<a name="zh-cn_topic_0000002271534921_section18510124618368"></a>
 
 -   expanded_x：Tensor类型，根据expert_idx进行扩展过的特征，要求是2D的Tensor，shape为(NUM_ROWS\*K, H)。非量化场景下数据类型同x；量化场景下数据类型支持int8。数据格式要求为ND。前available_idx_num\*H个元素为有效数据，其余为无效数据。其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值无意义。
--   expanded_row_idx：Tensor类型，expanded_x和x的映射关系，要求是1D的Tensor，shape为(NUM_ROWS\*K, )，数据类型支持int32，数据格式要求为ND。前available_idx_num\*H个元素为有效数据，其余由row_idx_type决定。其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值无意义。
--   expert_token_cumsum_or_count：Tensor类型。在expert_tokens_num_type为1的场景下，要求是1D的Tensor，表示active_expert_range范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在expert_tokens_num_type为2的场景下，要求是2D的Tensor，shape为(expert_num,  2)，表示active_expert_range范围内token总数为非0的expert，以及对应expert处理token的总数；expert id在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持int64，数据格式要求为ND。
+-   expanded_row_idx：Tensor类型，expanded_x和x的映射关系，要求是1D的Tensor，shape为(NUM_ROWS\*K, )，数据类型支持int32，数据格式要求为ND。当row_idx_type为0时，有效元素与无效元素共存，其中无效元素由-1填充；当row_idx_type为1时，前available_idx_num个元素有效，其余无效元素值未定义。其中available_idx_num为expert_idx中active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值无意义。
+-   expert_token_cumsum_or_count：Tensor类型，数据类型支持int64，数据格式要求为ND。
+    - 在expert_tokens_num_type为1的场景下，要求是1D的Tensor，表示active_expert_range范围内每个expert对应的处理token的总数。shape为(expert_end-expert_start,)。
+    - 在expert_tokens_num_type为2的场景下，要求是2D的Tensor，shape为(expert_num, 2)，表示active_expert_range范围内的每个expert的expert_idx及其对应处理的token总数。有效元素对是指expert_idx在active_expert_range范围内，且处理的token数不为0的元素对，这些有效元素对按原顺序存放在Tensor头部。如果有效元素对的数量少于expert_num，其后会跟一对元素对(0,0)以表示有效元素对的结束。
 -   expanded_scale：Tensor类型，数据类型支持float32，数据格式要求为ND。令available_idx_num为active_expert_range范围的元素的个数。
-    -   非量化场景下，shape为(NUM_ROWS\*K,)。当scale未输入时，输出值无意义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num\*H个元素为有效数据，其余为无效数据。
-    -   动态quant场景下，输出量化计算过程中scale的中间值，shape为(NUM_ROWS \*K)。当scale未输入时，输出值无意义，输出表示一个1D的Tensor，前available_idx_num个元素为有效数据，其余为无效数据，若x的输入类型为int8，输出值无意义。
+    -   非量化场景下，即quant_mode为-1，shape为(NUM_ROWS\*K,)。当scale未输入时，输出值无意义；当scale输入时，输出表示一个1D的Tensor，前available_idx_num个元素为有效数据，其余为无效数据。
+    -   动态量化场景下，即quant_mode为1，输出量化计算过程中scale的中间值，shape为(NUM_ROWS\*K,)。输出表示一个1D的Tensor，前available_idx_num个元素为有效数据，其余为无效数据，若x的输入类型为int8，输出值无意义。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
