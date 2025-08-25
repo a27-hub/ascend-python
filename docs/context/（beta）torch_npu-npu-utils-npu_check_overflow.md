@@ -35,10 +35,10 @@ True溢出，False未溢出。
 ## 调用示例
 
 ```python
->>> import torch
->>> import torch_npu.npu.utils as utils
->>> from torch_npu.testing.testcase import TestCase, run_tests
->>> class TestCheckOverFlow(TestCase):
+import torch
+import torch_npu.npu.utils as utils
+from torch_npu.testing.testcase import TestCase, run_tests
+class TestCheckOverFlow(TestCase):
     def test_check_over_flow(self):
         a = torch.Tensor([65535]).npu().half()
         a = a + a
