@@ -13,6 +13,12 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+const int DIMENSION_2D = 2;
+const int DIMENSION_3D = 3;
+const int DIM_0 = 0;
+const int DIM_1 = 1;
+const int DIM_2 = 2;
+
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -29,14 +35,14 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     auto scale_shape = op_infer::array_to_small_vector(x.sizes());
 
-    if (scale_shape.size() == 2) {
-        scale_shape[0] = op_infer::CeilDiv(scale_shape[0], row_block_size);
-        scale_shape[1] = op_infer::CeilDiv(scale_shape[1], col_block_size);
-    } else if (scale_shape.size() == 3) {
-        scale_shape[1] = op_infer::CeilDiv(scale_shape[1], row_block_size);
-        scale_shape[2] = op_infer::CeilDiv(scale_shape[2], col_block_size);
+    if (scale_shape.size() == DIMENSION_2D) {
+        scale_shape[DIM_0] = op_infer::CeilDiv(scale_shape[DIM_0], row_block_size);
+        scale_shape[DIM_1] = op_infer::CeilDiv(scale_shape[DIM_1], col_block_size);
+    } else if (scale_shape.size() == DIMENSION_3D) {
+        scale_shape[DIM_1] = op_infer::CeilDiv(scale_shape[DIM_1], row_block_size);
+        scale_shape[DIM_2] = op_infer::CeilDiv(scale_shape[DIM_2], col_block_size);
     } else {
-        TORCH_CHECK(false, "x must be 2 or 3 dimenal.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+        TORCH_CHECK(false, "x must be 2 or 3 dimensional.", OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
 
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
