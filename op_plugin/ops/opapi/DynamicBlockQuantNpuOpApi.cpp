@@ -34,7 +34,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
     at::Tensor scale;
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     auto scale_shape = op_infer::array_to_small_vector(x.sizes());
-
     if (scale_shape.size() == DIMENSION_2D) {
         scale_shape[DIM_0] = op_infer::CeilDiv(scale_shape[DIM_0], row_block_size);
         scale_shape[DIM_1] = op_infer::CeilDiv(scale_shape[DIM_1], col_block_size);
