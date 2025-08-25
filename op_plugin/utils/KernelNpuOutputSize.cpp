@@ -2169,6 +2169,8 @@ c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> split_with_sizes_copy_ou
         shape[dim] = size;
         output_shapes.emplace_back(std::move(shape));
     }
+
+    return output_shapes;
 }
 
 } // namespace op_infer
