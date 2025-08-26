@@ -44,7 +44,8 @@ torch_npu.npu.disable_deterministic_with_backward(tensor) -> Tensor
 ```python
 import unittest
 import torch
-import torch.nn as nnimport torch_npu
+import torch.nn as nn
+import torch_npu
 import torchair as tng
 from torchair.configs.compiler_config import CompilerConfig
 
