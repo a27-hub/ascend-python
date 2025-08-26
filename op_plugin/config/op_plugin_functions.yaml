@@ -7148,6 +7148,11 @@ custom:
 
   - func: npu_min_backward(Tensor grad, int dim, Tensor indices, SymInt[] sizes, bool keepdim) -> Tensor
     acl_op: [v2.0, newest]
+  
+  - func: npu_nsa(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor gamma_cq, Tensor gamma_ckv, Tensor prolog_sin, Tensor prolog_cos, Tensor cache_index, Tensor cmp_cache_index, Tensor kv_cache, Tensor kr_cache, Tensor topk_indices, Tensor topk_tensor_shape, Tensor act_seqs, Tensor block_table, Tensor slc_act_seqs, Tensor weight_gate1, Tensor weight_gate2, Tensor weight_sim_gate1, Tensor cmp_atten, Tensor weight_uv, Tensor weight_o, Tensor cmp_kv_cache, Tensor cmp_kr_cache, Tensor cmp_block_table, Tensor act_seq_len, Tensor act_cmp_seq_len, Tensor weight_mlp_k1, Tensor weight_mlp_k2, Tensor mlp_sin, Tensor mlp_cos, Tensor firstRope, Tensor firstRopeInput, Tensor weight_mlp_v1, Tensor weight_mlp_v2, Tensor weight_avg_k, Tensor weight_avg_v, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? dequant_scale_w_o=None, Tensor? smooth_scales_w_o=None, Tensor? dequant_scale_w_uv=None, Tensor? smooth_scales_w_uv=None, float epsilon_cq=1e-05, float epsilon_ckv=1e-05, str cache_mode="PA_BSND", int block_size=128, float softmax_scale=1.736e-3, str cmp_mode="mlp", int slc_block_size=64, int front=1, int near=2, int k=16, int win=128, str gate_mode="standard", int cmp_block_size=32, int cmp_stride=16) -> Tensor
+    acl_op: [v2.1, newest]
+    exposed: [v2.1, newest]
+    internal_format_opapi: [v2.1, newest]
 
   - func: npu_min_backward(Tensor grad, int dim, Tensor indices, int[] sizes, bool keepdim) -> Tensor
     acl_op: v1.11

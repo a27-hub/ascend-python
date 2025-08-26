@@ -6957,6 +6957,119 @@ tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 )
 
 _add_torch_npu_docstr(
+"npu_nsa",
+"""
+功能描述:
+推理场景，NSA xxx。
+
+接口原型:
+torch_npu.npu_nsa(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor gamma_cq, Tensor gamma_ckv, Tensor prolog_sin, Tensor prolog_cos, Tensor cache_index, Tensor cmp_cache_index, Tensor kv_cache, Tensor kr_cache, Tensor topk_indices, Tensor topk_tensor_shape, Tensor act_seqs, Tensor block_table, Tensor slc_act_seqs, Tensor weight_gate1, Tensor weight_gate2, Tensor weight_sim_gate1, Tensor cmp_atten, Tensor weight_uv, Tensor weight_o, Tensor cmp_kv_cache, Tensor cmp_kr_cache, Tensor cmp_block_table, Tensor act_seq_len, Tensor act_cmp_seq_len, Tensor weight_mlp_k1, Tensor weight_mlp_k2, Tensor mlp_sin, Tensor mlp_cos, Tensor firstRope, Tensor firstRopeInput, Tensor weight_mlp_v1, Tensor weight_mlp_v2, Tensor weight_avg_k, Tensor weight_avg_v, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? dequant_scale_w_uv=None, Tensor? smooth_scales_w_uv=None, Tensor? dequant_scale_w_o=None, Tensor? smooth_scales_w_o=None, float epsilon_cq=1e-05, float epsilon_ckv=1e-05, str cache_mode="PA_BSND", int block_size=128, float softmax_scale=1.736e-3, str cmp_mode="mlp", int slc_block_size=64, int front=1, int near=2, int k=16, int win=128, str gate_mode="standard", int cmp_block_size=32, int cmp_stride=16) -> Tensor
+参数说明:
+token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x，Device侧的aclTensor。shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
+weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵，WDQ，Device侧的aclTensor。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+weight_uq_qr：Tensor类型，表示用于计算Query的上采样权重矩阵和Query的位置编码权重矩阵，WUQ和WQR ，Device侧的aclTensor。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+weight_uk：Tensor类型，表示用于计算Key的上采样权重，WUK，Device侧的aclTensor。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
+weight_dkv_kr：Tensor类型，表示用于计算Key的上采样权重矩阵和Key的位置编码权重矩阵。Device侧的aclTensor。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+gamma_cq：Tensor类型，表示用于计算Query的rmsnorm中的gamma参数，对应计算Query的rmsNorm中的γ，Device侧的aclTensor。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
+gamma_ckv：Tensor类型，表示用于计算Key的rmsnorm中的gamma参数，对应计算Key的rmsNorm中的γ，Device侧的aclTensor。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
+prolog_sin：Tensor类型，表示用于计算旋转位置编码的正弦参数矩阵，Device侧的aclTensor。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
+prolog_cos：Tensor类型，表示用于计算旋转位置编码的余弦参数矩阵，Device侧的aclTensor。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
+cache_index：Tensor类型，表示用于存储kvCache和krCache的索引，Device侧的aclTensor。其shape支持2维，dtype支持int64，数据格式支持ND格式。
+cmp_cache_index：Tensor类型，表示用于存储kvCache和krCache的索引，Device侧的aclTensor。其shape支持2维，dtype支持int64，数据格式支持ND格式。
+kv_cache：Tensor类型，表示用于cache索引的aclTensor。其shape支持4维，dtype支持bfloat16，数据格式支持ND格式。
+kr_cache：Tensor类型，表示用于key位置编码的cache，Device侧的aclTensor。其shape支持4维，dtype支持bfloat16，数据格式支持ND格式。
+topk_indices: Tensor类型
+topk_tensor_shape:Tensor类型
+act_seqs：Tensor类型，xxx。
+block_table：Tensor类型，xxx。
+slc_act_seqs：Tensor类型，xxx。
+weight_gate1：Tensor类型，xxx。
+weight_gate2：Tensor类型，xxx。
+weight_sim_gate1：Tensor类型，xxx。
+weight_uv：Tensor类型，xxx。
+weight_o：Tensor类型，xxx。
+cmp_kv_cache：Tensor类型，xxx。
+cmp_kr_cache：Tensor类型，xxx。
+block_table：Tensor类型，xxx。
+cmp_block_table：Tensor类型，xxx。
+act_seqs：Tensor类型，xxx。
+act_cmp_seqs：Tensor类型，xxx。
+weight_mlp_k1：Tensor类型，xxx。
+weight_mlp_v1：Tensor类型，xxx。
+weight_mlp_k2：Tensor类型，xxx。
+weight_mlp_v2：Tensor类型，xxx。
+mlp_sin：Tensor类型，xxx。
+mlp_cos：Tensor类型，xxx。
+weight_avg_k：Tensor类型，xxx。
+weight_avg_v：Tensor类型，xxx。
+weight_gate1：Tensor类型，xxx。
+weight_gate2：Tensor类型，xxx。
+weight_sim_gate1：Tensor类型，xxx。
+weight_uv：Tensor类型，xxx。
+weight_o：Tensor类型，xxx。
+dequant_scale_x：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_dq：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_uq_qr：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_dkv_kr：Tensor类型，预留参数，暂未使用，使用默认值即可。
+smooth_scales_cq：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_gate1：Tensor类型，xxx。
+dequant_scale_w_sim_gate1：Tensor类型，xxx。
+dequant_scale_w_o：Tensor类型，xxx。
+smooth_scales_w_o：Tensor类型，xxx。
+atten_mask(Tensor)：可选参数，取值为1代表该位不参与计算（不生效），为0代表该位参与计算，数据类型支持bool，数据格式支持ND，输入shape类型支持[S,S]格式，SS分别是maxSq和maxSkv。
+epsilon_cq：Double类型，表示用于计算Query的rmsnorm中的ϵ参数，对应计算Query的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
+epsilon_ckv：Double类型，表示用于计算Key额时rmsnorm中的ϵ参数，对应计算Key的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
+cache_mode：String类型，用于表示kvCache的模式，支持"PA_BSND","PA_NZ"，其用户不特意指定时可传入默认值"PA_BSND"。
+block_size：int类型, xxx。
+softmax_scale：Double类型, xxx。
+cmp_mode：String类型，xxx。
+slc_block_size：int类型, xxx。
+cmp_block_size：int类型, xxx。
+cmp_stride：int类型, xxx。
+front：int类型, xxx。
+near：int类型, xxx。
+k：int类型, xxx。
+win：int类型, xxx。
+gate_mode：String类型，xxx。
+nsa_out：Tensor类型，表示 xxx，数据格式支持ND格式。
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+
+单算子调用方式
+import torch
+import torch_npu
+import math
+
+生成随机数据, 并发送到npu
+B = 8
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 1024
+S = 2
+Nkv = 1
+BlockNum = 32
+BlockSize = 128
+...
+
+调用Nsa算子
+nsa_out = self.npu_nsa(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, gamma_cq, gamma_ckv, prolog_sin,
+prolog_cos, cache_index, cmp_cache_index, kv_cache, kr_cache, topk_indices, topk_tensor_shape, act_seqs, block_table, slc_act_seqs, weight_gate1, weight_gate2, weight_sim_gate1, cmp_atten, weight_uv, weight_o, cmp_kv_cache, cmp_kr_cache,
+cmp_block_table, act_seq_len, act_cmp_seq_len, weight_mlp_k1, weight_mlp_k2, mlp_sin, mlp_cos, firstRope, firstRopeInput, weight_mlp_v1, weight_mlp_v2, weight_avg_k, weight_avg_v, dequant_scale_x,
+dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, dequant_scale_w_o, smooth_scales_w_o, dequant_scale_w_v, smooth_scales_w_v,
+epsilon_cq, epsilon_ckv, cache_mode, block_size, softmax_scale, cmp_mode, slc_block_size, front, near, k, win, gate_mode, cmp_block_size, cmp_stride)
+
+执行上述代码的输出类似如下
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_mla_prolog",
     """
 功能描述:
