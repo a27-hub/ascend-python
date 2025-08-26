@@ -21,6 +21,10 @@ class TestNPUDequantSwigluQuant(TestCase):
         group_num,
         activate_left,
         quant_mode,
+        swiglu_mode: int = 0,
+        clamp_limit: float = 7.0,
+        glu_alpha: float = 1.702,
+        glu_bias: float = 1.0,
     ):
         x = x.to(torch.float32)
         weight_scale = weight_scale.to(torch.float32)
@@ -28,15 +32,25 @@ class TestNPUDequantSwigluQuant(TestCase):
         quant_scale = quant_scale.to(torch.float32)
         res = torch.mul(x, weight_scale)
         res = torch.mul(res, activation_scale)
-        out = torch.chunk(res, 2, dim=-1)
-        if activate_left:
-            self_tensor = out[0]
-            other = out[1]
-        else:
-            self_tensor = out[1]
-            other = out[0]
 
-        output = torch.nn.functional.silu(self_tensor) * other
+        if swiglu_mode == 0:
+            # Old logic: the last dimension cuts in half, the left branch is SiLU and the right branch is linear (or vice versa depending on activate_left)
+            left, right = torch.chunk(res, 2, dim=-1)
+            self_tensor, other = (left, right) if activate_left else (right, left)
+            output = torch.nn.functional.silu(self_tensor) * other
+        else:
+            # New logic: parity + clamp + α/bias
+            even = res[..., ::2]
+            odd = res[..., 1::2]
+            x_glu, x_linear = (even, odd) if activate_left else (odd, even)
+
+            # clamp
+            x_glu = torch.clamp_max(x_glu, clamp_limit)
+            x_linear = torch.clamp(x_linear, -clamp_limit, clamp_limit)
+
+            out_glu = x_glu * torch.sigmoid(glu_alpha * x_glu)
+            output = out_glu * (x_linear + glu_bias)
+
         output = torch.mul(output, quant_scale)
 
         scale_out = torch.zeros([x.shape[0]], dtype=torch.float32)
@@ -61,6 +75,11 @@ class TestNPUDequantSwigluQuant(TestCase):
         quant_scale = torch.randn((1, x_shape[1] // 2), dtype=torch.float32).npu()
         quant_offset = None
         group_index = None
+        swiglu_mode = 0           
+        clamp_limit = 7.0
+        glu_alpha = 1.702
+        glu_bias = 1.0
+
         for _ in range(10):
             y_npu, scale_npu = torch_npu.npu_dequant_swiglu_quant(
                 x,
@@ -72,6 +91,10 @@ class TestNPUDequantSwigluQuant(TestCase):
                 group_index=group_index,
                 activate_left=False,
                 quant_mode=1,
+                swiglu_mode = 0,
+                clamp_limit=7.0,
+                glu_alpha=1.702,
+                glu_bias=1.0,
             )
 
         cpu_out = self.golden_dequant_swiglu_quant_torch(
@@ -84,6 +107,10 @@ class TestNPUDequantSwigluQuant(TestCase):
             group_index,
             False,
             "dynamic",
+            swiglu_mode=swiglu_mode,
+            clamp_limit=clamp_limit,
+            glu_alpha=glu_alpha,
+            glu_bias=glu_bias,
         )
 
         self.assertRtolEqual(cpu_out[0], y_npu.cpu().numpy())
