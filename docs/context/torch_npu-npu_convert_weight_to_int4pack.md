@@ -65,6 +65,7 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
         weight_int4 = weight_int4.transpose(-1, -2)
         cpu_antiquantscale = cpu_antiquantscale.transpose(-1, -2)
         cpu_antiquantoffset = cpu_antiquantoffset.transpose(-1, -2)
+
     npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), weight_int4.npu(), cpu_antiquantscale.npu(), cpu_antiquantoffset.npu())
     print(npu_out)
     # 执行上述代码的输出类似如下    
@@ -133,7 +134,6 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=True, fullgraph=True)
     npu_out = model(cpu_x.npu(), weight_int4pack, cpu_antiquantscale.npu(), cpu_antiquantoffset.npu(), None, None, None, 0)
     print(npu_out)
-
     # 执行上述代码的输出类似如下  
     tensor([[  4.6055,   6.0078,  -9.5078,  ...,  29.7188,   9.4688,  -7.6797],
             [-23.0312, -24.9062,  32.2500,  ...,  -7.8789,  14.3359, -19.7812],
