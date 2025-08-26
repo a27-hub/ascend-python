@@ -132,8 +132,10 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
     cpu_model = MyModel()
     model = cpu_model.npu()
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=True, fullgraph=True)
+
     npu_out = model(cpu_x.npu(), weight_int4pack, cpu_antiquantscale.npu(), cpu_antiquantoffset.npu(), None, None, None, 0)
     print(npu_out)
+
     # 执行上述代码的输出类似如下  
     tensor([[  4.6055,   6.0078,  -9.5078,  ...,  29.7188,   9.4688,  -7.6797],
             [-23.0312, -24.9062,  32.2500,  ...,  -7.8789,  14.3359, -19.7812],
