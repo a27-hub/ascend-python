@@ -82,6 +82,7 @@ class TorchairSt(unittest.TestCase):
         loss = loss_fn(output_data, target_data)
         loss.backward()
         self.assertEqual(False, torch.are_deterministic_algorithms_enabled())
+
 if __name__ == '__main__':    
     unittest.main()
 
