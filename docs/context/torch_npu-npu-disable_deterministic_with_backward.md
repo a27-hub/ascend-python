@@ -53,8 +53,8 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 
 class TorchairSt(unittest.TestCase):
      def test_enable_to_disable_deterministic_algorithms(self):
-     target_dtype = torch.float16        
-     class DeterministicModel(torch.nn.Module):
+         target_dtype = torch.float16        
+         class DeterministicModel(torch.nn.Module):
             def __init__(self):
                 super().__init__()
 
