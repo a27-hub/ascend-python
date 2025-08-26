@@ -53,9 +53,9 @@ config = CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
 
 class TorchairSt(unittest.TestCase):
-     def test_enable_to_disable_deterministic_algorithms(self):
-         target_dtype = torch.float16        
-         class DeterministicModel(torch.nn.Module):
+    def test_enable_to_disable_deterministic_algorithms(self):
+        target_dtype = torch.float16        
+        class DeterministicModel(torch.nn.Module):
             def __init__(self):
                 super().__init__()
 
@@ -82,9 +82,9 @@ class TorchairSt(unittest.TestCase):
         loss = loss_fn(output_data, target_data)
         loss.backward()
         self.assertEqual(False, torch.are_deterministic_algorithms_enabled())
-    
-   if __name__ == '__main__':    
-    unittest.main()
+ 
+if __name__ == '__main__':    
+ unittest.main()
 
 # 执行上述代码的输出类似如下：
 ----------------------------------------------------------------------
