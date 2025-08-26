@@ -23,8 +23,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& x, const c10::optional<at::Tensor>& weight_scale,
     const c10::optional<at::Tensor>& activation_scale, const c10::optional<at::Tensor>& bias,
     const c10::optional<at::Tensor>& quant_scale, const c10::optional<at::Tensor>& quant_offset,
-    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t dst_type, 
-    int64_t round_mode, int64_t activate_dim, int64_t swiglu_mode, double clamp_limit, double glu_alpha, double glu_bias)
+    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t swiglu_mode, double clamp_limit, double glu_alpha, double glu_bias)
 {
     TORCH_CHECK(x.dim() > 1, "x dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "quant_mode only support 0 or 1, but got", quant_mode,
@@ -65,8 +64,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& bias_opt = c10::value_or_else(bias, [] { return at::Tensor(); });
 
     EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
-                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, dst_type, round_mode, 
-                 activate_dim, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
+                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
 
     return std::tie(y, scale);
 }
