@@ -84,7 +84,7 @@ class TorchairSt(unittest.TestCase):
         self.assertEqual(False, torch.are_deterministic_algorithms_enabled())
  
 if __name__ == '__main__':    
- unittest.main()
+  unittest.main()
 
 # 执行上述代码的输出类似如下：
 ----------------------------------------------------------------------
