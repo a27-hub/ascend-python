@@ -11,14 +11,14 @@
 
 - API功能：从输入Tensor的指定维度，按照`index`中的下标序号提取元素，保存到输出Tensor中。
 
-- 计算公式：假设$x$是输入input，$idx$是输入index
+- 计算公式：假设$x$是输入`input`，$idx$是输入`index`：
   $$
   y_{i,j} = x_{idx[i],j}
   $$
 
 - 示例：
 
-  输入x如下：
+  输入$x$如下：
   $$
   \begin{bmatrix}
     1& 2 & 3\\
@@ -26,7 +26,7 @@
     7& 8 &9
   \end{bmatrix}
   $$
-  索引idx如下：
+  索引$idx$如下：
   $$
   \begin{bmatrix}
   1 & 0
@@ -62,8 +62,8 @@ torch_npu.npu_gather_sparse_index(input, index) -> torch.Tensor
 
 ## 约束说明
 - `input`的维度与`index`的维度之和减1不能超过8，即$index.dim + input.dim - 1<=8$。
-- 为获取性能收益，`weight`和`index`需要满足如下约束：
-     1. `weight`的shape内积需要大于$150 * 1024 / itemsize$，其中itemsize为`weight` dtype对应元素大小，可以通过`torch.dtype.itemsize`查询。
+- 为获取性能收益，`input`和`index`需要满足如下约束：
+     1. `input`的shape内积需要大于$150 * 1024 / itemsize$，其中itemsize为`input` dtype对应元素大小，可以通过`torch.dtype.itemsize`查询。
      2. `index`的shape内积大于960。
      3. 数据需要聚合，即非0值分布集中，0分布集中。
 
