@@ -62,9 +62,18 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& weight_scale_opt = c10::value_or_else(weight_scale, [] { return at::Tensor(); });
     const at::Tensor& activate_scale_opt = c10::value_or_else(activation_scale, [] { return at::Tensor(); });
     const at::Tensor& bias_opt = c10::value_or_else(bias, [] { return at::Tensor(); });
-
-    EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
-                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
+    
+    if (swiglu_mode ==0 ) {
+        EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
+                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, y, scale);
+    } else {
+        int64_t dst_type = 2;
+        char* round_mode = "rint";
+        int64_t activate_dim = -1;
+        EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
+                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, dst_type, round_mode, 
+                 activate_dim, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
+    }
 
     return std::tie(y, scale);
 }
