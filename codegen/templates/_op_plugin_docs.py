@@ -9640,9 +9640,11 @@ Atlas A2训练系列产品
 _add_torch_npu_docstr(
     "npu_nsa_select_attention",
     """
-torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None)
 功能描述
 实现Native Sparse Attention算法中训练场景下选择注意力的计算。
+
+接口原型:
+torch_npu.npu_nsa_select_attention(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> (Tensor, Tensor, Tensor)
 
 参数说明
 query(Tensor)：必选参数，shape支持[T1,N1,D1]，数据类型支持bfloat16、float16，数据格式支持ND，支持非连续的Tensor，不支持空Tensor。
@@ -9695,6 +9697,140 @@ Atlas A2训练系列产品
 >>> actual_seq_qlen = [128, 256]
 >>> actual_seq_kvlen = [2048, 3072]
 >>> torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+"""
+)
+_add_torch_npu_docstr(
+    "npu_nsa_select_attention.out",
+     """
+功能描述:
+算子功能：npu_nsa_select_attention.out算子实现，可用于aclgraph tilling入图场景（需传入workspace tensor），输入参数相比npu_nsa_select_attention增加workspace、output。
+
+接口原型:
+torch_npu.npu_nsa_select_attention.out(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_max_out, Tensor(c!) softmax_sum_out) -> (Tensor(a!), Tensor(b!), Tensor(c!))
+
+参数说明:
+在npu_nsa_select_attention的基础上增加下面四个参数：
+workspace(可选): 一维Device侧的Input Tensor，数据类型与Query一致；
+Tensor：代表经过选择后的注意力attention结果。
+Tensor：代表softmax计算的max中间结果，用于反向计算。
+Tensor：代表softmax计算的sum中间结果，用于反向计算。
+softmaxMaxOut（aclTensor *，计算输出）：Device侧的aclTensor，Softmax计算的Max中间结果，用于反向计算。数据类型支持FLOAT，输出的shape类型为[T_q, N_q, 8]，数据格式支持ND。
+softmaxSumOut（aclTensor *，计算输出）：Device侧的aclTensor，Softmax计算的Sum中间结果，用于反向计算。数据类型支持FLOAT，输出的shape类型为[T_q, N_q, 8]，数据格式支持ND。
+attentionOut（aclTensor *，计算输出）：Device侧的aclTensor，计算公式的最终输出。数据类型支持BFLOAT16、FLOAT16，输出数据类型与query保持一致, shape类型为[T_q, N_q, D_v]，数据格式支持ND。
+
+约束说明:
+参考npu_nsa_select_attention算子的约束说明
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例及入图方式:
+参考_npu_nsa_select_attention_get_max_workspace算子说明文档
+"""
+)
+_add_torch_npu_docstr(
+    "_npu_nsa_select_attention_get_max_workspace",
+     """
+功能描述:
+算子功能：用于npu_nsa_select_attention算子aclgraph tilling下沉场景，获取最大workspace size并创建一个此size大小的tensor。
+
+接口原型:
+torch_npu._npu_nsa_select_attention_get_max_workspace(Tensor query, Tensor key, Tensor value, Tensor topk_indices, float scale_value, int head_num, int select_block_size, int select_block_count, *, Tensor? atten_mask=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None) -> Tensor
+
+参数说明:
+输入与npu_nsa_select_attention一致
+输出类型为Tensor, 由aclnnNsaSelectedAttentionGetMaxWorkspaceSize返回最大的Size，返回创建的workspace tensor。
+
+约束说明:
+该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
+
+输入query、key、value的batchsize必须相等，即要求传入的actualSeqQLenOptional和actualSeqKvLenOptional具有相同的长度。
+
+输入query、key、value的D：Head-Dim必须满足（D_q == D_k && D_k >= D_v）。
+
+输入query、key、value的数据类型必须一致。
+
+输入query、key、value的input_layout必须一致。
+
+sparseMode目前支持0和2。
+
+selectedBlockSize支持<=128且满足16的整数倍。
+
+selectedBlockCount支持<=32。
+
+inputLayout目前仅支持TND。
+
+支持输入query的N和key/value的N不相等，但必须成比例关系，即N_q / N_kv必须是非0整数，称为G（group），且需满足G <= 32。
+
+当attenMaskOptional输入为nullptr时，sparseMode参数不生效，固定为全计算。
+
+关于数据shape的约束，以inputLayout的TND举例（注：T等于各batch S的长度累加和。当各batch的S相等时，T=B*S）。其中：
+    B（Batchsize）：取值范围为1~1024。
+    N（Head-Num）：取值范围为1~128。
+    G（Group）：取值范围为1~32。
+    S（Seq-Length）：取值范围为1~128K。同时需要满足S_kv >= selectedBlockSize * selectedBlockCount，且S_kv长度为selectedBlockSize的整数倍。
+    D（Head-Dim）：D_qk=192，D_v=128。
+
+
+支持的芯片型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+    query = torch.randn([1, 115, 192], dtype=torch.float16)
+    key = torch.randn([1088, 115, 192], dtype=torch.float16)
+    value = torch.randn([1088, 115, 128], dtype=torch.float16)
+    scale_value = 1.0
+    head_num = query.size(1)
+    select_block_count = 16
+    select_block_size = 64
+    actual_seq_qlen = [1]
+    actual_seq_kvlen = [1088]
+
+    topk_indices = torch.zeros(query.size(0), value.size(1), select_block_count,).to(torch.int)
+    for i in range(query.size(0)):
+        _, s1_idx = self.get_tnd_idx(actual_seq_qlen, i)
+        for j in range(value.size(1)):
+            if s1_idx < select_block_count * select_block_size:
+                topk_indices[i][j] = torch.arange(select_block_count)
+            else:
+                topk_indices[i][j] = torch.randperm(select_block_count)
+                topk_indices[i][j][random.uniform(0, select_block_count)] = (s1_idx + select_block_size - 1) // select_block_size
+
+
+    output = torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=None, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+    # 入图方式
+    g = torch.npu.NPUGraph()
+    event = torch.npu.ExternalEvent()
+    update_stream = torch.npu.Stream()
+    output = None
+    handle = None
+    workspace = torch_npu._npu_nsa_select_attention_get_max_workspace(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=None, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+   
+    size_in_bytes = workspace.numel() * workspace.element_size()
+    print(f"Allocated {size_in_bytes / 1024 / 1024:.2f} MB successfully")
+
+    with torch.npu.graph(g):
+        stream = torch.npu.current_stream()
+        softmax_max_out = torch.empty((query.shape[0], query.shape[1], 8), dtype=torch.float, device="npu")
+        softmax_sum_out = torch.empty((query.shape[0], query.shape[1], 8), dtype=torch.float, device="npu")
+        attention_out = torch.empty((query.shape[0], query.shape[1], value.shape[2]), dtype=torch.float16, device="npu")
+        event.wait(stream)
+        event.reset(stream)
+        torch.npu.graph_task_group_begin(stream)
+        torch_npu.npu_nsa_select_attention.out(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen, workspace=workspace, out=[attention_out, softmax_max_out, softmax_sum_out])
+        handle = torch.npu.graph_task_group_end(stream)
+        print("success empty")
+    
+    with torch.npu.stream(update_stream):
+        torch.npu.graph_task_update_begin(update_stream, handle)
+        torch_npu.npu_nsa_select_attention.out(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen, workspace=workspace, out=[attention_out, softmax_max_out, softmax_sum_out])
+        torch.npu.graph_task_update_end(update_stream)
+        event.record(update_stream)
+        print("success updata process")
+
+    g.replay()
 """
 )
 
