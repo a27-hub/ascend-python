@@ -107,11 +107,11 @@ at::Tensor npu_dtype_cast_backward(
 {
     grad.requires_grad_();
     int64_t input_dtype_tocheck = input_dtype.has_value() ? input_dtype.value() : static_cast<int64_t>(dtype);
-    return npu_dtype_cast(grad, input_dtype_tocheck, grad_dtype);
+    return at_npu::native::custom_ops::npu_dtype_cast(grad, input_dtype_tocheck, grad_dtype);
 };
 at::Tensor _npu_dtype_cast_backward(const at::Tensor& grad, at::ScalarType dtype)
 {
     grad.requires_grad_();
-    return _npu_dtype_cast(grad, dtype);
+    return at_npu::native::custom_ops::_npu_dtype_cast(grad, dtype);
 };
 } // namespace op_api
