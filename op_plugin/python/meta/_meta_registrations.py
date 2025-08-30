@@ -1426,7 +1426,20 @@ def npu_scatter_pa_kv_cache_meta(key, value, key_cache, value_cache, slot_mappin
 
 @impl(m, "npu_geglu")
 def npu_geglu_meta(self, dim=-1, approximate=1, activate_left=False):
-    return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(self, dtype=self.dtype))
+    dim_num = self.dim()
+    input_shape = list(self.shape)
+
+    if dim_num < 1 or dim_num > 8:
+        raise RuntimeError("dim num out of range [1, 8]" + ops_error(ErrCode.PARAM))
+
+    if dim >= dim_num or dim < -dim_num:
+        raise RuntimeError("attribute [dim] out of range [-" + str(dim_num) + ", " + str(dim_num - 1) + "]" + ops_error(ErrCode.VALUE))
+
+    if input_shape[dim] % 2 == 1:
+        raise RuntimeError("x shape: " + str(input_shape) + ". Dim [" + str(dim) + "] of x should be divisible by 2, but get [" + str(input_shape[dim]) + "]" + ops_error(ErrCode.PARAM))
+    
+    input_shape[dim] //= 2
+    return (self.new_empty(input_shape, dtype=self.dtype), self.new_empty(input_shape, dtype=self.dtype))
 
 
 @impl(m, "npu_geglu_grad")
