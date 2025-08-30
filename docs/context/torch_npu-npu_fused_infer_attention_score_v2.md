@@ -230,7 +230,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             -   数据类型仅支持BFLOAT16；
             -   当sparse\_mode=3时，要求每个batch单独的actual\_seq\_qlen<actual\_seq\_kvlen；
             -   page attention场景下仅支持blocksize 128,512或1024；
-            -   不支持tensorlist、pse、page attention、伪量化、全量化、后量化；
+            -   不支持tensorlist、pse、伪量化、全量化、后量化；
             -   **不支持图模式配置Tiling调度优化**（tiling\_schedule\_optimize=True）、**reduce-overhead执行模式**（config.mode="reduce-overhead"）。
             -   actual\_seq\_qlen和actual\_seq\_kvlen的元素个数不大于4096。
 -   GQA伪量化场景下KV为NZ格式时的参数约束如下：
