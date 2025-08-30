@@ -17,20 +17,11 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+static const int64_t DIM_ONE = 1;
 static const int64_t DIM_TWO = 2;
-static const int64_t EXPERT_RANGE_DIM = 2;
-static const int64_t MAX_EXPERT_NUM = 10240;
-static const int64_t UN_QUANT = -1;
-static const int64_t STATIC_QUANT = 0;
-static const int64_t DYNAMIC_QUANT = 1;
-static const int64_t GATHER = 0;
-static const int64_t SCATTER = 1;
-static const int64_t CUMSUM = 0;
-static const int64_t COUNT = 1;
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
-    using npu_utils = at_npu::native::NpuUtils;
     using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
     tensor_list npu_moe_init_routing_quant(const at::Tensor &x, const at::Tensor &expert_idx,
@@ -40,88 +31,106 @@ namespace op_api {
                                               int64_t drop_pad_mode, int64_t expert_tokens_num_mode,
                                               bool expert_tokens_before_capacity_flag, int64_t quant_mode)
     {
-        TORCH_CHECK(x.dim() == DIM_TWO, "The x should be 2D");
-        TORCH_CHECK(x.scalar_type() == at::kChar || x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat ||
-                    x.scalar_type() == at::kBFloat16,
-                    "an int8, float16, float32 or bfloat16 tensor is expected but got a tensor with dtype: ",
-                    x.scalar_type());
-        TORCH_CHECK(expert_idx.dim() == DIM_TWO, "The expert_idx should be 2D");
+        TORCH_CHECK(x.dim() == DIM_TWO, "Input tensor 'x' must be 2-dimensional, but got dimension ", x.dim());
+        TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
+            "Expected input tensor 'x' to have dtype float16, float32, or bfloat16, but got dtype: ", x.scalar_type());
+        TORCH_CHECK(expert_idx.dim() == DIM_TWO,
+            "Input tensor 'expert_idx' must be 2-dimensional, but got dimension ", expert_idx.dim());
         TORCH_CHECK(expert_idx.scalar_type() == at::kInt,
-                    "int32 tensor expected but got a tensor with dtype: ",
-                    expert_idx.scalar_type());
-
-
-        TORCH_CHECK(drop_pad_mode == 0 || drop_pad_mode == 1, "drop_pad_mode must be in [0, 1]");
-        TORCH_CHECK(quant_mode >= UN_QUANT && quant_mode <= DYNAMIC_QUANT, "quant_mode must be in [-1, 0, 1]");
+            "Expected tensor 'expert_idx' to have dtype int32, but got dtype: ", expert_idx.scalar_type());
 
         auto x_size = x.sizes();
         auto expert_idx_size = expert_idx.sizes();
-        TORCH_CHECK(x_size[0] == expert_idx_size[0], "Input rows of x and expert_idx should be same.");
+        TORCH_CHECK(x_size[0] == expert_idx_size[0],
+            "The number of rows in input 'x' (", x_size[0], ") must match the number of rows in 'expert_idx' (", expert_idx_size[0], ").");
+
+        TORCH_CHECK(drop_pad_mode == 0 || drop_pad_mode == 1,
+            "Parameter 'drop_pad_mode' must be 0 or 1, but got: ", drop_pad_mode);
+        TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "Parameter 'quant_mode' must be 0 or 1, but got: ", quant_mode);
+        TORCH_CHECK(expert_tokens_num_mode >= 0 && expert_tokens_num_mode <= 2,
+            "Parameter 'expert_tokens_num_mode' must be 0, 1, or 2, but got: ", expert_tokens_num_mode);
+
+        if (drop_pad_mode == 0) {
+            TORCH_CHECK(active_num >= 0,
+                "Parameter 'active_num' must be greater than or equal to 0 in non-Drop/Pad mode, but got: ", active_num);
+        } else {
+            TORCH_CHECK(expert_capacity > 0 && expert_capacity < x_size[0],
+                "In Drop/Pad mode, 'expert_capacity' must be in the range (0, NUM_ROWS), but got: ", expert_capacity);
+            TORCH_CHECK(expert_num > 0, "In Drop/Pad mode, 'expert_num' must be greater than 0, but got: ", expert_num);
+        }
+
+        if (expert_tokens_num_mode > 0) {
+            TORCH_CHECK(expert_num > 0, "When 'expert_tokens_num_mode' > 0, 'expert_num' must be greater than 0, but got: ", expert_num);
+        }
 
         const at::Tensor &p_scale = c10::value_or_else(scale, [] { return at::Tensor(); });
         const at::Tensor &p_offset = c10::value_or_else(offset, [] { return at::Tensor(); });
-        if (p_scale.defined()) {
-            TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "float32 tensor expected but got a tensor with dtype: ",
-                        p_scale.scalar_type());
-            auto scale_size = p_scale.sizes();
-            if (quant_mode == -1) {
-                // no quant mode, scale should be (bs,)
-                TORCH_CHECK(p_scale.dim() == 1, "The scale should be 1D");
-                TORCH_CHECK(x_size[0] == scale_size[0],
-                            "Input rows of scale should be the same with the length of x[0].");
-            } else if (quant_mode == 0) {
-                TORCH_CHECK(x.scalar_type() != at::kChar,
-                            "tensor x has dtype int8 which is not supported in static/dynamic quaant mode");
-                // static quant mode, scale should be (end-start, h) or (end-start, 1)
-                TORCH_CHECK(p_scale.dim() == DIM_TWO || p_scale.dim() == 1,
-                            "The scale should be (end-start, 1) or (end-start,)");
-                TORCH_CHECK(p_scale.dim() == 1 || x_size[1] == scale_size[1] || 1 == scale_size[1],
-                            "Input cols of scale should be 1 or the same with the input cols of x.");
 
-                if (p_offset.defined()) {
-                    // offset is checked only in static quant mode and only when scale is checked, dim/shapes are the same with scale, if not None
-                    TORCH_CHECK(p_offset.scalar_type() == at::kFloat,
-                                "float32 tensor expected but got a tensor with dtype: ", p_offset.scalar_type());
-                    TORCH_CHECK(p_offset.dim() == DIM_TWO || p_offset.dim() == 1,
-                                "The offset should (end-start, 1) or (end-start,)");
-                    auto offset_size = p_offset.sizes();
-                    TORCH_CHECK(scale_size[0] == offset_size[0],
-                                "Input rows of offset should be the same with the length of active_expert_range.");
-                    TORCH_CHECK(p_offset.dim() == 1 || x_size[1] == offset_size[1] || 1 == offset_size[1],
-                                "Input cols of offset should be the same with the input cols of scale_size.");
-                }
-            } else {
-                TORCH_CHECK(x.scalar_type() != at::kChar,
-                            "tensor x has dtype int8 which is not supported in static/dynamic quaant mode");
-                // dynamic quant mode, scale should be (end-start, h)
-                TORCH_CHECK(p_scale.dim() == DIM_TWO, "The scale should be 2D");
-                TORCH_CHECK(x_size[1] == scale_size[1],
-                            "Input cols of scale should be the same with the input cols of x.");
+        if (quant_mode == 0) {
+            TORCH_CHECK(scale.has_value() && offset.has_value(), "In static quantization mode (quant_mode=0), both 'scale' and 'offset' must be provided.");
+            TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type());
+            TORCH_CHECK(p_scale.dim() == DIM_ONE && p_scale.size(0) == 1, "In static quantization, 'scale' must be a 1D tensor with shape (1,), but got shape: ", p_scale.sizes());
+
+            TORCH_CHECK(p_offset.scalar_type() == at::kFloat, "Expected tensor 'offset' to have dtype float32, but got dtype: ", p_offset.scalar_type());
+            TORCH_CHECK(p_offset.dim() == DIM_ONE && p_offset.size(0) == 1, "In static quantization, 'offset' must be a 1D tensor with shape (1,), but got shape: ", p_offset.sizes());
+        } else {
+            if (p_scale.defined()) {
+                TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type());
+                TORCH_CHECK(p_scale.dim() == DIM_TWO, "In dynamic quantization, optional 'scale' must be a 2D tensor, but got dimension ", p_scale.dim());
+                auto scale_size = p_scale.sizes();
+                TORCH_CHECK(scale_size[0] == expert_num || scale_size[0] == 1, "The first dimension of 'scale' must be 'expert_num' or 1, but got: ", scale_size[0]);
+                TORCH_CHECK(scale_size[1] == x_size[1] || scale_size[1] == 1, "The second dimension of 'scale' must match 'H' of input 'x' or be 1, but got: ", scale_size[1]);
             }
         }
 
-        int bs = x_size[0];
-        int h = x_size[1];
-        int k = expert_idx_size[1];
+        int64_t bs = x_size[0];
+        int64_t h = x_size[1];
+        int64_t k = expert_idx_size[1];
+
         at::Tensor expanded_x;
-        if (quant_mode == -1) {
-            expanded_x = npu_preparation::apply_tensor_without_format(x, {bs * k, h});
-        } else {
-            expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kChar));
+        int64_t expanded_scale_len = 0;
+        if (drop_pad_mode == 1) { // Drop/Pad
+            expanded_x = npu_preparation::apply_tensor_without_format({expert_num, expert_capacity, h}, x.options().dtype(at::kChar));
+            expanded_scale_len = expert_num * expert_capacity;
+        } else { // Dropless / Active
+            if (active_num > 0) { // Active
+                int64_t num_out_tokens = std::min((int64_t)bs * k, active_num);
+                expanded_x = npu_preparation::apply_tensor_without_format({num_out_tokens, h}, x.options().dtype(at::kChar));
+                expanded_scale_len = num_out_tokens;
+            } else { // Dropless
+                expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kChar));
+                expanded_scale_len = bs * k;
+            }
         }
-        at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
-        at::Tensor expert_tokens_count_or_cumsum = npu_preparation::apply_tensor_without_format({expert_num},
-                                                                                                x.options().dtype(
-                                                                                                    at::kInt));
-        at::Tensor expert_tokens_before_capacity = npu_preparation::apply_tensor_without_format({expert_num},
-                                                                                                x.options().dtype(
-                                                                                                    at::kLong));
-        at::Tensor dynamic_quant_scale = npu_preparation::apply_tensor_without_format({bs * k},
-                                                                                 x.options().dtype(at::kFloat));
+
+        at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format({bs * k}, expert_idx.options());
+
+        at::Tensor expert_token_cumsum_or_count;
+        if (drop_pad_mode == 0 && expert_tokens_num_mode > 0) {
+            expert_token_cumsum_or_count = npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
+        } else {
+            expert_token_cumsum_or_count = at::Tensor();
+        }
+
+        at::Tensor expert_tokens_before_capacity;
+        if (drop_pad_mode == 1 && expert_tokens_before_capacity_flag) {
+            expert_tokens_before_capacity = npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
+        } else {
+            expert_tokens_before_capacity = at::Tensor();
+        }
+
+        at::Tensor expanded_scale;
+        if (quant_mode == 1) {
+            expanded_scale = npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
+        } else {
+            expanded_scale = at::Tensor();
+        }
+
         EXEC_NPU_CMD(aclnnMoeInitRoutingQuantV2, x, expert_idx, p_scale, p_offset,
                      active_num, expert_capacity, expert_num, drop_pad_mode, expert_tokens_num_mode,
                      expert_tokens_before_capacity_flag, quant_mode, 
-                     expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity, dynamic_quant_scale);
-        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity, dynamic_quant_scale);
+                     expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale);
+
+        return std::tie(expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale);
     }
 }
