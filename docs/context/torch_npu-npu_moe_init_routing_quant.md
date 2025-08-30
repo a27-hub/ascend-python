@@ -8,27 +8,27 @@
 
   1.对输入expert_idx做排序，得出排序后的结果sorted_expert_idx和对应的序号sorted_row_idx：
 
-    $$
-    \text{sorted\_expert\_idx}, \text{sorted\_row\_idx} = keyValueSort(\text{expert\_idx})
-    $$
+   $$
+   \text{sorted\_expert\_idx}, \text{sorted\_row\_idx} = keyValueSort(\text{expert\_idx})
+   $$
 
   2.以sorted_row_idx做位置映射得出expanded_row_idx：
 
-    $$
-    \text{expanded\_row\_idx}[\text{sorted\_row\_idx}[i]]=i
-    $$
+   $$
+   \text{expanded\_row\_idx}[\text{sorted\_row\_idx}[i]]=i
+   $$
 
   3.在Dropless模式下，对sorted_expert_idx的每个专家统计直方图结果，再进行Cumsum，得出expert_token_cumsum_or_count：
 
-    $$
-    \text{expert\_token\_cumsum\_or\_count}[i]=Cumsum(Histogram(\text{sorted\_expert\_idx}))
-    $$
+   $$
+   \text{expert\_token\_cumsum\_or\_count}[i]=Cumsum(Histogram(\text{sorted\_expert\_idx}))
+   $$
 
   4.在Drop模式下，对sorted_expert_idx的每个专家统计直方图结果，得出expert_tokens_before_capacity：
 
-    $$
-    \text{expert\_tokens\_before\_capacity}[i]=Histogram(\text{sorted\_expert\_idx})
-    $$
+   $$
+   \text{expert\_tokens\_before\_capacity}[i]=Histogram(\text{sorted\_expert\_idx})
+   $$
 
   5.计算量化结果：
     - 静态量化：
@@ -52,9 +52,9 @@
             $$
   6.对quant_result取前NUM\_ROWS个sorted_row_idx的对应位置的值，得出expanded_x：
 
-    $$
-    \text{expanded\_x}[i]=\text{quant\_result}[\text{sorted\_row\_idx}[i]\%NUM\_ROWS]
-    $$
+   $$
+   \text{expanded\_x}[i]=\text{quant\_result}[\text{sorted\_row\_idx}[i]\%NUM\_ROWS]
+   $$
 
 ## 函数原型<a name="zh-cn_topic_0000002271534921_section14509346133618"></a>
 
