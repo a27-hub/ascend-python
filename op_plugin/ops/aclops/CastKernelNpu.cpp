@@ -86,12 +86,12 @@ at::Tensor npu_dtype_cast_backward(
     c10::optional<int64_t> input_dtype)
 {
     grad.requires_grad_();
-    return npu_dtype_cast(grad, static_cast<int64_t>(dtype), grad_dtype);
+    return at_npu::native::custom_ops::npu_dtype_cast(grad, static_cast<int64_t>(dtype), grad_dtype);
 }
 
 at::Tensor _npu_dtype_cast_backward(const at::Tensor& grad, at::ScalarType dtype)
 {
     grad.requires_grad_();
-    return _npu_dtype_cast(grad, dtype);
+    return at_npu::native::custom_ops::_npu_dtype_cast(grad, dtype);
 }
 }  // namespace acl_op
