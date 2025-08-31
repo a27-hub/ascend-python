@@ -5,7 +5,6 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// https://opensource.org/licenses/BSD-3-Clause
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,16 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "op_plugin/utils/OpAdapter.h"
-#if VERSION_BETWEEN(V2R1, V2R1)
+#include <ATen/TensorSubclassLikeUtils.h>
 #include "op_plugin/AclOpsInterface.h"
-#include <ATen/ops/_unsafe_index_native.h>
+#include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/op_api_common.h"
 
-namespace acl_op {
+namespace op_api {
+using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor _unsafe_index(const at::Tensor &self, const torch::List<c10::optional<at::Tensor>> &indices)
+at::Tensor npu_gather_sparse_index_backward_symint(const at::Tensor& grad, c10::SymIntArrayRef self_sizes, const at::Tensor& index)
 {
-    return at::native::_unsafe_index(self, indices);
+    at::Tensor output = grad.new_zeros_symint(self_sizes, grad.options());
+    if (at::isTensorSubclassLike(index)) {
+        return at_npu::native::custom_ops::_npu_index_add(output, index, grad);
+    }
+    return at_npu::native::custom_ops::_npu_index_add_(output, index, grad);
 }
-} // namespace acl_op
-#endif
+}
