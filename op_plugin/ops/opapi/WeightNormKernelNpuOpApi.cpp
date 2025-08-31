@@ -8,6 +8,7 @@
 
 
 namespace op_api {
+const int DIMENSION_2D = 2;
 at::Tensor _weight_norm(
     const at::Tensor& v_in,
     const at::Tensor& g_in,
@@ -19,7 +20,7 @@ at::Tensor _weight_norm(
         "on ", v_in.device(), " and g_in is on ", g_in.device(), OPS_ERROR(ErrCode::PARAM));
     auto v = v_in.contiguous();
     auto g = g_in.contiguous();
-    return v * g.div(at::norm_except_dim(v, 2, dim));
+    return v * g.div(at::norm_except_dim(v, DIMENSION_2D, dim));
 }
 
 } // namespace op_api

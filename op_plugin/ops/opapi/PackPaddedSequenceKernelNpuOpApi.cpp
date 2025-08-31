@@ -7,11 +7,11 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-
+const int DIMENSION_2D = 2;
 std::tuple<at::Tensor, at::Tensor> _pack_padded_sequence(const at::Tensor &input, const at::Tensor &lengths,
                                                          bool batch_first)
 {
-    TORCH_CHECK(input.dim() >= 2, "Input must have two dims.", input.dim(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(input.dim() >= DIMENSION_2D, "Input must have two dims.", input.dim(), OPS_ERROR(ErrCode::PARAM));
     // get the size of B and T, the input size is [T, B, *] or [B, T, *]
     auto batchsize = batch_first ? input.size(0) : input.size(1);
     auto timesize = batch_first ? input.size(1) : input.size(0);
