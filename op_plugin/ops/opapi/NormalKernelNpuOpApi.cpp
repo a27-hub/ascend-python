@@ -38,6 +38,7 @@ at::Tensor& normal_(at::Tensor& self, double mean, double std, c10::optional<at:
         float rstd_cast = static_cast<float>(std);
         EXEC_NPU_CMD(aclnnInplaceNormal, self, mean_cast, rstd_cast, seed, offset);
     } else {
+#if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
         auto gen_state_ = gen->philox_npu_state(10);
         const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
         const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
@@ -45,6 +46,7 @@ at::Tensor& normal_(at::Tensor& self, double mean, double std, c10::optional<at:
         float mean_cast = static_cast<float>(mean);
         float rstd_cast = static_cast<float>(std);
         EXEC_NPU_CMD(aclnnInplaceNormalTensor, self, mean_cast, rstd_cast, *seed_ptr, *offset_ptr, offset_intragraph);
+#endif
     }
     return self;
 }

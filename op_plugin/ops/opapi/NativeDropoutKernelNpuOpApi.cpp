@@ -68,12 +68,14 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
             aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
             EXEC_NPU_CMD(aclnnDropoutGenMaskV2, shapeArray, p, seed, offset, dataType, mask);
         } else {
+#if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
             auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(10);
             const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
             const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
             const uint64_t offset_intragraph = gen_state_.offset_intragraph_;
             aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
             EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, p, *seed_ptr, *offset_ptr, offset_intragraph, dataType, mask);
+#endif
         }
 
         if (is_capture != c10_npu::CaptureStatus::None) {

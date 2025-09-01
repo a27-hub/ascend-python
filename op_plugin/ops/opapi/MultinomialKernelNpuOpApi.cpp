@@ -37,11 +37,13 @@ at::Tensor& multinomial_op_api(
         const uint64_t offset = pair.second;
         EXEC_NPU_CMD(aclnnMultinomial, self, num_samples, replacement, seed, offset, result);
     } else {
+#if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
         auto gen_state_ = gen->philox_npu_state(10);
         const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
         const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
         const uint64_t offset_intragraph = gen_state_.offset_intragraph_;
         EXEC_NPU_CMD(aclnnMultinomialTensor, self, num_samples, replacement, *seed_ptr, *offset_ptr, offset_intragraph, result);
+#endif
     }
     return result;
 }
