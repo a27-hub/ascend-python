@@ -120,15 +120,11 @@ bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
         at::Tensor dst_tensor = dst[i];
         at::Tensor src_tensor = src[i];
         // 获取 Tensor 的地址
-        void *self_dataPtr = dst_tensor.data_ptr();
-        void *src_dataPtr = src_tensor.data_ptr();
-        src_tensor_address_list[i] = src_dataPtr;
-        dsts_tensor_address_list[i] = self_dataPtr;
+        src_tensor_address_list[i] = src_tensor.data_ptr();
+        dsts_tensor_address_list[i] = dst_tensor.data_ptr();
         // 计算 Tensor 的内存大小
-        size_t memory_size = static_cast<size_t>(dst_tensor.numel() * dst_tensor.element_size());
-        dsts_tensor_mem_size_list[i] = memory_size;
-        size_t src_memory_size = static_cast<size_t>(src_tensor.numel() * src_tensor.element_size());
-        src_tensor_mem_size_list[i] = src_memory_size;
+        dsts_tensor_mem_size_list[i] = static_cast<size_t>(dst_tensor.numel() * dst_tensor.element_size());
+        src_tensor_mem_size_list[i] = static_cast<size_t>(src_tensor.numel() * src_tensor.element_size());
         attrsIdxs[i] = i;
         // 判断哪个是d哪个是h
         if (dst_tensor.device().type() == c10::DeviceType::PrivateUse1) {
