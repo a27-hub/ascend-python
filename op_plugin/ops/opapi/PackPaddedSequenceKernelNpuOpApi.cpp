@@ -4,6 +4,7 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include "op_plugin/OpInterface.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
