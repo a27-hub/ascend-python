@@ -7,6 +7,7 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
+
 class TestNPUDequantSwigluQuant(TestCase):
     
     def golden_dequant_swiglu_quant_torch(
@@ -113,7 +114,7 @@ class TestNPUDequantSwigluQuant(TestCase):
             offset += groupIdx
 
         return res_y.to(torch.int8), res_scale
-
+        
     @unittest.skip("skip test_npu_dequant_swiglu_quant now")
     @SupportedDevices(["Ascend910B"])
     def test_npu_dequant_swiglu_quant(self, device="npu"):

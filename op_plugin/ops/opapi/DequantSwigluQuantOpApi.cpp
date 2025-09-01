@@ -23,7 +23,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& x, const c10::optional<at::Tensor>& weight_scale,
     const c10::optional<at::Tensor>& activation_scale, const c10::optional<at::Tensor>& bias,
     const c10::optional<at::Tensor>& quant_scale, const c10::optional<at::Tensor>& quant_offset,
-    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t swiglu_mode, double clamp_limit, double glu_alpha, double glu_bias)
+    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t swiglu_mode, 
+    double clamp_limit, double glu_alpha, double glu_bias)
 {
     TORCH_CHECK(x.dim() > 1, "x dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "quant_mode only support 0 or 1, but got", quant_mode,
