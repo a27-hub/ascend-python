@@ -434,6 +434,9 @@
   "func: npu_add_rms_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor scales1, Tensor? zero_points1, Tensor? scales2=None, Tensor? zero_points2=None, *, int axis=-1, float epsilon=1e-06, bool div_mode=True) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor)" : {
+    "version": ["all_version"]
+  },
   "func: logit_backward.grad_input(Tensor grad_output, Tensor self, float? eps=None, *, Tensor(a!) grad_input) -> Tensor(a!)": {
     "version": ["all_version"]
   },

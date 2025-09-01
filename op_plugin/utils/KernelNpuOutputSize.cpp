@@ -140,6 +140,24 @@ c10::SmallVector<int64_t, SIZE> reduce_ops_npu_output_size(const at::Tensor &sel
     return shape;
 }
 
+c10::SmallVector<int64_t, SIZE> reduce_ops_npu_output_size(const at::Tensor &self, c10::IntArrayRef dim, bool keepdim)
+{
+    int64_t ndim = self.dim();
+    std::bitset<64> mask = make_dim_mask(dim, ndim);
+    auto shape = array_to_small_vector(self.sizes());
+    for (int dim = static_cast<int64_t>(shape.size()) - 1; dim >= 0; dim--) {
+        if (mask[dim]) {
+            if (keepdim) {
+                shape[dim] = 1;
+            } else {
+                shape.erase(shape.begin() + dim);
+            }
+        }
+    }
+
+    return shape;
+}
+
 c10::SmallVector<int64_t, SIZE> mse_loss_npu_output_size(const at::Tensor &self, const at::Tensor &target,
                                                          int64_t reduction)
 {
