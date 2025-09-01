@@ -6468,18 +6468,29 @@ per-token模式: 两个参数的shape均为(2, B, KV_S), 数据类型固定为fl
 支持对称量化和非对称量化: 
 非对称量化模式下, antiquant_scale和antiquant_offset参数需同时存在. 
 对称量化模式下, antiquant_offset可以为空(即None); 当antiquant_offset参数为空时, 执行对称量化, 否则执行非对称量化. 
-query_rope和key_rope参数约束: 
-query_rope的数据类型、数据格式与query一致, 配置时要求query的S为1-16、N为32、64、128, D为512, shape中B、N、S与query一致, D为64. 
-key_rope的数据类型、数据格式与key一致, 配置时要求key的N为1, D为512, key_rope的shape中B、N、S与key一致, D为64. 
-query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个. 
-当query_rope和key_rope非空时, 支持如下特性: 
-sparse: Q_S等于1时只支持sparse=0且不传mask, Q_S大于1时只支持sparse=3且传入mask; 
+query_rope和key_rope参数约束及支持特性: 
+query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个.
+query_rope的数据类型、数据格式与query一致.
+key_rope的数据类型、数据格式与key一致.
+sparse: Q_S等于1时支持sparse=0且不传mask或sparse=4且传入mask, Q_S大于1时支持sparse=3或sparse=4且传入mask;
+sparse不为4时:
+query_rope配置时要求query的S为1-16、N为32、64、128, D为512, shape中B、N、S与query一致, D为64. 
+key_rope配置时要求key的N为1, D为512, key_rope的shape中B、N、S与key一致, D为64. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
 Atlas A3 训练系列产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A3 训练系列产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
 Atlas A3 训练系列产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
+sparse为4时:
+query_rope配置时要求query的每batch的S不大于key的每batch的S、N为128, D为512, query_rope的shape中B、N、S与query一致, D为64. 
+key_rope配置时要求key的S不大于131088, N为1, D为512, key_rope的shape中B、N、S与key一致, D为64.
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 仅支持key、value的input_layout格式为ND.
+Atlas A3 训练系列产品: 仅支持key、value的input_layout格式为ND. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状仅支持BSND. 
+Atlas A3 训练系列产品: input_layout形状仅支持BSND. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持开启PageAttention, 此时block_size支持64、128. 
+Atlas A3 训练系列产品: 支持开启PageAttention, 此时block_size支持64、128. 
 TND场景下query、key、value输入的综合限制: 
 T小于等于65536;
 N等于8/16/32/64/128, 且Q_N、K_N、V_N相等;
@@ -8330,6 +8341,111 @@ moe_gating_topk_softmax_model = MoeGatingTopkSoftmaxModel().npu()
 moe_gating_topk_softmax_model = torch.compile(moe_gating_topk_softmax_model, backend=npu_backend, dynamic=True)
 res = moe_gating_topk_softmax_model(x, None, 2)
 print(res)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_moe_gating_top_k",
+    """
+函数原型
+npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
+
+## 参数说明
+
+-   **x**（`Tensor`）：必选参数，表示待计算的输入。要求是一个2D的Tensor，数据类型支持`float16`、`bfloat16`、`float32`，数据格式要求为ND。支持非连续Tensor。最后一维的大小（即专家数）要求不大于`2048`。
+
+-   **k**（`int`）：必选参数，表示每个token最终筛选得到的专家个数，数据类型为`int64`。要求`1 <= k <= x_shape[-1] / group_count * k_group`。
+
+-   <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+ 
+-   **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
+
+-   **group_count**（`int`）：可选参数，表示将全部专家划分的组数，数据类型为`int64`，默认值为`1`。要求`group_count > 0，x_shape[-1]`能够被`group_count`整除且整除后的结果大于`2`，并且整除的结果按照`32`个数对齐后乘`group_count`的结果不大于`2048`。
+
+-   **group_select_mode**（`int`）：可选参数，表示一个专家组的总得分计算方式。默认值为`0`，`0`表示组内取最大值，作为专家组得分；`1`表示取组内Top2的专家进行得分累加，作为专家组得分。
+
+-   **renorm**（`int`）：可选参数，表示renorm标记，默认值为`0`，表示先进行norm再进行topk计算。当前仅支持`0`。
+-   **norm_type**（`int`）：可选参数，表示norm函数类型，`1`表示使用Sigmoid函数，`0`表示Softmax函数。默认值为`0`。
+
+-   **out_flag**（`bool`）：可选参数，是否输出norm函数中间结果。默认值为`False`。
+-   **routed_scaling_factor**（`float`）：可选参数，表示计算`yOut`使用的`routed_scaling_factor`系数，默认值为`1.0`。
+-   **eps**（`float`）：可选参数，表示计算`yOut`使用的`eps`系数，默认值为`1e-20`。
+
+返回值说明
+y_out（Tensor）：表示对x做norm操作和分组排序topk后计算的结果。是一个2D的Tensor，数据类型与`x`一致。
+expert_idx_out（Tensor）：表示对`x`做norm操作和分组排序topk后的索引，即专家的序号。shape与y_out一致，数据类型为`int32`。
+norm_out（Tensor）：表示norm计算的输出结果。shape与`x`一致，数据类型为`float32`。
+
+约束说明
+
+该接口支持推理场景下使用。
+该接口支持图模式（PyTorch 2.1版本）。
+
+调用示例
+单算子模式调用
+import torch
+import torch_npu
+import numpy
+
+k = 1
+k_group = 4
+group_count = 8
+group_select_mode = 1
+renorm = 0
+norm_type = 1
+out_flag = False
+routed_scaling_factor = 1.0
+eps = 1e-20
+
+# 生成随机数据, 并发送到npu
+x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
+bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
+x_tensor = torch.tensor(x).npu()
+bias_tensor = torch.tensor(bias).npu()
+
+# 调用MoeGatingTopK算子
+y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(x_tensor, k, bias=bias_tensor, k_group=k_group, group_count=group_count, group_select_mode=group_select_mode, renorm=renorm, norm_type=norm_type, out_flag=out_flag, routed_scaling_factor=routed_scaling_factor, eps=eps)
+
+图模式调用
+# 入图方式
+import torch
+import torch_npu
+import torchair
+import numpy
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x_tensor, bias_tensor):
+        return torch_npu.npu_moe_gating_top_k(x_tensor, k, bias=bias_tensor, k_group=k_group, group_count=group_count, group_select_mode=group_select_mode, renorm=renorm, norm_type=norm_type, out_flag=out_flag, routed_scaling_factor=routed_scaling_factor, eps=eps)
+# 实例化模型model
+model = Model().npu()
+# 从TorchAir获取NPU提供的默认backend
+config = torchair.CompilerConfig()
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+# 使用TorchAir的backend去调用compile接口编译模型
+model = torch.compile(model, backend=npu_backend)
+
+k = 1
+k_group = 4
+group_count = 8
+group_select_mode = 1
+renorm = 0
+norm_type = 1
+out_flag = False
+routed_scaling_factor = 1.0
+eps = 1e-20
+
+# 生成随机数据, 并发送到npu
+x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
+bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
+x_tensor = torch.tensor(x).npu()
+bias_tensor = torch.tensor(bias).npu()
+
+# 调用MoeGatingTopK算子
+y_npu, expert_idx_npu, out_npu = model(x_tensor, bias_tensor)
 """
 )
 
