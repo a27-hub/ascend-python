@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestDynamicBlockQuant(TestCase):
@@ -46,6 +47,7 @@ class TestDynamicBlockQuant(TestCase):
         output = torch_npu.npu_dynamic_block_quant(x, dst_type=dst_type)
         return output
 
+    @SupportedDevices(["Ascend910B"])
     def test_npu_dynamic_block_quant(self):
         x = self.generate_data(-2, 2, (4, 3), np.float16)
         cpu_output = self.cpu_op_exec(x)
