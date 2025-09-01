@@ -64,7 +64,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& activate_scale_opt = c10::value_or_else(activation_scale, [] { return at::Tensor(); });
     const at::Tensor& bias_opt = c10::value_or_else(bias, [] { return at::Tensor(); });
 
-    if (swiglu_mode ==0 ) {
+    if (swiglu_mode ==0) {
         EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
                  quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, y, scale);
     } else {
