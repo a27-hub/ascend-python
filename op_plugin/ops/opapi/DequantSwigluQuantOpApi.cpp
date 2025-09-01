@@ -29,7 +29,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     TORCH_CHECK(x.dim() > 1, "x dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "quant_mode only support 0 or 1, but got", quant_mode,
                 OPS_ERROR(ErrCode::PARAM));
-
     TORCH_CHECK(x.size(x.dim() - 1) % 2 == 0, "x last dim should be even", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(swiglu_mode == 0 || swiglu_mode == 1, "swiglu_mode only support 0 or 1, but got ", swiglu_mode,
                 OPS_ERROR(ErrCode::PARAM));
