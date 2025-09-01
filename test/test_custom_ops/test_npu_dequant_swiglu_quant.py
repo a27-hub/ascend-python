@@ -113,7 +113,7 @@ class TestNPUDequantSwigluQuant(TestCase):
             offset += groupIdx
 
         return res_y.to(torch.int8), res_scale
-        
+
     @unittest.skip("skip test_npu_dequant_swiglu_quant now")
     @SupportedDevices(["Ascend910B"])
     def test_npu_dequant_swiglu_quant(self, device="npu"):
@@ -218,5 +218,4 @@ class TestNPUDequantSwigluQuant(TestCase):
 
 
 if __name__ == "__main__":
-    import numpy as np
     run_tests()
