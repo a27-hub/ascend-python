@@ -37,29 +37,21 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
     auto original_stream = c10_npu::getCurrentNPUStream();
     auto secondary_stream = c10_npu::getCurrentSecondaryStream();
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+    // DropOutGenMask use seed and seed1 to generator a seed, like this:
+    //  seed1   seed
+    // 127~64   63~0
+    // so, we set seed1 = 0 to ensure the seed which user set is equal to the seed
+    // used by the operator DropOutGenMask
+    const auto gen = at_npu::detail::getDefaultNPUGenerator();
     {
         // During the life cycle of this raii instance, the calcu stream is set as the
         // secondary stream, and tasks are distributed to the secondary stream. At the
         // same time, according to the one-stream-one-pool principle, memory is also
         // alloced from the pool of the secondary stream.
-        if (is_capture != c10_npu::CaptureStatus::None) {
-            c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
-            capture_event_begin.record(original_stream);
-            capture_event_begin.block(secondary_stream);
-            ASCEND_LOGI("Event: record and block in dropout op capture begin is successfully executed, event=%p", capture_event_begin.event());
-        }
-
-        c10_npu::SecondaryStreamGuard guard(secondary_stream);
-        mask = at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
-        at::IntArrayRef shapeArray(self.sizes());
-
-        // DropOutGenMask use seed and seed1 to generator a seed, like this:
-        //  seed1   seed
-        // 127~64   63~0
-        // so, we set seed1 = 0 to ensure the seed which user set is equal to the seed
-        // used by the operator DropOutGenMask
-        const auto gen = at_npu::detail::getDefaultNPUGenerator();
         if (is_capture == c10_npu::CaptureStatus::None) {
+            c10_npu::SecondaryStreamGuard guard(secondary_stream);
+            mask = at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
+            at::IntArrayRef shapeArray(self.sizes());
             auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
             // At present, the default value of random number may be very large,
             // which will cause overflow in graph mode, so we set seed = 0 to avoid it.
@@ -73,16 +65,20 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
             const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
             const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
             const uint64_t offset_intragraph = gen_state_.offset_intragraph_;
+            c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
+            capture_event_begin.record(original_stream);
+            capture_event_begin.block(secondary_stream);
+            ASCEND_LOGI("Event: record and block in dropout op capture begin is successfully executed, event=%p", capture_event_begin.event());
+            c10_npu::SecondaryStreamGuard guard(secondary_stream);
+            mask = at_npu::native::OpPreparation::apply_tensor_without_format({length}, self.options().dtype(at::kByte));
+            at::IntArrayRef shapeArray(self.sizes());
             aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
             EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, p, *seed_ptr, *offset_ptr, offset_intragraph, dataType, mask);
-#endif
-        }
-
-        if (is_capture != c10_npu::CaptureStatus::None) {
             c10_npu::NPUEvent capture_event_end = c10_npu::NPUEvent();
             capture_event_end.record(secondary_stream);
             capture_event_end.block(original_stream);
             ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed, event=%p", capture_event_end.event());
+#endif
         }
     }
     // When tasks on multiple streams read and write the same block of memory,
