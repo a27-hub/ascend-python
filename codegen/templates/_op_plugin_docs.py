@@ -10085,7 +10085,15 @@ torch_npu.npu_dequant_swiglu_quant(
         config = CompilerConfig()
         npu_backend = tng.get_npu_backend(compiler_config=config)
 
-        cpu_model = Model().npu()
+        cpu_model = Model().npu()、
+        # 模拟输入数据
+        tokens_num = 4608
+        hidden_size = 2048
+        x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.int32)
+        weight_scale = torch.randn((1, hidden_size), dtype=torch.float32)
+        activation_scale = torch.randn((tokens_num, 1), dtype=torch.float32)
+        quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
+        group_index = torch.tensor([tokens_num], dtype=torch.int64)
         # 图模式调用
         model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
         model(x_npu, weight_scale_npu, activation_scale_npu, bias, quant_scale_npu, quant_offset, group_index_npu, \
