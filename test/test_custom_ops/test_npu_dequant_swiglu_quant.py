@@ -9,7 +9,7 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestNPUDequantSwigluQuant(TestCase):
-    
+
     def golden_dequant_swiglu_quant_torch(
         self,
         x,
@@ -114,8 +114,8 @@ class TestNPUDequantSwigluQuant(TestCase):
             offset += groupIdx
 
         return res_y.to(torch.int8), res_scale
-        
-    @unittest.skip("skip test_npu_dequant_swiglu_quant now")
+
+    @unittest.skip("skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
     @SupportedDevices(["Ascend910B"])
     def test_npu_dequant_swiglu_quant(self, device="npu"):
         swiglu_mode=1
@@ -125,7 +125,7 @@ class TestNPUDequantSwigluQuant(TestCase):
         x = torch.randint(-10, 10, x_shape, dtype=torch.int32)
         weight_scale = torch.randn(x_shape[1], dtype=torch.float32)
         activate_scale = torch.randn((x_shape[0], 1), dtype=torch.float32)
-        quant_scale = torch.randn((1, x_shape[1] // 2), dtype=torch.float32)  
+        quant_scale = torch.randn((1, x_shape[1] // 2), dtype=torch.float32)
         group_index = torch.tensor([x.shape[0]])
 
         y_cpu, scale_cpu = self.golden_dequant_swiglu_quant_torch(
@@ -166,7 +166,7 @@ class TestNPUDequantSwigluQuant(TestCase):
         self.assertRtolEqual(y_cpu.numpy(), y_npu.cpu().numpy())
         self.assertRtolEqual(scale_cpu.numpy(), scale_npu.cpu().numpy())
 
-    @unittest.skip("skip test_npu_dequant_swiglu_quant now")
+    @unittest.skip("skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
     @SupportedDevices(["Ascend910B"])
     def test_npu_dequant_swiglu_quant_2(self, device="npu"):
         swiglu_mode = 0

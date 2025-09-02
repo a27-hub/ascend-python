@@ -23,7 +23,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& x, const c10::optional<at::Tensor>& weight_scale,
     const c10::optional<at::Tensor>& activation_scale, const c10::optional<at::Tensor>& bias,
     const c10::optional<at::Tensor>& quant_scale, const c10::optional<at::Tensor>& quant_offset,
-    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t swiglu_mode, 
+    const c10::optional<at::Tensor>& group_index, bool activate_left, int64_t quant_mode, int64_t swiglu_mode,
     double clamp_limit, double glu_alpha, double glu_bias)
 {
     TORCH_CHECK(x.dim() > 1, "x dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
@@ -36,7 +36,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
                 OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(std::isfinite(glu_alpha), "glu_alpha should be finite", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(std::isfinite(glu_bias),  "glu_bias should be finite",  OPS_ERROR(ErrCode::PARAM));
-    
+
     at::SmallVector<int64_t, op_infer::SIZE> y_size;
     at::SmallVector<int64_t, op_infer::SIZE> scale_size;
     for (int i = 0; i < x.dim() - 1; i++) {
@@ -63,16 +63,16 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
     const at::Tensor& activate_scale_opt = c10::value_or_else(activation_scale, [] { return at::Tensor(); });
     const at::Tensor& bias_opt = c10::value_or_else(bias, [] { return at::Tensor(); });
 
-    if (swiglu_mode ==0) {
+    if (swiglu_mode == 0) {
         EXEC_NPU_CMD(aclnnDequantSwigluQuant, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
-                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, y, scale);
+                     quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, y, scale);
     } else {
         int64_t dst_type = 2;
         char* round_mode = "rint";
         int64_t activate_dim = -1;
         EXEC_NPU_CMD(aclnnDequantSwigluQuantV2, x, weight_scale_opt, activate_scale_opt, bias_opt, quant_scale_opt,
-                 quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, dst_type, round_mode, 
-                 activate_dim, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
+                     quant_offset_opt, group_index_opt, activate_left, quant_mode_ptr, dst_type, round_mode,
+                     activate_dim, swiglu_mode, clamp_limit, glu_alpha, glu_bias, y, scale);
     }
 
     return std::tie(y, scale);
