@@ -6,25 +6,25 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestDynamicBlockQuant(TestCase):
-    def calc_base(self, x):
-        if len(x.shape) == 3:
-            b0, m0, n0 = x.shape
+    def calc_base(self, input):
+        if len(input.shape) == 3:
+            b0, m0, n0 = input.shape
             m = b0 * m0
             n = n0
-        elif len(x.shape) == 2:
-            m, n = x.shape
+        elif len(input.shape) == 2:
+            m, n = input.shape
         pad_size = (128 - (n % 128)) % 128
-        x = x.view((m, n))
+        x = input.view((m, n))
         x = torch.nn.functional.pad(x, (0, pad_size), value=0) if pad_size > 0 else x
         x_view = x.view(m, -1, 128)
         x_amax = x_view.abs().float().amax(dim=2).view(m, -1)
         y_data = x_view * (127.0 / x_amax.unsqueeze(2))
         y_data = y_data.round()
         y_data = torch.clamp(y_data, -127, 127).to(torch.int8)
-        y_data = y_data.view(m, n + pad_size)[:, :n].view(x.shape)
+        y_data = y_data.view(m, n + pad_size)[:, :n].view(input.shape)
         scale = x_amax / 127.0
-        if len(x.shape) == 3:
-            scale = scale.view((b0, m0, -1))
+        if len(input.shape) == 3:
+            scale = scale.view((b0, m0 -1))
         else:
             scale = scale.view((m, -1))
         return y_data, scale
@@ -47,7 +47,6 @@ class TestDynamicBlockQuant(TestCase):
         output = torch_npu.npu_dynamic_block_quant(x, dst_type=dst_type)
         return output
 
-    @SupportedDevices(["Ascend910B"])
     def test_npu_dynamic_block_quant(self):
         x = self.generate_data(-2, 2, (4, 3), np.float16)
         cpu_output = self.cpu_op_exec(x)
