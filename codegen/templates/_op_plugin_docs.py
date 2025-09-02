@@ -9894,122 +9894,90 @@ torch_npu.npu_dequant_swiglu_quant(
 调用示例:
 
 -   单算子模式调用
-    import torch
-    import numpy as np
-    import torch_npu
-
-    # 模拟输入数据
-    tokens_num = 4608
-    hidden_size = 2048
-    x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.int32)
-    weight_scale = torch.randn((1, hidden_size), dtype=torch.float32)
-    activation_scale = torch.randn((tokens_num, 1), dtype=torch.float32)
-    quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
-    group_index = torch.tensor([tokens_num], dtype=torch.int64)
-
-    # 调用算子
-    y, scale = torch_npu.npu_dequant_swiglu_quant(
-        x.npu(),
-        weight_scale=weight_scale.npu(),
-        activation_scale=activation_scale.npu(),
-        bias=None,
-        quant_scale=quant_scale.npu(),
-        quant_offset=None,
-        group_index=group_index.npu(),
-        activate_left=True,
-        quant_mode=1,
-        swiglu_mode=1,
-        clamp_limit=7.0,
-        glu_alpha=1.702,
-        glu_bias=1.0
-    )
-
-    # 执行上述代码，打印y和scale输出类似如下
-    tensor([[-1,  0,  0,  ...,  0,  0,  0],
-            [ 0,  0,  0,  ..., -2,  5,  0],
-            [ 0,  0,  0,  ...,  0,  0,  0],
-            ...,
-            [13,  0,  0,  ...,  0,  0, -1],
-            [ 1,  0,  0,  ..., -1,  3,  0],
-            [ 0, 17,  0,  ..., -1, -1,  0]], device='npu:0', dtype=torch.int8)
-
-    tensor([0.4954, 0.3586, 0.1305,  ..., 1.0272, 1.0030, 0.0863], device='npu:0')
-
--   图模式调用
-    import numpy as np
+    import os
+    import shutil
+    import unittest
+    
     import torch
     import torch_npu
+    from torch_npu.testing.testcase import TestCase, run_tests
+    from torch_npu.testing.common_utils import SupportedDevices
 
-    import torchair as tng
-    from torchair.ge_concrete_graph import ge_apis as ge
-    from torchair.configs.compiler_config import CompilerConfig
-    import torch._dynamo
-    TORCHDYNAMO_VERBOSE=1
-    TORCH_LOGS="+dynamo"
-
-    # 支持入图的打印宏
-    import logging
-    from torchair.core.utils import logger
-    logger.setLevel(logging.DEBUG)
-    config = CompilerConfig()
-    config.aoe_config.aoe_mode = "2"
-    config.debug.graph_dump.type = "pbtxt"
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-    from torch.library import Library, impl
-
-    class Model(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-
-        def forward(self, x, weight_scale, activation_scale, bias, quant_scale, quant_offset, group_index, activate_left, \
-            quant_mode, swiglu_mode, clamp_limit, glu_alpha, glu_bias):
-            y_npu, scale_npu = torch_npu.npu_dequant_swiglu_quant(
-                x,
-                weight_scale=weight_scale,
-                activation_scale=activation_scale,
-                bias=bias,
-                quant_scale=quant_scale,
-                quant_offset=quant_offset,
-                group_index=group_index,
-                activate_left=activate_left,
-                quant_mode=quant_mode,
-                swiglu_mode = swiglu_mode,
-                clamp_limit=clamp_limit,
-                glu_alpha=glu_alpha,
-                glu_bias=glu_bias,
+    class TestNPUDequantSwigluQuant(TestCase):
+        def test_npu_dequant_swiglu_quant(self, device="npu"):
+            tokens_num = 4608
+            hidden_size = 2048
+            x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.int32)
+            weight_scale = torch.randn((1, hidden_size), dtype=torch.float32)
+            activation_scale = torch.randn((tokens_num, 1), dtype=torch.float32)
+            quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
+            group_index = torch.tensor([tokens_num], dtype=torch.int64)
+            bias = None
+            y, scale = torch_npu.npu_dequant_swiglu_quant(
+                x.npu(),
+                weight_scale=weight_scale.npu(),
+                activation_scale=activation_scale.npu(),
+                bias=None,
+                quant_scale=quant_scale.npu(),
+                quant_offset=None,
+                group_index=group_index.npu(),
+                activate_left=True,
+                quant_mode=1,
+                swiglu_mode=1,
+                clamp_limit=7.0,
+                glu_alpha=1.702,
+                glu_bias=1.0
             )
-            return y_npu, scale_npu
 
     if __name__ == "__main__":
-        torch_npu.npu.set_device(0)
-        config = CompilerConfig()
-        npu_backend = tng.get_npu_backend(compiler_config=config)
+        run_tests()
 
-        cpu_model = Model().npu()、
-        # 模拟输入数据
-        tokens_num = 4608
-        hidden_size = 2048
-        x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.int32)
-        weight_scale = torch.randn((1, hidden_size), dtype=torch.float32)
-        activation_scale = torch.randn((tokens_num, 1), dtype=torch.float32)
-        quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
-        group_index = torch.tensor([tokens_num], dtype=torch.int64)
-        # 图模式调用
-        model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
-        model(x_npu, weight_scale_npu, activation_scale_npu, bias, quant_scale_npu, quant_offset, group_index_npu, \
-            activate_left, quant_mode, swiglu_mode, clamp_limit, glu_alpha, glu_bias)
+-   图模式调用
 
-
-    # 执行上述代码，打印y和scale输出类似如下
-    tensor([[-1,  0,  0,  ...,  0,  0,  0],
-            [ 0,  0,  0,  ..., -2,  5,  0],
-            [ 0,  0,  0,  ...,  0,  0,  0],
-            ...,
-            [13,  0,  0,  ...,  0,  0, -1],
-            [ 1,  0,  0,  ..., -1,  3,  0],
-            [ 0, 17,  0,  ..., -1, -1,  0]], device='npu:0', dtype=torch.int8)
-
-    tensor([0.4954, 0.3586, 0.1305,  ..., 1.0272, 1.0030, 0.0863], device='npu:0')
+    ```python
+    import os
+    import shutil
+    import unittest
+    
+    import torch
+    import torch_npu
+    from torch_npu.testing.testcase import TestCase, run_tests
+    from torch_npu.testing.common_utils import SupportedDevices
+    from torchair.configs.compiler_config import CompilerConfig
+    import torchair as tng
+    config = CompilerConfig()
+    config.experimental_config.frozen_parameter = True
+    config.experimental_config.tiling_schedule_optimize = True
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+    
+    class TestNPUDequantSwigluQuant(TestCase):
+        def test_npu_dequant_swiglu_quant(self, device="npu"):
+            tokens_num = 4608
+            hidden_size = 2048
+            x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.int32)
+            weight_scale = torch.randn((1, hidden_size), dtype=torch.float32)
+            activation_scale = torch.randn((tokens_num, 1), dtype=torch.float32)
+            quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
+            group_index = torch.tensor([tokens_num], dtype=torch.int64)
+            bias = None
+            y, scale = torch_npu.npu_dequant_swiglu_quant(
+                x.npu(),
+                weight_scale=weight_scale.npu(),
+                activation_scale=activation_scale.npu(),
+                bias=None,
+                quant_scale=quant_scale.npu(),
+                quant_offset=None,
+                group_index=group_index.npu(),
+                activate_left=True,
+                quant_mode=1,
+                swiglu_mode=1,
+                clamp_limit=7.0,
+                glu_alpha=1.702,
+                glu_bias=1.0
+            )
+    
+    if __name__ == "__main__":
+        run_tests()
 
 """
 )
