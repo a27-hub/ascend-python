@@ -11,17 +11,17 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
     def setUp(self):
         super().setUp()
         torch.manual_seed(0)
-    
+
     def compare(self, a: torch.Tensor, b: torch.Tensor, benchmark: float) -> bool:
         a = a.reshape(-1).cpu()
         b = b.reshape(-1).cpu()
         diff_abs = torch.abs(a - b)
-        if(diff_abs.numel() == 0):
+        if diff_abs.numel() == 0:
             return True
-        max_diff_abs = diff_abs.max
+        max_diff_abs = diff_abs.max().item()
         if max_diff_abs == 0:
             return True
-        
+
         rel_error = 0
         abs_error = 0
         for i in range(a.numel()):
@@ -35,19 +35,19 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
                 diff_rel_item = 1.0
             else:
                 diff_rel_item = diff / abs(ai)
-            
+
             if abs(ai) < 1 and diff > benchmark:
                 abs_error += 1
             elif abs(ai) >= 1 and diff_rel_item > benchmark:
                 rel_error += 1
-            
+
             if (rel_error + abs_error) > 10:
                 break
-            
+
         return (rel_error + abs_error) == 0
 
     def npu_add_rms_norm_dynamic_quant_v2_golden(
-        self, 
+        self,
         x1: torch.Tensor,
         x2: torch.Tensor,
         gamma: torch.Tensor,
@@ -78,10 +78,10 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         y = (x / rms) * gamma_fp
         if beta is not None:
             y = y + beta.to(torch.float32)
-        
+
         def row_max_abs(t: torch.Tensor):
             return t.abs().amax(dim=-1, keepdim=True)
-        
+
         input1 = y if smooth_scale1 is None else y * smooth_scale1.to(torch.float32)
         scale1 = row_max_abs(input1) / 127.0
         scale1 = torch.where(scale1 > 0, scale1, torch.ones_like(scale1))
@@ -91,8 +91,8 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         input2 = y if smooth_scale2 is None else y * smooth_scale2.to(torch.float32)
         scale2 = row_max_abs(input2) / 127.0
         scale2 = torch.where(scale2 > 0, scale2, torch.ones_like(scale2))
-        q2 = torch.round(input1 / scale1).to(torch.int32)
-        q1 = torch.clamp(q1, -128, 127).to(torch.int8)
+        q2 = torch.round(input2 / scale2).to(torch.int32)
+        q2 = torch.clamp(q2, -128, 127).to(torch.int8)
 
         s1_out = scale1.squeeze(-1).to(torch.float32).contiguous()
         s2_out = scale2.squeeze(-1).to(torch.float32).contiguous()
@@ -122,7 +122,6 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         s2_n = smooth_scale2.npu() if smooth_scale2 is not None else None
         beta_n = beta.npu() if beta is not None else None
         eps_f = float(epsilon)
-
         y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant_v2(
             x1_n, x2_n, gamma_n, s1_n, s2_n, beta_n, epsilon=eps_f
         )
@@ -135,7 +134,7 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         self.assertEqual(y2_npu.dtype, torch.int8)
         self.assertEqual(x_out_npu.dtype, x1.dtype)
         self.assertEqual(s1_npu.dtype, torch.float32)
-        self.assertEqual(y2_npu.dtype, torch.float32)
+        self.assertEqual(s2_npu.dtype, torch.float32)
 
         self.assertEqual(tuple(y1_npu.shape), tuple(x1.shape))
         self.assertEqual(tuple(y2_npu.shape), tuple(x1.shape))
@@ -146,25 +145,25 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         y1_diff = (y1_npu.cpu().to(torch.int16) - y1_cpu.cpu().to(torch.int16)).abs()
         y2_diff = (y2_npu.cpu().to(torch.int16) - y2_cpu.cpu().to(torch.int16)).abs()
         self.assertTrue(int(y1_diff.max()) <= 1, f"max |y1_npu - y1_ref| = {int(y1_diff.max())} > 1")
-        self.assertTrue(int(y2_diff.max()) <= 1, f"max |y1_npu - y1_ref| = {int(y2_diff.max())} > 1")
+        self.assertTrue(int(y2_diff.max()) <= 1, f"max |y2_npu - y2_ref| = {int(y2_diff.max())} > 1")
 
         benchmark = math.pow(2, -7)
         x_out_npu_flat = x_out_npu.reshape(-1).cpu().to(torch.float32)
         x_out_cpu_flat = x_out_cpu.reshape(-1).cpu().to(torch.float32)
-        self.assertTrue(self.compare(x_out_npu_flat, x_out_cpu_flat, benchmark))
+        self.assertTrue(self.compare(x_out_cpu_flat, x_out_npu_flat, benchmark))
 
         s1_npu_flat = s1_npu.reshape(-1).cpu().to(torch.float32)
         s1_cpu_flat = s1_cpu.reshape(-1).cpu().to(torch.float32)
         s2_npu_flat = s2_npu.reshape(-1).cpu().to(torch.float32)
         s2_cpu_flat = s2_cpu.reshape(-1).cpu().to(torch.float32)
-        self.assertTrue(self.compare(s1_npu_flat, s1_cpu_flat, benchmark))
-        self.assertTrue(self.compare(s2_npu_flat, s2_cpu_flat, benchmark))
+        self.assertTrue(self.compare(s1_cpu_flat, s1_npu_flat, benchmark))
+        self.assertTrue(self.compare(s2_cpu_flat, s2_npu_flat, benchmark))
 
         for t in [x_out_npu, s1_npu, s2_npu]:
             tt = t.float()
             self.assertFalse(torch.isnan(tt).any().item())
             self.assertFalse(torch.isinf(tt).any().item())
-        
+
     @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant_v2 due to low version of cann")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes(self):
