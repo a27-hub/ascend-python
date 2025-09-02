@@ -1256,9 +1256,6 @@
   "func: _cummin_helper(Tensor self, Tensor(a!) values, Tensor(b!) indices, int dim) -> ()": {
     "version": ["all_version"]
   },
-  "func: _dim_arange(Tensor like, int dim) -> Tensor": {
-    "version": ["all_version"]
-  },
   "func: _embedding_bag(Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -1356,9 +1353,6 @@
     "version": ["all_version"]
   },
   "func: acosh_(Tensor(a!) self) -> Tensor(a!)": {
-    "version": ["all_version"]
-  },
-  "func: adaptive_avg_pool1d(Tensor self, int[1] output_size) -> Tensor": {
     "version": ["all_version"]
   },
   "func: adaptive_avg_pool2d(Tensor self, SymInt[2] output_size) -> Tensor": {
@@ -1833,12 +1827,6 @@
     "version": ["all_version"]
   },
   "func: conv_tbc_backward(Tensor self, Tensor input, Tensor weight, Tensor bias, int pad) -> (Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
-  },
-  "func: conv_transpose2d.input(Tensor input, Tensor weight, Tensor? bias=None, int[2] stride=1, SymInt[2] padding=0, SymInt[2] output_padding=0, int groups=1, int[2] dilation=1) -> Tensor": {
-    "version": ["all_version"]
-  },
-  "func: conv_transpose3d.input(Tensor input, Tensor weight, Tensor? bias=None, int[3] stride=1, SymInt[3] padding=0, SymInt[3] output_padding=0, int groups=1, int[3] dilation=1) -> Tensor": {
     "version": ["all_version"]
   },
   "func: convolution(Tensor input, Tensor weight, Tensor? bias, int[] stride, SymInt[] padding, int[] dilation, bool transposed, SymInt[] output_padding, int groups) -> Tensor": {
@@ -4365,6 +4353,12 @@
     "version": ["all_version"]
   },
   "func: npu_kv_rmsnorm_rope_cache_v2_functional(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: _quantize_per_tensor_impl.out(Tensor inputs, Tensor scales, Tensor zero_points, ScalarType dtype, *, Tensor(a!) result) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: _quantize_per_channel_impl.out(Tensor inputs, Tensor scales, Tensor zero_points, int axis, ScalarType dtype, *, Tensor(a!) result) -> Tensor(a!)": {
     "version": ["all_version"]
   },
   "func: npu_dynamic_block_quant(Tensor x, *, float min_scale=0.0, str round_mode=\"rint\", int dst_type=23, int row_block_size=1, int col_block_size=128) -> (Tensor y, Tensor scale)": {
