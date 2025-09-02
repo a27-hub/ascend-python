@@ -98,7 +98,7 @@ class TestNpuMoeInitRoutingQuant(TestCase):
     def npu_op_exec(self, x, expert_idx, scale, offset, active_expert_range,
                     quant_mode, drop_mode):
         expert_num = active_expert_range[-1]
-        expanded_x, expanded_row_idx, expert_token_cumsum_or_count, _, expanded_scale = torch_npu.npu_moe_init_routing_quant(
+        expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale = torch_npu.npu_moe_init_routing_quant(
             x,
             expert_idx.to(torch.int32),
             scale=scale,
@@ -172,11 +172,13 @@ class TestNpuMoeInitRoutingQuant(TestCase):
         local_expanded_x_npu = expanded_x_npu.cpu()
         local_expanded_row_idx_npu = expanded_row_idx_npu.cpu()
         local_expert_tokens_count_npu = expert_tokens_count_npu.cpu()
-        local_expanded_scale_npu = expanded_scale_npu.cpu()
-
         actual_expert_count = np.sum(local_expert_tokens_count_npu.numpy())
+        if expanded_scale_npu is not None:
+            local_expanded_scale_npu = expanded_scale_npu.cpu()
+            local_expanded_scale_npu[actual_expert_count:] = 0
+        else:
+            local_expanded_scale_npu = None
         local_expanded_x_npu[actual_expert_count:] = 0
-        local_expanded_scale_npu[actual_expert_count:] = 0
 
         return expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
             expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu
