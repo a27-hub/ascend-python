@@ -7933,6 +7933,61 @@ custom:
   - func: npu_moe_token_unpermute_with_routing_map_grad(Tensor unpermuted_tokens_grad, Tensor out_index, Tensor permuted_token_id, Tensor? routing_map, Tensor? permuted_tokens, Tensor? probs, bool drop_and_pad, int[] restore_shape) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
 
+  - func: fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> Tensor, Tensor, Tensor, Tensor, Tensor, Tensor
+  # 返回值：(logits_max_local, sum_exp_logits_local, predicted_logits_local, target_mask, masked_target, vocab_parallel_logits)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      logits_max:
+        size: '{input.size(0)}'
+        dtype: at::kFloat
+      sum_exp_logits:
+        size: '{input.size(0)}'
+        dtype: at::kFloat
+      predicted_logits:
+        size: '{input.size(0)}'
+        dtype: at::kFloat
+      target_mask:
+        size: '{(input.size(0)+7)/8}'
+        dtype: at::kByte
+      masked_target:
+        size: '{input.size(0), 1}'
+        dtype: target
+      vocab_parallel_logits:
+        size: 'return_logits ? {input.size(0), weight.size(0)} : {0}'
+        dtype: input
+      new_params:
+        # vocab_start_index_value: 'static_cast<int32_t>(vocab_start_index)'
+        # vocab_end_index_value: 'static_cast<int32_t>(vocab_end_index)'
+        # return_logits_value: 'return_logits ? true : false'
+      exec: aclnnFusedLinearOnlineMaxSum, input, weight, target, vocab_start_index, vocab_end_index, logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits
+  - func: fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> Tensor, Tensor
+  # 返回值：(loss, softMax)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      loss:
+        size: logits_max
+        dtype: at::kFloat
+      softmax:
+        size: 'vocab_parallel_logits.defined() ? {vocab_parallel_logits.value().size(0), } : {0}'
+        dtype: logits_max
+      new_params:
+        label_smoothing_value: 'label_smoothing.value_or(0.0)'
+      exec: aclnnFusedCrossEntropyLossWithMaxSum, logits_max, sum_exp_logits, predicted_logits, label_smoothing_value, input, weight, vocab_parallel_logits, loss, softmax
+
+  - func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max, Tensor? sum_exp_logits, Tensor? softmax=None) -> Tensor, Tensor
+  # 返回值：(input_grad, weight_grad)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      input_grad:
+        size: '{grad.size(0), input.size(1)}'
+        dtype: input
+      weight_grad:
+        size: '{weight.size(0), grad.size(1)}'
+        dtype: input
+      new_params:
+        label_smoothing_value: 'label_smoothing.value_or(0.0)'
+      exec: aclnnFusedLinearCrossEntropyLossGrad, grad, input, weight, target_mask, masked_target, label_smoothing_value, logits_max, sum_exp_logits, softmax, input_grad, weight_grad
+
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
