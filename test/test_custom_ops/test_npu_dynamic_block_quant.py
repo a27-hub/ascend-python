@@ -1,3 +1,4 @@
+import unittest
 import torch
 import numpy as np
 import torch_npu
@@ -47,6 +48,7 @@ class TestDynamicBlockQuant(TestCase):
         output = torch_npu.npu_dynamic_block_quant(x, dst_type=dst_type)
         return output
 
+    @unittest.skip("skip until CANN is updated to support aclnnScatterPaKvCache")
     def test_npu_dynamic_block_quant(self):
         x = self.generate_data(-2, 2, (4, 3), np.float16)
         cpu_output = self.cpu_op_exec(x)
