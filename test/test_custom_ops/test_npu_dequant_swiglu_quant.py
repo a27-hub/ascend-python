@@ -115,9 +115,9 @@ class TestNPUDequantSwigluQuant(TestCase):
 
         return res_y.to(torch.int8), res_scale
 
-    @unittest.skip("skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
+    @unittest.skip("Skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
     @SupportedDevices(["Ascend910B"])
-    def test_npu_dequant_swiglu_quant(self, device="npu"):\
+    def test_npu_dequant_swiglu_quant(self, device="npu"):
         swiglu_mode = 1
         bias = None
         quant_offset = None
@@ -166,7 +166,7 @@ class TestNPUDequantSwigluQuant(TestCase):
         self.assertRtolEqual(y_cpu.numpy(), y_npu.cpu().numpy())
         self.assertRtolEqual(scale_cpu.numpy(), scale_npu.cpu().numpy())
 
-    @unittest.skip("skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
+    @unittest.skip("Skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
     @SupportedDevices(["Ascend910B"])
     def test_npu_dequant_swiglu_quant_2(self, device="npu"):
         swiglu_mode = 0
