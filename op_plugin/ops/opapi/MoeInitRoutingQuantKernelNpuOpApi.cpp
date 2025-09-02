@@ -19,17 +19,19 @@
 
 static const int64_t DIM_ONE = 1;
 static const int64_t DIM_TWO = 2;
+static const int64_t DISABLED = 0;
+static const int64_t MODE_TOKEN_COUNT = 2;
+
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
     using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
     tensor_list npu_moe_init_routing_quant(const at::Tensor &x, const at::Tensor &expert_idx,
-                                              const c10::optional <at::Tensor> &scale,
-                                              const c10::optional <at::Tensor> &offset,
-                                              int64_t active_num, int64_t expert_capacity, int64_t expert_num,
-                                              int64_t drop_pad_mode, int64_t expert_tokens_num_mode,
-                                              bool expert_tokens_before_capacity_flag, int64_t quant_mode)
+        const c10::optional <at::Tensor> &scale, const c10::optional <at::Tensor> &offset,
+        int64_t active_num, int64_t expert_capacity, int64_t expert_num,
+        int64_t drop_pad_mode, int64_t expert_tokens_num_mode,
+        bool expert_tokens_before_capacity_flag, int64_t quant_mode)
     {
         TORCH_CHECK(x.dim() == DIM_TWO, "Input tensor 'x' must be 2-dimensional, but got dimension ", x.dim());
         TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
@@ -47,7 +49,7 @@ namespace op_api {
         TORCH_CHECK(drop_pad_mode == 0 || drop_pad_mode == 1,
             "Parameter 'drop_pad_mode' must be 0 or 1, but got: ", drop_pad_mode);
         TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "Parameter 'quant_mode' must be 0 or 1, but got: ", quant_mode);
-        TORCH_CHECK(expert_tokens_num_mode >= 0 && expert_tokens_num_mode <= 2,
+        TORCH_CHECK(expert_tokens_num_mode >= DISABLED && expert_tokens_num_mode <= MODE_TOKEN_COUNT,
             "Parameter 'expert_tokens_num_mode' must be 0, 1, or 2, but got: ", expert_tokens_num_mode);
 
         if (drop_pad_mode == 0) {
@@ -127,9 +129,9 @@ namespace op_api {
         }
 
         EXEC_NPU_CMD(aclnnMoeInitRoutingQuantV2, x, expert_idx, p_scale, p_offset,
-                     active_num, expert_capacity, expert_num, drop_pad_mode, expert_tokens_num_mode,
-                     expert_tokens_before_capacity_flag, quant_mode, 
-                     expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale);
+            active_num, expert_capacity, expert_num, drop_pad_mode, expert_tokens_num_mode,
+            expert_tokens_before_capacity_flag, quant_mode, expanded_x, expanded_row_idx,
+            expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale);
 
         return std::tie(expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expert_tokens_before_capacity, expanded_scale);
     }
