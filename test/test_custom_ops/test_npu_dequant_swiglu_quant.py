@@ -117,8 +117,8 @@ class TestNPUDequantSwigluQuant(TestCase):
 
     @unittest.skip("skip until CANN is updated to 8.3.RC1 to support aclnnDequantSwigluQuantV2")
     @SupportedDevices(["Ascend910B"])
-    def test_npu_dequant_swiglu_quant(self, device="npu"):
-        swiglu_mode=1
+    def test_npu_dequant_swiglu_quant(self, device="npu"):\
+        swiglu_mode = 1
         bias = None
         quant_offset = None
         x_shape = [4608, 2048]
