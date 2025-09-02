@@ -45,6 +45,7 @@
       "npu_scatter_nd_update_",
       "npu_stride_copy",
       "npu_gemma_rms_norm",
+      "npu_dequant_swiglu_quant",
       "npu_swiglu",
       "npu_gelu",
       "npu_gelu_backward",
