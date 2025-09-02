@@ -22,6 +22,35 @@
 
         ![](./figures/zh-cn_formulaimage_0000002242076304.png)
 
+        - 将 `x_dequant` 在最后一维均分为两部分 `x1` 和 `x2`。
+        - 根据 `activate_left` 和 `swiglu_mode` 决定计算公式：
+
+        - **当 swiglu_mode = 0（标准 Swiglu）**  
+            - activate_left=True：
+            ```
+            out = swish(x1) * x2
+            ```
+            - activate_left=False：
+            ```
+            out = swish(x2) * x1
+            ```
+            其中 `swish(z) = z * sigmoid(z)`。
+
+        - **当 swiglu_mode = 1（变种 Swiglu）**  
+            - 先对输入进行截断：
+            ```
+            x1_clamp = clamp(x1, -clamp_limit, clamp_limit)
+            x2_clamp = clamp(x2, -clamp_limit, clamp_limit)
+            ```
+         - 再计算：
+           - activate_left=True：
+             ```
+             out = swish(x1_clamp, alpha=glu_alpha, bias=glu_bias) * x2_clamp
+             ```
+           - activate_left=False：
+             ```
+             out = swish(x2_clamp, alpha=glu_alpha, bias=glu_bias) * x1_clamp
+             ```
     -   量化：
         1.  （可选）先进行smooth量化
 
@@ -57,6 +86,10 @@ torch_npu.npu_dequant_swiglu_quant(Tensor x, *, Tensor? weight_scale=None, Tenso
     -   取False时，out=swish\(split\[x, -1, 2\]\[1\]\)\*split\[x, -1, 2\]\[0\]
 
 -   quant\_mode：int类型，可选参数，默认0，表示量化类型。0表示静态量化，1表示动态量化。group\_index场景下（非None），只支持动态量化即quant\_mode=1。
+-   swiglu_mode（int）：可选参数，swiglu 计算模式，0 表示传统 swiglu，1 表示变种 swiglu（支持 clamp、alpha、bias）。
+-   clamp_limit（float）：可选参数，swiglu 输入门限，默认 7.0。
+-   glu_alpha（float）：可选参数，glu 激活函数系数，默认 1.702。
+-   glu_bias（float）：可选参数，swiglu 计算中的偏差，默认 1.0。
 
 ## 输出说明
 
@@ -71,6 +104,14 @@ torch_npu.npu_dequant_swiglu_quant(Tensor x, *, Tensor? weight_scale=None, Tenso
     -   group\_index只支持count模式，需要网络保证group\_index输入的求和不超过x的TokensNum维度，否则会出现越界访问。
     -   H轴有维度大小限制：H≤10496同时64对齐场景；规格不满足场景会进行校验。
     -   输出y和scale超过group\_index总和的部分未进行清理处理，该部分内存为垃圾数据，可能会存在inf/nan异常值，网络使用的时候需要注意影响。
+-   当 x 为 int32 时，必须提供 weight_scale。
+-   当 x 为 float16 或 bfloat16 时，weight_scale、activation_scale、bias 必须为 None。
+-   x 的最后一维长度必须为偶数。
+-   当激活维度不是 x 的最后一维时，group_index 必须为 None。
+-   当 group_index 非 None 时，仅支持动态量化（quant_mode=1），且 bias、quant_offset 必须为 None。
+-   Ascend 910_95 AI 处理器不支持输入 quant_offset。
+-   y 的类型仅支持 int8。
+-   clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
 
 ## 支持的型号
 
