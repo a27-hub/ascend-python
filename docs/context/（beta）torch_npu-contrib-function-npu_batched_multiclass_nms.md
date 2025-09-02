@@ -7,7 +7,9 @@
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
-|<term>Atlas 训练系列产品</term>                                       |    √     |## 功能说明
+|<term>Atlas 训练系列产品</term>                                       |    √     |
+
+## 功能说明
 
 使用NPU API的批量多类bbox NMS。
 ## 函数原型
