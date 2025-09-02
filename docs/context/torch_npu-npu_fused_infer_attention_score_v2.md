@@ -82,7 +82,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     
 -   **dequant\_offset\_value**（`Tensor`）：可选参数，kv伪量化参数分离时表示`value`的反量化偏移。数据类型支持`float16`、`bfloat16`、`float32`。数据格式支持ND。支持per-channel、per-tensor、per-token、per-tensor叠加per-head、per-token叠加per-head、per-token叠加使用page attention模式管理offset、per-token叠加per head并使用page attention模式管理offset。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 -   **dequant\_scale\_key\_rope**（`Tensor`）：可选参数，**预留参数，暂未使用，使用默认值即可。**
--   **quant\_scale\_out**（`Tensor`）：可选参数，表示输出的量化因子。数据类型支持`float32`、`bfloat16`。数据格式支持ND。支持per-tensor、per-channel。当输入为`bfloat16`时，同时支持`float32`、`bfloat16`，否则仅支持`float32`。per-channel格式，当输出layout为BSH时，要求`quant_scale_out`所有维度的乘积等于H；其他layout要求乘积等于N\*D（建议输出layout为BSH时，quant\_scale\_out shape传入\(1, 1, H\)或\(H,\)；输出为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D\)）。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+-   **quant\_scale\_out**（`Tensor`）：可选参数，表示输出的量化因子。数据类型支持`float32`、`bfloat16`。数据格式支持ND。支持per-tensor、per-channel。当输入为`bfloat16`时，同时支持`float32`、`bfloat16`，否则仅支持`float32`。per-channel格式，当输出layout为BSH时，要求`quant_scale_out`所有维度的乘积等于H；其他layout要求乘积等于Q\_N\*D（建议输出layout为BSH时，quant\_scale\_out shape传入\(1, 1, H\)或\(H,\)；输出为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D\)）。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 -   **quant\_offset\_out**（`Tensor`）：可选参数，表示输出的量化偏移。数据类型支持`float32`、`bfloat16`。数据格式支持ND。支持per-tensor、per-channel。若传入`quant_offset_out`，需保证其类型和shape信息与`quant_scale_out`一致。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
 -   **num\_query\_heads**（`int`）：可选参数，代表query的head个数，数据类型支持int64，在BNSD场景下，需要与shape中的`query`的N轴shape值相同，否则执行异常。
@@ -178,8 +178,9 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     -   当query\_rope和key\_rope非空时，支持如下特性：
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的D只支持512、128；
         -   当query的D等于512时：
-            -   sparse：Q\_S等于1时只支持sparse=0且不传mask，Q\_S大于1时只支持sparse=3且传入mask；
+            -   sparse：Q\_S等于1时支持sparse=0且不传mask或sparse=4且传入mask，Q\_S大于1时支持sparse=3或sparse=4且传入mask；
             -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
+            - sparse不为4时：
                 - query\_rope配置时要求query的S为1-16、N为32/64/128，query\_rope shape中D为64，其余维度与query一致；
                 - key\_rope配置时要求key的N为1、D为512，key\_rope shape中D为64，其余维度与key一致；
                 - 支持key、value、key\_rope的input\_layout格式为ND或NZ。当input\_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为\[blockNum, KV\_N, D/16, blockSize, 16\]；当数据类型为int8时，输入参数key和value的格式为\[blockNum, KV\_N, D/32, blockSize, 32\]；
@@ -191,6 +192,13 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
                     - 不支持传入quant\_scale\_out、quant\_offset\_out、dequant\_offset\_key、dequant\_offset\_value（即不为nullptr），否则报错并返回。
                     - query\_quant\_mode仅支持per-token叠加per-head模式，key\_quant\_mode和value\_quant\_mode仅支持per-tensor模式。
                     - 支持key、value、key\_rope的input\_layout格式为NZ。
+            - sparse为4时：
+                - query的每batch的S不大于key的每batch的S、N为128，query\_rope shape中D为64，其余维度与query一致；
+                - key的S不大于131088，N为1、D为512，key\_rope shape中D为64，其余维度与key一致；
+                - key、value、key\_rope仅支持ND输入；
+                - input\_layout形状仅支持BSND。
+                - 该场景下，支持开启PageAttention，此时block\_size支持64、128。
+                - 不支持开启SoftMaxLse、tensorlist、pse、伪量化、后量化、全量化场景。
         -   当query的D等于128时：
             -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
 
@@ -217,10 +225,11 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             -   不支持开启softmax\_lse、tensorlist、pse、伪量化、全量化、后量化。
 
         -   当query的D不等于512时：
-            -   当query\_rope和key\_rope为空时：TND场景，要求Q\_D、K\_D、V\_D等于128，或者Q\_D、K\_D等于192，V\_D等于128/192；NTD\_TND场景，要求Q\_D、K\_D等于128/192，V\_D等于128。当query\_rope和key\_rope不为空时，要求Q\_D、K\_D、V\_D等于128；
+            -   当query\_rope和key\_rope为空时：TND场景，要求Q\_D、K\_D、V\_D等于128，或者Q\_D、K\_D等于192，V\_D等于128/192；NTD\_TND场景，要求Q\_D、K\_D等于128/192，V\_D等于128。当query\_rope和key\_rope不为空时，要求Q\_D、K\_D、V\_D等于128；GQA和PA场景不支持V_D等于192;
             -   支持TND、NTD\_TND；
             -   数据类型仅支持BFLOAT16；
             -   当sparse\_mode=3时，要求每个batch单独的actual\_seq\_qlen<actual\_seq\_kvlen；
+            -   page attention场景下仅支持blocksize 128,512或1024；
             -   不支持tensorlist、pse、page attention、伪量化、全量化、后量化；
             -   **不支持图模式配置Tiling调度优化**（tiling\_schedule\_optimize=True）、**reduce-overhead执行模式**（config.mode="reduce-overhead"）。
             -   actual\_seq\_qlen和actual\_seq\_kvlen的元素个数不大于4096。
@@ -279,7 +288,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             -   传入atten\_mask时，如mask shape为（B, 1, Q\_S, KV\_S）。
             -   传入pse\_shift时，如pse\_shift shape为（B, Q\_N, Q\_S, KV\_S）。
 
-    -   入参quant\_scale\_out和quant\_offset\_out支持per-tensor、per-channel量化，支持float32、bfloat16类型。若传入quant\_offset\_out，需保证其类型和shape信息与quant\_scale\_out一致。当输入为bfloat16时，同时支持float32和bfloat16，否则仅支持float32。per-channel场景下，当输出layout为BSH时，要求quant\_scale\_out所有维度的乘积等于H；其他layout要求乘积等于N\*D。当输出layout为BSH时，quant\_scale\_out shape建议传入\(1, 1, H\)或\(H,\)；当输出layout为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；当输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D)。
+    -   入参quant\_scale\_out和quant\_offset\_out支持per-tensor、per-channel量化，支持float32、bfloat16类型。若传入quant\_offset\_out，需保证其类型和shape信息与quant\_scale\_out一致。当输入为bfloat16时，同时支持float32和bfloat16，否则仅支持float32。per-channel场景下，当输出layout为BSH时，要求quant\_scale\_out所有维度的乘积等于H；其他layout要求乘积等于Q\_N\*D。当输出layout为BSH时，quant\_scale\_out shape建议传入\(1, 1, H\)或\(H,\)；当输出layout为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；当输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D)。
     -   输出为int8，quant\_scale\_out和quant\_offset\_out为per-channel时，暂不支持Ring Attention或者D非32Byte对齐的场景。
     -   输出为int8时，暂不支持sparse为band且preTokens/nextTokens为负数。
     -   pse\_shift功能使用限制如下：
