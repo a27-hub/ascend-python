@@ -156,6 +156,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPUGraph场景下，用于标记待更新任务的结束。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu-utils-get_cann_version.md">torch_npu.npu.utils.get_cann_version</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.1 "><p>获取当前环境CANN或相关组件的版本号。</p>
+</td>
+</tr>
 </tbody>
 </table>
 
