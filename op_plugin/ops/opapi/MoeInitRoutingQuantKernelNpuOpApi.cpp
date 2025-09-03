@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpAdapter.h"
 
 static const int64_t DIM_ONE = 1;
 static const int64_t DIM_TWO = 2;
@@ -33,55 +34,55 @@ namespace op_api {
         int64_t drop_pad_mode, int64_t expert_tokens_num_mode,
         bool expert_tokens_before_capacity_flag, int64_t quant_mode)
     {
-        TORCH_CHECK(x.dim() == DIM_TWO, "Input tensor 'x' must be 2-dimensional, but got dimension ", x.dim());
+        TORCH_CHECK(x.dim() == DIM_TWO, "Input tensor 'x' must be 2-dimensional, but got dimension ", x.dim(), OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
-            "Expected input tensor 'x' to have dtype float16, float32, or bfloat16, but got dtype: ", x.scalar_type());
+            "Expected input tensor 'x' to have dtype float16, float32, or bfloat16, but got dtype: ", x.scalar_type(), OPS_ERROR(ErrCode::TYPE));
         TORCH_CHECK(expert_idx.dim() == DIM_TWO,
-            "Input tensor 'expert_idx' must be 2-dimensional, but got dimension ", expert_idx.dim());
+            "Input tensor 'expert_idx' must be 2-dimensional, but got dimension ", expert_idx.dim(), OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(expert_idx.scalar_type() == at::kInt,
-            "Expected tensor 'expert_idx' to have dtype int32, but got dtype: ", expert_idx.scalar_type());
+            "Expected tensor 'expert_idx' to have dtype int32, but got dtype: ", expert_idx.scalar_type(), OPS_ERROR(ErrCode::TYPE));
 
         auto x_size = x.sizes();
         auto expert_idx_size = expert_idx.sizes();
         TORCH_CHECK(x_size[0] == expert_idx_size[0],
-            "The number of rows in input 'x' (", x_size[0], ") must match the number of rows in 'expert_idx' (", expert_idx_size[0], ").");
+            "The number of rows in input 'x' (", x_size[0], ") must match the number of rows in 'expert_idx' (", expert_idx_size[0], ").", OPS_ERROR(ErrCode::PARAM));
 
         TORCH_CHECK(drop_pad_mode == 0 || drop_pad_mode == 1,
-            "Parameter 'drop_pad_mode' must be 0 or 1, but got: ", drop_pad_mode);
-        TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "Parameter 'quant_mode' must be 0 or 1, but got: ", quant_mode);
+            "Parameter 'drop_pad_mode' must be 0 or 1, but got: ", drop_pad_mode, OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(quant_mode == 0 || quant_mode == 1, "Parameter 'quant_mode' must be 0 or 1, but got: ", quant_mode, OPS_ERROR(ErrCode::VALUE));
         TORCH_CHECK(expert_tokens_num_mode >= DISABLED && expert_tokens_num_mode <= MODE_TOKEN_COUNT,
-            "Parameter 'expert_tokens_num_mode' must be 0, 1, or 2, but got: ", expert_tokens_num_mode);
+            "Parameter 'expert_tokens_num_mode' must be 0, 1, or 2, but got: ", expert_tokens_num_mode, OPS_ERROR(ErrCode::VALUE));
 
         if (drop_pad_mode == 0) {
             TORCH_CHECK(active_num >= 0,
-                "Parameter 'active_num' must be greater than or equal to 0 in non-Drop/Pad mode, but got: ", active_num);
+                "Parameter 'active_num' must be greater than or equal to 0 in non-Drop/Pad mode, but got: ", active_num, OPS_ERROR(ErrCode::VALUE));
         } else {
             TORCH_CHECK(expert_capacity > 0 && expert_capacity < x_size[0],
-                "In Drop/Pad mode, 'expert_capacity' must be in the range (0, NUM_ROWS), but got: ", expert_capacity);
-            TORCH_CHECK(expert_num > 0, "In Drop/Pad mode, 'expert_num' must be greater than 0, but got: ", expert_num);
+                "In Drop/Pad mode, 'expert_capacity' must be in the range (0, NUM_ROWS), but got: ", expert_capacity, OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(expert_num > 0, "In Drop/Pad mode, 'expert_num' must be greater than 0, but got: ", expert_num, OPS_ERROR(ErrCode::VALUE));
         }
 
         if (expert_tokens_num_mode > 0) {
-            TORCH_CHECK(expert_num > 0, "When 'expert_tokens_num_mode' > 0, 'expert_num' must be greater than 0, but got: ", expert_num);
+            TORCH_CHECK(expert_num > 0, "When 'expert_tokens_num_mode' > 0, 'expert_num' must be greater than 0, but got: ", expert_num, OPS_ERROR(ErrCode::VALUE));
         }
 
         const at::Tensor &p_scale = c10::value_or_else(scale, [] { return at::Tensor(); });
         const at::Tensor &p_offset = c10::value_or_else(offset, [] { return at::Tensor(); });
 
         if (quant_mode == 0) {
-            TORCH_CHECK(scale.has_value() && offset.has_value(), "In static quantization mode (quant_mode=0), both 'scale' and 'offset' must be provided.");
-            TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type());
-            TORCH_CHECK(p_scale.dim() == DIM_ONE && p_scale.size(0) == 1, "In static quantization, 'scale' must be a 1D tensor with shape (1,), but got shape: ", p_scale.sizes());
+            TORCH_CHECK(scale.has_value() && offset.has_value(), "In static quantization mode (quant_mode=0), both 'scale' and 'offset' must be provided.", OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type(), OPS_ERROR(ErrCode::TYPE));
+            TORCH_CHECK(p_scale.dim() == DIM_ONE && p_scale.size(0) == 1, "In static quantization, 'scale' must be a 1D tensor with shape (1,), but got shape: ", p_scale.sizes(), OPS_ERROR(ErrCode::PARAM));
 
-            TORCH_CHECK(p_offset.scalar_type() == at::kFloat, "Expected tensor 'offset' to have dtype float32, but got dtype: ", p_offset.scalar_type());
-            TORCH_CHECK(p_offset.dim() == DIM_ONE && p_offset.size(0) == 1, "In static quantization, 'offset' must be a 1D tensor with shape (1,), but got shape: ", p_offset.sizes());
+            TORCH_CHECK(p_offset.scalar_type() == at::kFloat, "Expected tensor 'offset' to have dtype float32, but got dtype: ", p_offset.scalar_type(), OPS_ERROR(ErrCode::TYPE));
+            TORCH_CHECK(p_offset.dim() == DIM_ONE && p_offset.size(0) == 1, "In static quantization, 'offset' must be a 1D tensor with shape (1,), but got shape: ", p_offset.sizes(), OPS_ERROR(ErrCode::PARAM));
         } else {
             if (p_scale.defined()) {
-                TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type());
-                TORCH_CHECK(p_scale.dim() == DIM_TWO, "In dynamic quantization, optional 'scale' must be a 2D tensor, but got dimension ", p_scale.dim());
+                TORCH_CHECK(p_scale.scalar_type() == at::kFloat, "Expected tensor 'scale' to have dtype float32, but got dtype: ", p_scale.scalar_type(), OPS_ERROR(ErrCode::TYPE));
+                TORCH_CHECK(p_scale.dim() == DIM_TWO, "In dynamic quantization, optional 'scale' must be a 2D tensor, but got dimension ", p_scale.dim(), OPS_ERROR(ErrCode::PARAM));
                 auto scale_size = p_scale.sizes();
-                TORCH_CHECK(scale_size[0] == expert_num || scale_size[0] == 1, "The first dimension of 'scale' must be 'expert_num' or 1, but got: ", scale_size[0]);
-                TORCH_CHECK(scale_size[1] == x_size[1] || scale_size[1] == 1, "The second dimension of 'scale' must match 'H' of input 'x' or be 1, but got: ", scale_size[1]);
+                TORCH_CHECK(scale_size[0] == expert_num || scale_size[0] == 1, "The first dimension of 'scale' must be 'expert_num' or 1, but got: ", scale_size[0], OPS_ERROR(ErrCode::PARAM));
+                TORCH_CHECK(scale_size[1] == x_size[1] || scale_size[1] == 1, "The second dimension of 'scale' must match 'H' of input 'x' or be 1, but got: ", scale_size[1], OPS_ERROR(ErrCode::PARAM));
             }
         }
 
