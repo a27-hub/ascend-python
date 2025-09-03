@@ -7933,6 +7933,15 @@ custom:
   - func: npu_moe_token_unpermute_with_routing_map_grad(Tensor unpermuted_tokens_grad, Tensor out_index, Tensor permuted_token_id, Tensor? routing_map, Tensor? permuted_tokens, Tensor? probs, bool drop_and_pad, int[] restore_shape) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
 
+  - func: fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+
+  - func: fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)
+    op_api: all_version
+
+  - func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
+    op_api: all_version
+
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
