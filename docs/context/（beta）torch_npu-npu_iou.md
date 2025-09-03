@@ -1,27 +1,35 @@
 # （beta）torch_npu.npu_iou
 
+## 产品支持情况
+
+| 产品                                                         | 是否支持 |
+| ------------------------------------------------------------ | :------: |
+|<term>Atlas A3 训练系列产品</term>            |    √     |
+|<term>Atlas A2 训练系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>                                       |    √     |
+|<term>Atlas 训练系列产品</term>                                       |    √     |
+
+## 功能说明
+
+根据ground-truth和预测区域计算交并比（IoU）或前景交叉比（IoF）。
+
 ## 函数原型
 
 ```
 torch_npu.npu_iou(bboxes, gtboxes, mode=0) -> Tensor 
 ```
 
-## 功能说明
-
-根据ground-truth和预测区域计算交并比（IoU）或前景交叉比（IoF）。
 
 ## 参数说明
 
-- bboxes (Tensor) - 输入张量。
-- gtboxes (Tensor) - 输入张量。
-- mode (Int，默认值为0) - 0为IoU模式，1为IoF模式。
+- **bboxes** (`Tensor`)：输入张量。
+- **gtboxes** (`Tensor`)：输入张量。
+- **mode** (`int`)：0为IoU模式，1为IoF模式，默认值为0。
 
-## 支持的型号
+## 返回值说明
 
-- <term>Atlas 训练系列产品</term>
-- <term>Atlas A2 训练系列产品</term>
-- <term>Atlas A3 训练系列产品</term>
-- <term>Atlas 推理系列产品</term>
+`Tensor`
+
 
 ## 调用示例
 
