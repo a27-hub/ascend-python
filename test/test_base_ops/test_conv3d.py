@@ -90,6 +90,7 @@ class TestConv3d(TestCase):
             [[np.float16, 30, [1, 64, 4, 14, 14]],
              [np.float16, 30, [1, 64, 3, 3, 3]], [1, 1, 1], [2, 2, 2], 1, None, 1],
         ]
+
         self.conv3d_backward_result(shape_format)
 
     def test_conv3d_backward_shape_format_fp32(self):
@@ -101,6 +102,7 @@ class TestConv3d(TestCase):
             [[np.float32, 32, [1, 64, 8, 28, 28]],
              [np.float32, 33, [1, 64, 3, 3, 3]], [1, 1, 1], [1, 1, 1], [1, 1, 1], None, 1]
         ]
+
         self.conv3d_backward_result(shape_format)
 
 
