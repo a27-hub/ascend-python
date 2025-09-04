@@ -35,6 +35,7 @@
       "npu_grouped_matmul",
       "npu_moe_finalize_routing",
       "npu_quant_matmul",
+      "npu_quant_matmul_reduce_sum",
       "npu_quant_scatter",
       "npu_quantize",
       "npu_dequant_bias",
@@ -42,6 +43,7 @@
       "npu_dynamic_quant",
       "npu_dynamic_quant_asymmetric",
       "npu_scatter_nd_update_",
+      "npu_scatter_pa_kv_cache",
       "npu_stride_copy",
       "npu_gemma_rms_norm",
       "npu_swiglu",
@@ -69,7 +71,7 @@
       "npu_transpose_batchmatmul",
       "npu_gather_sparse_index",
       "npu_moe_distribute_combine_add_rms_norm",
-      "npu_moe_eplb_update_expert"
+      "npu_moe_update_expert"
     ]
   }
   

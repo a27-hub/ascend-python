@@ -99,6 +99,7 @@
         -   [torch_npu.npu_prefetch](./context/torch_npu-npu_prefetch.md)
         -   [torch_npu.npu_prompt_flash_attention](./context/torch_npu-npu_prompt_flash_attention.md)
         -   [torch_npu.npu_quant_matmul](./context/torch_npu-npu_quant_matmul.md)
+        -   [torch_npu.npu_quant_matmul_reduce_sum](./context/torch_npu-npu_quant_matmul_reduce_sum.md)
         -   [torch_npu.npu_quant_scatter](./context/torch_npu-npu_quant_scatter.md)
         -   [torch_npu.npu_quant_scatter_](./context/torch_npu-npu_quant_scatter_.md)
         -   [torch_npu.npu_quantize](./context/torch_npu-npu_quantize.md)
@@ -210,6 +211,11 @@
             -   [torch_npu.npu.graph_task_group_end](./context/torch_npu-npu-graph_task_group_end.md)
             -   [torch_npu.npu.graph_task_update_begin](./context/torch_npu-npu-graph_task_update_begin.md)
             -   [torch_npu.npu.graph_task_update_end](./context/torch_npu-npu-graph_task_update_end.md)
+            -   [torch_npu.obfuscation_initialize](./context/torch_npu-obfuscation_initialize.md)
+            -   [torch_npu.obfuscation_finalize](./context/torch_npu-obfuscation_finalize.md)
+            -   [torch_npu.obfuscation_calculate](./context/torch_npu-obfuscation_calculate.md)
+            -   [（beta）torch_npu.npu.aclnn.version](./context/（beta）torch_npu-npu-aclnn-version.md)
+            -   [torch_npu.npu.aclnn.allow_hf32](./context/torch_npu-npu-aclnn-allow_hf32.md)            
     
         -   [amp](./context/amp.md)
             -   [（beta）torch_npu.npu.get_amp_supported_dtype](./context/（beta）torch_npu-npu-get_amp_supported_dtype.md)
@@ -236,9 +242,6 @@
             -   [torch_npu.npu.mstx.mstx_range](./context/torch_npu-npu-mstx-mstx_range.md)
     
         -   [torch_npu Storage](./context/torch_npu-Storage.md)
-        -   [aclnn](./context/aclnn.md)
-            -   [（beta）torch_npu.npu.aclnn.version](./context/（beta）torch_npu-npu-aclnn-version.md)
-            -   [torch_npu.npu.aclnn.allow_hf32](./context/torch_npu-npu-aclnn-allow_hf32.md)
     
         -   [（beta）NPU Tensor](./context/（beta）NPU-Tensor.md)
     

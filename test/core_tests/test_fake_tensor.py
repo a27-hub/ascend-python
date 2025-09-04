@@ -1359,6 +1359,17 @@ class TestFusedInferAttentionV2(TestCase):
 
             self.assertTrue(q.shape == atten_out.shape)
 
+    @unittest.skipIf("2.1" not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testFusedInferAttentionV2Pa(self):
+        with FakeTensorMode():
+            q = torch.randn(128, 1, 128, dtype=torch.bfloat16).npu()
+            k = torch.randn(1, 1, 8, 128, 16, dtype=torch.bfloat16).npu()
+            v = torch.randn(1, 1, 8, 128, 16, dtype=torch.bfloat16).npu()
+            block_table = torch.randint(0, 10, (1, 1), dtype=torch.int32).npu()
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(q, k, v, block_table=block_table)
+
+            self.assertTrue(q.shape == atten_out.shape)
+
 
 class TestFlashAttentionScore(TestCase):
     def testFlashAttentionScore(self):
@@ -2109,6 +2120,20 @@ class TestQuantMatmul(TestCase):
             self.assertTrue(expect_ret.dtype == res.dtype)
 
 
+class TestQuantMatmulReduceSum(TestCase):
+    def test_quant_matmul_reduce_sum(self):
+        with FakeTensorMode():
+            b, m, n, k = (2, 3, 4, 5)
+            x1 = torch.randint(-1, 1, (b, m, k), dtype=torch.int8).npu()
+            x2 = torch.randint(-1, 1, (b, k, n), dtype=torch.int8).npu()
+            x1_scale = torch.ones((b, m), dtype=torch.float32).npu()
+            x2_scale = torch.ones((n,), dtype=torch.bfloat16).npu()
+            y = torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=x1_scale, x2_scale=x2_scale)
+            self.assertTrue(y.shape[0] == m)
+            self.assertTrue(y.shape[1] == n)
+            self.assertTrue(y.dtype == torch.bfloat16)
+
+
 class TestTranQuantParam(TestCase):
     def test_npu_trans_quant_param_meta(self):
         with FakeTensorMode():
@@ -2473,23 +2498,35 @@ class TestAddRmsNormQuant(TestCase):
             self.assertTrue(x_out.dtype == x1.dtype)
 
 
-class TestMoeEPLBUpdateExpert(TestCase):
-    def test_moe_eplb_update_expert(self):
+class TestMoeUpdateExpert(TestCase):
+    def test_moe_update_expert(self):
         with FakeTensorMode():
+            dtype = torch.bfloat16
             world_size = 8
             local_rank_id = 0
+            balance_mode = 0
             bs = 32
             k = 8
             f = 4
             moe_expert_num = 256
             expert_ids = torch.randn(bs, k).to(torch.int32)
             eplb_table = torch.randn(moe_expert_num, f).to(torch.int32)
-            result = torch_npu.npu_moe_eplb_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
-            local_rank_id=local_rank_id, world_size=world_size, balance_mode=0)
+            expert_scales = torch.sort(torch.rand(bs, k, dtype=dtype), dim=-1, descending=True).values
+            pruning_threshold = torch.rand(k, dtype=dtype)
+            num_true = np.random.randint(0, bs + 1)
+            active_mask_arr = np.concatenate([np.ones(num_true, dtype=bool), np.zeros(bs - num_true, dtype=bool)])
+            active_mask = torch.from_numpy(active_mask_arr).to(torch.bool)
+            result = torch_npu.npu_moe_update_expert(expert_ids=expert_ids, eplb_table=eplb_table,
+            expert_scales=expert_scales, pruning_threshold=pruning_threshold, active_mask=active_mask,
+            local_rank_id=local_rank_id, world_size=world_size, balance_mode=balance_mode)
 
-            self.assertEqual(result.shape[0], 32)
-            self.assertEqual(result.shape[1], 8)
-            self.assertEqual(result.dtype, torch.int32)
+            self.assertEqual(result[0].shape[0], 32)
+            self.assertEqual(result[0].shape[1], 8)
+            self.assertEqual(result[0].dtype, torch.int32)
+
+            self.assertEqual(result[1].shape[0], 32)
+            self.assertEqual(result[1].shape[1], 8)
+            self.assertEqual(result[1].dtype, torch.bool)
 
 
 class TestNpuMropeMeta(TestCase):
@@ -2585,6 +2622,52 @@ class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
                 unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
                 self.assertEqual(unpermuted_tokens.dtype, dtype)
                 self.assertEqual(unpermuted_tokens.shape, (sorted_indices.size(0) / topk, hidden_size))
+
+    def test_npu_moe_token_permute_unpermute_grad_meta(self):
+        """Meta test for backward functions with topk=1 and topk=4"""
+        dtype = torch.bfloat16
+        num_tokens = 1000
+        hidden_size = 6144
+        num_experts = 128
+
+        with FakeTensorMode():
+            for topk in [1, 4]:
+                tokens = torch.randn(num_tokens, hidden_size).npu().to(dtype)
+                indices = torch.randint(0, num_experts, (num_tokens, topk)).npu()
+                probs = (torch.ones(num_tokens, topk) / topk).npu().to(dtype)
+                permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices)
+                expected_permuted_shape = (num_tokens * topk, hidden_size)
+                self.assertEqual(permuted_tokens.shape, expected_permuted_shape)
+
+                grad_unpermuted_tokens = torch.randn(num_tokens, hidden_size).npu().to(dtype)
+
+                grad_permuted_tokens, grad_probs = torch_npu.npu_moe_token_unpermute_grad(
+                    permuted_tokens=permuted_tokens,
+                    grad_unpermuted_tokens=grad_unpermuted_tokens,
+                    sorted_indices=sorted_indices,
+                    probs=probs,
+                    padded_mode=False,
+                    restore_shape=None,
+                )
+
+                self.assertEqual(grad_permuted_tokens.dtype, permuted_tokens.dtype)
+                self.assertEqual(grad_permuted_tokens.shape, permuted_tokens.shape)
+
+                self.assertIsNotNone(grad_probs)
+                self.assertEqual(grad_probs.dtype, probs.dtype)
+                self.assertEqual(grad_probs.shape, probs.shape)
+
+                grad_permuted_tokens_for_permute = torch.randn_like(permuted_tokens)
+                grad_tokens = torch_npu.npu_moe_token_permute_grad(
+                    tokens=tokens,
+                    grad_permuted_tokens=grad_permuted_tokens_for_permute,
+                    indices=indices,
+                    sorted_indices=sorted_indices,
+                    padded_mode=False,
+                )
+
+                self.assertEqual(grad_tokens.dtype, tokens.dtype)
+                self.assertEqual(grad_tokens.shape, tokens.shape) 
 
 
 class TestNpuMoeUnpermuteWithRoutingMap(TestCase):
