@@ -9042,7 +9042,7 @@ _add_torch_npu_docstr(
     "npu_add_rms_norm_dynamic_quant_v2",
     """
 接口原型：
-npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 功能描述
 将RmsNorm前的Add操作、RmsNorm归一化和最多两路DynamicQuant量化进行融合，减少数据搬入搬出操作。
@@ -9055,6 +9055,7 @@ smooth_scale1: Device侧的Tensor类型，第一路量化的smooth_scale张量�
 smooth_scale2: Device侧的Tensor类型，第二路量化的smooth_scale张量。可选，shape和数据类型与gamma一致，需与smooth_scale1配合使用。不支持空Tensor。
 beta: Device侧的Tensor类型，归一化偏置项。可选，shape和数据类型与gamma一致。不支持空Tensor
 epsilon: double类型，防止除0错误，默认值为1e-6.
+outputMask: Host侧的Tensor类型，表示输出的掩码，数据类型支持BOOL，支持空指针，长度固定为2
 
 输出说明
 y1: Device侧的Tensor类型，第一路量化输出。数据类型支持INT8。shape、数据格式需要与入参x1保持一致。支持非连续的Tensor，不支持空Tensor。

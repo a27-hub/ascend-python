@@ -6631,7 +6631,7 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNormQuant, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, axis, epsilon, div_mode, y1, y2, x_out
   
-  - func: npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     gen_opapi:
       y1:
@@ -6649,7 +6649,7 @@ custom:
       scale2:
         size: reduce_lastdim_output_size(x1, false)
         dtype: at::kFloat
-      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, y1, y2, x_out, scale1, scale2
+      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, outputMask, y1, y2, x_out, scale1, scale2
 
   - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> Tensor
     op_api: all_version

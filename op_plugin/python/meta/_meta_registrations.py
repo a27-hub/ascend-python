@@ -2601,7 +2601,7 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=No
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 @impl(m, "npu_add_rms_norm_dynamic_quant_v2")
-def npu_add_rms_norm_dynamic_quant_v2_meta(x1, x2, gamma, smooth_scale1=None, smooth_scale2=None, beta=None, *, epsilon=1e-6):
+def npu_add_rms_norm_dynamic_quant_v2_meta(x1, x2, gamma, smooth_scale1=None, smooth_scale2=None, beta=None, *, epsilon=1e-6, Tensor? outputMask=None):
     torch.check(
         smooth_scale1 is None,
         lambda: f"smoot_scale1 should be None, but got {smooth_scale1}.",
