@@ -35,12 +35,8 @@ namespace op_api {
         bool expert_tokens_before_capacity_flag, int64_t quant_mode)
     {
         TORCH_CHECK(x.dim() == DIM_TWO, "Input tensor 'x' must be 2-dimensional, but got dimension ", x.dim(), OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
-            "Expected input tensor 'x' to have dtype float16, float32, or bfloat16, but got dtype: ", x.scalar_type(), OPS_ERROR(ErrCode::TYPE));
         TORCH_CHECK(expert_idx.dim() == DIM_TWO,
             "Input tensor 'expert_idx' must be 2-dimensional, but got dimension ", expert_idx.dim(), OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(expert_idx.scalar_type() == at::kInt,
-            "Expected tensor 'expert_idx' to have dtype int32, but got dtype: ", expert_idx.scalar_type(), OPS_ERROR(ErrCode::TYPE));
 
         auto x_size = x.sizes();
         auto expert_idx_size = expert_idx.sizes();
