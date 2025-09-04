@@ -1219,7 +1219,7 @@ pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16�
 padding_mask: Tensor类型, 暂不支持该传参. 
 atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明. 
 scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1. 
-keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 数据类型支持float, 默认值为1, 表示全部保留. 
+keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留. 
 pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明. 
 next_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. next_tockens和pre_tockens取值与atten_mask的关系请参见sparse_mode参数, 参数取值与atten_mask分布不一致会导致精度问题. 综合约束请见约束说明. 
 inner_precise: 整型, 用于提升精度, 数据类型支持int64, 默认值为0. 
@@ -1282,19 +1282,28 @@ sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值�
 
 约束说明
 该接口仅在训练场景下使用. 
-输入query、key、value的B: batchsize必须相等; 非varlen场景B取值范围1~2M; varlen场景B取值范围1~2K. 
+该接口暂不支持图模式(PyTorch 2.1版本). 
 输入query、key、value、pse的数据类型必须一致. 
 输入query、key、value的input_layout必须一致. 
-支持输入query的N和key/value的N不相等, 但必须成比例关系, 即Nq/Nkv必须是非0整数, Nq取值范围1~256. 当Nq/Nkv > 1时, 即为GQA(grouped-query attention); 当Nq/Nkv=1时, 即为MHA(multi-head attention). 本文如无特殊说明, N表示的是Nq. 
+输入query、key、value的shape说明:
+1. 输入key和value的shape必须一致. 
+2. B: batchsize必须相等; 非varlen场景B取值范围1~2M; varlen场景B取值范围1~2K. 
+3. D: Head Dim必须满足Dq=Dk和Dk≥Dv，取值范围1~768. 
+4. S: sequence length, 取值范围1~1M. 
+varlen场景下:
+1. 要求T(B*S)取值范围1~1M. 
+2. atten_mask输入不支持补pad，即atten_mask中不能存在某一行全1的场景.
+支持输入query的N和key/value的N不相等, 但必须成比例关系, 即Nq/Nkv必须是非0整数, Nq取值范围1~256. 当Nq/Nkv > 1时, 即为GQA\(grouped-query attention); 当Nq/Nkv=1时，即为MHA(multi-head attention). 本文如无特殊说明, N表示的是Nq. 
 输入key/value的shape必须一致. 
-输入query、key、value的S: sequence length, 取值范围1~1M. 
-部分场景下, 如果计算量过大可能会导致算子执行超时(aicore error类型报错, errorStr为: timeout or trap error), 此时建议做轴切分处理, 注: 这里的计算量会受B、S、N、D等参数的影响, 值越大计算量越大. 
-输入query、key、value的D: Head Dim必须满足Dq=Dk和Dk≥Dv, 取值范围1~768. 
-varlen场景T(B*S)取值范围1~1M. 
-keep_prob的取值范围为(0, 1] . 
-sparse_mode为1、2、3、4、5、6、7、8时, 应传入对应正确的atten_mask, 否则将导致计算结果错误. 当atten_mask输入为None时, sparse_mode, pre_tockens, next_tockens参数不生效, 固定为全计算. 
-sparse_mode配置为1、2、3、5、6时, 用户配置的pre_tockens、next_tockens不会生效. 
-sparse_mode配置为0、4时, 需保证atten_mask与pre_tockens、next_tockens的范围一致. 
+sparse_mode取值说明:
+1. sparse_mode为1、2、3、4、5、6、7、8时, 应传入对应正确的atten_mask, 否则将导致计算结果错误. 当atten_mask输入为None时, sparse_mode, pre_tockens, next_tockens参数不生效, 固定为全计算. 
+2. sparse_mode配置为1、2、3、5、6时, 用户配置的pre_tockens、next_tockens不会生效. 
+3. sparse_mode配置为0、4时, 需保证atten_mask与pre_tockens、next_tockens的范围一致.
+4. sparse_mode配置为7、8时，不支持可选参数pse. 
+prefix稀疏计算场景B不大于32, varlen场景不支持非压缩prefix, 即不支持sparse_mode=5; 当Sq>Skv时, prefix的N值取值范围[0, Skv], 当Sq<=Skv时, prefix的N值取值范围[Skv-Sq, Skv]. 
+支持actual_seq_qlen中某个Batch上的S长度为0; 如果存在S为0的情况, 不支持pse输入, 假设真实的S长度为[2, 2, 0, 2, 2], 则传入的actual_seq_qlen为[2, 4, 4, 6, 8]. actual_seq_qlen的长度取值范围为1~2K, varlen场景下长度最大支持1K. 
+TND格式下, 支持尾部部分Batch不参与计算, 此时actual_seq_qlen和actual_seq_kvlen尾部传入对应个数个0即可. 假设真实的S长度为[2, 3, 4, 5, 6], 此时后两个Batch不参与计算, 则传入的actual_seq_qlen为[2, 5, 9, 0, 0]. 
+部分场景下, 如果计算量过大可能会导致算子执行超时(aicore error类型报错, errorStr为: timeout or trap error), 此时建议做轴切分处理, 注: 这里的计算量会受B、S、N、D等参数的影响, 值越大计算量越大.
 
 支持的PyTorch版本
 PyTorch 2.4
@@ -6459,18 +6468,29 @@ per-token模式: 两个参数的shape均为(2, B, KV_S), 数据类型固定为fl
 支持对称量化和非对称量化: 
 非对称量化模式下, antiquant_scale和antiquant_offset参数需同时存在. 
 对称量化模式下, antiquant_offset可以为空(即None); 当antiquant_offset参数为空时, 执行对称量化, 否则执行非对称量化. 
-query_rope和key_rope参数约束: 
-query_rope的数据类型、数据格式与query一致, 配置时要求query的S为1-16、N为32、64、128, D为512, shape中B、N、S与query一致, D为64. 
-key_rope的数据类型、数据格式与key一致, 配置时要求key的N为1, D为512, key_rope的shape中B、N、S与key一致, D为64. 
-query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个. 
-当query_rope和key_rope非空时, 支持如下特性: 
-sparse: Q_S等于1时只支持sparse=0且不传mask, Q_S大于1时只支持sparse=3且传入mask; 
+query_rope和key_rope参数约束及支持特性: 
+query_rope和key_rope要求同时配置或同时不配置, 不支持只配置其中一个.
+query_rope的数据类型、数据格式与query一致.
+key_rope的数据类型、数据格式与key一致.
+sparse: Q_S等于1时支持sparse=0且不传mask或sparse=4且传入mask, Q_S大于1时支持sparse=3或sparse=4且传入mask;
+sparse不为4时:
+query_rope配置时要求query的S为1-16、N为32、64、128, D为512, shape中B、N、S与query一致, D为64. 
+key_rope配置时要求key的N为1, D为512, key_rope的shape中B、N、S与key一致, D为64. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
 Atlas A3 训练系列产品: 支持key、value的input_layout格式为ND或NZ. 当input_layout为NZ时, 输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A3 训练系列产品: input_layout形状支持BSH、BSND、BNSD, 当数据格式为NZ时input_layout不支持BNSD. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
 Atlas A3 训练系列产品: 该场景下, 必须开启PageAttention, 此时block_size支持16、128, 其中数据格式为NZ时block_size不支持配置16. 
+sparse为4时:
+query_rope配置时要求query的每batch的S不大于key的每batch的S、N为128, D为512, query_rope的shape中B、N、S与query一致, D为64. 
+key_rope配置时要求key的S不大于131088, N为1, D为512, key_rope的shape中B、N、S与key一致, D为64.
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 仅支持key、value的input_layout格式为ND.
+Atlas A3 训练系列产品: 仅支持key、value的input_layout格式为ND. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: input_layout形状仅支持BSND. 
+Atlas A3 训练系列产品: input_layout形状仅支持BSND. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持开启PageAttention, 此时block_size支持64、128. 
+Atlas A3 训练系列产品: 支持开启PageAttention, 此时block_size支持64、128. 
 TND场景下query、key、value输入的综合限制: 
 T小于等于65536;
 N等于8/16/32/64/128, 且Q_N、K_N、V_N相等;
@@ -8325,6 +8345,111 @@ print(res)
 )
 
 _add_torch_npu_docstr(
+    "npu_moe_gating_top_k",
+    """
+函数原型
+npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mode=0, renorm=0, norm_type=0, out_flag=False, routed_scaling_factor=1.0, eps=1e-20) -> (Tensor, Tensor, Tensor)
+
+## 参数说明
+
+-   **x**（`Tensor`）：必选参数，表示待计算的输入。要求是一个2D的Tensor，数据类型支持`float16`、`bfloat16`、`float32`，数据格式要求为ND。支持非连续Tensor。最后一维的大小（即专家数）要求不大于`2048`。
+
+-   **k**（`int`）：必选参数，表示每个token最终筛选得到的专家个数，数据类型为`int64`。要求`1 <= k <= x_shape[-1] / group_count * k_group`。
+
+-   <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+ 
+-   **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
+
+-   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
+
+-   **group_count**（`int`）：可选参数，表示将全部专家划分的组数，数据类型为`int64`，默认值为`1`。要求`group_count > 0，x_shape[-1]`能够被`group_count`整除且整除后的结果大于`2`，并且整除的结果按照`32`个数对齐后乘`group_count`的结果不大于`2048`。
+
+-   **group_select_mode**（`int`）：可选参数，表示一个专家组的总得分计算方式。默认值为`0`，`0`表示组内取最大值，作为专家组得分；`1`表示取组内Top2的专家进行得分累加，作为专家组得分。
+
+-   **renorm**（`int`）：可选参数，表示renorm标记，默认值为`0`，表示先进行norm再进行topk计算。当前仅支持`0`。
+-   **norm_type**（`int`）：可选参数，表示norm函数类型，`1`表示使用Sigmoid函数，`0`表示Softmax函数。默认值为`0`。
+
+-   **out_flag**（`bool`）：可选参数，是否输出norm函数中间结果。默认值为`False`。
+-   **routed_scaling_factor**（`float`）：可选参数，表示计算`yOut`使用的`routed_scaling_factor`系数，默认值为`1.0`。
+-   **eps**（`float`）：可选参数，表示计算`yOut`使用的`eps`系数，默认值为`1e-20`。
+
+返回值说明
+y_out（Tensor）：表示对x做norm操作和分组排序topk后计算的结果。是一个2D的Tensor，数据类型与`x`一致。
+expert_idx_out（Tensor）：表示对`x`做norm操作和分组排序topk后的索引，即专家的序号。shape与y_out一致，数据类型为`int32`。
+norm_out（Tensor）：表示norm计算的输出结果。shape与`x`一致，数据类型为`float32`。
+
+约束说明
+
+该接口支持推理场景下使用。
+该接口支持图模式（PyTorch 2.1版本）。
+
+调用示例
+单算子模式调用
+import torch
+import torch_npu
+import numpy
+
+k = 1
+k_group = 4
+group_count = 8
+group_select_mode = 1
+renorm = 0
+norm_type = 1
+out_flag = False
+routed_scaling_factor = 1.0
+eps = 1e-20
+
+# 生成随机数据, 并发送到npu
+x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
+bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
+x_tensor = torch.tensor(x).npu()
+bias_tensor = torch.tensor(bias).npu()
+
+# 调用MoeGatingTopK算子
+y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(x_tensor, k, bias=bias_tensor, k_group=k_group, group_count=group_count, group_select_mode=group_select_mode, renorm=renorm, norm_type=norm_type, out_flag=out_flag, routed_scaling_factor=routed_scaling_factor, eps=eps)
+
+图模式调用
+# 入图方式
+import torch
+import torch_npu
+import torchair
+import numpy
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x_tensor, bias_tensor):
+        return torch_npu.npu_moe_gating_top_k(x_tensor, k, bias=bias_tensor, k_group=k_group, group_count=group_count, group_select_mode=group_select_mode, renorm=renorm, norm_type=norm_type, out_flag=out_flag, routed_scaling_factor=routed_scaling_factor, eps=eps)
+# 实例化模型model
+model = Model().npu()
+# 从TorchAir获取NPU提供的默认backend
+config = torchair.CompilerConfig()
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+# 使用TorchAir的backend去调用compile接口编译模型
+model = torch.compile(model, backend=npu_backend)
+
+k = 1
+k_group = 4
+group_count = 8
+group_select_mode = 1
+renorm = 0
+norm_type = 1
+out_flag = False
+routed_scaling_factor = 1.0
+eps = 1e-20
+
+# 生成随机数据, 并发送到npu
+x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
+bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
+x_tensor = torch.tensor(x).npu()
+bias_tensor = torch.tensor(bias).npu()
+
+# 调用MoeGatingTopK算子
+y_npu, expert_idx_npu, out_npu = model(x_tensor, bias_tensor)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_moe_init_routing",
     """
 接口原型：
@@ -9022,35 +9147,40 @@ _add_torch_npu_docstr(
     "npu_advance_step_flashattn",
     """
 接口原型：
-npu_advance_step_flashattn(Tensor(a!) input_tokens, Tensor sampled_token_ids, Tensor(b!) input_positions, Tensor(c!) seq_lens, Tensor(d!) slot_mapping, Tensor block_tables, int num_seqs, int num_queries, int block_size) -> ()
+npu_advance_step_flashattn(Tensor(a!) input_tokens, Tensor sampled_token_ids, Tensor(b!) input_positions, Tensor(c!) seq_lens, Tensor(d!) slot_mapping, Tensor block_tables, int num_seqs, int num_queries, int block_size, *, Tensor? spec_token=None, Tensor? accepted_num=None) -> ()
 
 功能描述
-在npu上实现vLLM库中advance_step_flashattn的功能，在每个生成步骤中原地更新input_tokens，input_positions，seq_lens和slot_mapping。
+在npu上实现vLLM库中advance_step_flashattn的功能，在每个生成步骤中原地更新input_tokens，input_positions，seq_lens和slot_mapping，增加可选入参，用于支持投机推理的计算。
 
 参数说明
-input_tokens: Device侧的Tensor类型，输入/输出张量，用于更新vLLM模型中的token值；数据类型支持int64类型；shape为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
-sampled_token_ids: Device侧的Tensor类型，输入张量，用于储存token_id；数据类型支持INT64类型；shape为[num_queries, 1]，第一维长度与num_queries相同，第二维长度是1，不支持空tensor，必须为大于0的正整数。
-input_positions: Device侧的Tensor类型，输入/输出张量，用于记录token的index；数据类型支持INT64类型；shape为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
-seq_lens: Device侧的Tensor类型，输入/输出张量，用于记录不同block_idx下seq的长度；数据类型支持INT64类型；shape为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
-slot_mapping: Device侧的Tensor类型，输入/输出张量，用于将token值在序列中的位置映射到物理位置；数据类型支持INT64类型；shape为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
-block_tables: Device侧的Tensor类型，输入/输出张量，用于记录不同block_idx下block的大小；数据类型支持INT64类型；shape为二维，第一维长度与num_seqs相同，第二维长度需要大于seq_lens_cpu中最大值除以block_size的整数部分，不支持空tensor，必须为大于0的正整数。
-num_seqs: int类型，记录输入的seq数量; 必须为大于0的正整数。
-num_queries: int类型，记录输入的query数量; 必须为大于0的正整数。
-block_size：int类型，每个block的大小; 必须为大于0的正整数。
+input_tokens: Device侧的Tensor类型，输入/输出张量，用于更新vLLM模型中的token值；数据类型支持int64类型；如果是非投机场景，shape为[num_seqs,]，如果是投机场景，shape为[num_seqs, 1 + spec_num]；Shape第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数；
+sampled_token_ids: Device侧的Tensor类型，输入张量，用于储存token_id；数据类型支持INT64类型；如果是非投机场景，shape为[num_queries, 1]，第二维长度是1；如果是投机场景，shape为[num_seqs, 1 + spec_num]；Shape第一维长度与num_queries相同，不支持空tensor，必须为大于0的正整数。
+input_positions: Device侧的Tensor类型，输入/输出张量，用于记录token的index；数据类型支持INT64类型；如果是非投机场景，shape为[num_queries, 1]，第二维长度是1；如果是投机场景，shape为[num_seqs, 1 + spec_num]；第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
+seq_lens: Device侧的Tensor类型，输入/输出张量，用于记录不同block_idx下seq的长度；数据类型支持INT64类型；非投机场景与投机场景shape均为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
+slot_mapping: Device侧的Tensor类型，输入/输出张量，用于将token值在序列中的位置映射到物理位置；数据类型支持INT64类型；非投机场景与投机场景shape均为[num_seqs,]，第一维长度与num_seqs相同，不支持空tensor，必须为大于0的正整数。
+block_tables: Device侧的Tensor类型，输入/输出张量，用于记录不同block_idx下block的大小；数据类型支持INT64类型；非投机场景与投机场景shape均为二维，第一维长度与num_seqs相同，第二维长度需要大于seq_lens_cpu中最大值除以block_size的整数部分，不支持空tensor，必须为大于0的正整数。
+num_seqs: int类型，记录输入的seq数量；非投机场景与投机场景相同，必须为大于0的正整数。
+num_queries: int类型，记录输入的query数量；投机场景下与num_seqs相同，必须为大于0的正整数。
+block_size: int类型，记录每个block的大小；非投机场景与投机场景相同，必须为大于0的正整数。
+spec_token: 可选参数，Device侧的Tensor类型，输入张量，用于记录投机场景下当前的token的idx。数据类型支持INT64类型；spec_token为空时，则为非投机场景，默认为None；spec_token不为空时，则为投机场景，shape为[num_seqs, spec_num]；不支持空tensor，必须为大于0的正整数。
+accepted_num: 可选参数，Device侧的Tensor类型，输入张量，用于记录投机场景下每个request接受的投机的数量。数据类型支持INT64类型；accepted_num为空时，则为非投机场景，默认为None；accepted_num不为空时，则为投机场景，shape为[num_seqs,]；不支持空tensor，必须为大于0的正整数。
 
 输出说明
 此接口将原地更新input_tokens，input_positions，seq_lens和slot_mapping的值，无返回值。
 
 约束说明
 1. 输入input_tokens，input_positions，seq_lens，slot_mapping和block_tables的第一维长度与num_seqs相同
-2. 输入sampled_token_ids的第一维长度与num_queries相同且第二维长度为1
-3. 输入block_tables的shape的第二维长度大于seq_lens_cpu中最大值除以block_size的整数部分
+2. 投机场景下，输入input_tokens的第二维长度为1 + spec_num
+3. 输入sampled_token_ids的第一维长度与num_queries相同，非投机场景下第二维长度为1，投机场景下第二维长度为1 + spec_num
+4. 输入block_tables的shape的第二维长度大于seq_lens_cpu中最大值除以block_size的整数部分
+5. 非投机场景下，输入num_seqs必须大于输入num_queries；投机场景下，num_queries下与num_seqs相同
 
 支持的型号
 Atlas A2训练系列产品
 Atlas A3训练系列产品
 
 调用示例:
+非投机场景：
 import numpy as np
 
 import torch
@@ -9059,9 +9189,10 @@ import torch_npu
 num_seqs = 16
 num_queries = 8
 block_size = 8
+spec_num = 2
 
 input_token = np.random.randint(10, size=(num_seqs,))
-sampled_token_id = np.random.randint(10, size=(num_queries,1))
+sampled_token_id = np.random.randint(10, size=(num_queries, 1))
 input_position = np.random.randint(10, size=(num_seqs,))
 seq_len = np.random.randint(10, size=(num_seqs,))
 slot_mapping = np.random.randint(10, size=(num_seqs,))
@@ -9078,7 +9209,41 @@ block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
 
 torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions,
                                      seq_lens, slot_mappings, block_tables, num_seqs,
-                                     num_queries, block_size)
+                                     num_queries, block_size, spec_token=None, accepted_num=None)
+
+投机场景：
+import numpy as np
+
+import torch
+import torch_npu
+
+num_seqs = 16
+block_size = 8
+spec_num = 2
+
+input_token = np.random.randint(10, size=(num_seqs, 1 + spec_num))
+sampled_token_id = np.random.randint(10, size=(num_seqs, 1 + spec_num))
+input_position = np.random.randint(10, size=(num_seqs,))
+seq_len = np.random.randint(10, size=(num_seqs,))
+slot_mapping = np.random.randint(10, size=(num_seqs,))
+spec_token = np.random.randint(10, size=(num_seqs, spec_num))
+accepted_num = np.random.randint(10, size=(num_seqs,))
+
+input_tokens = torch.tensor(input_token, dtype=torch.int64, device="npu")
+sampled_token_ids = torch.tensor(sampled_token_id, dtype=torch.int64, device="npu")
+input_positions = torch.tensor(input_position, dtype=torch.int64, device="npu")
+seq_lens = torch.tensor(seq_len, dtype=torch.int64, device="npu")
+slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
+spec_tokens = torch.tensor(spec_token, dtype=torch.int64, device="npu")
+accepted_nums = torch.tensor(accepted_num, dtype=torch.int64, device="npu")
+
+block_table = np.random.randint(10, size=(num_seqs, torch.max(seq_lens.cpu()) // block_size + 1))
+block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
+
+
+torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions,
+                                     seq_lens, slot_mappings, block_tables, num_seqs,
+                                     num_seqs, block_size, spec_token=spec_tokens, accepted_num=accepted_nums)
 """
 )
 
