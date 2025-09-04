@@ -36,6 +36,41 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
         return torch.empty_like(query)
 
 
+@impl(m, "npu_nsa_v2")
+def npu_nsa_v2_forward(token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, mla_rope_cos, mla_rope_sin, kv_cache, kr_cache, actual_seq_lengths_query,
+    actual_seq_lengths_key, w_qb, w_k, w_proj, layernorm_gamma_k, layernorm_beta_k, idx_rope_cos, idx_rope_sin, idx_k_cache, block_table=None, cache_idx=None, idx_block_table=None, idx_k_cache_idx=None,
+    rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, layernorm_epsilon_k, selected_count=2024, loat idx_n_heads_scale=640.5,
+    idx_softmax_scale=128**0.5, attn_softmax_scale=576**0.5, block_size=128, layout_query="BSND", layout_key="PA_BBND"):
+    require_param = {"token_x": token_x, "w_dq": w_dq, "w_uq_qr": w_uq_qr, "w_uk": w_uk, "w_dkv_kr": w_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv,
+        "mla_rope_cos": mla_rope_cos, "mla_rope_sin": mla_rope_sin, "kv_cache": kv_cache, "kr_cache": kr_cache, "actual_seq_lengths_query": actual_seq_lengths_query,
+        "actual_seq_lengths_key": actual_seq_lengths_key, "w_qb": w_qb, "w_k": w_k, "w_proj": w_proj, "layernorm_gamma_k": layernorm_gamma_k, "layernorm_beta_k": layernorm_beta_k,
+        "idx_rope_cos": idx_rope_cos, "idx_rope_sin": idx_rope_sin, "idx_k_cache": idx_k_cache}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be null,but the actual value is null" + ops_error(ErrCode.VALUE),
+        )
+
+    token_x_dim = token_x.dim()
+    # 暂时只支持3维
+    torch._check(
+        token_x_dim == 3,
+        lambda: "token_x dim num should be 3,but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    attn_res_shape = []
+    attn_res_shape.append(token_x.size(0))
+    attn_res_shape.append(token_x.size(1))
+    attn_res_shape.append(token_x.size(2))
+
+    attn_res = torch.empty(attn_res, dtype=token_x.dtype, device='meta')
+    kv_cache = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
+    kr_cache = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
+    idx_k_cache = torch.empty_like(idx_k_cache, dtype=idx_k_cache.dtype, device='meta')
+    return attn_res, kv_cache, kr_cache, idx_k_cache
+
+
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
                    rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
@@ -430,12 +465,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -595,7 +630,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -1248,7 +1283,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1320,8 +1355,8 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 
 
 @impl(m, "npu_moe_distribute_combine_v2")
-def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
-                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, 
+def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
+                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0,
                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
@@ -1330,7 +1365,7 @@ def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_com
 
 @impl(m, "npu_moe_distribute_combine_add_rms_norm")
 def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
-                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, 
+                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None,
                                     group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, comm_alg="", norm_eps=0, zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_list = []
     dim_list.append(expert_ids.size(0))
@@ -2545,7 +2580,7 @@ def npu_moe_token_permute_with_routing_map_meta(tokens, routing_map, *, probs=No
     out2 = None
     if probs is not None:
         out2 = torch.empty(output_size_1, dtype=probs.dtype, device=tokens.device)
-    
+
     return out1, out2, out3
 
 
@@ -2636,7 +2671,7 @@ def npu_gather_sparse_index(inputs, index):
 
     for i in range(1, input_dim):
         output_size.append(input_size[i])
-    
+
     return torch.empty(output_size, dtype=inputs.dtype, device=inputs.device)
 
 
@@ -2671,11 +2706,11 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 
