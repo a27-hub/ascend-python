@@ -69,7 +69,11 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
     -   取True时，out=swish\(split\[x, -1, 2\]\[0\]\)\*split\[x, -1, 2\]\[1\]
     -   取False时，out=swish\(split\[x, -1, 2\]\[1\]\)\*split\[x, -1, 2\]\[0\]
 
--   **quant\_mode** (`int`)：可选参数，表示量化类型，默认值为0。0表示静态量化，1表示动态量化。`group_index`场景下（非None），只支持动态量化即`quant_mode`为1。
+-   quant\_mode：int类型，可选参数，默认0，表示量化类型。0表示静态量化，1表示动态量化。group\_index场景下（非None），只支持动态量化即quant\_mode=1。
+-   swiglu_mode（int）：可选参数，swiglu 计算模式，0 表示传统 swiglu，1 表示变种 swiglu（支持 clamp、alpha、bias）。
+-   clamp_limit（float）：可选参数，swiglu 输入门限，默认 7.0。
+-   glu_alpha（float）：可选参数，glu 激活函数系数，默认 1.702。
+-   glu_bias（float）：可选参数，swiglu 计算中的偏差，默认 1.0。
 
 ## 返回值说明
 
@@ -83,7 +87,22 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 -   `group_index`场景下（非None）约束说明：
     -   `group_index`只支持count模式，需要网络保证`group_index`输入的求和不超过`x`的TokensNum维度，否则会出现越界访问。
     -   H轴有维度大小限制：H≤10496同时64对齐场景；规格不满足场景会进行校验。
-    -   输出`out`和`scale`超过`group_index`总和的部分未进行清理处理，该部分内存为垃圾数据，可能会存在inf/nan异常值，网络使用的时候需要注意影响。
+    -   输出y和scale超过group\_index总和的部分未进行清理处理，该部分内存为垃圾数据，可能会存在inf/nan异常值，网络使用的时候需要注意影响。
+-   当 x 为 int32 时，必须提供 weight_scale。
+-   当 x 为 float16 或 bfloat16 时，weight_scale、activation_scale、bias 必须为 None。
+-   x 的最后一维长度必须为偶数。
+-   当激活维度不是 x 的最后一维时，group_index 必须为 None。
+-   当 group_index 非 None 时，仅支持动态量化（quant_mode=1），且 bias、quant_offset 必须为 None。
+-   Ascend 910_95 AI 处理器不支持输入 quant_offset。
+-   y 的类型仅支持 int8。
+-   clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
+-   输出`out`和`scale`超过`group_index`总和的部分未进行清理处理，该部分内存为垃圾数据，可能会存在inf/nan异常值，网络使用的时候需要注意影响。
+
+## 支持的型号
+
+-   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
+
+-   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
 
 ## 调用示例
 
