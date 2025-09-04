@@ -6407,6 +6407,12 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
+  - func: npu_split_with_size(Tensor self, int[] split_size, int dim) -> Tensor[]
+    op_api: all_version
+
+  - func: fused_add_topk_div(Tensor x, Tensor add_num, Tensor mapping_num, Tensor mapping_table, int group_num, int group_topk, int n, int k, int activate_type, bool is_norm, bool enable_expert_mapping, float scale) -> (Tensor y, Tensor indices)
+    op_api: all_version
+    
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
@@ -6579,6 +6585,27 @@ custom:
         size: x1
         dtype: x1
       exec: aclnnAddRmsNormQuant, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, axis, epsilon, div_mode, y1, y2, x_out
+
+  - func: npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth1=None, Tensor? smooth2=None, *, float epsilon=1e-06) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    gen_opapi:
+      y1:
+        size: x1
+        dtype: at::kChar
+      y2:
+        size: x1
+        dtype: at::kChar
+      x_out:
+        size: x1
+        dtype: x1
+      scale1_out:
+        size: '{x1.size(0)}'
+        dtype: at::kFloat
+      scale2_out:
+        size: '{x1.size(0)}'
+        dtype: at::kFloat
+      exec: aclnnAddRmsNormDynamicQuant, x1, x2, gamma, smooth1, smooth2, epsilon, y1, y2, x_out, scale1_out, scale2_out
+      
 
   - func: npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)
     op_api: all_version
@@ -7790,6 +7817,10 @@ custom:
       new_params:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermute, permuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, unpermuted_tokens
+
+  - func: npu_mla_preprocess(Tensor input, Tensor gamma0, Tensor beta0, Tensor quantScale0, Tensor quantOffset0, Tensor wdqkv, Tensor deScale0, Tensor bias0, Tensor gamma1, Tensor beta1, Tensor quantScale1, Tensor quantOffset1, Tensor wuq, Tensor deScale1, Tensor bias1, Tensor gamma2, Tensor cos, Tensor sin, Tensor wuk, Tensor kvCache, Tensor kvCacheRope, Tensor slotmapping, Tensor ctkvScale, Tensor qNopeScale, int N, int headNum, int cacheMode, int quantMode) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
 
 symint:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor

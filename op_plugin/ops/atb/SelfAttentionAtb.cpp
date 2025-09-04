@@ -29,14 +29,14 @@ void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const 
     selfattentionparam.kvcacheCfg = SelfAttentionParam::K_CACHE_V_CACHE;
     selfattentionparam.scaleType = SelfAttentionParam::SCALE_TYPE_TOR;
     selfattentionparam.quantType = SelfAttentionParam::TYPE_QUANT_UNDEFINED;
-    selfattentionparam.cacheType = SelfAttentionParam::CACHE_TYPE_NORM;
+    selfattentionparam.maskType = SelfAttentionParam::MASK_TYPE_NORM_COMPRESS;
     selfattentionparam.outDataType = ACL_DT_UNDEFINED;
     selfattentionparam.headNum = num_heads;
     selfattentionparam.kvHeadNum = num_kv_heads;
     selfattentionparam.qScale = 1;
     selfattentionparam.qkScale = scale_value;
     selfattentionparam.batchRunStatusEnable = false;
-    selfattentionparam.isTriuMask = 0;
+    selfattentionparam.isTriuMask = 1;
     selfattentionparam.clampMin = 0;
     selfattentionparam.clampMax = 0;
     selfattentionparam.inputLayout = atb::infer::TYPE_BSND;
