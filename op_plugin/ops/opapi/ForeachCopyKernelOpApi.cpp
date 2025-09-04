@@ -104,27 +104,27 @@ bool check_tensor_support_batch(const at::TensorList dst, const at::TensorList s
 }
 
 bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
-    size_t count = dst.size();
-    void *dsts_tensor_address_list[count];
-    void *src_tensor_address_list[count];
-    size_t dsts_tensor_mem_size_list[count];
-    size_t src_tensor_mem_size_list[count];
-    size_t attrsIdxs[count];
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
                 " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
-    aclrtMemcpyBatchAttr aclrtMemcpyBatchAttrs[count];
-    for (size_t i = 0; i < dst.size(); ++i) {
+    size_t count = dst.size();
+    void *dsts[count];
+    void *srcs[count];
+    size_t dstLens[count];
+    size_t srcLens[count];
+    size_t attrsIdxs[count];
+    aclrtMemcpyBatchAttr attrs[count];
+    for (size_t i = 0; i < count; ++i) {
         aclrtMemcpyBatchAttr attr;
         aclrtMemLocation dstLoc;
         aclrtMemLocation srcLoc;
         at::Tensor dst_tensor = dst[i];
         at::Tensor src_tensor = src[i];
         // 获取 Tensor 的地址
-        src_tensor_address_list[i] = src_tensor.data_ptr();
-        dsts_tensor_address_list[i] = dst_tensor.data_ptr();
+        dsts[i] = src_tensor.data_ptr();
+        srcs[i] = dst_tensor.data_ptr();
         // 计算 Tensor 的内存大小
-        dsts_tensor_mem_size_list[i] = static_cast<size_t>(dst_tensor.numel() * dst_tensor.element_size());
-        src_tensor_mem_size_list[i] = static_cast<size_t>(src_tensor.numel() * src_tensor.element_size());
+        dstLens[i] = static_cast<size_t>(dst_tensor.numel() * dst_tensor.element_size());
+        srcLens[i] = static_cast<size_t>(src_tensor.numel() * src_tensor.element_size());
         attrsIdxs[i] = i;
         // 判断哪个是d哪个是h
         if (dst_tensor.device().type() == c10::DeviceType::PrivateUse1) {
@@ -147,18 +147,36 @@ bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
         for (uint32_t i = 0U; i < rsvMaxSize; i++) {
             attr.rsv[i] = 0U;
         }
-        aclrtMemcpyBatchAttrs[i] = attr;
+        attrs[i] = attr;
     }
     size_t failIdx = SIZE_MAX;
     auto ret = ACL_RT_SUCCESS;
     if (non_blocking) {
-        auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
-        ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts_tensor_address_list, dsts_tensor_mem_size_list, src_tensor_address_list,
-                                    src_tensor_mem_size_list, count, aclrtMemcpyBatchAttrs, attrsIdxs, count, &failIdx,
-                                    acl_stream);
+        aclError ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts, dstLens, srcs,
+                           srcLens, count, attrs, attrsIdxs, count, &failIdx,aclrtMemcpyKind::ACL_MEMCPY_DEVICE_TO_HOST,true);
+        NPU_CHECK_ERROR(ret);
+        ASCEND_LOGD("non_blocking copy without StreamSynchronize.");
+//        aclError AclrtMemcpyBatchAsync(void **dsts, size_t *destMax, void **srcs, size_t *sizes,
+//                               size_t numBatches, aclrtMemcpyBatchAttr *attrs, size_t *attrsIndexes,
+//                               size_t numAttrs, size_t *failIndex, aclrtStream stream)
+//        ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts, dstLens, srcs,
+//                                    srcLens, count, aclrtMemcpyBatchAttrs, attrsIndexes, count, &failIdx,
+//                                    acl_stream);
     } else {
-        ret = c10_npu::acl::AclrtMemcpyBatch(dsts_tensor_address_list, dsts_tensor_mem_size_list, src_tensor_address_list,
-                               src_tensor_mem_size_list, count, aclrtMemcpyBatchAttrs, attrsIdxs, count, &failIdx);
+        auto acl_stream = c10_npu::getCurrentNPUStream();
+        aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
+        ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs,
+                               srcLens, count, aclrtMemcpyBatchAttrs, attrsIndexes, count, &failIdx);
+        if (error != ACL_ERROR_NONE) {
+            CHECK_AND_THROW_ERROR_WITH_SPECIFIC_MESSAGE(error);
+            C10_NPU_SHOW_ERR_MSG();
+            if (c10_npu::option::OptionsManager::IsResumeModeEnable()) {
+                TORCH_NPU_WARN("ACL stream synchronize failed, error code:", error,
+                    ". But in checkpoint-resume mode will not throw exceptions.");
+            } else {
+                AT_ERROR("ACL stream synchronize failed, error code:", error);
+            }
+        }
     }
     if (ret != ACL_RT_SUCCESS) {
         ASCEND_LOGW("Failed to copy tensor using memcpyBatch. We will use the kernel slow to copy the tensor.", ret);
