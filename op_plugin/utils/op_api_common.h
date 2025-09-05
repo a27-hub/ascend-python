@@ -1331,7 +1331,9 @@ auto DecodeDevice(Ts&... args) -> at::Device
             int api_ret = 0;                                                                                           \
             if (hit_cache_v2(                                                                                          \
                acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aicNum, aivNum)) {\
-                at_npu::native::SetDeterministicOps(deterministic_status);                                             \
+                return api_ret;                                                                                        \
+            }                                                                                                          \
+            at_npu::native::SetDeterministicOps(deterministic_status);                                                 \
             if (initMemFunc) {                                                                                         \
                 initMemFunc(nullptr, false);                                                                           \
             }                                                                                                          \
