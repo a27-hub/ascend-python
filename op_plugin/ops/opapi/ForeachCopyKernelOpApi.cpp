@@ -103,7 +103,7 @@ bool check_tensor_support_batch(const at::TensorList dst, const at::TensorList s
     return true;
 }
 
-bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
+void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
                 " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
     size_t count = dst.size();
@@ -153,7 +153,7 @@ bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     auto ret = ACL_RT_SUCCESS;
     if (non_blocking) {
         aclError ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts, dstLens, srcs,
-                           srcLens, count, attrs, attrsIdxs, count, &failIdx,aclrtMemcpyKind::ACL_MEMCPY_DEVICE_TO_HOST,true);
+                           srcLens, count, attrs, attrsIdxs, count, &failIdx);
         NPU_CHECK_ERROR(ret);
         ASCEND_LOGD("non_blocking copy without StreamSynchronize.");
 //        aclError AclrtMemcpyBatchAsync(void **dsts, size_t *destMax, void **srcs, size_t *sizes,
@@ -166,7 +166,8 @@ bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
         auto acl_stream = c10_npu::getCurrentNPUStream();
         aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
         ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs,
-                               srcLens, count, aclrtMemcpyBatchAttrs, attrsIndexes, count, &failIdx);
+                               srcLens, count, attrs, attrsIdxs, count, &failIdx);
+        NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
         if (error != ACL_ERROR_NONE) {
             CHECK_AND_THROW_ERROR_WITH_SPECIFIC_MESSAGE(error);
             C10_NPU_SHOW_ERR_MSG();
@@ -178,11 +179,6 @@ bool memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
             }
         }
     }
-    if (ret != ACL_RT_SUCCESS) {
-        ASCEND_LOGW("Failed to copy tensor using memcpyBatch. We will use the kernel slow to copy the tensor.", ret);
-        return false;
-    };
-    return true;
 }
 
 void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
@@ -192,11 +188,14 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+    static const bool is_support_batch = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9391);
+
     if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
-         // 同一个方向
-        if (check_tensor_support_batch(self, src) && memcpyBatch(self, src, non_blocking)){
-            return;
-        }
+         if (is_support_batch&&((non_blocking&& c10_npu::acl::IsExistMemcpyBatchAsync())||(!non_blocking&& c10_npu::acl::IsExistMemcpyBatch()))){
+             return memcpyBatch(self, src, non_blocking);
+         }
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 
