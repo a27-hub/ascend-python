@@ -118,19 +118,6 @@ at::Tensor view3d(const at::Tensor &tensor)
     return tensor.squeeze(2);
 }
 
-std::tuple<at::Tensor, bool> batchify(
-    const at::Tensor& input,
-    const int64_t num_spatial_dims,
-    const std::string& func_name) {
-  const auto dim_count_no_batch = num_spatial_dims + 1;
-  const auto dim_count_batch = dim_count_no_batch + 1;
-  const auto is_batched = (input.dim() == dim_count_batch);
-  TORCH_CHECK(input.dim() == dim_count_no_batch || is_batched,
-      "Expected ", dim_count_no_batch, "D (unbatched) or ", dim_count_batch,
-      "D (batched) input to ", func_name, ", but got input of size: ", input.sizes(), OPS_ERROR(ErrCode::PARAM));
-  return std::make_tuple(is_batched ? input : input.unsqueeze(0), is_batched);
-}
-
 inline std::vector<int64_t> expand_param_if_needed(
     at::IntArrayRef list_param,
     const char* param_name,
@@ -323,27 +310,6 @@ at::native::ConvBackend select_conv_backend(const at::Tensor &input_r, const at:
     return select_conv_backend(input, weight, bias_sizes_opt, need_backward, params);
 }
 
-at::Tensor conv_transpose2d(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias,
-                            at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef output_padding,
-                            int64_t groups, at::IntArrayRef dilation)
-{
-    return at::convolution(input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-}
-
-at::Tensor conv_transpose3d(const at::Tensor &input_opt, const at::Tensor &weight,
-                            const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride, at::IntArrayRef padding,
-                            at::IntArrayRef output_padding, int64_t groups, at::IntArrayRef dilation)
-{
-    c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
-    const at::Tensor &bias = *bias_maybe_owned;
-
-    at::Tensor input;
-    bool is_batched;
-    std::tie(input, is_batched) = batchify(input_opt, 3, "conv_transpose3d");
-    auto output = at::convolution(input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-    return is_batched ? output : output.squeeze(0);
-}
-
 at::Tensor convolution(const at::Tensor &input, const at::Tensor &weight, const c10::optional<at::Tensor> &bias,
                        at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
                        at::IntArrayRef output_padding, int64_t groups)
@@ -434,7 +400,7 @@ at::Tensor npu_convolution(const at::Tensor &input, const at::Tensor &weight, co
             is_dilated |= (d != 1);
         }
         output = (groups == 1 && !is_dilated) ?
-                     at::slow_conv3d(input, weight, kernel_size, bias, stride, padding) :
+                     at::slow_conv3d_forward(input, weight, kernel_size, bias, stride, padding) :
                      acl_op::npu_conv3d(input, weight, bias, stride, padding, dilation, groups);
     }
     return output;
@@ -459,7 +425,7 @@ at::Tensor convolution_overrideable(const at::Tensor &input, const at::Tensor &w
             is_dilated |= (d != 1);
         }
         output = (groups == 1 && !is_dilated) ?
-                     at::slow_conv3d(input, weight, kernel_size, bias_opt, stride, padding) :
+                     at::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding) :
                      acl_op::npu_conv3d(input, weight, bias_opt, stride, padding, dilation, groups);
     }
     return output;
@@ -819,38 +785,6 @@ at::native::ConvBackend select_conv_backend(
   return select_conv_backend(input, weight, bias_sizes_opt, need_backward, params);
 }
 
-at::Tensor conv_transpose2d(
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-  return at::convolution(input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-}
-
-at::Tensor conv_transpose3d(
-    const at::Tensor& input_opt,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias_opt,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-  c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
-  const at::Tensor& bias = *bias_maybe_owned;
-
-  at::Tensor input;
-  bool is_batched;
-  std::tie(input, is_batched) = batchify(input_opt, 3, "conv_transpose3d");
-  auto output = at::convolution(
-      input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-  return is_batched ? output : output.squeeze(0);
-}
-
 at::Tensor convolution(
     const at::Tensor& input,
     const at::Tensor& weight,
@@ -961,7 +895,7 @@ at::Tensor npu_convolution(
     for (int d : dilation) {
       is_dilated |= (d != 1);
     }
-    output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias, stride, padding) :
+    output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias, stride, padding) :
         acl_op::npu_conv3d(input, weight, bias, stride, padding, dilation, groups);
   }
   return output;
@@ -990,7 +924,7 @@ at::Tensor convolution_overrideable(
     for (int d : dilation) {
       is_dilated |= (d != 1);
     }
-    output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias_opt, stride, padding) :
+    output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding) :
        acl_op::npu_conv3d(input, weight, bias_opt, stride, padding, dilation, groups);
   }
   return output;
@@ -1317,38 +1251,6 @@ at::native::ConvBackend select_conv_backend(
     TORCH_CHECK(false, "unsupported ConvNd parameters"+ OPS_ERROR(ErrCode::NOT_SUPPORT));
 }
 
-at::Tensor conv_transpose2d(
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-  return at::convolution(input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-}
-
-at::Tensor conv_transpose3d(
-    const at::Tensor& input_opt,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias_opt,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-  c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
-  const at::Tensor& bias = *bias_maybe_owned;
-
-  at::Tensor input;
-  bool is_batched;
-  std::tie(input, is_batched) = batchify(input_opt, 3, "conv_transpose3d");
-  auto output = at::convolution(
-      input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-  return is_batched ? output : output.squeeze(0);
-}
-
 at::Tensor convolution(
     const at::Tensor& input,
     const at::Tensor& weight,
@@ -1459,7 +1361,7 @@ at::Tensor npu_convolution(
     for (int d : dilation) {
       is_dilated |= (d != 1);
     }
-    output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias, stride, padding) :
+    output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias, stride, padding) :
         acl_op::npu_conv3d(input, weight, bias, stride, padding, dilation, groups);
   }
   return output;
@@ -1488,7 +1390,7 @@ at::Tensor convolution_overrideable(
     for (int d : dilation) {
       is_dilated |= (d != 1);
     }
-    output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias_opt, stride, padding) :
+    output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding) :
        acl_op::npu_conv3d(input, weight, bias_opt, stride, padding, dilation, groups);
   }
   return output;
@@ -1859,38 +1761,6 @@ at::native::ConvBackend select_conv_backend(
     return select_conv_backend(input, weight, bias_sizes_opt, need_backward, params);
 }
 
-at::Tensor conv_transpose2d(
-    const at::Tensor& input,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-    return at::convolution(input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-}
-
-at::Tensor conv_transpose3d(
-    const at::Tensor& input_opt,
-    const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias_opt,
-    at::IntArrayRef stride,
-    at::IntArrayRef padding,
-    at::IntArrayRef output_padding,
-    int64_t groups,
-    at::IntArrayRef dilation) {
-    c10::MaybeOwned<at::Tensor> bias_maybe_owned = at::borrow_from_optional_tensor(bias_opt);
-    const at::Tensor& bias = *bias_maybe_owned;
-
-    at::Tensor input;
-    bool is_batched;
-    std::tie(input, is_batched) = batchify(input_opt, 3, "conv_transpose3d");
-    auto output = at::convolution(
-        input, weight, bias, stride, padding, dilation, true, output_padding, groups);
-    return is_batched ? output : output.squeeze(0);
-}
-
 at::Tensor convolution(
     const at::Tensor& input,
     const at::Tensor& weight,
@@ -2000,7 +1870,7 @@ at::Tensor npu_convolution(
         for (int d : dilation) {
             is_dilated |= (d != 1);
         }
-        output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias, stride, padding) :
+        output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias, stride, padding) :
             acl_op::npu_conv3d(input, weight, bias, stride, padding, dilation, groups);
     }
     return output;
@@ -2029,7 +1899,7 @@ at::Tensor convolution_overrideable(
         for (int d : dilation) {
             is_dilated |= (d != 1);
         }
-        output = (groups == 1 && !is_dilated) ? at::slow_conv3d(input, weight, kernel_size, bias_opt, stride, padding) :
+        output = (groups == 1 && !is_dilated) ? at::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding) :
           acl_op::npu_conv3d(input, weight, bias_opt, stride, padding, dilation, groups);
     }
     return output;
