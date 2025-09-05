@@ -46,7 +46,7 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
 
         return (rel_error + abs_error) == 0
 
-    def npu_add_rms_norm_dynamic_quant_v2_golden(
+    def npu_add_rms_norm_dynamic_quant_golden(
         self,
         x1: torch.Tensor,
         x2: torch.Tensor,
@@ -122,11 +122,11 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
         s2_n = smooth_scale2.npu() if smooth_scale2 is not None else None
         beta_n = beta.npu() if beta is not None else None
         eps_f = float(epsilon)
-        y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant_v2(
+        y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
             x1_n, x2_n, gamma_n, s1_n, s2_n, beta_n, epsilon=eps_f
         )
 
-        y1_cpu, y2_cpu, x_out_cpu, s1_cpu, s2_cpu = self.npu_add_rms_norm_dynamic_quant_v2_golden(
+        y1_cpu, y2_cpu, x_out_cpu, s1_cpu, s2_cpu = self.npu_add_rms_norm_dynamic_quant_golden(
             x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon
         )
 
@@ -164,7 +164,7 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
             self.assertFalse(torch.isnan(tt).any().item())
             self.assertFalse(torch.isinf(tt).any().item())
 
-    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant_v2 due to low version of cann")
+    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes(self):
         shape_list = [
@@ -187,7 +187,7 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
             smooth_scale2 = torch.ones(last_dim, dtype=torch.float16, device='npu')
             self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
 
-    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant_v2 due to low version of cann")
+    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes_bf16(self):
         shape_list = [
