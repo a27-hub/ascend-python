@@ -13,10 +13,10 @@
 - API功能：并行场景下交叉熵计算的一部分，解决超大规模词汇表下的显存和计算效率问题，功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与cross\_entropy\_loss，中间根据通信拆分为torch_npu.fused_linear_online_max_sum、torch_npu.fused_cross_entropy_loss_with_max_sum，需要依次调用实现完整功能。torch_npu.fused_cross_entropy_loss_with_max_sum为第一阶段接口，用于计算loss与softmax。支持高性能和省显存两种模式，高性能模式下需要传入vocab\_parallel\_logits，返回softmax计算结果。
 - 计算公式：
           $$ 
-          loss = log(sum_exp_logits) - predicted_logits
+          loss = log(sum\_exp\_logits) - predicted\_logits
           $$
           $$
-          softmax = exp(vocab_parallel_logits -logits_max.unsqueeze(dim = -1)) \ sum_exp_logits.unsqueeze(dim = -1)
+          softmax = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) \ sum\_exp\_logits.unsqueeze(dim = -1)
           $$
 ## 函数原型
 
