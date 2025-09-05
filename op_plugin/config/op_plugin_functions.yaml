@@ -3409,7 +3409,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      self: 
+      self:
         name: self, other
       exec: aclnnInplaceLogicalAnd
 
@@ -3846,7 +3846,7 @@ official:
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
-    
+
   - func: mse_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
     acl_op: all_version
     op_api: all_version
@@ -4325,7 +4325,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      self: 
+      self:
         name: self, exponent
       exec: aclnnInplacePowTensorTensor
 
@@ -7874,10 +7874,10 @@ custom:
       grad_tokens:
         size: 'npu_moe_token_permute_grad_out_size(tokens, grad_permuted_tokens, indices, sorted_indices)'
         dtype: tokens
-      new_params: 
+      new_params:
         num_topK: '(indices.dim() == 1) ? 1 : indices.size(1)'
       exec: aclnnMoeTokenPermuteGrad, grad_permuted_tokens, sorted_indices, num_topK, padded_mode, grad_tokens
-  
+
   - func: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
     op_api: [v2.1, newest]
     gen_opapi:
@@ -7979,6 +7979,11 @@ symint:
 
   - func: npu_max_backward(Tensor grad, int dim, Tensor indices, SymInt[] sizes, bool keepdim) -> Tensor
     acl_op: [v2.0, newest]
+
+  - func: npu_nsa_v2(Tensor token_x, Tensor w_dq, Tensor w_uq_qr, Tensor w_uk, Tensor w_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor mla_rope_cos, Tensor mla_rope_sin, Tensor kv_cache, Tensor kr_cache, Tensor actual_seq_lengths_query, Tensor actual_seq_lengths_key, Tensor w_qb, Tensor w_k, Tensor w_proj, Tensor layernorm_gamma_k, Tensor layernorm_beta_k, Tensor idx_rope_cos, Tensor idx_rope_sin, Tensor idx_k_cache, Tensor? block_table=None, Tensor? cache_idx=None, Tensor? idx_block_table=None, Tensor? idx_k_cache_idx=None, float rmsnorm_epsilon_cq, float rmsnorm_epsilon_ckv, float layernorm_epsilon_k, int selected_count=2024, loat idx_n_heads_scale=640.5, float idx_softmax_scale=128**0.5, float attn_softmax_scale=576**0.5, int block_size=128, str layout_query="BSND", str layout_key="PA_BBND") -> Tensor
+    acl_op: [v2.1, newest]
+    exposed: [v2.1, newest]
+    internal_format_opapi: [v2.1, newest]
 
   - func: npu_min_backward(Tensor grad, int dim, Tensor indices, SymInt[] sizes, bool keepdim) -> Tensor
     acl_op: [v2.0, newest]
