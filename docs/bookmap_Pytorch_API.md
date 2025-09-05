@@ -131,6 +131,9 @@
         -   [torch_npu.npu_moe_distribute_combine_add_rms_norm](./context/torch_npu-npu_moe_distribute_combine_add_rms_norm.md)
         -   [torch_npu.npu_transpose_batchmatmul](./context/torch_npu-npu_transpose_batchmatmul.md)
         -   [torch_npu.npu_moe_eplb_update_expert](./context/torch_npu-npu_moe_eplb_update_expert.md)
+        - [torch_npu.fused_linear_online_max_sum](./context/torch_npu-fused_linear_online_max_sum.md)
+        - [torch_npu.fused_cross_entropy_loss_with_max_sum](./context/torch_npu-fused_cross_entropy_loss_with_max_sum.md)
+        - [torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad](./context/torch_npu-fused_linear_cross_entropy_loss_with_max_sum_grad.md)
         
     -   [torch_npu.contrib](./context/torch_npu-contrib.md)
         -   [torch_npu.contrib接口列表](./context/torch_npu-contrib接口列表.md)
