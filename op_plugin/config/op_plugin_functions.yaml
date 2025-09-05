@@ -1959,6 +1959,10 @@ official:
     acl_op: v1.11
     op_api: v1.11
 
+  - func: dequant_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, * , Tensor ? weight_scale, Tensor ? activation_scale, Tensor ? bias, Tensor ? offset_k, Tensor ? offset_v, int[3] size_splits, str quant_mode="static", string input_layout="BSND", bool kv_output=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    acl_op: all_version
+    op_api: all_version
+
   - func: diag(Tensor self, int diagonal=0) -> Tensor
     acl_op: v1.11
     op_api: v1.11
