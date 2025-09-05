@@ -6649,7 +6649,7 @@ custom:
       scale2:
         size: reduce_lastdim_output_size(x1, false)
         dtype: at::kFloat
-      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, outputMask, epsilon, y1, y2, x_out, scale1, scale2
+      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, y1, y2, x_out, scale1, scale2
 
   - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> Tensor
     op_api: all_version
