@@ -9039,10 +9039,10 @@ y1, y2, rstd, x = torch_npu.npu_add_rms_norm_cast(input_x1, input_x2, input_gamm
 )
 
 _add_torch_npu_docstr(
-    "npu_add_rms_norm_dynamic_quant_v2",
+    "npu_add_rms_norm_dynamic_quant",
     """
 接口原型：
-npu_add_rms_norm_dynamic_quant_v2(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, *, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 功能描述
 将RmsNorm前的Add操作、RmsNorm归一化和最多两路DynamicQuant量化进行融合，减少数据搬入搬出操作。
@@ -9083,7 +9083,7 @@ smooth_scale1 = torch.ones(8, dtype=torch.float16, device='npu')
 smooth_scale2 = torch.ones(8, dtype=torch.float16, device='npu')
 epsilon = 1e-6
 
-y1, y2, x_out, scale1, scale2 = torch.npu.npu_add_rms_norm_dynamic_quant_v2(
+y1, y2, x_out, scale1, scale2 = torch.npu.npu_add_rms_norm_dynamic_quant(
     x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon=epsilon
 )
 """
