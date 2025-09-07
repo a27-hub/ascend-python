@@ -6,8 +6,8 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
-class TestAddRmsNormDynamicQuantV2(TestCase):
 
+class TestAddRmsNormDynamicQuant(TestCase):
     def setUp(self):
         super().setUp()
         torch.manual_seed(0)
@@ -175,7 +175,6 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
             self.assertFalse(torch.isnan(tt).any().item())
             self.assertFalse(torch.isinf(tt).any().item())
 
-    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes(self):
         shape_list = [
@@ -202,7 +201,6 @@ class TestAddRmsNormDynamicQuantV2(TestCase):
 
             self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta, outputMask=outputMask)
 
-    @unittest.skip("skip test_npu_add_rms_norm_dynamic_quant due to low version of cann")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes_bf16(self):
         shape_list = [

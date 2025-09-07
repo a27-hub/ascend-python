@@ -46,6 +46,7 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
     O = torch.sum(out_stack * weights.unsqueeze(-1), dim=0)
     return O.contiguous()
 
+
 class TestNpuAttentionUpdate(TestCase):
     def setUp(self):
         super().setUp()

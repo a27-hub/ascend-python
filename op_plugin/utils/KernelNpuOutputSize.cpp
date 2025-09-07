@@ -152,7 +152,6 @@ c10::SmallVector<int64_t, SIZE> reduce_lastdim_output_size(const at::Tensor& sel
     } else {
         shape.erase(shape.begin() + last);
     }
-
     return shape; 
 }
 
