@@ -2790,6 +2790,7 @@ class TestGroupedMatmulSwigluQuant(TestCase):
             self.assertTrue(output2_npu.dtype == output2.dtype)
 
 
+@unittest.skip("skip until CANN is updated to support aclnnDynamicBlockQuant")
 class TestNpuDynamicBlockQuant(TestCase):
     def test_npu_dynamic_block_quant_meta(self):
         # 2 dim
