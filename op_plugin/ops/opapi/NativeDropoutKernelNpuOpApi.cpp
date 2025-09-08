@@ -81,7 +81,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
                 capture_event_end.record(secondary_stream);
                 capture_event_end.block(original_stream);
                 ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed, event=%p", capture_event_end.event());
-                gen->set_secondary_stream_capture_state(true);
+                at::check_generator<at_npu::NPUGeneratorImpl>(gen)->set_secondary_stream_capture_state(true);
             }
 #endif
         }
