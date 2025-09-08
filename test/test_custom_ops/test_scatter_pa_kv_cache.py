@@ -86,7 +86,6 @@ class TestScatterPaKvCache(TestCase):
         return key_cache_npu_cast, value_cache_npu_cast, key_cache_golden_npu, value_cache_golden_npu
 
 
-    @unittest.skip("skip until CANN is updated to support aclnnScatterPaKvCache")
     @SupportedDevices(['Ascend910B'])
     def test_npu_scatter_pa_kv_cache_1(self, device="npu"):
         bs = 16
@@ -104,7 +103,6 @@ class TestScatterPaKvCache(TestCase):
         self.assertRtolEqual(value_cache_npu_cast, value_cache_golden_npu)
 
 
-    @unittest.skip("skip until CANN is updated to support aclnnScatterPaKvCache")
     @SupportedDevices(['Ascend910B'])
     def test_npu_scatter_pa_kv_cache_2(self, device="npu"):
         bs = 16
@@ -122,7 +120,6 @@ class TestScatterPaKvCache(TestCase):
         self.assertRtolEqual(value_cache_npu_cast, value_cache_golden_npu)
 
 
-    @unittest.skip("skip until CANN is updated to support aclnnScatterPaKvCache")
     @SupportedDevices(['Ascend910B'])
     def test_npu_scatter_pa_kv_cache_3(self, device="npu"):
         bs = 16
@@ -140,7 +137,6 @@ class TestScatterPaKvCache(TestCase):
         self.assertRtolEqual(value_cache_npu_cast, value_cache_golden_npu)
 
 
-    @unittest.skip("skip until CANN is updated to support aclnnScatterPaKvCache")
     @SupportedDevices(['Ascend910B'])
     def test_npu_scatter_pa_kv_cache_4(self, device="npu"):
         bs = 16
