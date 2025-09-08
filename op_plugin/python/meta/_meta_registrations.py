@@ -984,8 +984,8 @@ def npu_moe_distribute_dispatch_meta(x, expert_ids, group_ep, ep_world_size, ep_
 
 
 @impl(m, "npu_moe_distribute_dispatch_v2")
-def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0,
-                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1):
+def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, scales=None, x_active_mask=None, expert_scales=None, elastic_info=None, group_tp="", tp_world_size=0,
+                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1, zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     torch._check(
         (ep_rank_id >= 0) and (ep_rank_id < ep_world_size),
         lambda: (
@@ -1025,7 +1025,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     shared_front = (expert_shard_type == 0)
     outDtype = x.dtype
 
-    local_moe_expert_num = 0
+    local_moe_expert_num = 1
     global_bs_real = 0
     if global_bs == 0:
         global_bs_real = bs * ep_world_size
@@ -1042,6 +1042,16 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
         else:
             local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
             a = global_bs_real * min(local_moe_expert_num, k)
+        if elastic_info is not None:
+            if ((is_shared_default) or (is_no_shared)):
+                local_moe_expert_num = max(local_moe_expert_num, moe_expert_num // (ep_world_size - shared_expert_rank_num))
+                a = global_bs_real * min(local_moe_expert_num, k)
+            else:
+                max_bs = global_bs_real // ep_world_size
+                rank_num_per_shared_expert = shared_expert_rank_num // shared_expert_num
+                max_shared_group_num = (ep_world_size + rank_num_per_shared_expert - 1) // rank_num_per_shared_expert
+                a = max(max_bs * max_shared_group_num, global_bs_real * min(moe_expert_num // (ep_world_size - shared_expert_rank_num), k))
+                local_moe_expert_num = max(local_moe_expert_num, moe_expert_num // (ep_world_size - shared_expert_rank_num))
 
     ep_recv_cnt_num = 0
     if tp_world_size == 2:
@@ -1083,8 +1093,9 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 
 @impl(m, "npu_moe_distribute_combine_v2")
 def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
-                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0, 
-                                       tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0):
+                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None,
+                                       const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, 
+                                       shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
     return expand_x.new_empty(dim_tuple)
@@ -1107,7 +1118,7 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
 
 
 @impl(m, "_npu_distribute_barrier")
-def _npu_distribute_barrier(x_ref, group, world_size):
+def _npu_distribute_barrier(x_ref, group, world_size, time_out=None, elastic_info=None, task_time_out=-1):
     return torch.empty_like(x_ref)
 
 
