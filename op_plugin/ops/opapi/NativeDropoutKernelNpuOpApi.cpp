@@ -77,7 +77,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
             aclDataType dataType = at_npu::native::OpPreparation::convert_to_acl_data_type(self.scalar_type());
             EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, p, *seed_ptr, *offset_ptr, offset_intragraph, dataType, mask);
             if (!gen_state_.secondary_stream_capture_state_) {
-                ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed, event=%p", capture_event_end.event());
+                ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed");
                 at::check_generator<at_npu::NPUGeneratorImpl>(gen)->set_secondary_stream_capture_state(true);
             }
 #endif
