@@ -5420,6 +5420,32 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
+  - func: ffn_worker_scheduler_(Tensor(a!) self, *, int sync_group_size=1, int execute_mode=1) -> Tensor(a!)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      exec: aclnnFfnWorkerScheduler
+
+  - func: ffn_worker_scheduler(Tensor self, *, int sync_group_size=1, int execute_mode=1) -> Tensor
+    op_api: [v2.1, newest]
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnFfnWorkerScheduler
+
+  - func: attention_worker_scheduler_(Tensor(a!) self) -> Tensor(a!)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      exec: aclnnAttentionWorkerScheduler
+
+  - func: attention_worker_scheduler(Tensor self) -> Tensor
+    op_api: [v2.1, newest]
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnAttentionWorkerScheduler
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
