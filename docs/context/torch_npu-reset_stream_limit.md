@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-通过该接口，可以恢复指定流上算子在执行时所使用的cube和vector核数为默认配置。
+调用`torch.npu.set_stream_limit`接口设置指定Stream的Device资源限制后，可调用本接口重置指定Stream的Device资源限制，恢复默认配置，此时可通过`torch.npu.get_stream_limit`接口查询默认的资源设置。
 
 ## 函数原型
 
@@ -19,7 +19,7 @@ torch.npu.reset_stream_limit(stream) -> None
 
 ## 参数说明
 
-- **stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
+**stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
 
 ## 返回值说明
 `None`

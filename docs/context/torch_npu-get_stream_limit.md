@@ -9,8 +9,9 @@
 
 ## 功能说明
 
-- 通过该接口，可以获取指定流上算子执行的cube和vector核数。
-- 若没有调用`torch.npu.set_stream_limit`接口设置Device资源限制，则调用本接口获取到的Device资源优先级为：当前进程的Device资源限制（调用`torch.npu.set_device_limit`接口设置）>硬件默认资源限制。
+- 通过该接口，获取指定Stream的Device资源限制。
+- 若没有调用`torch.npu.set_stream_limit`接口设置Device资源限制，则调用本接口获取到的Device资源优先级为：当前进程的Device资源限制（调用`torch.npu.set_device_limit`接口设置）> 硬件默认资源限制。
+- 当前支持资源类型为Cube Core、Vector Core。
 
 ## 函数原型
 
@@ -20,7 +21,7 @@ torch.npu.get_stream_limit(stream) ->Dict
 
 ## 参数说明
 
-- **stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
+**stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
 
 ## 返回值说明
 `Dict`

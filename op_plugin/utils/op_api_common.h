@@ -1106,12 +1106,14 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
     auto deterministic = at::globalContext().deterministicAlgorithms();
-    auto aicNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
-    auto aivNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);
+    if (c10_npu::acl::IsExistGetResInCurrentThread()) {
+        auto aicNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);
+        auto aivNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);
+        add_param_to_buf(aicNum);
+        add_param_to_buf(aivNum);
+    }
     auto device = c10_npu::current_device();
     add_param_to_buf(deterministic);
-    add_param_to_buf(aicNum);
-    add_param_to_buf(aivNum);
     add_param_to_buf(std::string(aclnn_api), args...);
     add_param_to_buf(device);
     uint64_t hashId = calc_hash_id();
@@ -1161,8 +1163,10 @@ bool hit_cache_v2(
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
     add_param_to_buf_v2(deterministic_status);
-    add_param_to_buf_v2(aicNum);
-    add_param_to_buf_v2(aivNum);
+    if (aicNum != UINT32_MAX && aivNum != UINT32_MAX) {
+        add_param_to_buf_v2(aicNum);
+        add_param_to_buf_v2(aivNum);
+    }
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
     if (g_hash_offset == g_hash_buf_max_size) {
@@ -1316,8 +1320,12 @@ auto DecodeDevice(Ts&... args) -> at::Device
         }                                                                                                              \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
-        auto aicNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                          \
-        auto aivNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                        \
+        uint32_t aicNum = UINT32_MAX;                                                                                  \
+        uint32_t aivNum = UINT32_MAX;                                                                                  \
+        if (c10_npu::acl::IsExistGetResInCurrentThread()) {                                                            \
+            aicNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                           \
+            aivNum = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
+        }                                                                                                              \
         auto acl_call = [copied_params, acl_stream, deterministic_status, aicNum, aivNum]()->int {                     \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
@@ -1330,7 +1338,8 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
             int api_ret = 0;                                                                                           \
             if (hit_cache_v2(                                                                                          \
-               acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aicNum, aivNum)) {\
+               acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aicNum, aivNum))  \
+            {                                                                                                          \
                 return api_ret;                                                                                        \
             }                                                                                                          \
             at_npu::native::SetDeterministicOps(deterministic_status);                                                 \
