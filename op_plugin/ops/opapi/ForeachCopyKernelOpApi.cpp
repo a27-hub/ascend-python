@@ -80,7 +80,8 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     return false;
 }
 
-void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking) {
+void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
+{
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
                 " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
     size_t count = dst.size();
@@ -129,8 +130,8 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     size_t failIdx = SIZE_MAX;
     auto acl_stream = c10_npu::getCurrentNPUStream().stream();
     if (non_blocking) {
-        auto ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts, dstLens, srcs,
-                                                  srcLens, count, attrs, attrsIndexes, count, &failIdx, acl_stream);
+        auto ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count,
+                                                       &failIdx, acl_stream);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatchAsync");
     } else {
         aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
@@ -144,8 +145,8 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
                 AT_ERROR("ACL stream synchronize failed, error code:", error);
             }
         }
-        auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs,
-                                             srcLens, count, attrs, attrsIndexes, count, &failIdx);
+        auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count,
+                                                  &failIdx);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
     }
 }
