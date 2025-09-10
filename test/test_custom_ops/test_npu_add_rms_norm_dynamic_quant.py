@@ -175,6 +175,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertFalse(torch.isnan(tt).any().item())
             self.assertFalse(torch.isinf(tt).any().item())
 
+    @unittest.skip("skip until CANN is updated to support aclnnAddRmsNormDynamicQuantV2")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes(self):
         shape_list = [
@@ -201,6 +202,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
 
             self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta, outputMask=outputMask)
 
+    @unittest.skip("skip until CANN is updated to support aclnnAddRmsNormDynamicQuantV2")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes_bf16(self):
         shape_list = [

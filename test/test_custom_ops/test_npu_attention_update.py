@@ -119,6 +119,7 @@ class TestNpuAttentionUpdate(TestCase):
             self.assertFalse(torch.isnan(t).any().item())
             self.assertFalse(torch.isinf(t).any().item())
 
+    @unittest.skip("skip until CANN is updated to support aclnnAttentionUpdate")
     @SupportedDevices(['Ascend910B'])
     def test_forward_min_case(self):
         cases = [
