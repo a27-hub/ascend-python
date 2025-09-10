@@ -19,8 +19,10 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-#define INT8 2
-#define INT4 29
+namespace {
+constexpr int64_t INT8 = 2;
+constexpr int64_t INT4 = 29;
+}  // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(const at::Tensor& x, const c10::optional<at::Tensor>& smooth_scales,
     const c10::optional<at::Tensor>& offsets, const c10::optional<at::Tensor>& group_index, bool activate_left,
