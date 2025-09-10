@@ -809,6 +809,12 @@
   "func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: npu_add_layer_norm_backward(Tensor? dy_opt, Tensor x1, Tensor x2, Tensor rstd, Tensor mean, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
