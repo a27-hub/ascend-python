@@ -22,7 +22,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-at::ScalarType get_output_type(bool return_complex, at::ScalarType input_type)
+at::ScalarType get_output_type_by_input(bool return_complex, at::ScalarType input_type)
 {
     at::ScalarType output_type;
     if (return_complex) {
@@ -39,6 +39,34 @@ at::ScalarType get_output_type(bool return_complex, at::ScalarType input_type)
         } else if (input_type == at::ScalarType::ComplexFloat) {
             output_type = at::ScalarType::Float;
         } else if (input_type == at::ScalarType::ComplexDouble) {
+            output_type = at::ScalarType::Double;
+        }
+    }
+    return output_type;
+}
+
+at::ScalarType get_output_type_by_input_and_window(bool return_complex, at::ScalarType input_type,
+                                                   at::ScalarType window_type)
+{
+    at::ScalarType output_type;
+    if (return_complex) {
+        if (input_type == at::ScalarType::Float || input_type == at::ScalarType::ComplexFloat) {
+            if (window_type == at::ScalarType::Float || window_type == at::ScalarType::ComplexFloat) {
+                output_type = at::ScalarType::ComplexFloat;
+            } else {
+                output_type = at::ScalarType::ComplexDouble;
+            }
+        } else {
+            output_type = at::ScalarType::ComplexDouble;
+        }
+    } else {
+        if (input_type == at::ScalarType::Float || input_type == at::ScalarType::ComplexFloat) {
+            if (window_type == at::ScalarType::Float || window_type == at::ScalarType::ComplexFloat) {
+                output_type = at::ScalarType::Float;
+            } else {
+                output_type = at::ScalarType::Double;
+            }
+        } else {
             output_type = at::ScalarType::Double;
         }
     }
@@ -143,7 +171,22 @@ at::Tensor stft(at::Tensor const &self,
     int64_t len = self.dim() == 2 ? self.size(1) : self.size(0);
     int64_t frames = (len - n_fft) / hop_length + 1;
     int64_t n = onesided == true ? n_fft / 2 + 1 : n_fft;
-    at::ScalarType output_type = get_output_type(return_complex, self.scalar_type());
+    at::ScalarType input_type = self.scalar_type();
+    TORCH_CHECK(input_type == at::ScalarType::Float || input_type == at::ScalarType::Double ||
+                input_type == at::ScalarType::ComplexFloat || input_type == at::ScalarType::ComplexDouble,
+                "input type should be float, double, complex<float> or complex<double>", OPS_ERROR(ErrCode::TYPE));
+    at::ScalarType output_type;
+
+    if (!window_opt.has_value()) {
+        output_type = get_output_type_by_input(return_complex, input_type);
+    } else {
+        at::Tensor window = window_opt.value();
+        at::ScalarType window_type = window.scalar_type();
+        TORCH_CHECK(window_type == at::ScalarType::Float || window_type == at::ScalarType::Double ||
+                    window_type == at::ScalarType::ComplexFloat || window_type == at::ScalarType::ComplexDouble,
+                    "window type should be float, double, complex<float> or complex<double>", OPS_ERROR(ErrCode::TYPE));
+        output_type = get_output_type_by_input_and_window(return_complex, input_type, window_type);
+    }
     TORCH_CHECK(output_type == at::ScalarType::Float || output_type == at::ScalarType::Double ||
                 output_type == at::ScalarType::ComplexFloat || output_type == at::ScalarType::ComplexDouble,
                 "output type should be float, double, complex<float> or complex<double>", OPS_ERROR(ErrCode::TYPE));
