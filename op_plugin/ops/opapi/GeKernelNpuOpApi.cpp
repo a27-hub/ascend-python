@@ -22,19 +22,21 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& ge_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge_out(self, other, result));
-  auto output_size = self.sizes();
-  npu_preparation::check_tensor({self}, result, output_size);
-  EXEC_NPU_CMD(aclnnGeScalar, self, other, result);
-  return result;
+    DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge_out(self, other, result));
+    auto output_size = self.sizes();
+    npu_preparation::check_tensor({self}, result, output_size);
+    EXEC_NPU_CMD(aclnnGeScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
+    return result;
 }
 
 at::Tensor ge(const at::Tensor& self, const at::Scalar& other) {
-  DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge(self, other));
-  auto output_size = op_infer::input_same_output_size(self);
-  at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
-  EXEC_NPU_CMD(aclnnGeScalar, self, other, result);
-  return result;
+    DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge(self, other));
+    auto output_size = op_infer::input_same_output_size(self);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+    EXEC_NPU_CMD(aclnnGeScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
+    return result;
 }
 
 at::Tensor& ge_(at::Tensor& self, const at::Scalar& other) {
@@ -44,33 +46,38 @@ at::Tensor& ge_(at::Tensor& self, const at::Scalar& other) {
 }
 
 at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
-  DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge_out(self, other, result));
-  auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-  npu_preparation::check_tensor({self, other}, result, output_size);
-  EXEC_NPU_CMD(aclnnGeTensor, self, other, result);
-  return result;
+    DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge_out(self, other, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+    auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+    npu_preparation::check_tensor({self, other}, result, output_size);
+    EXEC_NPU_CMD(aclnnGeTensor, self, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+    return result;
 }
 
 at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
-  DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge(self, other));
-  if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-    DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge(self, other));
-    at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kBool));
-    const at::Scalar tmpItem = other.item();
-    EXEC_NPU_CMD(aclnnGeScalar, self, tmpItem, result);
+    DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge(self, other));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+    at::Tensor result;
+    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge(self, other));
+        result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kBool));
+        const at::Scalar tmpItem = other.item();
+        EXEC_NPU_CMD(aclnnGeScalar, self, tmpItem, result);
+    } else if (self.dim() == 0 && !torch_npu::utils::is_npu(self)) {
+        DO_COMPATIBILITY(aclnnLessScalar, acl_op::ge(self, other));
+        result = npu_preparation::apply_tensor_without_format(other.sizes(), other.options().dtype(at::kBool));
+        const at::Scalar tmpItem = self.item();
+        EXEC_NPU_CMD(aclnnLessScalar, other, tmpItem, result);
+    } else {
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnGeTensor, self, other, result);
+    }
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
-  } else if (self.dim() == 0 && !torch_npu::utils::is_npu(self)) {
-    DO_COMPATIBILITY(aclnnLessScalar, acl_op::ge(self, other));
-    at::Tensor result = npu_preparation::apply_tensor_without_format(other.sizes(), other.options().dtype(at::kBool));
-    const at::Scalar tmpItem = self.item();
-    EXEC_NPU_CMD(aclnnLessScalar, other, tmpItem, result);
-    return result;
-  } else {
-    auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
-    EXEC_NPU_CMD(aclnnGeTensor, self, other, result);
-    return result;
-  }
 }
 
 at::Tensor& ge_(at::Tensor &self, const at::Tensor &other)

@@ -22,9 +22,12 @@ namespace op_api {
 at::Tensor &le_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le_out(self, other, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
     EXEC_NPU_CMD(aclnnLeTensor, self, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -35,12 +38,15 @@ at::Tensor &le_out(const at::Tensor &self, const at::Scalar &other, at::Tensor &
     at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
 
     EXEC_NPU_CMD(aclnnLeScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 
 at::Tensor le(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le(self, other));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result =
         at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
@@ -50,6 +56,7 @@ at::Tensor le(const at::Tensor &self, const at::Tensor &other)
     } else {
         EXEC_NPU_CMD(aclnnLeTensor, self, other, result);
     }
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -60,6 +67,7 @@ at::Tensor le(const at::Tensor &self, const at::Scalar &other)
     at::Tensor result =
         at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
     EXEC_NPU_CMD(aclnnLeScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 

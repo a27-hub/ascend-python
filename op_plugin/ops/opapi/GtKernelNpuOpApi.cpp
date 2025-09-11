@@ -26,6 +26,7 @@ at::Tensor& gt_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
     auto output_size = self.sizes();
     npu_preparation::check_tensor({self}, result, output_size);
     EXEC_NPU_CMD(aclnnGtScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 
@@ -40,6 +41,7 @@ at::Tensor gt(const at::Tensor& self, const at::Scalar& other)
 
     // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnGtScalar, self, other, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 
@@ -53,17 +55,22 @@ at::Tensor& gt_(at::Tensor& self, const at::Scalar& other)
 at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt_out(self, other, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
     npu_preparation::check_tensor({self, other}, result, output_size);
 
     EXEC_NPU_CMD(aclnnGtTensor, self, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
 at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt(self, other));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
@@ -77,6 +84,7 @@ at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
     } else {
         EXEC_NPU_CMD(aclnnGtTensor, self, other, result);
     }
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
