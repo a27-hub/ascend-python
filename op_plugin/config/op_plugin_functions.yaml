@@ -2390,11 +2390,6 @@ official:
   - func: grid_sampler_2d(Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners) -> Tensor
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out0:
-        size: '{input.size(0), input.size(1), grid.size(1), grid.size(2)}'
-        dtype: input
-      exec: aclnnGridSampler2D
 
   - func: grid_sampler_2d_backward(Tensor grad_output, Tensor input, Tensor grid, int interpolation_mode, int padding_mode, bool align_corners, bool[2] output_mask) -> (Tensor, Tensor)
     acl_op: all_version
