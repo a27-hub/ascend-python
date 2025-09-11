@@ -1,6 +1,5 @@
 {
-  "torch_npu": 
-  {
+  "torch_npu": {
     "v2.1": [],
     "v2.5": [],
     "v2.6": [],
@@ -25,6 +24,7 @@
       "npu_random_choice_with_mask",
       "npu_rms_norm",
       "npu_add_rms_norm_cast",
+      "npu_rms_norm_quant",
       "npu_moe_compute_expert_tokens",
       "npu_fused_infer_attention_score",
       "npu_mla_prolog",
@@ -77,5 +77,4 @@
       "npu_dynamic_block_quant"
     ]
   }
-  
 }
