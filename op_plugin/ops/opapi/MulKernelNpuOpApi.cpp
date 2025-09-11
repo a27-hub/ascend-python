@@ -67,6 +67,8 @@ at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
 {
     DO_COMPATIBILITY(aclnnMul, acl_op::mul_out(self, other, result));
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul_out(self, other, result));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     at::Tensor output_tensor = mul_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -75,6 +77,7 @@ at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
     npu_preparation::check_tensor({self}, result, result.scalar_type(), output_size);
     // calculate the output result of the NPU
     mul_out_npu_no_check(self_cp, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -82,6 +85,8 @@ at::Tensor mul(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnMul, acl_op::mul(self, other));
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul(self, other));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     at::Tensor output_tensor = mul_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -95,6 +100,7 @@ at::Tensor mul(const at::Tensor &self, const at::Tensor &other)
 
     // calculate the output result of the NPU
     mul_out_npu_no_check(self_cp, other, result);
+    at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
 
@@ -107,6 +113,7 @@ at::Tensor mul(const at::Tensor &self, const at::Scalar &other)
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(result_type));
     // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnMuls, self, other, result);
+    at::namedinference::propagate_names(result, self);
     return result;
 }
 
@@ -115,8 +122,11 @@ at::Tensor &mul_(at::Tensor &self, const at::Tensor &other)
     DO_COMPATIBILITY(aclnnInplaceMul, acl_op::mul_(self, other));
     DO_COMPATIBILITY(aclnnInplaceMuls, acl_op::mul_(self, other));
     TORCH_CHECK(torch_npu::utils::is_npu(self), "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
+    std::vector<at::Tensor> tensor_list = {self, other};
+    auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     npu_preparation::check_memory({self, other}, {self});
     inplace_mul_out_npu_no_check(self, other);
+    at::namedinference::propagate_names_if_nonempty(self, maybe_names);
     return self;
 }
 
