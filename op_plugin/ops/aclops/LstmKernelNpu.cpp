@@ -42,7 +42,11 @@ tensor_list npu_lstm_npu_nocheck(const at::Tensor &input, const at::Tensor &weig
     at::Tensor y_output = npu_preparation::apply_tensor(input, output_size);
     at::Tensor h_output = npu_preparation::apply_tensor(input, output_size);
     at::Tensor c_output = npu_preparation::apply_tensor(input, output_size);
-    int64_t output_format = train ? ACL_FORMAT_FRACTAL_NZ : ACL_FORMAT_ND;
+
+    bool is_train = train; // Use local variables to reduce code redundancy
+    bool use_nd_format = (is_train && op_plugin::utils::isSocVersionSupported()) || !is_train;
+    int64_t output_format = use_nd_format? ACL_FORMAT_ND: ACL_FORMAT_FRACTAL_NZ;
+
     at::Tensor i_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
     at::Tensor j_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);
     at::Tensor f_output = npu_preparation::apply_tensor_with_format(input, output_size, output_format);

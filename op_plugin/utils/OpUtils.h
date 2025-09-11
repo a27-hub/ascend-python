@@ -21,6 +21,7 @@
 #include "op_plugin/utils/OpConstants.h"
 #include "op_plugin/utils/Export.h"
 #include "op_plugin/utils/Version.h"
+#include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
 
 namespace op_plugin {
 namespace utils {
@@ -52,6 +53,9 @@ OP_PLUGIN_HIDDEN bool is_nz_format(const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_scalar_one(const c10::Scalar &scalar);
+bool isSocVersionInRange(c10_npu::SocVersion start);
+bool isSocVersionInRange(c10_npu::SocVersion start, c10_npu::SocVersion end);
+bool isSocVersionSupported();
 OP_PLUGIN_HIDDEN float get_scalar_float_value(const c10::Scalar &scalar);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> convert_array_to_vector(c10::IntArrayRef intArray);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, N> get_dimlist_for_tensor(const at::Tensor &self);

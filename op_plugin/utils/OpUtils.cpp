@@ -157,6 +157,22 @@ bool is_scalar_one(const c10::Scalar &scalar)
     }
 }
 
+bool isSocVersionInRange(c10_npu::SocVersion start)
+{
+    return c10_npu::GetSocVersion() >= start;
+}
+
+bool isSocVersionInRange(c10_npu::SocVersion start, c10_npu::SocVersion end)
+{
+    return c10_npu::GetSocVersion() >= start && c10_npu::GetSocVersion() <= end;
+}
+
+bool isSocVersionSupported()
+{
+    return isSocVersionInRange(c10_npu::SocVersion::Ascend910B1, c10_npu::SocVersion::Ascend910B4_1) ||
+           isSocVersionInRange(c10_npu::SocVersion::Ascend910_9391);
+}
+
 float get_scalar_float_value(const c10::Scalar &scalar)
 {
     float value;
