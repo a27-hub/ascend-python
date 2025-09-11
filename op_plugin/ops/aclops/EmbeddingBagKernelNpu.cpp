@@ -134,7 +134,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
     at::Tensor offset2bag = npu_preparation::apply_tensor(indices_cast);
     at::Tensor bag_size = npu_preparation::apply_tensor(offsets_cast);
 
-    if (include_last_offset) {
+    if (include_last_offset && mode_str == "mean") {
         bag_size = npu_preparation::apply_tensor(offsets_cast, offsets_cast.size(0) - 1);
     }
 
@@ -145,7 +145,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
         max_indices = npu_preparation::apply_tensor(offsets_cast, max_indices_size);
     } else {
         max_indices = npu_preparation::apply_tensor(offsets_cast);
-        if (include_last_offset) {
+        if (include_last_offset && mode_str == "mean") {
             max_indices = npu_preparation::apply_tensor(offsets_cast, offsets_cast.size(0) - 1);
         }
     }
@@ -187,7 +187,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forwar
     at::Tensor offset2bag = npu_preparation::apply_tensor(indices_cast);
     at::Tensor bag_size = npu_preparation::apply_tensor(offsets_cast);
 
-    if (include_last_offset) {
+    if (include_last_offset && mode_str == "mean") {
         bag_size = npu_preparation::apply_tensor(offsets_cast, offsets_cast.size(0) - 1);
     }
 
@@ -198,7 +198,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag_forwar
         max_indices = npu_preparation::apply_tensor(offsets_cast, max_indices_size);
     } else {
         max_indices = npu_preparation::apply_tensor(offsets_cast);
-        if (include_last_offset) {
+        if (include_last_offset && mode_str == "mean") {
             max_indices = npu_preparation::apply_tensor(offsets_cast, offsets_cast.size(0) - 1);
         }
     }
