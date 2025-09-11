@@ -7301,6 +7301,119 @@ tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
 )
 
 _add_torch_npu_docstr(
+    "npu_attention_work",
+    """
+功能描述:
+推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分为四路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache；PA+PAPOST XXXX。
+
+接口原型:
+torch_npu.npu_attention_work(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, Tensor block_table, Tensor act_seqs, Tensor weight_uv, Tensor weight_o, Tensor weight_o_scale, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND") -> Tensor
+
+参数说明:
+token_x：Tensor类型，表示输入的tensor，用于计算Q和K的x。shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
+weight_dq：Tensor类型，表示用于计算Query的下采样权重矩阵，WDQ 。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+weight_uq_qr：Tensor类型，表示用于计算Query的上采样权重矩阵和Query的位置编码权重矩阵，WUQ和WQR 。其shape支持2维，dtype支持bfloat16和int8，数据格式支持FRACTAL_NZ格式。
+weight_uk：Tensor类型，表示用于计算Key的上采样权重，WUK。其shape支持3维，dtype支持bfloat16，数据格式支持ND格式。
+weight_dkv_kr：Tensor类型，表示用于计算Key的下采样权重矩阵和Key的位置编码权重矩阵。Device侧的aclTensor。其shape支持2维，dtype支持bfloat16，数据格式支持FRACTAL_NZ格式。
+rmsnorm_gamma_cq：Tensor类型，表示用于计算Query的rmsnorm中的gamma参数，对应计算Query的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
+rmsnorm_gamma_ckv：Tensor类型，表示用于计算Key的rmsnorm中的gamma参数，对应计算Key的rmsNorm中的γ。其shape支持1维，dtype支持bfloat16，数据格式支持ND格式。
+rope_sin：Tensor类型，表示用于计算旋转位置编码的正弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
+rope_cos：Tensor类型，表示用于计算旋转位置编码的余弦参数矩阵。其shape支持2维和3维，dtype支持bfloat16，数据格式支持ND格式。
+cache_index：Tensor类型，表示用于存储kvCache和krCache的索引。其shape支持1维和2维，dtype支持int64，数据格式支持ND格式。
+kv_cache：Tensor类型，表示用于cache索引的aclTensor。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
+kr_cache：Tensor类型，表示用于key位置编码的cache。其shape支持4维，dtype支持bfloat16和int8，数据格式支持ND格式。
+block_table：Tensor类型，表示用于XX。
+act_seqs：Tensor类型，表示用于XX。
+weight_uv：Tensor类型，表示用于XX。
+weight_o：Tensor类型，表示用于XX。
+weight_o_scale：Tensor类型，表示用于XX。
+dequant_scale_x：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_dq：Tensor类型，预留参数，暂未使用，使用默认值即可。
+dequant_scale_w_uq_qr：Tensor类型，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化算法为per-channel。其shape支持2维，dtype支持float，数据格式支持ND格式。
+dequant_scale_w_dkv_kr：Tensor类型，预留参数，暂未使用，使用默认值即可。
+quant_scale_ckv：Tensor类型，用于输出到KVCache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
+quant_scale_ckr：Tensor类型，用于输出到KRCache中的数据做量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
+smooth_scales_cq：Tensor类型，用于对RmsNormCq输出做动态量化操作时的参数。其shape支持2维，dtype支持float，数据格式支持ND格式。
+rmsnorm_epsilon_cq：Double类型，表示用于计算Query的rmsnorm中的ϵ参数，对应计算Query的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
+rmsnorm_epsilon_ckv：Double类型，表示用于计算Key额时rmsnorm中的ϵ参数，对应计算Key的rmsNorm中的ϵ，用户不特意指定时可传入默认值1e-05。
+cache_mode：String类型，用于表示kvCache的模式，支持"PA_BSND","PA_NZ"，其用户不特意指定时可传入默认值"PA_BSND"。
+
+输出说明：
+attention_work_out：Tensor类型，表示XX，数据格式支持ND格式。
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+# 单算子调用方式
+import torch
+import torch_npu
+import math
+
+# 生成随机数据, 并发送到npu
+B = 8
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 1024
+S = 2
+Nkv = 1
+BlockNum = 32
+BlockSize = 128
+...
+
+# 调用AttentionWork算子
+attention_work_out = self.npu_attention_work(token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, rmsnorm_gamma_cq,
+    rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, block_table, act_seqs, weight_uv, weight_o, weight_o_scale, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode)
+
+# 执行上述代码的输出类似如下
+
+# 入图方式
+
+import torch
+import torch_npu
+import math
+
+import torchair as tng
+from torchair.ge_concrete_graph import ge_apis as ge
+from torchair.configs.compiler_config import CompilerConfig
+import torch._dynamo
+TORCHDYNAMO_VERBOSE=1
+TORCH_LOGS="+dynamo"
+
+# 支持入图的打印宏
+import logging
+from torchair.core.utils import logger
+logger.setLevel(logging.DEBUG)
+config = CompilerConfig()
+config.aoe_config.aoe_mode = "2"
+config.debug.graph_dump.type = "pbtxt"
+npu_backend = tng.get_npu_backend(compiler_config=config)
+from torch.library import Library, impl
+
+# 数据生成
+B = 8
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 1024
+S = 2
+Nkv = 1
+BlockNum = 32
+BlockSize = 128
+...
+
+# 执行上述代码的输出类似如下
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_mla_prolog",
     """
 功能描述:

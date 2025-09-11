@@ -36,6 +36,36 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
         return torch.empty_like(query)
 
 
+@impl(m, "npu_attention_work")
+def npu_attention_work_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
+                   rope_sin, rope_cos, cache_index, kv_cache, kr_cache, block_table, act_seqs, weight_uv, weight_o, weight_o_scale, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
+                   quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None,
+                   rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, cache_mode="PA_BSND"):
+    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "cache_index": cache_index, "kv_cache": kv_cache, "kr_cache": kr_cache, "block_table": block_table, "act_seqs": act_seqs, "weight_uv": weight_uv, "weight_o": weight_o, "weight_o_scale": weight_o_scale}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be null,but the actual value is null" + ops_error(ErrCode.VALUE),
+        )
+
+    token_x_dim = token_x.dim()
+    # 暂且只支持3 dim
+    torch._check(
+        token_x_dim == 3,
+        lambda: "token_x dim num should be 3,but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    attention_work_out_shape = []
+    attention_work_out_shape.append(token_x.size(0))
+    attention_work_out_shape.append(token_x.size(1))
+    attention_work_out_shape.append(token_x.size(2))
+
+    attention_work_out = torch.empty(attention_work_out_shape, dtype=token_x.dtype, device='meta')
+
+    return (attention_work_out)
+
+
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
                    rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
