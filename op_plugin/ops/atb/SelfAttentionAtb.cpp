@@ -36,7 +36,7 @@ void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const 
     selfattentionparam.qScale = 1;
     selfattentionparam.qkScale = scale_value;
     selfattentionparam.batchRunStatusEnable = false;
-    selfattentionparam.isTriuMask = 0;
+    selfattentionparam.isTriuMask = 1;
     selfattentionparam.clampMin = 0;
     selfattentionparam.clampMax = 0;
     selfattentionparam.inputLayout = atb::infer::TYPE_BSND;
