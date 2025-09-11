@@ -49,7 +49,7 @@ class TestThresholdBackward(TestCase):
             self.assertRtolEqual(npu_output1.astype(np.float32), cpu_output1)
             self.assertRtolEqual(npu_output2.astype(np.float32), cpu_output2)
 
-    def test_threshold_backward_broadcast_output(self):
+    def test_threshold_backward_broadcast_output_shape(self):
         shape_format = [
             [[np.float32, 0, (9, 34, 48, 25)], [np.float32, 0, (1, 1, 1, 1)], [1.0]]
         ]
@@ -64,8 +64,8 @@ class TestThresholdBackward(TestCase):
                 cpu_input2 = cpu_input2.to(torch.float32)
                 
             threshold = item[2][0]
-            cpu_output = torch.ops.aten.threshold_backward(cpu_input1, cpu_input2. threshold=threshold)
-            npu_output = torch.ops.aten.threshold_backward(npu_input1, npu_input2. threshold=threshold)
+            cpu_output = torch.ops.aten.threshold_backward(cpu_input1, cpu_input2, threshold=threshold)
+            npu_output = torch.ops.aten.threshold_backward(npu_input1, npu_input2, threshold=threshold)
             cpu_output = cpu_output.detach()
             npu_output = npu_output.detach().to("cpu")
             self.assertRtolEqual(npu_output.numpy().astype(np.float32), cpu_output.numpy())
