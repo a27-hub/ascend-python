@@ -5545,13 +5545,40 @@ custom:
   - func: matmul_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
 
-  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias=None, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
 
   - func: npu_add_layer_norm_backward(Tensor? dy_opt, Tensor x1, Tensor x2, Tensor rstd, Tensor mean, Tensor gamma, Tensor? dsum_opt) -> (Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+
+  - func: npu_fake_dynamic_quant(Tensor input, Tensor? smooth_scales) -> (Tensor, Tensor)
+    acl_op: v1.11, v2.1
+
+  - func: npu_fake_ascend_quant(Tensor x, float scale, float offset) -> Tensor
+    acl_op: v1.11, v2.1
+
+  - func: npu_quantize_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor bias, Tensor scales, Tensor? zero_points, int dtype, int axis=-1, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor)
+    acl_op: v1.11, v2.1
+
+  - func: npu_dua_quantize_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor bias, Tensor scales1, Tensor scales2, Tensor? zero_points1, Tensor? zero_points2, int dtype, int axis=-1, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor)
+    acl_op: v1.11, v2.1
+
+  - func: npu_add_layer_norm_fake(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
+    acl_op: v1.11, v2.1
+
+  - func: npu_add_layer_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, Tensor? bias, Tensor? scales1, Tensor? scales2, Tensor? zero_points1, Tensor? zero_points2, int quant_mode=0, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    acl_op: v1.11, v2.1
+    op_api: v1.11, v2.1
+
+  - func: npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor? smooth1, Tensor? smooth2, float epsilon=1e-05) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    acl_op: v1.11, v2.1
+    op_api: v1.11, v2.1
+
+  - func: npu_swi_glu_dynamic_quant(Tensor x, Tensor? smooth=None, Tensor? group_idx=None, int dim=-1, int core_num=8) -> (Tensor, Tensor, Tensor)
+    acl_op: v2.1
+    op_api: v2.1
 
   - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
