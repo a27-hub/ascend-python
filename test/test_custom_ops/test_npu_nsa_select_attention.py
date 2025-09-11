@@ -12,6 +12,8 @@
 # limitations under the License.
 
 import itertools
+import random
+import unittest
 import numpy as np
 import torch
 import torch_npu
@@ -62,6 +64,19 @@ class TestNpuCompress(TestCase):
             if BS_index < x:
                 return i
         raise RuntimeError(f"BS_index is greater than max(actual_seq_len).")
+
+    @staticmethod
+    def set_atten_mask(qk, currentS1, topK_index, block_count, block_size):
+        diag_index = currentS1 // block_size
+        saveNum = currentS1 % block_size + 1
+        mask_value = -np.inf
+        for i in range(block_count):
+            if (topK_index[i] == diag_index):
+                qk[:, i, saveNum:] = mask_value
+                continue
+            if (topK_index[i] > diag_index):
+                qk[:, i] = mask_value
+        return qk
 
     # pylint:disable = huawei-too-many-arguments
     def cpu_op_exec(self, query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask, actual_seq_qlen, actual_seq_kvlen):
@@ -115,6 +130,10 @@ class TestNpuCompress(TestCase):
                     selectedK = torch.index_select(key_reshaped[start_block_index:end_block_index, :, n2_index, :], 0, topk_index_) # (block_count, block_size, QKD)
                     selectedK = selectedK.reshape(block_count * block_size, QKD)
                     qk_ = torch.matmul(query_reshaped[bs1_index, n2_index, :, :], selectedK.transpose(-1, -2)) # (G, block_count * block_size)
+                    if atten_mask is not None:
+                        qk_ = qk_.reshape(G, block_count, block_size)
+                        qk_ = self.set_atten_mask(qk_, s1_index, topk_index_, block_count, block_size)
+                        qk_ = qk_.reshape(G, -1)
                     qk_ = torch.mul(qk_, scalar_value)
                     softmax_res, x_max, x_sum = softmax_torch(qk_)
                     selectedV = torch.index_select(value_reshaped[start_block_index:end_block_index, :, n2_index, :], 0, topk_index_) # (block_count, block_size, VD)
@@ -151,20 +170,14 @@ class TestNpuCompress(TestCase):
 
     # pylint:disable = huawei-too-many-arguments
     def npu_op_exec(self, query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask, actual_seq_qlen, actual_seq_kvlen):
-        output = torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=None, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+        output = torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
         return output
 
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_nsa_select_attention(self):
-        query = torch.randn([1, 115, 192], dtype=torch.float16)
-        key = torch.randn([1088, 115, 192], dtype=torch.float16)
-        value = torch.randn([1088, 115, 128], dtype=torch.float16)
+
+    def execute_npu_nsa_select_attention_case(self, query, key, value, select_block_count, select_block_size,
+                                              actual_seq_qlen, actual_seq_kvlen, atten_mask=None):
         scale_value = 1.0
         head_num = query.size(1)
-        select_block_count = 16
-        select_block_size = 64
-        actual_seq_qlen = [1]
-        actual_seq_kvlen = [1088]
 
         topk_indices = torch.zeros(query.size(0), value.size(1), select_block_count,).to(torch.int)
         for i in range(query.size(0)):
@@ -174,14 +187,126 @@ class TestNpuCompress(TestCase):
                     topk_indices[i][j] = torch.arange(select_block_count)
                 else:
                     topk_indices[i][j] = torch.randperm(select_block_count)
-                    topk_indices[i][j][random.uniform(0, select_block_count)] = (s1_idx + select_block_size - 1) // select_block_size
+                    topk_indices[i][j][int(random.uniform(0, select_block_count))] = (s1_idx + select_block_size - 1) // select_block_size
 
-        npuout = self.npu_op_exec(query.npu(), key.npu(), value.npu(), topk_indices.npu(), scale_value, head_num, select_block_size, select_block_count, None, actual_seq_qlen, actual_seq_kvlen)
-        gloden_out = self.cpu_op_exec(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, None, torch.tensor(actual_seq_qlen, dtype=torch.int64), torch.tensor(actual_seq_kvlen, dtype=torch.int64))
+        npuout = self.npu_op_exec(query.npu(), key.npu(), value.npu(), topk_indices.npu(), scale_value, head_num, select_block_size, select_block_count, atten_mask.npu() if atten_mask else None, actual_seq_qlen, actual_seq_kvlen)
+        gloden_out = self.cpu_op_exec(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask, torch.tensor(actual_seq_qlen, dtype=torch.int64), torch.tensor(actual_seq_kvlen, dtype=torch.int64))
+
 
         self.assertRtolEqual(gloden_out[0].numpy(), npuout[0].cpu().numpy())
         self.assertRtolEqual(gloden_out[1].numpy(), npuout[1].cpu().numpy())
         self.assertRtolEqual(gloden_out[2].numpy(), npuout[2].cpu().numpy())
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_1(self):
+        query = torch.randn([1, 115, 192], dtype=torch.float16)
+        key = torch.randn([1088, 115, 192], dtype=torch.float16)
+        value = torch.randn([1088, 115, 128], dtype=torch.float16)
+        select_block_count = 16
+        select_block_size = 64
+        actual_seq_qlen = [1]
+        actual_seq_kvlen = [1088]
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen)
+
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_2(self):
+        query = torch.randn([1, 115, 192], dtype=torch.float16)
+        key = torch.randn([48, 115, 192], dtype=torch.float16)
+        value = torch.randn([48, 115, 128], dtype=torch.float16)
+        select_block_count = 1
+        select_block_size = 16
+        actual_seq_qlen = [1]
+        actual_seq_kvlen = [48]
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_3(self):
+        batch = 5
+        query = torch.randn([batch, 96, 192], dtype=torch.float16)
+        key = torch.randn([4224 * batch, 3, 192], dtype=torch.float16)
+        value = torch.randn([4224 * batch, 3, 128], dtype=torch.float16)
+        select_block_count = 32
+        select_block_size = 128
+        actual_seq_qlen = [i for i in range(1, batch + 1)]
+        actual_seq_kvlen = [4224 * i for i in range(1, batch + 1)]
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen)
+
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_mask_1(self):
+        query = torch.randn([130, 2, 192], dtype=torch.float16)
+        key = torch.randn([1088, 2, 192], dtype=torch.float16)
+        value = torch.randn([1088, 2, 128], dtype=torch.float16)
+        select_block_count = 16
+        select_block_size = 64
+        actual_seq_qlen = [130]
+        actual_seq_kvlen = [1088]
+        atten_mask = torch.tensor([[1]], dtype=torch.bool)
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_mask_2(self):
+        query = torch.randn([50, 4, 192], dtype=torch.float16)
+        key = torch.randn([128, 2, 192], dtype=torch.float16)
+        value = torch.randn([128, 2, 128], dtype=torch.float16)
+        select_block_count = 5
+        select_block_size = 16
+        actual_seq_qlen = [50]
+        actual_seq_kvlen = [128]
+        atten_mask = torch.tensor([[1]], dtype=torch.bool)
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_mask_3(self):
+        query = torch.randn([100, 32, 192], dtype=torch.float16)
+        key = torch.randn([4224, 1, 192], dtype=torch.float16)
+        value = torch.randn([4224, 1, 128], dtype=torch.float16)
+        select_block_count = 32
+        select_block_size = 128
+        actual_seq_qlen = [100]
+        actual_seq_kvlen = [4224]
+        atten_mask = torch.tensor([[1]], dtype=torch.bool)
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_mask_4(self):
+        query = torch.randn([100, 32, 192], dtype=torch.float16)
+        key = torch.randn([4144, 1, 192], dtype=torch.float16)
+        value = torch.randn([4144, 1, 128], dtype=torch.float16)
+        select_block_count = 19
+        select_block_size = 112
+        actual_seq_qlen = [100]
+        actual_seq_kvlen = [4144]
+        atten_mask = torch.tensor([[1]], dtype=torch.bool)
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to version 8.3.RC1.B020 and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_nsa_select_attention_mask_5(self):
+        query = torch.randn([1, 2, 192], dtype=torch.float16)
+        key = torch.randn([1344, 1, 192], dtype=torch.float16)
+        value = torch.randn([1344, 1, 128], dtype=torch.float16)
+        select_block_count = 1
+        select_block_size = 16
+        actual_seq_qlen = [1]
+        actual_seq_kvlen = [1344]
+        atten_mask = torch.tensor([[1]], dtype=torch.bool)
+        self.execute_npu_nsa_select_attention_case(query, key, value, select_block_count, select_block_size,
+                                                   actual_seq_qlen, actual_seq_kvlen, atten_mask)
 
 if __name__ == "__main__":
     run_tests()

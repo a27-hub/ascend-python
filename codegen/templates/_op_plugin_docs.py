@@ -9990,10 +9990,11 @@ Tensor：代表softmax计算的sum中间结果，用于反向计算。
 2. 输入query、key、value的D（head_dim）必须满足D_q == D_k，D_k >= D_v。
 3. 输入query、key、value的数据类型必须一致。
 4. 输入query、key、value的input_layout必须一致，且只支持TND。
-5. select_block_size目前仅支持64，与此对应的select_block_count为16。
-6. topk_indices必须大于等于0且小于等于B对应的S2 / 64。
-7. 支持输入query的N和key/value的N不相等，但必须成比例关系，即N_q / N_kv必须是非0整数，称为G（group），且需满足G <= 32
-- B（batchsize）：取值范围为1\~65536。
+5. select_block_size支持<=128且满足16的整数倍。
+6. select_block_count支持<=32。
+7. topk_indices必须大于等于0且小于B对应的S2 / select_block_size。
+8. 支持输入query的N和key/value的N不相等，但必须成比例关系，即N_q / N_kv必须是非0整数，称为G（group），且需满足G <= 32
+- B（batchsize）：取值范围为1\~1024。
 - N（head_num）：取值范围为1\~128。
 - G（group）：取值范围为1\~32。
 - S（seq_length）：取值范围为1\~128K。且对于KV的S >= select_block_size * select_block_count,且为select_block_size的倍数。
