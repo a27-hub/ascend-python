@@ -1667,6 +1667,80 @@ tensor([[[-1.5771e-01, -1.4331e-01, -1.0846e-01,  ..., -1.1133e-01,
 
 
 _add_torch_npu_docstr(
+    "npu_gelu_quant",
+    """
+npu_gelu_quant(Tensor self, *, Tensor input_scale=None, Tensor? input_offset=None, str approximate='none', str quant_mode='dynamic', int? dst_type=None, str round_mode="rint") -> (Tensor, Tensor)
+
+功能描述:
+    对张量进行GELU(Gaussian Error Linear Unit，高斯误差线性单元)激活操作，再对结果进行静态/动态量化。
+
+接口原型:
+    npu_gelu_quant(Tensor self, *, Tensor? input_scale=None, Tensor? input_offset=None, str approximate='none', str quant_mode='dynamic', int? dst_type=None, str round_mode="rint") -> (Tensor, Tensor)
+    
+参数说明:
+    - self：Tensor类型，需要gelu函数激活并量化的数据，数据类型支持torch.float16，torch.bfloat16，torch.float32。数据格式支持ND。
+        - 动态量化场景下（即quant_mode为'dynamic'时），self的维度是2~8维。
+        - 静态量化场景下（即quant_mode为'static'时），self的维度是1~8维。
+    - input_scale：Tensor类型可选输入，表示输入的量化尺度（静态场景）或平滑缩放尺度（动态场景），quant_mode为'static'时必须传入，
+        数据类型需要和self保持一致或者比self高。shape仅支持1维，大小只能是self的尾轴维度大小或1。
+    - input_offset：Tensor类型可选输入，表示量化输入的偏执，数据类型需要和self保持一致或者比self高。
+    - approximate：string类型可选属性，表示gelu激活函数的模式，支持'none'，'tanh'，分别对应gelu激活函数的erf和tanh模式。默认值为'none'。
+    - quant_mode：string类型可选属性，表示量化模式，支持'dynamic'，'static'，分别对应动态量化和静态量化模式。默认值为'dynamic'。
+    - dst_type：int类型的可选属性，指定输出y的数据类型，默认值为torch.int8，支持取值torch.int8(1)，torch_npu.hifloat8(290)，
+        torch.float8_e5m2(23)，torch.float8_e4m3fn(24)。
+    - round_mode：string类型可选属性，表示最终cast到量化输出的舍入模式。默认值为'rint'。
+        当dst_type为torch.int8，torch.float8_e5m2，torch.float8_e4m3fn时，支持'rint'。
+        当dst_type为torch_npu.hifloat8时，支持'round'，'hybrid'。
+
+输出说明：
+    - y：Tensor类型，输入self量化后的对应结果，数据类型由参数dst_type指定，支持torch.int8，torch_npu.hifloat8，torch.float8_e5m2，torch.float8_e4m3fn。shape与输入self一致。
+    - out_scale：Tensor类型，表示动态量化场景中动态量化的尺度，数据类型支持float32，shape为输入self剔除最后一个维度的结果，
+        如self的shape为[a,b,c]，则out_scale的shape为[a,b]。当quant_mode为'static'时，输出为None。
+
+约束说明:
+    - 该接口支持图模式（目前仅支持Pytorch 2.1 版本）。
+    - 目标数据类型为torch_npu.hifloat8时，必须传入支持的round_mode，不支持默认值'rint'。
+
+支持的型号:
+    昇腾910_95 AI处理器
+
+调用示例:
+1. 单算子调用
+```python
+import torch
+import torch_npu
+
+# generate inputs
+x = torch.randn((32,128), dtype=torch.float32).npu()
+y, scale = torch_npu.npu_gelu_quant(x)
+
+
+2. 图模式调用
+import torch
+import torch_npu
+import torchair
+import numpy as np
+
+class NetModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x, input_scale=None, input_offset=None, approximate='none', quant_mode='dynamic', dst_type=None, round_mode="rint"):
+        return torch_npu.npu_gelu_quant(
+            x, input_scale=input_scale, input_offset=input_offset, approximate=approximate, quant_mode=quant_mode, dst_type=dst_type, round_mode=round_mode)
+
+# generate inputs
+x = torch.randn((32,128), dtype=torch.float16).npu()
+model = NetModel()
+config = torchair.CompilerConfig()
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
+y, scale = model(x)
+
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_get_float_status",
     """
 torch_npu.npu_get_float_status(self) -> Tensor
