@@ -57,6 +57,302 @@ class TestFusedInferAttentionScore(TestCase):
             query, key, value, num_heads=2, input_layout="NTD_TND", scale=scale, pre_tokens=65535, next_tokens=65535, actual_seq_lengths=actseqlen, 
             actual_seq_lengths_kv=actseqlenkv, softmax_lse_flag=softmax_lse_flag)
     
+    def compare_output_data(self, out, golden, ratios):
+        error_count = 0
+        strict_error_count = 0
+        fp16_min_normal = 1.0 / (1 << 14)
+        golden = golden.flatten().to(torch.float32)
+        out = out.flatten().to(torch.float32)
+        diff = torch.abs(golden - out)
+        max_diff = diff.max().item()
+        limit_error = torch.maximum(torch.abs(golden * ratios[0]), torch.tensor(ratios[1]))
+        strict_limit_error = torch.maximum(torch.abs(golden * ratios[2]), torch.tensor(ratios[3]))
+        error_count = torch.gt(diff, limit_error).sum().item()
+        strict_error_count = torch.gt(diff, strict_limit_error).sum().item()
+        calc_times = self.head_size_qk * self.max_context_len + 4
+        if self.data_type == torch.bfloat16:
+            if calc_times < 2048:
+                error = 2**(-7)
+            else:
+                error = 2**(-6)
+            error_threshold = torch.clamp(torch.abs(golden), min=1) * error
+            res = (diff <= error_threshold).all().item()
+            return res
+        else:
+            if calc_times < 2048:
+                error = 2**(-8)
+            else:
+                error = 2**(-7)
+            error_threshold = torch.clamp(torch.abs(golden), min=1) * error
+            res = (diff <= error_threshold).all().item()
+            return res
+
+    def group_matmul(self, head, kv_head, A, B):
+        group_num = head // kv_head
+        score = None
+        for i in range(kv_head):
+            group_score = torch.matmul(A[i * group_num: (i + 1) * group_num, :, :].to(torch.float32),
+                                    B[i:(i + 1), :, :].to(torch.float32))
+            if score is None:
+                score = group_score
+            else:
+                score = torch.cat((score, group_score), 0)
+        return score
+
+    def softmax_numpy(self, sim):
+        sim = sim.cpu().numpy()
+        row_max = np.max(sim, axis=-1, keepdims=True)
+        sim_sub = sim - row_max
+        sim_sub = np.exp(sim_sub)
+        row_sum = np.sum(sim_sub, axis=-1, keepdims=True)
+        soft_res = sim_sub / row_sum
+        return soft_res
+
+    def ref_masked_attention(self,
+            query,  # (q_seqlen, num_heads, head_size)
+            key,    # (k_seqlen, kv_heads, head_size)
+            value,
+            scale: float,
+            mask,    # (q_seqlen, k_seqlen)
+    ):
+        # Q * K.T
+        query = query
+        query = torch.permute(query, (1, 0, 2))
+        key = torch.permute(key, (1, 2, 0))
+
+        sim_high = self.group_matmul(query.shape[0], key.shape[0], query, key)  # (head_num, q_seqlen, k_seqlen)
+
+        sim_high = sim_high * scale
+        if mask is not None:
+            sim_high = sim_high + (mask[:sim_high.shape[-2], :sim_high.shape[-1]] * self.post_mask_factor).to(torch.float32)
+
+        # softmax
+        p_high = self.softmax_numpy(sim_high)
+        p = torch.from_numpy(p_high).to(query.dtype)
+        p_high = torch.from_numpy(p_high).to(torch.float32)
+        value = torch.permute(value, (1, 0, 2))
+
+        # P * V
+        out_high = self.group_matmul(query.shape[0], key.shape[0], p_high, value)
+        out = self.group_matmul(query.shape[0], key.shape[0], p, value)
+        out_high = torch.permute(out_high, (1, 0, 2))
+        out = torch.permute(out, (1, 0, 2))
+        out = out.to(query.dtype)
+        return out, out_high
+
+    def ref_single_query_cached_kv_attention(self, params: dict) -> None:
+        output = params['output']
+        true_out = params['true_out']
+        query = params['query']
+        key_cache = params['key_cache']
+        value_cache = params['value_cache']
+        block_tables = params['block_tables']
+        q_seqlen_list = params['q_seqlen_list']
+        k_seqlen_list = params['k_seqlen_list']
+        global_mask = params['global_mask']
+        mask_type = params['mask_type']
+        window_size = params['window_size']
+
+        num_heads = query.shape[2]
+        kv_heads = value_cache.shape[2]
+        head_size_qk = key_cache.shape[3]
+        head_size_vo = value_cache.shape[3]
+        block_size = value_cache.shape[1]
+
+        batch = len(q_seqlen_list)
+        scale = 1.0 / (head_size_qk ** 0.5)
+        cu_seqlen = 0
+        for i in range(batch):
+            q_seqlen = int(q_seqlen_list[i])
+            k_seqlen = int(k_seqlen_list[i])
+            q = query[i]
+            block_table = block_tables[i]
+            keys = []
+            values = []
+            cur_window_size = window_size
+            if k_seqlen < window_size:
+                cur_window_size = k_seqlen
+            for j in range(k_seqlen - cur_window_size, k_seqlen):
+                block_number = int(block_table[j // block_size][0])
+                block_offset = j % block_size
+
+                k = key_cache[block_number, block_offset, :, :]
+                k = k.reshape(kv_heads, head_size_qk)
+                k = torch.tensor(k)
+                keys.append(k)
+
+                v = value_cache[block_number, block_offset, :, :]
+                v = v.reshape(kv_heads, head_size_vo)
+                v = torch.tensor(v)
+                values.append(v)
+            keys = torch.stack(keys, axis=0)
+            values = torch.stack(values, axis=0)
+
+            if mask_type == 1:
+                mask = global_mask[k_seqlen - q_seqlen:k_seqlen, :k_seqlen]  # prefill, decoder, prefill + decoder
+            elif mask_type == 3:
+                mask = global_mask[cu_seqlen:(cu_seqlen + q_seqlen), :]  # lookahead: cur_q: cur_q + q
+            else:
+                mask = None
+            out, out_high = self.ref_masked_attention(q, keys, values, scale, mask)
+            out = out.reshape(-1, num_heads, head_size_vo)
+            out_high = out_high.reshape(-1, num_heads, head_size_vo)
+            output[i] = out
+            true_out[i] = out_high
+            cu_seqlen += q_seqlen
+
+    def calc_data(self, params):
+        q = params['q']
+        k = params['k']
+        v = params['v']
+        num_heads = params['num_heads']
+        kv_heads = params['kv_heads']
+        num_blocks = params['num_blocks']
+        block_size = params['block_size']
+        head_size_qk = params['head_size_qk']
+        head_size_vo = params['head_size_vo']
+        q_seqlen_list = params['q_seqlen_list']
+        k_seqlen_list = params['k_seqlen_list']
+        mask_type = params['mask_type']
+        window_size = params['window_size']
+        blk_tab = params['blk_tab']
+        dtype = params.get('dtype', torch.float16)
+        self.data_type = dtype
+        self.head_size_qk = head_size_qk
+
+        num_tokens = np.array(q_seqlen_list).sum()
+        batch_size = len(q_seqlen_list)
+        self.max_context_len = max(k_seqlen_list)
+
+        q_seqlen = 1
+
+        query = q.reshape(batch_size, q_seqlen, num_heads, head_size_qk)
+        key_cache = k.reshape(num_blocks, block_size, kv_heads, head_size_qk)
+        value_cache = v.reshape(num_blocks, block_size, kv_heads, head_size_vo)
+
+        blktab_data = np.array(blk_tab, dtype=np.int32).reshape(-1)
+
+        query = query
+        key_cache = key_cache
+        value_cache = value_cache
+
+        max_k_seqlen = max(k_seqlen_list)
+        max_num_blocks_per_seq = (max_k_seqlen + block_size - 1) // block_size
+        block_tables = []   # (num_tokens, max_num_blocks_per_seq）
+        for i in range(batch_size):
+            block_table = []
+            for j in range(max_num_blocks_per_seq):
+                block_table.append([blktab_data[i * max_num_blocks_per_seq + j]])
+            block_tables.append(block_table)
+        self.pre_mask_factor = -10000.0
+        self.post_mask_factor = 1.0
+        if self.data_type == torch.bfloat16:
+            self.pre_mask_factor = 1.0
+            self.post_mask_factor = -10000.0
+
+        if mask_type == 1:
+            mask = np.ones(shape=(max_k_seqlen, max_k_seqlen)).astype(np.float16)
+            mask = np.triu(mask, 1)
+            mask *= -10000.0
+            mask = torch.from_numpy(mask).to(dtype)
+        elif mask_type == 3:
+            mask = np.zeros(shape=(batch_size, max_k_seqlen)).astype(np.float16)
+            pre_qseqlen = 0
+            for i in range(batch_size):
+                qseqlen = q_seqlen_list[i]
+                kseqlen = k_seqlen_list[i]
+                tri = np.ones((qseqlen, qseqlen))
+                tri = np.triu(tri, 1)
+                tri *= self.pre_mask_factor
+                mask[pre_qseqlen:(pre_qseqlen + qseqlen), kseqlen - qseqlen:kseqlen] = tri
+                pre_qseqlen += qseqlen
+
+            mask = torch.from_numpy(mask).to(dtype)
+        elif mask_type == 0:
+            mask = None
+
+        shape_out = (batch_size, q_seqlen, num_heads, head_size_vo)
+        ref_output = torch.zeros(shape_out, dtype=dtype)
+        true_out = torch.zeros(shape_out, dtype=torch.float32)
+        ref_params = {
+            'output': ref_output,
+            'true_out': true_out,
+            'query': query,
+            'key_cache': key_cache,
+            'value_cache': value_cache,
+            'block_tables': block_tables,
+            'q_seqlen_list': q_seqlen_list,
+            'k_seqlen_list': k_seqlen_list,
+            'global_mask': mask,
+            'mask_type': mask_type,
+            'window_size': window_size
+        }
+        self.ref_single_query_cached_kv_attention(ref_params)
+
+        self.q = query
+        self.key_cache = key_cache
+        self.value_cache = value_cache
+        self.block_tables = np.array(block_tables).astype(np.int32)
+        self.q_seqlen_list = np.array(q_seqlen_list).astype(np.int32)
+        self.k_seqlen_list = np.array(k_seqlen_list).astype(np.int32)
+        self.mask = mask
+        self.golden_out = ref_output
+        self.true_out = true_out
+
+    def golden_compare(self, out_tensors, golden_tensors):
+        result_old = self.compare_output_data(out_tensors[0], golden_tensors[0], [0.001, 0.001, 0.005, 0.005])
+        return result_old
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_fused_infer_attention_score_sliding(self, device="npu"):
+        b = 2
+        n = 64
+        kv_n = 16
+        d_qk = 128
+        d_vo = 192
+
+        block_num = 128
+        block_size = 64
+
+        max_s_kv = 16 * 1024
+
+        # 生成随机数据，并发送到npu
+        q = torch.randn(b, 1, n * d_qk, dtype=torch.bfloat16) # （b, 1, N * D）
+        k = torch.randn(block_num, block_size, kv_n * d_qk, dtype=torch.bfloat16) # （blocknum, block_size, KV_N * D）
+        v = torch.randn(block_num, block_size, kv_n * d_vo, dtype=torch.bfloat16) # （blocknum, block_size, KV_N * D）
+
+        block_table = torch.randint(0, 128, (b, ((max_s_kv + block_size - 1) // block_size)), dtype=torch.int32)
+
+        scale = 1 / math.sqrt(d_qk)
+        actseqlen = [1] * b
+        actseqlenkv = [max_s_kv] * b
+        window_size = 512
+        out, _ = torch.ops.npu.npu_fused_infer_attention_score(q.npu(), k.npu(), v.npu(), block_table=block_table.npu(), actual_seq_lengths_kv=actseqlenkv,
+                        num_heads=n, num_key_value_heads=kv_n, input_layout="BSH", scale=scale, pre_tokens=window_size, block_size=block_size)
+
+        calc_params = {
+            'q': q,
+            'k': k,
+            'v': v,
+            'num_heads': n,
+            'kv_heads': kv_n,
+            'num_blocks': block_num,
+            'block_size': block_size,
+            'head_size_qk': d_qk,
+            'head_size_vo': d_vo,
+            'q_seqlen_list': actseqlen,
+            'k_seqlen_list': actseqlenkv,
+            'mask_type': 0,
+            'window_size': window_size,
+            'blk_tab': block_table,
+            'dtype': torch.bfloat16
+        }
+        self.calc_data(calc_params)
+        out_r = out.reshape(self.golden_out.shape)
+        res = self.golden_compare([self.golden_out.cpu()], [out_r.cpu()])       
+        self.assertRtolEqual(res, True)
+
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_fused_infer_attention_score(self, device="npu"):
