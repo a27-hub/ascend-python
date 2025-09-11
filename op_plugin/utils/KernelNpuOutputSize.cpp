@@ -2025,7 +2025,7 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_compress_attention_infer_out_size(const 
     if (input_layout == "TND") {
         output_size = {query.size(DIM_0), query.size(DIM_1), head_size_vo};
     } else {
-        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), head_size_vo};
+        output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), value.size(DIM_3)};
     }
 
     return output_size;
