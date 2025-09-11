@@ -290,6 +290,35 @@ struct LinearParam {
     uint8_t rsv[23] = {0};
 };
 
+struct TopkToppSamplingParam {
+    //! \brief TopkToppSamplingType
+    enum TopkToppSamplingType {
+        SAMPLING_UNDEFINED = -1,         //!< 未定义，不作为取样处理类型。
+        SINGLE_TOPK_SAMPLING,            //!< 非batch级别随机种子、top-k。
+        BATCH_TOPK_MULTINOMIAL_SAMPLING, //!< batch级别随机种子、top-k的multinomial取样
+        BATCH_TOPK_EXPONENTIAL_SAMPLING, //!< batch级别随机种子，top-k的exponential取样。
+        BATCH_TOPK_MULTINOMIAL_LOGPROBS_SAMPLING, //!< batch级别随机种子、top-k的multinomial取样，输出增加logProbs。
+        BATCH_TOPK_EXPONENTIAL_LOGPROBS_SAMPLING, //!< batch级别随机种子，top-k的exponential取样，输出增加logProbs。
+        SAMPLING_MAX,                    //!< 枚举最大值，不作为取样处理类型。
+    };
+    //! \brief 指定取样处理类型。
+    TopkToppSamplingType topkToppSamplingType = SINGLE_TOPK_SAMPLING;
+    //! \brief top-p阶段随机抽样使用的随机数种子，默认值为0。
+    std::vector<uint32_t> randSeeds;
+    //! \brief top-p阶段随机抽样使用的随机数种子，默认值为0。
+    uint32_t randSeed = 0;
+    //! \brief top-k阶段保留的词的个数，需要小于词表的词数，默认值为100。top-k必须大于0且小于或等于输入probs最后一维的大小。
+    uint32_t topk = 100;
+    //!
+    //! \brief 为scalar的int型变量。取值范围是(0, 16384]。
+    //!
+    int32_t logProbsSize = 0;
+    //!
+    //! \brief 预留参数
+    //!
+    uint8_t rsv[12] = {0};
+};
+
 struct GroupTopkParam {
     //!
     //! \brief 每个token分组数量。注：“专家总数”为inTensor0Desc.shape.dims[1]的值。
