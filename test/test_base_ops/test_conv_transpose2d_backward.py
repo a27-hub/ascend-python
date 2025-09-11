@@ -7,6 +7,7 @@ import numpy as np
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestConvTranspose2dBackward(TestCase):
@@ -36,6 +37,7 @@ class TestConvTranspose2dBackward(TestCase):
         weight_grad = weight.grad.cpu()
         return res_forward, input_grad, weight_grad
 
+    @SupportedDevices(['Ascend910A'])
     def conv_transpose2d_backward_result(self, shape_format):
         for item in shape_format:
             cpu_input1, npu_input1 = create_common_tensor(item[0], -2, 2)
@@ -50,6 +52,27 @@ class TestConvTranspose2dBackward(TestCase):
                 cpu_input1 = cpu_input1.half().float()
                 cpu_input2 = cpu_input2.half().float()
                 cpu_bias = cpu_bias.half().float()
+            cpu_output, cpu_input_grad, cpu_weight_grad = self.cpu_op_exec(cpu_input1, cpu_input2, bias=cpu_bias)
+            npu_output, npu_input_grad, npu_weight_grad = self.npu_op_exec(npu_input1, npu_input2, bias=npu_bias)
+            if item[0][0] == np.float16:
+                cpu_output = cpu_output.half()
+                cpu_input_grad = cpu_input_grad.half()
+                cpu_weight_grad = cpu_weight_grad.half()
+
+            self.assertRtolEqual(cpu_output.detach(), npu_output.detach(), prec=1e-3)
+            self.assertRtolEqual(cpu_input_grad, npu_input_grad, prec=1e-3)
+            self.assertRtolEqual(cpu_weight_grad, npu_weight_grad, prec=1e-3)
+
+    @SupportedDevices(['Ascend910B'])
+    def conv_transpose2d_backward_result(self, shape_format):
+        for item in shape_format:
+            cpu_input1, npu_input1 = create_common_tensor(item[0], -2, 2)
+            cpu_input2, npu_input2 = create_common_tensor(item[1], -2, 2)
+            cpu_bias, npu_bias = create_common_tensor((item[0][0], 0, 4), -100, 100)
+            if item[0][0] == np.float16:
+                cpu_input1 = cpu_input1.float()
+                cpu_input2 = cpu_input2.float()
+                cpu_bias = cpu_bias.float()
             cpu_output, cpu_input_grad, cpu_weight_grad = self.cpu_op_exec(cpu_input1, cpu_input2, bias=cpu_bias)
             npu_output, npu_input_grad, npu_weight_grad = self.npu_op_exec(npu_input1, npu_input2, bias=npu_bias)
             if item[0][0] == np.float16:
