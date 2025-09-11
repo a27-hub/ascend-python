@@ -5,6 +5,7 @@ import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestIndexPut(TestCase):
@@ -134,6 +135,7 @@ class TestIndexPut(TestCase):
         ninput[:, [[1, 2, 1], [1, 2, 0]], :, [[1, 0, 2]]] = 1000
         self.assertRtolEqual(cinput.numpy(), ninput.cpu().numpy())
 
+    @SupportedDevices(['Ascend910A'])
     def test_index_put_tensor_fp32(self):
         cinput = torch.randn(4, 4, 4, 4)
         ninput = cinput.npu()
