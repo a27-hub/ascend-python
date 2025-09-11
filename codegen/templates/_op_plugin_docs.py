@@ -10737,7 +10737,7 @@ _add_torch_npu_docstr(
 该接口用于完成PMCC模型混淆引擎的资源初始化。
 
 接口原型: 
-torch_npu.obfuscation_initialize(int hidden_size, int tp_rank, int cmd, int data_type, int model_obf_seed_id, int data_obf_seed_id, int thread_num, float obf_coefficient) -> Tensor
+torch_npu.npu.obfuscation_initialize(int hidden_size, int tp_rank, int cmd, int data_type, int model_obf_seed_id, int data_obf_seed_id, int thread_num, float obf_coefficient) -> Tensor
 
 参数说明: 
 - hidden_size(Int, 计算输入): 必选参数,隐藏层的维度,数据类型为int32,支持输入范围为1-10000,仅在cmd设置为1或2时需要填写有效值,否则填0。
@@ -10772,7 +10772,7 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
 """
 )
 
@@ -10784,7 +10784,7 @@ _add_torch_npu_docstr(
 该接口用于完成PMCC模型混淆引擎的资源释放。
 
 接口原型: 
-torch_npu.obfuscation_finalize(Tensor fd_to_close) -> Tensor
+torch_npu.npu.obfuscation_finalize(Tensor fd_to_close) -> Tensor
 
 参数说明: 
 - fd_to_close(Tensor, 计算输入): 填写本算子初始化时返回的fd。数据类型为int32。
@@ -10809,8 +10809,8 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
-torch_npu.obfuscation_finalize(fd)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+torch_npu.npu.obfuscation_finalize(fd)
 """
 )
 
@@ -10822,7 +10822,7 @@ _add_torch_npu_docstr(
 该接口用于实现矩阵乘计算输入和输出的transpose操作。
 
 接口原型: 
-torch_npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
+torch_npu.npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
 
 参数说明: 
 - fd(Tensor, 计算输入): 必选参数,待关闭的socket连接符,cmd为3时,填写本算子在cmd为1时返回的fd,否则填0,数据类型为int32。
@@ -10854,9 +10854,9 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
 param = torch.tensor([3584], device=device)
-x_obf_out = torch_npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
+x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
 
 """
 )
