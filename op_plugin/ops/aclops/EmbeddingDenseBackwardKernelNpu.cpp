@@ -15,6 +15,7 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#include <iostream>
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -33,15 +34,41 @@ at::Tensor embedding_dense_backward(
 
     // indices must be int64 in pytorch, but npu can only support int32
     auto indices_int32 = at_npu::native::custom_ops::npu_dtype_cast(indices, at::kInt);
+    std::cout << "sort start!!!" << std::endl;
+    at::Tensor sort_indices = npu_preparation::apply_tensor(indices_int32);
+    at::Tensor pos_idx = npu_preparation::apply_tensor(indices_int32);
     at_npu::native::OpCommand cmd;
-    cmd.Name("EmbeddingDenseGrad")
+    int64_t dim = -1;
+    cmd.Name("Sort")
+        .Input(indices)
+        .Output(sort_indices)
+        .Output(pos_idx)
+        .Attr("axis", dim)
+        .Attr("descending", false)
+        .Run();
+
+    std::cout << "sort finish!!!" << std::endl;
+    
+    cmd.Name("EmbeddingDenseGradV2")
         .Input(grad_output)
-        .Input(indices_int32)
+        .Input(sort_indices)
+        .Input(pos_idx)
         .Attr("num_weights", num_weights)
         .Attr("padding_idx", padding_idx)
         .Attr("scale_grad_by_freq", scale_grad_by_freq)
         .Output(result)
         .Run();
+    std::cout << "embddingv2 finish!!!" << std::endl;
     return result;
+
+    // cmd.Name("EmbeddingDenseGrad")
+    //     .Input(grad_output)
+    //     .Input(indices_int32)
+    //     .Attr("num_weights", num_weights)
+    //     .Attr("padding_idx", padding_idx)
+    //     .Attr("scale_grad_by_freq", scale_grad_by_freq)
+    //     .Output(result)
+    //     .Run();
+    // return result;
 }
 } // namespace acl_op
