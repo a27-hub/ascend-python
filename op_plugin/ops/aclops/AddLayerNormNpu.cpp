@@ -31,8 +31,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_layer_norm(co
     at::Tensor y;
     at::Tensor x;
     if (x1.dtype() == x2.dtype()) {
+        bool is_beta_gamma_mix_Dtype = (gamma.dtype() != x1.dtype()) &&
+                                       (gamma.dtype() == at::kFloat);
+        bool is_soc_version_910C = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910C1) &&
+                                   (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910D1);
+    if (is_beta_gamma_mix_Dtype && is_soc_version_910C) {
+        y = npu_preparation::apply_tensor(x1);
+        x = npu_preparation::apply_tensor(x1.sizes(), x1.options().dtype(at::kFloat), x1);
+    } else {
         y = npu_preparation::apply_tensor(x1);
         x = npu_preparation::apply_tensor(x1);
+    }
     } else {
         y = npu_preparation::apply_tensor(x1.sizes(), x1.options().dtype(at::kFloat), x1);
         x = npu_preparation::apply_tensor(x1.sizes(), x1.options().dtype(at::kFloat), x1);
