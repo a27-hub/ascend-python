@@ -22,12 +22,12 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
-void _split_and_exec_npu_cmd_addcdiv_tensor(const at::TensorList input,
-    const at::TensorList tensors1,
-    const at::TensorList tensors2,
-    const at::Tensor scalars,
-    at::TensorList result,
-    bool is_inplace)
+void _split_and_exec_npu_cmd_addcdiv_tensor_v1(const at::TensorList input,
+                                               const at::TensorList tensors1,
+                                               const at::TensorList tensors2,
+                                               const at::Tensor scalars,
+                                               at::TensorList result,
+                                               bool is_inplace)
 {
     size_t tensor_count = input.size();
     size_t max_tensor_count = is_inplace ? 16 : 12;
@@ -62,6 +62,56 @@ void _split_and_exec_npu_cmd_addcdiv_tensor(const at::TensorList input,
     }
 }
 
+void _split_and_exec_npu_cmd_addcdiv_tensor_v2(const at::TensorList input,
+                                               const at::TensorList tensors1,
+                                               const at::TensorList tensors2,
+                                               at::ArrayRef<at::Scalar> scalars,
+                                               at::TensorList result,
+                                               bool is_inplace)
+{
+    size_t tensor_count = input.size();
+    size_t max_tensor_count = is_inplace ? 16 : 12;
+    size_t loop_time = tensor_count / max_tensor_count;
+    size_t remaining_count = tensor_count % max_tensor_count;
+    size_t data_count = max_tensor_count;
+    if (remaining_count > 0) {
+        loop_time++;
+    }
+
+    if (tensor_count <= max_tensor_count) {
+        EXEC_NPU_CMD(aclnnForeachAddcdivScalarListV2, input, tensors1, tensors2, scalars, result);
+        return;
+    }
+    for (size_t i = 0; i < loop_time; i++) {
+        if (i == loop_time - 1 && remaining_count > 0) data_count = remaining_count;
+        at::TensorList temp_input(input.data() + i * max_tensor_count, data_count);
+        at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, data_count);
+        at::TensorList temp_tensors2(tensors2.data() + i * max_tensor_count, data_count);
+        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + i * max_tensor_count, data_count);
+        at::TensorList temp_result(result.data() + i * max_tensor_count, data_count);
+        EXEC_NPU_CMD(aclnnForeachAddcdivScalarListV2, temp_input, temp_tensors1, temp_tensors2, temp_scalars, temp_result);
+    }
+}
+
+std::vector<at::Tensor> _foreach_addcdiv_tensor_v1(const at::TensorList input,
+                                                   const at::TensorList tensors1,
+                                                   const at::TensorList tensors2,
+                                                   at::TensorList result_,
+                                                   std::vector<at::Tensor> result,
+                                                   const at::Tensor& scalars)
+{
+    _split_and_exec_npu_cmd_addcdiv_tensor_v1(input, tensors1, tensors2, scalars, result_, false);
+    return result;
+}
+
+void _foreach_addcdiv_tensor_v1_(const at::TensorList input,
+                                 const at::TensorList tensors1,
+                                 const at::TensorList tensors2,
+                                 const at::Tensor& scalars)
+{
+    _split_and_exec_npu_cmd_addcdiv_tensor_v1(input, tensors1, tensors2, scalars, input, true);
+}
+
 std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
     const at::TensorList tensors1,
     const at::TensorList tensors2,
@@ -94,14 +144,15 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
             tensor.options().dtype(scalar_type));
     }
     at::TensorList result_ = at::TensorList(result);
-    _split_and_exec_npu_cmd_addcdiv_tensor(input, tensors1, tensors2, scalars, result_, false);
+    DO_COMPATIBILITY(aclnnForeachAddcdivScalarListV2, _foreach_addcdiv_tensor_v1(input, tensors1, tensors2, result_, result, scalars));
+    _split_and_exec_npu_cmd_addcdiv_tensor_v2(input, tensors1, tensors2, scalars_, result_, false);
     return result;
 }
 
 void _foreach_addcdiv_(const at::TensorList input,
-    const at::TensorList tensors1,
-    const at::TensorList tensors2,
-    const at::Tensor& scalars)
+                       const at::TensorList tensors1,
+                       const at::TensorList tensors2,
+                       const at::Tensor& scalars)
 {
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
@@ -120,7 +171,8 @@ void _foreach_addcdiv_(const at::TensorList input,
     }
 
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2);
-    _split_and_exec_npu_cmd_addcdiv_tensor(input, tensors1, tensors2, scalars, input, true);
+    DO_COMPATIBILITY(aclnnForeachAddcdivScalarListV2, _foreach_addcdiv_tensor_v1_(input, tensors1, tensors2, scalars));
+    _split_and_exec_npu_cmd_addcdiv_tensor_v2(input, tensors1, tensors2, scalars_, input, true);
 }
 #endif
 }
