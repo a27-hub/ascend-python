@@ -43,16 +43,7 @@ tensor_list rotary_mul_backward_nocheck(at::Tensor &dx, at::Tensor &dr1, at::Ten
     TORCH_CHECK(r2.dim() == 4, "The dim of input tensor [r2] shoule equal to four." + OPS_ERROR(ErrCode::PARAM));
     bool check_support = true;
     int64_t broadcast_dim_num = 1;
-    for (int64_t i = 0; i < x.dim(); i++) {
-        if (x.sizes()[i] != r1.sizes()[i]) {
-            broadcast_dim_num = broadcast_dim_num * x.sizes()[i];
-        }
-        if (broadcast_dim_num > 1024) {
-            check_support = false;
-            break;
-        }
-    }
-    if (x.sizes()[3] % 64 != 0 || check_support == false) {
+    if (x.sizes()[3] % 64 != 0) {
         at::Tensor x_grad_mul = at::mul(x, dy);
         at::Tensor x1_grad_mul = at::mul(r1, dy);
         at::Tensor x2_grad_mul = at::mul(r2, dy);
