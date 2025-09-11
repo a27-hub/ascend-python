@@ -5568,6 +5568,14 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNorm
 
+  - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lseOut=None) -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: local_out[0]
+        dtype: local_out[0]
+      exec: aclnnAttentionUpdate, lse, local_out, update_type, out, lseOut
+
   - func: npu_add_rms_norm_cast(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     gen_opapi:
