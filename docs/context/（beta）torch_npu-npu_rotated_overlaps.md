@@ -1,27 +1,35 @@
 # （beta）torch_npu.npu_rotated_overlaps
 
+## 产品支持情况
+
+| 产品                                                         | 是否支持 |
+| ------------------------------------------------------------ | :------: |
+|<term>Atlas A3 训练系列产品</term>            |    √     |
+|<term>Atlas A2 训练系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>                                       |    √     |
+|<term>Atlas 训练系列产品</term>                                       |    √     |
+
+## 功能说明
+
+计算旋转框的重叠面积。
+
 ## 函数原型
 
 ```
 torch_npu.npu_rotated_overlaps(self, query_boxes, trans=False) -> Tensor
 ```
 
-## 功能说明
-
-计算旋转框的重叠面积。
 
 ## 参数说明
 
-- self (Tensor) -梯度增量数据，shape为(B, 5, N)数据类型为float32的3D张量。
-- query_boxes (Tensor) - 标注框，shape为(B, 5, K)数据类型为float32的3D张量。
-- trans (Bool，默认值为False) - 值为True表示“xyxyt”，值为False表示“xywht”。
+- **self** (`Tensor`)：梯度增量数据，shape为(B, 5, N)数据类型为float32的3D张量。
+- **query_boxes** (`Tensor`)：标注框，shape为(B, 5, K)数据类型为float32的3D张量。
+- **trans** (`bool`)：值为True表示“xyxyt”，值为False表示“xywht”。默认值为False。
 
-## 支持的型号
+## 返回值说明
 
-- <term>Atlas 训练系列产品</term>
-- <term>Atlas A2 训练系列产品</term>
-- <term>Atlas A3 训练系列产品</term>
-- <term>Atlas 推理系列产品</term>
+`Tensor`
+
 
 ## 调用示例
 

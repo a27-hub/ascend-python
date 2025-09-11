@@ -5,6 +5,21 @@
 本项目开发了Ascend Extension for Pytorch（torch_npu）算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
 OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch。因此，在编译OpPlugin之前，需要了解、安装昇腾PyTorch。使用手册可参考昇腾社区[Ascend Extension for Pytorch](https://gitee.com/ascend/pytorch/blob/master/README.zh.md)。
 
+## 版本说明
+
+## 版本配套表
+op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
+| op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
+| ------------- | :----------------------------------: |
+| master        |     主线版本，如v2.1.0等             |
+| 7.0.0        |     7.0.0版本，如v2.1.0-7.0.0等       |
+| 6.0.0        |     6.0.0版本，如v2.1.0-6.0.0等       |
+| 6.0.rc3       |   6.0.rc3版本，如v2.1.0-6.0.rc3等    |
+| 6.0.rc2       |   6.0.rc2版本，如v2.1.0-6.0.rc2等    |
+| 6.0.rc1       |   6.0.rc1版本，如v2.1.0-6.0.rc1等    |
+| 5.0.0         |     5.0.0版本，如v2.1.0-5.0.0等      |
+| 5.0.rc3       |   5.0.rc3版本，如v2.1.0-5.0.rc3等    |
+
 ## 编译、安装OpPlugin
 
 ### 发布包安装
@@ -54,18 +69,7 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
    # 典型的whl包名类似：torch_npu-2.1.0.post13+gitb32f3-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
    ```
 
-## 版本配套表
-op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
-| op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
-| ------------- | :----------------------------------: |
-| master        |     主线版本，如v2.1.0等             |
-| 7.0.0        |     7.0.0版本，如v2.1.0-7.0.0等       |
-| 6.0.0        |     6.0.0版本，如v2.1.0-6.0.0等       |
-| 6.0.rc3       |   6.0.rc3版本，如v2.1.0-6.0.rc3等    |
-| 6.0.rc2       |   6.0.rc2版本，如v2.1.0-6.0.rc2等    |
-| 6.0.rc1       |   6.0.rc1版本，如v2.1.0-6.0.rc1等    |
-| 5.0.0         |     5.0.0版本，如v2.1.0-5.0.0等      |
-| 5.0.rc3       |   5.0.rc3版本，如v2.1.0-5.0.rc3等    |
+
 
 ## 支持的型号
 - Atlas 训练系列产品
