@@ -16,7 +16,7 @@
 ## 函数原型
 
 ```
-torch_npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
+torch_npu.npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
 ```
 
 ## 参数说明
@@ -48,7 +48,7 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
 param = torch.tensor([3584], device=device)
-x_obf_out = torch_npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
+x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
 ```
