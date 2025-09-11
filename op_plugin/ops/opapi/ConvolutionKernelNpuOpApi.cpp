@@ -50,17 +50,7 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
     int64_t k = weight.ndimension();
     int64_t inputK = input.ndimension();
     int64_t dim = k - 2; // Subtract nonspatial dimensions: 2
-    bool unBatch = false;
 
-    bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
-    bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
-    // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable = False: turn on JitCompile
-    ASCEND_LOGI("_calc_convolution exec with jit compile: %d, allow internal format: %d",
-                is_jit_enable, is_allow_internel_format);
-    if ((is_allow_internel_format || is_jit_enable) && (dim != 3)) {
-        return acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups,
-                                    false, false, false, false);
-    }
     // Conv1D: 1, Conv2D: 2, Conv3D: 3
     if (dim != 1 && dim != 2 && dim != 3) {
         return at::Tensor();
