@@ -2059,7 +2059,7 @@ c10::SmallVector<int64_t, SIZE> npu_nsa_select_attention_infer_out_size(const at
         output_size = {query.size(DIM_0), query.size(DIM_1), head_num * key_head_dim};
     } else if (input_layout == "TND") {
         auto key_head_dim = value.size(DIM_2) / key_value_head_num;
-        output_size = {query.size(DIM_0), query.size(DIM_1), key_head_dim};
+        output_size = {query.size(DIM_0), head_num, key_head_dim};
     } else {
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), value.size(DIM_3)};
     }

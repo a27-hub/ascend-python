@@ -148,8 +148,8 @@ class TestNpuCompress(TestCase):
             k = k.reshape([k.shape[0], block_size, num_key_value_heads, headDim])
             v = v.reshape([v.shape[0], block_size, num_key_value_heads, headDimV])
         elif layout == 'TND':
-            headDim = q.shape[1]
-            headDimV = v.shape[1] 
+            headDim = q.shape[2]
+            headDimV = v.shape[2] // num_key_value_heads 
             q = q.reshape([batch, 1, num_heads, headDim])
             k = k.reshape([k.shape[0], block_size, num_key_value_heads, headDim])
             v = v.reshape([v.shape[0], block_size, num_key_value_heads, headDimV])
