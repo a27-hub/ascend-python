@@ -5568,6 +5568,14 @@ custom:
         dtype: x1
       exec: aclnnAddRmsNorm
 
+  - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lse_out=None) -> Tensor
+    op_api: all_version
+    gen_opapi:
+      out:
+        size: local_out[0]
+        dtype: local_out[0]
+      exec: aclnnAttentionUpdate, lse, local_out, update_type, out, lse_out
+
   - func: npu_add_rms_norm_cast(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     gen_opapi:
@@ -5600,6 +5608,14 @@ custom:
         size: x1
         dtype: x1
       exec: aclnnAddRmsNormQuant, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, axis, epsilon, div_mode, y1, y2, x_out
+
+    - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lse_out=None) -> Tensor
+      op_api: all_version
+      gen_opapi:
+        out:
+        size: local_out[0]
+        dtype: local_out[0]
+        exec: aclnnAttentionUpdate, lse, local_out, update_type, out, lse_out
 
   - func: npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)
     op_api: all_version
