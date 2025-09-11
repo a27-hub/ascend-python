@@ -284,7 +284,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         -   page attention的使能必要条件是block\_table存在且有效，同时key、value是按照block\_table中的索引在一片连续内存中排布，支持key、value数据类型为`float16`、`bfloat16`。在该场景下key、value的input\_layout参数无效。block\_table中填充的是blockid，当前不会对blockid的合法性进行校验，需用户自行保证。
         -   block\_size是用户自定义的参数，该参数的取值会影响page attention的性能，在使能page attention场景下，block\_size最小为128，最大为512，且要求是128的倍数。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
     
-        -   page attention场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且KV\_N\*D超过65535时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小KV\_N）或调整kv cache排布格式为（blocknum, KV\_N, blocksize, D）解决。当query的input\_layout为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当query的input\_layout为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据actual\_seq\_kvlen和blockSize计算的每个batch的block数量之和。且key和value的shape需保证一致。
+        -   page attention场景下，当输入kv cache排布格式为BnBsH（blocknum, blocksize, H），且KV\_N\*D超过65535时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小KV\_N）或调整kv cache排布格式为BnNBsD（blocknum, KV\_N, blocksize, D）解决。当query的input\_layout为BNSD、TND时，kv cache排布支持BnBsH和BnNBsD两种格式，当query的input\_layout为BSH、BSND时，kv cache排布只支持BnBsH一种格式。blocknum不能小于根据actual\_seq\_kvlen和blockSize计算的每个batch的block数量之和。且key和value的shape需保证一致。
         -   page attention不支持伪量化场景，不支持tensorlist场景。
         -   page attention场景下，必须传入actual\_seq\_kvlen。
         -   page attention场景下，block\_table必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大actual\_seq\_kvlen对应的block数量）。
@@ -376,9 +376,9 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         -   该场景下，block\_size是用户自定义的参数，该参数的取值会影响page attention的性能。key、value输入类型为float16、bfloat16时需要16对齐，key、value输入类型为int8时需要32对齐，推荐使用128。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
         -   参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围。
         -   page attention场景下，blockTable必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大actual\_seq\_kvlen对应的block数量）。
-        -   page attention场景下，当query的input\_layout为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当query的input\_layout为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据actual\_seq\_kvlen和blockSize计算的每个batch的block数量之和。且key和value的shape需保证一致。
-        -   page attention场景下，kv cache排布为（blocknum, KV\_N, blocksize, D）时性能通常优于kv cache排布为（blocknum, blocksize, H）时的性能，建议优先选择（blocknum, KV\_N, blocksize, D）格式。
-        -   page attention使能场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且numKvHeads \* headDim 超过64k时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小 numKvHeads）或调整kv cache排布格式为（blocknum, numKvHeads, blocksize, D）解决。
+        -   page attention场景下，当query的input\_layout为BNSD、TND时，kv cache排布支持BnBsH（blocknum, blocksize, H）和BnNBsD（blocknum, KV\_N, blocksize, D）两种格式，当query的input\_layout为BSH、BSND时，kv cache排布只支持BnBsH一种格式。blocknum不能小于根据actual\_seq\_kvlen和blockSize计算的每个batch的block数量之和。且key和value的shape需保证一致。
+        -   page attention场景下，kv cache排布为BnNBsD时性能通常优于kv cache排布为BnBsH时的性能，建议优先选择BnNBsD格式。
+        -   page attention使能场景下，当输入kv cache排布格式为BnBsH，且numKvHeads \* headDim 超过64k时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小 numKvHeads）或调整kv cache排布格式为BnNBsD解决。
         -   page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围。
 
     -   kv伪量化参数分离：
