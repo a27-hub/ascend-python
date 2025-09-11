@@ -9311,6 +9311,110 @@ y1, y2, rstd, x = torch_npu.npu_add_rms_norm_cast(input_x1, input_x2, input_gamm
 )
 
 _add_torch_npu_docstr(
+    "npu_add_rms_norm_dynamic_quant",
+    """
+接口原型：
+npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, Tensor? outputMask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+
+功能描述
+将RmsNorm前的Add操作、RmsNorm归一化和最多两路DynamicQuant量化进行融合，减少数据搬入搬出操作。
+
+参数说明
+x1: Device侧的Tensor类型，标准化输入张量。shape支持2-8维，数据类型支持FLOAT16、BFLOAT16，格式支持ND。不支持空Tensor。
+x2: Device侧的Tensor类型，标准化输入张量。shape支持2-8维，数据类型支持FLOAT16、BFLOAT16，格式支持ND。不支持空Tensor。
+gamma: Device侧的Tensor类型，归一化权重张量。shape为1维，需与x1最后一维一致，数据类型与x1一致。不支持空Tensor。
+smooth_scale1: Device侧的Tensor类型，第一路量化的smooth_scale张量。可选，shape和数据类型与gamma一致。不支持空Tensor。
+smooth_scale2: Device侧的Tensor类型，第二路量化的smooth_scale张量。可选，shape和数据类型与gamma一致，需与smooth_scale1配合使用。不支持空Tensor。
+beta: Device侧的Tensor类型，归一化偏置项。可选，shape和数据类型与gamma一致。不支持空Tensor
+epsilon: double类型，防止除0错误，默认值为1e-6.
+outputMask: Host侧的Tensor类型，表示输出的掩码，数据类型支持BOOL，支持空指针，长度固定为2
+
+输出说明
+y1: Device侧的Tensor类型，第一路量化输出。数据类型支持INT8。shape、数据格式需要与入参x1保持一致。支持非连续的Tensor，不支持空Tensor。
+y2: Device侧的Tensor类型，第二路量化输出。数据类型支持INT8。shape、数据格式需要与入参x1保持一致。支持非连续的Tensor，不支持空Tensor。若未输入smooth_scale2，此输出无实际意义。
+x_out: Device侧的Tensor类型，x1与x2之和。shape、数据类型与x1一致。
+scale1: Device侧的Tensor类型，第一路量化scale输出。shape为x1除最后一维后的shape，数据类型为float32，数据格式支持ND，支持非连续的Tensor，不支持空Tensor
+scale2: Device侧的Tensor类型，第二路量化scale输出，shape同scale1，数据类型为float32， 数据类型支持ND，支持非连续的Tensor，不支持空Tensor。若未输入smooth_scale2，此输出无实际意义。
+
+约束说明
+所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
+
+支持的型号
+Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A2训练系列产品/Atlas 800I A2推理产品/A200I A2 Box异构组件
+
+调用示例:
+import torch
+import torch_npu
+
+x1 = torch.randn(3, 4, 8, dtype=torch.float16, device='npu')
+x2 = torch.randn(3, 4, 8, dtype=torch.float16, device='npu')
+gamma = torch.ones(8, dtype=torch.float16, device='npu')
+beta = torch.zeros(8, dtype=torch.float16, device='npu')
+smooth_scale1 = torch.ones(8, dtype=torch.float16, device='npu')
+smooth_scale2 = torch.ones(8, dtype=torch.float16, device='npu')
+epsilon = 1e-6
+outputMask = torch.ones(x1.shape[:-1], dtype=torch.bool, device='npu')
+
+y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
+    x1_n, x2_n, gamma_n,
+    smooth_scale1=s1_n,
+    smooth_scale2=s2_n,
+    beta=beta_n,
+    epsilon=eps_f,
+    outputMask=outputMask,
+)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_attention_update",
+    """
+接口原型：
+npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> Tensor
+
+功能描述
+将各SP域PA算子的输出的中间结果lse, attention out 两个局部结果更新成全局结果。
+
+参数说明
+lse：Device侧的TensorList，每个Tensor形状为 (batch * seqLen * headNum)，各sp域计算的lse。数据类型支持 FLOAT，格式支持 ND。
+localOut：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，格式支持 ND。
+updateType：int64_t 类型，指定执行的操作类型。目前仅支持 0（DECODE_UPDATE）。
+
+输出说明
+out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，格式为 ND。
+
+支持的型号
+----------------
+昇腾910B AI处理器
+昇腾910_93 AI处理器
+
+调用示例
+----------------
+import torch
+import torch_npu
+
+dtype = torch.float32
+N = 4
+head_dim = 32  
+
+lse = [
+    torch.randn(N, dtype=dtype, device='npu'),  # 1D: [N]
+    torch.randn(N, dtype=dtype, device='npu'),  # 1D: [N]
+]
+
+local_out = [
+    torch.randn(N, head_dim, dtype=dtype, device='npu'),  # 2D: [N, head_dim]
+    torch.randn(N, head_dim, dtype=dtype, device='npu'),  # 2D: [N, head_dim]
+]
+
+update_type = 0  
+output = torch_npu.npu_attention_update(lse, local_out, update_type)
+return output
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_advance_step_flashattn",
     """
 接口原型：
