@@ -2612,6 +2612,15 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=No
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 
+@impl(m, "npu_add_rms_norm_dynamic_quant")
+def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, smooth_scale2=None, beta=None, epsilon=1e-6, output_mask=None):
+    return (torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
+            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
+            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
+
+
 @impl(m, "npu_mrope")
 def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
     return (torch.empty_like(query), torch.empty_like(key))
