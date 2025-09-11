@@ -1,8 +1,6 @@
-import numpy as np
 import torch_npu
 import torch
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import get_npu_device
 
 
 class TestRepeatInterleaveBackward(TestCase):
@@ -84,6 +82,26 @@ class TestRepeatInterleaveBackward(TestCase):
                                                             repeat_int, repeat_tensor)
 
                             self.assertRtolEqual(result, input_grad)
+        repeat_tensor = True
+        for input_shape in test_shape_all:
+            axis_all = list(range(-len(input_shape), len(input_shape)))
+            for axis in axis_all:
+                for data_type in data_type_all:
+                    for repeats_type in repeats_type_all:
+
+                        repeat_shape = (input_shape[axis],)
+                        repeat_int = False
+                        inputs_data, repeats_data, output_grad = self.custom_op_exec(input_shape,
+                                                                                     repeat_shape,
+                                                                                     axis,
+                                                                                     data_type,
+                                                                                     repeats_type,
+                                                                                     repeat_int)
+                        input_grad = inputs_data.grad.float().detach().numpy()
+                        result = self.supported_op_exec(inputs_data, repeats_data, output_grad,
+                                                        axis, all_back,
+                                                        repeat_int, repeat_tensor)
+                        self.assertRtolEqual(result, input_grad)
 
 
 if __name__ == "__main__":
