@@ -51,19 +51,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_group_norm_out_npu(
     at::Tensor beta = beta_.defined() ? beta_ : at::zeros({C}, X.options());
 
     at_npu::native::OpCommand cmd;
-    cmd.Name("GroupNorm")
+    cmd.Name("GroupNormSwish")
         .Input(X)
         .Input(gamma)
         .Input(beta)
         .Output(y)
         .Output(mean)
-        .Output(variance)
+        .Output(rstd)
         .Attr("num_groups", num_groups)
         .Attr("eps", static_cast<float>(eps))
-        .Attr("is_training", true)
+        .Attr("activate_swish", false)
         .Run();
 
-    rstd = 1.0 / (variance + eps).sqrt();
     return std::make_tuple(y, mean, rstd);
 }
 
