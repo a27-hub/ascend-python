@@ -6445,6 +6445,7 @@ custom:
     acl_op: all_version
 
   - func: npu_swiglu(Tensor self, int dim=-1) -> Tensor
+    acl_op: all_version
     op_api: all_version
     exposed: all_version
     gen_opapi:
@@ -6454,6 +6455,7 @@ custom:
       exec: aclnnSwiGlu
 
   - func: npu_swiglu_backward(Tensor grad_output, Tensor self, int dim=-1) -> Tensor
+    acl_op: all_version
     op_api: all_version
     gen_opapi:
       out:
