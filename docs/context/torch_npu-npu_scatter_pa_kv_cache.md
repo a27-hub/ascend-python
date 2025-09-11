@@ -73,7 +73,6 @@ torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor key_cache, Te
 
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
 - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：仅支持场景一。
-- <term>昇腾910_95 AI处理器</term>：仅支持场景二、三。
 
 ## 调用示例
 
