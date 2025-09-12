@@ -2589,6 +2589,16 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
 
 
+@impl(m, "npu_attention_update")
+def npu_attention_update_meta(lse, local_out, update_type, lse_out=None):
+    torch._check(
+        lse_out is None,
+        lambda: f"lse_out should be None, but got {lse_out}."
+    )
+    ref = local_out[0]
+    return torch.empty(ref.size(), dtype=ref.dtype, device=ref.device)
+
+    
 @impl(m, "npu_add_rms_norm_quant")
 def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True):
     torch._check(
