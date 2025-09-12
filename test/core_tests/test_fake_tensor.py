@@ -2469,19 +2469,6 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
 
 
 class TestAddRmsNormQuant(TestCase):
-    def test_npu_attention_update_meta(self):
-        with FakeTensorMode():
-            N, H, K = 8, 64, 2
-            update_type = 0
-            dtype = torch.float32
-            lse_list = [torch.randn([N], dtype=dtype).npu() for _ in range(K)]
-            local_out_list = [torch.randn([N, H], dtype=dtype).npu() for _ in range(K)]
-            out = torch_npu.npu_attention_update(lse_list, local_out_list, update_type, None)
-            self.assertTrue(out.shape == torch.Size([N, H]))
-            self.assertTrue(out.dtype == dtype)
-            
-
-class TestAddRmsNormQuant(TestCase):
     def test_npu_add_rms_norm_quant(self):
         with FakeTensorMode():
             x1 = torch.randn([2, 16], dtype=torch.float16).npu()
@@ -2509,19 +2496,6 @@ class TestAddRmsNormQuant(TestCase):
             self.assertTrue(y2.dtype == torch.int8)
             self.assertTrue(x_out.shape == x1.shape)
             self.assertTrue(x_out.dtype == x1.dtype)
-
-
-class TestAddRmsNormQuant(TestCase):
-    def test_npu_attention_update_meta(self):
-        with FakeTensorMode():
-            N, H, K = 8, 64, 2
-            update_type = 0
-            dtype = torch.float32
-            lse_list = [torch.randn([N], dtype=dtype).npu() for _ in range(K)]
-            local_out_list = [torch.randn([N, H], dtype=dtype).npu() for _ in range(K)]
-            out = torch_npu.npu_attention_update(lse_list, local_out_list, update_type, None)
-            self.assertTrue(out.shape == torch.Size([N, H]))
-            self.assertTrue(out.dtype == dtype)
 
 
 class TestMoeUpdateExpert(TestCase):

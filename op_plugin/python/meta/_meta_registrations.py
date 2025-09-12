@@ -2612,16 +2612,6 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=No
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 
-@impl(m, "npu_attention_update")
-def npu_attention_update_meta(lse, local_out, update_type, lse_out=None):
-    torch._check(
-        lse_out is None,
-        lambda: f"lse_out should be None, but got {lse_out}."
-    )
-    ref = local_out[0]
-    return torch.empty(ref.size(), dtype=ref.dtype, device=ref.device)
-
-
 @impl(m, "npu_mrope")
 def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
     return (torch.empty_like(query), torch.empty_like(key))
