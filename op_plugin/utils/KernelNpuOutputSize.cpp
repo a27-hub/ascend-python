@@ -2174,4 +2174,14 @@ c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> split_with_sizes_copy_ou
     return output_shapes;
 }
 
+std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> 
+triangular_solve_output_size(const at::Tensor& self, const at::Tensor& A)
+{
+    auto result = at::native::_linalg_broadcast_batch_dims(self, A, "triangular_solve");
+    return std::make_tuple(
+        array_to_small_vector(std::get<0>(result).sizes()),
+        array_to_small_vector(std::get<1>(result).sizes())
+    );
+}
+
 } // namespace op_infer
