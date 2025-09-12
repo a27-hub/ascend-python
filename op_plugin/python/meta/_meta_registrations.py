@@ -1110,6 +1110,10 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
 def _npu_distribute_barrier(x_ref, group, world_size):
     return torch.empty_like(x_ref)
 
+@impl(m, "npu_fault_detection")
+def npu_fault_detection_meta(expand_x, group_ep, ep_world_size, ep_rank_id,
+                             group_detection, detection_world_size, detection_rank_id):
+    return torch.empty(detection_world_size, dtype=torch.bool)
 
 @impl(m, "npu_moe_eplb_update_expert")
 def npu_moe_eplb_update_expert_meta(expert_ids, eplb_table, local_ranke_id, world_size, balance_mode=0):
