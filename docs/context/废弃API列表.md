@@ -76,7 +76,7 @@
 </tr>
 <tr id="row0331103454113"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p19331734194116"><a name="p19331734194116"></a><a name="p19331734194116"></a><a href="（beta）torch_npu-npu_nms_rotated.md">torch_npu.npu_nms_rotated</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p208131543205314"><a name="p208131543205314"></a><a name="p208131543205314"></a>该接口计划废弃，可以参考<a href="https://gitee.com/ascend/pytorch/blob/v2.1.0-6.0.rc1/test/network_ops/test_nms_rotated.py" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p208131543205314"><a name="p208131543205314"></a><a name="p208131543205314"></a>该接口计划废弃，可以参考<a href="https://gitcode.com/ascend/pytorch/blob/v2.1.0-6.0.rc1/test/network_ops/test_nms_rotated.py" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
 </td>
 </tr>
 <tr id="row43319341418"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p63313347411"><a name="p63313347411"></a><a name="p63313347411"></a><a href="（beta）torch_npu-npu_ptiou.md">torch_npu.npu_ptiou</a></p>
@@ -111,7 +111,7 @@
 </tr>
 <tr id="row2333123474117"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p733363404114"><a name="p733363404114"></a><a name="p733363404114"></a><a href="（beta）torch_npu-contrib-BiLSTM.md">torch_npu.contrib.BiLSTM</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p191653147552"><a name="p191653147552"></a><a name="p191653147552"></a>该接口计划废弃，可以参考<a href="https://gitee.com/ascend/ModelZoo-PyTorch/blob/732cb7fc5ab59249ae62a905c0d43400a8250da7/PyTorch/contrib/audio/deepspeech/deepspeech_pytorch/bidirectional_lstm.py#L18" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p191653147552"><a name="p191653147552"></a><a name="p191653147552"></a>该接口计划废弃，可以参考<a href="https://gitcode.com/ascend/ModelZoo-PyTorch/blob/732cb7fc5ab59249ae62a905c0d43400a8250da7/PyTorch/contrib/audio/deepspeech/deepspeech_pytorch/bidirectional_lstm.py#L18" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
 </td>
 </tr>
 <tr id="row1846663914412"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p15466439164114"><a name="p15466439164114"></a><a name="p15466439164114"></a><a href="（beta）torch_npu-contrib-Swish.md">torch_npu.contrib.Swish</a></p>
