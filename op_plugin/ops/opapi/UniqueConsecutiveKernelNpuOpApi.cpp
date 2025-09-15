@@ -25,19 +25,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_consecutive(const at::Tens
                                                                   bool return_counts, c10::optional<int64_t> dim)
 {
     DO_COMPATIBILITY(aclnnUniqueConsecutive, acl_op::unique_consecutive(self, return_inverse, return_counts, dim));
-    at::Tensor y = dim.has_value() ? npu_preparation::apply_tensor_without_format(self) :
-                                     npu_preparation::apply_tensor_without_format(self, self.numel());
     if (dim.has_value()) {
         TORCH_CHECK(dim.value() < self.dim(), "Dim's value must be smaller than self's dim.", OPS_ERROR(ErrCode::VALUE));
     }
-    at::Tensor y_inverse =
-        dim.has_value() ?
-            npu_preparation::apply_tensor_without_format(self.size(dim.value()), self.options().dtype(at::kLong)) :
-            npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong));
-    at::Tensor y_counts =
-        dim.has_value() ?
-            npu_preparation::apply_tensor_without_format(self.size(dim.value()), self.options().dtype(at::kLong)) :
-            npu_preparation::apply_tensor_without_format(self.numel(), self.options().dtype(at::kLong));
+    at::Tensor y = dim.has_value() ? npu_preparation::apply_tensor_without_format(self) :
+                                     npu_preparation::apply_tensor_without_format(self, self.numel());
+    auto apply_no_format = [&](auto shape) {
+        return npu_preparation::apply_tensor_without_format(shape, self.options().dtype(at::kLong));
+    };
+    at::Tensor y_inverse = return_inverse
+        ? (dim.has_value()
+            ? apply_no_format(self.size(dim.value()))
+            : apply_no_format(self.sizes()))
+        : apply_no_format({0});
+
+    at::Tensor y_counts = return_counts
+        ? (dim.has_value()
+            ? apply_no_format(self.size(dim.value()))
+            : apply_no_format(self.numel()))
+        : apply_no_format({0});
     static auto opApiFuncAddr = []() {
         auto ret = GetOpApiFuncAddr("aclGetViewShape");
         TORCH_CHECK(ret != nullptr, "GetOpApiFuncAddr failed.", OPS_ERROR(ErrCode::INTERNAL));
