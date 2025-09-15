@@ -30,7 +30,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> unique_consecutive(const at::Tens
     }
     at::Tensor y = dim.has_value() ? npu_preparation::apply_tensor_without_format(self) :
                                      npu_preparation::apply_tensor_without_format(self, self.numel());
-    auto apply_no_format = [&](auto shape) {
+    auto apply_no_format = [self](auto shape) {
         return npu_preparation::apply_tensor_without_format(shape, self.options().dtype(at::kLong));
     };
     at::Tensor y_inverse = return_inverse
