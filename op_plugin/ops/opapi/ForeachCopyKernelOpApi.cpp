@@ -80,6 +80,29 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     return false;
 }
 
+bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorList srcs)
+{
+    if (dst.size() != src.size() || dst.size() == 0 || srcs.size() == 0) {
+        return false;
+    }
+    // 方向一致校验
+    for (const auto &dst: dsts) {
+        if (dst.device().type() != dsts[0].device().type()) {
+            return false;
+        }
+    }
+    for (const auto &src: srcs) {
+        if (src.device().type() != srcs[0].device().type()) {
+            return false;
+        }
+    }
+    // 排除d2d场景
+    if (dsts[0].device().type() == srcs[0].device().type()) {
+        return false;
+    }
+    return true;
+}
+
 void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
@@ -164,7 +187,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
 
     if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
-                                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch()))) {
+                (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src)) {
             return memcpyBatch(self, src, non_blocking);
         }
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
