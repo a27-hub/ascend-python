@@ -402,6 +402,5 @@ bool is_gte_cann_version_820rc1()
     const static bool result = IsGteCANNVersion("8.2.RC1", "CANN");
     return result;
 }
-
 }  // namespace utils
 }  // namespace op_plugin
