@@ -113,8 +113,14 @@ std::vector<at::Tensor> _foreach_norm(const at::TensorList self, const at::Scala
     auto scalar_type = self[0].scalar_type();
 
     std::vector<at::Tensor> result;
-    for (const at::Tensor &tensor : self) {
-        result.push_back(npu_preparation::apply_tensor_without_format(1, tensor.options().dtype(scalar_type)));
+    if (op_plugin::utils::is_gte_cann_version_830rc1()) {
+        for (const at::Tensor &tensor : self) {
+            result.push_back(npu_preparation::apply_tensor_without_format({}, tensor.options().dtype(scalar_type)));
+        }
+    } else {
+        for (const at::Tensor &tensor : self) {
+            result.push_back(npu_preparation::apply_tensor_without_format(1, tensor.options().dtype(scalar_type)));
+        }
     }
     at::TensorList result_ = at::TensorList(result);
     _split_and_exec_npu_cmd_norm(self, scalar, result_);
@@ -153,8 +159,14 @@ std::vector<at::Tensor> _foreach_norm(const at::TensorList self, const at::Scala
     at::TensorList inputs_ = at::TensorList(inputs);
 
     std::vector<at::Tensor> result;
-    for (const at::Tensor &tensor : self) {
-        result.push_back(npu_preparation::apply_tensor_without_format(1, tensor.options().dtype(dtype)));
+    if (op_plugin::utils::is_gte_cann_version_830rc1()) {
+        for (const at::Tensor &tensor : self) {
+            result.push_back(npu_preparation::apply_tensor_without_format({}, tensor.options().dtype(dtype)));
+        }
+    } else {
+        for (const at::Tensor &tensor : self) {
+            result.push_back(npu_preparation::apply_tensor_without_format(1, tensor.options().dtype(dtype)));
+        }
     }
     at::TensorList result_ = at::TensorList(result);
 
