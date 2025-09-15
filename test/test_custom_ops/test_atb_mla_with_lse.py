@@ -2,9 +2,11 @@ import unittest
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
 
 
 class TestAtbAttention(TestCase):
+    @SupportedDevices(['Ascend910B'])
     def test_atb_attention(self):
         torch.manual_seed(42)
         num_tokens = 5
