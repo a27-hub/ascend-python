@@ -6584,7 +6584,7 @@ page attention场景下, blockTable必须为二维, 第一维长度需等于B, �
 page attention场景下, 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_lengths_kv和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
 page attention场景下, kv cache排布为(blocknum, KV_N, blocksize, D)时性能通常优于kv cache排布为(blocknum, blocksize, H)时的性能, 建议优先选择(blocknum, KV_N, blocksize, D)格式. 
 page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
-page attentionbu不支持tensorlist场景，不支持左padding场景.
+page attention不支持tensorlist场景，不支持左padding场景.
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为bfloat16/float16、key、value为int4(int32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为bfloat16/float16、key、value为int4(int32)的场景. 
 page attention场景下，必须传入actualSeqLengthsKv.
