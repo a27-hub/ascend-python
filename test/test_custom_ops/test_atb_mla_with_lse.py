@@ -2,6 +2,7 @@ import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 
+
 class TestAtbAttention(TestCase):
     def test_atb_attention(self):
         torch.manual_seed(42)
@@ -44,7 +45,7 @@ class TestAtbAttention(TestCase):
             dtype=torch.float16
         ).npu()
 
-        block_tables = torch.tensor([[0],[1],[2],[3],[4]], dtype=torch.int32).npu()
+        block_tables = torch.tensor([[0], [1], [2], [3], [4]], dtype=torch.int32).npu()
         contextLens = [10] * batch
 
         torch_npu.atb.npu_multi_head_latent_attention_with_lse(
