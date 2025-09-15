@@ -1,9 +1,11 @@
+import unittest
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 
 
 class TestAtbAttention(TestCase):
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_atb_attention(self):
         torch.manual_seed(42)
         num_tokens = 5
