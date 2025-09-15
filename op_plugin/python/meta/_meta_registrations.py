@@ -2589,6 +2589,15 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
 
 
+@impl(m, "npu_add_rms_norm_dynamic_quant")
+def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, smooth_scale2=None, beta=None, epsilon=1e-6, output_mask=None):
+    return (torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
+            torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
+            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
+            torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
+
+            
 @impl(m, "npu_add_rms_norm_quant")
 def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True):
     torch._check(

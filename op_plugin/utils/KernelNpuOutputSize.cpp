@@ -535,6 +535,17 @@ c10::SmallVector<int64_t, SIZE> cosine_similarity_npu_output_size(const at::Tens
     return reduce_ops_npu_output_size(x1, dims, keepdim);
 }
 
+c10::SmallVector<int64_t, SIZE> reduce_lastdim_output_size(const at::Tensor& self)
+{
+    auto shape = array_to_small_vector(self.sizes());
+    int64_t ndim = static_cast<int64_t>(shape.size());
+    TORCH_CHECK(ndim >= 1, "reduce_lastdim_output_size: input must have at least 1 dimension");
+
+    int64_t last = ndim - 1;
+    shape.erase(shape.begin() + last);
+    return shape;
+}
+
 tuple_array_vector conv_transpose2d_backward_npu_output_size(const at::Tensor &input, const at::Tensor &grad_output,
                                                              const at::Tensor &weight)
 {
