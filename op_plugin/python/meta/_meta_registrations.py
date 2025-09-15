@@ -617,7 +617,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             else:
                 return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([0], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         out_dtype = torch.half
         if query_rope is not None:
@@ -630,7 +630,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                 return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([B, N, S1, 1], dtype=torch.float32, \
                     device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([0], dtype=torch.float32, device='meta'))
     else:
         if (softmax_lse_flag == True):
             if input_layout == "TND" or input_layout == "TND_NTD":
@@ -643,7 +643,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out), torch.empty([0], dtype=torch.float32, device='meta'))
 
 
 @impl(m, "npu_fused_infer_attention_score_v2")
@@ -807,7 +807,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             else:
                 return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([0], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         out_dtype = torch.half
         if query_rope is not None:
@@ -820,7 +820,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                 return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([B, N, S1, 1], dtype=torch.float32, \
                     device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([0], dtype=torch.float32, device='meta'))
     else:
         if return_softmax_lse:
             if input_layout == "TND" or input_layout == "TND_NTD":
@@ -841,7 +841,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out), torch.empty([0], dtype=torch.float32, device='meta'))
 
 
 @impl(m, "npu_fusion_attention")
