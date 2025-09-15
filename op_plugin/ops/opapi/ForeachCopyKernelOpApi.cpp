@@ -80,6 +80,22 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     return false;
 }
 
+bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorList srcs) {
+    const auto expected_dst_device_dtype = dsts[0].device().type();
+    const auto expected_src_device_dtype = srcs[0].device().type();
+    for (const auto &tensor: dsts) {
+        if (tensor.device().type() != expected_dst_device_dtype) {
+            return false;
+        }
+    }
+    for (const auto &tensor: srcs) {
+        if (tensor.device().type() != expected_src_device_dtype) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
@@ -164,7 +180,7 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
 
     if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
-                                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch()))) {
+                (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src)) {
             return memcpyBatch(self, src, non_blocking);
         }
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
