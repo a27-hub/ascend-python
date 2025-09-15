@@ -283,7 +283,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
     
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
-        expert_ids = gen_unique_topk_array(0, moe_expert_num+zero_expert_num+copy_expert_num+const_expert_num, bs, k).astype(np.int32)
+        expert_ids = gen_unique_topk_array(0, moe_expert_num, bs, k).astype(np.int32)
         expert_ids = torch.from_numpy(expert_ids).npu()
     
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
@@ -447,7 +447,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
     
         def forward(self, x, expert_ids, group_ep, group_tp, ep_world_size, tp_world_size,
                     ep_rank_id, tp_rank_id, expert_shard_type, shared_expert_rank_num, moe_expert_num,
-                    scales, quant_mode, global_bs, expert_scales, residual_x, gamma, norm_eps, elastic_info, x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v, zero_expert_num, copy_expert_num, const_expert_num):
+                    scales, quant_mode, global_bs, expert_scales, residual_x, gamma, norm_eps, elastic_info, const_expert_alpha_1, const_expert_alpha_2, const_expert_v, zero_expert_num, copy_expert_num, const_expert_num):
             output_dispatch_npu = torch_npu.npu_moe_distribute_dispatch_v2(x=x,
                                                                         expert_ids=expert_ids,
                                                                         group_ep=group_ep,
@@ -511,7 +511,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
         table1 = [-1] * ep_world_size
         table2 = [-1] * ep_world_size
 
-        for local_rank_id, ep_rank_id in enumerate(lastic_ranks):
+        for local_rank_id, ep_rank_id in enumerate(elastic_ranks):
             if ep_rank_id < ep_world_size:
                 table1[ep_rank_id] = local_rank_id
                 table2[local_rank_id] = ep_rank_id
@@ -545,7 +545,6 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
             array.append(top_idx[0:k])
         return np.array(array)
     
-    
     def get_new_group(rank):
         for i in range(tp_world_size):
             ep_ranks = [x * tp_world_size + i for x in range(ep_world_size)]
@@ -578,7 +577,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
     
         # 创建输入tensor
         x = torch.randn(bs, h, dtype=input_dtype).npu()
-        expert_ids = gen_unique_topk_array(0, moe_expert_num+zero_expert_num+copy_expert_num+const_expert_num, bs, k).astype(np.int32)
+        expert_ids = gen_unique_topk_array(0, moe_expert_num, bs, k).astype(np.int32)
         expert_ids = torch.from_numpy(expert_ids).npu()
     
         expert_scales = torch.randn(bs, k, dtype=torch.float32).npu()
@@ -606,7 +605,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
         model = torch.compile(model, backend=npu_backend, dynamic=False)
         output = model.forward(x, expert_ids, ep_hcomm_info, tp_hcomm_info, ep_world_size, tp_world_size,
                                rank // tp_world_size,rank % tp_world_size, 0, shared_expert_rank_num, moe_expert_num, scales,
-                               quant_mode, globalBS, expert_scales, residual_x, gamma, norm_eps, elastic_info, x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v, zero_expert_num, copy_expert_num, const_expert_num)
+                               quant_mode, globalBS, expert_scales, residual_x, gamma, norm_eps, elastic_info, const_expert_alpha_1, const_expert_alpha_2, const_expert_v, zero_expert_num, copy_expert_num, const_expert_num)
         torch.npu.synchronize()
         print(f'rank {rank} epid {rank // tp_world_size} tpid {rank % tp_world_size} npu finished! \n')
     
