@@ -120,7 +120,7 @@ class TestNPURmsNormQuant(TestCase):
     def test_npu_rms_norm_quant_bf16(self):
         shape_list = [
             [[16, ], [16, ]],    
-            [[16,], [1, 16]],   
+            [[16, ], [1, 16]],   
             [[1, 16], [16, ]],     
             [[1, 16], [1, 16]],   
             [[1, 1, 16], [16, ]], 
