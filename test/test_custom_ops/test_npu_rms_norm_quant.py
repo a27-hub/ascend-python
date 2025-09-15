@@ -70,21 +70,21 @@ class TestNPURmsNormQuant(TestCase):
         torch.manual_seed(42) 
         np.random.seed(42)  
         shape_list = [
-            [[16,],      [16,]],    
-            [[16,],      [1, 16]],   
-            [[1, 16],    [16,]],     
-            [[1, 16],    [1, 16]],   
-            [[1, 1, 16], [16,]], 
+            [[16, ], [16, ]],    
+            [[16, ], [1, 16]],   
+            [[1, 16], [16, ]],     
+            [[1, 16], [1, 16]],   
+            [[1, 1, 16], [16, ]], 
             [[1, 1, 16], [1, 16]],
-            [[1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 1, 16], [1, 16]],     
-            [[1, 1, 1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 1, 1, 16], [1, 16]],  
         ]
 
@@ -95,20 +95,20 @@ class TestNPURmsNormQuant(TestCase):
 
             x = torch.randn(x_shape, dtype=torch.float16)
 
-            if quant_shape == [D,]:
+            if quant_shape == [D, ]:
                 gamma = torch.randn(D, dtype=torch.float16)
-                beta  = torch.randn(D, dtype=torch.float16)
+                beta = torch.randn(D, dtype=torch.float16)
             elif quant_shape == [1, D]:
                 gamma = torch.randn(1, D, dtype=torch.float16)
-                beta  = torch.randn(1, D, dtype=torch.float16)
+                beta = torch.randn(1, D, dtype=torch.float16)
 
             scale = (torch.rand(1, dtype=torch.float16) * 0.8 + 0.2)  
             offset = torch.randint(-5, 6, (1,), dtype=torch.int8)
-            x_npu       = x.npu()     
-            gamma_npu   = gamma.npu() 
-            beta_npu    = beta.npu() 
-            scale_npu   = scale.npu() 
-            offset_npu  = offset.npu() 
+            x_npu = x.npu()     
+            gamma_npu = gamma.npu() 
+            beta_npu = beta.npu() 
+            scale_npu = scale.npu() 
+            offset_npu = offset.npu() 
             
             y_ref = self.npu_rms_norm_quant_golden(x, gamma, beta, scale, offset, epsilon=1e-6)
             y_npu = torch_npu.npu_rms_norm_quant(x_npu, gamma_npu, beta_npu, scale_npu, offset_npu, epsilon=1e-6)
@@ -119,21 +119,21 @@ class TestNPURmsNormQuant(TestCase):
 
     def test_npu_rms_norm_quant_bf16(self):
         shape_list = [
-            [[16,],      [16,]],    
-            [[16,],      [1, 16]],   
-            [[1, 16],    [16,]],     
-            [[1, 16],    [1, 16]],   
-            [[1, 1, 16], [16,]], 
+            [[16, ], [16, ]],    
+            [[16,], [1, 16]],   
+            [[1, 16], [16, ]],     
+            [[1, 16], [1, 16]],   
+            [[1, 1, 16], [16, ]], 
             [[1, 1, 16], [1, 16]],
-            [[1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 16], [1, 16]],
-            [[1, 1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 1, 16], [1, 16]],    
-            [[1, 1, 1, 1, 1, 1, 1, 16], [16,]], 
+            [[1, 1, 1, 1, 1, 1, 1, 16], [16, ]], 
             [[1, 1, 1, 1, 1, 1, 1, 16], [1, 16]],  
         ]
 
@@ -142,21 +142,21 @@ class TestNPURmsNormQuant(TestCase):
         for x_shape, quant_shape in shape_list:
             D = x_shape[-1]
             x = torch.randn(x_shape, dtype=torch.bfloat16)
-            if quant_shape == [D,]:
+            if quant_shape == [D, ]:
                 gamma = torch.randn(D, dtype=torch.bfloat16)
-                beta  = torch.randn(D, dtype=torch.bfloat16)
+                beta = torch.randn(D, dtype=torch.bfloat16)
             elif quant_shape == [1, D]:
                 gamma = torch.randn(1, D, dtype=torch.bfloat16)
-                beta  = torch.randn(1, D, dtype=torch.bfloat16)
+                beta = torch.randn(1, D, dtype=torch.bfloat16)
 
             scale = (torch.rand(1, dtype=torch.bfloat16) * 0.8 + 0.2)  # (0.2, 1.0]
-            offset = torch.randint(-5, 6, (1,), dtype=torch.int8)
+            offset = torch.randint(-5, 6, (1, ), dtype=torch.int8)
 
-            x_npu       = x.npu()     
-            gamma_npu   = gamma.npu() 
-            beta_npu    = beta.npu() 
-            scale_npu   = scale.npu() 
-            offset_npu  = offset.npu() 
+            x_npu = x.npu()     
+            gamma_npu = gamma.npu() 
+            beta_npu = beta.npu() 
+            scale_npu = scale.npu() 
+            offset_npu = offset.npu() 
 
             y_ref = self.npu_rms_norm_quant_golden(x, gamma, beta, scale, offset, epsilon=1e-6)
             y_npu = torch_npu.npu_rms_norm_quant(x_npu, gamma_npu, beta_npu, scale_npu, offset_npu, epsilon=1e-6)
