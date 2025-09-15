@@ -2468,6 +2468,28 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             self.assertEqual(result[2].dtype, torch.bfloat16)
 
 
+class TestRmsNormQuant(TestCase):
+    def test_rms_norm_quant(self):
+        with FakeTensorMode():
+            x = torch.randn([2, 16], dtype=torch.float16).npu()
+            gamma = torch.randn([16, ], dtype=torch.float16).npu()
+            beta = torch.randn([16, ], dtype=torch.float16).npu()
+            scale = torch.randn(1, dtype=torch.float16).npu()
+            offset = torch.randint(-10, 10, (1, ), dtype=torch.int8).npu()
+            y = torch_npu.npu_add_rms_norm_quant(x, gamma, beta, scale, offset)
+            self.assertTrue(y.shape == x.shape)
+            self.assertTrue(y.dtype == torch.int8)
+
+            x = torch.randn([2, 16], dtype=torch.bfloat16).npu()
+            gamma = torch.randn([16, ], dtype=torch.bfloat16).npu()
+            beta = torch.randn([16, ], dtype=torch.bfloat16).npu()
+            scale = torch.randn(1, dtype=torch.bfloat16).npu()
+            offset = torch.randint(-10, 10, (1, ), dtype=torch.int8).npu()
+            y = torch_npu.npu_add_rms_norm_quant(x, gamma, beta, scale, offset)
+            self.assertTrue(y.shape == x.shape)
+            self.assertTrue(y.dtype == torch.int8)
+
+
 class TestAddRmsNormQuant(TestCase):
     def test_npu_add_rms_norm_quant(self):
         with FakeTensorMode():
