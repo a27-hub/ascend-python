@@ -103,4 +103,3 @@ op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的
 ## 安全声明
 
 [OpPlugin安全声明](SECURITYNOTE.md)
-
