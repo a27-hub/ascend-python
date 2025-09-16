@@ -2109,7 +2109,7 @@ local_out = [
 ]
 
 update_type = 0  
-output = torch_npu.npu_attention_update(lse, local_out, update_type)
+output, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
 """
 )
 

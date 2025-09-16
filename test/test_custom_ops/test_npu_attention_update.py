@@ -127,7 +127,7 @@ class TestNpuAttentionUpdate(TestCase):
         lse_list = [torch.randn(N, dtype=dtype, device=device) for _ in range(K)]
         local_out_list = [torch.randn(N, H, dtype=dtype, device=device) for _ in range(K)]
 
-        out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
+        out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
 
         out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
                                               [t.to("cpu") for t in local_out_list],
