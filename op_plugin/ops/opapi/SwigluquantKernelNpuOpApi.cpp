@@ -54,6 +54,7 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(const at::Tensor& x, const c
     int64_t x_last_dim = x.size(x.dim() - 1);
     TORCH_CHECK(x_last_dim <= MAX_LAST_DIM, "x last dim size should not be larger than ", MAX_LAST_DIM, ", but got ",
                 x_last_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(x_last_dim % 2 == 0, "x last dim size should be even", OPS_ERROR(ErrCode::PARAM));
     // to concatenate two INT4 into one INT8, the last dimension of x should be divisible by 4
     TORCH_CHECK(dst_type != at::ScalarType::QUInt4x2 || x_last_dim % DIV_LAST_DIM == 0,
                 "x shape last dim must be divded by 4 when dst_type is torch.quint4x2, but got ",
@@ -68,6 +69,7 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(const at::Tensor& x, const c
     auto last_dim = dst_type == at::ScalarType::Char ? x_last_dim / 2 : x_last_dim / 2 / INT4_IN_INT8_NUM;
     y_size.push_back(last_dim);
 
+    // The dtype of y is INT8(char), change y_size for different quantization types
     at::Tensor y = npu_preparation::apply_tensor_without_format(y_size, c10::dtype(c10::ScalarType::Char));
     at::Tensor scale = npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Float));
 
