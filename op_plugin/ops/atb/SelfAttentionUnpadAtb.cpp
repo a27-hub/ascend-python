@@ -51,7 +51,6 @@ void _npu_flash_attention_unpad(const at::Tensor &query, const at::Tensor &key, 
 
     auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
-
     return;
 }
 
