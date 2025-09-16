@@ -25,14 +25,20 @@ def tsoftmax(x):
 
 
 class TestNPUFlashAttentionV2(TestCase):
-    def supported_op_exec(self, query, key, value, dy):
+    def supported_op_exec(self, query, key, value, dy, drop_mask=None, keep_prob=1.0):
         scale = 0.08838
         qk = torch.matmul(query, key.transpose(2, 3)).mul(scale)
         softmax_res, x_max, x_sum = tsoftmax(qk.to(torch.float32))
-        y = torch.matmul(softmax_res, value)
-        dv = torch.matmul(softmax_res.transpose(2, 3), dy)
         dp = torch.matmul(dy, value.transpose(2, 3))
-        softmax_grad_res = (tsoftmax_grad(dp, softmax_res) * scale)
+        if drop_mask == None or len(drop_mask.shape) == 0:
+            drop_res = softmax_res.permute(0, 1, 3, 2)
+            dp_drop = dp
+        else:
+            drop_res = softmax_res.mul(drop_mask).mul(1.0 / keep_prob).permute(0, 1, 3, 2)
+            dp_drop = dp * drop_mask * (1.0 / keep_prob)
+        y = torch.matmul(drop_res, value)
+        dv = torch.matmul(drop_res.transpose(2, 3), dy)
+        softmax_grad_res = (tsoftmax_grad(dp_drop, softmax_res) * scale)
         dq = torch.matmul(softmax_grad_res, key)
         dk = torch.matmul(softmax_grad_res.transpose(2, 3), query)       
         dq = dq.transpose(1, 2)
@@ -53,6 +59,15 @@ class TestNPUFlashAttentionV2(TestCase):
         tensor = torch.transpose(tensor, 1, 2)
         tensor = torch.reshape(tensor, (tensor.shape[0], tensor.shape[1], -1))
         return tensor
+    
+    def get_drop_mask(self, q, B, N1, S1, S2, seed=2, gen_p=0.2):
+        torch.npu.set_compile_mode(jit_compile=False)
+        torch.npu.manual_seed(seed)
+        drop_mask_uint8 = torch_npu._npu_dropout_gen_mask(q.npu(), [B, N1, S1, S2], p=gen_p, seed=seed, offset=0,
+                                                          parallel=True, sync=False)
+        drop_mask_bit_np = np.unpackbits(drop_mask_uint8.cpu().numpy(), count=B*N1*S1*S2, bitorder='little')
+        drop_mask_bit = torch.tensor(torch.from_numpy(drop_mask_bit_np).reshape([B, N1, S1, S2]), dtype=torch.uint8)
+        return drop_mask_bit.cpu()
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_flash_attention_v2(self, device="npu"):
@@ -70,6 +85,29 @@ class TestNPUFlashAttentionV2(TestCase):
         x_sum = x_sum.expand(1, 32, 128, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
         dq, dk, dv, dpse, dq_rope, dk_rope = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_v2_with_dropmask(self, device="npu"):
+        query = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        key = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        dy = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        keep_prob = 0.9
+        drop_mask = self.get_drop_mask(query, 1, 32, 256, 256, seed=2, gen_p=1-keep_prob)
+
+        q_npu = self.trans_BNSD2BSH(query).npu()
+        k_npu = self.trans_BNSD2BSH(key).npu()
+        v_npu = self.trans_BNSD2BSH(value).npu()
+        dy_npu = self.trans_BNSD2BSH(dy).npu()
+        out, softmax_res, x_max, x_sum, dq_cpu, dk_cpu, dv_cpu = self.supported_op_exec(
+            query.to(torch.float32),key.to(torch.float32), value.to(torch.float32),
+            dy.to(torch.float32), drop_mask, keep_prob)
+        x_max = x_max.expand(1, 32, 128, 8).npu()
+        x_sum = x_sum.expand(1, 32, 128, 8).npu()
+        out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
+        dq, dk, dv, dpse, dq_rope, dk_rope = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum,
+                                                                 out_npu, keep_prob)
         self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
 
 if __name__ == "__main__":
