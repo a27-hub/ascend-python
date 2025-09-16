@@ -15,22 +15,21 @@
 
 - 计算公式
 
-    - 公式1：<br>
-    $$
-    fast\_gelu(x)=\frac{x}{1+e^{-1.702 \mid x\mid}} e^{0.851 x(x- \mid x\mid)}
-    $$
-     <br>
-         该公式仅支持：<br>
-             - <term>Atlas 训练系列产品</term><br>
-             - <term>Atlas 推理系列产品</term>
-    - 公式2：<br>
-    $$
-    fast\_gelu(x)=\frac{x}{1+e^{-1.702x}}
-    $$
-     <br>
-         该公式仅支持：<br>
-             - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term><br>
-             - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+  - 公式1：
+  $$
+  fast\_gelu(x)=\frac{x}{1+e^{-1.702 \mid x\mid}} e^{0.851 x(x- \mid x\mid)}
+  $$
+  该公式仅支持：
+    - <term>Atlas 训练系列产品</term>
+    - <term>Atlas 推理系列产品</term>
+
+  - 公式2：
+  $$
+  fast\_gelu(x)=\frac{x}{1+e^{-1.702x}}
+  $$
+  该公式仅支持：
+    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
 
 ## 函数原型
 
