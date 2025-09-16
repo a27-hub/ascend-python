@@ -15,7 +15,7 @@ class TestAtbAttention(TestCase):
         fp16_min_normal = 1.0 / (1 << 14)
         golden = golden.flatten().to(torch.float32)
         out = out.flatten().to(torch.float32)
-        len = out.shape[0]
+        out_len = out.shape[0]
         diff = torch.abs(golden - out)
         max_diff = diff.max().item()
         limit_error = torch.maximum(torch.abs(golden * ratios[0]), torch.tensor(ratios[1]))
@@ -23,12 +23,12 @@ class TestAtbAttention(TestCase):
         error_count = torch.gt(diff, limit_error).sum().item()
         strict_error_count = torch.gt(diff, strict_limit_error).sum().item()
         print(f"maxDiff {max_diff}")
-        print("1/1000 Accuracy is %f", 1 - float(error_count) / len)
-        print("5/1000 Accuracy is %f", 1 - float(strict_error_count) / len)
+        print("1/1000 Accuracy is %f", 1 - float(error_count) / out_len)
+        print("5/1000 Accuracy is %f", 1 - float(strict_error_count) / out_len)
         if self.data_type == torch.bfloat16 or self.is_int8_flag:
-            print("accuracy is correct in old standard: %r", (float(strict_error_count) / len) <= ratios[2])
+            print("accuracy is correct in old standard: %r", (float(strict_error_count) / out_len) <= ratios[2])
         else:
-            print("accuracy is correct in old standard: %r", (float(strict_error_count) / len) <= ratios[0])
+            print("accuracy is correct in old standard: %r", (float(strict_error_count) / out_len) <= ratios[0])
         calc_times = self.head_size_qk * self.max_context_len + 4
         if self.data_type == torch.bfloat16:
             if calc_times < 2048:
