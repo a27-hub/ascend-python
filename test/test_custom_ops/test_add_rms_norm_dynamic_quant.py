@@ -218,4 +218,18 @@ class TestAddRmsNormDynamicQuant(TestCase):
             [2, 3, 4, 5, 6, 7, 8, 512],
         ]
         for x_shape in shape_list:
-            last_dim = x
+            last_dim = x_shape[-1]
+            x1 = torch.randn(x_shape, dtype=torch.bfloat16, device='npu')
+            x2 = torch.randn(x_shape, dtype=torch.bfloat16, device='npu')
+            gamma = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+            beta = torch.zeros(last_dim, dtype=torch.bfloat16, device='npu')
+            smooth_scale1 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+            smooth_scale2 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+
+            mask_shape = x1.shape[:-1]
+            output_mask = torch.ones(mask_shape, dtype=torch.bool, device='npu')
+
+            self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta, output_mask=output_mask)
+            
+if __name__ == "__main__":
+    run_tests()
