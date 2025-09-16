@@ -103,7 +103,11 @@ std::tuple<at::Tensor, at::Tensor> npu_multi_head_latent_attention_lse(const at:
     at::Tensor context_lens_tensor = at::tensor(c10::asIntArrayRefUnchecked(context_lens), at::kInt);
     at::Tensor qseqlen_tensor = qseqlen.has_value()? at::tensor(c10::asIntArrayRefUnchecked(qseqlen.value()), at::kInt): at::Tensor();
     EXEC_ATB_CMD(AtbMLA, q_nope, q_rope, ctkv, k_rope, block_tables, context_lens_tensor, mask, qseqlen_tensor, qk_descale, pv_descale, head_num, qkScale_float, kv_headnum, mask_type, calc_type, cache_mode, output, lse);
-    return std::make_tuple(output, lse);
+    if (return_lse) {
+        return std::make_tuple(output, lse);
+    } else {
+        return std::make_tuple(output, at::Tensor());
+    }
 }
 
 std::tuple<at::Tensor&, at::Tensor&> npu_multi_head_latent_attention_lse_out(const at::Tensor & q_nope, const at::Tensor & q_rope, const at::Tensor & ctkv, const at::Tensor & k_rope, const at::Tensor & block_tables,
@@ -120,7 +124,11 @@ std::tuple<at::Tensor&, at::Tensor&> npu_multi_head_latent_attention_lse_out(con
     at::Tensor context_lens_tensor = at::tensor(c10::asIntArrayRefUnchecked(context_lens), at::kInt);
     at::Tensor qseqlen_tensor = qseqlen.has_value()? at::tensor(c10::asIntArrayRefUnchecked(qseqlen.value()), at::kInt): at::Tensor();
     EXEC_ATB_CMD(AtbMLA, q_nope, q_rope, ctkv, k_rope, block_tables, context_lens_tensor, mask, qseqlen_tensor, qk_descale, pv_descale, head_num, qkScale_float, kv_headnum, mask_type, calc_type, cache_mode, output, lse);
-    return std::forward_as_tuple(output, lse);
+    if (return_lse) {
+        return std::forward_as_tuple(output, lse);
+    } else {
+        return std::forward_as_tuple(output, at::Tensor());
+    }
 }
 
 namespace {
@@ -131,7 +139,7 @@ TORCH_LIBRARY_FRAGMENT(atb, m)
     m.def("npu_multi_head_latent_attention.out(Tensor q_nope, Tensor q_rope, Tensor ctkv, Tensor k_rope, Tensor block_tables, SymInt[] context_lens, int q_headnum, float qk_scale, int kv_headnum,"
     " *, Tensor? mask=None, SymInt[]? qseqlen=None, Tensor? qk_descale=None, Tensor? pv_descale=None, str? mask_type=None, str? calc_type=None, str? cache_mode=None, Tensor(a!) output) -> Tensor(a!)");
     m.def("npu_multi_head_latent_attention.lse(Tensor q_nope, Tensor q_rope, Tensor ctkv, Tensor k_rope, Tensor block_tables, SymInt[] context_lens, int q_headnum, float qk_scale, int kv_headnum, bool return_lse,"
-    " *, Tensor? mask=None, SymInt[]? qseqlen=None, Tensor? qk_descale=None, Tensor? pv_descale=None, str? mask_type=None, str? calc_type=None, str? cache_mode=None) -> (Tensor(a!), Tensor(b!))");
+    " *, Tensor? mask=None, SymInt[]? qseqlen=None, Tensor? qk_descale=None, Tensor? pv_descale=None, str? mask_type=None, str? calc_type=None, str? cache_mode=None) -> (Tensor, Tensor)");
     m.def("npu_multi_head_latent_attention.lse_out(Tensor q_nope, Tensor q_rope, Tensor ctkv, Tensor k_rope, Tensor block_tables, SymInt[] context_lens, int q_headnum, float qk_scale, int kv_headnum, bool return_lse,"
     " *, Tensor? mask=None, SymInt[]? qseqlen=None, Tensor? qk_descale=None, Tensor? pv_descale=None, str? mask_type=None, str? calc_type=None, str? cache_mode=None, Tensor(a!) output, Tensor(b!) lse) -> (Tensor(a!), Tensor(b!))");
 }
