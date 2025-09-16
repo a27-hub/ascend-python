@@ -57,7 +57,6 @@ class TestAtbAttention(TestCase):
             m1 = 2.0 ** (-4.0 / n)
             mm = torch.pow(m1, torch.arange(1, 1 + 2 * (n_heads - n), 2))
             slopes = torch.cat([slopes, mm])
-        # slopes = torch.ones(n_heads)
         return slopes
 
     def group_mm_torch(self, heads, group_num, A, B, is_k):
@@ -106,7 +105,6 @@ class TestAtbAttention(TestCase):
         row_max = np.max(sim, axis=-1, keepdims=True)
         sim_sub = sim - row_max
         sim_sub = np.exp(sim_sub)
-        # print(sim_sub)
         row_sum = np.sum(sim_sub, axis=-1, keepdims=True)
         soft_res = sim_sub / row_sum
         return soft_res, row_max + np.log(row_sum)
@@ -118,7 +116,7 @@ class TestAtbAttention(TestCase):
         a0, b0 = 16, 16
         return list(batch) + [math.ceil(b / b0), math.ceil(a / a0), a0, b0]
 
-    def gen_axes_for_transpose(self,offset, base):
+    def gen_axes_for_transpose(self, offset, base):
         return [x for x in range(offset)] + [x + offset for x in base]
 
     def convert_nd_to_nz(self, x):
@@ -197,12 +195,12 @@ class TestAtbAttention(TestCase):
 
         num_input_tokens = query.shape[0]
         index = 0
-        for i in range(len(context_lens)):
-            block_table = block_tables[i]
-            context_len = int(context_lens[i])
+        for i, context_len in enumerate(context_lens):
             if context_len == 0:
                 continue
-
+            block_table = block_tables[i]
+            context_len = int(context_len)
+            
             q = query[index].view(1, num_heads, head_size_qk)
             keys = []
             values = []
@@ -242,10 +240,10 @@ class TestAtbAttention(TestCase):
             sim[index] = sim_out
             index = index + 1
 
-    def calc_data(self, num_tokens, num_heads, kv_heads, head_size_qk, head_size_vo, block_size, num_blocks, k_seqlen,\
-                  dtype, mask_dim = 0, mask_data_type = torch.bfloat16,\
-                  dynamic_batch = False, dynamic_seqlen = None, is_int8_flag = False, has_bias = False,
-                  compressHead = False, is_kv_combined = True, is_nz_in = False):
+    def calc_data(self, num_tokens, num_heads, kv_heads, head_size_qk, head_size_vo, block_size, num_blocks, k_seqlen,
+                  dtype, mask_dim=0, mask_data_type=torch.bfloat16,
+                  dynamic_batch=False, dynamic_seqlen=None, is_int8_flag=False, has_bias=False,
+                  compressHead=False, is_kv_combined=True, is_nz_in=False):
         self.num_heads = num_heads
         self.kv_heads = kv_heads
         self.num_tokens = num_tokens
@@ -257,7 +255,6 @@ class TestAtbAttention(TestCase):
             f'input info: {num_tokens}, {num_heads}, {kv_heads}, {head_size_qk}, {head_size_vo}, {block_size}, {num_blocks}, {k_seqlen}, {dtype}')
 
         query = torch.from_numpy(np.random.uniform(-1.0, 1.0, size=(num_tokens, num_heads, head_size_qk))).to(dtype)
-        # (num_blocks, block_size, num_heads, head_size)
         kv_range = 1.0
         kv_type = dtype
         if is_int8_flag:
@@ -267,7 +264,6 @@ class TestAtbAttention(TestCase):
             key_cache = torch.from_numpy(
                 np.random.uniform(-kv_range, kv_range, size=(num_blocks, block_size, kv_heads, head_size_qk))).to(
                 kv_type)
-            # (num_blocks, block_size, num_heads, head_size)
             if not is_kv_combined:
                 value_cache = torch.from_numpy(
                     np.random.uniform(-kv_range, kv_range, size=(num_blocks, block_size, kv_heads, head_size_vo))).to(
@@ -278,7 +274,6 @@ class TestAtbAttention(TestCase):
             key_cache = torch.from_numpy(
                 np.random.uniform(-kv_range, kv_range, size=(num_blocks * kv_heads, block_size, 1, head_size_qk))).to(
                 kv_type)
-            # (num_blocks, block_size, num_heads, head_size)
             if not is_kv_combined:
                 value_cache = torch.from_numpy(np.random.uniform(-kv_range, kv_range, size=(
                 num_blocks * kv_heads, block_size, 1, head_size_vo))).to(kv_type)
@@ -316,13 +311,18 @@ class TestAtbAttention(TestCase):
             mask = None
 
         if compressHead:
-            context_lens = [val for val in context_lens for _ in range(kv_heads)]
+            context_lens = [
+                val
+                for val in context_lens
+                for _ in range(kv_heads)
+            ]
         batch = len(context_lens)
         max_num_blocks_per_seq = (max_context_len + block_size - 1) // block_size
         block_tables = []  # （num_tokens, max_num_blocks_per_seq）
         for i in range(batch):
             block_table = [
-                i * max_num_blocks_per_seq + _ for _ in range(max_num_blocks_per_seq)
+                i * max_num_blocks_per_seq + _
+                for _ in range(max_num_blocks_per_seq)
             ]
             block_tables.append(block_table)
 
@@ -420,7 +420,7 @@ class TestAtbAttention(TestCase):
 
         self.calc_data(num_tokens, num_heads, kv_heads, head_size_qk, head_size_vo, block_size, num_blocks, k_seqlen,
                        dtype, mask_dim, dtype,
-                       is_kv_combined=is_kv_combined, is_nz_in = is_nz_in)
+                       is_kv_combined=is_kv_combined, is_nz_in=is_nz_in)
 
         go_output, lse_output = torch_npu.atb.npu_multi_head_latent_attention(
             self.q_split1.npu(),
@@ -458,7 +458,7 @@ class TestAtbAttention(TestCase):
 
         self.calc_data(num_tokens, num_heads, kv_heads, head_size_qk, head_size_vo, block_size, num_blocks, k_seqlen,
                        dtype, mask_dim, dtype,
-                       is_kv_combined=is_kv_combined, is_nz_in = is_nz_in)
+                       is_kv_combined=is_kv_combined, is_nz_in=is_nz_in)
 
         go_output = torch.empty(
             [num_tokens, num_heads, 512],
