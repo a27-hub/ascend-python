@@ -94,7 +94,7 @@ std::tuple<at::Tensor, at::Tensor> npu_multi_head_latent_attention_lse(const at:
 {
     const c10::OptionalDeviceGuard device_guard(device_of(q_nope));
     at::Tensor output = at::empty(q_nope.sizes(), q_rope.options());
-    at::Tensor lse = at::empty({q_nope.sizes()[0], q_nope.sizes()[1], 1}, q_rope.options());;
+    at::Tensor lse = at::empty({q_nope.sizes()[0], q_nope.sizes()[1], 1}, q_rope.options());
     float qkScale_float = static_cast<float>(qk_scale);
     auto mode = get_mla_mode(mask_type_opt, calc_type_opt, cache_mode_opt);
     int mask_type = std::get<0>(mode);
