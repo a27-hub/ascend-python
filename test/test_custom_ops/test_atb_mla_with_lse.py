@@ -7,7 +7,62 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 class TestAtbAttention(TestCase):
     @SupportedDevices(['Ascend910B'])
-    def test_atb_attention(self):
+    def test_atb_attention_with_lse(self):
+        torch.manual_seed(42)
+        num_tokens = 5
+        batch = num_tokens
+        q_head_num = 128
+        kv_lora_rank = 512
+        qk_rope_rank = 64
+        num_blocks = 64
+        block_size = 128
+        kv_head = 1
+
+        q_nope = torch.randn(
+            [num_tokens, q_head_num, kv_lora_rank],
+            dtype=torch.float16
+        ).npu()
+
+        q_rope = torch.randn(
+            [num_tokens, q_head_num, qk_rope_rank],
+            dtype=torch.float16
+        ).npu()
+
+        ckv = torch.randn(
+            [num_blocks, block_size, kv_head, kv_lora_rank],
+            dtype=torch.float16
+        ).npu()
+
+        k_rope = torch.randn(
+            [num_blocks, block_size, kv_head, qk_rope_rank],
+            dtype=torch.float16
+        ).npu()
+
+        block_tables = torch.tensor([[0], [1], [2], [3], [4]], dtype=torch.int32).npu()
+        contextLens = [10] * batch
+
+        go_output, lse_output = torch_npu.atb.npu_multi_head_latent_attention(
+            q_nope,
+            q_rope,
+            ckv,
+            k_rope,
+            block_tables,
+            contextLens,
+            q_head_num,
+            0.14,
+            1,
+            True,
+            calc_type="calc_type_ring"
+        )
+
+        # 验证输出
+        self.assertEqual(go_output.shape, (num_tokens, q_head_num, kv_lora_rank))
+        self.assertEqual(lse_output.shape, (num_tokens, q_head_num, 1))
+        self.assertEqual(go_output.sum(), 836.0)
+        self.assertEqual(lse_output.sum(), 3594.0)
+    
+    @SupportedDevices(['Ascend910B'])
+    def test_atb_attention_with_lse_out(self):
         torch.manual_seed(42)
         num_tokens = 5
         batch = num_tokens
@@ -51,7 +106,7 @@ class TestAtbAttention(TestCase):
         block_tables = torch.tensor([[0], [1], [2], [3], [4]], dtype=torch.int32).npu()
         contextLens = [10] * batch
 
-        torch_npu.atb.npu_multi_head_latent_attention_with_lse(
+        torch_npu.atb.npu_multi_head_latent_attention(
             q_nope,
             q_rope,
             ckv,
@@ -61,6 +116,7 @@ class TestAtbAttention(TestCase):
             q_head_num,
             0.14,
             1,
+            True,
             calc_type="calc_type_ring",
             output=go_output,
             lse=lse_output
