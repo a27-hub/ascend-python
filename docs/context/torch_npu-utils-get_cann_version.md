@@ -1,4 +1,4 @@
-# torch_npu.npu.utils.get_cann_version
+# torch_npu.utils.get_cann_version
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -14,7 +14,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu.utils.get_cann_version(module="CANN")
+torch_npu.utils.get_cann_version(module="CANN")
 ```
 
 ## 参数说明
@@ -35,7 +35,7 @@ DRIVER的版本号获取是根据/etc/ascend_install.info; /usr/local/Ascend/dri
 ```python
 >>> import torch
 >>> import torch_npu
->>> from torch_npu.npu.utils import get_cann_version
+>>> from torch_npu.utils import get_cann_version
 >>> version = get_cann_version(module="CANN")
 >>> version
 '8.3.RC1'
