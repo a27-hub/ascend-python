@@ -1865,7 +1865,6 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(s1_npu.dtype, torch.float32)
             self.assertEqual(s2_npu.shape, x1.shape[:-1])
             self.assertEqual(s2_npu.dtype, torch.float32)
->>>>>>> 8a6157a2 (添加npu_add_rms_norm_dynamic_quant接口)
 
 
 class TestFFN(TestCase):
