@@ -397,7 +397,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             -    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持`query`为`bfloat16`/`float16`，`key`、`value`为`int4`（`int32`）的场景。
         -   page attention场景下，必须传入`actual_seq_lengths_kv`。
         -   page attention场景下，以下场景输入S需要大于等于blockTable的第二维 * blockSize。
-            -   使能`atten_mask`，当sparse_mode不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于blockTable的第二维 * blockSize。
+            -   使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于blockTable的第二维 * blockSize。
             -   使能`pse_shift`，如`pse_shift` shape为\(B, N, 1, S\)。
             -   使能伪量化per-token模式：输入参数`antiquant_scale`和`antiquant_offset`的shape均为\(2, B, S\)。
             -   使能per-token叠加per-head模式：两个参数的shape均为\(B, N, S\)，数据类型固定为`float32`。支持`key`、`value`数据类型为`int8`、`int4`\(`int32`\)。
