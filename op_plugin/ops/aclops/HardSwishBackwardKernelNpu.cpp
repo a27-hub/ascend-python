@@ -19,7 +19,7 @@
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
-
+#if VERSION_BETWEEN(V1R11, V2R7)
 at::Tensor hardswish_backward(const at::Tensor& grad_output, const at::Tensor& self)
 {
     at::Tensor grad_input = npu_preparation::apply_tensor(grad_output);
@@ -31,4 +31,20 @@ at::Tensor hardswish_backward(const at::Tensor& grad_output, const at::Tensor& s
         .Run();
     return grad_input;
 }
+#endif
+#if VERSION_BETWEEN(V2R8, V2R8)
+at::Tensor hardswish_backward(const at::Tensor& grad_output, const at::Tensor& self)
+{
+    at::Tensor grad_input = npu_preparation::apply_tensor(grad_output);
+    at_npu::native::OpCommand cmd;
+    cmd.Name("HardSwishGrad")
+        .Input(grad_output)
+        .Input(self)
+        .Output(grad_input)
+        .Run();
+    grad_input.index_put_({self.eq(-3.0f)}, 0.0f);
+    grad_input.index_put_({self.eq(3.0f)}, 1.0f);
+    return grad_input;
+}
+#endif
 } // namespace acl_op
