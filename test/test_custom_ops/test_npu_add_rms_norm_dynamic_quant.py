@@ -54,8 +54,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
         smooth_scale1: torch.Tensor = None,
         smooth_scale2: torch.Tensor = None,
         beta: torch.Tensor = None,
-        epsilon: float = 1e-6,
-        output_mask: torch.Tensor = None,  
+        epsilon: float = 1e-6,  
     ):
         assert x1.shape == x2.shape
         last_dim = x1.shape[-1]
@@ -110,7 +109,6 @@ class TestAddRmsNormDynamicQuant(TestCase):
         smooth_scale2=None,
         beta=None,
         epsilon=1e-6,
-        output_mask=None,
     ):
         for t in [x1, x2, gamma, smooth_scale1, smooth_scale2, beta]:
             if t is None:
@@ -125,20 +123,16 @@ class TestAddRmsNormDynamicQuant(TestCase):
         beta_n = beta.npu() if beta is not None else None
         eps_f = float(epsilon)
 
-        output_mask_n = output_mask.npu() if output_mask is not None else None
-        assert output_mask_n is not None, "output_mask must not be None."
-
         y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
             x1_n, x2_n, gamma_n,
             smooth_scale1=s1_n,
             smooth_scale2=s2_n,
             beta=beta_n,
             epsilon=eps_f,
-            output_mask=output_mask_n,
         )
 
         y1_cpu, y2_cpu, x_out_cpu, s1_cpu, s2_cpu = self.npu_add_rms_norm_dynamic_quant_golden(
-            x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, output_mask
+            x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon
         )
 
 
@@ -199,10 +193,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
             smooth_scale1 = torch.ones(last_dim, dtype=torch.float16, device='npu')
             smooth_scale2 = torch.ones(last_dim, dtype=torch.float16, device='npu')
 
-            mask_shape = x1.shape[:-1]
-            output_mask = torch.ones(mask_shape, dtype=torch.bool, device='npu')
-
-            self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta, output_mask=output_mask)
+            self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
 
     @unittest.skip("skip until CANN is updated to support aclnnAddRmsNormDynamicQuantV2")
     @SupportedDevices(['Ascend910B'])
@@ -226,10 +217,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
             smooth_scale1 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
             smooth_scale2 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
 
-            mask_shape = x1.shape[:-1]
-            output_mask = torch.ones(mask_shape, dtype=torch.bool, device='npu')
-
-            self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta, output_mask=output_mask)
+            self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
             
 if __name__ == "__main__":
     run_tests()

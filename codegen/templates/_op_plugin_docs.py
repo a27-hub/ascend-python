@@ -9290,7 +9290,7 @@ smooth_scale1: Tensor类型，第一路量化的smooth_scale张量。可选，sh
 smooth_scale2: Tensor类型，第二路量化的smooth_scale张量。可选，shape和数据类型与gamma一致，需与smooth_scale1配合使用。不支持空Tensor。
 beta: Tensor类型，归一化偏置项。可选，shape和数据类型与gamma一致。不支持空Tensor
 epsilon: double类型，防止除0错误，默认值为1e-6.
-output_mask: Tensor类型，表示输出的掩码，数据类型支持BOOL，支持空指针，长度固定为2，该接口为预留接口，目前aclnn暂不支持，因此调用时暂不传入
+output_mask: 数组，表示输出的掩码，数据类型支持BOOL，支持空指针，或长度为2的数组
 
 输出说明
 y1: Tensor类型，第一路量化输出。数据类型支持INT8。shape、数据格式需要与入参x1保持一致。支持非连续的Tensor，不支持空Tensor。
@@ -9301,6 +9301,9 @@ scale2: Tensor类型，第二路量化scale输出，shape同scale1，数据类�
 
 约束说明
 所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
+当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
+当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
+当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
 
 支持的型号
 Atlas A3训练系列产品/Atlas A3推理系列产品
