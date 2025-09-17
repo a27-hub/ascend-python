@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-获取当前环境CANN或相关组件的版本号。
+获取当前环境CANN或相关组件的版本号。CANN及相关组件版本号命名规则以《华为公司Offering、Release和补丁命名规则》为准。
 
 ## 函数原型
 
@@ -19,7 +19,26 @@ torch_npu.utils.get_cann_version(module="CANN")
 
 ## 参数说明
 
-**module**(`str`)：可选参数，指定需要获取版本号的组件，默认值为"CANN"。支持的可选参数为["CANN", "RUNTIME", "COMPILER", "HCCL", "TOOLKIT", "OPP", "OPP_KERNEL", "DRIVER"]
+**module**(`str`)：可选参数，指定需要获取版本号的组件，默认值为"CANN"。支持的可选参数为["CANN", "RUNTIME", "COMPILER", "HCCL", "TOOLKIT", "OPP", "OPP_KERNEL", "DRIVER"]。
+
+可选参数说明：
+
+"CANN"：CANN(Compute Architecture for Neural Networks)是昇腾针对AI场景推出的异构计算架构。
+
+"RUNTIME"：runtime组件。
+
+"COMPILER"：编译器。
+
+"HCCL"：集合通信库。
+
+"TOOLKIT"：开发工具包。
+
+"OPP"：算子包。
+
+"OPP_KERNEL"：二进制算子包。
+
+"DRIVER"：驱动。
+
 
 ## 返回值说明
 `str`
