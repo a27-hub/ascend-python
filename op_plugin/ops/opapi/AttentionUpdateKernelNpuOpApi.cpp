@@ -1,4 +1,3 @@
-// op-plugin-faupdate/op_plugin/ops/opapi/AttentionUpdateKernelNpuOpApi.cpp
 // Copyright (c) 2025 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
@@ -29,9 +28,9 @@ std::tuple<at::Tensor, at::Tensor> npu_attention_update(at::TensorList lse, at::
         output_size_0,
         lse[0].options().dtype(output_dtype_0)
     );
-    aclTensor* lse_out = nullptr;
+    at::Tensor lse_out = nullptr;
     EXEC_NPU_CMD(aclnnAttentionUpdate, lse, local_out, update_type, out, lse_out);
 
-    return std::make_tuple(out, at::Tensor());
+    return std::make_tuple(out, lse_out);
 }
 }
