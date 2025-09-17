@@ -136,7 +136,6 @@ class TestAddRmsNormDynamicQuant(TestCase):
         )
 
 
-
         self.assertEqual(y1_npu.dtype, torch.int8)
         self.assertEqual(y2_npu.dtype, torch.int8)
         self.assertEqual(x_out_npu.dtype, x1.dtype)
