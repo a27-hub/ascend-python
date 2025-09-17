@@ -9325,7 +9325,6 @@ y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_q
     smooth_scale2=s2_n,
     beta=beta_n,
     epsilon=eps_f,
-    output_mask=output_mask,
 )
 """
 )
