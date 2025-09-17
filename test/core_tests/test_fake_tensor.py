@@ -1725,6 +1725,35 @@ class TestMmAllReduce(TestCase):
             self.assertEqual(output.dtype, dst_dtype)
 
 
+class TestMmReduceScatter(TestCase):
+    def test_mm_reduce_scatter(self):
+        with FakeTensorMode():
+            dst_dtype = torch.float16
+            m, k, n = 128, 512, 256
+            x1 = torch.randn(m, k, dtype=torch.float16).npu()
+            x2 = torch.randn(k, n, dtype=torch.float16).npu()
+            hcom = "fake group info"
+            world_size = 8
+            output = torch_npu.npu_mm_reduce_scatter_base(x1, x2, hcom, world_size, reduce_op="sum")
+            self.assertEqual(output.shape, (m // world_size, n))
+            self.assertEqual(output.dtype, dst_dtype)
+
+    def test_mm_all_reduce_quant(self):
+        with FakeTensorMode():
+            world_size = 8
+            m, k, n = 128, 512, 256
+            dst_dtype = torch.bfloat16
+            x1 = torch.randint(-10, 10, size=(m, k), dtype=torch.int8).npu()
+            x2 = torch.randint(-10, 10, size=(k, n), dtype=torch.int8).npu()
+            x1_scale = torch.randn((m, 1), dtype=torch.float32).npu()
+            x2_scale = torch.randn((1, n), dtype=torch.float32).npu()
+            hcom = "fake group info"
+            output = torch_npu.npu_mm_reduce_scatter_base(x1, x2, hcom, world_size, x1_scale=x1_scale,
+                                                          x2_scale=x2_scale, reduce_op="sum")
+            self.assertEqual(output.shape, (m // world_size, n))
+            self.assertEqual(output.dtype, dst_dtype)
+
+
 class TestNpuDeepNorm(TestCase):
     def test_npu_deep_norm(self):
         with FakeTensorMode():
@@ -1794,6 +1823,27 @@ class TestNpuAddRmsNorm(TestCase):
             self.assertEqual(result_x.dtype, npu_x1.dtype)
             self.assertEqual(result_x.shape, npu_x1.shape)
             self.assertEqual(result_x.device, npu_x1.device)
+
+
+class TestNpuFfnWorkerBatching(TestCase):
+    def test_npu_ffn_worker_batching(self):
+        with FakeTensorMode():
+            x = torch.randn((1024,)).npu().to(torch.int8)
+            expert_num = 2
+            max_out_shape = [16, 8, 9, 7168]
+            Y = max_out_shape[0] * max_out_shape[1] * max_out_shape[2]
+            y, group_list, session_ids, micro_batch_ids, token_ids, expert_offsets, dynamic_scale, actual_token_num = torch_npu.npu_ffn_worker_batching(x,
+                expert_num, max_out_shape, token_dtype=2, need_schedule=1, layer_num=1)
+            self.assertTrue(y.shape[0] == Y)
+            self.assertTrue(y.shape[1] == max_out_shape[3])
+            self.assertTrue(group_list.shape[0] == expert_num)
+            self.assertTrue(group_list.shape[1] == 2)
+            self.assertTrue(session_ids.shape[0] == Y)
+            self.assertTrue(micro_batch_ids.shape[0] == Y)
+            self.assertTrue(token_ids.shape[0] == Y)
+            self.assertTrue(expert_offsets.shape[0] == Y)
+            self.assertTrue(dynamic_scale.shape[0] == Y)
+            self.assertTrue(actual_token_num.shape[0] == 1)
 
 
 class TestFFN(TestCase):
@@ -2723,6 +2773,21 @@ class TestNpuMoeUnpermuteWithRoutingMap(TestCase):
                 self.assertEqual(unpermuted_tokens.dtype, permuted_tokens_npu.dtype)
                 self.assertEqual(unpermuted_tokens.shape[0], restore_shape[0])
                 self.assertEqual(unpermuted_tokens.shape[1], restore_shape[1])
+
+
+class TestNpuAttentionWorkerCombine(TestCase):
+    def test_npu_attention_worker_combine(self):
+        with FakeTensorMode():
+            schedule_context = torch.randn((1024,)).npu().to(torch.int8)
+            BS = 16
+            expert_scales = torch.rand(BS, 8, dtype=torch.float32).npu()
+            layer_id = torch.randint(1, 20, (1,), dtype=torch.int32).npu()
+            H = 7168
+            y_npu, next_layer_id_npu = \
+            torch_npu.npu_attention_worker_combine(schedule_context, expert_scales, layer_id, H, token_dtype=0, need_schedule=0)
+            self.assertTrue(y_npu.shape[0] == BS)
+            self.assertTrue(y_npu.shape[1] == H)
+            self.assertTrue(next_layer_id_npu.shape[0] == 1)
 
 
 class TestNpuMoeTokenPermuteWithRoutingMap(TestCase):

@@ -8010,26 +8010,33 @@ _add_torch_npu_docstr(
     "npu_mm_reduce_scatter_base",
     """
 接口原型：
-torch_npu.npu_mm_reduce_scatter_base(Tensor input, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, int comm_turn=0) -> Tensor
+torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='sum', bias=None, x1_scale=None, x2_scale=None, comm_turn=0, output_dtype=None, comm_mode=None) -> Tensor
 
 功能描述
-TP切分场景下, 实现matmul和reduce_scatter的融合, 融合算子内部实现计算和通信流水并行. 
+TP切分场景下, 实现matmul和reduce_scatter的融合, 融合算子内部实现计算和通信流水并行. 支持perchanel, pertoken量化。
 使用该接口时, 请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本, 否则将会引发报错, 比如BUS ERROR等. 
 
 参数说明
-input: Tensor类型, 数据类型支持float16、bfloat16, 数据格式支持ND, 输入shape支持2维. 
-x2: Tensor类型, 数据类型支持float16、bfloat16, 数据格式支持ND, 数据类型需要和input保持一致, 输入shape维度和input保持一致. 
+input: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入shape支持2维. 
+x2: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND、NZ。NZ仅在comm_mode为`aiv`时支持。数据类型需要和input保持一致, 输入shape维度和input保持一致. 
 hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
 world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8. 
 *: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 reduce_op: String类型, reduce操作类型, 当前仅支持'sum', 默认值: 'sum'. 
 bias: Tensor类型, 可选输入, 数据类型支持float16、bfloat16, 数据格式支持ND格式. 数据类型需要和input保持一致. bias仅支持一维, 且维度大小与output的第1维大小相同. 当前版本暂不支持bias输入为非0的场景. 
-comm_turn: int类型, 表示rank间通信切分粒度, 默认值: 0, 表示默认的切分方式. 当前版本仅支持输入0. 
+x1_scale: Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持`float32`，数据格式支持$ND$格式。数据维度为\(m, 1\), 支持pertoken量化。
+x2_scale： Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持`float32`、`int64`，数据格式支持$ND$格式。数据维度为\(1, n\), 支持perchannel量化。
+comm_turn：int类型, 可选参数。表示rank间通信切分粒度，默认值为0，表示默认的切分方式。当前版本仅支持输入0。
+output_dtype: ScalarType, 可选参数。表示输出数据类型。仅支持在量化场景且x1_scale和x2_scale均为float32时，可指定输出数据类型为bfloat16或float16，默认值为bfloat16。
+comm_mode：str类型，可选参数。表示通信模式，支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。
 
 输出说明
-Tensor类型, 数据类型和input保持一致, shape维度和input保持一致. 
+shape维度和input保持一致。
+基础场景时数据类型和input保持一致。
+量化场景下，x2_scale为int64数据类型时，输出数据类型为float16。x1_scale和x2_scale均为float32时, 输出数据类型由output_dtype指定，默认为torch.bfloat16。
 
 约束说明
+comm_mode为ai_cpu时：
 该接口仅在训练场景下使用. 
 该接口支持图模式(PyTorch 2.1版本). 
 输入input、x2必须是2维, 分别为(m, k)、(k, n), 轴满足matmul算子入参要求, k轴相等, 且k轴取值范围为[256, 65535), m轴约束如下: 
@@ -8038,6 +8045,9 @@ Atlas A2 训练系列产品支持2、4、8卡,  支持hccs链路all mesh组网(�
 Atlas A3 训练系列产品支持2、4、8、16卡,  支持hccs链路double ring组网(多张卡按顺序组成一个圈, 每张卡只和左右卡相连). 
 input不支持输入转置后的tensor, x2转置后输入, 需要满足shape的第一维大小与input的最后一维相同, 满足matmul的计算条件. 
 Atlas A2 训练系列产品: 一个模型中的通算融合算子(AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce), 仅支持相同通信域. 
+comm_mode为aiv时：
+- 支持Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+- 支持Atlas A3 训练系列产品/Atlas A3 推理系列产品
 
 支持的PyTorch版本
 PyTorch 2.1
@@ -9311,6 +9321,55 @@ y1, y2, rstd, x = torch_npu.npu_add_rms_norm_cast(input_x1, input_x2, input_gamm
 )
 
 _add_torch_npu_docstr(
+    "npu_add_rms_norm_quant",
+    """
+接口原型：
+func: npu_add_rms_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor scales1, 
+Tensor? zero_points1, Tensor? beta, Tensor? scales2=None, Tensor? zero_points2=None, *, int axis=-1, 
+float epsilon=1e-06, bool div_mode=True) -> (Tensor, Tensor, Tensor)
+
+功能描述
+add_rms_norm_quant算子将rms_norm前的add算子以及之后的quantize算子融合，减少搬入搬出。新增偏置项beta参数
+
+参数说明
+x1：Device侧的Tensor类型，表示标准化过程中的源数据张量。shape支持1-8维。数据类型支持BFLOAT16、FLOAT16，数据格式支持ND，支持非连续的Tensor。不支持空tensor。
+x2：Device侧的Tensor类型，表示标准化过程中的源数据张量。shape支持1-8维。数据类型支持BFLOAT16、FLOAT16，数据格式支持ND，支持非连续的Tensor。数据格式、数据类型均需要与入参x1保持一致。不支持空tensor。
+gamma：Device侧的Tensor类型，表示标准化过程中的权重张量。shape支持1-8维，shape需要与x1需要Norm的维度一致。数据类型支持BFLOAT16、FLOAT16，数据格式支持ND，支持非连续的Tensor。数据类型需要与入参x1保持一致。不支持空tensor。
+scales1：Device侧的Tensor类型，表示量化过程中得到y1进行的scales张量。shape需要与gamma保持一致。数据类型支持FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。当参数divMode的值为True时，该参数的值不能为0。
+zero_points1：Device侧的Tensor类型，表示量化过程中得到y1进行的offset张量。可选参数。shape需要与gamma保持一致。数据类型支持INT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
+beta：Device侧的Tensor类型，表示标准化过程中的偏置项。可选参数。shape支持1-8维，shape需要与gamma的shape保持一致。数据类型支持BFLOAT16、FLOAT16，数据类型需要与gamma保持一致，数据格式支持ND，支持非连续的Tensor。
+scales2：Device侧的Tensor类型，表示量化过程中得到y2进行的scales张量。可选参数。shape需要与gamma保持一致。数据类型支持FLOAT32、BFLOAT16，数据类型需要与scales1保持一致。数据格式支持ND，支持非连续的Tensor。当参数divMode的值为True时，该参数的值不能为0。
+zero_points2：Device侧的Tensor类型，表示量化过程中得到y2进行的offset张量。可选参数。shape需要与gamma保持一致。数据类型支持INT32、BFLOAT16，数据类型需要与zero_points1保持一致。数据格式支持ND，支持非连续的Tensor。
+axis：Host侧的整型，表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入x的维度数。数据类型为int64_t，当前仅支持-1，传其他值均不生效。
+epsilon：用于防止除0错误，数据类型为double。建议传较小的正数。默认值为1e-6。
+
+输出说明
+y1：Device侧的Tensor类型，表示量化后的输出数据。shape支持1-8维度，shape需要与输入x1/x2一致。数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。
+y2：Device侧的Tensor类型，表示量化后的输出数据。shape支持1-8维度，shape需要与输入x1/x2一致，数据类型支持INT8，数据格式支持ND，支持非连续的Tensor。
+x_out：Device侧的Tensor类型，表示x1和x2的和。shape支持1-8维度，shape需要与输入x1/x2一致。数据类型支持BFLOAT16、FLOAT16，需要与输入x1、x2一致。数据格式支持ND，支持非连续的Tensor。
+
+支持的型号
+Atlas 推理系列产品
+Atlas A2训练系列产品/Atlas 800I A2中的推理产品/A200I A2 Box异构组件/Atlas A3训练系列产品/Atlas A3推理系列产品
+
+调用示例:
+import torch
+import torch_npu
+
+x_shape = [16, 32]
+quant_shape = [32, ]
+x1 = torch.randn(x_shape, dtype=torch.float16).npu()
+x2 = torch.randn(x_shape, dtype=torch.float16).npu()
+gamma = torch.randn(quant_shape, dtype=torch.float16).npu()
+beta = torch.randn(quant_shape, dtype=torch.float16).npu()
+scales1 = torch.randn(quant_shape, dtype=torch.float32).npu()
+zero_points1 = torch.randint(-10, 10, quant_shape, dtype=torch.int32).npu()
+
+y1, _, x_out = torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_advance_step_flashattn",
     """
 接口原型：
@@ -9548,6 +9607,80 @@ if __name__ == "__main__":
     dtype = torch.float16
 
     mp.spawn(run_npu_alltoallv_gmm, args=(worksize, master_ip, master_port, gmm_x, gmm_weight, send_counts, recv_counts, dtype), nprocs=worksize)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_swiglu_quant",
+    """
+torch_npu.npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
+功能描述
+在swiglu激活函数后添加quant操作。
+
+参数说明
+x (Tensor)：必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，尾轴为偶数且长度不超过8192，当dst_type传入值为29(输出为int4量化)时，x的最后一维需要为4的倍数。
+smooth_scales (Tensor)：可选参数，表示smooth量化系数。数据类型支持float32，支持非连续的Tensor，数据格式为ND。shape支持[G, N]，[G, ]。
+offsets (Tensor)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入None即可。静态量化场景下：数据类型支持FLOAT，支持非连续的Tensor，数据格式为ND。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与smooth_scales保持一致。
+group_index (Tensor)：可选参数，当前支持cumsum和count两种模式，要求为1维张量，数据类型支持int32，数据格式ND，shape支持[G, ]，group_index内元素要求为非递减，且最大值不得超过输入x的除最后一维之外的所有维度大小之积。
+activate_left (bool)：可选参数，Swiglu流程中是否进行左激活，默认False。
+quant_mode (int)：可选参数，表示量化类型，默认值为0。0表示静态量化，1表示动态量化。
+group_list_type (int)：可选参数，表示group_index类型，默认值为0。0表示cumsum模式，1表示count模式。
+dst_type (ScalarType): 可选参数，指定量化输出的类型, 传None时当做torch.int8处理。
+
+输出说明
+out (Tensor)：表示量化后的输出tensor。数据类型支持int8和int4，支持非连续的Tensor，数据格式为ND。
+scale (Tensor)：表示量化的scale参数，计算输出scale的shape与计算输入x相比，无最后一维，其余维度与计算输入x保持一致，数据类型支持float32，数据格式为ND。
+
+支持的型号
+A2训练、推理系列产品
+A3训练、推理系列产品
+
+调用示例
+import os
+import shutil
+import unittest
+
+import torch
+import torch_npu
+from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
+
+
+class TestNPUSwigluQuant(TestCase):
+    def test_npu_swiglu_quant(self, device="npu"):
+        batch_size = 4608
+        hidden_size = 2048
+        x_shape = (batch_size, hidden_size)
+        input_data = np.random.randn(*x_shape).astype(np.float32)
+
+        quant_mode = 1
+        group_list_type = 0
+        dst_type = torch.int8
+        activate_left = False
+        offsets = None
+        num_groups = 8
+        group_sizes = batch_size // num_groups
+        group_index = [(i + 1) * group_sizes for i in range(num_groups)]
+        smooth_scales = np.random.randn(num_groups, hidden_size // 2).astype(np.float32)
+
+        device = "npu"
+        npu_x = torch.from_numpy(input_data).to(device)
+        npu_group_index = torch.from_numpy(np.array(group_index)).to(device)
+        npu_smooth_scales = torch.from_numpy(smooth_scales).to(device)
+        result = torch_npu.npu_swiglu_quant(
+            npu_x,
+            smooth_scales=npu_smooth_scales,
+            offsets=offsets,
+            group_index=npu_group_index,
+            activate_left=False,
+            quant_mode=quant_mode,
+            group_list_type=group_list_type,
+            dst_type=dst_type
+        )
+
+if __name__ == "__main__":
+    run_tests()
+
 """
 )
 
@@ -10734,30 +10867,35 @@ _add_torch_npu_docstr(
     "obfuscation_initialize",
     """
 功能描述: 
-该接口用于完成PMCC模型混淆引擎的资源初始化。
+该接口用于完成PMCC（Privacy&Model Confidential Computing）模型混淆引擎的资源初始化，即与PMCC混淆引擎CA（普通OS中的Client Application）建立socket连接、对CA、TA（TEE OS中的Trusted Application）进行初始化，并返回socket连接符。
 
 接口原型: 
-torch_npu.obfuscation_initialize(int hidden_size, int tp_rank, int cmd, int data_type, int model_obf_seed_id, int data_obf_seed_id, int thread_num, float obf_coefficient) -> Tensor
+torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type, model_obf_seed_id, data_obf_seed_id, thread_num, obf_coefficient) -> Tensor
 
-参数说明: 
-- hidden_size(Int, 计算输入): 必选参数,隐藏层的维度,数据类型为int32,支持输入范围为1-10000,仅在cmd设置为1或2时需要填写有效值,否则填0。
-- tp_rank(Int, 计算输入): 必选参数, 张量并行TP Rank,数据类型为int32,支持输入范围为0-1024,仅在cmd设置为1或2时需要填写有效值,否则填0。
-- cmd(Int, 计算输入): 必选参数, setup指令编号,在{1, 2, 3}中选择,设置为1时进行浮点推理模式资源初始化、为2时进行量化推理模式资源初始化,设置为3时进行资源释放。数据类型为int32。
-- data_type(Int, 计算输入): 可选参数, 代表Tensor数据类型的编号,数据类型为INT32,仅在cmd设置为1或2时需要填写有效值,否则填0。
-    昇腾310P AI处理器:在{0, 1}中选择,0表示ACL_FLOAT、1表示ACL_FLOAT16
-    昇腾910B AI处理器:在{0, 1, 27}中选择,0表示ACL_FLOAT、1表示ACL_FLOAT16、27表示ACL_BF16
-- model_obf_seed_id(Int, 计算输入): 可选参数, 模型混淆因子id,用于TA从TEE KMC查询模型混淆因子,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
-- data_obf_seed_id(Int, 计算输入): 必选参数, 数据混淆因子id,用于TA从TEE KMC查询数据混淆因子,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
-- thread_num(Int, 计算输入): 可选参数, CA/TA进行混淆处理使用的线程数。在{1, 2, 3, 4, 5, 6}中选择,数据类型为int32,仅在cmd设置为1或2时需要填写有效值,否则填0。
-- obf_coefficient(Float, 计算输入): 可选参数,混淆系数,数据类型为float,支持输入范围为0-1,默认值1.0。
-- fd(Tensor, 计算输出): socket连接符,1D,shape为(1),int32。
+参数说明
+- hidden_size（`int`）：必选参数，隐藏层的维度，数据类型为`int32`，支持输入范围为1-10000，仅在`cmd`设置为1或2时需要填写有效值，否则填0。
+- tp_rank（`int`）：必选参数， 张量并行TP Rank，数据类型为`int32`，支持输入范围为0-1024，仅在`cmd`设置为1或2时需要填写有效值，否则填0。
+- cmd（`int`）：必选参数，资源初始化的指令编号，数据类型为`int32`，取值范围为{1, 2, 3}。
+    * 1：进行浮点推理模式资源初始化。
+    * 2：进行量化推理模式资源初始化。
+    * 3：进行资源释放。
+- data_type（`int`）：可选参数， 代表Tensor数据类型的编号，数据类型为`int32`，仅在`cmd`设置为1或2时需要填写有效值，否则填0。
+    * <term>Atlas 推理系列产品</term>: Tensor数据类型支持`float16` 、`float32`、`int8`。
+    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>: Tensor数据类型支持`float16`、`float32`、`bfloat16`、`int8`。
+- model_obf_seed_id（`int`）：可选参数， 模型混淆因子id，用于`TA`从`TEE KMC`查询模型混淆因子，数据类型为`int32`，仅在`cmd`设置为1或2时需要填写已注册的有效混淆因子id，否则填0。
+- data_obf_seed_id（`int`）：必选参数， 数据混淆因子id，用于`TA`从`TEE KMC`查询数据混淆因子，数据类型为`int32`，仅在`cmd`设置为1或2时需要填写已注册的有效混淆因子id，否则填0。
+- thread_num（`int`）：可选参数， `CA`/`TA`进行混淆处理使用的线程数，数据类型为`int32`，取值范围为{1, 2, 3, 4, 5, 6}，仅在`cmd`设置为1或2时需要填写有效值，否则填0。
+- obf_coefficient（`float`）：可选参数，混淆系数，支持输入范围为0-1，默认值1.0。
+
+输出说明:
+`Tensor`
+代表socket连接符，1D，shape为(1)，数据类型为`int32`。
 
 支持的芯片型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
 Atlas 推理系列产品
 
 调用示例:
-# 单算子调用
 import torch
 import torch_npu
 
@@ -10772,7 +10910,7 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
 """
 )
 
@@ -10781,20 +10919,23 @@ _add_torch_npu_docstr(
     "obfuscation_finalize",
     """
 功能描述: 
-该接口用于完成PMCC模型混淆引擎的资源释放。
+该接口用于完成PMCC（Privacy&Model Confidential Computing）模型混淆引擎的资源释放，即与PMCC混淆引擎CA（普通OS中的Client Application）断开socket连接。
 
 接口原型: 
-torch_npu.obfuscation_finalize(Tensor fd_to_close) -> Tensor
+torch_npu.npu.obfuscation_finalize(fd_to_close) -> Tensor
 
 参数说明: 
-- fd_to_close(Tensor, 计算输入): 填写本算子初始化时返回的fd。数据类型为int32。
+fd_to_close（`Tensor`）：填写调用[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)接口的返回值，数据类型为`int32`。
+
+输出说明:
+`Tensor`
+代表socket连接符，1D，shape为(1)，数据类型为`int32`。
 
 支持的芯片型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
 Atlas 推理系列产品
 
 调用示例:
-# 单算子调用
 import torch
 import torch_npu
 
@@ -10809,8 +10950,8 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
-torch_npu.obfuscation_finalize(fd)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+torch_npu.npu.obfuscation_finalize(fd)
 """
 )
 
@@ -10819,27 +10960,28 @@ _add_torch_npu_docstr(
     "obfuscation_calculate",
     """
 功能描述: 
-该接口用于实现矩阵乘计算输入和输出的transpose操作。
+该接口用于将张量x和配置参数（如param）发送至PMCC（Privacy&Model Confidential Computing）混淆引擎。引擎的CA（普通OS中的Client Application）模块调用TA（TEE OS中的Trusted Application）模块，进行张量混淆处理，最终返回混淆结果。
 
 接口原型: 
-torch_npu.obfuscation_calculate(Tensor fd, Tensor x, Tensor param, float obf_coefficient) -> Tensor
+torch_npu.npu.obfuscation_calculate(fd, x, param, obf_coefficient) -> Tensor
 
 参数说明: 
-- fd(Tensor, 计算输入): 必选参数,待关闭的socket连接符,cmd为3时,填写本算子在cmd为1时返回的fd,否则填0,数据类型为int32。
-- x(Tensor, 计算输入): 必选参数,待混淆处理的Tensor输入,数据类型如下,对Tensor维度不作限制,Shape为( , *, ... , hiddenSize),即最后一维的size是hiddenSize。数据格式支持ND。
-    昇腾310P AI处理器: Tensor数据类型支持ACL_FLOAT、 ACL_FLOAT16            torch.float16 / torch.float32 / torch.bfloat16
-    昇腾910B AI处理器: Tensor数据类型支持ACL_FLOAT、 ACL_FLOAT16、ACL_BF16
-- param(Tensor, 计算输入): 必选参数,预留的参数字段,Tensor数据类型为int32。
-- obf_coefficient(Float, 计算输入): 可选参数,混淆系数,数据类型为float,支持输入范围为0-1,默认值1.0。
-- y(Tensor, 计算输出): 混淆处理后的张量,输出数据类型及Shape与x相同。
+- fd（`Tensor`）：必选参数，socket连接符，数据类型为`int32`，填写调用[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)接口的返回值。
+- x（`Tensor`）：必选参数，待混淆处理的`Tensor`输入，对`Tensor`维度不作限制，shape为( , *, ... , hiddenSize)，即最后一维的size是[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)的入参`hiddenSize`。数据格式支持ND。
+    * <term>Atlas 推理系列产品</term>: `Tensor`数据类型支持`float16` 、`float32`、`int8`。
+    * <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>: `Tensor`数据类型支持`float16`、`float32`、`bfloat16`、`int8`。
+- param（`Tensor`）：必选参数，张量`x`的最后一维的维度，数据类型为`int32`。
+- obf_coefficient（`float`）：可选参数，混淆系数，支持输入范围为(0.0，1.0]，默认值1.0。
 
+输出说明:
+`Tensor`
+代表`obfuscation_calculate`的计算结果，输出数据类型及shape与`x`相同。
 
 支持的芯片型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
 Atlas 推理系列产品
 
 调用示例:
-# 单算子调用
 import torch
 import torch_npu
 
@@ -10854,9 +10996,8 @@ tp_rank = 0
 i = 0
 hidden_states = torch.randn((1024,3584), dtype=torch.bfloat16, device=device)
 obf_cft = 1.0
-fd = torch_npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
+fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=data_type, thread_num= thread_num, obf_coefficient=obf_cft)
 param = torch.tensor([3584], device=device)
-x_obf_out = torch_npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
-
+x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
 """
 )
