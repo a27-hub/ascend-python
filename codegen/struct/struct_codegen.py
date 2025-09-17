@@ -29,7 +29,7 @@ from codegen.api import cpp
 from .model import StructInfo, ResInfo, filt_input_tensor
 
 
-USED_KEYS = ['official', 'custom', 'autograd']
+USED_KEYS = ['official', 'custom', 'autograd', 'custom_autograd']
 
 
 PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
