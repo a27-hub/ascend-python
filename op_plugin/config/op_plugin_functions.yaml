@@ -6188,7 +6188,7 @@ custom:
       scale2:
         size: reduce_lastdim_output_size(x1)
         dtype: at::kFloat
-      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, y1, y2, x_out, scale1, scale2
+      exec: aclnnAddRmsNormDynamicQuantV2, x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, output_mask, y1, y2, x_out, scale1, scale2
 
   - func: npu_attention_worker_combine(Tensor schedule_context, Tensor expert_scales, Tensor layer_id, int hidden_size, *, int token_dtype=0, int need_schedule=0) -> (Tensor, Tensor)
     op_api: all_version
