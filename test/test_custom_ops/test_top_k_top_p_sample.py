@@ -274,12 +274,11 @@ class TestTopKTopPSample(TestCase):
 
         return logits_select_idx_npu, logits_top_kp_select_npu, logits_select_idx_golden_npu, logits_top_kp_select_golden_npu
 
-    @unittest.skip("skip test_top_k_top_p_sample_major for now")
     @SupportedDevices(['Ascend910B'])
     def test_top_k_top_p_sample_major(self, device="npu"):
         bs_rng_list = [(1, 128)]
         voc_size = 2 ** 14
-        topK_flags = [1] # topK and topP can not be 0 at the same time 
+        topK_flags = [0, 1] # topK and topP can not be 0 at the same time 
         topP_flags = [0, 1]
         q_flags = [0, 1]
         need_logits_flags = [0, 1]
