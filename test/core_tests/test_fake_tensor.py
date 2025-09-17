@@ -2528,11 +2528,8 @@ class TestAddRmsNormDynamicQuant(TestCase):
             beta = torch.zeros([16, ], dtype=torch.float16, device='npu')
             smooth_scale1 = torch.ones([16, ], dtype=torch.float16, device='npu')
             smooth_scale2 = torch.ones([16, ], dtype=torch.float16, device='npu')
-            mask_shape = x1.shape[:-1]
-            output_mask = torch.ones(mask_shape, dtype=torch.bool, device='npu')
             y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
-                x1, x2, gamma, smooth_scale1=smooth_scale1, smooth_scale2=smooth_scale2,
-                beta=beta, output_mask=output_mask
+                x1, x2, gamma, smooth_scale1=smooth_scale1, smooth_scale2=smooth_scale2, beta=beta
             )
             self.assertEqual(y1_npu.shape, x1.shape)
             self.assertEqual(y1_npu.dtype, torch.int8)
@@ -2551,11 +2548,8 @@ class TestAddRmsNormDynamicQuant(TestCase):
             beta = torch.zeros([16, ], dtype=torch.bfloat16, device='npu')
             smooth_scale1 = torch.ones([16, ], dtype=torch.bfloat16, device='npu')
             smooth_scale2 = torch.ones([16, ], dtype=torch.bfloat16, device='npu')
-            mask_shape = x1.shape[:-1]
-            output_mask = torch.ones(mask_shape, dtype=torch.bool, device='npu')
             y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
-                x1, x2, gamma, smooth_scale1=smooth_scale1, smooth_scale2=smooth_scale2,
-                beta=beta, output_mask=output_mask
+                x1, x2, gamma, smooth_scale1=smooth_scale1, smooth_scale2=smooth_scale2, beta=beta, output_mask=output_mask
             )
             self.assertEqual(y1_npu.shape, x1.shape)
             self.assertEqual(y1_npu.dtype, torch.int8)

@@ -9277,7 +9277,7 @@ _add_torch_npu_docstr(
     "npu_add_rms_norm_dynamic_quant",
     """
 接口原型：
-npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, Tensor? output_mask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, bool[]? output_mask=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 功能描述
 将RmsNorm前的Add操作、RmsNorm归一化和最多两路DynamicQuant量化进行融合，减少数据搬入搬出操作。
