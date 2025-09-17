@@ -17,7 +17,7 @@ def _add_torch_npu_atb_api_docstr():
 torch_npu.atb.npu_multi_head_latent_attention(q_nope, q_rope, ctkv, k_rope, block_tables, context_lens, q_headnum, qk_scale, kv_headnum, *, mask=None, qseqlen=None, qk_descale=None, pv_descale=None, mask_type=None, calc_type=None, cache_mode=None, output=None) -> Tensor
 torch_npu.atb.npu_multi_head_latent_attention(q_nope, q_rope, ctkv, k_rope, block_tables, context_lens, q_headnum, qk_scale, kv_headnum, return_lse, *, mask=None, qseqlen=None, qk_descale=None, pv_descale=None, mask_type=None, calc_type=None, cache_mode=None, output=None, lse=None) -> (Tensor, Tensor)
 功能描述
-MLA场景，使用分页管理的kvcache计算attention score，额外支持分离qnope/qrope、ctkv/krope的输入。
+MLA场景，使用分页管理的kvcache计算attention score，额外支持分离qnope/qrope、ctkv/krope的输入。第一个接口不支持返回lse输出，第二个接口支持根据return_lse值判断是否返回lse输出。
 
 参数说明
 位置参数：
