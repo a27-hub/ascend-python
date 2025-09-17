@@ -54,7 +54,7 @@ def tsoftmax_grad(dp, softmax_res):
 
 
 # pylint:disable = huawei-too-many-arguments
-def tbackward(dx, q, k, v, softmax_res, scale, drop_mask, keep_prob):
+def tbackward(dx, q, k, v, softmax_res, scale, drop_mask=None, keep_prob=1.0):
     dp = torch.matmul(dx, v.permute(0, 1, 3, 2))
     if drop_mask == None or len(drop_mask.shape) == 0:
         drop_res = softmax_res.permute(0, 1, 3, 2)
@@ -267,10 +267,10 @@ class TestNPUFlashAttention(TestCase):
 
     @SupportedDevices(['Ascend910B'])
     @unittest.skip("skip test_npu_flash_attention_dropmask now")
-    def test_npu_flash_attention_dropmask(self, device="npu"):
-        query = torch.randn(1, 32, 256, 256, dtype=torch.float16)
-        key = torch.randn(1, 32, 256, 256, dtype=torch.float16)
-        value = torch.randn(1, 32, 256, 256, dtype=torch.float16)
+    def test_npu_flash_attention_with_dropmask(self, device="npu"):
+        query = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        key = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
         keep_prob = 0.9
         drop_mask = get_drop_mask(query, [1, 32, 256, 256], seed=2, gen_p=1-keep_prob)
 
@@ -281,8 +281,8 @@ class TestNPUFlashAttention(TestCase):
                                         key.to(torch.float32),
                                         value.to(torch.float32),
                                         scale=0.08838,
-                                        drop_mask,
-                                        keep_prob).to(torch.float16)
+                                        drop_mask=drop_mask,
+                                        keep_prob=keep_prob).to(torch.float16)
         result = self.custom_op_exec(q_npu, k_npu, v_npu, head_num=32, scale=0.08838, input_layout="BSH",
                                      keep_prob=keep_prob)
         attention_score = result[0]
@@ -290,8 +290,8 @@ class TestNPUFlashAttention(TestCase):
 
     @SupportedDevices(['Ascend910B'])
     @unittest.skip("skip test_npu_flash_attention_tnd now")
-    def test_npu_flash_attention_tnd_dropmask(self, device="npu"):
-        B, N1, N2, D = 3, 8, 2, 256
+    def test_npu_flash_attention_tnd_with_dropmask(self, device="npu"):
+        B, N1, N2, D = 3, 8, 2, 128
         scale = 1 / (D ** 0.5)
         seqlens_list_q = np.array([1, 2, 3])
         seqlens_list_k = np.array([3, 4, 5])
