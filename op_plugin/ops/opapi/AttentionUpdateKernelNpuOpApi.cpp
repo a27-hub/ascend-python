@@ -20,7 +20,8 @@ namespace op_api {
 
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_attention_update(at::TensorList lse, at::TensorList local_out, int64_t update_type) {
+std::tuple<at::Tensor, at::Tensor> npu_attention_update(at::TensorList lse, at::TensorList local_out, int64_t update_type)
+{
     auto output_size_0 = local_out[0].sizes();
     auto output_dtype_0 = local_out[0].scalar_type();
 
