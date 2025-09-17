@@ -20,7 +20,7 @@
 
         对输入`x`经过swiglu计算后的结果进行分组计算，`group_index`表示每个group分组的tokens数，每组使用不同的量化`smooth_scales`。
 
-        举例说明：假设x.shape=\[6, 2N\]，在`cumsum`模式下，`group_index`=\[2, 4, 6\]，表示有3个group，对应的`smooth_scales`维度为\[3, H\]。每个group数据使用不同的`smooth_scales`分别做quant量化操作。
+        举例说明：假设x.shape=\[6, 2N\]，在`cumsum`模式下，`group_index`的shape为\[2, 4, 6\]，表示有3个group，对应的`smooth_scales`维度为\[3, H\]。每个group数据使用不同的`smooth_scales`分别做quant量化操作。
 
         -   group0=x\[0:2, :\]，scale0=smooth_scales\[0, :\]
         -   group1=x\[2:4, :\]，scale1=smooth_scales\[1, :\]
@@ -34,9 +34,9 @@
             out=out*smooth\_scales
             $$
 
-        2.  动态/静态量化操作：对激活后的结果进行量化，以动态量化为例，详细数学公式请参考[aclnnSwGluQuantV2](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/API/aolapi/context/aclnnSwiGluQuantV2.md)
+        2.  动态/静态量化操作：对激活后的结果进行量化，以动态量化（dynamic_quant）为例，详细数学公式请参考[aclnnSwGluQuantV2](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/API/aolapi/context/aclnnSwiGluQuantV2.md)。
             $$
-            out,scale=dynamicquant(out)
+            out,scale=dynamic\_quant(out)
             $$
 
 ## 函数原型
@@ -55,7 +55,7 @@ torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=N
 -   **x** (`Tensor`)：必选参数，表示目标张量。数据类型支持`float16`、`bfloat16`、`float32`，支持非连续的`Tensor`，数据格式为$ND$，`x`的维数必须大于1维，尾轴为偶数且长度不超过8192，当`dst_type`为`int4`量化时，`x`的最后一维需要为4的倍数。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 -   **smooth\_scales** (`Tensor`)：可选参数，表示smooth量化系数。数据类型支持`float32`，支持非连续的`Tensor`，数据格式为$ND$。shape支持[G, N]，[G, ]。
--    **offsets** (`Tensor`)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入`None`即可。静态量化场景下：数据类型支持`FLOAT`，支持非连续的`Tensor`，数据格式为$ND$。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与`smooth_scales`保持一致。
+-    **offsets** (`Tensor`)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入`None`即可。静态量化场景下：数据类型支持`float`，支持非连续的`Tensor`，数据格式为$ND$。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与`smooth_scales`保持一致。
 -   **group\_index** (`Tensor`)：可选参数，当前支持`cumsum`和`count`两种模式，要求为1维张量，数据类型支持`int32`，数据格式$ND$，shape支持[G, ]，`group_index`内元素要求为非递减，且最大值不得超过输入`x`的除最后一维之外的所有维度大小之积。
 -   **activate\_left** (`bool`)：可选参数，swiglu流程中是否进行左激活，默认值为`False`。
 -   **quant\_mode** (`int`)：可选参数，表示量化类型，默认值为`0`。`0`表示静态量化，`1`表示动态量化。
