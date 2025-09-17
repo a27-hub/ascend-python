@@ -109,6 +109,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
         smooth_scale2=None,
         beta=None,
         epsilon=1e-6,
+        output_mask=None,
     ):
         for t in [x1, x2, gamma, smooth_scale1, smooth_scale2, beta]:
             if t is None:
@@ -122,6 +123,8 @@ class TestAddRmsNormDynamicQuant(TestCase):
         s2_n = smooth_scale2.npu() if smooth_scale2 is not None else None
         beta_n = beta.npu() if beta is not None else None
         eps_f = float(epsilon)
+        if output_mask is None:
+            output_mask = [True, True]
 
         y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
             x1_n, x2_n, gamma_n,
@@ -129,6 +132,7 @@ class TestAddRmsNormDynamicQuant(TestCase):
             smooth_scale2=s2_n,
             beta=beta_n,
             epsilon=eps_f,
+            output_mask=output_mask,
         )
 
         y1_cpu, y2_cpu, x_out_cpu, s1_cpu, s2_cpu = self.npu_add_rms_norm_dynamic_quant_golden(

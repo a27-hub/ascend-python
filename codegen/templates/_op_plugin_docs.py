@@ -9320,6 +9320,7 @@ beta = torch.zeros(8, dtype=torch.float16, device='npu')
 smooth_scale1 = torch.ones(8, dtype=torch.float16, device='npu')
 smooth_scale2 = torch.ones(8, dtype=torch.float16, device='npu')
 epsilon = 1e-6
+output_mask = [True, True]
 
 y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
     x1_n, x2_n, gamma_n,
@@ -9327,6 +9328,7 @@ y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_q
     smooth_scale2=s2_n,
     beta=beta_n,
     epsilon=eps_f,
+    output_mask=output_mask,
 )
 """
 )
