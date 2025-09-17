@@ -153,7 +153,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   参数里Shape使用的变量如下：
     -   A：表示本卡接收的最大token数量，取值范围如下
         -   不使能动态缩容场景时：
-            -   对于共享专家，要满足A=BS\*shared\_expert\_num/shared\_expert\_rank\_num。
+            -   对于共享专家，要满足A=BS\*ep\_world\_size*shared\_expert\_num/shared\_expert\_rank\_num。
             -   对于MoE专家，当`global_bs`为0时，要满足A\>=BS\*ep\_world\_size\*min\(local\_expert\_num, K\)；当`global_bs`非0时，要满足A\>=global\_bs\* min\(local\_expert\_num, K\)。
         -   使能动态缩容场景时：
             -   当`global_bs`为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；当`global_bs`非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))

@@ -145,11 +145,11 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 
 -   **copy\_expert\_num** (`int`)：可选参数，表示copy专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：当前版本不支持，传0即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。</term>
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的copy专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。</term>
 
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：当前版本不支持，传0即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。</term>
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的常量专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。</term>
 
 ## 返回值说明<a name="zh-cn_topic_0000002168254826_section22231435517"></a>
 `Tensor`
@@ -166,7 +166,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 -   参数里Shape使用的变量如下：
     -   A：表示本卡接收的最大token数量，取值范围如下
         -   不使能动态缩容场景时：
-            -   对于共享专家，要满足A=BS\*shared\_expert\_num/shared\_expert\_rank\_num。
+            -   对于共享专家，要满足A=BS\*ep\_world\_size*shared\_expert\_num/shared\_expert\_rank\_num。
             -   对于MoE专家，当global\_bs为0时，要满足A\>=BS\*ep\_world\_size\*min\(local\_expert\_num, K\)；当global\_bs非0时，要满足A\>=global\_bs\* min\(local\_expert\_num, K\)。
         -   使能动态缩容场景时：
             -   当global_bs为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；当gobal_bs非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))
