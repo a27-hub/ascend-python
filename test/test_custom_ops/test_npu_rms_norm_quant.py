@@ -65,7 +65,8 @@ class TestNPURmsNormQuant(TestCase):
         y1_np = y1.int_repr().detach().clone().cpu().numpy()
         return torch.tensor(y1_np).type(torch.float16).type(torch.int8).reshape(ori_shape)
 
-
+    @unittest.skip("skip until CANN is updated to support aclnnRmsNormQuant")
+    @SupportedDevices(['Ascend910B'])
     def test_npu_rms_norm_quant(self):
         torch.manual_seed(42) 
         np.random.seed(42)  
@@ -116,7 +117,8 @@ class TestNPURmsNormQuant(TestCase):
             y_npu_flat = y_npu.reshape(1, y_npu.numel())[0].cpu()
             self.assertTrue(self.compare(y_ref_flat, y_npu_flat, benchmark_int8))
     
-
+    @unittest.skip("skip until CANN is updated to support aclnnRmsNormQuant")
+    @SupportedDevices(['Ascend910B'])
     def test_npu_rms_norm_quant_bf16(self):
         shape_list = [
             [[16, ], [16, ]],    
