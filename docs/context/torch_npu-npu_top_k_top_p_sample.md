@@ -42,7 +42,7 @@
     $$
     top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
     $$
-    v表示预设的滚动topK时固定的分段长度：
+    v表示预设的滚动topK时的固定分段长度：
 
     $$
     v=8*1024
