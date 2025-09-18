@@ -38,11 +38,13 @@
   top\_k\_value[b] = {Max(top\_k[b])}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ top\_k\_value[b]\left \{s-1 \right \}  \cup \left \{ logits[b][v] \ge top\_k\_min[b][s-1] \right \} \right \}\\
   Card(top\_k\_value[b])=top\_k[b]
   $$
-        其中：
+  <p style="margin-left:3em"> 其中：
+  
   $$
   top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
   $$
-        v表示预设的滚动topK时固定的分段长度：
+  <p style="margin-left:3em"> v表示预设的滚动topK时固定的分段长度：
+
   $$
   v=8*1024
   $$
