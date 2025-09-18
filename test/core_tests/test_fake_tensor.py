@@ -2876,6 +2876,191 @@ class TestNpuDynamicBlockQuant(TestCase):
         self.assertEqual(actual_y.shape, fake_y.shape)
         self.assertEqual(actual_scale.shape, fake_scale.shape)
 
+@unittest.skip("skip until CANN is updated to support NSA operators")
+class TestNSAAttention(TestCase):
+    def get_tnd_idx(self, actual_q_len, t_idx):
+        b_idx = 0
+        while t_idx >= actual_q_len[b_idx]:
+            b_idx += 1
+        if b_idx == 0:
+            s1_offset = 0
+        else:
+            s1_offset = actual_q_len[b_idx - 1]
+        s1_idx = t_idx - s1_offset
+        return b_idx, s1_idx
+    
+    def test_npu_nsa_select_attention_infer_meta(self):
+        batch_size = 2
+        kv_seqlen = 128
+        page_block_size = 128
+        key_value_head_num = 2
+        head_num = 32
+        select_block_size = 64
+        actual_seq_kvlen = [kv_seqlen] * batch_size
+        max_k_seqlen = max(actual_seq_kvlen)
+        layout = "TND"
+        select_block_count = 2
+        atten_mask = None
+        scale_value = 0.0721
+        g = 4
+        d1 = 192
+        d2 = 128
+        actual_seq_qlen = [1] * batch_size
+        max_num_blocks_per_seq = int(max_k_seqlen / page_block_size) + 1
+        block_table = torch.tensor([[1] * ((max_k_seqlen + page_block_size - 1) // page_block_size)] * batch_size, device="npu").int()
+        query = torch.randn([batch_size, 1 * head_num, d1], dtype=torch.float16, device="npu")
+        key = torch.randn([batch_size * max_num_blocks_per_seq, page_block_size, key_value_head_num * d1], dtype=torch.float16, device="npu")
+        value = torch.randn([batch_size * max_num_blocks_per_seq, page_block_size, key_value_head_num * d2], dtype=torch.float16, device="npu")
+        topk_indices = torch.tensor([0, -1, 0, -1, 1, -1, 1, -1], dtype=torch.int32).reshape((2, 2, 2)).npu()
+        actual_output = torch_npu.npu_nsa_select_attention_infer(query, key, value, topk_indices, scale_value, head_num, key_value_head_num, 
+                                                                select_block_size, select_block_count, page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                                block_table=block_table, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+        with FakeTensorMode():
+            fake_block_table = torch.tensor([[1] * ((max_k_seqlen + page_block_size - 1) // page_block_size)] * batch_size, device="npu").int()
+            fake_query = torch.randn([batch_size, 1 * head_num, d1], dtype=torch.float16, device="npu")
+            fake_key = torch.randn([batch_size * max_num_blocks_per_seq, page_block_size, key_value_head_num * d1], dtype=torch.float16, device="npu")
+            fake_value = torch.randn([batch_size * max_num_blocks_per_seq, page_block_size, key_value_head_num * d2], dtype=torch.float16, device="npu")
+            fake_topk_indices = torch.tensor([0, -1, 0, -1, 1, -1, 1, -1], dtype=torch.int32).reshape((2, 2, 2)).npu()
+            fake_output = torch_npu.npu_nsa_select_attention_infer(fake_query, fake_key, fake_value, fake_topk_indices, scale_value, head_num, key_value_head_num, 
+                                                                    select_block_size, select_block_count, page_block_size, layout=layout, atten_mask=atten_mask, 
+                                                                    block_table=fake_block_table, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+        self.assertEqual(actual_output.shape, fake_output.shape)
+
+    def test_npu_nsa_compress_attention_infer_meta(self):
+        batch_size = 10
+        Seq = 1
+        head_num = 4
+        key_value_head_num = 2
+        head_dim = 8
+        seq_length = 512
+        page_block_size = 32
+        block_table = torch.tensor([[1] * ((seq_length + page_block_size - 1) // page_block_size)] * batch_size, device="npu").int()
+        head_dim_vo = 6
+        query = torch.randn([batch_size * Seq, head_num, head_dim], dtype=torch.float16, device="npu")
+        key = torch.randn([batch_size, page_block_size, key_value_head_num * head_dim], dtype=torch.float16, device="npu")
+        value = torch.randn([batch_size, page_block_size, key_value_head_num * head_dim_vo], dtype=torch.float16, device="npu")
+        scale_value = 0.01
+        select_block_size = 64
+        select_block_count = 8
+        compress_block_size = 32
+        compress_stride = 16
+        actual_cmp_seq_kvlen = [95] * batch_size
+        actual_output, actual_topk = torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, 
+                                                            select_block_size, select_block_count, page_block_size, 
+                                                            compress_block_size, compress_stride, block_table=block_table, 
+                                                            atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
+                                                            actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None)
+
+        with FakeTensorMode():
+            fake_block_table = torch.tensor([[1] * ((seq_length + page_block_size - 1) // page_block_size)] * batch_size, device="npu").int()
+            fake_query = torch.randn([batch_size * Seq, head_num, head_dim], dtype=torch.float16, device="npu")
+            fake_key = torch.randn([batch_size, page_block_size, key_value_head_num * head_dim], dtype=torch.float16, device="npu")
+            fake_value = torch.randn([batch_size, page_block_size, key_value_head_num * head_dim_vo], dtype=torch.float16, device="npu")      
+            fake_output, fake_topk = torch_npu.npu_nsa_compress_attention_infer(fake_query, fake_key, fake_value, scale_value, head_num, key_value_head_num, 
+                                                                select_block_size, select_block_count, page_block_size, 
+                                                                compress_block_size, compress_stride, block_table=fake_block_table, 
+                                                                atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
+                                                                actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None) 
+        self.assertEqual(actual_output.shape, fake_output.shape)
+        self.assertEqual(actual_topk.shape, fake_topk.shape)
+
+    def test_npu_nsa_compress_attention_meta(self):
+        query = torch.randn([2633, 7, 8], dtype=torch.float16, device="npu")
+        key = torch.randn([4072, 7, 8], dtype=torch.float16, device="npu")
+        value = torch.randn([4072, 7, 7], dtype=torch.float16, device="npu")
+        scale_value = 0.3
+        head_num = 7
+        compress_block_size = 32
+        compress_stride = 16
+        select_block_size = 64
+        select_block_count = 16
+        top_k_masks = torch.eye(1384, 567)
+        top_k_masks[:, 0] = 1  
+        top_k_masks = top_k_masks.to(torch.bool)
+        topk_mask = top_k_masks.to(torch.uint8).npu()
+
+        atten_mask = np.triu(np.ones([1384, 2266]), k=1)
+        atten_mask = torch.from_numpy(atten_mask).to(torch.uint8).npu()
+        actual_seq_qlen = [1384, 2633]
+        actual_cmp_seq_kvlen = [2266, 4072]
+        actual_sel_seq_kvlen = [567, 1019]
+        output = torch_npu.npu_nsa_compress_attention(query, key, value, scale_value, head_num, compress_block_size,compress_stride, select_block_size, 
+                                                    select_block_count, topk_mask=topk_mask, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, 
+                                                    actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=actual_sel_seq_kvlen)
+
+        with FakeTensorMode():
+            fake_query = torch.randn([2633, 7, 8], dtype=torch.float16, device="npu")
+            fake_key = torch.randn([4072, 7, 8], dtype=torch.float16, device="npu")
+            fake_value = torch.randn([4072, 7, 7], dtype=torch.float16, device="npu")    
+            atten_mask = np.triu(np.ones([1384, 2266]), k=1)
+            fake_atten_mask = torch.from_numpy(atten_mask).to(torch.uint8).npu()
+            top_k_masks = torch.eye(1384, 567)
+            top_k_masks[:, 0] = 1  
+            top_k_masks = top_k_masks.to(torch.bool)
+            fake_topk_mask = top_k_masks.to(torch.uint8).npu()
+            fake_actual_seq_qlen = [1384, 2633]
+            fake_actual_cmp_seq_kvlen = [2266, 4072]
+            fake_actual_sel_seq_kvlen = [567, 1019]
+            fake_output = torch_npu.npu_nsa_compress_attention(fake_query, fake_key, fake_value, scale_value, head_num, compress_block_size, compress_stride, select_block_size, 
+                                                        select_block_count, topk_mask=fake_topk_mask, atten_mask=fake_atten_mask, actual_seq_qlen=fake_actual_seq_qlen, 
+                                                        actual_cmp_seq_kvlen=fake_actual_cmp_seq_kvlen, actual_sel_seq_kvlen=fake_actual_sel_seq_kvlen)
+
+        self.assertEqual(output[0].shape, fake_output[0].shape)
+        self.assertEqual(output[1].shape, fake_output[1].shape)
+        self.assertEqual(output[2].shape, fake_output[2].shape)
+        self.assertEqual(output[3].shape, fake_output[3].shape)
+
+    def test_npu_nsa_select_attention_meta(self):
+        query = torch.randn([1, 115, 192], dtype=torch.float16, device="npu")
+        key = torch.randn([1088, 115, 192], dtype=torch.float16, device="npu")
+        value = torch.randn([1088, 115, 128], dtype=torch.float16, device="npu")
+        scale_value = 1.0
+        head_num = query.size(1)
+        select_block_count = 16
+        select_block_size = 64
+        actual_seq_qlen = [1]
+        actual_seq_kvlen = [1088]
+
+        topk_indices = torch.zeros(query.size(0), value.size(1), select_block_count,).to(torch.int)
+        for i in range(query.size(0)):
+            _, s1_idx = self.get_tnd_idx(actual_seq_qlen, i)
+            for j in range(value.size(1)):
+                if s1_idx < select_block_count * select_block_size:
+                    topk_indices[i][j] = torch.arange(select_block_count)
+                else:
+                    topk_indices[i][j] = torch.randperm(select_block_count)
+                    topk_indices[i][j][random.uniform(0, select_block_count)] = (s1_idx + select_block_size - 1) // select_block_size
+        topk_indices = topk_indices.npu()     
+        output = torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, 
+                                                                                        select_block_count, atten_mask=None, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+
+        with FakeTensorMode():
+            query = torch.randn([1, 115, 192], dtype=torch.float16, device="npu")
+            key = torch.randn([1088, 115, 192], dtype=torch.float16, device="npu")
+            value = torch.randn([1088, 115, 128], dtype=torch.float16, device="npu")
+            scale_value = 1.0
+            head_num = query.size(1)
+            select_block_count = 16
+            select_block_size = 64
+            actual_seq_qlen = [1]
+            actual_seq_kvlen = [1088]
+
+            topk_indices = torch.zeros(query.size(0), value.size(1), select_block_count,).to(torch.int)
+            for i in range(query.size(0)):
+                _, s1_idx = self.get_tnd_idx(actual_seq_qlen, i)
+                for j in range(value.size(1)):
+                    if s1_idx < select_block_count * select_block_size:
+                        topk_indices[i][j] = torch.arange(select_block_count)
+                    else:
+                        topk_indices[i][j] = torch.randperm(select_block_count)
+                        topk_indices[i][j][random.uniform(0, select_block_count)] = (s1_idx + select_block_size - 1) // select_block_size
+            topk_indices = topk_indices.npu()
+            fake_output = torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, 
+                                                                                            select_block_count, atten_mask=None, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
+
+        self.assertEqual(output[0].shape, fake_output[0].shape)
+        self.assertEqual(output[1].shape, fake_output[1].shape)
+        self.assertEqual(output[2].shape, fake_output[2].shape)
 
 if __name__ == "__main__":
     run_tests()
