@@ -144,7 +144,7 @@ c10::SmallVector<int64_t, SIZE> reduce_lastdim_output_size(const at::Tensor& sel
 {
     auto shape = array_to_small_vector(self.sizes());
     int64_t ndim = static_cast<int64_t>(shape.size());
-    TORCH_CHECK(ndim >= 1, "reduce_lastdim_output_size: input must have at least 1 dimension");
+    TORCH_CHECK(ndim >= 1, "Expected input to have at least 1 dimension, but got a tensor with ", ndim, "dimensions.", OPS_ERROR(ErrCode::PARAM));
 
     int64_t last = ndim - 1;
     shape.erase(shape.begin() + last);
