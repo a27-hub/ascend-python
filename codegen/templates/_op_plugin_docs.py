@@ -6588,12 +6588,11 @@ page attention不支持tensorlist场景，不支持左padding场景.
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
 Atlas A3 训练系列产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
 page attention场景下，必须传入actual_seqLengths_kv.
+page attention场景下，使能atten_mask，当sparse_mode不为2、3、4时，传入的atten_mask的最后一维需要大于等于blockTable的第二维 * blockSize.
+page attention场景下，使能pse_shift，传入的pse_shift的最后一维需要大于等于blockTable的第二维 * blockSize.
 page attention场景下，以下场景输入S需要大于等于blockTable的第二维 * blockSize:
-使能atten_mask: 当sparse_mode不为2、3、4时，传入的atten_mask的最后一维需要大于等于blockTable的第二维 * blockSize。.
-使能pseShift: 如pseShift shape为(B, N, 1, S).
 使能伪量化per-token模式：输入参数antiquant_scale和antiquant_offset的shape均为(2, B, S).
 使能per-token叠加per-head模式：两个参数的shape均为(B, N, S)，数据类型固定为float32，支持key、value数据类型为int8、int4(int32).
-使能per-token-group模式：antiquant_scale的shape为(1, B, N, S, D/32)，数据类型固定为FLOAT8_E8M0，不支持带antiquant_offset。当key、value数据类型为FLOAT4_E1M2、FLOAT4_E2M1时支持.
 kv左padding场景: 
 kvCache的搬运起点计算公式为: Smax-kv_padding_size-actual_seq_lengths. kvCache的搬运终点计算公式为: Smax-kv_padding_size. 其中kvCache的搬运起点或终点小于0时, 返回数据结果为全0. 
 kv_padding_size小于0时将被置为0. 
