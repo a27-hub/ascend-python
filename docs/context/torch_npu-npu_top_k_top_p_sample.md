@@ -26,23 +26,26 @@
 
 - 计算公式：
 输入`logits`为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
-`logtis`中的每一行`logtis[batch][:]`根据相应的`top_k[batch]`、`top_p[batch]`、`q[batch, :]`，执行不同的计算场景。<br>
+`logtis`中的每一行logtis[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]，执行不同的计算场景。<br> 
 下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
 
   topK采样
   1. 按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
-  2. `top_k[batch]`对应当前batch采样的k值，有效范围为1≤`top_k[batch]`≤min(voc_size[batch], 1024)，如果`top_k[k]`超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入`logits[batch]`直接传入下一模块。<br>
+  2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
   * 具体计算流程如下所示：
   * 对当前batch分割为若干子段，滚动计算top_k_value[b]：
   $$
   top\_k\_value[b] = {Max(top\_k[b])}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ top\_k\_value[b]\left \{s-1 \right \}  \cup \left \{ logits[b][v] \ge top\_k\_min[b][s-1] \right \} \right \}\\
   Card(top\_k\_value[b])=top\_k[b]
   $$
-  * 其中：
+  <p style="margin-left:3em">其中：
+
   $$
   top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
   $$
-  *  v表示预设的滚动topK时固定的分段长度：
+
+  <p style="margin-left:3em">v表示预设的滚动topK时固定的分段长度：
+  
   $$
   v=8*1024
   $$
@@ -74,7 +77,7 @@
     $$
     top\_p\_mask[b] = probs\_sum[b][*] < top\_p[b]
     $$
-  * 如果topK采样被跳过，则先对输入`logits[b]`进行softmax处理：
+  * 如果topK采样被跳过，则先对输入logits[b]进行softmax处理：
   $$
   logits\_value[b] = logits[b].softmax(dim=-1)
   $$
@@ -87,7 +90,7 @@
   \sum^{top\_k\_guess}(top\_p\_value[b]) \ge top\_p[b]\\
   top\_p\_mask[b][Index(top\_p\_value[b])] = false
   $$
-  * 如果`top_k_guess`失败，则对当前序logits_value[b]进行全排序和cumsum，按`top_p[b]`截断采样：
+  * 如果`top_k_guess`失败，则对当前序logits_value[b]进行全排序和cumsum，按top_p[b]截断采样：
   $$
   sorted\_logits[b] = sort(logits\_value[b], descendant) \\
   probs\_sum[b]=sorted\_logits[b].cumcum (dim=-1) \\
@@ -117,7 +120,7 @@
     $$
     logits\_select\_idx[b] = logits\_idx[b][argmax(probs\_opt[b][:])]
     $$
-  * 其中0≤b<sorted_value.size(0)，0≤v<sorted_value.size(1)。
+    其中0≤b<$sorted\_value.size(0)$，0≤v<$sorted\_value.size(1)$。
 ## 函数原型
 ```
 torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need_logits=False, top_k_guess=32) -> (Tensor, Tensor)
@@ -125,12 +128,12 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need
 
 ## 参数说明
 -   **logits**（`Tensor`）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持`float16`和`bfloat16`，数据格式支持$ND$，支持非连续Tensor。
--   **top_k**（`Tensor`）：必选参数，表示每个batch采样的k值，有效范围为1≤`top_k[batch]`≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
--   **top_p**（`Tensor`）：必选参数，表示每个batch采样的p值，有效范围为0<`top_p[batch]`<1，目前支持1维。数据类型和数据格式与`logits`保持一致，支持非连续Tensor。
+-   **top_k**（`Tensor`）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
+-   **top_p**（`Tensor`）：必选参数，表示每个batch采样的p值，有效范围为0<$top\_p[batch]<1$，目前支持1维。数据类型和数据格式与`logits`保持一致，支持非连续Tensor。
 -   **q**（`Tensor`）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持`float32`，数据格式支持$ND$，支持非连续Tensor，默认值为None。
 -   **eps**（`float`）：可选参数，在softmax和权重采样中防止除零，默认值为1e-8。
--   **is_need_logits**（`bool`）：可选参数，控制logits_top_kp_select的输出条件，默认值为False。
--   **top_k_guess**（`int`）：可选参数，表示每个batch在尝试topP部分遍历采样时的候选logits大小，必须为正整数，默认值为32。
+-   **is_need_logits**（`bool`）：可选参数，控制`logits_top_kp_select`的输出条件，默认值为False。
+-   **top_k_guess**（`int`）：可选参数，表示每个batch在尝试topP部分遍历采样时的候选`logits`大小，必须为正整数，默认值为32。
 
 ## 返回值说明
 `Tensor`
@@ -144,7 +147,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need
 -   `logits`、`q`、`logits_top_kp_select`的尺寸和维度必须完全一致。
 -   `logits`、`top_k`、`top_p`、`logits_select_idx`除最后一维以外的所有维度必须顺序和大小完全一致。目前`logits`只能是2维，`top_k`、`top_p`、`logits_select_idx`必须是1维非空Tensor。`logits`、`top_k`、`top_p`不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
 -   如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
--   如果1024<`top_k[batch]`<voc_size[batch]，则视为选择当前batch的全部有效元素并跳过topK环节。
+-   如果1024<$top\_k[batch]<voc\_size[batch]$，则视为选择当前batch的全部有效元素并跳过topK环节。
 -   如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。
 -   如果需要单独跳过Sample模块，使用其默认值或设置`q`为None；如需使用Sample模块，则必须传入尺寸为[batch, voc_size]的Tensor。
 
