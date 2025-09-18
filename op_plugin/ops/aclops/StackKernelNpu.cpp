@@ -15,7 +15,6 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
-#include "op_plugin/third_party/acl/inc/op_proto/all_ops.h"
 
 
 namespace acl_op {

@@ -16,7 +16,6 @@
 #include <ATen/native/TypeProperties.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
-#include "op_plugin/third_party/acl/inc/op_proto/all_ops.h"
 #include "op_plugin/utils/custom_functions/aclops/inner_compute.h"
 
 namespace acl_op {
