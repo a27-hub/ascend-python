@@ -662,3 +662,4 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         print("run npu success.")
     ```
 
+AA
