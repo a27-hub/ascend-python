@@ -34,19 +34,19 @@
     2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
     * 具体计算流程如下所示：
     * 对当前batch分割为若干子段，滚动计算top_k_value[b]：
-    $$
-    top\_k\_value[b] = {Max(top\_k[b])}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ top\_k\_value[b]\left \{s-1 \right \}  \cup \left \{ logits[b][v] \ge top\_k\_min[b][s-1] \right \} \right \}\\
-    Card(top\_k\_value[b])=top\_k[b]
-    $$
-    * 在上述公式中，top_k_min[b][s]的计算如下所示：
-    $$
-    top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
-    $$
-    * v表示预设的滚动topK时固定的分段长度：
+      $$
+      top\_k\_value[b] = {Max(top\_k[b])}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ top\_k\_value[b]\left \{s-1 \right \}  \cup \left \{ logits[b][v] \ge top\_k\_min[b][s-1] \right \} \right \}\\
+      Card(top\_k\_value[b])=top\_k[b]
+      $$
+      其中：
+      $$
+      top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
+      $$
+      v表示预设的滚动topK时固定的分段长度：
 
-    $$
-    v=8*1024
-    $$
+      $$
+      v=8*1024
+      $$
     * 生成需要过滤的mask：
     $$
     sorted\_value[b] = sort(top\_k\_value[b], descendant)
@@ -99,9 +99,9 @@
       sorted\_value[b][v] = \begin{cases} -inf& \text{top\_p\_mask[b][v]=true}\\sorted\_value[b][v]& \text{top\_p\_mask[b][v]=false}\end{cases}
       $$
     *  取过滤后sorted_value[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx：
-      $$
-      logits\_idx[b][v] = Index(sorted\_value[b][v] \in logits)
-      $$
+    $$
+    logits\_idx[b][v] = Index(sorted\_value[b][v] \in logits)
+    $$
     指数采样（Sample）
     * 如果`is_need_logits`设置为True，则根据logits_idx，选取采样后结果输出到`logits_top_kp_select`：
     $$
