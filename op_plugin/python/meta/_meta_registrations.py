@@ -2342,3 +2342,42 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
     output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
     output_offset_shape = torch.empty([], dtype=torch.float32, device=x.device)
     return output_shape, output_scale_shape, output_offset_shape
+
+@impl(m, "npu_nsa_select_attention_infer")
+def npu_nsa_select_attention_infer_meta(query, key, value, topk_indices, scale_value, head_num, key_value_head_num, select_block_size, 
+                                select_block_count, page_block_size, layout='BSND', atten_mask=None, block_table=None, actual_seq_qlen=None, actual_seq_kvlen=None):
+    key_head_dim = value.size(2) // key_value_head_num
+    if layout == "BSND":
+        return torch.empty([query.size(0), query.size(1), query.size(2), value.size(3)], dtype=query.dtype, device='meta')
+    elif layout == "BSH":
+        return torch.empty([query.size(0), query.size(1), head_num * key_head_dim], dtype=query.dtype, device='meta')
+    else:
+        return torch.empty([query.size(0), head_num, key_head_dim], dtype=query.dtype, device='meta')
+
+@impl(m, "npu_nsa_select_attention")
+def npu_nsa_select_attention_meta(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, *, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None):
+    attention_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
+    softmax_max_out = torch.empty([query.size(0), query.size(1), 8], dtype=torch.float32, device='meta')
+    softmax_sum_out = torch.empty([query.size(0), query.size(1), 8], dtype=torch.float32, device='meta')
+    return attention_out, softmax_max_out, softmax_sum_out
+
+@impl(m, "npu_nsa_compress_attention_infer")
+def npu_nsa_compress_attention_infer_meta(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, 
+                                    select_block_count, page_block_size, compress_block_size, compress_stride, *, layout='TND', 
+                                    atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None):
+    head_dim_vo = value.size(2) // key_value_head_num
+    if layout == "TND":
+        output = torch.empty([query.size(0), query.size(1), head_dim_vo], dtype=query.dtype, device='meta')
+        topKOutput = torch.empty([query.size(0), key_value_head_num, select_block_count], dtype=torch.int32, device='meta')
+    else:
+        output = torch.empty([query.size(0), query.size(1), query.size(2), head_dim_vo], dtype=query.dtype, device='meta')
+        topKOutput = torch.empty([query.size(0), query.size(1), key_value_head_num, select_block_count], dtype=torch.int32, device='meta')
+    return output, topKOutput
+
+@impl(m, "npu_nsa_compress_attention")
+def npu_nsa_compress_attention_meta(query, key, value, scale_value, head_num, compress_block_size, compress_stride, select_block_size, select_block_count, *, topk_mask=None, atten_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None):
+    attention_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
+    topk_indices_out = torch.empty([query.size(0), key.size(1), select_block_count], dtype=torch.int32, device='meta')
+    softmax_max_out = torch.empty([query.size(0), query.size(1), 8], dtype=torch.float32, device='meta')
+    softmax_sum_out = torch.empty([query.size(0), query.size(1), 8], dtype=torch.float32, device='meta')
+    return attention_out, topk_indices_out, softmax_max_out, softmax_sum_out
