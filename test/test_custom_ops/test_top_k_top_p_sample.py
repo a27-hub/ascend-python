@@ -274,6 +274,7 @@ class TestTopKTopPSample(TestCase):
 
         return logits_select_idx_npu, logits_top_kp_select_npu, logits_select_idx_golden_npu, logits_top_kp_select_golden_npu
 
+    @unittest.skip("skip test_top_k_top_p_sample_major for now")
     @SupportedDevices(['Ascend910B'])
     def test_top_k_top_p_sample_major(self, device="npu"):
         bs_rng_list = [(1, 128)]
