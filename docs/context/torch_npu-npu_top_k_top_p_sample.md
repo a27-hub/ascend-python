@@ -38,12 +38,12 @@
   top\_k\_value[b] = {Max(top\_k[b])}_{s=1}^{\left \lceil \frac{S}{v} \right \rceil }\left \{ top\_k\_value[b]\left \{s-1 \right \}  \cup \left \{ logits[b][v] \ge top\_k\_min[b][s-1] \right \} \right \}\\
   Card(top\_k\_value[b])=top\_k[b]
   $$
-  <p style="margin-left:3em"> 其中：
+    <p style="margin-left:4em"> 其中：
   
   $$
   top\_k\_min[b][s] = Min(top\_k\_value[b]\left \{  s \right \})
   $$
-  <p style="margin-left:3em"> v表示预设的滚动topK时固定的分段长度：
+    <p style="margin-left:4em"> v表示预设的滚动topK时固定的分段长度：
 
   $$
   v=8*1024
@@ -135,8 +135,6 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need
 -   **top_k_guess**（`int`）：可选参数，表示每个batch在尝试topP部分遍历采样时的候选`logits`大小，必须为正整数，默认值为32。
 
 ## 返回值说明
-`Tensor`
-
 -   **logits_select_idx**（`Tensor`）：表示经过topK-topP-sample计算流程后，每个batch中词频最大元素max(probs_opt[batch, :])在输入`logits`中的位置索引。数据类型支持`int64`，数据格式支持$ND$。
 -   **logits_top_kp_select**（`Tensor`）：表示经过topK-topP计算流程后，输入`logtis`中剩余未被过滤的`logits`。数据类型支持`float32`，数据格式支持$ND$。
 
