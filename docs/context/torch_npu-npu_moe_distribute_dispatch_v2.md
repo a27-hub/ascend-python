@@ -20,13 +20,44 @@
 
       若`quant_mode`不为`2`，即非动态量化场景：
 
-      ![](./figures/zh-cn_formulaimage_0000002244554688.png)
+        $ \ quant\_out=
+        \begin{cases}
+        \ x, & \quad \text{if}\ quant\_mode = 0 \\
+        \ CaseToInt8(\ CaseToFp32(x) \times \ scales ), & \quad \text{if } quant\_mode ≠ 0 \\
+        \end{cases}$
+
+        $\ alltoall\_x\_out= \ alltoallv(\ quant\_out)$
+
+        $\ enpand\_x=
+        \begin{cases}
+        \ allgatherv(alltoall\_x\_out), & \quad \ 有TP通信域 \\
+        \ alltoall\_x\_out & \quad \ 无TP通信域 \\
+        \end{cases}$
 
       若`quant_mode`为`2`，即动态量化场景：
 
-      ![](./figures/zh-cn_formulaimage_0000002244394892.png)
 
+        $\ x\_fp32= \ CastToFp32(x) \times \ scales$
 
+        $\ dynamic\_scales\_value = 127.0/Max(Abs(x\_fp32))$
+
+        $\ quant\_out=CaseToInt8(\ x\_fp32 \times \ dynamic\_scales\_value )$
+
+        $\ alltoall\_x\_out= \ alltoallv(\ quant\_out)$
+
+        $\ alltoall\_dynamic\_scales\_out = alltoall(1.0/dynamic\_scales)$
+
+        $\ enpand\_x=
+        \begin{cases}
+        \ allgatherv(alltoall\_x\_out), & \quad \ 有TP通信域 \\
+        \ alltoall\_x\_out & \quad \ 无TP通信域 \\
+        \end{cases}$
+
+        $\ dynamic\_scales=
+        \begin{cases}
+        \ allgatherv(alltoall\_dynamic\_scales\_out), & \quad \ 有TP通信域 \\
+        \ alltoall\_dynamic\_scales\_out & \quad \ 无TP通信域 \\
+        \end{cases}$
 
     - 多计算专家场景：
 
