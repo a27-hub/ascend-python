@@ -14,7 +14,7 @@
     需与[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)或[torch\_npu.npu\_moe\_distribute\_combine\_add\_rms\_norm](torch_npu-npu_moe_distribute_combine_add_rms_norm.md)配套使用，完成MoE的并行部署下的token dispatch\_v2与combine\_v2。
      - 支持动态量化场景，对token数据先进行量化（可选），再进行EP（Expert Parallelism）域的alltoallv通信，再进行TP（Tensor  Parallelism）域的allgatherv通信（可选）；
      - 支持动态缩容场景，支持在创建通信域后，出现故障卡，将故障卡从通信域中剔除，算子可正常执行，无需重新编译；
-     - 支持多计算专家场景。
+     - 支持特殊专家场景。
 -   计算公式：
     - 动态量化场景：
 
@@ -59,21 +59,21 @@
       \end{cases}$
 
 
-    - 多计算专家场景：
+    - 特殊专家场景：
 
       零专家场景（$zeroExpertNum≠0$）：
 
-      $Moe(ori\_x)=0$
+      $$Moe(ori\_x)=0$$
 
       拷贝专家场景（$copyExpertNum≠0$）：
 
-      $Moe(ori\_x)=ori\_x$
+      $$Moe(ori\_x)=ori\_x$$
       
       常量专家场景（$constExpertNum≠0$）：
 
-      $Moe(ori\_x)=const\_expert\_alpha\_1*ori\_x+const\_expert\_alpha\_2*const\_expert\_v$
+      $$Moe(ori\_x)=const\_expert\_alpha\_1*ori\_x+const\_expert\_alpha\_2*const\_expert\_v$$
       
-      参数ori\_x、const_expert_alpha_1、const_expert_alpha_2、const_expert_v见[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)文档。
+      参数$ori\_x$、$const\_expert\_alpha\_1$、$const\_expert\_alpha\_2$、$const\_expert\_v$见[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)文档。
 
 ## 函数原型<a name="zh-cn_topic_0000002203575833_section45077510411"></a>
 

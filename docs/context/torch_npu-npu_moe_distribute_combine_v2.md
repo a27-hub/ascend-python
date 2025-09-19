@@ -14,7 +14,7 @@
     需与[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)和配套使用，相当于按npu\_moe\_distribute\_dispatch\_v2算子收集数据的路径原路返回。
      - 支持数据整合功能，先进行reduce\_scatterv通信，再进行alltoallv通信，最后将接收的数据整合（乘权重再相加）；
      - 支持动态缩容场景，在创建通信域后，出现故障卡，将故障卡从通信域中剔除，算子可正常执行，无需重新编译；
-     - 支持多计算专家场景。
+     - 支持特殊专家场景。
 -   计算公式：
     - 数据整合功能：
 
@@ -24,15 +24,15 @@
 
       $x = Sum(expert\_scales * ata\_out + expert\_scales * shared\_expert\_x)$
 
-    - 多计算专家场景：
+    - 特殊专家场景：
 
       零专家场景（$zeroExpertNum≠0$）：
 
-      $Moe(ori\_x)=0$
+      $$Moe(ori\_x)=0$$
 
       拷贝专家场景（$copyExpertNum≠0$）：
 
-      $Moe(ori\_x)=ori\_x$
+      $$Moe(ori\_x)=ori\_x$$
       
       常量专家场景（$constExpertNum≠0$）：
 
@@ -171,7 +171,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
             -   对于共享专家，要满足A=BS\*ep\_world\_size*shared\_expert\_num/shared\_expert\_rank\_num。
             -   对于MoE专家，当global\_bs为0时，要满足A\>=BS\*ep\_world\_size\*min\(local\_expert\_num, K\)；当global\_bs非0时，要满足A\>=global\_bs\* min\(local\_expert\_num, K\)。
         -   使能动态缩容场景时：
-            -   当global_bs为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；当gobal_bs非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))
+            -   当global_bs为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；
+            -   当gobal_bs非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))
 
     -   H：表示hidden size隐藏层大小。
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：取值范围\(0, 7168\]，且保证是32的整数倍。
