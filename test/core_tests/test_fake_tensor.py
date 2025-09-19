@@ -2843,7 +2843,8 @@ class TestNpuMoeUnpermuteWithRoutingMap(TestCase):
 
                 if need_probs:
                     self.assertEqual(permute_probs.dtype, porbs_npu.dtype)
-                    self.assertEqual(permute_probs.shape, porbs_npu.shape)
+                    self.assertEqual(permute_probs.shape, sorted_indices.shape)
+
 
 
 class TestNpuAttentionWorkerCombine(TestCase):
