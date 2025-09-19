@@ -20,7 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t INT4_IN_INT32_NUM = 8;
-//Substitute INT32_OUTPUT_TYPE for ge::DataType::DT_INT32, INT8_OUTPUT_TYPE for ge::DataType::DT_INT8.
+// Substitute INT32_OUTPUT_TYPE for ge::DataType::DT_INT32, INT8_OUTPUT_TYPE for ge::DataType::DT_INT8.
 const int INT32_OUTPUT_TYPE = 3;
 const int INT8_OUTPUT_TYPE = 2;
 
