@@ -3389,12 +3389,6 @@
   "func: soft_margin_loss_backward.grad_input(Tensor grad_output, Tensor self, Tensor target, int reduction, *, Tensor(a!) grad_input) -> Tensor(a!)": {
     "version": ["all_version"]
   },
-  "func: softmax.Dimname(Tensor self, Dimname dim, *, ScalarType? dtype=None) -> Tensor": {
-    "version": ["all_version"]
-  },
-  "func: softmax.int(Tensor self, int dim, ScalarType? dtype=None) -> Tensor": {
-    "version": ["all_version"]
-  },
   "func: softplus(Tensor self, Scalar beta=1, Scalar threshold=20) -> Tensor": {
     "version": ["all_version"]
   },
