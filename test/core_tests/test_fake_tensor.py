@@ -1781,7 +1781,7 @@ class TestRmsNormQuant(TestCase):
             beta = torch.randn([16, ], dtype=torch.float16).npu()
             scale = torch.randn(1, dtype=torch.float16).npu()
             offset = torch.randint(-10, 10, (1, ), dtype=torch.int8).npu()
-            y = torch_npu.npu_add_rms_norm_quant(x, gamma, beta, scale, offset)
+            y = torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset)
             self.assertTrue(y.shape == x.shape)
             self.assertTrue(y.dtype == torch.int8)
 
@@ -1790,7 +1790,7 @@ class TestRmsNormQuant(TestCase):
             beta = torch.randn([16, ], dtype=torch.bfloat16).npu()
             scale = torch.randn(1, dtype=torch.bfloat16).npu()
             offset = torch.randint(-10, 10, (1, ), dtype=torch.int8).npu()
-            y = torch_npu.npu_add_rms_norm_quant(x, gamma, beta, scale, offset)
+            y = torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset)
             self.assertTrue(y.shape == x.shape)
             self.assertTrue(y.dtype == torch.int8)
 
