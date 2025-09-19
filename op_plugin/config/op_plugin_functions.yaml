@@ -5564,6 +5564,14 @@ custom:
     acl_op: all_version
     op_api: all_version
 
+  - func: npu_rms_norm_quant(Tensor x, Tensor gamma, Tensor beta, Tensor scale, Tensor offset, float epsilon=1e-06) -> Tensor
+    op_api: all_version
+    gen_opapi:
+      y:
+        size: x
+        dtype: at::kChar
+      exec: aclnnRmsNormQuant, x, gamma, beta, scale, offset, epsilon, y
+
   - func: npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version

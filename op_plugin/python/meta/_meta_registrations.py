@@ -1103,7 +1103,12 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
 
-            
+
+@impl(m, "npu_rms_norm_quant")
+def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06):
+    return torch.empty(x.size(), dtype=torch.int8, device=x.device)
+
+
 @impl(m, "npu_rms_norm_backward")
 def npu_rms_norm_backward_meta(dy, self, gamma, rstd):
     return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(gamma, dtype=gamma.dtype))
