@@ -4696,14 +4696,6 @@ official:
         dtype: grad_input
       exec: aclnnSoftMarginLossBackward
 
-  - func: softmax.Dimname(Tensor self, Dimname dim, *, ScalarType? dtype=None) -> Tensor
-    acl_op: all_version
-    op_api: all_version
-
-  - func: softmax.int(Tensor self, int dim, ScalarType? dtype=None) -> Tensor
-    acl_op: all_version
-    op_api: all_version
-
   - func: softplus(Tensor self, Scalar beta=1, Scalar threshold=20) -> Tensor
     acl_op: all_version
     op_api: all_version
