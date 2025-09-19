@@ -104,7 +104,7 @@ class TestNPURmsNormQuant(TestCase):
                 beta = torch.randn(1, D, dtype=torch.float16)
 
             scale = (torch.rand(1, dtype=torch.float16) * 0.8 + 0.2)  
-            offset = torch.randint(-5, 6, (1,), dtype=torch.int8)
+            offset = torch.randint(-5, 6, (1, ), dtype=torch.int8)
             x_npu = x.npu()     
             gamma_npu = gamma.npu() 
             beta_npu = beta.npu() 
