@@ -189,7 +189,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
             -   对于共享专家，要满足A=BS\*shared\_expert\_num/shared\_expert\_rank\_num。
             -   对于MoE专家，当`global_bs`为0时，要满足A\>=BS\*ep\_world\_size\*min\(local\_expert\_num, K\)；当`global_bs`非0时，要满足A\>=global\_bs\* min\(local\_expert\_num, K\)。
         -   使能动态缩容场景时：
-            -   当`global_bs`为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；当`global_bs`非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))
+            -   当`global_bs`为0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, BS\*ep_world_size\*min(local_expert_num,K))；
+            -   当`global_bs`非0时，A>=max(BS\*ep_world_size\*shared_expert_num/shared_expert_rank_num, global_bs*min(local_expert_num,K))
 
     -   H：表示hidden size隐藏层大小。
         -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：取值范围\(0,7168\]，且保证是32的整数倍。
@@ -694,5 +695,3 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
             p.join()
         print("run npu success.")
     ```
-
-AA
