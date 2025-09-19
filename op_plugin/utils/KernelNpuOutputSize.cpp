@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <bitset>
+#include <ATen/native/LinearAlgebraUtils.h>
 #include "torch_npu/csrc/core/npu/NPUException.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "op_plugin/utils/AdvancedIndex.h"
@@ -137,6 +138,17 @@ c10::SmallVector<int64_t, SIZE> reduce_ops_npu_output_size(const at::Tensor &sel
         }
     }
 
+    return shape;
+}
+
+c10::SmallVector<int64_t, SIZE> reduce_lastdim_output_size(const at::Tensor& self)
+{
+    auto shape = array_to_small_vector(self.sizes());
+    int64_t ndim = static_cast<int64_t>(shape.size());
+    TORCH_CHECK(ndim >= 1, "Expected input to have at least 1 dimension, but got a tensor with ", ndim, "dimensions.", OPS_ERROR(ErrCode::PARAM));
+
+    int64_t last = ndim - 1;
+    shape.erase(shape.begin() + last);
     return shape;
 }
 
@@ -2172,6 +2184,15 @@ c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> split_with_sizes_copy_ou
     }
 
     return output_shapes;
+}
+
+std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> triangular_solve_output_size(const at::Tensor& self, const at::Tensor& A)
+{
+    auto result = at::native::_linalg_broadcast_batch_dims(self, A, "triangular_solve");
+    return std::make_tuple(
+        array_to_small_vector(std::get<0>(result).sizes()),
+        array_to_small_vector(std::get<1>(result).sizes())
+    );
 }
 
 } // namespace op_infer

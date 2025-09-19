@@ -224,11 +224,22 @@ else:
 
 @impl(m, "npu_mm_reduce_scatter_base")
 def npu_mm_reduce_scatter_base_meta(self, x2, hcom, world_size, reduce_op='sum',
-                                    bias=None, comm_turn=0):
+                                    bias=None, x1_scale=None, x2_scale=None, comm_turn=0,
+                                    output_dtype=None, comm_mode=None):
     if world_size <= 0:
         world_size = 1
     out_m = math.floor(self.size(0) / world_size)
-    return self.new_empty(out_m, x2.size(1))
+    dtype = self.dtype
+    size = [out_m, x2.size(1)]
+    if x2_scale is not None:
+        if x2_scale.dtype == torch.int64:
+            dtype = torch.float16
+        elif output_dtype is not None:
+            dtype = output_dtype
+        else:
+            dtype = torch.bfloat16
+
+    return torch.empty(size, dtype=dtype, device='meta')
 
 
 @impl(m, "npu_gmm_alltoallv")
@@ -440,6 +451,26 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
             x.new_empty(tuple(expanded_scale_dim_list), dtype=torch.float32))
+
+
+@impl(m, "npu_ffn_worker_batching")
+def npu_ffn_worker_batching(schedule_context, expert_num, max_out_shape, *, token_dtype=0, need_schedule=0, layer_num=0):
+    Y_size = max_out_shape[0] * max_out_shape[1] * max_out_shape[2]
+    H_size = max_out_shape[3]
+    H_dtype = torch.float16
+    if token_dtype == 1:
+        H_dtype = torch.bfloat16
+    if token_dtype == 2:
+        H_dtype = torch.int8
+    return (torch.empty(Y_size, H_size, dtype=H_dtype, device=schedule_context.device),
+            torch.empty(expert_num, 2, dtype=torch.int64, device=schedule_context.device),
+            torch.empty(Y_size, dtype=torch.int32, device=schedule_context.device),
+            torch.empty(Y_size, dtype=torch.int32, device=schedule_context.device),
+            torch.empty(Y_size, dtype=torch.int32, device=schedule_context.device),
+            torch.empty(Y_size, dtype=torch.int32, device=schedule_context.device),
+            torch.empty(Y_size, dtype=torch.float32, device=schedule_context.device),
+            torch.empty(1, dtype=torch.int64, device=schedule_context.device)
+            )
 
 
 @impl(m, "npu_moe_gating_top_k_softmax")
@@ -2484,6 +2515,19 @@ def rope_quant_kvcache(x, cos, k_cache, v_cache, size_splits, kv_output=False):
             k_cache, v_cache)
 
 
+@impl(m, "npu_swiglu_quant")
+def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None, activate_left=False, quant_mode=0,
+                          group_list_type=0, dst_type=torch.int8):
+    y_size = []
+    scale_size = []
+    for i in range(x.dim() - 1):
+        y_size.append(x.size(i))
+        scale_size.append(x.size(i))
+    y_size.append(math.floor(x.size(x.dim() - 1) / 2))
+    return (torch.empty(y_size, dtype=dst_type, device=x.device),
+            torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
 @impl(m, "npu_dequant_swiglu_quant")
 def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, bias=None, quant_scale=None,
                                   quant_offset=None, group_index=None, activate_left=False, quant_mode=0, 
@@ -2603,8 +2647,22 @@ def npu_moe_re_routing_meta(tokens, expert_token_num_per_rank, per_token_scales=
             torch.empty(expert_token_num_size, dtype=expert_token_num_per_rank.dtype, device=tokens.device))
 
 
+@impl(m, "npu_attention_worker_combine")
+def npu_attention_worker_combine(schedule_context, expert_scales, layer_id, hidden_size, token_dtype=0, need_schedule=0):
+    y_size = []
+    next_layer_id_size = []
+    y_size.append(expert_scales.size(0))
+    y_size.append(hidden_size)
+    next_layer_id_size.append(layer_id.size(0))
+    y_dtype = torch.half
+    if token_dtype == 1:
+        y_dtype = torch.bfloat16
+    return (torch.empty(y_size, dtype=y_dtype, device=schedule_context.device),
+            torch.empty(next_layer_id_size, dtype=torch.int32, device=schedule_context.device))
+
+
 @impl(m, "npu_add_rms_norm_quant")
-def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True):
+def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True):
     torch._check(
         scales2 is None,
         lambda: f"scales2 should be None, but got {scales2}.",
@@ -2626,6 +2684,12 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, scales2=No
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 
+@impl(m, "npu_attention_update")
+def npu_attention_update_meta(lse, local_out, update_type):
+    ref = local_out[0]
+    return torch.empty(ref.size(), dtype=ref.dtype, device=ref.device)
+
+    
 @impl(m, "npu_mrope")
 def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
     return (torch.empty_like(query), torch.empty_like(key))
