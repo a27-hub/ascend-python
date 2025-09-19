@@ -31,8 +31,7 @@ bool is_nd_nz_format_3d(const at::Tensor &self, const at::Tensor &mat2)
 
 at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &result)
 {
-    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2,
-                     acl_op::bmm_out(self, mat2, result));
+    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm_out(self, mat2, result));
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
     npu_preparation::check_tensor({self, mat2}, result, self.scalar_type(), output_size);
 
@@ -53,8 +52,7 @@ at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &
 
 at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
 {
-    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2,
-                     acl_op::bmm(self, mat2));
+    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
 
     // calculate the output size
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
