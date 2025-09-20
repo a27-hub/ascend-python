@@ -42,8 +42,6 @@ at::Tensor hardswish_backward(const at::Tensor& grad_output, const at::Tensor& s
         .Input(self)
         .Output(grad_input)
         .Run();
-    at::Tensor values_le3 = at::tensor(0.0f, grad_output.options());
-    at::Tensor values_ge3 = at::tensor(1.0f, grad_output.options());
     at::Tensor values_le3 = at::empty({}, self.options());
     at::Tensor values_ge3 = at::empty({}, self.options());
     acl_op::fill_(values_le3, 0.0f);
