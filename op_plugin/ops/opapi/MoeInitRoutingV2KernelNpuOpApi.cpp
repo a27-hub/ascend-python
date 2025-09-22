@@ -89,20 +89,24 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     }
 
     if (using_v2) {
-        at::Tensor expert_tokens_before_capacityOut = npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
+        at::Tensor expert_tokens_before_capacity = npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
+        expert_capacity = 0;
+        drop_pad_mode = 0;
+        expert_tokens_num_flag = 2;
+        bool expert_tokens_before_capacity_flag = false
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
             active_num,
-            0,
+            expert_capacity,
             expert_num,
-            0,
-            2,
-            false,
+            drop_pad_mode,
+            expert_tokens_num_flag,
+            expert_tokens_before_capacity_flag,
             expanded_x,
             expanded_row_idx,
             expert_tokens_count_or_cumsum,
-            expert_tokens_before_capacityOut);
+            expert_tokens_before_capacity);
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacityOut);
     }
     else {
