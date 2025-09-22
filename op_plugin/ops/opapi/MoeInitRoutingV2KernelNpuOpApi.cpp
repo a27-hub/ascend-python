@@ -107,7 +107,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             expanded_row_idx,
             expert_tokens_count_or_cumsum,
             expert_tokens_before_capacity);
-        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacityOut);
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
     }
     else {
         at::Tensor expanded_scale = npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
