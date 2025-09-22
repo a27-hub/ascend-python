@@ -273,7 +273,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     is_quant = (quant_mode > 0)
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 0
+    const_expert_num = 1
 
 
     def gen_const_expert_alpha_1():
@@ -289,15 +289,6 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     def gen_const_expert_v():
         const_expert_v = torch.empty(size=[const_expert_num, h], dtype=input_dtype).uniform_(-1, 1)
         return const_expert_v
-
-
-    def gen_unique_topk_array(low, high, bs, k):
-        array = []
-        for i in range(bs):
-            top_idx = list(np.arange(low, high, dtype=np.int32))
-            random.shuffle(top_idx)
-            array.append(top_idx[0:k])
-        return np.array(array)
 
 
     def get_new_group(rank):
@@ -537,7 +528,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 0
+    const_expert_num = 1
 
 
     class MOE_DISTRIBUTE_GRAPH_Model(torch.nn.Module):
@@ -616,15 +607,6 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     def gen_const_expert_v():
         const_expert_v = torch.empty(size=[const_expert_num, h], dtype=input_dtype).uniform_(-1, 1)
         return const_expert_v
-
-
-    def gen_unique_topk_array(low, high, bs, k):
-        array = []
-        for i in range(bs):
-            top_idx = list(np.arange(low, high, dtype=np.int32))
-            random.shuffle(top_idx)
-            array.append(top_idx[0:k])
-        return np.array(array)
 
 
     def get_new_group(rank):
