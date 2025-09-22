@@ -271,8 +271,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     globalBS = bs * ep_world_size
     is_shared = (shared_expert_rank_num > 0)
     is_quant = (quant_mode > 0)
-    zero_expert_num = 0
-    copy_expert_num = 0
+    zero_expert_num = 1
+    copy_expert_num = 1
     const_expert_num = 0
 
 
@@ -407,7 +407,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 
         if rank in available_ranks:
-            expand_x, dynamic_scales, assist_info_for_combine, expert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales = torch_npu.npu_moe_distribute_dispatch_v2(
+            expand_x, dynamic_scales, assist_info_for_combine, ex~pert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales = torch_npu.npu_moe_distribute_dispatch_v2(
                 x=x,
                 expert_ids=expert_ids,
                 group_ep=ep_hcomm_info,
@@ -535,8 +535,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     is_shared = (shared_expert_rank_num > 0)
     is_quant = (quant_mode > 0)
 
-    zero_expert_num = 0
-    copy_expert_num = 0
+    zero_expert_num = 1
+    copy_expert_num = 1
     const_expert_num = 0
 
 

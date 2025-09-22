@@ -249,8 +249,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     globalBS = bs * ep_world_size
     is_shared = (shared_expert_rank_num > 0)
     is_quant = (quant_mode > 0)
-    zero_expert_num = 0
-    copy_expert_num = 0
+    zero_expert_num = 1
+    copy_expert_num = 1
     const_expert_num = 0
 
 
@@ -513,8 +513,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     is_shared = (shared_expert_rank_num > 0)
     is_quant = (quant_mode > 0)
 
-    zero_expert_num = 0
-    copy_expert_num = 0
+    zero_expert_num = 1
+    copy_expert_num = 1
     const_expert_num = 0
 
 
