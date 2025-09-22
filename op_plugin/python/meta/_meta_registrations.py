@@ -1082,6 +1082,11 @@ def npu_add_rms_norm_meta(x1, x2, gamma, epsilon=1e-6):
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
 
+@impl(m, "npu_rms_norm_quant")
+def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06):
+    return torch.empty(x.size(), dtype=torch.int8, device=x.device)
+
+    
 @impl(m, "npu_add_rms_norm_cast")
 def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
     rstd_dim = x1.dim() - gamma.dim()
@@ -2793,6 +2798,17 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 def npu_moe_token_unpermute_with_routing_map(permuted_tokens, sorted_indices, restore_shape, *, probs=None, routing_map=None, drop_and_pad=False):
     unpermuted_tokens = torch.empty([restore_shape[0], restore_shape[1]], dtype=permuted_tokens.dtype, device=permuted_tokens.device)
     return unpermuted_tokens
+
+
+@impl(m, "_npu_moe_token_unpermute_with_routing_map")
+def _npu_moe_token_unpermute_with_routing_map(permuted_tokens, sorted_indices, restore_shape, *, probs=None, routing_map=None, drop_and_pad=False):
+    unpermuted_tokens = torch.empty([restore_shape[0], restore_shape[1]], dtype=permuted_tokens.dtype, device=permuted_tokens.device)
+    out_index = torch.empty(sorted_indices.shape, dtype=sorted_indices.dtype, device=sorted_indices.device)
+    permuted_token_id = torch.empty(sorted_indices.shape, dtype=sorted_indices.dtype, device=sorted_indices.device)
+    permute_probs = None
+    if probs is not None:
+        permute_probs = torch.empty(sorted_indices.shape, dtype=probs.dtype, device=probs.device)
+    return unpermuted_tokens, out_index, permuted_token_id, permute_probs
 
 
 @impl(m, "npu_moe_token_unpermute_with_routing_map_grad")
