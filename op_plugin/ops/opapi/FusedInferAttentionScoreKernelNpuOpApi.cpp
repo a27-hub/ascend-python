@@ -24,6 +24,7 @@ namespace op_api {
 const static int FLASH_THRESHOLD = 512;
 const static int64_t PFA_SPARSE_HIGH_PRECISION_NO_MASK = 10;
 const static int64_t PFA_SPARSE_HIGH_PRECISION_BAND = 14;
+const static int64_t ZERO = 0;
 const static int64_t DIM_0 = 0;
 const static int64_t DIM_1 = 1;
 const static int64_t DIM_2 = 2;
@@ -35,13 +36,17 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     const at::Tensor &query,
+    const at::Tensor &key,
     const at::Tensor &value,
     std::string input_layout_str,
     const c10::optional<at::Tensor> &quant_scale2,
     const c10::optional<at::Tensor> &block_table,
     int64_t num_heads,
+    int64_t num_key_value_heads,
     bool softmax_lse_flag,
-    const c10::optional<at::Tensor> &query_rope)
+    const c10::optional<at::Tensor> &query_rope,
+    int64_t pre_tokens,
+    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths_kv)
 {
     at::Tensor output;
     int64_t batchSize = 1;
@@ -85,6 +90,16 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     } else if (input_layout_str == "BSH") {
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_1);
+        if (!op_plugin::utils::is_gte_cann_version_830rc1()) {
+            if (query.dim() == DIM_3 && query.size(DIM_1) == DIM_1 && block_table.has_value() && !query_rope.has_value() && pre_tokens > ZERO &&
+            query.scalar_type() == key.scalar_type() && key.scalar_type() == value.scalar_type() &&
+            (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && actual_seq_lengths_kv.has_value()) {
+                auto num_key_value_heads_real = num_key_value_heads > ZERO ? num_key_value_heads : num_heads;
+                tmp_output = OpPreparation::apply_tensor_without_format(
+                    {batchSize, qsSize, value.size(DIM_2) / num_key_value_heads_real * num_heads},
+                    query.options().dtype(query.dtype()));
+            }
+        }
     } else if (input_layout_str == "BSND") {
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_1);
@@ -187,9 +202,13 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
     std::string input_layout_str = std::string(input_layout);
 
     // construct the output tensor
-    std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, value, input_layout_str,
+    std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, key, value, input_layout_str,
                                                                                         quant_scale2, block_table, num_heads,
-                                                                                        softmax_lse_flag, query_rope);
+                                                                                        num_key_value_heads,
+                                                                                        softmax_lse_flag,
+                                                                                        query_rope,
+                                                                                        pre_tokens,
+                                                                                        actual_seq_lengths_kv);
     at::Tensor output = std::get<0>(fia_output);
     at::Tensor softmax_lse = std::get<1>(fia_output);
 
@@ -335,9 +354,13 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
     std::string input_layout_str = std::string(input_layout);
 
     // construct the output tensor
-    std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, value, input_layout_str,
+    std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor(query, key, value, input_layout_str,
                                                                                         quant_scale2, block_table, num_heads,
-                                                                                        softmax_lse_flag, query_rope);
+                                                                                        num_key_value_heads,
+                                                                                        softmax_lse_flag,
+                                                                                        query_rope,
+                                                                                        pre_tokens,
+                                                                                        actual_seq_lengths_kv);
     at::Tensor output = std::get<0>(fia_output);
     at::Tensor softmax_lse = std::get<1>(fia_output);
 
