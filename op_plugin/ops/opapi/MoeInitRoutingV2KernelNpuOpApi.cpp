@@ -75,7 +75,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         // expert_tokens_count_or_cumsum in [end-start, ]
         if (using_v2) {
             expert_tokens_count_or_cumsum =
-            npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
+            npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         }
         else {
             expert_tokens_count_or_cumsum =
@@ -93,17 +93,12 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
-            p_scale,
-            p_offset,
             active_num,
-            expert_capacity,
+            0,
             expert_num,
-            drop_pad_mode,
-            expert_tokens_num_type,
-            expert_tokens_num_flag,
-            quant_mode,
-            active_expert_range,
-            row_idx_type,
+            0,
+            2,
+            false,
             expanded_x,
             expanded_row_idx,
             expert_tokens_count_or_cumsum,
