@@ -18,8 +18,6 @@
 torch_npu.contrib.module.npu_modules.DropoutWithByteMask(Module)
 ```
 
-
-
 ## 参数说明
 
 - **Input** (`Tensor`)：输入张量，可为任何shape。
