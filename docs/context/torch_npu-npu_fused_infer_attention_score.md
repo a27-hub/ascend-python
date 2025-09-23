@@ -387,14 +387,14 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             -   支持`key`、`value`数据类型为`float16`、`bfloat16`、`int8`。
     
         -   该场景下，`block_size`是用户自定义的参数，该参数的取值会影响page attention的性能，在page attention场景下，`block_size`需要传入非0值，且`block_size`最大不超过512。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
-            -   Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：`key`、`value`输入类型为`float16`/`bfloat16`时需要16对齐，`key`、`value`输入类型为`int8`时需要32对齐，推荐使用128。
+            -   `key`、`value`输入类型为`float16`/`bfloat16`时需要16对齐，`key`、`value`输入类型为`int8`时需要32对齐，推荐使用128。
         -   参数`key`、`value`各自对应tensor的shape所有维度相乘不能超过`int32`的表示范围。
         -   page attention场景下，`block_table`必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大`actual_seq_lengths_kv`对应的block数量）。
         -   page attention场景下，当`query`的`input_layout`为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当`query`的`input_layout`为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据`actual_seq_lengths_kv`和`block_size`计算的每个batch的block数量之和。且`key`和`value`的shape需保证一致。
         -   page attention场景下，kv cache排布为（blocknum, KV\_N, blocksize, D）时性能通常优于kv cache排布为（blocknum, blocksize, H）时的性能，建议优先选择（blocknum, KV\_N, blocksize, D）格式。
         -   page attention场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且numKvHeads \* headDim 超过64k时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小 numKvHeads）或调整kv cache排布格式为（blocknum, numKvHeads, blocksize, D）解决。
         -   page attention不支持tensorlist场景，不支持左padding场景。
-            -    <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持`query`为`bfloat16`/`float16`，`key`、`value`为`int4`（`int32`）的场景。
+            -    不支持`query`为`bfloat16`/`float16`，`key`、`value`为`int4`（`int32`）的场景。
         -   page attention场景下，必须传入`actual_seq_lengths_kv`。
         -   page attention场景下，使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于blockTable的第二维 * blockSize。
         -   page attention场景下，使能`pse_shift`，传入的`pse_shift`的最后一维需要大于等于blockTable的第二维 * blockSize。
