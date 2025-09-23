@@ -5,8 +5,7 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    仅支持场景一     |
-| <term>昇腾 AI处理器</term> |    仅支持场景二、三     |
+| <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 
 ## 功能说明
 
@@ -46,7 +45,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor key_cache, Tensor value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()
+torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None, compress_seq_offsets=None, seq_lens=None) -> ()
 ```
 
 ## 参数说明
@@ -56,9 +55,9 @@ torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor key_cache, Te
 - **key_cache**（`Tensor`）：必选参数，表示需要更新的key cache，当前layer的key cache，只支持4维，数据类型和数据格式与`key`保持一致。
 - **value_cache**（`Tensor`）：必选参数，表示需要更新的value cache，当前layer的value cache。只支持4维，数据类型和数据格式与`key`保持一致。
 - **slot_mapping**（`Tensor`）：必选参数，表示每个token key或value在cache中的存储偏移，数据类型支持`int32`和`int64`，数据格式支持$ND$。
-- **compress_lens**（`Tensor`）：可选参数，表示压缩量，数据类型与`slot_mapping`一致，数据格式支持$ND$。
-- **compress_seq_offsets**（`Tensor`）：可选参数，表示每个batch每个head的压缩起点，数据类型与`slot_mapping`一致，数据格式支持$ND$。
-- **seq_lens**（`Tensor`）：可选参数，表示每个batch的实际seqLens，数据类型与`slot_mapping`一致，数据格式支持$ND$。
+- **compress_lens**（`Tensor`）：可选参数，表示压缩量，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
+- **compress_seq_offsets**（`Tensor`）：可选参数，表示每个batch每个head的压缩起点，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
+- **seq_lens**（`Tensor`）：可选参数，表示每个batch的实际seqLens，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
 
 ## 返回值说明
 无
