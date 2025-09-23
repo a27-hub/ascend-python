@@ -83,8 +83,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求为一个2维或3维的张量，当张量为2D时，shape为\(BS, H\)；当张量为3D时，前两位的乘积需等于BS，第三维需等于H。
 
 -   **elastic\_info** (`Tensor`)：可选参数，表示EP通信域的动态缩容信息。当某些通信卡因异常被从通信域中剔除，实际参与通信的卡数与创建通信域时不一致，可从本参数中获取当前部署信息。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：预留参数，当前版本不支持，传空指针即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：可选择传入有效数据或填空指针，传入空指针时表示不使能动态缩容功能；当传入有效数据时，要求是一个1D的Tensor，shape为(4 + 2\*ep\_world\_size,)，数据类型支持int32；数据格式要求为ND，支持非连续的Tensor。Tensor中的前四个数字分别表示(是否缩容，缩容后实际rnak数，共享专家使用rank数，moe专家个数)，后2\*ep\_world\_size表示两个rank映射表，缩容后本卡在新EP通信域中的rank index使用local\_ep\_rank\_id表示，第一个Table的映射关系为Table1[ep\_rank\_id]=local\_ep\_rank\_id或-1，-1表示ep\_rank\_id这张卡从通信域中被剔除，第二个Table映射关系为Table2[local\_ep\_rank\_id]=ep\_rank\_id。</term>
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：预留参数，当前版本不支持，传空指针即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填空指针，传入空指针时表示不使能动态缩容功能；当传入有效数据时，要求是一个1D的Tensor，shape为(4 + 2\*ep\_world\_size,)，数据类型支持int32；数据格式要求为ND，支持非连续的Tensor。Tensor中的前四个数字分别表示(是否缩容，缩容后实际rnak数，共享专家使用rank数，moe专家个数)，后2\*ep\_world\_size表示两个rank映射表，缩容后本卡在新EP通信域中的rank index使用local\_ep\_rank\_id表示，第一个Table的映射关系为Table1[ep\_rank\_id]=local\_ep\_rank\_id或-1，-1表示ep\_rank\_id这张卡从通信域中被剔除，第二个Table映射关系为Table2[local\_ep\_rank\_id]=ep\_rank\_id。
 
 -   **ori\_x** (`Tensor`)：可选参数，表示未经过FFN的token数据，在使能copy_expert或使能const_expert的场景下需要本输入数据。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：预留参数，当前版本不支持，传空指针即可。
@@ -140,16 +140,16 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可。
 
 -   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：当前版本不支持，传0即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。</term>
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当前版本不支持，传0即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。
 
 -   **copy\_expert\_num** (`int`)：可选参数，表示copy专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：当前版本不支持，传0即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。</term>
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当前版本不支持，传0即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。
 
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：当前版本不支持，传0即可。</term>
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。</term>
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当前版本不支持，传0即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, MAX_INT32\]，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。
 
 ## 返回值说明<a name="zh-cn_topic_0000002168254826_section22231435517"></a>
 `Tensor`
