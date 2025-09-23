@@ -92,7 +92,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         at::Tensor expert_tokens_before_capacity = npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
         drop_pad_mode = 0;
-        expert_tokens_num_flag = 2;
+        int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
@@ -101,7 +101,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             expert_capacity,
             expert_num,
             drop_pad_mode,
-            expert_tokens_num_flag,
+            expert_tokens_count_or_cumsum_flag,
             expert_tokens_before_capacity_flag,
             expanded_x,
             expanded_row_idx,
