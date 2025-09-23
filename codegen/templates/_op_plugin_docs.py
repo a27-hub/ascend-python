@@ -5441,8 +5441,7 @@ torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache
 
 支持的型号:
 Atlas A3 训练系列产品/Atlas A3 推理系列产品
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：仅支持场景一
-昇腾 AI处理器：仅支持场景二、三
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
 
 调用示例:
 # 单算子调用方式
