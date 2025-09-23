@@ -15,7 +15,7 @@
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
 ```
-torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None, scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,  gen_mask_parallel=True, sync=False, softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None, scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000001742717129_section112637109429"></a>
@@ -39,7 +39,7 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
     >如果算子可判断出存在无效行场景，会自动使能无效行计算，例如`sparse_mode`为3，Sq \> Skv场景。
 
 -   **prefix**（`List[int]`）：可选参数，代表prefix稀疏计算场景每个Batch的N值。数据类型支持`int64`，数据格式支持$ND$。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
--   actual\_seq\_qlen：可选参数，varlen场景时需要传入此参数。表示`query`每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
+-   **actual\_seq\_qlen**（`List[int]`）：可选参数，varlen场景时需要传入此参数。表示`query`每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
 
     比如真正的S长度列表为：2 2 2 2 2，则`actual_seq_qlen`传：2 4 6 8 10。
 
@@ -127,7 +127,7 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
     </table>
 
 -   **gen\_mask\_parallel**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为True：同AI Core计算并行；设为False：同AI Core计算串行。
--   **sync**：DSA生成dropout随机数向量mask的控制开关。默认值为False：dropout mask异步生成；设为True：dropout mask同步生成。
+-   **sync**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为False：dropout mask异步生成；设为True：dropout mask同步生成。
 -   **softmax_layout**（`string`）：可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
 
 ## 输出说明<a name="zh-cn_topic_0000001742717129_section22231435517"></a>
