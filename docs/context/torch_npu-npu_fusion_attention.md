@@ -126,7 +126,7 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
     </tbody>
     </table>
 
--   **gen\_mask\_parallel**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为True：同AI Core计算并行；设为False：同AI Core计算串行。
+-   **gen\_mask\_parallel**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为True：同AI Core并行计算；设为False：同AI Core串行计算。
 -   **sync**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为False：dropout mask异步生成；设为True：dropout mask同步生成。
 -   **softmax_layout**（`string`）：可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
 
@@ -138,9 +138,9 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
 -   第2个输出为`Tensor`，Softmax计算的Max中间结果，用于反向计算，数据类型支持`float`。
 -   第3个输出为`Tensor`，Softmax计算的Sum中间结果，用于反向计算，数据类型支持`float`。
 -   第4个输出为`Tensor`，预留参数，暂未使用。
--   第5个输出为`int`，DSA生成dropoutmask中，Philox算法的seed。
--   第6个输出为`int`，DSA生成dropoutmask中，Philox算法的offset。
--   第7个输出为`int`，DSA生成dropoutmask的长度。
+-   第5个输出为`int`，DSA生成dropout mask中，Philox算法的seed。
+-   第6个输出为`int`，DSA生成dropout mask中，Philox算法的offset。
+-   第7个输出为`int`，DSA生成dropout mask的长度。
 
 ## 约束说明<a name="zh-cn_topic_0000001742717129_section12345537164214"></a>
 
