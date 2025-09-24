@@ -7617,6 +7617,11 @@ custom:
   - func: npu_attn_softmax_backward_(Tensor(a!) self, Tensor grad_output, Tensor values) -> Tensor(a!)
     op_api: all_version
 
+  - func: npu_alltoallv_gmm_v2(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts=[], int[] recv_counts=[], *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False, Tensor? gmm_x_scale=None, Tensor? gmm_weight_scale=None, str comm_mode="", int y_dtype=0, int max_output_token_num=-1) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+    internal_format_opapi: all_version
+
   - func: npu_gather_sparse_index(Tensor input, Tensor index) -> Tensor
     op_api: all_version
     exposed: all_version
