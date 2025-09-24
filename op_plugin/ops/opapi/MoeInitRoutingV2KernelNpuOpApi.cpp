@@ -37,7 +37,7 @@ using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
 static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range, int64_t expert_tokens_num_type, int64_t quant_mode) {
     // 判断当前用例是否需要回退到V2版本的alcnn接口
-    if(expert_num == EXPERT_NUM_V2 && active_expert_range[0] >= EXPERT_NUM_MIN_V2 && active_expert_range[1] <= EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2){
+    if(expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 && active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2){
         if(quant_mode == -1 && expert_tokens_num_type == 1) {
             return true;
         } 
