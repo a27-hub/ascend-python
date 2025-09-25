@@ -33,7 +33,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
 ## 约束说明
 
 - 该接口不支持多线程并发设置同一条流上的控核数，无法保证算子执行时的控核生效值。
-- 该接口暂不支持设置aclop算子。
+- 该接口需要配合torch_npu.npu.config.allow_internal_format = False来使用（是否使用私有格式）。
 
 ## 调用示例
 
