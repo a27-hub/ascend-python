@@ -1,4 +1,4 @@
-# torch.npu.reset_stream_limit
+# （beta）torch.npu.reset_stream_limit
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
