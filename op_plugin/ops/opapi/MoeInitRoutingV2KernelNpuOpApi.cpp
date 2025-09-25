@@ -27,18 +27,21 @@ static const int64_t EXPERT_NUM_V2 = 128;
 static const int64_t EXPERT_NUM_MIN_V2 = 0;
 static const int64_t EXPERT_NUM_MAX_V2 = 128;
 static const int64_t HIDDEN_DIM_VAL_V2 = 2048;
+static const int64_t MOE_DIM_2 = 2;
+static const int64_t MOE_DIM_1 = 1;
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
-static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range, int64_t expert_tokens_num_type, int64_t quant_mode) {
-    // 判断当前用例是否需要回退到V2版本的alcnn接口
-    if(expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 && active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2){
-        if(quant_mode == -1 && expert_tokens_num_type == 1) {
+static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range, int64_t expert_tokens_num_type, int64_t quant_mode) 
+{
+    // 判断当前用例是否需要回退到moe init routing V2版本
+    if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 && active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
+        if (quant_mode == -1 && expert_tokens_num_type == 1) {
             return true;
-        } 
+        }
     }
     return false; 
 }
@@ -74,12 +77,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         if (using_v2) {
             expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
-        }
-        else {
+        } else {
             expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kLong));
         }
-
     } else if (expert_tokens_num_type == KEY_VALUE) {
         // key_value in [2, end-start]
         expert_tokens_count_or_cumsum =
@@ -106,8 +107,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             expert_tokens_count_or_cumsum,
             expert_tokens_before_capacity);
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
-    }
-    else {
+    } else {
         at::Tensor expanded_scale = npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
         EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
             x,
