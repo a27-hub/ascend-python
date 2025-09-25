@@ -6674,18 +6674,22 @@ page attention场景:
 使能必要条件是block_table存在且有效, 同时key、value是按照block_table中的索引在一片连续内存中排布, 在该场景下key、value的input_layout参数无效. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value数据类型为float16、bfloat16、int8. 
 Atlas A3 训练系列产品: 支持key、value数据类型为float16、bfloat16、int8. 
-该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能. key、value输入类型为float16、bfloat16时需要16对齐, key、value输入类型为int8时需要32对齐, 推荐使用128. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
+该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能,在使能page attention场景下，block_size需要传入非0值，且block_size最大不超过512. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：key、value输入类型为float16、bfloat16时需要16对齐，key、value输入类型为int8时需要32对齐，推荐使用128。
 参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
-Atlas A3 训练系列产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
 page attention场景下, blockTable必须为二维, 第一维长度需等于B, 第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为不同batch中最大actual_seq_lengths_kv对应的block数量). 
 page attention场景下, 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_lengths_kv和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
 page attention场景下, kv cache排布为(blocknum, KV_N, blocksize, D)时性能通常优于kv cache排布为(blocknum, blocksize, H)时的性能, 建议优先选择(blocknum, KV_N, blocksize, D)格式. 
-page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
-page attention不支持左padding场景. 
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
-Atlas A3 训练系列产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
-page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
+page attention场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
+page attention不支持tensorlist场景，不支持左padding场景.
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
+Atlas A3 训练系列产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
+page attention场景下，必须传入actual_seqLengths_kv.
+page attention场景下，使能atten_mask，当sparse_mode不为2、3、4时，传入的atten_mask的最后一维需要大于等于block_table的第二维 * block_size.
+page attention场景下，使能pse_shift，传入的pse_shift的最后一维需要大于等于block_table的第二维 * block_size.
+page attention场景下，以下场景输入S需要大于等于block_table的第二维 * block_size:
+使能伪量化per-token模式：输入参数antiquant_scale和antiquant_offset的shape均为(2, B, S).
+使能per-token叠加per-head模式：两个参数的shape均为(B, N, S)，数据类型固定为float32，支持key、value数据类型为int8、int4(int32).
 kv左padding场景: 
 kvCache的搬运起点计算公式为: Smax-kv_padding_size-actual_seq_lengths. kvCache的搬运终点计算公式为: Smax-kv_padding_size. 其中kvCache的搬运起点或终点小于0时, 返回数据结果为全0. 
 kv_padding_size小于0时将被置为0. 
