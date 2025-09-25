@@ -312,7 +312,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
 
             self.assertExpandedXRtolEqual(expanded_x, local_expanded_x_npu, dtype)
             self.assertRtolEqual(expanded_row_idx, local_expanded_row_idx_npu.numpy())
-            self.assertRtolEqual(expert_tokens_count, local_expert_tokens_count_npu.numpy())
+            self.assertRtolEqual(expert_tokens_count, local_expert_tokens_count_npu.numpy().astype(np.int32))
             if none_scale:
                 return
 
