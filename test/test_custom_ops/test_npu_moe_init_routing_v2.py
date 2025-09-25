@@ -294,7 +294,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         expert_range_list = [[0, 128]]
         quant_mode_list = [-1]
         drop_mode_list = [0]
-        dtype_list = [np.int32]
+        dtype_list = [np.float32]
         none_scales = [True]
         none_offsets = [True]
         for bs, h, k, expert_range, quant_mode, drop_mode, dtype, none_scale, none_offset in itertools.product(
