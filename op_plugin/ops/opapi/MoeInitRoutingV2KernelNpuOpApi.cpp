@@ -35,7 +35,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
-static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range, int64_t expert_tokens_num_type, int64_t quant_mode) 
+static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range, int64_t expert_tokens_num_type, int64_t quant_mode)
 {
     // 判断当前用例是否需要回退到moe init routing V2版本
     if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 && active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
@@ -43,7 +43,7 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
             return true;
         }
     }
-    return false; 
+    return false;
 }
 
 tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &expert_idx,
