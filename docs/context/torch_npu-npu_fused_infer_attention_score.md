@@ -396,9 +396,9 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         -   page attention不支持tensorlist场景，不支持左padding场景。
             -    不支持`query`为`bfloat16`/`float16`，`key`、`value`为`int4`（`int32`）的场景。
         -   page attention场景下，必须传入`actual_seq_lengths_kv`。
-        -   page attention场景下，使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于blockTable的第二维 * blockSize。
-        -   page attention场景下，使能`pse_shift`，传入的`pse_shift`的最后一维需要大于等于blockTable的第二维 * blockSize。
-        -   page attention场景下，以下场景输入S需要大于等于blockTable的第二维 * blockSize。
+        -   page attention场景下，使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于`block_table`的第二维 * `block_size`。
+        -   page attention场景下，使能`pse_shift`，传入的`pse_shift`的最后一维需要大于等于`block_table`的第二维 * `block_size`。
+        -   page attention场景下，以下场景输入S需要大于等于`block_table`的第二维 * `block_size`。
             -   使能伪量化per-token模式：输入参数`antiquant_scale`和`antiquant_offset`的shape均为\(2, B, S\)。
             -   使能per-token叠加per-head模式：两个参数的shape均为\(B, N, S\)，数据类型固定为`float32`。支持`key`、`value`数据类型为`int8`、`int4`\(`int32`\)。
     
