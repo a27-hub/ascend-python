@@ -6588,9 +6588,9 @@ page attention不支持tensorlist场景，不支持左padding场景.
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
 Atlas A3 训练系列产品: 不支持query为bfloat16/float16，key、value为int4(int32)的场景. 
 page attention场景下，必须传入actual_seqLengths_kv.
-page attention场景下，使能atten_mask，当sparse_mode不为2、3、4时，传入的atten_mask的最后一维需要大于等于blockTable的第二维 * blockSize.
-page attention场景下，使能pse_shift，传入的pse_shift的最后一维需要大于等于blockTable的第二维 * blockSize.
-page attention场景下，以下场景输入S需要大于等于blockTable的第二维 * blockSize:
+page attention场景下，使能atten_mask，当sparse_mode不为2、3、4时，传入的atten_mask的最后一维需要大于等于block_table的第二维 * block_size.
+page attention场景下，使能pse_shift，传入的pse_shift的最后一维需要大于等于block_table的第二维 * block_size.
+page attention场景下，以下场景输入S需要大于等于block_table的第二维 * block_size:
 使能伪量化per-token模式：输入参数antiquant_scale和antiquant_offset的shape均为(2, B, S).
 使能per-token叠加per-head模式：两个参数的shape均为(B, N, S)，数据类型固定为float32，支持key、value数据类型为int8、int4(int32).
 kv左padding场景: 
