@@ -33,8 +33,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
 ## 约束说明
 
 - 该接口不支持多线程并发设置同一条流上的控核数，无法保证算子执行时的控核生效值。
-- 该接口暂不支持设置aclop算子。
-
+- TBE算子不支持控核，例如ReduceSum、Conv2DBackpropInput等算子。
 ## 调用示例
 
  ```python
