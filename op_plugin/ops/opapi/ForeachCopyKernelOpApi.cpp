@@ -88,13 +88,27 @@ bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorL
     // 方向一致校验
     const auto expected_dst_dtype =  dsts[0].device().type();
     const auto expected_src_dtype =  srcs[0].device().type();
+    int expected_dst_device_index =  -1;
+    int expected_src_device_index =  -1;
+    if (c10::DeviceType::PrivateUse1 == expected_dst_dtype) {
+        expected_dst_device_index = dsts[0].device().index();
+    }
+    if (c10::DeviceType::PrivateUse1 == expected_src_dtype) {
+        expected_src_device_index = srcs[0].device().index();
+    }
     for (const auto &dst: dsts) {
         if (dst.device().type() != expected_dst_dtype) {
+            return false;
+        }
+        if (expected_dst_device_index != -1 && dst.device().index() != expected_dst_device_index) {
             return false;
         }
     }
     for (const auto &src: srcs) {
         if (src.device().type() != expected_src_dtype) {
+            return false;
+        }
+        if (expected_src_device_index != -1 && src.device().index() != expected_src_device_index) {
             return false;
         }
     }
