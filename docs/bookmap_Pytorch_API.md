@@ -107,6 +107,7 @@
         -   [torch_npu.npu_scatter_nd_update_](./context/torch_npu-npu_scatter_nd_update_.md)
         -   [torch_npu.npu_top_k_top_p](./context/torch_npu-npu_top_k_top_p.md)
         -   [torch_npu.npu_top_k_top_p_sample](./context/torch_npu-npu_top_k_top_p_sample.md)
+        -   [torch_npu.npu_scatter_pa_kv_cache](./context/torch_npu-npu_scatter_pa_kv_cache.md)
         -   [torch_npu.npu_trans_quant_param](./context/torch_npu-npu_trans_quant_param.md)
         -   [torch_npu.npu_weight_quant_batchmatmul](./context/torch_npu-npu_weight_quant_batchmatmul.md)
         -   [torch_npu.scatter_update](./context/torch_npu-scatter_update.md)
@@ -288,6 +289,8 @@
         -   [torch_npu.profiler.dynamic_profile.step](./context/torch_npu-profiler-dynamic_profile-step.md)
         -   [torch_npu.profiler.dynamic_profile.start](./context/torch_npu-profiler-dynamic_profile-start.md)
         -   [torch_npu.profiler.profiler.analyse](./context/torch_npu-profiler-profiler-analyse.md)
+        -   [torch_npu.profiler.profile.enable_profiler_in_child_thread](./context/torch_npu.profiler.profile.enable_profiler_in_child_thread.md)
+        -   [torch_npu.profiler.profile.disable_profiler_in_child_thread](./context/torch_npu.profiler.profile.disable_profiler_in_child_thread.md)
     
     -   [torch_npu.utils](./context/torch_npu-utils.md)
         -   [torch_npu.utils接口列表](./context/torch_npu-utils接口列表.md)
