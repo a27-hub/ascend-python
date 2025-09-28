@@ -119,6 +119,8 @@ inline aclTensor *ConvertType(TensorMaintainer& maintainer, const at::Tensor &te
         aclCreateTensor(at_tensor.sizes().data(), at_tensor.sizes().size(), acl_data_type, at_tensor.strides().data(),
                         at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
                         const_cast<void *>(at_tensor.storage().data()));
+    ASCEND_LOGE("[Mem DEBUG] ATB aclTensor ConvertType v_ptr=%p, size=%zu.", 
+        at_tensor.sizes().data(), at_tensor.sizes().size());
     if (at_tensor.device().type() == at::kCPU) {
         maintainer.cpu_tensors.emplace_back(std::move(at_tensor));
     } else {
@@ -230,6 +232,8 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
     auto acl_tensor = aclCreateTensor(
         (*at_tensor).sizes.data(), (*at_tensor).sizes.size(), acl_data_type, (*at_tensor).strides.data(),
         (*at_tensor).storage_offset, (*at_tensor).format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
+    ASCEND_LOGE("[Mem DEBUG] ATB aclTensor ConvertTypeV2 v_ptr=%p, storage_offset=%zu.", 
+        (*at_tensor).data_ptr, (*at_tensor).storage_offset);
     return acl_tensor;
 }
 
@@ -323,6 +327,7 @@ template <typename Tuple> void ReleaseConvertTypes(Tuple &t)
         atb::Operation *op = nullptr;                                                                             \
         atb::Operation **op_addr = &op;                                                                           \
         TensorMaintainer tensor_maintainer;                                                                       \
+        ASCEND_LOGE("[Mem DEBUG] ================== v1 enqueue atb OpName:%s ==================", #atb_api)       \
         auto converted_params = ConvertTypes(tensor_maintainer, __VA_ARGS__,                                      \
                                                 workspace_size_addr, op_addr, context_ptr);                       \
         static auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);        \
@@ -339,6 +344,7 @@ template <typename Tuple> void ReleaseConvertTypes(Tuple &t)
         auto atb_call = [converted_params, workspace_addr, workspace_size, context_ptr, op, cpu_tensors]()->int { \
             AtbApiFunc atbApiFunc = reinterpret_cast<AtbApiFunc>(atbApiFuncAddr);                                 \
             auto api_ret = atbApiFunc(workspace_addr, workspace_size, op, context_ptr);                           \
+            ASCEND_LOGE("[Mem DEBUG] ================== v1 dequeue atb OpName:%s ==================", #atb_api)   \
             TORCH_CHECK(api_ret == 0, "call " #atb_api " failed, detail:");                                       \
             DestroyOperation(op);                                                                                 \
             ReleaseConvertTypes(converted_params);                                                                \
@@ -367,6 +373,7 @@ template <typename Tuple> void ReleaseConvertTypes(Tuple &t)
             atb::Operation *op = opParamCache.getOperation(hash_id);                                              \
             atb::Operation **op_addr = &op;                                                                       \
             int api_ret = 0;                                                                                      \
+            ASCEND_LOGE("[Mem DEBUG] ================== v2 enqueue atb OpName:%s ==================", #atb_api)    \
             auto converted_params = ConvertTypesV2(copied_params, workspace_size_addr, op_addr, context_ptr);     \
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);           \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                 \
@@ -380,6 +387,8 @@ template <typename Tuple> void ReleaseConvertTypes(Tuple &t)
             }                                                                                                     \
             AtbApiFunc atbApiFunc = reinterpret_cast<AtbApiFunc>(AtbApiFuncAddr);                                 \
             api_ret = atbApiFunc(workspace_addr, workspace_size, op, context_ptr);                                \
+            ASCEND_LOGE("[Mem DEBUG] tq_V2 atb OpName:%s, ptr=%p, size=%zu.", #atb_api, workspace_addr, workspace_size); \
+            ASCEND_LOGE("[Mem DEBUG] ================== v2 dequeue atb OpName:%s ==================", #atb_api)      \
             TORCH_CHECK(api_ret == 0, "call " #atb_api " failed");                                                \
             ReleaseConvertTypes(converted_params);                                                                \
             return api_ret;                                                                                       \
