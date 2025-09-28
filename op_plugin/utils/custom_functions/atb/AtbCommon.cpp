@@ -52,8 +52,13 @@ atb::Tensor AtTensor2AtbTensor(const at::Tensor at_tensor)
 void RunAtbCmdV1(atb::Operation *op, const ParamSetter &paramsetter, const std::string &name)
 {
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
+    int32_t stream_id;
+    if (c10_npu::acl::AclrtStreamGetId(stream, &stream_id) != ACL_ERROR_NONE) {
+        stream_id = -1;
+    }
     auto context_ptr = atb::utils::GetContext(stream);
     atb::VariantPack variant_pack = paramsetter.variant_pack_;
+    ASCEND_LOGW("[Mem DEBUG] ================== v1 RunAtbCmdV1 enqueue atb OpName:%s, stream_id = %d ==================", name.c_str(), stream_id);
     uint64_t workspace_size = OperationSetup(variant_pack, op, context_ptr);
     at::Tensor workspace_tensor;
     void *workspace_ptr = nullptr;
@@ -74,9 +79,14 @@ void RunAtbCmdV1(atb::Operation *op, const ParamSetter &paramsetter, const std::
 void RunAtbCmdV2(atb::Operation *op, const ParamSetter &paramsetter, const std::string &name)
 {
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
+    int32_t stream_id;
+    if (c10_npu::acl::AclrtStreamGetId(stream, &stream_id) != ACL_ERROR_NONE) {
+        stream_id = -1;
+    }
     atb::VariantPack variant_pack = paramsetter.variant_pack_;
     const c10::SmallVector<at::Tensor, N>& cpu_tensors = paramsetter.tensor_maintainer_.cpu_tensors;
-    auto acl_call = [op, variant_pack, stream, cpu_tensors]() -> int {
+    ASCEND_LOGW("[Mem DEBUG] ================== v2 RunAtbCmdV2 enqueue atb OpName:%s, stream_id = %d ==================", name.c_str(), stream_id);
+    auto acl_call = [op, variant_pack, stream, stream_id, cpu_tensors]() -> int {
         auto context_ptr = atb::utils::GetContext(stream);
         uint64_t workspace_size = OperationSetup(variant_pack, op, context_ptr);
         at::Tensor workspace_tensor;
@@ -85,9 +95,11 @@ void RunAtbCmdV2(atb::Operation *op, const ParamSetter &paramsetter, const std::
             workspace_tensor = at_npu::native::allocate_workspace(workspace_size, stream);
             workspace_ptr = const_cast<void *>(workspace_tensor.storage().data());
         }
+        ASCEND_LOGW("[Mem DEBUG] tq_V2 RunAtbCmdV2 workspace OpName:%s, v_ptr=%p, size=%zu, context_ptr=%p, stream_id = %d.", name.c_str(), workspace_tensor, workspace_size, context_ptr, stream_id);
         auto st = op->Execute(variant_pack, (uint8_t *)workspace_ptr, workspace_size, context_ptr);
         return 0;
     };
+    ASCEND_LOGW("[Mem DEBUG] ================== v2 RunAtbCmdV2 dequeue atb OpName:%s ==================", name.c_str());
     at_npu::native::OpCommand::RunOpApiV2(name, acl_call);
 }
 
