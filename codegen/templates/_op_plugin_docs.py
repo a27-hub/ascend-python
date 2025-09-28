@@ -6674,18 +6674,23 @@ page attention场景:
 使能必要条件是block_table存在且有效, 同时key、value是按照block_table中的索引在一片连续内存中排布, 在该场景下key、value的input_layout参数无效. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value数据类型为float16、bfloat16、int8. 
 Atlas A3 训练系列产品: 支持key、value数据类型为float16、bfloat16、int8. 
-该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能. key、value输入类型为float16、bfloat16时需要16对齐, key、value输入类型为int8时需要32对齐, 推荐使用128. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
+该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能. block_size需要传入非0值，且最大不超过512, key、value输入类型为float16、bfloat16时需要16对齐, key、value输入类型为int8时需要32对齐, 推荐使用128. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
 参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
 page attention场景下, blockTable必须为二维, 第一维长度需等于B, 第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为不同batch中最大actual_seq_lengths_kv对应的block数量). 
 page attention场景下, 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_lengths_kv和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
 page attention场景下, kv cache排布为(blocknum, KV_N, blocksize, D)时性能通常优于kv cache排布为(blocknum, blocksize, H)时的性能, 建议优先选择(blocknum, KV_N, blocksize, D)格式. 
-page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
-page attention不支持左padding场景. 
+page attention场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
+page attention不支持tensorlist场景, 不支持左padding场景. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
+age attention场景下，使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于`block_table`的第二维 * `block_size`.
+page attention场景下，使能`pse_shift`，传入的`pse_shift`的最后一维需要大于等于`block_table`的第二维 * `block_size`.
+page attention场景下，以下场景输入S需要大于等于`block_table`的第二维 * `block_size`：
+使能伪量化per-token模式：输入参数`antiqunant_scale`和`antiquant_offset`的shape均为\(2, B, S\).
+使能per-token叠加per-head模式：两个参数的shape均为\(B, N, S\)，数据类型固定为`float32`。支持`key`、`value`数据类型为`int8`、`int4`\(`int32`\)。
 kv左padding场景: 
 kvCache的搬运起点计算公式为: Smax-kv_padding_size-actual_seq_lengths. kvCache的搬运终点计算公式为: Smax-kv_padding_size. 其中kvCache的搬运起点或终点小于0时, 返回数据结果为全0. 
 kv_padding_size小于0时将被置为0. 
@@ -7044,7 +7049,7 @@ key_rope配置时要求key的n为1，d为512，keyRope的shape中d为64，其余
 支持key、value、keyRope的input_layout格式为ND或NZ。当input_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]，数据类型为int8时，输入参数key和value的格式为[blockNum, KV_N, D/32, blockSize, 32]；
 input_layout形状支持BSH、BSND、BNSD、BNSD_NBSD、BSND_NBSD、BSH_NBSD、TND、TND_NTD，当数据格式为NZ时input_layout不支持BNSD、BNSD_NBSD。
 该场景下，必须开启PageAttention，此时block_size支持16、128，其中数据格式为NZ时block_size不支持配置16。
-不支持开启SoftMaxLse、tensorlist、pse、伪量化、后量化。
+不支持开启softmax_lse、左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
 支持全量化场景，即输入query/key/value全为int8，query_rope和key_rope为bfloat16，输出为bfloat16的场景：
 入参dequant_scale_query、dequant_scale_key、dequant_scale_value需要同时存在，且其数据类型仅支持FP32。
 不支持传入quant_scale_out、quant_offset_out、dequant_offset_key、dequant_offset_value（即不为nullptr），否则报错并返回。
@@ -7055,7 +7060,7 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产�
 inputLayout：TND、NTD_TND。  
 query_rope配置时要求query_rope的shape中d为64，其余维度与query一致。  
 keyRope配置时要求keyRope的shape中d为64，其余维度与key一致。  
-不支持tensorlist、pse、page attention、伪量化、全量化、后量化。
+不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化、空Tensor。
 其余约束同TND、NTD_TND场景下的综合限制保持一致。
 TND、TND_NTD、NTD_TND场景下query、key、value输入的综合限制：
 T小于等于1M;
@@ -7065,9 +7070,9 @@ actual_seq_qlen和actual_seq_kvlen必须传入，且以该入参元素的数量�
 支持TND、TND_NTD;
 必须开启page attention，此时actual_seq_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV_S；
 支持query每个batch的s为1-16；
-要求query的n为32/64/128，key、value的n为1；
+要求query的n为1/2/4/8/16/32/64/128，key、value的n为1；
 要求query_rope和keyRope不等于空，query_rope和keyRope的d为64；
-不支持开启SoftMaxLse、tensorlist、pse、伪量化、全量化、后量化。
+不支持开启softmax_lse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor。
 
 当query的d不等于512时：
 当query_rope和key_rope为空时：TND场景，要求Q_D、K_D、V_D等于128，或者Q_D、K_D等于192，V_D等于128/192；NTD_TND场景，要求Q_D、K_D等于128/192，V_D等于128。当query_rope和key_rope不为空时，要求Q_D、K_D、V_D等于128；
@@ -7076,7 +7081,7 @@ Q_N、K_N、V_N：需要满足K_N、V_N相等，Q_N整除K_N，Q_N与K_N的比�
 数据类型仅支持BFLOAT16；
 当sparse=3时，要求每个batch单独的actual_seq_qlen<actual_seq_kvlen；
 sparse模式支持sparse\_mode=4且传入mask；当sparse\_mode=4时，要求preTokens >= -actual\_seq\_qlen、nextTokens >= -actual\_seq\_kvlen、preTokens + nextTokens >= 0；
-不支持tensorlist、pse、page attention、伪量化、全量化、后量化；
+不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor；
 不支持图模式配置Tiling调度优化（tiling_schedule_optimize=True）、reduce-overhead执行模式（config.mode="reduce-overhead"）。
 actual_seq_qlen和actual_seq_kvlen的元素个数不大于4096。
 
