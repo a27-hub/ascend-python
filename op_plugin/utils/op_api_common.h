@@ -578,7 +578,7 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
     auto acl_tensor = aclCreateTensor(
         (*at_tensor).sizes.data(), (*at_tensor).sizes.size(), acl_data_type, (*at_tensor).strides.data(),
         (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
-    ASCEND_LOGW("[Mem DEBUG] ACLNN aclTensor ConvertTypeV2 v_ptr=%p, storage_offset=%zu.", 
+    ASCEND_LOGE("[Mem DEBUG] ACLNN aclTensor ConvertTypeV2 v_ptr=%p, storage_offset=%zu.", 
         (*at_tensor).data_ptr, (*at_tensor).storage_offset);
     return acl_tensor;
 }
@@ -1274,7 +1274,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         if (initMemFunc) {                                                                                             \
             initMemFunc(nullptr, false);                                                                               \
         }                                                                                                              \
-        ASCEND_LOGW("[Mem DEBUG] ================== v1 enqueue aclnn OpName:%s ==================", #aclnn_api)        \
+        ASCEND_LOGE("[Mem DEBUG] ================== v1 enqueue aclnn OpName:%s ==================", #aclnn_api)        \
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                         \
         static auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);             \
         auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
@@ -1292,7 +1292,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
-            ASCEND_LOGW("[Mem DEBUG] ================== v1 dequeue aclnn OpName:%s ==================", #aclnn_api)    \
+            ASCEND_LOGE("[Mem DEBUG] ================== v1 dequeue aclnn OpName:%s ==================", #aclnn_api)    \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
             if (releaseMemFunc) {                                                                                      \
@@ -1334,7 +1334,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                           \
             aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
         }                                                                                                              \
-        ASCEND_LOGW("[Mem DEBUG] ================== v2 enqueue aclnn OpName:%s, stream_id = %d ==================", #aclnn_api, stream_id)       \
+        ASCEND_LOGE("[Mem DEBUG] ================== v2 enqueue aclnn OpName:%s, stream_id = %d ==================", #aclnn_api, stream_id)       \
         auto acl_call = [copied_params, acl_stream, stream_id, deterministic_status, aic_num, aiv_num]()->int {                     \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
@@ -1367,8 +1367,8 @@ auto DecodeDevice(Ts&... args) -> at::Device
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
-            ASCEND_LOGW("[Mem DEBUG] tq_V2 aclnn stream_id = %d, OpName:%s, ptr=%p, size=%zu.", stream_id, #aclnn_api, workspace_addr, workspace_size); \
-            ASCEND_LOGW("[Mem DEBUG] ================== v2 dequeue aclnn OpName:%s ==================", #aclnn_api)    \
+            ASCEND_LOGE("[Mem DEBUG] tq_V2 aclnn stream_id = %d, OpName:%s, ptr=%p, size=%zu.", stream_id, #aclnn_api, workspace_addr, workspace_size); \
+            ASCEND_LOGE("[Mem DEBUG] ================== v2 dequeue aclnn OpName:%s ==================", #aclnn_api)    \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
