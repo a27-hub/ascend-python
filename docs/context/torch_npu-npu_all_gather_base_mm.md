@@ -37,19 +37,20 @@
 ## 函数原型
 
 ```
-torch_npu.npu_all_gather_base_mm(input, x2, hcom, world_size, *, bias=None, x1_scale=None, x2_scale=None, gather_index=0, bool gather_output=True, comm_turn=0, output_dtype=None, comm_mode=None) -> (Tensor, Tensor)
+torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None,
+                                x1_scale=None, x2_scale=None, 
+                                gather_index=0, gather_output=True, comm_turn=0,
+                                output_dtype=None, comm_mode=None) -> tuple[Tensor, Tensor]
 ```
 
 ## 参数说明
 
--   **input** (`Tensor`)：必选参数，表示矩阵乘法中的左矩阵，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持ND，输入shape支持2维，形如\(m, k\)、\(k, n\)，轴满足matmul算子入参要求，k轴相等，且k轴取值范围为\[256, 65535\)。
+-   **x1** (`Tensor`)：必选参数，表示矩阵乘法中的左矩阵，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持ND，输入shape支持2维，形如\(m, k\)、\(k, n\)，轴满足matmul算子入参要求，k轴相等，且k轴取值范围为\[256, 65535\)。
 -   **x2** (`Tensor`)：必选参数，表示矩阵乘法中的左矩阵，数据类型、输入shape维度需要和input保持一致，数据格式支持$ND$、$NZ$。$NZ$仅在`comm_mode`为`aiv`时支持。
 -   **hcom** (`string`)：必选参数，通信域handle名，通过get\_hccl\_comm\_name接口获取。
 -   **world\_size** (`int`)：必选参数，通信域内的rank总数。
     -   <term>Atlas A2 训练系列产品</term>：支持2、4、8卡，支持hccs链路all mesh组网（每张卡和其它卡两两相连）。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持2、4、8、16、32卡，支持hccs链路double ring组网（多张卡按顺序组成一个圈，每张卡只和左右卡相连）。
-
--   <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 -   **bias** (`Tensor`)：可选参数，数据类型支持float16、bfloat16，数据格式支持ND格式。数据类型需要和input保持一致。bias仅支持一维，且维度大小与output的第1维大小相同。**当前版本暂不支持bias输入为非0的场景。**
 - **x1\_scale** (`Tensor`)：可选参数，mm左矩阵反量化参数。数据类型支持`float32`，数据格式支持$ND$格式。数据维度为\(m, 1\)，支持pertoken量化。
 - **x2\_scale** (`Tensor`)：可选参数，mm左矩阵反量化参数。数据类型支持`float32`、`int64`，数据格式支持$ND$格式。数据维度为\(1, n\)，支持perchannel量化。如需传入`int64`数据类型的，需要提前调用torch_npu.npu_trans_quant_param来获取`int64`数据类型的`x2_scale`。
@@ -70,7 +71,7 @@ torch_npu.npu_all_gather_base_mm(input, x2, hcom, world_size, *, bias=None, x1_s
 `comm_mode`为`ai_cpu`时：
 -   该接口支持训练场景下使用。
 -   该接口支持图模式（PyTorch 2.1.0 版本）。
--   `input`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
+-   `x1`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
 -   <term>Atlas A2 训练系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
 
 `comm_mode`为`aiv`时，训练和推理场景均可使用。
