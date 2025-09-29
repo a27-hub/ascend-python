@@ -80,7 +80,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
         at::IntArrayRef send_counts_real = send_counts.empty() ? at::IntArrayRef(inplace_vec) : send_counts;
         at::IntArrayRef recv_counts_real = recv_counts.empty() ? at::IntArrayRef(inplace_vec) : recv_counts;
         auto global_token_per_expert_dtype = at::kInt;
-        global_token_per_expert = at_npu::native::OpPreparation::apply_tensor_without_format({ep_world_size, gmm_weight.size(0) * ep_world_size}, global_token_per_expert_dtype);
+        if (comm_mode == "aiv") {
+            global_token_per_expert = at_npu::native::OpPreparation::apply_tensor_without_format({ep_world_size, gmm_weight.size(0) * ep_world_size}, global_token_per_expert_dtype);
+        }
         char* hcom_ptr = const_cast<char *>(hcom.data());
         char* comm_mode_ptr = const_cast<char *>(comm_mode.data());
         EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,

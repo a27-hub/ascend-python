@@ -23,6 +23,7 @@ std::tuple<at::Tensor, at::Tensor> npu_gmm_alltoallv(const at::Tensor &gmm_x, co
                                                      const c10::optional<at::Tensor> &send_counts_tensor, 
                                                      const c10::optional<at::Tensor> &recv_counts_tensor,
                                                      const c10::optional<at::Tensor> &mm_x, const c10::optional<at::Tensor> &mm_weight, bool trans_gmm_weight,
+                                                     const c10::optional<at::Tensor> &global_token_per_expert,
                                                      bool trans_mm_weight, const c10::optional<at::Tensor> &gmm_weight_scale,
                                                      const c10::optional<at::Tensor> &gmm_x_scale, c10::string_view comm_mode, int64_t y_dtype, int64_t output_token_num)
 {
@@ -70,13 +71,28 @@ std::tuple<at::Tensor, at::Tensor> npu_gmm_alltoallv(const at::Tensor &gmm_x, co
     auto global_token_per_expert_real = global_token_per_expert.value_or(at::Tensor());
     auto gmm_weight_scale_real = gmm_weight_scale.value_or(at::Tensor());
     auto gmm_x_scale_real = gmm_x_scale.value_or(at::Tensor());
-    void *handle = dlopen("libopapi.so", RTLD_LAZY | RTLD_LOCAL);
-    if (!handle) {
-        std::cerr << "[ERROR] failed to open libopapi.so: " << dlerror() << std::endl;
+    if (check_aclnn_kernel_available("aclnnGroupedMatMulAlltoAllvV2")) {
+        EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
+                    gmm_x,
+                    gmm_weight,
+                    send_count_tensor_real,
+                    recv_count_tensor_real,
+                    mm_x_real,
+                    mm_weight_real,
+                    global_token_per_expert_real,
+                    gmm_x_scale_real,
+                    gmm_weight_scale_real,
+                    hcom_ptr,
+                    ep_world_size,
+                    send_counts_real,
+                    recv_counts_real,
+                    trans_gmm_weight,
+                    trans_mm_weight,
+                    comm_mode_ptr,
+                    y,
+                    mm_y);
     }
-    void *func = dlsym(handle, "aclnnGroupedMatMulAlltoAllvV2");
-    dlclose(handle);
-    if (func == nullptr) {
+    else {
         EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllv,
             gmm_x,
             gmm_weight,
@@ -92,27 +108,7 @@ std::tuple<at::Tensor, at::Tensor> npu_gmm_alltoallv(const at::Tensor &gmm_x, co
             trans_mm_weight,
             y,
             mm_y);
-    } else {
-        EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
-            gmm_x,
-            gmm_weight,
-            send_count_tensor_real,
-            recv_count_tensor_real,
-            mm_x_real,
-            mm_weight_real,
-            global_token_per_expert_real,
-            gmm_x_scale_real,
-            gmm_weight_scale_real,
-            hcom_ptr,
-            ep_world_size,
-            send_counts_real,
-            recv_counts_real,
-            trans_gmm_weight,
-            trans_mm_weight,
-            comm_mode_ptr,
-            y,
-            mm_y);
+    } 
         return std::tie(y, mm_y);
-    }
 }  
 }// namespace op_api
