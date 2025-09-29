@@ -32,7 +32,7 @@ torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_s
 - **bias** (`bool`)：如果值为True，则向输出添加可学习偏差。默认值为False。
 - **pack** (`bool`)：如果值为True，此模块将包括conv_offset和掩码。默认值为True。
 
-### 输入参数
+### 计算输入
 `Tensor`
 输入张量。
 
