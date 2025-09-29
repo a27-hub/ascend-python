@@ -39,7 +39,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
 
 ## 约束说明
 
-- 该接口支持图模式（PyTorch 2.1版本）。
+- 该接口支持图模式（PyTorch 2.1.0版本）。
 - `input`输入不能含有空指针。
 
 ## 支持的型号
