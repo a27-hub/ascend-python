@@ -65,6 +65,12 @@
   "op_api: torch_npu.npu_ffn(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_distribute_barrier(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_distribute_barrier(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "op_api: torch_npu.npu_moe_distribute_combine_add_rms_norm(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -449,7 +455,7 @@
   "func: npu_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, int[3] size_splits, *, Tensor? offset_k=None, Tensor? offset_v=None, int quant_mode=0, str input_layout=\"BSND\", bool kv_output=False, str cache_mode=\"contiguous\") -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: _npu_distribute_barrier(Tensor x_ref, str group, int world_size) -> Tensor": {
+  "func: npu_distribute_barrier(Tensor x_ref, str group, int world_size, *, Tensor? time_out=None, Tensor? elastic_info=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: logit_(Tensor(a!) self, float? eps=None) -> Tensor(a!)": {
