@@ -2573,7 +2573,8 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             gamma = torch.randn(7168).to(torch.bfloat16)
             ep_world_size = 16
             ep_rank_id = 0
-            moe_expert_num = 16
+            moe_expert_num = 1
+            6
 
             result = torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x=expand_x, expert_ids=expert_ids, 
             expand_idx=expand_idx, ep_send_counts=ep_send_counts, expert_scales=expert_scales, 
@@ -2594,6 +2595,22 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             self.assertEqual(result[2].shape[1], 1)
             self.assertEqual(result[2].shape[2], 7168)
             self.assertEqual(result[2].dtype, torch.bfloat16)
+
+class TestMoeDistributeBarrier(TestCase):
+    def test_moe_distribute_barrier(self):
+        with FakeTensorMode():
+            ep_world_size = 16
+            x_ref = torch.randn(1).to(torch.int32)
+            time_out = torch.randn(1).to(torch.int32)
+            elastic_info = torch.randn(1,4+2*ep_world_size).to(torch.int32)
+            
+            result = torch_npu.npu_moe_distribute_barrier(x_ref = x_ref, 
+                                                          group = "groupe_ep",
+                                                          world_size = ep_world_size,
+                                                          time_out = time_out,
+                                                          elastic_info = elastic_info)
+
+            self.assertEqual(result.shape==x_ref.shape)
 
 
 class TestAddRmsNormQuant(TestCase):
