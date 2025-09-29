@@ -20,11 +20,14 @@
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor _npu_distribute_barrier(const at::Tensor &x_ref,
-                                   c10::string_view group, int64_t world_size)
+at::Tensor npu_distribute_barrier(const at::Tensor &x_ref,
+                                  c10::string_view group, int64_t world_size,
+                                  const c10::optional<at::Tensor> &time_out,
+                                  const c10::optional<at::Tensor> &elastic_info
+                                   )
 {
     char *group_ptr = const_cast<char *>(group.data());
-    EXEC_NPU_CMD(aclnnDistributeBarrier, x_ref, group_ptr, world_size);
+    EXEC_NPU_CMD(aclnnDistributeBarrier, x_ref, time_out, elastic_info, group_ptr, world_size);
     return x_ref;
 }
 }
