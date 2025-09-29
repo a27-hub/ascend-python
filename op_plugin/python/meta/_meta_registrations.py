@@ -1405,9 +1405,11 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
     return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), expand_x.new_empty(tuple(dim_list2), dtype=torch.float32), expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype))
 
 
-@impl(m, "_npu_distribute_barrier")
-def _npu_distribute_barrier(x_ref, group, world_size):
-    return torch.empty_like(x_ref)
+# @impl(m, "_npu_distribute_barrier")
+# def _npu_distribute_barrier(group, world_size, x_ref=None, time_out=None, elastic_info=None):
+#     if x_ref is None:
+#         x_ref = torch.empty(0,dtype=x_ref.dtype, device='meta')
+#     return torch.empty_like(x_ref)
 
 
 @impl(m, "npu_moe_update_expert")
