@@ -30,7 +30,7 @@ torch_npu.contrib.module.Focus(c1, c2, k=1, s=1, p=None, g=1, act=True)
 - **g** (`int`)：从输入通道到输出通道的分组数，默认值为1。
 - **act** (`bool`)：是否使用激活函数，默认值为True。
 
-### 输入参数
+### 计算输入
 `Tensor`
 输入张量
 
