@@ -1,5 +1,5 @@
 # torch_npu.npu_gelu
-
+在NPU环境下使用torch原生接口gelu时，approximate参数不起作用且默认设定为tanh，如果需要approximate的默认值为None或者区分不同的approximate方法需要使用此接口。
 ## 功能说明
 
 - 算子功能：计算高斯误差线性单元的激活函数。
@@ -39,7 +39,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
 
 ## 约束说明
 
-- 该接口支持图模式（PyTorch 2.1版本）。
+- 该接口支持图模式（PyTorch 2.1.0版本）。
 - `input`输入不能含有空指针。
 
 ## 支持的型号
