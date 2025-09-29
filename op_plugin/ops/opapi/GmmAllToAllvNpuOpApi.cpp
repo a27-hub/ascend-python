@@ -22,7 +22,7 @@ namespace op_api {
                                                          c10::string_view hcom, int64_t ep_world_size, at::IntArrayRef send_counts, at::IntArrayRef recv_counts,
                                                          const c10::optional<at::Tensor> &send_counts_tensor,
                                                          const c10::optional<at::Tensor> &recv_counts_tensor, const c10::optional<at::Tensor> &mm_x,
-                                                         const c10::optional<at::Tensor> &mm_weight, bool trans_gmm_weight, bool trans_mm_weight
+                                                         const c10::optional<at::Tensor> &mm_weight, bool trans_gmm_weight, bool trans_mm_weight,
                                                          const c10::optional<at::Tensor> &global_token_per_expert,
                                                          bool trans_mm_weight, const c10::optional<at::Tensor> &gmm_weight_scale,
                                                          const c10::optional<at::Tensor> &gmm_x_scale, c10::string_view comm_mode, int64_t y_dtype, int64_t output_token_num)

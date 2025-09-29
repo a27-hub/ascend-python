@@ -63,6 +63,7 @@
       "npu_mrope",
       "npu_grouped_matmul_finalize_routing",
       "npu_alltoallv_gmm",
+      "npu_alltoallv_gmm_v2",
       "npu_gmm_alltoallv",
       "npu_nsa_compress",
       "npu_nsa_compress_infer",

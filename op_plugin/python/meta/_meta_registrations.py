@@ -325,7 +325,7 @@ def npu_alltoallv_gmm_v2_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_count
     if comm_mode == "aiv":
         if max_output_token_num != -1:
             out_x = max_output_token_num
-        else
+        else:
             out_x = 2*gmm_x.size(0)
     else:
         out_x = sum(recv_counts)
