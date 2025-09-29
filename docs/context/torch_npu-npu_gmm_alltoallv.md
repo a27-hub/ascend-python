@@ -14,6 +14,22 @@
 <td class="cellrowborder" align="center" valign="top" width="42%" headers="mcps1.1.3.1.2 "><p id="zh-cn_topic_0000002317314449_p7948163910184"><a name="zh-cn_topic_0000002317314449_p7948163910184"></a><a name="zh-cn_topic_0000002317314449_p7948163910184"></a>√</p>
 </td>
 </tr>
+<tr id="zh-cn_topic_0000002317314449_row220181016241">
+<td class="cellrowborder" valign="top" width="57.99999999999999%" headers="mcps1.1.3.1.1 ">
+<p><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></p>
+</td>
+<td class="cellrowborder" align="center" valign="top" width="42%" headers="mcps1.1.3.1.2 ">
+<p>√</p>
+</td>
+</tr>
+<tr id="zh-cn_topic_0000002317314449_row220181016242">
+<td class="cellrowborder" valign="top" width="57.99999999999999%" headers="mcps1.1.3.1.1">
+<p><term>昇腾910_95 AI处理器</term></p>
+</td>
+<td class="cellrowborder" align="center" valign="top" width="42%" headers="mcps1.1.3.1.2">
+<p>√</p>
+</td>
+</tr>
 </tbody>
 </table>
 
@@ -41,27 +57,33 @@
 ## 函数原型<a name="zh-cn_topic_0000002317314449_section45077510411"></a>
 
 ```
-torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts, recv_counts, *, send_counts_tensor=None, recv_counts_tensor=None, mm_x=None, mm_weight=None, trans_gmm_weight=False, trans_mm_weight=False) -> (Tensor, Tensor)
+torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts=[], recv_counts=[], *, send_counts_tensor=None, recv_counts_tensor=None, mm_x=None, mm_weight=None, trans_gmm_weight=False, trans_mm_weight=False, global_token_per_expert=None, gmm_weight_scale=None, gmm_x_scale=None, comm_mode="aicpu", y_dtype=0, output_token_num=-1) -> (Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002317314449_section112637109429"></a>
 
 -   **gmm\_x**（`Tensor`）：必选参数，GroupedMatMul计算的左矩阵。数据类型支持`float16`、`bfloat16`，支持2维，shape为$(A, H1)$，数据格式支持ND。
--   **gmm\_weight**（`Tensor`）：必选参数，GroupedMatMul计算的右矩阵。数据类型与`gmm_x`保持一致，支持3维，shape为$(e, H1, N1)$，数据格式支持ND。
+-   **gmm\_weight**（`Tensor`）：必选参数，GroupedMatMul计算的右矩阵。数据类型与`gmm_x`保持一致，支持3维，shape为$(e, H1, N1)$，数据格式支持ND。当comm_mode为“aiv”时，支持ND、NZ数据格式。
 -   **hcom**（`str`）：必选参数，专家并行的通信域名，字符串长度要求\(0, 128\)。
--   **ep\_world\_size**（`int`）：必选参数，EP通信域size，取值支持8、16、32、64。
--   **send\_counts**（`List[int]`）：必选参数，表示发送给其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。
--   **recv\_counts**（`List[int]`）：必选参数，表示接收其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。
+-   **ep\_world\_size**（`int`）：必选参数，EP通信域size，Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件，当comm_mode为“aiv”时，取值支持2、4、8。Atlas A3 训练系列产品/Atlas A3 推理系列产品，当comm_mode为“aicpu”时，取值支持8、16、32、64。当comm_mode为“aicpu”时，取值支持2、4、8、16。昇腾910_95 AI处理器，当comm_mode为“ccu”时，取值支持4、8、16、32、64。
+-   **send\_counts**（`List[int]`）：必选参数，表示发送给其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。**当comm_mode为“aiv”时，不支持该参数，传空链表**。
+-   **recv\_counts**（`List[int]`）：必选参数，表示接收其他卡的token数，数据类型支持`int`，取值大小为e\*`ep_world_size`，最大为256。**当comm_mode为“aiv”时，不支持该参数，传空链表**。
 -   **send\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep\_world\_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
 -   **recv\_counts\_tensor**（`Tensor`）：可选参数，数据类型支持`int`，shape为$(e*ep\_world\_size,)$，数据格式支持ND。**当前版本暂不支持**，使用默认值即可。
 -   **mm\_x**（`Tensor`）：可选参数，共享专家MatMul计算中的左矩阵。当需要融合共享专家矩阵计算时，该参数必选，数据类型支持`float16`、`bfloat16`，支持2维，shape为$(BS, H2)$。
 -   **mm\_weight**（`Tensor`）：可选参数，共享专家MatMul计算中的右矩阵。当需要融合共享专家矩阵计算时，该参数必选，数据类型与`mm_x`保持一致，支持2维，shape为$(H2, N2)$。
 -   **trans\_gmm\_weight**（`bool`）：可选参数，GroupedMatMul的右矩阵是否需要转置，true表示需要转置，false表示不转置。
 -   **trans\_mm\_weight**（`bool`）：可选参数，共享专家MatMul的右矩阵是否需要转置，true表示需要转置，false表示不转置。
+-   **global_token_per_expert**(`Tensor`)：可选参数，通信矩阵。包含所有卡向所有专家发送的token数。数据类型支持INT32，shape为$(ep\_world\_size， e*ep\_world\_size)$，数据格式支持ND。**当前版本仅在comm_mode为“aiv”时支持。**
+-   **gmm_x_scale**（`Tensor`）：可选参数，mm左矩阵反量化参数。数据类型支持`float`，shape为$(A, )$，数据格式支持ND。**当前版本仅在comm_mode为”aiv”时支持**。
+-   **gmm_weight_scale**（`Tensor`）：可选参数，mm右矩阵反量化参数。数据类型支持`int64`，shape为$(e, N1)$，数据格式支持ND。**当前版本仅在commMode为”aiv”时支持**。
+-   **comm_mode**（`str`）：可选参数，Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件支持取值“aiv”，Atlas A3 训练系列产品/Atlas A3 推理系列产品支持取值“aiv”和“aicpu”，昇腾910_95 AI处理器支持取值“ccu”，默认值为“aicpu”。不受环境变量的影响
+-   **y_dtype**（`int`）：可选参数，支持取值0和1，分别代表量化场景下，gmm_y的输出类型，0为float16，1为bfloat16。
+-   **output_token_num**（`int`）：可选参数，int类型，表示y第一维的shape，**仅在comm_mode为"aiv"时支持。**
 
 ## 返回值说明<a name="zh-cn_topic_0000002317314449_section22231435517"></a>
 
--   **y**（`Tensor`）：表示最终计算结果，数据类型与输入`gmm_x`保持一致，支持2维，shape为$(BSK, N1)$。
+-   **y**（`Tensor`）：表示最终计算结果，支持2维，shape为$(BSK, N1)$。aicpu模式下数据类型与输入`gmm_x`保持一致，aiv量化模式下取决于y_dtype。
 -   **mm\_y**（`Tensor`）：共享专家MatMul的输出，数据类型与`mm_x`保持一致，支持2维，shape为$(BS, N2)$。仅当传入`mm_x`与`mm_weight`才输出。
 
 ## 约束说明<a name="zh-cn_topic_0000002317314449_section12345537164214"></a>
@@ -70,7 +92,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
 -   该接口支持图模式（PyTorch 2.1版本）。
 -   单卡通信量范围：\[2MB, 100MB\]。
 -   输入参数Tensor中shape使用的变量说明：
-    -   BSK：本卡接收的token数（BS\*K=BSK），是recv\_counts参数累加之和，取值范围\(0, 52428800\)。
+    -   BSK：本卡接收的token数（BS\*K=BSK），在"aicpu"模式下，是recv\_counts参数累加之和，取值范围\(0, 52428800\)。在"aiv"模式下，是output_token_num的值，取值范围\(0,524288000\)。
 
     -   H1：表示路由专家hidden size隐藏层大小，取值范围\(0, 65536\)。
     -   H2：表示共享专家hidden size隐藏层大小，取值范围\(0, 12288\]。
@@ -79,12 +101,12 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     -   N2：表示共享专家的head\_num，取值范围\(0, 65536\)。
     -   BS：batch sequence size。
     -   K：表示选取top\_k个专家，K的范围\[2, 8\]。
-    -   A：本卡发送的token数，是send\_counts参数累加之和。
+    -   A：本卡发送的token数，在"aicpu"模式下，是send\_counts参数累加之和。在"aiv"模式下，它是global_token_per_expert通信矩阵，本卡往各个专家发送的token数累加之和。
     -   EP通信域内所有卡上的A参数的累加和等于所有卡上的BSK参数的累加和。
 
 ## 调用示例<a name="zh-cn_topic_0000002317314449_section14459801435"></a>
 
--   单算子模式调用
+-   单算子aicpu/ccu模式调用
 
     ```python
     import torch
@@ -117,7 +139,13 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                                                 mm_x = None,
                                                 mm_weight = None,
                                                 trans_gmm_weight = False,
-                                                trans_mm_weight  = False))
+                                                trans_mm_weight  = False,
+                                                global_token_per_expert = None，
+                                                gmm_x_scale = None,
+                                           	    gmm_weight_scale = None,
+                                       		    comm_mode = "aicpu",
+                                          	    y_dtype = 0,
+                                       		    output_token_num = -1))
     
     if __name__ == "__main__":
         epWorkSize = 8
@@ -136,7 +164,76 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
         mp.spawn(run_npu_gmm_alltoallv, args=(epWorkSize, master_ip, master_port, gmm_x_shape, gmm_weight_shape, send_counts, recv_counts, dtype), nprocs=epWorkSize)
     ```
 
--   图模式调用
+-   单算子aiv模式调用
+
+    ```python
+    import torch
+    import torch_npu
+    import torch.distributed as dist
+    import torch.multiprocessing as mp
+    
+    def run_npu_gmm_alltoallv_aiv(rank, ep_world_size, master_ip, master_port, gmm_x_shape, gmm_weight_shape, dtype, global_token_per_expert, output_token_num):
+        torch_npu.npu.set_device(rank)
+        init_method = f'tcp://{master_ip}:{master_port}'
+        dist.init_process_group(backend="hccl", rank=rank, world_size=ep_world_size, init_method=init_method)
+        from torch.distributed.distributed_c10d import _get_default_group
+        default_pg = _get_default_group()
+        if torch.__version__ >= '2.0.1':
+            hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+        else:
+            hcom_info = default_pg.get_hccl_comm_name(rank)
+    
+        gmm_x = torch.randn(gmm_x_shape, dtype=dtype).npu()
+        gmm_weight = torch.randn(gmm_weight_shape, dtype=dtype).npu()
+    
+        gmm_x_scale = torch.ones((1,), dtype=torch.float32).npu()
+        gmm_weight_scale = torch.ones((1,), dtype=torch.float32).npu()
+        
+        global_token_per_expert_rank = torch.tensor(global_token_per_expert, dtype=torch.int32).npu()
+    
+        print(f"[Rank {rank}] Running npu_gmm_alltoallv in AIV mode...")
+        print(torch_npu.npu_gmm_alltoallv(gmm_x=gmm_x,
+                                                gmm_weight=gmm_weight,
+                                                hcom=hcom_info,
+                                                ep_world_size=ep_world_size,
+                                                send_counts_tensor = None, 
+                                                recv_counts_tensor = None, 
+                                                mm_x = None,
+                                                mm_weight = None,
+                                                trans_gmm_weight = False,
+                                                trans_mm_weight  = False，
+                                                gmm_x_scale = gmm_x_scale,
+                                                gmm_weight_scale = gmm_weight_scale,
+                                          		global_token_per_expert = global_token_per_expert_rank,
+                                                comm_mode = "aiv",         
+                                                y_dtype = 0,              
+                                                output_token_num = output_token_num))
+    
+    
+    if __name__ == "__main__":
+        ep_world_size = 8
+        e = 4
+        master_ip = '127.0.0.1'
+        master_port = '50001'
+    
+        BS = 512
+        K = 8
+        gmm_x_shape = [BS * K, 2048]
+        gmm_weight_shape = [e, 2048, 2048]
+        dtype = torch.float16
+    
+        global_token_per_expert = np.random.randint(
+            low=0, high=128, size=(ep_world_size, e * ep_world_size), dtype=np.int32
+        )
+    
+        output_token_num = 32
+        
+        mp.spawn(run_npu_gmm_alltoallv_aiv, args=(ep_world_size, master_ip, master_port, gmm_x_shape, gmm_weight_shape, dtype， global_token_per_expert， output_token_num),
+                 nprocs=ep_world_size)
+    
+    ```
+
+-   图模式调用（当前版本仅aicpu支持）
 
     ```python
     import torch
