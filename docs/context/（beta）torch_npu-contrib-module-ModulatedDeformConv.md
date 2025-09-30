@@ -33,16 +33,17 @@ torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_s
 - **pack** (`bool`)：如果值为True，此模块将包括conv_offset和掩码。默认值为True。
 
 ### 计算输入
+- **x**(`Tensor`): 输入张量。
+
+## 返回值说明
 `Tensor`
-输入张量。
+
+卷积计算结果。
 
 ## 约束说明
 
 ModulatedDeformConv仅实现float32数据类型的操作。conv_offset中权重和偏置必须初始化为0。
 
-## 返回值说明
-`Tensor`
-卷积计算结果。
 
 ## 调用示例
 
