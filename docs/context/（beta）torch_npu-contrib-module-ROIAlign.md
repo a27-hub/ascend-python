@@ -24,7 +24,7 @@ torch_npu.contrib.module.ROIAlign(output_size, spatial_scale, sampling_ratio, al
 ## 参数说明
 
 ### 计算参数
-- **output_size** (`Tuple`): h, w。
+- **output_size** (`Tuple`): (height, width)，表示输出的高和宽。
 - **spatial_scale** (`float`): 按此参数值缩放输入框。
 - **sampling_ratio** (`int`): 为每个输出样本采集的输入样本数。0表示密集采样。
 - **aligned** (`bool`): 如果值为False，使用Detectron中的原实现方式。如果值为True，可更准确地对齐结果。
@@ -41,6 +41,7 @@ torch_npu.contrib.module.ROIAlign(output_size, spatial_scale, sampling_ratio, al
 ## 返回值说明
 
 `Tensor` 
+
 ROIAlign计算结果。
 
 

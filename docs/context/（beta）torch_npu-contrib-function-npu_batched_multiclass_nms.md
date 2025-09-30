@@ -32,7 +32,8 @@ torch_npu.contrib.function.npu_batched_multiclass_nms(multi_bboxes, multi_scores
 
 ## 返回值说明
 
-**Tuple** - (bboxes, labels)，shape为(bs, k, 5)和(bs, k, 1)的张量。标签以0为基础。
+`Tuple`
+(bboxes, labels)，表示候选框和标签，shape为(bs, k, 5)和(bs, k, 1)的张量。标签以0为基础。
 
 ## 约束说明
 
