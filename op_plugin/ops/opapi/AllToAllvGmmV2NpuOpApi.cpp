@@ -30,7 +30,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
         }
     }
     TORCH_CHECK((y_dtype == 0 || y_dtype == 1), "Invalid y_dtype value:", y_dtype,
-            ". Expected 0(fp16) or 1 (bfp16).");
+                ". Expected 0(fp16) or 1 (bfp16).");
     if (mm_x.has_value() && mm_weight.has_value()) {
         const at::Tensor &mm_x_value = mm_x.value();
         const at::Tensor &mm_weight_value = mm_weight.value();
