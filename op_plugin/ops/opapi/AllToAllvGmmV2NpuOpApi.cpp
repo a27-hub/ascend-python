@@ -18,7 +18,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
     at::Tensor permute_out{nullptr};
     at::Tensor global_token_per_expert{nullptr};
     int64_t a = 0;
-    max_output_token_num = max_output_token_num == -1 ? 2 * gmm_x.size(0) : max_output_token_num;
+    int64_t default_scale = 2;
+    max_output_token_num = max_output_token_num == -1 ? default_scale * gmm_x.size(0) : max_output_token_num;
     if (comm_mode == "aiv") {
         a = max_output_token_num;
     } else {

@@ -29,7 +29,8 @@ namespace op_api {
     {
         at::Tensor mm_y{nullptr};
         int64_t bsk = 0;
-        output_token_num = output_token_num == -1 ? 2 * gmm_x.size(0) : output_token_num;
+        int64_t default_scale = 2;
+        output_token_num = output_token_num == -1 ? default_scale * gmm_x.size(0) : output_token_num;
         if (comm_mode == "aiv") {
             bsk = output_token_num;
         } else {
