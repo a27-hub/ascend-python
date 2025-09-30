@@ -19,6 +19,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
     at::Tensor global_token_per_expert{nullptr};
     int64_t a = 0;
     int64_t default_scale = 2;
+    int64_t dtype_float16 = 0;
+    int64_t dtype_bfloat16 = 1;
     max_output_token_num = max_output_token_num == -1 ? default_scale * gmm_x.size(0) : max_output_token_num;
     if (comm_mode == "aiv") {
         a = max_output_token_num;
@@ -27,15 +29,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
             a += i;
         }
     }
+    TORCH_CHECK((y_dtype == 0 || y_dtype == 1), "Invalid y_dtype value:", y_dtype,
+            ". Expected 0(fp16) or 1 (bfp16).");
     if (mm_x.has_value() && mm_weight.has_value()) {
         const at::Tensor &mm_x_value = mm_x.value();
         const at::Tensor &mm_weight_value = mm_weight.value();
         int64_t bs = mm_x_value.size(0);
         int64_t n2 = trans_mm_weight ? mm_weight_value.size(0) : mm_weight_value.size(1);
         auto mmy_options = mm_x_value.options();
-        if (y_dtype == 0 && gmm_x.scalar_type() == at::kChar) {
+        if (y_dtype == dtype_float16 && gmm_x.scalar_type() == at::kChar) {
             mmy_options = mmy_options.dtype(at::kHalf);
-        } else if (y_dtype == 1 && gmm_x.scalar_type() == at::kChar) {
+        } else if (y_dtype == dtype_bfloat16 && gmm_x.scalar_type() == at::kChar) {
             mmy_options = mmy_options.dtype(at::kBFloat16);
         }
         mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bs, n2}, mmy_options);
@@ -43,18 +47,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm_v2(
     if (permute_out_flag) {
         int64_t h1 = gmm_x.size(1);
         auto gmmx_options = gmm_x.options();
-        if (y_dtype == 0 && gmm_x.scalar_type() == at::kChar) {
+        if (y_dtype == dtype_float16 && gmm_x.scalar_type() == at::kChar) {
             gmmx_options = gmmx_options.dtype(at::kHalf);
-        } else if (y_dtype == 1 && gmm_x.scalar_type() == at::kChar) {
+        } else if (y_dtype == dtype_bfloat16 && gmm_x.scalar_type() == at::kChar) {
             gmmx_options = gmmx_options.dtype(at::kBFloat16);
         }
         permute_out = at_npu::native::OpPreparation::apply_tensor_without_format({a, h1}, gmmx_options);
     }
     int64_t n1 = trans_gmm_weight ? gmm_weight.size(1) : gmm_weight.size(2);
     auto gmmy_options = gmm_x.options();
-    if (y_dtype == 0 && gmm_x.scalar_type() == at::kChar) {
+    if (y_dtype == dtype_float16 && gmm_x.scalar_type() == at::kChar) {
         gmmy_options = gmmy_options.dtype(at::kHalf);
-    } else if (y_dtype == 1 && gmm_x.scalar_type() == at::kChar) {
+    } else if (y_dtype == dtype_bfloat16 && gmm_x.scalar_type() == at::kChar) {
         gmmy_options = gmmy_options.dtype(at::kBFloat16);
     }
     auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format({a, n1}, gmmy_options);
