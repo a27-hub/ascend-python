@@ -254,7 +254,7 @@ def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
         if output_token_num != -1: 
             out_x = output_token_num 
         else: 
-            out_x = 2*gmm_x.size(0) 
+            out_x = 2 * gmm_x.size(0) 
     else: 
         out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
@@ -327,7 +327,7 @@ def npu_alltoallv_gmm_v2_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_count
         if max_output_token_num != -1:
             out_x = max_output_token_num
         else:
-            out_x = 2*gmm_x.size(0)
+            out_x = 2 * gmm_x.size(0)
     else:
         out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
@@ -359,7 +359,7 @@ def npu_alltoallv_gmm_v2_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_count
         gmmy_dtype = gmm_x.dtype
     gmm_y = torch.empty([out_x, out_y], dtype=gmmy_dtype, device='meta')
     global_token_per_expert_dtype = torch.int32
-    global_token_per_expert = torch.empty([ep_world_size,gmm_weight.size(0)*ep_world_size], dtype=global_token_per_expert_dtype, device='meta')
+    global_token_per_expert = torch.empty([ep_world_size, gmm_weight.size(0)*ep_world_size], dtype=global_token_per_expert_dtype, device='meta')
     return (gmm_y, mm_y, permute_out, global_token_per_expert)
 
 
