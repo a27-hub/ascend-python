@@ -95,10 +95,10 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
        .Output(kr_cache_out, "kr_cache_out")
        .Attr("rmsnorm_epsilon_cq", static_cast<float>(rmsnorm_epsilon_cq))
        .Attr("rmsnorm_epsilon_ckv", static_cast<float>(rmsnorm_epsilon_ckv))
-       .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale))
-       .Attr("kc_scale", static_cast<float>(kc_scale));
+       .Attr("cache_mode", (string)cache_mode)
+       .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale));
 
-    cmd.Attr("cache_mode", (string)cache_mode).Run();
+    cmd.Attr("kc_scale", static_cast<float>(kc_scale)).Run();
 
     return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&>(query, query_rope, kv_cache_out, kr_cache_out);
 }
