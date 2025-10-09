@@ -124,7 +124,7 @@ class TestQuantMatmul(TestCase):
         x2 = torch_npu.npu_convert_weight_to_int4pack(x2.to(torch.int32).transpose(-1, -2).contiguous()).transpose(-1, -2)
         return x1, x2, x1_scale.reshape(-1, 1), x2_scale, x2_offset
 
-    @SupportedDevices(['Ascend910_'])
+    @SupportedDevices(['Ascend910B'])
     def test_npu_quant_matmul_a4w4_pergroup(self):
         torch.manual_seed(0)
         x1, x2, x1_scale, x2_scale, x2_offset = self.gen_inputs_for_npu_quant_matmul_a4w4_pergroup(torch.bfloat16)
