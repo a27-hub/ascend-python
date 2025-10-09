@@ -71,6 +71,9 @@
   "op_api: torch_npu.npu_gmm_alltoallv(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_alltoallv_gmm_v2(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_moe_update_expert(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -273,6 +276,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_gmm_alltoallv(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_alltoallv_gmm_v2(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_group_norm_swish(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
