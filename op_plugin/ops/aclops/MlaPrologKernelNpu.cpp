@@ -28,8 +28,8 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
     const at::Tensor& dequant_scale_x, const at::Tensor& dequant_scale_w_dq,
     const at::Tensor& dequant_scale_w_uq_qr, const at::Tensor& dequant_scale_w_dkv_kr,
     const at::Tensor& quant_scale_ckv, const at::Tensor& quant_scale_ckr,
-    const at::Tensor& smooth_scales_cq, double rmsnorm_epsilon_cq,
-    double rmsnorm_epsilon_ckv, c10::string_view cache_mode, at::Tensor& query,
+    const at::Tensor& smooth_scales_cq, double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, 
+    c10::string_view cache_mode, double qc_qr_scale, double kc_scale, at::Tensor& query,
     at::Tensor& query_rope, at::Tensor& kv_cache_out, at::Tensor& kr_cache_out)
 {
     at_npu::native::OpCommand cmd;
@@ -94,7 +94,9 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
        .Output(kv_cache_out, "kv_cache_out")
        .Output(kr_cache_out, "kr_cache_out")
        .Attr("rmsnorm_epsilon_cq", static_cast<float>(rmsnorm_epsilon_cq))
-       .Attr("rmsnorm_epsilon_ckv", static_cast<float>(rmsnorm_epsilon_ckv));
+       .Attr("rmsnorm_epsilon_ckv", static_cast<float>(rmsnorm_epsilon_ckv))
+       .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale))
+       .Attr("kc_scale", static_cast<float>(kc_scale));
 
     cmd.Attr("cache_mode", (string)cache_mode).Run();
 
@@ -109,7 +111,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog(
     const c10::optional<at::Tensor>& dequant_scale_x_opt, const c10::optional<at::Tensor>& dequant_scale_w_dq_opt,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr_opt, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr_opt, const c10::optional<at::Tensor>& quant_scale_ckv_opt,
     const c10::optional<at::Tensor>& quant_scale_ckr_opt, const c10::optional<at::Tensor>& smooth_scales_cq_opt,
-    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode)
+    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, double qc_qr_scale, double kc_scale)
 {
     std::map<std::string, at::Tensor> mMap = { {"token_x", token_x}, {"weight_dq", weight_dq}, {"weight_uq_qr", weight_uq_qr}, {"weight_uk", weight_uk}, {"weight_dkv_kr", weight_dkv_kr}, {"rmsnorm_gamma_cq", rmsnorm_gamma_cq}, {"rmsnorm_gamma_ckv", rmsnorm_gamma_ckv}, {"rope_sin", rope_sin}, {"rope_cos", rope_cos}, {"cache_index", cache_index}, {"kv_cache", kv_cache}, {"kr_cache", kr_cache}};
 
@@ -164,7 +166,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog(
             dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr,
             smooth_scales_cq, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
-            cache_mode, query, query_rope, kv_cache_out, kr_cache_out);
+            cache_mode, qc_qr_scale, kc_scale, query, query_rope, 
+            kv_cache_out, kr_cache_out);
         npu_utils::format_fresh_view(query, contiguous_query);
         npu_utils::format_fresh_view(query_rope, contiguous_query_rope);
         npu_utils::format_fresh_view(kv_cache_out, contiguous_kv_cache_out);
@@ -176,7 +179,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog(
             dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr,
             smooth_scales_cq, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
-            cache_mode, query, query_rope, kv_cache_out, kr_cache_out);
+            cache_mode, qc_qr_scale, kc_scale, query, query_rope, 
+            kv_cache_out, kr_cache_out);
     }
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, kv_cache_out, kr_cache_out);
 }
