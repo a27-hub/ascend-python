@@ -107,7 +107,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填空指针，当`const_expert_num`不为0时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(const_expert_num,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
 -   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。有TP域通信才需要传参。
-    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：不支持TP域通信，使用默认值即可。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：eager模式使用默认值即可；图模式传入与`group_ep`相同。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：字符串长度范围为\[1, 128\)，不能和`group_ep`相同。
 
 -   **tp\_world\_size** (`int`)：可选参数，TP通信域size。有TP域通信才需要传参。
