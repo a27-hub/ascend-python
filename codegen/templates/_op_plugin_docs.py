@@ -6674,18 +6674,23 @@ page attention场景:
 使能必要条件是block_table存在且有效, 同时key、value是按照block_table中的索引在一片连续内存中排布, 在该场景下key、value的input_layout参数无效. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持key、value数据类型为float16、bfloat16、int8. 
 Atlas A3 训练系列产品: 支持key、value数据类型为float16、bfloat16、int8. 
-该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能. key、value输入类型为float16、bfloat16时需要16对齐, key、value输入类型为int8时需要32对齐, 推荐使用128. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
+该场景下, block_size是用户自定义的参数, 该参数的取值会影响page attention的性能. block_size需要传入非0值，且最大不超过512, key、value输入类型为float16、bfloat16时需要16对齐, key、value输入类型为int8时需要32对齐, 推荐使用128. 通常情况下, page attention可以提高吞吐量, 但会带来性能上的下降. 
 参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为bfloat16、float16、key、value为int4(int32)的场景. 
 page attention场景下, blockTable必须为二维, 第一维长度需等于B, 第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为不同batch中最大actual_seq_lengths_kv对应的block数量). 
 page attention场景下, 当query的input_layout为BNSD、TND时, kv cache排布支持(blocknum, blocksize, H)和(blocknum, KV_N, blocksize, D)两种格式, 当query的input_layout为BSH、BSND时, kv cache排布只支持(blocknum, blocksize, H)一种格式. blocknum不能小于根据actual_seq_lengths_kv和blockSize计算的每个batch的block数量之和. 且key和value的shape需保证一致. 
 page attention场景下, kv cache排布为(blocknum, KV_N, blocksize, D)时性能通常优于kv cache排布为(blocknum, blocksize, H)时的性能, 建议优先选择(blocknum, KV_N, blocksize, D)格式. 
-page attention使能场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
-page attention不支持左padding场景. 
+page attention场景下, 当输入kv cache排布格式为(blocknum, blocksize, H), 且 numKvHeads * headDim 超过64k时, 受硬件指令约束, 会被拦截报错. 可通过使能GQA(减小 numKvHeads)或调整kv cache排布格式为(blocknum, numKvHeads, blocksize, D)解决. 
+page attention不支持tensorlist场景, 不支持左padding场景. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 Atlas A3 训练系列产品: 不支持Q为BF16/FP16且KV为INT4(INT32)的场景. 
 page attention场景的参数key、value各自对应tensor的shape所有维度相乘不能超过int32的表示范围. 
+age attention场景下，使能`atten_mask`，当`sparse_mode`不为2、3、4时，传入的`atten_mask`的最后一维需要大于等于`block_table`的第二维 * `block_size`.
+page attention场景下，使能`pse_shift`，传入的`pse_shift`的最后一维需要大于等于`block_table`的第二维 * `block_size`.
+page attention场景下，以下场景输入S需要大于等于`block_table`的第二维 * `block_size`：
+使能伪量化per-token模式：输入参数`antiqunant_scale`和`antiquant_offset`的shape均为\(2, B, S\).
+使能per-token叠加per-head模式：两个参数的shape均为\(B, N, S\)，数据类型固定为`float32`。支持`key`、`value`数据类型为`int8`、`int4`\(`int32`\)。
 kv左padding场景: 
 kvCache的搬运起点计算公式为: Smax-kv_padding_size-actual_seq_lengths. kvCache的搬运终点计算公式为: Smax-kv_padding_size. 其中kvCache的搬运起点或终点小于0时, 返回数据结果为全0. 
 kv_padding_size小于0时将被置为0. 
@@ -7039,12 +7044,12 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产�
 当query的d等于512时：
 sparse：Q_S等于1时只支持sparse=0且不传mask，Q_S大于1时只支持sparse=3且传入mask；
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产品约束如下：
-query_rope配置时要求query的s为1-16、n为32、64、128，query_rope的shape中d为64，其余维度与query一致；
+query_rope配置时要求query的s为1-16、n为1/2/4/8/16/32/64/128，query_rope的shape中d为64，其余维度与query一致；
 key_rope配置时要求key的n为1，d为512，keyRope的shape中d为64，其余维度与key一致；
 支持key、value、keyRope的input_layout格式为ND或NZ。当input_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]，数据类型为int8时，输入参数key和value的格式为[blockNum, KV_N, D/32, blockSize, 32]；
 input_layout形状支持BSH、BSND、BNSD、BNSD_NBSD、BSND_NBSD、BSH_NBSD、TND、TND_NTD，当数据格式为NZ时input_layout不支持BNSD、BNSD_NBSD。
 该场景下，必须开启PageAttention，此时block_size支持16、128，其中数据格式为NZ时block_size不支持配置16。
-不支持开启SoftMaxLse、tensorlist、pse、伪量化、后量化。
+不支持开启softmax_lse、左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
 支持全量化场景，即输入query/key/value全为int8，query_rope和key_rope为bfloat16，输出为bfloat16的场景：
 入参dequant_scale_query、dequant_scale_key、dequant_scale_value需要同时存在，且其数据类型仅支持FP32。
 不支持传入quant_scale_out、quant_offset_out、dequant_offset_key、dequant_offset_value（即不为nullptr），否则报错并返回。
@@ -7055,7 +7060,7 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品/Atlas A3 推理系列产�
 inputLayout：TND、NTD_TND。  
 query_rope配置时要求query_rope的shape中d为64，其余维度与query一致。  
 keyRope配置时要求keyRope的shape中d为64，其余维度与key一致。  
-不支持tensorlist、pse、page attention、伪量化、全量化、后量化。
+不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化、空Tensor。
 其余约束同TND、NTD_TND场景下的综合限制保持一致。
 TND、TND_NTD、NTD_TND场景下query、key、value输入的综合限制：
 T小于等于1M;
@@ -7065,9 +7070,9 @@ actual_seq_qlen和actual_seq_kvlen必须传入，且以该入参元素的数量�
 支持TND、TND_NTD;
 必须开启page attention，此时actual_seq_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV_S；
 支持query每个batch的s为1-16；
-要求query的n为32/64/128，key、value的n为1；
+要求query的n为1/2/4/8/16/32/64/128，key、value的n为1；
 要求query_rope和keyRope不等于空，query_rope和keyRope的d为64；
-不支持开启SoftMaxLse、tensorlist、pse、伪量化、全量化、后量化。
+不支持开启softmax_lse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor。
 
 当query的d不等于512时：
 当query_rope和key_rope为空时：TND场景，要求Q_D、K_D、V_D等于128，或者Q_D、K_D等于192，V_D等于128/192；NTD_TND场景，要求Q_D、K_D等于128/192，V_D等于128。当query_rope和key_rope不为空时，要求Q_D、K_D、V_D等于128；
@@ -7076,7 +7081,7 @@ Q_N、K_N、V_N：需要满足K_N、V_N相等，Q_N整除K_N，Q_N与K_N的比�
 数据类型仅支持BFLOAT16；
 当sparse=3时，要求每个batch单独的actual_seq_qlen<actual_seq_kvlen；
 sparse模式支持sparse\_mode=4且传入mask；当sparse\_mode=4时，要求preTokens >= -actual\_seq\_qlen、nextTokens >= -actual\_seq\_kvlen、preTokens + nextTokens >= 0；
-不支持tensorlist、pse、page attention、伪量化、全量化、后量化；
+不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor；
 不支持图模式配置Tiling调度优化（tiling_schedule_optimize=True）、reduce-overhead执行模式（config.mode="reduce-overhead"）。
 actual_seq_qlen和actual_seq_kvlen的元素个数不大于4096。
 
@@ -7893,27 +7898,34 @@ _add_torch_npu_docstr(
     "npu_all_gather_base_mm",
     """
 接口原型：
-torch_npu.npu_all_gather_base_mm(Tensor input, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int gather_index=0, bool gather_output=True, int comm_turn=0) -> (Tensor, Tensor)
+torch_npu.npu_all_gather_base_mm(input, x2, hcom, world_size, *, bias=None, x1_scale=None, x2_scale=None, gather_index=0, bool gather_output=True, comm_turn=0, output_dtype=None, comm_mode=None) -> (Tensor, Tensor)
 
 功能描述
 TP切分场景下, 实现allgather和matmul的融合, 实现通信和计算流水并行. 
 使用该接口时, 请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本, 否则将会引发报错, 比如BUS ERROR等. 
 
 参数说明
-input: Tensor类型, 数据类型支持float16、bfloat16, 数据格式支持ND, 输入shape支持2维, 形如(m, k)、(k, n), 轴满足matmul算子入参要求, k轴相等, 且k轴取值范围为[256, 65535). 
-x2: Tensor类型, 数据类型、输入shape维度需要和input保持一致, 数据格式支持ND. 
+input: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入shape支持2维, 形如(m, k)、(k, n), 轴满足matmul算子入参要求, k轴相等, 且k轴取值范围为[256, 65535). 
+x2: Tensor类型, 数据类型、输入shape维度需要和input保持一致, 数据格式支持ND、NZ。NZ仅在comm_mode为aiv时支持。
 hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
 world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8. 
 *: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 bias: Tensor类型, 可选输入, 数据类型支持float16、bfloat16, 数据格式支持ND格式. 数据类型需要和input保持一致. bias仅支持一维, 且维度大小与output的第1维大小相同. 当前版本暂不支持bias输入为非0的场景. 
+x1_scale: 可选Tensor类型，mm左矩阵反量化参数。数据类型支持float32，数据格式支持ND格式。数据维度为(m, 1), 支持pertoken量化。
+x2_scale: 可选Tensor类型。mm左矩阵反量化参数。数据类型支持float32、int64，数据格式支持ND格式。数据维度为(1, n), 支持perchannel量化。如需传入int64数据类型的，需要提前调用torch_npu.npu_trans_quant_param来获取int64数据类型的x2_scale。
 gather_index: int类型, 表示gather操作对象, 0: 对input做gather, 1: 对x2做gather. 默认值0. 当前版本仅支持输入0. 
-gather_output: bool类型, 表示是否需要gather输出. 默认值true. 
+gather_output: bool类型, 表示是否需要gather输出， 默认值true。
 comm_turn: int类型, 表示rank间通信切分粒度, 默认值: 0, 表示默认的切分方式. 当前版本仅支持输入0. 
+output_dtype ：可选dtype参数。表示第一个输出的数据类型。仅支持在量化场景且x1_scale和x2_scale均为float32时，可指定输出数据类型为bfloat16或float1，默认值为bfloat16。
+comm_mode：可选str参数。表示通信模式，支持ai_cpu、aiv两种模式。ai_cpu模式仅支持基础场景。aiv模式支持基础场景和量化场景。
+
 
 输出说明
 两个输出, 均为Tensor类型: (Tensor, Tensor)
-第一个输出是allgather+matmul的结果. 
-第二个输出是allgather的结果. 
+-   Tensor：第一个输出Tensor是allgather+matmul的结果。
+基础场景时数据类型和input保持一致。
+量化场景下，x2_scale为int64数据类型时，输出数据类型为float16。x1_scale和x2_scale均为float32时, 输出数据类型由output_dtype指定，默认为bfloat16。
+-   Tensor：第二个输出Tensor是allgather的结果。
 
 约束说明
 该接口支持训练场景下使用. 
@@ -8115,17 +8127,17 @@ TP切分场景下, 实现matmul和reduce_scatter的融合, 融合算子内部实
 
 参数说明
 input: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入shape支持2维. 
-x2: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND、NZ。NZ仅在comm_mode为`aiv`时支持。数据类型需要和input保持一致, 输入shape维度和input保持一致. 
+x2: Tensor类型, 数据类型支持float16、bfloat16、int8, 数据格式支持ND、NZ。NZ仅在comm_mode为aiv时支持。数据类型需要和input保持一致, 输入shape维度和input保持一致. 
 hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
 world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8. 
 *: 代表其之前的变量是位置相关, 按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 reduce_op: String类型, reduce操作类型, 当前仅支持'sum', 默认值: 'sum'. 
 bias: Tensor类型, 可选输入, 数据类型支持float16、bfloat16, 数据格式支持ND格式. 数据类型需要和input保持一致. bias仅支持一维, 且维度大小与output的第1维大小相同. 当前版本暂不支持bias输入为非0的场景. 
-x1_scale: Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持`float32`，数据格式支持$ND$格式。数据维度为\(m, 1\), 支持pertoken量化。
-x2_scale： Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持`float32`、`int64`，数据格式支持$ND$格式。数据维度为\(1, n\), 支持perchannel量化。
+x1_scale: Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持float32，数据格式支持$ND$格式。数据维度为(m, 1), 支持pertoken量化。
+x2_scale： Tensor类型，可选参数。mm左矩阵反量化参数。数据类型支持float32、int64，数据格式支持$ND$格式。数据维度为(1, n), 支持perchannel量化。如需传入int64数据类型的，需要提前调用torch_npu.npu_trans_quant_param来获取int64数据类型的x2_scale。
 comm_turn：int类型, 可选参数。表示rank间通信切分粒度，默认值为0，表示默认的切分方式。当前版本仅支持输入0。
 output_dtype: ScalarType, 可选参数。表示输出数据类型。仅支持在量化场景且x1_scale和x2_scale均为float32时，可指定输出数据类型为bfloat16或float16，默认值为bfloat16。
-comm_mode：str类型，可选参数。表示通信模式，支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。
+comm_mode：str类型，可选参数。表示通信模式，支持ai_cpu、aiv两种模式。ai_cpu模式仅支持基础场景。aiv模式支持基础场景和量化场景。
 
 输出说明
 shape维度和input保持一致。
@@ -8780,6 +8792,47 @@ if __name__ == '__main__':
     main()
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_moe_token_permute_with_routing_map",
+    """
+接口原型：
+torch_npu.npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)
+
+算子功能：
+MoE的permute计算，将token和expert的标签作为routingMap传入，根据routing_map将tokens和可选probs广播后排序
+
+接口说明：
+输入：
+tokens（Tensor，计算输入）：输入toke，要求为一个维度为2D的Tensor，shape为 (tokens_num, hidden_size)，数据类型支持BFLOAT16，FLOAT16，FLOAT，数据格式要求为ND。支持非连续的Tensor。
+routing_map（Tensor ，计算输入）：表token到expert的映射关系，要求shape为一个2D的（tokens_num，experts_num），数据类型支持INT8、BOOL。当数据类型为INT8，取值支持0、1，当数据类型为bool，取值支持true、false，数据格式要求为ND。支持非连续的Tensor。非droppad模式要求每行中包含topK个true 或 1。
+probs（Tensor，计算输入）：可选输入probs，关键字参数，默认值为None，要求元素个数与routing_map相同,当probs为None时，可选输出permute_probs_out_optional为空，数据类型同tokens。数据格式要求为ND。支持非连续的Tensor。
+num_out_tokens（int64_t，计算输入）：可选输入，默认值为token_num, 用于计算topK 和capacity 的有效输出token数。
+drop_and_pad（bool，计算输入）：可选输入，默认值为False，表示是否开启drop_and_pad模式。
+输出：
+permuted_tokens_out（Tensor，第一个输出）：根据indices进行扩展并排序筛选过的tokens，要求是一个2D的Tensor，shape为(outToken , hidden_size)。数据类型同tokens，数据格式要求为ND。支持非连续的Tensor。
+permute_probs_out_optional（Tensor，第二个输出）：根据indices进行排序并筛选过的probs，Shape为(outToken)，数据类型同probsOptional，数据格式要求为ND。支持非连续的Tensor。
+sorted_indices_out（Tensor，第三个输出）：permute_tokens和tokens的映射关系， 要求是一个1D的Tensor，Shape为(outToken)，数据类型支持INT32，数据格式要求为ND。支持非连续的Tensor。
+
+输入约束：
+1. 由于float无损转int限制，tokens_num和experts_num要求小于16777215。
+2. 由于UB限制，routing_map 中 每行为1或true的个数固定且小于512，num_out_tokens/num_tokens小于512。
+3. drop_and_pad为False场景，num_out_tokens / num_tokens需和routing_map中每行1或True的个数一致。
+
+调用示例：
+import torch,torch_npu
+
+x = torch.randn((3, 4), dtype=torch.float).npu()
+rounting_map = torch.tensor(
+    [[True, True], [True, True], [True, True]], dtype=torch.bool).npu()
+numtoken = 6
+pad_mode = False
+
+permuted_tokens_out, _, sorted_indices_out = torch_npu.npu_moe_token_permute_with_routing_map(x, rounting_map, num_out_tokens=numtoken, drop_and_pad=pad_mode)
+    """
+)
+
 
 _add_torch_npu_docstr(
     "npu_prefetch",
