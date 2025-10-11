@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "op_plugin/OpApiInterface.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/op_api_common.h"
+#include <numeric>
+#include <algorithm>
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -33,15 +36,19 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
     at::Tensor& query_rope, at::Tensor& kv_cache_out, at::Tensor& kr_cache_out)
 {
     at_npu::native::OpCommand cmd;
-    if (qc_qr_scale != 1.0 || kc_scale!= 1.0) {
-        cmd.Name("MlaPrologV2")
-           .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale))
-           .Attr("kc_scale", static_cast<float>(kc_scale));
-    } else {
-        cmd.Name("MlaProlog");
+    if (std::abs(qc_qr_scale - 1.0f) <= std::numeric_limits<float>::epsilon() || std::abs(kc_scale - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+        char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
+        at::Tensor dequant_scale_q_nope = nullptr;
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
+            dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
+            rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, qc_qr_scale, kc_scale, query, query_rope, dequant_scale_q_nope);
+
+        return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&>(query, query_rope, kv_cache, kr_cache);
     }
 
-    cmd.Input(token_x, "token_x")
+    cmd.Name("MlaProlog")
+       .Input(token_x, "token_x")
        .Input(weight_dq, "weight_dq")
        .Input(weight_uq_qr, "weight_uq_qr")
        .Input(weight_uk, "weight_uk")
@@ -186,6 +193,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog(
             smooth_scales_cq, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, qc_qr_scale, kc_scale, query, query_rope, 
             kv_cache_out, kr_cache_out);
+    }
+    if (std::abs(qc_qr_scale - 1.0f) <= std::numeric_limits<float>::epsilon() || std::abs(kc_scale - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+        return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, kv_cache, kr_cache);
     }
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, kv_cache_out, kr_cache_out);
 }
