@@ -33,8 +33,15 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
     at::Tensor& query_rope, at::Tensor& kv_cache_out, at::Tensor& kr_cache_out)
 {
     at_npu::native::OpCommand cmd;
-    cmd.Name("MlaProlog")
-       .Input(token_x, "token_x")
+    if (qc_qr_scale != 1.0 && kc_scale!= 1.0) {
+        cmd.Name("MlaPrologV3")
+           .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale))
+           .Attr("kc_scale", static_cast<float>(kc_scale));
+    } else {
+        cmd.Name("MlaProlog");
+    }
+
+    cmd.Input(token_x, "token_x")
        .Input(weight_dq, "weight_dq")
        .Input(weight_uq_qr, "weight_uq_qr")
        .Input(weight_uk, "weight_uk")
@@ -94,11 +101,9 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
        .Output(kv_cache_out, "kv_cache_out")
        .Output(kr_cache_out, "kr_cache_out")
        .Attr("rmsnorm_epsilon_cq", static_cast<float>(rmsnorm_epsilon_cq))
-       .Attr("rmsnorm_epsilon_ckv", static_cast<float>(rmsnorm_epsilon_ckv))
-       .Attr("cache_mode", (string)cache_mode)
-       .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale));
+       .Attr("rmsnorm_epsilon_ckv", static_cast<float>(rmsnorm_epsilon_ckv));
 
-    cmd.Attr("kc_scale", static_cast<float>(kc_scale)).Run();
+    cmd.Attr("cache_mode", (string)cache_mode).Run();
 
     return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&>(query, query_rope, kv_cache_out, kr_cache_out);
 }

@@ -99,7 +99,7 @@ class TestPromptFlashAttetion(TestCase):
     def baseline(self, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr, quant_scale_ckv,
-            smooth_scale_cq, mla_param):
+            smooth_scale_cq, mla_param, qc_qr_scale=1.0, kc_scale=1.0):
 
         B = mla_param['B']
         S1 = mla_param['S1']
@@ -150,6 +150,7 @@ class TestPromptFlashAttetion(TestCase):
         gamma1 = rmsnorm_gamma_cq
         norm1_res = matmul1_res / torch.sqrt(torch.mean(matmul1_res ** 2, dim=-1, keepdim=True) + ep1)
         norm1_res *= gamma1
+        norm1_res *= qc_qr_scale
 
         # matmul2 预处理
         weight_uq_qr = weight_uq_qr.to(torch.int32)
@@ -217,6 +218,7 @@ class TestPromptFlashAttetion(TestCase):
         gamma2 = rmsnorm_gamma_ckv
         norm2_res = splitd2_res1 / torch.sqrt(torch.mean(splitd2_res1 ** 2, dim=-1, keepdim=True) + ep2)
         norm2_res *= gamma2
+        norm2_res *= kc_scale
 
         # rmsnorm2 后处理
         norm2_res = quant(norm2_res, quant_scale_ckv)
@@ -249,12 +251,12 @@ class TestPromptFlashAttetion(TestCase):
     def mla_prolog_npu(self, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
-            quant_scale_ckv, smooth_scale_cq):
+            quant_scale_ckv, smooth_scale_cq, qc_qr_scale=1.0, kc_scale=1.0):
 
         return torch_npu.npu_mla_prolog_v2(
             token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
             rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv,
-            cache_mode=cache_mode, dequant_scale_x=dequant_scale_x, dequant_scale_w_dq=dequant_scale_w_dq,
+            cache_mode=cache_mode, qc_qr_scale=qc_qr_scale, kc_scale=kc_scale, dequant_scale_x=dequant_scale_x, dequant_scale_w_dq=dequant_scale_w_dq,
             dequant_scale_w_uq_qr=dequant_scale_w_uqqr, dequant_scale_w_dkv_kr=dequant_scale_w_dkvkr,
             quant_scale_ckv=quant_scale_ckv, smooth_scales_cq=smooth_scale_cq)
 
@@ -361,6 +363,110 @@ class TestPromptFlashAttetion(TestCase):
         self.assertRtolEqual(kr_cache_out_mla.to(torch.float32), kr_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
         self.assertRtolEqual(dequant_scale_q_nope_mla.to(torch.float32), dequant_scale_q_nope.to(torch.float32), prec=0.005, prec16=0.005)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_op_exec_qc_qr_scale_kc_scale(self):
+        B = 2
+        He = 7168
+        Hcq = 1536
+        Hckv = 512
+        N = 32
+        D = 128
+        Dr = 64
+        Skv = 6144
+        S = 1
+        Nkv = 1
+        BlockSize = 128
+        BlockNum = math.ceil(B * Skv / BlockSize)
+        T = 8
+        token_x = torch.randint(-100, 100, (B, S, He), dtype=torch.int8).npu()
+        w_dq = torch.randint(-100, 100, (He, Hcq), dtype=torch.int8).npu()
+        w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
+        w_uq_qr = torch.randint(-100, 100, (Hcq, N * (D + Dr)), dtype=torch.int8).npu()
+        w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
+        w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
+        w_dkv_kr = torch.randint(-100, 100, (He, Hckv + Dr), dtype=torch.int8).npu()
+        w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
+        rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+        rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+        rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+        rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+        cache_index = torch.randint(0, B * S, (B, S), dtype=torch.int64).npu()
+        kv_cache = torch.randint(-100, 100, (1, BlockNum * BlockSize * Nkv * Hckv), dtype=torch.int8).npu()
+        kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+        kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+        kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+        rmsnorm_epsilon_cq = 1.0e-5
+        rmsnorm_epsilon_ckv = 1.0e-5
+        cache_mode = "PA_BSND"
+        qc_qr_scale = 3.0
+        kc_scale = 4.0
+        dequant_scale_x = torch.rand(B * S, 1, dtype=torch.float32).npu()
+        dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
+        dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
+        dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
+        quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+        smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
+
+        mla_param = {
+            'B': B,
+            'He': He,
+            'Hcq': Hcq,
+            'Hckv': Hckv,
+            'N1': N,
+            'D': D,
+            'Dr': Dr,
+            'S2': Skv,
+            'S1': S,
+            'N2': Nkv,
+            'BlockNum': BlockNum,
+            'BlockSize': BlockSize,
+            't_flag': False,
+            'T': T,
+            "out_deqq_shape_shape": [B * S, N, 1]
+        }
+
+        query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla, dequant_scale_q_nope_mla = self.mla_prolog_npu(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+            cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+            quant_scale_ckv, smooth_scale_cq, qc_qr_scale, kc_scale)
+        query_mla = query_mla.cpu()
+        query_rope_mla = query_rope_mla.cpu()
+        kv_cache_out_mla = kv_cache_out_mla.cpu()
+        kr_cache_out_mla = kr_cache_out_mla.cpu()
+        dequant_scale_q_nope_mla = dequant_scale_q_nope_mla.cpu()
+
+        token_x = token_x.cpu()
+        w_dq = w_dq.cpu()
+        w_dq_cast = w_dq_cast.cpu()
+        w_uq_qr_cast = w_uq_qr_cast.cpu()
+        w_uk = w_uk.cpu()
+        w_dkv_kr_cast = w_dkv_kr_cast.cpu()
+        rmsnorm_gamma_cq = rmsnorm_gamma_cq.cpu()
+        rmsnorm_gamma_ckv = rmsnorm_gamma_ckv.cpu()
+        rope_sin = rope_sin.cpu()
+        rope_cos = rope_cos.cpu()
+        cache_index = cache_index.cpu()
+        kv_cache = kv_cache.cpu()
+        kr_cache = kr_cache.cpu()
+        dequant_scale_x = dequant_scale_x.cpu()
+        dequant_scale_w_dq = dequant_scale_w_dq.cpu()
+        dequant_scale_w_uqqr = dequant_scale_w_uqqr.cpu()
+        dequant_scale_w_dkvkr = dequant_scale_w_dkvkr.cpu()
+        quant_scale_ckv = quant_scale_ckv.cpu()
+        smooth_scale_cq = smooth_scale_cq.cpu()
+
+        query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope = self.baseline(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+            cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+            quant_scale_ckv, smooth_scale_cq, mla_param, qc_qr_scale, kc_scale)
+
+        # query为int8类型，允许误差为1
+        self.assertRtolEqual(query_mla, query, prec=1, prec16=1)
+        self.assertRtolEqual(query_rope_mla.to(torch.float32), query_rope.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kv_cache_out_mla.to(torch.float32), kv_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kr_cache_out_mla.to(torch.float32), kr_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(dequant_scale_q_nope_mla.to(torch.float32), dequant_scale_q_nope.to(torch.float32), prec=0.005, prec16=0.005)
 
 if __name__ == "__main__":
     run_tests()
