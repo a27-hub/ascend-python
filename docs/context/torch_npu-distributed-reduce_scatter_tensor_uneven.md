@@ -8,7 +8,8 @@
 
 ## 功能说明
 
-参考原生接口`torch.distributed.reduce_scatter_tensor`功能，`torch_npu.distributed.reduce_scatter_tensor_uneven`接口新增支持零拷贝和非等长切分功能。
+参考原生接口`torch.distributed.reduce_scatter_tensor`功能，具体请参考[https://pytorch.org/docs/stable/distributed.html\#torch.distributed.reduce_scatter_tensor](https://pytorch.org/docs/stable/distributed.html#torch.distributed.reduce_scatter_tensor)。
+`torch_npu.distributed.reduce_scatter_tensor_uneven`接口新增支持零拷贝和非等长切分功能。
 
 ## 函数原型
 

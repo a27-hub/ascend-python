@@ -73,3 +73,10 @@ if __name__ == "__main__":
     main()
 ```
 
+结果示例：
+
+```
+group_name_0
+group_name_0
+```
+
