@@ -34,7 +34,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
 {
     at_npu::native::OpCommand cmd;
     if (qc_qr_scale != 1.0 && kc_scale!= 1.0) {
-        cmd.Name("MlaPrologV3")
+        cmd.Name("MlaPrologV2")
            .Attr("qc_qr_scale", static_cast<float>(qc_qr_scale))
            .Attr("kc_scale", static_cast<float>(kc_scale));
     } else {
