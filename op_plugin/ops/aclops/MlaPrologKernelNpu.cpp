@@ -38,7 +38,7 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
     at_npu::native::OpCommand cmd;
     if (std::abs(qc_qr_scale - 1.0f) <= std::numeric_limits<float>::epsilon() || std::abs(kc_scale - 1.0f) <= std::numeric_limits<float>::epsilon()) {
         char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor dequant_scale_q_nope = nullptr;
+        at::Tensor dequant_scale_q_nope {nullptr};
         EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
             dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
