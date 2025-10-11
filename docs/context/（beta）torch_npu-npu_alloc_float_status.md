@@ -16,23 +16,24 @@
 ## 函数原型
 
 ```
-torch_npu.npu_alloc_float_status(self) -> Tensor
+torch_npu.npu_alloc_float_status(input) -> Tensor
 ```
 
 
 ## 参数说明
 
-**self** (`Tensor`)：任何张量（主要用于确定device位置）。
+**input** (`Tensor`)：必选参数，任意构建的一个NPU张量（主要用于确定device信息）。
 
-## 返回值
+## 返回值说明
+
+`Tensor`
 
 一个包含8个float32 类型全零值的Tensor。
-
 
 ## 调用示例
 
 ```python
->>> input    = torch.randn([1,2,3]).npu()
+>>> input = torch.randn([1,2,3]).npu()
 ## 分配状态空间
 >>> output = torch_npu.npu_alloc_float_status(input)
 >>> input
@@ -41,7 +42,7 @@ tensor([[[ 2.2324,  0.2478, -0.1056],
 >>> output
 tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 
-## 清楚状态
+## 清除状态
 >>> torch_npu.npu_clear_float_status(output)
 
 ## 执行可能溢出的计算操作
