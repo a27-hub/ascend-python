@@ -42,3 +42,22 @@ torch_npu.jit.optimize(traced_model)
 
 ```
 
+
+## 调用示例
+
+```python
+import torch
+import torch_npu
+from torch_npu import jit
+
+class SimpleModel(torch.nn.Module):
+    def forward(self, x, y):
+        z = x + y
+        return torch.relu(z)
+
+model = SimpleModel().eval()
+traced_model = torch.jit.trace(model, (torch.rand(1, 3), torch.rand(1, 3)))
+
+torch_npu.jit.optimize(traced_model)
+
+```
