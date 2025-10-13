@@ -28,7 +28,11 @@ const static int64_t DIM_0 = 0;
 const static int64_t DIM_1 = 1;
 const static int64_t DIM_2 = 2;
 const static int64_t DIM_3 = 3;
+const static int64_t DIM_4 = 4;
 const static int64_t INT4_IN_INT32 = 8;
+const static int SHAPE_3D = 3;
+const static int SHAPE_4D = 4;
+const static int SHAPE_5D = 5;
 
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
@@ -40,12 +44,18 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     const c10::optional<at::Tensor> &quant_scale2,
     const c10::optional<at::Tensor> &block_table,
     int64_t num_heads,
+    int64_t kv_num_heads,
     bool softmax_lse_flag,
     const c10::optional<at::Tensor> &query_rope)
 {
     at::Tensor output;
     int64_t batchSize = 1;
     int64_t qsSize = 1;
+    TORCH_CHECK(num_heads > 0, "num_heads should be greater than 0, but the actual value is ", 
+        num_heads, OPS_ERROR(ErrCode::VALUE));
+    if (kv_num_heads == 0) {
+        kv_num_heads = num_heads;
+    }
     int64_t changeDScale = 1;
     // int4 伪装成 int32
     if (value.scalar_type() == at::kInt) {
@@ -99,13 +109,29 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_2);
     } else if (input_layout_str == "TND") {
-        if (block_table.has_value()) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
+        if (block_table.has_value() && value.dim() == SHAPE_4D) { // IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
+            int64_t outputD = value.size(DIM_3);
+            outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
-                {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2)},
+                {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
-        } else {
+        } else if(block_table.has_value() && value.dim() == SHAPE_3D) {
+            int64_t outputD = value.size(DIM_2) / kv_num_heads;
+            outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
-                {query.size(DIM_0), query.size(DIM_1), value.size(DIM_2)},
+                {query.size(DIM_0), query.size(DIM_1), outputD},
+                query.options().dtype(query.dtype()));
+        } else if() {
+            int64_t outputD = value.size(DIM_2) * value.size(DIM_4);
+            outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format(
+                {query.size(DIM_0), query.size(DIM_1), outputD},
+                query.options().dtype(query.dtype()));
+        }else {
+            int64_t outputD = value.size(DIM_2);
+            outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format(
+                {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
         }
     } else if (input_layout_str == "NTD_TND") {
