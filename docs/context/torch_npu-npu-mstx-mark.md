@@ -35,3 +35,31 @@ torch_npu.npu.mstx.mark(message: str, stream=None, domain: str='default') -> non
 ## 返回值说明
 
 无
+
+## 调用示例
+
+以下是关键步骤的代码示例，不可直接拷贝编译运行，仅供参考。
+
+
+```python
+import torch_npu
+
+stream = torch_npu.npu.current_stream()
+
+experimental_config = torch_npu.profiler._ExperimentalConfig(
+    profiler_level=torch_npu.profiler.ProfilerLevel.Level_none,
+    msprof_tx=True,
+    export_type=[
+        torch_npu.profiler.ExportType.Db
+        ])
+with torch_npu.profiler.profile(
+    schedule=torch_npu.profiler.schedule(wait=1, warmup=1, active=2, repeat=1, skip_first=1),
+    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
+    experimental_config=experimental_config) as prof:
+       
+    for epoch in range(epochs):
+        torch_npu.npu.mstx.mark("train epoch start")    # 标识在Host侧以及在Device侧的瞬时时刻，也可以使用torch_npu.npu.mstx().mark("train epoch start")
+        for step in range(steps):
+            train_one_step(step, steps, train_loader, model, optimizer, criterion)
+            prof.step()
+```
