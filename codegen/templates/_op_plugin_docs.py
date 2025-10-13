@@ -8793,6 +8793,47 @@ if __name__ == '__main__':
 """
 )
 
+
+_add_torch_npu_docstr(
+    "npu_moe_token_permute_with_routing_map",
+    """
+接口原型：
+torch_npu.npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)
+
+算子功能：
+MoE的permute计算，将token和expert的标签作为routingMap传入，根据routing_map将tokens和可选probs广播后排序
+
+接口说明：
+输入：
+tokens（Tensor，计算输入）：输入toke，要求为一个维度为2D的Tensor，shape为 (tokens_num, hidden_size)，数据类型支持BFLOAT16，FLOAT16，FLOAT，数据格式要求为ND。支持非连续的Tensor。
+routing_map（Tensor ，计算输入）：表token到expert的映射关系，要求shape为一个2D的（tokens_num，experts_num），数据类型支持INT8、BOOL。当数据类型为INT8，取值支持0、1，当数据类型为bool，取值支持true、false，数据格式要求为ND。支持非连续的Tensor。非droppad模式要求每行中包含topK个true 或 1。
+probs（Tensor，计算输入）：可选输入probs，关键字参数，默认值为None，要求元素个数与routing_map相同,当probs为None时，可选输出permute_probs_out_optional为空，数据类型同tokens。数据格式要求为ND。支持非连续的Tensor。
+num_out_tokens（int64_t，计算输入）：可选输入，默认值为token_num, 用于计算topK 和capacity 的有效输出token数。
+drop_and_pad（bool，计算输入）：可选输入，默认值为False，表示是否开启drop_and_pad模式。
+输出：
+permuted_tokens_out（Tensor，第一个输出）：根据indices进行扩展并排序筛选过的tokens，要求是一个2D的Tensor，shape为(outToken , hidden_size)。数据类型同tokens，数据格式要求为ND。支持非连续的Tensor。
+permute_probs_out_optional（Tensor，第二个输出）：根据indices进行排序并筛选过的probs，Shape为(outToken)，数据类型同probsOptional，数据格式要求为ND。支持非连续的Tensor。
+sorted_indices_out（Tensor，第三个输出）：permute_tokens和tokens的映射关系， 要求是一个1D的Tensor，Shape为(outToken)，数据类型支持INT32，数据格式要求为ND。支持非连续的Tensor。
+
+输入约束：
+1. 由于float无损转int限制，tokens_num和experts_num要求小于16777215。
+2. 由于UB限制，routing_map 中 每行为1或true的个数固定且小于512，num_out_tokens/num_tokens小于512。
+3. drop_and_pad为False场景，num_out_tokens / num_tokens需和routing_map中每行1或True的个数一致。
+
+调用示例：
+import torch,torch_npu
+
+x = torch.randn((3, 4), dtype=torch.float).npu()
+rounting_map = torch.tensor(
+    [[True, True], [True, True], [True, True]], dtype=torch.bool).npu()
+numtoken = 6
+pad_mode = False
+
+permuted_tokens_out, _, sorted_indices_out = torch_npu.npu_moe_token_permute_with_routing_map(x, rounting_map, num_out_tokens=numtoken, drop_and_pad=pad_mode)
+    """
+)
+
+
 _add_torch_npu_docstr(
     "npu_prefetch",
     """
@@ -9781,6 +9822,118 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+    "npu_alltoallv_gmm_v2",
+    """
+接口原型：
+npu_alltoallv_gmm_v2(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts=[], int[] recv_counts=[], *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False, Tensor? gmm_x_scale=None, Tensor? gmm_weight_scale=None, str comm_mode="aicpu", int y_dtype=0, int max_output_token_num=-1) -> (Tensor, Tensor, Tensor, Tensor)
+
+功能描述
+alltoallv和grouped matmul的融合算子，对alltoallv通信后的输出做grouped matmul操作，通信时间和计算时间进行掩盖，新增了aiv通信模式和新增pertoken量化、perchannel量化
+
+参数说明
+    gmmX: device侧Tensor，表示输入，数据类型支持float16，bfloat16。该输入进行AllToAllv通信，仅支持二维, 数据格式支持ND，通信后结果作为GrouedMatMul计算的左矩阵
+    gmmWeight：device侧Tensor，表示输入，数据类型支持float16, bfloat16，类型需与gmmX保持一致，仅支持三维, 数据格式支持ND，GrouedMatMul计算的右矩阵
+    hcom：char*类型,计算输入，专家并行的通信域名。字符串长度需大于0，小于128。
+    ep_world_size：int类型，计算输入，ep通信域size，支持8/16/32/64。
+    sendCounts：int[]，计算输入，支持int数据类型，通信发送的数据量。仅在comm_mode为"aicpu"时支持
+    recvCounts：int[]，计算输入，支持int数据类型，通信接收的数据量。仅在comm_mode为"aicpu"时支持
+    send_counts_tensor：device侧Tensor，表示输入，暂不支持。
+    recv_counts_tensor：device侧Tensor，表示输入，暂不支持。
+    mm_x：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的左矩阵。
+    mm_weight：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的右矩阵。
+    transGmmWeight：为True：表明gmm的右矩阵要转置，为False时表明gmm右矩阵不转置，默认为false
+    transMmWeight：为True：表明mm的右矩阵要转置，为False时表明mm右矩阵不转置，默认为false
+    permute_out_flag：为True：表明permute结果输出，为False时表明permute结果不输出，默认为false
+    gmm_x_scale：device侧Tensor，计算输入，左矩阵反量化参数，仅当comm_mode为"aiv"时支持
+    gmm_weight_scale：device侧Tensor，计算输入，右矩阵反量化参数，数据类型支持int64，仅在comm_mode为"aiv"时支持
+    comm_mode：str类型，计算输入，表示通信模式，当前Atlas A2上仅支持"aiv"，Atlas A3上支持"aicpu"和"aiv"，昇腾910_95上支持"ccu",不受环境变量的影响
+    y_dtype：int类型，计算输入，支持取值0和1，分别代表量化场景下，gmm_y的输出类型，0为float16,1为bfloat16
+    max_output_token_num：int类型，表示gmm_y第一维的shape，仅在comm_mode为"aiv"时支持
+    
+
+输出说明
+    gmmY：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，aicpu模式下数据类型与输入gmmX保持一致，aiv量化模式下取决于y_dtype
+    mmY：device侧Tensor, 数据类型支持float16, bfloat16，共享专家matmul的输出，仅当传入mmX与mmWeight才输出，数据类型与mmX保持一致。仅在"aicpu"模式下支持
+    permute_out：device侧Tensor, 数据类型支持float16, bfloat16，alltoallv输出的中间结果，permute_out_flag为True表明permute结果输出，为False时表明permute结果不输出。
+    global_token_per_expert：device侧Tensor，数据类型支持int32，仅当comm_mode为"aiv"时才输出
+
+支持的型号
+Atlas A3训练系列产品
+Atlas A2训练系列产品
+昇腾910_95 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+import torch.distributed as dist
+import torch.multiprocessing as mp
+
+def run_npu_alltoallv_gmm_v2(rank, world_size, master_ip, master_port, gmm_x, gmm_w, send_counts, recv_counts, dtype):
+    torch_npu.npu.set_device(rank)
+    init_method = 'tcp://' + master_ip + ':' + master_port
+    dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
+    from torch.distributed.distributed_c10d import _get_default_group
+    default_pg = _get_default_group()
+    if torch.__version__ > '2.0.1':
+        hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
+    else:
+        hcom_info = default_pg.get_hccl_comm_name(rank)
+
+    input = torch.randn(gmm_x, dtype=dtype).npu()
+    weight = torch.randn(gmm_w, dtype=dtype).npu()
+    gmmYOut, _, _, _= torch_npu.npu_alltoallv_gmm_v2(gmm_x=input,
+                                                gmm_weight=weight,
+                                                send_counts_tensor=None,
+                                                recv_counts_tensor=None,
+                                                mm_x=None,
+                                                mm_weight=None,
+                                                group=hcom_info,
+                                                ep_world_size=world_size,
+                                                send_counts=send_counts,
+                                                recv_counts=recv_counts,
+                                                trans_gmm_weight=False,
+                                                trans_mm_weight=False,
+                                                permute_out_flag=False,                                         
+                                                gmm_x_scale=None,
+                                                max_output_token_num=-1,
+                                                comm_mode="aicpu",
+                                                y_dtype=0,
+
+                                                )
+
+def generate_matrix(self, e, ep_world_size, bsk, name="alltoallv_gmm_v2", max_iter=10000):
+    import hashlib
+    hash_bytes = hashlib.sha256(name.encode()).digest()
+    seed = int.from_bytes(hash_bytes[:4], byteorder='big')
+    np.random.seed(seed)
+    row_size = ep_world_size
+    col_size = e * ep_world_size
+    matrix = []
+    avg = bsk // col_size
+    tail_num = bsk % col_size
+    matrix = np.full((row_size, col_size), avg)
+    matrix[:, -1] += tail_num
+    return matrix
+
+if __name__ == "__main__":
+    worksize = 8
+    e = 4
+    master_ip = '127.0.0.1'
+    master_port = '50001'
+    BS = 128
+    K = 8
+    x1_shape = [BS*K, 2048]
+    x2_shape = [2048, 2048]
+    send_counts = self.generate_matrix(e, worksize, BS*K)
+    recv_counts = np.hstack(np.split(mc2_send_counts.reshape(-1, e), epWorldSize, axis=0))
+
+    dtype = torch.float16
+
+    mp.spawn(run_npu_alltoallv_gmm_v2, args=(worksize, master_ip, master_port, gmm_x, gmm_weight, send_counts, recv_counts, dtype), nprocs=worksize)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_swiglu_quant",
     """
 torch_npu.npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
@@ -9945,14 +10098,22 @@ grouped matmul和alltoallv的融合算子，对grouped matmul计算后的结果�
     mm_weight：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的右矩阵。
     trans_gmm_weight：为True：表明gmm的右矩阵要转置，为False时表明gmm右矩阵不转置，默认为false。
     trans_mm_weight：为True：表明mm的右矩阵要转置，为False时表明mm右矩阵不转置，默认为false。
+    global_token_per_expert：device侧Tensor，表示输入，通信矩阵，包含所有卡向专家发送的token数。数据类型支持INT32
+    gmm_x_scale：device侧Tensor，计算输入，左矩阵反量化参数，仅当comm_mode为"aiv"时支持
+    gmm_weight_scale：device侧Tensor，计算输入，右矩阵反量化参数，数据类型支持int64，仅在comm_mode为"aiv"时支持
+    comm_mode：str类型，计算输入，表示通信模式，当前Atlas A2上仅支持"aiv"，Atlas A3上支持"aicpu"和"aiv"，昇腾910_95上支持"ccu"，不受环境变量的影响
+    y_dtype：int类型，计算输入，支持取值0和1，分别代表量化场景下，gmm_y的输出类型，0为float16,1为bfloat16
+    output_token_num：int类型，表示gmm_y第一维的shape，仅在comm_mode为"aiv"时支持
 
 输出说明
-    y：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmm_X保持一致
+    y：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmm_X保持一致，aicpu模式下数据类型与输入gmmX保持一致，aiv量化模式下取决于y_dtype
     mm_y：device侧Tensor, 数据类型支持float16, bfloat16，共享专家matmul的输出，仅当传入mm_x与mm_weight才输出，数据类型与mm_x保持一致。
 
 
 支持的型号
 Atlas A3训练系列产品
+Atlas A2训练系列产品
+昇腾910_95 AI处理器
 
 调用示例:
 import torch
