@@ -121,7 +121,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
             tmp_output = OpPreparation::apply_tensor_without_format(
                 {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
-        } else if() {
+        } else if(block_table.has_value() && value.dim() == SHAPE_5D) {
             int64_t outputD = value.size(DIM_2) * value.size(DIM_4);
             outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
