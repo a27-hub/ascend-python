@@ -23,6 +23,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
     const at::Tensor & group_list,
     const at::Tensor & weight_scale,
     const at::Tensor & x_scale,
+    const c10::optional<at::Tensor> & weight_assistance_matrix,
     const c10::optional<at::Tensor> & bias,
     const c10::optional<at::Tensor> & offset)
 {
@@ -43,6 +44,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
         offset,
         weight_scale,
         x_scale,
+        weight_assistance_matrix,
         group_list,
         output,
         output_scale,
