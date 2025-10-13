@@ -1,10 +1,12 @@
 import unittest
 import numpy as np
 import torch
+import os
 
 import torch_npu
 from torch.testing._internal.common_utils import TestCase, run_tests, parametrize, instantiate_parametrized_tests
 from torch_npu.testing.common_utils import SupportedDevices
+from torch.utils._python_dispatch import TorchDispatchMode
 
 TOL_MAPPING = {
     torch.float: dict(atol=1e-4, rtol=1e-4),
@@ -12,6 +14,27 @@ TOL_MAPPING = {
     torch.bfloat16: dict(atol=5e-3, rtol=5e-3),
 }
 
+import torch
+import torch_npu
+from torch.utils._python_dispatch import TorchDispatchMode
+
+class PtdbgDispatch(TorchDispatchMode):
+    def __init__(self):
+        super(PtdbgDispatch, self).__init__()
+
+    def __torch_dispatch__(self, func, types, args=(), kwargs=None):
+        res = func(*args, **kwargs)
+        #if 'add' in func.__name__:
+        print(f"\n{func.__module__} {func.__name__}")
+        for arg in args:
+            print("arg: ", arg)
+        print(f"in torch dispatch\n res: {res}")
+        return res
+
+torch.npu.config.allow_internal_format = False
+torch.npu.set_compile_mode(jit_compile=False)
+
+torch.manual_seed(42)
 
 class TestNpuTopKTopP(TestCase):
     def cpu_op_exec(self, logits, p, k):
@@ -66,6 +89,25 @@ class TestNpuTopKTopP(TestCase):
         logits = torch.empty_like(logits_sort).scatter_(dim=-1, index=logits_idx, src=logits_sort) # 形状 [batch_size, vocab_size]
         return logits
 
+    def cpu_op_exec_top_k(self, logits, p, k):
+        logits_sort, logits_idx = logits.sort(dim=-1, descending=False, stable=True)
+        kth_idx = logits_sort.size(1) - k.to(torch.long)
+        kth_value = logits_sort.gather(1, kth_idx.unsqueeze(dim=1))
+        top_k_mask = logits_sort < kth_value
+        logits_sort.masked_fill_(top_k_mask, -float("inf"))
+        logits = torch.empty_like(logits_sort).scatter_(dim=-1, index=logits_idx, src=logits_sort)
+        return logits
+
+    def cpu_op_exec_top_p(self, logits, p, k):
+        logits_sort, logits_idx = logits.sort(dim=-1, descending=False, stable=True)
+        softmax_res = logits_sort.to(torch.float32).softmax(dim=-1)
+        cumsum_res = softmax_res.cumsum(dim=-1)
+        top_p_mask = cumsum_res <= 1 - p.unsqueeze(dim=1)
+        top_p_mask[:, -1] = False
+        logits_sort.masked_fill_(top_p_mask, -float("inf"))
+        logits = torch.empty_like(logits_sort).scatter_(dim=-1, index=logits_idx, src=logits_sort)
+        return logits
+
     def npu_op_exec(self, logits, p, k):
         return torch_npu.npu_top_k_top_p(logits, p, k).cpu()
 
@@ -85,6 +127,37 @@ class TestNpuTopKTopP(TestCase):
         out_npu = self.npu_op_exec(logits.npu(), p.npu(), k.npu())
         self.assertEqual(out_cpu, out_npu, **tols)
 
+    @unittest.skip("skip") # CI版本不支持
+    @SupportedDevices(['Ascend910B'])
+    @parametrize('vocab_size', [15206, 152064])
+    @parametrize('batch_size', [4, 128])
+    @parametrize('dtype', [torch.float32])
+    def test_npu_apply_top_k(self, vocab_size, batch_size, dtype):
+        tols = TOL_MAPPING.get(dtype)
+        k_max = 1024
+        shape = [batch_size, vocab_size]
+        logits = torch.from_numpy(np.random.uniform(-5, 5, shape)).to(dtype)
+        p = None
+        k = torch.randint(10, k_max, (batch_size,)).to(torch.int32)
+        out_cpu = self.cpu_op_exec_top_k(logits, p, k)
+        out_npu = self.npu_op_exec(logits.npu(), p, k.npu())
+        self.assertEqual(out_cpu, out_npu, **tols)
+
+    @unittest.skip("skip") # CI版本不支持
+    @SupportedDevices(['Ascend910B'])
+    @parametrize('vocab_size', [15206, 152064])
+    @parametrize('batch_size', [4, 128])
+    @parametrize('dtype', [torch.float32])
+    def test_npu_apply_top_p(self, vocab_size, batch_size, dtype):
+        tols = TOL_MAPPING.get(dtype)
+        k_max = 1024
+        shape = [batch_size, vocab_size]
+        logits = torch.from_numpy(np.random.uniform(-5, 5, shape)).to(dtype)
+        p = torch.rand(batch_size).to(dtype)
+        k = None
+        out_cpu = self.cpu_op_exec_top_p(logits, p, k)
+        out_npu = self.npu_op_exec(logits.npu(), p.npu(), k)
+        self.assertEqual(out_cpu, out_npu, **tols)
 
 instantiate_parametrized_tests(TestNpuTopKTopP)
 
