@@ -14,6 +14,8 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include <numeric>
+#include <algorithm>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -26,7 +28,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     const c10::optional<at::Tensor>& dequant_scale_x, const c10::optional<at::Tensor>& dequant_scale_w_dq,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
-    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode)
+    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
@@ -66,10 +68,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
 
-    EXEC_NPU_CMD(aclnnMlaPrologV2WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
-        rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
-        dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
-        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query, query_rope, dequant_scale_q_nope);
+    if (std::abs(qc_qr_scale - 1.0f) <= std::numeric_limits<float>::epsilon() || 
+        std::abs(kc_scale - 1.0f) <= std::numeric_limits<float>::epsilon()) {
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
+            dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
+            rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, qc_qr_scale, kc_scale, query, query_rope, dequant_scale_q_nope);
+    } else {
+        EXEC_NPU_CMD(aclnnMlaPrologV2WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, dequant_scale_x, dequant_scale_w_dq,
+            dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
+            rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query, query_rope, dequant_scale_q_nope);
+    }
+
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, kv_cache, kr_cache, dequant_scale_q_nope);
 }

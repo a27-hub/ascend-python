@@ -13,7 +13,7 @@ from torch_npu.testing.common_utils import SupportedDevices
 class TestPromptFlashAttetion(TestCase):
     def baseline(self, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
-            cache_mode, mla_param):
+            cache_mode, mla_param, qc_qr_scale=1.0, kc_scale=1.0):
         def rotate_half(x):
             x1 = x[..., :x.shape[-1] // 2]
             x2 = x[..., x.shape[-1] // 2:]
@@ -54,6 +54,7 @@ class TestPromptFlashAttetion(TestCase):
         gamma1 = rmsnorm_gamma_cq.to(torch.float32)
         norm1_res = matmul1_res / torch.sqrt(torch.mean(matmul1_res ** 2, dim=-1, keepdim=True) + ep1)
         norm1_res *= gamma1
+        norm1_res *= qc_qr_scale
 
         # matmul2 : norm1_res(B*S1,Hcq) * w_uq_qr(Hcq,N*(D+Dr)) -> matmul2_res(B*S1,N,(D+Dr))
         norm1_res = norm1_res.to(torch.bfloat16).to(torch.float32)
@@ -98,6 +99,7 @@ class TestPromptFlashAttetion(TestCase):
         gamma2 = rmsnorm_gamma_ckv
         norm2_res = splitd2_res1 / torch.sqrt(torch.mean(splitd2_res1 ** 2, dim=-1, keepdim=True) + ep2)
         norm2_res *= gamma2
+        norm2_res *= kc_scale
 
         # scatter1 : norm2_res(B*S1,Hckv) * kv_cache(B,N2,S2,Hckv/B,B,N2,Hckv) -> kv_cache_out_mla(B,N2,S2,Hckv/B,B,N2,Hckv)
         kv_cache = copy.deepcopy(kv_cache)
@@ -126,11 +128,12 @@ class TestPromptFlashAttetion(TestCase):
 
     def mla_prolog_npu(self, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
-            cache_mode):
+            cache_mode, qc_qr_scale=1.0, kc_scale=1.0):
 
         return torch_npu.npu_mla_prolog(
             token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
-            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv, cache_mode=cache_mode)
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, 
+            rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv, cache_mode=cache_mode, qc_qr_scale=qc_qr_scale, kc_scale=kc_scale)
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
@@ -263,6 +266,77 @@ class TestPromptFlashAttetion(TestCase):
         query, query_rope, kv_cache_out, kr_cache_out = self.baseline(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, mla_param)
+        print("baseline output", query, query.shape)
+
+        self.assertRtolEqual(query_mla.to(torch.float32), query.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(query_rope_mla.to(torch.float32), query_rope.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kv_cache_out_mla.to(torch.float32), kv_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kr_cache_out_mla.to(torch.float32), kr_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    @SupportedDevices(['Ascend910B'])
+    def test_op_exec_qc_qr_scale_kc_scale(self):
+        B = 8
+        He = 7168
+        Hcq = 1536
+        Hckv = 512
+        N = 32
+        D = 128
+        Dr = 64
+        Skv = 1024
+        S = 1
+        Nkv = 1
+        BlockSize = 128
+        BlockNum = math.ceil(B * Skv / BlockSize)
+        T = 8
+        token_x = torch.rand(B, S, He, dtype=torch.bfloat16).npu()
+        w_dq = torch.rand(He, Hcq, dtype=torch.bfloat16).npu()
+        w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
+        w_uq_qr = torch.rand(Hcq, N * (D + Dr), dtype=torch.bfloat16).npu()
+        w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
+        w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
+        w_dkv_kr = torch.rand(He, Hckv + Dr, dtype=torch.bfloat16).npu()
+        w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
+        rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+        rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+        rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+        rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+        cache_index = torch.rand(B, S).to(torch.int64).npu()
+        kv_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Hckv, dtype=torch.bfloat16).npu()
+        kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+        kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+        kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+        rmsnorm_epsilon_cq = 1.0e-5
+        rmsnorm_epsilon_ckv = 1.0e-5
+        cache_mode = "PA_BSND"
+        qc_qr_scale = 3.0
+        kc_scale = 4.0
+
+        mla_param = {
+            'B': B,
+            'He': He,
+            'Hcq': Hcq,
+            'Hckv': Hckv,
+            'N1': N,
+            'D': D,
+            'Dr': Dr,
+            'S2': Skv,
+            'S1': S,
+            'N2': Nkv,
+            'BlockNum': BlockNum,
+            'BlockSize': BlockSize,
+            't_flag': False,
+            'T': T
+        }
+
+        query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla = self.mla_prolog_npu(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+            cache_mode, qc_qr_scale, kc_scale)
+        print("mla_prolog output", query_mla, query_mla.shape)
+
+        query, query_rope, kv_cache_out, kr_cache_out = self.baseline(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+            cache_mode, qc_qr_scale, kc_scale, mla_param)
         print("baseline output", query, query.shape)
 
         self.assertRtolEqual(query_mla.to(torch.float32), query.to(torch.float32), prec=0.005, prec16=0.005)
