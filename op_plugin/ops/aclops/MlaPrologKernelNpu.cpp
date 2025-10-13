@@ -44,7 +44,10 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&> npu_mla_prolog_no
             dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq,
             rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, qc_qr_scale, kc_scale, query, query_rope, dequant_scale_q_nope);
 
-        return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&>(query, query_rope, kv_cache, kr_cache);
+        kv_cache_out.copy_(kv_cache);
+        kr_cache_out.copy_(kr_cache);
+
+        return std::tuple<at::Tensor&, at::Tensor&, at::Tensor&, at::Tensor&>(query, query_rope, kv_cache_out, kr_cache_out);
     }
 
     cmd.Name("MlaProlog")
