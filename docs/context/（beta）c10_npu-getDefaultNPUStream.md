@@ -13,7 +13,6 @@ c10_npu::NPUStream c10_npu::getDefaultNPUStream(c10::DeviceIndex device_index = 
 ## 功能说明
 
 获取默认NPU流，返回值类型NPUStream，与c10::CUDA::CUDAStream c10::CUDA::getDefaultCUDAStream(c10::DeviceIndex  _device_index_  = -1)相同。
-默认NPU流常被使用于未显式使用流进行计算的情况。
 
 ## 参数说明
 

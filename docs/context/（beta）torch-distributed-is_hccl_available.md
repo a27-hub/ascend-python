@@ -10,8 +10,7 @@
 
 ## 功能说明
 
-参考原生接口`torch.distributed.is_nccl_available`功能，具体请参考[https://pytorch.org/docs/stable/distributed.html\#torch.distributed.is_nccl_available](https://pytorch.org/docs/stable/distributed.html#torch.distributed.is_nccl_available)。
-`torch_npu.distributed.is_hccl_available`接口用于判断HCCL通信后端是否可用。
+判断HCCL通信后端是否可用,与torch.distributed.is_nccl_available类似，具体请参考[https://pytorch.org/docs/stable/distributed.html\#torch.distributed.is_nccl_available](https://pytorch.org/docs/stable/distributed.html#torch.distributed.is_nccl_available)。
 
 ## 函数原型
 ```
@@ -19,7 +18,7 @@ torch.distributed.is_hccl_available()
 ```
 
 ## 返回值说明
-`Bool`
+`Bool`：True为可用，False为不可用。
 
 ## 调用示例
 
@@ -28,10 +27,6 @@ import torch
 import torch_npu
 
 torch.distributed.is_hccl_available()
-```
 
-结果示例：
-
-```
 True
 ```
