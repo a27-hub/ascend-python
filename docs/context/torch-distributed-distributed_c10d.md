@@ -71,11 +71,7 @@ if __name__ == "__main__":
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29505"
     main()
-```
 
-结果示例：
-
-```
 group_name_0
 group_name_0
 ```
