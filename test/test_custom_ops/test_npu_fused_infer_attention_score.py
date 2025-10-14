@@ -10,10 +10,10 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 class TestFusedInferAttentionScore(TestCase):
 
-    def generate_int_tensor_with_sum(self, B, T)
+    def generate_int_tensor_with_sum(self, B, T):
         if B <= 0 or T < 0:
             raise ValueError("B 必须大于 0, T 必须是非负整数")
-        if B > T
+        if B > T:
             raise ValueError(f"无法生成 B={B} 个非负整数且总和为 T={T}, 每个数至少为 1, 所以 B <= T")
         
         partition_points = np.sort(np.random.choice(range(1, T), B - 1, replace = False))
@@ -30,7 +30,7 @@ class TestFusedInferAttentionScore(TestCase):
         ans = y
         return ans, x_sum, x_max
 
-   def compute_golden_output_cpu(self, query, key_cache, value_cache, num_heads, num_key_value_heads, head_dim, block_size, block_table, seq_lens, scale, input_layout = "TND"):
+    def compute_golden_output_cpu(self, query, key_cache, value_cache, num_heads, num_key_value_heads, head_dim, block_size, block_table, seq_lens, scale, input_layout = "TND"):
         B, H, D = query.shape
         assert H == num_heads, f"Query heads {H} != num_heads {num_heads}"
         assert D == head_dim, f"Query dim {D} != head_dim {head_dim}"
