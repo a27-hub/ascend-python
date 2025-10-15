@@ -27,7 +27,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq, const c10::optional<at::Tensor>& actual_seq_len,
     double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, int64_t query_norm_flag, int64_t weight_quant_mode, int64_t kv_quant_mode,
-    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, int64_t k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
+    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
 {
 
     // construct the output tensor
@@ -112,7 +112,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq, const c10::optional<at::Tensor>& actual_seq_len,
     double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, int64_t query_norm_flag, int64_t weight_quant_mode, int64_t kv_quant_mode,
-    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, int64_t k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
+    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
