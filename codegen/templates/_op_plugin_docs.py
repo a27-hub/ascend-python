@@ -7900,7 +7900,7 @@ _add_torch_npu_docstr(
 推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分五路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache；第五路是输出query经过DynamicQuant后得到的量化参数。
 
 接口原型:
-torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor(a!) kv_cache, Tensor(b!) kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? actual_seq_kvlen=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND", bool query_norm_flag=False, float qc_qr_scale=1.0, float kc_scale=1.0) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor(a!) kv_cache, Tensor(b!) kr_cache, *, Tensor cache_index=None, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? actual_seq_len=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND", int query_norm_flag=0, int weight_quant_mode=0, int kv_quant_mode=0, int query_quant_mode=0, int ckvkr_repo_mode=0, int quant_scale_repo_mode=0, int tile_size=128, float k_nope_clip_alpha=1.0, float qc_qr_scale=1.0, float kc_scale=1.0) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明:
 -   token_x（Tensor）：必选参数，对应公式中x。shape支持2维和3维，格式为(T, He)和(B, S, He)，dtype支持bfloat16和int8，数据格式支持ND。
@@ -7912,10 +7912,10 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   rmsnorm_gamma_ckv（Tensor）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hckv,)，dtype支持bfloat16，数据格式支持ND。
 -   rope_sin（Tensor）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
 -   rope_cos（Tensor）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
--   cache_index（Tensor）：必选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
--   cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
 -   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor，支持原地修改。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache，支持原地修改。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   cache_index（Tensor）：可选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
+-   cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
 -   dequant_scale_x（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为pertoken。其shape支持2维，格式为(T, 1)和(BS, 1)，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_dq（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为perchannel。其shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_uq_qr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化参数维perchannel。shape支持2维，格式为(1, N*(D+Dr))，dtype支持float，数据格式支持ND。
@@ -7923,11 +7923,18 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
 -   quant_scale_ckr（Tensor）：可选参数，用于对输出到kr_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Dr)，dtype支持float，数据格式支持ND。
 -   smooth_scales_cq（Tensor）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
--   actual_seq_kvlen（Tensor）：预留参数，暂未使用，使用默认值即可。
+-   actual_seq_len（Tensor）：预留参数，暂未使用，使用默认值即可。
 -   rmsnorm_epsilon_cq（float）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   rmsnorm_epsilon_ckv（float）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   cache_mode（str）：可选参数，表示kvCache的模式，支持"PA_BSND"、"PA_NZ"，其用户不特意指定时可传入默认值“PA_BSND”。
--   query_norm_flag（bool）：预留参数，暂未使用，使用默认值即可。
+-   query_norm_flag（int）：预留参数，暂未使用，使用默认值即可。
+-   weight_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   kv_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   query_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   ckvkr_repo_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   quant_scale_repo_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   tile_size（int）：预留参数，暂未使用，使用默认值即可。
+-   k_nope_clip_alpha（float）：预留参数，暂未使用，使用默认值即可。
 -   qc_qr_scale（float）：可选参数，表示Query的尺度矫正参数，不传入的时候默认值为1.0。
 -   kc_scale（float）：可选参数，表示Key的尺度矫正参数，不传入的时候默认值为1.0。
 
@@ -8159,7 +8166,7 @@ _add_torch_npu_docstr(
 推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分五路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache；第五路是输出query经过DynamicQuant后得到的量化参数。
 
 接口原型:
-torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor cache_index, Tensor kv_cache, Tensor kr_cache, *, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? actual_seq_kvlen=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND", bool query_norm_flag=False, float qc_qr_scale=1.0, float kc_scale=1.0) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, Tensor weight_uk, Tensor weight_dkv_kr, Tensor rmsnorm_gamma_cq, Tensor rmsnorm_gamma_ckv, Tensor rope_sin, Tensor rope_cos, Tensor kv_cache, Tensor kr_cache, *, Tensor cache_index=None, Tensor? dequant_scale_x=None, Tensor? dequant_scale_w_dq=None, Tensor? dequant_scale_w_uq_qr=None, Tensor? dequant_scale_w_dkv_kr=None, Tensor? quant_scale_ckv=None, Tensor? quant_scale_ckr=None, Tensor? smooth_scales_cq=None, Tensor? actual_seq_len=None, float rmsnorm_epsilon_cq=1e-05, float rmsnorm_epsilon_ckv=1e-05, str cache_mode="PA_BSND", int query_norm_flag=0, int weight_quant_mode=0, int kv_quant_mode=0, int query_quant_mode=0, int ckvkr_repo_mode=0, int quant_scale_repo_mode=0, int tile_size=128,float k_nope_clip_alpha=1.0, float qc_qr_scale=1.0, float kc_scale=1.0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明:
 -   token_x（Tensor）：必选参数，对应公式中x。shape支持2维和3维，格式为(T, He)和(B, S, He)，dtype支持bfloat16和int8，数据格式支持ND。
@@ -8171,10 +8178,10 @@ torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor 
 -   rmsnorm_gamma_ckv（Tensor）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hckv,)，dtype支持bfloat16，数据格式支持ND。
 -   rope_sin（Tensor）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
 -   rope_cos（Tensor）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
--   cache_index（Tensor）：必选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
--   cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
 -   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   cache_index（Tensor）：可选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
+-   cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
 -   dequant_scale_x（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为pertoken。其shape支持2维，格式为(T, 1)和(BS, 1)，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_dq（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为perchannel。其shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_uq_qr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化参数维perchannel。shape支持2维，格式为(1, N*(D+Dr))，dtype支持float，数据格式支持ND。
@@ -8182,11 +8189,18 @@ torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor 
 -   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
 -   quant_scale_ckr（Tensor）：可选参数，用于对输出到kr_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Dr)，dtype支持float，数据格式支持ND。
 -   smooth_scales_cq（Tensor）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
--   actual_seq_kvlen（Tensor）：预留参数，暂未使用，使用默认值即可。
+-   actual_seq_len（Tensor）：预留参数，暂未使用，使用默认值即可。
 -   rmsnorm_epsilon_cq（float）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   rmsnorm_epsilon_ckv（float）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   cache_mode（str）：可选参数，表示kvCache的模式，支持"PA_BSND"、"PA_NZ"，其用户不特意指定时可传入默认值“PA_BSND”。
--   query_norm_flag（bool）：预留参数，暂未使用，使用默认值即可。
+-   query_norm_flag（int）：预留参数，暂未使用，使用默认值即可。
+-   weight_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   kv_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   query_quant_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   ckvkr_repo_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   quant_scale_repo_mode（int）：预留参数，暂未使用，使用默认值即可。
+-   tile_size（int）：预留参数，暂未使用，使用默认值即可。
+-   k_nope_clip_alpha（float）：预留参数，暂未使用，使用默认值即可。
 -   qc_qr_scale（float）：可选参数，表示Query的尺度矫正参数，不传入的时候默认值为1.0。
 -   kc_scale（float）：可选参数，表示Key的尺度矫正参数，不传入的时候默认值为1.0。
 
