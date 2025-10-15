@@ -267,7 +267,7 @@ class TestPromptFlashAttetion(TestCase):
 
         return torch_npu.npu_mla_prolog_v3_functional(
             token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
-            rope_sin, rope_cos, kv_cache, kr_cache, cache_index, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv,
+            rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv,
             cache_mode=cache_mode, qc_qr_scale=qc_qr_scale, kc_scale=kc_scale, dequant_scale_x=dequant_scale_x, dequant_scale_w_dq=dequant_scale_w_dq,
             dequant_scale_w_uq_qr=dequant_scale_w_uqqr, dequant_scale_w_dkv_kr=dequant_scale_w_dkvkr,
             quant_scale_ckv=quant_scale_ckv, smooth_scales_cq=smooth_scale_cq)
