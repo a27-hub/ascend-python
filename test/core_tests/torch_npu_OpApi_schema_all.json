@@ -68,6 +68,18 @@
   "op_api: torch_npu.npu_moe_distribute_combine_add_rms_norm(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_moe_distribute_dispatch(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_dispatch_v2(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_combine(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_combine_v2(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_gmm_alltoallv(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -297,6 +309,18 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_moe_distribute_combine_add_rms_norm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_combine(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_combine_v2(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_dispatch(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_moe_distribute_dispatch_v2(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_moe_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
