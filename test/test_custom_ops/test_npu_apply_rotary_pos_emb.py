@@ -49,6 +49,7 @@ class TestQuantScatter(TestCase):
         custom_output = torch_npu.npu_apply_rotary_pos_emb(query2, key2, cos2, sin2, 'BSND')
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
+    @unittest.skip("Skip until CANN is updated to support layout TND format")
     @SupportedDevices(['Ascend910B'])
     def test_npu_apply_rotary_pos_emb_TND(self, device="npu"):
         query_data = np.random.uniform(0, 1, [1024, 16, 128]).astype(np.float16)
