@@ -25,9 +25,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor& kv_cache, at::Tensor& kr_cache, const c10::optional<at::Tensor>& cache_index,
     const c10::optional<at::Tensor>& dequant_scale_x, const c10::optional<at::Tensor>& dequant_scale_w_dq,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
-    const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq, const c10::optional<at::Tensor>& actual_seq_len,
-    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, int64_t query_norm_flag, int64_t weight_quant_mode, int64_t kv_quant_mode,
-    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
+    const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
+    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, double qc_qr_scale, double kc_scale)
 {
 
     // construct the output tensor
@@ -45,6 +44,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_nope;
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
+    at::Tensor actual_seq_len {nullptr};
+    int64_t query_norm_flag = 0;
+    int64_t weight_quant_mode = 0;
+    int64_t kv_quant_mode = 0;
+    int64_t query_quant_mode = 0;
+    int64_t ckvkr_repo_mode = 0;
+    int64_t quant_scale_repo_mode =0;
+    int64_t tile_size = 128;
+    double k_nope_clip_alpha = 1.0;
 
     if (token_x_dim == 3) {
         if (token_x.dtype() == at::kChar && quant_scale_ckv.has_value()) {
@@ -110,9 +118,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const at::Tensor& kv_cache, const at::Tensor& kr_cache, const c10::optional<at::Tensor>& cache_index,
     const c10::optional<at::Tensor>& dequant_scale_x, const c10::optional<at::Tensor>& dequant_scale_w_dq,
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
-    const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq, const c10::optional<at::Tensor>& actual_seq_len,
-    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, int64_t query_norm_flag, int64_t weight_quant_mode, int64_t kv_quant_mode,
-    int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double k_nope_clip_alpha, double qc_qr_scale, double kc_scale)
+    const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
+    double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
@@ -130,6 +137,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dequant_scale_q_nope;
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
+    at::Tensor actual_seq_len {nullptr};
+    int64_t query_norm_flag = 0;
+    int64_t weight_quant_mode = 0;
+    int64_t kv_quant_mode = 0;
+    int64_t query_quant_mode = 0;
+    int64_t ckvkr_repo_mode = 0;
+    int64_t quant_scale_repo_mode =0;
+    int64_t tile_size = 128;
+    double k_nope_clip_alpha = 1.0;
 
     if (token_x_dim == 3) {
         if (token_x.dtype() == at::kChar && quant_scale_ckv.has_value()) {

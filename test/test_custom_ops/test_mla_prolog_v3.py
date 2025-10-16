@@ -335,14 +335,16 @@ class TestPromptFlashAttetion(TestCase):
             "out_deqq_shape_shape": [B * S, N, 1]
         }
 
-        query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla, dequant_scale_q_nope_mla = self.mla_prolog_npu_v3(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
-            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+        kv_cache_copy = kv_cache.clone()
+        kr_cache_copy = kr_cache.clone()
+        query_mla, query_rope_mla, dequant_scale_q_nope_mla, query_norm_mla, dequant_scale_q_norm_mla = self.mla_prolog_npu_v3(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache_copy, kr_cache_copy, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
             quant_scale_ckv, smooth_scale_cq, qc_qr_scale, kc_scale)
         query_mla = query_mla.cpu()
         query_rope_mla = query_rope_mla.cpu()
-        kv_cache_out_mla = kv_cache_out_mla.cpu()
-        kr_cache_out_mla = kr_cache_out_mla.cpu()
+        kv_cache_copy = kv_cache_copy.cpu()
+        kr_cache_copy = kr_cache_copy.cpu()
         dequant_scale_q_nope_mla = dequant_scale_q_nope_mla.cpu()
 
         token_x = token_x.cpu()
@@ -373,8 +375,8 @@ class TestPromptFlashAttetion(TestCase):
         # query为int8类型，允许误差为1
         self.assertRtolEqual(query_mla, query, prec=1, prec16=1)
         self.assertRtolEqual(query_rope_mla.to(torch.float32), query_rope.to(torch.float32), prec=0.005, prec16=0.005)
-        self.assertRtolEqual(kv_cache_out_mla.to(torch.float32), kv_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
-        self.assertRtolEqual(kr_cache_out_mla.to(torch.float32), kr_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kv_cache_copy.to(torch.float32), kv_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
+        self.assertRtolEqual(kr_cache_copy.to(torch.float32), kr_cache_out.to(torch.float32), prec=0.005, prec16=0.005)
         self.assertRtolEqual(dequant_scale_q_nope_mla.to(torch.float32), dequant_scale_q_nope.to(torch.float32), prec=0.005, prec16=0.005)
 
 
