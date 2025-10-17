@@ -695,8 +695,8 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     if input_layout == "TND":
         if num_key_value_heads == 0:
             num_key_value_heads = num_heads
-        token_x_dim = query.dim()
         token_kv_dim = key.dim()
+        token_x_dim = query.dim()
         torch._check(
             token_x_dim == 3,
             lambda: "Layout TND, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
