@@ -2870,7 +2870,7 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 
 
 @impl(m, "npu_grouped_matmul_swiglu_quant_v2")
-def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assistance_matrix=None, bias=None, dequant_mode=0, dequant_mode=0, quant_mode=0, group_list_type=0, tuning_config=None):
+def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, group_list_type=0, tuning_config=None):
     batch_size = x.size(0)
     n = weight[0].size(2)
     output_shape = torch.empty([batch_size, n // 2], dtype=torch.int8, device=x.device)

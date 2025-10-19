@@ -17,19 +17,19 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
+std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
     const at::TensorList weight,
     const at::TensorList weight_scale,
     const at::Tensor & x_scale,
     const at::Tensor & group_list,
     const c10::optional<at::Tensor> & smooth_scale,
-    const c10::optional<at::TensorList> weight_assistance_matrix,
+    const c10::optional<at::TensorList> weight_assist_matrix,
     const c10::optional<at::Tensor> & bias,
-    const c10::optional<int64_t> dequant_mode,
-    const c10::optional<int64_t> dequant_dtype,
-    const c10::optional<int64_t> quant_mode,
-    const c10::optional<int64_t> group_list_type,
+    c10::optional<int64_t> dequant_mode,
+    c10::optional<int64_t> dequant_dtype,
+    c10::optional<int64_t> quant_mode,
+    c10::optional<int64_t> group_list_type,
     const c10::OptionalIntArrayRef tuning_config)
 {
     auto x_size = x.sizes();
@@ -44,17 +44,17 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
     int64_t quant_mode_real = quant_mode.value_or(0);
     int64_t group_list_type_real = group_list_type.value_or(0);
-    auto weight_assistance_matrix_real = weight_assistance_matrix.value_or(at::TensorList());
+    auto weight_assist_matrix_real = weight_assist_matrix.value_or(at::TensorList());
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
     auto bias_real = bias.value_or(at::Tensor());
-    auto smooth_scale_real = smooth_scale.value_or(at::Tendor());
+    auto smooth_scale_real = smooth_scale.value_or(at::Tensor());
 
     EXEC_NPU_CMD(
         aclnnGroupedMatmulSwigluQuantWeightNzV2,
         x,
         weight,
         weight_scale,
-        weight_assistance_matrix_real,
+        weight_assist_matrix_real,
         bias_real,
         x_scale,
         smooth_scale_real,
@@ -64,8 +64,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
         quant_mode_real,
         group_list_type_real,
         output,
-        output_scale,
-        output_offset);
+        output_scale);
     return std::tuple<at::Tensor, at::Tensor>(output, output_scale);
 }
 }
