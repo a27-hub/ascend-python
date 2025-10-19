@@ -63,6 +63,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         dequant_dtype_real,
         quant_mode_real,
         group_list_type_real,
+        tuning_config_real,
         output,
         output_scale);
     return std::tuple<at::Tensor, at::Tensor>(output, output_scale);
