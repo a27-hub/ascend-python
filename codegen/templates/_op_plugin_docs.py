@@ -9822,6 +9822,7 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+<<<<<<< HEAD
     "npu_alltoallv_gmm_v2",
     """
 接口原型：
@@ -9934,6 +9935,8 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+=======
+>>>>>>> 2166c70b (Revert "npu_gmm_alltoallv新增参数、新增npu_alltoallv_gmm_v2接口")
     "npu_swiglu_quant",
     """
 torch_npu.npu_swiglu_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? offsets=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int group_list_type=0, ScalarType? dst_type=None) -> (Tensor, Tensor)
@@ -10098,22 +10101,28 @@ grouped matmul和alltoallv的融合算子，对grouped matmul计算后的结果�
     mm_weight：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的右矩阵。
     trans_gmm_weight：为True：表明gmm的右矩阵要转置，为False时表明gmm右矩阵不转置，默认为false。
     trans_mm_weight：为True：表明mm的右矩阵要转置，为False时表明mm右矩阵不转置，默认为false。
+<<<<<<< HEAD
     global_token_per_expert：device侧Tensor，表示输入，通信矩阵，包含所有卡向专家发送的token数。数据类型支持INT32
     gmm_x_scale：device侧Tensor，计算输入，左矩阵反量化参数，仅当comm_mode为"aiv"时支持
     gmm_weight_scale：device侧Tensor，计算输入，右矩阵反量化参数，数据类型支持int64，仅在comm_mode为"aiv"时支持
     comm_mode：str类型，计算输入，表示通信模式，当前Atlas A2上仅支持"aiv"，Atlas A3上支持"aicpu"和"aiv"，不受环境变量的影响。
     y_dtype：int类型，计算输入，支持取值0和1，分别代表量化场景下，gmm_y的输出类型，0为float16,1为bfloat16
     output_token_num：int类型，表示gmm_y第一维的shape，仅在comm_mode为"aiv"时支持
+=======
+>>>>>>> 2166c70b (Revert "npu_gmm_alltoallv新增参数、新增npu_alltoallv_gmm_v2接口")
 
 输出说明
-    y：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmm_X保持一致，aicpu模式下数据类型与输入gmmX保持一致，aiv量化模式下取决于y_dtype
+    y：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmm_X保持一致
     mm_y：device侧Tensor, 数据类型支持float16, bfloat16，共享专家matmul的输出，仅当传入mm_x与mm_weight才输出，数据类型与mm_x保持一致。
 
 
 支持的型号
 Atlas A3训练系列产品
+<<<<<<< HEAD
 Atlas A2训练系列产品
 
+=======
+>>>>>>> 2166c70b (Revert "npu_gmm_alltoallv新增参数、新增npu_alltoallv_gmm_v2接口")
 
 调用示例:
 import torch
