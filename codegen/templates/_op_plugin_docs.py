@@ -7933,7 +7933,7 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   query（Tensor）：表示Query的输出Tensor，即公式中q<sup>N</sup>。shape支持3维和4维，格式为(T, N, Hckv)和(B, S, N, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   query_rope（Tensor）：表示Query位置编码的输出Tensor，即公式中q<sup>R</sup>。shape支持3维和4维，格式为(T, N, Dr)和(B, S, N, Dr)，dtype支持bfloat16，数据格式支持ND。
 -   dequant_scale_q_nope（Tensor）：表示Query的输出Tensor的反量化参数。其shape支持1维和3维，全量化kv_cache量化场景下，其shape为(T, N, 1)和(B*S, N, 1)；其他场景下，其shape为(1)，dtype支持float，数据格式支持ND。
--   query_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持float，数据格式支持ND。
+-   query_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持bfloat16和int8，数据格式支持ND。
 -   dequant_scale_q_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持float，数据格式支持ND。
 
 约束说明:
@@ -7942,7 +7942,7 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   接口参数中shape格式字段含义：
     -   B：Batch表示输入样本批量大小，取值范围为0~65536。
     -   S：Seq-Length表示输入样本序列长度，取值范围为0~16。
-    -   He：Head-Size表示隐藏层的大小，取值为7168。
+    -   He：Head-Size表示隐藏层的大小，取值为7168、7680或6144。
 
     -   Hcq：q低秩矩阵维度，取值为1536。
     -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
@@ -8014,8 +8014,8 @@ quant_scale_ckv = torch.rand(1,Hckv, dtype=torch.float).npu()
 cache_mode = "PA_NZ"
 
 # 调用MlaPrologV3算子
-query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3(token_x, w_dq, w_uq_qr, w_uk,
-    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm = torch.ops.npu.npu_mla_prolog_v3(token_x, w_dq, w_uq_qr, w_uk,
+    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
     dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
     dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
 
@@ -8071,12 +8071,12 @@ class Model_ds(torch.nn.Module):
     def init(self):
         super().init()
     def forward(self, token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-        sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x,
+        sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x,
         dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr,
         quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, cache_mode = "PA_BSND"):
             query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch_npu.npu_mla_prolog_v3(token_x,
             w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-            sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x,
+            sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x,
             dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None,
             smooth_scales_cq=None, cache_mode = cache_mode)
@@ -8119,14 +8119,14 @@ if name=="main":
     # 图模式调用
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
     query, query_rope, kvcache, krcache,dequant_scale_q_nope = model(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None, 
         smooth_scales_cq=None, cache_mode=cache_mode)
 
     # 单算子调用
     query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
 
@@ -8190,7 +8190,7 @@ torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor 
 -   query（Tensor）：表示Query的输出Tensor，即公式中q<sup>N</sup>。shape支持3维和4维，格式为(T, N, Hckv)和(B, S, N, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   query_rope（Tensor）：表示Query位置编码的输出Tensor，即公式中q<sup>R</sup>。shape支持3维和4维，格式为(T, N, Dr)和(B, S, N, Dr)，dtype支持bfloat16，数据格式支持ND。
 -   dequant_scale_q_nope（Tensor）：表示Query的输出Tensor的反量化参数。其shape支持1维和3维，全量化kv_cache量化场景下，其shape为(T, N, 1)和(B*S, N, 1)；其他场景下，其shape为(1)，dtype支持float，数据格式支持ND。
--   query_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持float，数据格式支持ND。
+-   query_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持bfloat16和int8，数据格式支持ND。
 -   dequant_scale_q_norm（Tensor）：预留输出，默认生成shape为(1,)的零张量，dtype支持float，数据格式支持ND。
 -   kv_cache_out（Tensor）：表示Key输出到kv_cache中的Tensor（本质in-place更新），即公式中k<sup>C</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   kr_cache_out（Tensor）：表示Key的位置编码输出到kr_cache中的Tensor（本质in-place更新），即公式中k<sup>R</sup>。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
@@ -8201,7 +8201,7 @@ torch_npu.npu_mla_prolog_v3_functional(Tensor token_x, Tensor weight_dq, Tensor 
 -   接口参数中shape格式字段含义：
     -   B：Batch表示输入样本批量大小，取值范围为0~65536。
     -   S：Seq-Length表示输入样本序列长度，取值范围为0~16。
-    -   He：Head-Size表示隐藏层的大小，取值为7168。
+    -   He：Head-Size表示隐藏层的大小，取值为7168、7680或6144。
 
     -   Hcq：q低秩矩阵维度，取值为1536。
     -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
@@ -8274,7 +8274,7 @@ cache_mode = "PA_NZ"
 
 # 调用MlaPrologV2算子
 query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq, w_uq_qr, w_uk,
-    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
     dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
     dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
 
@@ -8330,12 +8330,12 @@ class Model_ds(torch.nn.Module):
     def init(self):
         super().init()
     def forward(self, token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-        sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x,
+        sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x,
         dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr,
         quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, cache_mode = "PA_BSND"):
             query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch_npu.npu_mla_prolog_v3_functional(token_x,
             w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-            sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x,
+            sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x,
             dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None,
             smooth_scales_cq=None, cache_mode = cache_mode)
@@ -8378,14 +8378,14 @@ if name=="main":
     # 图模式调用
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
     query, query_rope, kvcache, krcache,dequant_scale_q_nope = model(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None, 
         smooth_scales_cq=None, cache_mode=cache_mode)
 
     # 单算子调用
     query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
 

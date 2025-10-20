@@ -270,6 +270,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     # 输出query_norm
+    query_norm_flag = 0
     if query_norm_flag:
         query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
         if weight_uq_qr.dtype == torch.int8:
@@ -380,6 +381,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
     # 输出query_norm
+    query_norm_flag = 0
     if query_norm_flag:
         query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
         # 动态量化
