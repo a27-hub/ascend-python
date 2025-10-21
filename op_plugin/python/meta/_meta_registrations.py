@@ -178,6 +178,7 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     return (query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope)
 
+
 @impl(m, "npu_mla_prolog_v3")
 def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
                     rope_sin, rope_cos, kv_cache, kr_cache, *, cache_index=None, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,

@@ -28,7 +28,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
     double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, double qc_qr_scale, double kc_scale)
 {
-
     // construct the output tensor
     auto token_x_dim = token_x.dim();
     TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
@@ -103,12 +102,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
         rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
         dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode, 
-        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, k_nope_clip_alpha, qc_qr_scale, kc_scale, query, query_rope, 
+        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, k_nope_clip_alpha, qc_qr_scale, kc_scale, query, query_rope,
         dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
-
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3_functional(
@@ -124,7 +122,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     // construct the output tensor
     auto token_x_dim = token_x.dim();
     TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
-
 
     auto weight_uk_dim = weight_uk.dim();
     TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
@@ -198,13 +195,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
         rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
         dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode, 
-        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, k_nope_clip_alpha, qc_qr_scale, kc_scale, query, query_rope, 
+        rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, k_nope_clip_alpha, qc_qr_scale, kc_scale, query, query_rope,
         dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
 
-
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm, kv_cache_inplace, kr_cache_inplace);
-
 }
 
 } // namespace op_api
