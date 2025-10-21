@@ -2992,6 +2992,7 @@ class TestGroupedMatmulSwigluQuant(TestCase):
             self.assertTrue(output2_npu.dtype == output2.dtype)
 
 
+@unittest.skip("skip until CANN is updated to support aclnnGroupedMatmulSwigluQuantWeightNzV2")
 class TestGroupedMatmulSwigluQuantV2(TestCase):
     def test_npu_grouped_matmul_swiglu_quant_v2(self):
         with FakeTensorMode():
