@@ -378,7 +378,7 @@
 </tr>
 <tr id="row44591911184819"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p820225218412"><a name="p820225218412"></a><a name="p820225218412"></a><a href="torch_npu-npu_dynamic_quant_asymmetric.md">torch_npu.npu_dynamic_quant_asymmetric</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p271341016220"><a name="p271341016220"></a><a name="p271341016220"></a>对输入的张量进行per-token非对称动态量化。其中输入的最后一个维度对应一个token，每个token作为一组进行量化。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p271341016220"><a name="p271341016220"></a><a name="p271341016220"></a>对输入的张量进行pertoken非对称动态量化。其中输入的最后一个维度对应一个token，每个token作为一组进行量化。</p>
 </td>
 </tr>
 <tr id="row1245931134815"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1055135819577"><a name="p1055135819577"></a><a name="p1055135819577"></a><a href="torch_npu-npu_fast_gelu.md">torch_npu.npu_fast_gelu</a></p>
