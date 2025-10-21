@@ -2595,6 +2595,16 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             self.assertEqual(result[2].shape[2], 7168)
             self.assertEqual(result[2].dtype, torch.bfloat16)
 
+class TestDistributeBarrier(TestCase):
+    def test_npu_distribute_barrier(self):
+        with FakeTensorMode():
+            ep_world_size = 16
+            x_ref = None
+            time_out = None
+            elastic_info = None            
+            result = torch_npu._npu_distribute_barrier(x_ref = x_ref, group = "group_ep",
+            world_size = ep_world_size, time_out = time_out, elastic_info = elastic_info)
+            self.assertEqual(result.shape, x_ref.shape)
 
 class TestAddRmsNormQuant(TestCase):
     def test_npu_add_rms_norm_quant(self):
