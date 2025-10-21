@@ -7973,51 +7973,55 @@ import torch_npu
 import math
 
 # 生成随机数据, 并发送到npu
-B = 32
-He=7168
-Hcq=1536
-Hckv=512
-N=32
-D=128
-Dr=64
-Skv=6144
-S=2
-Nkv=1
-block_size=128
-block_num=math.ceil(B*Skv/block_size)
-BS = B * S
+B = 2
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 6144
+S = 2
+Nkv = 1
+BlockSize = 128
+BlockNum = math.ceil(B * Skv / BlockSize)
+T = 8
 
-token_x = torch.rand(B, S, He).to(torch.int8).npu()
-torch_npu.get_npu_format(token_x)
-w_dq = torch.rand(He, Hcq).to(torch.int8).npu()
+token_x = torch.randint(-100, 100, (B, S, He), dtype=torch.int8).npu()
+w_dq = torch.randint(-100, 100, (He, Hcq), dtype=torch.int8).npu()
 w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
-torch_npu.get_npu_format(w_dq_cast)
-w_uq_qr = torch.rand(Hcq, N*(D+Dr)).to(torch.int8).npu()
+w_uq_qr = torch.randint(-100, 100, (Hcq, N * (D + Dr)), dtype=torch.int8).npu()
 w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
 w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
-w_dkv_kr = torch.rand(He,Hckv+Dr).to(torch.int8).npu()
+w_dkv_kr = torch.randint(-100, 100, (He, Hckv + Dr), dtype=torch.int8).npu()
 w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
-gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
-gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
-sin = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-cos = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-cache_index = torch.rand(B,S).to(torch.int64).npu()
-kv_cache = torch.rand(1, block_numblock_sizeNkvHckv).to(torch.int8).npu()
-kv_cache = kv_cache.view(block_num, block_size, Nkv, Hckv)
-kr_cache = torch.rand(1, block_numblock_sizeNkvDr, dtype=torch.bfloat16).npu()
-kr_cache = kr_cache.view(block_num, block_size, Nkv, Dr)
-dequant_scale_x = torch.rand(BS, 1, dtype=torch.float).npu()
-dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float).npu()
-dequant_scale_w_uq_qr = torch.rand(1,N*(D+Dr), dtype=torch.float).npu()
-dequant_scale_w_dkv_kr = torch.rand(1,Hckv+Dr, dtype=torch.float).npu()
-quant_scale_ckv = torch.rand(1,Hckv, dtype=torch.float).npu()
-cache_mode = "PA_NZ"
+rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+cache_index = torch.randint(0, B * S, (B, S), dtype=torch.int64).npu()
+kv_cache = torch.randint(-100, 100, (1, BlockNum * BlockSize * Nkv * Hckv), dtype=torch.int8).npu()
+kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+rmsnorm_epsilon_cq = 1.0e-5
+rmsnorm_epsilon_ckv = 1.0e-5
+cache_mode = "PA_BSND"
+qc_qr_scale = 10.0
+kc_scale = 10.0
+dequant_scale_x = torch.rand(B * S, 1, dtype=torch.float32).npu()
+dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
+dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
+dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
+quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
 # 调用MlaPrologV3算子
-query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm = torch.ops.npu.npu_mla_prolog_v3(token_x, w_dq, w_uq_qr, w_uk,
-    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
-    dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
-    dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
+query_mla, query_rope_mla, dequant_scale_q_nope_mla, query_norm_mla, dequant_scale_q_norm_mla = torch.ops.npu.mla_prolog_npu_v3(token_x, w_dq_cast, 
+    w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+    rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+    cache_mode, qc_qr_scale, kc_scale, cache_index, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+    quant_scale_ckv, smooth_scale_cq)
 
 # 执行上述代码的输出类似如下
 tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -8053,19 +8057,19 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 from torch.library import Library, impl
 
 # 数据生成
-B = 32
-He=7168
-Hcq=1536
-Hckv=512
-N=32
-D=128
-Dr=64
-Skv=6144
-S=1
-Nkv=1
-block_size=128
-block_num=math.ceil(B*Skv/block_size)
-BS = B * S
+B = 2
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 6144
+S = 1
+Nkv = 1
+BlockSize = 128
+BlockNum = math.ceil(B * Skv / BlockSize)
+T = 8
 
 class Model_ds(torch.nn.Module):
     def init(self):
@@ -8073,44 +8077,48 @@ class Model_ds(torch.nn.Module):
     def forward(self, token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
         sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x,
         dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr,
-        quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, cache_mode = "PA_BSND"):
-            query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch_npu.npu_mla_prolog_v3(token_x,
+        quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, epsilon_cq = 0.00001, epsilon_ckv = 0.00001,
+        cache_mode = "PA_BSND", qc_qr_scale = 1.0, kc_scale = 1.0):
+            return torch_npu.npu_mla_prolog_v3(token_x,
             w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-            sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x,
+            sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x,
             dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None,
-            smooth_scales_cq=None, cache_mode = cache_mode)
+            smooth_scales_cq=None, epsilon_cq=epsilon_cq, epsilon_ckv=epsilon_ckv, cache_mode=cache_mode, 
+            qc_qr_scale=qc_qr_scale, kc_scale=kc_scale)
 
-            return query, query_rope, kvcache, krcache, dequant_scale_q_nope
 
 if name=="main":
     torch_npu.npu.set_device(0)
 
-    token_x = torch.rand(B, S, He).to(torch.int8).npu()
-    torch_npu.get_npu_format(token_x)
-    w_dq = torch.rand(He, Hcq).to(torch.int8).npu()
+    token_x = torch.randint(-100, 100, (B, S, He), dtype=torch.int8).npu()
+    w_dq = torch.randint(-100, 100, (He, Hcq), dtype=torch.int8).npu()
     w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
-    torch_npu.get_npu_format(w_dq_cast)
-    w_uq_qr = torch.rand(Hcq, N*(D+Dr)).to(torch.int8).npu()
+    w_uq_qr = torch.randint(-100, 100, (Hcq, N * (D + Dr)), dtype=torch.int8).npu()
     w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
     w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
-    w_dkv_kr = torch.rand(He,Hckv+Dr).to(torch.int8).npu()
+    w_dkv_kr = torch.randint(-100, 100, (He, Hckv + Dr), dtype=torch.int8).npu()
     w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
-    gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
-    gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
-    sin = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-    cos = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-    cache_index = torch.rand(B,S).to(torch.int64).npu()
-    kv_cache = torch.rand(1, block_num*block_size*Nkv*Hckv).to(torch.int8).npu()
-    kv_cache = kv_cache.view(block_num, block_size, Nkv, Hckv)
-    kr_cache = torch.rand(1, block_num*block_size*Nkv*Dr, dtype=torch.bfloat16).npu()
-    kr_cache = kr_cache.view(block_num, block_size, Nkv, Dr)
-    dequant_scale_x = torch.rand(BS, 1, dtype=torch.float).npu()
-    dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float).npu()
-    dequant_scale_w_uq_qr = torch.rand(1,N*(D+Dr), dtype=torch.float).npu()
-    dequant_scale_w_dkv_kr = torch.rand(1,Hckv+Dr, dtype=torch.float).npu()
-    quant_scale_ckv = torch.rand(1,Hckv, dtype=torch.float).npu()
-    cache_mode = "PA_NZ" # PA_BSND
+    rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+    rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+    rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+    rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+    cache_index = torch.randint(0, B * S, (B, S), dtype=torch.int64).npu()
+    kv_cache = torch.randint(-100, 100, (1, BlockNum * BlockSize * Nkv * Hckv), dtype=torch.int8).npu()
+    kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+    kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+    kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+    rmsnorm_epsilon_cq = 1.0e-5
+    rmsnorm_epsilon_ckv = 1.0e-5
+    cache_mode = "PA_BSND"
+    qc_qr_scale = 10.0
+    kc_scale = 10.0
+    dequant_scale_x = torch.rand(B * S, 1, dtype=torch.float32).npu()
+    dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
+    dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
+    dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
+    quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+    smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -8118,17 +8126,18 @@ if name=="main":
     cpu_model = Model_ds().npu()
     # 图模式调用
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
-    query, query_rope, kvcache, krcache,dequant_scale_q_nope = model(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
+    query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm = model(token_x, w_dq, w_uq_qr, w_uk,
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None, 
-        smooth_scales_cq=None, cache_mode=cache_mode)
+        smooth_scales_cq=None, epsilon_cq=epsilon_cq, epsilon_ckv=epsilon_ckv, cache_mode=cache_mode, qc_qr_scale=qc_qr_scale, kc_scale=kc_scale)
 
     # 单算子调用
-    query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
-        dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
-        dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
+    query_mla, query_rope_mla, dequant_scale_q_nope_mla, query_norm_mla, dequant_scale_q_norm_mla = torch.ops.npu.mla_prolog_npu_v3(token_x, w_dq_cast, 
+        w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+        rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+        cache_mode, qc_qr_scale, kc_scale, cache_index, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+        quant_scale_ckv, smooth_scale_cq)
 
 # 执行上述代码的输出类似如下
 single op output: tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -8232,51 +8241,56 @@ import torch_npu
 import math
 
 # 生成随机数据, 并发送到npu
-B = 32
-He=7168
-Hcq=1536
-Hckv=512
-N=32
-D=128
-Dr=64
-Skv=6144
-S=2
-Nkv=1
-block_size=128
-block_num=math.ceil(B*Skv/block_size)
-BS = B * S
+B = 2
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 6144
+S = 2
+Nkv = 1
+BlockSize = 128
+BlockNum = math.ceil(B * Skv / BlockSize)
+T = 8
 
-token_x = torch.rand(B, S, He).to(torch.int8).npu()
-torch_npu.get_npu_format(token_x)
-w_dq = torch.rand(He, Hcq).to(torch.int8).npu()
+token_x = torch.randint(-100, 100, (B, S, He), dtype=torch.int8).npu()
+w_dq = torch.randint(-100, 100, (He, Hcq), dtype=torch.int8).npu()
 w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
-torch_npu.get_npu_format(w_dq_cast)
-w_uq_qr = torch.rand(Hcq, N*(D+Dr)).to(torch.int8).npu()
+w_uq_qr = torch.randint(-100, 100, (Hcq, N * (D + Dr)), dtype=torch.int8).npu()
 w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
 w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
-w_dkv_kr = torch.rand(He,Hckv+Dr).to(torch.int8).npu()
+w_dkv_kr = torch.randint(-100, 100, (He, Hckv + Dr), dtype=torch.int8).npu()
 w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
-gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
-gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
-sin = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-cos = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-cache_index = torch.rand(B,S).to(torch.int64).npu()
-kv_cache = torch.rand(1, block_numblock_sizeNkvHckv).to(torch.int8).npu()
-kv_cache = kv_cache.view(block_num, block_size, Nkv, Hckv)
-kr_cache = torch.rand(1, block_numblock_sizeNkvDr, dtype=torch.bfloat16).npu()
-kr_cache = kr_cache.view(block_num, block_size, Nkv, Dr)
-dequant_scale_x = torch.rand(BS, 1, dtype=torch.float).npu()
-dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float).npu()
-dequant_scale_w_uq_qr = torch.rand(1,N*(D+Dr), dtype=torch.float).npu()
-dequant_scale_w_dkv_kr = torch.rand(1,Hckv+Dr, dtype=torch.float).npu()
-quant_scale_ckv = torch.rand(1,Hckv, dtype=torch.float).npu()
-cache_mode = "PA_NZ"
+rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+cache_index = torch.randint(0, B * S, (B, S), dtype=torch.int64).npu()
+kv_cache = torch.randint(-100, 100, (1, BlockNum * BlockSize * Nkv * Hckv), dtype=torch.int8).npu()
+kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+rmsnorm_epsilon_cq = 1.0e-5
+rmsnorm_epsilon_ckv = 1.0e-5
+cache_mode = "PA_BSND"
+qc_qr_scale = 10.0
+kc_scale = 10.0
+dequant_scale_x = torch.rand(B * S, 1, dtype=torch.float32).npu()
+dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
+dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
+dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
+quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
-# 调用MlaPrologV2算子
-query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq, w_uq_qr, w_uk,
-    w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
-    dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
-    dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
+# 调用npu_mla_prolog_v3_functional算子
+query_mla, query_rope_mla, dequant_scale_q_nope_mla, _, _, kv_cache_mla, kr_cache_mla = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq_cast, 
+    w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+    rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+    cache_mode, qc_qr_scale, kc_scale, cache_index, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+    quant_scale_ckv, smooth_scale_cq)
+
 
 # 执行上述代码的输出类似如下
 tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -8312,19 +8326,19 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 from torch.library import Library, impl
 
 # 数据生成
-B = 32
-He=7168
-Hcq=1536
-Hckv=512
-N=32
-D=128
-Dr=64
-Skv=6144
-S=1
-Nkv=1
-block_size=128
-block_num=math.ceil(B*Skv/block_size)
-BS = B * S
+B = 2
+He = 7168
+Hcq = 1536
+Hckv = 512
+N = 32
+D = 128
+Dr = 64
+Skv = 6144
+S = 1
+Nkv = 1
+BlockSize = 128
+BlockNum = math.ceil(B * Skv / BlockSize)
+T = 8
 
 class Model_ds(torch.nn.Module):
     def init(self):
@@ -8332,44 +8346,48 @@ class Model_ds(torch.nn.Module):
     def forward(self, token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
         sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x,
         dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr,
-        quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, cache_mode = "PA_BSND"):
-            query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch_npu.npu_mla_prolog_v3_functional(token_x,
+        quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, epsilon_cq = 0.00001, epsilon_ckv = 0.00001,
+        cache_mode = "PA_BSND", qc_qr_scale = 1.0, kc_scale = 1.0):
+            return torch_npu.npu_mla_prolog_v3_functional(token_x,
             w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
-            sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x,
+            sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x,
             dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr,
             dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None,
-            smooth_scales_cq=None, cache_mode = cache_mode)
+            smooth_scales_cq=None, epsilon_cq=epsilon_cq, epsilon_ckv=epsilon_ckv, cache_mode=cache_mode, 
+            qc_qr_scale=qc_qr_scale, kc_scale=kc_scale)
 
-            return query, query_rope, kvcache, krcache, dequant_scale_q_nope
 
 if name=="main":
     torch_npu.npu.set_device(0)
 
-    token_x = torch.rand(B, S, He).to(torch.int8).npu()
-    torch_npu.get_npu_format(token_x)
-    w_dq = torch.rand(He, Hcq).to(torch.int8).npu()
+    token_x = torch.randint(-100, 100, (B, S, He), dtype=torch.int8).npu()
+    w_dq = torch.randint(-100, 100, (He, Hcq), dtype=torch.int8).npu()
     w_dq_cast = torch_npu.npu_format_cast(w_dq.contiguous(), 29)
-    torch_npu.get_npu_format(w_dq_cast)
-    w_uq_qr = torch.rand(Hcq, N*(D+Dr)).to(torch.int8).npu()
+    w_uq_qr = torch.randint(-100, 100, (Hcq, N * (D + Dr)), dtype=torch.int8).npu()
     w_uq_qr_cast = torch_npu.npu_format_cast(w_uq_qr.contiguous(), 29)
     w_uk = torch.rand(N, D, Hckv, dtype=torch.bfloat16).npu()
-    w_dkv_kr = torch.rand(He,Hckv+Dr).to(torch.int8).npu()
+    w_dkv_kr = torch.randint(-100, 100, (He, Hckv + Dr), dtype=torch.int8).npu()
     w_dkv_kr_cast = torch_npu.npu_format_cast(w_dkv_kr.contiguous(), 29)
-    gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
-    gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
-    sin = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-    cos = torch.rand(B,S,Dr, dtype=torch.bfloat16).npu()
-    cache_index = torch.rand(B,S).to(torch.int64).npu()
-    kv_cache = torch.rand(1, block_num*block_size*Nkv*Hckv).to(torch.int8).npu()
-    kv_cache = kv_cache.view(block_num, block_size, Nkv, Hckv)
-    kr_cache = torch.rand(1, block_num*block_size*Nkv*Dr, dtype=torch.bfloat16).npu()
-    kr_cache = kr_cache.view(block_num, block_size, Nkv, Dr)
-    dequant_scale_x = torch.rand(BS, 1, dtype=torch.float).npu()
-    dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float).npu()
-    dequant_scale_w_uq_qr = torch.rand(1,N*(D+Dr), dtype=torch.float).npu()
-    dequant_scale_w_dkv_kr = torch.rand(1,Hckv+Dr, dtype=torch.float).npu()
-    quant_scale_ckv = torch.rand(1,Hckv, dtype=torch.float).npu()
-    cache_mode = "PA_NZ" # PA_BSND
+    rmsnorm_gamma_cq = torch.rand(Hcq, dtype=torch.bfloat16).npu()
+    rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
+    rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+    rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
+    cache_index = torch.randint(0, B * S, (B, S), dtype=torch.int64).npu()
+    kv_cache = torch.randint(-100, 100, (1, BlockNum * BlockSize * Nkv * Hckv), dtype=torch.int8).npu()
+    kv_cache = kv_cache.view(BlockNum, BlockSize, Nkv, Hckv)
+    kr_cache = torch.rand(1, BlockNum * BlockSize * Nkv * Dr, dtype=torch.bfloat16).npu()
+    kr_cache = kr_cache.view(BlockNum, BlockSize, Nkv, Dr)
+    rmsnorm_epsilon_cq = 1.0e-5
+    rmsnorm_epsilon_ckv = 1.0e-5
+    cache_mode = "PA_BSND"
+    qc_qr_scale = 10.0
+    kc_scale = 10.0
+    dequant_scale_x = torch.rand(B * S, 1, dtype=torch.float32).npu()
+    dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
+    dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
+    dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
+    quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+    smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -8377,17 +8395,18 @@ if name=="main":
     cpu_model = Model_ds().npu()
     # 图模式调用
     model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
-    query, query_rope, kvcache, krcache,dequant_scale_q_nope = model(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
+    query_mla, query_rope_mla, dequant_scale_q_nope_mla, _, _, kv_cache_mla, kr_cache_mla = model(token_x, w_dq, w_uq_qr, w_uk,
+        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
         dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, quant_scale_ckr=None, 
-        smooth_scales_cq=None, cache_mode=cache_mode)
+        smooth_scales_cq=None, epsilon_cq=epsilon_cq, epsilon_ckv=epsilon_ckv, cache_mode=cache_mode, qc_qr_scale=qc_qr_scale, kc_scale=kc_scale)
 
     # 单算子调用
-    query, query_rope, kvcache, krcache,dequant_scale_q_nope = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq, w_uq_qr, w_uk,
-        w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index, dequant_scale_x=dequant_scale_x, 
-        dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
-        dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr, quant_scale_ckv=quant_scale_ckv, cache_mode=cache_mode)
+    query_mla, query_rope_mla, dequant_scale_q_nope_mla, _, _, kv_cache_mla, kr_cache_mla = torch.ops.npu.npu_mla_prolog_v3_functional(token_x, w_dq_cast, 
+        w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+        rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_copy, kr_cache_copy, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
+        cache_mode, qc_qr_scale, kc_scale, cache_index, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
+        quant_scale_ckv, smooth_scale_cq)
 
 # 执行上述代码的输出类似如下
 single op output: tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],

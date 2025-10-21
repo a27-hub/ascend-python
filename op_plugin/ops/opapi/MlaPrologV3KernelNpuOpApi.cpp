@@ -44,12 +44,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
     at::Tensor actual_seq_len {nullptr};
-    int64_t query_norm_flag = 0;
+    bool query_norm_flag = false;
     int64_t weight_quant_mode = 0;
     int64_t kv_cache_quant_mode = 0;
     int64_t query_quant_mode = 0;
-    int64_t ckvkr_repo_mode = 1;
-    int64_t quant_scale_repo_mode = 1;
+    int64_t ckvkr_repo_mode = 0;
+    int64_t quant_scale_repo_mode = 0;
     int64_t tile_size = 128;
     double k_nope_clip_alpha = 1.0;
 
@@ -135,12 +135,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
     at::Tensor actual_seq_len {nullptr};
-    int64_t query_norm_flag = 0;
+    bool query_norm_flag = false;
     int64_t weight_quant_mode = 0;
     int64_t kv_cache_quant_mode = 0;
     int64_t query_quant_mode = 0;
-    int64_t ckvkr_repo_mode = 1;
-    int64_t quant_scale_repo_mode = 1;
+    int64_t ckvkr_repo_mode = 0;
+    int64_t quant_scale_repo_mode = 0;
     int64_t tile_size = 128;
     double k_nope_clip_alpha = 1.0;
 
