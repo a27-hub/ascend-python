@@ -19,12 +19,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-
-namespace {
 const int64_t INT4_IN_INT32_NUM = 8;
-// Substitute INT32_OUTPUT_TYPE for ge::DataType::DT_INT32, INT8_OUTPUT_TYPE for ge::DataType::DT_INT8.
-const int INT32_OUTPUT_TYPE = 3;
-const int INT8_OUTPUT_TYPE = 2;
 constexpr int64_t DTYPE_NUM_FOR_QUINT4X2 = static_cast<int64_t>(at::ScalarType::QUInt4x2);
 
 TensorWrapper get_output_tensor_wrapper(
@@ -52,7 +47,6 @@ TensorWrapper get_output_tensor_wrapper(
 
 std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant_v0(
     const at::Tensor &input,
-
     const c10::optional<at::Tensor> &smooth_scales,
     const c10::optional<at::Tensor> &group_index,
     c10::optional<int64_t> dst_type)
@@ -70,7 +64,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant_v0(
     EXEC_NPU_CMD(aclnnDynamicQuant, input, smooth_scales, y_wrapper, scale);
     return std::make_tuple(output, scale);
 }
-}; // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant(
     const at::Tensor &input,
@@ -79,9 +72,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant(
     c10::optional<int64_t> dst_type,
     c10::string_view quant_mode)
 {
-    // if aclnnDynamicQuantV2 is not implemented, use npu_dynamic_quant_v0(aclnnDynamicQuant)
     DO_COMPATIBILITY(aclnnDynamicQuantV2, npu_dynamic_quant_v0(input, smooth_scales, group_index, dst_type));
-
     at::SmallVector<int64_t, op_infer::SIZE> scale_size;
     int scale_dim = input.dim() - 1;
     int index = 0;
@@ -89,22 +80,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_quant(
         scale_size.push_back(input.size(index));
     }
     at::Tensor scale = npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Float));
-<<<<<<< HEAD
-
-    int output_type;
-    at::Tensor output;
-    if (dst_type == static_cast<int64_t>(at::ScalarType::QUInt4x2)) { // INT4
-        TORCH_CHECK(input.size(index) % INT4_IN_INT32_NUM == 0,
-                    "Input shape last dim must be divded by 8 when int4 quantization" + OPS_ERROR(ErrCode::PARAM));
-        output_type = ge::DataType::DT_INT32;
-        scale_size.push_back(input.size(index) / INT4_IN_INT32_NUM);
-        output = npu_preparation::apply_tensor_without_format(scale_size, c10::dtype(c10::ScalarType::Int));
-    } else { // 默认INT8
-        output_type = INT8_OUTPUT_TYPE;
-        output = npu_preparation::apply_tensor_without_format(input.sizes(), c10::dtype(c10::ScalarType::Char));
-    }
-=======
->>>>>>> d9bb6e22 (sync to master)
     c10::optional<at::Tensor> offset;
 
     at::Tensor output;
@@ -168,4 +143,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_dynamic_quant_asymmetric(
 
     return std::make_tuple(output, scale, offset);
 }
-} // namespace op_api
+}
