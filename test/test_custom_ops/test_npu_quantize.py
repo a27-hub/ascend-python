@@ -116,7 +116,6 @@ class TestNPUQuantize(TestCase):
         npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.qint8)
         self.assertRtolEqual(cpu_output1, npu_output1)
 
-    @unittest.skip("Skipping test_npu_quantize_ascend_quant_v2_nz_pertensor for now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_quantize_ascend_quant_v2_nz_pertensor(self):
         def int4s_to_int32(int4_tensor):
