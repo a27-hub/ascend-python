@@ -1179,6 +1179,8 @@ def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
     output_shape = tuple(output_shape)
     output_dtype = input_tensor.dtype
     return torch.empty(size=output_shape, dtype=output_dtype, device=torch.device("meta"))
+
+
 @impl(m, "npu_gelu_quant")
 def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None, 
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
