@@ -7,17 +7,17 @@
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    | √  |
 
-## 功能说明<a name="zh-cn_topic_48263917405931_section76182394561028"></a>
+## 功能说明
 
 aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模型使用，对比小算子做性能优化。
 
-## 函数原型<a name="zh-cn_topic_79152608374612_section29507481637295"></a>
+## 函数原型
 
 ```
 torch_npu.npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=0, int? group_list_type=0, int[]? tuning_config=None) -> (Tensor, Tensor)
 ```
 
-## 参数说明<a name="zh-cn_topic_63095148217596_section41853029746218"></a>
+## 参数说明
 
 - **x**（`Tensor`）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持`int8`，数据格式支持ND，支持非连续的Tensor。
 - **weight**（`TensorList`）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持`int8`，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
@@ -34,14 +34,14 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[]
 - **groupListType**（`可选，暂不支持，int`）：输入设置参数，grouplist的输入类型。0：cunsum 1：count，数据类型为`int32`，预留输入，暂不支持
 - **tuningConfig**（`可选，Listint`）：输入设置参数，数组中的第一个元素表示各个专家处理的token数的预期值
 
-## 返回值说明<a name="zh-cn_topic_25739406813945_section73962851409367"></a>
+## 返回值说明
 
 `Tensor`
 
 output：输出的量化结果，公式中的Q，Device侧的aclTensor。数据类型支持`int8`，shape支持2维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
 output_scale：输出的量化因子，公式中的Q_scale，Device侧的aclTensor。数据类型支持`float`，shape支持1维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
 
-## 约束说明<a name="zh-cn_topic_91824375602184_section56217938047526"></a>
+## 约束说明
 
 -   该接口支持推理和训练场景下使用。
 -   该接口支持图模式。
@@ -50,7 +50,7 @@ output_scale：输出的量化因子，公式中的Q_scale，Device侧的aclTens
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
     |`int8`|`int8`|`int64`|`float32`|`float`|`int32`|`float32`|`float32`|`int8`|`float`|
 
-## 调用示例<a name="zh-cn_topic_65913284057249_section12748506391275"></a>
+## 调用示例
 
 -   单算子模式调用
 
