@@ -5538,6 +5538,11 @@ custom:
   - func: fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnFastGelu
     exposed: all_version
     gen_opapi:
       out:
@@ -5879,6 +5884,11 @@ custom:
   - func: npu_fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnFastGelu
     exposed: all_version
     gen_opapi:
       out:
