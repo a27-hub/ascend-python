@@ -7,7 +7,7 @@
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    | √  |
 
-## 功能说明<a name="zh-cn_topic_0000002259402011_section14441123234220"></a>
+## 功能说明<a name="zh-cn_topic_12312312204021_section14441123234220"></a>
 
 aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模型使用，对比小算子做性能优化。
 
@@ -17,7 +17,7 @@ aclnnGroupedMatmulV4、aclnnDynamicDequant、aclnnSwigluQuant融合, deepseek模
 torch_npu.npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=0, int? group_list_type=0, int[]? tuning_config=None) -> (Tensor, Tensor)
 ```
 
-## 参数说明<a name="zh-cn_topic_0000002259402011_section112637101241"></a>
+## 参数说明<a name="zh-cn_topic_232082259402011_section112637101241"></a>
 
 - **x**（`Tensor`）：输入，左矩阵，公式中的X，Device侧的aclTensor。shape支持2维，数据类型支持`int8`，数据格式支持ND，支持非连续的Tensor。
 - **weight**（`TensorList`）：输入，权重矩阵，公式中的W，Device侧的aclTensor。shape支持5维，数据类型支持`int8`，数据格式支持FRACTAL_NZ，支持非连续的Tensor，需注意该接口会将weight的数据格式强制视为FRACTAL_NZ格式。
@@ -34,14 +34,14 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[]
 - **groupListType**（`可选，暂不支持，int`）：输入设置参数，grouplist的输入类型。0：cunsum 1：count，数据类型为`int32`，预留输入，暂不支持
 - **tuningConfig**（`可选，Listint`）：输入设置参数，数组中的第一个元素表示各个专家处理的token数的预期值
 
-## 返回值说明<a name="zh-cn_topic_0000002259402011_section222314121314"></a>
+## 返回值说明<a name="zh-cn_topic_6432002259802041_section222317544415"></a>
 
 `Tensor`
 
 output：输出的量化结果，公式中的Q，Device侧的aclTensor。数据类型支持`int8`，shape支持2维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
 output_scale：输出的量化因子，公式中的Q_scale，Device侧的aclTensor。数据类型支持`float`，shape支持1维，Device侧的aclTensor。数据格式支持ND，支持非连续的Tensor。
 
-## 约束说明<a name="zh-cn_topic_0000002259402011_section12345532434255"></a>
+## 约束说明<a name="zh-cn_topic_123122412259345011_section12345532434255"></a>
 
 -   该接口支持推理和训练场景下使用。
 -   该接口支持图模式。
@@ -50,7 +50,7 @@ output_scale：输出的量化因子，公式中的Q_scale，Device侧的aclTens
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
     |`int8`|`int8`|`int64`|`float32`|`float`|`int32`|`float32`|`float32`|`int8`|`float`|
 
-## 调用示例<a name="zh-cn_topic_0000002259402011_section12312421424213"></a>
+## 调用示例<a name="zh-cn_topic_345345622594023453_section12731412421424213"></a>
 
 -   单算子模式调用
 
