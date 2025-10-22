@@ -2858,7 +2858,7 @@ def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_typ
 
 
 @impl(m, "npu_fused_linear_online_max_sum")
-def npu_fused_linear_online_max_sum_meta(input, weight, target, vocab_start_index, vocab_end_index, return_logits):
+def npu_fused_linear_online_max_sum_meta(input, weight, target, vocab_start_index, vocab_end_index, return_logits=False):
     output_size_0 = [input.size(0)]
     output_size_1 = [(input.size(0) + 7) // 8]
     output_dtype_0 = torch.float32
@@ -2881,7 +2881,7 @@ def npu_fused_linear_online_max_sum_meta(input, weight, target, vocab_start_inde
 
 
 @impl(m, "npu_fused_cross_entropy_loss_with_max_sum")
-def npu_fused_cross_entropy_loss_with_max_sum_meta(logits_max, sum_exp_logits, predicted_logits, label_smoothing, input, weight, vocab_parallel_logits):
+def npu_fused_cross_entropy_loss_with_max_sum_meta(logits_max, sum_exp_logits, predicted_logits, *, label_smoothing=0.0, input=None, weight=None, vocab_parallel_logits=None):
     output_size_0 = logits_max.size()
     output_dtype_0 = torch.float32
 
@@ -2896,7 +2896,7 @@ def npu_fused_cross_entropy_loss_with_max_sum_meta(logits_max, sum_exp_logits, p
 
 
 @impl(m, "npu_fused_linear_cross_entropy_loss_with_max_sum_grad")
-def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weight, target_mask, masked_target, label_smoothing, logits_max, sum_exp_logits, softmax):
+def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weight, target_mask, masked_target, label_smoothing=0.0, logits_max=None, sum_exp_logits=None, softmax=None):
     output_size_0 = [input.size(0), input.size(1)]
     output_size_1 = [weight.size(0), weight.size(1)]
     output_dtype_0 = input.dtype
