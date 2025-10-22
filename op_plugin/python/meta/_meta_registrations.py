@@ -1179,6 +1179,8 @@ def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
     output_shape = tuple(output_shape)
     output_dtype = input_tensor.dtype
     return torch.empty(size=output_shape, dtype=output_dtype, device=torch.device("meta"))
+
+
 @impl(m, "npu_gelu_quant")
 def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None, 
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
@@ -2416,19 +2418,6 @@ def npu_group_quant_meta(x, scale, group_index, *, offset=None, dst_dtype=None):
     return torch.empty_like(x, dtype=torch.int8)
 
 
-@impl(m, "npu_dynamic_block_quant")
-def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_type=23,
-                                 row_block_size=1, col_block_size=128):
-    scale_shape = []
-    scale_shape.append((x.size(0) + row_block_size - 1) // row_block_size)
-    scale_shape.append((x.size(1) + col_block_size - 1) // col_block_size)
-
-    dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
-    y = torch.empty_like(x, dtype=dtype)
-    scale = x.new_empty(scale_shape, dtype=torch.float32)
-    return (y, scale)
-
-
 @impl(m, "npu_dynamic_quant")
 def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1, quant_mode="pertoken"):
     # default dst_type 1 is the enum of torch.int8
@@ -3200,7 +3189,8 @@ def npu_moe_token_unpermute_with_routing_map_grad(unpermuted_tokens_grad, out_in
 # pylint:disable = huawei-too-many-arguments
 def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128):
     # dst_type only support torch.int8 in 910B/C
-    y = torch.empty(x.shape, dtype=torch.int8, device=x.device)
+    dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
+    y = torch.empty(x.shape, dtype=dtype, device=x.device)
     scale_shape = list(x.shape)
 
     if len(scale_shape) == 2:
