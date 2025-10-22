@@ -1,4 +1,3 @@
-import unittest
 import torch
 import numpy as np
 import torch_npu
@@ -147,7 +146,6 @@ class TestTopK(TestCase):
         ]
         self.topk_result(shape_format)
 
-    @unittest.skipIf(True, "Skipping now")
     @SupportedDevices(['Ascend910B'])
     def test_topk_zero_dim(self):
         inputs = torch.tensor(3).npu()
