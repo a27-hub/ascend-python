@@ -41,9 +41,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
     at::Tensor mxscale;
     ASCEND_LOGI("[npu_grouped_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
-    TORCH_CHECK((y_acltype == aclDataType::ACL_FLOAT8_E5M2 || y_acltype == aclDataType::ACL_FLOAT8_E4M3FN),
-                "Parameter dst_type only supports torch.float8_e5m2(23), torch.float8_e4m3fn(24), got ",
-                dst_type, OPS_ERROR(ErrCode::PARAM));
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     auto mxscale_shape = op_infer::array_to_small_vector(x.sizes());
     mxscale_shape.emplace_back(NUM_TWO);

@@ -36,11 +36,9 @@ at::Tensor npu_quant_scatter(
 {
     at::Tensor result = self.clone();
     int64_t reduction = 1;
-    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2");
+    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95;
     if (isAclnnQuantScatterV2Available) {
         aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
-        TORCH_CHECK(self_acltype == aclDataType::ACL_INT8 || self_acltype == aclDataType::ACL_HIFLOAT8 || self_acltype == aclDataType::ACL_FLOAT8_E5M2 || self_acltype == aclDataType::ACL_FLOAT8_E4M3FN,
-            "dst_type only support 'torch.int8', 'torch.float8_e5m2', 'torch.float8_e4m3fn', 'torch_npu.hifloat8', but got ", c10_npu::CustomDataTypeToString(dst_type.value()), OPS_ERROR(ErrCode::PARAM));
         char* round_mode_str = "rint";
         if (round_mode.has_value()) {
             round_mode_str = const_cast<char *>(round_mode.value().data());
@@ -68,11 +66,9 @@ at::Tensor& npu_quant_scatter_(
     c10::optional<c10::string_view> round_mode)
 {
     int64_t reduction = 1;
-    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2");
+    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95;
     if (isAclnnQuantScatterV2Available) {
         aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
-        TORCH_CHECK(self_acltype == aclDataType::ACL_INT8 || self_acltype == aclDataType::ACL_HIFLOAT8 || self_acltype == aclDataType::ACL_FLOAT8_E5M2 || self_acltype == aclDataType::ACL_FLOAT8_E4M3FN,
-            "dst_type only support 'torch.int8', 'torch.float8_e5m2', 'torch.float8_e4m3fn', 'torch_npu.hifloat8', but got ", c10_npu::CustomDataTypeToString(dst_type.value()), OPS_ERROR(ErrCode::PARAM));
         char* round_mode_str = "rint";
         if (round_mode.has_value()) {
             round_mode_str = const_cast<char *>(round_mode.value().data());

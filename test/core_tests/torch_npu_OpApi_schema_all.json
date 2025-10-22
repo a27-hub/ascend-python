@@ -104,6 +104,12 @@
   "op_api: torch_npu.npu_dynamic_block_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_dynamic_mx_quant(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_grouped_dynamic_mx_quant(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
@@ -429,6 +435,12 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_dynamic_block_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_dynamic_mx_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_grouped_dynamic_mx_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)": {
@@ -876,6 +888,9 @@
     "version": ["all_version"]
   },
   "func: npu_grouped_dynamic_mx_quant(Tensor x, Tensor group_index, *, str round_mode=\"rint\", int dst_type=23, int blocksize=32) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode=\"rint\", int dst_type=296, int block_size=32) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_lstm_backward(Tensor? grady, Tensor? gradh, Tensor? gradc, Tensor input, Tensor weight, Tensor bias, Tensor hx, Tensor cx, Tensor y_output, Tensor h_output, Tensor c_output, Tensor i, Tensor j, Tensor f, Tensor o, Tensor tanhc) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
@@ -4386,6 +4401,9 @@
     "version": ["all_version"]
   },
   "func: npu_gelu_quant(Tensor self, *, Tensor? input_scale=None, Tensor? input_offset=None, str approximate='none', str quant_mode='dynamic', int? dst_type=None, str round_mode='rint') -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: _masked_scale(Tensor self, Tensor mask, float scale) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_group_norm_swish(Tensor input, int num_groups, Tensor weight, Tensor bias, float? eps=1e-5, float? swish_scale=1.0) -> (Tensor, Tensor, Tensor)": {
