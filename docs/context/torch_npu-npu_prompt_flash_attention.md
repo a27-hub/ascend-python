@@ -39,28 +39,12 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float16`、`bfloat16`、`int8`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
-
-- <strong>*</strong>：代表其之前的变量是位置相关，需要按照顺序输入，必选；之后的变量是键值对赋值的，位置无关，可选（不输入会使用默认值）。
-
+- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **pse_shift** (`Tensor`)：可选参数。不支持非连续的`Tensor`，数据格式支持$ND$。输入shape类型需为$（B, N, Q_S, KV_S）$或$（1, N, Q_S, KV_S）$，其中$Q_S$为`query`的shape中的$S$，$KV_S$为`key`和`value`的shape中的$S$。对于`pse_shift`的$KV_S$为非32字节对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。如不使用该功能时可传入`None`。综合约束请见[约束说明](#section12345537164214)。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持该参数。
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float16`、`bfloat16`。当`pse_shift`为`float16`时，要求`query`为`float16`或`int8`；当`pse_shift`为`bfloat16`时，要求`query`为`bfloat16`。在`query`、`key`、`value`为`float16`且`pse_shift`存在的情况下，默认走高精度模式。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float16`、`bfloat16`。当`pse_shift`为`float16`时，要求`query`为`float16`或`int8`；当`pse_shift`为`bfloat16`时，要求`query`为`bfloat16`。在`query`、`key`、`value`为`float16`且`pse_shift`存在的情况下，默认走高精度模式。
 - **padding_mask**：预留参数，暂未使用，默认值为`None`。
-<<<<<<< 1020RC7.20
-- **atten_mask** (`Tensor`)：可选参数，对应公式中$atten\_mask$，代表下三角全为0上三角全为负无穷的倒三角mask矩阵，数据类型支持`bool`、`int8`和`uint8`。数据格式支持$ND$，不支持非连续的`Tensor`。如果不使用该功能可传入`nullptr`。通常建议shape输入$(Q_S, KV_S)$、$(B, Q_S, KV_S)$、$(1, Q_S, KV_S)$、$(B, 1, Q_S, KV_S)$、$(1, 1, Q_S, KV_S)$，其中$Q_S$为`query`的shape中的$S$，$KV_S$为`key`和`value`的shape中的$S$，对于`atten_mask`的$KV_S$为非32字节对齐的场景，建议padding到32字节对齐来提高性能，多余部分填充成1。综合约束请见[约束说明](#section12345537164214)。
-- **actual_seq_lengths** (`List[int]`)：可选参数，代表不同Batch中`query`的有效Sequence Length，数据类型支持`int64`。如果不指定`seqlen`可以传入`nullptr`，表示和`query`的shape的s长度相同。限制：该入参中每个batch的有效Sequence Length应该不大于`query`中对应batch的Sequence Length。`seqlen`的传入长度为1时，每个Batch使用相同`seqlen`；传入长度大于等于Batch数时取`seqlen`的前Batch个数。其它长度不支持。<term>Atlas 推理系列加速卡产品</term>仅支持`nullptr`。
-- **deq_scale1** (`Tensor`)：可选参数，表示BMM1后面的反量化因子，支持pertensor。数据类型支持`uint64`、`float32`，数据格式支持$ND$。如不使用该功能时可传入`nullptr`。<term>Atlas 推理系列加速卡产品</term>仅支持`nullptr`。
-- **quant_scale1** (`Tensor`)：可选参数，数据类型支持`float32`。数据格式支持$ND$，表示BMM2前面的量化因子，支持pertensor。如不使用该功能时可传入`nullptr`。<term>Atlas 推理系列加速卡产品</term>仅支持`nullptr`。
-- **deq_scale2** (`Tensor`)：可选参数，数据类型支持`uint64`、`float32`。数据格式支持$ND$，表示BMM2后面的反量化因子，支持pertensor。如不使用该功能时可传入`nullptr`。<term>Atlas 推理系列加速卡产品</term>仅支持`nullptr`。
-- **quant_scale2** (`Tensor`)：可选参数，数据格式支持$ND$，表示输出的量化因子，支持pertensor、perchannel。如不使用该功能时可传入`nullptr`。
-    - <term>Atlas 推理系列加速卡产品</term>：仅支持传入`nullptr`。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`、`bfloat16`。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为$BSH$时，要求`quant_scale2`所有维度的乘积等于$H$；其他layout要求乘积等于$N*D$。当输出layout为$BSH$，`quant_scale2` shape建议传入$(1, 1, H)$或$(H,)$；输出为$BNSD$时，建议传入$(1, N, 1, D)$或$(N, D)$；输出为$BSND$时，建议传入$(1, 1, N, D)$或$(N, D)$。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`bfloat16`。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为$BSH$时，要求`quant_scale2`所有维度的乘积等于$H$；其他layout要求乘积等于$N*D$。当输出layout为$BSH$，`quant_scale2` shape建议传入$(1, 1, H)$或$(H,)$；输出为$BNSD$时，建议传入$(1, N, 1, D)$或$(N, D)$；输出为$BSND$时，建议传入$(1, 1, N, D)$或$(N, D)$。
-
-- **quant_offset2** (`Tensor`)：可选参数，数据格式支持$ND$，表示输出的量化偏移，支持pertensor、perchannel。若传入 `quant_offset2`，需保证其类型和`shape`信息与`quant_scale2`一致。如不使用该功能时可传入`nullptr`。
-    - <term>Atlas 推理系列加速卡产品</term>：仅支持传入`nullptr`。
-=======
 - **atten_mask** (`Tensor`)：可选参数，对应公式中$atten\_mask$，代表下三角全为0上三角全为负无穷的倒三角mask矩阵，数据类型支持`bool`、`int8`和`uint8`。数据格式支持$ND$，不支持非连续的`Tensor`。如果不使用该功能可传入`None`。通常建议shape输入$(Q_S, KV_S)$、$(B, Q_S, KV_S)$、$(1, Q_S, KV_S)$、$(B, 1, Q_S, KV_S)$、$(1, 1, Q_S, KV_S)$，其中$Q_S$为`query`的shape中的$S$，$KV_S$为`key`和`value`的shape中的$S$，对于`atten_mask`的$KV_S$为非32字节对齐的场景，建议padding到32字节对齐来提高性能，多余部分填充成1。综合约束请见[约束说明](#section12345537164214)。
 - **actual_seq_lengths** (`List[int]`)：可选参数，代表不同Batch中`query`的有效Sequence Length，数据类型支持`int64`。如果不指定`seqlen`可以传入`None`，表示和`query`的shape的s长度相同。限制：该入参中每个batch的有效Sequence Length应该不大于`query`中对应batch的Sequence Length。`seqlen`的传入长度为1时，每个Batch使用相同`seqlen`；传入长度大于等于Batch数时取`seqlen`的前Batch个数。其它长度不支持。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持该参数。
@@ -76,7 +60,6 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
 
 - **quant_offset2** (`Tensor`)：可选参数，数据格式支持$ND$，表示输出的量化偏移，支持pertensor、perchannel。若传入 `quant_offset2`，需保证其类型和`shape`信息与`quant_scale2`一致。如不使用该功能时可传入`None`。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持该参数。
->>>>>>> 7.2.0
     - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`、`bfloat16`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`bfloat16`。
 
@@ -140,17 +123,10 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
 
 - `int8`量化相关入参数量与输入、输出数据格式的综合限制：
     - 输入为`int8`，输出为`int8`的场景：入参`deq_scale1`、`quant_scale1`、`deq_scale2`、`quant_scale2`需要同时存在，`quant_offset2`可选，不传时默认为`0`。
-<<<<<<< 1020RC7.20
-    - 输入为`int8`，输出为`float16`的场景：入参`deq_scale1`、`quant_scale1`、`deq_scale2`需要同时存在，若存在入参`quant_offset2`或`quant_scale2`（即不为`nullptr`），则报错并返回。
-    - 输入为`float16`或`bfloat16`，输出为`int8`的场景：入参`quant_scale2`需存在，`quant_offset2`可选，不传时默认为`0`，若存在入参`deq_scale1`或`quant_scale1`或`deq_scale2`（即不为`nullptr`），则报错并返回。
-    - 入参 `quant_offset2`和`quant_scale2`支持pertensor/perchannel两种格式和`float32`/`bfloat16`两种数据类型。若传入`quant_offset2`，需保证其类型和shape信息与`quant_scale2`一致。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为$BSH$时，要求`quant_scale2`所有维度的乘积等于$H$；其他layout要求乘积等于$N*D$。当输出layout为$BSH$，`quant_scale2` shape传入$(1, 1, H)$或$(H,)$；输出为$BNSD$时，建议传入$(1, N, 1, D)$或$(N, D)$；输出为$BSND$时，建议传入$(1, 1, N, D)$或$(N, D)$。pertensor格式，建议$D$轴对齐到32Byte。
-    - perchannel格式，入参`quant_scale2`和`quant_offset2`暂不支持左padding、Ring Attention或者$D$非32Byte对齐的场景。
-=======
     - 输入为`int8`，输出为`float16`的场景：入参`deq_scale1`、`quant_scale1`、`deq_scale2`需要同时存在，若存在入参`quant_offset2`或`quant_scale2`（即不为`None`），则报错并返回。
     - 输入为`float16`或`bfloat16`，输出为`int8`的场景：入参`quant_scale2`需存在，`quant_offset2`可选，不传时默认为`0`，若存在入参`deq_scale1`或`quant_scale1`或`deq_scale2`（即不为`None`），则报错并返回。
     - 入参 `quant_offset2`和`quant_scale2`支持pertensor/perchannel两种格式和`float32`/`bfloat16`两种数据类型。若传入`quant_offset2`，需保证其类型和shape信息与`quant_scale2`一致。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为$BSH$时，要求`quant_scale2`所有维度的乘积等于$H$；其他layout要求乘积等于$N*D$。当输出layout为$BSH$，`quant_scale2` shape传入$(1, 1, H)$或$(H,)$；输出为$BNSD$时，建议传入$(1, N, 1, D)$或$(N, D)$；输出为$BSND$时，建议传入$(1, 1, N, D)$或$(N, D)$。pertensor格式，建议$D$轴对齐到32Byte。
     - perchannel格式，入参`quant_scale2`和`quant_offset2`暂不支持左padding、Ring Attention或者$D$非32Byte对齐的场景。
->>>>>>> 7.2.0
     - 输出为`int8`时，暂不支持sparse为`band`且`pre_tokens`/`next_tokens`为负数。
 
 - `pse_shift`功能使用限制如下：
