@@ -26,9 +26,6 @@ torch_npu.npu_yolo_boxes_encode(self, gt_bboxes, stride, performance_mode=False)
 - **strides** (`Tensor`)：必选参数，各框比例。shape为(N,)数据类型为`int32`的1D张量。“N”表示ROI的数量。
 - **performance_mode** (Bool)：可选参数，选择性能模式为“high_precision”或“high_performance”。如果值为True，则性能模式为“high_performance”；如果值为False，则性能模式为“high_precision”，默认值为False。当输入数据类型为`float32`时，选择“high_precision”，输出张量精度将小于0.0001。当输入数据类型为`float16`时，选择“high_performance”，ops将是最佳性能，但精度将只小于0.005。
 
-## 返回值说明
-`Tensor`
-
 ## 约束说明
 
 输入锚点框支持的最大N为20480。
