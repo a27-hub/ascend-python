@@ -3040,5 +3040,6 @@ class TestNpuDynamicBlockQuant(TestCase):
         self.assertEqual(actual_scale.shape, fake_scale.shape)
 
 
+
 if __name__ == "__main__":
     run_tests()
