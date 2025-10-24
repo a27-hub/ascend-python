@@ -77,11 +77,15 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     const c10::optional<at::Tensor> &c_kv_scale,
     const c10::optional<at::Tensor> &k_rope_offset,
     const c10::optional<at::Tensor> &c_kv_offset,
+    const c10::optional<at::Tensor> &v,
     double epsilon,
     c10::string_view cache_mode,
     bool is_output_kv)
 {
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || v.dim() == 4), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || v.dtype == kv.dtype), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || (v.size(0) == kv.size(0) && v.size(1) == kv.size(1) && v.size(2) == kv.size(2))), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
@@ -90,9 +94,17 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
     at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
     at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache, ckv_cache,
+
+    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
+    if(is_kv_rnrc_V2_available){
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
+                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v, epsilon, cache_mode_ptr,
+                                 is_output_kv, k_rope, c_kv);
+    } else {
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                                  k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
+    }
     return std::tie(k_rope, c_kv);
 }
 
@@ -108,11 +120,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     const c10::optional<at::Tensor> &c_kv_scale,
     const c10::optional<at::Tensor> &k_rope_offset,
     const c10::optional<at::Tensor> &c_kv_offset,
+    const c10::optional<at::Tensor> &v,
     double epsilon,
     c10::string_view cache_mode,
     bool is_output_kv)
 {
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || v.dim() == 4), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || v.dtype == kv.dtype), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v==None || (v.size(0) == kv.size(0) && v.size(1) == kv.size(1) && v.size(2) == kv.size(2))), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
@@ -125,9 +141,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     at::Tensor k_cache_inplace = k_cache.clone();
     at::Tensor ckv_cache_inplace = ckv_cache.clone();
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache_inplace,
+    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
+    if(is_kv_rnrc_V2_available){
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache_inplace,
                                  ckv_cache_inplace, k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, epsilon,
                                  cache_mode_ptr, is_output_kv, k_rope, c_kv);
+    } else {
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache_inplace,
+                                 ckv_cache_inplace, k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v, epsilon,
+                                 cache_mode_ptr, is_output_kv, k_rope, c_kv);
+    }
+    
     return std::tie(k_rope, c_kv, k_cache_inplace, ckv_cache_inplace);
 }
 
