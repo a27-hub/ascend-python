@@ -75,7 +75,9 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持TP通信域，要求为一个1维张量，shape为\(tp\_world\_size, \)，数据类型支持`int32`，数据格式要求为$ND$，支持非连续的Tensor。
 
 -   **x\_active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：要求为一个1维张量。shape为\(BS, \)数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
+         - `comm_alg`设置为"fullmesh"时，要求为一个1维张量。shape为\(BS, \)，数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
+         - `comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求为一个1维或2维张量。当输入为1维时，shape为\(BS, \); 当输入为2维时，shape为\(BS, K\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。当输入为1维时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2维时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
 
 -   **expand\_scales** (`Tensor`)：可选参数，对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`expand_scales`输出。
