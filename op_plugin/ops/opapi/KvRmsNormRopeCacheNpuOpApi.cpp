@@ -19,6 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 const int64_t MAX_DIM = 4;
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache(
     const at::Tensor &kv,
     const at::Tensor &gamma,
@@ -36,12 +37,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     c10::string_view cache_mode,
     bool is_output_kv)
 {
-    TORCH_CHECK((kv.dim() == 4), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dim() == 4), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dtype == kv.dtype), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || (v.size(0) == kv.size(0) && v.size(1) == kv.size(1) && v.size(2) == kv.size(2))), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
+    const at::Tensor &v_tsr = v.value_or(at::Tensor());
+    TORCH_CHECK((v_tsr.dim() == MAX_DIM), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((cos.dim() == 4), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
     c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), gamma.size(0)};
 
@@ -83,9 +85,10 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     bool is_output_kv)
 {
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dim() == 4), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dtype == kv.dtype), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || (v.size(0) == kv.size(0) && v.size(1) == kv.size(1) && v.size(2) == kv.size(2))), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
+    const at::Tensor &v_tsr = v.value_or(at::Tensor());
+    TORCH_CHECK((v_tsr.dim() == MAX_DIM), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
@@ -126,9 +129,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     bool is_output_kv)
 {
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dim() == 4), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || v.dtype == kv.dtype), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((v==None || (v.size(0) == kv.size(0) && v.size(1) == kv.size(1) && v.size(2) == kv.size(2))), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
+    const at::Tensor &v_tsr = v.value_or(at::Tensor());
+    TORCH_CHECK((v_tsr.dim() == MAX_DIM), "4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
