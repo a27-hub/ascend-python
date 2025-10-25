@@ -16,6 +16,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+const int64_t INT4_NUMS_IN_INT32 = 8;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
     const at::Tensor & x,
@@ -32,7 +33,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
     int k = x_size[1];
     bool is_a8w4 = x.dtype() == at::kChar && weight.dtype() == at::kInt;
     if (is_a8w4) {
-        n *= 8;
+        n *= INT4_NUMS_IN_INT32;
     }
 
     at::Tensor output = npu_preparation::apply_tensor_without_format({m, n/2}, c10::dtype(c10::ScalarType::Char));
