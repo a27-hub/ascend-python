@@ -9349,6 +9349,63 @@ torch_npu.npu_dequant_swiglu_quant(
 )
 
 _add_torch_npu_docstr(
+    "npu_clipped_swiglu",
+    """
+接口定义：
+torch_npu.npu_clipped_swiglu(Tensor x, *, Tensor? group_index=None, int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved) -> Tensor
+功能描述：
+新增带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。
+
+参数说明:
+x：Tensor类型，必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，尾轴为偶数。
+group_index：Tensor类型，可选参数，当前只支持count模式，表示该模式下指定分组的Tokens数（要求非负整数）。要求是1D的Tensor，数据类型支持int64，数据格式ND。
+dim： int类型，可选参数，需要进行切分的维度序号，默认为-1。
+alpha：float类型，可选参数，glu激活函数系数，默认 1.702。
+limit：float类型，可选参数，变体swiglu输入门限，默认 7.0。
+bias：float类型，可选参数，变体swiglu计算中的偏差，默认 1.0。
+interleaved： bool类型，可选参数，表示输入x是否按交错方式切分，默认为true。
+
+输出说明
+out：Tensor类型，表示激活函数的输出，数据类型同输入x，在维度上，第dim维是输入x的1/2，其余维度与输入x相同，数据格式为ND。
+
+支持的型号
+A2训练、推理系列产品
+A3训练、推理系列产品
+
+调用示例
+import os
+import shutil
+import unittest
+
+import torch
+import torch_npu
+from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
+
+class TestNPUClippedSwiglu(TestCase):
+    def test_npu_clipped_swiglu(self, device="npu"):
+        tokens_num = 4608
+        hidden_size = 2048
+        x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
+        group_index = torch.tensor([tokens_num], dtype=torch.int64)
+        out = torch_npu.npu_clipped_swiglu(
+            x.npu(),
+            group_index=group_index.npu(),
+            dim=-1,
+            alpha=1.702,
+            limit=7.0,
+            bias=1.0,
+            interleaved=True
+        )
+
+if __name__ == "__main__":
+    run_tests()
+
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
