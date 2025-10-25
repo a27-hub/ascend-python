@@ -30,6 +30,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant(
     int n = weight.sizes()[2];
     int m = x_size[0];
     int k = x_size[1];
+    bool is_a8w4 = x.dtype() == at::kChar && weight.dtype() == at::kInt;
+    if (is_a8w4) {
+        n *= 8;
+    }
 
     at::Tensor output = npu_preparation::apply_tensor_without_format({m, n/2}, c10::dtype(c10::ScalarType::Char));
     at::Tensor output_scale = npu_preparation::apply_tensor_without_format(x_scale, {m});
