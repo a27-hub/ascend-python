@@ -146,7 +146,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本仅支持""，"fullmesh_v1"，"fullmesh_v2"三种输入方式。
         - ""：默认值，不使能性能优化模板；
         - "fullmesh_v1"：不使能性能优化模板；
-        - "fullmesh_v2"：使能性能优化模板，commAlg仅在tp\_world\_size取值为1时生效。
+        - "fullmesh_v2"：使能性能优化模板，其中commAlg仅在tp\_world\_size取值为1时生效，且不支持在各卡Bs不一致、输入xActiveMask和特殊专家场景下使能。
 
 -   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当前版本不支持，传0即可。
