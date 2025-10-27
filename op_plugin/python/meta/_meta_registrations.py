@@ -2185,7 +2185,7 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
                                    cache_mode='Norm', is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
-    if v!=None:
+    if v!=None and v.dim()>0:
         if v.dtype != kv.dtype:
             raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
         if v.dim() != 4:
@@ -2217,7 +2217,7 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
                                            cache_mode='Norm', is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
-    if v!=None:
+    if v!=None and v.dim()>0:
         if v.dtype != kv.dtype:
             raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
         if v.dim() != 4:
@@ -2246,7 +2246,7 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
                                                       is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
-    if v!=None:
+    if v!=None and v.dim()>0:
         if v.dtype != kv.dtype:
             raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
         if v.dim() != 4:
