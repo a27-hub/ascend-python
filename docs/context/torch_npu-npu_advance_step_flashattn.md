@@ -56,10 +56,10 @@ torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_posi
 ## 约束说明
 
 - 输入`input_tokens`，`input_positions`，`seq_lens`，`slot_mapping`和`block_tables`的第一维长度与`num_seqs`相同。
-- 投机场景下，输入input_tokens的第二维长度为`1 + spec_num`。
+- 投机场景下，输入`input_tokens`的第二维长度为`1 + spec_num`。
 - 输入`sampled_token_ids`的第一维长度与`num_queries`相同且第二维长度为1。
 - 输入`block_tables`的shape的第二维长度大于`seq_lens`中最大值除以`block_size`的整数部分。
-- 非投机场景下，输入`num_seqs`必须大于输入`num_queries`；投机场景下，`num_queries`与`num_seqs`相同
+- 非投机场景下，输入`num_seqs`必须大于输入`num_queries`；投机场景下，`num_queries`与`num_seqs`相同。
 - 该接口仅限推理场景使用，无反向函数。
 
 ## 调用示例
