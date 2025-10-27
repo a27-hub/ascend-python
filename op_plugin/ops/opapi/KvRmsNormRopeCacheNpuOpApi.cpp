@@ -50,16 +50,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
-        const at::Tensor &v_tsr = v.value_or(at::Tensor());
-        const int64_t v_dim = v_tsr.dim();
-        if(v_dim>0){
-            // Validate v tensor if not none
-            TORCH_CHECK((v_tsr.dim() == MAX_DIM), "OpApi: 4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "OpApi: v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "OpApi: v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
-        }
+        const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
-                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v, epsilon, cache_mode_ptr,
+                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v_tsr_opt, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
@@ -102,16 +95,9 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
-        const at::Tensor &v_tsr = v.value_or(at::Tensor());
-        const int64_t v_dim = v_tsr.dim();
-        if(v_dim>0){
-            // Validate v tensor if not none
-            TORCH_CHECK((v_tsr.dim() == MAX_DIM), "OpApi: 4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "OpApi: v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "OpApi: v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
-        }
+        const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
-                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v, epsilon, cache_mode_ptr,
+                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v_tsr_opt, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
@@ -156,16 +142,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
-        const at::Tensor &v_tsr = v.value_or(at::Tensor());
-        const int64_t v_dim = v_tsr.dim();
-        if(v_dim>0){
-            // Validate v tensor if not none
-            TORCH_CHECK((v_tsr.dim() == MAX_DIM), "OpApi: 4D tensor expected for input v" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.dtype() == kv.dtype()), "OpApi: v MUST have same data type as kv!" + OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK((v_tsr.size(0) == kv.size(0) && v_tsr.size(1) == kv.size(1) && v_tsr.size(2) == kv.size(2)), "OpApi: v MUST have same token shape [B,N,S] as kv!" + OPS_ERROR(ErrCode::PARAM));
-        }
+        const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
-                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v, epsilon, cache_mode_ptr,
+                                 k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, v_tsr_opt, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
