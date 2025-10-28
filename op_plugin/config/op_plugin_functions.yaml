@@ -5490,6 +5490,10 @@ custom:
     op_api: all_version
     tags: nondeterministic_seeded
 
+  - func: npu_sparse_flash_attention_antiquant(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+
   - func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor
     acl_op: all_version
 
