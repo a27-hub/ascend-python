@@ -747,9 +747,10 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             x.new_empty(tuple(expert_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
 
+
 def get_query_and_attention_out_layout(query, input_layout):
     class ParserLayout:
-        def _init_(self, qLayout: str, outLayout: str, qDim: int):
+        def __init__(self, qLayout: str, outLayout: str, qDim: int):
             self.qLayout = qLayout
             self.outLayout = outLayout
             self.qDim = qDim
@@ -892,6 +893,7 @@ def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
         lse_out = torch.empty([b, n1, s1, 1], dtype=torch.float32, device='meta')
     return lse_out
 
+
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
                                     dequant_scale1=None, quant_scale1=None, dequant_scale2=None, quant_scale2=None,
@@ -915,6 +917,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     else:
         return attention_out
 
+
 @impl(m, "npu_fused_infer_attention_score_v2")
 def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None,
                                          block_table=None, dequant_scale_query=None, dequant_scale_key=None, dequant_offset_key=None, dequant_scale_value=None,
@@ -937,6 +940,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
         return attention_out, lse_out
     else:
         return attention_out
+
 
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
