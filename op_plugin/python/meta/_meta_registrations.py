@@ -1122,6 +1122,19 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             return (torch.empty_like(tmp_out), torch.empty([0], dtype=torch.float32, device='meta'))
 
 
+@impl(m, "npu_sparse_flash_attention_antiquant")
+def npu_sparse_flash_attention_antiquant_forward(query, key, value, sparse_indices, scale_value, sparse_block_size, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, layout_query='BSND',
+                                                layout_kv='BSND', sparse_mode=3, attention_mode=0, quant_scale_repo_mode=0, tile_size=0,
+                                                rope_head_dim=0):
+    if layout_query == "BSND":
+        out = torch.empty([query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3) - rope_head_dim], dtype=query.dtype, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(DIM_0), query.size(DIM_1), query.size(DIM_2) - rope_head_dim], dtype=query.dtype, device='meta')
+    return out
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
