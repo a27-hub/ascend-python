@@ -5913,6 +5913,43 @@ custom:
   - func: npu_fusion_attention_grad_v2(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale_value=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
 
+  - func: npu_sparse_lighting_indexer_kl_loss_train(Tensor query, Tensor key, Tensor query_index, Tensor key_index, Tensor weights, Tensor sparse_indices, Tensor softmax_max, Tensor softmax_sum, Tensor? query_rope, Tensor? key_rope, Tensor? actual_seq_lengths_query, Tensor? actual_seq_lengths_key, float scale_value=1., str? layout="BSND", int? sparse_mode=3, bool? deterministic=False) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      out0:
+        size: query_index
+        dtype: query_index
+      out1:
+        size: key_index
+        dtype: key_index
+      out2:
+        size: weights
+        dtype: weights
+      out3:
+        size: {1}
+        dtype: at::kFloat
+      exec: aclnnSparseLightingIndexerKLLossTrain
+
+  - func: npu_sparse_flash_attention_grad(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, Tensor d_out, Tensor out, Tensor softmax_max, Tensor softmax_sum, Tensor? query_rope, Tensor? key_rope, Tensor? actual_seq_lengths_query, Tensor? actual_seq_lengths_key, float scale_value, int64_t sparse_block_size, str? layout="BSND", int64_t? sparse_mode=3, bool? deterministic=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: [v2.1, newest]
+    gen_opapi:
+      out0:
+        size: query
+        dtype: query
+      out1:
+        size: key
+        dtype: key
+      out2:
+        size: value
+        dtype: value
+      out3:
+        size: query_rope
+        dtype: query_rope
+      out4:
+        size: key_rope
+        dtype: key_rope
+      exec: aclnnSparseFlashAttentionGrad
+
   - func: npu_fused_attention_layernorm_qkv_fwd(Tensor x, Tensor kernel_query, Tensor kernel_key, Tensor kernel_value, Tensor gamma, Tensor beta, Tensor? bias_query=None, Tensor? bias_key=None, Tensor? bias_value=None, int seq_len=128, int num_heads=12, float eps=1e-05) -> Tensor[]
     acl_op: all_version
 
