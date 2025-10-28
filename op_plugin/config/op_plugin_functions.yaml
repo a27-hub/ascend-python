@@ -7402,6 +7402,10 @@ custom:
   - func: npu_sort_v2.out(Tensor self, int dim=-1, bool descending=False, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
 
+  - func: npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor selected_indices, float scale_value, int selected_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode = 0, bool return_softmax_lse = False, Tensor? softmax_max, Tensor? softmax_sum) -> Tensor
+    op_api: all_version
+    internal_format_opapi: all_version
+    
   - func: npu_stride_add(Tensor self, Tensor other, Scalar offset1, Scalar offset2, Scalar c1_len) -> Tensor
     acl_op: all_version
 
