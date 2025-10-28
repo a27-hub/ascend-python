@@ -9352,7 +9352,7 @@ _add_torch_npu_docstr(
     "npu_clipped_swiglu",
     """
 接口定义：
-torch_npu.npu_clipped_swiglu(Tensor x, *, Tensor? group_index=None, int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved) -> Tensor
+torch_npu.npu_clipped_swiglu(Tensor x, *, Tensor? group_index=None, int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved=True) -> Tensor
 功能描述：
 新增带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。
 
