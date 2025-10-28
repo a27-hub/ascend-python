@@ -1,10 +1,7 @@
 import unittest
 import torch
 import torch_npu
-import torchair
 import os
-import torch.nn as nn
-from torchair.configs.compiler_config import CompilerConfig
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
@@ -37,7 +34,7 @@ def _set_all_flags():
 
 
 class TestAttentionWorkerScheduler(TestCase):
-    @unittest.skip("skip case before cann supported")
+    @unittest.skip("skip case until cann supported")
     @SupportedDevices(['Ascend910B'])
     def test_attention_worker_scheduler_(self):
         _set_all_flags()
@@ -45,7 +42,7 @@ class TestAttentionWorkerScheduler(TestCase):
         torch_npu.attention_worker_scheduler_(schedule_context)
         self.assertNotEqual(schedule_context1, schedule_context)
 
-    @unittest.skip("skip case before cann supported")
+    @unittest.skip("skip case until cann supported")
     @SupportedDevices(['Ascend910B'])
     def test_attention_worker_scheduler(self):
         _set_all_flags()
