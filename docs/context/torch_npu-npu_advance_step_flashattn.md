@@ -16,7 +16,7 @@
      inputTokens[blockIdx] = sampledTokenIds[blockIdx]  \\
      inputPositions[blockIdx] = seqLens[blockIdx] \\
      seqLens[blockIdx] = seqLens[blockIdx] + 1 \\
-
+     
      slotMapping[blockIdx] = ({blockTables}[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx]\%blockSize)
      $$
 - 投机场景计算公式：$i$是当前代码被执行的请求的索引。
