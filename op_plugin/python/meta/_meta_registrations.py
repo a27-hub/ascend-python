@@ -430,12 +430,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -586,7 +586,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         torch._check(
             token_x_dim == 3,
@@ -1017,7 +1017,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1082,8 +1082,8 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 
 
 @impl(m, "npu_moe_distribute_combine_v2")
-def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
-                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0, 
+def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
+                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, group_tp="", tp_world_size=0,
                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
@@ -1184,6 +1184,14 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
 
     return y
 
+@impl(m, "npu_grouped_matmul_add_")
+def npu_grouped_matmul_add__meta(y, x1, x2, group_list, *, transpose_x = True,
+                                 transpose_weight = False, group_type = 2, group_list_type = 0):
+    torch._check(
+        group_type == 2,
+        lambda: f"group_type only supports 2, but got {group_type} {ops_error(ErrCode.VALUE)}",
+    )
+    return y
 
 @impl(m, "npu_grouped_matmul_finalize_routing")
 def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bias=None, offset=None,
@@ -2326,11 +2334,11 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 
