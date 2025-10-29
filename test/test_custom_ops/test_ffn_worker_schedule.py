@@ -32,7 +32,7 @@ def _set_all_flags():
     int32_view[:] = 1
 
 
-class TestAttentionWorkerScheduler(TestCase):
+class TestFfnWorkerScheduler(TestCase):
     @unittest.skip("skip case until cann supported")
     @SupportedDevices(['Ascend910B'])
     def test_ffn_worker_scheduler_(self):
