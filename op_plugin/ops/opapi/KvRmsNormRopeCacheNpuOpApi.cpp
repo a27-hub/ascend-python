@@ -53,17 +53,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     const int64_t vDim = v.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
+
+    // Shared init for prec-cache shapes
+    c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
+    c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
+    for(int64_t i=0;i<TOKEN_FEATURE_DIM_IDX;++i){
+        k_rope_shape[i] = kv.size(i);
+        c_kv_shape[i] = kv.size(i);
+    }
 
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
-        // Use default Dk and Dv sizes for V1
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+        // Use Dk and Dv sizes for V1 as defaults
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V1_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V1_MODE_IDX];
     }
     
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
@@ -111,17 +119,25 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     const int64_t vDim = v.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
-    
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
+
+    // Shared init for prec-cache shapes
+    c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
+    c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
+    for(int64_t i=0;i<TOKEN_FEATURE_DIM_IDX;++i){
+        k_rope_shape[i] = kv.size(i);
+        c_kv_shape[i] = kv.size(i);
+    }
+
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
-        // Use default Dk and Dv sizes for V1
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+        // Use Dk and Dv sizes for V1 as defaults
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V1_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V1_MODE_IDX];
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
@@ -168,17 +184,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     const int64_t vDim = v.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
+
+    // Shared init for prec-cache shapes
+    c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
+    c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
+    for(int64_t i=0;i<TOKEN_FEATURE_DIM_IDX;++i){
+        k_rope_shape[i] = kv.size(i);
+        c_kv_shape[i] = kv.size(i);
+    }
 
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
-        // Use default Dk and Dv sizes for V1
-        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
-        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+        // Use Dk and Dv sizes for V1 as defaults
+        k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V1_MODE_IDX];
+        c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V1_MODE_IDX];
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
