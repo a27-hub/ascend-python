@@ -54,7 +54,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
     printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
-    const int
+
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
@@ -112,7 +112,7 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
     printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
-    const int
+    
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
@@ -169,7 +169,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
     printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
-    const int
+
     if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
         printf("verified input v tensor.\n");
