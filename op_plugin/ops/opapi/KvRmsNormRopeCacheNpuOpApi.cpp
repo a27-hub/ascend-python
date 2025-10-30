@@ -54,8 +54,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     const int64_t vDim = v_tsr_opt.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
-
     // Shared init for prec-cache shapes
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
     c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
@@ -66,7 +64,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
 
     if(is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
-        printf("verified input v tensor.\n");
+        //printf("verified input v tensor.\n");
         k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
         c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
@@ -86,7 +84,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
-        printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
+        //printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                                  k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
@@ -120,8 +118,6 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     const int64_t vDim = v_tsr_opt.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
-
     // Shared init for prec-cache shapes
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
     c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
@@ -132,7 +128,7 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
 
     if(is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
-        printf("verified input v tensor.\n");
+        //printf("verified input v tensor.\n");
         k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
         c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
@@ -152,7 +148,7 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
-        printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
+        //printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                                  k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
@@ -185,8 +181,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     const int64_t vDim = v_tsr_opt.dim();
     static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
 
-    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available ? 1 : 0);
-
     // Shared init for prec-cache shapes
     c10::SmallVector<int64_t, SIZE> k_rope_shape = {0, 0, 0, 0};
     c10::SmallVector<int64_t, SIZE> c_kv_shape = {0, 0, 0, 0};
@@ -197,7 +191,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
 
     if(is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
         // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
-        printf("verified input v tensor.\n");
+        //printf("verified input v tensor.\n");
         k_rope_shape[TOKEN_FEATURE_DIM_IDX] = DK_SIZES[V2_MODE_IDX];
         c_kv_shape[TOKEN_FEATURE_DIM_IDX] = DV_SIZES[V2_MODE_IDX];
     } else{
@@ -221,7 +215,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
                                  is_output_kv, k_rope, c_kv);
     }else{
         // Compatibility for CANN supports only V1
-        printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
+        //printf("aclnnKvRmsNormRopeCacheV2 is not available, Switch to aclnnKvRmsNormRopeCache.\n");
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCache, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                                  k_rope_scale, c_kv_scale, k_rope_offset, c_kv_offset, epsilon, cache_mode_ptr,
                                  is_output_kv, k_rope, c_kv);
