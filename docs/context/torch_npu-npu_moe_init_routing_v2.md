@@ -67,36 +67,51 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 -   **expert_tokens_num_type** (`int`)：可选参数，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。当前仅支持1和2。
 -   **expert_tokens_num_flag** (`bool`)：可选参数，表示是否输出`expert_token_cumsum_or_count`，默认False表示不输出。当前仅支持True。
 -   **quant_mode** (`int`)：可选参数，表示量化模式，支持取值为0、1、-1。0表示静态量化（默认值，但当前版本暂不支持），-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。
--   **active_expert_range** (`List[int]`)：可选参数，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。
+-   **active_expert_range** (`List[int]`)：可选参数（目前默认值为`[]`，因此必须传入），表示活跃expert的范围。数组内值的范围为`[expert_start, expert_end]`，表示活跃的expert范围在`[expert_start, expert_end)`区间内，左闭右开。要求值大于等于0，并且`expert_start`小于`expert_end`，`expert_end`不大于`expert_num`。
 -   **row_idx_type** (`int`)：可选参数，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。
 
 ## 返回值说明<a name="zh-cn_topic_0000002271534921_section18510124618368"></a>
 
--   **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，要求是2维张量，shape为(NUM_ROWS\*K, H)。非量化场景下数据类型同`x`；量化场景下数据类型支持`int8`。数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余为无效数据。其中available_idx_num为`expert_idx`中`active_expert_range`范围的元素的个数。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
--   **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS\*K, )，数据类型支持`int32`，数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余由`row_idx_type`决定。其中available_idx_num为`expert_idx`中`active_expert_range`范围的元素的个数。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
--   **expert_token_cumsum_or_count** (`Tensor`)：在`expert_tokens_num_typ`e为1的场景下，要求是1维张量，表示`active_expert_range`范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`int64`，数据格式要求为$ND$。
+-   **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，要求是2维张量，shape为(NUM_ROWS\*K, H)。非量化场景下数据类型同`x`；量化场景下数据类型支持`int8`。数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余为无效数据。其中available_idx_num为`expert_idx`中`active_expert_range`范围的元素的个数。量化场景下（`quant_mode`输入不为-1时），当`x`的数据类型为`int8`时，输出值无意义。
+-   **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS\*K, )，数据类型支持`int32`，数据格式要求为$ND$。当`row_idx_type`为0时，有效元素与无效元素共存，其中无效元素由-1填充；当`row_idx_type`为1时，前`available_idx_num`个元素有效，其余无效元素值未定义。其中`available_idx_num`为`expert_idx`在`active_expert_range`范围的元素的个数。量化场景下（`quant_mode`输入不为-1时），当`x`的数据类型为`int8`时，输出值无意义。
+-   **expert_token_cumsum_or_count** (`Tensor`)：数据类型支持`int64`，数据格式要求为$ND$。
+    - 在`expert_tokens_num_type`为1的场景下，要求是1维张量，表示`active_expert_range`范围内每个expert对应的处理token的总数。shape为(`expert_end`-`expert_start`,)。
+    - 在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(`expert_num`, 2)，表示`active_expert_range`范围内的每个expert的`expert_idx`及其对应处理的token总数。有效元素对是指`expert_idx`在`active_expert_range`范围内，且处理的token数不为0的元素对，这些有效元素对按原顺序存放在Tensor头部。如果有效元素对的数量少于`expert_num`，其后会跟一对元素对(0,0)以表示有效元素对的结束。
 -   **expanded_scale** (`Tensor`)：数据类型支持`float32`，数据格式要求为$ND$。令available_idx_num为`active_expert_range`范围的元素的个数。
-    -   非量化场景下，shape为(NUM_ROWS\*K,)。当`scale`未输入时，输出值无意义；当`scale`输入时，输出表示一个1维张量，前available_idx_num\*H个元素为有效数据，其余为无效数据。
-    -   动态quant场景下，输出量化计算过程中`scale`的中间值，shape为(NUM_ROWS \*K)。当`scale`未输入时，输出值无意义，输出表示一个1维张量，前available_idx_num个元素为有效数据，其余为无效数据，若`x`的输入类型为`int8`，输出值无意义。
+    -   非量化（输入`quant_mode`为-1）场景下，shape为(NUM_ROWS\*K,)。当`scale`未输入时，输出值无意义；当`scale`输入时，输出表示一个1维张量，前`available_idx_num*H`个元素为有效数据，其余为无效数据。
+    -   动态量化（输入`quant_mode`为1）场景下，输出量化计算过程中`scale`的中间值，shape为(NUM_ROWS \*K)。当`scale`未输入时，输出值无意义，输出表示一个1维张量，前`available_idx_num`个元素为有效数据，其余为无效数据，若`x`的输入类型为`int8`，输出值无意义。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
 -   该接口支持推理场景下使用。
 -   该接口支持图模式。
 -   不支持静态量化模式。
--   进入低时延性能模板需要同时满足以下条件：
-    -   `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
-    -   `x`数据类型要求：`bfloat16``
-    -   属性要求：active_expert_range=[0, 256]、 quant_mode=1、expert_tokens_num_type=2、expert_num=256
+-   该接口在部分产品型号下，支持两种性能模板。进入两种性能模板需要分别额外满足以下条件，不满足条件则进入通用模板：
+    -   支持性能模板的产品型号：
+        -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
+        -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+    -   性能模板的约束条件：
+        -   进入低时延性能模板需要同时满足以下条件：
+            -   x、expert_idx、scale输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
+            -   x数据类型要求：bfloat16
+            -   属性要求：active_expert_range=[0, 256]、 quant_mode=1、expert_tokens_num_type=2、expert_num=256
 
--   进入大batch性能模板需要同时满足以下条件：
-    -   NUM_ROWS范围为[384, 8192]
-    -   K=8
-    -   expert_num=256
-    -   expert_end-expert_start<=32
-    -   quant_mode=-1
-    -   row_idx_type=1
-    -   expert_tokens_num_type=1
+        -   进入大batch性能模板需要同时满足以下条件：
+            -   NUM_ROWS范围为[384, 8192]
+            -   K=8
+            -   expert_num=256
+            -   expert_end-expert_start<=32
+            -   quant_mode=-1
+            -   row_idx_type=1
+            -   expert_tokens_num_type=1
+
+## 支持的型号<a name="zh-cn_topic_0000002271534921_section1951034683619"></a>
+
+-   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
+
+-   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+
+-   <term>昇腾910_95 AI处理器</term>
 
 ## 调用示例<a name="zh-cn_topic_0000002271534921_section12510194643618"></a>
 
