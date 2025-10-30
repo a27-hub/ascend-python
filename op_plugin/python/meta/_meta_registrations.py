@@ -23,7 +23,7 @@ class WEIGHT_QUANT_MODE(Enum):
     FULL_QUANT = 2
 
 
-class KV_QUANT_MODE(Enum):
+class KV_CACHE_QUANT_MODE(Enum):
     NO_QUANT = 0,
     PER_TENSOR = 1,
     PER_CHANNEL = 2,
@@ -277,7 +277,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_norm_shape.append(1)
 
     # kvcache量化
-    if weight_quant_mode == WEIGHT_QUANT_MODE.FULL_QUANT.value and kv_cache_quant_mode == KV_QUANT_MODE.PER_TENSOR.value:
+    if weight_quant_mode == WEIGHT_QUANT_MODE.FULL_QUANT.value and kv_cache_quant_mode == KV_CACHE_QUANT_MODE.PER_TENSOR.value:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
@@ -385,7 +385,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_norm_shape.append(1)
 
     # kvcache量化
-    if weight_quant_mode == WEIGHT_QUANT_MODE.FULL_QUANT.value and kv_cache_quant_mode == KV_QUANT_MODE.PER_TENSOR.value:
+    if weight_quant_mode == WEIGHT_QUANT_MODE.FULL_QUANT.value and kv_cache_quant_mode == KV_CACHE_QUANT_MODE.PER_TENSOR.value:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
