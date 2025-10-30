@@ -1232,6 +1232,7 @@ actual_seq_kvlen: int类型数组, 可选参数, varlen场景时需要传入此�
 比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_kvlen传: 2 4 6 8 10. 
 sparse_mode: 整型, 表示sparse的模式, 可选参数. 数据类型支持int64, 默认值为0, 支持配置值为0、1、2、3、4、5、6、7、8. 当整网的atten_mask都相同且shape小于2048*2048时, 建议使用defaultMask模式, 来减少内存使用量. 综合约束请见约束说明. 
 softmax_layout: string类型，可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input\_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
+sink_num: 整型, 可选参数. 数据类型支持int64, 默认值为0, 当sink_num > 0时表示在kv序列前面加入若干个固定的sink_kv充当attention sink. 综合约束请见约束说明. 
 表1 sparse_mode不同取值场景说明
 sparse_mode
 0: defaultMask模式. 
