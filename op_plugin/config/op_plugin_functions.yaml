@@ -5517,7 +5517,13 @@ custom:
 
   - func: fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
+    op_api: all_version
     exposed: all_version
+    gen_opapi:
+      out:
+        size: self
+        dtype: self
+      exec: aclnnFastGelu
 
   - func: image_normalize(Tensor self, float[]? mean, float[]? variance, int dtype=0) -> Tensor
     acl_op: v2.1
