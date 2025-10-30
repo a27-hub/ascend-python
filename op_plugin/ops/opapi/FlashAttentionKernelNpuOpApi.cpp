@@ -375,7 +375,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout)
+    c10::string_view softmax_layout, int64_t sink_num)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
@@ -530,7 +530,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
     static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
     if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
-        if (softmax_layout_str == "TND" && is_fa_V4_available) {
+        if (softmax_layout_str == "TND" && is_fa_V4_available && sink_num==0) {
             softmax_layout_str = "same_as_input";
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
@@ -547,7 +547,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
                 ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
-                input_layout_char, inner_precise, sparse_mode, softmax_max, softmax_sum,
+                input_layout_char, inner_precise, sparse_mode, sink_num, softmax_max, softmax_sum,
                 softmax_out, attention_score);
         }
     } else {
@@ -863,7 +863,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout)
+    c10::string_view softmax_layout, int64_t sink_num)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
@@ -1035,7 +1035,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
                 aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
                 ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
-                input_layout_char, inner_precise, sparse_mode, softmax_max, softmax_sum,
+                input_layout_char, inner_precise, sparse_mode, sink_num, softmax_max, softmax_sum,
                 softmax_out, attention_score);
         }
     } else {
