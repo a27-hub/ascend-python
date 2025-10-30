@@ -18,7 +18,16 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-const int64_t MAX_DIM = 4;
+constexpr int64_t TOKEN_FEATURE_DIM_IDX = 3;
+constexpr int64_t AVAILABLE_VERSION_NUM = 2;
+constexpr int64_t MAX_DIM = 4;
+
+// V1: RmsNorm(Dv=512) -> v_cache, Rope(Dk=64) -> k_cache
+// V2: Dv(128) -> v_cache, Concat(Rope(RmsNorm(Dk=192)(-63:)), RmsNorm(Dk=192)(:-63)) -> k_cache
+constexpr int64_t V1_MODE_IDX = 0;
+constexpr int64_t V2_MODE_IDX = 1;
+constexpr int64_t DK_SIZES[AVAILABLE_VERSION_NUM] = {64, 192};
+constexpr int64_t DV_SIZES[AVAILABLE_VERSION_NUM] = {512, 128};
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache(
     const at::Tensor &kv,
@@ -40,14 +49,27 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
-    c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
-    c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), gamma.size(0)};
 
+    const int64_t vDim = v.dim();
+    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
+
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
+    const int
+    if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
+        // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
+        printf("verified input v tensor.\n");
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+    } else{
+        // Use default Dk and Dv sizes for V1
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+    }
+    
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
     at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
     at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
 
-    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
         const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
@@ -85,14 +107,27 @@ std::tuple<at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_cache_v2(
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
-    c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
-    c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), gamma.size(0)};
+    
+    const int64_t vDim = v.dim();
+    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
+
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
+    const int
+    if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
+        // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
+        printf("verified input v tensor.\n");
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+    } else{
+        // Use default Dk and Dv sizes for V1
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+    }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
     at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
     at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
 
-    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
         const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
@@ -129,17 +164,31 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_kv_rmsnorm_rope_c
     TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((cos.dim() == MAX_DIM), "4D tensor expected for input cos" + OPS_ERROR(ErrCode::PARAM));
-    c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), cos.size(3)};
-    c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), gamma.size(0)};
+    
+    const int64_t vDim = v.dim();
+    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
+
+    printf('[KvRmsNormRopeCacheNpuOpApi]: received Tensor v with %d dim(s), is_kv_rnrc_V2_available=%d.\n', vDim, is_kv_rnrc_V2_available);
+    const int
+    if(vDim == MAX_DIM && is_kv_rnrc_V2_available && v.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX]){
+        // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
+        printf("verified input v tensor.\n");
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V2_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V2_MODE_IDX]};
+    } else{
+        // Use default Dk and Dv sizes for V1
+        c10::SmallVector<int64_t, SIZE> k_rope_shape = {kv.size(0), kv.size(1), kv.size(2), DK_SIZES[V1_MODE_IDX]};
+        c10::SmallVector<int64_t, SIZE> c_kv_shape = {kv.size(0), kv.size(1), kv.size(2), DV_SIZES[V1_MODE_IDX]};
+    }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
     at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
     at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
+
     // 保证接口对外为functional
     at::Tensor k_cache_inplace = k_cache.clone();
     at::Tensor ckv_cache_inplace = ckv_cache.clone();
 
-    static const bool is_kv_rnrc_V2_available = check_aclnn_kernel_available("aclnnKvRmsNormRopeCacheV2");
     if(is_kv_rnrc_V2_available){
         // V2 : v is ignored in V1
         const at::Tensor &v_tsr_opt = v.value_or(at::Tensor());
