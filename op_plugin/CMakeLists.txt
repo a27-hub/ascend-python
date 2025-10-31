@@ -8,7 +8,8 @@ FILE(GLOB _OPS_PLUGIN_SRCS
 
 FILE(GLOB _OPPLUGIN_BASE_OPS_SRCS
     ops/aclops/*.cpp
-    ops/opapi/*.cpp)
+    ops/opapi/*.cpp
+    ops/dvm/*.cpp)
 
 FILE(GLOB _OPPLUGIN_UTILS_SRCS
     *.cpp
