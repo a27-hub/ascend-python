@@ -16,6 +16,8 @@
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
+#include "op_plugin/AclOpsInterface.h"
+
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
@@ -47,7 +49,7 @@ at::Tensor construct_lightning_indexer_quant_output_tensor(const at::Tensor& que
     return output;
 }
 
-at::Tensor _npu_lightning_indexer_quant(
+at::Tensor npu_lightning_indexer_quant(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &weights,
     const at::Tensor &query_dequant_scale, const at::Tensor &key_dequant_scale,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
