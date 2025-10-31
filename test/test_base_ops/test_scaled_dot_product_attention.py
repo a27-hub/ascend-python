@@ -2,6 +2,7 @@ import unittest
 import torch
 import numpy as np
 import torch.nn
+from torch.nn.attention import sdpa_kernel, SDPBackend
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
@@ -49,6 +50,39 @@ class TestScaledDotProductAttention(TestCase):
         cpu_output = torch.nn.functional.scaled_dot_product_attention(query, key, value, attn_mask=attn_mask, enable_gqa=True)
         npu_output = torch.nn.functional.scaled_dot_product_attention(query.npu(), key.npu(), value.npu(), attn_mask=attn_mask.npu(), enable_gqa=True)
         self.assertRtolEqual(cpu_output, npu_output, 0.001)
+
+
+    def fa_func_eager(self, q, k, v, attn_mask):
+        with sdpa_kernel(
+            [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH],
+            set_priority=True,
+        ):
+            return F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, is_causal=False)
+
+    @torch.compile(backend="aot_eager")
+    def fa_func(self, q, k, v, attn_mask):
+        with sdpa_kernel(
+            [SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION, SDPBackend.MATH],
+            set_priority=True,
+        ):
+            return F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, is_causal=False)
+
+    @unittest.skipIf(torch.__version__ < "2.6.0", "enable_gqa is only supported on torch's version >= 2.6")
+    @SupportedDevices(['Ascend910B'])
+    def test_sdpa_graph(self):
+        dtype = torch.half
+        Eqk, Ev = 64, 64
+        Sq, Skv = 38, 38
+        Hq, Hkv = 32, 32
+        for B in [1, 2, 4]:
+            q = torch.randn(B, Hq, Sq, Eqk, dtype=dtype).npu()
+            k = torch.randn(B, Hkv, Skv, Eqk, dtype=dtype).npu()
+            v = torch.randn(B, Hkv, Skv, Ev, dtype=dtype).npu()
+            attn_mask = torch.zeros(B, Hq, Sq, Skv, dtype=torch.bool).npu()
+            res_eager = self.fa_func_eager(q, k, v, attn_mask)
+            res = self.fa_func(q, k, v, attn_mask)
+        self.assertRtolEqual(res_eager, res, 0.001)
+
 
 if __name__ == "__main__":
     run_tests()
