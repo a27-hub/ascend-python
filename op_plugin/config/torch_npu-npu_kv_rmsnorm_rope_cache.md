@@ -182,8 +182,8 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
 ## 参数说明
 * kv(Tensor，计算输入)：必选参数，公式中用于切分出rms_norm计算所需数据Dv和rope计算所需数据Dk的输入数据。支持[非连续的Tensor](common/非连续的Tensor.md)。shape仅支持4维[B,N,S,D]。[数据格式](common/数据格式.md)支持ND，数据类型支持FLOAT6、BFLOAT16。
 * gamma(Tensor，计算输入)：必选参数，公式中用于rms_norm计算的输入数据。支持[非连续的Tensor](common/非连续的Tensor.md)。shape为1维[Dv,]。[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致。
-* cos(Tensor，计算输入)：必选参数，公式中用于rope计算的输入数据，对输入张量Dk进行余弦变换，支持[非连续的Tensor](common/非连续的Tensor.md)。shape为4维[B,N,S,Dk]或[B,N,1,Dk]，[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致。
-* sin(Tensor，计算输入)：必选参数，公式中用于rope计算的输入数据，对输入张量Dk进行正弦变换。支持[非连续的Tensor](common/非连续的Tensor.md)。shape为4维[B,N,S,Dk]或[B,N,1,Dk]，与cos的shape保持一致。[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致。
+* cos(Tensor，计算输入)：必选参数，公式中用于rope计算的输入数据，对输入张量Dk进行余弦变换，支持[非连续的Tensor](common/非连续的Tensor.md)。shape为4维[B,N,S,D_rope]或[B,N,1,D_rope]，[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致。
+* sin(Tensor，计算输入)：必选参数，公式中用于rope计算的输入数据，对输入张量Dk进行正弦变换。支持[非连续的Tensor](common/非连续的Tensor.md)。shape为4维[B,N,S,D_rope]或[B,N,1,D_rope]，与cos的shape保持一致。[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致。
 * index(Tensor，计算输入)：必选参数，用于指定写入cache的具体索引位置，当index的value数值为-1时，代表跳过更新。支持[非连续的Tensor](common/非连续的Tensor.md)。当cache_mode为Norm时，shape为2维[B,S]；当cache_mode为PA_BNSD、PA_NZ时，shape为1维[B * S]；当cache_mode为PA_BLK_BSND、PA_BLK_NZ时，shape为1维[B\*ceil_div(S,BlockSize)]。[数据格式](common/数据格式.md)支持ND。数据类型支持INT64。 
 * k_cache(Tensor，计算输入/输出)：必选参数，提前申请的cache，输入输出同地址复用。支持[非连续的Tensor](common/非连续的Tensor.md)。当cache_mode为PA场景（cache_mode为PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ）时，shape为4维[BlockNum,BlockSize,N,Dk]；当cache_mode为Norm场景时，shape为4维[Bcache,N,Scache,Dk]。[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致或者INT8。
 * ckv_cache(Tensor，计算输入/输出)：必选参数，提前申请的cache，输入输出同地址复用。支持[非连续的Tensor](common/非连续的Tensor.md)。当cache_mode为PA场景（cache_mode为PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ）时，shape为4维[BlockNum,BlockSize,N,Dv]；当cache_mode为Norm场景时，shape为4维[Bcache,N,Scache,Dv]。[数据格式](common/数据格式.md)支持ND。数据类型与输入kv一致或者INT8。
@@ -202,6 +202,8 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
 * k_cache_prec(Tensor，计算输出)：由is_output_kv控制，表示需要写入到k_cache中的数据，在未经量化和Scatter处理的状态。当is_output_kv为true时，需输出。shape为4维[B,N,S,Dk\_rope]。数据类型与输入kv一致。
 * ckv_cache_prec(Tensor，计算输出)：由is_output_kv控制，表示需要写入到ckv_cache中的数据，在未经量化和Scatter处理的状态。当is_output_kv为true时，需输出。shape为4维[B,N,S,Dk\_rope]。数据类型与输入kv一致。
 ## 约束说明
+* kv/v格式：
+    * 目前仅支持BNSD格式的kv/v作为输入，kv和v的数据类型与[B, N, S]维度必须完全一致。
 * 参数说明里shape格式说明：
     * B为输入kv的batch size，S为输入kv的sequence length，大小由用户输入场景决定，无明确限制。 
     * N为输入kv的head number。场景一与DeepSeekV3网络结构强相关，仅支持N=1。场景二支持N=1,2,4,8。
@@ -214,7 +216,11 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
     * 当cacheModeOptional为Norm时，shape为2维[B,S]，要求index的value值范围为[-1,Scache)。不同的B下，value数值可以重复。
     * 当cacheModeOptional为PA_BNSD、PA_NZ时，shape为1维[B * S]，要求index的value值范围为[-1,BlockNum * BlockSize)。value数值不能重复。
     * 当cacheModeOptional为PA_BLK_BSND、PA_BLK_NZ时，shape为1维[B * ceil_div(S,BlockSize)]，要求index的value的数值范围为[-1,BlockNum * BlockSize)。value/BlockSize的值不能重复。
-* v
+* cos/sin项相关约束：
+    * cos/sin最后一维大小总是和当前场景需要进行Rope计算的输入维度一致。
+    * 在场景一中，仅Dk部分全部参与Rope运算，因而cos/sin的大小为[B,N,S,Dk]，Dk=64。
+    * 在场景二中，Dk仅前64维参与Rope运算，因而cos/sin的大小为[B,N,S,64]。
+* v相关约束:
     * 该参数仅在场景二中作为必须入参，在场景一中会作为无效参数被忽略。
     * 如果需要调用场景二，则必须传入尺寸为[B,N,S,128]的Tensor作为v。
 
