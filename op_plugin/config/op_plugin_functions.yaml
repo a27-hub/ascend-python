@@ -2354,6 +2354,18 @@ official:
         dtype: 'at::native::result_type(grad_output, self)'
       exec: aclnnGeluBackward, grad_output, self, grad_input
 
+  - func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
+    op_api: [v2.6, newest]
+    exposed: [v2.6, newest]
+    gen_opapi:
+      out:
+        size: npu_gelu_mul_output_size(input)
+        dtype: input
+      new_params:
+        approximate_str: 'npu_gelu_approximate_str(approximate)'
+        approximate_ptr: 'const_cast<char*>(approximate_str.c_str())'
+      exec: aclnnGeluMul, input, approximate_ptr, out
+
   - func: glu(Tensor self, int dim=-1) -> Tensor
     acl_op: all_version
     op_api: all_version
