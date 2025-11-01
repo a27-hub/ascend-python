@@ -2225,6 +2225,9 @@
   "func: gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
   "func: glu(Tensor self, int dim=-1) -> Tensor": {
     "version": ["all_version"]
   },
