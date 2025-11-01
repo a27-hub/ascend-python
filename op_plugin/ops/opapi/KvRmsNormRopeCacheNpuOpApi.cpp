@@ -22,8 +22,9 @@ constexpr int64_t TOKEN_FEATURE_DIM_IDX = 3;
 constexpr int64_t AVAILABLE_VERSION_NUM = 2;
 constexpr int64_t MAX_DIM = 4;
 
-// V1: RmsNorm(Dv=512) -> v_cache, Rope(Dk=64) -> k_cache
-// V2: Dv(128) -> v_cache, Concat(Rope(RmsNorm(Dk=192)(-63:)), RmsNorm(Dk=192)(:-63)) -> k_cache
+// 'Vx' below refers to the aclnn api version, NOT pta version.
+// V1(aclnnKvRmsNormRopeCache): RmsNorm(Dv=512) -> v_cache, Rope(Dk=64) -> k_cache
+// V2(aclnnKvRmsNormRopeCacheV2): Dv(128) -> v_cache, Concat(Rope(RmsNorm(Dk=192)(-63:)), RmsNorm(Dk=192)(:-63)) -> k_cache
 constexpr int64_t V1_MODE_IDX = 0;
 constexpr int64_t V2_MODE_IDX = 1;
 constexpr int64_t DK_SIZES[AVAILABLE_VERSION_NUM] = {64, 192};
