@@ -27,6 +27,7 @@ from codegen.context import native_function_manager
 from codegen.api.types import NativeSignature
 from codegen.api import cpp
 from .model import StructInfo, ResInfo, filt_input_tensor
+from packaging import version as V
 
 
 USED_KEYS = ['official', 'custom', 'autograd']
@@ -97,7 +98,7 @@ def is_support_version(op):
     elif op_api_version == 'all_version':
         is_support = True
     elif isinstance(op_api_version, list):
-        is_support = version >= op_api_version[0]
+        is_support = V.parse(version[1:]) >= V.parse(op_api_version[0][1:])
     else:
         is_support = version in op_api_version
     return is_support
