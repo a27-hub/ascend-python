@@ -18,6 +18,7 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Sequence, Tuple
 import yaml
+from packaging import version as V
 
 from codegen.code_template import CodeTemplate
 from codegen.gen import FileManager
@@ -92,12 +93,13 @@ auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 def is_support_version(op):
     op_api_version = op.get('op_api', None)
     version = f"v{PYTORCH_VERSION[0]}.{PYTORCH_VERSION[1]}"
+    parse_version = lambda v: tuple(map(int, v.lstrip('v').split('.')))
     if op_api_version is None:
         is_support = False
     elif op_api_version == 'all_version':
         is_support = True
     elif isinstance(op_api_version, list):
-        is_support = version >= op_api_version[0]
+        is_support = parse_version(version) >= parse_version(op_api_version[0])
     else:
         is_support = version in op_api_version
     return is_support
