@@ -18,6 +18,7 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Sequence, Tuple
 import yaml
+from packaging import version as V
 
 from codegen.code_template import CodeTemplate
 from codegen.gen import FileManager
@@ -97,7 +98,7 @@ def is_support_version(op):
     elif op_api_version == 'all_version':
         is_support = True
     elif isinstance(op_api_version, list):
-        is_support = version >= op_api_version[0]
+        is_support = V.parse(version[1:]) >= V.parse(op_api_version[0][1:])
     else:
         is_support = version in op_api_version
     return is_support
