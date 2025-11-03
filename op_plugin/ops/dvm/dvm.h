@@ -17,6 +17,7 @@
 #ifndef _DVM_H_
 #define _DVM_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 

@@ -4,15 +4,142 @@ from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.operator_support import OperatorSupportBase
 from torch._dynamo.backends.common import aot_autograd
 from torch._decomp import get_decompositions
-from torch_npu._C import Kernel, BinaryOpType, KernelType
-from typing import Any
-
+from torch._inductor.utils import IndentedBuffer
+from torch._inductor.virtualized import V
+from torch._inductor.codegen.common import CSE
+from torch_npu._C import Kernel, BinaryOpType, KernelType, UnaryOpType
+from typing import Any, Optional, List
+import torch.utils._pytree as pytree
 from torch.fx.node import Argument, Target
+
 aten = torch.ops.aten
 
 
+class DvmCompilerKernel:
+    def __init__(
+        self,
+        kernel: Kernel,
+        kernel_name: str,
+        kernel_fullname: str,
+        cont_flag_input: List[bool],
+        cont_flag_output:  List[bool],
+    ):
+        self.kernel = kernel
+        self.kernel.codegen()
+        self.kernel.set_name(kernel_name, kernel_fullname)
+        self.input_size = self.kernel.input_size()
+        self.non_contiguous_inputs = [
+            idx for idx, flag in enumerate(cont_flag_input) if not flag
+        ]
+
+        self.non_contiguous_outputs = [
+            idx for idx, flag in enumerate(cont_flag_output) if not flag
+        ]
+
+    def run(self, *args, **kwargs):
+        args = list(args)
+        inputs = args[: self.input_size]
+        outputs = args[self.input_size:]
+        for idx in self.non_contiguous_inputs:
+            inputs[idx] = inputs[idx].contiguous()
+        contiguous_outputs = []
+        original_refs = []
+        for idx in self.non_contiguous_outputs:
+            original_refs.append(outputs[idx])
+            contiguous_output = torch.empty_like(outputs[idx])
+            outputs[idx] = contiguous_output
+            contiguous_outputs.append(contiguous_output)
+
+        self.kernel.run(inputs, outputs)
+
+        for orig, contig in zip(original_refs, contiguous_outputs):
+            orig.copy_(contig)
+
+
+class DvmCodegenInterpreter(torch.fx.Interpreter):
+    def __init__(self, gm: torch.fx.GraphModule, compile_wrapper: IndentedBuffer):
+        super().__init__(gm)
+        self.cse = CSE()
+        self.code = compile_wrapper
+        self.code.do_indent()
+        self.code.splice("kernel = Kernel(KernelType.kStaticShape)")
+        self.current_node = None
+        self.cont_flag_input = []
+        self.cont_flag_output = []
+
+    def run_node(self, n: torch.fx.Node) -> Argument:
+        self.current_node = n
+        ret = super().run_node(n)
+        return pytree.tree_map(lambda x: self.cse.generate(self.code, x), ret)
+
+    def run(
+        self,
+        *args,
+        initial_env: Optional[dict[torch.fx.Node, Any]] = None,
+        enable_io_processing: bool = True,
+    ) -> Any:
+        with V.set_kernel_handler(torch._inductor.codegen.common.Kernel()):
+            super().run()
+        self.code.splice("return kernel")
+
+    def placeholder(
+        self, target: "Target", args: tuple[Argument], kwargs: dict[str, Any]
+    ) -> Any:
+        meta = self.current_node.meta["val"]
+        is_contiguous = meta.is_contiguous()
+        last_dim_contiguous = meta.stride()[-1] == 1
+        self.cont_flag_input.append(is_contiguous or last_dim_contiguous)
+
+        if is_contiguous:
+            return f"kernel.load({meta.shape}, {meta.dtype}) #{target}"
+        elif last_dim_contiguous:
+            return f"kernel.view_load({meta.shape}, {meta.stride()}, {meta.dtype}) #{target}"
+        else:
+            return f"kernel.load({meta.shape}, {meta.dtype}) #{target}"
+
+    def call_function(
+        self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
+    ) -> Any:
+        args_str = ", ".join(map(str, args))
+        if target in [aten.add.Tensor, aten.add.Scalar]:
+            return f"kernel.binary(BinaryOpType.kAdd, {args_str})"
+        elif target == aten.sub.Tensor:
+            return f"kernel.binary(BinaryOpType.kSub, {args_str})"
+        elif target in [aten.mul.Tensor, aten.mul.Scalar]:
+            return f"kernel.binary(BinaryOpType.kMul, {args_str})"
+        elif target == aten.div.Tensor:
+            return f"kernel.binary(BinaryOpType.kDiv, {args_str})"
+        elif target == aten.le.Scalar:
+            return f"kernel.binary(BinaryOpType.kLess, {args_str})"
+        elif target == aten.reshape.default:
+            return f"kernel.reshape({args_str})"
+        elif target == aten.sqrt.default:
+            return f"kernel.unary(UnaryOpType.kSqrt, {args_str})"
+        elif target == aten.mm.default:
+            return f"kernel.matmul({args_str}, False, False)"
+        elif target == torch.ops.npu._npu_dtype_cast.default:
+            return f"kernel.cast({args_str})"
+        elif target == aten.relu.default:
+            return f"kernel.binary(BinaryOpType.kMaximum, {args_str}, 0)"
+        elif target == aten.expand.default:
+            return f"kernel.broadcast({args_str})"
+        else:
+            raise ValueError(f"Unsupported operation: {target}.")
+
+    def output(
+        self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
+    ) -> Any:
+        outs = super().output(target, args, kwargs)
+
+        def codegen(out, node: torch.fx.Node):
+            self.cont_flag_output.append(node.meta["val"].is_contiguous())
+            return f"kernel.store(kernel.cast({out}, {node.meta['val'].dtype}))"
+
+        return pytree.tree_map(codegen, outs, tuple(self.current_node.all_input_nodes))
+
+
 class FxDvmInterpreter(torch.fx.Interpreter):
-    def __init__(self, gm:  torch.fx.GraphModule, kernel):
+    def __init__(self, gm: torch.fx.GraphModule, kernel):
         super().__init__(gm)
         self.kernel = kernel
         self.node: torch.fx.Node
@@ -21,7 +148,9 @@ class FxDvmInterpreter(torch.fx.Interpreter):
         self.node = n
         return super().run_node(n)
 
-    def placeholder(self, target: "Target", args: tuple[Argument], kwargs: dict[str, Any]) -> Any:
+    def placeholder(
+        self, target: "Target", args: tuple[Argument], kwargs: dict[str, Any]
+    ) -> Any:
         meta = self.node.meta["val"]
         return self.kernel.load(meta.shape, meta.dtype)
 
@@ -41,20 +170,23 @@ class FxDvmInterpreter(torch.fx.Interpreter):
         elif target == torch.ops.npu._npu_dtype_cast.default:
             return self.kernel.cast(*args)
         elif target == aten.expand.default:
-            return self.kernel.broadcast(*args, self.node.meta['val'].dtype)
+            return self.kernel.broadcast(*args)
 
     def output(
         self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
     ) -> Any:
         out = super().output(target, args, kwargs)
         if isinstance(out, tuple):
-            for arg, node in zip(out, self.node.all_input_nodes):
-                op = self.kernel.store(self.kernel.cast(
-                    arg, node.meta['val'].dtype))
+            return tuple(
+                self.kernel.store(self.kernel.cast(
+                    arg, node.meta["val"].dtype))
+                for arg, node in zip(out, self.node.all_input_nodes)
+            )
         else:
-            op = self.kernel.store(self.kernel.cast(
-                out, self.node.all_input_nodes[0].meta['val'].dtype))
-        return out
+            return self.kernel.store(
+                self.kernel.cast(
+                    out, self.node.all_input_nodes[0].meta["val"].dtype)
+            )
 
 
 class DvmModule(torch.nn.Module):
@@ -70,8 +202,9 @@ class DvmModule(torch.nn.Module):
             output_nodes = list(self.gm.graph.nodes)[-1].all_input_nodes
 
             def get_output_info(node):
-                val = node.meta['val']
+                val = node.meta["val"]
                 return (val.size(), val.dtype, val.device)
+
             self.outputs_info = [get_output_info(
                 node) for node in output_nodes]
 
@@ -80,14 +213,21 @@ class DvmModule(torch.nn.Module):
             # Todo
             self.kernel.codegen()
         else:
-            outputs = [torch.empty(size, dtype=dtype, device=device)
-                       for size, dtype, device in self.outputs_info]
+            outputs = [
+                torch.empty(size, dtype=dtype, device=device)
+                for size, dtype, device in self.outputs_info
+            ]
         self.kernel.run(inputs, outputs)
         return outputs[0] if len(outputs) == 1 else outputs
 
 
 DVM_SUPPORT_TYPE = [
-    torch.bfloat16, torch.float16, torch.bool, torch.float32, torch.int32]
+    torch.bfloat16,
+    torch.float16,
+    torch.bool,
+    torch.float32,
+    torch.int32,
+]
 
 
 class TestOpSupport(OperatorSupportBase):
@@ -98,9 +238,9 @@ class TestOpSupport(OperatorSupportBase):
         for input_node in node.all_input_nodes:
             if not isinstance(input_node, torch.fx.Node):
                 continue
-            if not input_node.meta['val'].is_contiguous():
+            if not input_node.meta["val"].is_contiguous():
                 return False
-            input_dtypes.append(input_node.meta['val'].dtype)
+            input_dtypes.append(input_node.meta["val"].dtype)
 
         if len(input_dtypes) > 0:
             first_dtype = input_dtypes[0]
@@ -113,18 +253,29 @@ class TestOpSupport(OperatorSupportBase):
     def is_node_supported(self, submodules, node):
         if node.op != "call_function":
             return False
-        if node.target in [aten.add.Tensor, aten.sub.Tensor, aten.mul.Tensor, aten.add.Scalar, aten.sub.Scalar, aten.mul.Scalar, aten.expand.default]:
+        if node.target in [
+            aten.add.Tensor,
+            aten.sub.Tensor,
+            aten.mul.Tensor,
+            aten.add.Scalar,
+            aten.sub.Scalar,
+            aten.mul.Scalar,
+            aten.expand.default,
+        ]:
             return self.check_input(node)
         return False
 
 
 class DvmBackend:
     def __init__(self):
-        self._compiled_module_cache: dict[torch.fx.GraphModule, torch.fx.GraphModule] = {
-        }
+        self._compiled_module_cache: dict[
+            torch.fx.GraphModule, torch.fx.GraphModule
+        ] = {}
         self.dvm_operator_support = TestOpSupport()
 
-    def compile(self, graph_module: torch.fx.GraphModule, input_tensors) -> torch.fx.GraphModule:
+    def compile(
+        self, graph_module: torch.fx.GraphModule, input_tensors
+    ) -> torch.fx.GraphModule:
 
         if graph_module in self._compiled_module_cache:
             compiled_module = self._compiled_module_cache[graph_module]
@@ -133,7 +284,7 @@ class DvmBackend:
             partitioner = CapabilityBasedPartitioner(
                 graph_module,
                 self.dvm_operator_support,
-                allows_single_node_partition=True
+                allows_single_node_partition=True,
             )
 
             compiled_module = partitioner.partition_and_fuse(prefix="dvm_")
@@ -150,14 +301,10 @@ class DvmBackend:
                 fused_submodule = compiled_module.get_submodule(node.target)
                 compiled_module.delete_submodule(node.target)
                 compiled_module.add_submodule(
-                    node.target,
-                    DvmModule(fused_submodule)
-                )
+                    node.target, DvmModule(fused_submodule))
 
     def __call__(self, graph_module: torch.fx.GraphModule, input_args, **kwargs):
-        decomposition_table = get_decompositions([
-            aten.relu
-        ])
+        decomposition_table = get_decompositions([aten.relu])
 
         return aot_autograd(
             fw_compiler=self.compile,
