@@ -48,8 +48,8 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     )
 {
     bool is_weight_nz = is_nz_format(w);
-    TORCH_CHECK(group_list_type == 1,
-                "only support group_list_type's value is 1.",
+    TORCH_CHECK(group_list_type == 1 || group_list_type == 0,
+                "only support group_list_type's value 0 or 1.",
                 OPS_ERROR(ErrCode::PARAM));
 
     auto x_dim_num = x.dim();
@@ -97,22 +97,6 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
     auto antiquant_scale_real = at::Tensor();
     auto antiquant_offset_real = at::Tensor();
-
-    auto scene_has_share = false;
-    auto scene_no_share = false;
-    if (scale.has_value() && shared_input.has_value()
-        && logit.has_value() && row_index.has_value()) {
-        scene_has_share = true;
-    }
-
-    if (scale.has_value() && !shared_input.has_value()
-        && !logit.has_value() && row_index.has_value()) {
-        scene_no_share = true;
-    }
-
-    TORCH_CHECK(scene_has_share || scene_no_share,
-                "input tensor only support shared_input and logit empty tensor",
-                OPS_ERROR(ErrCode::PARAM));
     
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
     TORCH_CHECK(dst_type == at::ScalarType::Float,
