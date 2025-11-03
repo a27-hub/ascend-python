@@ -635,13 +635,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
 
 @impl(m, "npu_lightning_indexer_quant")
-def npu_lightning_indexer_quant_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
+def npu_lightning_indexer_quant_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, actual_seq_lengths_query=None,
                                         actual_seq_lengths_key=None, block_table=None, layout_query='BSND',
-                                        layout_key='BSND', sparse_count=2048, sparse_mode=3):
+                                        layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+    if layout_key == "TND":
+        keyHeadNum = key.size(1)
+    else:
+        keyHeadNum = key.size(2)
     if layout_query == "BSND":
-        out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
     if layout_query == "TND":
-        out = torch.empty([output_size = {query.size(0), key.size(1), sparse_count}], dtype=torch.int32, device='meta')
+        out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
     return out
 
 
