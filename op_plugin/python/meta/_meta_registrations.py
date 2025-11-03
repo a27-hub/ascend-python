@@ -39,10 +39,14 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, sparse_block_size, *, block_table=None, 
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, key_rope=None, layout_query='BSND', layout_kv='BSND', sparse_mode=0, attention_mode=0, return_soft_lse=False):
     if layout_query == "TND":
-        out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)])
+        softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)])
     if layout_query == "BSND":
-        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
-    return out
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)])
+        softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)])
+    return (attention_out, softmax_max, softmax_sum)
 
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,

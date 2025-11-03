@@ -41,7 +41,7 @@ at::Tensor construct_sparse_flash_attention_output_tensor(
     return output;
 }
 
-at::Tensor npu_sparse_flash_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const at::Tensor &sparse_indices, double scale_value, int64_t sparse_block_size,
     const c10::optional<at::Tensor> &block_table,
@@ -58,6 +58,19 @@ at::Tensor npu_sparse_flash_attention(
     // construct the output tensor
     at::Tensor sparse_flash_attention_output = op_api::construct_sparse_flash_attention_output_tensor(
             query, value, layout_query_str);
+    at::Tensor softmax_max;
+    at::Tensor softmax_sum;
+    at::SmallVector<int64_t, SIZE> softmax_max_size;
+    at::SmallVector<int64_t, SIZE> softmax_sum_size;
+    if(query.dim() == 3){
+        softmax_max_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
+        softmax_sum_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
+    }else {
+        softmax_max_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
+        softmax_sum_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
+    }
+    softmax_max = at::empty(softmax_max_size, query.options().dtype(at::kFloat));
+    softmax_sum = at::empty(softmax_sum_size, query.options().dtype(at::kFloat));
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
@@ -66,9 +79,9 @@ at::Tensor npu_sparse_flash_attention(
         key, value, sparse_indices, block_table, actual_seq_lengths_query,
         actual_seq_lengths_kv, query_rope, key_rope, scale_value, sparse_block_size, 
         layout_query_ptr, layout_kv_ptr, sparse_mode, attention_mode, return_softmax_lse,
-        sparse_flash_attention_output);
+        sparse_flash_attention_output, softmax_max, softmax_sum);
 
-    return sparse_flash_attention_output;
+    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(sparse_flash_attention_output, softmax_max, softmax_sum);
 }
 
 } // namespace op_api
