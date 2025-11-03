@@ -77,9 +77,14 @@ public:
                            bool trans_b, py::object bias, py::object group_list,
                            int64_t group_type, int64_t group_list_type);
   void ParallelNext();
+  int GetInputSize() { return loads_.size(); }
+  int GetOutputSize() { return stores_.size(); }
+  void SetName(const std::string &op_name) {
+    op_name_ = op_name;
+    kernel_->SetOpName(op_name_.c_str(), ) op_name_.c_str();
+  }
 
   void Reset();
-
   void Input(py::object load, const at::Tensor &tensor);
   void CodeGen();
   void Run(py::sequence inputs_tensor, py::sequence outputs_tensor);
@@ -98,6 +103,7 @@ protected:
   std::vector<NDObject *> loads_;
   std::vector<NDObject *> stores_;
   size_t ws_size_;
+  std::string op_name_;
 };
 } // namespace dvm
 #endif // _DVM_PYBIND_API_H_

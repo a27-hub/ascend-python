@@ -4,11 +4,111 @@ from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.operator_support import OperatorSupportBase
 from torch._dynamo.backends.common import aot_autograd
 from torch._decomp import get_decompositions
-from torch_npu._C import Kernel, BinaryOpType, KernelType
-from typing import Any
+from torch._inductor.utils import IndentedBuffer
+from torch._inductor.virtualized import V
+from torch._inductor.codegen.common import CSE
+from torch_npu._C import Kernel, BinaryOpType, KernelType, UnaryOpType
+from typing import Any, Optional
 
 from torch.fx.node import Argument, Target
 aten = torch.ops.aten
+
+
+class DvmCompilerKernel:
+    def __init__(self, kernel: Kernel, kernel_name):
+        self.kernel = kernel
+        self.kernel.codegen()
+        self.kernel.set_name(kernel_name)
+
+    def run(self, *args, **kwargs):
+        input_size = self.kernel.input_size()
+        self.kernel.run(args[:input_size], args[input_size:])
+
+
+class DvmCodegenInterpreter(torch.fx.Interpreter):
+    def __init__(self, gm: torch.fx.GraphModule, compile_wrapper: IndentedBuffer):
+        super().__init__(gm)
+        self.cse = CSE()
+        self.code = compile_wrapper
+        self.code.do_indent()
+        self.code.splice("kernel = Kernel(KernelType.kStaticShape)")
+        self.node = None  # 初始化node属性
+
+    def run_node(self, n: torch.fx.Node) -> Argument:
+        self.node = n
+        expr = super().run_node(n)
+        if isinstance(expr, tuple):
+            return tuple(self.cse.generate(self.code, i) for i in expr)
+        else:
+            return self.cse.generate(self.code, expr)
+
+    def run(
+        self,
+        *args,
+        initial_env: Optional[dict[torch.fx.Node, Any]] = None,
+        enable_io_processing: bool = True,
+    ) -> Any:
+        with V.set_kernel_handler(Kernel()):
+            super().run()
+        self.code.splice("return kernel")
+
+    def placeholder(self, target: "Target", args: tuple[Argument], kwargs: dict[str, Any]) -> Any:
+        meta = torch.fx.traceback.current_meta["val"]
+        if not hasattr(meta, 'shape') or not hasattr(meta, 'dtype'):
+            raise ValueError(
+                f"Missing shape or dtype in meta for placeholder {target}")
+        return f"kernel.load({meta.shape}, {meta.dtype})"
+
+    def call_function(
+        self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
+    ) -> Any:
+        args_str = ", ".join(map(str, args))
+        meta = torch.fx.traceback.current_meta["val"]
+        if target in [aten.add.Tensor, aten.add.Scalar]:
+            return f"kernel.binary(BinaryOpType.kAdd, {args_str})"
+        elif target == aten.sub.Tensor:
+            return f"kernel.binary(BinaryOpType.kSub, {args_str})"
+        elif target in [aten.mul.Tensor, aten.mul.Scalar]:
+            return f"kernel.binary(BinaryOpType.kMul, {args_str})"
+        elif target == aten.div.Tensor:
+            return f"kernel.binary(BinaryOpType.kDiv, {args_str})"
+        elif target == aten.le.Scalar:
+            return f"kernel.binary(BinaryOpType.kLess, {args_str})"
+        elif target == aten.reshape.default:
+            return f"kernel.reshape({args_str})"
+        elif target == aten.sqrt.default:
+            return f"kernel.unary(UnaryOpType.kSqrt, {args_str})"
+        elif target == aten.mm.default:
+            return f"kernel.matmul({args_str}, False, False)"
+        elif target == torch.ops.npu._npu_dtype_cast.default:
+            return f"kernel.cast({args_str})"
+        elif target == aten.relu.default:
+            return f"kernel.binary(BinaryOpType.kMax, {args_str}, 0)"
+        elif target == aten.expand.default:
+            return f"kernel.broadcast({args_str}, {meta.dtype})"
+        else:
+            raise ValueError(f"Unsupported operation: {target}.")
+
+    def output(
+        self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
+    ) -> Any:
+        print(self.node)
+        out = super().output(target, args, kwargs)
+        if isinstance(out, tuple):
+            input_nodes = self.node.all_input_nodes
+            if len(input_nodes) != len(out):
+                raise ValueError(
+                    f"Output tuple length {len(out)} doesn't match input nodes length {len(input_nodes)}")
+
+            return tuple(
+                f"kernel.store(kernel.cast({arg}, {node.meta['val'].dtype}))"
+                for arg, node in zip(out, input_nodes)
+            )
+        else:
+            input_nodes = self.node.all_input_nodes
+            if not input_nodes:
+                raise ValueError("No input nodes found for output")
+            return f"kernel.store(kernel.cast({out}, {input_nodes[0].meta['val'].dtype}))"
 
 
 class FxDvmInterpreter(torch.fx.Interpreter):

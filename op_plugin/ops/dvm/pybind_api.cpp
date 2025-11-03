@@ -66,6 +66,9 @@ void TORCH_NPU_API THDVM_init(PyObject *module) {
 
   shared_ptr_class_<KernelPy>(torch_C_m, "Kernel")
       .def(py::init<const KernelType &>())
+      .def("input_size", &KernelPy::GetInputSize, "load array")
+      .def("output_size", &KernelPy::GetOutputSize, "load array")
+      .def("set_name", &KernelPy::SetName, "load array")
       .def("load", &KernelPy::Load, "load array")
       .def("view_load", &KernelPy::ViewLoad, "load array")
       .def("slice_load", &KernelPy::SliceLoad, "load array")
@@ -414,7 +417,6 @@ void KernelPy::Run(py::sequence inputs_tensor, py::sequence outputs_tensor) {
   for (size_t i = 0; i < outputs_addr.size(); ++i) {
     outputs_addr[i] = outputs_tensor[i].cast<at::Tensor>().data_ptr();
   }
-  static std::string op_name = "DvmOp";
   auto kernel = kernel_;
   auto ws_size = ws_size_;
   aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
