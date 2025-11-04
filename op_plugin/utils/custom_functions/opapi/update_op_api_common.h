@@ -159,7 +159,7 @@
         auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
         NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                               \
         ReleaseConvertTypes(converted_params);                                                                         \
-        UnInitCacheThreadLocal();                                                                                      \
+        NPU_CHECK_ERROR(aclDestroyAclOpExecutor(executor));                                                            \
         return workspace_size;                                                                                         \
     }(#aclnn_api, __VA_ARGS__)
 
