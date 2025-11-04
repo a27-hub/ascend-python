@@ -25,6 +25,54 @@ using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
 
+#if VERSION_BETWEEN(V1R11, V1R11)
+c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(at::TensorList tensors)
+{
+    at::ScalarType high_type = at::native::result_type(tensors);
+    c10::SmallVector<at::Tensor, N> dst_tensor_list;
+    // pytorch supports empty tensors, which needs to be removed from the NPU.
+    for (at::Tensor tensor : tensors) {
+        if (tensor.dim() == 1 && tensor.sizes()[0] == 0) {
+            continue;
+        }
+        if (tensor.scalar_type() != high_type) {
+            tensor = at_npu::native::custom_ops::_npu_dtype_cast(tensor, high_type);
+        }
+        dst_tensor_list.emplace_back(tensor);
+    }
+    return dst_tensor_list;
+}
+
+at::Tensor& cat_out_nocheck(at::Tensor& result, at::TensorList tensors, int64_t dim)
+{
+    c10::SmallVector<at::Tensor, N> input_tensors = cat_dest_tensor_list(tensors);
+    int64_t dim_post_expr = 0;
+    if (input_tensors.size() > 0) {
+        dim_post_expr = input_tensors[0].dim();
+    } else {
+        return result;
+    }
+    dim = op_plugin::utils::make_warp_dim(dim, dim_post_expr);
+    int64_t input_number = 0;
+    at_npu::native::OpCommand cmd;
+    cmd.Name("ConcatD");
+    for (size_t i = 0; i < input_tensors.size(); i++) {
+        if (input_tensors[i].numel() != 0) {
+            string input_name = "x" + std::to_string(input_number++);
+            cmd.Input(input_tensors[i], input_name);
+        }
+    }
+
+    cmd.DynamicInputReg(concat_func<ge::op::ConcatD>, {{input_number, 0}})
+        .Output(result)
+        .Attr("N", input_number)
+        .Attr("concat_dim", dim)
+        .Run();
+    return result;
+}
+#endif
+
+#if VERSION_BETWEEN(V2R0, VERSION_NEWEST)
 c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(const at::MaterializedITensorListRef& tensors)
 {
     auto high_type = at::native::result_type(tensors);
@@ -36,7 +84,7 @@ c10::SmallVector<at::Tensor, N> cat_dest_tensor_list(const at::MaterializedITens
             continue;
         }
         if (tensor.scalar_type() != high_type) {
-            tensor = at_npu::native::custom_ops::npu_dtype_cast(tensor, high_type);
+            tensor = at_npu::native::custom_ops::_npu_dtype_cast(tensor, high_type);
         }
         dst_tensor_list.emplace_back(tensor);
     }

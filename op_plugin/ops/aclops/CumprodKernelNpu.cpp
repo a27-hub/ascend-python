@@ -53,7 +53,7 @@ at::Tensor& cumprod_out(
     }
 
     at::Tensor self_cp = self.scalar_type() == dst_type ? self :
-        at_npu::native::custom_ops::npu_dtype_cast(self, dst_type);
+        at_npu::native::custom_ops::_npu_dtype_cast(self, dst_type);
     npu_preparation::CheckOut(
         {self_cp},
         result,
@@ -70,4 +70,44 @@ at::Tensor& cumprod_out(
     at::namedinference::propagate_names(result, self);
     return result;
 }
+
+at::Tensor& cumprod_out(
+    const at::Tensor& self,
+    at::Dimname dim,
+    c10::optional<at::ScalarType> dtype,
+    at::Tensor& result) {
+  return acl_op::cumprod_out(self, dimname_to_position(self, dim), dtype, result);
+}
+
+at::Tensor& cumprod_(
+    at::Tensor& self,
+    int64_t dim,
+    c10::optional<at::ScalarType> dtype) {
+  TORCH_CHECK(
+      !dtype.has_value() || (self.scalar_type() == dtype.value()),
+      "provided dtype must match the dtype of self tensor in cumprod. Got ",
+      toString(self.scalar_type()),
+      " and ",
+      toString(dtype.value()),
+      "." + OPS_ERROR(ErrCode::TYPE));
+  return acl_op::cumprod_out(self, dim, dtype, self);
+}
+
+at::Tensor& cumprod_(at::Tensor& self, at::Dimname dim, c10::optional<at::ScalarType> dtype) {
+  return acl_op::cumprod_(self, dimname_to_position(self, dim), dtype);
+}
+
+#if VERSION_BETWEEN(V2R0, V2R0)
+at::Tensor cumprod(
+    const at::Tensor& self,
+    int64_t dim,
+    c10::optional<at::ScalarType> dtype)
+{
+    at::Tensor self_cast = dtype.has_value() ? at_npu::native::custom_ops::_npu_dtype_cast(self, dtype.value()) : self;
+    at::Tensor result = npu_preparation::apply_tensor(self_cast);
+    cumprod_out_nocheck(result, self_cast, dim);
+    return result;
+}
+#endif
+
 } // namespace acl_op

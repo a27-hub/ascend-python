@@ -56,6 +56,28 @@ std::tuple<at::Tensor, at::Tensor> npu_max(const at::Tensor& self, at::Dimname d
   return acl_op::npu_max(self, dimname_to_position(self, dim), keepdim);
 }
 
+#if VERSION_BETWEEN(V1R11, V1R11)
+at::Tensor npu_max_backward(
+    const at::Tensor& grad,
+    int64_t dim,
+    const at::Tensor& indices,
+    at::IntArrayRef sizes,
+    bool keepdim) {
+    at::Tensor new_grad = grad;
+    at::Tensor new_indices = indices;
+    if (keepdim && sizes.size() > 0) {
+        new_grad = grad.squeeze(dim);
+        new_indices = indices.squeeze(dim);
+    }
+    if (new_indices.dtype() == at::kLong) {
+        new_indices = at_npu::native::custom_ops::_npu_dtype_cast(new_indices, at::kInt);
+    }
+    auto grad_input = acl_op::npu_scatter(at::zeros(sizes, new_grad.options()), new_indices, new_grad, dim);
+    return grad_input;
+}
+#endif
+
+#if VERSION_BETWEEN(V2R0, VERSION_NEWEST)
 at::Tensor npu_max_backward_symint(const at::Tensor &grad, int64_t dim, const at::Tensor &indices,
                                    c10::SymIntArrayRef sizes_symint, bool keepdim)
 {
@@ -67,7 +89,7 @@ at::Tensor npu_max_backward_symint(const at::Tensor &grad, int64_t dim, const at
         new_indices = indices.squeeze(dim);
     }
     if (new_indices.dtype() == at::kLong) {
-        new_indices = at_npu::native::custom_ops::npu_dtype_cast(new_indices, at::kInt);
+        new_indices = at_npu::native::custom_ops::_npu_dtype_cast(new_indices, at::kInt);
     }
     auto grad_input = acl_op::npu_scatter(at::zeros(sizes, new_grad.options()), new_indices, new_grad, dim);
     return grad_input;
