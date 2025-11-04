@@ -7,6 +7,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    |    √     |
 | <term>Atlas 推理系列产品</term>     |    √     |
+| <term>Ascend 950</term>     |    √     |
 
 ## 功能说明
 
@@ -19,21 +20,29 @@
 ## 函数原型
 
 ```
-torch_npu.contrib.module.QuantConv2d(in_channels, out_channels, kernel_size, output_dtype, stride=1, padding=0, dilation=1, groups=1, bias=True, offset=False, offset_x=0, round_mode="rint", device=None, dtype=None)
+torch_npu.contrib.module.QuantConv2d(in_channels, out_channels, kernel_size, output_dtype, stride=1, padding=0, dilation=1, groups=1, bias=True, offset=False, offset_x=0, round_mode="rint", input_dtype=None, weight_dtype=None, device=None, dtype=None)
 ```
 
 ## 参数说明
 
 **计算参数**
 
-- **in_channels**（`int`）：必选参数，Conv2d的输入的channel值。
-- **out_channels**（`int`）：必选参数，Conv2d的输出的channel值。
+- **in_channels**（`int`）：必选参数，Conv2d的输入的channel值，满足**in_channels**%**groups**=0。
+- **out_channels**（`int`）：必选参数，Conv2d的输出的channel值，满足**out_channels**%**groups**=0。
 - **kernel_size**（`int`/`tuple`）：必选参数，卷积核大小，支持单个数字输入或者2维tuple输入。当前仅支持kernel_size范围为[1, 255]。
-- **output_dtype**（`torch.dtype`）：必选参数，输出数据类型，当前仅支持输入`float16`。
+- **output_dtype**（`torch.dtype`/`int`）：必选参数，输出数据类型。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型只支持`float16`。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型只支持`float16`。
+  - <term>Atlas 推理系列产品</term>：数据类型只支持`float16`。
+  - <term>Ascend 950</term>：当**quant_conv2d_input**数据类型为`int8`（且**input_dtype**=None）时，**output_dtype**仅支持`float16`。当**quant_conv2d_input**数据类型为`float8_e4m3fn`（且**input_dtype**=None）时，**output_dtype**支持`float16`、`bfloat16`、`float32`。当**input_dtype**为`hifloat8`时，**output_dtype**支持`float16`、`bfloat16`、`float32`、`hifloat8`。
 - **stride**（`int`/`tuple`）：可选参数，默认值为1，Conv2d的stride，支持单个数字输入或者2维tuple输入。当前仅支持stride范围为[1, 63]。
 - **padding**（`int`/`tuple`）：可选参数，默认值为0，Conv2d的padding，支持单个数字输入或者2维tuple输入。当前仅支持padding范围为[0, 255]。
 - **dilation**（`int`/`tuple`）：可选参数，默认值为1，Conv2d的dilation，支持单个数字输入或者2维tuple输入。当前仅支持dilation范围为[1, 255]。
-- **groups**（`int`）：可选参数，默认值为1，Conv2d的group。当前仅支持取1。
+- **groups**（`int`）：可选参数，默认值为1，Conv2d的group。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持取1。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：仅支持取1。
+  - <term>Atlas 推理系列产品</term>：仅支持取1。
+  - <term>Ascend 950</term>：支持[1,65535]。
 - **bias**（`bool`）：可选参数，默认值为True，代表是否需要bias计算参数。如果设置成False，则bias不会加入QuantConv2d计算。
 - **offset**（`bool`）：可选参数，默认值为False，**预留参数，暂未使用**。
 - **offset_x**（`int`）：可选参数，默认值为0，补的pad中填入的实际值。
@@ -42,34 +51,67 @@ torch_npu.contrib.module.QuantConv2d(in_channels, out_channels, kernel_size, out
 
     ![](figures/zh-cn_image_0000001809304238.png)
 
-- **round_mode**（`string`）：可选参数，默认值为"rint"。**预留参数，暂未使用**。
+- **round_mode**（`string`）：可选参数。默认值为"rint"。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：**预留参数，暂未使用**。
+  - <term>Atlas 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Ascend 950</term>：当**output_dtype**为`hifloat8`时，仅支持配置"round"，其他场景不做要求，建议使用默认值。
+- **input_dtype**（`int`）：可选参数。默认值为None。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：**预留参数，暂未使用**。
+  - <term>Atlas 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Ascend 950</term>：当使能hifloat8类型计算时配置为`hifloat8`，其他场景配置为None。**input_dtype**和**weight_dtype**必须相同。
+- **weight_dtype**（`int`）：可选参数。默认值为None。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：**预留参数，暂未使用**。
+  - <term>Atlas 推理系列产品</term>：**预留参数，暂未使用**。
+  - <term>Ascend 950</term>：当使能hifloat8类型计算时配置为`hifloat8`，其他场景配置为None。**input_dtype**和**weight_dtype**必须相同。
 - **device**：可选参数，默认值为None。**预留参数，暂未使用**。
 - **dtype**：可选参数，默认值为None。**预留参数，暂未使用**。
 
 **计算输入**
 
-**quant_conv2d_input**（`Tensor`）：数据类型支持`int8`，数据格式支持$NCHW$，shape为4维。
+**quant_conv2d_input**（`Tensor`）：数据格式支持$NCHW$，shape为4维。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持`int8`。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型仅支持`int8`。
+  - <term>Atlas 推理系列产品</term>：数据类型仅支持`int8`。
+  - <term>Ascend 950</term>：当**input_dtype**为`hifloat8`时，**quant_conv2d_input**数据类型支持`int8`和`uint8`。当**input_dtype**为None时，**quant_conv2d_input**数据类型支持`int8`和`float8_e4m3fn`。
 
 ## 变量说明
 
-- **weight**（`Tensor`）：数据格式支持`int8`。数据格式支持$NCHW$，shape为4维。
-- **scale**（`Tensor`）：数据类型支持`float32`和`int64`。数据格式支持$ND$，shape是1维(n,)，其中n与`weight`的`out_channels`一致。
-- **bias**（`Tensor`）：可选参数。数据类型支持`int32`，数据格式支持$ND$，shape支持1维(n,)，n与`weight`的`out_channels`一致。
+- **weight**（`Tensor`）：数据格式支持$NCHW$，shape为4维。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持`int8`。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型仅支持`int8`。
+  - <term>Atlas 推理系列产品</term>：数据类型仅支持`int8`。
+  - <term>Ascend 950</term>：当**weight_dtype**为`hifloat8`时，**weight**数据类型支持`int8`和`uint8`。当**weight_dtype**为None时，**weight**数据类型支持`int8`和`float8_e4m3fn`。
+- **scale**（`Tensor`）：数据格式支持$ND$，shape是1维(n,)，其中n与**weight**的**out_channels**一致。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`和`int64`。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`和`int64`。
+  - <term>Atlas 推理系列产品</term>：数据类型支持`float32`和`int64`。
+  - <term>Ascend 950</term>：数据类型支持`int64`。
+- **bias**（`Tensor`）：可选参数。数据格式支持$ND$，shape支持1维(n,)，n与`weight`的`out_channels`一致。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型仅支持`int32`。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型仅支持`int32`。
+  - <term>Atlas 推理系列产品</term>：数据类型仅支持`int32`。
+  - <term>Ascend 950</term>：当**quant_conv2d_input**数据类型为`int8`时，仅支持`int32`。当**quant_conv2d_input**数据类型是`float8_e4m3fn`，或者**input_dtype**为`hifloat8`时，仅支持`float32`。
 
 ## 输出说明
 `Tensor`
 
 代表QuantConv2d的计算结果：
 
-- 如果output_dtype为`float16`，输出的数据类型为`float16`。
-- 如果output_dtype非以上数据类型，则不支持。
+- 数据类型和**output_dtype**一致，例如：如果output_dtype为`float16`，输出的数据类型为`float16`。
 
 ## 约束说明
 
 - 该接口支持推理场景下使用。
 - 该接口仅支持PyTorch静态图模式在线推理。
 - <term>Atlas 推理系列产品</term>：不支持output中w轴为1的场景。
-
+- 调用方式限制：
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持图模式调用。
+  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：仅支持图模式调用。
+  - <term>Atlas 推理系列产品</term>：仅支持图模式调用。
+  - <term>Ascend 950</term>：支持图模式调用、单算子模式调用
 ## 调用示例
 
 图模式调用：
@@ -103,3 +145,73 @@ with torch.no_grad():
 print("static graph result: ", output)
 ```
 
+单算子模式调用：
+
+- `int8`类型计算
+```python
+import torch 
+import torch_npu 
+
+from torch_npu.contrib.module import QuantConv2d 
+
+torch_npu.npu.set_device(0) 
+fmap = torch.randn(1, 1, 64, 64).to(torch.int8).npu() 
+weight = torch.randn(1, 1, 3, 3).to(torch.int8).npu() 
+scale = torch.randint(-1, 1, (1,), dtype=torch.int64).npu() 
+bias = torch.randint(-1, 1, (1,), dtype=torch.int32).npu() 
+  
+model = QuantConv2d(in_channels=1, out_channels=1, kernel_size=(3, 3), output_dtype=torch.float16).npu() # 输出fp16 
+model.weight.data = weight 
+model.scale.data = scale 
+model.bias.data = bias 
+  
+with torch.no_grad(): 
+    output = model(fmap) 
+print("eager result: ", output.cpu())
+```
+- `float8_e4m3fn`类型计算
+```python
+import torch 
+import torch_npu 
+
+from torch_npu.contrib.module import QuantConv2d 
+
+torch_npu.npu.set_device(0) 
+fmap = torch.randn(1, 1, 64, 64).to(torch.float8_e4m3fn).npu() 
+weight = torch.randn(1, 1, 3, 3).to(torch.float8_e4m3fn).npu() 
+scale = torch.randint(-1, 1, (1,), dtype=torch.int64).npu() 
+bias = torch.randint(-1, 1, (1,), dtype=torch.float).npu() 
+  
+model = QuantConv2d(in_channels=1, out_channels=1, kernel_size=(3, 3), output_dtype=torch.float16).npu() # 输出fp16 
+model.weight.data = weight 
+model.scale.data = scale 
+model.bias.data = bias 
+  
+with torch.no_grad(): 
+    output = model(fmap) 
+print("eager result: ", output.cpu())
+```
+- `hifloat8`类型计算
+```python
+import torch 
+import torch_npu 
+
+from torch_npu.contrib.module import QuantConv2d 
+
+torch_npu.npu.set_device(0) 
+fmap = torch.randn(1, 1, 64, 64).to(torch.uint8).npu() 
+weight = torch.randn(1, 1, 3, 3).to(torch.uint8).npu() 
+scale = torch.randint(-1, 1, (1,), dtype=torch.int64).npu() 
+bias = torch.randint(-1, 1, (1,), dtype=torch.float).npu() 
+  
+model = QuantConv2d(in_channels=1, out_channels=1, kernel_size=(3, 3),
+                      output_dtype=torch_npu.hifloat8, input_dtype=torch_npu.hifloat8,
+                      weight_dtype=torch_npu.hifloat8, round_mode='round').npu() # 输出hifloat8
+model.weight.data = weight 
+model.scale.data = scale 
+model.bias.data = bias 
+  
+with torch.no_grad(): 
+    output = model(fmap) 
+print("eager result: ", output.cpu())
+```
