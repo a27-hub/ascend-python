@@ -93,7 +93,7 @@ static std::tuple<int64_t, int64_t, int64_t> get_query_b_n_s(
     if (query_layout == "BSH") {
         b = query.size(DIM_0);
         s1 = query.size(DIM_1);
-        n1 = query.size(DIM_2) / num_heads;
+        n1 = num_heads;
     } else if (query_layout == "BSND") {
         b = query.size(DIM_0);
         s1 = query.size(DIM_1);

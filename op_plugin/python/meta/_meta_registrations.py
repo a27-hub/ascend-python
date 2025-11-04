@@ -797,7 +797,7 @@ def get_query_b_n_s(query, query_layout, num_heads):
     if query_layout == "BSH":
         b = query.size(0)
         s1 = query.size(1)
-        n1 = query.size(2) // num_heads
+        n1 = num_heads
     elif query_layout == "BSND":
         b = query.size(0)
         s1 = query.size(1)
@@ -834,7 +834,7 @@ def get_query_t_n(query, query_layout):
 def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
     if block_table is not None: # PA场景
         if value.dim() == 3: #BBH
-            value_d = value.size(2) / num_key_value_heads
+            value_d = value.size(2) // num_key_value_heads
         elif value.dim() == 4: # BNBD
             value_d = value.size(3)
         elif value.dim() == 5: # NZ
@@ -911,11 +911,12 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     attention_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
     # 推断lse out shape
     lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_heads)
+    lse_out_null = torch.empty([0], dtype=torch.float32, device='meta')
 
     if softmax_lse_flag:
         return attention_out, lse_out
     else:
-        return attention_out
+        return attention_out, lse_out_null
 
 
 @impl(m, "npu_fused_infer_attention_score_v2")
@@ -935,11 +936,12 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
     attention_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_query_heads, value_d)
     # 推断lse out shape
     lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_query_heads)
+    lse_out_null = torch.empty([0], dtype=torch.float32, device='meta')
 
     if return_softmax_lse:
         return attention_out, lse_out
     else:
-        return attention_out
+        return attention_out, lse_out_null
 
 
 @impl(m, "npu_fusion_attention")

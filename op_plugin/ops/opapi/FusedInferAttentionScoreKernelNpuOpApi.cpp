@@ -95,7 +95,7 @@ static std::tuple<int64_t, int64_t, int64_t> get_query_b_n_s(
     if (query_layout == "BSH") {
         b = query.size(DIM_0);
         s1 = query.size(DIM_1);
-        n1 = query.size(DIM_2) / num_heads;
+        n1 = num_heads;
     } else if (query_layout == "BSND") {
         b = query.size(DIM_0);
         s1 = query.size(DIM_1);
@@ -243,7 +243,8 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     if (kv_num_heads == 0) {
         kv_num_heads = num_heads;
     }
-    // 获取query_layout和attention_out_layout
+    
+    // 获取query_layout, attention_out_layout
     auto [query_layout, attention_out_layout] = get_query_and_attention_out_layout(query, input_layout_str);
 
     // 计算valueD
