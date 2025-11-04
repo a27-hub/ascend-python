@@ -16,8 +16,6 @@
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
-#include "op_plugin/AclOpsInterface.h"
-
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
@@ -52,10 +50,12 @@ at::Tensor construct_lightning_indexer_quant_output_tensor(const at::Tensor& que
 at::Tensor npu_lightning_indexer_quant(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &weights,
     const at::Tensor &query_dequant_scale, const at::Tensor &key_dequant_scale,
+    int64_t query_quant_mode, int64_t key_quant_mode,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_key,
-    const c10::optional<at::Tensor> &block_table, int64_t query_quant_mode, int64_t key_quant_mode,
-    c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode)
+    const c10::optional<at::Tensor> &block_table, 
+    c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count,
+    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens)
 {
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
@@ -70,7 +70,7 @@ at::Tensor npu_lightning_indexer_quant(
     EXEC_NPU_CMD_V1(aclnnLightningIndexerQuant, query,
         key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
         block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
-        lightning_indexer_quant_output);
+        pre_tokens, next_tokens, lightning_indexer_quant_output);
 
     return lightning_indexer_quant_output;
 }
