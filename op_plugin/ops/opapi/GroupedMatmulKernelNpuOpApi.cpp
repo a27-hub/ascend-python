@@ -209,7 +209,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (size_t i = 0; i < num_x; i++) {
                 dim_m += static_cast<size_t>(x[i].size(0));
             }
-            weight[0].dtype() == at::ScalarType::Int ?
+            (weight[0].dtype() == at::ScalarType::Int) && (!op_plugin::utils::is_transpose_last_two_dims(weight[0])) ?
                 create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, dim_m, n0, options);
         } else if (num_x == 1) {
@@ -218,7 +218,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
                         "When group_list is 2(K_SPLIT) and split_item is 2/3, the length of weight must equal x.");
                     create_new_tensor_batch(y, num_group_list, x[0].size(0), n0, options);
             } else {
-            weight[0].dtype() == at::ScalarType::Int ?
+            (weight[0].dtype() == at::ScalarType::Int) && (!op_plugin::utils::is_transpose_last_two_dims(weight[0])) ?
                 create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, x[0].size(0), n0, options);
             }
