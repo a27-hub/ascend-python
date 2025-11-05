@@ -1123,11 +1123,11 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
 
 
 @impl(m, "npu_sparse_flash_attention_antiquant")
-def npu_sparse_flash_attention_antiquant_forward(query, key, value, sparse_indices, scale_value, sparse_block_size, key_quant_mode,
+def npu_sparse_flash_attention_antiquant_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
-                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, layout_query='BSND',
-                                                layout_kv='BSND', sparse_mode=3, attention_mode=0, quant_scale_repo_mode=0, tile_size=0,
-                                                rope_head_dim=0):
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size, layout_query='BSND',
+                                                layout_kv='BSND', sparse_mode=3, pre_tokens=2147483647, next_tokens=2147483647, attention_mode=0,
+                                                quant_scale_repo_mode=0, tile_size=0, rope_head_dim=0):
     if layout_query == "BSND":
         out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
     if layout_query == "TND":
