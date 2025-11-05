@@ -51,15 +51,15 @@ at::Tensor construct_sparse_antiquant_infer_output_tensor(
 
 at::Tensor npu_sparse_flash_attention_antiquant(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-    const at::Tensor &sparse_indices, double scale_value, int64_t sparse_block_size,
+    const at::Tensor &sparse_indices, double scale_value,
     int64_t key_quant_mode, int64_t value_quant_mode,
     const c10::optional<at::Tensor> &key_dequant_scale,
     const c10::optional<at::Tensor> &value_dequant_scale,
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_kv,
-    c10::string_view layout_query, c10::string_view layout_kv,
-    int64_t sparse_mode, int64_t attention_mode, int64_t quant_scale_repo_mode,
+    int64_t sparse_block_size, c10::string_view layout_query, c10::string_view layout_kv,
+    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
     int64_t tile_size, int64_t rope_head_dim)
 {
     std::string layout_query_str = std::string(layout_query);
@@ -74,9 +74,9 @@ at::Tensor npu_sparse_flash_attention_antiquant(
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnSparseFlashAttentionAntiquant, query,
         key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
-        actual_seq_lengths_kv, scale_value, sparse_block_size, key_quant_mode, value_quant_mode,
-        layout_query_ptr, layout_kv_ptr, sparse_mode, attention_mode, quant_scale_repo_mode, tile_size, rope_head_dim,
-        output);
+        actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
+        layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
+        rope_head_dim, output);
     return output;
 }
 
