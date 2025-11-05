@@ -83,6 +83,13 @@ void calculate_dim_m(size_t& dim_m, size_t num_x, const at::TensorList x)
     }
 }
 
+bool is_weight_trans(const at::Tensor &tensor)
+{
+    int64_t dim1 = tensor.dim() - 1;
+    int64_t dim2 = tensor.dim() - 2;
+    return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
+}
+
 // Motivation for adapting this interface for each Torch version separately:
 // 1. Optional TensorList is only supported in Torch2.1 and later versions.
 //    Thus, "Tensor[] bias" is used in Torch1.11 and Torch2.0, while
@@ -178,6 +185,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     size_t dim_num_w = weight[0].sizes().size();
     size_t n0 = static_cast<size_t>(weight[0].size(dim_num_w - 1));
 
+    bool weight_trans_flag = is_weight_trans(weight[0]);
     if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
         if (num_group_list > 0) {
             y.reserve(num_group_list);
@@ -209,18 +217,18 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (size_t i = 0; i < num_x; i++) {
                 dim_m += static_cast<size_t>(x[i].size(0));
             }
-            weight[0].dtype() == at::ScalarType::Int ?
-                create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
-                create_new_tensor(y, dim_m, n0, options);
+            (weight[0].dtype() == at::ScalarType::Int) && (!weight_trans_flag)
+                ? create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options)
+                : create_new_tensor(y, dim_m, n0, options);
         } else if (num_x == 1) {
             if (group_type_value == K_SPLIT) {
                     TORCH_CHECK(num_weight == 1,
                         "When group_list is 2(K_SPLIT) and split_item is 2/3, the length of weight must equal x.");
                     create_new_tensor_batch(y, num_group_list, x[0].size(0), n0, options);
             } else {
-            weight[0].dtype() == at::ScalarType::Int ?
-                create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options) :
-                create_new_tensor(y, x[0].size(0), n0, options);
+                (weight[0].dtype() == at::ScalarType::Int) && (!weight_trans_flag)
+                    ? create_new_tensor(y, x[0].size(0), n0 * INT4_NUMS_IN_INT32, options)
+                    : create_new_tensor(y, x[0].size(0), n0, options);
             }
         }
     }
