@@ -91,11 +91,11 @@ c10::optional<at::Tensor> convert_boolean_attn_mask(
             "The attn_mask should be none when is_causal is true, but got ",
             attn_mask.has_value(), "-value");
         at::Tensor atten_mask_shape = at::ones({ATTENMASK_LIMIT, ATTENMASK_LIMIT}, query.options().dtype(at::kBool));
-        auto new_attn_mask = op_api::triu(atten_mask_shape, 1);
+        auto new_attn_mask = at::triu(atten_mask_shape, 1);
         return new_attn_mask;
     }
     const at::Tensor &atten_mask_in = attn_mask.value_or(at::Tensor());
-    at::Tensor atten_mask = op_api::logical_not(atten_mask_in);
+    at::Tensor atten_mask = at::logical_not(atten_mask_in);
     return atten_mask;
 }
 
@@ -229,7 +229,7 @@ at::Tensor scaled_dot_product_attention(
         // attn_mask supports dim is 2 or 4
         if (attn_mask.has_value() && attn_mask.value().dim() != ATTN_MASK_DIM_TWO && attn_mask.value().dim() != ATTN_MASK_DIM_FOUR) {
             c10::optional<at::Tensor> atten_mask_math = convert_boolean_attn_mask_math(attn_mask, query.dtype());
-            auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal, c10::nullopt, scale);
+            auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal, c10::nullopt, scale, enable_gqa);
             return std::get<0>(output);
         }
 
@@ -302,7 +302,7 @@ at::Tensor scaled_dot_product_attention(
     }
     c10::optional<at::Tensor> atten_mask_math = convert_boolean_attn_mask_math(attn_mask, query.dtype());
     auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal,
-                                                         c10::nullopt, scale);
+                                                         c10::nullopt, scale, enable_gqa);
     return std::get<0>(output);
 }
 #endif

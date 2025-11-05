@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：对输入的张量进行per-token对称动态量化。
+- API功能：对输入的张量进行pertoken对称动态量化。
 
     如果是MoE（Mixture of Experts，混合专家模型）场景，会引入`group_index`，`smooth_scales`中包含多组smooth向量，按`group_index`中的数值作用到`x`的不同行上。具体地，假如`x`包含m个token，`smooth_scales`有n行，`smooth_scales[0]`会作用到`x[0:group_index[0]]`上，`smooth_scales[i]`会作用到`x[group_index[i-1]: group_index[i]]`上，`i=1, 2, ..., n-1`。
 
@@ -51,10 +51,8 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- 该接口支持图模式（PyTorch 2.1版本）。
-- 该接口仅在如下产品支持MoE场景。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> 
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+- 该接口支持图模式。
+- 该接口支持MoE场景。
 
 - 使用`smooth_scales`时：
     - 若不使用`group_index`，`smooth_scales`必须是一维Tensor，元素数量与`x`的最后一维大小一致。

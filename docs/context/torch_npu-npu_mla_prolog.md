@@ -47,7 +47,7 @@ torch_npu.npu_mla_prolog(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv
 - **token\_x**（`Tensor`）：必选参数，对应公式中x。shape支持2维和3维，格式为\(T, He\)和\(B, S, He\)，dtype支持`bfloat16`，数据格式支持ND。
 - **weight\_dq**（`Tensor`）：必选参数，表示计算Query的下采样权重矩阵，即公式中W<sup>DQ</sup>。shape支持2维，格式为\(He, Hcq\)，dtype支持`bfloat16`，数据格式支持FRACTAL\_NZ（可通过`torch_npu.npu_format_cast`将ND格式转为FRACTAL\_NZ格式）。
 - **weight\_uq\_qr**（`Tensor`）：必选参数，表示计算Query的上采样权重矩阵和Query的位置编码权重矩阵，即公式中W<sup>UQ</sup>和W<sup>QR</sup>。shape支持2维，格式为\(Hcq, N\*\(D+Dr\)\)，dtype支持`bfloat16`和`int8`，数据格式支持FRACTAL\_NZ。   
-    -   当`weight_uq_qr`为`int8`类型时，`weight_uq_qr`是一个per-tensor的量化后的输入，表示当前为部分量化场景。  
+    -   当`weight_uq_qr`为`int8`类型时，`weight_uq_qr`是一个pertensor的量化后的输入，表示当前为部分量化场景。  
         - 若`kv_cache`、`kr_cache`为`bfloat16`类型，对应`kv_cache_out`、`kr_cache_out`为非量化输出，此时`dequant_scale_w_uq_qr`字段必须传入，`smooth_scales_cq`字段可选传入。  
         - 若`kv_cache`、`kr_cache`为`int8`类型，对应`kv_cache_out`、`kr_cache_out`为量化输出，此时`dequant_scale_w_uq_qr`、`quant_scale_ckv`、`quant_scale_ckr`字段必须传入，`smooth_scales_cq`字段可选传入。    
     -   当`weight_uq_qr`为`bfloat16`类型时，表示当前为非量化场景。   
@@ -65,14 +65,14 @@ torch_npu.npu_mla_prolog(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **dequant\_scale\_x**（`Tensor`）：预留参数，暂未使用，使用默认值即可。
 - **dequant\_scale\_w\_dq**（`Tensor`）：预留参数，暂未使用，使用默认值即可。
-- **dequant\_scale\_w\_uq\_qr**（`Tensor`）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化方式为per-channel。shape支持2维，格式为\(1, N\*\(D+Dr\)\)，dtype支持`float`，数据格式支持ND。
+- **dequant\_scale\_w\_uq\_qr**（`Tensor`）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化方式为perchannel。shape支持2维，格式为\(1, N\*\(D+Dr\)\)，dtype支持`float`，数据格式支持ND。
 - **dequant\_scale\_w\_dkv\_kr**（`Tensor`）：预留参数，暂未使用，使用默认值即可。
 - **quant\_scale\_ckv**（`Tensor`）：可选参数，用于对输出到`kv_cache_out`中的数据做量化操作时的参数。shape支持2维，格式为\(1, Hckv\)，dtype支持`float`，数据格式支持ND。
 - **quant\_scale\_ckr**（`Tensor`）：可选参数，用于对输出到`kr_cache_out`中的数据做量化操作时的参数。shape支持2维，格式为\(1, Dr\)，dtype支持`float`，数据格式支持ND。
 - **smooth\_scales\_cq**（`Tensor`）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为\(1, Hcq\)，dtype支持`float`，数据格式支持ND。
-- **rmsnorm\_epsilon\_cq**（`float`）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
-- **rmsnorm\_epsilon\_ckv**（`float`）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
-- **cache\_mode**（`str`）：可选参数，表示`kv_cache`的模式，支持"PA\_BSND"、"PA\_NZ"，用户不特意指定时可传入默认值“PA\_BSND”。
+- **rmsnorm\_epsilon\_cq**（`float`）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，默认值为1e-05。
+- **rmsnorm\_epsilon\_ckv**（`float`）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，默认值为1e-05。
+- **cache\_mode**（`str`）：可选参数，表示`kv_cache`的模式，支持"PA\_BSND"、"PA\_NZ"，默认值为“PA\_BSND”。
 
 ## 返回值说明
 
@@ -84,7 +84,7 @@ torch_npu.npu_mla_prolog(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv
 ## 约束说明
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   接口参数中shape格式字段含义：
     -   B：Batch表示输入样本批量大小，取值范围为0\~65536。
     -   S：Seq-Length表示输入样本序列长度，取值范围为0\~16。

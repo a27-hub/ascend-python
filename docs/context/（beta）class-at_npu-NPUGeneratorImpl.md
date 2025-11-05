@@ -64,16 +64,6 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     NPUGeneratorImpl获取每条线程的philox offset，返回值类型uint64_t，与uint64_t at::CUDAGeneratorImpl::philox_offset_per_thread()相同。
 
-- **void at_npu::NPUGeneratorImpl::capture_prologue(int64_t\*offset_extragraph)**
-
-    NPUGeneratorImpl设置offset_extragraph，用于NpuGraph来预留图捕获区域，支持图捕获，与void at::CUDAGeneratorImpl::capture_prologue(int64_t\*  _seed_extragraph_, int64_t\*  _offset_extragraph_)相同。
-
-    offset_extragraph：int64_t\*类型，待设置的offset_extragraph。
-
-- **uint64_t at_npu::NPUGeneratorImpl::capture_epilogue()**
-
-    NPUGeneratorImpl结束图捕获，返回值类型uint64_t，关闭图捕获并返回预留区域大小offset_extragraph，与uint64_t at::CUDAGeneratorImpl::capture_epilogue()相同。
-
 - **at_npu::PhiloxNpuState at_npu::NPUGeneratorImpl::philox_npu_state(uint64_t increment)**
 
     NPUGeneratorImpl philox npu state捕获，返回值类型PhiloxNpuState，与at::PhiloxCudaState at::CUDAGeneratorImpl::philox_cuda_state(uint64_t  _increment_)相同。
@@ -89,6 +79,37 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 - **c10::DeviceType at_npu::NPUGeneratorImpl::device_type()**
 
     NPUGeneratorImpl设备类型获取，返回值类型DeviceType，与c10::DeviceType at::CUDAGeneratorImpl::device_type()相同。
+
+Pytorch2.5.1及以上版本，移除以下成员函数，Pytorch2.5.1之前版本以下成员函数仍旧存在：
+
+- **void at_npu::NPUGeneratorImpl::capture_prologue(int64_t\*offset_extragraph)**
+
+    NPUGeneratorImpl设置offset_extragraph，用于NpuGraph来预留图捕获区域，支持图捕获，与void at::CUDAGeneratorImpl::capture_prologue(int64_t\*  _seed_extragraph_, int64_t\*  _offset_extragraph_)相同。
+
+    offset_extragraph：int64_t\*类型，待设置的offset_extragraph。
+
+- **uint64_t at_npu::NPUGeneratorImpl::capture_epilogue()**
+
+    NPUGeneratorImpl结束图捕获，返回值类型uint64_t，关闭图捕获并返回预留区域大小offset_extragraph，与uint64_t at::CUDAGeneratorImpl::capture_epilogue()相同。
+
+Pytorch2.5.1及以上版本，新增以下成员函数：
+
+- **void graphsafe_set_state(const c10::intrusive_ptr& state)**
+
+    在capture状态下为aclgraph设置期望的随机数生成状态，与at::CUDAGeneratorImpl:graphsafe_set_state(const c10::intrusive_ptr& state)功能相同。
+    
+    state：随机数生成器状态。
+- **c10::intrusive_ptrc10::GeneratorImpl graphsafe_get_state()**
+
+    在capture状态下为aclgraph查询随机数生成对象，与c10::intrusive_ptrc10::GeneratorImpl at::CUDAGeneratorImpl::graphsafe_get_state()功能相同。
+    
+    返回值为c10::GeneratorImpl对象。
+- **void register_graph(c10_npu::NPUGraph* graph)**
+
+    为NPUGeneratorImpl对象注册aclgraph图对象，进行统一管理，与void at::CUDAGeneratorImpl::register_graph(CUDAGraph* graph)功能相同。
+- **void unregister_graph(c10_npu::NPUGraph* graph)**
+
+    为NPUGeneratorImpl对象移除aclgraph图对象，在图对象的析构时会调用，与void at::CUDAGeneratorImpl::unregister_graph(CUDAGraph* graph)功能相同。
 
 ## 支持的型号
 

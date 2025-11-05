@@ -9,7 +9,7 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002271534921_section1650913464367"></a>
 
--   算子功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化和动态量化模式。
+-   API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化和动态量化模式。
 -   计算公式：
     1.  对输入`expert_idx`做排序，得出排序的结果sorted_expert_idx和对应的序号sorted_row_idx：
 
@@ -82,7 +82,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   不支持静态量化模式。
 -   进入低时延性能模板需要同时满足以下条件：
     -   `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)

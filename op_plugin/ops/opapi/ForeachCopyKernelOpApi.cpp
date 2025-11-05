@@ -80,6 +80,56 @@ bool check_tensor_dtype_support_base(const at::TensorList src)
     return false;
 }
 
+bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorList srcs, bool non_blocking)
+{
+    if (dsts.size() != srcs.size() || dsts.size() == 0 || srcs.size() == 0) {
+        return false;
+    }
+    // 方向一致校验
+    const auto expected_dst_dtype =  dsts[0].device().type();
+    const auto expected_src_dtype =  srcs[0].device().type();
+    int expected_dst_device_index =  -1;
+    int expected_src_device_index =  -1;
+    // 如果是异步，需要做流校验，不支持跨卡集合copy
+    int current_device_index = -1;
+    if (non_blocking) {
+        c10_npu::GetDevice(&current_device_index);
+    }
+    if (c10::DeviceType::PrivateUse1 == expected_dst_dtype) {
+        expected_dst_device_index = dsts[0].device().index();
+        if (non_blocking && current_device_index != expected_dst_device_index) {
+            return false;
+        }
+    }
+    if (c10::DeviceType::PrivateUse1 == expected_src_dtype) {
+        expected_src_device_index = srcs[0].device().index();
+        if (non_blocking && current_device_index != expected_src_device_index) {
+            return false;
+        }
+    }
+    for (const auto &dst: dsts) {
+        if (dst.device().type() != expected_dst_dtype) {
+            return false;
+        }
+        if (expected_dst_device_index != -1 && dst.device().index() != expected_dst_device_index) {
+            return false;
+        }
+    }
+    for (const auto &src: srcs) {
+        if (src.device().type() != expected_src_dtype) {
+            return false;
+        }
+        if (expected_src_device_index != -1 && src.device().index() != expected_src_device_index) {
+            return false;
+        }
+    }
+    // 排除d2d场景
+    if (expected_dst_dtype == expected_src_dtype) {
+        return false;
+    }
+    return true;
+}
+
 void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
@@ -128,10 +178,10 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
         attrs[i] = attr;
     }
     size_t failIdx = SIZE_MAX;
-    auto acl_stream = c10_npu::getCurrentNPUStream().stream();
+    auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
     if (non_blocking) {
-        auto ret = c10_npu::acl::AclrtMemcpyBatchAsync(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count,
-                                                       &failIdx, acl_stream);
+        auto ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes,
+                                                            count, acl_stream);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatchAsync");
     } else {
         aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
@@ -164,9 +214,15 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
 
     if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
-                                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch()))) {
+                (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
             return memcpyBatch(self, src, non_blocking);
         }
+        ASCEND_LOGW(
+            "The current situation does not support the use of the memcpyBatch interface in the foreach copy interface."
+            "There may be the following reasons:1.SOC version is not supported; 2.CANN version is not supported;"
+            "3.The direction of the tensor devices for srcs and dsts is inconsistent,"
+            "and mixed H2D and D2H scenarios are not supported."
+            "For example, all tensors on the srcList must be on the host or device side");
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 

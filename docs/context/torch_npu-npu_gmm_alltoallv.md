@@ -19,7 +19,7 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002317314449_section14441124184110"></a>
 
--   算子功能：MoE网络中，完成路由专家GroupedMatMul、AlltoAllv融合并实现与共享专家MatMul并行融合，先计算后通信。
+-   API功能：MoE网络中，完成路由专家GroupedMatMul、AlltoAllv融合并实现与共享专家MatMul并行融合，先计算后通信。
 -   路由专家计算公式：
 
     ![](figures/zh-cn_formulaimage_0000002323688460.png)
@@ -67,7 +67,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
 ## 约束说明<a name="zh-cn_topic_0000002317314449_section12345537164214"></a>
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1版本）。
+-   该接口支持图模式。
 -   单卡通信量范围：\[2MB, 100MB\]。
 -   输入参数Tensor中shape使用的变量说明：
     -   BSK：本卡接收的token数（BS\*K=BSK），是recv\_counts参数累加之和，取值范围\(0, 52428800\)。
