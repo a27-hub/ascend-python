@@ -60,7 +60,6 @@ compile_commands.json
 # Compiled Static libraries
 *.lai
 *.la
-*.a
 *.lib
 
 # Compiled protocol buffers

@@ -55,8 +55,10 @@ public:
   py::object Unary(const UnaryOpType &op_type, py::object input);
   py::object Binary(const BinaryOpType &op_type, py::object lhs,
                     py::object rhs);
-  py::object Broadcast(py::object input, const at::SymIntArrayRef &shape,
-                       at::ScalarType dtype, bool dummy_load);
+  py::object Broadcast(py::object input, const at::SymIntArrayRef &shape);
+  py::object BroadcastScalar(c10::Scalar scalar,
+                             const at::SymIntArrayRef &shape,
+                             at::ScalarType dtype);
   py::object Reshape(py::object input, const at::SymIntArrayRef &shape);
   py::object Cast(py::object input, at::ScalarType dtype);
   py::object ReduceMax(py::object input, const at::SymIntArrayRef &dims,
@@ -77,9 +79,15 @@ public:
                            bool trans_b, py::object bias, py::object group_list,
                            int64_t group_type, int64_t group_list_type);
   void ParallelNext();
+  int GetInputSize() { return loads_.size(); }
+  int GetOutputSize() { return stores_.size(); }
+  void SetName(const std::string &op_name, const std::string &op_fullname) {
+    op_name_ = op_name;
+    op_fullname_ = op_fullname;
+    kernel_->SetOpName(op_name_.c_str(), op_fullname_.c_str());
+  }
 
   void Reset();
-
   void Input(py::object load, const at::Tensor &tensor);
   void CodeGen();
   void Run(py::sequence inputs_tensor, py::sequence outputs_tensor);
@@ -98,6 +106,9 @@ protected:
   std::vector<NDObject *> loads_;
   std::vector<NDObject *> stores_;
   size_t ws_size_;
+  std::string op_name_;
+  std::string op_fullname_;
+  bool empty_input_{true};
 };
 } // namespace dvm
 #endif // _DVM_PYBIND_API_H_

@@ -66,6 +66,9 @@ void TORCH_NPU_API THDVM_init(PyObject *module) {
 
   shared_ptr_class_<KernelPy>(torch_C_m, "Kernel")
       .def(py::init<const KernelType &>())
+      .def("input_size", &KernelPy::GetInputSize, "load array")
+      .def("output_size", &KernelPy::GetOutputSize, "load array")
+      .def("set_name", &KernelPy::SetName, "load array")
       .def("load", &KernelPy::Load, "load array")
       .def("view_load", &KernelPy::ViewLoad, "load array")
       .def("slice_load", &KernelPy::SliceLoad, "load array")
@@ -78,8 +81,9 @@ void TORCH_NPU_API THDVM_init(PyObject *module) {
       .def("binary", &KernelPy::Binary, "emit binary op")
       .def("select", &KernelPy::Select, "emit select op")
       .def("broadcast", &KernelPy::Broadcast, "emit broadcast op",
-           py::arg("input"), py::arg("shape"), py::arg("dtype") = "float32",
-           py::arg("dummy_load") = true)
+           py::arg("input"), py::arg("shape"))
+      .def("broadcast_scalar", &KernelPy::BroadcastScalar, "emit broadcast op",
+           py::arg("input"), py::arg("shape"), py::arg("dtype"))
       .def("reshape", &KernelPy::Reshape, "emit reshape op")
       .def("copy", &KernelPy::Copy, "emit copy op")
       .def("one_hot", &KernelPy::OneHot, "emit onehot op")
@@ -138,15 +142,6 @@ at::ScalarType DvmDType2TorchDtype(DType dtype) {
   default:
     throw std::runtime_error("Unsupported Dtype conversion");
   }
-}
-
-template <typename T> std::pair<bool, T> GetScalar(py::object obj) {
-  if (py::isinstance<py::int_>(obj)) {
-    return {true, static_cast<T>(py::cast<int64_t>(obj))};
-  } else if (py::isinstance<py::float_>(obj)) {
-    return {true, py::cast<T>(obj)};
-  }
-  return {false, (T)0};
 }
 } // namespace
 
@@ -221,22 +216,18 @@ py::object KernelPy::ReduceMin(py::object input, const at::SymIntArrayRef &dims,
 py::object KernelPy::Binary(const BinaryOpType &op_type, py::object lhs,
                             py::object rhs) {
   NDObject *op;
-  auto [lhs_is_scalar, lhs_scalar] = GetScalar<float>(lhs);
-  auto [rhs_is_scalar, rhs_scalar] = GetScalar<float>(rhs);
-  if (lhs_is_scalar) {
-    auto input2 = rhs.cast<NDOpPyPtr>()->Get();
-    if (kernel_->GetDType(input2) == kInt32) {
-      op = kernel_->Binary(op_type, GetScalar<int>(lhs).second, input2);
-    } else {
-      op = kernel_->Binary(op_type, lhs_scalar, input2);
-    }
-  } else if (rhs_is_scalar) {
-    auto input1 = lhs.cast<NDOpPyPtr>()->Get();
-    if (kernel_->GetDType(input1) == kInt32) {
-      op = kernel_->Binary(op_type, input1, GetScalar<int>(rhs).second);
-    } else {
-      op = kernel_->Binary(op_type, input1, rhs_scalar);
-    }
+  if (py::isinstance<py::int_>(lhs)) {
+    op =
+        kernel_->Binary(op_type, lhs.cast<int>(), rhs.cast<NDOpPyPtr>()->Get());
+  } else if (py::isinstance<py::float_>(lhs)) {
+    op = kernel_->Binary(op_type, lhs.cast<float>(),
+                         rhs.cast<NDOpPyPtr>()->Get());
+  } else if (py::isinstance<py::int_>(rhs)) {
+    op =
+        kernel_->Binary(op_type, lhs.cast<NDOpPyPtr>()->Get(), rhs.cast<int>());
+  } else if (py::isinstance<py::float_>(rhs)) {
+    op = kernel_->Binary(op_type, lhs.cast<NDOpPyPtr>()->Get(),
+                         rhs.cast<float>());
   } else {
     auto input1 = lhs.cast<NDOpPyPtr>()->Get();
     auto input2 = rhs.cast<NDOpPyPtr>()->Get();
@@ -246,18 +237,25 @@ py::object KernelPy::Binary(const BinaryOpType &op_type, py::object lhs,
 }
 
 py::object KernelPy::Broadcast(py::object input,
-                               const at::SymIntArrayRef &shape,
-                               at::ScalarType dtype, bool dummy_load) {
+                               const at::SymIntArrayRef &shape) {
   auto shape_ref = SymIntArraytoShapeRef(shape);
+  auto in_obj = input.cast<NDOpPyPtr>()->Get();
+  auto op = kernel_->Broadcast(in_obj, shape_ref);
+  return py::cast(std::make_shared<NDObjectPy>(op));
+}
+
+py::object KernelPy::BroadcastScalar(c10::Scalar scalar,
+                                     const at::SymIntArrayRef &shape,
+                                     at::ScalarType dtype) {
+  auto shape_ref = SymIntArraytoShapeRef(shape);
+  auto type_id = TorchDtype2DvmDType(dtype);
   NDObject *op;
-  auto [is_scalar, scalar] = GetScalar<float>(input);
-  if (is_scalar) {
-    auto type_id = TorchDtype2DvmDType(dtype);
-    op = kernel_->Broadcast(scalar, shape_ref, type_id, dummy_load);
+  if (scalar.isIntegral()) {
+    op = kernel_->Broadcast(scalar.toInt(), shape_ref, type_id, empty_input_);
   } else {
-    auto in_obj = input.cast<NDOpPyPtr>()->Get();
-    op = kernel_->Broadcast(in_obj, shape_ref);
+    op = kernel_->Broadcast(scalar.toFloat(), shape_ref, type_id, empty_input_);
   }
+  empty_input_ = empty_input_ && false;
   return py::cast(std::make_shared<NDObjectPy>(op));
 }
 
@@ -414,11 +412,10 @@ void KernelPy::Run(py::sequence inputs_tensor, py::sequence outputs_tensor) {
   for (size_t i = 0; i < outputs_addr.size(); ++i) {
     outputs_addr[i] = outputs_tensor[i].cast<at::Tensor>().data_ptr();
   }
-  static std::string op_name = "DvmOp";
   auto kernel = kernel_;
   auto ws_size = ws_size_;
   aclrtStream stream = c10_npu::getCurrentNPUStream().stream(false);
-  auto acl_call = [kernel, inputs_addr, outputs_addr, stream, inputs, outputs,
+  auto dvm_call = [kernel, inputs_addr, outputs_addr, stream, inputs, outputs,
                    ws_size]() mutable -> int {
     dvm::RelocTable reloc_table;
     reloc_table.inputs_size = inputs.size();
@@ -436,7 +433,7 @@ void KernelPy::Run(py::sequence inputs_tensor, py::sequence outputs_tensor) {
 
     return ret;
   };
-  at_npu::native::OpCommand::RunOpApiV2(op_name, acl_call);
+  at_npu::native::OpCommand::RunOpApiV2(op_name_, dvm_call);
 }
 
 void KernelPy::Input(py::object load, const at::Tensor &array) {}
