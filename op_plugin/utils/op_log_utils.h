@@ -101,10 +101,12 @@ inline std::string convert_info(const at::Tensor &at_tensor)
        << ", dtype: "
        << at_tensor.dtype()
        << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: "
-       << at_tensor.data_ptr()
-       << "\n";
+       << static_cast<int>(at_tensor.device().index());
+    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+        ss << ", data_ptr: "
+           << at_tensor.data_ptr();
+    }
+    ss << "\n";
 
     return ss.str();
 }
@@ -350,10 +352,12 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
        << ", dtype: "
        << at_tensor.dtype()
        << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: "
-       << at_tensor.data_ptr()
-       << "\n";
+       << static_cast<int>(at_tensor.device().index());
+    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+        ss << ", data_ptr: "
+           << at_tensor.data_ptr();
+    }
+    ss << "\n";
 
     return ss.str();
 }
