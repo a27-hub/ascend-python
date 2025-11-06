@@ -12087,3 +12087,49 @@ param = torch.tensor([3584], device=device)
 x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
 """
 )
+
+_add_torch_npu_docstr(
+    "npu_grouped_matmul_add_",
+    """
+接口原型: npu_grouped_matmul_add_(Tensor(a!) self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor(a!)
+
+功能描述：训练反向中GroupedMatmul操作后对weight原地add梯度进行更新
+
+计算公式:
+y=y + x x weight
+
+参数说明:
+y (torch.Tensor): 待累加矩阵, 支持的数据类型 torch.float32. shape支持3维. 数据格式支持ND
+x (torch.Tensor): 输入矩阵, 表示矩阵乘法中的左矩阵. 支持的数据类型 torch.bfloat16、torch.float16. 数据格式支持ND
+weight (torch.Tensor): 输入矩阵, 表示矩阵乘法中的右矩阵. 支持的数据类型 torch.bfloat16、torch.float16. 数据格式支持ND
+group_list (torch.Tensor): 用于指定分组的索引, 表示x的第0维矩阵乘法的索引情况. 数据类型支持torch.int64.
+group_list_type (int): 代表group_list的表达形式. 数据类型支持torch.int32. 可取值0或1, 0代表group_list_type中数值为分组轴大小的cumsum结果(累积和), 1代表group_list_type中数值为分组轴上每组大小.
+
+输出说明:
+y [torch.Tensor]: GroupedMatmul计算完成后与待累加矩阵相加后得到的最后结果矩阵，支持数据类型、shape、数据格式均与输入y保持一致。
+
+约束说明:
+该接口支持训练场景下使用.
+数据类型使用约束:
+y: torch.float32
+x: torch_npu.bfloat16/torch.float16
+weight: torch.bfloat16、torch.float16
+
+支持版本:
+PyTorch 2.1及更高版本
+
+支持的型号:
+Atlas A5训练系列产品
+
+调用示例:
+
+单算子模式调用示例
+import torch
+import torch_npu
+y = torch.randint(-1, 1, (4, 576, 7168), dtype=torch.float32).npu()
+x = torch.randint(-1, 1, (512, 576), dtype=torch.float16).npu()
+weight = torch.randint(-1, 1, (512, 7168), dtype=torch.float16).npu()
+group_list = torch.Tensor([8,181,415,512]).to(torch.int64)npu()
+y = torch_npu.npu_grouped_matmul_add_(y, x, weight, group_list, transpose_x=True, transpose_weight=False, group_type=2, group_list_type=0)
+"""
+)

@@ -1800,6 +1800,16 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     return y
 
 
+@impl(m, "npu_grouped_matmul_add_")
+def npu_grouped_matmul_add__meta(y, x1, x2, group_list, *, transpose_x=True,
+                                 transpose_weight=False, group_type=2, group_list_type=0):
+    torch._check(
+        group_type == 2,
+        lambda: f"group_type only supports 2, but got {group_type} {ops_error(ErrCode.VALUE)}",
+    )
+    return y
+
+
 @impl(m, "npu_grouped_matmul_finalize_routing")
 def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bias=None, offset=None,
                                             pertoken_scale=None, shared_input=None, logit=None,
