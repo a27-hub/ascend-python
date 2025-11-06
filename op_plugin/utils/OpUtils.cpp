@@ -409,5 +409,11 @@ bool is_gte_cann_version_830rc1()
     return result;
 }
 
+const std::string DTypeToString(int64_t input_type)
+{
+    return c10_npu::IsCustomDType(input_type) ?
+           c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
+}
+
 }  // namespace utils
 }  // namespace op_plugin
