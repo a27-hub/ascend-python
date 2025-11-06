@@ -1,5 +1,5 @@
 {
-  "torch_npu": 
+  "torch_npu":
   {
     "v2.1": [],
     "v2.5": [],
@@ -38,6 +38,8 @@
       "npu_ffn",
       "npu_geglu",
       "npu_grouped_matmul",
+      "npu_add_quant_gmm",
+      "npu_add_quant_gmm_",
       "npu_moe_finalize_routing",
       "npu_quant_matmul",
       "npu_quant_matmul_reduce_sum",
@@ -87,5 +89,5 @@
       "ffn_worker_scheduler"
     ]
   }
-  
+
 }
