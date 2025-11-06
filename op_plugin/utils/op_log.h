@@ -114,3 +114,4 @@ extern thread_local int log_depth;
 }  // namespace op_plugin
 
 #endif //  TORCHNPU_TORCH_NPU_UTILS_OP_LOG_H_
+// ci test
