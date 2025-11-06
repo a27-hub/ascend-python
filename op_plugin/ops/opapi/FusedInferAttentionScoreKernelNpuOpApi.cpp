@@ -63,8 +63,17 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     }
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     if (input_layout_str == "BNSD_BSND") {
-        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
-            query.options().dtype(query.dtype()));
+         if (block_table.has_value() && value.dim() == 3) {  // 3 for dim num
+            int64_t outputD = value.size(DIM_2) / num_key_value_heads * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), outputD},
+                query.options().dtype(query.dtype()));
+        } else {
+            int64_t outputD = value.size(DIM_3) * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), outputD},
+                query.options().dtype(query.dtype()));
+        }
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_2);
     } else if (input_layout_str == "BNSD_NBSD") {
@@ -90,50 +99,74 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
             {query.size(DIM_1), query.size(DIM_0), query.size(DIM_2)},
             query.options().dtype(query.dtype()));
     } else if (input_layout_str == "NSD") {
+        int64_t outputD = value.size(DIM_2) * changeDScale;
+        outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), outputD},
+            query.options().dtype(query.dtype()));
         batchSize = 1;
         qsSize = query.size(DIM_1);
     } else if (input_layout_str == "BSH") {
+        int64_t outputH = value.size(DIM_2) / num_key_value_heads * num_heads * changeDScale;
+        outputH = (outputH == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputH;
+        tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), outputH},
+            query.options().dtype(query.dtype()));
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_1);
     } else if (input_layout_str == "BSND") {
+        if (!block_table.has_value()) {
+            int64_t outputD = value.size(DIM_3) * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
+                query.options().dtype(query.dtype()));
+        } else {
+            int64_t outputD = value.size(DIM_2) / num_key_value_heads * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
+                query.options().dtype(query.dtype()));
+        }
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_1);
     } else if (input_layout_str == "BNSD") {
-        if (block_table.has_value()) {
-            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1),
-                query.size(DIM_2), query.size(DIM_3)}, query.options().dtype(query.dtype()));
+        if (block_table.has_value() && value.dim() == 3) { // 3 for dim num
+            int64_t outputD = value.size(DIM_2) / num_key_value_heads * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
+                query.options().dtype(query.dtype()));
         } else {
-            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1),
-                query.size(DIM_2), value.size(DIM_3) * changeDScale}, query.options().dtype(query.dtype()));
+            int64_t outputD = value.size(DIM_3) * changeDScale;
+            outputD = (outputD == 0 || query.size(DIM_3) == 0) ? query.size(DIM_3) : outputD;
+            tmp_output = OpPreparation::apply_tensor_without_format({query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), outputD},
+                query.options().dtype(query.dtype()));
         }
         batchSize = query.size(DIM_0);
         qsSize = query.size(DIM_2);
     } else if (input_layout_str == "TND") {
         if (block_table.has_value() && value.dim() == SHAPE_4D) { // PA场景
-            int64_t outputD = value.size(DIM_3);
+            int64_t outputD = value.size(DIM_3) * changeDScale;
             outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
                 {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
         } else if (block_table.has_value() && value.dim() == SHAPE_3D) {
-            int64_t outputD = value.size(DIM_2) / kv_num_heads;
+            int64_t outputD = value.size(DIM_2) / kv_num_heads * changeDScale;
             outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
                 {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
         } else if (block_table.has_value() && value.dim() == SHAPE_5D) {
-            int64_t outputD = value.size(DIM_2) * value.size(DIM_4);
+            int64_t outputD = value.size(DIM_2) * value.size(DIM_4) * changeDScale;
             outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
                 {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
         } else {
-            int64_t outputD = value.size(DIM_2);
+            int64_t outputD = value.size(DIM_2) * changeDScale;
             outputD = (outputD == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outputD;
             tmp_output = OpPreparation::apply_tensor_without_format(
                 {query.size(DIM_0), query.size(DIM_1), outputD},
                 query.options().dtype(query.dtype()));
         }
+        qsSize = query.size(DIM_0);
     } else if (input_layout_str == "NTD_TND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
             {query.size(DIM_1), query.size(DIM_0), value.size(DIM_2)},
@@ -223,6 +256,12 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
 
     at::TensorList valueTensors = value;
     at::TensorList keyTensors = key;
+    auto actSeqLenMiddle = actual_seq_lengths.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLen = c10::asIntArrayRefUnchecked(actSeqLenMiddle);
+    auto actSeqLenKvMiddle = actual_seq_lengths_kv.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenKv = c10::asIntArrayRefUnchecked(actSeqLenKvMiddle);
+    auto actSeqLenPrefixMiddle = actual_shared_prefix_len.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenPrefix = c10::asIntArrayRefUnchecked(actSeqLenPrefixMiddle);
 
     // dispatch hostAPI
     if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
@@ -231,14 +270,14 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
             + OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
     if (op_plugin::utils::is_gte_cann_version_810rc1()) {
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
             quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
             num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
     } else {
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
             quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
             num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
     }
     return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
@@ -287,6 +326,12 @@ std::tuple<at::Tensor &, at::Tensor &> npu_fused_infer_attention_score_out_symin
 
     at::TensorList valueTensors = value;
     at::TensorList keyTensors = key;
+    auto actSeqLenMiddle = actual_seq_lengths.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLen = c10::asIntArrayRefUnchecked(actSeqLenMiddle);
+    auto actSeqLenKvMiddle = actual_seq_lengths_kv.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenKv = c10::asIntArrayRefUnchecked(actSeqLenKvMiddle);
+    auto actSeqLenPrefixMiddle = actual_shared_prefix_len.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenPrefix = c10::asIntArrayRefUnchecked(actSeqLenPrefixMiddle);
 
     // dispatch hostAPI
     if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
@@ -298,26 +343,26 @@ std::tuple<at::Tensor &, at::Tensor &> npu_fused_infer_attention_score_out_symin
         void* workspace_addr = const_cast<void *>(workspace.value().storage().data());
         uint64_t workspace_size = static_cast<uint64_t>(workspace.value().numel() * workspace.value().element_size());
         if (op_plugin::utils::is_gte_cann_version_810rc1()) {
-            EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, workspace_addr, workspace_size,  query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+             EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, workspace_addr, workspace_size,  query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
                 quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
                 num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, attention_out, softmax_lse);
         } else {
-            EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, workspace_addr, workspace_size, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+            EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, workspace_addr, workspace_size, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
                 quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
                 num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, attention_out, softmax_lse);
         }
     } else {
         if (op_plugin::utils::is_gte_cann_version_810rc1()) {
-            EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
                 quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
                 num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, attention_out, softmax_lse);
         } else {
-            EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV2, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
                 quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
                 num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, attention_out, softmax_lse);
         }
     }
@@ -372,6 +417,12 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
 
     at::TensorList valueTensors = value;
     at::TensorList keyTensors = key;
+    auto actSeqLenMiddle = actual_seq_lengths.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLen = c10::asIntArrayRefUnchecked(actSeqLenMiddle);
+    auto actSeqLenKvMiddle = actual_seq_lengths_kv.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenKv = c10::asIntArrayRefUnchecked(actSeqLenKvMiddle);
+    auto actSeqLenPrefixMiddle = actual_shared_prefix_len.value_or(at::ArrayRef<c10::SymInt>{});
+    auto actSeqLenPrefix = c10::asIntArrayRefUnchecked(actSeqLenPrefixMiddle);
 
     // dispatch hostAPI
     if (!op_plugin::utils::is_gte_cann_version_810rc1() &&
@@ -379,9 +430,9 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
         TORCH_CHECK(false, "query_rope|key_rope|key_rope_antiquant_scale has value, CANN version should greater than 8.1.RC1!"
             + OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
-    uint64_t workspace_size = EXEC_GET_MAX_WORKSPACE_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
+    uint64_t workspace_size = EXEC_GET_MAX_WORKSPACE_CMD(aclnnFusedInferAttentionScoreV3, query, keyTensors, valueTensors, pse_shift, atten_mask, actSeqLen, actSeqLenKv, dequant_scale1, quant_scale1, dequant_scale2,
         quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-        value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+        value_antiquant_offset, key_shared_prefix, value_shared_prefix, actSeqLenPrefix, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
         num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
     at::Tensor workspace_tensor = npu_preparation::apply_tensor_without_format({workspace_size}, query.options().dtype(query.dtype()));
     return workspace_tensor;
