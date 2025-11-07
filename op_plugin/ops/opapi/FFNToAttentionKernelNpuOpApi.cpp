@@ -19,9 +19,10 @@
 
 namespace op_api {
 void npu_ffn_to_attention(const at::Tensor &x, const at::Tensor &session_ids,
-                          const at::Tensor &micro_batch_ids, const at::Tensor &token_ids, const at::Tensor &expert_offsets,
-                          const at::Tensor &actual_token_num, const at::Tensor &attn_rank_table, c10::string_view group, int64_t world_size,
-                          c10::IntArrayRef token_info_table_shape, c10::IntArrayRef token_data_shape)
+                          const at::Tensor &micro_batch_ids, const at::Tensor &token_ids, 
+                          const at::Tensor &expert_offsets, const at::Tensor &actual_token_num, 
+                          c10::string_view group, int64_t world_size, c10::IntArrayRef token_info_table_shape, 
+                          c10::IntArrayRef token_data_shape, const c10::optional<at::Tensor> &attn_rank_table)
 {
     char *group_ptr = const_cast<char *>(group.data());
     EXEC_NPU_CMD(aclnnFFNToAttention, x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table,

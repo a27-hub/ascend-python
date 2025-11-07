@@ -2871,6 +2871,6 @@ has_side_effect(torch.ops.npu.npu_ffn_to_attention.default)
 
 
 @impl(m, "npu_ffn_to_attention")
-def npu_ffn_to_attention_meta(x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, group, world_size,
-                              token_info_table_shape, token_data_shape):
+def npu_ffn_to_attention_meta(x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, group, world_size,
+                              token_info_table_shape, token_data_shape, attn_rank_table=None):
     return
