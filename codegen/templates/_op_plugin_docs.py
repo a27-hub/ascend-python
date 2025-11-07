@@ -9357,7 +9357,7 @@ torch_npu.npu_clipped_swiglu(Tensor x, *, Tensor? group_index=None, int dim=-1, 
 新增带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。
 
 参数说明:
-x：Tensor类型，必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，尾轴为偶数。
+x：Tensor类型，必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，dim轴为偶数。
 group_index：Tensor类型，可选参数，当前只支持count模式，表示该模式下指定分组的Tokens数（要求非负整数）。要求是1D的Tensor，数据类型支持int64，数据格式ND。
 dim： int类型，可选参数，需要进行切分的维度序号，默认为-1。
 alpha：float类型，可选参数，glu激活函数系数，默认 1.702。
