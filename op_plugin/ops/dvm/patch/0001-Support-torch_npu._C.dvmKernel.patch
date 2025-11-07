@@ -64,7 +64,7 @@ index 276fcbffa..c0e540e85 100644
                  from torch._inductor.codegen.multi_kernel import MultiKernelCall
                  from torch.utils._sympy.functions import FloatTrueDiv
 -                from torch.utils._sympy.functions import IntTrueDiv
-+                from torch_npu._C import Kernel, BinaryOpType, KernelType, UnaryOpType
++                from torch_npu._C import Kernel, KernelType
 +                from torch_npu.op_plugin.dvm.dvm_build import DvmCompilerKernel
 +
  

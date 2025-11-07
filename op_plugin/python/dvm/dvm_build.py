@@ -7,7 +7,7 @@ from torch._decomp import get_decompositions
 from torch._inductor.utils import IndentedBuffer
 from torch._inductor.virtualized import V
 from torch._inductor.codegen.common import CSE
-from torch_npu._C import Kernel, BinaryOpType, KernelType, UnaryOpType
+from torch_npu._C import Kernel, KernelType
 from typing import Any, Optional, List
 import torch.utils._pytree as pytree
 from torch.fx.node import Argument, Target
@@ -57,12 +57,13 @@ class DvmCompilerKernel:
 
 
 class DvmCodegenInterpreter(torch.fx.Interpreter):
-    def __init__(self, gm: torch.fx.GraphModule, compile_wrapper: IndentedBuffer):
+    def __init__(self, gm: torch.fx.GraphModule, compile_wrapper: IndentedBuffer, outside_kernel : bool = False):
         super().__init__(gm)
         self.cse = CSE()
         self.code = compile_wrapper
         self.code.do_indent()
-        self.code.splice("kernel = Kernel(KernelType.kStaticShape)")
+        if not outside_kernel:
+            self.code.splice("k = Kernel(KernelType.kStaticShape)")
         self.current_node = None
         self.cont_flag_input = []
         self.cont_flag_output = []
@@ -80,7 +81,7 @@ class DvmCodegenInterpreter(torch.fx.Interpreter):
     ) -> Any:
         with V.set_kernel_handler(torch._inductor.codegen.common.Kernel()):
             super().run()
-        self.code.splice("return kernel")
+        self.code.splice("return k")
 
     def placeholder(
         self, target: "Target", args: tuple[Argument], kwargs: dict[str, Any]
@@ -91,38 +92,38 @@ class DvmCodegenInterpreter(torch.fx.Interpreter):
         self.cont_flag_input.append(is_contiguous or last_dim_contiguous)
 
         if is_contiguous:
-            return f"kernel.load({meta.shape}, {meta.dtype}) #{target}"
+            return f"k.load({meta.shape}, {meta.dtype}) #{target}"
         elif last_dim_contiguous:
-            return f"kernel.view_load({meta.shape}, {meta.stride()}, {meta.dtype}) #{target}"
+            return f"k.view_load({meta.shape}, {meta.stride()}, {meta.dtype}) #{target}"
         else:
-            return f"kernel.load({meta.shape}, {meta.dtype}) #{target}"
+            return f"k.load({meta.shape}, {meta.dtype}) #{target}"
 
     def call_function(
         self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
     ) -> Any:
         args_str = ", ".join(map(str, args))
         if target in [aten.add.Tensor, aten.add.Scalar]:
-            return f"kernel.binary(BinaryOpType.kAdd, {args_str})"
+            return f"k.add({args_str})"
         elif target == aten.sub.Tensor:
-            return f"kernel.binary(BinaryOpType.kSub, {args_str})"
+            return f"k.sub({args_str})"
         elif target in [aten.mul.Tensor, aten.mul.Scalar]:
-            return f"kernel.binary(BinaryOpType.kMul, {args_str})"
+            return f"k.mul({args_str})"
         elif target == aten.div.Tensor:
-            return f"kernel.binary(BinaryOpType.kDiv, {args_str})"
+            return f"k.div({args_str})"
         elif target == aten.le.Scalar:
-            return f"kernel.binary(BinaryOpType.kLess, {args_str})"
+            return f"k.less({args_str})"
         elif target == aten.reshape.default:
-            return f"kernel.reshape({args_str})"
+            return f"k.reshape({args_str})"
         elif target == aten.sqrt.default:
-            return f"kernel.unary(UnaryOpType.kSqrt, {args_str})"
+            return f"k.sqrt({args_str})"
         elif target == aten.mm.default:
-            return f"kernel.matmul({args_str}, False, False)"
+            return f"k.matmul({args_str}, False, False)"
         elif target == torch.ops.npu._npu_dtype_cast.default:
-            return f"kernel.cast({args_str})"
+            return f"k.cast({args_str})"
         elif target == aten.relu.default:
-            return f"kernel.binary(BinaryOpType.kMaximum, {args_str}, 0)"
+            return f"k.maximum({args_str}, 0)"
         elif target == aten.expand.default:
-            return f"kernel.broadcast({args_str})"
+            return f"k.broadcast({args_str})"
         else:
             raise ValueError(f"Unsupported operation: {target}.")
 
@@ -133,7 +134,7 @@ class DvmCodegenInterpreter(torch.fx.Interpreter):
 
         def codegen(out, node: torch.fx.Node):
             self.cont_flag_output.append(node.meta["val"].is_contiguous())
-            return f"kernel.store(kernel.cast({out}, {node.meta['val'].dtype}))"
+            return f"k.store(k.cast({out}, {node.meta['val'].dtype}))"
 
         return pytree.tree_map(codegen, outs, tuple(self.current_node.all_input_nodes))
 
@@ -158,13 +159,13 @@ class FxDvmInterpreter(torch.fx.Interpreter):
         self, target: "Target", args: tuple[Argument, ...], kwargs: dict[str, Any]
     ) -> Any:
         if target in [aten.add.Tensor, aten.add.Scalar]:
-            return self.kernel.binary(BinaryOpType.kAdd, *args)
+            return self.kernel.add(*args)
         elif target == aten.sub.Tensor:
-            return self.kernel.binary(BinaryOpType.kSub, *args)
+            return self.kernel.sub(*args)
         elif target == aten.mul.Tensor:
-            return self.kernel.binary(BinaryOpType.kMul, *args)
+            return self.kernel.mul(*args)
         elif target == aten.le.Scalar:
-            return self.kernel.binary(BinaryOpType.kLess, *args)
+            return self.kernel.less(*args)
         elif target == aten.mm.default:
             return self.kernel.matmul(*args, False, False)
         elif target == torch.ops.npu._npu_dtype_cast.default:

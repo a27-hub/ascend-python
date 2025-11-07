@@ -13,11 +13,12 @@
 
 #ifndef _DVM_PYBIND_API_H_
 #define _DVM_PYBIND_API_H_
-#include "op_plugin/ops/dvm/dvm.h"
 #include <memory>
+#include <vector>
+#include "op_plugin/ops/dvm/dvm.h"
 #include <torch/csrc/jit/python/pybind.h>
 #include <torch/csrc/python_headers.h>
-#include <vector>
+#include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace dvm {
 class NDObjectPy {
@@ -30,7 +31,6 @@ public:
 private:
   NDObject *obj_;
 };
-using KernelPtr = std::shared_ptr<Kernel>;
 using NDOpPyPtr = std::shared_ptr<NDObjectPy>;
 using ShapeRefPtr = std::shared_ptr<ShapeRef>;
 
@@ -52,9 +52,10 @@ public:
                               at::ScalarType dtype);
   py::object Store(py::object obj);
   void SetStoreInplace(py::object store);
-  py::object Unary(const UnaryOpType &op_type, py::object input);
-  py::object Binary(const BinaryOpType &op_type, py::object lhs,
-                    py::object rhs);
+  template<UnaryOpType op_type>
+  py::object Unary(py::object input);
+  template<BinaryOpType op_type>
+  py::object Binary(py::object lhs, py::object rhs);
   py::object Broadcast(py::object input, const at::SymIntArrayRef &shape);
   py::object BroadcastScalar(c10::Scalar scalar,
                              const at::SymIntArrayRef &shape,
@@ -84,7 +85,7 @@ public:
   void SetName(const std::string &op_name, const std::string &op_fullname) {
     op_name_ = op_name;
     op_fullname_ = op_fullname;
-    kernel_->SetOpName(op_name_.c_str(), op_fullname_.c_str());
+    kernel_.SetOpName(op_name_.c_str(), op_fullname_.c_str());
   }
 
   void Reset();
@@ -100,7 +101,7 @@ public:
   ShapeRef *SymIntArraytoShapeRef(const at::SymIntArrayRef &shape);
 
 protected:
-  KernelPtr kernel_;
+  Kernel kernel_;
   std::vector<std::vector<int64_t>> shape_vec_;
   std::vector<ShapeRefPtr> shape_;
   std::vector<NDObject *> loads_;
@@ -109,6 +110,27 @@ protected:
   std::string op_name_;
   std::string op_fullname_;
   bool empty_input_{true};
+};
+
+class GraphSplitKernelPy : public KernelPy {
+ public:
+  GraphSplitKernelPy(bool dyn_shape) : KernelPy(dyn_shape ? KernelType::kDynSplit : KernelType::kStaticSplit) {} 
+
+  void Setup();
+  py::object Call(py::args inputs);
+
+  void *AllocWorkspace(uint64_t size) {
+    int64_t size_data = size;
+    c10::IntArrayRef shape = c10::IntArrayRef(&size_data, 1);
+    at::Tensor tensor = at_npu::native::OpPreparation::apply_tensor_without_format(shape, options_);
+    wss_.push_back(tensor);
+    return tensor.data_ptr();
+  }
+
+ protected:
+  std::vector<RelocEntry> relocs_;
+  std::vector<at::Tensor> wss_;
+  c10::TensorOptions options_;
 };
 } // namespace dvm
 #endif // _DVM_PYBIND_API_H_
