@@ -36,6 +36,9 @@ at::Tensor &npu_add_quant_gmm__symint(at::Tensor &self, const at::Tensor &x1, co
 // Tensor? x1_scale=None, int? group_list_type=0, int[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None,
 // int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor(a!)
 {
+    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95,
+                "This operator currently only supports Ascend910_95 chips",
+                OPS_ERROR(ErrCode::PARAM));
     // 确定能调到aclnn接口
     static const bool is_quant_grouped_matmul_inplace_add_available =
         check_aclnn_kernel_available("aclnnQuantGroupedMatmulInplaceAdd");
