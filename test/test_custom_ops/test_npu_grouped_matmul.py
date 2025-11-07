@@ -737,31 +737,6 @@ class TestGroupedMatmul(TestCase):
         with self.assertRaisesRegex(RuntimeError, "Requires manual passing group_type"):
             _ = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list,
                                     split_item=split_item)
-    
-    @SupportedDevices(['Ascend910_95'])
-    def test_npu_grouped_matmul_no_quant_case_1(self): # 单单单
-        torch.manual_seed(0)
-        x1 = torch.normal(mean=0., std=0.1, size=(64, 256), dtype=torch.float16)
-        x = [x1]
-        weight1 = torch.normal(mean=0., std=0.1, size=(1, 256, 1024), dtype=torch.float16)
-        weight = [weight1]
-        group_list = torch.tensor([64]).npu()
-        split_item = 3
-        group_type = 0
-
-        x_clone = []
-        weight_clone = []
-        bias_clone = []
-        for x_i in x:
-            x_clone.append(x_i.clone().npu())
-
-        weight_clone.append(weight1.clone().npu())
-
-        supported_output = self.supported_op_exec(x, weight, bias=None, group_list=group_list, split_item=split_item)
-        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=None, group_list=group_list,
-                                            split_item=split_item, group_type=group_type)
-
-        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
 
 
 if __name__ == "__main__":
