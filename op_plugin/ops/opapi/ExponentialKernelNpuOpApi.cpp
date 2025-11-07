@@ -42,14 +42,14 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
         return self;
     }
 
-    self.neg_();
-    self.add_(1.0);
+    // 边界值转换，和cuda保持一致，区间改为(0,1]
+    self.masked_fill_(sefl == 0, 1.0);
 
     AT_DISPATCH_FLOATING_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
                                     self.scalar_type(), "exponential_", [&]() {
         auto eps = std::numeric_limits<scalar_t>::epsilon() / 2;
         auto mask = self >= (1.0 - eps);
-        self.masked_fill_(mask, 1.0 - eps);
+        self.masked_fill_(mask, -eps);
     });
 
     self.log_();
