@@ -83,9 +83,10 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter_symint(
                                       (x2_scale_dtype.has_value())
                                           ? c10_npu::GetAclDataType(x2_scale_dtype.value())
                                           : npu_preparation::convert_to_acl_data_type(x2_scale_scalar_dtype)};
+    const char* comm_mode = "ccu";
     EXEC_NPU_CMD(aclnnMatmulReduceScatterV2, x1_wrapper, x2_wrapper, bias_real, x1_scale_wrapper, x2_scale_wrapper,
-                 quant_scale_real, block_size, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, group_size, result,
-                 amax_output_result);
+                 quant_scale_real, block_size, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, group_size, comm_mode,
+                 result, amax_output_result);
 
     FLOP_COUNT(FlopCounter::mm_flop, self, x2);
     return std::tie(result, amax_output_result);
