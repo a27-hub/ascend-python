@@ -40,8 +40,7 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
                   const c10::optional<at::Tensor>& dequant_scale,
                   const c10::optional<at::Tensor>& pertoken_scale,
                   const c10::optional<at::Tensor>& comm_quant_scale_1,
-                  const c10::optional<at::Tensor>& comm_quant_scale_2,
-                  c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype)
+                  const c10::optional<at::Tensor>& comm_quant_scale_2)
 {
     // check shape: shape of x1:[s,m,k], shape of x2:[k,n], k_x1 == k_x2
     TORCH_CHECK(x2.dim() == 2, "x2 needs to be 2D, but got: ", x2.dim(), "D", OPS_ERROR(ErrCode::VALUE));
@@ -55,25 +54,22 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
     // A8W8: antiquantScale and antiquantOffset should be None.
     // A16W8: dequantScale should be None.
     // MC2 without quantization. antiquantScale and antiquantOffset and dequantScale should be None.
-    // x1_dtype or x2_dtype has value, don't check x1 and x2 dtype
-    if (!x1_dtype.has_value() && !x2_dtype.has_value()) {
-        if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
-            TORCH_CHECK(x1.scalar_type() == at::kChar, "x1 must be an int8 tensor for quant.", OPS_ERROR(ErrCode::TYPE));
-            TORCH_CHECK(x2.scalar_type() == at::kChar, "x2 must be an int8 tensor for quant.", OPS_ERROR(ErrCode::TYPE));
-            TORCH_CHECK((!antiquant_scale.has_value() && !antiquant_offset.has_value()),
-                        "when both dtype of x1 and dtype of x2 are equal to int8, "
-                        "antiquantScale, antiquantOffset should both be null", OPS_ERROR(ErrCode::TYPE));
-        } else if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
-            TORCH_CHECK(x2.scalar_type() == at::kChar, "x2 must be an int8 tensor for weight quant.", OPS_ERROR(ErrCode::TYPE));
-            TORCH_CHECK((!dequant_scale.has_value()),
-                        "when only dtype of x2 is equal to int8, dequantScale should be null", OPS_ERROR(ErrCode::TYPE));
-        } else if (!isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type())) {
-            TORCH_CHECK((!antiquant_scale.has_value() && !antiquant_offset.has_value() && !dequant_scale.has_value()),
-                        "when neither dtype of x1 or dtype of x2 is equal to int8, "
-                        "antiquantScale, antiquantOffset and dequantScale should all be null", OPS_ERROR(ErrCode::TYPE));
-        } else {
-            TORCH_CHECK(false, "when neither dtype of x1 or dtype of x2 is valid. ", OPS_ERROR(ErrCode::TYPE));
-        }
+    if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+        TORCH_CHECK(x1.scalar_type() == at::kChar, "x1 must be an int8 tensor for quant.", OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(x2.scalar_type() == at::kChar, "x2 must be an int8 tensor for quant.", OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK((!antiquant_scale.has_value() && !antiquant_offset.has_value()),
+                    "when both dtype of x1 and dtype of x2 are equal to int8, "
+                    "antiquantScale, antiquantOffset should both be null", OPS_ERROR(ErrCode::TYPE));
+    } else if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+        TORCH_CHECK(x2.scalar_type() == at::kChar, "x2 must be an int8 tensor for weight quant.", OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK((!dequant_scale.has_value()),
+                    "when only dtype of x2 is equal to int8, dequantScale should be null", OPS_ERROR(ErrCode::TYPE));
+    } else if (!isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type())) {
+        TORCH_CHECK((!antiquant_scale.has_value() && !antiquant_offset.has_value() && !dequant_scale.has_value()),
+                    "when neither dtype of x1 or dtype of x2 is equal to int8, "
+                    "antiquantScale, antiquantOffset and dequantScale should all be null", OPS_ERROR(ErrCode::TYPE));
+    } else {
+        TORCH_CHECK(false, "when neither dtype of x1 or dtype of x2 is valid. ", OPS_ERROR(ErrCode::TYPE));
     }
 
     // check x3 dtype and shape
@@ -145,10 +141,14 @@ at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor&
                                          c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
                                          c10::optional<int64_t> dequant_scale_dtype,
                                          c10::optional<int64_t> pertoken_scale_dtype,
-                                         c10::optional<int64_t> comm_quant_mode)
+                                         int64_t comm_quant_mode)
 {
-    check_params(x1, x2, antiquant_scale, antiquant_offset, x3, dequant_scale, pertoken_scale, 
-                 comm_quant_scale_1, comm_quant_scale_2, x1_dtype, x2_dtype);
+    static bool is_version_910b_or_93 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) &&
+        (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95);
+    if (is_version_910b_or_93) {
+        check_params(x1, x2, antiquant_scale, antiquant_offset, x3, dequant_scale, pertoken_scale, comm_quant_scale_1,
+            comm_quant_scale_2);
+    }
 
     at::IntArrayRef group_size_list = {};
     if (group_sizes.has_value()) {
@@ -177,12 +177,14 @@ at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor&
         auto output_acltype = c10_npu::GetAclDataType(y_dtype.value());
         output_dtype= npu_preparation::convert_to_scalar_type(output_acltype);
     }
+    bool is_fp8 = is_a8 || is_w8;
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size,
                                                                              x1.options().dtype(output_dtype));
     char* reduce_op_ptr = const_cast<char*>(reduce_op.data());
     char* hcom_ptr = const_cast<char*>(hcom.data());
     const at::Tensor& bias_real = bias.value_or(at::Tensor());
     const at::Tensor& x3_real = x3.value_or(at::Tensor());
+    const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
     const at::Tensor& comm_quant_scale_1_real = comm_quant_scale_1.value_or(at::Tensor());
     const at::Tensor& comm_quant_scale_2_real = comm_quant_scale_2.value_or(at::Tensor());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
@@ -194,35 +196,31 @@ at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor&
         npu_preparation::convert_to_acl_data_type(x2.scalar_type())};
     // a8w8: x1/x2: fp8; a4w4 x1/x2 fp4
     if (is_a8 || is_a4) {
-        TORCH_CHECK(pertoken_scale.has_value(), "a8w8 or a4w4 scense should input pertoken_scale",
-            OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(dequant_scale.has_value(), "a8w8 or a4w4 scense should input dequant_scale",
             OPS_ERROR(ErrCode::PARAM));
-        TensorWrapper pertoken_scale_wrapper = {pertoken_scale.value(), (pertoken_scale_dtype.has_value()) ?
+        auto pertoken_scale_tensor_dtype =
+                pertoken_scale.has_value()
+                    ? npu_preparation::convert_to_acl_data_type(pertoken_scale_real.scalar_type())
+                    : aclDataType::ACL_FLOAT;
+        TensorWrapper pertoken_scale_wrapper = {pertoken_scale_real, (pertoken_scale_dtype.has_value()) ?
             c10_npu::GetAclDataType(pertoken_scale_dtype.value()) :
-            npu_preparation::convert_to_acl_data_type(pertoken_scale.value().scalar_type())};
+            pertoken_scale_tensor_dtype};
         TensorWrapper dequant_scale_wrapper = {dequant_scale.value(), (dequant_scale_dtype.has_value()) ?
             c10_npu::GetAclDataType(dequant_scale_dtype.value()) :
             npu_preparation::convert_to_acl_data_type(dequant_scale.value().scalar_type())};
         EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV4, x1_wrapper, x2_wrapper, bias_real, x3_real, pertoken_scale_wrapper,
                      dequant_scale_wrapper, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr, reduce_op_ptr,
-                     comm_turn, stream_mode, group_size, output_dtype, comm_quant_mode, result);
-    } else if (!is_a8 && is_w8) { // a16w8 x1:fp16/bf16 x2:fp8
-        const at::Tensor& antiquant_scale_real = antiquant_scale.value_or(at::Tensor());
-        const at::Tensor& antiquant_offset_real = antiquant_offset.value_or(at::Tensor());
-        EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1_wrapper, x2_wrapper, bias_real, antiquant_scale_real,
-                     antiquant_offset_real, x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode,
-                     antiquant_group_size, result);
+                     comm_turn, stream_mode, group_size, comm_quant_mode, result);
     }
-    // a8w8: x1\x2 kChar; a16w8: x2 kChar;
-    if (!isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type())) {
+
+    if (!isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type()) && !is_fp8 && !is_a4) {
         if (x3.has_value()) {
             EXEC_NPU_CMD(aclnnMatmulAllReduceV2, x1, x2, bias_real, x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
         } else {
             EXEC_NPU_CMD(aclnnMatmulAllReduce, x1, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
         }
     }
-    if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+    if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) && !is_fp8 && !is_a4) {
         const at::Tensor& dequant_scale_real = dequant_scale.value_or(at::Tensor());
         if (comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) {
             const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
@@ -237,10 +235,10 @@ at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor&
             EXEC_NPU_CMD(aclnnQuantMatmulAllReduce, x1, x2, bias_real, x3_real, dequant_scale_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
         }
     }
-    if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+    if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) || (!is_a8 && is_w8)) {
         const at::Tensor& antiquant_scale_real = antiquant_scale.value_or(at::Tensor());
         const at::Tensor& antiquant_offset_real = antiquant_offset.value_or(at::Tensor());
-        EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1, x2, bias_real, antiquant_scale_real, antiquant_offset_real,
+        EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1_wrapper, x2_wrapper, bias_real, antiquant_scale_real, antiquant_offset_real,
                      x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, antiquant_group_size, result);
     }
 
