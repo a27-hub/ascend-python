@@ -37,8 +37,7 @@ const static int64_t PA_NZ_DIMS = 5;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
-static std::pair<std::string, std::string>
-get_query_and_attention_out_layout(
+static std::pair<std::string, std::string> get_query_and_attention_out_layout(
     const at::Tensor query,
     std::string input_layout_str)
 {
@@ -88,8 +87,7 @@ get_query_and_attention_out_layout(
     return {query_layout, attention_out_layout};
 }
 
-static std::tuple<int64_t, int64_t, int64_t, int64_t>
-get_query_b_n_s_d(
+static std::tuple<int64_t, int64_t, int64_t, int64_t> get_query_b_n_s_d(
     const at::Tensor &query,
     std::string query_layout,
     int64_t num_heads)
@@ -129,8 +127,7 @@ get_query_b_n_s_d(
     return {b, n1, s1, d1};
 }
 
-static std::tuple<int64_t, int64_t, int64_t>
-get_query_t_n_d(
+static std::tuple<int64_t, int64_t, int64_t> get_query_t_n_d(
     const at::Tensor &query,
     std::string query_layout)
 {
