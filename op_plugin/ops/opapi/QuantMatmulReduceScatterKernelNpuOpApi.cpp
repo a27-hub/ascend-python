@@ -39,6 +39,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter_symint(
     TORCH_CHECK(self.size(1) == x2.size(0),
                 "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ",
                 self.size(1), " and the K-axis of x2 is ", x2.size(0), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(world_size != 0, "world_size cannot be zero", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
     at::IntArrayRef group_size_list = {};
@@ -47,7 +48,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter_symint(
     }
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
-    auto output_size = {self.size(0) / world_size, x2.size(1)};
+    auto output_size = {self.size(0) / (world_size != 0 ? world_size : 1), x2.size(1)};
     auto output_scalar_type = self.scalar_type();
     bool is_fp16_or_bf16 = ((output_scalar_type == at::kBFloat16) || (output_scalar_type == at::kHalf));
     if (!is_fp16_or_bf16) {
