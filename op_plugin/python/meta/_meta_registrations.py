@@ -794,6 +794,7 @@ def get_query_and_attention_out_layout(query, input_layout):
         )
     return query_layout, attention_out_layout
 
+
 def get_query_b_n_s(query, query_layout, num_heads):
     if query_layout == "BSH":
         b = query.size(0)
@@ -820,6 +821,7 @@ def get_query_b_n_s(query, query_layout, num_heads):
         )
     return b, s1, n1
 
+
 def get_query_t_n(query, query_layout):
     if query_layout == "TND":
         t = query.size(0)
@@ -836,13 +838,14 @@ def get_query_t_n(query, query_layout):
         )
     return t, n1
 
+
 def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
-    if block_table is not None: # PA场景
-        if value.dim() == 3: #BBH
+    if block_table is not None:
+        if value.dim() == 3:
             value_d = value.size(2) // num_key_value_heads
-        elif value.dim() == 4: # BNBD
+        elif value.dim() == 4:
             value_d = value.size(3)
-        elif value.dim() == 5: # NZ
+        elif value.dim() == 5:
             value_d = value.size(2) * value.size(4)
         else:
             torch._check(
@@ -850,7 +853,7 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
                 lambda: "when Page Attention enabled, value's dim should be 3/4/5, but got " + str(value.dim()) +
                 ops_error(ErrCode.VALUE),
             )
-    else: # 非PA场景
+    else:
         torch._check(
             value.dim() == query.dim(),
             lambda: (
@@ -865,6 +868,7 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
         if query_layout == "TND" or query_layout == "NTD" or query_layout == "NSD":
             value_d = value.size(2)
     return value_d
+
 
 def infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d):
     attention_out = torch.empty_like(query, dtype=query.dtype, device='meta')
@@ -887,13 +891,16 @@ def infer_attention_out_shape(attention_out_layout, query, query_layout, num_hea
         t, n1 = get_query_t_n(query, query_layout)
         attention_out = torch.empty([n1, t, value_d], dtype=query.dtype, device='meta')
     elif attention_out_layout == "NSD":
-        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        _, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
         attention_out = torch.empty([n1, s1, value_d], dtype=query.dtype, device='meta')
     return attention_out
 
+
 def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
     lse_out = torch.empty([0], dtype=torch.float32, device='meta')
-    if input_layout == "TND" or input_layout == "NTD" or input_layout == "TND_NTD" or input_layout == "NTD_TND":
+
+    tnd_like_layouts = {"TND", "NTD", "TND_NTD", "NTD_TND"}
+    if input_layout in tnd_like_layouts:
         t, n1 = get_query_t_n(query, query_layout)
         lse_out = torch.empty([t, n1, 1], dtype=torch.float32, device='meta')
     else:
