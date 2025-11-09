@@ -51,7 +51,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     const c10::optional<at::Tensor> &key_rope, int64_t sparse_block_size,
     c10::string_view layout_query, c10::string_view layout_kv,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
-    int64_t attention_mode, c10::optional<bool> return_softmax_lse)
+    int64_t attention_mode, bool return_softmax_lse)
 {
     std::string layout_query_str = std::string(layout_query);
     std::string layout_kv_str = std::string(layout_kv);
