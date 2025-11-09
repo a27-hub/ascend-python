@@ -3718,17 +3718,17 @@ _add_torch_npu_docstr(
 - 计算公式： 
 
 $$
-y = OP((x1 * x2 + bias), x3)
+y = OP((x1 @ x2 + bias), x3)
 $$
 
 OP类型由fused_op_type输入定义,支持如下：
-1.add  y = (x1 *x2 + bias) + x3
+1.add  y = (x1 @ x2 + bias) + x3
 
-2.mul  y = (x1 *x2 + bias) * x3
+2.mul  y = (x1 @ x2 + bias) * x3
 
-3.gelu_tanh  y = gelu_tanh(x1 *x2 + bias)
+3.gelu_tanh  y = gelu_tanh(x1 @ x2 + bias)
 
-4.gelu_erf  y = gelu_erf(x1 *x2 + bias)
+4.gelu_erf  y = gelu_erf(x1 @ x2 + bias)
 
 
 该公式支持: 昇腾910_95处理器
@@ -3737,12 +3737,12 @@ OP类型由fused_op_type输入定义,支持如下：
 torch_npu.npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
 
 参数说明
-x1: Tensor类型, 即公式中的x. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维. 
-x2: Tensor类型, 即公式中的x2. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维.
-bias: Tensor类型, 可选，即公式中的bias. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维. 当前暂不支持。
-x3: Tensor类型, 可选，即公式中的x3. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维。对于x3而言，当输入的fused_op_type为
+x1: Tensor类型, 即公式中的x. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维及以上. 
+x2: Tensor类型, 即公式中的x2. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维及以上.
+bias: Tensor类型, 可选，即公式中的bias. 数据格式支持ND, 支持非连续的Tensor。
+x3: Tensor类型, 可选，即公式中的x3. 数据格式支持ND, 支持非连续的Tensor。对于x3而言，当输入的fused_op_type为
 gelu_tanh/gelu_erf类型的时候, x3 必须为None, 当输入的fused_op_type为add/mul类型的时候, x3必须有输入.
-fused_op_type: string类型，支持输入的类型包括"add","mul","gelu_erf","gelu_tanh"中的一种.
+fused_op_type: string类型，支持输入的类型包括"","add","mul","gelu_erf","gelu_tanh","relu"中的一种.
 输出说明
 一个Tensor类型的输出, 代表融合算子的计算结果. 
 
