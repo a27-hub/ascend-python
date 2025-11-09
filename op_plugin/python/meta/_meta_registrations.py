@@ -39,7 +39,8 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
                                          key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', 
-                                         sparse_mode=3, attention_mode=0, return_softmax_lse=False):
+                                         sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807,
+                                         attention_mode=0, return_softmax_lse=False):
     if layout_query == "TND":
         attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')

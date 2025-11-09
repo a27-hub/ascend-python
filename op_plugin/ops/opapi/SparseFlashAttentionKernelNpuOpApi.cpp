@@ -50,7 +50,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope, int64_t sparse_block_size,
     c10::string_view layout_query, c10::string_view layout_kv,
-    int64_t sparse_mode, int64_t attention_mode, c10::optional<bool> return_softmax_lse)
+    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
+    int64_t attention_mode, c10::optional<bool> return_softmax_lse)
 {
     std::string layout_query_str = std::string(layout_query);
     std::string layout_kv_str = std::string(layout_kv);
@@ -78,7 +79,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnSparseFlashAttention, query,
         key, value, sparse_indices, scale_value, block_table, actual_seq_lengths_query,
         actual_seq_lengths_kv, query_rope, key_rope, sparse_block_size, 
-        layout_query_ptr, layout_kv_ptr, sparse_mode, attention_mode, return_softmax_lse,
+        layout_query_ptr, layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, return_softmax_lse,
         sparse_flash_attention_output, softmax_max, softmax_sum);
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(sparse_flash_attention_output, softmax_max, softmax_sum);
