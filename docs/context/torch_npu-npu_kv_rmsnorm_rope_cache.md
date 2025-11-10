@@ -242,7 +242,7 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
 * c\_kv\_scale(Tensor，计算输入)：可选参数，默认值None，表示压缩后kv的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
 * k\_rope\_offset(Tensor，计算输入)：可选参数，默认值None，表示k旋转位置编码量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
 * c\_kv\_offset(Tensor，计算输入)：可选参数，默认值None，表示压缩后kv的量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
-* v(Tensor\*，计算输入)：可选参数，在类型二的计算中作为immediate scatter的Dv输入来源。支持[非连续的Tensor](common/非连续的Tensor.md)。shape仅支持4维[B,N,S,Dv]，在类型二的计算中[B, N, S]必须与输入kv保持一致。[数据格式](common/数据格式.md)支持ND，必须与输入kv一致。
+* v(Tensor，计算输入)：可选参数，在类型二的计算中作为immediate scatter的Dv输入来源。支持[非连续的Tensor](common/非连续的Tensor.md)。shape仅支持4维[B,N,S,Dv]，在类型二的计算中[B, N, S]必须与输入kv保持一致。[数据格式](common/数据格式.md)支持ND，必须与输入kv一致。
 * epsilon(float，输入)：可选参数，默认值1e-5，表示RMS归一化中的极小值，防止除以零。
 * cache\_mode(str，输入)：可选参数，默认值'Norm'，表示缓存模式，支持的模式有Norm、PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ。
 * is\_output\_kv(bool，输入)：可选参数，表示是否输出处理后的`k_embed_out`和`y_out`（未量化的原始值），默认值False不输出，仅`cache_mode`在\(PA/PA\_BNSD/PA\_NZ/PA\_BLK\_BNSD/PA\_BLK\_NZ\)模式下有效。
