@@ -234,7 +234,7 @@ class TestAttentionToFFN(TestCase):
 
         self._test_multiprocess(TestAttentionToFFN._test_attention_to_ffn,
                 TestAttentionToFFN._init_dist_hccl, [bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, input_type,
-                            x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape])
+                            x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, token_info_golden, token_data_golden, token_data_mask])
 
 if __name__ == '__main__':
     run_tests()
