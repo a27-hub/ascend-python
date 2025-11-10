@@ -1,14 +1,14 @@
-From 6ba6e5b254fe0ca96020297cb16351c7dd5c647e Mon Sep 17 00:00:00 2001
+From d1047392a51c96aafcf58384bf389b24a7607f1a Mon Sep 17 00:00:00 2001
 From: huangchengnuo <huangchengnuo1@huawei.com>
-Date: Mon, 3 Nov 2025 17:22:25 +0800
+Date: Mon, 10 Nov 2025 20:16:13 +0800
 Subject: [PATCH] Support torch_npu._C.dvmKernel
 
 ---
- CMakeLists.txt                                    |  1 +
- .../ascend_npu_ir/npu/codegen/mlir.py             | 15 ++++++++++++++-
- .../ascend_npu_ir/npu/codegen/wrapper.py          |  4 +++-
- torch_npu/csrc/InitNpuBindings.cpp                |  2 ++
- 4 files changed, 20 insertions(+), 2 deletions(-)
+ CMakeLists.txt                                |  1 +
+ .../ascend_npu_ir/npu/codegen/mlir.py         | 19 ++++++++++++++++---
+ .../ascend_npu_ir/npu/codegen/wrapper.py      |  3 +++
+ torch_npu/csrc/InitNpuBindings.cpp            |  2 ++
+ 4 files changed, 22 insertions(+), 3 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 6b12fb061..4acd83234 100644
@@ -23,14 +23,18 @@ index 6b12fb061..4acd83234 100644
  if (DEFINED BUILD_TENSORPIPE)
    target_link_libraries(${PLUGIN_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/build/packages/torch_npu/lib/libtensorpipe.so)
 diff --git a/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/mlir.py b/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/mlir.py
-index 2eb4d3b08..ce9d2ebba 100644
+index 2eb4d3b08..516952acc 100644
 --- a/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/mlir.py
 +++ b/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/mlir.py
-@@ -299,7 +299,9 @@ class NpuMlirScheduling(SIMDScheduling):
+@@ -297,9 +297,11 @@ class NpuMlirScheduling(SIMDScheduling):
+             
+             num_call_functions = get_num_call_functions(mlir_kernel._gm)
  
-             if num_call_functions <= 1 or kernel_name in anir_config.force_fallback_kernel_names:
-                 mode = "complete_fallback"
+-            if num_call_functions <= 1 or kernel_name in anir_config.force_fallback_kernel_names:
+-                mode = "complete_fallback"
 -            
++            # if num_call_functions <= 1 or kernel_name in anir_config.force_fallback_kernel_names:
++            mode = "complete_fallback"
 +            from torch_npu.op_plugin.dvm.dvm_build import DvmCodegenInterpreter, DVM_SUPPORT_TYPE
 +            if all(node.meta['val'].dtype in DVM_SUPPORT_TYPE if node.op == "call_function" else True for node in mlir_kernel._gm.graph.nodes):
 +                mode = "dvm"
@@ -49,22 +53,21 @@ index 2eb4d3b08..ce9d2ebba 100644
 +                dvm_codegen = DvmCodegenInterpreter(mlir_kernel._gm, func_wrapper)
 +                dvm_codegen.run()
 +                compile_wrapper.writeline(
-+                    f"DvmCompilerKernel({fused_kernel_name}(), {kernel_name!r},{func_name!r},{dvm_codegen.cont_flag_input},{dvm_codegen.cont_flag_output})")
++                    f"DvmCompilerKernel({func_name}(), {kernel_name!r},{fused_kernel_name!r},{dvm_codegen.cont_flag_input},{dvm_codegen.cont_flag_output})")
 +                wrapper.define_kernel(
 +                    kernel_name, compile_wrapper.getvalue(), func_wrapper.getvalue())
              elif mode == "complete_fallback":
                  compile_wrapper.writeline(f"async_compile.import_fx({kernel_name!r}, kernel_meta={kernel_meta})")
                  metadata_comment = f'"""\n{mlir_kernel._gm.print_readable(print_output=False)}\n"""'
 diff --git a/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/wrapper.py b/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/wrapper.py
-index 276fcbffa..c0e540e85 100644
+index 276fcbffa..f288b4834 100644
 --- a/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/wrapper.py
 +++ b/torch_npu/_inductor/ascend_npu_ir/ascend_npu_ir/npu/codegen/wrapper.py
-@@ -79,7 +79,9 @@ class NpuMlirWrapperCodeGen(PythonWrapperCodegen):
-                 from torch._inductor.select_algorithm import extern_kernels
+@@ -80,6 +80,9 @@ class NpuMlirWrapperCodeGen(PythonWrapperCodegen):
                  from torch._inductor.codegen.multi_kernel import MultiKernelCall
                  from torch.utils._sympy.functions import FloatTrueDiv
--                from torch.utils._sympy.functions import IntTrueDiv
-+                from torch_npu._C import Kernel, KernelType
+                 from torch.utils._sympy.functions import IntTrueDiv
++                from torch_npu._C import Kernel
 +                from torch_npu.op_plugin.dvm.dvm_build import DvmCompilerKernel
 +
  

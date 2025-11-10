@@ -72,7 +72,7 @@ public:
   py::object ElementAny(py::object input);
   py::object Copy(py::object input);
   py::object OneHot(py::object indices, int depth, int axis,
-                    py::object on_value, py::object off_value,
+                    c10::Scalar on_value, c10::Scalar off_value,
                     at::ScalarType dtype);
   py::object MatMul(py::object lhs, py::object rhs, bool trans_a, bool trans_b,
                     py::object bias);
@@ -89,7 +89,6 @@ public:
   }
 
   void Reset();
-  void Input(py::object load, const at::Tensor &tensor);
   void CodeGen();
   void Run(py::sequence inputs_tensor, py::sequence outputs_tensor);
 
