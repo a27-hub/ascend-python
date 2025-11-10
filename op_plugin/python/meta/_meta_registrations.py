@@ -503,46 +503,46 @@ def npu_fused_matmul_meta(x, x2, *, bias=None, x3=None, fused_op_type=''):
         x.dtype == x2.dtype,
         lambda: "x and x2 type not same. x.dtype is" + str(x.dtype) + "x2.dtype is" + str(x2.dtype) + ops_error(ErrCode.TYPE),
     )
-    input_supported_list = [torch.bfloat16, torch.float16]
-    torch._check(
-        x.dtype in input_supported_list,
-        lambda: "x type supported for bfloat16, float16, but x type is " + str(x.dtype) + ops_error(ErrCode.TYPE),
-    )
+
     x_dim = x.dim()
     torch._check(
-        x_dim == 2,
-        lambda: "x dim num should be 2,but the actual value is " + str(x_dim) + ops_error(ErrCode.VALUE),
+        x_dim >= 2,
+        lambda: "x dim num cannot be less than 2,but the actual value is " + str(x_dim) + ops_error(ErrCode.VALUE),
     )
-
     x2_dim = x2.dim()
     torch._check(
-        x2_dim == 2,
-        lambda: "x2 dim num should be 2,but the actual value is " + str(x2_dim) + ops_error(ErrCode.VALUE),
+        x2_dim >= 2,
+        lambda: "x2 dim num cannot be less than 2,but the actual value is " + str(x2_dim) + ops_error(ErrCode.VALUE),
     )
 
-    m_value = x.size(0)
-    ka = x.size(1)
-    kb = x2.size(0)
-    n = x2.size(1)
+    ma = x.size(x_dim - 2)
+    ka = x.size(x_dim - 1)
+    kb = x2.size(x2_dim - 2)
+    nb = x2.size(x2_dim - 1)
     torch._check(
         ka == kb,
         lambda: "ka and kb should be the same" + ops_error(ErrCode.TYPE),
     )
-    if x3 is not None:
+
+    # infer output shape
+    out_dim_num = max(x_dim, x2_dim)
+    shape_long = x if x_dim > x2_dim else x2
+    shape_short = x2 if x_dim > x2_dim else x
+    vaild_offset = out_dim_num - min(x_dim, x2_dim)
+    output_shape = []
+    for i in range(0, out_dim_num - 2):
+        short_dim = 1 if i < vaild_offset else shape_short.size(i - vaild_offset)
+        long_dim = shape_long.size(i)
         torch._check(
-        x3.dtype in input_supported_list,
-        lambda: "x3 type supported for bfloat16, float16, but x3 is " + str(x3.dtype) + ops_error(ErrCode.TYPE),
+            not (short_dim > 1 and long_dim > 1 and short_dim != long_dim),
+            lambda: "the batch shape cannot be broadcast" + ops_error(ErrCode.VALUE),
         )
-    torch._check(
-        bias is None,
-        lambda: "sorry, but x3 type is not supported right now" + ops_error(ErrCode.TYPE),
-        )
-    op_type_supported_list = ["add", "mul", "gelu_erf", "gelu_tanh"]
-    
-    torch._check(
-        fused_op_type in op_type_supported_list,
-        lambda: "fused_op_type supported for add, mul, gelu_erf and gelu_tanh, but fused_op_type is " + str(fused_op_type) + ops_error(ErrCode.TYPE),
-    )
+        cur_batch_val = max(short_dim, long_dim)
+        output_shape.append(cur_batch_val)
+
+    output_shape.append(ma)
+    output_shape.append(nb)
+
     if fused_op_type == "gelu_erf" or fused_op_type == "gelu_tanh":
         torch._check(
             x3 is None,
@@ -553,7 +553,7 @@ def npu_fused_matmul_meta(x, x2, *, bias=None, x3=None, fused_op_type=''):
             x3 is not None,
             lambda: "there must have x3 for add and mul" + ops_error(ErrCode.TYPE),
         )
-    result = torch.empty((m_value, n), dtype=x.dtype, device='meta')
+    result = torch.empty(output_shape, dtype=x.dtype, device='meta')
     return torch.empty_like(result, dtype=x.dtype)
 
 
