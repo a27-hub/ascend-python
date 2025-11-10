@@ -6,6 +6,7 @@
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Ascend 950</term>  | √   |
 
 ## 功能说明<a name="zh-cn_topic_0000002203575833_section14441124184110"></a>
 
@@ -161,6 +162,15 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：当前版本不支持，传0即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的常量专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。
+    
+-   **y\_dtype**(`int`)：可选参数，表示输出的数据类型。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：暂不支持该参数。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数。
+    -   <term>Ascend 950</term>：该产品型号下，当quant_mode取值不为0时必须要输入。
+
+-  **x\_dtype**(`int`)：可选参数，表示输入的tensor x的数据类型，当其为PyTorch原生不支持的数据类型时需通过该参数指定。
+
+-  **scales\_dtype**(`int`)：可选参数，代表输入的tensor scales的数据类型，当其为PyTorch原生不支持的数据类型时需通过该参数指定。
 
 ## 输出说明<a name="zh-cn_topic_0000002203575833_section22231435517"></a>
 
