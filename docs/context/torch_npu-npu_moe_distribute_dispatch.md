@@ -22,7 +22,7 @@
 ## 函数原型<a name="zh-cn_topic_0000002203575833_section45077510411"></a>
 
 ```
-torch_npu.npu_moe_distribute_dispatch(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_moe_distribute_dispatch(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, scales=None, x_active_mask=None, expert_scales=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, quant_mode=0, global_bs=0, expert_token_nums_type=1, y_dtype=None, x_dtype=None, scales_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002203575833_section112637109429"></a>
@@ -74,6 +74,15 @@ torch_npu.npu_moe_distribute_dispatch(x, expert_ids, group_ep, ep_world_size, ep
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size，其中max\_bs表示单rank BS最大值；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
 
 -   **expert\_token\_nums\_type**(`int`)：可选参数，表示输出`expert_token_nums`的值类型，取值范围\[0, 1\]，0表示每个专家收到token数量的前缀和，1表示每个专家收到的token数量（默认）。
+
+-   **y\_dtype**(`int`)：可选参数，表示输出的数据类型。
+    -   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：暂不支持该参数。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数。
+    -   <term>Ascend 950</term>：该产品型号下，当quant_mode取值不为0时必须要输入。
+
+-  **x\_dtype**(`int`)：可选参数，表示输入的tensor x的数据类型，当其为PyTorch原生不支持的数据类型时需通过该参数指定。
+
+-  **scales\_dtype**(`int`)：可选参数，代表输入的tensor scales的数据类型，当其为PyTorch原生不支持的数据类型时需通过该参数指定。
 
 ## 返回值说明<a name="zh-cn_topic_0000002203575833_section22231435517"></a>
 
