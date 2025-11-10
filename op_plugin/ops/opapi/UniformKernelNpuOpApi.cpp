@@ -24,7 +24,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 // 定义常量
 constexpr uint64_t UNIFORM_INCREMENT = 4;
-constexpr float CURAND_2POW32_INV = float(2.3283064e-10)
+constexpr float CURAND_2POW32_INV = float(2.3283064e-10);
 
 at::Tensor& uniform_(at::Tensor& self, double from, double to, c10::optional<at::Generator> generator)
 {

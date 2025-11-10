@@ -43,7 +43,7 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
     }
 
     // 边界值转换，和cuda保持一致，区间改为(0,1]
-    self.masked_fill_(sefl == 0, 1.0);
+    self.masked_fill_(self == 0, 1.0);
 
     AT_DISPATCH_FLOATING_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
                                     self.scalar_type(), "exponential_", [&]() {
