@@ -2616,6 +2616,7 @@ def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, b
     return (torch.empty(y_size, dtype=torch.int8, device=x.device),
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
+
 @impl(m, "npu_clipped_swiglu")
 def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
     output_size = []
