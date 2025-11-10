@@ -11,7 +11,7 @@
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 | <term>Atlas 200/300/500 推理产品</term>                      |    ×     |
 
-## 功能说明<a name="zh-cn_topic_0000002236535552_section1023311522369"></a>
+ ## 功能说明<a name="zh-cn_topic_0000002236535552_section1023311522369"></a>
 
 ### 基本功能
 本算子融合了MLA（Multi-head Latent Attention）结构中RMSNorm归一化计算与RoPE（Rotary Position Embedding）位置编码以及更新KVCache的ScatterUpdate操作。<br>根据输入参数中kv与v的使能情况，按每个张量块的维度索引index，提供两种类型的KvRmsRopeCache计算处理。<br>本算子目前仅支持对应特定场景规定的维度尺寸的Key和Value作为合法输入。
@@ -61,6 +61,7 @@
         -   RotateHalf\(k\)将k的后半部分元素移至前半部分并取反，后半部分用前半部分的值。具体来说，对于维度d=64：
 
         ![](./figures/zh-cn_formulaimage_0000002242091560.png)
+
 #### Cache索引模式
 index表示从输入token的索引空间(B, N, S)，映射到输出cache中索引的的计算过程：
 $$
@@ -112,9 +113,13 @@ $$
     </tr>
 </table>
 
-#### 场景一
-拆出kv尾轴的左半边作为Dv进行RmsNorm计算，右半边作为Dk用于interleaveRope计算，再分别将计算结果按维度索引index写入ckv_cache和k_cache中。
-- (1) RmsNorm:
+- 场景一：Rms(Dv)+Rope(Dk)<br>
+拆出kv尾轴的左半边作为Dv进行RmsNorm计算，右半边作为Dk用于interleaveRope计算，再分别将计算结果按维度索引index写入ckv_cache和k_cache中。<br>
+    ```
+    vOptional=nullptr
+    method_mode=0
+    ```
+    (1) RmsNorm:
     $$
     x=kv[...,:Dv]
     $$
@@ -134,7 +139,8 @@ $$
     $$
     ckv\_cache[index(B, S)] = (x/rms)*gamma
     $$
-- (2) interleaveRope:
+
+    (2) interleaveRope:
 
     $$
     x=kv[...,Dv:]
@@ -160,9 +166,13 @@ $$
     k\_cache[index(B, S)] = x\_part1*cos+x\_part2*sin
     $$
 
-#### 场景二
-将kv尾轴直接作为Dk，进行RmsNorm计算后，取左半边进行interleaveRope计算的结果，与右半边拼接，根据index写出到输出到k_cache中；将v的尾轴作为Dv，根据index输出到ckv_cache中。
-- (1) RmsNorm+InterleaveRope
+- 场景二<br>
+将kv尾轴直接作为Dk，进行RmsNorm计算后，取左半边进行interleaveRope计算的结果，与右半边拼接，根据index写出到输出到k_cache中；将v的尾轴作为Dv，根据index输出到ckv_cache中。<br>
+     ```
+    vOptional!=nullptr
+    method_mode=1
+    ```
+    (1) RmsNorm+InterleaveRope
     $$
         x=kv[...,:] \\
         square\_x = x * x
@@ -194,7 +204,8 @@ $$
     Ck\_rope = Ck1\_part1 * cos + Ck1\_part2 * sin  \\
     k\_cache[index(B, S)] = Concat(Ck\_rope, Ck2)
     $$
-- (2) Index Scatter:
+
+    (2) Index Scatter:
     $$
         ckv\_cache[index(B, S)] = v[..., :]
     $$
@@ -219,28 +230,28 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
 >-   block\_num：PagedAttention模式下有效，表示Block的个数。
 >-   block\_size：PagedAttention模式下有效，表示Block的大小。
 
--   **kv** (`Tensor`)：必选参数，表示输入的特征张量。数据类型支持`bfloat16`、`float16`，数据格式为$BNSD$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, hidden\_size\]，其中hidden\_size=rms\_size\(Dv\)+rope\_size\(Dk\)。
--   **gamma** (`Tensor`)：必选参数，表示RMS归一化的缩放参数。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。
--   **cos** (`Tensor`)：必选参数，表示RoPE旋转位置编码的余弦分量。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, rope\_size\]。
--   **sin** (`Tensor`)：必选参数，表示RoPE旋转位置编码的正弦分量。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, rope\_size\]。
--   **index** (`Tensor`)：必选参数，表示缓存索引张量，用于定位`k_cache`和`ckv_cache`的写入位置。数据类型支持`int64`，数据格式为$ND$。shape取决于`cache_mode`。
--   **k\_cache** (`Tensor`)：必选参数，用于存储量化/非量化的键向量。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
--   **ckv\_cache** (`Tensor`)：必选参数，用于存储量化/非量化的压缩后的kv向。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
+* kv(Tensor\*，计算输入)：必选参数，表示输入的特征张量。数据类型支持`bfloat16`、`float16`，数据格式为$BNSD$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, hidden\_size\]，其中hidden\_size=rms\_size\(Dv\)+rope\_size\(Dk\)。
+* gamma(Tensor\*，计算输入)：必选参数，表示RMS归一化的缩放参数。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。
+* cos(Tensor\*，计算输入)：必选参数，表示RoPE旋转位置编码的余弦分量。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, rope\_size\]。
+* sin(Tensor\*，计算输入)：必选参数，表示RoPE旋转位置编码的正弦分量。数据类型支持`bfloat16`、`float16`，数据格式为$ND$，要求为4维张量，形状为\[batch\_size, 1, seq\_len, rope\_size\]。
+* index(Tensor\*，计算输入)：必选参数，表示缓存索引张量，用于定位`k_cache`和`ckv_cache`的写入位置。数据类型支持`int64`，数据格式为$ND$。shape取决于`cache_mode`。
+* k\_cache(Tensor\*，计算输入/输出)：必选参数，用于存储量化/非量化的键向量。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
+* ckv\_cache(Tensor\*，计算输入/输出)：必选参数，用于存储量化/非量化的压缩后的kv向。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
--   **k\_rope\_scale** (`Tensor`)：可选参数，默认值None，表示k旋转位置编码的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
--   **c\_kv\_scale** (`Tensor`)：可选参数，默认值None，表示压缩后kv的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
--   **k\_rope\_offset** (`Tensor`)：可选参数，默认值None，表示k旋转位置编码量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
--   **c\_kv\_offset** (`Tensor`)：可选参数，默认值None，表示压缩后kv的量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
--   **v**(`Tensor`)：可选参数，在类型二的计算中作为immediate scatter的Dv输入来源。支持[非连续的Tensor](common/非连续的Tensor.md)。shape仅支持4维[B,N,S,Dv]，在类型二的计算中[B, N, S]必须与输入kv保持一致。[数据格式](common/数据格式.md)支持ND，必须与输入kv一致。
--   **epsilon** (`float`)：可选参数，默认值1e-5，表示RMS归一化中的极小值，防止除以零。
--   **cache\_mode** (`str`)：可选参数，默认值'Norm'，表示缓存模式，支持的模式有Norm、PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ。
--   **is\_output\_kv** (`bool`)：可选参数，表示是否输出处理后的`k_embed_out`和`y_out`（未量化的原始值），默认值False不输出，仅`cache_mode`在\(PA/PA\_BNSD/PA\_NZ/PA\_BLK\_BNSD/PA\_BLK\_NZ\)模式下有效。
+* k\_rope\_scale(Tensor，计算输入)：可选参数，默认值None，表示k旋转位置编码的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
+* c\_kv\_scale(Tensor，计算输入)：可选参数，默认值None，表示压缩后kv的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
+* k\_rope\_offset(Tensor，计算输入)：可选参数，默认值None，表示k旋转位置编码量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
+* c\_kv\_offset(Tensor，计算输入)：可选参数，默认值None，表示压缩后kv的量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
+* v(Tensor\*，计算输入)：可选参数，在类型二的计算中作为immediate scatter的Dv输入来源。支持[非连续的Tensor](common/非连续的Tensor.md)。shape仅支持4维[B,N,S,Dv]，在类型二的计算中[B, N, S]必须与输入kv保持一致。[数据格式](common/数据格式.md)支持ND，必须与输入kv一致。
+* epsilon(float，输入)：可选参数，默认值1e-5，表示RMS归一化中的极小值，防止除以零。
+* cache\_mode(str，输入)：可选参数，默认值'Norm'，表示缓存模式，支持的模式有Norm、PA、PA_BNSD、PA_NZ、PA_BLK_BNSD、PA_BLK_NZ。
+* is\_output\_kv(bool，输入)：可选参数，表示是否输出处理后的`k_embed_out`和`y_out`（未量化的原始值），默认值False不输出，仅`cache_mode`在\(PA/PA\_BNSD/PA\_NZ/PA\_BLK\_BNSD/PA\_BLK\_NZ\)模式下有效。
 
 ## 返回值说明<a name="zh-cn_topic_0000002236535552_section3234185215368"></a>
--   **k\_cache** (`Tensor`)：和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
--   **ckv\_cache** (`Tensor`)：和输入`ckv_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
--   **k\_embed\_out** (`Tensor`)：由`is_output_kv`控制，表示需要写入到`k_cache`中的数据，在未经量化和Scatter处理的状态。当`is_output_kv`为true时，需输出。shape为4维[B,N,S,Dk]。数据类型与输入`kv`一致。
--   **y\_out** (`Tensor`)：由`is_output_kv`控制，表示需要写入到`ckv_cache`中的数据，在未经量化和Scatter处理的状态。当`is_output_kv`为true时，需输出。shape为4维[B,N,S,Dv]。数据类型与输入`kv`一致。
+* k\_cache(Tensor\*，计算输出)：和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+* ckv\_cache(Tensor\*，计算输出)：和输入`ckv_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+* k\_embed\_out(Tensor\*，计算输出)：由`is_output_kv`控制，表示需要写入到`k_cache`中的数据，在未经量化和Scatter处理的状态。当`is_output_kv`为true时，需输出。shape为4维[B,N,S,Dk]。数据类型与输入`kv`一致。
+* y\_out(Tensor\*，计算输出)：由`is_output_kv`控制，表示需要写入到`ckv_cache`中的数据，在未经量化和Scatter处理的状态。当`is_output_kv`为true时，需输出。shape为4维[B,N,S,Dv]。数据类型与输入`kv`一致。
 
 ## 约束说明<a name="zh-cn_topic_0000002236535552_section1523425283618"></a>
 
