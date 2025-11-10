@@ -42,8 +42,8 @@ class TestAttentionToFFN(TestCase):
 
     @classmethod
     def _test_attention_to_ffn(cls, rank, input_list):
-        bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, input_type, \
-        x_list, expert_ids_list, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, c2p = input_list
+        bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, ep_world_size, tp_world_size, input_type, \
+        x_list, expert_ids_list, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, init_pg, c2p = input_list
 
         # 准备
         pg, ep_group, tp_group = init_pg(rank, world_size, ep_world_size, tp_world_size)
@@ -51,7 +51,7 @@ class TestAttentionToFFN(TestCase):
 
         if rank >= ffn_worker_num:
             target_ranks = list(range(ffn_worker_num))
-        else
+        else:
             target_ranks = list(range(ffn_worker_num, world_size))
         ep_group._get_backend(torch.device('npu'))._window_register_and_exchange(window_size, target_ranks)
 
@@ -74,7 +74,7 @@ class TestAttentionToFFN(TestCase):
                 world_size = world_size,
                 ffn_token_info_table_shape = ffn_token_info_table_shape,
                 ffn_token_data_shape = ffn_token_data_shape,
-                attn_token_info_table_shape = attn_token_info_table_shape
+                attn_token_info_table_shape = attn_token_info_table_shape,
                 moe_expert_num = moe_expert_num,
                 scales=None,
                 quant_mode=0)
@@ -96,7 +96,7 @@ class TestAttentionToFFN(TestCase):
             ])
 
     def _test_multiprocess(self, f, init_pg, input_list):
-        bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, input_type, \
+        bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, ep_world_size, tp_world_size, moe_expert_num, window_size, input_type, \
             x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, token_info_golden, token_data_golden, token_data_mask = input_list
         
         ctx = mp.get_context('spawn')
@@ -107,17 +107,28 @@ class TestAttentionToFFN(TestCase):
             p = ctx.Process(
                 target=f,
                 args=(i, [bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, input_type,
-                            x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, c2p]))
+                            x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, init_pg, c2p]))
             p.start()
             ps.append(p)
 
-        for _ in range(world_size):
-            rank, output = c2p.get()
-            self.assertEqual(output, expt_out_list[rank],
-                             ("rank {} Expect receive tensor {} but got {}.").format(rank, expt_out_list[rank], output))
-
         for p in ps:
             p.join()
+
+        token_data_list = [None] * ffn_worker_num
+        token_info_list = [None] * ffn_worker_num
+        for _ in range(ffn_worker_num):
+            rank, output = c2p.get()
+            token_info_list[rank] = output[0]
+            token_data_list[rank] = output[1]
+        
+        for rank in range(ffn_worker_num):
+            self.assertEqual(token_info_list[rank], token_info_golden[rank],
+                             ("rank {} Expect receive tensor {} but got {}.").format(rank, token_info_golden[rank], token_info_list[rank]))
+
+        for rank in range(ffn_worker_num):
+             self.assertEqual(token_data_list[rank], token_data_golden[rank],
+                             ("rank {} Expect receive tensor {} but got {}.").format(rank, token_data_list[rank], token_data_golden[rank]))
+        
 
     def _construct_excepted_result(self, x_golden, expert_ids_golden, expert_rank_table, ffn_worker_num, attention_worker_num, micro_batch_num, bs, k, h, X, expert_num, default_layer_id, default_micro_batch_id):
         token_info_golden = torch.zeros(ffn_worker_num, attention_worker_num, micro_batch_num, 1 + 1 + bs * (k + 1))
@@ -134,15 +145,15 @@ class TestAttentionToFFN(TestCase):
             nonlocal token_info_golden, token_data_golden, token_data_mask
             # 处理moe专家
             for topk_id, expert_i in enumerate(expert_id):
-                dst_rank_id = load_banance(atten_id, default_layer_id, expert_i)[0]
-                dst_expert_id = load_banance(atten_id, default_layer_id, expert_i)[1]
+                dst_rank_id = load_banance(attn_id, default_layer_id, expert_i)[0]
+                dst_expert_id = load_banance(attn_id, default_layer_id, expert_i)[1]
                 token_data_golden[dst_rank_id, attn_id, default_micro_batch_id, row_idx, topk_id, :h] = x_i
                 token_data_mask[dst_rank_id, attn_id, default_micro_batch_id, row_idx, topk_id, :h] = torch.ones(h, dtype = torch.bool)
                 token_info_golden[dst_rank_id, attn_id, default_micro_batch_id, 0] = 1
                 token_info_golden[dst_rank_id, attn_id, default_micro_batch_id, row_idx * (k + 1) + topk_id + 2] = dst_expert_id.float()
 
-            dst_rank_id = load_banance(atten_id, default_layer_id, expert_num - 1)[0]
-            dst_expert_id = load_banance(atten_id, default_layer_id, expert_num - 1)[1]
+            dst_rank_id = load_banance(attn_id, default_layer_id, expert_num - 1)[0]
+            dst_expert_id = load_banance(attn_id, default_layer_id, expert_num - 1)[1]
             token_data_golden[dst_rank_id, attn_id, default_micro_batch_id, row_idx, expert_num - 1, :h] = x_i
             token_data_mask[dst_rank_id, attn_id, default_micro_batch_id, row_idx, expert_num - 1, :h] = torch.ones(h, dtype = torch.bool)
             token_info_golden[dst_rank_id, attn_id, default_micro_batch_id, 0] = 1
@@ -155,7 +166,7 @@ class TestAttentionToFFN(TestCase):
         
         return token_info_golden, token_data_golden, token_data_mask
 
-    def gen_expert_rank_table(self, moe_rank_ffn_num, experts_per_rank, moe_expert_num):
+    def gen_expert_rank_table(self, moe_rank_ffn_num, experts_per_rank, moe_expert_num, layer_num, ffn_worker_num):
         data = []
         max_len = 0
         valid_rank_id = [i for i in range(moe_rank_ffn_num)] * 2
@@ -225,7 +236,7 @@ class TestAttentionToFFN(TestCase):
         x = torch.empty([attention_worker_num, X, bs, h], dtype = input_type).uniform_(-1024, 1024)
         ep_expert_ids = [torch.randperm(moe_expert_num, dtype = input_type)[:k] for _ in range(bs * attention_worker_num)]
         expert_ids = torch.cat(ep_expert_ids).view([attention_worker_num, X, bs, k])
-        expert_rank_table = self.gen_expert_rank_table(moe_rank_ffn_num, experts_per_rank, moe_expert_num)
+        expert_rank_table = self.gen_expert_rank_table(moe_rank_ffn_num, experts_per_rank, moe_expert_num, layer_num, ffn_worker_num)
         ffn_token_info_table_shape = [attention_worker_num, micro_batch_num, 1 + 1 + bs * (k + 1)]
         ffn_token_data_shape = [attention_worker_num, micro_batch_num, bs, k + 1, h]
         attn_token_info_table_shape = [micro_batch_num, bs, k + 1]
@@ -233,7 +244,7 @@ class TestAttentionToFFN(TestCase):
         token_info_golden, token_data_golden, token_data_mask = self._construct_excepted_result(x, expert_ids, expert_rank_table, ffn_worker_num, attention_worker_num, micro_batch_num, bs, k, h, X, expert_num, default_layer_id, default_micro_batch_id)
 
         self._test_multiprocess(TestAttentionToFFN._test_attention_to_ffn,
-                TestAttentionToFFN._init_dist_hccl, [bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, moe_expert_num, window_size, input_type,
+                TestAttentionToFFN._init_dist_hccl, [bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, ep_world_size, tp_world_size, moe_expert_num, window_size, input_type,
                             x, expert_ids, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, token_info_golden, token_data_golden, token_data_mask])
 
 if __name__ == '__main__':
