@@ -18,6 +18,11 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+const int DIM_2 = 2;
+const int DIM_3 = 3;
+const int MODE_1 = 1;
+const int MODE_2 = 2;
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
     const at::Tensor& weight_uk, const at::Tensor& weight_dkv_kr, const at::Tensor& rmsnorm_gamma_cq,
@@ -32,13 +37,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
-    TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(token_x_dim == DIM_2 || token_x_dim == DIM_3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto weight_uk_dim = weight_uk.dim();
-    TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(weight_uk_dim == DIM_3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto rope_sin_dim = rope_sin.dim();
-    TORCH_CHECK(rope_sin_dim == 2 || rope_sin_dim == 3, "rope_sin dim num should be 2 or 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(rope_sin_dim == DIM_2 || rope_sin_dim == DIM_3, "rope_sin dim num should be 2 or 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor query;
     at::Tensor query_rope;
@@ -46,8 +51,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
 
-    if (token_x_dim == 3) {
-        if (weight_quant_mode == 2 && kv_cache_quant_mode == 1) {
+    if (token_x_dim == DIM_3) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
@@ -68,7 +73,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({1}, at::kFloat);
         }
     } else {
-        if (weight_quant_mode == 2 && kv_cache_quant_mode == 1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
@@ -116,13 +121,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 {
     // construct the output tensor
     auto token_x_dim = token_x.dim();
-    TORCH_CHECK(token_x_dim == 2 || token_x_dim == 3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(token_x_dim == DIM_2 || token_x_dim == DIM_3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto weight_uk_dim = weight_uk.dim();
-    TORCH_CHECK(weight_uk_dim == 3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(weight_uk_dim == DIM_3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto rope_sin_dim = rope_sin.dim();
-    TORCH_CHECK(rope_sin_dim == 2 || rope_sin_dim == 3, "rope_sin dim num should be 2 or 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(rope_sin_dim == DIM_2 || rope_sin_dim == DIM_3, "rope_sin dim num should be 2 or 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
 
     at::Tensor query;
     at::Tensor query_rope;
@@ -130,9 +135,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor query_norm;
     at::Tensor dequant_scale_q_norm;
 
-
-    if (token_x_dim == 3) {
-        if (weight_quant_mode == 2 && kv_cache_quant_mode == 1) {
+    if (token_x_dim == DIM_3) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
@@ -153,7 +157,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({1}, at::kFloat);
         }
     } else {
-        if (weight_quant_mode == 2 && kv_cache_quant_mode == 1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
