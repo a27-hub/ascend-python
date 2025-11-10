@@ -31,7 +31,7 @@ const int DIM_2 = 2;
 const int DIM_3 = 3;
 
 // 工具函数，推导输出shape
-at::Tensor construct_lightning_indexer_quant_output_tensor(const at::Tensor& query, const at::Tensor& key,
+at::Tensor construct_quant_lightning_indexer_output_tensor(const at::Tensor& query, const at::Tensor& key,
                                                            int64_t sparse_count, std::string query_layout_str, 
                                                            std::string key_layout_str)
 {
@@ -47,7 +47,7 @@ at::Tensor construct_lightning_indexer_quant_output_tensor(const at::Tensor& que
     return output;
 }
 
-at::Tensor npu_lightning_indexer_quant(
+at::Tensor npu_quant_lightning_indexer(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &weights,
     const at::Tensor &query_dequant_scale, const at::Tensor &key_dequant_scale,
     int64_t query_quant_mode, int64_t key_quant_mode,
@@ -61,18 +61,18 @@ at::Tensor npu_lightning_indexer_quant(
     std::string key_layout_str = std::string(layout_key);
 
     // construct the output tensor
-    at::Tensor lightning_indexer_quant_output = construct_lightning_indexer_quant_output_tensor(
+    at::Tensor quant_lightning_indexer_output = construct_quant_lightning_indexer_output_tensor(
             query, key, sparse_count, query_layout_str, key_layout_str);
     // convert str
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
 
-    EXEC_NPU_CMD_V1(aclnnLightningIndexerQuant, query,
+    EXEC_NPU_CMD_V1(aclnnQuantLightningIndexer, query,
         key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
         block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
-        pre_tokens, next_tokens, lightning_indexer_quant_output);
+        pre_tokens, next_tokens, quant_lightning_indexer_output);
 
-    return lightning_indexer_quant_output;
+    return quant_lightning_indexer_output;
 }
 
 } // namespace op_api
