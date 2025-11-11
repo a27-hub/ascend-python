@@ -18,19 +18,44 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 
-std::vector<at::Tensor> split_with_sizes_copy(const at::Tensor & self, at::IntArrayRef split_sizes, int64_t dim)
-{
-    auto output_shapes = op_infer::split_with_sizes_copy_output_size(op_infer::array_to_small_vector(self.sizes()), split_sizes, dim);
-    auto output_dtype = self.scalar_type();
-
-    std::vector<at::Tensor> result;
-    for (const auto& shape : output_shapes) {
-        result.push_back(npu_preparation::apply_tensor_without_format(shape, self.options().dtype(output_dtype)));
+bool is_fused_op_optim(const at::Tensor& self, at::IntArrayRef split_sizes) {
+    if (!op_plugin::utils::is_gte_cann_version_830rc1()) {
+        return false;
     }
 
-    at::TensorList result_ = at::TensorList(result);
-    EXEC_NPU_CMD(aclnnSplitWithSize, self, split_sizes, dim, result_);
-    return result;
+    if (self.dim() != 2) {
+        return false;
+    }
+
+    int64_t len = split_sizes.size();
+    if ((len <= 32) || (len > 64)) {
+        return false;
+    }
+
+    at::ScalarType dtype = self.scalar_type();
+
+    int64_t dim0 = self.size(0);
+    int64_t dim1 = self.size(1);
+
+    if (dtype == at::ScalarType::Half || dtype == at::ScalarType::BFloat16) {
+        return (dim0 <= 16) && (dim1 > 65536);
+    } else if (dtype == at::ScalarType::Float) {
+        return (dim0 <= 8) && (dim1 > 65536);
+    } else {
+        return false;
+    }
+}
+
+
+void split_with_sizes_copy_out(const at::Tensor & self, at::IntArrayRef split_sizes, int64_t dim, at::TensorList out)
+{
+    if(is_fused_op_optim) {
+        EXEC_NPU_CMD(aclnnSplitWithSize, self, split_sizes, dim, out);
+    } else {
+        at::native::split_with_sizes_copy_out(self, split_sizes, dim, out);
+        // auto array = self.split_with_sizes(split_sizes, dim);
+        // copy_tensor_array_to_out("split_with_sizes_copy_out", array, out);
+    }
 }
 
 }  // namespace op_api
