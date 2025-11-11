@@ -1218,6 +1218,24 @@ def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *
             numels)
 
 
+@impl(m, "npu_lightning_indexer")
+def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
+    actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3,
+    pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    if layout_query == 'BSND':
+        sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+    else:
+        sparse_indices_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+    if return_value:
+        if layout_query == 'BSND':
+            sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+        else:
+            sparse_values_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+    else:
+        sparse_values_out = torch.empty([0], dtype=query.dtype, device='meta')
+    return (sparse_indices_out, sparse_values_out)
+
+
 @impl(m, "npu_fusion_attention_grad_v2")
 def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, query_rope=None, key_rope=None, scale_value=1.0,
