@@ -35,6 +35,18 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
     else:
         return torch.empty_like(query)
 
+@impl(m, "npu_lightning_indexer")
+def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
+    actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='PA_BSND', sparse_count=2048,
+    sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    if layout_query == 'BSND':
+        indicesOut = torch.empyt([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, devide='meta')
+        valuesOut = torch.empyt([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, devide='meta')
+    else:
+        indicesOut = torch.empyt([query.size(0), key.size(2), sparse_count], dtype=torch.int32, devide='meta')
+        valuesOut = torch.empyt([query.size(0), key.size(2), sparse_count], dtype=query.dtype, devide='meta')
+    return (indicesOut, valuesOut)
+
 @impl(m, "npu_sparse_flash_attention")
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
