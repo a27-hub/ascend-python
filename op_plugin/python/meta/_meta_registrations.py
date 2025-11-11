@@ -488,6 +488,7 @@ def npu_gmm_alltoallv_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     y = torch.empty([out_x, out_y], dtype=gmm_x.dtype, device='meta')
     return (y, mm_y)
 
+
 @impl(m, "npu_fused_matmul")
 def npu_fused_matmul_meta(x, x2, *, bias=None, x3=None, fused_op_type=''):
     torch._check(
