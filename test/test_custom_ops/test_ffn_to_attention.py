@@ -7,6 +7,7 @@ import torch.multiprocessing as mp
 import torch_npu
 import time
 import torchair
+import random
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
@@ -41,7 +42,7 @@ class TestFFNToAttention(TestCase):
     @classmethod
     def _test_ffn_to_attention(cls, rank, input_list):
         bs, k, h, micro_batch_num, attention_worker_num, ffn_worker_num, expert_num, world_size, window_size, ep_world_size, tp_world_size, input_type, \
-        x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, init_pg, c2p = input_list
+        x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, init_pg, c2p, p2c = input_list
         
         # 准备
         pg, ep_group, tp_group = init_pg(rank, world_size, ep_world_size, tp_world_size)
@@ -62,19 +63,22 @@ class TestFFNToAttention(TestCase):
             expert_offsets = expert_offsets.to(torch.int32).npu()
             attn_rank_table = attn_rank_table.to(torch.int32).npu()
             
-            torch_npu.npu_ffn_to_annention(x=x,
+            torch_npu.npu_ffn_to_attention(x=x,
                 session_ids = session_ids,
                 micro_batch_ids = micro_batch_ids,
                 token_ids = token_ids,
-                expert_offset = expert_offsets,
+                expert_offsets = expert_offsets,
                 actual_token_num = torch.tensor([actual_token_num], dtype=torch.int64).npu(),
                 attn_rank_table = attn_rank_table,
                 group = ep_hcomm_name,
                 world_size = world_size,
                 token_info_table_shape = token_info_table_shape,
                 token_data_shape = token_data_shape)
+            c2p.put([rank,
+                [0, 0]
+            ])
         else:
-            time.sleep(1)
+            time.sleep(5)
             window_addr = ep_group._get_backend(torch.device('npu'))._get_window_mem().data_ptr()
             token_info_npu = torchair.llm_datadist.create_npu_tensors(
                 [micro_batch_num, bs, expert_num], torch.int32, [window_addr]
@@ -90,31 +94,32 @@ class TestFFNToAttention(TestCase):
                 [token_info_cpu, token_data_cpu]
             ])
 
+        p2c.get()
+
     def _test_multiprocess(self, f, init_pg, input_list):
         bs, k, h, micro_batch_num, attention_worker_num, ffn_worker_num, expert_num, world_size, window_size, ep_world_size, tp_world_size, input_type, \
             x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, token_info_golden, token_data_golden, token_data_mask = input_list
 
         ctx = mp.get_context('spawn')
-        c2p = ctx.Queue(attention_worker_num)
+        c2p = ctx.Queue(world_size)
+        p2c = ctx.Queue(world_size)
         ps = []
 
         for i in range(world_size):
             p = ctx.Process(
                 target=f,
                 args=(i, [bs, k, h, micro_batch_num, attention_worker_num, ffn_worker_num, expert_num, world_size, window_size, ep_world_size, tp_world_size, input_type,
-                            x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, init_pg, c2p]))
+                            x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, init_pg, c2p, p2c]))
             p.start()
             ps.append(p)
 
-        for p in ps:
-            p.join()
-
         token_data_list = [None] * attention_worker_num
         token_info_list = [None] * attention_worker_num
-        for _ in range(attention_worker_num):
+        for _ in range(world_size):
             rank, output = c2p.get()
-            token_info_list[rank] = output[0]
-            token_data_list[rank] = output[1]
+            if rank < attention_worker_num:
+                token_info_list[rank] = output[0]
+                token_data_list[rank] = output[1]
         
         for rank in range(attention_worker_num):
             self.assertEqual(token_info_list[rank], token_info_golden[rank],
@@ -123,6 +128,12 @@ class TestFFNToAttention(TestCase):
         for rank in range(attention_worker_num):
              self.assertEqual(token_data_list[rank], token_data_golden[rank],
                              ("rank {} Expect receive tensor {} but got {}.").format(rank, token_data_list[rank], token_data_golden[rank]))
+
+        for _ in range(world_size):
+            p2c.put(0)
+
+        for p in ps:
+            p.join()
 
     def _construct_excepted_result(self, attention_worker_num, micro_batch_num, bs, expert_num, h, x, session_ids, micro_batch_ids, batch_ids, expert_offsets, actual_token_num):
         token_info_golden = torch.zeros(attention_worker_num, micro_batch_num, bs, expert_num)
@@ -172,10 +183,12 @@ class TestFFNToAttention(TestCase):
 
         token_info_golden, token_data_golden, token_data_mask = self._construct_excepted_result(attention_worker_num, micro_batch_num, bs, expert_num, h, x, session_ids, micro_batch_ids, batch_ids, expert_offsets, actual_token_num)
 
-        self._test_multiprocess(TestFFNToAttention._test_attention_to_ffn,
+        self._test_multiprocess(TestFFNToAttention._test_ffn_to_attention,
                 TestFFNToAttention._init_dist_hccl, [bs, k, h, micro_batch_num, attention_worker_num, ffn_worker_num, expert_num, world_size, window_size, ep_world_size, tp_world_size, input_type, \
                                                         x, session_ids, micro_batch_ids, batch_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, token_info_golden, token_data_golden, token_data_mask])
 
 
 if __name__ == '__main__':
+    torch.manual_seed(0)
+    random.seed(0)
     run_tests()
