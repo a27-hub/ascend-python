@@ -35,6 +35,33 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
     else:
         return torch.empty_like(query)
 
+@impl(m, "npu_lightning_indexer")
+def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
+    actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='PA_BSND', sparse_count=2048,
+    sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    if layout_query == 'BSND':
+        indicesOut = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        valuesOut = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+    else:
+        indicesOut = torch.empty([query.size(0), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        valuesOut = torch.empty([query.size(0), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+    return (indicesOut, valuesOut)
+
+@impl(m, "npu_sparse_flash_attention")
+def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
+                                         key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', 
+                                         sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807,
+                                         attention_mode=0, return_softmax_lse=False):
+    if layout_query == "TND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+    if layout_query == "BSND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+    return (attention_out, softmax_max, softmax_sum)
 
 @impl(m, "npu_mla_prolog")
 def npu_mla_prolog_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
