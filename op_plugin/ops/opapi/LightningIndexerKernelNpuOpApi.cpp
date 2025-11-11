@@ -27,15 +27,10 @@ const static int64_t DIM_3 = 3;
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(const at::Tensor& query, const at::Tensor& key,
+std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(const at::Tensor& query, const at::Tensor& key,
     const c10::optional<at::Tensor> &actual_seq_lengths_query, int64_t sparse_count, std::string query_layout_str, std::string key_layout_str)
-(
+{
     at::SmallVector<int64_t, SIZE> output_size;
-    for (size_t i = 0; i < query.sizes(); i++) {
-        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
-            "than 0, but shape[", i, "] is ", query.size(i));
-    }
-    TORCH_CHECK(sparse_count > 0, "sparse count should be greater than 0, but now is ", sparse_count);
 
     if (query_layout_str == "BSND") {
         output_size = {query.size(DIM_0), query.size(DIM_1), key.size(DIM_2), sparse_count};
@@ -46,8 +41,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> construct_lightning_indexer_outpu
     }
     at::Tensor indicesOut = npu_preparation::apply_tensor_without_format(output_size, at::kInt);
     at::Tensor valuesOut = npu_preparation::apply_tensor_without_format(output_size, query.options().dtype(query.dtype()));
-    return std::tuple<at::Tensor, at::Tensor, at::Tensor>(indicesOut, valuesOut);
-)
+    return std::tuple<at::Tensor, at::Tensor>(indicesOut, valuesOut);
+}
 
 std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &weights,

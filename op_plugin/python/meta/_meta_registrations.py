@@ -40,11 +40,11 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
     actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='PA_BSND', sparse_count=2048,
     sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
     if layout_query == 'BSND':
-        indicesOut = torch.empyt([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, devide='meta')
-        valuesOut = torch.empyt([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, devide='meta')
+        indicesOut = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        valuesOut = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
     else:
-        indicesOut = torch.empyt([query.size(0), key.size(2), sparse_count], dtype=torch.int32, devide='meta')
-        valuesOut = torch.empyt([query.size(0), key.size(2), sparse_count], dtype=query.dtype, devide='meta')
+        indicesOut = torch.empty([query.size(0), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        valuesOut = torch.empty([query.size(0), key.size(2), sparse_count], dtype=query.dtype, device='meta')
     return (indicesOut, valuesOut)
 
 @impl(m, "npu_sparse_flash_attention")
