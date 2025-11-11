@@ -66,7 +66,8 @@ namespace op_api
             c_kv_shape[i] = kv.size(i);
         }
 
-        if (is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX])
+        bool exec_v2_flag = is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX];
+        if (exec_v2_flag)
         {
             // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
             // printf("verified input v tensor.\n");
@@ -84,7 +85,7 @@ namespace op_api
         at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
         at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
 
-        if (is_kv_rnrc_V2_available)
+        if (exec_v2_flag)
         {
             // V2 : v is ignored in V1
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
@@ -137,7 +138,8 @@ namespace op_api
             c_kv_shape[i] = kv.size(i);
         }
 
-        if (is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX])
+        bool exec_v2_flag = is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX];
+        if (exec_v2_flag)
         {
             // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
             // printf("verified input v tensor.\n");
@@ -155,7 +157,7 @@ namespace op_api
         at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
         at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
 
-        if (is_kv_rnrc_V2_available)
+        if (exec_v2_flag)
         {
             // V2 : v is ignored in V1
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
@@ -207,7 +209,8 @@ namespace op_api
             c_kv_shape[i] = kv.size(i);
         }
 
-        if (is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX])
+        bool exec_v2_flag = is_kv_rnrc_V2_available && vDim == MAX_DIM && v_tsr_opt.size(TOKEN_FEATURE_DIM_IDX) == DV_SIZES[V2_MODE_IDX];
+        if (exec_v2_flag)
         {
             // Accepts ONLY valid v tensor with exact Dv equals to V2 preset under aclnnV2
             // printf("verified input v tensor.\n");
@@ -229,7 +232,7 @@ namespace op_api
         at::Tensor k_cache_inplace = k_cache.clone();
         at::Tensor ckv_cache_inplace = ckv_cache.clone();
 
-        if (is_kv_rnrc_V2_available)
+        if (exec_v2_flag)
         {
             // V2 : v is ignored in V1
             EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvRmsNormRopeCacheV2, kv, gamma, cos, sin, index, k_cache, ckv_cache,
