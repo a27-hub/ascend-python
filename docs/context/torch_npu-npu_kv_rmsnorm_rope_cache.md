@@ -257,6 +257,8 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
 
 -   该接口支持推理场景下使用。
 -   该接口支持图模式（PyTorch 2.1.0, 2.5.1版本）。
+-   该接口的场景一和场景二，目前仅支持D维度满足相应场景固定预设尺寸的输入，其他输入将被拦截。
+
 * kv/v格式：
     * 目前仅支持BNSD格式的kv/v作为输入，kv和v的数据类型与[B, N, S]维度必须完全一致。
 * 参数说明里shape格式说明：
@@ -276,7 +278,8 @@ torch_npu.npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ck
     * 在场景一中，仅Dk部分全部参与Rope运算，因而cos/sin的大小为[B,N,S,Dk]，Dk=64。
     * 在场景二中，Dk仅前64维参与Rope运算，因而cos/sin的大小为[B,N,S,64]。
 * v相关约束:
-    * 该参数仅在场景二中作为必须入参，在场景一中会作为无效参数被忽略。
+    * 该接口目前仅在场景二中支持k-v分离输入，v仅在场景二中作为必须入参。
+    * 不要在场景一的调用中传入v参数，否则会导致非预期结果。
     * 如果需要调用场景二，则必须传入尺寸为[B,N,S,128]的Tensor作为v。
 -   量化模式：当`k_rope_scale`和`c_kv_scale`非空时，`k_cache`和`ckv_cache`的dtype为`int8`，缓存形状的最后一个维度需要为32（Cache数据格式为FRACTAL\_NZ模式），`k_rope_scale`和`c_kv_scale`必须同时非空，`k_rope_offset`和`c_kv_offset`必须同时为None为非空。
 -   非量化模式：当`k_rope_scale`和`c_kv_scale`为空时，`k_cache`和`ckv_cache`的dtype为`bfloat16`或`float16`。
