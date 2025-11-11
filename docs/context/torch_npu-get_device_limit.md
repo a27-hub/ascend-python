@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 通过该接口，获取指定Device上的的Device资源限制。
+- 通过该接口，获取指定Device上的Device资源限制。
 - 当前支持资源类型为Cube Core、Vector Core。
 
 ## 函数原型
@@ -25,7 +25,7 @@ torch.npu.get_device_limit(device) ->Dict
 ## 返回值说明
 `Dict`
 
-代表`Device`的cube和vector核数。
+代表`Device`的Cube和Vector核数。
 
 ## 约束说明
 

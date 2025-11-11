@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
@@ -23,7 +23,7 @@ torch_npu.npu_scatter_nd_update(input, indices, updates) -> Tensor
 
 - **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`updates`一致，维数只能是1~8维。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
    
@@ -32,7 +32,7 @@ torch_npu.npu_scatter_nd_update(input, indices, updates) -> Tensor
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`、`int64`，数据格式支持$ND$，支持非连续的Tensor，`indices`中的索引数据不支持越界。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`input`一致。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
 
@@ -43,7 +43,7 @@ torch_npu.npu_scatter_nd_update(input, indices, updates) -> Tensor
 
 ## 约束说明
 
-- 该接口支持图模式（PyTorch 2.1.0版本）。
+- 该接口支持图模式。
 - `indices`至少是2维，其最后1维的大小不能超过`input`的维度大小。
 - 假设`indices`最后1维的大小是a，则`updates`的shape等于`indices`除最后1维外的shape加上`input`除前a维外的shape。举例：`input`的shape是$(4, 5, 6)$，`indices`的shape是$(3, 2)$，则`updates`的shape必须是$(3, 6)$。
 

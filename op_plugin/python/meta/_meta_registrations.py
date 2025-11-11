@@ -178,7 +178,228 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     return (query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope)
 
-if "2.1" in torch.__version__:
+
+@impl(m, "npu_mla_prolog_v3")
+def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
+                    rope_sin, rope_cos, kv_cache, kr_cache, *, cache_index=None, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
+                    quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, 
+                    cache_mode="PA_BSND", qc_qr_scale=1.0, kc_scale=1.0):
+
+    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    token_x_dim = token_x.dim()
+    torch._check(
+        token_x_dim == 2 or token_x_dim == 3,
+        lambda: "token_x dim num should be 2 or 3, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    weight_uk_dim = weight_uk.dim()
+    torch._check(
+        weight_uk_dim == 3,
+        lambda: "weight_uk dim num should be 3, but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    rope_sin_dim = rope_sin.dim()
+    torch._check(
+        rope_sin_dim == 2 or rope_sin_dim == 3,
+        lambda: "rope_sin dim num should be 2 or 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    if token_x_dim == 3:
+        query_shape = []
+        query_shape.append(token_x.size(0))
+        query_shape.append(token_x.size(1))
+        query_shape.append(weight_uk.size(0))
+        query_shape.append(weight_uk.size(2))
+
+        query_rope_shape = []
+        query_rope_shape.append(token_x.size(0))
+        query_rope_shape.append(token_x.size(1))
+        query_rope_shape.append(weight_uk.size(0))
+        query_rope_shape.append(rope_sin.size(2))
+
+        dequant_scale_q_nope_shape = []
+        dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(1)
+
+        query_norm_shape = []
+        query_norm_shape.append(token_x.size(0))
+        query_norm_shape.append(token_x.size(1))
+        query_norm_shape.append(weight_dq.size(1))
+
+        dequant_scale_q_norm_shape = []
+        dequant_scale_q_norm_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_norm_shape.append(1)
+
+    else:
+        query_shape = []
+        query_shape.append(token_x.size(0))
+        query_shape.append(weight_uk.size(0))
+        query_shape.append(weight_uk.size(2))
+
+        query_rope_shape = []
+        query_rope_shape.append(token_x.size(0))
+        query_rope_shape.append(weight_uk.size(0))
+        query_rope_shape.append(rope_sin.size(1))
+
+        dequant_scale_q_nope_shape = []
+        dequant_scale_q_nope_shape.append(token_x.size(0))
+        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(1)
+
+        query_norm_shape = []
+        query_norm_shape.append(token_x.size(0))
+        query_norm_shape.append(weight_dq.size(1))
+
+        dequant_scale_q_norm_shape = []
+        dequant_scale_q_norm_shape.append(token_x.size(0))
+        dequant_scale_q_norm_shape.append(1)
+
+    # kvcache量化
+    if token_x.dtype == torch.int8 and quant_scale_ckv is not None:
+        query = torch.empty(query_shape, dtype=torch.int8, device='meta')
+        dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
+    else:
+        query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
+        dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
+
+    # 输出query_norm
+    query_norm_flag = False
+    if query_norm_flag:
+        query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
+        if weight_uq_qr.dtype == torch.int8:
+            dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+    else:
+        query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+        dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+
+    query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
+
+    return (query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm)
+
+
+@impl(m, "npu_mla_prolog_v3_functional")
+def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv,
+                    rope_sin, rope_cos, kv_cache, kr_cache, *, cache_index=None, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
+                    quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, 
+                    cache_mode="PA_BSND", qc_qr_scale=1.0, kc_scale=1.0):
+
+
+    require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    token_x_dim = token_x.dim()
+    torch._check(
+        token_x_dim == 2 or token_x_dim == 3,
+        lambda: "token_x dim num should be 2 or 3, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    weight_uk_dim = weight_uk.dim()
+    torch._check(
+        weight_uk_dim == 3,
+        lambda: "weight_uk dim num should be 3, but the actual value is " + str(weight_uk_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    rope_sin_dim = rope_sin.dim()
+    torch._check(
+        rope_sin_dim == 2 or rope_sin_dim == 3,
+        lambda: "rope_sin dim num should be 2 or 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+    )
+
+    if token_x_dim == 3:
+        query_shape = []
+        query_shape.append(token_x.size(0))
+        query_shape.append(token_x.size(1))
+        query_shape.append(weight_uk.size(0))
+        query_shape.append(weight_uk.size(2))
+
+        query_rope_shape = []
+        query_rope_shape.append(token_x.size(0))
+        query_rope_shape.append(token_x.size(1))
+        query_rope_shape.append(weight_uk.size(0))
+        query_rope_shape.append(rope_sin.size(2))
+
+        dequant_scale_q_nope_shape = []
+        dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(1)
+
+        query_norm_shape = []
+        query_norm_shape.append(token_x.size(0))
+        query_norm_shape.append(token_x.size(1))
+        query_norm_shape.append(weight_dq.size(1))
+
+        dequant_scale_q_norm_shape = []
+        dequant_scale_q_norm_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_norm_shape.append(1)
+
+    else:
+        query_shape = []
+        query_shape.append(token_x.size(0))
+        query_shape.append(weight_uk.size(0))
+        query_shape.append(weight_uk.size(2))
+
+        query_rope_shape = []
+        query_rope_shape.append(token_x.size(0))
+        query_rope_shape.append(weight_uk.size(0))
+        query_rope_shape.append(rope_sin.size(1))
+
+        dequant_scale_q_nope_shape = []
+        dequant_scale_q_nope_shape.append(token_x.size(0))
+        dequant_scale_q_nope_shape.append(weight_uk.size(0)) # support pertoken-head dynamic antiquant
+        dequant_scale_q_nope_shape.append(1)
+
+        query_norm_shape = []
+        query_norm_shape.append(token_x.size(0))
+        query_norm_shape.append(weight_dq.size(1))
+
+        dequant_scale_q_norm_shape = []
+        dequant_scale_q_norm_shape.append(token_x.size(0))
+        dequant_scale_q_norm_shape.append(1)
+
+    # kvcache量化
+    if token_x.dtype == torch.int8 and quant_scale_ckv is not None:
+        query = torch.empty(query_shape, dtype=torch.int8, device='meta')
+        dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
+    else:
+        query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
+        dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
+
+    query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
+
+    # 输出query_norm
+    query_norm_flag = False
+    if query_norm_flag:
+        query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
+        # 动态量化
+        if weight_uq_qr.dtype == torch.int8:
+            dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+    else:
+        query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+        dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+
+    kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
+    kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
+
+    return (query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm, kv_cache_out, kr_cache_out)
+
+if "2.1." in torch.__version__:
     @impl(m, "npu_prompt_flash_attention")
     def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147473647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
         tmp_out = torch.empty_like(query, dtype=query.dtype, device='meta')
@@ -466,6 +687,26 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             x.new_empty(tuple(expanded_scale_dim_list), dtype=torch.float32))
 
 
+@impl(m, "ffn_worker_scheduler_")
+def ffn_worker_scheduler__meta(self, *, sync_group_size=1, execute_mode=0):
+    return self
+
+
+@impl(m, "attention_worker_scheduler_")
+def attention_worker_scheduler__meta(self):
+    return self
+
+
+@impl(m, "ffn_worker_scheduler")
+def ffn_worker_scheduler_meta(self, *, sync_group_size=1, execute_mode=0):
+    return torch.empty_like(self)
+
+
+@impl(m, "attention_worker_scheduler")
+def attention_worker_scheduler_meta(self):
+    return torch.empty_like(self)
+
+
 @impl(m, "npu_ffn_worker_batching")
 def npu_ffn_worker_batching(schedule_context, expert_num, max_out_shape, *, token_dtype=0, need_schedule=0, layer_num=0):
     Y_size = max_out_shape[0] * max_out_shape[1] * max_out_shape[2]
@@ -631,13 +872,26 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         N = query.size(0)
         S1 = query.size(1)
     if input_layout == "TND":
+        if num_key_value_heads == 0:
+            num_key_value_heads = num_heads
+        token_kv_dim = key.dim()
         token_x_dim = query.dim()
         torch._check(
             token_x_dim == 3,
             lambda: "Layout TND, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
-            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+            torch._check(
+                token_kv_dim == 3 or token_kv_dim == 4 or token_kv_dim == 5,
+                lambda: "Layout NTD_TND, token_kv_dim must be 3/4/5!, but the actual value is "
+                + str(token_kv_dim) + ops_error(ErrCode.VALUE),
+            )
+            if value.dim() == 3:
+                tmp_out = torch.empty([query.size(0), query.size(1), value.size(2) // num_key_value_heads], dtype=query.dtype, device='meta')
+            elif value.dim() == 4:
+                tmp_out = torch.empty([query.size(0), query.size(1), value.size(3)], dtype=query.dtype, device='meta')
+            else:
+                tmp_out = torch.empty([query.size(0), query.size(1), value.size(2) * value.size(4)], dtype=query.dtype, device='meta')
         else:
             tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
     if input_layout == "TND_NTD":
@@ -661,7 +915,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             else:
                 return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([0], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         out_dtype = torch.half
         if query_rope is not None:
@@ -674,7 +928,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                 return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([B, N, S1, 1], dtype=torch.float32, \
                     device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([0], dtype=torch.float32, device='meta'))
     else:
         if (softmax_lse_flag == True):
             if input_layout == "TND" or input_layout == "TND_NTD":
@@ -687,7 +941,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out), torch.empty([0], dtype=torch.float32, device='meta'))
 
 
 @impl(m, "npu_fused_infer_attention_score_v2")
@@ -851,7 +1105,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             else:
                 return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([0], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         out_dtype = torch.half
         if query_rope is not None:
@@ -864,7 +1118,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                 return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([B, N, S1, 1], dtype=torch.float32, \
                     device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=out_dtype), torch.empty([0], dtype=torch.float32, device='meta'))
     else:
         if return_softmax_lse:
             if input_layout == "TND" or input_layout == "TND_NTD":
@@ -885,7 +1139,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             else:
                 return (torch.empty_like(tmp_out), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out), torch.empty([1], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out), torch.empty([0], dtype=torch.float32, device='meta'))
 
 
 @impl(m, "npu_fusion_attention")
@@ -910,17 +1164,11 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
     seed = 0
     offset = 0
     numels = 0
-    attention_score = torch.empty_like(query, dtype=query.dtype, device='meta')
+    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta')
     softmax_max = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
     softmax_sum = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
     softmax_out = torch.empty([0], dtype=query.dtype, device='meta')
-    return (torch.empty_like(attention_score),
-            torch.empty_like(softmax_max),
-            torch.empty_like(softmax_sum),
-            torch.empty_like(softmax_out),
-            seed,
-            offset,
-            numels)
+    return (attention_score, softmax_max, softmax_sum, softmax_out, seed, offset, numels)
 
 
 @impl(m, "npu_fusion_attention_grad")
@@ -928,11 +1176,11 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, scale_value=1.0,
                                   keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=0, offset=0,
                                   numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout=""):
-    dq = torch.empty_like(query, dtype=query.dtype, device='meta')
-    dk = torch.empty_like(key, dtype=query.dtype, device='meta')
-    dv = torch.empty_like(value, dtype=query.dtype, device='meta')
+    dq = query.new_empty(query.shape, dtype=query.dtype, device='meta')
+    dk = key.new_empty(key.shape, dtype=query.dtype, device='meta')
+    dv = value.new_empty(value.shape, dtype=query.dtype, device='meta')
     dpse = torch.empty([0], dtype=query.dtype, device='meta')
-    return (torch.empty_like(dq), torch.empty_like(dk), torch.empty_like(dv), torch.empty_like(dpse))
+    return (dq, dk, dv, dpse)
 
 
 @impl(m, "npu_fusion_attention_v2")
@@ -1406,7 +1654,7 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
 
 
 @impl(m, "_npu_distribute_barrier")
-def _npu_distribute_barrier(x_ref, group, world_size):
+def _npu_distribute_barrier(x_ref, group, world_size, *, time_out=None, elastic_info=None):
     return torch.empty_like(x_ref)
 
 
@@ -2805,6 +3053,15 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
     output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
     output_offset_shape = torch.empty([], dtype=torch.float32, device=x.device)
     return output_shape, output_scale_shape, output_offset_shape
+
+
+@impl(m, "npu_grouped_matmul_swiglu_quant_v2")
+def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None, weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0, group_list_type=0, tuning_config=None):
+    batch_size = x.size(0)
+    n = weight[0].size(2)
+    output_shape = torch.empty([batch_size, n // 2], dtype=torch.int8, device=x.device)
+    output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
+    return output_shape, output_scale_shape
 
 
 @impl(m, "npu_moe_token_unpermute_with_routing_map")

@@ -5,11 +5,11 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
 ## 功能说明
 
-- API功能：对输入的张量进行per-token对称动态量化。
+- API功能：对输入的张量进行pertoken对称动态量化。
 
     如果是MoE（Mixture of Experts，混合专家模型）场景，会引入`group_index`，`smooth_scales`中包含多组smooth向量，按`group_index`中的数值作用到`x`的不同行上。具体地，假如`x`包含m个token，`smooth_scales`有n行，`smooth_scales[0]`会作用到`x[0:group_index[0]]`上，`smooth_scales[i]`会作用到`x[group_index[i-1]: group_index[i]]`上，`i=1, 2, ..., n-1`。
 
@@ -20,7 +20,8 @@
     $$
 
     - 若`smooth_scales`存在：
-    $$\text{scale} = \frac{\text{rowMax}(\text{abs}(\mathbf{x} * smooth\_scales))}{DTYPE\_MAX}  \\
+    $$
+    \text{scale} = \frac{\text{rowMax}(\text{abs}(\mathbf{x} * smooth\_scales))}{DTYPE\_MAX}  \\
     y = \text{round}\left(\frac{\mathbf{x} * smooth\_scales}{\text{scale}}\right)
     $$
 
@@ -40,7 +41,7 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
 - **group_index** (`Tensor`)：可选参数，对`smooth_scales`进行分组的下标，仅在MoE场景下生效。数据类型支持`int32`，数据格式支持$ND$，支持非连续的Tensor。
 
 - **dst_type** (`ScalarType`)：可选参数，指定量化输出的类型，传`None`时当作`int8`处理。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：支持取值`int8`、`quint4x2`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持取值`int8`、`quint4x2`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取值`int8`、`quint4x2`。
 
 ## 返回值说明
@@ -51,10 +52,8 @@ torch_npu.npu_dynamic_quant(x, *, smooth_scales=None, group_index=None, dst_type
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- 该接口支持图模式（PyTorch 2.1版本）。
-- 该接口仅在如下产品支持MoE场景。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> 
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
+- 该接口支持图模式。
+- 该接口支持MoE场景。
 
 - 使用`smooth_scales`时：
     - 若不使用`group_index`，`smooth_scales`必须是一维Tensor，元素数量与`x`的最后一维大小一致。
