@@ -97,16 +97,13 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填空指针，当`copy_expert_num`不为0或`const_expert_num`不为0时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
 -   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在`const_expert_num`不为0的场景下需要输入的计算系数。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传空指针即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本不支持，传空指针即可。
+    -  当前版本不支持，传空指针即可。
 
 -   **const\_expert\_alpha\_2** (`Tensor`)：可选参数，在`const_expert_num`不为0的场景下需要输入的计算系数。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传空指针即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本不支持，传空指针即可。
+    -  当前版本不支持，传空指针即可。
 
 -   **const\_expert\_v** (`Tensor`)：可选参数，在`const_expert_num`不为0的场景下需要输入的计算系数。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传空指针即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本不支持，传空指针即可。
+    -  当前版本不支持，传空指针即可。
 
 -   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。有TP域通信才需要传参。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值即可。
@@ -154,8 +151,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。
 
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本不支持，传0即可。
+    -   当前版本不支持，传0即可。
 
 ## 返回值说明<a name="zh-cn_topic_0000002168254826_section22231435517"></a>
 `Tensor`
