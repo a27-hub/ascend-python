@@ -277,7 +277,7 @@ std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors, at::ArrayRef<at
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_clamp_min_scalarlist_kernel_slow(tensors, scalars);
     }
-    if (scalars.empty()){
+    if (scalars.empty()) {
         return at::native::foreach_tensor_clamp_min_scalarlist_kernel_slow(tensors, scalars);
     }
     at::native::check_foreach_api_restrictions(tensors, scalars);
@@ -316,7 +316,7 @@ void _foreach_maximum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_clamp_min_scalarlist_kernel_slow_(tensors, scalars);
     }
-    if (scalars.empty()){
+    if (scalars.empty()) {
         return at::native::foreach_tensor_clamp_min_scalarlist_kernel_slow(tensors, scalars);
     }
     // datatype check
