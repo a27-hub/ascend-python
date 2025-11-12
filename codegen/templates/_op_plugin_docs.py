@@ -12088,6 +12088,7 @@ x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_co
 """
 )
 
+
 _add_torch_npu_docstr(
     "npu_grouped_matmul_add_",
     """
