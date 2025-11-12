@@ -61,12 +61,11 @@ at::Tensor& _index_put_impl_(
   for (at::Tensor index_opt : indices_expand) {
       indices_expand_list.push_back(index_opt);
   }
-
   auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
   TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
       "shape mismatch: value tensor of shape ", value.sizes(),
       " cannot be broadcast to indexing result of shape ", info.src.sizes(),
-      OPS_ERROR(ErrCode::PARAM));
+  OPS_ERROR(ErrCode::PARAM));
   for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
     if (indices_after[i].defined()) {
       all_defined_indices.emplace_back(indices_after[i]);
