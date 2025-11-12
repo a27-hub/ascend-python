@@ -22,7 +22,7 @@
 
 namespace op_api{
     using namespace at_npu::native;
-    using tensor_list = std::tuple<at::Tensor, at::Tensor>
+    using tensor_list = std::tuple<at::Tensor, at::Tensor>;
 
     void npu_gather_pa_kv_cache(
         const at::Tensor& key_cache,
