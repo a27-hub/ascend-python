@@ -228,7 +228,12 @@ at::Tensor npu_convert_weight_to_b4pack(const at::Tensor &weight)
             weight_packed_bytes, packed_weight.data(), weight_packed_bytes, ACL_MEMCPY_HOST_TO_DEVICE));
 
         auto &weight_packed_npu_desc = torch_npu::NPUBridge::GetNpuStorageImplDesc(weight_packed_npu);
-        weight_packed_npu_desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
+        auto npu_format = ACL_FORMAT_FRACTAL_NZ;
+        if (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_32) {
+            npu_format = ACL_FORMAT_FRACTAL_NZ_C0_4;
+        }
+
+        weight_packed_npu_desc.npu_format_ = npu_format;
         weight_packed_npu_desc.origin_format_ = ACL_FORMAT_ND;
         std::vector<int64_t> weight_packed_npu_sizes(weight_dim_num);
         std::vector<int64_t> weight_packed_npu_strides(weight_dim_num);
