@@ -902,6 +902,10 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     N = 1
     S1 = 1
     change_d_scale = 1
+    output_d = 0
+    output_h = 0
+    # KV_N除零保护，当KV_N为零时KV_N = Q_N
+    num_key_value_heads = num_heads if num_key_value_heads == 0 else num_key_value_heads
     # int4伪装int32
     if value is not None and value.dtype == torch.int32:
         change_d_scale = 8
@@ -911,7 +915,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             token_x_dim == 4,
             lambda: "Layout BNSD_BSND, queryDims must be 4!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(2), query.size(1), query.size(3)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else:
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(2), query.size(1), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -952,12 +966,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             lambda: "Layout BNSD, queryDims must be 4!, but the actual value is " +
                 str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        if block_table is not None: # PA场景
-            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)],
-                dtype=query.dtype, device='meta')
-        else:
-            tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3) * change_d_scale],
-                dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else: # PA场景 value BNBD格式 与非PA场景
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -967,7 +986,12 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             token_x_dim == 3,
             lambda: "Layout BSH, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        if not isinstance(value.size(2), int):
+            output_h = query.size(2)
+        else:
+            output_h = value.size(2) // num_key_value_heads * num_heads * change_d_scale if value.size(2) != 0 else query.size(2)
+
+        tmp_out = torch.empty([query.size(0), query.size(1), output_h], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = num_heads
         S1 = query.size(1)
@@ -977,7 +1001,17 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             token_x_dim == 4,
             lambda: "Layout BSND, queryDims must be 4!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else:
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = num_heads
         S1 = query.size(1)
@@ -987,7 +1021,8 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
             token_x_dim == 3,
             lambda: "Layout NSD, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        output_d = value.size(2) * change_d_scale if value.size(2) != 0 else query.size(2)
+        tmp_out = torch.empty([query.size(0), query.size(1), output_d], dtype=query.dtype, device='meta')
         B = 1
         N = query.size(0)
         S1 = query.size(1)
@@ -1007,13 +1042,20 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                 + str(token_kv_dim) + ops_error(ErrCode.VALUE),
             )
             if value.dim() == 3:
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(2) // num_key_value_heads], dtype=query.dtype, device='meta')
+                if not isinstance(value.size(2), int):
+                    output_d = query.size(2)
+                else:
+                    output_d = int(value.size(2) / num_key_value_heads * change_d_scale)
             elif value.dim() == 4:
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(3)], dtype=query.dtype, device='meta')
+                if not isinstance(value.size(3), int):
+                    output_d = query.size(2)
+                else:
+                    output_d = int(value.size(3) * change_d_scale)
             else:
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(2) * value.size(4)], dtype=query.dtype, device='meta')
+                output_d = int(value.size(2) * valude.size(4) * change_d_scale)
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
+            output_d = value.size(2) * change_d_scale
+        tmp_out = torch.empty([query.size(0), query.size(1), output_d], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -1072,18 +1114,42 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                                          input_layout="BSH", sparse_mode=0, block_size=0, query_quant_mode=0, key_quant_mode=0, value_quant_mode=0, inner_precise=0,
                                          return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
                                          key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None,
-                                         dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None):
+                                         dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None, out_dtype=None):
     tmp_out = torch.empty_like(query, dtype=query.dtype, device='meta')
     B = 1
     N = 1
     S1 = 1
+    change_d_scale = 1
+    output_d = 0
+    output_h = 0
+    # KV_N除零保护，当KV_N为零时KV_N = Q_N
+    num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
+    # int4伪装int32
+    if value is not None and value.dtype == torch.int32:
+        change_d_scale = 8
+    # value_dtype float4_e2m1fn_x2 伪装 uint8
+    if value is not None and value_dtype == torch_npu.float4_e2m1fn_x2:
+        change_d_scale = 2
+    # value_dtype float4_e1m2fn_x2 伪装 uint8
+    if value is not None and value_dtype == torch_npu.float4_e1m2fn_x2:
+        change_d_scale = 2
     if input_layout == "BNSD_BSND":
         token_x_dim = query.dim()
         torch._check(
             token_x_dim == 4,
             lambda: "Layout BNSD_BSND, queryDims must be 4!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(2), query.size(1), query.size(3)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else:
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(2), query.size(1), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -1123,7 +1189,17 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             token_x_dim == 4,
             lambda: "Layout BNSD, queryDims must be 4!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else: # PA场景 value BNBD格式 与非PA场景
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = query.size(1)
         S1 = query.size(2)
@@ -1133,7 +1209,12 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             token_x_dim == 3,
             lambda: "Layout BSH, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        if not isinstance(value.size(2), int):
+            output_h = query.size(2)
+        else:
+            output_h = value.size(2) // num_key_value_heads * num_query_heads * change_d_scale if value.size(2) != 0 else query.size(2)
+
+        tmp_out = torch.empty([query.size(0), query.size(1), output_h], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = num_query_heads
         S1 = query.size(1)
@@ -1143,7 +1224,17 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             token_x_dim == 4,
             lambda: "Layout BSND, queryDims must be 4!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        if block_table is not None and value.dim() == 3:
+            if not isinstance(value.size(2), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(2) // num_key_value_heads * change_d_scale if value.size(2) != 0 else query.size(3)
+        else:
+            if not isinstance(value.size(3), int):
+                output_d = query.size(3)
+            else:
+                output_d = value.size(3) * change_d_scale if value.size(3) != 0 else query.size(3)
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), output_d], dtype=query.dtype, device='meta')
         B = query.size(0)
         N = num_query_heads
         S1 = query.size(1)
@@ -1153,7 +1244,8 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
             token_x_dim == 3,
             lambda: "Layout NSD, queryDims must be 3!, but the actual value is " + str(token_x_dim) + ops_error(ErrCode.VALUE),
         )
-        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        output_d = value.size(2) * change_d_scale if value.size(2) != 0 else query.size(2)
+        tmp_out = torch.empty([query.size(0), query.size(1), output_d], dtype=query.dtype, device='meta')
         B = 1
         N = query.size(0)
         S1 = query.size(1)
@@ -1173,17 +1265,19 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                 lambda: "Layout NTD_TND, token_kv_dim must be 3/4/5!, but the actual value is "
                 + str(token_kv_dim) + ops_error(ErrCode.VALUE),
             )
-            if token_kv_dim == 3:
-                # BBH的情况下，D = H / N
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(2) // num_key_value_heads], dtype=query.dtype, device='meta')
-            elif token_kv_dim == 4:
-                # BNBD情况下取D
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(3)], dtype=query.dtype, device='meta')
-            else:
-                # blockNum, N, D / 16, blockSize, 16取DIM2*DIM4, 非3，4，5情况已拦截
-                tmp_out = torch.empty([query.size(0), query.size(1), value.size(4) * value.size(2)], dtype=query.dtype, device='meta')
+            if token_kv_dim == 3: # PA场景 value BBH格式
+                if not isinstance(value.size(2), int):
+                    output_d = query.size(2)
+                else:
+                    output_d = int(value.size(2) / num_key_value_heads * change_d_scale)
+            elif token_kv_dim == 4: # PA场景 value BNBD格式
+                if not isinstance(value.size(3), int):
+                    output_d = query.size(2)
+                else:
+                    output_d = int(value.size(3) * change_d_scale)
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
+            output_d = value.size(2) * change_d_scale
+        tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -1219,13 +1313,16 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
         else:
             tmp_out = torch.empty([query.size(1), query.size(0), value.size(2)], dtype=query.dtype, device='meta')
     if quant_scale_out is not None:
+        output_type = torch.int8
+        if out_dtype is not None:
+            output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
         if return_softmax_lse:
             if input_layout == "TND" or input_layout == "TND_NTD":
-                return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([query.size(0), num_query_heads, 1], dtype=torch.float32, device='meta'))
+                return (torch.empty_like(tmp_out, dtype=output_type), torch.empty([query.size(0), num_query_heads, 1], dtype=torch.float32, device='meta'))
             else:
-                return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
+                return (torch.empty_like(tmp_out, dtype=output_type), torch.empty([B, N, S1, 1], dtype=torch.float32, device='meta'))
         else:
-            return (torch.empty_like(tmp_out, dtype=torch.int8), torch.empty([0], dtype=torch.float32, device='meta'))
+            return (torch.empty_like(tmp_out, dtype=output_type), torch.empty([0], dtype=torch.float32, device='meta'))
     elif query.dtype == torch.int8:
         out_dtype = torch.half
         if query_rope is not None:
