@@ -61,6 +61,7 @@ at::Tensor& _index_put_impl_(
   for (at::Tensor index_opt : indices_expand) {
     indices_expand_list.push_back(index_opt);
   }
+  
   auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
   TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
     "shape mismatch: value tensor of shape ", value.sizes(),
