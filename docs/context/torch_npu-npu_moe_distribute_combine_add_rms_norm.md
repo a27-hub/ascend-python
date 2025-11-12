@@ -319,9 +319,9 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
                                      -1,  0, 1,  2, -1, 3, -1,  4, -1,  5,  6,  7, -1,  8,  9, -1,
                                       1,  2, 3,  5,  7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1,  -1], dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
 
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 
@@ -657,9 +657,9 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
                                      1, 2, 3, 5, 7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1, -1],dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
 
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
     
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
         model = MOE_DISTRIBUTE_GRAPH_Model()

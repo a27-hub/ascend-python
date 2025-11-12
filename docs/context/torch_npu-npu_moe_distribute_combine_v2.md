@@ -254,7 +254,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     is_quant = (quant_mode > 0)
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 1
+    const_expert_num = 0
 
 
     def gen_const_expert_alpha_1():
@@ -372,9 +372,9 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
                                     1, 2, 3, 5, 7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1, -1], dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
 
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
 
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 
@@ -508,7 +508,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 1
+    const_expert_num = 0
 
     class MOE_DISTRIBUTE_GRAPH_Model(torch.nn.Module):
         def __init__(self):
@@ -696,9 +696,9 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
             1, 2, 3, 5, 7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1, -1
         ], dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
 
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 

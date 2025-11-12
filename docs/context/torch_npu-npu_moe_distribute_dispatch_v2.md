@@ -24,7 +24,7 @@
          \ quant\_out=
          \begin{cases}
          \ x, & \quad \text{if}\ quant\_mode = 0 \\
-         \ CaseToInt8(\ CaseToFp32(x) \times \ scales ), & \quad \text{if } quant\_mode ≠ 0 \\
+         \ CastToInt8(\ CaseToFp32(x) \times \ scales ), & \quad \text{if } quant\_mode ≠ 0 \\
          \end{cases}
          $$
 
@@ -44,7 +44,7 @@
 
          $$\ dynamic\_scales\_value = 127.0/Max(Abs(x\_fp32))$$
 
-         $$\ quant\_out=CaseToInt8(\ x\_fp32 \times \ dynamic\_scales\_value )$$
+         $$\ quant\_out=CastToInt8(\ x\_fp32 \times \ dynamic\_scales\_value )$$
 
          $$\ alltoall\_x\_out= \ alltoallv(\ quant\_out)$$
 
@@ -286,7 +286,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     is_quant = (quant_mode > 0)
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 1
+    const_expert_num = 0
 
 
     def gen_const_expert_alpha_1():
@@ -404,9 +404,9 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
                                     1, 2, 3, 5, 7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1, -1], dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
 
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
 
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 
@@ -540,7 +540,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
     zero_expert_num = 1
     copy_expert_num = 1
-    const_expert_num = 1
+    const_expert_num = 0
 
 
     class MOE_DISTRIBUTE_GRAPH_Model(torch.nn.Module):
@@ -729,9 +729,9 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
             1, 2, 3, 5, 7, 9, 10, 11, 13, 14, -1, -1, -1, -1, -1, -1
         ], dtype=torch.int32).npu()
         available_ranks = [1, 2, 3, 5, 7, 9, 10, 11, 13, 14]
-        const_expert_alpha_1 = gen_const_expert_alpha_1().npu()
-        const_expert_alpha_2 = gen_const_expert_alpha_2().npu()
-        const_expert_v = gen_const_expert_v().npu()
+        const_expert_alpha_1 = None
+        const_expert_alpha_2 = None
+        const_expert_v = None
         out = warm_up_dispatch(rank, ep_hcomm_info, tp_hcomm_info)
 
         model = MOE_DISTRIBUTE_GRAPH_Model()
