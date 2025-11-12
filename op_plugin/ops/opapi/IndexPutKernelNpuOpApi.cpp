@@ -72,7 +72,7 @@ at::Tensor& _index_put_impl_(
         continue;
         }
     all_defined_indices.emplace_back(emptyTensor);
-  }
+    }
 
   for (auto &all_defined_indice : all_defined_indices) {
       if (all_defined_indice.device() != self.device()) {
