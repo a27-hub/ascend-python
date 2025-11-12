@@ -3707,6 +3707,100 @@ PyTorch2.1及以上
 )
 
 _add_torch_npu_docstr(
+    "npu_fused_matmul",
+    """
+功能描述
+算子功能: 矩阵乘与通用向量计算融合。 
+计算公式
+## 功能描述
+
+- 算子功能： 矩阵乘与通用向量计算融合。
+- 计算公式： 
+
+$$
+y = OP((x1 @ x2 + bias), x3)
+$$
+
+OP类型由fused_op_type输入定义,支持如下：
+1.add  y = (x1 @ x2 + bias) + x3
+
+2.mul  y = (x1 @ x2 + bias) * x3
+
+3.gelu_tanh  y = gelu_tanh(x1 @ x2 + bias)
+
+4.gelu_erf  y = gelu_erf(x1 @ x2 + bias)
+
+
+该公式支持: 昇腾910_95处理器
+
+接口原型
+torch_npu.npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
+
+参数说明
+x1: Tensor类型, 即公式中的x. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维及以上. 
+x2: Tensor类型, 即公式中的x2. 数据格式支持ND, 支持非连续的Tensor. 输入支持2维及以上.
+bias: Tensor类型, 可选，即公式中的bias. 数据格式支持ND, 支持非连续的Tensor。
+x3: Tensor类型, 可选，即公式中的x3. 数据格式支持ND, 支持非连续的Tensor。对于x3而言，当输入的fused_op_type为
+gelu_tanh/gelu_erf类型的时候, x3 必须为None, 当输入的fused_op_type为add/mul类型的时候, x3必须有输入.
+fused_op_type: string类型，支持输入的类型包括"","add","mul","gelu_erf","gelu_tanh","relu"中的一种.
+输出说明
+一个Tensor类型的输出, 代表融合算子的计算结果. 
+
+约束说明
+该接口支持静态入图模式. 
+该接口支持单算子直调脚本。 
+x1输入不能含有None.
+x2输入不能含有None 
+
+支持的PyTorch版本
+PyTorch 2.1
+
+
+示例
+单算子调用
+import os
+import torch
+import torch_npu
+import numpy as np
+M, K, N = 128, 1, 16
+x1 = torch.randn((M, K), dtype=torch.float16)
+x2 = torch.randn((K, N), dtype=torch.float16)
+bias =None
+x3 = torch.randn((M, N), dtype=torch.float16)
+fused_op_type="add"
+y=torch_npu.npu_fused_matmul(x1.npu(),x2.npu(), bias=bias, x3=x3.npu(),fused_op_type=fused_op_type)
+
+图模式调用
+import os
+import torch
+import torch_npu
+import numpy as np
+import torch.nn as nn
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+os.environ["ENABLE_ACLNN"] = "false"
+torch_npu.npu.set_compile_mode(jit_compile=False)
+class FusedMatMulModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x1, x2, x3, bias=None, fused_op_type=fused_op_type): 
+        y = torch_npu.npu_fused_matmul(x1, x2, bias=bias, x3=x3, fused_op_type=fused_op_type)
+        return y
+
+model = FusedMatmulModel()
+model = model.npu()
+model = torch.compile(model, fullgraph=True, backend=executor("npu"), dynamic=False)
+x1 = torch.randn((M, N), dtype=torch.float16)
+x2 = torch.randn((K, N), dtype=torch.float16)
+bias =None
+x3 = torch.randn((M, N), dtype=torch.float16)
+fused_op_type="add"
+output = model( x1, x2, x3, None, fused_op_type)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_quant_matmul",
     """
 功能描述:
@@ -12040,5 +12134,52 @@ mode = "none"
 input = torch.rand(shape, dtype=torch.float16).npu()
 output = torch_npu.npu_gelu_mul(input, approximate=mode)
 
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_grouped_matmul_add_",
+    """
+接口原型: npu_grouped_matmul_add_(Tensor(a!) self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor(a!)
+
+功能描述：训练反向中GroupedMatmul操作后对weight原地add梯度进行更新
+
+计算公式:
+y=y + x x weight
+
+参数说明:
+y (torch.Tensor): 待累加矩阵, 支持的数据类型 torch.float32. shape支持3维. 数据格式支持ND
+x (torch.Tensor): 输入矩阵, 表示矩阵乘法中的左矩阵. 支持的数据类型 torch.bfloat16、torch.float16. 数据格式支持ND
+weight (torch.Tensor): 输入矩阵, 表示矩阵乘法中的右矩阵. 支持的数据类型 torch.bfloat16、torch.float16. 数据格式支持ND
+group_list (torch.Tensor): 用于指定分组的索引, 表示x的第0维矩阵乘法的索引情况. 数据类型支持torch.int64.
+group_list_type (int): 代表group_list的表达形式. 数据类型支持torch.int32. 可取值0或1, 0代表group_list_type中数值为分组轴大小的cumsum结果(累积和), 1代表group_list_type中数值为分组轴上每组大小.
+
+输出说明:
+y [torch.Tensor]: GroupedMatmul计算完成后与待累加矩阵相加后得到的最后结果矩阵，支持数据类型、shape、数据格式均与输入y保持一致。
+
+约束说明:
+该接口支持训练场景下使用.
+数据类型使用约束:
+y: torch.float32
+x: torch_npu.bfloat16/torch.float16
+weight: torch.bfloat16、torch.float16
+
+支持版本:
+PyTorch 2.1及更高版本
+
+支持的型号:
+Atlas A5训练系列产品
+
+调用示例:
+
+单算子模式调用示例
+import torch
+import torch_npu
+y = torch.randint(-1, 1, (4, 576, 7168), dtype=torch.float32).npu()
+x = torch.randint(-1, 1, (512, 576), dtype=torch.float16).npu()
+weight = torch.randint(-1, 1, (512, 7168), dtype=torch.float16).npu()
+group_list = torch.Tensor([8,181,415,512]).to(torch.int64)npu()
+y = torch_npu.npu_grouped_matmul_add_(y, x, weight, group_list, transpose_x=True, transpose_weight=False, group_type=2, group_list_type=0)
 """
 )
