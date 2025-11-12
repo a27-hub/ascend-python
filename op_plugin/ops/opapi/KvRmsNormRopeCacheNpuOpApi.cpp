@@ -43,7 +43,6 @@ namespace op_api {
         const c10::optional<at::Tensor> &k_rope_offset,
         const c10::optional<at::Tensor> &c_kv_offset,
         const c10::optional<at::Tensor> &v,
-        const c10::optional<at::Tensor> &v,
         double epsilon,
         c10::string_view cache_mode,
         bool is_output_kv)
