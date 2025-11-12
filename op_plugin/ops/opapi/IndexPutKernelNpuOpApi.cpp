@@ -66,6 +66,7 @@ at::Tensor& _index_put_impl_(
         "shape mismatch: value tensor of shape ", value.sizes(),
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
+        
   for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
     if (indices_after[i].defined()) {
       all_defined_indices.emplace_back(indices_after[i]);
