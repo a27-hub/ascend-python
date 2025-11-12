@@ -309,7 +309,7 @@ void _foreach_minimum_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
         return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow_(tensors, scalars);
     }
     if (scalars.empty()) {
-        return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow(tensors, scalars);
+        return at::native::foreach_tensor_clamp_max_scalarlist_kernel_slow_(tensors, scalars);
     }
     // datatype check
     if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(),
