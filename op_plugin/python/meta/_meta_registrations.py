@@ -1037,6 +1037,14 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
     return value_d
 
 
+def get_change_d_scale(value):
+    change_d_scale = 1
+    if value is not None and value.dtype == torch.int32:
+        change_d_scale = 8
+    
+    return change_d_scale
+
+
 def infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d):
     attention_out = torch.empty_like(query, dtype=query.dtype, device='meta')
     if attention_out_layout == "BSH":
@@ -1085,10 +1093,16 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                                     actual_shared_prefix_len=None, query_rope=None, key_rope=None, key_rope_antiquant_scale=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, inner_precise=0, block_size=0, antiquant_mode=0,
                                     softmax_lse_flag=False, key_antiquant_mode=0, value_antiquant_mode=0):
+    # KV_N除零保护，当KV_N为零时KV_N = Q_N
+    num_key_value_heads = num_heads if num_key_value_heads == 0 else num_key_value_heads
+
     # 获取query_layout, attention_out_layout
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
     # 获取value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    # 获取change_d_scale
+    change_d_scale = get_change_d_scale(value)
+    value_d = value_d * change_d_scale
 
     # 推断attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
