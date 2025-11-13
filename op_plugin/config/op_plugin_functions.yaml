@@ -6499,7 +6499,7 @@ custom:
     op_api: all_version
     exposed: all_version
 
-  - func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)	
+  - func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)
     op_api: all_version
 
   - func: npu_scatter_pa_kv_cache.value(Tensor key, Tensor value, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache, Tensor(b!) value_cache) -> (Tensor(a!) key_value, Tensor(b!) value_cache)
