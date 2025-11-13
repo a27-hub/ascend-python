@@ -1250,7 +1250,7 @@
   "func: npu_trans_quant_param(Tensor scale, Tensor? offset=None, int? round_mode=0) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, ScalarType? output_dtype=None, SymInt[]? group_sizes=None) -> Tensor": {
+  "func: npu_quant_matmul(Tensor x1, Tensor x2, Tensor scale, *, Tensor? offset=None, Tensor? pertoken_scale=None, Tensor? bias=None, int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? pertoken_scale_dtype=None, int? scale_dtype=None, SymInt[]? group_sizes=None, Tensor? y_scale=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: _npu_dropout_gen_mask.Tensor(Tensor self, int[] size, float p, int seed, int offset, *, bool? parallel=True, bool? sync=None) -> Tensor": {
@@ -4329,10 +4329,10 @@
     "version": ["all_version"]
   },
   "func: npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)": {
-    "version": ["all_version"] 
+    "version": ["all_version"]
   },
   "func: npu_moe_token_permute_with_routing_map_grad(Tensor permuted_token_out_grad, Tensor? probs_grad, Tensor sorted_indices, Tensor routing_map, SymInt experts_num, SymInt tokens_num, bool drop_and_pad) -> (Tensor, Tensor)": {
-    "version": ["all_version"] 
+    "version": ["all_version"]
   },
   "func: _npu_silent_check_v3(Tensor val, Tensor(a!) input_grad, Tensor(b!) step, Tensor(c!) max, Tensor(d!) avg, float c_thresh_l1, float c_thresh_l2, float betal, int npu_asd_detect) -> Tensor": {
     "version": ["all_version"]
