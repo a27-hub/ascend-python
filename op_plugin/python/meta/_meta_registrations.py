@@ -71,6 +71,50 @@ def npu_dtype_to_str(dtype):
     return str(torch_dtype)
 
 
+TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP = {
+    0: torch.uint8,
+    1: torch.int8,
+    2: torch.int16,
+    3: torch.int32,
+    4: torch.int64,
+    5: torch.float16,
+    6: torch.float32,
+    7: torch.float64,
+    8: torch.complex32,
+    9: torch.complex64,
+    10: torch.complex128,
+    11: torch.bool,
+    12: torch.qint8,
+    13: torch.quint8,
+    14: torch.qint32,
+    15: torch.bfloat16,
+    16: torch.quint4x2,
+    21: torch.bits8,
+    23: torch.float8_e5m2,
+    24: torch.float8_e4m3fn,
+    290: torch.uint8,  # torch_npu.hifloat8 use torch.uint8
+    291: torch.float8_e5m2,
+    292: torch.float8_e4m3fn,
+    296: torch.uint8,  # torch_npu.float4_e2m1fn_x2 use torch.uint8
+    297: torch.uint8,  # torch_npu.float4_e1m2fn_x2 use torch.uint8
+}
+
+
+def npu_dtype_to_str(dtype):
+    if dtype == torch_npu.hifloat8:
+        return "torch_npu.hifloat8"
+    elif dtype == torch_npu.float8_e8m0fnu:
+        return "torch_npu.float8_e8m0fnu"
+    elif dtype == torch_npu.float4_e2m1fn_x2:
+        return "torch_npu.float4_e2m1fn_x2"
+    elif dtype == torch_npu.float4_e1m2fn_x2:
+        return "torch_npu.float4_e1m2fn_x2"
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dtype)
+    if torch_dtype is None:
+        return str(dtype)
+    return str(torch_dtype)
+
+
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
     return (torch.empty_like(self), torch.empty_like(other))
@@ -1812,17 +1856,40 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
                             antiquant_offset=None, per_token_scale=None, group_list=None,
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
-                            split_item=0, group_type=None, group_list_type=0, act_type=0, tuning_config=None, output_dtype=None):
+                            split_item=0, group_type=None, group_list_type=0, act_type=0, tuning_config=None,
+                            output_dtype=None, x_dtype=None, weight_dtype=None, scale_dtype=None, per_token_scale_dtype=None):
     torch._check(
-        group_type == -1 or group_type == 0,
-        lambda: f"group_type only support -1 and 0, but got {group_type} {ops_error(ErrCode.VALUE)}",
+        group_type == -1 or group_type == 0 or group_type == 2,
+        lambda: f"group_type only supports -1, 0 and 2, but got {group_type} {ops_error(ErrCode.VALUE)}",
     )
+    if x_dtype is not None:
+        torch._check(
+            x_dtype == torch_npu.hifloat8 or x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2,
+            lambda: "x_dtype supports hifloat8, mxfp4 for now, but it is " + npu_dtype_to_str(x_dtype),
+        )
+    if weight_dtype is not None:
+        torch._check(
+            weight_dtype == torch_npu.hifloat8 or weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2,
+            lambda: "weight_dtype only supports hifloat8, mxfp4 for now, but it is " + npu_dtype_to_str(weight_dtype),
+        )
+    if scale_dtype is not None:
+        torch._check(
+            scale_dtype == torch_npu.float8_e8m0fnu,
+            lambda: "scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(scale_dtype),
+        )
+    if per_token_scale_dtype is not None:
+        torch._check(
+            per_token_scale_dtype == torch_npu.float8_e8m0fnu,
+            lambda: "per_token_scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(per_token_scale_dtype),
+        )
     y = []
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
     INT4_IN_INT32 = 8
-
+    FP4_IN_INT8 = 2
+    is_a4w4_mxfp = (x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2) and \
+                   (weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2)
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if split_item == 0:
@@ -1846,10 +1913,22 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
         dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
         for i in range(num_x):
             dim_m += x[i].shape[0]
-        y.append(x[0].new_empty((dim_m, dim_n), dtype=output_dtype))
+        if is_a4w4_mxfp:
+            dim_n = n if x[0].size(x[0].dim() - 1) == weight[0].size(weight[0].dim() - 2) else n * FP4_IN_INT8
+        if group_type != 2:
+            y.append(x[0].new_empty((dim_m, dim_n), dtype=output_dtype))
+        else:
+            num_group_list = group_list.shape[0]
+            y.append(x[0].new_empty((num_group_list, dim_m, dim_n), dtype=output_dtype))
     elif split_item == 3:
         dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
-        y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
+        if is_a4w4_mxfp:
+            dim_n = n if x[0].size(x[0].dim() - 1) == weight[0].size(weight[0].dim() - 2) else n * FP4_IN_INT8
+        if group_type != 2:
+            y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
+        else:
+            num_group_list = group_list.shape[0]
+            y.append(x[0].new_empty((num_group_list, x[0].shape[0], dim_n), dtype=output_dtype))
 
     return y
 
