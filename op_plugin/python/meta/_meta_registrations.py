@@ -55,6 +55,22 @@ TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP = {
     297: torch.uint8,  # torch_npu.float4_e1m2fn_x2 use torch.uint8
 }
 
+
+def npu_dtype_to_str(dtype):
+    if dtype == torch_npu.hifloat8:
+        return "torch_npu.hifloat8"
+    elif dtype == torch_npu.float8_e8m0fnu:
+        return "torch_npu.float8_e8m0fnu"
+    elif dtype == torch_npu.float4_e2m1fn_x2:
+        return "torch_npu.float4_e2m1fn_x2"
+    elif dtype == torch_npu.float4_e1m2fn_x2:
+        return "torch_npu.float4_e1m2fn_x2"
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dtype)
+    if torch_dtype is None:
+        return str(dtype)
+    return str(torch_dtype)
+
+
 @impl(m_aten, "matmul_backward")
 def matmul_backward_meta(grad, self, other, mask):
     return (torch.empty_like(self), torch.empty_like(other))
