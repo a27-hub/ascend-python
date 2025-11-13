@@ -123,7 +123,6 @@ class TestPromptFlashAttetion(TestCase):
 
         dequant_scale_qcqr = None
         dequant_scale_q_nope = None
-        quant_scale_ckv = quant_scale_ckv[:, :1]
 
         if not mla_param["t_flag"]:
             T = B * S1
@@ -321,7 +320,7 @@ class TestPromptFlashAttetion(TestCase):
         dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
         dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
         dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
-        quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+        quant_scale_ckv = torch.rand(1, dtype=torch.float32).npu()
         smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
         mla_param = {
@@ -429,7 +428,7 @@ class TestPromptFlashAttetion(TestCase):
         dequant_scale_w_dq = torch.rand(1, Hcq, dtype=torch.float32).npu()
         dequant_scale_w_uqqr = torch.rand(1, N * (D + Dr), dtype=torch.float32).npu()
         dequant_scale_w_dkvkr = torch.rand(1, Hckv + Dr, dtype=torch.float32).npu()
-        quant_scale_ckv = torch.rand(1, Hckv, dtype=torch.float32).npu()
+        quant_scale_ckv = torch.rand(1, dtype=torch.float32).npu()
         smooth_scale_cq = torch.ones(1, Hcq, dtype=torch.float32).npu()
 
         mla_param = {
@@ -480,7 +479,7 @@ class TestPromptFlashAttetion(TestCase):
         quant_scale_ckv = quant_scale_ckv.cpu()
         smooth_scale_cq = smooth_scale_cq.cpu()
 
-        query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope = self.baseline(ttoken_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
+        query, query_rope, kv_cache_out, kr_cache_out, dequant_scale_q_nope = self.baseline(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,
             rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv,
             cache_mode, dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uqqr, dequant_scale_w_dkvkr,
             quant_scale_ckv, smooth_scale_cq, query_norm_flag=True, weight_quant_mode=2, kv_cache_quant_mode=1,
