@@ -9,6 +9,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #include <vector>
 #include <tuple>
 #include "op_plugin/OpApiInterface.h"
@@ -16,11 +17,8 @@
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 namespace op_api {
-constexpr int QUERY_DIM_NUM = 3;
-constexpr int key_DIM_NUM = 3;
 constexpr int VALUE_DIM_NUM = 3;
 constexpr int OUT_DIM_NUM = 3;
-
 constexpr int INITIAL_STATE_DIM_NUM = 4;
 
 using npu_preparation = at_npu::native::OpPreparation;
@@ -38,10 +36,8 @@ at::Tensor npu_recurrent_gated_delta_rule(
     const c10::optional<at::Tensor> &g,
     const c10::optional<at::Tensor> &gk)
 {
-    TORCH_CHECK(query.dim() == QUERY_DIM_NUM, "query dim should be ", QUERY_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(key.dim() == key_DIM_NUM, "key dim should be ", key_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim should be ", VALUE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(state.dim() == INITIAL_STATE_DIM_NUM, "initial_state dim should be ", INITIAL_STATE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(scale.has_value(), "scale cannot be empty", OPS_ERROR(ErrCode::PARAM));
 
     auto t_dim = value.size(0);
     auto nv_dim = value.size(1);
@@ -55,7 +51,7 @@ at::Tensor npu_recurrent_gated_delta_rule(
     c10::TensorOptions options = value.options().dtype(at::ScalarType::BFloat16);
     at::Tensor outResult = npu_preparation::apply_tensor_without_format(out, options);
 
-    float scale_real = static_cast<float>(scale.value_or(1.0));
+    float scale_real = static_cast<float>(scale.value());
 
     EXEC_NPU_CMD(aclnnRecurrentGatedDeltaRule, query, key, value, beta, state, actual_seq_lengths, ssm_state_indices,
                  g, gk, num_accepted_tokens, scale_real, outResult);
@@ -76,11 +72,9 @@ std::tuple<at::Tensor, at::Tensor> npu_recurrent_gated_delta_rule_functional(
     const c10::optional<at::Tensor> &g,
     const c10::optional<at::Tensor> &gk)
 {
-    TORCH_CHECK(query.dim() == QUERY_DIM_NUM, "query dim should be ", QUERY_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(key.dim() == key_DIM_NUM, "key dim should be ", key_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim should be ", VALUE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
-
     TORCH_CHECK(state.dim() == INITIAL_STATE_DIM_NUM, "initial_state dim should be ", INITIAL_STATE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(scale.has_value(), "scale cannot be empty", OPS_ERROR(ErrCode::PARAM));
 
     auto t_dim = value.size(0);
     auto nv_dim = value.size(1);
@@ -95,7 +89,7 @@ std::tuple<at::Tensor, at::Tensor> npu_recurrent_gated_delta_rule_functional(
     at::Tensor outResult = npu_preparation::apply_tensor_without_format(out, options);
 
     at::Tensor state_inplace = state.clone();
-    float scale_real = static_cast<float>(scale.value_or(1.0));
+    float scale_real = static_cast<float>(scale.value());
 
     EXEC_NPU_CMD(aclnnRecurrentGatedDeltaRule, query, key, value, beta, state_inplace, actual_seq_lengths, ssm_state_indices,
                  g, gk, num_accepted_tokens, scale_real, outResult);
