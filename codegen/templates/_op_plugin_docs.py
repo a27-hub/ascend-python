@@ -7912,8 +7912,8 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   rmsnorm_gamma_ckv（Tensor）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为(Hckv,)，dtype支持bfloat16，数据格式支持ND。
 -   rope_sin（Tensor）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
 -   rope_cos（Tensor）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为(T, Dr)和(B, S, Dr)，dtype支持bfloat16，数据格式支持ND。
--   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor（本质in-place更新）。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
--   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache（本质in-place更新）。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
+-   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
 -   cache_index（Tensor）：可选参数，表示用于存储kv_cache和kr_cache的索引。shape支持1维和2维，格式为(T)和(B, S)，dtype支持int64，数据格式支持ND。
 -   cache_index的取值范围为[0,BlockNum*BlockSize)，当前不会对cache_index传入值的合法性进行校验，需用户自行保证。
 -   dequant_scale_x（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为pertoken。其shape支持2维，格式为(T, 1)和(BS, 1)，dtype支持float，数据格式支持ND。
@@ -7923,9 +7923,18 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
 -   quant_scale_ckr（Tensor）：可选参数，用于对输出到kr_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Dr)，dtype支持float，数据格式支持ND。
 -   smooth_scales_cq（Tensor）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
+-   actual_seq_len（Tensor）：可选预留参数，当前版本暂未使用。
+-   k_nope_clip_alpha（Tensor）：可选参数，表示kv_cache做clip操作时的缩放因子，当前仅在kvcache per-tile量化场景下使用。不支持非连续，数据格式支持ND，数据类型支持float，shape为[1]。
 -   rmsnorm_epsilon_cq（float）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   rmsnorm_epsilon_ckv（float）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
 -   cache_mode（str）：可选参数，表示kvCache的模式，支持"PA_BSND"、"PA_NZ"，其用户不特意指定时可传入默认值“PA_BSND”。
+-   query_norm_flag（int）：可选参数，表示是否输出query_norm，Host侧参数。仅支持bool类型，False表示不输出query_norm，True表示输出query_norm，默认值为0。
+-   weight_quant_mode（int）：可选参数，表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、 weight_uk、weight_dkv_kr量化，默认值为0。
+-   kv_cache_quant_mode（int）：可选参数，表示kv_cache的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示per-tensor量化，2表示per-channel量化，3-表示per-tile量化，默认值为0。
+-   query_quant_mode（int）：可选参数，表示query的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示per-token-head量化，默认值为0。
+-   ckvkr_repo_mode（int）：可选参数，表示kv_cache和kr_cache的存储模式，Host侧参数。仅支持int64类型，0表示kv_cache和kr_cache分别存储，1表示kv_cache和kr_cache合并存储，默认值为0。
+-   quant_scale_repo_mode（int）：可选参数，表示量化scale的存储模式，Host侧参数。仅支持int64类型，0表示量化scale和数据分别存储，1表示量化scale和数据合并存储，默认值为0。
+-   tile_size（int）：可选参数，表示per-tile量化时每个tile的大小，仅在kv_cache_quant_mode为3时有效，Host侧参数，默认值为128。
 -   qc_qr_scale（float）：可选参数，表示Query的尺度矫正参数，不传入的时候默认值为1.0。
 -   kc_scale（float）：可选参数，表示Key的尺度矫正参数，不传入的时候默认值为1.0。
 
@@ -7948,6 +7957,7 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
     -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
 
     -   Hckv：kv低秩矩阵维度，取值为512。
+    -   Dtile：kv_cache per-tile量化时的矩阵维度，取值为656
     -   D：qk不含位置编码维度，取值为128。
     -   Dr：qk位置编码维度，取值为64。
     -   Nkv：kv的head数，取值为1。
