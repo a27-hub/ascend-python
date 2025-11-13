@@ -140,10 +140,12 @@ at::Tensor npu_quant_conv2d(const at::Tensor& input, const at::Tensor& weight, c
     DO_COMPATIBILITY(aclnnQuantConvolution,
                      acl_op::npu_quant_conv2d(input, weight, scale, strides, pads, dilations, groups, offset_x,
                                               round_mode, output_dtype, bias, offset, input_dtype, weight_dtype));
-
+    if (c10_npu::IsAclnnOnly()) {
+        return npu_quant_conv2d_out(input, weight, scale, strides, pads, dilations, groups, static_cast<int32_t>(offset_x),
+                                    round_mode, input_dtype, weight_dtype, output_dtype, bias, offset);
+    }
     // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable = False: turn on JitCompile
-    if (!c10_npu::IsAclnnOnly() && (!at_npu::native::env::CheckForbidInternalFormat() ||
-        !at_npu::native::env::CheckJitDisable())) {
+    if (!c10_npu::IsAclnnOnly() && (!at_npu::native::env::CheckForbidInternalFormat() || !at_npu::native::env::CheckJitDisable())) {
         TORCH_NPU_WARN("Opapi will switch to Aclop since private format or jitCompile is enabled.");
         return acl_op::npu_quant_conv2d(input, weight, scale, strides, pads, dilations, groups, offset_x,
                                         round_mode, output_dtype, bias, offset, input_dtype, weight_dtype);
