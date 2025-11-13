@@ -1128,7 +1128,7 @@ def get_change_d_scale(value):
     change_d_scale = 1
     if value is not None and value.dtype == torch.int32:
         change_d_scale = 8
-    
+
     return change_d_scale
 
 
@@ -1390,7 +1390,7 @@ def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
     output_dtype = input_tensor.dtype
     return torch.empty(size=output_shape, dtype=output_dtype, device=torch.device("meta"))
 @impl(m, "npu_gelu_quant")
-def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None, 
+def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None,
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
     if not (quant_mode == "dynamic" or quant_mode == "static"):
         raise RuntimeError("Parameter(quant_mode) must be 'dynamic' or 'static', got " + quant_mode + ops_error(ErrCode.VALUE))
@@ -1427,7 +1427,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-    
+
     if dtype == 296 or dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1443,7 +1443,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
             output = self.new_empty(input_shape, dtype=output_dst_dtype)
         else:
             raise RuntimeError("Parameter(dtype) enum value:{} not found in " \
-                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) + 
+                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) +
                 ops_error(ErrCode.PARAM))
     return output
 
@@ -1471,7 +1471,7 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-        
+
     if input_dtype == 296 or input_dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1647,7 +1647,7 @@ def npu_geglu_meta(self, dim=-1, approximate=1, activate_left=False):
 
     if input_shape[dim] % 2 == 1:
         raise RuntimeError("x shape: " + str(input_shape) + ". Dim [" + str(dim) + "] of x should be divisible by 2, but get [" + str(input_shape[dim]) + "]" + ops_error(ErrCode.PARAM))
-    
+
     input_shape[dim] //= 2
     return (self.new_empty(input_shape, dtype=self.dtype), self.new_empty(input_shape, dtype=self.dtype))
 
@@ -2104,7 +2104,7 @@ def group_norm_silu_meta(self, gemma, beta, group, eps=0.00001):
 def npu_mm_all_reduce_base_forward(x1, x2, hcom, reduce_op='sum', bias=None, antiquant_scale=None,
                                    antiquant_offset=None, x3=None, dequant_scale=None, pertoken_scale=None,
                                    comm_quant_scale_1=None, comm_quant_scale_2=None, antiquant_group_size=0,
-                                   comm_turn=0, group_sizes=None, y_dtype=None, x1_dtype=None, x2_dtype=None, 
+                                   comm_turn=0, group_sizes=None, y_dtype=None, x1_dtype=None, x2_dtype=None,
                                    dequant_scale_dtype=None, pertoken_scale_dtype=None, comm_quant_mode=0):
     dim_list = []
     for i in range(x1.dim()):
@@ -2301,11 +2301,11 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
     )
     if bias.dtype == torch.bfloat16:
         torch._check(
-            output_dtype == torch.bfloat16,
+            output_dtype == TORCH_DTYPE_MAP[torch.bfloat16],
             lambda: "When bias dtype is bfloat16, output_dtype must be bfloat16, but it is " +
                     str(output_dtype) + ops_error(ErrCode.TYPE),
         )
-    if output_dtype == torch.int32:
+    if output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         torch._check(
             bias.dtype == torch.int32,
             lambda: "When output_dtype dtype is int32, bias_dtype must be int32, but it is " +
@@ -2314,7 +2314,7 @@ def quant_matmul_bias_dtype_check(bias, pertoken_scale, output_dtype):
     if pertoken_scale is not None:
         if bias.dtype == torch.float16:
             torch._check(
-                output_dtype == torch.float16,
+                output_dtype == TORCH_DTYPE_MAP[torch.float16],
                 lambda: "When bias dtype is float16 and pertoken is given, output_dtype must be float16, but it is " +
                         str(output_dtype) + ops_error(ErrCode.TYPE),
             )
@@ -2409,7 +2409,7 @@ def quant_matmul_dtype_check(*args):
             )
         if output_dtype is not None:
             torch._check(
-                output_dtype == torch.float16 or output_dtype == torch.bfloat16,
+                output_dtype == TORCH_DTYPE_MAP[torch.float16] or output_dtype == TORCH_DTYPE_MAP[torch.bfloat16],
                 lambda: f"output_dtype's type should be torch.int32 or torch.bfloat16 in A8W4, \
                     but output_dtype.dtype is {npu_dtype_to_str(output_dtype)} {ops_error(ErrCode.TYPE)}",
             )
@@ -2433,11 +2433,11 @@ def quant_matmul_dtype_check(*args):
 def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4):
     if scale.dtype == torch.bfloat16:
         torch._check(
-            output_dtype in [torch.bfloat16, torch.int32],
+            output_dtype in [TORCH_DTYPE_MAP[torch.bfloat16], TORCH_DTYPE_MAP[torch.int32]],
             lambda: "When scale's dtype is bfloat16, output_dtype must be bfloat16 or int32, but output_dtype is " +
                     npu_dtype_to_str(output_dtype) + ops_error(ErrCode.TYPE),
         )
-    if output_dtype == torch.int32:
+    if output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         torch._check(
             scale.dtype in [torch.bfloat16, torch.float32],
             lambda: "When output_dtype is int32, scale's dtype must be bfloat16 or float32, but scale's dtype is " +
@@ -2445,7 +2445,7 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
         )
     if is_a4w4:
         torch._check(
-            output_dtype == torch.float16,
+            output_dtype == TORCH_DTYPE_MAP[torch.float16],
             lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
                     npu_dtype_to_str(output_dtype) + ops_error(ErrCode.TYPE),
         )
@@ -2598,21 +2598,21 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
     quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
 
-    if output_dtype == torch.float16:
+    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
-    elif output_dtype == torch.bfloat16:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.bfloat16)
-    elif output_dtype == torch.float32:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float32)
-    elif output_dtype == torch.int32:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.int32]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int32)
-    elif output_dtype == torch.float8_e5m2:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e5m2)
-    elif output_dtype == torch.float8_e4m3fn:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e4m3fn)
-    elif output_dtype == torch.bits8 or output_dtype == torch_npu.hifloat8:
+    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8] or output_dtype == torch_npu.hifloat8:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.uint8)
-    elif output_dtype is None or output_dtype == torch.int8:
+    elif output_dtype is None or output_dtype == TORCH_DTYPE_MAP[torch.int8]:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.int8)
     else:
         raise RuntimeError("Not supportted output dtype is " + npu_dtype_to_str(output_dtype))
@@ -2956,14 +2956,14 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
-        raise RuntimeError("Input x must be 2-dimensional, got dimNum " + 
+        raise RuntimeError("Input x must be 2-dimensional, got dimNum " +
                             str(x.dim()) + ops_error(ErrCode.VALUE))
     if group_index.dim() != 1:
-        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " + 
+        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " +
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
     # zero division protection
     if blocksize != 32:
-        raise RuntimeError("Parameter blocksize only supports 32,  got " + 
+        raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1], 2]
 
@@ -3179,7 +3179,7 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             )
         elif (input_.dtype == torch.float8_e4m3fn):
             torch._check(
-                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or 
+                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.bfloat16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.float32]),
                 lambda: "output_dtype should be one of "
