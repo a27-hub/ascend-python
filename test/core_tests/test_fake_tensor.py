@@ -2298,6 +2298,44 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(x[0].shape[0] == res[0].shape[0])
             self.assertTrue((w[0].shape[1] * 8) == res[0].shape[1])
 
+    def test_npu_grouped_matmul_meta_910_95_fp8_1(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            x = [x1, ]
+            w1 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            w = [w1, ]
+            group_list = torch.tensor([16, ]).to(torch.int64).npu()
+            split_item = 2
+            scale1 = torch.randint(2, 3, size=(1, 32), dtype=torch.int64).npu()
+            scale = [scale1, ]
+            res = torch_npu.npu_grouped_matmul(x, w, bias=None, scale=scale, group_list=group_list, split_item=split_item, group_type=0, output_dtype=torch.float16)
+            dim0 = x1.shape[0]
+            dim1 = w1.shape[2]
+            self.assertTrue(dim0 == res[0].shape[0])
+            self.assertTrue(dim1 == res[0].shape[1])
+
+    def test_npu_grouped_matmul_meta_910_95_fp8_group_type_2(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            x1 = torch.randint(2, 3, size=(128, 4096), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            x = [x1.t(), ]
+            w1 = torch.randint(2, 3, size=(128, 7168), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+            w = [w1, ]
+            group_list = torch.tensor([32, 32, 64]).to(torch.int64).npu()
+            split_item = 2
+            scale1 = torch.randn(3, 56, dtype=torch.float32).npu()
+            scale2 = torch.randn(3, 4096, dtype=torch.float32).npu()
+            scale = [scale1, ]
+            per_token_scale = [scale2.t(), ]
+            res = torch_npu.npu_grouped_matmul(x, w, bias=None, scale=scale, per_token_scale=per_token_scale, group_list=group_list, split_item=split_item, group_type=2, group_list_type=0, output_dtype=torch.float16)
+            dim0 = x1.shape[1]
+            dim1 = w1.shape[1]
+            self.assertTrue(res[0].dtype == torch.float16)
+            self.assertTrue(res[0].shape[0] == 3)
+            self.assertTrue(len(res[0].shape) == 3)
+            self.assertTrue(dim0 == res[0].shape[1])
+            self.assertTrue(dim1 == res[0].shape[2])
 
 class TestQuantMatmul(TestCase):
     def test_npu_quant_matmul_meta(self):
