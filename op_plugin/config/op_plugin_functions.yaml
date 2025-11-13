@@ -5428,22 +5428,6 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
-  - func: ffn_worker_scheduler_(Tensor(a!) self, *, int sync_group_size=1, int execute_mode=0) -> Tensor(a!)
-    op_api: [v2.1, newest]
-    gen_opapi:
-      exec: aclnnInplaceFfnWorkerScheduler
-
-  - func: ffn_worker_scheduler(Tensor self, *, int sync_group_size=1, int execute_mode=0) -> Tensor
-    op_api: [v2.1, newest]
-
-  - func: attention_worker_scheduler_(Tensor(a!) self) -> Tensor(a!)
-    op_api: [v2.1, newest]
-    gen_opapi:
-      exec: aclnnInplaceAttentionWorkerScheduler
-
-  - func: attention_worker_scheduler(Tensor self) -> Tensor
-    op_api: [v2.1, newest]
-
   - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, Tensor? q=None, float eps=1e-8, bool is_need_logits=False, int top_k_guess=32) -> (Tensor, Tensor)
     op_api: all_version
     gen_opapi:
@@ -5481,18 +5465,6 @@ custom:
         approximate_str: 'npu_gelu_approximate_str(approximate)'
         approximate_ptr: 'const_cast<char *>(approximate_str.c_str())'
       exec: aclnnGeluBackwardV2, grad_output, self, approximate_ptr, out
-
-  - func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor
-    op_api: [v2.6, newest]
-    exposed: [v2.6, newest]
-    gen_opapi:
-      out:
-        size: npu_gelu_mul_output_size(input)
-        dtype: input
-      new_params:
-        approximate_str: 'npu_gelu_approximate_str(approximate)'
-        approximate_ptr: 'const_cast<char*>(approximate_str.c_str())'
-      exec: aclnnGeluMul, input, approximate_ptr, out
 
   - func: _conv_depthwise2d_backward(Tensor grad_output, Tensor self, Tensor weight, int[2] kernel_size, int[2] stride, int[2] padding, int[2] dilation, bool[2] output_mask) -> (Tensor grad_input, Tensor grad_weight)
     acl_op: all_version
@@ -5545,13 +5517,7 @@ custom:
 
   - func: fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
-    op_api: all_version
     exposed: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnFastGelu
 
   - func: image_normalize(Tensor self, float[]? mean, float[]? variance, int dtype=0) -> Tensor
     acl_op: v2.1
@@ -5886,22 +5852,10 @@ custom:
 
   - func: npu_fast_gelu(Tensor self) -> Tensor
     acl_op: all_version
-    op_api: all_version
     exposed: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnFastGelu
 
   - func: npu_fast_gelu_backward(Tensor grad, Tensor self) -> Tensor
     acl_op: all_version
-    op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnFastGeluBackward
 
   - func: npu_ffn(Tensor x, Tensor weight1, Tensor weight2, str activation, *, int[]? expert_tokens=None, int[]? expert_tokens_index=None, Tensor? bias1=None, Tensor? bias2=None, Tensor? scale=None, Tensor? offset=None, Tensor? deq_scale1=None, Tensor? deq_scale2=None, Tensor? antiquant_scale1=None, Tensor? antiquant_scale2=None, Tensor? antiquant_offset1=None, Tensor? antiquant_offset2=None, int? inner_precise=None, ScalarType? output_dtype=None) -> Tensor
     op_api: all_version
@@ -5958,6 +5912,13 @@ custom:
 
   - func: npu_fusion_attention_grad_v2(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale_value=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
+
+  - func: npu_sparse_lightning_indexer_kl_loss_train(Tensor query, Tensor key, Tensor query_index, Tensor key_index, Tensor weights, Tensor sparse_indices, Tensor softmax_max, Tensor softmax_sum, Tensor? query_rope, Tensor? key_rope, Tensor? actual_seq_lengths_query, Tensor? actual_seq_lengths_key, float scale_value, str? layout="BSND", int? sparse_mode=3, bool? deterministic=False) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: [v2.1, newest]
+
+  - func: npu_sparse_flash_attention_grad(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, Tensor d_out, Tensor out, Tensor softmax_max, Tensor softmax_sum, Tensor? query_rope=None, Tensor? key_rope=None, int[]? actual_seq_lengths_query=None, int[]? actual_seq_lengths_key=None, float scale_value=1.0, int sparse_block_size=1, str? layout="BSND", int? sparse_mode=3, int pre_tokens=2147483647, int next_tokens=2147483647, bool? deterministic=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
 
   - func: npu_fused_attention_layernorm_qkv_fwd(Tensor x, Tensor kernel_query, Tensor kernel_key, Tensor kernel_value, Tensor gamma, Tensor beta, Tensor? bias_query=None, Tensor? bias_key=None, Tensor? bias_value=None, int seq_len=128, int num_heads=12, float eps=1e-05) -> Tensor[]
     acl_op: all_version
