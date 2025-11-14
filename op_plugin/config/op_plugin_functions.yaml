@@ -6558,8 +6558,8 @@ custom:
     op_api: all_version
 
   - func: npu_clipped_swiglu(Tensor x, *, Tensor? group_index=None, int dim=-1, float alpha=1.702, float limit=7.0, float bias=1.0, bool interleaved=True) -> Tensor
-    op_api: all_version
-    exposed: all_version
+    op_api: [v2.6, newest]
+    exposed: [v2.6, newest]
     gen_opapi:
       out:
         size: 'swiglu_backward_infershape(x, dim)'
