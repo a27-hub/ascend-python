@@ -32,6 +32,12 @@
   "op_api: torch_npu.npu_gelu_backward(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_fused_floyd_attention(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_fused_floyd_attention_grad(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_mla_prolog(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -106,6 +112,12 @@
   },
   "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_fused_floyd_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_fused_floyd_attention_grad(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_alltoallv_gmm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
@@ -2232,6 +2244,12 @@
     "version": ["all_version"]
   },
   "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: npu_fused_floyd_attention(Tensor query, Tensor key_0, Tensor value_0, Tensor key_1, Tensor value_1, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: npu_fused_floyd_attention_grad(Tensor query, Tensor key_0, Tensor value_0, Tensor key_1, Tensor value_1, Tensor dy, Tensor softmax_max, Tensor softmax_sum, Tensor softmax_in, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["v2.6", "newest"]
   },
   "func: glu(Tensor self, int dim=-1) -> Tensor": {
