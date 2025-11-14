@@ -39,6 +39,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>npu_add_layer_norm_bac
     }
 
     at::Tensor dx = npu_preparation::apply_tensor(x1);
+    
     at::Tensor dgamma = npu_preparation::apply_tensor(shape, x1.options().dtype(at::kFloat), x1);
     at::Tensor dbeta = npu_preparation::apply_tensor(shape, x1.options().dtype(at::kFloat), x1);
     EXEC_NPU_CMD(aclnnAddLayerNormGrad, d_y, x1, x2, rstd, mean, gamma, d_sum, dx, dgamma, dbeta);
