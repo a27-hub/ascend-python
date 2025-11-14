@@ -7,7 +7,6 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import get_npu_device, SupportedDevices
 
-    
 dim_kv = [512, 192]
 dim_v = [None, 128]
 k_cache_len = [64, 192]
