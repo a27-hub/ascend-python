@@ -72,6 +72,7 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Te
                                            c10::nullopt /* device */, c10::nullopt /* pin_memory */,
                                            LEGACY_CONTIGUOUS_MEMORY_FORMAT);
     }
+    
     // 调用HostAPI接口
     EXEC_NPU_CMD(aclnnLayerNormBackward, grad_out, input, normalized_shape, mean_refined, variance_refined, weight_refined,
                  bias_refined, output_mask, grad_input, grad_weight, grad_bias);
