@@ -32,7 +32,7 @@ const int DIM_3 = 3;
 
 // 工具函数，推导输出shape
 at::Tensor construct_quant_lightning_indexer_output_tensor(const at::Tensor& query, const at::Tensor& key,
-                                                           int64_t sparse_count, std::string query_layout_str, 
+                                                           int64_t sparse_count, std::string query_layout_str,
                                                            std::string key_layout_str)
 {
     at::SmallVector<int64_t, SIZE> output_size;
@@ -53,7 +53,7 @@ at::Tensor npu_quant_lightning_indexer(
     int64_t query_quant_mode, int64_t key_quant_mode,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_key,
-    const c10::optional<at::Tensor> &block_table, 
+    const c10::optional<at::Tensor> &block_table,
     c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens)
 {
@@ -62,7 +62,7 @@ at::Tensor npu_quant_lightning_indexer(
 
     // construct the output tensor
     at::Tensor quant_lightning_indexer_output = construct_quant_lightning_indexer_output_tensor(
-            query, key, sparse_count, query_layout_str, key_layout_str);
+        query, key, sparse_count, query_layout_str, key_layout_str);
     // convert str
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
