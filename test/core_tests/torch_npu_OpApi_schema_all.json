@@ -4462,5 +4462,8 @@
   },
   "func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
+  },
+  "func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor": {
+    "version": ["all_version"]
   }
 }
