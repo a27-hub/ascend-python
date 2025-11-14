@@ -9931,6 +9931,10 @@ torch_npu.npu_dequant_swiglu_quant(
 )
 
 _add_torch_npu_docstr(
+    "npu_clipped_swiglu", " "
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
