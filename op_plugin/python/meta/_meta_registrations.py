@@ -1093,6 +1093,25 @@ def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layo
     return (torch.empty_like(dq), torch.empty_like(dk), torch.empty_like(dv), torch.empty_like(dpse), torch.empty_like(dq_rope), torch.empty_like(dk_rope))
 
 
+@impl(m, "npu_fused_floyd_attention")
+def npu_fused_floyd_attention(query, key_0, value_0, key_1, value_1, *, atten_mask=None, scale_value=1.):
+    out0_out1_shape = (query.shape[0], query.shape[1], query.shape[2], query.shape[3], 8)
+    out0 = torch.empty(out0_out1_shape, dtype=torch.float32, device='meta')
+    out1 = torch.empty_like(out0, device='meta')
+    out2 = torch.empty_like(query, device='meta')
+    return (out0, out1, out2)
+
+
+@impl(m, "npu_fused_floyd_attention_grad")
+def npu_fused_floyd_attention_grad(query, key_0, value_0, key_1, value_1, dy, softmax_max, softmax_sum, softmax_in, *, atten_mask=None, scale_value=1.):
+    dquery = torch.empty_like(query, device='meta')
+    dkey_0 = torch.empty_like(key_0, device='meta')
+    dvalue_0 = torch.empty_like(value_0, device='meta')
+    dkey_1 = torch.empty_like(key_1, device='meta')
+    dvalue_1 = torch.empty_like(value_1, device='meta')
+    return (dquery, dkey_0, dvalue_0, dkey_1, dvalue_1)
+
+
 @impl(m, "npu_rotary_mul")
 def npu_rotary_mul_meta(embedding, cosine, sine, mode='half'):
     return torch.empty_like(embedding)
