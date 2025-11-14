@@ -652,7 +652,7 @@ class TestNPUKvRmsNormRopeCache(TestCase):
     def test_npu_kv_rmsnorm_rope_cache_PA_NZ(self, device="npu"):
         kv, gamma, cos, sin, index, k_cache, ckv_cache, k_rope_scale, c_kv_scale, v, cache_mode, output_mode, input_dtype = self.generate_inputs(
             1, 64, 1, 576, 128, 0, "PA_NZ", False, torch.bfloat16)
-        golden_out = self.supported_op_exec(0, kv, gamma, cos, sin, index, k_cache, ckv_cache,
+        golden_out = self.supported_op_exec(1, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                                             k_rope_scale=k_rope_scale, c_kv_scale=c_kv_scale,
                                             k_rope_offset=None, c_kv_offset=None, v=v,
                                             epsilon=1e-05, cache_mode=cache_mode, is_output_kv=output_mode)
