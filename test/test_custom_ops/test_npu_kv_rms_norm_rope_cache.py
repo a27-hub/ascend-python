@@ -646,8 +646,6 @@ class TestNPUKvRmsNormRopeCache(TestCase):
                 max_diff = torch.max(torch.abs(c_kv_npu.cpu() - c_kv_cpu))
                 self.assertLessEqual(
                     max_diff, 1, f"Output mismatch. Max diff: {max_diff}")
-
-        @SupportedDevices(['Ascend910B'])
         
     @unittest.skip("skip test_kv_rms_norm_rope_cache_v2 now")
     @SupportedDevices(['Ascend910B'])
