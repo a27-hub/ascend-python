@@ -36,7 +36,7 @@ at::Tensor npu_quant_scatter(
 {
     at::Tensor result = self.clone();
     int64_t reduction = 1;
-    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2");
+    bool isAclnnQuantScatterV2Available = check_aclnn_kernel_available("aclnnInplaceQuantScatterV2") && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95;
     if (isAclnnQuantScatterV2Available) {
         aclDataType self_acltype = dst_type.has_value() ? c10_npu::GetAclDataType(dst_type.value()) : aclDataType::ACL_INT8;
         TORCH_CHECK(self_acltype == aclDataType::ACL_INT8 || self_acltype == aclDataType::ACL_HIFLOAT8 || self_acltype == aclDataType::ACL_FLOAT8_E5M2 || self_acltype == aclDataType::ACL_FLOAT8_E4M3FN,
