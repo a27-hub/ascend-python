@@ -19,10 +19,15 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 #include "torch_npu/csrc/aten/mirror/NPUTypeProperties.h"
 #include "torch_npu/csrc/core/npu/GetCANNInfo.h"
+#include "torch_npu/csrc/custom_dtype/Init.h"
 #include "op_plugin/utils/OpUtils.h"
 
 namespace op_plugin {
 namespace utils {
+static const uint64_t GROUP_MAX = 65535UL;
+static const size_t GROUP_DIM = 3;
+static const size_t OFFSET_32_BITS = 32;
+static const size_t OFFSET_16_BITS = 16;
 bool is_neox_style(std::string rotary_mode)
 {
     TORCH_CHECK(rotary_mode != "half" || rotary_mode != "interleave",
@@ -45,6 +50,20 @@ std::string get_reduction_str(int64_t reduction)
         reductionStr = "sum";
     }
     return reductionStr;
+}
+
+std::string get_vector_str(const std::vector<int64_t> &vec)
+{
+    std::string shape_str = "[";
+    size_t vec_num = vec.size();
+    for (size_t i = 0; i < vec_num; i++) {
+        shape_str += std::to_string(vec[i]);
+        if (i != vec_num - 1) {
+            shape_str += ", ";
+        }
+    }
+    shape_str += "]";
+    return shape_str;
 }
 
 int64_t get_rotary_mode(c10::string_view mode)
@@ -229,7 +248,7 @@ at::ScalarType get_divide_calculate_type(const at::Tensor &self, const at::Tenso
 
 at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 {
-    at::Tensor self_cast = (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::npu_dtype_cast(self, calculate_type);
+    at::Tensor self_cast = (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
     self_cast = at_npu::native::OpPreparation::CastBackToOriFormat(self_cast);
     return self_cast;
 }
@@ -409,5 +428,54 @@ bool is_gte_cann_version_830rc1()
     return result;
 }
 
+int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
+{
+    int64_t groups = 0;
+    if (group_size_list.empty()) {
+        return groups;
+    }
+    size_t group_dim = group_size_list.size();
+    TORCH_CHECK(group_dim == GROUP_DIM, "group_sizes only support input with three elements, but got ", group_dim,
+                OPS_ERROR(ErrCode::PARAM));
+    int64_t group_m = static_cast<int64_t>(group_size_list[0]);
+    int64_t group_n = static_cast<int64_t>(group_size_list[1]);
+    int64_t group_k = static_cast<int64_t>(group_size_list[2]);
+    bool invalid_group_param = ((group_m <= GROUP_MAX && group_m >= 0) && (group_n <= GROUP_MAX && group_n >= 0) &&
+                                (group_k <= GROUP_MAX && group_k >= 0));
+    TORCH_CHECK(invalid_group_param, "group param value must conform to range [0, 65535]", OPS_ERROR(ErrCode::VALUE));
+    groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << OFFSET_32_BITS) +
+                                  (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
+    return groups;
+}
+
+aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales, int64_t quant_mode)
+{
+    aclDataType dynamic_scale_dtype = ACL_FLOAT;
+    if (quant_mode == QuantMode::QUANT_MODE_NO_QUANT) {
+        dynamic_scale_dtype = (x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf) ? ACL_FLOAT :
+           (scales.has_value() ? at_npu::native::OpPreparation::convert_to_acl_data_type(scales.value().scalar_type()) : ACL_FLOAT);
+    } else if (quant_mode == QuantMode::QUANT_MODE_MX) {
+        dynamic_scale_dtype = c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0);
+    }
+    return dynamic_scale_dtype;
+}
+
+std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, int64_t quant_mode, int64_t a, int64_t h)
+{
+    const static int PER_GROUP_SIZE = 128;
+    const static int MX_QUANT_SIZE = 32;
+    std::vector<int64_t> shape{a};
+    if (quant_mode == QuantMode::QUANT_MODE_NO_QUANT && scales.has_value()) {
+        shape = {a * scales.value().sizes()[1]};
+    } else if (quant_mode == QuantMode::QUANT_MODE_PERTOKEN) {
+        shape = {a};
+    } else if (quant_mode == QuantMode::QUANT_MODE_PERGROUP) {
+        shape = {a, (h + PER_GROUP_SIZE - 1) / PER_GROUP_SIZE};
+    } else if (quant_mode == QuantMode::QUANT_MODE_MX) {
+        // ensure the ceiling of h divided by MX_QUANT_SIZE is even
+        shape = {a, ((h + MX_QUANT_SIZE - 1) / MX_QUANT_SIZE + 1) / 2 * 2};
+    }
+    return shape;
+}
 }  // namespace utils
 }  // namespace op_plugin

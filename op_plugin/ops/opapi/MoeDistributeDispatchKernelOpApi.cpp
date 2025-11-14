@@ -13,15 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vector>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
     using npu_utils = at_npu::native::NpuUtils;
     using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
+    const int DIM_ONE = 1;
     const int DIM_TWO = 2;
+    const int QUANT_MODE_TWO = 2;
+    const int QUANT_MODE_FOUR = 4;
+
+aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales, int64_t quant_mode)
+{
+    aclDataType dynamic_scale_dtype = ACL_FLOAT;
+    if (quant_mode == 0) {
+        dynamic_scale_dtype = (x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf) ? ACL_FLOAT :
+           (scales.has_value() ? npu_preparation::convert_to_acl_data_type(scales.value().scalar_type()) : ACL_FLOAT);
+    } else if (quant_mode == QUANT_MODE_FOUR) {
+        dynamic_scale_dtype = c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0);
+    }
+    return dynamic_scale_dtype;
+}
 
 tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &expert_ids,
                                         c10::string_view group_ep, int64_t ep_world_size, int64_t ep_rank_id,
@@ -31,11 +48,21 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
                                         const c10::optional<at::Tensor> &expert_scales,
                                         c10::string_view group_tp, int64_t tp_world_size, int64_t tp_rank_id,
                                         int64_t expert_shard_type, int64_t shared_expert_num, int64_t shared_expert_rank_num,
-                                        int64_t quant_mode, int64_t global_bs, int64_t expert_token_nums_type)
+                                        int64_t quant_mode, int64_t global_bs, int64_t expert_token_nums_type,
+                                        c10::optional<int64_t> y_dtype, c10::optional<int64_t> x_dtype,
+                                        c10::optional<int64_t> scales_dtype)
 {
-    TORCH_CHECK((x.dim() == 2) && (expert_ids.dim() == 2), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((x.scalar_type() == at::kBFloat16 || (x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
-                "dtype of x should be bfloat16 or half, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK((x.dim() == DIM_TWO) && (expert_ids.dim() == DIM_TWO), "The x and expert_ids should be 2D", OPS_ERROR(ErrCode::PARAM));
+    static bool is_version_910b_or_93 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) &&
+        (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95);
+    if (is_version_910b_or_93) {
+        TORCH_CHECK((x.scalar_type() == at::kBFloat16 || (x.scalar_type() == at::kHalf)) && (expert_ids.scalar_type() == at::kInt),
+                    "dtype of x should be bfloat16 or half, dtype of expert_ids should be int.", OPS_ERROR(ErrCode::PARAM));
+    }
+    static bool is_version_95 = (c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend910_95);
+    if (is_version_95) {
+        TORCH_CHECK((tp_world_size == DIM_ONE), "tp_world_size should be 1.", OPS_ERROR(ErrCode::PARAM));
+    }
     TORCH_CHECK((shared_expert_rank_num >= 0) && (shared_expert_rank_num < ep_world_size),
                 "shared_expert_rank_num should be in [0, ep_world_size)", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK((expert_token_nums_type == 0) || (expert_token_nums_type == 1),
@@ -76,18 +103,44 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num;
     }
 
-    auto output_dtype = (!scales.has_value() && quant_mode == 0) ? x.scalar_type() : at::kChar;
+    auto output_dtype = at::kChar;
+    if (is_version_910b_or_93) {
+        TORCH_CHECK(quant_mode >= op_plugin::utils::QuantMode::QUANT_MODE_NO_QUANT
+                    && quant_mode <= op_plugin::utils::QuantMode::QUANT_MODE_PERTOKEN,
+                    "quant_mode should be 0~2 when version is Ascend910B and Ascend910_93", OPS_ERROR(ErrCode::PARAM));
+        output_dtype = (!scales.has_value() && quant_mode == op_plugin::utils::QuantMode::QUANT_MODE_NO_QUANT)
+                            ? x.scalar_type()
+                            : at::kChar;
+    } else {
+        if (quant_mode != op_plugin::utils::QuantMode::QUANT_MODE_NO_QUANT) {
+            TORCH_CHECK(y_dtype.has_value(),
+                "y_dtype should be provided when version is Ascend910_95 and quant_mode isn't 0",
+                OPS_ERROR(ErrCode::PARAM));
+            output_dtype = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
+        } else {
+            output_dtype = x.scalar_type();
+        }
+    }
+
     char *group_ep_ptr = const_cast<char *>(group_ep.data());
     std::string group_tp_str = std::string(group_tp);
     char *group_tp_ptr = const_cast<char *>(group_tp_str.c_str());
-    at::Tensor expand_x {nullptr};
-    at::Tensor dynamic_scales {nullptr};
+    at::Tensor expand_x = npu_preparation::apply_tensor_without_format({std::max(a, a * tp_world_size), h}, x.options().dtype(output_dtype));
+    at::Tensor dynamic_scales{nullptr};
+    aclDataType acl_dynamic_scale_dtype = op_plugin::utils::get_dynamic_scales_dtype(x, scales, quant_mode);
+    auto scalar_dynamic_scale_dtype = npu_preparation::convert_to_scalar_type(acl_dynamic_scale_dtype);
     if (tp_world_size == 0) {
-        expand_x = npu_preparation::apply_tensor_without_format({a, h}, x.options().dtype(output_dtype));
-        dynamic_scales = npu_preparation::apply_tensor_without_format({a}, x.options().dtype(at::kFloat));
+        dynamic_scales = npu_preparation::apply_tensor_without_format({a},
+            x.options().dtype(scalar_dynamic_scale_dtype));
     } else {
-        expand_x = npu_preparation::apply_tensor_without_format({a * tp_world_size, h}, x.options().dtype(output_dtype));
-        dynamic_scales = npu_preparation::apply_tensor_without_format({a * tp_world_size}, x.options().dtype(at::kFloat));
+        if (is_version_95) {
+            auto dynamic_scales_shape = op_plugin::utils::get_dynamic_shape(scales, quant_mode, a, h);
+            dynamic_scales = npu_preparation::apply_tensor_without_format(dynamic_scales_shape,
+                x.options().dtype(scalar_dynamic_scale_dtype));
+        } else {
+            dynamic_scales = npu_preparation::apply_tensor_without_format({a * tp_world_size},
+                x.options().dtype(scalar_dynamic_scale_dtype));
+        }
     }
     
     at::Tensor expand_idx = npu_preparation::apply_tensor_without_format({n * k}, x.options().dtype(at::kInt));
@@ -102,14 +155,26 @@ tensor_list npu_moe_distribute_dispatch(const at::Tensor &x, const at::Tensor &e
         ep_recv_counts = npu_preparation::apply_tensor_without_format({ep_recv_cnt_num}, x.options().dtype(at::kInt));
     }
 
-    EXEC_NPU_CMD(aclnnMoeDistributeDispatch, x, expert_ids, scales, x_active_mask, expert_scales,
+    TensorWrapper x_wrapper = {x, (x_dtype.has_value()) ?
+        c10_npu::GetAclDataType(x_dtype.value()) :
+        npu_preparation::convert_to_acl_data_type(x.scalar_type())};
+    auto scales_scalar_dtype = scales.has_value() ? scales.value().scalar_type() : at::kFloat;
+    TensorWrapper scales_wrapper = {scales.has_value() ? scales.value() : at::Tensor(), (scales_dtype.has_value()) ?
+        c10_npu::GetAclDataType(scales_dtype.value()) :
+        npu_preparation::convert_to_acl_data_type(scales_scalar_dtype)};
+    TensorWrapper expand_x_wrapper = {expand_x, (y_dtype.has_value()) ?
+        c10_npu::GetAclDataType(y_dtype.value()) :
+        npu_preparation::convert_to_acl_data_type(output_dtype)};
+    TensorWrapper dynamic_scales_wrapper = {dynamic_scales, acl_dynamic_scale_dtype};
+    EXEC_NPU_CMD(aclnnMoeDistributeDispatch, x_wrapper, expert_ids, scales_wrapper, x_active_mask, expert_scales,
                  group_ep_ptr, ep_world_size, ep_rank_id,
                  moe_expert_num,
                  group_tp_ptr, tp_world_size, tp_rank_id,
                  expert_shard_type, shared_expert_num, shared_expert_rank_num,
-                 quant_mode, global_bs_real, expert_token_nums_type, expand_x,
-                 dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts,
+                 quant_mode, global_bs_real, expert_token_nums_type, expand_x_wrapper,
+                 dynamic_scales_wrapper, expand_idx, expert_token_nums, ep_recv_counts,
                  tp_recv_counts, expand_scales);
+   
     return std::tie(expand_x, dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts, tp_recv_counts,
         expand_scales);
 }
