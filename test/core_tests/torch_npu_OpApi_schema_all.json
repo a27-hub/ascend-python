@@ -107,10 +107,22 @@
   "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_add_quant_gmm(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_add_quant_gmm_(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_alltoallv_gmm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_gelu_mul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_add_quant_gmm(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_add_quant_gmm_(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_alloc_float_status(*args, **kwargs)": {
@@ -2233,6 +2245,12 @@
   },
   "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
     "version": ["v2.6", "newest"]
+  },
+  "func: npu_add_quant_gmm(Tensor self, Tensor x1, Tensor x2, Tensor x2_scale, Tensor group_list, *, Tensor? x1_scale=None, int? group_list_type=0, SymInt[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_add_quant_gmm_(Tensor(a!) self, Tensor x1, Tensor x2, Tensor x2_scale, Tensor group_list, *, Tensor? x1_scale=None, int? group_list_type=0, SymInt[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor(a!)": {
+    "version": ["all_version"]
   },
   "func: glu(Tensor self, int dim=-1) -> Tensor": {
     "version": ["all_version"]
