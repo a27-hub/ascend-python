@@ -1394,6 +1394,80 @@ class TestFusedInferAttentionV2(TestCase):
 
             self.assertTrue(q.shape == atten_out.shape)
 
+    def testFusedInferAttentionV2_bnsd_bsnd_d_unequal(self):
+        with FakeTensorMode():
+            q = torch.randn(32, 8, 2048, 192, dtype=torch.float16).npu()
+            k = torch.randn(32, 8, 2048, 192, dtype=torch.float16).npu()
+            v = torch.randn(32, 8, 2048, 128, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+
+            softmax_scale = 1 / 0.0078125
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(
+                q, k, v, num_query_heads=8, input_layout="BNSD_BSND", 
+                softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        
+            golden_output = torch.randn(32, 2048, 8, 128, dtype=torch.float16).npu()
+
+            self.assertTrue(golden_output.shape == atten_out.shape)
+
+    def testFusedInferAttentionV2_bsnd_d_unequal(self):
+        with FakeTensorMode():
+            q = torch.randn(32, 2048, 8, 192, dtype=torch.float16).npu()
+            k = torch.randn(32, 2048, 8, 192, dtype=torch.float16).npu()
+            v = torch.randn(32, 2048, 8, 128, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            
+            softmax_scale = 1 / 0.0078125
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(
+                q, k, v, num_query_heads=8, input_layout="BSND", 
+                softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        
+            golden_output = torch.randn(32, 2048, 8, 128, dtype=torch.float16).npu()
+
+            self.assertTrue(golden_output.shape == atten_out.shape)
+
+    def testFusedInferAttentionV2_bsh_d_unequal(self):
+        with FakeTensorMode():
+            q = torch.randn(32, 2048, 1536, dtype=torch.float16).npu()
+            k = torch.randn(32, 2048, 1536, dtype=torch.float16).npu()
+            v = torch.randn(32, 2048, 1024, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            
+            softmax_scale = 1 / 0.0078125
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(
+                q, k, v, num_query_heads=8, input_layout="BSH", 
+                softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        
+            golden_output = torch.randn(32, 2048, 1024, dtype=torch.float16).npu()
+
+            self.assertTrue(golden_output.shape == atten_out.shape)
+
+    def testFusedInferAttentionV2_tnd_d_unequal(self):
+        with FakeTensorMode():
+            q = torch.randn(32, 8, 192, dtype=torch.float16).npu()
+            k = torch.randn(32, 8, 192, dtype=torch.float16).npu()
+            v = torch.randn(32, 8, 128, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+
+            softmax_scale = 1 / 0.0078125
+
+            atten_out, softmax_lse = torch.ops.npu.npu_fused_infer_attention_score_v2(
+                q, k, v, num_query_heads=8, input_layout="TND",
+                softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        
+            golden_output = torch.randn(32, 8, 128, dtype=torch.float16).npu()
+
+            self.assertTrue(golden_output.shape == atten_out.shape)
+
+
 
 class TestFlashAttentionScore(TestCase):
     def testFlashAttentionScore(self):
@@ -1569,18 +1643,25 @@ class TestNpuRopeQuantKVCache(TestCase):
 
 class TestGeGlu(TestCase):
     # meta shape infer
-    @unittest.skipIf("2.1." in torch.__version__, "skip this test for PyTorch version 2.1")
     def TestGeGlu(self):
         with FakeTensorMode():
-            x = torch.randn(2, 10, 1024, dtype=torch.float)
+            x = torch.randn(2, 10, 64, dtype=torch.float)
             dim = -1
             approximate = 1
             activate_left = False
-            atten_mask.requires_grad = True
-            relative_pos_bias.requires_grad = True
-            res = torch.ops.npu.npu_geglu(x, dim, approximate, activate_left)
-            self.assertTrue(x.shape == res.shape)
+            y, gelu = torch.ops.npu.npu_geglu(x, dim, approximate, activate_left)
 
+            dim_num = x.dim()
+            if dim < 0:
+                dim += dim_num
+            for index in range(dim_num):
+                if index != dim:
+                    self.assertEqual(y.size(index), x.size(index))
+                    self.assertEqual(gelu.size(index), x.size(index))
+                else:
+                    self.assertEqual(y.size(index) * 2, x.size(index))
+                    self.assertEqual(gelu.size(index) * 2, x.size(index))
+            
 
 class TestScatterUpdateMeta(TestCase):
 
@@ -3173,6 +3254,58 @@ class TestMlaProLogV3Functional(TestCase):
             self.assertTrue(dequant_scale_q_nope_mla.shape == dequant_scale_q_nope.shape)
             self.assertTrue(kv_cache_mla.shape == kv_cache.shape)
             self.assertTrue(kr_cache_mla.shape == kr_cache.shape)
+
+class TestGatherPAKVCacheFunctional(TestCase):
+    def test_npu_gather_pa_kv_cache_functional_meta(self):
+        with FakeTensorMode():
+
+            batch_size = 2
+            num_blocks = 8
+            head_num = 4
+            block_size = 64
+            head_dim = 64
+            max_blocks_per_sequence = 5
+
+            seq_lens_list = [5, 8]
+            total_tokens = sum(seq_lens_list)
+
+            key_cache = torch.empty(
+                (num_blocks, block_size, head_num, head_dim),
+                dtype=torch.float16
+            )
+            value_cache = torch.empty_like(key_cache)
+
+            block_tables = torch.empty(
+                (batch_size, max_blocks_per_sequence),
+                dtype=torch.int32
+            )
+
+            seq_lens = torch.empty(
+                (batch_size,),
+                dtype=torch.int32
+            )
+
+            key_out = torch.empty(
+                (total_tokens, head_num, head_dim),
+                dtype=torch.float16
+            )
+            value_out = torch.empty_like(key_out)
+
+            seq_offset = torch.empty(
+                (batch_size,),
+                dtype=torch.int32;
+            )
+
+            key_result, value_result = torch_npu.npu_gather_pa_kv_cache_functional(
+                key_cache, value_cache,
+                block_tables, seq_lens,
+                key_out, value_out,
+                seq_offset=seq_offset,
+                is_seq_lens_cumsum=False
+            )
+
+            self.assertEqual(key_result.shape, key_out.shape)
+            self.assertEqual(value_result.shape, value_out.shape)
 
 
 if __name__ == "__main__":
