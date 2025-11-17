@@ -20,7 +20,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-
 using namespace at_npu::native;
 using tensor_list = std::tuple<at::Tensor, at::Tensor>;
 
