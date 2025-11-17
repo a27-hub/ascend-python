@@ -52,20 +52,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
     const at::Tensor &softmax_sum,
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope,
-    const c10::OptionalIntArrayRef actual_seq_lengths_query,
-    const c10::OptionalIntArrayRef actual_seq_lengths_key,
+    const c10::OptionalIntArrayRef actual_seq_qlen,
+    const c10::OptionalIntArrayRef actual_seq_kvlen,
     double scale_value,
     int64_t sparse_block_size,
     c10::optional<c10::string_view> layout,
     c10::optional<int64_t> sparse_mode,
-    int64_t pre_tockens, 
-    int64_t next_tockens,
-    c10::optional<bool> deterministic)
+    int64_t pre_tockens,
+    int64_t next_tockens)
 {
     const at::Tensor &query_rope_const = query_rope.value_or(at::Tensor());
     const at::Tensor &key_rope_const = key_rope.value_or(at::Tensor());
-    auto ac_seq_qlen = actual_seq_lengths_query.value_or(at::IntArrayRef{});
-    auto ac_seq_kvlen = actual_seq_lengths_key.value_or(at::IntArrayRef{});
+    auto ac_seq_qlen = actual_seq_qlen.value_or(at::IntArrayRef{});
+    auto ac_seq_kvlen = actual_seq_kvlen.value_or(at::IntArrayRef{});
     TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
         "The shapes of the input query should be 3 or 4 dimensional, but got ",
         query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
@@ -115,7 +114,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
     char *layout_ptr = const_cast<char *>(layout_str_view.data());
 
     const int64_t sparse_mode_const = sparse_mode.value_or(0);
-    const bool deterministic_const = deterministic.value_or(false);
+    const bool deterministic_const = true;
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnSparseFlashAttentionGrad, format_query, format_key, format_value, format_sparse_indices, format_d_out,

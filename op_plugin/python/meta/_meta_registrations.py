@@ -967,10 +967,9 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     return attention_out, lse_out
 
 @impl(m, "npu_sparse_flash_attention_grad")
-def npu_sparse_flash_attention_grad(query, key, value, sparse_indices, d_out, out, 
-                                    softmax_max, softmax_sum, query_rope=None, key_rope=None, actual_seq_lengths_query=None, actual_seq_lengths_key=None,
-                                    scale_value=1.0, sparse_block_size=1, layout="BSND", sparse_mode=3, pre_tokens=2147483647, next_tokens=2147483647, 
-                                    deterministic=False):
+def npu_sparse_flash_attention_grad(query, key, value, sparse_indices, d_out, out,
+                                    softmax_max, softmax_sum, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None,
+                                    scale_value=1.0, sparse_block_size=1, layout="BSND", sparse_mode=3, pre_tokens=2147483647, next_tokens=2147483647):
     if layout_query == "TND":
         d_query = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         d_key = torch.empty([key.size(0), key.size(1), key.size(2)], dtype=key.dtype, device='meta')
