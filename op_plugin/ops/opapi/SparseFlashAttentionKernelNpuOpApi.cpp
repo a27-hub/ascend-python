@@ -24,6 +24,8 @@ const static int64_t DIM_0 = 0;
 const static int64_t DIM_1 = 1;
 const static int64_t DIM_2 = 2;
 const static int64_t DIM_3 = 3;
+const static int64_t DIM_NUM_3 = 3;
+
 using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -50,7 +52,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope, int64_t sparse_block_size,
     c10::string_view layout_query, c10::string_view layout_kv,
-    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
+    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens,
     int64_t attention_mode, bool return_softmax_lse)
 {
     std::string layout_query_str = std::string(layout_query);
@@ -58,20 +60,20 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
 
     // construct the output tensor
     at::Tensor sparse_flash_attention_output = op_api::construct_sparse_flash_attention_output_tensor(
-            query, value, layout_query_str);
+                                               query, value, layout_query_str);
     at::Tensor softmax_max;
     at::Tensor softmax_sum;
     at::SmallVector<int64_t, SIZE> softmax_max_size;
     at::SmallVector<int64_t, SIZE> softmax_sum_size;
-    if(return_softmax_lse){
-        if(query.dim() == 3){
+    if (return_softmax_lse) {
+        if (query.dim() == DIM_NUM_3) {
             softmax_max_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
             softmax_sum_size = {key.size(1), query.size(0), query.size(1) / key.size(1)};
-        }else {
+        } else {
             softmax_max_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
             softmax_sum_size = {query.size(0), key.size(2), query.size(1), query.size(2) / key.size(2)};
         }
-    }else {
+    } else {
         softmax_max_size = {0};
         softmax_sum_size = {0};
     }
@@ -83,7 +85,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnSparseFlashAttention, query,
         key, value, sparse_indices, scale_value, block_table, actual_seq_lengths_query,
-        actual_seq_lengths_kv, query_rope, key_rope, sparse_block_size, 
+        actual_seq_lengths_kv, query_rope, key_rope, sparse_block_size,
         layout_query_ptr, layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, return_softmax_lse,
         sparse_flash_attention_output, softmax_max, softmax_sum);
 
