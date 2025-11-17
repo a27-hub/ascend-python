@@ -41,6 +41,8 @@ class TestFFNToAttention(TestCase):
 
     @classmethod
     def _test_ffn_to_attention(cls, rank, input_list):
+        import torchair
+        
         bs, k, h, micro_batch_num, attention_worker_num, ffn_worker_num, expert_num, world_size, window_size, ep_world_size, tp_world_size, input_type, \
         x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, token_info_table_shape, token_data_shape, init_pg, c2p, p2c = input_list
         
@@ -153,6 +155,7 @@ class TestFFNToAttention(TestCase):
         return token_info_golden, token_data_golden, token_data_mask
 
 
+    @unittest.skip("skip test_ffn_to_attention, no module named torchair")
     @skipIfUnsupportMultiNPU(16)
     @SupportedDevices(['Ascend910_'])
     def test_ffn_to_attention(self):

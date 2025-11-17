@@ -5,7 +5,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch_npu
-import torchair
 import copy
 import time
 import random
@@ -42,6 +41,8 @@ class TestAttentionToFFN(TestCase):
 
     @classmethod
     def _test_attention_to_ffn(cls, rank, input_list):
+        import torchair
+
         bs, k, h, micro_batch_num, default_micro_batch_id, default_layer_id, attention_worker_num, ffn_worker_num, world_size, ep_world_size, tp_world_size, moe_expert_num, window_size, input_type, \
         x_list, expert_ids_list, expert_rank_table, ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, init_pg, c2p, p2c = input_list
 
@@ -216,6 +217,7 @@ class TestAttentionToFFN(TestCase):
 
         return torch.tensor(padded_data)
 
+    @unittest.skip("skip test_attention_to_ffn, no module named torchair")
     @skipIfUnsupportMultiNPU(16)
     @SupportedDevices(['Ascend910_'])
     def test_attention_to_ffn(self):
