@@ -81,9 +81,9 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 
 -   **ori\_x** (`Tensor`)：可选参数，表示未经过FFN的token数据，在使能copy_expert或使能const_expert的场景下需要本输入数据。可选择传入有效数据或填空指针，当copy_expert_num不为零或const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
--   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。可选择传入有效数据或填空指针，当const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个1D的Tensor，shape为(const_expert_num,)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
+-   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。可选择传入有效数据或填空指针，当const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(const_expert_num,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
--   **const\_expert\_alpha\_2** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。可选择传入有效数据或填空指针，当const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个1D的Tensor，shape为(const_expert_num,)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
+-   **const\_expert\_alpha\_2** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。可选择传入有效数据或填空指针，当const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(const_expert_num,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
 -   **const\_expert\_v** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。可选择传入有效数据或填空指针，当const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(const_expert_num,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
