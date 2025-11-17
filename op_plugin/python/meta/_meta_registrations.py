@@ -964,6 +964,24 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
 
     return attention_out, lse_out
 
+@impl(m, "npu_sparse_flash_attention_grad")
+def npu_sparse_flash_attention_grad(query, key, value, sparse_indices, d_out, out,
+                                    softmax_max, softmax_sum, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None,
+                                    scale_value=1.0, sparse_block_size=1, layout="BSND", sparse_mode=3, pre_tokens=2147483647, next_tokens=2147483647):
+    if layout_query == "TND":
+        d_query = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        d_key = torch.empty([key.size(0), key.size(1), key.size(2)], dtype=key.dtype, device='meta')
+        d_value = torch.empty([value.size(0), value.size(1), value.size(2)], dtype=value.dtype, device='meta')
+        d_query_rope = torch.empty([query_rope.size(0), query_rope.size(1), query_rope.size(2)], dtype=query_rope.dtype, device='meta')
+        d_key_rope = torch.empty([key_rope.size(0), key_rope.size(1), key_rope.size(2)], dtype=key_rope.dtype, device='meta')
+    if layout_query == "BSND":
+        d_query = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        d_key = torch.empty([key.size(0), key.size(1), key.size(2), key.size(3)], dtype=key.dtype, device='meta')
+        d_value = torch.empty([value.size(0), value.size(1), value.size(2), value.size(3)], dtype=value.dtype, device='meta')
+        d_query_rope = torch.empty([query_rope.size(0), query_rope.size(1), query_rope.size(2), query_rope.size(3)], dtype=query_rope.dtype, device='meta')
+        d_key_rope = torch.empty([key_rope.size(0), key_rope.size(1), key_rope.size(2), key_rope.size(3)], dtype=key_rope.dtype, device='meta')
+
+    return (d_query, d_key, d_value, d_query_rope, d_key_rope)
 
 @impl(m, "npu_fused_infer_attention_score_v2")
 def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None,
