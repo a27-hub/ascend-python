@@ -17,7 +17,7 @@
 
     2.  以sorted_row_idx做位置映射得出expanded_row_idx：
 
-        ![](./figures/zh-cn_formulaimage_0000002354450121.png)1
+        ![](./figures/zh-cn_formulaimage_0000002354450121.png)
 
     3.  在drop模式下，对sorted_expert_idx的每个专家统计直方图结果，得出`expert_token_cumsum_or_count`：
 
