@@ -120,7 +120,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
     import os
     import shutil
     import unittest
-    
+
     import torch
     import torch_npu
     from torch_npu.testing.testcase import TestCase, run_tests
@@ -209,7 +209,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
             torch_npu.npu.set_compile_mode(jit_compile=True)
             compiler_config = CompilerConfig()
             npu_backend = tng.get_npu_backend(compiler_config=compiler_config)
-            npu_mode = 1  
+            npu_mode = 1
             model = Model().npu()
 
             if npu_mode == 1:
