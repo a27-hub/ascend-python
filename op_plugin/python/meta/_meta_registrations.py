@@ -3113,6 +3113,7 @@ def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_typ
     scale = torch.empty(scale_shape, dtype=torch.float32, device=x.device)
     return y, scale
 
+
 @impl(m, "npu_gather_pa_kv_cache_functional")
 def npu_gather_pa_kv_cache_functional_meta(key_cache, value_cache, block_tables, seq_lens, key, value, *, seq_offset=None, is_seq_lens_cumsum=False):
     key_out = key.new_empty(key.shape, dtype=key.dtype, device='meta')
