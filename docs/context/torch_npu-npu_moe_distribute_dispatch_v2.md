@@ -163,8 +163,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。
 
--   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
-    -  当前版本不支持，传0即可。
+-   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量, 当前版本不支持，传0即可。
 
 ## 输出说明<a name="zh-cn_topic_0000002203575833_section22231435517"></a>
 
