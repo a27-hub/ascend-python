@@ -927,7 +927,7 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
 def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, scale_value=1.0,
                                   keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=0, offset=0,
-                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout=""):
+                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, sink_num=0, gen_mask_parallel=True, sync=False, softmax_layout=""):
     dq = torch.empty_like(query, dtype=query.dtype, device='meta')
     dk = torch.empty_like(key, dtype=query.dtype, device='meta')
     dv = torch.empty_like(value, dtype=query.dtype, device='meta')

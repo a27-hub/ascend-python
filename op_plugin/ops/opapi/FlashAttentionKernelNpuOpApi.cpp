@@ -196,6 +196,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
     int64_t sparse_mode,
+    int64_t sink_num,
     c10::string_view softmax_layout)
 {
     double scale = scale_value;
@@ -250,7 +251,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
-                inner_precise, sparse_mode, dq, dk, dv, dpse, softmax_layout_char);
+                inner_precise, sparse_mode, sink_num, dq, dk, dv, dpse, softmax_layout_char);
         } else {
             TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
                 OPS_ERROR(ErrCode::PARAM));
@@ -259,7 +260,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
-                inner_precise, sparse_mode, dq, dk, dv, dpse);
+                inner_precise, sparse_mode, sink_num, dq, dk, dv, dpse);
         }
     } else {
         EXEC_NPU_CMD(
@@ -306,6 +307,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
     int64_t sparse_mode,
+    int64_t sink_num,
     bool gen_mask_parallel,
     bool sync,
     c10::string_view softmax_layout)
@@ -357,7 +359,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     auto result = npu_fusion_attention_backward(query,
         key, value, dy, head_num, input_layout_str, pse, drop_mask, padding_mask, atten_mask,
         softmax_max, softmax_sum, softmax_in, attention_in, scale_value, keep_prob, pre_tockens,
-        next_tockens, inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, softmax_layout);
+        next_tockens, inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, sink_num, softmax_layout);
     if (!sync) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
@@ -683,6 +685,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
     int64_t sparse_mode,
+    int64_t sink_num,
     c10::string_view softmax_layout)
 {
     double scale = scale_value;
@@ -737,7 +740,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
-                inner_precise, sparse_mode, dq, dk, dv, dpse, softmax_layout_char);
+                inner_precise, sparse_mode, sink_num, dq, dk, dv, dpse, softmax_layout_char);
         } else {
             TORCH_CHECK(softmax_layout_str == "", "The param softmax_layout is not supported",
                 OPS_ERROR(ErrCode::PARAM));
@@ -746,7 +749,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
                 format_softmax_sum, format_softmax, format_attention, prefixN, ac_seq_qlen, ac_seq_kvlen,
                 scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
-                inner_precise, sparse_mode, dq, dk, dv, dpse);
+                inner_precise, sparse_mode, sink_num, dq, dk, dv, dpse);
         }
     } else {
         EXEC_NPU_CMD(
@@ -754,7 +757,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
             format_softmax_sum, format_softmax, format_attention, prefixN, scale_value, keep_prob,
             pre_tockens, next_tockens, head_num, input_layout_char,
-            inner_precise, sparse_mode, dq, dk, dv, dpse);
+            inner_precise, sparse_mode, sink_num, dq, dk, dv, dpse);
     }
     FLOP_COUNT(FlopCounter::flash_attention_backward_flop, query, key, value,
         dy, head_num, input_layout, actual_seq_qlen, actual_seq_kvlen);
@@ -793,6 +796,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
     int64_t sparse_mode,
+    int64_t sink_num,
     bool gen_mask_parallel,
     bool sync,
     c10::string_view softmax_layout)
@@ -845,7 +849,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     auto result = npu_fusion_attention_backward(query,
         key, value, dy, head_num, input_layout_str, pse, drop_mask, padding_mask, atten_mask,
         softmax_max, softmax_sum, softmax_in, attention_in, scale_value, keep_prob, pre_tockens,
-        next_tockens, inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, softmax_layout);
+        next_tockens, inner_precise, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, sink_num, softmax_layout);
     if (!sync) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
