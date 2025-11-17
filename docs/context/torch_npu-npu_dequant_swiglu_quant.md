@@ -206,7 +206,6 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
             bias = None
             quant_offset = None
 
-            torch_npu.npu.set_compile_mode(jit_compile=True)
             compiler_config = CompilerConfig()
             npu_backend = tng.get_npu_backend(compiler_config=compiler_config)
             npu_mode = 1
