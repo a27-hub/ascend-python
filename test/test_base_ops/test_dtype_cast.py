@@ -1,11 +1,12 @@
 import sys
+import os
 
 import torch
 import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 from torch_npu.testing.common_distributed import skipIfUnsupportMultiNPU
 
 
@@ -72,6 +73,13 @@ class TestDtypeCast(TestCase):
 
         y[::2].copy_(x[::2])
         self.assertEqual(y, [1, 0, 3, 0, 5, 0])
+
+    @SupportedDevices(['Ascend910_95'])
+    def test_fp4_dtype_cast_with_tq2(self):
+        os.environ['TASK_QUEUE_ENABLE'] = '2'
+        a = torch.rand(4, 4).npu()
+        b = torch_npu.npu_dtype_cast(a, torch_npu.float4_e2m1fn_x2)
+        self.assertEqual(b.size(), [4, 2])
 
 
 if __name__ == "__main__":
