@@ -36,8 +36,7 @@ class TestIndexPut(TestCase):
         for item in shape:
             cpu_input, npu_input = create_common_tensor(item[0], 1, 100)
             for i in range(1, 3):
-                cpu_indices1, npu_indices1 = create_common_tensor(
-                    item[1], 1, 5)
+                cpu_indices1, npu_indices1 = create_common_tensor(item[1], 1, 5)
                 cpu_indices2.append(cpu_indices1)
                 npu_indices2.append(npu_indices1)
             cpu_value, npu_value = create_common_tensor(item[2], 1, 100)
@@ -52,8 +51,7 @@ class TestIndexPut(TestCase):
             cpu_input, npu_input = create_common_tensor(item[0], 1, 100)
             cpu_input = cpu_input.to(torch.float32)
             for i in range(1, 3):
-                cpu_indices1, npu_indices1 = create_common_tensor(
-                    item[1], 1, 5)
+                cpu_indices1, npu_indices1 = create_common_tensor(item[1], 1, 5)
                 cpu_indices3.append(cpu_indices1)
                 npu_indices3.append(npu_indices1)
             cpu_value, npu_value = create_common_tensor(item[2], 1, 100)
@@ -69,15 +67,12 @@ class TestIndexPut(TestCase):
         for item in shape:
             cpu_input, npu_input = create_common_tensor(item[0], 1, 100)
             for i in range(1, 3):
-                cpu_indices1, npu_indices1 = create_common_tensor(
-                    item[1], 1, 5)
+                cpu_indices1, npu_indices1 = create_common_tensor(item[1], 1, 5)
                 cpu_indices4.append(cpu_indices1)
                 npu_indices4.append(npu_indices1)
             cpu_value, npu_value = create_common_tensor(item[2], 1, 100)
-            cpu_output = self.cpu_op_inp_exec(
-                cpu_input, cpu_indices4, cpu_value)
-            npu_output = self.npu_op_inp_exec(
-                npu_input, npu_indices4, npu_value)
+            cpu_output = self.cpu_op_inp_exec(cpu_input, cpu_indices4, cpu_value)
+            npu_output = self.npu_op_inp_exec(npu_input, npu_indices4, npu_value)
             self.assertEqual(cpu_output, npu_output)
 
     def case_inp_exec_fp16(self, shape):
@@ -87,32 +82,35 @@ class TestIndexPut(TestCase):
             cpu_input, npu_input = create_common_tensor(item[0], 1, 100)
             cpu_input = cpu_input.to(torch.float32)
             for i in range(1, 3):
-                cpu_indices1, npu_indices1 = create_common_tensor(
-                    item[1], 1, 5)
+                cpu_indices1, npu_indices1 = create_common_tensor(item[1], 1, 5)
                 cpu_indices5.append(cpu_indices1)
                 npu_indices5.append(npu_indices1)
             cpu_value, npu_value = create_common_tensor(item[2], 1, 100)
             cpu_value = cpu_value.to(torch.float32)
-            cpu_output = self.cpu_op_inp_exec(
-                cpu_input, cpu_indices5, cpu_value)
-            npu_output = self.npu_op_inp_exec(
-                npu_input, npu_indices5, npu_value)
+            cpu_output = self.cpu_op_inp_exec(cpu_input, cpu_indices5, cpu_value)
+            npu_output = self.npu_op_inp_exec(npu_input, npu_indices5, npu_value)
             cpu_output = cpu_output.astype(np.float16)
             self.assertEqual(cpu_output, npu_output)
 
     def test_index_put_shape_format_fp32(self):
         format_list = [0]
         shape_list = [(5, 6)]
-        shape_format = [[[np.float32, i, j], [np.int64, 0, [1, 2]], [
-            np.float32, 0, [1, 2]]] for i in format_list for j in shape_list]
+        shape_format = [
+            [[np.float32, i, j], [np.int64, 0, [1, 2]], [np.float32, 0, [1, 2]]]
+            for i in format_list
+            for j in shape_list
+        ]
         self.case_exec(shape_format)
         self.case_inp_exec(shape_format)
 
     def test_index_put_shape_format_fp16(self):
         format_list = [0]
         shape_list = [(5, 6)]
-        shape_format = [[[np.float16, i, j], [np.int64, 0, [1, 2]], [
-            np.float16, 0, [1, 2]]] for i in format_list for j in shape_list]
+        shape_format = [
+            [[np.float16, i, j], [np.int64, 0, [1, 2]], [np.float16, 0, [1, 2]]]
+            for i in format_list
+            for j in shape_list
+        ]
         self.case_exec_fp16(shape_format)
         self.case_inp_exec_fp16(shape_format)
 
@@ -143,10 +141,18 @@ class TestIndexPut(TestCase):
         self.assertRtolEqual(cinput.numpy(), ninput.cpu().numpy())
 
     def test_index_put_NCDHW_and_resize(self):
-        index_list = [20, 26, 21, 8, 25], [8, 15, 2, 17, 1], [20, 79, 5, 28, 45], [24, 3, 44, 37, 10], [2, 3, 0, 10, 14]
+        index_list = (
+            [20, 26, 21, 8, 25],
+            [8, 15, 2, 17, 1],
+            [20, 79, 5, 28, 45],
+            [24, 3, 44, 37, 10],
+            [2, 3, 0, 10, 14],
+        )
         index = [torch.LongTensor(i) for i in index_list]
         input_data = torch.randn(32, 20, 80, 80, 16)
-        input2 = torch.randn(5,)
+        input2 = torch.randn(
+            5,
+        )
 
         index_npu = [i.npu() for i in index]
         input_data_npu = input_data.npu()
@@ -179,6 +185,22 @@ class TestIndexPut(TestCase):
         cpu_output2 = self.cpu_op_exec(input1, (cpu_indices,), values)
         npu_output2 = self.npu_op_exec(input1, (npu_indices,), values)
         self.assertRtolEqual(cpu_output2, npu_output2)
+
+    def test_index_put_shape_mismatch(self):
+        torch.set_default_device('npu')
+        data_tensor = torch.zeros(3, 3)
+        indices = (torch.tensor([0, 2]), torch.tensor([1, 0]))
+        values = torch.tensor([[[[5.0]]]], [[[10.0]]])
+        with self.assertRaises(RuntimeError):
+            data_tensor.index_put_(indices, values)
+
+    def test_index_put_shape_mismatch_broadcast_together(self):
+        torch.set_default_device('npu')
+        data = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=torch.int64)
+        indices = (torch.tensor([True, False, True]), torch.tensor([0, 1, 2]))
+        values = torch.tensor([10, 20], dtype=torch.int64)
+        with self.assertRaises(RuntimeError):
+            result = data.index_put(indices, values, accumulate=False)
 
 
 if __name__ == "__main__":
