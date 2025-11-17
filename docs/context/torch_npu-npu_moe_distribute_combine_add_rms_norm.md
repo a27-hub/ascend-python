@@ -42,7 +42,7 @@
 ## 函数原型<a name="zh-cn_topic_0000002322738573_section470115437220"></a>
 
 ```
-torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, Tensor elastic_info=None, Tensor ori_x=None, Tensor const_expert_alpha_1=None, Tensor const_expert_alpha_2=None, Tensor const_expert_v=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, norm_eps=1e-06, int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, norm_eps=1e-06, int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002322738573_section187018431529"></a>
@@ -79,13 +79,13 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 
 -   **elastic\_info** (`Tensor`)：可选参数，表示EP通信域的动态缩容信息。当某些通信卡因异常从通信域中被剔除，实际参与通信的卡数与创建通信域时不一致，可从本参数中获取当前部署信息。可选择传入有效数据或填空指针，传入空指针时表示不使能动态缩容功能；当传入有效数据时，要求是一个1D的Tensor，shape为(4 + 2\*ep\_world\_size,)，数据类型支持int32；数据格式要求为ND，支持非连续的Tensor。Tensor中的前四个数字分别表示（是否缩容，缩容后实际rnak数，缩容后共享专家使用rank数，缩容后moe专家个数），后2\*ep\_world\_size表示两个rank映射表，第一个Table的映射关系为Table1[ep\_rank\_id]=local\_ep\_rank\_id或-1，-1表示epRankId这张卡从通信域中剔除，localEpRankId表示缩容后本卡在新EP通信域中的rankIndex，第二个Table映射关系为Table2[local\_ep\_rank\_id]=ep\_rank\_id。</term>
 
--   **ori\_x** (`Tensor`)：可选参数，表示未经过FFN的token数据，在使能copy_expert或使能const_expert的场景下需要本输入数据。可选择传入有效数据或填空指针，当copy_expert_num不为零或const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
+-   **ori\_x** (`Tensor`)：可选参数，表示未经过FFN的token数据，在使能copy_expert或使能const_expert的场景下需要本输入数据。可选择传入有效数据或填None，当copy_expert_num不为零或const_expert_num不为零时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
--   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传空指针即可。
+-   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传None即可。
 
--   **const\_expert\_alpha\_2** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传空指针即可。
+-   **const\_expert\_alpha\_2** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传None即可。
 
--   **const\_expert\_v** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传空指针即可。
+-   **const\_expert\_v** (`Tensor`)：可选参数，在使能const_expert的场景下需要输入的计算系数。当前版本不支持，传None即可。
 
 -   **group\_tp**（`str`）：可选参数，TP通信域名称，数据并行的通信域。有TP域通信才需要传参。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当有TP域通信时，字符串长度范围为\[1, 128\)，不能和`group_ep`相同。
