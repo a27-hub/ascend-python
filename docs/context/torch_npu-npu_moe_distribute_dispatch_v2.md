@@ -24,7 +24,7 @@
          \ quant\_out=
          \begin{cases}
          \ x, & \quad \text{if}\ quant\_mode = 0 \\
-         \ CastToInt8(\ CaseToFp32(x) \times \ scales ), & \quad \text{if } quant\_mode ≠ 0 \\
+         \ CastToInt8(\ CastToFp32(x) \times \ scales ), & \quad \text{if } quant\_mode ≠ 0 \\
          \end{cases}
          $$
 
