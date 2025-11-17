@@ -53,7 +53,7 @@ class TestNPUFlashAttention(TestCase):
         scale = 0.08838
         return torch_npu.npu_fusion_attention_grad(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max,
-            softmax_sum=softmax_sum, attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, numels=numels, seed=seed, offset=offset)
+            softmax_sum=softmax_sum, attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, numels=numels, seed=seed, offset=offset, sink_num=2)
 
     def trans_BNSD2BSH(self, tensor: torch.Tensor):
         tensor = torch.transpose(tensor, 1, 2)
