@@ -13,11 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iostream>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
+#include "torch_npu/csrc/aten/CustomFunctions.h"
 
 namespace op_api {
+using namespace at_npu::native;
+using tensor_list = std::tuple<at::Tensor&, at::Tensor&>;
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> npu_scatter_pa_kv_cache_functional(
@@ -62,6 +67,22 @@ void npu_scatter_pa_kv_cache(
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnScatterPaKvCache, key, key_cache, slot_mapping, value, value_cache,
         compress_lens, compress_seq_offsets, seq_lens, cache_mode, scatter_mode, strides, offsets);
+}
+
+tensor_list npu_scatter_pa_kv_cache_out(
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& slot_mapping,
+    const c10::optional<at::Tensor>& compress_lens,
+    const c10::optional<at::Tensor>& compress_seq_offsets,
+    const c10::optional<at::Tensor>& seq_lens,
+    at::Tensor& key_cache,
+    at::Tensor& value_cache)
+{
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnScatterPaKvCache, key, key_cache, slot_mapping, value, value_cache, compress_lens,
+                                 compress_seq_offsets, seq_lens);
+
+    return std::tuple<at::Tensor&, at::Tensor&>(key_cache, value_cache);
 }
 
 }
