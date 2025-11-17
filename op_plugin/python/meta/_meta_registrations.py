@@ -934,7 +934,21 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
     dpse = torch.empty([0], dtype=query.dtype, device='meta')
     return (torch.empty_like(dq), torch.empty_like(dk), torch.empty_like(dv), torch.empty_like(dpse))
 
+@impl(m, "npu_lightning_indexer_grad")
+def npu_lightning_indexer_grad(query, key, dy, sparse_indices, weights, head_num, 
+                                    actual_seq_lengths_query=None, actual_seq_lengths_key=None,
+                                    layout="BSND", sparse_mode=3, pre_tokens=2147483647, next_tokens=2147483647, deterministic=False):
+    if layout_query == "TND":
+        d_query = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+        d_key = torch.empty([key.size(0), key.size(1), key.size(2)], dtype=key.dtype, device='meta')
+        d_weights = torch.empty([weights.size(0), weights.size(1)], dtype=weights.dtype, device='meta')
+    if layout_query == "BSND":
+        d_query = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+        d_key = torch.empty([key.size(0), key.size(1), key.size(2), key.size(3)], dtype=key.dtype, device='meta')
+        d_weights = torch.empty([weights.size(0), weights.size(1), weights.size(2)], dtype=weights.dtype, device='meta')
 
+    return (d_query, d_key, d_weights)
+    
 @impl(m, "npu_fusion_attention_v2")
 def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *, pse=None, padding_mask=None,
                                 atten_mask=None, query_rope=None, key_rope=None, scale=1.0, keep_prob=1.0, pre_tokens=2147483647, next_tokens=2147483647,
