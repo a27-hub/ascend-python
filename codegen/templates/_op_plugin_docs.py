@@ -9969,30 +9969,61 @@ Atlas A2 推理系列产品
 Atlas A3 推理系列产品
 
 调用示例:
+
+单算子调用
 import torch
 import torch_npu
-from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import SupportedDevices
 
-class TestNPUClippedSwiglu(TestCase):
-    def test_npu_clipped_swiglu(self, device="npu"):
-        tokens_num = 4608
-        hidden_size = 2048
-        x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
-        group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+tokens_num = 4608
+hidden_size = 2048
+x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
+group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+y = torch_npu.npu_clipped_swiglu(
+    x.npu(),
+    group_index=group_index.npu(),
+    dim=-1,
+    alpha=1.702,
+    limit=7.0,
+    bias=1.0,
+    interleaved=True
+)
+
+图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+torch_npu.npu.set_compile_mode(jit_compile=True)
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+device = torch.device(f'npu:0')
+torch_npu.npu.set_device(device)
+
+class ClippedSwigluModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, group_index, dim, alpha, limit, bias, interleaved):
         y = torch_npu.npu_clipped_swiglu(
             x.npu(),
             group_index=group_index.npu(),
-            dim=-1,
-            alpha=1.702,
-            limit=7.0,
-            bias=1.0,
-            interleaved=True
+            dim=dim,
+            alpha=alpha,
+            limit=limit,
+            bias=bias,
+            interleaved=interleaved
         )
+        return y
 
-if __name__ == "__main__":
-    run_tests()
-
+tokens_num = 4608
+hidden_size = 2048
+x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
+group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+clipped_swiglu_model = ClippedSwigluModel().npu()
+clipped_swiglu_model = torch.compile(clipped_swiglu_model, backend=npu_backend, dynamic=True)
+y = clipped_swiglu_model(x, group_index, -1, 1.702, 7.0, 1.0, True)
 """
 )
 
