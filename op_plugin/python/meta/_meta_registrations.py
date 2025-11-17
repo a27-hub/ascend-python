@@ -2513,7 +2513,7 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
     if v is None:
         k_rope_size.append(cos.size(3))
         c_kv_size.append(gamma.size(0))
-    else :
+    else:
         k_rope_size.append(kv.size(3))
         c_kv_size.append(v.size(3))
     return (torch.empty_like(k_cache), torch.empty_like(ckv_cache),
@@ -2546,7 +2546,7 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
     if v is None:
         k_rope_size.append(cos.size(3))
         c_kv_size.append(gamma.size(0))
-    else :
+    else:
         k_rope_size.append(kv.size(3))
         c_kv_size.append(v.size(3))
     return (torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
@@ -2579,7 +2579,7 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
     if v is None:
         k_rope_size.append(cos.size(3))
         c_kv_size.append(gamma.size(0))
-    else :
+    else:
         k_rope_size.append(kv.size(3))
         c_kv_size.append(v.size(3))
     return (torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
