@@ -20,6 +20,7 @@
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 
+
 at::Tensor npu_kl_div(
     const at::Tensor& self,
     const at::Tensor& target,
