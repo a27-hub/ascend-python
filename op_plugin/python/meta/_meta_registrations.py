@@ -1003,6 +1003,21 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
     return attention_out, lse_out
 
 
+@impl(m, "npu_quant_lightning_indexer")
+def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
+                                        actual_seq_lengths_key=None, block_table=None, layout_query='BSND',
+                                        layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+    if layout_key == "TND":
+        keyHeadNum = key.size(1)
+    else:
+        keyHeadNum = key.size(2)
+    if layout_query == "BSND":
+        out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    return out
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
