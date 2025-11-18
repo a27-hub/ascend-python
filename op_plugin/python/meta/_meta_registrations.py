@@ -1039,6 +1039,7 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
         out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
     if layout_query == "TND":
         out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    return out
 
 
 @impl(m, "npu_kv_quant_sparse_flash_attention")
