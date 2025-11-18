@@ -17,7 +17,7 @@ class TestTopK(TestCase):
         output, indices = torch.topk(input1, k)
         output = output.to("cpu")
         indices = indices.to("cpu")
-        output = output.numptest_topk_zero_dim_out y()
+        output = output.numpy()
         indices = indices.numpy().astype(np.int32)
         return output, indices
 
