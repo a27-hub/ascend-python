@@ -25,10 +25,6 @@ at::Tensor& npu_grouped_matmul_add_(at::Tensor& self, const at::Tensor& x, const
     int64_t group_list_type_value = group_list_type.value_or(0);
     bool checkSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95;
     if (!has_grouped_matmul_add_v2 || checkSoc) {
-        TORCH_CHECK(
-            group_list_type_value == 1U,
-            "can not find aclnnGroupedMatmulAddV2, group_list_type do not support count type. Please check cann version or soc version",
-            OPS_ERROR(ErrCode::VALUE));
         EXEC_NPU_CMD(aclnnGroupedMatmulAdd, x, weight, group_list, self, transpose_x, transpose_weight,
                      group_type);
         return self;
