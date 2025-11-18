@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch_npu
-
+import unittest
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
 
