@@ -43,7 +43,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_nope;
 
     if (token_x_dim == 3) {
-        if (token_x.dtype() == at::kChar && quant_scale_ckv.has_value()) {
+        if (token_x.dtype() != at::kBFloat16 && quant_scale_ckv.has_value()) {
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);

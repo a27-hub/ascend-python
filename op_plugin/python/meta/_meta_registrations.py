@@ -176,8 +176,8 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_nope_shape.append(1)
 
     # kvcache量化
-    if token_x.dtype == torch.int8 and quant_scale_ckv is not None:
-        query = torch.empty(query_shape, dtype=torch.int8, device='meta')
+    if token_x.dtype != torch.bfloat16 and quant_scale_ckv is not None:
+        query = torch.empty(query_shape, dtype=token_x.dtype, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
