@@ -1655,18 +1655,25 @@ class TestNpuRopeQuantKVCache(TestCase):
 
 class TestGeGlu(TestCase):
     # meta shape infer
-    @unittest.skipIf("2.1." in torch.__version__, "skip this test for PyTorch version 2.1")
     def TestGeGlu(self):
         with FakeTensorMode():
-            x = torch.randn(2, 10, 1024, dtype=torch.float)
+            x = torch.randn(2, 10, 64, dtype=torch.float)
             dim = -1
             approximate = 1
             activate_left = False
-            atten_mask.requires_grad = True
-            relative_pos_bias.requires_grad = True
-            res = torch.ops.npu.npu_geglu(x, dim, approximate, activate_left)
-            self.assertTrue(x.shape == res.shape)
+            y, gelu = torch.ops.npu.npu_geglu(x, dim, approximate, activate_left)
 
+            dim_num = x.dim()
+            if dim < 0:
+                dim += dim_num
+            for index in range(dim_num):
+                if index != dim:
+                    self.assertEqual(y.size(index), x.size(index))
+                    self.assertEqual(gelu.size(index), x.size(index))
+                else:
+                    self.assertEqual(y.size(index) * 2, x.size(index))
+                    self.assertEqual(gelu.size(index) * 2, x.size(index))
+            
 
 class TestScatterUpdateMeta(TestCase):
 
@@ -3341,6 +3348,58 @@ class TestMlaProLogV3Functional(TestCase):
             self.assertTrue(dequant_scale_q_nope_mla.shape == dequant_scale_q_nope.shape)
             self.assertTrue(kv_cache_mla.shape == kv_cache.shape)
             self.assertTrue(kr_cache_mla.shape == kr_cache.shape)
+
+class TestGatherPAKVCacheFunctional(TestCase):
+    def test_npu_gather_pa_kv_cache_functional_meta(self):
+        with FakeTensorMode():
+
+            batch_size = 2
+            num_blocks = 8
+            head_num = 4
+            block_size = 64
+            head_dim = 64
+            max_blocks_per_sequence = 5
+
+            seq_lens_list = [5, 8]
+            total_tokens = sum(seq_lens_list)
+
+            key_cache = torch.empty(
+                (num_blocks, block_size, head_num, head_dim),
+                dtype=torch.float16
+            )
+            value_cache = torch.empty_like(key_cache)
+
+            block_tables = torch.empty(
+                (batch_size, max_blocks_per_sequence),
+                dtype=torch.int32
+            )
+
+            seq_lens = torch.empty(
+                (batch_size,),
+                dtype=torch.int32
+            )
+
+            key_out = torch.empty(
+                (total_tokens, head_num, head_dim),
+                dtype=torch.float16
+            )
+            value_out = torch.empty_like(key_out)
+
+            seq_offset = torch.empty(
+                (batch_size,),
+                dtype=torch.int32;
+            )
+
+            key_result, value_result = torch_npu.npu_gather_pa_kv_cache_functional(
+                key_cache, value_cache,
+                block_tables, seq_lens,
+                key_out, value_out,
+                seq_offset=seq_offset,
+                is_seq_lens_cumsum=False
+            )
+
+            self.assertEqual(key_result.shape, key_out.shape)
+            self.assertEqual(value_result.shape, value_out.shape)
 
 
 class TestGroupedMatmulAdd(TestCase):
