@@ -67,7 +67,7 @@ at::Tensor npu_quant_lightning_indexer(
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
 
-    EXEC_NPU_CMD_V1(aclnnQuantLightningIndexer, query,
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query,
         key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
         block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
         pre_tokens, next_tokens, quant_lightning_indexer_output);
