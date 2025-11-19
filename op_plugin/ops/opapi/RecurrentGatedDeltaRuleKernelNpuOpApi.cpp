@@ -43,7 +43,7 @@ at::Tensor npu_recurrent_gated_delta_rule(
     auto nv_dim = value.size(1);
     auto dv_dim = value.size(2);
 
-    c10::SmallVector<int64_t, OUT_DIM_NUM> out; 
+    c10::SmallVector<int64_t, OUT_DIM_NUM> out;
     out.push_back(t_dim);
     out.push_back(nv_dim);
     out.push_back(dv_dim);
@@ -80,7 +80,7 @@ std::tuple<at::Tensor, at::Tensor> npu_recurrent_gated_delta_rule_functional(
     auto nv_dim = value.size(1);
     auto dv_dim = value.size(2);
 
-    c10::SmallVector<int64_t, OUT_DIM_NUM> out; 
+    c10::SmallVector<int64_t, OUT_DIM_NUM> out;
     out.push_back(t_dim);
     out.push_back(nv_dim);
     out.push_back(dv_dim);
