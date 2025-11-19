@@ -292,7 +292,7 @@ class TestGatherPaKvCache(TestCase):
         atol = 1e-3 if input_dtype == torch.float16 else 1e-4
 
         self.assertRtolEqual(key_gold, out_key_cpu, rtol=rtol, atol=atol)
-        self.assertRtolEqual(value_gold, out_value_cpu, rtol=rtol atol=atol)
+        self.assertRtolEqual(value_gold, out_value_cpu, rtol=rtol, atol=atol)
 
     @SupportedDevices(['Ascend910_95'])
     def test_out_of_place_eager_fp16(self):
