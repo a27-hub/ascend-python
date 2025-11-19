@@ -3196,7 +3196,7 @@ class TestGatherPAKVCacheFunctional(TestCase):
 
             seq_offset = torch.empty(
                 (batch_size,),
-                dtype=torch.int32;
+                dtype=torch.int32
             )
 
             key_result, value_result = torch_npu.npu_gather_pa_kv_cache_functional(
