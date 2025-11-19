@@ -61,7 +61,7 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
 
     // construct the output tensor
     std::tuple<at::Tensor, at::Tensor> lightning_indexer_output = op_api::construct_lightning_indexer_output_tensor(
-            query, key, actual_seq_lengths_query, sparse_count, query_layout_str, return_value);
+            query, key, actual_seq_lengths_query, sparse_count, query_layout_str, key_layout_str, return_value);
     at::Tensor sparse_indices_out = std::get<0>(lightning_indexer_output);
     at::Tensor sparse_values_out = std::get<1>(lightning_indexer_output);
     // convert str
