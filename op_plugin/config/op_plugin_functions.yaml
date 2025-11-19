@@ -6023,6 +6023,11 @@ custom:
     acl_op: all_version
     op_api: all_version
 
+  - func: npu_lower_triangular_inverse(Tensor x) -> Tensor
+    acl_op: all_version
+    op_api: all_version
+    exposed: true
+
   - func: npu_lstm(Tensor input, Tensor weight, Tensor bias, Tensor seq_mask, Tensor h, Tensor c, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first, bool flag_seq, bool direction) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     tags: nondeterministic_seeded
