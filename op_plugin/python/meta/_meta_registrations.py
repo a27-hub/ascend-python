@@ -2905,3 +2905,73 @@ def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weig
     weight_grad = torch.empty(output_size_1, dtype=output_dtype_0, device='meta')
 
     return (input_grad, weight_grad)
+
+
+@impl(m, "npu_sparse_flash_attention")
+def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
+                                         key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', 
+                                         sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
+                                         attention_mode=0, return_softmax_lse=False):  
+    if layout_query == "TND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+    elif layout_query == "BSND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+
+    if return_softmax_lse:
+        if layout_query == "TND":
+            softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+        if layout_query == "BSND":
+            softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+    else:
+        softmax_max = torch.empty([0], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([0], dtype=torch.float32, device='meta')
+    return (attention_out, softmax_max, softmax_sum)
+
+
+@impl(m, "npu_quant_lightning_indexer")
+def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
+                                        actual_seq_lengths_key=None, block_table=None, layout_query='BSND',
+                                        layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+    if layout_key == "TND":
+        keyHeadNum = key.size(1)
+    else:
+        keyHeadNum = key.size(2)
+    if layout_query == "BSND":
+        out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    return out
+
+
+@impl(m, "npu_kv_quant_sparse_flash_attention")
+def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query='BSND',
+                                                layout_kv='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64):
+    if layout_query == "BSND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
+    return out
+
+
+@impl(m, "npu_lightning_indexer")
+def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
+    actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3,
+    pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    if layout_query == 'BSND':
+        sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+    else:
+        sparse_indices_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+    if return_value:
+        if layout_query == 'BSND':
+            sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+        else:
+            sparse_values_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+    else:
+        sparse_values_out = torch.empty([0], dtype=query.dtype, device='meta')
+    return (sparse_indices_out, sparse_values_out)
