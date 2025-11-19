@@ -1149,12 +1149,20 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
     if layout_query == 'BSND':
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
     else:
-        sparse_indices_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+        if layout_key == 'TND':
+            n_dim_idx = 1
+        else:
+            n_dim_idx = 2
+        sparse_indices_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=torch.int32, device='meta')
     if return_value:
         if layout_query == 'BSND':
             sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
         else:
-            sparse_values_out = torch.empty([query.size(0), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+            if layout_key == 'TND':
+                n_dim_idx = 1
+            else:
+                n_dim_idx = 2
+            sparse_values_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=query.dtype, device='meta')
     else:
         sparse_values_out = torch.empty([0], dtype=query.dtype, device='meta')
     return (sparse_indices_out, sparse_values_out)
