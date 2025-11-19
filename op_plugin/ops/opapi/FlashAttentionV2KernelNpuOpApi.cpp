@@ -240,7 +240,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout.c_str(), LAYOUT_MAX_LENGTH - 1);
 
-    const int LAYOUT_MAX_LENGTH = 20;
     if (format_sink.defined()) { // sink
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) { // TND
             TORCH_CHECK(
@@ -252,6 +251,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+            softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGradV5, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
@@ -380,16 +380,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(
-        (softmax_layout_str == "TND" || softmax_layout_str == ""),
-        "only supported softmax_layout=TND",
-        OPS_ERROR(ErrCode::PARAM)
-    );
-    TORCH_CHECK(
-        !(softmax_layout_str == "TND" && input_layout_str != "TND"),
-        "softmax_layout=TND only supported when input_layout_str=TND",
-        OPS_ERROR(ErrCode::PARAM)
-    );
     std::string input_layout_str = std::string(input_layout);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
@@ -505,6 +495,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         input_layout_str == "BNSD" || input_layout_str == "BSND" || input_layout_str == "TND",
         "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
         input_layout, OPS_ERROR(ErrCode::PARAM));
+    std::string softmax_layout_str = std::string(softmax_layout);
     TORCH_CHECK(
         (softmax_layout_str == "TND" || softmax_layout_str == ""),
         "only supported softmax_layout=TND",
@@ -623,10 +614,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
                 "The param sink is not supported in this CANN version, aclnnFlashAttentionVarLenScoreV5 is not available",
                 OPS_ERROR(ErrCode::PARAM)
             );
-            std::string softmax_layout_str = std::string(softmax_layout);
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+            softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
             EXEC_NPU_CMD(
                 aclnnFlashAttentionVarLenScoreV5, format_query, format_query_rope, format_key, format_key_rope, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN, // +sink
