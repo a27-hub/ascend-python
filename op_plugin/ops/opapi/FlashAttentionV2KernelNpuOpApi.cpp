@@ -103,14 +103,7 @@ at::Tensor dropout_gen_mask_impl(const at::Tensor &query, double keep_prob, int6
     c10::SmallVector<int64_t, SIZE> shapeSize = {numels};
     at::IntArrayRef shapeArray = at::IntArrayRef(shapeSize);
     double prob;
-    at::Scalar probScalar;
-    if (query.scalar_type() == at::kHalf) {
-        probScalar = at::Scalar(at::Half(1.0)- at::Half(keep_prob));
-    } else if (query.scalar_type() == at::kBFloat16) {
-        probScalar = at::Scalar(at::BFloat16(1.0)- at::BFloat16(keep_prob));
-    } else {
-        probScalar = at::Scalar(float(1.0) - float(keep_prob));
-    }
+    at::Scalar probScalar = at::Scalar(float(1.0) - float(keep_prob));
     prob = probScalar.toDouble();
     aclDataType probDataType = at_npu::native::OpPreparation::convert_to_acl_data_type(query.scalar_type());
     DO_COMPATIBILITY(aclnnDropoutGenMaskV2,
@@ -250,8 +243,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const int LAYOUT_MAX_LENGTH = 20;
     if (format_sink.defined()) { // sink
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) { // TND
-            static const bool is_fa_unpaddind_grad_V5_available = check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV5");
-            TORCH_CHECK(is_fa_unpaddind_grad_V5_available, "The param sink is not supportted in this CANN version, can not find aclnnFlashAttentionUnpaddingScoreGradV5", OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(
+                check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV5"),
+                "The param sink is not supported in this CANN version, aclnnFlashAttentionUnpaddingScoreGradV5 is not available",
+                OPS_ERROR(ErrCode::PARAM)
+            );
             std::string softmax_layout_str = std::string(softmax_layout);
             softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
@@ -259,12 +255,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             EXEC_NPU_CMD(
                 aclnnFlashAttentionUnpaddingScoreGradV5, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
-                format_softmax_sum, format_softmax, format_attention, format_sink ,prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, // + sink
+                format_softmax_sum, format_softmax, format_attention, format_sink, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, // + sink
                 scale_value, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char, // +softmax_layout
                 dq, dq_rope, dk, dk_rope, dv, dpse, dsink); // +dsink
         } else {
-            static const bool is_fa_grad_V3_available = check_aclnn_kernel_available("aclnnFlashAttentionScoreGradV3");
-            TORCH_CHECK(is_fa_grad_V3_available, "The param sink is not supportted in this CANN version, can not find aclnnFlashAttentionScoreGradV3", OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(
+                check_aclnn_kernel_available("aclnnFlashAttentionScoreGradV3"),
+                "The param sink is not supported in this CANN version, aclnnFlashAttentionScoreGradV3 is not available",
+                OPS_ERROR(ErrCode::PARAM)
+            );
             EXEC_NPU_CMD(
                 aclnnFlashAttentionScoreGradV3, format_query, format_key, format_value, format_dy,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
@@ -600,8 +599,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
 
     if (format_sink.defined()) {
         if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) { // TND
-            static const bool is_fa_varlen_V5_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV5");
-            TORCH_CHECK(is_fa_varlen_V5_available, "The param sink is not supportted in this CANN version, can not find aclnnFlashAttentionVarLenScoreV5", OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(
+                check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV5"),
+                "The param sink is not supported in this CANN version, aclnnFlashAttentionVarLenScoreV5 is not available",
+                OPS_ERROR(ErrCode::PARAM)
+            );
             std::string softmax_layout_str = std::string(softmax_layout);
             TORCH_CHECK(
                 (softmax_layout_str == "TND" || softmax_layout_str == ""),
@@ -617,14 +619,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
             char softmax_layout_char[LAYOUT_MAX_LENGTH];
             strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
             EXEC_NPU_CMD(
-                    aclnnFlashAttentionVarLenScoreV5, format_query, format_query_rope, format_key, format_key_rope, format_value,
-                    format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN, // +sink
-                    ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num,
-                    input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char, softmax_max, softmax_sum, // +softmax_layout
-                    softmax_out, attention_score);
+                aclnnFlashAttentionVarLenScoreV5, format_query, format_query_rope, format_key, format_key_rope, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN, // +sink
+                ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num,
+                input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char, softmax_max, softmax_sum, // +softmax_layout
+                softmax_out, attention_score);
         } else {
-            static const bool is_fa_V3_available = check_aclnn_kernel_available("aclnnFlashAttentionScoreV3");
-            TORCH_CHECK(is_fa_V3_available, "The param sink is not supportted in this CANN version, can not find aclnnFlashAttentionScoreV3", OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(
+                check_aclnn_kernel_available("aclnnFlashAttentionScoreV3"),
+                "The param sink is not supported in this CANN version, aclnnFlashAttentionScoreV3 is not available",
+                OPS_ERROR(ErrCode::PARAM)
+            );
             EXEC_NPU_CMD(
                 aclnnFlashAttentionScoreV3, format_query, format_key, format_value,
                 format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN, q_start_idx_val, kv_start_idx_val, // +sink
