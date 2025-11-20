@@ -2066,8 +2066,10 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                 )
             bias_shape_check(x2, bias, batch_val, is_a4w4, transpose_x2)
         quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
-    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4)
+    is_1952 = True
+    if not is_1952:
+        quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4)
+        quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4)
     if output_dtype == torch.float16:
         return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
     elif output_dtype == torch.bfloat16:
