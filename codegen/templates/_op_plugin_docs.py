@@ -1197,7 +1197,6 @@ tensor([[0.5010, 0.4709, 0.4841,  ..., 0.4321, 0.4448, 0.4834],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_fusion_attention",
     """
