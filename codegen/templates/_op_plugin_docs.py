@@ -5280,18 +5280,7 @@ _add_torch_npu_docstr(
 完成变步长的Recurrent Gated Delta Rule计算。
 
 接口原型:
-npu_recurrent_gated_delta_rule(
-    Tensor query,
-    Tensor key,
-    Tensor value,
-    Tensor(a!) state,
-    *, 
-    Tensor? beta=None,
-    float? scale=None,
-    Tensor? actual_seq_lengths=None,
-    Tensor? ssm_state_indices=None,
-    Tensor? num_accepted_tokens=None,
-    Tensor? g=None, Tensor? gk=None) -> Tensor
+npu_recurrent_gated_delta_rule(Tensor query, Tensor key, Tensor value, Tensor(a!) state, *, Tensor? beta=None, float? scale=None, Tensor? actual_seq_lengths=None, Tensor? ssm_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? g=None, Tensor? gk=None) -> Tensor
 
 参数说明:
 令 $B$ 表示batch size，$L_i$ 表示第i个序列的长度，$T=\sum_i^B L_i$ 表示累积序列长度。$N_k$ 表示key的头数，$N_v$ 表示value的头数，$D_k$ 表示key向量的维度，$D_v$ 表示value向量的维度。

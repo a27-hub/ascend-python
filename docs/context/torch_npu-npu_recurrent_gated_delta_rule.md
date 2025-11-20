@@ -35,19 +35,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_recurrent_gated_delta_rule(
-    query,
-    key,
-    value,
-    state,
-    *,
-    beta=None,
-    scale=None,
-    actual_seq_lengths=None,
-    ssm_state_indices=None,
-    num_accepted_tokens=None,
-    g=None,
-    gk=None) -> Tensor
+torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None) -> Tensor
 ```
 
 
@@ -62,19 +50,19 @@ torch_npu.npu_recurrent_gated_delta_rule(
 
 - **state** (`Tensor`)：必选输入&输出，对应公式中的状态矩阵S，数据类型支持`bfloat16`，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
 
-- **beta** (`Tensor`)：必选关键字输入，对应公式中的β，数据类型支持`bfloat16`，数据格式支持ND，shape为（T, Nv）。
+- **beta** (`Tensor`)：必选输入，对应公式中的β，数据类型支持`bfloat16`，数据格式支持ND，shape为（T, Nv）。
 
-- **scale** (`Scalar`)：必选关键字输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持`float32`。
+- **scale** (`Scalar`)：必选输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持`float32`。
 
-- **actual_seq_lengths** (`Tensor`)：必选关键字输入，各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（B,）。
+- **actual_seq_lengths** (`Tensor`)：必选输入，各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（B,）。
 
-- **ssm_state_indices** (`Tensor`)：必选关键字输入，输入序列到状态矩阵的映射索引。`state[ssm_state_indices[i]]`表示第i个token的状态矩阵。数据类型支持`int32`，数据格式支持ND，shape为（T,）。
+- **ssm_state_indices** (`Tensor`)：必选输入，输入序列到状态矩阵的映射索引。`state[ssm_state_indices[i]]`表示第i个token的状态矩阵。数据类型支持`int32`，数据格式支持ND，shape为（T,）。
 
-- **num_accepted_tokens** (`Tensor`)：可选关键字输入，投机推理每个batch接受的token数量。默认为None，表示每个batch接受的token数为1。数据类型支持`int32`，数据格式支持ND，shape为（B,）。
+- **num_accepted_tokens** (`Tensor`)：可选输入，投机推理每个batch接受的token数量。默认为None，表示每个batch接受的token数为1。数据类型支持`int32`，数据格式支持ND，shape为（B,）。
 
-- **g** (`Tensor`)：可选关键字输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持`float32`，数据格式支持ND，shape为（T, Nv）。
+- **g** (`Tensor`)：可选输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持`float32`，数据格式支持ND，shape为（T, Nv）。
 
-- **gk** (`Tensor`)：可选关键字输入，衰减系数，当前版本暂不支持，传None即可。
+- **gk** (`Tensor`)：可选输入，衰减系数，当前版本暂不支持，传None即可。
 
 
 ## 返回值说明
@@ -98,7 +86,7 @@ torch_npu.npu_recurrent_gated_delta_rule(
     import torch_npu
 
     # 构造输入
-    bs, mtp, nv, dv, dk, nk = (2, 3, 4, 8, 128, 128)
+    bs, mtp, nk, nv, dk, dv = (2, 3, 4, 8, 128, 128)
     actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
     T = int(torch.sum(actual_seq_lengths))
 
@@ -113,11 +101,11 @@ torch_npu.npu_recurrent_gated_delta_rule(
     query = torch.nn.functional.normalize(query, p=2, dim=-1)
     key = torch.nn.functional.normalize(key, p=2, dim=-1)
     scale = dk ** -0.5
-    num_accepted_tokens = (torch.randint(1,, mtp + 1, (bs,)).npu()).to(torch.int32)
+    num_accepted_tokens = (torch.randint(1, mtp + 1, (bs,)).npu()).to(torch.int32)
 
     # 调用算子
     o = torch_npu.npu_recurrent_gated_delta_rule(
-        query, key, value, state, bata=beta, scale=scale,
+        query, key, value, state, beta=beta, scale=scale,
         actual_seq_lengths=actual_seq_lengths, ssm_state_indices=ssm_state_indices,
         num_accepted_tokens=num_accepted_tokens, g=g, gk=None)
     print(o)
@@ -148,13 +136,13 @@ torch_npu.npu_recurrent_gated_delta_rule(
  
         def forward(self, query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, num_accepted_tokens, g):
             return torch_npu.npu_recurrent_gated_delta_rule(
-                query, key, value, state, bata=beta, scale=scale,
+                query, key, value, state, beta=beta, scale=scale,
                 actual_seq_lengths=actual_seq_lengths, ssm_state_indices=ssm_state_indices,
                 num_accepted_tokens=num_accepted_tokens, g=g, gk=None)
 
 
     # 构造输入
-    bs, mtp, nv, dv, dk, nk = (2, 3, 4, 8, 128, 128)
+    bs, mtp, nk, nv, dk, dv = (2, 3, 4, 8, 128, 128)
     actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
     T = int(torch.sum(actual_seq_lengths))
 
@@ -169,7 +157,7 @@ torch_npu.npu_recurrent_gated_delta_rule(
     query = torch.nn.functional.normalize(query, p=2, dim=-1)
     key = torch.nn.functional.normalize(key, p=2, dim=-1)
     scale = dk ** -0.5
-    num_accepted_tokens = (torch.randint(1,, mtp + 1, (bs,)).npu()).to(torch.int32)
+    num_accepted_tokens = (torch.randint(1, mtp + 1, (bs,)).npu()).to(torch.int32)
 
     #调用
     cpu_model = MyModel()
