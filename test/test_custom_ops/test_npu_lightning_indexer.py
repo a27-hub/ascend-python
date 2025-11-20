@@ -68,6 +68,7 @@ class TestCustomLightningIndexer(TestCase):
         out = out.reshape(out_shape)
         return out
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_bsnd_lightning_indexer_eager(self):
         b = 1
         s1 = 1
@@ -110,6 +111,7 @@ class TestCustomLightningIndexer(TestCase):
         res = npu_out.equal(cpu_out)
         self.assertRtolEqual(res, True)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_tnd_lightning_indexer_eager(self):
         b = 3
         t = 5
