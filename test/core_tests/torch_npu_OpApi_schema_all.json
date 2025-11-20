@@ -36,16 +36,16 @@
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_quant_lightning_indexer(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+    "version": ["all_version"]
   },
   "op_api: torch_npu.npu_lightning_indexer(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+    "version": ["all_version"]
   },
   "op_api: torch_npu.npu_sparse_flash_attention(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+    "version": ["all_version"]
   },
   "op_api: torch_npu.npu_kv_quant_sparse_flash_attention(*args, **kwargs)": {
-    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+    "version": ["all_version"]
   },
   "op_api: torch_npu.npu_kronecker_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]

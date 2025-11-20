@@ -50,17 +50,15 @@ class TestCustomLightningIndexerQuant(TestCase):
         n1 = query.shape[-2]
         out_shape[-1] = sparse_count
         out_shape[-2] = n2
-        # 初始化为全-1
         out = torch.zeros(out_shape, dtype=torch.int32, device=query.device).reshape(-1, n2, sparse_count) - 1
         act_s1 = 0
         act_s2 = 0
         process_q_len = 0
         for batch_id in range(batch_size):
             if actual_seq_lengths_query is None:
-                # 只能为BSND格式
                 act_s1 = query.shape[1]
             else:
-                if layout_query == "TND": # TND格式时actual_seq_lengths_query为前缀和
+                if layout_query == "TND":
                     act_s1 = actual_seq_lengths_query[batch_id] - process_q_len
                 else:
                     act_s1 = actual_seq_lengths_query[batch_id]
@@ -70,7 +68,7 @@ class TestCustomLightningIndexerQuant(TestCase):
             now_weights = weights.reshape(-1, n1, 1)[process_q_len:process_q_len + act_s1, :, :]
             now_query_scale = query_dequant_scale.reshape(-1, n1, 1)[process_q_len:process_q_len + act_s1, :, :]
             # s1, n1, 1
-            weights_scale = now_weights * now_query_scale # float16 相乘
+            weights_scale = now_weights * now_query_scale # float16
             process_q_len += act_s1
             now_block_table = block_table[batch_id, :]
             # d s2
@@ -79,7 +77,7 @@ class TestCustomLightningIndexerQuant(TestCase):
             now_k_scale = self._get_k_scale(key_dequant_scale, now_block_table, act_s2).to(torch.float32)
             # n1,s1,d @ d,s2 -> n1,s1,s2
             s_out = (torch.maximum(torch.matmul(now_q, now_k), torch.tensor(0)).to(torch.float32)) / 1024.0
-            # n1,s1,s2 -> s1,n1,s2  to fp16 降精度与kernel保持一致
+            # n1,s1,s2 -> s1,n1,s2  to fp16
             s_out = s_out.to(torch.float16).transpose(0, 1).to(torch.float32)
             # s1,n1,1 -> s1,1,n1
             weights_scale = weights_scale.transpose(1, 2).to(torch.float32)
@@ -87,7 +85,6 @@ class TestCustomLightningIndexerQuant(TestCase):
             topk_in = torch.bmm(weights_scale, s_out).squeeze(1)
             # s1,s2 * s2
             topk_in = topk_in * now_k_scale
-            # sparse场景下三角置为-inf
             tmp_s1 = topk_in.shape[0]
             tmp_s2 = topk_in.shape[1]
             if sparse_mode == 3:
@@ -130,7 +127,6 @@ class TestCustomLightningIndexerQuant(TestCase):
 
     def quant_lightning_indexer_result(self, layout_query, b, t, s1, s2, act_seq_q, act_seq_k, sparse_mode,
                                        sparse_count = 2048):
-        # -----固定参数--------
         n1 = 64
         n2 = 1
         d = 128
@@ -177,7 +173,6 @@ class TestCustomLightningIndexerQuant(TestCase):
     def test_quant_lightning_indexer(self):
         # layout_query, b, t, s1, s2, act_seq_q, act_seq_k, sparse_mode
         test_case_list = [
-            # BSND case t act_seq_q act_seq_k 可填None
             ("BSND", 24, None, 4, 512, None, None, 0),
         ]
         for case in test_case_list:
