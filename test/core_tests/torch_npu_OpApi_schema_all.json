@@ -437,6 +437,9 @@
   "func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()": {
     "version": ["all_version"]
   },
+  "func: npu_scatter_pa_kv_cache.value(Tensor key, Tensor value, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache, Tensor(b!) value_cache) -> (Tensor(a!) key_value, Tensor(b!) value_cache)": {
+    "version": ["all_version"]
+  },
   "func: npu_quant_matmul_dequant(Tensor x, Tensor quantized_weight, Tensor weight_scale, *, Tensor? bias=None, Tensor? x_scale=None, Tensor? x_offset=None, Tensor? smooth_scale=None, str? quant_mode='pertoken') -> Tensor": {
     "version": ["all_version"]
   },
