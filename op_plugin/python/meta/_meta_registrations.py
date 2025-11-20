@@ -50,7 +50,7 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
 @impl(m, "npu_sparse_flash_attention")
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
-                                         key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', 
+                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", 
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
                                          attention_mode=0, return_softmax_lse=False):  
     if layout_query == "TND":
@@ -1040,8 +1040,8 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
 
 @impl(m, "npu_quant_lightning_indexer")
 def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
-                                        actual_seq_lengths_key=None, block_table=None, layout_query='BSND',
-                                        layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+                                        actual_seq_lengths_key=None, block_table=None, layout_query="BSND",
+                                        layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     if layout_key == "TND":
         keyHeadNum = key.size(1)
     else:
@@ -1056,8 +1056,8 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
 @impl(m, "npu_kv_quant_sparse_flash_attention")
 def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
-                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query='BSND',
-                                                layout_kv='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
+                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
                                                 quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64):
     if layout_query == "BSND":
         out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
@@ -1144,21 +1144,21 @@ def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *
 
 @impl(m, "npu_lightning_indexer")
 def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
-    actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3,
+    actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3,
     pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
-    if layout_query == 'BSND':
+    if layout_query == "BSND":
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
     else:
-        if layout_key == 'TND':
+        if layout_key == "TND":
             n_dim_idx = 1
         else:
             n_dim_idx = 2
         sparse_indices_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=torch.int32, device='meta')
     if return_value:
-        if layout_query == 'BSND':
+        if layout_query == "BSND":
             sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
         else:
-            if layout_key == 'TND':
+            if layout_key == "TND":
                 n_dim_idx = 1
             else:
                 n_dim_idx = 2
