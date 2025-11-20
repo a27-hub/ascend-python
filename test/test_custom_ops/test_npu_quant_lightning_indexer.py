@@ -170,6 +170,7 @@ class TestCustomLightningIndexerQuant(TestCase):
         res = npu_eager_out.equal(cpu_out)
         self.assertRtolEqual(res, True)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_quant_lightning_indexer(self):
         # layout_query, b, t, s1, s2, act_seq_q, act_seq_k, sparse_mode
         test_case_list = [

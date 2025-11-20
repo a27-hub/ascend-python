@@ -183,6 +183,7 @@ class TestSparseFlashAttention(TestCase):
             return self.trans_bnsd_to_tnd(cpu_out, cpu_out.shape, actual_seq_lengths_query)
         return np.transpose(y, axes=(0, 2, 1, 3))
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_sfa_eager(self, device = "npu"):
         scale_value = 0.041666666666666664
         sparse_block_size = 1
