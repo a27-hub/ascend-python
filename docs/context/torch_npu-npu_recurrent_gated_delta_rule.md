@@ -35,19 +35,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_recurrent_gated_delta_rule(
-    query,
-    key,
-    value,
-    state,
-    *,
-    beta=None,
-    scale=None,
-    actual_seq_lengths=None,
-    ssm_state_indices=None,
-    num_accepted_tokens=None,
-    g=None,
-    gk=None) -> Tensor
+torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None) -> Tensor
 ```
 
 
