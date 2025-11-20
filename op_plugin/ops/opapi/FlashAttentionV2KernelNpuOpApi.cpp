@@ -217,7 +217,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dq = OpPreparation::apply_tensor_without_format(format_query);
     at::Tensor dk = OpPreparation::apply_tensor_without_format(format_key);
     at::Tensor dv = OpPreparation::apply_tensor_without_format(format_value);
-    at::Tensor dsink = OpPreparation::apply_tensor_without_format(format_sink);
+    at::Tensor dsink;
     at::Tensor dpse;
     at::Tensor dq_rope;
     at::Tensor dk_rope;
@@ -235,6 +235,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         dk_rope = OpPreparation::apply_tensor_without_format(format_key_rope);
     } else {
         dk_rope = at::empty({0}, key.options());
+    }
+    if (format_sink.defined()) {
+        dsink = OpPreparation::apply_tensor_without_format(format_sink);
+    } else {
+        dsink = at::empty({0}, key.options().dtype(at::Float));
     }
 
     char input_layout_char[LAYOUT_MAX_LENGTH];
