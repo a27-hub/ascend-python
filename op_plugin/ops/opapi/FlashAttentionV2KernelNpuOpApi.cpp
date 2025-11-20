@@ -239,7 +239,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     if (format_sink.defined()) {
         dsink = OpPreparation::apply_tensor_without_format(format_sink);
     } else {
-        dsink = at::empty({0}, key.options().dtype(at::Float));
+        dsink = at::empty({0}, key.options().dtype(at::kFloat));
     }
 
     char input_layout_char[LAYOUT_MAX_LENGTH];
