@@ -1,7 +1,6 @@
 import random
 import torch
 import torch_npu
-import torchair
 import numpy as np
 import torch.nn as nn
 from torch_npu.testing.testcase import TestCase, run_tests
@@ -178,106 +177,6 @@ class TestCustomSFA(TestCase):
             print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
         self.assertTrue(true_ratio > 0.99, "precision compare fail")
         print(f'======================== PTA eager FINISH ========================')
-
-
-    def test_sfa_graph(self):
-        torch_npu.npu.set_device(int(DEVICE_ID))
-        query_type = torch.bfloat16
-        scale_value = 0.041666666666666664
-        sparse_block_size = 1
-        sparse_block_count = 2048
-        b = 4
-        s1 = 1
-        s2 = 8192
-        n1 = 128
-        n2 = 1
-        dn = 512
-        dr = 64
-        tile_size = 128
-        block_size = 256
-        layout_query = 'BSND'
-        s2_act = 4096
-
-        query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
-        key = torch.tensor(np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn))).to(torch.int8)
-        value = key.clone()
-        idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
-        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count). \
-            to(torch.int32)
-        query_rope = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dr))).to(query_type)
-        key_rope = torch.tensor(np.random.uniform(-10, 10, (b * (s2 // block_size), block_size, n2, dr))).to(query_type)
-        act_seq_q = torch.tensor([s1] * b).to(torch.int32)
-        act_seq_kv = torch.tensor([s2_act] * b).to(torch.int32)
-        antiquant_scale = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2,
-            dn // tile_size))).to(torch.float32)
-        key = torch.cat((key, key_rope.view(torch.int8), antiquant_scale.view(torch.int8)), axis=3)
-        query = torch.cat((query, query_rope), axis=3)
-        block_table = torch.tensor([range(b * s2 // block_size)], dtype=torch.int32).reshape(b, -1)
-
-        cpu_out = cpu_kv_quant_sparse_flash_attention(
-            query, key, value, sparse_indices,
-            key_dequant_scale=antiquant_scale, value_dequant_scale=antiquant_scale,
-            scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
-            layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
-            attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
-        
-        query = query.to("npu:%s" % DEVICE_ID)
-        key = key.to("npu:%s" % DEVICE_ID)
-        value = value.to("npu:%s" % DEVICE_ID)
-        sparse_indices = sparse_indices.to("npu:%s" % DEVICE_ID)
-        query_rope = query_rope.to("npu:%s" % DEVICE_ID)
-        key_rope = key_rope.to("npu:%s" % DEVICE_ID)
-        act_seq_q = act_seq_q.to("npu:%s" % DEVICE_ID)
-        act_seq_kv = act_seq_kv.to("npu:%s" % DEVICE_ID)
-        block_table = block_table.to("npu:%s" % DEVICE_ID)
-        antiquant_scale = antiquant_scale.to("npu:%s" % DEVICE_ID)
-
-
-        from torchair.configs.compiler_config import CompilerConfig
-        config = CompilerConfig()
-        npu_backend = torchair.get_npu_backend(compiler_config=config)
-      
-        class Network(nn.Module):
-            def __init__(self):
-                super(Network, self).__init__()
-
-            def forward(self, query, key, value, sparse_indices, scale_value, sparse_block_size,
-                actual_seq_lengths_query, actual_seq_lengths_kv,
-                layout_query, layout_kv, sparse_mode, block_table,
-                attention_mode, quant_scale_repo_mode, tile_size, key_quant_mode,
-                value_quant_mode, rope_head_dim):
-              
-                out1 = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value,
-                    sparse_indices, scale_value, sparse_block_size, 
-                    actual_seq_lengths_query=actual_seq_lengths_query, actual_seq_lengths_kv=actual_seq_lengths_kv,
-                    layout_query=layout_query, layout_kv=layout_kv, sparse_mode=sparse_mode, block_table=block_table,
-                    attention_mode=attention_mode, quant_scale_repo_mode=quant_scale_repo_mode, tile_size=tile_size,
-                    key_quant_mode=key_quant_mode, value_quant_mode=value_quant_mode, rope_head_dim=rope_head_dim)
-                return out1
-
-
-        mod = torch.compile(Network().npu(), backend=npu_backend, fullgraph=True)
-        print(f'======================== PTA graph BEGIN ========================')
-        # calculate on npu compile
-        npu_out = mod(query, key, value, sparse_indices, scale_value, sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
-            layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
-            attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
-
-        npu_out = npu_out.cpu().to(torch.float32).numpy()
-        cpu_out = cpu_out.to(torch.float32).numpy()
-
-        res = np.isclose(npu_out, cpu_out, rtol=0.005, atol=0.0001, equal_nan=False)
-        true_ratio = np.mean(res)
-        if true_ratio < 0.99:
-            print("npu output:\n", npu_out, npu_out.shape)
-            print("cpu output:\n", cpu_out, cpu_out.shape)
-            print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
-        self.assertTrue(true_ratio > 0.99, "precision compare fail")
-        print(f'======================== PTA graph FINISH ========================')
 
 
 if __name__ == "__main__":

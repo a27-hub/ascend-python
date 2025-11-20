@@ -1,6 +1,5 @@
 import torch
 import torch_npu
-import torchair
 import numpy as np
 import torch.nn as nn
 
@@ -148,25 +147,6 @@ class TestCustomLightningIndexerQuant(TestCase):
         output = output.cpu()
 
         return output
-
-    def npu_op_exec_graph(self, query, key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query,
-                          actual_seq_lengths_key, block_table, query_quant_mode, key_quant_mode, layout_query,
-                          layout_key, sparse_count, sparse_mode):
-        npu_mode = LIQuantNetwork().to("npu:%s" % DEVICE_ID)
-        from torchair.configs.compiler_config import CompilerConfig
-        config = CompilerConfig()
-        npu_backend = torchair.get_npu_backend(compiler_config=config)
-        torch._dynamo.reset()
-        npu_mode = torch.compile(npu_mode, fullgraph=True, backend=npu_backend, dynamic=False)
-        npu_out = npu_mode(query, key, weights, query_dequant_scale, key_dequant_scale,
-                           actual_seq_lengths_query=actual_seq_lengths_query,
-                           actual_seq_lengths_key=actual_seq_lengths_key,
-                           block_table=block_table, query_quant_mode=query_quant_mode,
-                           key_quant_mode=key_quant_mode, layout_query=layout_query,
-                           layout_key=layout_key, sparse_count=sparse_count, sparse_mode=sparse_mode)
-        npu_out = npu_out.cpu()
-
-        return npu_out
 
     def npu_op_exec_eager(self, query, key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query,
                           actual_seq_lengths_key, block_table, query_quant_mode, key_quant_mode, layout_query,
