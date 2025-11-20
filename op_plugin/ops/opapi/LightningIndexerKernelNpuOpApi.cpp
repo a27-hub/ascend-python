@@ -32,6 +32,15 @@ std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(con
     std::string query_layout_str, std::string key_layout_str, bool return_value)
 {
     at::SmallVector<int64_t, SIZE> output_size;
+    for (size_t i = 0; i < query.sizes().size(); i++) {
+        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
+            "than 0, but shape[", i, "] is ", query.size(i));
+    }
+    for (size_t i = 0; i < key.sizes().size(); i++) {
+        TORCH_CHECK(key.size(i) > 0, "All values within key's shape should be greater "
+            "than 0, but shape[", i, "] is ", key.size(i));
+    }
+    TORCH_CHECK(sparse_count > 0, "sparse count should be greater than 0, but now is ", sparse_count);
     if (query_layout_str == "BSND") {
         output_size = {query.size(DIM_0), query.size(DIM_1), key.size(DIM_2), sparse_count};
     } else {
@@ -58,6 +67,9 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode,
     int64_t pre_tokens, int64_t next_tokens, bool return_value)
 {
+    TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
+    TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
+
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
 
