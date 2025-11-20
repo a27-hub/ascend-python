@@ -40,6 +40,7 @@ at::Tensor _nnpack_spatial_convolution(
     if (stride.size() != 1) {
         strides_size[1] = stride[1];
     }
+
     c10::SmallVector<int64_t, N> dilations = {1, 1};
     c10::SmallVector<int64_t, N> output_padding = {0, 0};
     at::IntArrayRef paddings_intarray = at::IntArrayRef(paddings);
