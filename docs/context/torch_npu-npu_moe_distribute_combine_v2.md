@@ -62,7 +62,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 -   **group\_ep** (`str`)：必选参数，EP通信域名称，专家并行的通信域。字符串长度范围为\[1, 128\)，不能和`group_tp`相同。
 -   **ep\_world\_size** (`int`)：必选参数，EP通信域size。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`ep_world_size`的取值范围如下所示。
-         - `comm_alg`设置为"fullmesh"时，`ep_world_size`取值范围为16、32、64、128、256。
+         - `comm_alg`设置为"fullmesh"时，`ep_world_size`取值范围为16、32、64、128、256、384。
          - `comm_alg`设置为"hierarchy"时，`ep_world_size`取值范围为16、32、64。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值支持\[2, 768\]。
 
