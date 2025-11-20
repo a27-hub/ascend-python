@@ -100,6 +100,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
                     y[batch, n2_idx * g: (n2_idx + 1) * g, s1_idx, :] = mm2_res
         return torch.transpose(y, 1, 2)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_sfa_eager(self, device="npu"):
         query_type = torch.bfloat16
         scale_value = 0.041666666666666664
