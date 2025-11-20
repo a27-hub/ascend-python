@@ -7002,6 +7002,16 @@ custom:
   - func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_recurrent_gated_delta_rule(Tensor query, Tensor key, Tensor value, Tensor(a!) state, *, Tensor? beta=None, float? scale=None, Tensor? actual_seq_lengths=None, Tensor? ssm_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? g=None, Tensor? gk=None) -> Tensor
+    op_api: all_version
+    exposed: all_version
+    internal_format_opapi: all_version
+
+  - func: npu_recurrent_gated_delta_rule_functional(Tensor query, Tensor key, Tensor value, Tensor state, *, Tensor? beta=None, float? scale=None, Tensor? actual_seq_lengths=None, Tensor? ssm_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? g=None, Tensor? gk=None) -> (Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+    internal_format_opapi: all_version
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
