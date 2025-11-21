@@ -57,15 +57,18 @@ TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP = {
 }
 
 
+TORCH_NPU_DTYPE_TO_STRING_MAP = {
+    290: "torch_npu.hifloat8",
+    293: "torch_npu.float8_e8m0fnu",
+    296: "torch_npu.float4_e2m1fn_x2",
+    297: "torch_npu.float4_e1m2fn_x2",
+}
+
+
 def npu_dtype_to_str(dtype):
-    if dtype == torch_npu.hifloat8:
-        return "torch_npu.hifloat8"
-    elif dtype == torch_npu.float8_e8m0fnu:
-        return "torch_npu.float8_e8m0fnu"
-    elif dtype == torch_npu.float4_e2m1fn_x2:
-        return "torch_npu.float4_e2m1fn_x2"
-    elif dtype == torch_npu.float4_e1m2fn_x2:
-        return "torch_npu.float4_e1m2fn_x2"
+    torch_dtype = TORCH_NPU_DTYPE_TO_STRING_MAP.get(dtype)
+    if torch_dtype is not None:
+        return torch_dtype
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dtype)
     if torch_dtype is None:
         return str(dtype)
