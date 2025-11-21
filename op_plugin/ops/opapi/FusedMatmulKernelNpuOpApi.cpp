@@ -47,7 +47,6 @@ at::Tensor npu_fused_matmul(
     c10::string_view fused_op_type
     )
 {
-    TORCH_CHECK(c10_npu::IsAclnnOnly(), "npu fused matmul only support 910_95 right now");
     auto x1_dim_num = x.dim();
     TORCH_CHECK(x1_dim_num >= X_DIM, "x1 shape dim num cannot be less than 2, but it is ",
                 x1_dim_num);

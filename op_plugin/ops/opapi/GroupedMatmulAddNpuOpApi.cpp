@@ -23,8 +23,8 @@ at::Tensor& npu_grouped_matmul_add_(at::Tensor& self, const at::Tensor& x, const
 {
     static const bool has_grouped_matmul_add_v2 = check_aclnn_kernel_available("aclnnGroupedMatmulAddV2");
     int64_t group_list_type_value = group_list_type.value_or(0);
-    bool checkSoc = c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95;
-    if (!has_grouped_matmul_add_v2 || checkSoc) {
+    bool checkSoc = c10_npu::IsAclnnOnly();
+    if (!has_grouped_matmul_add_v2 || !checkSoc) {
         EXEC_NPU_CMD(aclnnGroupedMatmulAdd, x, weight, group_list, self, transpose_x, transpose_weight,
                      group_type);
         return self;
