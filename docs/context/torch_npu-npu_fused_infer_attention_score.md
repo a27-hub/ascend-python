@@ -241,7 +241,6 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     - 不支持配置`key_antiquant_offset`和`value_antiquant_offset`;
     - 不支持配置`query_rope`和`key_rope`；
     - 不支持左padding、tensorlist、pse、prefix、后量化；
-    - num_query_heads与`num_key_value_heads`支持组合有(10, 1)、(64, 8)、(80, 8)、(128, 16)。
 -   **当Q\_S大于1时：**
     -   `query`、`key`、`value`输入，功能使用限制如下：
         -   支持B轴小于等于65536，D轴32byte不对齐时仅支持到128。
