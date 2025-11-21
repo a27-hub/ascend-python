@@ -172,38 +172,6 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
         return y;
     }
 
-    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
-        TORCH_CHECK(!x_dtype.has_value() && !weight_dtype.has_value() && !scale_dtype.has_value() &&
-                        !per_token_scale_dtype.has_value(),
-                    "Special dtypes are only supported in Ascend910_95 and higher soc versions.",
-                    OPS_ERROR(ErrCode::PARAM));
-    }
-
-    if (x_dtype.has_value()) {
-        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8) ||
-                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
-                    "The optional parameter x_dtype only supports hifloat8, mxfp4 or None, but now is ",
-                    op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (weight_dtype.has_value()) {
-        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8) ||
-                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
-                    "The optional parameter weight_dtype only supports hifloat8, mxfp4 or None, but now is ",
-                    op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (scale_dtype.has_value()) {
-        TORCH_CHECK(scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                    "The optional parameter scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (per_token_scale_dtype.has_value()) {
-        TORCH_CHECK(per_token_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                    "The optional parameter per_token_scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    op_plugin::utils::DTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-
     auto num_x = x.size();
     bool singleWeight = weight.size() == 1 && weight[0].sizes().size() == 3;
     auto num_weight = singleWeight ? static_cast<size_t>(weight[0].size(0)) : static_cast<size_t>(weight.size());
@@ -223,11 +191,30 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     // weight is trans or not
     c10::SmallVector<int64_t, MAX_DIM_NUM> wrapper_stride = op_infer::array_to_small_vector(weight[0].strides());
     bool weight_trans = wrapper_stride[weight[0].sizes().size() - PENULTIMATE_DIM] == 1;
-    static const bool mxfp4_valid = x_dtype.has_value() && weight_dtype.has_value() &&
+#if VERSION_BETWEEN(V2R1, V2R7)
+    bool mxfp4_valid = x_dtype.has_value() && weight_dtype.has_value() &&
                                    (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
                                    (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+#endif
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+    bool mxfp4_valid = false;
+    if (x_dtype.has_value()) {
+        mxfp4_valid = (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                       x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    } else {
+        mxfp4_valid = x[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+    if (weight_dtype.has_value()) {
+        mxfp4_valid = mxfp4_valid &&
+                      (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                       weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    } else {
+        mxfp4_valid = mxfp4_valid &&
+                      weight[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+#endif
     size_t n_new = (mxfp4_valid && !weight_trans) ? (n0 * FP4_IN_INT8) : n0;
     if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
         if (num_group_list > 0) {
