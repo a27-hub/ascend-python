@@ -134,11 +134,11 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
 
 -   **rmsnorm_epsilon_ckv**（`float`，可选）：计算$c^{KV}$的RmsNorm公式中的$\epsilon$参数，Host侧参数。用户未特意指定时，建议传入1e-05，仅支持double类型，默认值为1e-05。
 
--   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。用户未特意指定时，建议传入"PA_BSND"，仅支持char*类型，可选值为"PA_BSND"、"PA_NZ"、"BSND"、"TND"，默认值为'PA_BSND'。
+-   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。用户未特意指定时，建议传入"PA_BSND"，仅支持char*类型，可选值为"PA_BSND","PA_NZ","PA_BLK_BSND","PA_BLK_NZ","TND","BSND"，默认值为'PA_BSND'。
 
 -   **query_norm_flag**（`int`，可选）：表示是否输出query_norm，Host侧参数。仅支持bool类型，False表示不输出query_norm，True表示输出query_norm，默认值为0。
 
--   **weight_quant_mode**（`int`，可选）：表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、 weight_uk、weight_dkv_kr量化，默认值为0。
+-   **weight_quant_mode**（`int`，可选）：表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、weight_uq_qr、weight_dkv_kr量化，默认值为0。
 
 -   **kv_cache_quant_mode**（`int`，可选）：表示kv_cache的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示per-tensor量化，2表示per-channel量化，3-表示per-tile量化，默认值为0。
 
@@ -175,7 +175,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536                                                           |
     | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
     | Hckv         | kv 低秩矩阵维度                | 取值固定为：512                                                             |
-    | Htile        | kv_cache per-tile量化时的矩阵维度  | 取值固定为：656                                                          |
+    | Dtile        | kv_cache per-tile量化时的矩阵维度  | 取值固定为：656                                                          |
     | D            | qk 不含位置编码维度            | 取值固定为：128                                                             |
     | Dr           | qk 位置编码维度                | 取值固定为：64                                                              |
     | Nkv          | kv 的 head 数                  | 取值固定为：1                                                               |
