@@ -245,7 +245,6 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     - 不支持配置dequant\_offset\_key和dequant\_offset\_value;
     - 不支持配置query\_rope和key\_rope；
     - 不支持左padding、tensorlist、pse、prefix、后量化；
-    - num\_query\_heads与num\_key\_value\_heads支持组合有(10, 1)、(64, 8)、(80, 8)、(128, 16)。
 -   learnable_sink的参数约束如下：
     - 仅支持TND、NTD\_TND；
     - 仅支持value的d小于等于128；
