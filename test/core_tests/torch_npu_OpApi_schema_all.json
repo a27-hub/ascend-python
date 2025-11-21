@@ -36,16 +36,16 @@
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_quant_lightning_indexer(*args, **kwargs)": {
-    "version": ["all_version"]
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_lightning_indexer(*args, **kwargs)": {
-    "version": ["all_version"]
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_sparse_flash_attention(*args, **kwargs)": {
-    "version": ["all_version"]
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_kv_quant_sparse_flash_attention(*args, **kwargs)": {
-    "version": ["all_version"]
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_kronecker_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
@@ -360,6 +360,18 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_mla_prolog_v3_functional(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_quant_lightning_indexer(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_lightning_indexer(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_sparse_flash_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_kv_quant_sparse_flash_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_mm_reduce_scatter_base(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
