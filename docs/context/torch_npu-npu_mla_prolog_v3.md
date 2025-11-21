@@ -170,7 +170,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
     | 字段名       | 英文全称/含义                  | 取值规则与说明                                                                 |
     |--------------|--------------------------------|------------------------------------------------------------------------------|
     | B            | Batch（输入样本批量大小）      | 取值范围：0~65536                                                           |
-    | S            | Seq-Length（输入样本序列长度） | 取值范围：0~16                                                              |
+    | S            | Seq-Length（输入样本序列长度） | 取值范围：不限制                                                              |
     | He           | Head-Size（隐藏层大小）        | 取值固定为：7168、7680                                                            |
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536                                                           |
     | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
@@ -181,7 +181,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
     | Nkv          | kv 的 head 数                  | 取值固定为：1                                                               |
     | BlockNum     | PagedAttention 场景下的块数    | 取值为计算 `B*Skv/BlockSize` 的结果后向上取整（Skv 表示 kv 的序列长度，允许取 0） |
     | BlockSize    | PagedAttention 场景下的块大小  | 取值范围：16、128                                                           |
-    | T            | BS 合轴后的大小                | 取值范围：0~1048576；注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos 均为 2 维，cache_index 为 1 维，query_out、query_rope_out 为 3 维 |
+    | T            | BS 合轴后的大小                | 取值范围：不限制；注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos 均为 2 维，cache_index 为 1 维，query_out、query_rope_out 为 3 维 |
 
 - 支持场景：
   <table style="table-layout: auto;" border="1">
