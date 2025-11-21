@@ -31,38 +31,13 @@ at::Tensor npu_add_quant_gmm_symint(const at::Tensor &self, const at::Tensor &x1
 // Tensor? x1_scale=None, int? group_list_type=0, int[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None,
 // int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor(a!) 对应的非原地npu实现
 {
-    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95,
-                "This operator currently only supports Ascend910_95 chips",
-                OPS_ERROR(ErrCode::PARAM));
-    // 确定能调到aclnn接口
     static const bool is_quant_grouped_matmul_inplace_add_available =
         check_aclnn_kernel_available("aclnnQuantGroupedMatmulInplaceAdd");
     TORCH_CHECK(is_quant_grouped_matmul_inplace_add_available,
                 "Get aclnnQuantGroupedMatmulInplaceAdd or aclnnQuantGroupedMatmulInplaceAddGetWorkspaceSize failed, "
                 "please upgrade CANN.",
                 OPS_ERROR(ErrCode::PARAM));
-    // x1_dtype、x2_dtype、x2_scale_dtype、x1_scale_dtype参数传入自定义数据类型的校验
-    if (x1_dtype.has_value()) {
-        TORCH_CHECK(x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter x1_dtype only supports hifloat8 or None, but now is ",
-                    op_plugin::utils::DTypeToString(x1_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (x2_dtype.has_value()) {
-        TORCH_CHECK(x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter x2_dtype only supports hifloat8 or None, but now is ",
-                    op_plugin::utils::DTypeToString(x2_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (x2_scale_dtype.has_value()) {
-        TORCH_CHECK(x2_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                    "The optional parameter x2_scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    op_plugin::utils::DTypeToString(x2_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    if (x1_scale_dtype.has_value()) {
-        TORCH_CHECK(x1_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
-                    "The optional parameter x1_scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    op_plugin::utils::DTypeToString(x1_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
-    // check groupsize 为none
+
     TORCH_CHECK(!group_sizes.has_value(), "group_sizes is not supported currently. ", OPS_ERROR(ErrCode::VALUE));
 
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
