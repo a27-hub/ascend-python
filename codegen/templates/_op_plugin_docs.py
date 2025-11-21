@@ -3706,7 +3706,6 @@ PyTorch2.1及以上
     """
 )
 
-
 _add_torch_npu_docstr(
     "npu_quant_matmul",
     """
