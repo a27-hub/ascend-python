@@ -104,51 +104,48 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   **moe\_expert\_num** (`int`)：必选参数，MoE专家数量，取值范围\[1, 1024\]，并且满足以下条件：moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)\=0。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：还需满足moe\_expert\_num\/\(ep\_world\_size - shared\_expert\_rank\_num\) <= 24。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
--   **scales** (`Tensor`)：可选参数，表示每个专家的权重，非量化场景不传，动态量化场景可传可不传。若传值要求为2维张量，如果有共享专家，shape为\(shared\_expert\_num+moe\_expert\_num, H\)，如果没有共享专家，shape为\(moe\_expert\_num, H\)，数据类型支持`float`，数据格式为$ND$，不支持非连续的Tensor。
--   **x\_active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-         - `comm_alg`设置为"fullmesh"时，要求为一个1维张量。shape为\(BS, \)，数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
-         - `comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求是一个1维或者2维张量。当输入为1维时，shape为\(BS, \); 当输入为2维时，shape为\(BS, K\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。当输入为1维时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2D时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
+-   **scales** (`Tensor`)：可选参数，表示每个专家的权重，非量化场景不传，动态量化场景可传可不传。若传值要求为2维张量，如果有共享专家，shape为\(shared\_expert\_num+moe\_expert\_num, H\)，如果没有共享专家，shape为\(moe\_expert\_num, H\)，数据类型支持`float`，数据格式为$ND$，不支持非连续的Tensor。默认值为None。
+-   **x\_active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。要求是一个1维或者2维张量。当输入为1维时，shape为\(BS, \); 当输入为2维时，shape为\(BS, K\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。当输入为1维时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2D时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。默认值为None。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
 
--   **expert\_scales** (`Tensor`)：可选参数，表示每个token的topK个专家权重。
+-   **expert\_scales** (`Tensor`)：可选参数，表示每个token的topK个专家权重。默认值为None。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：要求为2维张量，shape为\(BS, K\)，数据类型支持`float`，数据格式为$ND$，支持非连续的Tensor。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可。
 
--   **elastic\_info** (`Tensor`)：可选参数，表示EP通信域的动态缩容信息。当某些通信卡因异常而从通信域中剔除，实际参与通信的卡数可从本参数中获取。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传空指针即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填空指针，传入空指针时表示不使能动态缩容功能；当传入有效数据时，要求是一个1D的Tensor，shape为(4 + 2\*ep\_world\_size,)，数据类型支持int32；数据格式要求为ND，支持非连续的Tensor。Tensor中的前四个数字分别表示（是否缩容，缩容后实际rank数，缩容后共享专家使用的rank数，缩容后moe专家的个数），后2 * epWorldSize表示2个rank映射表，缩容后本卡中因部分rank异常而从EP通信域中剔除，第一个Table的映射关系为Table1[epRankId]=localEpRankId或-1，localEpRankId表示新EP通信域中的rank Index，-1表示epRankId这张卡从通信域中被剔除，第二个Table映射关系为Table2[localEpRankId] = epRankId。
+-   **elastic\_info** (`Tensor`)：可选参数，表示EP通信域的动态缩容信息。当某些通信卡因异常而从通信域中剔除，实际参与通信的卡数可从本参数中获取。默认值为None。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传默认值即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填None，传入None时表示不使能动态缩容功能；当传入有效数据时，要求是一个1D的Tensor，shape为(4 + 2\*ep\_world\_size,)，数据类型支持int32；数据格式要求为ND，支持非连续的Tensor。Tensor中的前四个数字分别表示（是否缩容，缩容后实际rank数，缩容后共享专家使用的rank数，缩容后moe专家的个数），后2 * epWorldSize表示2个rank映射表，缩容后本卡中因部分rank异常而从EP通信域中剔除，第一个Table的映射关系为Table1[epRankId]=localEpRankId或-1，localEpRankId表示新EP通信域中的rank Index，-1表示epRankId这张卡从通信域中被剔除，第二个Table映射关系为Table2[localEpRankId] = epRankId。
 
--   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。若有TP域通信需要传参，若无TP域通信，使用默认值即可。
+-   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。若有TP域通信需要传参，若无TP域通信，使用默认值即可。默认值为""。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：字符串长度范围为\[1, 128\)，不能和`group_ep`相同。
 
--   **tp\_world\_size** (`int`)：可选参数，TP通信域size。有TP域通信才需要传参。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值0即可。
+-   **tp\_world\_size** (`int`)：可选参数，TP通信域size。有TP域通信才需要传参。默认值为0。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当有TP域通信时，取值范围\[0, 2\]，0和1表示无TP域通信，2表示有TP域通信。
 
--   **tp\_rank\_id** (`int`)：可选参数，TP通信域本卡ID。有TP域通信才需要传参。
+-   **tp\_rank\_id** (`int`)：可选参数，TP通信域本卡ID。有TP域通信才需要传参。默认值为0。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当有TP域通信时，取值范围\[0, 1\]，默认为0，同一个TP通信域中各卡的`tp_rank_id`不重复。无TP域通信时，传0即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当有TP域通信时，取值范围\[0, 1\]，默认为0，同一个TP通信域中各卡的`tp_rank_id`不重复。无TP域通信时，使用默认值即可。
 
--   **expert\_shard\_type** (`int`)：可选参数，表示共享专家卡排布类型。
+-   **expert\_shard\_type** (`int`)：可选参数，表示共享专家卡排布类型。默认值为0。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前仅支持0，表示共享专家卡排在MoE专家卡前面。
 
--   **shared\_expert\_num** (`int`)：可选参数，表示共享专家数量，一个共享专家可以复制部署到多个卡上。
+-   **shared\_expert\_num** (`int`)：可选参数，表示共享专家数量，一个共享专家可以复制部署到多个卡上。默认值为1。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, 4\]，0表示无共享专家，默认值为1。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, 4\]，0表示无共享专家。
 
--   **shared\_expert\_rank\_num** (`int`)：可选参数，表示共享专家卡数量。
+-   **shared\_expert\_rank\_num** (`int`)：可选参数，表示共享专家卡数量。默认值为0。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持共享专家，使用默认值即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, ep\_world\_size\)。取0表示无共享专家，不取0需满足shared\_expert\_rank\_num%shared\_expert\_num=0。
 
--   **quant\_mode** (`int`)：可选参数，表示量化模式。支持取值：0表示非量化（默认），2表示动态量化。当`quant_mode`为2，`dynamic_scales`不为None；当`quant_mode`为0，`dynamic_scales`为None。
--   **global\_bs** (`int`)：可选参数，表示EP域全局的batch size大小。当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size，其中max\_bs表示单rank BS最大值；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
+-   **quant\_mode** (`int`)：可选参数，表示量化模式。支持取值：0表示非量化（默认），2表示动态量化。当`quant_mode`为2，`dynamic_scales`不为None；当`quant_mode`为0，`dynamic_scales`为None。默认值为0。
+-   **global\_bs** (`int`)：可选参数，表示EP域全局的batch size大小。当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size，其中max\_bs表示单rank BS最大值；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。默认值为0。
 
--   **expert\_token\_nums\_type** (`int`)：可选参数，表示输出`expert_token_nums`的值类型，取值范围\[0, 1\]，0表示每个专家收到token数量的前缀和，1表示每个专家收到的token数量（默认）。
+-   **expert\_token\_nums\_type** (`int`)：可选参数，表示输出`expert_token_nums`的值类型，取值范围\[0, 1\]，0表示每个专家收到token数量的前缀和，1表示每个专家收到的token数量。默认值为1。
 
--   **comm\_alg** (`string`)：可选参数，表示通信亲和内存布局算法。
+-   **comm\_alg** (`string`)：可选参数，表示通信亲和内存布局算法。默认值为""。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本支持""，"fullmesh"，"hierarchy"三种输入方式。推荐配置"hierarchy"并搭配25.0.RC1.1及以上版本驱动使用。
         - "": 配置HCCL\_INTRA\_PCIE\_ENABLE=1和HCCL\_INTRA\_ROCE\_ENABLE=0时，调用"hierarchy"算法，否则调用"fullmesh"算法。不推荐使用该方式。
         - "fullmesh": token数据直接通过RDMA方式发往topk个目标专家所在的卡。
@@ -158,17 +155,14 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - "fullmesh_v1"：不使能fullmesh_v2模板；
         - "fullmesh_v2"：使能fullmesh_v2模板，其中commAlg仅在tp\_world\_size取值为1时生效，且不支持在各卡Bs不一致、输入xActiveMask和特殊专家场景下使能。
 
--   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。
+-   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。默认值为0。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
 
--   **copy\_expert\_num** (`int`)：可选参数，表示拷贝专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。
+-   **copy\_expert\_num** (`int`)：可选参数，表示拷贝专家的数量。取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。默认值为0。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
 
--   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的常量专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。
+-   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的常量专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num+const\_expert\_num\)。默认值为0。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，使用默认值即可。
 
 ## 输出说明<a name="zh-cn_topic_0000002203575833_section22231435517"></a>
 
