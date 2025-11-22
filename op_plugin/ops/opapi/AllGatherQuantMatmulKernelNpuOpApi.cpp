@@ -36,11 +36,11 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_gather_out_size(const at::T
     return {gather_out.size(0) * world_size, gather_out.size(1)};
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm_symint(
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
     const at::Tensor& self, const at::Tensor& x2, c10::string_view hcom, int64_t world_size,
     const c10::optional<at::Tensor>& bias, const c10::optional<at::Tensor>& x1_scale,
     const c10::optional<at::Tensor>& x2_scale, const c10::optional<at::Tensor>& quant_scale, int64_t block_size,
-    int64_t gather_index, bool gather_output, int64_t comm_turn, c10::OptionalArrayRef<c10::SymInt> group_sizes,
+    int64_t gather_index, bool gather_output, int64_t comm_turn, c10::OptionalIntArrayRef group_sizes,
     bool amax_output, c10::optional<int64_t> y_dtype, c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
     c10::optional<int64_t> x1_scale_dtype, c10::optional<int64_t> x2_scale_dtype)
 {
@@ -48,10 +48,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm_symint(
                 (world_size & (world_size - 1)) == 0,
                 "world_size should be in [2, 4, 8, 16, 32, 64], but actual value is ", world_size,
                 OPS_ERROR(ErrCode::PARAM));
-    at::IntArrayRef group_size_list = {};
-    if (group_sizes.has_value()) {
-        group_size_list = c10::asIntArrayRefUnchecked(group_sizes.value());
-    }
+    at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
     int64_t stream_mode = 1;

@@ -128,20 +128,20 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
     }
 }
 
-at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor& x2, c10::string_view hcom,
-                                         c10::string_view reduce_op, const c10::optional<at::Tensor>& bias,
-                                         const c10::optional<at::Tensor>& antiquant_scale,
-                                         const c10::optional<at::Tensor>& antiquant_offset,
-                                         const c10::optional<at::Tensor>& x3, const c10::optional<at::Tensor>& dequant_scale,
-                                         const c10::optional<at::Tensor>& pertoken_scale,
-                                         const c10::optional<at::Tensor>& comm_quant_scale_1,
-                                         const c10::optional<at::Tensor>& comm_quant_scale_2,
-                                         int64_t antiquant_group_size, int64_t comm_turn,
-                                         c10::OptionalArrayRef<c10::SymInt> group_sizes, c10::optional<int64_t> y_dtype,
-                                         c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
-                                         c10::optional<int64_t> dequant_scale_dtype,
-                                         c10::optional<int64_t> pertoken_scale_dtype,
-                                         int64_t comm_quant_mode)
+at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c10::string_view hcom,
+                                  c10::string_view reduce_op, const c10::optional<at::Tensor>& bias,
+                                  const c10::optional<at::Tensor>& antiquant_scale,
+                                  const c10::optional<at::Tensor>& antiquant_offset,
+                                  const c10::optional<at::Tensor>& x3, const c10::optional<at::Tensor>& dequant_scale,
+                                  const c10::optional<at::Tensor>& pertoken_scale,
+                                  const c10::optional<at::Tensor>& comm_quant_scale_1,
+                                  const c10::optional<at::Tensor>& comm_quant_scale_2,
+                                  int64_t antiquant_group_size, int64_t comm_turn,
+                                  c10::OptionalIntArrayRef group_sizes, c10::optional<int64_t> y_dtype,
+                                  c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
+                                  c10::optional<int64_t> dequant_scale_dtype,
+                                  c10::optional<int64_t> pertoken_scale_dtype,
+                                  int64_t comm_quant_mode)
 {
     static bool is_version_910b_or_93 = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) &&
         (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95);
@@ -150,10 +150,7 @@ at::Tensor npu_mm_all_reduce_base_symint(const at::Tensor& x1, const at::Tensor&
             comm_quant_scale_2);
     }
 
-    at::IntArrayRef group_size_list = {};
-    if (group_sizes.has_value()) {
-        group_size_list = c10::asIntArrayRefUnchecked(group_sizes.value());
-    }
+    at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
 
