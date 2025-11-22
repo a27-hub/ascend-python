@@ -21,6 +21,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+
 constexpr int FOREACH_NORM_MAX_TENSOR_COUNT = 24;
 constexpr int L1_NORM = 1;
 constexpr int L2_NORM = 2;

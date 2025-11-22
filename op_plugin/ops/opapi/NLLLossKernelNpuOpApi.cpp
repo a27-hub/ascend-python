@@ -66,7 +66,6 @@ std::tuple<at::Tensor, at::Tensor> nll_loss_forward(const at::Tensor& self,
     if (reduction == at::Reduction::None && self.dim() != 1) {
         output_size = {self.size(0)};
     }
-
     at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self, output_size);
     at::Tensor total_weight = at_npu::native::OpPreparation::apply_tensor_without_format(self, totalWeightSize);
 

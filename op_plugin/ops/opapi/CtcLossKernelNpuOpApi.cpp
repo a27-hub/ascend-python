@@ -38,7 +38,6 @@ std::tuple<at::Tensor, at::Tensor> _ctc_loss(
             max_length = i;
         }
     }
-
     // calculate the output size
     auto outputSizes = op_infer::ctc_loss_npu_output_size(log_probs, max_length);
 

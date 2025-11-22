@@ -56,7 +56,6 @@ at::Tensor _ctc_loss_backward(
         .Attr("blank", blank)
         .Attr("zero_infinity", zero_infinity)
         .Run();
-
     if (grad.scalar_type() == at::kHalf) {
         grad_out = at_npu::native::custom_ops::npu_dtype_cast(grad_out, at::kHalf);
     }

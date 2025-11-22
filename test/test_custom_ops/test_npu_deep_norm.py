@@ -7,6 +7,7 @@ from torch_npu.testing.common_utils import get_npu_device, SupportedDevices
 torch.npu.set_compile_mode(jit_compile=False)
 
 
+
 class TestNPUDeepNorm(TestCase):
     def supported_op_exec(self, x, gx, beta, gamma):
         alpha = 0.3

@@ -70,7 +70,6 @@ std::tuple<at::Tensor, at::Tensor> _ctc_loss(const at::Tensor &log_probs, const 
         neg_log_likelihood = at_npu::native::custom_ops::npu_dtype_cast(neg_log_likelihood, at::kHalf);
         log_alpha = at_npu::native::custom_ops::npu_dtype_cast(log_alpha, at::kHalf);
     }
-
     return std::tie(neg_log_likelihood, log_alpha);
 }
 

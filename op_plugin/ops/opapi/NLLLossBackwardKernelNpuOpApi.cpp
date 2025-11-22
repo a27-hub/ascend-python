@@ -52,7 +52,6 @@ at::Tensor nll_loss_backward(const at::Tensor& grad_output, const at::Tensor& se
     // calculate the output result of the NPU
     nll_loss_backward_out(grad_output, self, target, weight, reduction, ignore_index,
                           total_weight, grad_input);
-
     return grad_input;
 }
 
