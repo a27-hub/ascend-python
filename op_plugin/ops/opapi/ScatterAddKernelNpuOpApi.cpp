@@ -20,7 +20,6 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-
 at::Tensor scatter_add(
     const at::Tensor& self,
     int64_t dim,

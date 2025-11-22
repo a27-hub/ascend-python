@@ -64,7 +64,6 @@ at::Tensor& scatter_add_(
   } else {
     scatter_add_out_npu_nocheck(self, self, dim, index, src);
   }
-
   return self;
 }
 
