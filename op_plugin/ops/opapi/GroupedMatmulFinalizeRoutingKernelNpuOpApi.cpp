@@ -69,11 +69,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0));
-    if (!shared_input.has_value() && !logit.has_value()) {
-        TORCH_CHECK(output_bs_real == x_m_dim,
-                    "When shared_input and logit is None, output_bs must equal to M",
-                    OPS_ERROR(ErrCode::PARAM));
-    }
+
     if (output_bs_real == 0) {
         output_bs_real = x_m_dim;
     }
@@ -102,7 +98,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TORCH_CHECK(dst_type == at::ScalarType::Float,
         "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
 
-    if (shared_input.has_value() && logit.has_value()) {
+    if (shared_input.has_value()) {
         TORCH_CHECK(dst_type == at::ScalarType::Float,
                     "When shared_input and logit is not None, the dtype must be float32",
                     OPS_ERROR(ErrCode::PARAM));
