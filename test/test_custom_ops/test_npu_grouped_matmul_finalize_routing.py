@@ -74,8 +74,9 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
             out[shared_input_offset:shared_input_offset + shared_input.shape[0], :] += \
                 shared_input_scale * shared_input.to(torch.float32)
         else:
+            out = mm_out * logit.reshape(-1, 1)
             index = torch.argsort(row_index, dim=0)
-            out = mm_out[index].reshape(-1, topK, mm_out.shape[-1]).sum(dim=1)
+            out = out[index].reshape(-1, topK, mm_out.shape[-1]).sum(dim=1)
         return out
     
     def supported_a8w4_op_exec(self, topK, x_in, weight_in, groupList_in, scale_in,
@@ -185,8 +186,9 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
         ).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip.")
     @SupportedDevices(["Ascend910B"])
-    def test_npu_grouped_matmul_finalize_routing_4(self, device="npu"):
+    def test_npu_grouped_matmul_finalize_routing_sharedinput_none_grouplist_cumsum(self, device="npu"):
         m, k, n, batch, topK, group_num, shared_input_scale = 576, 2048, 7168, 72, 8, 8, 1
         x = torch.randint(-10, 10, (m, k), dtype=torch.int8)
         weight = torch.randint(-10, 10, (group_num, k, n), dtype=torch.int8)
