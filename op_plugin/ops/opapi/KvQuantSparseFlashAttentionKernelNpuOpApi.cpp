@@ -31,7 +31,7 @@ const int DIM_2 = 2;
 const int DIM_3 = 3;
 
 at::Tensor construct_quant_sparse_infer_output_tensor(
-    const at::Tensor& query, const at::Tensor& value, std::string layout_query_str,
+    const at::Tensor& query, std::string layout_query_str,
     std::string layout_kv_str, const uint64_t &rope_head_dim)
 {
     for (auto i = 0; i < query.sizes().size(); i++) {
@@ -62,12 +62,14 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
     int64_t tile_size, int64_t rope_head_dim)
 {
+    TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
+
     std::string layout_query_str = std::string(layout_query);
     std::string layout_kv_str = std::string(layout_kv);
 
     // construct the output tensor
     at::Tensor output = op_api::construct_quant_sparse_infer_output_tensor(
-        query, value, layout_query_str, layout_kv_str, rope_head_dim);
+        query, layout_query_str, layout_kv_str, rope_head_dim);
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
