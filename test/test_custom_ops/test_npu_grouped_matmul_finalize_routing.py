@@ -185,6 +185,7 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
         ).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip.")
     @SupportedDevices(["Ascend910B"])
     def test_npu_grouped_matmul_finalize_routing_4(self, device="npu"):
         m, k, n, batch, topK, group_num, shared_input_scale = 576, 2048, 7168, 72, 8, 8, 1
