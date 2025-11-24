@@ -23,17 +23,6 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 const int64_t INT4_NUMS_IN_INT32_SPACE = 8;
-
-static std::map<int64_t, at::ScalarType> QUANTIZE_SUPPORT_MAP = {
-    {static_cast<int64_t>(at::kQUInt8), at::ScalarType::Byte},
-    {static_cast<int64_t>(at::kQInt8), at::ScalarType::Char},
-    {static_cast<int64_t>(at::kQInt32), at::ScalarType::Int},
-    {static_cast<int64_t>(at::kByte), at::ScalarType::Byte},
-    {static_cast<int64_t>(at::kChar), at::ScalarType::Char},
-    {static_cast<int64_t>(at::kInt), at::ScalarType::Int},
-    {static_cast<int64_t>(at::kFloat8_e4m3fn), at::ScalarType::Float8_e4m3fn},
-    {static_cast<int64_t>(at::kFloat8_e5m2), at::ScalarType::Float8_e5m2},
-    {static_cast<int64_t>(c10_npu::DType::HIFLOAT8), at::ScalarType::Byte}};
 };
 
 at::Tensor npu_quantize_by_kernel(
@@ -46,17 +35,12 @@ at::Tensor npu_quantize_by_kernel(
     // check if aclnn api implemented
     DO_COMPATIBILITY(aclnnQuantize,
         acl_op::npu_quantize(self, scales, zero_points_opt, dtype, axis));
-    // check output datatype supported
-    TORCH_CHECK(QUANTIZE_SUPPORT_MAP.find(dtype) != QUANTIZE_SUPPORT_MAP.end(),
-        "Param (dtype) must be Int8, UInt8, Int32, HiFloat8, Float8_e4m3fn, Float8_e5m2" + OPS_ERROR(ErrCode::TYPE));
-    auto output_shape = op_infer::array_to_small_vector(self.sizes());
 
-    at::ScalarType scalarDtype = QUANTIZE_SUPPORT_MAP[dtype];
-    aclDataType yAclType = npu_preparation::convert_to_acl_data_type(scalarDtype);
-    if (dtype == static_cast<int64_t>(c10_npu::DType::HIFLOAT8)) {
-        yAclType = ACL_HIFLOAT8;
-    }
-    at::Tensor y = npu_preparation::apply_tensor_without_format(output_shape, self.options().dtype(scalarDtype));
+    auto output_shape = op_infer::array_to_small_vector(self.sizes());
+    aclDataType yAclType = c10_npu::GetAclDataType(dtype);
+    at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(yAclType);
+
+    at::Tensor y = npu_preparation::apply_tensor_without_format(output_shape, c10::dtype(scalar_dtype));
     TensorWrapper y_wrapper = {y, yAclType};
     EXEC_NPU_CMD(aclnnQuantize, self, scales, zero_points_opt, yAclType, axis, y_wrapper);
     return y;
@@ -73,12 +57,7 @@ at::Tensor npu_quantize_by_ascend_quant(
     aclDataType yAclType = ACL_INT8;
     at::Tensor result;
 
-    if (dtype == static_cast<int64_t>(at::kQInt8)) {
-        ASCEND_LOGI("[npu_quantize]: Parameter(dtype) is torch.qint8, setting aclTensor out dtype to: %s",
-                    at_npu::native::AclDataTypeToString(aclDataType::ACL_INT8).c_str());
-        yAclType = ACL_INT8;
-        scalarDtype = at::ScalarType::Char;
-    } else if (dtype == static_cast<int64_t>(at::ScalarType::QUInt4x2)) {
+    if (dtype == static_cast<int64_t>(at::ScalarType::QUInt4x2)) {
         // int4 pack to int32
         ASCEND_LOGI("[npu_quantize]: Parameter(dtype) is torch.quint4x2, setting aclTensor out dtype to: %s",
                     at_npu::native::AclDataTypeToString(aclDataType::ACL_INT32).c_str());
