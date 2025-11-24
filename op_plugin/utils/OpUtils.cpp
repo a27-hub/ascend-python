@@ -19,6 +19,7 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 #include "torch_npu/csrc/aten/mirror/NPUTypeProperties.h"
 #include "torch_npu/csrc/core/npu/GetCANNInfo.h"
+#include "torch_npu/csrc/custom_dtype/Init.h"
 #include "op_plugin/utils/OpUtils.h"
 
 namespace op_plugin {
@@ -45,6 +46,20 @@ std::string get_reduction_str(int64_t reduction)
         reductionStr = "sum";
     }
     return reductionStr;
+}
+
+std::string get_vector_str(const std::vector<int64_t> &vec)
+{
+    std::string shape_str = "[";
+    size_t vec_num = vec.size();
+    for (size_t i = 0; i < vec_num; i++) {
+        shape_str += std::to_string(vec[i]);
+        if (i != vec_num - 1) {
+            shape_str += ", ";
+        }
+    }
+    shape_str += "]";
+    return shape_str;
 }
 
 int64_t get_rotary_mode(c10::string_view mode)
@@ -229,7 +244,7 @@ at::ScalarType get_divide_calculate_type(const at::Tensor &self, const at::Tenso
 
 at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 {
-    at::Tensor self_cast = (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::npu_dtype_cast(self, calculate_type);
+    at::Tensor self_cast = (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
     self_cast = at_npu::native::OpPreparation::CastBackToOriFormat(self_cast);
     return self_cast;
 }
@@ -407,6 +422,12 @@ bool is_gte_cann_version_830rc1()
 {
     const static bool result = IsGteCANNVersion("8.3.RC1", "CANN");
     return result;
+}
+
+const std::string DTypeToString(int64_t input_type)
+{
+    return c10_npu::IsCustomDType(input_type) ?
+           c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
 }
 
 }  // namespace utils
