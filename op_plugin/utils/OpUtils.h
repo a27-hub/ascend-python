@@ -44,6 +44,7 @@ enum ForeachMappingType {
 
 using NameVector = c10::SmallVector<at::Dimname, at::kDimVectorStaticSize>;
 OP_PLUGIN_HIDDEN std::string get_reduction_str(int64_t reduction);
+OP_PLUGIN_HIDDEN std::string get_vector_str(const std::vector<int64_t> &vec);
 OP_PLUGIN_HIDDEN int64_t make_warp_dim(int64_t dim, int64_t dim_post_expr);
 OP_PLUGIN_HIDDEN bool is_neox_style(std::string rotary_mode);
 OP_PLUGIN_HIDDEN bool is_transpose_last_two_dims(const at::Tensor &tensor);
@@ -77,6 +78,7 @@ OP_PLUGIN_HIDDEN bool is_gte_cann_version_810rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_820rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_830rc1();
 OP_PLUGIN_HIDDEN int64_t get_rotary_mode(c10::string_view mode);
+OP_PLUGIN_HIDDEN const std::string DTypeToString(int64_t input_type);
 
 }  // namespace utils
 }  // namespace op_plugin
