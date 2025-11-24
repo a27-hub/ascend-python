@@ -134,7 +134,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
 
 -   **rmsnorm_epsilon_ckv**（`float`，可选）：计算$c^{KV}$的RmsNorm公式中的$\epsilon$参数，Host侧参数。用户未特意指定时，建议传入1e-05，仅支持double类型，默认值为1e-05。
 
--   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。用户未特意指定时，建议传入"PA_BSND"，仅支持char*类型，可选值为"PA_BSND","PA_NZ","PA_BLK_BSND","PA_BLK_NZ","TND","BSND"，默认值为'PA_BSND'。
+-   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。仅支持char*类型，可选值为"PA_BSND"、"PA_NZ"、"PA_BLK_BSND"、"PA_BLK_NZ"、"TND"和"BSND"，默认为"PA_BSND"。
 
 -   **query_norm_flag**（`int`，可选）：表示是否输出query_norm，Host侧参数。仅支持bool类型，False表示不输出query_norm，True表示输出query_norm，默认值为0。
 
