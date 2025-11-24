@@ -30,9 +30,13 @@ using namespace at_npu::native;
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor construct_sparse_flash_attention_output_tensor(
-    const at::Tensor& query, const at::Tensor& value, std::string layout)
+    const at::Tensor& query, std::string layout)
 {
     at::SmallVector<int64_t, SIZE> output_size;
+    for (size_t i = 0; i < query.sizes().size(); i++) {
+        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
+            "than 0, but shape[", i, "] is ", query.size(i));
+    }
     if (layout == "TND") {
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2)};
     } else {
@@ -55,12 +59,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens,
     int64_t attention_mode, bool return_softmax_lse)
 {
+    TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
+    TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
+
     std::string layout_query_str = std::string(layout_query);
     std::string layout_kv_str = std::string(layout_kv);
 
     // construct the output tensor
     at::Tensor sparse_flash_attention_output = op_api::construct_sparse_flash_attention_output_tensor(
-        query, value, layout_query_str);
+        query, layout_query_str);
     at::Tensor softmax_max;
     at::Tensor softmax_sum;
     at::SmallVector<int64_t, SIZE> softmax_max_size;

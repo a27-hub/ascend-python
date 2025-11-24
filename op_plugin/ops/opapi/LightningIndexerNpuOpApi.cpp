@@ -29,13 +29,24 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(const at::Tensor& query,
     const at::Tensor& key, const c10::optional<at::Tensor> &actual_seq_lengths_query, int64_t sparse_count,
-    std::string query_layout_str, bool return_value)
+    std::string query_layout_str, std::string key_layout_str, bool return_value)
 {
     at::SmallVector<int64_t, SIZE> output_size;
+    for (size_t i = 0; i < query.sizes().size(); i++) {
+        TORCH_CHECK(query.size(i) > 0, "All values within query's shape should be greater "
+            "than 0, but shape[", i, "] is ", query.size(i));
+    }
+    for (size_t i = 0; i < key.sizes().size(); i++) {
+        TORCH_CHECK(key.size(i) > 0, "All values within key's shape should be greater "
+            "than 0, but shape[", i, "] is ", key.size(i));
+    }
+    TORCH_CHECK(sparse_count > 0, "sparse count should be greater than 0, but now is ", sparse_count);
     if (query_layout_str == "BSND") {
         output_size = {query.size(DIM_0), query.size(DIM_1), key.size(DIM_2), sparse_count};
     } else {
-        output_size = {query.size(DIM_0), key.size(DIM_2), sparse_count};
+        int n_dim_index = 0;
+        n_dim_index = (key_layout_str == "TND") ? DIM_1 : DIM_2;
+        output_size = {query.size(DIM_0), key.size(n_dim_index), sparse_count};
     }
     at::Tensor sparse_indices_out = npu_preparation::apply_tensor_without_format(output_size, at::kInt);
     at::Tensor sparse_values_out;
@@ -56,12 +67,15 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode,
     int64_t pre_tokens, int64_t next_tokens, bool return_value)
 {
+    TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
+    TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
+
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
 
     // construct the output tensor
     std::tuple<at::Tensor, at::Tensor> lightning_indexer_output = op_api::construct_lightning_indexer_output_tensor(
-            query, key, actual_seq_lengths_query, sparse_count, query_layout_str, key_layout_str, return_value);
+        query, key, actual_seq_lengths_query, sparse_count, query_layout_str, key_layout_str, return_value);
     at::Tensor sparse_indices_out = std::get<0>(lightning_indexer_output);
     at::Tensor sparse_values_out = std::get<1>(lightning_indexer_output);
     // convert str
