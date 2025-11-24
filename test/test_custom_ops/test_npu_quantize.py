@@ -96,24 +96,24 @@ class TestNPUQuantize(TestCase):
     def test_npu_quantize_ascend_quant_v2_perchannel(self):
         datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
         input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.qint8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.qint8)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.int8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.int8)
         self.assertRtolEqual(cpu_output1, npu_output1)
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_quantize_ascend_quant_v2_perhead(self):
         datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
         input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.qint8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.qint8)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.int8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.int8)
         self.assertRtolEqual(cpu_output1, npu_output1)
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_quantize_ascend_quant_v2_pertensor(self):
         datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
         input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.qint8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.qint8)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.int8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.int8)
         self.assertRtolEqual(cpu_output1, npu_output1)
 
     @unittest.skip("Skipping test_npu_quantize_ascend_quant_v2_nz_pertensor for now")
