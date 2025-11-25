@@ -1049,7 +1049,8 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
 @impl(m, "npu_fusion_attention_v2")
 def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *, pse=None, padding_mask=None,
                                 atten_mask=None, query_rope=None, key_rope=None, scale=1.0, keep_prob=1.0, pre_tokens=2147483647, next_tokens=2147483647,
-                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False):
+                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False,
+                                pse_type=1, q_start_idx=None, kv_start_idx=None, softmax_layout="", sink=None):
     B = query.size(0)
     N = head_num
     S1 = query.size(2)
@@ -1085,14 +1086,16 @@ def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *
 def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, query_rope=None, key_rope=None, scale_value=1.0,
                                   keep_prob=1.0, pre_tokens=2147483647, next_tokens=2147483647, inner_precise=0, seed=0, offset=0,
-                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False):
+                                  numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False,
+                                  pse_type=1, q_start_idx=None, kv_start_idx=None, softmax_layout="", sink=None):
     dq = torch.empty_like(query, dtype=query.dtype, device='meta')
     dq_rope = torch.empty_like([0], dtype=query.dtype, device='meta')
     dk = torch.empty_like(key, dtype=query.dtype, device='meta')
     dk_rope = torch.empty_like([0], dtype=query.dtype, device='meta')
     dv = torch.empty_like(value, dtype=query.dtype, device='meta')
-    dpse = torch.empty([0], dtype=query.dtype, device='meta')
-    return (torch.empty_like(dq), torch.empty_like(dk), torch.empty_like(dv), torch.empty_like(dpse), torch.empty_like(dq_rope), torch.empty_like(dk_rope))
+    dpse = torch.empty_like([0], dtype=query.dtype, device='meta')
+    dsink = None if sink is None else torch.empty_like(sink, dtype=sink.dtype, device='meta')
+    return (dq, dk, dv, dpse, dq_rope, dk_rope, dsink)
 
 
 @impl(m, "npu_rotary_mul")
@@ -2360,10 +2363,17 @@ def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_
 
 @impl(m, "npu_kv_rmsnorm_rope_cache")
 def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
-                                   c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, epsilon=1e-5,
+                                   c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, v=None, epsilon=1e-5,
                                    cache_mode='Norm', is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
+    if v is not None and v.dim() > 0:
+        if v.dtype != kv.dtype:
+            raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
+        if v.dim() != 4:
+            raise RuntimeError("4D tensor expected for input v" + ops_error(ErrCode.PARAM))
+        if v.size(0) != kv.size(0) or v.size(1) != kv.size(1) or v.size(2) != kv.size(2):
+            raise RuntimeError("v MUST have same token shape as kv!" + ops_error(ErrCode.PARAM))
     if gamma.dim() != 1:
         raise RuntimeError("1D tensor expected for input gamma" + ops_error(ErrCode.PARAM))
     if cos.dim() != 4:
@@ -2373,8 +2383,12 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
     for i in range(kv.dim() - 1):
         k_rope_size.append(kv.size(i))
         c_kv_size.append(kv.size(i))
-    k_rope_size.append(cos.size(3))
-    c_kv_size.append(gamma.size(0))
+    if v is None:
+        k_rope_size.append(cos.size(3))
+        c_kv_size.append(gamma.size(0))
+    else:
+        k_rope_size.append(kv.size(3))
+        c_kv_size.append(v.size(3))
     return (torch.empty_like(k_cache), torch.empty_like(ckv_cache),
             torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
             torch.empty(c_kv_size, dtype=kv.dtype, device=kv.device))
@@ -2382,10 +2396,17 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
 
 @impl(m, "npu_kv_rmsnorm_rope_cache_v2")
 def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
-                                           c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, epsilon=1e-5,
+                                           c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, v=None, epsilon=1e-5,
                                            cache_mode='Norm', is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
+    if v is not None and v.dim() > 0:
+        if v.dtype != kv.dtype:
+            raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
+        if v.dim() != 4:
+            raise RuntimeError("4D tensor expected for input v" + ops_error(ErrCode.PARAM))
+        if v.size(0) != kv.size(0) or v.size(1) != kv.size(1) or v.size(2) != kv.size(2):
+            raise RuntimeError("v MUST have same token shape [B,N,S] as kv!" + ops_error(ErrCode.PARAM))
     if gamma.dim() != 1:
         raise RuntimeError("1D tensor expected for input gamma" + ops_error(ErrCode.PARAM))
     if cos.dim() != 4:
@@ -2395,8 +2416,12 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
     for i in range(kv.dim() - 1):
         k_rope_size.append(kv.size(i))
         c_kv_size.append(kv.size(i))
-    k_rope_size.append(cos.size(3))
-    c_kv_size.append(gamma.size(0))
+    if v is None:
+        k_rope_size.append(cos.size(3))
+        c_kv_size.append(gamma.size(0))
+    else:
+        k_rope_size.append(kv.size(3))
+        c_kv_size.append(v.size(3))
     return (torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
             torch.empty(c_kv_size, dtype=kv.dtype, device=kv.device))
 
@@ -2404,10 +2429,17 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
 @impl(m, "npu_kv_rmsnorm_rope_cache_v2_functional")
 def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *,
                                                       k_rope_scale=None, c_kv_scale=None, k_rope_offset=None,
-                                                      c_kv_offset=None, epsilon=1e-5, cache_mode='Norm',
+                                                      c_kv_offset=None, v=None, epsilon=1e-5, cache_mode='Norm',
                                                       is_output_kv=False):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
+    if v is not None and v.dim() > 0:
+        if v.dtype != kv.dtype:
+            raise RuntimeError("v MUST have same data type as kv!" + ops_error(ErrCode.PARAM))
+        if v.dim() != 4:
+            raise RuntimeError("4D tensor expected for input v" + ops_error(ErrCode.PARAM))
+        if v.size(0) != kv.size(0) or v.size(1) != kv.size(1) or v.size(2) != kv.size(2):
+            raise RuntimeError("v MUST have same token shape as kv!" + ops_error(ErrCode.PARAM))
     if gamma.dim() != 1:
         raise RuntimeError("1D tensor expected for input gamma" + ops_error(ErrCode.PARAM))
     if cos.dim() != 4:
@@ -2417,8 +2449,12 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
     for i in range(kv.dim() - 1):
         k_rope_size.append(kv.size(i))
         c_kv_size.append(kv.size(i))
-    k_rope_size.append(cos.size(3))
-    c_kv_size.append(gamma.size(0))
+    if v is None:
+        k_rope_size.append(cos.size(3))
+        c_kv_size.append(gamma.size(0))
+    else:
+        k_rope_size.append(kv.size(3))
+        c_kv_size.append(v.size(3))
     return (torch.empty(k_rope_size, dtype=kv.dtype, device=kv.device),
             torch.empty(c_kv_size, dtype=kv.dtype, device=kv.device),
             torch.empty_like(k_cache), torch.empty_like(ckv_cache))
@@ -2674,6 +2710,15 @@ def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, b
     y_size.append(math.floor(x.size(x.dim() - 1) / 2))
     return (torch.empty(y_size, dtype=torch.int8, device=x.device),
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
+@impl(m, "npu_clipped_swiglu")
+def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
+    output_size = []
+    for i in range(x.dim()):
+        output_size.append(x.size(i))
+    output_size[dim] = math.floor(output_size[dim] / 2)
+    return torch.empty(output_size, dtype=x.dtype, device=x.device)
 
 
 @impl(m, "npu_dequant_rope_quant_kvcache")
