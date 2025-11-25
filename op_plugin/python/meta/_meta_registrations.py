@@ -2609,24 +2609,14 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
     quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
 
-    if output_dtype == TORCH_DTYPE_MAP[torch.float16]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.float16)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.bfloat16]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.bfloat16)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.float32)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.int32]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.int32)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e5m2)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.float8_e4m3fn)
-    elif output_dtype == TORCH_DTYPE_MAP[torch.bits8] or output_dtype == torch_npu.hifloat8:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.uint8)
-    elif output_dtype is None or output_dtype == TORCH_DTYPE_MAP[torch.int8]:
-        return shape_long.new_empty(tuple(dim_list), dtype=torch.int8)
-    else:
-        raise RuntimeError("Not supportted output dtype is " + npu_dtype_to_str(output_dtype))
+    tensor_dtype = torch.int8
+    if output_dtype is not None:
+        tensor_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(output_dtype)
+        if TORCH_DTYPE_MAP[tensor_dtype] == TORCH_DTYPE_MAP[torch.bits8]:
+            tensor_dtype = torch.uint8
+        if tensor_dtype is None or (tensor_dtype not in TORCH_DTYPE_MAP.keys() and tensor_dtype != torch.uint8):
+            raise RuntimeError("Not supported output dtype is " + npu_dtype_to_str(output_dtype))
+    return shape_long.new_empty(tuple(dim_list), dtype=tensor_dtype)
 
 
 @impl(m, "npu_quant_matmul_dequant")
