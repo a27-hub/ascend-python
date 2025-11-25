@@ -16,7 +16,6 @@
 
 -   计算公式:
     -   RmsNorm公式
-
 $$
 \text{RmsNorm}(x) = \gamma \cdot \frac{x_i}{\text{RMS}(x)}
 $$
@@ -26,7 +25,6 @@ $$
 $$
 
     -   路径1：标准Query计算
-
 包括下采样、RmsNorm和两次上采样：
 
 $$
@@ -42,7 +40,6 @@ q^N = q^C \cdot W^{UK}
 $$
 
     -   路径2：位置编码Query计算
-
 对Query进行ROPE旋转位置编码：
 
 $$
@@ -50,7 +47,6 @@ q^R = ROPE(c^Q \cdot W^{QR})
 $$
 
     -   路径3：标准Key计算
-
 包括下采样、RmsNorm，将计算结果存入Cache：
 
 $$
@@ -62,7 +58,6 @@ k^C = Cache(c^{KV})
 $$
 
     -   路径4：位置编码Key计算
-
 对Key进行ROPE旋转位置编码，并将结果存入Cache：
 
 $$
@@ -130,11 +125,11 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
 
 -   **rmsnorm_epsilon_ckv**（`float`，可选）：计算$c^{KV}$的RmsNorm公式中的$\epsilon$参数，Host侧参数。用户未特意指定时，建议传入1e-05，仅支持double类型，默认值为1e-05。
 
--   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。用户未特意指定时，建议传入"PA_BSND"，仅支持char*类型，可选值为"PA_BSND"、"PA_NZ"、"BSND"、"TND"，默认值为'PA_BSND'。
+-   **cache_mode**（`str`，可选）：表示kv_cache的模式，Host侧参数。仅支持char*类型，可选值为"PA_BSND"、"PA_NZ"、"PA_BLK_BSND"、"PA_BLK_NZ"、"TND"和"BSND"，默认为"PA_BSND"。
 
 -   **query_norm_flag**（`int`，可选）：表示是否输出query_norm，Host侧参数。仅支持bool类型，False表示不输出query_norm，True表示输出query_norm，默认值为0。
 
--   **weight_quant_mode**（`int`，可选）：表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、 weight_uk、weight_dkv_kr量化，默认值为0。
+-   **weight_quant_mode**（`int`，可选）：表示weight_dq、weight_uq_qr、weight_uk、weight_dkv_kr的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示weight_uq_qr量化，2表示weight_dq、weight_uq_qr、weight_dkv_kr量化，默认值为0。
 
 -   **kv_cache_quant_mode**（`int`，可选）：表示kv_cache的量化模式，Host侧参数。仅支持int64类型，0表示非量化，1表示per-tensor量化，2表示per-channel量化，3-表示per-tile量化，默认值为0。
 
@@ -166,7 +161,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
     | 字段名       | 英文全称/含义                  | 取值规则与说明                                                                 |
     |--------------|--------------------------------|------------------------------------------------------------------------------|
     | B            | Batch（输入样本批量大小）      | 取值范围：0~65536                                                           |
-    | S            | Seq-Length（输入样本序列长度） | 取值范围：0~16                                                              |
+    | S            | Seq-Length（输入样本序列长度） | 取值范围：不限制                                                              |
     | He           | Head-Size（隐藏层大小）        | 取值固定为：7168、7680                                                            |
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536                                                           |
     | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
@@ -177,7 +172,7 @@ custom.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_qr, 
     | Nkv          | kv 的 head 数                  | 取值固定为：1                                                               |
     | BlockNum     | PagedAttention 场景下的块数    | 取值为计算 `B*Skv/BlockSize` 的结果后向上取整（Skv 表示 kv 的序列长度，允许取 0） |
     | BlockSize    | PagedAttention 场景下的块大小  | 取值范围：16、128                                                           |
-    | T            | BS 合轴后的大小                | 取值范围：0~1048576；注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos 均为 2 维，cache_index 为 1 维，query_out、query_rope_out 为 3 维 |
+    | T            | BS 合轴后的大小                | 取值范围：不限制；注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos 均为 2 维，cache_index 为 1 维，query_out、query_rope_out 为 3 维 |
 
 - 支持场景：
   <table style="table-layout: auto;" border="1">
