@@ -176,7 +176,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     -   当query\_rope和key\_rope非空时，支持如下特性：
         -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的D只支持512、128；
         -   当query的D等于512时：
-            -  sparse：支持sparse=0且不传mask，sparse=3或sparse=4且传入mask；
+            - sparse：支持sparse=0，sparse=3，sparse=4；
             - query\_rope配置时要求query的N为1/2/4/8/16/32/64/128，query\_rope shape中D为64，其余维度与query一致；
             - key\_rope配置时要求key的N为1、D为512，key\_rope shape中D为64，其余维度与key一致；
             - 支持开启PageAttention，此时block\_size支持16的倍数且不大于1024；
@@ -188,7 +188,8 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
                 - 不支持传入quant\_scale\_out、quant\_offset\_out、dequant\_offset\_key、dequant\_offset\_value，否则报错并返回。
                 - query\_quant\_mode仅支持pertoken叠加perhead模式，key\_quant\_mode和value\_quant\_mode仅支持pertensor模式。
                 - 支持key、value、key\_rope的input\_layout格式为NZ。
-        -   当query的D等于128时：
+        -   
+            当query的D等于128时：
             -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
 
                 - input\_layout：TND、NTD\_TND。  
@@ -202,9 +203,9 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             -   其余约束同TND、NTD\_TND场景下的综合限制保持一致。
 
     -   TND、TND\_NTD、NTD\_TND场景下query、key、value输入的综合限制：
-        -   sparse模式仅支持sparse\_mode=0且不传mask，或sparse\_mode=3且传入mask；
         -   actual\_seq\_qlen和actual\_seq\_kvlen必须传入，且以该入参元素数量作为Batch值（注意入参元素数量要小于等于4096）。该入参中每个元素的值表示当前Batch与之前所有Batch的Sequence Length和，因此后一个元素的值必须大于等于前一个元素的值；
         -   当query的D等于512时：
+            -   sparse：支持sparse=0，sparse=3，sparse=4；
             -   支持TND、TND\_NTD；
             -   支持开启page attention，此时actual\_seq\_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV\_S；
             -   要求query的n为1/2/4/8/16/32/64/128，key、value的n为1；

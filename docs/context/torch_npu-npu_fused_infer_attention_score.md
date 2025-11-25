@@ -186,7 +186,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     -   当query\_rope和key\_rope非空时，支持如下特性：
         -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的D只支持512、128；
         -   当query的D等于512时：
-            -  sparse：支持sparse=0且不传mask，sparse=3或sparse=4且传入mask；
+            - sparse：支持sparse=0，sparse=3，sparse=4；
             - query\_rope配置时要求query的N为1/2/4/8/16/32/64/128，query\_rope shape中D为64，其余维度与query一致；
             - key\_rope配置时要求key的N为1、D为512，key\_rope shape中D为64，其余维度与key一致；
             - 支持开启PageAttention，此时block\_size支持16的倍数且不大于1024；
@@ -213,9 +213,9 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             -   其余约束同TND、NTD\_TND场景下的综合限制保持一致。
 
     -   TND、TND\_NTD、NTD\_TND场景下`query`、`key`、`value`输入的综合限制：
-        -   sparse模式仅支持sparse=0且不传mask，或sparse=3且传入mask；
         -   `actual_seq_lengths`和`actual_seq_lengths_kv`必须传入，且以该入参元素数量作为Batch值（注意入参元素数量要小于等于4096）。该入参中每个元素的值表示当前Batch与之前所有Batch的Sequence Length和，因此后一个元素的值必须大于等于前一个元素的值；
         -   当query的D等于512时：
+            -   支持sparse=0，sparse=3，sparse=4；
             -   支持TND、TND\_NTD；
             -   支持开启page attention，此时actual\_seq\_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV\_S；
             -   要求query的n为1/2/4/8/16/32/64/128，key、value的n为1；
