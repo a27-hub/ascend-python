@@ -105,6 +105,7 @@
         -   [torch_npu.npu_quant_scatter](./context/torch_npu-npu_quant_scatter.md)
         -   [torch_npu.npu_quant_scatter_](./context/torch_npu-npu_quant_scatter_.md)
         -   [torch_npu.npu_quantize](./context/torch_npu-npu_quantize.md)
+        -   [torch_npu.npu_recurrent_gated_delta_rule](./context/torch_npu-npu_recurrent_gated_delta_rule.md)
         -   [torch_npu.npu_scatter_nd_update](./context/torch_npu-npu_scatter_nd_update.md)
         -   [torch_npu.npu_scatter_nd_update_](./context/torch_npu-npu_scatter_nd_update_.md)
         -   [torch_npu.npu_top_k_top_p](./context/torch_npu-npu_top_k_top_p.md)
