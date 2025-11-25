@@ -767,6 +767,166 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             x.new_empty(tuple(expert_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
 
+def get_query_and_attention_out_layout(query, input_layout):
+    class ParserLayout:
+        def __init__(self, qLayout: str, outLayout: str, qDim: int):
+            self.qLayout = qLayout
+            self.outLayout = outLayout
+            self.qDim = qDim
+
+    LAYOUT_MAP: Dict[str, ParserLayout] = {
+        "BSH": ParserLayout("BSH", "BSH", 3),
+        "BSND": ParserLayout("BSND", "BSND", 4),
+        "BNSD": ParserLayout("BNSD", "BNSD", 4),
+        "TND": ParserLayout("TND", "TND", 3),
+        "NTD": ParserLayout("NTD", "NTD", 3),
+        "BNSD_BSND": ParserLayout("BNSD", "BSND", 4),
+        "BSH_BNSD": ParserLayout("BSH", "BNSD", 3),
+        "BSND_BNSD": ParserLayout("BSND", "BNSD", 4),
+        "NTD_TND": ParserLayout("NTD", "TND", 3),
+        "BSH_NBSD": ParserLayout("BSH", "NBSD", 3),
+        "BSND_NBSD": ParserLayout("BSND", "NBSD", 4),
+        "BNSD_NBSD": ParserLayout("BNSD", "NBSD", 4),
+        "TND_NTD": ParserLayout("TND", "NTD", 3),
+        "NSD": ParserLayout("NSD", "NSD", 3)
+    }
+
+    if input_layout in LAYOUT_MAP:
+        layout_entry = LAYOUT_MAP[input_layout]
+
+        query_layout = layout_entry.qLayout
+        attention_out_layout = layout_entry.outLayout
+        query_dim = layout_entry.qDim
+
+        torch._check(
+            query.dim() == query_dim,
+            lambda: (
+                f"Layout {query_layout}, queryDims({query.dim()}) must be {query_dim}!" + ops_error(ErrCode.VALUE)
+            ),
+        )
+    else:
+        torch._check(
+            False,
+            lambda: (
+                f"Layout {input_layout} is not supported!" + ops_error(ErrCode.VALUE)
+            ),
+        )
+    return query_layout, attention_out_layout
+
+
+def get_query_b_n_s(query, query_layout, num_heads):
+    if query_layout == "BSH":
+        b = query.size(0)
+        s1 = query.size(1)
+        n1 = num_heads
+    elif query_layout == "BSND":
+        b = query.size(0)
+        s1 = query.size(1)
+        n1 = query.size(2)
+    elif query_layout == "BNSD":
+        b = query.size(0)
+        s1 = query.size(2)
+        n1 = query.size(1)
+    elif query_layout == "NSD":
+        b = 1
+        s1 = query.size(1)
+        n1 = query.size(0)
+    else:
+        torch._check(
+            False,
+            lambda: (
+                f"Layout {query_layout} is not supported in get_query_b_n_s function!" + ops_error(ErrCode.VALUE)
+            ),
+        )
+    return b, s1, n1
+
+
+def get_query_t_n(query, query_layout):
+    if query_layout == "TND":
+        t = query.size(0)
+        n1 = query.size(1)
+    elif query_layout == "NTD":
+        t = query.size(1)
+        n1 = query.size(0)
+    else:
+        torch._check(
+            False,
+            lambda: (
+                f"Layout {query_layout} is not supported in get_query_t_n function!" + ops_error(ErrCode.VALUE)
+            ),
+        )
+    return t, n1
+
+
+def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
+    if block_table is not None:
+        if value.dim() == 3:
+            value_d = value.size(2) // num_key_value_heads
+        elif value.dim() == 4:
+            value_d = value.size(3)
+        elif value.dim() == 5:
+            value_d = value.size(2) * value.size(4)
+        else:
+            torch._check(
+                False,
+                lambda: "when Page Attention enabled, value's dim should be 3/4/5, but got " + str(value.dim()) +
+                ops_error(ErrCode.VALUE),
+            )
+    else:
+        torch._check(
+            value.dim() == query.dim(),
+            lambda: (
+                f"when Page Attention not enabled, value'dim{value.dim()} should equal to query's dim{query.dim()}!" +
+                ops_error(ErrCode.VALUE)
+            ),
+        )
+        if query_layout == "BSH":
+            value_d = value.size(2) // num_key_value_heads
+        if query_layout == "BNSD" or query_layout == "BSND":
+            value_d = value.size(3)
+        if query_layout == "TND" or query_layout == "NTD" or query_layout == "NSD":
+            value_d = value.size(2)
+    return value_d
+
+
+def infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d):
+    attention_out = torch.empty_like(query, dtype=query.dtype, device='meta')
+    if attention_out_layout == "BSH":
+        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        attention_out = torch.empty([b, s1, n1 * value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "BSND":
+        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        attention_out = torch.empty([b, s1, n1, value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "BNSD":
+        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        attention_out = torch.empty([b, n1, s1, value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "NBSD":
+        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        attention_out = torch.empty([n1, b, s1, value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "TND":
+        t, n1 = get_query_t_n(query, query_layout)
+        attention_out = torch.empty([t, n1, value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "NTD":
+        t, n1 = get_query_t_n(query, query_layout)
+        attention_out = torch.empty([n1, t, value_d], dtype=query.dtype, device='meta')
+    elif attention_out_layout == "NSD":
+        _, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        attention_out = torch.empty([n1, s1, value_d], dtype=query.dtype, device='meta')
+    return attention_out
+
+
+def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
+    lse_out = torch.empty([0], dtype=torch.float32, device='meta')
+
+    tnd_like_layouts = {"TND", "NTD", "TND_NTD", "NTD_TND"}
+    if input_layout in tnd_like_layouts:
+        t, n1 = get_query_t_n(query, query_layout)
+        lse_out = torch.empty([t, n1, 1], dtype=torch.float32, device='meta')
+    else:
+        b, s1, n1 = get_query_b_n_s(query, query_layout, num_heads)
+        lse_out = torch.empty([b, n1, s1, 1], dtype=torch.float32, device='meta')
+    return lse_out
+
 
 def get_query_and_attention_out_layout(query, input_layout):
     class ParserLayout:
@@ -938,14 +1098,31 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                                     actual_shared_prefix_len=None, query_rope=None, key_rope=None, key_rope_antiquant_scale=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, inner_precise=0, block_size=0, antiquant_mode=0,
                                     softmax_lse_flag=False, key_antiquant_mode=0, value_antiquant_mode=0):
-    # 获取query_layout, attention_out_layout
+    torch._check(
+        num_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
-    # 获取value_d
+
+    # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
 
-    # 推断attention out shape
+    # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
 
+    # special:IFA legacy feature
+    change_d_scale = 1
+    if value is not None and value.dtype == torch.int32: # treat int4 as int32
+        change_d_scale = 8
+    if input_layout == "BNSD" and block_table is None:
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3) * change_d_scale],
+            dtype=query.dtype, device='meta')
+
+    # handle quant
     if quant_scale2 is not None:
         attention_out = torch.empty_like(tmp_out, dtype=torch.int8)
     elif query.dtype == torch.int8:
@@ -956,7 +1133,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     else:
         attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
 
-    # 推断lse out shape
+    # infer lse out shape
     tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_heads)
 
     if softmax_lse_flag:
@@ -976,14 +1153,23 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                                          return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
                                          key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None,
                                          dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None):
-    # 获取query_layout, attention_out_layout
+    torch._check(
+        num_query_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
-    # 获取value_d
+
+    # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
 
-    # 推断attention out shape
+    # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_query_heads, value_d)
 
+    # handle quant
     if quant_scale_out is not None:
         attention_out = torch.empty_like(tmp_out, dtype=torch.int8)
     elif query.dtype == torch.int8:
@@ -994,7 +1180,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
     else:
         attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
 
-    # 推断lse out shape
+    # infer lse out shape
     tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_query_heads)
 
     if return_softmax_lse:
