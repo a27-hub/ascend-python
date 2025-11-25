@@ -198,10 +198,17 @@ static int64_t get_value_d(
 static at::Tensor infer_attention_out_shape(
     std::string attention_out_layout,
     const at::Tensor &query,
+    const at::Tensor &value,
     std::string query_layout,
     int64_t num_heads,
     int64_t valueD)
 {
+    int64_t changeDScale = 1;
+    // int4 伪装成 int32
+    if (value.scalar_type() == at::kInt) {
+        changeDScale = INT4_IN_INT32;
+    }
+
     int64_t b = 0;
     int64_t n1 = 0;
     int64_t s1 = 0;
@@ -229,7 +236,7 @@ static at::Tensor infer_attention_out_shape(
         int outD = valueD;
         outD = (outD == 0 || d1 == 0) ? d1 : outD;
         attention_out = OpPreparation::apply_tensor_without_format(
-            {b, n1, s1, outD},
+            {b, n1, s1, outD * changeDScale},
             query.options().dtype(query.dtype())
         );
     } else if (attention_out_layout == "NBSD") {
@@ -317,7 +324,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     int64_t valueD = get_value_d(block_table, query, value, query_layout, kv_num_heads);
 
     // 推导attenout shape
-    at::Tensor tmp_output = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, valueD);
+    at::Tensor tmp_output = infer_attention_out_shape(attention_out_layout, query, value, query_layout, num_heads, valueD);
 
     at::Tensor output;
     if (quant_scale2.has_value()) {
