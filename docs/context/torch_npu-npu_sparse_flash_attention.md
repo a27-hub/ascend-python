@@ -4,6 +4,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 推理系列产品</term>   | √  |
+|<term>Atlas A2 推理系列产品</term>   | √  |
 
 ## 功能说明
 - API功能：SparseFlashAttention(SFA)是针对大序列长度推理场景的高效注意力计算模块，该模块通过“只计算关键部分”大幅减少计算量，然而会引入大量的离散访存，造成数据搬运时间增加，进而影响整体性能。主要计算过程为：
@@ -70,20 +71,18 @@ torch_npu.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Ten
 
 ## 返回值说明
 
--   **attention_out**（`Tensor`）：公式中的输出。数据格式支持ND，数据类型支持`bfloat16`和`float16`。
-- **softmax_max**（`Tensor`）：可选输出，Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持`float`。
-- **softmax_sum**（`Tensor`）：可选输出，Attention算法query乘key的结果减去softmax_max, 再取exp，接着求sum，得到softmax_sum，数据类型支持`float`。
+- **attention_out**（`Tensor`）：公式中的输出。数据格式支持ND，数据类型支持`bfloat16`和`float16`，输出shape[B,S1,N1,D]，[T1,B1,D]。
+- **softmax_max**（`Tensor`）：可选输出，Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持`float`，输出shape[B,N2,S1,G]，[N2,T1,D]。
+- **softmax_sum**（`Tensor`）：可选输出，Attention算法query乘key的结果减去softmax_max, 再取exp，接着求sum，得到softmax_sum，数据类型支持`float`，输出shape[B,N2,S1,G]，[N2,T1,D]。
 
 ## 约束说明
 
--   该接口支持推理场景下使用。
--   该接口支持图模式。
--   该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
-- 参数query中的N支持1/2/4/8/16/32/64/128，key、value的N支持1
-- 参数query中的D和key、value的D值相等为512，参数query\_rope中的D和key\_rope的D值相等为64。
-- 支持block\_size取值为16的整数倍，最大支持到1024。
-- 支持sparse\_block\_size整除block\_size。
-- layout\_query为TND且layout\_kv为BSND场景不支持，在非PageAttention场景下，该参数值应与layout_query值保持一致。
+| 说明分类         | 具体描述                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| 适用场景   | 1. 支持推理场景下使用；<br>2. 支持图模式；<br>3. 与 PyTorch 配合使用时，需保证 CANN 相关包与 PyTorch 相关包版本匹配 |
+| 参数规则         | 1. query 中 N 支持 1/2/4/8/16/32/64/128，key、value 的 N 支持 1；<br>2. query 中 D 与 key、value 的 D 值相等为 512；query_rope 中 D 与 key_rope 的 D 值相等为 64 |
+| 取值限制         | 1. block_size 支持 16 的整数倍，最大支持到 1024；<br>2. sparse_block_size 需整除 block_size |
+| layout 参数约束   | 1. layout_query 为 TND 且 layout_kv 为 BSND 的场景不支持；<br>2. 非 PageAttention 场景下，layout_kv 应与 layout_query 值保持一致 |
 
 ## 调用示例
 - 单算子模式调用

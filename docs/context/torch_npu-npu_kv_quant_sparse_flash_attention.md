@@ -5,6 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 推理系列产品</term>   | √  |
+|<term>Atlas A2 推理系列产品</term>   | √  |
 
 ## 功能说明
 
@@ -83,21 +84,16 @@ torch_npu.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor v
 
 ## 返回值说明
 
--   **out**（`Tensor`）：公式中的输出。数据格式支持$ND$，数据类型支持`bfloat16`和`float16`。
+-   **out**（`Tensor`）：公式中的输出。数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，输出shape[B,S1,N1,D]，[T1,B1,D]。
 
 ## 约束说明
 
--   该接口支持推理场景下使用。
--   该接口支持图模式。
--   参数query中的N支持1/2/4/8/16/32/64/128，key、value的N支持1
--   参数query中的D值为576，即nope\+rope=512\+64。
--   参数key、value中的D值为656，即nope\+rope\*2\+dequant\_scale\*4=512\+64\*4\+4\*4。
--   支持block\_size取值为16的整数倍，最大支持到1024。
--   sparse\_block\_size支持范围为1至16。
--   支持sparse\_block\_size整除block\_size。
--   支持tile\_size支持取值为128。
--   支持rope\_head\_dim支持取值为64。
--   非PageAttention场景layout\_query和layout\_kv需要保持一致。
+| 说明分类         | 具体描述                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| 适用场景         | 1. 支持推理场景下使用；<br>2. 支持图模式                                 |
+| 参数规则         | 1. query 中 N 支持 1/2/4/8/16/32/64/128，key、value 的 N 支持 1；<br>2. query 的 D 值为 576（计算逻辑：nope+rope=512+64）；<br>3. key、value 的 D 值为 656（计算逻辑：nope+rope*2+dequant_scale*4=512+64*4+4*4） |
+| 取值限制         | 1. block_size 支持 16 的整数倍，最大支持到 1024；<br>2. sparse_block_size 支持范围为 1 至 16，且需整除 block_size；<br>3. tile_size 仅支持取值 128；<br>4. rope_head_dim 仅支持取值 64 |
+| layout约束         | 非 PageAttention 场景下，layout_query 和 layout_kv 需保持一致             |
 
 ## 调用示例
 
