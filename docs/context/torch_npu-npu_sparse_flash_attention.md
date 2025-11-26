@@ -4,6 +4,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 推理系列产品</term>   | √  |
+|<term>Atlas A2 推理系列产品</term>   | √  |
 
 ## 功能说明
 - API功能：SparseFlashAttention(SFA)是针对大序列长度推理场景的高效注意力计算模块，该模块通过“只计算关键部分”大幅减少计算量，然而会引入大量的离散访存，造成数据搬运时间增加，进而影响整体性能。主要计算过程为：
@@ -76,14 +77,12 @@ torch_npu.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Ten
 
 ## 约束说明
 
--   该接口支持推理场景下使用。
--   该接口支持图模式。
--   该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
-- 参数query中的N支持1/2/4/8/16/32/64/128，key、value的N支持1
-- 参数query中的D和key、value的D值相等为512，参数query\_rope中的D和key\_rope的D值相等为64。
-- 支持block\_size取值为16的整数倍，最大支持到1024。
-- 支持sparse\_block\_size整除block\_size。
-- layout\_query为TND且layout\_kv为BSND场景不支持，在非PageAttention场景下，该参数值应与layout_query值保持一致。
+| 说明分类         | 具体描述                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| 适用场景   | 1. 支持推理场景下使用；<br>2. 支持图模式；<br>3. 与 PyTorch 配合使用时，需保证 CANN 相关包与 PyTorch 相关包版本匹配 |
+| 参数规则         | 1. query 中 N 支持 1/2/4/8/16/32/64/128，key、value 的 N 支持 1；<br>2. query 中 D 与 key、value 的 D 值相等为 512；query_rope 中 D 与 key_rope 的 D 值相等为 64 |
+| 取值限制         | 1. block_size 支持 16 的整数倍，最大支持到 1024；<br>2. sparse_block_size 需整除 block_size |
+| layout 参数约束   | 1. layout_query 为 TND 且 layout_kv 为 BSND 的场景不支持；<br>2. 非 PageAttention 场景下，layout_kv 应与 layout_query 值保持一致 |
 
 ## 调用示例
 - 单算子模式调用
