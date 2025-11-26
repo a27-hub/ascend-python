@@ -231,6 +231,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 return
             self.assertRtolEqual(expanded_scale, local_expanded_scale_npu.numpy())
 
+    #! 这个ut fail了
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_init_routing_static_quant(self):
         bs_list = [4]
