@@ -35,7 +35,6 @@ class TestAvgPool2d(TestCase):
             npu_output = self.npu_op_exec(npu_input, item[1])
             self.assertRtolEqual(cpu_output, npu_output, prec16=0.002)
 
-    @unittest.skip("skip test_avg_pool2d_backward_shape_format_fp32 now")
     def test_avg_pool2d_backward_shape_format_fp32(self):
         shape_format = [
             [[np.float32, 0, (1, 3, 147, 147)], True],
@@ -57,7 +56,6 @@ class TestAvgPool2d(TestCase):
         npu_output = nmodel(ninput)
         self.assertRtolEqual(cpu_output.numpy(), npu_output.cpu().numpy(), 0.0009)
 
-    @unittest.skip("skip test_avg_pool2d_4d_fp32 now")
     def test_avg_pool2d_4d_fp32(self):
         cinput = torch.randn(18, 43, 12, 400)
         ninput = cinput.npu()
@@ -73,6 +71,20 @@ class TestAvgPool2d(TestCase):
         npu_output = nmodel(ninput)
         self.assertRtolEqual(cpu_output.numpy(), npu_output.cpu().numpy(), 0.0009)
 
+    def test_avg_pool2d_output_check(self):
+        input_tensor = torch.ones(1, 1, 1, 1).npu()
+        msg = "Given input size:"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            torch.nn.functional.avg_pool2d(input_tensor, kernel_size=5, stride=3, padding=1)
+
+    def test_avg_pool2d_precision(self):
+        input = torch.randn(20, 16, 50, 32)
+        m = nn.AvgPool2d(3, stride=2)
+        self.assertRtolEqual(m(input), m(input.npu()))
+        m = nn.AvgPool2d((3, 2), stride=(2, 1))
+        self.assertRtolEqual(m(input), m(input.npu()))
+        m = nn.AvgPool2d((3, 2), stride=(2, 1), ceil_mode=True)
+        self.assertRtolEqual(m(input), m(input.npu()))
 
 if __name__ == "__main__":
     run_tests()
