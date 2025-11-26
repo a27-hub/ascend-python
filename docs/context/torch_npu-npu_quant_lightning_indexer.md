@@ -4,6 +4,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 推理系列产品</term>   | √  |
+|<term>Atlas A2 推理系列产品</term>   | √  |
 
 ## 功能说明
 
@@ -66,19 +67,19 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
 
 ## 返回值说明
 
--   **out**（`Tensor`）：公式中的输出，数据类型支持`int32`。数据格式支持ND，支持输出shape[B,S1,N2,k]，[T,N2,k]
+-   **out**（`Tensor`）：公式中的输出，数据类型支持`int32`。数据格式支持ND，支持输出shape[B,S1,N2,k];[T,N2,k]。
 
 ## 约束说明
-
--   该接口支持推理场景下使用。
--   该接口支持图模式。
--   参数query中的N支持64，key中的N支持1。
--   参数query中的D和参数key中的D值相等为128。
--   支持block_size取值为16的整数倍，最大支持到1024。
--   该接口要求$W \odot Scale_Q$的结果可以被`float16`表示。
--   该接口要求**query_dequant_scale**、 **key_dequant_scale**的值均大于等于0。
--   该接口的TopK过程对NAN排序是未定义行为。
-
+| 说明分类         | 具体描述                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| 适用场景         | 该接口支持推理场景下使用                                                 |
+| 支持模式         | 该接口支持图模式                                                         |
+| 参数规则      | 参数 query 中的 N 支持 64，key 中的 N 支持 1                              |
+| 参数规则         | query中N支持64、D为128；<br>key中N支持1、D为128（query与key的D值相等）   |
+| block_size 取值   | 支持 block_size 取值为 16 的整数倍，最大支持到 1024                       |
+| 数据类型要求     | 该接口要求 $W \odot Scale_Q$ 的结果在`float16`表示范围内                    |
+| 量化缩放参数要求 | 该接口要求**query_dequant_scale**、**key_dequant_scale**的值均大于等于 0 |
+| 特殊行为说明     | 该接口的 TopK 过程对 NAN 排序是未定义行为                                 |
 
 ## 调用示例
 
@@ -107,6 +108,7 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
     act_seq_q = None
     act_seq_k = None
     sparse_mode = 0
+    sparse_count = 2048
     max_block_table_num = (s2 + block_size - 1) // block_size
     block_table = torch.tensor([range(b * max_block_table_num)], dtype = torch.int32).reshape(b, -1)
     key = torch.tensor(np.random.uniform(-128, 127, (b * max_block_table_num, block_size, n2, d))).to(torch.int8)
@@ -120,10 +122,11 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
     actual_seq_lengths_key = torch.tensor(np.random.uniform(s2, s2, (b))).to(torch.int32) \
                                 if act_seq_k is None else torch.tensor(act_seq_k).to(torch.int32)
     
-    npu_out = torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale,
-                                                    actual_seq_lengths_query=actual_seq_lengths_query,
-                                                    actual_seq_lengths_key=actual_seq_lengths_key,
-                                                    block_table=block_table,
+    npu_out = torch_npu.npu_quant_lightning_indexer(query.npu(), key.npu(), weights.npu(), query_dequant_scale.npu(),
+                                                    key_dequant_scale.npu(),
+                                                    actual_seq_lengths_query=actual_seq_lengths_query.npu(),
+                                                    actual_seq_lengths_key=actual_seq_lengths_key.npu(),
+                                                    block_table=block_table.npu(),
                                                     query_quant_mode=query_quant_mode,
                                                     key_quant_mode=key_quant_mode,
                                                     layout_query=layout_query,
@@ -156,6 +159,7 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
     act_seq_q = None
     act_seq_k = None
     sparse_mode = 0
+    sparse_count = 2048
     max_block_table_num = (s2 + block_size - 1) // block_size
     block_table = torch.tensor([range(b * max_block_table_num)], dtype = torch.int32).reshape(b, -1)
     key = torch.tensor(np.random.uniform(-128, 127, (b * max_block_table_num, block_size, n2, d))).to(torch.int8)
@@ -177,10 +181,11 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
                     actual_seq_lengths_key=None, block_table=None, query_quant_mode=0, key_quant_mode=0,
                     layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3):
 
-            out = torch_npu.npu_lightning_indexer_quant(query, key, weights, query_dequant_scale, key_dequant_scale,
-                                                        actual_seq_lengths_query=actual_seq_lengths_query,
-                                                        actual_seq_lengths_key=actual_seq_lengths_key,
-                                                        block_table=block_table,
+            out = torch_npu.npu_quant_lightning_indexer(query.npu(), key.npu(), weights.npu(), query_dequant_scale.npu(),       
+                                                        key_dequant_scale.npu(),
+                                                        actual_seq_lengths_query=actual_seq_lengths_query.npu(),
+                                                        actual_seq_lengths_key=actual_seq_lengths_key.npu(),
+                                                        block_table=block_table.npu(),
                                                         query_quant_mode=query_quant_mode,
                                                         key_quant_mode=key_quant_mode,
                                                         layout_query=layout_query,
@@ -192,7 +197,7 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
     config = CompilerConfig()
     npu_backend = torchair.get_npu_backend(compiler_config=config)
     torch._dynamo.reset()
-    npu_mode = torch.compile(npu_mode, fullgraph=True, backend=npu_backend, dynamic=False)
+    npu_mode = torch.compile(LIQuantNetwork().npu(), fullgraph=True, backend=npu_backend, dynamic=False)
     npu_out = npu_mode(query, key, weights, query_dequant_scale, key_dequant_scale,
                         actual_seq_lengths_query=actual_seq_lengths_query,
                         actual_seq_lengths_key=actual_seq_lengths_key,
