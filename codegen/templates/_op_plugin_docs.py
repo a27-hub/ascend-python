@@ -12675,3 +12675,19 @@ torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(
 
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_sim_exponential_",
+    """
+接口原型: 
+torch_npu.npu_sim_exponential_(Tensor(a!) self, float lambd=1, *, Generator? generator=None) -> Tensor(a!)
+
+功能描述：
+生成服从参数lambd的指数分布随机数，并将其填充到Tensor张量中
+
+参数说明：
+self(Tensor)：输入/输出
+
+"""
+)
