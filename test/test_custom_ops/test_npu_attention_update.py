@@ -32,8 +32,8 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
             raise TypeError(f"local_out[{i}] must be a torch.Tensor, got {type(out_i)}")
         if lse_i.dtype != torch.float32:
             raise ValueError(f"lse[{i}] must be float32, got {lse_i.dtype}")
-        if out_i.dtype != torch.float32:
-            raise ValueError(f"local_out[{i}] must be float32, got {out_i.dtype}")
+        if out_i.dtype != torch.float32 and out_i.dtype != torch.float16 and out_i.dtype != torch.bfloat16:
+            raise ValueError(f"local_out[{i}] must be float32, float16 or bfloat16, got {out_i.dtype}")
         if lse_i.dim() != 1:
             raise ValueError(f"lse[{i}] must be 1D [N], got shape {list(lse_i.shape)}")
         if out_i.dim() != 2:
