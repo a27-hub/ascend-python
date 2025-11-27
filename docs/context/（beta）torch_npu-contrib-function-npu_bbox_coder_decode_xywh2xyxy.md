@@ -21,12 +21,12 @@ torch_npu.contrib.function.npu_bbox_coder_decode_xywh2xyxy(bboxes, pred_bboxes, 
 
 ## 参数说明
 
-- **bboxes** (`Tensor`)：基础框，shape为(N, 4)。支持dtype：float，half。
-- **pred_bboxes** (`Tensor`)：编码框，shape为(N, 4)。支持dtype：float，half。
+- **bboxes** (`Tensor`)：基础框，shape为(N, 4)。支持的数据类型为`float`，`half`。
+- **pred_bboxes** (`Tensor`)：编码框，shape为(N, 4)。支持的数据类型为`float`，`half`。
 - **means** (`List[float]`)：对delta坐标的目标去归一化的方法，默认值为None。该参数需要与编码参数对齐。
 - **stds** (`List[float]`)：对delta坐标的目标去归一化的标准差，默认值为None。该参数需要与编码参数对齐。
 - **max_shape** (`Tuple[int]`)：可选参数，最大框shape(H, W)，一般对应bbox所在的真实图片的大小，默认为[9999,9999]不受限制。
-- **wh_ratio_clip** (`Float`)：可选参数，可允许的宽高比，默认值为16/1000。
+- **wh_ratio_clip** (`float`)：可选参数，可允许的宽高比，默认值为16/1000。
 
 ## 返回值说明
 
@@ -37,6 +37,7 @@ torch_npu.contrib.function.npu_bbox_coder_decode_xywh2xyxy(bboxes, pred_bboxes, 
 ## 调用示例
 
 ```python
+>>> import torch, torch_npu
 >>> from torch_npu.contrib.function import npu_bbox_coder_decode_xywh2xyxy
 >>> A = 1024
 >>> max_shape = 512
@@ -45,5 +46,6 @@ torch_npu.contrib.function.npu_bbox_coder_decode_xywh2xyxy(bboxes, pred_bboxes, 
 >>> out = npu_bbox_coder_decode_xywh2xyxy(bboxes, pred_bboxes, max_shape=(max_shape, max_shape))
 >>> torch.npu.synchronize()
 >>> print('npu_bbox_coder_decode_xywh2xyxy done. output shape is ', out.shape)
+npu_bbox_coder_decode_xywh2xyxy done. output shape is torch.Size([1024, 4])
 ```
 

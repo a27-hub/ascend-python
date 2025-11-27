@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    | √  |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
 
 ## 功能说明
 
@@ -69,9 +69,9 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 - **quant\_scale\_ckv**（`Tensor`）：可选参数，用于对输出到`kv_cache_out`中的数据做量化操作时的参数。shape支持2维，格式为\(1, Hckv\)，dtype支持`float`，数据格式支持ND。
 - **quant\_scale\_ckr**（`Tensor`）：可选参数，用于对输出到`kr_cache_out`中的数据做量化操作时的参数。shape支持2维，格式为\(1, Dr\)，dtype支持`float`，数据格式支持ND。
 - **smooth\_scales\_cq**（`Tensor`）：可选参数，用于对RmsNormCq输出做动态量化操作时的参数。shape支持2维，格式为\(1, Hcq\)，dtype支持`float`，数据格式支持ND。
-- **rmsnorm\_epsilon\_cq**（`float`）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
-- **rmsnorm\_epsilon\_ckv**（`float`）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，用户不特意指定时可传入默认值1e-05。
-- **cache\_mode**（`str`）：可选参数，表示`kv_cache`的模式，支持"PA\_BSND"、"PA\_NZ"，用户不特意指定时可传入默认值“PA\_BSND”。
+- **rmsnorm\_epsilon\_cq**（`float`）：可选参数，表示计算c<sup>Q</sup>的RmsNorm公式中的ε参数，默认值为1e-05。
+- **rmsnorm\_epsilon\_ckv**（`float`）：可选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的ε参数，默认值为1e-05。
+- **cache\_mode**（`str`）：可选参数，表示`kv_cache`的模式，支持"PA\_BSND"、"PA\_NZ"，默认值为“PA\_BSND”。
 
 ## 返回值说明
 
@@ -84,7 +84,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 ## 约束说明
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   接口参数中shape格式字段含义：
     -   B：Batch表示输入样本批量大小，取值范围为0\~65536。
     -   S：Seq-Length表示输入样本序列长度，取值范围为0\~16。
@@ -757,6 +757,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     import torch
     import torch_npu
     import math
+    torch.npu.config.allow_internal_format = True
     # 生成随机数据, 并发送到npu
     B = 8
     He = 7168
@@ -791,6 +792,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     
     # 调用MlaProlog算子
     query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla, dequant_scale_q_nope_mla = torch_npu.npu_mla_prolog_v2(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv, cache_mode=cache_mode)
+    print(query_mla)
     # 执行上述代码的输出out类似如下
     tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
@@ -824,6 +826,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     config.debug.graph_dump.type = "pbtxt"
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
+    torch.npu.config.allow_internal_format = True
     
     # 数据生成
     B = 8

@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
 ## 功能说明
 
@@ -77,7 +77,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 -   **x** (`Tensor`)：必选参数，表示目标张量。要求为2维张量，shape为\[TokensNum, 2H\]，尾轴为偶数。数据类型支持`int32`、`bfloat16`，数据格式为$ND$。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 -   **weight\_scale** (`Tensor`)：可选参数，表示权重量化对应的反量化系数。要求为2维张量，shape为\[groupNum, 2H\]，数据类型支持`float32`，数据格式为$ND$。当`x`为`int32`时，要求该参数非None，表示需要做反量化。
--   **activation\_scale** (`Tensor`)：可选参数，表示per-token权重量化对应的反量化系数。要求为1维张量，shape为\[TokensNum\]，数据类型支持`float32`，数据格式为$ND$。当`x`为`int32`时，要求该参数非None，表示需要做反量化。
+-   **activation\_scale** (`Tensor`)：可选参数，表示pertoken权重量化对应的反量化系数。要求为1维张量，shape为\[TokensNum\]，数据类型支持`float32`，数据格式为$ND$。当`x`为`int32`时，要求该参数非None，表示需要做反量化。
 -   **bias** (`Tensor`)：可选参数，表示`x`的偏置变量。数据类型支持`int32`，数据格式为$ND$。`group_index`场景下（`bias`非None），该参数不生效为None。
 -   **quant\_scale** (`Tensor`)：可选参数，表示smooth量化系数。要求为2维张量，shape为\[groupNum, H\]，数据类型支持`float32`、`float16`和`bfloat16`，数据格式为$ND$。
 -   **quant\_offset** (`Tensor`)：可选参数，表示量化中的偏移项。数据类型支持`float32`、`float16`和`bfloat16`，数据格式为$ND$。`group_index`场景下（非None），该参数不生效为None。
@@ -99,7 +99,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 ## 约束说明
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   `group_index`场景下（非None）约束说明：
     -   `group_index`只支持count模式，需要网络保证`group_index`输入的求和不超过`x`的TokensNum维度，否则会出现越界访问。
     -   H轴有维度大小限制：H≤10496同时64对齐场景；规格不满足场景会进行校验。
@@ -112,19 +112,15 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 -   y 的类型仅支持 int8。
 -   clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
 
-## 支持的型号
-
--   <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
-
--   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>
-
 ## 调用示例
 
 -   单算子模式调用
+
+    ```python
     import os
     import shutil
     import unittest
-    
+
     import torch
     import torch_npu
     from torch_npu.testing.testcase import TestCase, run_tests
@@ -158,6 +154,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 
     if __name__ == "__main__":
         run_tests()
+
     ```
 
 -   图模式调用
@@ -166,18 +163,37 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
     import os
     import shutil
     import unittest
-    
+
     import torch
     import torch_npu
     from torch_npu.testing.testcase import TestCase, run_tests
     from torch_npu.testing.common_utils import SupportedDevices
     from torchair.configs.compiler_config import CompilerConfig
     import torchair as tng
-    config = CompilerConfig()
-    config.experimental_config.frozen_parameter = True
-    config.experimental_config.tiling_schedule_optimize = True
-    npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
+    class Model(torch.nn.Module):
+        def forward(
+            self,
+            x, weight_scale, activation_scale, bias,
+            quant_scale, quant_offset, group_index,
+            activate_left, quant_mode, swiglu_mode, clamp_limit, glu_alpha, glu_bias
+        ):
+            return torch_npu.npu_dequant_swiglu_quant(
+                x,
+                weight_scale=weight_scale,
+                activation_scale=activation_scale,
+                bias=bias,
+                quant_scale=quant_scale,
+                quant_offset=quant_offset,
+                group_index=group_index,
+                activate_left=activate_left,
+                quant_mode=quant_mode,
+                swiglu_mode=swiglu_mode,
+                clamp_limit=clamp_limit,
+                glu_alpha=glu_alpha,
+                glu_bias=glu_bias
+            )
+
     class TestNPUDequantSwigluQuant(TestCase):
         def test_npu_dequant_swiglu_quant(self, device="npu"):
             tokens_num = 4608
@@ -188,14 +204,26 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
             quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
             group_index = torch.tensor([tokens_num], dtype=torch.int64)
             bias = None
-            y, scale = torch_npu.npu_dequant_swiglu_quant(
+            quant_offset = None
+
+            compiler_config = CompilerConfig()
+            npu_backend = tng.get_npu_backend(compiler_config=compiler_config)
+            npu_mode = 1
+            model = Model().npu()
+
+            if npu_mode == 1:
+                model = torch.compile(model, backend=npu_backend, dynamic=False)
+            else:
+                model = torch.compile(model, backend=npu_backend, dynamic=True)
+
+            y, scale = model(
                 x.npu(),
-                weight_scale=weight_scale.npu(),
-                activation_scale=activation_scale.npu(),
-                bias=None,
-                quant_scale=quant_scale.npu(),
-                quant_offset=None,
-                group_index=group_index.npu(),
+                weight_scale.npu(),
+                activation_scale.npu(),
+                bias,
+                quant_scale.npu(),
+                quant_offset,
+                group_index.npu(),
                 activate_left=True,
                 quant_mode=1,
                 swiglu_mode=1,
@@ -203,8 +231,8 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
                 glu_alpha=1.702,
                 glu_bias=1.0
             )
-    
+
     if __name__ == "__main__":
         run_tests()
-    ```
 
+    ```

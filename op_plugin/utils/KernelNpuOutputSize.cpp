@@ -235,14 +235,10 @@ c10::SmallVector<int64_t, SIZE> avg_pool2d_npu_output_size(const at::Tensor &sel
 
     int self_h = self.size(-2);
     int self_w = self.size(-1);
-
-    int64_t kernel_h = ceil_mode ? (CeilDiv(self_h + 2 * padding[0] - kernel_size[0], stride[0]) + 1) :
-                                   ((self_h + 2 * padding[0] - kernel_size[0]) / stride[0] + 1);
-    int64_t kernel_w = ceil_mode ? (CeilDiv(self_w + 2 * padding[1] - kernel_size[1], stride[1]) + 1) :
-                                   ((self_w + 2 * padding[1] - kernel_size[1]) / stride[1] + 1);
-    TORCH_CHECK(kernel_h > 0, "kernel_h has to be positive, but got ", kernel_h, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(kernel_w > 0, "kernel_w has to be positive, but got ", kernel_w, OPS_ERROR(ErrCode::VALUE));
-
+    int64_t kernel_h = div_rtn<int64_t>(
+        self_h + 2 * padding[0] - (kernel_size[0] - 1) - 1 + (ceil_mode ? stride[0] - 1 : 0), stride[0]) + 1;
+    int64_t kernel_w = div_rtn<int64_t>(
+        self_w + 2 * padding[1] - (kernel_size[1] - 1) - 1 + (ceil_mode ? stride[1] - 1 : 0), stride[1]) + 1;
     if (ceil_mode) {
         if ((kernel_h - 1) * stride[0] >= self_h + padding[0]) {
             --kernel_h;
@@ -259,7 +255,12 @@ c10::SmallVector<int64_t, SIZE> avg_pool2d_npu_output_size(const at::Tensor &sel
     } else {
         output_size = {self.size(0), self.size(1), kernel_h, kernel_w};
     }
-
+    TORCH_CHECK(kernel_h >= 1 && kernel_w >= 1,
+                "Given input size: (",
+                self.size(-3), "x", self.size(-2), "x", self.size(-1), "). ",
+                "Calculated output size: (",
+                self.size(-3), "x", kernel_h, "x", kernel_w, "). ",
+                "Output size is too small", OPS_ERROR(ErrCode::VALUE));
     return output_size;
 }
 
@@ -2152,39 +2153,6 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_probs_out_size(cons
     }
 }
 
-c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> split_with_sizes_copy_output_size(
-    const c10::SmallVector<int64_t, SIZE>& input_shape,
-    const c10::IntArrayRef split_sizes,
-    int64_t dim)
-{
-    const int64_t ndim = static_cast<int64_t>(input_shape.size());
-
-    // Wrap negative dim
-    if (dim < 0) {
-        dim += ndim;
-    }
-
-    TORCH_CHECK(dim >= 0 && dim < ndim, "Invalid dimension: ", dim, OPS_ERROR(ErrCode::PARAM));
-
-    // Check total size
-    int64_t total = 0;
-    for (int64_t size : split_sizes) {
-        TORCH_CHECK(size >= 0, "split_sizes must be non-negative", OPS_ERROR(ErrCode::PARAM));
-        total += size;
-    }
-    TORCH_CHECK(total == input_shape[dim],
-        "Sum of split_sizes (", total, ") must equal input_shape[dim] (", input_shape[dim], ")", OPS_ERROR(ErrCode::PARAM));
-
-    // Construct output shapes
-    c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> output_shapes;
-    for (int64_t size : split_sizes) {
-        c10::SmallVector<int64_t, SIZE> shape = input_shape;
-        shape[dim] = size;
-        output_shapes.emplace_back(std::move(shape));
-    }
-
-    return output_shapes;
-}
 
 std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> triangular_solve_output_size(const at::Tensor& self, const at::Tensor& A)
 {
@@ -2193,6 +2161,14 @@ std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> tri
         array_to_small_vector(std::get<0>(result).sizes()),
         array_to_small_vector(std::get<1>(result).sizes())
     );
+}
+
+c10::SmallVector<int64_t, SIZE> npu_gelu_mul_output_size(const at::Tensor &input)
+{
+    auto shape = array_to_small_vector(input.sizes());
+    int64_t last_dim_idx = input.dim() - 1;
+    shape[last_dim_idx] = shape[last_dim_idx] / 2;
+    return shape;
 }
 
 } // namespace op_infer

@@ -1,16 +1,19 @@
 # torch_npu.npu_gelu
 
+>**须知：**<br>
+>在NPU环境下使用Torch原生接口gelu时，approximate参数不起作用且默认为tanh，如果需要approximate的默认值设定为None或者区分不同的approximate方法需要使用此接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas 推理系列产品</term>           |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 |<term>Atlas 训练系列产品</term>   | √   |
 
 ## 功能说明
 
-- 算子功能：计算高斯误差线性单元的激活函数。
+- API功能：计算高斯误差线性单元的激活函数。
 - 计算公式：
 
     Gaussian Error Linear Unit(GELU)的表达式为：
@@ -34,7 +37,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
 
 - **input** (`Tensor`)：必选参数，对应公式中的$x$，待进行`npu_gelu`计算的入参，数据格式支持$ND$，支持非连续的Tensor。输入最大支持8维。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float16`、`float32`。
-    - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：数据类型支持`float32`、`float16`、`bfloat16`。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bfloat16`。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float16`、`float32`。
 
 - **approximate** (`Tensor`)：可选参数，字符串类型，计算使用的激活函数模式，可配置为`none`或者`tanh`。其中`none`代表使用erf模式，`tanh`代表使用tanh模式。
@@ -47,7 +50,7 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
 
 ## 约束说明
 
-- 该接口支持图模式（PyTorch 2.1版本）。
+- 该接口支持图模式。
 - `input`输入不能为None。
 
 ## 调用示例

@@ -1,30 +1,15 @@
 # torch\_npu.npu\_transpose\_batchmatmul<a name="ZH-CN_TOPIC_0000002350565344"></a>
 
-## 产品支持情况<a name="zh-cn_topic_0000002319693140_section8593133131718"></a>
+## 产品支持情况
 
-<a name="zh-cn_topic_0000002319693140_table1659316316174"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0000002319693140_row2059343171716"><th class="cellrowborder" valign="top" width="57.99999999999999%" id="mcps1.1.3.1.1"><p id="zh-cn_topic_0000002319693140_p125930301711"><a name="zh-cn_topic_0000002319693140_p125930301711"></a><a name="zh-cn_topic_0000002319693140_p125930301711"></a><span id="zh-cn_topic_0000002319693140_ph12593183191719"><a name="zh-cn_topic_0000002319693140_ph12593183191719"></a><a name="zh-cn_topic_0000002319693140_ph12593183191719"></a>产品</span></p>
-</th>
-<th class="cellrowborder" align="center" valign="top" width="42%" id="mcps1.1.3.1.2"><p id="zh-cn_topic_0000002319693140_p18593639173"><a name="zh-cn_topic_0000002319693140_p18593639173"></a><a name="zh-cn_topic_0000002319693140_p18593639173"></a>是否支持</p>
-</th>
-</tr>
-</thead>
-<tbody><tr id="zh-cn_topic_0000002319693140_row859317311178"><td class="cellrowborder" valign="top" width="57.99999999999999%" headers="mcps1.1.3.1.1 "><p id="zh-cn_topic_0000002319693140_p1559312351715"><a name="zh-cn_topic_0000002319693140_p1559312351715"></a><a name="zh-cn_topic_0000002319693140_p1559312351715"></a><span id="zh-cn_topic_0000002319693140_ph6756134210183"><a name="zh-cn_topic_0000002319693140_ph6756134210183"></a><a name="zh-cn_topic_0000002319693140_ph6756134210183"></a><term id="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term11962195213215"><a name="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term11962195213215"></a><a name="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term11962195213215"></a><term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term></term></span></p>
-</td>
-<td class="cellrowborder" align="center" valign="top" width="42%" headers="mcps1.1.3.1.2 "><p id="zh-cn_topic_0000002319693140_p1559313317178"><a name="zh-cn_topic_0000002319693140_p1559313317178"></a><a name="zh-cn_topic_0000002319693140_p1559313317178"></a>√</p>
-</td>
-</tr>
-<tr id="zh-cn_topic_0000002319693140_row294304412306"><td class="cellrowborder" valign="top" width="57.99999999999999%" headers="mcps1.1.3.1.1 "><p id="zh-cn_topic_0000002319693140_p49437440302"><a name="zh-cn_topic_0000002319693140_p49437440302"></a><a name="zh-cn_topic_0000002319693140_p49437440302"></a><span id="zh-cn_topic_0000002319693140_ph19280164145411"><a name="zh-cn_topic_0000002319693140_ph19280164145411"></a><a name="zh-cn_topic_0000002319693140_ph19280164145411"></a><term id="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term1253731311225"><a name="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term1253731311225"></a><a name="zh-cn_topic_0000002319693140_zh-cn_topic_0000001312391781_term1253731311225"></a><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></term></span></p>
-</td>
-<td class="cellrowborder" align="center" valign="top" width="42%" headers="mcps1.1.3.1.2 "><p id="zh-cn_topic_0000002319693140_p8877121915317"><a name="zh-cn_topic_0000002319693140_p8877121915317"></a><a name="zh-cn_topic_0000002319693140_p8877121915317"></a>√</p>
-</td>
-</tr>
-</tbody>
-</table>
+| 产品                                                         | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 
 ## 功能说明<a name="zh-cn_topic_0000002319693140_section14441124184110"></a>
 
--   算子功能：完成张量`input`与张量`weight`的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。`perm_x1`代表张量input的转置序列，`perm_x2`代表张量weight的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+-   API功能：完成张量`input`与张量`weight`的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。`perm_x1`代表张量input的转置序列，`perm_x2`代表张量weight的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 -   计算公式：
 
     T1、T2、Ty分别通过参数`perm_x1`、`perm_x2`、`perm_y`描述转置序列。
@@ -49,8 +34,9 @@ torch_npu.npu_transpose_batchmatmul(input, weight, *, bias=None, scale=None, per
 -   **batch\_split\_factor**（`int`）：可选参数，用于指定矩阵乘输出矩阵中N维的切分大小。数据类型支持`int32`。取值范围为\[1, N\]且能被N整除，默认值为1。注：当scale有值时，batch\_split\_factor只能为1。
 
 ## 返回值说明<a name="zh-cn_topic_0000002319693140_section22231435517"></a>
+`Tensor`
 
-**y**（`Tensor`）：表示最终计算结果，数据格式支持ND，shape维度支持3维。
+表示最终计算结果，对应公式中的$y$。数据格式支持ND，shape维度支持3维。
 
 -   当输入scale有值时，数据类型仅为`int8`类型，shape为\(M, 1, B\*N\)；否则数据类型支持`float16`、`bfloat16`、`float32`。
 -   当`batch_split_factor`\>1时，shape大小计算公式为\[`batch_split_factor`, M, B\*N/`batch_split_factor`\]。
@@ -58,7 +44,7 @@ torch_npu.npu_transpose_batchmatmul(input, weight, *, bias=None, scale=None, per
 ## 约束说明<a name="zh-cn_topic_0000002319693140_section12345537164214"></a>
 
 -   该接口支持推理场景下使用。
--   该接口支持单算子模式和图模式（PyTorch 2.1版本）。
+-   该接口支持单算子模式和图模式。
 -   输入参数Tensor中shape使用的变量说明：
     -   当perm\_x1为\[1, 0, 2\]时，即input矩阵需要转置时，K\*B的取值范围\[1, 65536\)；当perm\_x1为\[0, 1, 2\]时，K需要小于65536。
     -   K和N需要能被128整除。

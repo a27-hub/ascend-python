@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √   |
 
 ## 功能说明
 
@@ -17,7 +17,7 @@
 
       ![](./figures/zh-cn_formulaimage_0000002258672873.png)
 
-    - 当`norm_type`为0时（暂不支持）：
+    - 当`norm_type`为0时：
 
       ![](./figures/zh-cn_formulaimage_0000002313785750.png)
 
@@ -27,7 +27,7 @@
 
       ![](./figures/zh-cn_formulaimage_0000002219010398.png)
 
-    - 如果`group_select_mode`为0（暂不支持），每组按照组内的最大值对group进行排序，取前kGroup个组：
+    - 如果`group_select_mode`为0，每组按照组内的最大值对group进行排序，取前kGroup个组：
 
       ![](./figures/zh-cn_formulaimage_0000002347834049.png)
 
@@ -57,7 +57,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
 
 -   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
 
--   **group_count**（`int`）：可选参数，表示将全部专家划分的组数，数据类型为`int64`，默认值为`1`。要求`group_count > 0，x_shape[-1]`能够被`group_count`整除且整除后的结果大于`2`，并且整除的结果按照`32`个数对齐后乘`group_count`的结果不大于`2048`。
+-   **group_count**（`int`）：可选参数，表示将全部专家划分的组数，数据类型为`int64`，默认值为`1`。要group_count > 0，x_shape[-1]能够被`group_count`整除且整除后的结果大于`2`，并且整除的结果按照32个数对齐后乘`group_count`的结果不大于`2048`。
 
 -   **group_select_mode**（`int`）：可选参数，表示一个专家组的总得分计算方式。默认值为`0`，`0`表示组内取最大值，作为专家组得分；`1`表示取组内Top2的专家进行得分累加，作为专家组得分。
 
@@ -70,14 +70,14 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
 
 ## 返回值说明
 
--   yOut（`Tensor`）：表示对`x`做norm操作和分组排序topk后计算的结果。要求是一个2D的Tensor，数据类型支持`float16`、`bfloat16`、`float32`，数据类型与`x`需要保持一致，数据格式要求为ND，第一维的大小要求与`x`的第一维相同，最后一维的大小与`k`相同。不支持非连续Tensor。
--   expertIdxOut（`Tensor`）：表示对`x`做norm操作和分组排序topk后的索引，即专家的序号。shape要求与yOut一致，数据类型支持`int32`，数据格式要求为ND。不支持非连续Tensor。
--   normOut（`Tensor`）：表示norm计算的输出结果。shape要求与`x`保持一致，数据类型为`float32`，数据格式要求为ND。不支持非连续Tensor。
+-   **yOut**（`Tensor`）：表示对`x`做norm操作和分组排序topk后计算的结果。要求是一个2D的Tensor，数据类型支持`float16`、`bfloat16`、`float32`，数据类型与`x`需要保持一致，数据格式要求为ND，第一维的大小要求与`x`的第一维相同，最后一维的大小与`k`相同。不支持非连续Tensor。
+-   **expertIdxOut**（`Tensor`）：表示对`x`做norm操作和分组排序topk后的索引，即专家的序号。shape要求与yOut一致，数据类型支持`int32`，数据格式要求为ND。不支持非连续Tensor。
+-   **normOut**（`Tensor`）：表示norm计算的输出结果。shape要求与`x`保持一致，数据类型为`float32`，数据格式要求为ND。不支持非连续Tensor。
 
 ## 约束说明
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1版本）。
+-   该接口支持图模式。
 
 ## 调用示例
 

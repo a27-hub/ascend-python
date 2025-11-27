@@ -83,6 +83,8 @@ constexpr int64_t MAX_DIM_NUM = 5;
 constexpr int64_t NCL_DIM_NUM = 3;
 constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
+constexpr int64_t FP4_IN_INT8 = 2;
+constexpr int64_t PENULTIMATE_DIM = 2;
 }
 
 std::string real_path(const std::string &path);
@@ -127,13 +129,15 @@ inline void *GetOpApiLibHandler(const char *libName)
 }
 
 #define GET_OP_API_FUNC_FROM_FEATURE_LIB(lib_handler, lib_name, api_name)                                              \
-    static auto lib_handler = GetOpApiLibHandler(lib_name);                                                            \
-    if ((lib_handler) != nullptr) {                                                                                    \
-        auto funcAddr = GetOpApiFuncAddrInLib(lib_handler, lib_name, api_name);                                        \
-        if (funcAddr != nullptr) {                                                                                     \
-            return funcAddr;                                                                                           \
+    do {                                                                                                               \
+        static auto lib_handler = GetOpApiLibHandler((lib_name));                                                      \
+        if ((lib_handler) != nullptr) {                                                                                \
+            auto funcAddr = GetOpApiFuncAddrInLib((lib_handler), (lib_name), (api_name));                              \
+            if (funcAddr != nullptr) {                                                                                 \
+                return funcAddr;                                                                                       \
+            }                                                                                                          \
         }                                                                                                              \
-    }
+    } while (0)
 
 void *GetOpApiFuncAddrFromFeatureLib(const char *api_name);
 
@@ -411,6 +415,15 @@ inline aclIntArray *ConvertType(const c10::OptionalArrayRef<c10::SymInt> &opt_ar
     return nullptr;
 }
 
+inline aclIntArray *ConvertType(const c10::OptionalIntArrayRef &opt_array)
+{
+    if (opt_array.has_value()) {
+        return ConvertType(opt_array.value());
+    }
+
+    return nullptr;
+}
+
 inline aclScalar *ConvertType(const c10::optional<at::Scalar> &opt_scalar)
 {
     if (opt_scalar.has_value()) {
@@ -475,7 +488,32 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
+                if (at_tensor.sizes().size() == 1) {
+                    wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
+                } else if (at_tensor.sizes().size() > 1) {
+                    if (wrapperStride[at_tensor.sizes().size() - 1] == 1) {
+                        wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                            wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                        wrapperShape[at_tensor.sizes().size() - 1] =
+                            wrapperShape[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                    } else if (wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] == 1) {
+                        wrapperStride[at_tensor.sizes().size() - 1] =
+                            wrapperStride[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                        wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                            wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                    }
+                    
+                    for (auto i = 0; i < at_tensor.sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                } else {
+                    TORCH_CHECK(false, "unsupported tensor wrapper strides in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
+                }
+            } else {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            }
         }
     }
 
@@ -542,6 +580,8 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
     }
     aclDataType acl_data_type = (*at_tensor).acl_type;
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperStride = op_infer::array_to_small_vector((*at_tensor).strides);
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperShape = op_infer::array_to_small_vector((*at_tensor).sizes);
 
     const auto dimNum = (*at_tensor).sizes.size();
     aclFormat format = ACL_FORMAT_ND;
@@ -571,12 +611,38 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+                storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize * FP4_IN_INT8);
+                if ((*at_tensor).sizes.size() == 1) {
+                    wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
+                } else if ((*at_tensor).sizes.size() > 1 && wrapperStride[(*at_tensor).sizes.size() - 1] == 1) {
+                    wrapperStride[(*at_tensor).sizes.size() - PENULTIMATE_DIM] =
+                        wrapperStride[(*at_tensor).sizes.size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                    for (auto i = 0; i < (*at_tensor).sizes.size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[(*at_tensor).sizes.size() - 1] =
+                        wrapperShape[(*at_tensor).sizes.size() - 1] * FP4_IN_INT8;
+                } else if ((*at_tensor).sizes.size() > 1 &&
+                           wrapperStride[(*at_tensor).sizes.size() - PENULTIMATE_DIM] == 1) {
+                    wrapperStride[(*at_tensor).sizes.size() - 1] =
+                        wrapperStride[(*at_tensor).sizes.size() - 1] * FP4_IN_INT8;
+                    for (auto i = 0; i < (*at_tensor).sizes.size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                    wrapperShape[(*at_tensor).sizes.size() - PENULTIMATE_DIM] =
+                        wrapperShape[(*at_tensor).sizes.size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                } else {
+                    TORCH_CHECK(false, "unsupported tensor warrper strides in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
+                }
+            } else {
+                storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize);
+            }
         }
     }
 
     auto acl_tensor = aclCreateTensor(
-        (*at_tensor).sizes.data(), (*at_tensor).sizes.size(), acl_data_type, (*at_tensor).strides.data(),
+        wrapperShape.data(), (*at_tensor).sizes.size(), acl_data_type, wrapperStride.data(),
         (*at_tensor).storage_offset, format, storageDims.data(), storageDims.size(), (*at_tensor).data_ptr);
     return acl_tensor;
 }
@@ -816,6 +882,15 @@ inline c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalArrayRe
     return c10::nullopt;
 }
 
+inline c10::optional<std::vector<int64_t>> CopyTypeV2(const c10::OptionalIntArrayRef &opt_array)
+{
+    if (opt_array.has_value()) {
+        return CopyTypeV2(opt_array.value());
+    }
+
+    return c10::nullopt;
+}
+
 inline aclScalar *ConvertTypeV2(const c10::optional<at::Scalar> &opt_scalar)
 {
     if (opt_scalar.has_value()) {
@@ -995,6 +1070,7 @@ void add_param_to_buf(const at::ArrayRef<at::Scalar> &);
 void add_param_to_buf(const c10::optional<at::Tensor> &);
 void add_param_to_buf(const c10::optional<at::IntArrayRef> &);
 void add_param_to_buf(const c10::OptionalArrayRef<c10::SymInt> &);
+void add_param_to_buf(const c10::OptionalIntArrayRef &);
 void add_param_to_buf(const c10::optional<at::Scalar> &);
 void add_param_to_buf(const at::ScalarType);
 void add_param_to_buf(const string &);
@@ -1116,6 +1192,7 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     add_param_to_buf(deterministic);
     add_param_to_buf(std::string(aclnn_api), args...);
     add_param_to_buf(device);
+    add_param_to_buf((uintptr_t)acl_stream);
     uint64_t hashId = calc_hash_id();
     setPTAHashKeyFunc(hashId);
     aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
@@ -1169,6 +1246,7 @@ bool hit_cache_v2(
     }
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
+    add_param_to_buf_v2((uintptr_t)acl_stream);
     if (g_hash_offset == g_hash_buf_max_size) {
         setPTACacheHashKeyFunc(nullptr, 0);
     } else {
@@ -1397,6 +1475,9 @@ auto DecodeDevice(Ts&... args) -> at::Device
                     "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
+        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
+            c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+        }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -1425,6 +1506,9 @@ auto DecodeDevice(Ts&... args) -> at::Device
             workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                    \
         }                                                                                                              \
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]()->int {              \
+            if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
+                c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+            }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
@@ -1456,8 +1540,14 @@ auto DecodeDevice(Ts&... args) -> at::Device
                     "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
+        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
+            c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+        }                                                                                                              \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto acl_call = [copied_params, acl_stream]()->int {                                                           \
+            if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
+                c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+            }                                                                                                          \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
@@ -1615,6 +1705,9 @@ private:
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
+        if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
+            c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+        }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -1659,4 +1752,49 @@ private:
                                                            releaseMemFunc, unInitMemFunc);                             \
     }(#aclnn_api, #aclnn_api "GetWorkspaceSize", __VA_ARGS__)
 
+inline TensorWrapper make_wrapper(const at::Tensor& tensor, c10::optional<int64_t> tensor_dtype)
+{
+    if (!tensor.defined()) {
+        return {tensor, ACL_DT_UNDEFINED};
+    }
+    if (tensor_dtype.has_value()) {
+        aclDataType tensor_acltype = c10_npu::GetAclDataType(tensor_dtype.value());
+        int acl_item_size = at_npu::native::OpPreparation::GetAclDataTypeItemSize(tensor_acltype);
+        TORCH_CHECK(tensor.itemsize() == acl_item_size,
+            "Tensor dtype:", tensor.dtype(), " itemsize:", tensor.itemsize(),
+            ", is not compatible with tensor_dtype:", c10_npu::CustomDataTypeToString(tensor_dtype.value()),
+            " itemsize:", acl_item_size, OPS_ERROR(ErrCode::PARAM));
+        return {tensor, tensor_acltype};
+    }
+
+    return {tensor, at_npu::native::OpPreparation::convert_to_acl_data_type(tensor.scalar_type())};
+}
+
+inline TensorWrapper make_wrapper(const c10::optional<at::Tensor> &opt_tensor, c10::optional<int64_t> tensor_dtype)
+{
+    return make_wrapper(opt_tensor.value_or(at::Tensor()), tensor_dtype);
+}
+
+inline TensorListWrapper make_wrapper(const at::TensorList& tensorlist, c10::optional<int64_t> tensor_dtype)
+{
+    if (tensorlist.size() == 0) {
+        return {tensorlist, ACL_DT_UNDEFINED};
+    }
+    if (tensor_dtype.has_value()) {
+        aclDataType tensor_acltype = c10_npu::GetAclDataType(tensor_dtype.value());
+        int acl_item_size = at_npu::native::OpPreparation::GetAclDataTypeItemSize(tensor_acltype);
+        TORCH_CHECK(tensorlist[0].itemsize() == acl_item_size,
+            "Tensor dtype:", tensorlist[0].dtype(), " itemsize:", tensorlist[0].itemsize(),
+            ", is not compatible with tensor_dtype:", c10_npu::CustomDataTypeToString(tensor_dtype.value()),
+            " itemsize:", acl_item_size, OPS_ERROR(ErrCode::PARAM));
+        return {tensorlist, tensor_acltype};
+    }
+
+    return {tensorlist, at_npu::native::OpPreparation::convert_to_acl_data_type(tensorlist[0].scalar_type())};
+}
+
+inline TensorListWrapper make_wrapper(const c10::optional<at::TensorList> &opt_tensorlist, c10::optional<int64_t> tensor_dtype)
+{
+    return make_wrapper(opt_tensorlist.value_or(at::TensorList()), tensor_dtype);
+}
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_

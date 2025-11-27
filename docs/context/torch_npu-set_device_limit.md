@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- 设置一个进程上指定device，执行算子时所使用的cube和vector核数。
+设置一个进程上指定device，执行算子时所使用的cube和vector核数。
 
 
 ## 函数原型
@@ -32,7 +32,7 @@ torch.npu.set_device_limit(device, cube_num=-1, vector_num=-1) -> None
 ## 约束说明
 
 - 该接口只支持调用一次，仅对当前进程生效。
-- 使用该接口前需要`set_device`.
+- 使用该接口前需要`set_device`。
 
 ## 调用示例
 

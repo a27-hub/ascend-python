@@ -3,8 +3,11 @@
   {
     "v2.1": [],
     "v2.5": [],
-    "v2.6": [],
-    "v2.7": [],
+    "v2.6": ["npu_gelu_mul", "npu_clipped_swiglu"],
+    "v2.7": ["npu_gelu_mul", "npu_clipped_swiglu"],
+    "v2.8": ["npu_gelu_mul", "npu_clipped_swiglu"],
+    "v2.9": ["npu_gelu_mul", "npu_clipped_swiglu"],
+    "v2.10": ["npu_gelu_mul", "npu_clipped_swiglu"],
     "all_version": [
       "_npu_dropout",
       "copy_memory_",
@@ -29,6 +32,15 @@
       "npu_fused_infer_attention_score",
       "npu_mla_prolog",
       "npu_mla_prolog_v2",
+      "npu_mla_prolog_v3",
+      "npu_mla_prolog_v3_functional",
+      "npu_quant_lightning_indexer",
+      "npu_lightning_indexer",
+      "npu_sparse_flash_attention",
+      "npu_lightning_indexer_grad",
+      "npu_sparse_flash_attention_grad",
+      "npu_sparse_lightning_indexer_grad_kl_loss",
+      "npu_kv_quant_sparse_flash_attention",
       "npu_convert_weight_to_int4pack",
       "npu_ffn",
       "npu_geglu",
@@ -62,6 +74,9 @@
       "npu_group_norm_swish",
       "npu_mrope",
       "npu_grouped_matmul_finalize_routing",
+      "npu_grouped_matmul_swiglu_quant_v2",
+      "npu_recurrent_gated_delta_rule",
+      "npu_recurrent_gated_delta_rule_functional",
       "npu_alltoallv_gmm",
       "npu_gmm_alltoallv",
       "npu_nsa_compress",
@@ -74,7 +89,11 @@
       "npu_gather_sparse_index",
       "npu_moe_distribute_combine_add_rms_norm",
       "npu_moe_update_expert",
-      "npu_dynamic_block_quant"
+      "npu_dynamic_block_quant",
+      "attention_worker_scheduler_",
+      "attention_worker_scheduler",
+      "ffn_worker_scheduler_",
+      "ffn_worker_scheduler"
     ]
   }
   

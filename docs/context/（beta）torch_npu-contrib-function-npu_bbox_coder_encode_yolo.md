@@ -18,22 +18,21 @@
 torch_npu.contrib.function.npu_bbox_coder_encode_yolo(bboxes, gt_bboxes, stride)
 ```
 
-
-
 ## 参数说明
 
-- **bboxes** (`torch.Tensor`) - 源框，例如锚点框。支持数据类型：float、half。
-- **gt_bboxes** (`torch.Tensor`) - 转换目标框，例如真值框。支持数据类型：float、half。
-- **stride** (`torch.Tensor`) - bbox步长。仅支持int张量。
+- **bboxes** (`Tensor`)：源框，例如锚点框。支持的数据类型为`float`、`half`。
+- **gt_bboxes** (`Tensor`)：转换目标框，例如真值框。支持的数据类型为`float`、`half`。
+- **stride** (`Tensor`)：bbox步长。仅支持`int`张量。
 
 ## 返回值说明
+`Tensor`
 
-`torch.Tensor` - 框转换deltas。
-
+框转换deltas。
 
 ## 调用示例
 
 ```python
+>>> import torch, torch_npu
 >>> from torch_npu.contrib.function import npu_bbox_coder_encode_yolo
 >>> A = 1024
 >>> bboxes = torch.randint(0, 512, size=(A, 4)).npu()
@@ -42,5 +41,6 @@ torch_npu.contrib.function.npu_bbox_coder_encode_yolo(bboxes, gt_bboxes, stride)
 >>> out = npu_bbox_coder_encode_yolo(bboxes, gt_bboxes, stride)
 >>> torch.npu.synchronize()
 >>> print('npu_bbox_coder_encode_yolo done. output shape is ', out.shape)
+npu_bbox_coder_encode_yolo done. output shape is torch.Size([1024, 4])
 ```
 

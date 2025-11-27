@@ -102,9 +102,13 @@ inline std::string convert_info(const at::Tensor &at_tensor)
        << at_tensor.dtype()
        << ", device ID: "
        << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: "
-       << at_tensor.data_ptr()
-       << "\n";
+       << ", data_ptr: ";
+    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+        ss << at_tensor.data_ptr();
+    } else {
+        ss << "FakeTensor does not have data_ptr";
+    }
+    ss << "\n";
 
     return ss.str();
 }
@@ -351,9 +355,13 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
        << at_tensor.dtype()
        << ", device ID: "
        << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: "
-       << at_tensor.data_ptr()
-       << "\n";
+       << ", data_ptr: ";
+    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+        ss << at_tensor.data_ptr();
+    } else {
+        ss << "FakeTensor does not have data_ptr";
+    }
+    ss << "\n";
 
     return ss.str();
 }
@@ -401,13 +409,7 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
                << ", storage_sizes: "
                << at_tensor_sizes.storage_sizes_;
         } else {
-            ss << "Tensor min: "
-               << at_tensor.min()
-               << ", max: "
-               << at_tensor.max()
-               << ", mean: "
-               << at_tensor.mean()
-               << ", npu_format: "
+            ss << "Tensor npu_format: "
                << at_tensor_sizes.npu_format_
                << ", base_sizes: "
                << at_tensor_sizes.base_sizes_
@@ -484,13 +486,7 @@ inline std::string convert_debug_info(const TensorWrapper &tensor_r)
                << ", storage_sizes: "
                << at_tensor_sizes.storage_sizes_;
         } else {
-            ss << "Tensor min: "
-               << at_tensor.min()
-               << ", max: "
-               << at_tensor.max()
-               << ", mean: "
-               << at_tensor.mean()
-               << ", npu_format: "
+            ss << "Tensor npu_format: "
                << at_tensor_sizes.npu_format_
                << ", base_sizes: "
                << at_tensor_sizes.base_sizes_

@@ -32,9 +32,9 @@ torch_npu.npu_gru(input, hx, weight_input, weight_hidden, bias_input, bias_hidde
 - **bias_hidden**（`Tensor`）：数据类型支持`float16`，`float32`；格式支持ND。
 - **seq_length**（`Tensor`）：数据类型支持`int32`；格式支持ND。
 - **has_biases**（`bool`）：默认值为`True`。
-- **num_layers**（`int`）。
-- **dropout**（`float`）。
-- **train**（`bool`）：标识训练是否在op进行的bool参数，默认值为`True`。
+- **num_layers**（`int`）：层数。
+- **dropout**（`float`）：丢弃概率。
+- **train**（`bool`）：训练是否在op进行，默认值为`True`。
 - **bidirectional**（`bool`）：默认值为`True`。
 - **batch_first**（`bool`）：默认值为`True`。
 
@@ -49,4 +49,4 @@ torch_npu.npu_gru(input, hx, weight_input, weight_hidden, bias_input, bias_hidde
 
 ## 约束说明
 
-接口暂不支持jit_compile=False，需要在该模式下使用时请将"DynamicGRUV2"添加至"NPU_FUZZY_COMPILE_BLACKLIST"选项内，具体操作可参考[添加二进制黑名单示例](添加二进制黑名单示例.md)。
+接口暂不支持jit_compile=False，需要在该模式下使用时请将"DynamicGRUV2"添加至"NPU_FUZZY_COMPILE_BLACKLIST"选项内，具体操作可参考[添加二进制黑名单示例](blacklist.md)。

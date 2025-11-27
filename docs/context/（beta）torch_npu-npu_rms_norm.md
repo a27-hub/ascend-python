@@ -1,11 +1,11 @@
 # （beta）torch_npu.npu_rms_norm
 
-# 产品支持情况
+## 产品支持情况
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 推理系列产品</term>   |     √    |
 |  <term>Atlas 训练系列产品</term>   |     √    |
 
@@ -37,14 +37,14 @@ torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)
 
 ## 返回值说明
 
-- **RmsNorm(x)**（`Tensor`）：表示进行归一化后的最终输出，对应计算公式的最终输出`RmsNorm(x)`。数据类型和shape与输入`self`的数据类型和shape一致。支持非连续Tensor，支持空Tensor。
+- <strong>RmsNorm(x)</strong>（`Tensor`）：表示进行归一化后的最终输出，对应计算公式的最终输出`RmsNorm(x)`。数据类型和shape与输入`self`的数据类型和shape一致。支持非连续Tensor，支持空Tensor。
 - **rstd**（`Tensor`）：表示归一化后的标准差的倒数，rms_norm的中间结果，对应计算公式中的`Rms(x)`的倒数，用于反向计算。数据类型为`float32`。shape与入参`self`的shape前几维一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度。支持非连续Tensor，支持空Tensor。
 
 ## 约束说明
 
 - <term>Atlas 推理系列产品</term>：`self`、`gamma`输入的尾轴长度必须大于等于32 Bytes。
 - 各产品支持数据类型及对应关系说明：
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     | `self`数据类型 | `gamma`数据类型 |
     | -------- | -------- |
     | `float16` | `float32` |
@@ -61,8 +61,8 @@ torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)
 ## 调用示例
 
 ```python
->>> x = torch.randn(24, 1, 128).bfloat16().npu()
->>> w = torch.randn(128).bfloat16().npu()
+>>> x = torch.randn(24, 1, 128).npu()
+>>> w = torch.randn(128).npu()
 >>> out1 = torch_npu.npu_rms_norm(x, w, epsilon=1e-5)[0]
 >>> out1
 tensor([[[-0.1875,  0.2383,  0.2334,  ...,  0.8555, -0.0908, -0.3574]],
@@ -72,6 +72,6 @@ tensor([[[-0.1875,  0.2383,  0.2334,  ...,  0.8555, -0.0908, -0.3574]],
         [[ 0.0503,  1.9453,  2.6094,  ..., -0.1357,  0.0869, -2.8906]],
         [[ 0.0195,  0.6680, -0.9336,  ..., -0.6641, -0.1904,  0.4336]],
         [[ 0.0972, -1.2344, -1.0078,  ..., -0.5195,  0.3145, -3.7656]]],
-       device='npu:0', dtype=torch.bfloat16)
+       device='npu:0')
 ```
 

@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    | √  |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
 
 ## 功能说明
 
@@ -33,9 +33,9 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 - **reduce_op** (`str`)：可选参数。reduce操作类型，当前版本仅支持`sum`，默认值：`sum`。
 - **bias** (`Tensor`)：可选参数。数据类型支持`int32`、`float16`、`bfloat16`，数据格式支持$ND$。`bias`当前仅支持一维，且维度大小与`output/x2`的最后一维大小相同。
 - **antiquant_scale** (`Tensor`)：可选参数。伪量化场景对`x2`进行去量化的系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。伪量化场景数据类型需要和`x1`保持一致。
-    - per-tensor场景：shape为$[1]$。
-    - per-channel场景：shape为$[1,n]$或者$[n]$，$n$为`x2`最后一维的大小。
-    - per-group场景：shape为$[ceil(k, antiquant\_group\_size), n]$。其中$k$为`x2`第一维的大小，$n$为`x2`最后一维的大小，$antiquant\_group\_size$为伪量化场景对输入`x2`进行反量化计算的groupSize输入。
+    - pertensor场景：shape为$[1]$。
+    - perchannel场景：shape为$[1,n]$或者$[n]$，$n$为`x2`最后一维的大小。
+    - pergroup场景：shape为$[ceil(k, antiquant\_group\_size), n]$。其中$k$为`x2`第一维的大小，$n$为`x2`最后一维的大小，$antiquant\_group\_size$为伪量化场景对输入`x2`进行反量化计算的groupSize输入。
 
         >**说明：**<br>
         >$ceil(k, antiquant\_group\_size)$的计算逻辑为：$(k + antiquant\_group\_size - 1) / antiquant\_group\_size$，并对计算结果取整数部分。
@@ -44,15 +44,15 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 - **x3** (`Tensor`)：可选参数。matmul计算后的偏移。数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和输出`output`保持一致。
   
 - **dequant_scale** (`Tensor`)：可选参数。matmul计算后的去量化系数。数据类型支持`int64`、`uint64`、`bfloat16`、`float32`；数据格式支持$ND$。
-    - per-tensor场景：shape为$[1]$。
-    - per-channel场景：shape为$[n]/[1,n]$，$n$为`x2`最后一维的大小。
+    - pertensor场景：shape为$[1]$。
+    - perchannel场景：shape为$[n]/[1,n]$，$n$为`x2`最后一维的大小。
 
-- **pertoken_scale** (`Tensor`)：可选参数。matmul计算后的per-token去量化系数。数据类型支持`float32`。当`x1`为$[m,k]$时`pertoken_scale` shape为$[m]$；当`x1`为$[b, s, k]$时`pertoken_scale` shape为$[b*s]$。
+- **pertoken_scale** (`Tensor`)：可选参数。matmul计算后的pertoken去量化系数。数据类型支持`float32`。当`x1`为$[m,k]$时`pertoken_scale` shape为$[m]$；当`x1`为$[b, s, k]$时`pertoken_scale` shape为$[b*s]$。
   
 - **comm_quant_scale_1** (`Tensor`)：可选参数。alltoall通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
 - **comm_quant_scale_2** (`Tensor`)：可选参数。allgather通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
 - **comm_turn** (`int`)：可选参数。表示rank间通信切分粒度，默认值：`0`，表示默认的切分方式。当前版本仅支持输入`0`。
-- **antiquant_group_size** (`int`)：可选参数。表示伪量化per-group算法模式下，对输入`x2`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在$k$轴方向的大小。当伪量化算法模式不为per-group时传入`0`；当伪量化算法模式为per-group时传入值的范围为`[32, min(k-1, INT_MAX)]`且值要求是32的倍数，其中$k$为`x2`第一维的大小。默认值`0`，为`0`则表示非per-group场景。
+- **antiquant_group_size** (`int`)：可选参数。表示伪量化pergroup算法模式下，对输入`x2`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在$k$轴方向的大小。当伪量化算法模式不为pergroup时传入`0`；当伪量化算法模式为pergroup时传入值的范围为`[32, min(k-1, INT_MAX)]`且值要求是32的倍数，其中$k$为`x2`第一维的大小。默认值`0`，为`0`则表示非pergroup场景。
 
 ## 返回值说明
 `Tensor`
@@ -63,11 +63,11 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 
 - 该接口支持推理场景下使用。
 - 增量场景不使能该融合算子，全量场景使能该融合算子。
-- 该接口支持图模式（PyTorch 2.1版本）。
+- 该接口支持图模式。
 - 输入`x1`可为2维或者3维、`x2`必须是2维，分别为$(b, s, k)/(m, k)$, $(k, n)$，$k$轴满足mm算子入参要求，$k$轴相等。`bias`当前仅支持一维，且维度大小与`output`的最后一维大小相同。`x3`的shape与`output`的shape相同。
 - `x1`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
 - `antiquant_group_size`中$k$值的范围与matmul一致，为`[1,65535]`，`INT_MAX`大于$(k-1)$。
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     - 数据类型支持`bfloat16`。
     - `x1`、`x2`不支持为空tensor。
     - 支持1、2、4、8卡，并且仅支持hccs链路all mesh组网。
@@ -83,22 +83,22 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     **表1** 非量化场景
     |产品型号|x1|x2|bias|x3|output（输出）|antiquant_scale|antiquant_offset|dequant_scale|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`float16`|`float16`|`float16`|`float16`|`float16`|None|None|None|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|None|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`float16`|`float16`|`float16`|`float16`|`float16`|None|None|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|None|None|
     
     **表2** 伪量化场景
     |产品型号|x1|x2|bias|x3|output（输出）|antiquant_scale|antiquant_offset|dequant_scale|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`float16`|`int8`|`float16`|`float16`|`float16`|`float16`|`float16`|None|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`bfloat16`|`int8`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`float16`|`int8`|`float16`|`float16`|`float16`|`float16`|`float16`|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`bfloat16`|`int8`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|
     
     **表3** 全量化场景
     |产品型号|x1|x2|bias|x3|output（输出）|antiquant_scale|antiquant_offset|dequant_scale|pertoken_scale|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`int8`|`int8`|`int32`|`float16`|`float16`|None|None|`uint64`或`int64`|None|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`int8`|`int8`|`int32`|`bfloat16`|`bfloat16`|None|None|`bfloat16`|None|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`int8`|`int8`|`int32`|`float16`|`float16`|None|None|`float32`|`float32`|
-    |Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件|`int8`|`int8`|`int32`|`bfloat16`|`bfloat16`|None|None|`bfloat16`|`float32`|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`float16`|`float16`|None|None|`uint64`或`int64`|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`bfloat16`|`bfloat16`|None|None|`bfloat16`|None|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`float16`|`float16`|None|None|`float32`|`float32`|
+    |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`bfloat16`|`bfloat16`|None|None|`bfloat16`|`float32`|
 
     >**说明：**<br>
     >全量化场景：若`dequant_scale`需要以`float32`类型传入，在调用`torch_npu.npu_mm_all_reduce_base`前，需通过`torch_npu.npu_trans_quant_param`接口对`dequant_scale`进行处理为`int64`类型（处理方法见对应的接口使用说明）。

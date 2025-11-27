@@ -5,11 +5,11 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>  | √   |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
 
 ## 功能说明<a name="zh-cn_topic_0000002271534921_section1650913464367"></a>
 
--   算子功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化和动态量化模式。
+-   API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化和动态量化模式。
 -   计算公式：
     1.  对输入`expert_idx`做排序，得出排序的结果sorted_expert_idx和对应的序号sorted_row_idx：
 
@@ -17,7 +17,7 @@
 
     2.  以sorted_row_idx做位置映射得出expanded_row_idx：
 
-        ![](./figures/zh-cn_formulaimage_0000002354450121.png)1
+        ![](./figures/zh-cn_formulaimage_0000002354450121.png)
 
     3.  在drop模式下，对sorted_expert_idx的每个专家统计直方图结果，得出`expert_token_cumsum_or_count`：
 
@@ -74,7 +74,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
 -   **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，要求是2维张量，shape为(NUM_ROWS\*K, H)。非量化场景下数据类型同`x`；量化场景下数据类型支持`int8`。数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余为无效数据。其中available_idx_num为`expert_idx`中`active_expert_range`范围的元素的个数。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
 -   **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS\*K, )，数据类型支持`int32`，数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余由`row_idx_type`决定。其中available_idx_num为`expert_idx`中`active_expert_range`范围的元素的个数。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
--   **expert_token_cumsum_or_count** (`Tensor`)：在`expert_tokens_num_typ`e为1的场景下，要求是1维张量，表示`active_expert_range`范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`int64`，数据格式要求为$ND$。
+-   **expert_token_cumsum_or_count** (`Tensor`)：在`expert_tokens_num_type`为1的场景下，要求是1维张量，表示`active_expert_range`范围内expert对应的处理token的总数。shape为(expert_end-expert_start, )；在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`int64`，数据格式要求为$ND$。
 -   **expanded_scale** (`Tensor`)：数据类型支持`float32`，数据格式要求为$ND$。令available_idx_num为`active_expert_range`范围的元素的个数。
     -   非量化场景下，shape为(NUM_ROWS\*K,)。当`scale`未输入时，输出值无意义；当`scale`输入时，输出表示一个1维张量，前available_idx_num\*H个元素为有效数据，其余为无效数据。
     -   动态quant场景下，输出量化计算过程中`scale`的中间值，shape为(NUM_ROWS \*K)。当`scale`未输入时，输出值无意义，输出表示一个1维张量，前available_idx_num个元素为有效数据，其余为无效数据，若`x`的输入类型为`int8`，输出值无意义。
@@ -82,11 +82,11 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
 -   该接口支持推理场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   不支持静态量化模式。
 -   进入低时延性能模板需要同时满足以下条件：
     -   `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
-    -   `x`数据类型要求：`bfloat16``
+    -   `x`数据类型要求：`bfloat16`
     -   属性要求：active_expert_range=[0, 256]、 quant_mode=1、expert_tokens_num_type=2、expert_num=256
 
 -   进入大batch性能模板需要同时满足以下条件：

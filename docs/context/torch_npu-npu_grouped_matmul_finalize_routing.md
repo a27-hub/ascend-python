@@ -5,7 +5,7 @@
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>    | √  |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
 
 ## 功能说明<a name="zh-cn_topic_0000002259406069_section14441124184110"></a>
 
@@ -26,16 +26,16 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 
 - **group\_list** (`Tensor`)：必选参数。GroupedMatMul的各分组大小。不支持非连续的Tensor。数据类型支持`int64`，数据格式支持$ND$，维度为\(e,\)，e与`w`的e一致。`group_list`的值总和要求≤m。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **scale** (`Tensor`)：可选参数。矩阵计算反量化参数，对应weight矩阵。A8W8场景下支持per-channel量化方式，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(e, n\)，这里的n=n1\*n0，A8W4量化场景下，数据类型支持`int64`，维度为\(e, 1, n\)。
+- **scale** (`Tensor`)：可选参数。矩阵计算反量化参数，对应weight矩阵。A8W8场景下支持perchannel量化方式，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(e, n\)，这里的n=n1\*n0，A8W4量化场景下，数据类型支持`int64`，维度为\(e, 1, n\)。
 - **bias** (`Tensor`)：可选参数。矩阵计算的bias参数，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度为\(e, n\)，只支持A8W4量化场景。
 - **offset** (`Tensor`)：可选参数。矩阵计算量化参数的偏移量，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，输入维度只支持3维。只支持A8W4量化场景。
-- **pertoken\_scale** (`Tensor`)：可选参数。矩阵计算的反量化参数，对应`x`矩阵，per-token量化方式，不支持非连续的Tensor。维度为\(m,\)，m与`x`的m一致。数据类型支持`float32`，数据格式支持$ND$。
+- **pertoken\_scale** (`Tensor`)：可选参数。矩阵计算的反量化参数，对应`x`矩阵，pertoken量化方式，不支持非连续的Tensor。维度为\(m,\)，m与`x`的m一致。数据类型支持`float32`，数据格式支持$ND$。
 - **shared\_input** (`Tensor`)：可选参数。MoE计算中共享专家的输出，需要与MoE专家的输出进行combine操作，不支持非连续的Tensor。数据类型支持`bfloat16`，数据格式支持$ND$，维度\(batch/dp, n\)，n与`scale`的n一致，batch/dp取值范围\[1, 2\*1024\]，batch取值范围\[1, 16\*1024\]。
 - **logit** (`Tensor`)：可选参数。MoE专家对各个token的logit大小，矩阵乘的计算输出与该logit做乘法，然后索引进行combine，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(m,\)，m与`x`的m一致。
 - **row\_index** (`Tensor`)：可选参数。MoE专家输出按照该row_index进行combine，其中的值即为combine做scatter add的索引，不支持非连续的Tensor。数据类型支持`int32`、`int64`，数据格式支持$ND$，维度为\(m,\)，m与`x`的m一致。
 - **dtype** (`ScalarType`)：可选参数。指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。
 - **shared\_input\_weight** (`float`)：可选参数。指共享专家与MoE专家进行combine的系数，`shared_input`先与该参数乘，然后再和MoE专家结果累加。默认为1.0。
-- **shared\_input\_offset** (`int`)：可选参数。共享专家输出的在总输出中的偏移。默认值为0。
+- **shared\_input\_offset** (`int`)：可选参数。共享专家与MoE专家累加的行偏移量。默认值为0，表示没有偏移。
 - **output\_bs** (`int`)：可选参数。输出的最高维大小。默认值为0。
 - **group\_list\_type** (`List[int]`)：可选参数。GroupedMatMul的分组模式。默认为1，表示count模式；若配置为0，表示cumsum模式，即为前缀和。
 
@@ -48,7 +48,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 ## 约束说明<a name="zh-cn_topic_0000002259406069_section12345537164214"></a>
 
 -   该接口支持推理和训练场景下使用。
--   该接口支持图模式（PyTorch 2.1.0版本）。
+-   该接口支持图模式。
 -   输入和输出Tensor支持的数据类型组合如下：
     |x|w|group_list|scale|bias|offset|pertoken_scale|shared_input|logit|row_index|y|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
