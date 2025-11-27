@@ -8325,8 +8325,8 @@ torch_npu.npu_mla_prolog_v3(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   该接口支持图模式。
 -   接口参数中shape格式字段含义：
     -   B：Batch表示输入样本批量大小，取值范围为0~65536。
-    -   S：Seq-Length表示输入样本序列长度，取值范围为0~16。
-    -   He：Head-Size表示隐藏层的大小，取值为7168、7680或6144。
+    -   S：Seq-Length表示输入样本序列长度，A2、A3取值范围为：0~16，A5取值范围：0、1。
+    -   He：Head-Size表示隐藏层的大小，A2、A3取值为1024、2048、3072、4096、5120、6144、7168、7680、8192，A5取值范围固定为7168。
 
     -   Hcq：q低秩矩阵维度，取值为1536。
     -   N：Head-Num表示多头数，取值范围为1、2、4、8、16、32、64、128。
