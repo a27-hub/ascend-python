@@ -1917,6 +1917,12 @@ def gmm_get_dtype(output_dtype):
         raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
 
 
+def is_transpose_weight(weight):
+    dim1 = -1
+    dim2 = -2
+    return weight.stride()[dim2] == 1 and weight.stride()[dim1] == weight.shape[dim2]
+
+
 @impl(m, "npu_grouped_matmul")
 @impl(m, "npu_grouped_matmul.List")
 def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, antiquant_scale=None,
@@ -1977,7 +1983,8 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
             pre_offset = cur_offset
     elif split_item == 2:
         dim_m = 0
-        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+        dim_n = n * INT4_IN_INT32 if (weight[0].dtype == torch.int32 or weight[0].dtype == torch.float32) and \
+                not is_transpose_weight(weight[0]) else n
         for i in range(num_x):
             dim_m += x[i].shape[0]
         if is_a4w4_mxfp:
@@ -1988,7 +1995,8 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
             num_group_list = group_list.shape[0]
             y.append(x[0].new_empty((num_group_list, dim_m, dim_n), dtype=output_dtype))
     elif split_item == 3:
-        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+        dim_n = n * INT4_IN_INT32 if (weight[0].dtype == torch.int32 or weight[0].dtype == torch.float32) and \
+                not is_transpose_weight(weight[0]) else n
         if is_a4w4_mxfp:
             dim_n = n if x[0].size(x[0].dim() - 1) == weight[0].size(weight[0].dim() - 2) else n * FP4_IN_INT8
         if group_type != 2:
