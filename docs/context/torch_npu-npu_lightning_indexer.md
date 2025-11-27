@@ -1,23 +1,24 @@
 # torch_npu-npu_lightning_indexer
 
-
 ## 产品支持情况
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Atlas A3 推理系列产品</term>   | √  |
 |<term>Atlas A2 推理系列产品</term>   | √  |
+|<term>Atlas A3 推理系列产品</term>   | √  |
 
 ## 功能说明
 
-`LightningIndexer`基于一系列操作得到每一个 token 对应的 Top-$k$ 个位置。对于某个 token 对应的 Index Query $Q_{index}\in\R^{g\times d}$，给定上下文 Index Key $K_{index}\in\R^{S_{k}\times d},W\in\R^{g\times 1}$，其中 $g$ 为 GQA 对应的 group size，$d$ 为每一个头的维度，$S_{k}$ 是上下文的长度，`LightningIndexer`的具体计算公式如下：
+-   API功能：`lightning_indexer`基于一系列操作得到每一个token对应的Top-$k$个位置。对于某个token对应的Index Query $Q_{index}\in\R^{g\times d}$，给定上下文Index Key $K_{index}\in\R^{S_{k}\times d},W\in\R^{g\times 1}$，其中$g$为GQA对应的group size，$d$为每一个头的维度，$S_{k}$是上下文的长度。
+
+-   计算公式：
 $$
-\text{Top-}k\left\{[1]_{1\times g}@\left[(W@[1]_{1\times S_{k}})\odot\text{ReLU}\left(Q_{index}@K_{index}^T\right)\right]\right\}
+Indices=\text{Top-}k\left\{[1]_{1\times g}@\left[(W@[1]_{1\times S_{k}})\odot\text{ReLU}\left(Q_{index}@K_{index}^T\right)\right]\right\}
 $$
 
 ## 函数原型
 
 ```
-torch_npu.npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_key=None, Tensor? block_table=None, str layout_query="BSND", str layout_key="BSND", int sparse_count=2048, int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, bool return_value=False) -> (Tensor, Tensor)
+torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, return_value=False) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -25,15 +26,15 @@ torch_npu.npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Ten
 >**说明：**<br> 
 >
 >- query、key、weights参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
->- S1表示query shape中的S，S2表示key shape中的S，N1表示query shape中的N，N2表示key shape中的N。
+>- S1表示query shape中的S，S2表示key shape中的S，T1表示query shape中的T，T2表示key shape中的T，N1表示query shape中的N，N2表示key shape中的N。
 
--   **query**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`。
+-   **query**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，N1仅支持64。
     
--   **key**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2, D]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数。
+-   **key**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2, D]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数，block\_size取值为16的整数倍，最大支持到1024，N2仅支持1。
     
 -   **weights**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，支持输入shape[B,S1,N1]、[T,N1]。
     
-- <strong>*</strong>：代表其之前的参数是位置相关的，必须按照顺序输入，属于必选参数；其之后的参数是键值对赋值，与位置无关，属于可选参数（不传入会使用默认值）。
+- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 -   **actual\_seq\_lengths\_query**（`Tensor`）：可选参数，表示不同Batch中`query`的有效token数，数据类型支持`int32`。如果不指定seqlen可传入None，表示和`query`的shape的S长度相同。
     -   该入参中每个Batch的有效token数不超过`query`中的维度S大小。支持长度为B的一维tensor。当`query`的input\_layout为TND时，该入参必须传入，且以该入参元素的数量作为B值，该入参中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须>=前一个元素的值。不能出现负值。
@@ -54,26 +55,24 @@ torch_npu.npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Ten
     -   sparse\_mode为0时，代表defaultMask模式。
     -   sparse\_mode为3时，代表rightDownCausal模式的mask，对应以右顶点为划分的下三角场景。
 
--   **pre\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和前几个Token计算关联。数据类型支持`int64`。默认值为9223372036854775807。
+-   **pre\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和前几个Token计算关联。数据类型支持`int64`。仅支持默认值2^63-1。
 
--   **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为9223372036854775807。
+-   **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。仅支持默认值2^63-1。
 
--   **return\_values**（`bool`）：可选参数，表示是否输出`sparse_values`。true表示输出，false表示不输出；默认值为false。
+-   **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，False表示不输出；默认值为False。
 
 ## 返回值说明
 
--   **sparse_indices**（`Tensor`）：公式中的输出，数据类型支持`int32`。数据格式支持$ND$。
+-   **sparse\_indices**（`Tensor`）：公式中的Indices输出，数据类型支持`int32`,数据格式支持$ND$，当`layout\_query`为"BSND"时输出shape为[B, S1, N2, sparse\_count]，当layout\_query为"TND"时输出shape为[T1, N2, sparse\_count]。
 
--   **sparse_values**（`Tensor`）：公式中的输出对应的value值，数据类型支持`int32`。数据格式支持$ND$。
+-   **sparse\_values**（`Tensor`）：公式中的Indices输出对应的value值，数据类型支持`int32`,数据格式支持$ND$，输出shape与`sparse\_indices`保持一致。
 
 ## 约束说明
 
-| 说明分类         | 具体描述                                                                 |
-| ---------------- | ------------------------------------------------------------------------ |
-| 适用场景         | 1. 支持推理场景下使用；<br>2. 支持图模式                                 |
-| 参数规则         | 1. query 中 N 支持 64，key 中 N 支持 1；<br>2. query 与 key 的 D 值相等，均为 128；<br>3. query、key、weights 数据类型需保持一致 |
-| 取值限制         | 1. block_size 支持 16 的整数倍，最大支持到 1024；<br>2. sparse_count 最大支持到 2048 |
-| 默认值约束       | 1. pre_tokens 仅支持默认值 9223372036854775807；<br>2. next_tokens 仅支持默认值 9223372036854775807 |
+-   该接口支持图模式。
+-   参数query中的N支持64，key中的N支持1。
+-   参数query中的D和参数key中的D值相等为128。
+-   参数query、key、weights的数据类型应保持一致。
 
 ## 调用示例
 
@@ -185,3 +184,4 @@ torch_npu.npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Ten
     graph output: tensor([[[[4488, 3926, 1154, ..., 3535, 8031, 8180]]]],
             device='npu:0', dtype=torch.int32) torch.Size([1, 1, 1, 2048])
     ```
+
