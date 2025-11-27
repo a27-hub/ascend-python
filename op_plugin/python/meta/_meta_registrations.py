@@ -938,14 +938,31 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
                                     actual_shared_prefix_len=None, query_rope=None, key_rope=None, key_rope_antiquant_scale=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, inner_precise=0, block_size=0, antiquant_mode=0,
                                     softmax_lse_flag=False, key_antiquant_mode=0, value_antiquant_mode=0):
-    # 获取query_layout, attention_out_layout
+    torch._check(
+        num_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
-    # 获取value_d
+
+    # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
 
-    # 推断attention out shape
+    # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
 
+    # special:IFA legacy feature
+    change_d_scale = 1
+    if value is not None and value.dtype == torch.int32: # treat int4 as int32
+        change_d_scale = 8
+    if input_layout == "BNSD" and block_table is None:
+        tmp_out = torch.empty([query.size(0), query.size(1), query.size(2), value.size(3) * change_d_scale],
+            dtype=query.dtype, device='meta')
+
+    # handle quant
     if quant_scale2 is not None:
         attention_out = torch.empty_like(tmp_out, dtype=torch.int8)
     elif query.dtype == torch.int8:
@@ -956,7 +973,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     else:
         attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
 
-    # 推断lse out shape
+    # infer lse out shape
     tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_heads)
 
     if softmax_lse_flag:
@@ -976,14 +993,23 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                                          return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
                                          key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None,
                                          dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None):
-    # 获取query_layout, attention_out_layout
+    torch._check(
+        num_query_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
-    # 获取value_d
+
+    # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
 
-    # 推断attention out shape
+    # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_query_heads, value_d)
 
+    # handle quant
     if quant_scale_out is not None:
         attention_out = torch.empty_like(tmp_out, dtype=torch.int8)
     elif query.dtype == torch.int8:
@@ -994,7 +1020,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
     else:
         attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
 
-    # 推断lse out shape
+    # infer lse out shape
     tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_query_heads)
 
     if return_softmax_lse:
@@ -1629,25 +1655,13 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
 
     torch._check(
         x_dim == 2 and w_dim == 3,
-        lambda: "input tensor only support shared_input and logit empty tensor" + ops_error(ErrCode.VALUE),
+        lambda: "x_dim should be 2 and w_dim should be 3." + ops_error(ErrCode.VALUE),
     )
     torch._check(
         dimn > 0,
         lambda: "n value must bigger than 0." + ops_error(ErrCode.VALUE),
     )
 
-    scene1 = False
-    scene2 = False
-    scene1 = (scale is not None and
-              group_list is not None and shared_input is not None and
-              logit is not None and row_index is not None)
-    scene2 = (scale is not None and
-              group_list is not None and shared_input is None and
-              logit is None and row_index is not None)
-    torch._check(
-        scene1 or scene2,
-        lambda: "input tensor only support shared_input and logit empty tensor" + ops_error(ErrCode.VALUE),
-    )
     if dtype is None:
         dtype = torch.float32
     if shared_input is not None and logit is not None:
@@ -3030,3 +3044,91 @@ def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_typ
 
     scale = torch.empty(scale_shape, dtype=torch.float32, device=x.device)
     return y, scale
+
+
+@impl(m, "npu_sparse_flash_attention")
+def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
+                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", 
+                                         sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
+                                         attention_mode=0, return_softmax_lse=False):  
+    if layout_query == "TND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+    elif layout_query == "BSND":
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+
+    if return_softmax_lse:
+        if layout_query == "TND":
+            softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+        if layout_query == "BSND":
+            softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+    else:
+        softmax_max = torch.empty([0], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([0], dtype=torch.float32, device='meta')
+    return (attention_out, softmax_max, softmax_sum)
+
+
+@impl(m, "npu_lightning_indexer")
+def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
+    actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3,
+    pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    torch._check(
+        sparse_count > 0,
+        lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
+            ops_error(ErrCode.VALUE),
+    )
+    if layout_query == "BSND":
+        sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
+    else:
+        if layout_key == "TND":
+            n_dim_idx = 1
+        else:
+            n_dim_idx = 2
+        sparse_indices_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=torch.int32, device='meta')
+    if return_value:
+        if layout_query == "BSND":
+            sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
+        else:
+            if layout_key == "TND":
+                n_dim_idx = 1
+            else:
+                n_dim_idx = 2
+            sparse_values_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=query.dtype, device='meta')
+    else:
+        sparse_values_out = torch.empty([0], dtype=query.dtype, device='meta')
+    return (sparse_indices_out, sparse_values_out)
+
+
+@impl(m, "npu_quant_lightning_indexer")
+def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
+                                        actual_seq_lengths_key=None, block_table=None, layout_query="BSND",
+                                        layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+    torch._check(
+        sparse_count > 0,
+        lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
+            ops_error(ErrCode.VALUE),
+    )
+    if layout_key == "TND":
+        keyHeadNum = key.size(1)
+    else:
+        keyHeadNum = key.size(2)
+    if layout_query == "BSND":
+        out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    return out
+
+
+@impl(m, "npu_kv_quant_sparse_flash_attention")
+def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
+                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64):
+    if layout_query == "BSND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
+    if layout_query == "TND":
+        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
+    return out
