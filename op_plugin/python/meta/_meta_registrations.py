@@ -1050,6 +1050,33 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
     return value_d
 
 
+def get_change_d_scale(value):
+    change_d_scale = 1
+    #int4伪装int32
+    if value is not None and value.dtype == torch.int32:
+        change_d_scale = 8
+    
+    return change_d_scale
+
+
+def get_change_d_scale_v2(value, value_dtype):
+    change_d_scale = 1
+
+    if value is None:
+        return change_d_scale
+    #int4伪装int32
+    if value.dtype == torch.int32:
+        change_d_scale = 8
+    # value_dtype float4_e2m1fn_x2 伪装 uint8
+    if value.dtype == torch_npu.float4_e2m1fn_x2 or value_dtype == torch_npu.float4_e2m1fn_x2:
+        change_d_scale = 2
+    # value_dtype float4_e1m2fn_x2 伪装 uint8
+    if value.dtype == torch_npu.float4_e1m2fn_x2 or value_dtype == torch_npu.float4_e1m2fn_x2:
+        change_d_scale = 2
+    
+    return change_d_scale
+
+
 def infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d):
     attention_out = torch.empty_like(query, dtype=query.dtype, device='meta')
     if attention_out_layout == "BSH":
@@ -1110,6 +1137,9 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
 
     # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    # 获取change_d_scale
+    change_d_scale = get_change_d_scale(value)
+    value_d = value_d * change_d_scale
 
     # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
@@ -1152,7 +1182,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
                                          input_layout="BSH", sparse_mode=0, block_size=0, query_quant_mode=0, key_quant_mode=0, value_quant_mode=0, inner_precise=0,
                                          return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
                                          key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None,
-                                         dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None):
+                                         dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None, out_dtype=None):
     torch._check(
         num_query_heads > 0,
         lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
@@ -1165,13 +1195,19 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
 
     # get value_d
     value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    # 获取change_d_scale
+    change_d_scale = get_change_d_scale_v2(value, value_dtype)
+    value_d = value_d * change_d_scale
 
     # infer attention out shape
     tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_query_heads, value_d)
 
     # handle quant
     if quant_scale_out is not None:
-        attention_out = torch.empty_like(tmp_out, dtype=torch.int8)
+        output_type = torch.int8
+        if out_dtype is not None:
+            output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
+        attention_out = torch.empty_like(tmp_out, dtype=output_type)
     elif query.dtype == torch.int8:
         if query_rope is not None:
             attention_out = torch.empty_like(tmp_out, dtype=query_rope.dtype)
