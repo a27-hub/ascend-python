@@ -329,6 +329,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
         dequant_scale_q_norm_shape = []
         dequant_scale_q_norm_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_norm_shape.append(1)
 
     else:
         query_shape = []
@@ -352,6 +353,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
         dequant_scale_q_norm_shape = []
         dequant_scale_q_norm_shape.append(token_x.size(0))
+        dequant_scale_q_norm_shape.append(1)
 
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
@@ -435,6 +437,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
         dequant_scale_q_norm_shape = []
         dequant_scale_q_norm_shape.append(token_x.size(0) * token_x.size(1))
+        dequant_scale_q_norm_shape.append(1)
 
     else:
         query_shape = []
@@ -458,6 +461,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
         dequant_scale_q_norm_shape = []
         dequant_scale_q_norm_shape.append(token_x.size(0))
+        dequant_scale_q_norm_shape.append(1)
 
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
