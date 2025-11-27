@@ -52,46 +52,46 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_norm;
 
     if (token_x_dim == DIM_3) {
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { //weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(rope_sin.dtype()));
-            dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            dequant_scale_q_nope = nullptr;
         }
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) {
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { //weight_quant_mode=1 半量化场景 weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1)}, at::kFloat);
             } else {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+                dequant_scale_q_norm = nullptr;
             }
         } else {
-            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            query_norm = nullptr;
+            dequant_scale_q_norm = nullptr;
         }
     } else {
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { //weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(rope_sin.dtype()));
-            dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            dequant_scale_q_nope = nullptr;
         }
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) {
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { //weight_quant_mode=1 半量化场景 weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0)}, at::kFloat);
             } else {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+                dequant_scale_q_norm = nullptr;
             }
         } else {
-            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            query_norm = nullptr;
+            dequant_scale_q_norm = nullptr;
         }
     }
 
@@ -100,7 +100,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
         rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
         dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
         ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
         dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
 
@@ -136,46 +136,46 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dequant_scale_q_norm;
 
     if (token_x_dim == DIM_3) {
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { //weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(rope_sin.dtype()));
-            dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            dequant_scale_q_nope = nullptr;
         }
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) {
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { //weight_quant_mode=1 半量化场景 weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1)}, at::kFloat);
             } else {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+                dequant_scale_q_norm = nullptr;
             }
         } else {
-            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            query_norm = nullptr;
+            dequant_scale_q_norm = nullptr;
         }
     } else {
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) {
+        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { //weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
             // kvcache量化
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(rope_sin.dtype()));
-            dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            dequant_scale_q_nope = nullptr;
         }
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) {
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { //weight_quant_mode=1 半量化场景 weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0)}, at::kFloat);
             } else {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+                dequant_scale_q_norm = nullptr;
             }
         } else {
-            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+            query_norm = nullptr;
+            dequant_scale_q_norm = nullptr;
         }
     }
 
@@ -186,7 +186,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
         rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
         dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, query_norm_flag, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
         ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
         dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
 
