@@ -11,7 +11,7 @@
 -   API功能：QuantLightningIndexer是推理场景下，SparseFlashAttention（SFA）前处理的计算，选出关键的稀疏token，并对输入query和key进行量化实现存8算8，获取最大收益。主要计算过程为
     1. 将某个 token 对应的输入Index Query $Q_{index}^{INT8}\in\R^{g\times d}$ 乘以给定上下文 Index Key $K_{index}^{INT8}\in\R^{S_{k}\times d}$ ，得到相关性。
     2. 相关性结果与Index Query和Index Key的反量化系数$Scale_Q$和$Scale_K^T$相乘，通过激活函数$\text{ReLU}\$过滤无效负相关信号后，得到当前Token与所有前序Token的相关性分数向量。
-    3. 将其与权重系数 $(W@[1]_{1\times S_{k}})$相乘后，沿g的方向，选取前$\text{Top-k}\$个索引值得到输出$out$，作为SparseFlashAttention的输入。
+    3. 将其与权重系数 $(W@[1]_{1\times S_{k}})$相乘后，沿g的方向，选取前 $\text{Top-k}\$个索引值得到输出 $out$，作为SparseFlashAttention的输入。
     
 
 -   计算公式：
