@@ -271,21 +271,20 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 
     auto outputSizes = op_infer::conv2d_backward_npu_output_size(input, grad_output, weight);
 
-    // construct the output tensor of the NPU
-    at::Tensor gradInput{nullptr};
-    at::Tensor gradWeight{nullptr};
-    at::Tensor gradBias{nullptr};
+    // construct the output tensor of the NPU.
+    at::Tensor gradInput;
+    at::Tensor gradWeight;
+    at::Tensor gradBias;
 
-    if (output_mask[0]) {
-        gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
-    }
-    if (output_mask[1]) {
-        gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
-    }
+    
+    gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
+    
+    
+    gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
+    
     // use 2nd dimension of outputSizes
-    if (output_mask[2]) {
-        gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
-    }
+    
+    gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
     int64_t input_dim = input.ndimension();
     at::optional<c10::IntArrayRef> bias_sizes = c10::nullopt;
     if (bias_sizes_opt.has_value()) {
