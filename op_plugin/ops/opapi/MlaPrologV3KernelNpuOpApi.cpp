@@ -73,11 +73,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
             }
         } else {
-            if (weight_quant_mode = MODE_3) {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, at::kChar);
-            } else {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            }
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     } else {
@@ -98,11 +94,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
             }
         } else {
-            if (weight_quant_mode = MODE_3) {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, at::kChar);
-            } else {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            }
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     }
@@ -183,11 +175,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
             }
         } else {
-            if (weight_quant_mode = MODE_3) {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, at::kChar);
-            } else {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            }
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     } else {
@@ -208,11 +196,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
             }
         } else {
-            if (weight_quant_mode = MODE_3) {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, at::kChar);
-            } else {
-                query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
-            }
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     }
