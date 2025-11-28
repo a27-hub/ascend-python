@@ -8,15 +8,14 @@
 
 ## 功能说明
 
--   API功能：QuantLightningIndexer是推理场景下，SparseFlashAttention（SFA）前处理的计算，选出关键的稀疏token，并对输入query和key进行量化实现存8算8，获取最大收益。主要计算过程为
-    1. 将某个 token 对应的输入Index Query $Q_{index}^{INT8}\in\R^{g\times d}$ 乘以给定上下文 Index Key $K_{index}^{INT8}\in\R^{S_{k}\times d}$ ，得到相关性。
-    2. 相关性结果与Index Query和Index Key的反量化系数$Scale_Q$和$Scale_K^T$相乘，通过激活函数$\text{ReLU}\$过滤无效负相关信号后，得到当前Token与所有前序Token的相关性分数向量。
-    3. 将其与权重系数 $(W@[1]_{1\times S_{k}})$相乘后，沿g的方向，选取前$\text{Top-k}\$个索引值得到输出$out$，作为SparseFlashAttention的输入。
-    
+-   API功能：QuantLightningIndexer是推理场景下，SparseFlashAttention（SFA）前处理的计算，选出关键的稀疏token，并对输入query和key进行量化实现存8算8，获取最大收益。
 
 -   计算公式：
     $$out = \text{Top-}k\left\{[1]_{1\times g}@\left[(W@[1]_{1\times S_{k}})\odot\text{ReLU}\left(\left(Scale_Q@Scale_K^T\right)\odot\left(Q_{index}^{INT8}@{\left(K_{index}^{INT8}\right)}^T\right)\right)\right]\right\}$$
-
+    主要计算过程为
+    1. 将某个token对应的输入参数`query`（$Q_{index}^{INT8}\in\R^{g\times d}$）乘以给定上下文`key`（$K_{index}^{INT8}\in\R^{S_{k}\times d}$），得到相关性。
+    2. 相关性结果与`query`和`key`对应的反量化系数`query_dequant_scale`（$Scale_Q$）和`key_dequant_scale`（$Scale_K^T$）相乘，通过激活函数$ReLU$过滤无效负相关信号后，得到当前Token与所有前序Token的相关性分数向量。
+    3. 将其与权重系数`weights`（$W$）相乘后，沿g的方向，选取前$Top-k$个索引值得到输出$out$，作为SparseFlashAttention的输入。
 
 ## 函数原型
 
@@ -37,7 +36,7 @@ torch_npu.npu_quant_indexer_lightning(query, key, weights, query_dequant_scale, 
 
 -   **query_dequant_scale**（`Tensor`）：必选参数，表示Index Query的反量化系数$Scale_Q$ 。不支持非连续，数据格式支持$ND$，数据类型支持`float16`，支持输入shape[B,S1,N1]、[T,N1]。
 
--   **key_dequant_scale**（`Tensor`）：必选参数，表示Index Key的反量化系数，对应公式中的$Scale_K^T$ 。不支持非连续，数据格式支持$ND$，数据类型支持`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数。
+-   **key_dequant_scale**（`Tensor`）：必选参数，表示Index Key的反量化系数，对应公式中的$Scale_K^T$。不支持非连续，数据格式支持$ND$，数据类型支持`float16`，layout\_key为PA_BSND时shape为[block\_count, block\_size, N2]，其中block\_count为PageAttention时block总数，block\_size为一个block的token数。
 
 - <strong>*</strong>：代表其之前的参数是位置相关的，必须按照顺序输入；之后的参数是可选参数，位置无关，不赋值会使用默认值。
 
