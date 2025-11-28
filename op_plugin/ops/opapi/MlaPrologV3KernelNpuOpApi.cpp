@@ -12,13 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
-#include "torch_npu/csrc/aten/CustomFunctions"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
-
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
