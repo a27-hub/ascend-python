@@ -25,6 +25,8 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
     H = None
     lse_cpu = []
     out_cpu = []
+    out_dtype = torch.float32
+
     for i, (lse_i, out_i) in enumerate(zip(lse_list, local_out_list)):
         if not isinstance(lse_i, torch.Tensor):
             raise TypeError(f"lse[{i}] must be a torch.Tensor, got {type(lse_i)}")
@@ -42,6 +44,7 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
         if N is None:
             N = lse_i.size(0)
             H = out_i.size(1)
+            out_dtype = out_i.dtype
         else:
             if lse_i.size(0) != N:
                 raise ValueError(f"lse[{i}].size(0) must be {N}, got {lse_i.size(0)}")
@@ -61,7 +64,7 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
 
     weights = torch.exp(lse_stack - lse_m.unsqueeze(0))
     O = torch.sum(out_stack * weights.unsqueeze(-1), dim=0)
-    return O.contiguous()
+    return O.contiguous().to(out_dtype)
 
 
 class TestNpuAttentionUpdate(TestCase):
@@ -131,11 +134,11 @@ class TestNpuAttentionUpdate(TestCase):
         out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
                                               [t.to("cpu").float() for t in local_out_list],
                                               update_type=update_type)
-
+        out_cpu = out_cpu.to(dtype)
         self.assertEqual(tuple(out_npu.shape), (N, H))
         self.assertEqual(tuple(out_cpu.shape), (N, H))
         self.assertEqual(out_npu.dtype, dtype)
-        self.assertEqual(out_cpu.dtype, torch.float32)
+        self.assertEqual(out_cpu.dtype, dtype)
 
         out_npu_cpu = out_npu.to("cpu", dtype=torch.float32)
         out_cpu_f32 = out_cpu.to(torch.float32)
