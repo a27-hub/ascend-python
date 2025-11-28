@@ -22,6 +22,10 @@ backward:
   self: npu_dropout_backward(grad, result1, p)
   version: [v2.1, newest]
 
+- name: native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)
+  input: "native_dropout_backward(grad, result1, (!train.has_value() || !train.value() ? 1 : (p == 1 ? 0.0 : 1.0 / (1.0 - p))))"
+  version: [v2.1, newest]
+
 - name: _npu_format_cast(Tensor self, int acl_format) -> Tensor
   self: grad
   version: [v2.1, newest]

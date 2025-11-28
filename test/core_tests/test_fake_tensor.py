@@ -320,6 +320,22 @@ class FakeTensorTest(TestCase):
             y1 = torch.randperm(5, device="cpu")
             prims.utils.compare_tensor_meta(y, y1)
 
+    def test_dropout(self):
+        with FakeTensorMode():
+            a = torch.randn(2, 3)
+            a.requires_grad = True
+            z = torch.dropout(a, 0.3, True)
+            z.sum().backward()
+
+        with FakeTensorMode():
+            b = torch.randn(2, 3).npu()
+            b.requires_grad = True
+            y = torch.dropout(b, 0.3, True)
+            y.sum().backward()
+
+        self.assertTrue(a.grad.shape == b.grad.shape)
+        self.assertTrue(z.shape == y.shape)
+
     def test_print_in_fake_mode(self):
         x = torch.zeros(2)
         # does not fail
