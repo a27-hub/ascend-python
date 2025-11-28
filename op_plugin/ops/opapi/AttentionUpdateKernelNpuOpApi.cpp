@@ -29,6 +29,12 @@ std::tuple<at::Tensor, at::Tensor> npu_attention_update(at::TensorList lse, at::
         lse[0].options().dtype(output_dtype_0)
     );
     at::Tensor lse_out;
+    if (update_type == 1) {
+        lse_out = npu_preparation::apply_tensor_without_format(
+            lse[0].sizes(),
+            lse[0].options());
+    }
+    
     EXEC_NPU_CMD(aclnnAttentionUpdate, lse, local_out, update_type, out, lse_out);
 
     return std::make_tuple(out, lse_out);
