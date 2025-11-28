@@ -132,18 +132,19 @@ class TestNpuAttentionUpdate(TestCase):
         out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
 
         out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
-                                              [t.to("cpu").float() for t in local_out_list],
+                                              [t.to("cpu") for t in local_out_list],
                                               update_type=update_type)
-        out_cpu = out_cpu.to(dtype)
+
         self.assertEqual(tuple(out_npu.shape), (N, H))
         self.assertEqual(tuple(out_cpu.shape), (N, H))
         self.assertEqual(out_npu.dtype, dtype)
         self.assertEqual(out_cpu.dtype, dtype)
 
-        out_npu_cpu = out_npu.to("cpu", dtype=torch.float32)
-        out_cpu_f32 = out_cpu.to(torch.float32)
-        self.assertTrue(torch.allclose(out_npu_cpu, out_cpu_f32, atol=atol, rtol=rtol),
-                        f"allclose failed, max_abs={float((out_npu_cpu - out_cpu_f32).abs().max())}")
+        out_npu_cpu = out_npu.to("cpu")
+        # out_npu_cpu = out_npu.to("cpu", dtype=torch.float32)
+        # out_cpu_f32 = out_cpu.to(torch.float32)
+        self.assertTrue(torch.allclose(out_npu_cpu, out_cpu, atol=atol, rtol=rtol),
+                        f"allclose failed, max_abs={float((out_npu_cpu - out_cpu).abs().max())}")
 
         for t in [out_npu_cpu, out_cpu_f32]:
             self.assertFalse(torch.isnan(t).any().item())
