@@ -141,12 +141,10 @@ class TestNpuAttentionUpdate(TestCase):
         self.assertEqual(out_cpu.dtype, dtype)
 
         out_npu_cpu = out_npu.to("cpu")
-        # out_npu_cpu = out_npu.to("cpu", dtype=torch.float32)
-        # out_cpu_f32 = out_cpu.to(torch.float32)
         self.assertTrue(torch.allclose(out_npu_cpu, out_cpu, atol=atol, rtol=rtol),
                         f"allclose failed, max_abs={float((out_npu_cpu - out_cpu).abs().max())}")
 
-        for t in [out_npu_cpu, out_cpu_f32]:
+        for t in [out_npu_cpu, out_cpu]:
             self.assertFalse(torch.isnan(t).any().item())
             self.assertFalse(torch.isinf(t).any().item())
 
