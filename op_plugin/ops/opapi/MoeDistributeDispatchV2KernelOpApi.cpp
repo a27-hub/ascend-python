@@ -167,8 +167,8 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
                      dynamic_scales, assist_info_forcombine, expert_token_nums, ep_recv_counts,
                      tp_recv_counts, expand_scales);
     } else if (check_aclnn_kernel_available("aclnnMoeDistributeDispatchV3")) {
-        TORCH_CHECK(performance_info != nullptr, 
-                    "The performance_info is not supported in this CANN version, aclnnMoeDistributeDispatchV4 is not available, please update CANN version.", 
+        TORCH_CHECK(performance_info != nullptr,
+                    "The performance_info is not supported in this CANN version, aclnnMoeDistributeDispatchV4 is not available, please update CANN version.",
                     OPS_ERROR(ErrCode::PARAM));
         EXEC_NPU_CMD(aclnnMoeDistributeDispatchV3, x, expert_ids, scales, x_active_mask, expert_scales, elastic_info,
                      group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num,
