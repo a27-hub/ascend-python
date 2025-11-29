@@ -1290,6 +1290,17 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
 def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None,
                                         actual_seq_lengths_key=None, block_table=None, layout_query="BSND",
                                         layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+    require_param = {"query": query, "key": key, "weights": weights, "query_dequant_scale": query_dequant_scale, "key_dequant_scale": key_dequant_scale}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(query.numel() > 0, "Tensor query is empty.")
+    torch._check(key.numel() > 0, "Tensor key is empty.")
+    
     torch._check(
         sparse_count > 0,
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
@@ -1301,8 +1312,14 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
         keyHeadNum = key.size(2)
     if layout_query == "BSND":
         out = torch.empty([query.size(0), query.size(1), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
-    if layout_query == "TND":
+    elif layout_query == "TND":
         out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
+    else:
+         torch._check(
+            False,
+            lambda: "No support of query: " + str(layout_query) + ops_error(ErrCode.VALUE),
+        )
+
     return out
 
 
@@ -1401,6 +1418,16 @@ def npu_fusion_attention_forward_v2(query, key, value, head_num, input_layout, *
 def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
     actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3,
     pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    require_param = {"query": query, "key": key, "weights": weights}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(query.numel() > 0, "Tensor query is empty.")
+    torch._check(key.numel() > 0, "Tensor key is empty.")
     torch._check(
         sparse_count > 0,
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
