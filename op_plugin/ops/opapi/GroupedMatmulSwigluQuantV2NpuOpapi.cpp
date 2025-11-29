@@ -33,6 +33,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     c10::optional<int64_t> group_list_type,
     const c10::OptionalIntArrayRef tuning_config)
 {
+    TORCH_CHECK(x.dim() >= 2, "x dim should greater than 2, but the actual value is ", x.dim(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!weight_scale[0].sizes().empty(), "weight_scale[0] is empty", OPS_ERROR(ErrCode::PARAM));
     auto x_size = x.sizes();
     int n = weight_scale[0].sizes().back();
     int m = x_size[0];
