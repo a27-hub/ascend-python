@@ -315,7 +315,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(token_x.size(1))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(rope_sin.size(-1))
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
@@ -340,7 +340,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         query_rope_shape = []
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(rope_sin.size(-1))
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0))
@@ -423,7 +423,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(token_x.size(1))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(2))
+        query_rope_shape.append(rope_sin.size(-1))
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0) * token_x.size(1))
@@ -448,7 +448,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         query_rope_shape = []
         query_rope_shape.append(token_x.size(0))
         query_rope_shape.append(weight_uk.size(0))
-        query_rope_shape.append(rope_sin.size(1))
+        query_rope_shape.append(rope_sin.size(-1))
 
         dequant_scale_q_nope_shape = []
         dequant_scale_q_nope_shape.append(token_x.size(0))
