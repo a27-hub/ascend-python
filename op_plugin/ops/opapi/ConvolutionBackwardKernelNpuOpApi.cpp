@@ -271,9 +271,15 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 
     auto outputSizes = op_infer::conv2d_backward_npu_output_size(input, grad_output, weight);
 
+    // construct the output tensor of the NPU
+    at::Tensor gradInput;
+    at::Tensor gradWeight;
+    at::Tensor gradBias;
+
     const int OUTPUT_MASK_DIM_1 = 0;
     const int OUTPUT_MASK_DIM_2 = 1;
     const int OUTPUT_MASK_DIM_3 = 2;
+    
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
 
