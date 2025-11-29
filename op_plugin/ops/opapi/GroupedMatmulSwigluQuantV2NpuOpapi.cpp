@@ -34,7 +34,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const c10::OptionalIntArrayRef tuning_config)
 {
     auto x_size = x.sizes();
-    int n = weight[0].sizes()[2];
+    int n = weight_scale[0].sizes().back();
     int m = x_size[0];
     int k = x_size[1];
 
