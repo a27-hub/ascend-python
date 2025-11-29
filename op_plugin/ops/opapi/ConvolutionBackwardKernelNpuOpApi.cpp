@@ -271,6 +271,9 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 
     auto outputSizes = op_infer::conv2d_backward_npu_output_size(input, grad_output, weight);
 
+    const int OUTPUT_MASK_DIM1 = 0;
+    const int OUTPUT_MASK_DIM2 = 1;
+    const int OUTPUT_MASK_DIM3 = 2;
     // construct the output tensor of the NPU
     at::Tensor gradInput;
     at::Tensor gradWeight;
@@ -280,8 +283,10 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
 
     // use 2nd dimension of outputSizes
-    gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
-
+    if (output_mask[OUTPUT_MASK_DIM3]) {
+        gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+    }
+    
     int64_t input_dim = input.ndimension();
     at::optional<c10::IntArrayRef> bias_sizes = c10::nullopt;
     if (bias_sizes_opt.has_value()) {
@@ -289,6 +294,15 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     }
     EXEC_NPU_CMD(aclnnConvolutionBackward, grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed,
                  output_padding, groups, output_mask, cube_math_type, gradInput, gradWeight, gradBias);
+    if (!output_mask[OUTPUT_MASK_DIM1]) {
+        gradInput = at::tensor();
+    }
+    if (!output_mask[OUTPUT_MASK_DIM2]) {
+        gradWeight = at::tensor();
+    }
+    if (!output_mask[OUTPUT_MASK_DIM3]) {
+        gradBias = at::tensor();
+    }
     return std::make_tuple(std::move(gradInput), std::move(gradWeight), std::move(gradBias));
 }
 
