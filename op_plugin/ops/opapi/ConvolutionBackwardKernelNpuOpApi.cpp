@@ -271,14 +271,9 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 
     auto outputSizes = op_infer::conv2d_backward_npu_output_size(input, grad_output, weight);
 
-    const int OUTPUT_MASK_DIM1 = 0;
-    const int OUTPUT_MASK_DIM2 = 1;
-    const int OUTPUT_MASK_DIM3 = 2;
-    // construct the output tensor of the NPU
-    at::Tensor gradInput;
-    at::Tensor gradWeight;
-    at::Tensor gradBias;
-
+    const int OUTPUT_MASK_DIM_1 = 0;
+    const int OUTPUT_MASK_DIM_2 = 1;
+    const int OUTPUT_MASK_DIM_3 = 2;
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
 
@@ -286,23 +281,21 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     if (output_mask[2]) {
         gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
     }
-    
     int64_t input_dim = input.ndimension();
     at::optional<c10::IntArrayRef> bias_sizes = c10::nullopt;
     if (bias_sizes_opt.has_value()) {
-        bias_sizes = bias_sizes_opt.value();
     }
     EXEC_NPU_CMD(aclnnConvolutionBackward, grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed,
                  output_padding, groups, output_mask, cube_math_type, gradInput, gradWeight, gradBias);
-                 
-    if (!output_mask[OUTPUT_MASK_DIM1]) {
-        gradInput = at::tensor();
+    
+    if (!output_mask[OUTPUT_MASK_DIM_1]) {
+        gradInput = at::Tensor();
     }
-    if (!output_mask[OUTPUT_MASK_DIM2]) {
-        gradWeight = at::tensor();
+    if (!output_mask[OUTPUT_MASK_DIM_2]) {
+        gradWeight = at::Tensor();
     }
-    if (!output_mask[OUTPUT_MASK_DIM3]) {
-        gradBias = at::tensor();
+    if (!output_mask[OUTPUT_MASK_DIM_3]) {
+        gradBias = at::Tensor();
     }
     return std::make_tuple(std::move(gradInput), std::move(gradWeight), std::move(gradBias));
 }
