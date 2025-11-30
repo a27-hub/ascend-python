@@ -17,8 +17,12 @@
 #include <acl/acl.h>
 
 using namespace std;
-
 namespace atb {
+
+// Thread-local variable definitions for ReshapeAndCache hash calculation
+thread_local int g_reshape_cache_key_elements = 0;
+thread_local int g_reshape_cache_value_elements = 0;
+
 using ReshapeAndCacheParam = atb::infer::ReshapeAndCacheParam;
 void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::Tensor &key_cache, at::Tensor &value_cache, const at::Tensor &slot_indices)
 {

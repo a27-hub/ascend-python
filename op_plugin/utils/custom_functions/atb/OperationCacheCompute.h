@@ -28,9 +28,9 @@ constexpr int g_hash_buf_max_size = g_hash_buf_size + 1024;
 extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 
-// Global variable for ReshapeAndCache hash calculation
-int g_reshape_cache_key_elements = 0;
-int g_reshape_cache_value_elements = 0;
+// Thread-local variable for ReshapeAndCache hash calculation
+extern thread_local int g_reshape_cache_key_elements;
+extern thread_local int g_reshape_cache_value_elements;
 
 #define MEMCPY_TO_BUF(data_expression, size_expression)                                                                \
     if (g_hash_offset + (size_expression) > g_hash_buf_size) {                                                         \
