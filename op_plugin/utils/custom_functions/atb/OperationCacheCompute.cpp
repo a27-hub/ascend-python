@@ -21,6 +21,8 @@ thread_local int g_hash_offset = 0;
 constexpr int g_rShift33Bits = 33;
 constexpr uint64_t MIX_STEP1 = 18397679294719823053LLU;
 constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
+thread_local int g_reshape_cache_key_elements = 0;
+thread_local int g_reshape_cache_value_elements = 0;
 
 
 void add_param_to_buf(const string& s)
