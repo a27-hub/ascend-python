@@ -28,6 +28,10 @@ constexpr int g_hash_buf_max_size = g_hash_buf_size + 1024;
 extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 
+// Global variable for ReshapeAndCache hash calculation
+int g_reshape_cache_key_elements = 0;
+int g_reshape_cache_value_elements = 0;
+
 #define MEMCPY_TO_BUF(data_expression, size_expression)                                                                \
     if (g_hash_offset + (size_expression) > g_hash_buf_size) {                                                         \
         g_hash_offset = g_hash_buf_max_size;                                                                           \
@@ -143,6 +147,8 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
     {
         add_param_to_buf("compressType", param.compressType);
         add_param_to_buf("kvCacheCfg", param.kvCacheCfg);
+        add_param_to_buf("keyElements", g_reshape_cache_key_elements);
+        add_param_to_buf("valueElements", g_reshape_cache_value_elements);
     }
 };
 

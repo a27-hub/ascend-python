@@ -13,14 +13,21 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
+#include "op_plugin/utils/custom_functions/atb/OperationCacheCompute.h"
 #include <acl/acl.h>
 
 using namespace std;
+
 namespace atb {
 using ReshapeAndCacheParam = atb::infer::ReshapeAndCacheParam;
 void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::Tensor &key_cache, at::Tensor &value_cache, const at::Tensor &slot_indices)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(key));
+    
+    // Update global variable with key tensor element count
+    g_reshape_cache_key_elements = key.numel();
+    g_reshape_cache_value_elements = value.numel();
+    
     OpParamCache<ReshapeAndCacheParam>& reshapeAndCacheParamCache = OpParamCache<ReshapeAndCacheParam>::getInstance();
     ReshapeAndCacheParam reshapeparam;
     reshapeparam.compressType = ReshapeAndCacheParam::COMPRESS_TYPE_UNDEFINED;
