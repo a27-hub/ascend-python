@@ -1480,7 +1480,6 @@ class TestFusedInferAttentionV2(TestCase):
             self.assertTrue(golden_output.shape == atten_out.shape)
 
 
-
 class TestFlashAttentionScore(TestCase):
     def testFlashAttentionScore(self):
         with FakeTensorMode():
