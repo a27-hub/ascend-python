@@ -2,10 +2,14 @@ import unittest
 import torch
 import numpy as np
 import torch_npu
-
+import os
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import get_npu_device, SupportedDevices
 
+# export ASCEND_SLOG_PRINT_TO_STDOUT=1
+# export ASCEND_GLOBAL_LOG_LEVEL=0
+os.environ['ASCEND_SLOG_PRINT_TO_STDOUT'] = 1
+os.environ['ASCEND_GLOBAL_LOG_LEVEL'] = 0
 
 class DataInfo(object):
     def __init__(self, min_d, max_d, shape_x, shape_scale, shape_zp, dtype_x, dtype_scale, dtype_zp):
