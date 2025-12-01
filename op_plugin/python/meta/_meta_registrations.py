@@ -106,11 +106,11 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
 
 
 @impl(m, "npu_sparse_flash_attention")
-def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
-                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
-                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", 
+def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None,
+                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND",
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
-                                         attention_mode=0, return_softmax_lse=False):  
+                                         attention_mode=0, return_softmax_lse=False):
     if layout_query == "TND":
         attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
     elif layout_query == "BSND":
@@ -1401,7 +1401,7 @@ if _is_pytorch_version_ge("2.6.0"):
 
 
 @impl(m, "npu_gelu_quant")
-def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None, 
+def npu_gelu_quant_meta(self, *, input_scale=None, input_offset=None,
                         approximate="none", quant_mode="dynamic", dst_type=1, round_mode='rint'):
     if not (quant_mode == "dynamic" or quant_mode == "static"):
         raise RuntimeError("Parameter(quant_mode) must be 'dynamic' or 'static', got " + quant_mode + ops_error(ErrCode.VALUE))
@@ -1438,7 +1438,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-    
+
     if dtype == 296 or dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1454,7 +1454,7 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
             output = self.new_empty(input_shape, dtype=output_dst_dtype)
         else:
             raise RuntimeError("Parameter(dtype) enum value:{} not found in " \
-                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) + 
+                "TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP, please check.".format(dtype) +
                 ops_error(ErrCode.PARAM))
     return output
 
@@ -1482,7 +1482,7 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
         else:
             raise RuntimeError("Scalar input cannot be float4_e2m1 or float4_e1m2" +
                                ops_error(ErrCode.PARAM))
-        
+
     if input_dtype == 296 or input_dtype == 297:
         if dim_num == 0 or input_shape[-1] % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
@@ -1658,7 +1658,7 @@ def npu_geglu_meta(self, dim=-1, approximate=1, activate_left=False):
 
     if input_shape[dim] % 2 == 1:
         raise RuntimeError("x shape: " + str(input_shape) + ". Dim [" + str(dim) + "] of x should be divisible by 2, but get [" + str(input_shape[dim]) + "]" + ops_error(ErrCode.PARAM))
-    
+
     input_shape[dim] //= 2
     return (self.new_empty(input_shape, dtype=self.dtype), self.new_empty(input_shape, dtype=self.dtype))
 
@@ -2842,14 +2842,14 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
-        raise RuntimeError("Input x must be 2-dimensional, got dimNum " + 
+        raise RuntimeError("Input x must be 2-dimensional, got dimNum " +
                             str(x.dim()) + ops_error(ErrCode.VALUE))
     if group_index.dim() != 1:
-        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " + 
+        raise RuntimeError("Input group_index must be 1-dimensional, got dimNum " +
                             str(group_index.dim()) + ops_error(ErrCode.VALUE))
     # zero division protection
     if blocksize != 32:
-        raise RuntimeError("Parameter blocksize only supports 32,  got " + 
+        raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1], 2]
 
@@ -3104,7 +3104,7 @@ def npu_quant_conv2d(input_, weight, scale, strides, pads, dilations,
             )
         elif (input_.dtype == torch.float8_e4m3fn):
             torch._check(
-                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or 
+                (output_dtype == TORCH_DTYPE_MAP[torch.float16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.bfloat16] or
                  output_dtype == TORCH_DTYPE_MAP[torch.float32]),
                 lambda: "output_dtype should be one of "
@@ -3702,3 +3702,20 @@ def npu_gather_pa_kv_cache_functional_meta(key_cache, value_cache, block_tables,
     key_out = key.new_empty(key.shape, dtype=key.dtype, device='meta')
     value_out = value.new_empty(value.shape, dtype=value.dtype, device='meta')
     return (key_out, value_out)
+
+
+@impl(m, "npu_cross_entropy_loss")
+def npu_cross_entropy_loss_meta(input, target, weight=None, reduction="mean", *, ignore_index=-100, label_smoothing=0.0, lse_square_scale_for_zloss=0.0, return_zloss=False):
+    batch_size = input.size(0)
+
+    loss_shape = (input.size(0),) if reduction == "none" else (1,)
+    log_prob_shape = input.size()
+    zloss_shape = loss_shape if return_zloss else (0,)
+    lse_for_zloss_shape = (input.size(0),) if lse_square_scale_for_zloss != 0.0 else (0,)
+
+    loss = torch.empty(loss_shape, dtype=input.dtype, device='meta')
+    log_prob = torch.empty(log_prob_shape, dtype=input.dtype, device='meta')
+    zloss = torch.empty(zloss_shape, dtype=input.dtype, device='meta')
+    lse_for_zloss = torch.empty(lse_for_zloss_shape, dtype=input.dtype, device='meta')
+
+    return loss, log_prob, zloss, lse_for_zloss
