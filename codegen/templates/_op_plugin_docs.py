@@ -12614,8 +12614,8 @@ query_index（Tensor）：必选参数，数据格式支持ND，数据类型支�
 key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
 weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1)、(T1, N1)。
 sparse_indices（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, topK)、(T1, topK)。
-softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, G)、(T1, N1, G)。
-softmax_sum（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, G)、(T1, N1, G)。
+softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_sum（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
 scale_value（float）：必选参数，表示缩放系数，数据类型支持FLOAT。
 query_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, Dr)、(T1, N1, Dr)。
 key_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, Dr)、(T2, N2, Dr)。
