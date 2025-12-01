@@ -3155,3 +3155,8 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     if layout_query == "TND":
         out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
     return out
+
+if _is_pytorch_version_ge("2.6.0"):
+    @impl(m, "npu_sim_exponential_")
+    def npu_sim_exponential__meta(self, lambd=1, generator=None):
+        return torch.empty_like(self)
