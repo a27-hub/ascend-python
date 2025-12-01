@@ -10,14 +10,14 @@
 
 ## 功能说明<a name="zh-cn_topic_0000001832267082_section14441124184110"></a>
 
--   API功能：适配增量&全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。当不涉及system prefix、左padding、kv量化参数合一、pertensor全量化的场景，推荐使用本接口，否则使用老接口`npu_fused_infer_attention_score`。
+-   API功能：适配增量&全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。当不涉及system prefix、左padding、kv量化参数合一、pertensor全量化的场景，推荐使用本接口，否则使用老接口`npu_fused_infer_attention_score`，支持splitfuse场景+alibimask能力。
 -   计算公式：
 
     $$
-    Attention(Q,K,V)=Softmax(\frac{QK^T}{\sqrt{d}})V
+    Attention(Q,K,V)=Softmax(\frac{QK^T}{\sqrt{d}}+ alibimask)V
     $$
 
-    其中$Q$和$K^T$的乘积代表输入$x$的注意力，$d$表示隐藏层最小的单元尺寸。为避免该值变得过大，通常除以$d$的开根号进行缩放，并对每行进行softmax归一化，与$V$相乘后得到一个$n*d$的矩阵，$n$为输出矩阵的行数。
+    其中$Q$和$K^T$的乘积代表输入$x$的注意力，$d$表示隐藏层最小的单元尺寸。为避免该值变得过大，通常除以$d$的开根号进行缩放，加上alibimask进行掩码，并对每行进行softmax归一化，与$V$相乘后得到一个$n*d$的矩阵，$n$为输出矩阵的行数。
 
 ## 函数原型<a name="zh-cn_topic_0000001832267082_section45077510411"></a>
 
@@ -68,6 +68,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 -   **quant\_scale\_out**（`Tensor`）：可选参数，表示输出的量化因子。数据类型支持`float32`、`bfloat16`。数据格式支持ND。支持pertensor、perchannel。当输入为`bfloat16`时，同时支持`float32`、`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为BSH时，要求`quant_scale_out`所有维度的乘积等于H；其他layout要求乘积等于Q\_N\*D（建议输出layout为BSH时，quant\_scale\_out shape传入\(1, 1, H\)或\(H,\)；输出为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D\)）。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 -   **quant\_offset\_out**（`Tensor`）：可选参数，表示输出的量化偏移。数据类型支持`float32`、`bfloat16`。数据格式支持ND。支持pertensor、perchannel。若传入`quant_offset_out`，需保证其类型和shape信息与`quant_scale_out`一致。如不使用该功能可传入None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 -   **learnable_sink**（`Tensor`）：可选参数，表示通过可学习的“Sink Token”起到吸收Attention Score的作用，数据类型支持`bfloat16`，数据格式支持ND，shape输入为(Q_N,)。默认值为None，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+-   **alibi_coeff**（`Tensor`）：可选参数，alibimask头权重因子, 数据类型仅支持`float32`, 数据格式支持ND, shape输入为(Q\_N,).
 
 -   **num\_query\_heads**（`int`）：可选参数，代表query的head个数，数据类型支持`int64`，在BNSD场景下，需要与shape中的`query`的N轴shape值相同，否则执行异常。
 -   **num\_key\_value\_heads**（`int`）：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，数据类型支持`int64`。默认值为0，表示`key`/`value`/`query`的head个数相等，需要满足`num_query_heads`整除`num_key_value_heads`，`num_query_heads`与`num_key_value_heads`的比值不能大于64。在BSND、BNSD、BNSD\_BSND（仅支持Q\_S大于1）场景下，还需要与shape中的`key`/`value`的N轴shape值相同，否则执行异常。
@@ -129,6 +130,8 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 -   **dequant_scale_key_dtype**（`int`）：可选参数，表示`dequant_scale_key`的数据类型，**预留参数，暂未使用，使用默认值即可。**
 -   **dequant_scale_value_dtype**（`int`）：可选参数，表示`dequant_scale_value`的数据类型，**预留参数，暂未使用，使用默认值即可。**
 -   **dequant_scale_key_rope_dtype**（`int`）：可选参数，表示`dequant_scale_key_rope`的数据类型，**预留参数，暂未使用，使用默认值即可。**
+-   **alibi\_left\_align**（`bool`）：可选参数，alibimask是否左对齐. false表示右对齐，true表示左对齐。
+-   **is\_alibi\_mask\_sqrt**（`bool`）：可选参数，alibimask右对齐时，是否开根号。仅对右对齐alibimask生效，true表示位置编码本身需要开根号，false表示未开根号。
 
 ## 返回值说明<a name="zh-cn_topic_0000001832267082_section22231435517"></a>
 
@@ -447,6 +450,12 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
         -   pse\_shift数据类型需与query数据类型保持一致。
         -   仅支持D轴对齐，即D轴可以被16整除。
 
+    -   alibimask场景使用限制如下：
+        -   sparse\_mode=3。
+        -   pse\_shift不为空。
+        -   alibi\_coeff不为空。
+        -   input\_layout为`TND`。
+        -   query仅支持`float16`和`bfloat16`。
 ## 调用示例<a name="zh-cn_topic_0000001832267082_section14459801435"></a>
 
 -   单算子模式调用
