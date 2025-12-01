@@ -1529,6 +1529,82 @@ class TestFlashAttentionScoreGrad(TestCase):
             self.assertEqual(k.dtype, res[2].dtype)
 
 
+class TestFusedFloydAttention(TestCase):
+    def testFusedFloydAttention(self):
+        with FakeTensorMode():
+            batch_size = 2
+            seq_len_q = 40
+            seq_len_kv = 64
+            head_num = 16
+            head_dim = 128
+            dtype_qkv = torch.float16
+            dtype_mask = torch.float16
+
+            query = torch.randn(batch_size, seq_len_q, head_num, head_dim, dtype=dtype_qkv).npu()
+            key_0 = torch.randn(batch_size, seq_len_kv, head_num, head_dim, dtype=dtype_qkv).npu()
+            value_0 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            key_1 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            value_1 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            atten_mask = torch.randn(batch_size, 1, seq_len_q, seq_len_kv, requires_grad=False).npu()
+
+            out0, out1, out2 = torch_npu.npu_fused_floyd_attention(query, key_0, value_0, key_1, value_1, atten_mask=atten_mask, scale_value=1.0)
+            expected_out0_shape = (batch_size, seq_len_q, head_num, head_dim, 8)
+
+            self.assertEqual(out0.shape, expected_out0_shape)
+            self.assertEqual(out0.dtype, torch.float32)
+            self.assertEqual(out1.shape, out0.shape)
+            self.assertEqual(out1.dtype, out0.dtype)
+
+            self.assertEqual(out2.shape, query.shape)
+            self.assertEqual(out2.dtype, query.dtype)
+
+
+class TestFusedFloydAttentionGrad(TestCase):
+    def testFusedFloydAttentionGrad(self):
+        with FakeTensorMode():
+            batch_size = 2
+            seq_len_q = 40
+            seq_len_kv = 64
+            head_num = 16
+            head_dim = 128
+            dtype_qkv = torch.float16
+            dtype_softmax = torch.float32
+            dtype_mask = torch.float16
+
+            query = torch.randn(batch_size, seq_len_q, head_num, head_dim, dtype=dtype_qkv).npu()
+            key_0 = torch.randn(batch_size, seq_len_kv, head_num, head_dim, dtype=dtype_qkv).npu()
+            value_0 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            key_1 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            value_1 = torch.randn_like(key_0, dtype=dtype_qkv).npu()
+            atten_mask = torch.randn(batch_size, 1, seq_len_q, seq_len_kv, dtype=dtype_mask, requires_grad=False).npu()
+            dy = torch.randn_like(query, dtype=dtype_qkv).npu()
+            softmax_shape = (batch_size, seq_len_q, head_num, head_dim, 8)
+            softmax_max = torch.randn(softmax_shape, dtype=dtype_softmax).npu()
+            softmax_sum = torch.randn(softmax_shape, dtype=dtype_softmax).npu()
+            softmax_in = torch.randn(softmax_shape, dtype=dtype_softmax).npu()
+
+            query.requires_grad = True
+            key_0.requires_grad = True
+            value_0.requires_grad = True
+            key_1.requires_grad = True
+            value_1.requires_grad = True
+            dquery, dkey_0, dvalue_0, dkey_1, dvalue_1 = torch_npu.npu_fused_floyd_attention_grad(query, key_0, value_0, key_1, value_1,
+                                                                                                  dy, softmax_max, softmax_sum, softmax_in,
+                                                                                                  atten_mask=atten_mask,
+                                                                                                  scale_value=1.0)
+
+            self.assertEqual(dquery.shape, query.shape)
+            self.assertEqual(dquery.dtype, query.dtype)
+            self.assertEqual(dkey_0.shape, key_0.shape)
+            self.assertEqual(dkey_0.dtype, key_0.dtype)
+            self.assertEqual(dvalue_0.shape, value_0.shape)
+            self.assertEqual(dvalue_0.dtype, value_0.dtype)
+            self.assertEqual(dkey_1.shape, key_1.shape)
+            self.assertEqual(dkey_1.dtype, key_1.dtype)
+            self.assertEqual(dvalue_1.shape, value_1.shape)
+            self.assertEqual(dvalue_1.dtype, value_1.dtype)
+
+
 class TestNpuMoeComputeExpertTokens(TestCase):
     @unittest.skipIf('2.3.1' in torch.__version__, "skip this ut for this torch version")
     def test_npu_moe_compute_expert_tokens(self):
