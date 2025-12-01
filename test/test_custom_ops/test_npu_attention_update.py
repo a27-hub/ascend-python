@@ -92,9 +92,9 @@ def npu_attention_update(lse_list, local_out_list, update_type=0, run_npu_mode=0
         out_npu, lse_out_npu = model_static(lse_list, local_out_list, update_type)
         return out_npu, lse_out_npu
     elif run_npu_mode == 2:
-        model_static = Model().npu()
-        model_static = torch.compile(model_static, npu_backend, dynamic=True)
-        out_npu, lse_out_npu = model_static(lse_list, local_out_list, update_type)
+        model_dynamic = Model().npu()
+        model_dynamic = torch.compile(model_dynamic, npu_backend, dynamic=True)
+        out_npu, lse_out_npu = model_dynamic(lse_list, local_out_list, update_type)
         return out_npu, lse_out_npu
 
 
