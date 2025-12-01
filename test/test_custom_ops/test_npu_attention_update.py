@@ -81,22 +81,9 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
     O = torch.sum(out_stack * weights.unsqueeze(-1), dim=0)
     return O.contiguous().to(out_dtype)
 
-def npu_attention_update(lse_list, local_out_list, update_type=0, run_npu_mode=0):
-    print("run npu mode = ", run_npu_mode)
-    if run_npu_mode == 0:
-        out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
-        return out_npu, lse_out_npu
-    elif run_npu_mode == 1:
-        model_static = Model().npu()
-        model_static = torch.compile(model_static, npu_backend, dynamic=False)
-        out_npu, lse_out_npu = model_static(lse_list, local_out_list, update_type)
-        return out_npu, lse_out_npu
-    elif run_npu_mode == 2:
-        model_dynamic = Model().npu()
-        model_dynamic = torch.compile(model_dynamic, npu_backend, dynamic=True)
-        out_npu, lse_out_npu = model_dynamic(lse_list, local_out_list, update_type)
-        return out_npu, lse_out_npu
-
+def npu_attention_update(lse_list, local_out_list, update_type=0):
+    out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
+    return out_npu, lse_out_npu
 
 class TestNpuAttentionUpdate(TestCase):
     def setUp(self):
@@ -137,7 +124,7 @@ class TestNpuAttentionUpdate(TestCase):
 
         return (rel_error + abs_error) == 0
 
-    def _run_and_check(self, N=4, H=32, K=2, update_type=0, dtype=torch.float32, atol=1e-4, rtol=1e-4, benchmark=2**-10, run_npu_mode=0):
+    def _run_and_check(self, N=4, H=32, K=2, update_type=0, dtype=torch.float32, atol=1e-4, rtol=1e-4, benchmark=2**-10):
         if not isinstance(N, int):
             raise TypeError(f"N must be an int, got {type(N)}")
         if not isinstance(H, int):
@@ -160,7 +147,7 @@ class TestNpuAttentionUpdate(TestCase):
         lse_list = [torch.randn(N, dtype=torch.float32, device=device) for _ in range(K)]
         local_out_list = [torch.randn(N, H, dtype=dtype, device=device) for _ in range(K)]
 
-        out_npu, lse_out_npu = npu_attention_update(lse_list, local_out_list, update_type, run_npu_mode=run_npu_mode)
+        out_npu, lse_out_npu = npu_attention_update(lse_list, local_out_list, update_type)
 
         out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
                                               [t.to("cpu") for t in local_out_list],
@@ -198,7 +185,7 @@ class TestNpuAttentionUpdate(TestCase):
         ]
         for (N, H, K) in cases:
             for dtype, atol, rtol in dtype_configs:
-                self._run_and_check(N=N, H=H, K=K, update_type=0, dtype=dtype, atol=atol, rtol=rtol, run_npu_mode=0)
+                self._run_and_check(N=N, H=H, K=K, update_type=0, dtype=dtype, atol=atol, rtol=rtol)
 
 if __name__ == "__main__":
     run_tests()
