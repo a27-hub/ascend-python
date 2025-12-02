@@ -57,6 +57,7 @@ at::Tensor npu_quantize_by_kernel(
         yAclType = ACL_HIFLOAT8;
     }
     at::Tensor y = npu_preparation::apply_tensor_without_format(output_shape, self.options().dtype(scalarDtype));
+
     TensorWrapper y_wrapper = {y, yAclType};
     EXEC_NPU_CMD(aclnnQuantize, self, scales, zero_points_opt, yAclType, axis, y_wrapper);
     return y;
