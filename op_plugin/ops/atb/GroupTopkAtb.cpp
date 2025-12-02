@@ -40,7 +40,7 @@ void _npu_group_topk(const at::Tensor &self, int64_t k, int64_t group_num, int64
     paramsetter.Input(self, true)
                 .Input(idx, true)
                 .Output(out);
-    auto opGroupTopk = GroupTopkParamCache.getOperation(GroupTopkParam, "GroupTopkOperation");
+    auto opGroupTopk = GroupTopkParamCache.getOperation(GroupTopkParam, paramsetter, "roupTopkOperation");
     RunAtbCmd(opGroupTopk, paramsetter, "GroupTopkOperation");
     return;
 }

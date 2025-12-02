@@ -45,7 +45,7 @@ void _npu_paged_attention_mla(const at::Tensor &query, const at::Tensor &key_cac
         .Input(block_table, true)
         .Input(context_lens, true)
         .Output(out);
-    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
+    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, paramsetter, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
     return;

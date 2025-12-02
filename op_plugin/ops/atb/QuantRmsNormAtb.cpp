@@ -42,7 +42,7 @@ void _npu_quant_rms_norm(const at::Tensor &x,
                 .Input(offset, true)
                 .Output(output);
 
-    auto opRmsNorm = rmsnormParamCache.getOperation(rmsnormParam, "QuantRmsNormOperation");
+    auto opRmsNorm = rmsnormParamCache.getOperation(rmsnormParam, paramsetter, "QuantRmsNormOperation");
     RunAtbCmd(opRmsNorm, paramsetter, "QuantRmsNormOperation");
     return;
 }

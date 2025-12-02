@@ -12,6 +12,7 @@
 // limitations under the License.
 
 #include "OperationCacheCompute.h"
+#include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 
 
 namespace atb {
@@ -26,6 +27,38 @@ constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
 void add_param_to_buf(const string& s)
 {
     MEMCPY_TO_BUF(s.c_str(), static_cast<int64_t>(s.size()));
+}
+
+void add_param_to_buf(const atb::Tensor &tensor)
+{
+    auto tensor_desc = tensor.desc;
+    if (tensor.deviceData == nullptr && tensor.hostData == nullptr) {
+        MEMCPY_TO_BUF(",", 1);
+        return;
+    }
+    // atb tensor shape
+    MEMCPY_TO_BUF(tensor_desc.shape.dims, static_cast<int64_t>(tensor_desc.shape.dimNum * sizeof(int64_t)))
+    // atb tensor dtype
+    auto st = tensor_desc.dtype;
+    MEMCPY_TO_BUF(&st, sizeof(st));
+    // seperator
+    MEMCPY_TO_BUF(",", 1);
+    // format
+    auto format = tensor_desc.format;
+    MEMCPY_TO_BUF(&format, sizeof(format));
+}
+
+void add_param_to_buf(const ParamSetter &paramsetter)
+{
+    atb::VariantPack variant_pack = paramsetter.variant_pack_;
+    auto input_tensors = variant_pack.inTensors;
+    auto output_tensors = variant_pack.outTensors;
+    for (auto input: input_tensors) {
+        add_param_to_buf(input);
+    }
+    for (auto output: output_tensors) {
+        add_param_to_buf(output);
+    }
 }
 
 void add_param_to_buf(const c10::optional<at::Tensor> &t) {}

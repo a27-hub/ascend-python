@@ -51,7 +51,7 @@ void _npu_flash_attention(const at::Tensor &query, const at::Tensor &key, const 
         .Input(seq_len, true)
         .Output(out);
 
-    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
+    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, parametter, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
 
     return;

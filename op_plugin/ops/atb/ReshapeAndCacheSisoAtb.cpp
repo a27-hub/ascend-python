@@ -31,7 +31,7 @@ void _npu_reshape_and_cache_siso(const at::Tensor &key, at::Tensor &key_cache, c
         .Input(slot_indices, true)
         .Output(key_cache);
 
-    auto opReshape = reshapeAndCacheParamCache.getOperation(reshapeparam, "ReshapeCacheOperation");
+    auto opReshape = reshapeAndCacheParamCache.getOperation(reshapeparam, parametter, "ReshapeCacheOperation");
     RunAtbCmd(opReshape, parametter, "ReshapeCacheOperation");
 
     return;

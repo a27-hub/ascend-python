@@ -30,13 +30,12 @@ void _npu_matmul_add_fp32(const at::Tensor &x, const at::Tensor &weight, at::Ten
     linearParam.hasBias = false;
     linearParam.enAccum = true;
 
-    auto opLinear = linearParamCache.getOperation(linearParam, "LinearOperation");
     ParamSetter paramsetter;
     paramsetter.Input(x)
                 .Input(weight)
                 .Input(C)
                 .Output(C);
-
+    auto opLinear = linearParamCache.getOperation(linearParam, paramsetter, "LinearOperation");
     RunAtbCmd(opLinear, paramsetter, "LinearOperation");
     return ;
 }

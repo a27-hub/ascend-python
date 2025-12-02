@@ -26,13 +26,14 @@
 
 namespace atb {
 
+class ParamSetter;
 template <typename ParamType>
 class OpParamCache {
 public:
 
     static OpParamCache& getInstance();
 
-    atb::Operation* getOperation(const ParamType& param, const std::string& name);
+    atb::Operation* getOperation(const ParamType& param, const ParamSetter &paramsetter, const std::string& name);
     atb::Operation* getOperation(uint64_t hash_id);
     void saveOperation(uint64_t hash_id, atb::Operation* op);
 
@@ -66,14 +67,14 @@ OpParamCache<ParamType>& OpParamCache<ParamType>::getInstance()
 
 
 template <typename ParamType>
-atb::Operation* OpParamCache<ParamType>::getOperation(const ParamType& param, const std::string& name)
+atb::Operation* OpParamCache<ParamType>::getOperation(const ParamType& param, const ParamSetter &paramsetter, const std::string& name)
 {
     const auto is_capturing = static_cast<int>(c10_npu::currentStreamCaptureStatusMayInitCtx());
     if (is_capturing) {
         // The atb operator does not support operator reuse, when operator creation and execution in separate threads.
         return CreateAtbOperation(param, name);
     } else {
-        uint64_t hashValue = computeHash(param);
+        uint64_t hashValue = computeHash(param, paramsetter);
         {
             std::lock_guard<std::mutex> lock(mutex_);
             auto op_cache = op_map_.find(hashValue);
