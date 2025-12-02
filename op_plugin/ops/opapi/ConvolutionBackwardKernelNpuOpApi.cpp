@@ -276,6 +276,10 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     at::Tensor gradWeight;
     at::Tensor gradBias;
 
+    const int OUTPUT_MASK_GRAD_INPUT = 0;
+    const int OUTPUT_MASK_GRAD_WEIGHT = 1;
+    const int OUTPUT_MASK_GRAD_BIAS = 2;
+
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
 
@@ -289,6 +293,16 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     }
     EXEC_NPU_CMD(aclnnConvolutionBackward, grad_output, input, weight, bias_sizes, stride, padding, dilation, transposed,
                  output_padding, groups, output_mask, cube_math_type, gradInput, gradWeight, gradBias);
+    
+    if (!output_mask[OUTPUT_MASK_GRAD_INPUT]) {
+        gradInput = at::Tensor();
+    }
+    if (!output_mask[OUTPUT_MASK_GRAD_WEIGHT]) {
+        gradWeight = at::Tensor();
+    }
+    if (!output_mask[OUTPUT_MASK_GRAD_BIAS]) {
+        gradBias = at::Tensor();
+    }
     return std::make_tuple(std::move(gradInput), std::move(gradWeight), std::move(gradBias));
 }
 
