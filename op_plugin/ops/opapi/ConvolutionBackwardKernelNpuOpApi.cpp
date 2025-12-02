@@ -297,7 +297,7 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     if (!output_mask[OUTPUT_MASK_GRAD_INPUT]) {
         gradInput = at::Tensor();
     }
-    if (!output_mask[OUTPUT_MASK_GRAD_WEIGHTT]) {
+    if (!output_mask[OUTPUT_MASK_GRAD_WEIGHT]) {
         gradWeight = at::Tensor();
     }
     if (!output_mask[OUTPUT_MASK_GRAD_BIAS]) {
