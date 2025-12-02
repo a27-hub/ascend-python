@@ -158,6 +158,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             output,
             output_scale_wrapper);
     }
-    return std::tuple<at::Tensor, at::Tensor>(output, output_scale);
+    return std::tuple<at::Tensor, at::Tensor>(output, output_scale_wrapper);
 }
 }
