@@ -28,7 +28,7 @@ std::tuple<at::Tensor, at::Tensor> npu_attention_update(at::TensorList lse, at::
         output_size_0,
         lse[0].options().dtype(output_dtype_0)
     );
-    at::Tensor lse_out npu_preparation::apply_tensor_without_format(
+    at::Tensor lse_out = npu_preparation::apply_tensor_without_format(
         lse[0].sizes(),
         lse[0].options()
     );
