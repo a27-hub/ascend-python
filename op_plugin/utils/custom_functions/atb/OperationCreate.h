@@ -15,6 +15,7 @@
 #define OPPLUGIN_UTILS_ATB_OPERATION_CREATE_H
 
 #include <unordered_map>
+#include <queue>
 #include <mutex>
 #include <memory>
 #include <torch_npu/csrc/framework/OpCommand.h>
@@ -27,6 +28,7 @@
 namespace atb {
 
 class ParamSetter;
+
 template <typename ParamType>
 class OpParamCache {
 public:
@@ -38,14 +40,17 @@ public:
     void saveOperation(uint64_t hash_id, atb::Operation* op);
 
 private:
+    static constexpr size_t max_cache_size = 1000;
     OpParamCache();
 
     OpParamCache(const OpParamCache&) = delete;
     OpParamCache& operator=(const OpParamCache&) = delete;
 
     ~OpParamCache();
+    void evictIfNeeded();
 
     std::unordered_map<uint64_t, atb::Operation*> op_map_;
+    std::queue<uint64_t> order_queue_;
     mutable std::mutex mutex_;
 };
 
@@ -65,6 +70,20 @@ OpParamCache<ParamType>& OpParamCache<ParamType>::getInstance()
     return instance;
 }
 
+template <typename ParamType>
+void OpParamCache<ParamType>::evictIfNeeded()
+{
+    while (op_map_.size() > max_cache_size) {
+        uint64_t old_key = order_queue_.front();
+        order_queue_.pop();
+
+        auto it = op_map_.find(old_key);
+        if (it != op_map_.end()) {
+            DestroyOperation(it->second);
+            op_map_.erase(it);
+        }
+    }
+}
 
 template <typename ParamType>
 atb::Operation* OpParamCache<ParamType>::getOperation(const ParamType& param, const ParamSetter &paramsetter, const std::string& name)
@@ -83,6 +102,8 @@ atb::Operation* OpParamCache<ParamType>::getOperation(const ParamType& param, co
             }
             atb::Operation* op = CreateAtbOperation(param, name);
             op_map_[hashValue] = op;
+            order_queue_.push(hashValue);
+            evictIfNeeded();
             return op;
         }
     }
@@ -106,6 +127,7 @@ void OpParamCache<ParamType>::saveOperation(uint64_t hash_id, atb::Operation* op
 {
     std::lock_guard<std::mutex> lock(mutex_);
     op_map_[hash_id] = op;
+    evictIfNeeded();
     return ;
 }
 

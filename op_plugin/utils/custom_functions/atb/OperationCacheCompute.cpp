@@ -61,8 +61,31 @@ void add_param_to_buf(const ParamSetter &paramsetter)
     }
 }
 
-void add_param_to_buf(const c10::optional<at::Tensor> &t) {}
-void add_param_to_buf(const at::Tensor &t) {}
+void add_param_to_buf(const c10::optional<at::Tensor> &t)
+{
+    if (t.has_value() && t.value().defined()) {
+        add_param_to_buf(t.value());
+    } else {
+        MEMCPY_TO_BUF(",", 1);
+    }
+}
+
+void add_param_to_buf(const at::Tensor &t)
+{
+    if (!t.defined()) {
+        MEMCPY_TO_BUF(",", 1);
+        return;
+    }
+    // view shape
+    MEMCPY_TO_BUF(t.sizes().data(), static_cast<int64_t>(t.sizes().size() * sizeof(int64_t)));
+    // data type
+    auto st = t.scalar_type();
+    MEMCPY_TO_BUF(&st, sizeof(st));
+    // seperator
+    MEMCPY_TO_BUF(",", 1);
+    auto format = atb::utils::GetFormatForAtb(at_tensor);
+    MEMCPY_TO_BUF(&format, sizeof(format));
+}
 
 void add_param_to_buf() {}
 
