@@ -285,7 +285,6 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 
     // use 2nd dimension of outputSizes
     gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
-    
     int64_t input_dim = input.ndimension();
     at::optional<c10::IntArrayRef> bias_sizes = c10::nullopt;
     if (bias_sizes_opt.has_value()) {
