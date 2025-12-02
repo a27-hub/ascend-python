@@ -33,6 +33,7 @@ class TestNPUQuantize(TestCase):
     def cpu_op_exec_per_channel(self, input_x, input_scales, input_zero_points, axis, dtype):
         output = torch.quantize_per_channel(input_x, input_scales, input_zero_points, axis, dtype).int_repr()
         output = output.numpy()
+        print(f"cpu_op_exec_per_channel  output dtype is {output.dtype}")
         return output
     
     def cpu_op_exec_ascend_quant_v2(self, input_x, input_scales, input_zero_points, axis, dtype):
@@ -61,6 +62,7 @@ class TestNPUQuantize(TestCase):
         output = torch_npu.npu_quantize(input_x, input_scales, input_zero_points, dtype, axis)
         output = output.to("cpu")
         output = output.numpy()
+        print(f"npu_op_exec_per_channel  output dtype is {output.dtype}")
         return output
 
     def test_npu_quantize_3_3_0_int32(self, device="npu"):
