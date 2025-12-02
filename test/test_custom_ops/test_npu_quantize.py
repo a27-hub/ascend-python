@@ -31,9 +31,9 @@ class TestNPUQuantize(TestCase):
         return npu_input_x, npu_input_scales, npu_input_zero_points
 
     def cpu_op_exec_per_channel(self, input_x, input_scales, input_zero_points, axis, dtype):
-        input_x = input_x.astype("float32")
-        input_scales = input_scales.astype("float32")
-        input_zero_points = input_zero_points.astype("float32")
+        input_x = input_x.numpy().astype("float32")
+        input_scales = input_scales.numpy().astype("float32")
+        input_zero_points = input_zero_points.numpy().astype("float32")
 
         add_offset = input_x / input_scales + input_zero_points
         round_data = np.round(add_offset, 0)
