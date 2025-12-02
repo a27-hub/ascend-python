@@ -31,7 +31,6 @@ const static int64_t DIM_3 = 3;
 const static int64_t DIM_4 = 4;
 const static int64_t DIM_NUMS_3 = 3;
 const static int64_t DIM_NUMS_4 = 4;
-const static int64_t INT4_IN_INT32 = 8;
 const static int SHAPE_3D = 3;
 const static int SHAPE_4D = 4;
 const static int SHAPE_5D = 5;
@@ -195,6 +194,18 @@ static int64_t get_value_d(
     return valueD;
 }
 
+static int get_change_d_scale(
+    const at::Tensor &value)
+{
+    const static int changeDScale = 1;
+    const static int changeDForInt32 = 8;
+    // int4 伪装成 int32
+    if (value.scalar_type() == at::kInt) {
+        return changeDForInt32;
+    }
+    return changeDScale;
+}
+
 static at::Tensor infer_attention_out_shape(
     std::string attention_out_layout,
     const at::Tensor &query,
@@ -211,8 +222,7 @@ static at::Tensor infer_attention_out_shape(
     if (attention_out_layout == "BSH") {
         auto [b, n1, s1, d1] = get_query_b_n_s_d(query, query_layout, num_heads);
         int outH = num_heads * valueD;
-        int h1 = d1 * num_heads;
-        outH = (outH == 0 || h1 == 0) ? h1 : outH;
+        outH = (outH == 0 || query.size(DIM_2) == 0) ? query.size(DIM_2) : outH;
         attention_out = OpPreparation::apply_tensor_without_format(
             {b, s1, outH},
             query.options().dtype(query.dtype())
@@ -309,15 +319,17 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
         num_heads,
         OPS_ERROR(ErrCode::VALUE)
     );
-    if (kv_num_heads == 0) {
-        kv_num_heads = num_heads;
-    }
+    kv_num_heads = (kv_num_heads == 0) ? num_heads : kv_num_heads;
     
-    // 获取query_layout, attention_out_layout
+    // get query_layout, attention_out_layout
     auto [query_layout, attention_out_layout] = get_query_and_attention_out_layout(query, input_layout_str);
 
-    // 计算valueD
+    // cal valueD
     int64_t valueD = get_value_d(block_table, query, value, query_layout, kv_num_heads);
+
+    // 计算changeDScale
+    int changeDScale = get_change_d_scale(value);
+    valueD = valueD * changeDScale;
 
     // 推导attenout shape
     at::Tensor tmp_output = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, valueD);
@@ -336,7 +348,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
         output = npu_preparation::apply_tensor_without_format(tmp_output);
     }
 
-    // 推导lseout shape
+    // infer lseout shape
     at::Tensor softmax_lse;
     if (softmax_lse_flag) {
         softmax_lse = infer_lse_out_shape(input_layout_str, query, query_layout, num_heads);
