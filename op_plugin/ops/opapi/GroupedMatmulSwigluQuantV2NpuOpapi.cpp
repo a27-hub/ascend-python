@@ -16,6 +16,27 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+const static int64_t MXFP_DIVISOR_SIZE = 64;
+const static int64_t MXFP_MULTI_BASE_SIZE = 2;
+
+const std::string GmmSwigluTypeToString(int64_t input_type)
+{
+    return c10_npu::IsCustomDType(input_type) ?
+               c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
+}
+
+void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
+{
+    auto output_size = op_infer::array_to_small_vector({dim_m, dim_n});
+    y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
+
+void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t dim_n,
+                             const c10::TensorOptions &options)
+{
+    auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
+    y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
@@ -48,13 +69,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    GmmSwigluTypeToString(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     if (x_scale_dtype.has_value()) {
         TORCH_CHECK(x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but now is ",
-                    GmmSwigluTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     int64_t dequant_mode_real = dequant_mode.value_or(0);
@@ -66,14 +87,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     auto bias_real = bias.value_or(at::Tensor());
     auto smooth_scale_real = smooth_scale.value_or(at::Tensor());
 
-    TensorListWrapper weight_scale_wrapper = {weight_scale,
-        weight_scale_dtype.has_value() ? c10_npu::GetAclDataType(weight_scale_dtype.value())
-                                : (weight_scale.empty() ? aclDataType::ACL_FLOAT
-                                : npu_preparation::convert_to_acl_data_type(weight_scale[0].scalar_type()))};
-    TensorWrapper x_scale_wrapper = {x_scale,
-        x_scale_dtype.has_value() ? c10_npu::GetAclDataType(x_scale_dtype.value())
-                                : (!x_scale.numel() ? aclDataType::ACL_FLOAT
-                                : npu_preparation::convert_to_acl_data_type(x_scale.scalar_type()))};
+    TensorListWrapper weight_scale_wrapper = make_wrapper(weight_scale, weight_scale_dtype);
+    TensorWrapper x_scale_wrapper = make_wrapper(x_scale, x_scale_dtype);
     at::Tensor output;
     at::Tensor output_scale;
     if (!weight_scale_dtype.has_value()) {
