@@ -3005,12 +3005,15 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
 
 
 @impl(m, "npu_dynamic_mx_quant")
-def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32):
+def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32, scale_alg=0):
     dim_num = input_dummy.dim()
     mxscale_shape = []
     if axis < -dim_num or axis >= dim_num:
         raise RuntimeError("Parameter axis is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
                            ops_error(ErrCode.PARAM))
+    if scale_alg not in [0, 1]:
+        raise RuntimeError("Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
+                            ops_error(ErrCode.PARAM))
     if not (block_size % 32 == 0 and block_size > 0 and block_size <= 1024):
         raise RuntimeError("Parameter block_size must be divisible by 32 and no greater than 1024, greater than 0" +
                            ops_error(ErrCode.PARAM))
