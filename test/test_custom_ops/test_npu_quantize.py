@@ -88,8 +88,12 @@ class TestNPUQuantize(TestCase):
         datainfo = DataInfo(-1, 1, (30, 30, 30, 30), (30,), (30,), np.float16, np.float32, np.uint8)
         input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
         input_x1_cpu = input_x1.float()
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 2, torch.quint8).astype(np.int32)
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 2, torch.quint8)
+        print(f"cpu_output1 is {cpu_output1}")
+        cpu_output1 = cpu_output1.astype(np.int32)
+        print(f"cpu_output1 is {cpu_output1}")
         npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 2, torch.uint8)
+        print(f"npu_output1 is {npu_output1}")
         self.assertRtolEqual(cpu_output1, npu_output1)
 
     @SupportedDevices(['Ascend910B'])
