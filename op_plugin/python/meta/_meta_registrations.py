@@ -355,7 +355,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
-    # kvcache量化
+    # kvcache quantification
     if weight_quant_mode == 3 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.float8_e4m3fn, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
@@ -366,7 +366,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
         dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
-    # 输出query_norm
+    # output query_norm
     if query_norm_flag:
         query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
         if weight_uq_qr.dtype == torch.int8:
@@ -466,7 +466,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
-    # kvcache量化
+    # kvcache quantification
     if weight_quant_mode == 3 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.float8_e4m3fn, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
@@ -479,10 +479,10 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
-    # 输出query_norm
+    # output query_norm
     if query_norm_flag:
         query_norm = torch.empty(query_norm_shape, dtype=weight_uq_qr.dtype, device='meta')
-        # 动态量化
+        # dynamic quantification
         if weight_uq_qr.dtype == torch.int8:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:

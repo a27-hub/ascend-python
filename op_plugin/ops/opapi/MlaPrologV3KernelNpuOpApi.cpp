@@ -20,9 +20,9 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int DIM_2 = 2;
 const int DIM_3 = 3;
-const int MODE_1 = 1;
-const int MODE_2 = 2;
-const int MODE_3 = 3;
+const int KV_QUANT_MODE = 1;
+const int FULL_QUANT_MODE = 2;
+const int MXFP8_FULL_QUANT_MODE = 3;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
@@ -53,8 +53,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_norm {nullptr};
 
     if (token_x_dim == DIM_3) {
-        if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3) && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
+            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -66,10 +68,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
+        } else {
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     } else {
-        if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3) && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
+            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
+            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -81,12 +88,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
+        } else {
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
 
-    if (weight_quant_mode == MODE_3) {
+    if (weight_quant_mode == MXFP8_FULL_QUANT_MODE) {
         const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
         const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
         const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
@@ -144,8 +154,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dequant_scale_q_norm {nullptr};
 
     if (token_x_dim == DIM_3) {
-        if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3) && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
+            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
+            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -154,13 +166,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario.
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
+        } else {
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     } else {
-        if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3) && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景, weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) { 
+            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
+            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -172,6 +189,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
+        } else {
+            query_norm = npu_preparation::apply_tensor_without_format({0}, token_x.options().dtype(weight_uq_qr.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
     }
 
@@ -179,7 +199,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor kv_cache_inplace = kv_cache.clone();
     at::Tensor kr_cache_inplace = kr_cache.clone();
 
-    if (weight_quant_mode == MODE_3) {
+    if (weight_quant_mode == MXFP8_FULL_QUANT_MODE) {
         const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
         const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
         const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
