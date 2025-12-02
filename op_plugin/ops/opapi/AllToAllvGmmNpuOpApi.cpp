@@ -18,12 +18,23 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+    const int DIM_TWO = 2;
+    const int DIM_THREE = 3;
     std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(const at::Tensor &gmm_x, const at::Tensor &gmm_weight,
                                                                      c10::string_view hcom, int64_t ep_world_size, at::IntArrayRef send_counts, at::IntArrayRef recv_counts,
                                                                      const c10::optional<at::Tensor> &send_counts_tensor, const c10::optional<at::Tensor> &recv_counts_tensor,
                                                                      const c10::optional<at::Tensor> &mm_x, const c10::optional<at::Tensor> &mm_weight,
                                                                      bool trans_gmm_weight, bool trans_mm_weight, bool permute_out_flag)
     {
+        TORCH_CHECK(gmm_x.dim() == DIM_TWO, "The dim of gmm_x should be 2, but got: ", gmm_x.dim(), OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(gmm_weight.dim() == DIM_THREE, "The dim of gmm_weight(e, H1, N1) should be 3, but got: ", gmm_weight.dim(), OPS_ERROR(ErrCode::PARAM));
+        if (mm_x.has_value()) {
+            TORCH_CHECK(mm_x.value().dim() == DIM_TWO, "The dim of mm_x should be 2, but got: ", mm_x.value().dim(), OPS_ERROR(ErrCode::PARAM));
+        }
+        if (mm_weight.has_value()) {
+            TORCH_CHECK(mm_weight.value().dim() == DIM_TWO, "The dim of mm_weight should be 2, but got: ", mm_weight.value().dim(), OPS_ERROR(ErrCode::PARAM));
+        }
+
         at::Tensor mm_y{nullptr};
         at::Tensor permute_out{nullptr};
         int64_t a = 0;
