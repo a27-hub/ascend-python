@@ -44,7 +44,7 @@ void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::
         .Input(slot_indices, true)
         .Output(key_cache)
         .Output(value_cache);
-    auto opReshape = reshapeAndCacheParamCache.getOperation(reshapeparam, "ReshapeCacheOperation");
+    auto opReshape = reshapeAndCacheParamCache.getOperation(reshapeparam, parametter, "ReshapeCacheOperation");
     RunAtbCmd(opReshape, parametter, "ReshapeCacheOperation");
 
     return;

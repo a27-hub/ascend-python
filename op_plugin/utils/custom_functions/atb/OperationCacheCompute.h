@@ -23,6 +23,7 @@
 
 namespace atb {
 
+class ParamSetter;
 constexpr int g_hash_buf_size = 8192;
 constexpr int g_hash_buf_max_size = g_hash_buf_size + 1024;
 extern thread_local char g_hash_buf[g_hash_buf_size];
@@ -46,6 +47,7 @@ template <typename T> void add_param_to_buf(const T &value)
 void add_param_to_buf(const string &s);
 void add_param_to_buf(const c10::optional<at::Tensor> &t);
 void add_param_to_buf(const at::Tensor &t);
+void add_param_to_buf(const ParamSetter &paramsetter);
 void add_param_to_buf();
 
 template <typename T> void add_param_to_buf(const std::string &name, const T &value)
@@ -147,10 +149,11 @@ struct HashOpParam<atb::infer::ReshapeAndCacheParam> {
 };
 
 template <typename T>
-uint64_t computeHash(const T& obj)
+uint64_t computeHash(const T& obj, const ParamSetter &paramsetter)
 {
     g_hash_offset = 0;
     HashOpParam<T>{}(obj);
+    add_param_to_buf(paramsetter);
     return calc_hash_id();
 }
 

@@ -51,7 +51,7 @@ void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_c
             .Input(k_descale, true)
             .Input(v_descale, true)
             .Output(out);
-    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
+    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, paramsetter, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
     return;

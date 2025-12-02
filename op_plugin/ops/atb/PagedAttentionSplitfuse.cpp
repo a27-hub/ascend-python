@@ -46,7 +46,7 @@ void _npu_paged_attention_splitfuse(const at::Tensor &query, const at::Tensor &k
         .Input(mask)
         .Input(seq_len, true)
         .Output(out);
-    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
+    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, paramsetter, "PagedAttentionOperation");
     RunAtbCmd(opPaged, paramsetter, "PagedAttentionOperation");
 
     return;

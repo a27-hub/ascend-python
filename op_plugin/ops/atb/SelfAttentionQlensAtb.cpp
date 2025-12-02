@@ -53,7 +53,7 @@ void _npu_flash_attention_qlens(const at::Tensor &query, const at::Tensor &key_c
         .Input(context_lens, true)
         .Output(out);
 
-    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
+    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, parametter, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
 
     return;
