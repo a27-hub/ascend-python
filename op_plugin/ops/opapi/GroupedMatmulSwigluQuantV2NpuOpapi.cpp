@@ -19,6 +19,25 @@ using npu_preparation = at_npu::native::OpPreparation;
 const static int64_t MXFP_DIVISOR_SIZE = 64;
 const static int64_t MXFP_MULTI_BASE_SIZE = 2;
 
+const std::string GmmSwigluTypeToString(int64_t input_type)
+{
+    return c10_npu::IsCustomDType(input_type) ?
+               c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
+}
+
+void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
+{
+    auto output_size = op_infer::array_to_small_vector({dim_m, dim_n});
+    y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
+
+void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t dim_n,
+                             const c10::TensorOptions &options)
+{
+    auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
+    y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
+
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
     const at::TensorList weight,
