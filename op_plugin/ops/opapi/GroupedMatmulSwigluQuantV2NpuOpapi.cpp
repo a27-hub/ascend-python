@@ -16,6 +16,8 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+const static int64_t MXFP_DIVISOR_SIZE = 64;
+const static int64_t MXFP_MULTI_BASE_SIZE = 2;
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
