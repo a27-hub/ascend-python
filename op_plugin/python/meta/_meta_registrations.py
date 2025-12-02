@@ -3704,10 +3704,11 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None,
 
 
 @impl(m, "npu_attention_update")
+@impl(m, "npu_attention_update.List")
 def npu_attention_update_meta(lse, local_out, update_type):
     ref = local_out[0]
     return (torch.empty(ref.size(), dtype=ref.dtype, device=ref.device),
-            torch.empty(0, dtype=lse.dtype, device=lse.device))
+            torch.empty(lse[0].size(), dtype=lse[0].dtype, device=lse[0].device))
 
 
 @impl(m, "npu_mrope")
