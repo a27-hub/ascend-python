@@ -69,7 +69,7 @@ namespace atb {
             .Output(key);
 
         OpParamCache<RopeParam> &ropeParamCache = OpParamCache<RopeParam>::getInstance();
-        auto opRope = ropeParamCache.getOperation(ropeparam, "RopeOperation");
+        auto opRope = ropeParamCache.getOperation(ropeparam, paramsetter, "RopeOperation");
         RunAtbCmd(opRope, parametter, "RopeOperation");
     }
 

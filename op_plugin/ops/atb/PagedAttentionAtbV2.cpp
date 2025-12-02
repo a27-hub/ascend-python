@@ -70,7 +70,7 @@ at::Tensor& _npu_paged_attention_v2(
             .Output(out);
     }
 
-    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
+    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, paramsetter, "PagedAttentionOperation");
     if (workspace.has_value() && workspace.value().defined()) {
         RunAtbCmdWithWorkspace(opPaged, paramsetter, "PagedAttentionOperation", workspace.value());
     } else {
@@ -128,7 +128,7 @@ at::Tensor _npu_paged_attention_v2_get_workspace(
             .Input(mask)
             .Output(out);
     }
-    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, "PagedAttentionOperation");
+    auto opPaged = pagedAttentionParamCache.getOperation(pagedparam, paramsetter, "PagedAttentionOperation");
     uint64_t workspace_size = GetAtbWorkspaceSizeCmd(opPaged, paramsetter, "PagedAttentionOperation");
     at::Tensor workspace_tensor =  at::empty({workspace_size}, query.options().dtype(at::kByte));
     return workspace_tensor;

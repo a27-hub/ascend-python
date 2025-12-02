@@ -35,7 +35,7 @@ void _npu_quantize_per_tensor(const at::Tensor &x, const at::Tensor &scale, cons
                 .Input(scale, true)
                 .Input(zero_point, true)
                 .Output(y);
-    auto opReshape = elewiseParamCache.getOperation(elewiseparam, "ElewiseCacheOperation");
+    auto opReshape = elewiseParamCache.getOperation(elewiseparam, paramsetter, "ElewiseCacheOperation");
     RunAtbCmd(opReshape, parametter, "ElewiseCacheOperation");
     return;
 }

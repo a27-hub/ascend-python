@@ -84,7 +84,7 @@ at::Tensor& _npu_flash_attention_prefix_v2(
             .Input(slopes)
             .Output(out);
     }
-    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, "SelfAttentionOperation");
+    auto opSelfattention = selfAttentionParamCache.getOperation(selfattentionparam, paramsetter, "SelfAttentionOperation");
     RunAtbCmd(opSelfattention, parametter, "SelfAttentionOperation");
 
     return out;
