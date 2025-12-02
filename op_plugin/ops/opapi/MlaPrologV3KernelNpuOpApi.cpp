@@ -55,8 +55,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
-            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
-            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
             // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
@@ -66,7 +66,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         } else {
@@ -76,8 +76,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
-            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
-            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
             // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
@@ -155,9 +155,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
-       if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
-            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
-            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
             // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
@@ -167,7 +167,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         } else {
@@ -177,8 +177,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
-            // When weight_quant_mode is 2 and kv_cache_quant_mode is 1, it represents the fully quantized KV quantization scenario. 
-            // When weight_quant_mode is 3 and kv_cache_quant_mode is 1, it represents the mxfp8 fully quantized KV quantization scenario.
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
             // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
