@@ -277,7 +277,7 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     at::Tensor gradBias;
 
     const int OUTPUT_MASK_GRAD_INPUT = 0;
-    const int OUTPUT_MASK_GRAD_OUTPUT = 1;
+    const int OUTPUT_MASK_GRAD_WEIGHT = 1;
     const int OUTPUT_MASK_GRAD_BIAS = 2;
 
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
@@ -297,11 +297,11 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     if (!output_mask[OUTPUT_MASK_GRAD_INPUT]) {
         gradInput = at::Tensor();
     }
-    if (!output_mask[OUTPUT_MASK_GRAD_OUTPUT]) {
+    if (!output_mask[OUTPUT_MASK_GRAD_WEIGHTT]) {
         gradWeight = at::Tensor();
     }
     if (!output_mask[OUTPUT_MASK_GRAD_BIAS]) {
-        gradWeight = at::Tensor();
+        gradBias = at::Tensor();
     }
     return std::make_tuple(std::move(gradInput), std::move(gradWeight), std::move(gradBias));
 }
