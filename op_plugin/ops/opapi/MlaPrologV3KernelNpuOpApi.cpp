@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -20,8 +21,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int DIM_2 = 2;
 const int DIM_3 = 3;
-const int MODE_1 = 1;
-const int MODE_2 = 2;
+const int KV_QUANT_MODE = 1;
+const int PARTIAL_QUANT_MODE = 1;
+const int FULL_QUANT_MODE = 2;
+const int MXFP8_FULL_QUANT_MODE = 3;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
@@ -52,8 +55,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -62,14 +67,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         }
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -78,7 +85,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
         }
@@ -86,13 +93,31 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
 
-    EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
-        rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
-        dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
-        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
-        dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    if (weight_quant_mode == MXFP8_FULL_QUANT_MODE) {
+        const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_dkv_kr_tensor = c10::value_or_else(dequant_scale_w_dkv_kr, [] {return at::Tensor();});
 
+        TensorWrapper dequant_scale_x_wrapper = {dequant_scale_x_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_dq_wrapper = {dequant_scale_w_dq_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
+
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x_wrapper, dequant_scale_w_dq_wrapper,
+            dequant_scale_w_uq_qr_wrapper, dequant_scale_w_dkv_kr_wrapper, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+            k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+            ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+            dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    } else {
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
+            dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+            k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+            ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+            dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    }
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
 }
 
@@ -125,8 +150,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -135,14 +162,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         }
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
-        if (weight_quant_mode == MODE_2 && kv_cache_quant_mode == MODE_1) { // weight_quant_mode=2且kv_cache_quant_mode=1时为全量化kv量化场景
-            // kvcache量化
+        if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
+            // weight_quant_mode=2 and kv_cache_quant_mode=1 represents the fully quantized KV quantization scenario
+            // weight_quant_mode=3 and kv_cache_quant_mode=1 represents the mxfp8 fully quantized KV quantization scenario
+            // kvcache quantification
             query = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(token_x.dtype()));
             dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), 1}, at::kFloat);
         } else {
@@ -151,7 +180,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
         }
@@ -161,12 +190,31 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor kv_cache_inplace = kv_cache.clone();
     at::Tensor kr_cache_inplace = kr_cache.clone();
 
-    EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
-        rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
-        dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
-        k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
-        ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
-        dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    if (weight_quant_mode == MXFP8_FULL_QUANT_MODE) {
+        const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
+        const at::Tensor& dequant_scale_w_dkv_kr_tensor = c10::value_or_else(dequant_scale_w_dkv_kr, [] {return at::Tensor();});
+
+        TensorWrapper dequant_scale_x_wrapper = {dequant_scale_x_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_dq_wrapper = {dequant_scale_w_dq_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
+
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x_wrapper, dequant_scale_w_dq_wrapper,
+            dequant_scale_w_uq_qr_wrapper, dequant_scale_w_dkv_kr_wrapper, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+            k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+            ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+            dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    } else {
+        EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
+            rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
+            dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+            k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+            ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+            dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
+    }
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm, kv_cache_inplace, kr_cache_inplace);
 }
