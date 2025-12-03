@@ -22,6 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 const int DIM_2 = 2;
 const int DIM_3 = 3;
 const int KV_QUANT_MODE = 1;
+const int PARTIAL_QUANT_MODE = 1;
 const int FULL_QUANT_MODE = 2;
 const int MXFP8_FULL_QUANT_MODE = 3;
 
@@ -66,7 +67,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         } else {
@@ -87,7 +88,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
         } else {
@@ -167,7 +168,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), rope_sin.size(2)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
         } else {
@@ -188,7 +189,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         query_rope = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_uk.size(0), rope_sin.size(1)}, at::kBFloat16);
         if (query_norm_flag) {
             query_norm =  npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
-            if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
+            if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
         } else {
