@@ -24,8 +24,7 @@ const static int64_t DIM_0 = 0;
 const static int64_t DIM_1 = 1;
 const static int64_t DIM_2 = 2;
 const static int64_t DIM_3 = 3;
-const static int64_t DIM_NUM_3 = 3;
-const static int64_t DIM_NUM_4 = 4;
+const static int64_t DIM_4 = 4;
 
 using npu_preparation = at_npu::native::OpPreparation;
 
@@ -41,12 +40,12 @@ at::Tensor construct_sparse_flash_attention_output_tensor(
             "than 0, but shape[", i, "] is ", query.size(i), OPS_ERROR(ErrCode::PARAM));
     }
     if (layout == "TND") {
-        TORCH_CHECK(query.dim() == DIM_NUM_3,
+        TORCH_CHECK(query.dim() == DIM_3,
                     "When the layout of query is TND, the query dimension must be 3, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2)};
     } else {
-        TORCH_CHECK(query.dim() == DIM_NUM_4,
+        TORCH_CHECK(query.dim() == DIM_4,
                     "When the layout of query is BSND, the query dimension must be 4, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3)};
