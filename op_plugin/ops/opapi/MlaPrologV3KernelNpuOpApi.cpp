@@ -70,7 +70,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
-        } 
+        }
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
@@ -88,7 +88,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
-        } 
+        }
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
@@ -165,7 +165,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             }
-        } 
+        }
     } else {
         TORCH_CHECK(rope_sin_dim == DIM_2, "rope_sin dim num should be 2, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MXFP8_FULL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) && kv_cache_quant_mode == KV_QUANT_MODE) {
@@ -183,7 +183,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             if (weight_quant_mode == PARTIAL_QUANT_MODE || weight_quant_mode == FULL_QUANT_MODE) { // weight_quant_mode=1 represents the half-quantization scenario, and weight_quant_mode=2 represents the full quantization scenario
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             }
-        } 
+        }
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
