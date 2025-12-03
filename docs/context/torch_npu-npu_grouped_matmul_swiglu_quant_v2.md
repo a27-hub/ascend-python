@@ -20,14 +20,14 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 ## 参数说明
 
 - **x**（`Tensor`）：必选输入，矩阵乘法的左矩阵。shape支持2维[m,k]，数据类型支持`int8`，数据格式支持ND，支持非连续的Tensor。
-- **weight**（`TensorList`）：必选输入，权重矩阵(矩阵乘法右矩阵)，shape支持3维[e,k,n]，数据类型支持`int8`，数据格式支持FRACTAL_NZ(通过接口npu_format_cast，可实现格式转换)，支持非连续的Tensor。
-- **weight\_scale**（`TensorList`）：必选输入，右矩阵的量化因子。shape支持2维[e,n],数据类型支持`float32`，数据格式支持ND，支持非连续的Tensor。
+- **weight**（`TensorList`）：必选输入，权重矩阵(矩阵乘法右矩阵)，shape支持3维[e,k,n]，数据类型支持`int8`、`int32`，数据格式支持FRACTAL_NZ(通过接口npu_format_cast，可实现格式转换)，支持非连续的Tensor。
+- **weight\_scale**（`TensorList`）：必选输入，右矩阵的量化因子。`weight`数据类型为`int8`时，`weight_scale`的shape支持2维[e,n],`weight`数据类型为`int32`时,`weight_scale`的shape支持2维和3维。数据类型支持`float32`，数据格式支持ND，支持非连续的Tensor。
 - **x\_scale**（`Tensor`）：必选输入，左矩阵的量化因子。shape支持1维[m]，数据类型支持`float32`，数据格式支持ND，支持非连续的Tensor。
 - **group\_list**（`Tensor`）：必选输入，指示每个分组参与计算的Token个数。shape支持1维[e]，数据类型支持`int64`，数据格式支持ND，支持非连续的Tensor。
 - **smooth\_scale**（`Tensor`）：可选输入，量化的smooth_scales。数据类型为`float32`，当前仅支持传入默认值None。
 - **weight\_assist\_matrix**（`TensorList`）：可选输入，右矩阵的辅助矩阵，数据类型支持`float32`，当前仅支持传入默认值None。
 - **bias**（`Tensor`）：可选输入，矩阵乘计算的偏移值，公式中的bias，shape支持2维，数据类型支持`int32`，当前仅支持传入默认值None。
-- **dequant\_mode**（`int`）：可选输入，表示反量化模式，参数值对应0：左pertoken，右perchannel 1：左pertoken，右pergroup，数据类型为`int32`，当前仅支持传入默认值0。
+- **dequant\_mode**（`int`）：可选输入，表示反量化模式，参数值对应0：左pertoken，右perchannel 1：左pertoken，右pergroup，数据类型为`int32`。`weight`数据类型为`int8`时仅支持传入默认值0，`weight`数据类型为`int32`时支持传入0和1。
 - **dequant\_dtype**（`int`）：可选输入，表示反量化类型，参数值对应0：pertoken；1：pergroup，数据类型为`int32`，预留输入，当前仅支持传入默认值0。
 - **quant\_dtype**（`int`）：可选输入，参数表示量化后低比特数据类型。0：`int8`；1：`float8_e8m0`；2：`float8_e5m2`；3：`float8_e4m3`，数据类型为`int32`，当前仅支持传入默认值0。
 - **quant\_mode**（`int`）：可选输入，参数表示swiglu后的量化模式。0：pertoken 1：perchannel，数据类型为`int32`，当前仅支持传入默认值0。
