@@ -1192,6 +1192,7 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
     add_param_to_buf(deterministic);
     add_param_to_buf(std::string(aclnn_api), args...);
     add_param_to_buf(device);
+    add_param_to_buf((uintptr_t)acl_stream);
     uint64_t hashId = calc_hash_id();
     setPTAHashKeyFunc(hashId);
     aclOpExecutor *executor = ptaGetExecCacheFunc(hashId, workspace_size_addr);
@@ -1245,6 +1246,7 @@ bool hit_cache_v2(
     }
     add_param_to_buf_v2(std::string(aclnn_api));
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
+    add_param_to_buf_v2((uintptr_t)acl_stream);
     if (g_hash_offset == g_hash_buf_max_size) {
         setPTACacheHashKeyFunc(nullptr, 0);
     } else {
@@ -1752,6 +1754,9 @@ private:
 
 inline TensorWrapper make_wrapper(const at::Tensor& tensor, c10::optional<int64_t> tensor_dtype)
 {
+    if (!tensor.defined()) {
+        return {tensor, ACL_DT_UNDEFINED};
+    }
     if (tensor_dtype.has_value()) {
         aclDataType tensor_acltype = c10_npu::GetAclDataType(tensor_dtype.value());
         int acl_item_size = at_npu::native::OpPreparation::GetAclDataTypeItemSize(tensor_acltype);
@@ -1765,8 +1770,16 @@ inline TensorWrapper make_wrapper(const at::Tensor& tensor, c10::optional<int64_
     return {tensor, at_npu::native::OpPreparation::convert_to_acl_data_type(tensor.scalar_type())};
 }
 
+inline TensorWrapper make_wrapper(const c10::optional<at::Tensor> &opt_tensor, c10::optional<int64_t> tensor_dtype)
+{
+    return make_wrapper(opt_tensor.value_or(at::Tensor()), tensor_dtype);
+}
+
 inline TensorListWrapper make_wrapper(const at::TensorList& tensorlist, c10::optional<int64_t> tensor_dtype)
 {
+    if (tensorlist.size() == 0) {
+        return {tensorlist, ACL_DT_UNDEFINED};
+    }
     if (tensor_dtype.has_value()) {
         aclDataType tensor_acltype = c10_npu::GetAclDataType(tensor_dtype.value());
         int acl_item_size = at_npu::native::OpPreparation::GetAclDataTypeItemSize(tensor_acltype);
@@ -1778,5 +1791,10 @@ inline TensorListWrapper make_wrapper(const at::TensorList& tensorlist, c10::opt
     }
 
     return {tensorlist, at_npu::native::OpPreparation::convert_to_acl_data_type(tensorlist[0].scalar_type())};
+}
+
+inline TensorListWrapper make_wrapper(const c10::optional<at::TensorList> &opt_tensorlist, c10::optional<int64_t> tensor_dtype)
+{
+    return make_wrapper(opt_tensorlist.value_or(at::TensorList()), tensor_dtype);
 }
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
