@@ -31,7 +31,6 @@ const static int64_t DIM_3 = 3;
 const static int64_t DIM_4 = 4;
 const static int64_t DIM_NUMS_3 = 3;
 const static int64_t DIM_NUMS_4 = 4;
-const static int64_t INT4_IN_INT32 = 8;
 const static int SHAPE_3D = 3;
 const static int SHAPE_4D = 4;
 const static int SHAPE_5D = 5;
@@ -195,6 +194,18 @@ static int64_t get_value_d(
     return valueD;
 }
 
+static int get_change_d_scale(
+    const at::Tensor &value)
+{
+    const static int changeDScale = 1;
+    const static int changeDForInt32 = 8;
+    // int4 伪装成 int32
+    if (value.scalar_type() == at::kInt) {
+        return changeDForInt32;
+    }
+    return changeDScale;
+}
+
 static at::Tensor infer_attention_out_shape(
     std::string attention_out_layout,
     const at::Tensor &query,
@@ -310,11 +321,15 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
     );
     kv_num_heads = (kv_num_heads == 0) ? num_heads : kv_num_heads;
     
-    // 获取query_layout, attention_out_layout
+    // get query_layout, attention_out_layout
     auto [query_layout, attention_out_layout] = get_query_and_attention_out_layout(query, input_layout_str);
 
-    // 计算valueD
+    // cal valueD
     int64_t valueD = get_value_d(block_table, query, value, query_layout, kv_num_heads);
+
+    // 计算changeDScale
+    int changeDScale = get_change_d_scale(value);
+    valueD = valueD * changeDScale;
 
     // 推导attenout shape
     at::Tensor tmp_output = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, valueD);
@@ -333,7 +348,7 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor(
         output = npu_preparation::apply_tensor_without_format(tmp_output);
     }
 
-    // 推导lseout shape
+    // infer lseout shape
     at::Tensor softmax_lse;
     if (softmax_lse_flag) {
         softmax_lse = infer_lse_out_shape(input_layout_str, query, query_layout, num_heads);
