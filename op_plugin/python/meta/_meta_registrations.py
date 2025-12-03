@@ -139,13 +139,13 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
     if layout_query == "TND":
         torch._check(
             query.dim() == 3,
-            lambda: "When the layout of query is TND, the query dimension must be 3." + ops_error(ErrCode.VALUE),
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + query.dim() + ops_error(ErrCode.VALUE),
         )
         attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
     elif layout_query == "BSND":
         torch._check(
             query.dim() == 4,
-            lambda: "When the layout of query is BSND, the query dimension must be 4." + ops_error(ErrCode.VALUE),
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + query.dim() + ops_error(ErrCode.VALUE),
         )
         attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
     else:
@@ -1401,13 +1401,13 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     if layout_query == "BSND":
         torch._check(
             query.dim() == 4,
-            lambda: "When the layout of query is BSND, the query dimension must be 4." + ops_error(ErrCode.VALUE),
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + query.dim() + ops_error(ErrCode.VALUE),
         )
         out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
     elif layout_query == "TND":
         torch._check(
             query.dim() == 3,
-            lambda: "When the layout of query is TND, the query dimension must be 3." + ops_error(ErrCode.VALUE),
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + query.dim() + ops_error(ErrCode.VALUE),
         )
         out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
     else:
