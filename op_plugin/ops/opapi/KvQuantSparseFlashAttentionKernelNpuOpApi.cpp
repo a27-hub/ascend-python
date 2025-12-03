@@ -29,8 +29,7 @@ const int DIM_0 = 0;
 const int DIM_1 = 1;
 const int DIM_2 = 2;
 const int DIM_3 = 3;
-const int DIM_NUM_3 = 3;
-const int DIM_NUM_4 = 4;
+const int DIM_4 = 4;
 
 at::Tensor construct_quant_sparse_infer_output_tensor(
     const at::Tensor& query, std::string layout_query_str,
@@ -45,12 +44,12 @@ at::Tensor construct_quant_sparse_infer_output_tensor(
     }
     at::SmallVector<int64_t, SIZE> output_size;
     if (layout_query_str == "BSND") {
-        TORCH_CHECK(query.dim() == DIM_NUM_4,
+        TORCH_CHECK(query.dim() == DIM_4,
                     "When the layout of query is BSND, the query dimension must be 4, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3) - rope_head_dim};
     } else {
-        TORCH_CHECK(query.dim() == DIM_NUM_3,
+        TORCH_CHECK(query.dim() == DIM_3,
                     "When the layout of query is TND, the query dimension must be 3, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2) - rope_head_dim};
