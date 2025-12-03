@@ -20,6 +20,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+
 static inline c10::SmallVector<int64_t, op_infer::N> expand_dim(at::IntArrayRef list_param, const char *param_name,
                                                                 int64_t expected_dim)
 {
