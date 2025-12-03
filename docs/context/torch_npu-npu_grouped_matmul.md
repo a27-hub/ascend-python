@@ -43,6 +43,11 @@
         -   `x`为`int8`输入，`bias`为`bfloat16`，`float16`，`float32`输入（公式3-2）：
 
             $y_i = (x_i @ weight_i) \times scale_i \times pertokenscale_i + bias_i$
+        - x为INT4，无bias:
+
+        $$
+        y_i=x_i\times (weight_i * scale_i) * per\_token\_scale_i
+        $$
 
     -   伪量化场景（公式4）：
 
@@ -57,7 +62,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
 
 - **x** (`List[Tensor]`)：必选参数。输入矩阵列表，表示矩阵乘法中的左矩阵。
     -   支持的数据类型如下：
-        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`float32`、`bfloat16`和`int8`。
+        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`float32`、`bfloat16`、`int8`和`int4`。
         -   <term>Atlas 推理系列产品</term>：`float16`。
 
     -   列表最大长度为128。
@@ -219,6 +224,8 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             |perchannel全量化|`int8`|`int8`|`int32`|`float32`|无需赋值|无需赋值|无需赋值|`float16`|`float16`|
             |pertoken全量化|`int8`|`int8`|`int32`|`bfloat16`|无需赋值|无需赋值|`float32`|`bfloat16`|`bfloat16`|
             |pertoken全量化|`int8`|`int8`|`int32`|`float32`|无需赋值|无需赋值|`float32`|`float16`|`float16`|
+            |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`float16`|`float16`|
+            |pertoken全量化|`int4`|`int4`|无需赋值|`uint64`|无需赋值|无需赋值|None/`float32`|`bfloat16`|`bfloat16`|
             |伪量化|`float16`|`int8`/`int4`|`float16`|无需赋值|`float16`|`float16`|无需赋值|None/`float16`|`float16`|
             |伪量化|`bfloat16`|`int8`/`int4`|`float32`|无需赋值|`bfloat16`|`bfloat16`|无需赋值|None/`bfloat16`|`bfloat16`|
 
@@ -226,6 +233,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             >-   伪量化场景，若`weight`的类型为`int8`，仅支持perchannel模式；若`weight`的类型为`int4`，支持perchannel和pergroup两种模式。若为pergroup，pergroup数$G$或$G_i$必须要能整除对应的$k_i$。若`weight`为多tensor，定义pergroup长度$s_i= k_i/G_i$，要求所有$s_i(i=1,2,...g)$都相等。
             >-   伪量化场景，若`weight`的类型为`int4`，则`weight`中每一组tensor的最后一维大小都应是偶数。<code>weight<sub>i</sub></code>的最后一维指`weight`不转置时<code>weight<sub>i</sub></code>的N轴或当weight转置时weight<sub>i</sub>的$K$轴。并且在pergroup场景下，当`weight`转置时，要求pergroup长度$s_i$是偶数。tensor转置：指若tensor shape为$[M,K]$时，则stride为$[1,M]$,数据排布为$[K,M]$的场景，即非连续tensor。
             >-   当前PyTorch不支持`int4`类型数据，需要使用时可以通过[torch\_npu.npu\_quantize](torch_npu-npu_quantize.md)接口使用`int32`数据表示`int4`。
+            >-  pertoken全量化场景，x和weight为`int4` 时，weight支持`NZ`格式，需通过[torch\_npu.npu\_format\_cast](（beta）torch_npu-npu_format_cast.md)和[torch\_npu.npu\_quantize](torch_npu-npu_quantize.md)接口表示成`NZ`格式和`int4`数据类型。
 
         -   <term>Atlas 推理系列产品</term>：
 
