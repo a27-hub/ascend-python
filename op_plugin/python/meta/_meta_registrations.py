@@ -312,7 +312,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
     if token_x_dim == 3:
         torch._check(
             rope_sin_dim == 3,
-            lambda: "rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
         )
 
         query_shape = []
@@ -344,7 +344,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
     else:
         torch._check(
             rope_sin_dim == 2,
-            lambda: "rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
         )
 
         query_shape = []
@@ -425,7 +425,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
     if token_x_dim == 3:
         torch._check(
             rope_sin_dim == 3,
-            lambda: "rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            lambda: "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
         )
 
         query_shape = []
@@ -457,7 +457,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
     else:
         torch._check(
             rope_sin_dim == 2,
-            lambda: "rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
+            lambda: "when token_x dim num is 2, rope_sin dim num should be 2, but the actual value is " + str(rope_sin_dim) + ops_error(ErrCode.VALUE),
         )
 
         query_shape = []
