@@ -1359,7 +1359,7 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
     elif layout_query == "TND":
         out = torch.empty([query.size(0), keyHeadNum, sparse_count], dtype=torch.int32, device='meta')
     else:
-         torch._check(
+        torch._check(
             False,
             lambda: "No support of query: " + str(layout_query) + ops_error(ErrCode.VALUE),
         )
@@ -1379,7 +1379,7 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
         torch._check(
             item is not None,
             lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
-        )   
+        )
 
     torch._check(
         query.numel() > 0,
@@ -1413,7 +1413,7 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     else:
         torch._check(
             False,
-            lambda: "Not support layout of query:" + layout_query +ops_error(ErrCode.VALUE),
+            lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
         )
     return out
 
