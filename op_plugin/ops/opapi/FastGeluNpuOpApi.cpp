@@ -24,8 +24,7 @@ at::Tensor npu_fast_gelu(const at::Tensor &self)
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                             c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                             (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    if (!is_support_nd_out)
-    {
+    if (!is_support_nd_out) {
         return acl_op::npu_fast_gelu(self);
     }
 
@@ -41,8 +40,7 @@ at::Tensor npu_fast_gelu_backward(const at::Tensor &grad, const at::Tensor &self
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                             c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                             (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    if (!is_support_nd_out)
-    {
+    if (!is_support_nd_out) {
         return acl_op::npu_fast_gelu_backward(grad, self);
     }
 
