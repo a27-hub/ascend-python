@@ -32,9 +32,38 @@ std::tuple<at::Tensor, at::Tensor> _apply_rotary_pos_emb_v1(
     return std::tie(query, key);
 }
 
-std::tuple<at::Tensor, at::Tensor> npu_apply_rotary_pos_emb(
+std::tuple<at::Tensor, at::Tensor> npu_apply_rotary_pos_emb_functional(
     const at::Tensor &query,
     const at::Tensor &key,
+    const at::Tensor &cos,
+    const at::Tensor &sin,
+    c10::string_view layout,
+    c10::string_view rotary_mode)
+{
+    auto query_clone = query.clone();
+    auto key_clone = key.clone();
+    std::string layout_str = std::string(layout);
+    std::string rotary_mode_str = std::string(rotary_mode);
+    TORCH_CHECK(rotary_mode_str == "half" || rotary_mode_str == "quarter" || rotary_mode_str == "interleave",
+        "The layout should be half/quarter/interleave, but got ", rotary_mode_str, OPS_ERROR(ErrCode::PARAM));
+    int64_t lay_out = LAYOUT_BSND_BSH;
+    if (layout_str == "BNSD") {
+        lay_out = LAYOUT_BNSD;
+    } else if (layout_str == "SBND") {
+        lay_out = LAYOUT_SBND;
+    } else if (layout_str == "TND") {
+        lay_out = LAYOUT_TND;
+    }
+    DO_COMPATIBILITY(aclnnApplyRotaryPosEmbV2, _apply_rotary_pos_emb_v1(query_clone, key_clone, cos, sin, lay_out));
+
+    char* rotary_mode_ptr = const_cast<char *>(rotary_mode_str.c_str());
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnApplyRotaryPosEmbV2, query_clone, key_clone, cos, sin, lay_out, rotary_mode_ptr);
+    return std::tie(query_clone, key_clone);
+}
+
+void npu_apply_rotary_pos_emb(
+    at::Tensor &query,
+    at::Tensor &key,
     const at::Tensor &cos,
     const at::Tensor &sin,
     c10::string_view layout,
@@ -52,10 +81,21 @@ std::tuple<at::Tensor, at::Tensor> npu_apply_rotary_pos_emb(
     } else if (layout_str == "TND") {
         lay_out = LAYOUT_TND;
     }
-    DO_COMPATIBILITY(aclnnApplyRotaryPosEmbV2, _apply_rotary_pos_emb_v1(query, key, cos, sin, lay_out));
 
+    static const auto getWorkspaceSizeFuncAddr = GetOpApiFuncAddr("aclnnApplyRotaryPosEmbV2GetWorkspaceSize");
+    static const auto opApiFuncAddr = GetOpApiFuncAddr("aclnnApplyRotaryPosEmbV2");
+    static const auto isAclnnOnly = c10_npu::IsAclnnOnly();
+    if (getWorkspaceSizeFuncAddr == nullptr || opApiFuncAddr == nullptr) {
+        if (isAclnnOnly) {
+            TORCH_CHECK(false, "Current device only support aclnn operators, but aclnnApplyRotaryPosEmbV2 "
+                        "or aclnnApplyRotaryPosEmbV2 GetWorkspaceSize not found", OPS_ERROR(ErrCode::NOT_SUPPORT));
+        }
+        ASCEND_LOGW("aclnnApplyRotaryPosEmbV2 or aclnnApplyRotaryPosEmbV2GetWorkspaceSize not in %s, or %s not found.",
+                    GetOpApiLibName(), GetOpApiLibName());
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(_apply_rotary_pos_emb_v1, query, key, cos, sin, lay_out);
+    }
+    
     char* rotary_mode_ptr = const_cast<char *>(rotary_mode_str.c_str());
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnApplyRotaryPosEmbV2, query, key, cos, sin, lay_out, rotary_mode_ptr);
-    return std::tie(query, key);
 }
 }
