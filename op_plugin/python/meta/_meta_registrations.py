@@ -3360,9 +3360,13 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
             torch.empty_like(k_cache), torch.empty_like(ckv_cache))
 
 
-@impl(m, "npu_apply_rotary_pos_emb")
+@impl(m, "npu_apply_rotary_pos_emb_functional")
 def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1, rotary_mode='half'):
     return (torch.empty_like(query, dtype=query.dtype), torch.empty_like(key, dtype=key.dtype))
+
+@impl(m, "npu_apply_rotary_pos_emb")
+def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1, rotary_mode='half'):
+    return
 
 
 @impl(m, "npu_quant_conv2d")
