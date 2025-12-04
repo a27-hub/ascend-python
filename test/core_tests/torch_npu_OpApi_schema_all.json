@@ -4468,5 +4468,11 @@
   },
   "func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
+  },
+  "func: npu_attention_to_ffn(Tensor x, Tensor session_id, Tensor micro_batch_id, Tensor layer_id, Tensor expert_ids, Tensor expert_rank_table, str group, int world_size, int[] ffn_token_info_table_shape, int[] ffn_token_data_shape, int[] attn_token_info_table_shape, int moe_expert_num, *, Tensor? scales=None, Tensor? active_mask=None, int quant_mode=0, int sync_flag=0, int ffn_start_rank_id=0) -> ()": {
+    "version": ["all_version"]
+  },
+  "func: npu_ffn_to_attention(Tensor x, Tensor session_ids, Tensor micro_batch_ids, Tensor token_ids, Tensor expert_offsets, Tensor actual_token_num, str group, int world_size, int[] token_info_table_shape, int[] token_data_shape, *, Tensor? attn_rank_table=None) -> ()": {
+    "version": ["all_version"]
   }
 }
