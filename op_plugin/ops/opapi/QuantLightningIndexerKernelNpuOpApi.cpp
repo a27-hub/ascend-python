@@ -68,7 +68,7 @@ at::Tensor npu_quant_lightning_indexer(
 {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
-
+    
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
 
