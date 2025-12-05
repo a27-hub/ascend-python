@@ -2,25 +2,10 @@ import unittest
 import math
 import torch
 import torch_npu
-import torchair as tng
-from torchair.configs.compiler_config import CompilerConfig
+
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
-
-torch_npu.npu.set_compile_mode(jit_compile=True)
-config = CompilerConfig()
-npu_backend = tng.get_npu_backend(compiler_config=config)
-
-class Model(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(self, lse_list, local_out_list, update_type=0):
-        out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
-
-        return out_npu, lse_out_npu
-        
 
 def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
     if not isinstance(lse_list, (list, tuple)):
@@ -79,7 +64,7 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
 
     weights = torch.exp(lse_stack - lse_m.unsqueeze(0))
     O = torch.sum(out_stack * weights.unsqueeze(-1), dim=0)
-    return O.contiguous().to(out_dtype)
+    return O.contiguous().to(out_dtype), lse_m
 
 def npu_attention_update(lse_list, local_out_list, update_type=0):
     out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
