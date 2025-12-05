@@ -134,7 +134,7 @@ class TestNpuAttentionUpdate(TestCase):
 
         out_npu, lse_out_npu = npu_attention_update(lse_list, local_out_list, update_type)
 
-        out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
+        out_cpu, lse_out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
                                               [t.to("cpu") for t in local_out_list],
                                               update_type=update_type)
 
