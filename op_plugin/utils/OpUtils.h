@@ -76,6 +76,7 @@ OP_PLUGIN_HIDDEN void check_input_same_type_as_parameters(const at::Tensor& inpu
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_810rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_820rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_830rc1();
+OP_PLUGIN_HIDDEN bool is_gte_cann_version_850();
 OP_PLUGIN_HIDDEN int64_t get_rotary_mode(c10::string_view mode);
 
 }  // namespace utils

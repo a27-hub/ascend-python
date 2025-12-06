@@ -409,5 +409,11 @@ bool is_gte_cann_version_830rc1()
     return result;
 }
 
+bool is_gte_cann_version_850()
+{
+    const static bool result = IsGteCANNVersion("8.5.0", "CANN");
+    return result;
+}
+
 }  // namespace utils
 }  // namespace op_plugin
