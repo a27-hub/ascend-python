@@ -3707,6 +3707,7 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None,
 def npu_attention_update_meta(lse, local_out, update_type):
     ref = local_out[0]
     ref_lse = lse[0]
+    sp = len(lse)
     return (torch.empty(ref.size(), dtype=ref.dtype, device=ref.device),
             torch.empty(ref_lse.size(), dtype=ref_lse.dtype, device=ref_lse.device))
 
