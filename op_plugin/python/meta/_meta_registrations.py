@@ -2202,6 +2202,8 @@ def gmm_get_dtype(output_dtype):
         return torch.bfloat16
     elif output_dtype == TORCH_DTYPE_MAP[torch.float32]:
         return torch.float32
+    elif output_dtype == TORCH_DTYPE_MAP[torch.int32]:
+        return torch.int32
     elif not output_dtype:
         return output_dtype
     else:
