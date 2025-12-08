@@ -128,6 +128,27 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
     }
 }
 
+void check_a5_required_inputs(const at::Tensor& x1, const at::Tensor& x2, bool is_a8, bool is_w8, bool is_a4, bool is_w4)
+{
+    if ((is_a8 && !is_w8) || (is_a4 && is_w4)) {
+        TORCH_CHECK(false, "when dtype of x1 is fp8 or fp4, dtype of x2 also should be fp8 or fp4",
+        OPS_ERROR(ErrCode::TYPE));
+    } else if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type())) {
+        TORCH_CHECK(x1.scalar_type() == at::kChar || x1.scalar_type() == at::kInt || x1.scalar_type() == at::kByte,
+        "x1 must be an int8 or uint8 tensor for quant, but x1 actual type is ", x1.scalar_type(),
+        OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(x2.scalar_type() == at::kChar || x2.scalar_type() == at::kInt || x2.scalar_type() == at::kByte,
+        "x2 must be an int8 or uint8 tensor for quant, but x2 actual type is ", x1.scalar_type(),
+        OPS_ERROR(ErrCode::TYPE));
+    } else if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) || (!is_a8 && is_w8)) {
+        TORCH_CHECK(x2.scalar_type() == at::kChar || x1.scalar_type() == at::kInt || is_w8,
+        "x2 must be an int8 or uint8 tensor for weight quant, but x2 actual type is ", x2.scalar_type(),
+        OPS_ERROR(ErrCode::TYPE));
+    } else if (isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type())) {
+        TORCH_CHECK(false, "when neither dtype of x1 or dtype of x2 is vaild", OPS_ERROR(ErrCode::TYPE));
+    }
+}
+
 at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c10::string_view hcom,
                                   c10::string_view reduce_op, const c10::optional<at::Tensor>& bias,
                                   const c10::optional<at::Tensor>& antiquant_scale,
@@ -143,9 +164,23 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
                                   c10::optional<int64_t> pertoken_scale_dtype,
                                   int64_t comm_quant_mode)
 {
+    bool is_a8 = (x1_dtype.has_value() ?
+        (x1_dtype.value() == static_cast<int>(c10_npu::DType::HIFLOAT8)) : false) ||
+        (x1.scalar_type() == at::kFloat8_e4m3fn) || (x1.scalar_type() == at::kFloat8_e5m2);
+    bool is_w8 = (x2_dtype.has_value() ?
+        (x2_dtype.value() == static_cast<int>(c10_npu::DType::HIFLOAT8)) : false) ||
+        (x2.scalar_type() == at::kFloat8_e4m3fn) || (x2.scalar_type() == at::kFloat8_e5m2);
+    bool is_a4 = x1_dtype.has_value() ?
+        ((x1_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E1M2)) ||
+        (x1_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E2M1))) : false;
+    bool is_w4 = x2_dtype.has_value() ?
+        ((x2_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E1M2)) ||
+        (x2_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E2M1))) : false;
     if (!c10_npu::IsAclnnOnly()) {
         check_params(x1, x2, antiquant_scale, antiquant_offset, x3, dequant_scale, pertoken_scale, comm_quant_scale_1,
             comm_quant_scale_2);
+    } else {
+        check_a5_required_inputs(x1, x2, is_a8, is_w8, is_a4, is_w4);
     }
 
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
@@ -156,15 +191,7 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     output_size[x1.dim() - 1] = x2.size(1);
     // a8w8: dtype of output should be half.
     auto output_dtype = get_output_dtype(x1, dequant_scale);
-    bool is_a8 = (x1_dtype.has_value() ?
-        (x1_dtype.value() == static_cast<int>(c10_npu::DType::HIFLOAT8)) : false) ||
-        (x1.scalar_type() == at::kFloat8_e4m3fn) || (x1.scalar_type() == at::kFloat8_e5m2);
-    bool is_a4 = x1_dtype.has_value() ?
-        ((x1_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E1M2)) ||
-        (x1_dtype.value() == static_cast<int>(c10_npu::DType::FLOAT4_E2M1))) : false;
-    bool is_w8 = (x2_dtype.has_value() ?
-        (x2_dtype.value() == static_cast<int>(c10_npu::DType::HIFLOAT8)) : false) ||
-        (x2.scalar_type() == at::kFloat8_e4m3fn) || (x2.scalar_type() == at::kFloat8_e5m2);
+
     if (is_a8 || is_a4) {
         TORCH_CHECK(y_dtype.has_value(), "input dtype is fp8 or fp4, but no input y_dtype",
                     OPS_ERROR(ErrCode::PARAM));
