@@ -48,9 +48,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
 
     at::Tensor query;
     at::Tensor query_rope;
-    at::Tensor dequant_scale_q_nope {nullptr};
-    at::Tensor query_norm {nullptr};
-    at::Tensor dequant_scale_q_norm {nullptr};
+    at::Tensor dequant_scale_q_nope;
+    at::Tensor query_norm;
+    at::Tensor dequant_scale_q_norm;
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
@@ -144,9 +144,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     
     at::Tensor query;
     at::Tensor query_rope;
-    at::Tensor dequant_scale_q_nope {nullptr};
-    at::Tensor query_norm {nullptr};
-    at::Tensor dequant_scale_q_norm {nullptr};
+    at::Tensor dequant_scale_q_nope;
+    at::Tensor query_norm;
+    at::Tensor dequant_scale_q_norm;
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
