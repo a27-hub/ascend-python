@@ -19,7 +19,7 @@
   $$
 
   $$
-  scale = min(FP8\_MAX(HiF8\_MAX / INT8\_MAX) / input\_max, 1/min\_scale)
+  scale = min(input\_max / FP8\_MAX(HiF8\_MAX / INT8\_MAX), 1/min\_scale)
   $$
 
   $$
