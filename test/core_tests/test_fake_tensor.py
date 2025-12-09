@@ -3677,7 +3677,11 @@ class TestNpuDSA(TestCase):
     def test_dsa_npu_sparse_flash_attention(self):
         with FakeTensorMode():
             params = self.setup_sparse_flash_attention_test_params()
-            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            with self.assertRaises(RuntimeError) as cm:
+                npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            exception = cm.exception
+            self.assertEqual(str(exception), "when pytorch graph path does not equal to 0, return_softmax_lse should be False, but got True.")
+            # npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
 
             query = params['query']
             key = params['key']
@@ -3698,7 +3702,11 @@ class TestNpuDSA(TestCase):
     def test_dsa_npu_sparse_flash_attention_grad(self):
         with FakeTensorMode():
             params = self.setup_sparse_flash_attention_test_params(requires_grad=True)
-            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            # npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            with self.assertRaises(RuntimeError) as cm:
+                npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention(params)
+            exception = cm.exception
+            self.assertEqual(str(exception), "when pytorch graph path does not equal to 0, return_softmax_lse should be False, but got True.")
             loss = npu_out.sum() + npu_softmax_max.sum() + npu_softmax_sum.sum()
             loss.backward()
 
@@ -3782,7 +3790,11 @@ class TestNpuDSA(TestCase):
     def test_dsa_npu_lightning_indexer(self):
         with FakeTensorMode():
             params = self.setup_lightning_indexer_test()
-            npu_out, npu_values_out = self.call_npu_lightning_indexer(params)
+            with self.assertRaises(RuntimeError) as cm:
+                npu_out, npu_values_out = self.call_npu_lightning_indexer(params)
+            exception = cm.exception
+            self.assertEqual(str(exception), "when pytorch graph path does not equal to 0, return_value should be False, but got True.")
+            # npu_out, npu_values_out = self.call_npu_lightning_indexer(params)
 
             query = params['query']
             key = params['key']
