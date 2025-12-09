@@ -6970,7 +6970,7 @@ custom:
     gen_opapi:
       new_params:
         group_ptr: 'const_cast<char *>(group.data())'
-      exec: aclnnFFN·ToAttention, x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, group_ptr, world_size, token_info_table_shape, token_data_shape
+      exec: aclnnFFNToAttention, x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, group_ptr, world_size, token_info_table_shape, token_data_shape
 
   - func: npu_moe_token_unpermute_grad(Tensor permuted_tokens, Tensor grad_unpermuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
