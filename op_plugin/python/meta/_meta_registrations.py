@@ -2306,6 +2306,33 @@ def npu_grouped_matmul_add__meta(y, x1, x2, group_list, *, transpose_x=True,
     )
     return y
 
+@impl(m, "npu_matmul_all_to_all")
+def npu_matmul_all_to_all_meta(x1, x2, hcom, bias=None, x1_scale=None, x1_offset=None, x2_offset=None, x2_scale=None, 
+                               x1_quant_mode=0, x2_quant_mode=0, common_quant_mode=0, group_sizes=0, all2all_axes=None, 
+                               transpose_x1=False, transpose_x2=False, comm_quant_dtype=-1, x1_dtype=None, x2_dtype=None, 
+                               x1_scale_dtype=None, x2_scale_dtype=None, ouput_scale_dtype=None, comm_scale_dtype=None, y_dtype=None):
+    
+    size = [x1.size(0), x2.size(1)]
+    if y_dtype is not None:
+        dtype = y_dtype
+    else:
+        dtype = torch.bfloat16
+
+    return torch.empty(size, dtype=dtype, device='meta')
+
+@impl(m, "npu_quant_matmul_all_to_all")
+def npu_matmul_all_to_all_meta(x1, x2, hcom, bias=None, x1_scale=None, x1_offset=None, x2_offset=None, x2_scale=None, 
+                               x1_quant_mode=0, x2_quant_mode=0, common_quant_mode=0, group_sizes=0, all2all_axes=None, 
+                               transpose_x1=False, transpose_x2=False, comm_quant_dtype=-1, x1_dtype=None, x2_dtype=None, 
+                               x1_scale_dtype=None, x2_scale_dtype=None, ouput_scale_dtype=None, comm_scale_dtype=None, y_dtype=None):
+    
+    size = [x1.size(0), x2.size(1)]
+    if y_dtype is not None:
+        dtype = y_dtype
+    else:
+        dtype = torch.bfloat16
+
+    return torch.empty(size, dtype=dtype, device='meta')
 
 def add_quant_gmm_check(*args):
     group_sizes, x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype = args
