@@ -33,21 +33,12 @@ class TestWhere(TestCase):
         output = output.to("cpu").numpy()
         return output
 
-    def cpu_op_exec_s(self, input1, ones):
-        output = torch.where(input1 > 0, input1, ones)
-        output = output.numpy()
-        return output
-
-    def npu_op_exec_s(self, input1, ones):
-        output = torch.where(input1 > 0, input1, ones)
-        output = output.to("cpu").numpy()
-        return output
-
     def where_result(self, shape_format):
         for item in shape_format:
             cpu_input1, npu_input1 = create_common_tensor(item, -100, 100)
             cpu_ones = torch.ones_like(cpu_input1)
             npu_ones = cpu_ones.to("npu")
+            scalar_input = torch.tensor(0.0)
             if cpu_input1.dtype == torch.float16:
                 cpu_input1 = cpu_input1.to(torch.float32)
                 cpu_ones = cpu_ones.to(torch.float32)
@@ -59,9 +50,13 @@ class TestWhere(TestCase):
             npu_output_cond = self.npu_op_exec_condition(npu_input1, npu_ones)
             cpu_output_cond = cpu_output_cond.astype(npu_output_cond.dtype)
 
-            cpu_output_s = self.cpu_op_exec_s(cpu_input1, cpu_ones)
-            npu_output_s = self.npu_op_exec_s(npu_input1, npu_ones)
+            cpu_output_s = self.cpu_op_exec_condition(cpu_input1, scalar_input)
+            npu_output_s = self.npu_op_exec_condition(npu_input1, scalar_input)
             cpu_output_s = cpu_output_s.astype(npu_output_s.dtype)
+
+            cpu_output_s_self = self.cpu_op_exec_condition(cpu_input1, scalar_input)
+            npu_output_s_self = self.npu_op_exec_condition(npu_input1, scalar_input)
+            cpu_output_s_self = cpu_output_s_self.astype(npu_output_s_self.dtype)
 
             for i, _ in enumerate(cpu_output):
                 cpu_output[i] = cpu_output[i].astype(npu_output[i].dtype)
@@ -69,6 +64,7 @@ class TestWhere(TestCase):
 
             self.assertRtolEqual(cpu_output_cond, npu_output_cond)
             self.assertRtolEqual(cpu_output_s, npu_output_s)
+            self.assertRtolEqual(cpu_output_s_self, npu_output_s_self)
 
     def test_where_shape_format_fp32_1d(self):
         format_list = [0, 3]
