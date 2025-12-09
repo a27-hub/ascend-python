@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <vector>
+#include <filesystem>
+#include <regex>
 #include <functional>
 #include <type_traits>
 #include <ATen/Tensor.h>
@@ -77,6 +79,8 @@ extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 extern const std::vector<std::string> g_custom_lib_path;
 extern const std::vector<std::string> g_default_custom_lib_path;
+extern const std::vector<const char *> g_opApiSoFiles;
+extern const std::vector<void *> g_opApiHandlers;
 
 namespace {
 constexpr int64_t MAX_DIM_NUM = 5;
@@ -139,6 +143,8 @@ inline void *GetOpApiLibHandler(const char *libName)
         }                                                                                                              \
     } while (0)
 
+int LoadAllOpApiSo();
+
 void *GetOpApiFuncAddrFromFeatureLib(const char *api_name);
 
 bool check_aclnn_kernel_available(std::string aclnn_name);
@@ -191,11 +197,14 @@ inline void *GetOpApiFuncAddr(const char *apiName)
         ASCEND_LOGI("%s is not in default custom lib.", apiName);
     }
 
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiMathHandler, "libopapi_math.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiNnHandler, "libopapi_nn.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiCvHandler, "libopapi_cv.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiTransformerHandler, "libopapi_transformer.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiLegacyHandler, "libopapi_legacy.so", apiName);
+    if (!g_opApiHandlers.empty()) {
+        for (size_t i = 0; i < g_opApiHandlers.size(); ++i) {
+            auto funcAddr = GetOpApiFuncAddrInLib(g_opApiHandlers[i], g_opApiSoFiles[i], apiName);
+            if (funcAddr != nullptr) {
+                return funcAddr;
+            }
+        }
+    }
 
     static auto opApiHandler = GetOpApiLibHandler(GetOpApiLibName());
     if (opApiHandler != nullptr) {
