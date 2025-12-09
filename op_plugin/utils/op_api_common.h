@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <vector>
+#include <filesystem>
+#include <regex>
 #include <functional>
 #include <type_traits>
 #include <ATen/Tensor.h>
@@ -77,6 +79,8 @@ extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 extern const std::vector<std::string> g_custom_lib_path;
 extern const std::vector<std::string> g_default_custom_lib_path;
+std::vector<void *> g_op_api_handlers;
+std::vector<const char *> g_op_api_so_files;
 
 namespace {
 constexpr int64_t MAX_DIM_NUM = 5;
@@ -143,6 +147,50 @@ void *GetOpApiFuncAddrFromFeatureLib(const char *api_name);
 
 bool check_aclnn_kernel_available(std::string aclnn_name);
 
+inline int LoadAllOpApiSo()
+{
+    const char *ascendHomePath = std::getenv("ASCEND_HOME_PATH");
+    if (ascendHomePath == nullptr) {
+        ASCEND_LOGW("ASCEND_HOME_PATH does not exist");
+        return -1;
+    }
+
+    std::string allOpApiSoPath(ascendHomePath);
+    allOpApiSoPath = allOpApiSoPath + "/lib64";
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(allOpApiSoPath)) {
+            if (entry.is_regular_file()) {
+                const char *fileName = entry.path().filename();
+                std::string fileNameStr(fileName);
+                std::regex pattern("^libopapi_.*\\.so$");
+                if (std::regex_match(fileNameStr, pattern)) {
+                    static auto opApiHandler = GetOpApiLibHandler(fileName);
+                    if (opApiHandler != nullptr) {
+                        g_op_api_handlers.push_back(opApiHandler);
+                        g_op_api_so_files.push_back(fileName);
+                    }
+                }
+            }
+        }
+        if (g_op_api_handlers.empty()) {
+            ASCEND_LOGW("ASCEND_HOME_PATH does not get any libopapi_*.so handler");
+            return -1;
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        ASCEND_LOGW("Filesystem error: %s", e.what());
+        return -1;
+    } catch (const std::regex_error& e) {
+        ASCEND_LOGW("Regex error: %s", e.what());
+        return -1;
+    } catch (const std::exception& e) {
+        ASCEND_LOGW("Error: %s", e.what());
+        return -1;
+    }
+
+    return 0;
+}
+
 inline void *GetOpApiFuncAddr(const char *apiName)
 {
     if (!g_custom_lib_path.empty()) {
@@ -191,11 +239,15 @@ inline void *GetOpApiFuncAddr(const char *apiName)
         ASCEND_LOGI("%s is not in default custom lib.", apiName);
     }
 
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiMathHandler, "libopapi_math.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiNnHandler, "libopapi_nn.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiCvHandler, "libopapi_cv.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiTransformerHandler, "libopapi_transformer.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiLegacyHandler, "libopapi_legacy.so", apiName);
+    static int ret = LoadAllOpApiSo();
+    if (!ret) {
+        for (size_t i = 0; i < g_op_api_handlers.size(); ++i) {
+            auto funcAddr = GetOpApiFuncAddrInLib(g_op_api_handlers[i], g_op_api_so_files[i], apiName);
+            if (funcAddr != nullptr) {
+                return funcAddr;
+            }
+        }
+    }
 
     static auto opApiHandler = GetOpApiLibHandler(GetOpApiLibName());
     if (opApiHandler != nullptr) {
