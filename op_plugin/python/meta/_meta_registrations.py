@@ -2985,6 +2985,17 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     return shape_long.new_empty(tuple(dim_list), dtype=tensor_dtype)
 
 
+@impl(m, "npu_fused_quant_matmul")
+def npu_fused_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, x3=None,
+                                fused_op_type='', output_dtype=None, x1_dtype=None, x2_dtype=None,
+                                pertoken_scale_dtype=None, scale_dtype=None, x3_dtype=None, group_sizes=None,
+                                y_scale=None):
+    return npu_quant_matmul_meta(x1, x2, scale, offset=offset, pertoken_scale=pertoken_scale, bias=bias,
+                                 output_dtype=output_dtype, x1_dtype=x1_dtype, x2_dtype=x2_dtype,
+                                 pertoken_scale_dtype=pertoken_scale_dtype, scale_dtype=scale_dtype,
+                                 group_sizes=group_sizes, y_scale=y_scale)
+
+
 @impl(m, "npu_quant_matmul_dequant")
 def npu_quant_matmul_dequant_meta(x, quantized_weight, weight_scale, *,
                                   bias=None, x_scale=None, x_offset=None, smooth_scale=None, quant_mode="pertoken"):
