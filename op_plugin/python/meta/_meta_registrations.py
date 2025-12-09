@@ -901,7 +901,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expert_range_length = active_expert_range[1] - active_expert_range[0]
     else:
         expert_range_length = expert_num
-        
+
     torch._check(
         drop_pad_mode is not None and isinstance(drop_pad_mode, int) and drop_pad_mode in [0, 1],
         lambda: "drop_pad_mode is None or invalid. must be in [0, 1]"
@@ -972,20 +972,20 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     k = expert_idx.size(1)
 
     if active_num == 0:
-        active_num = bs * k 
+        active_num = bs * k
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
         expanded_scale_dim_list = [expert_num * expert_capacity]
     else:
         expanded_x_dim_list = [min(active_num, bs * k), h]
-        expanded_scale_dim_list = [min(active_num, bs * k)]  
+        expanded_scale_dim_list = [min(active_num, bs * k)]
 
     expanded_row_idx_dim_list = [bs * k]
-    
+
     if quant_mode == 0:
         expanded_scale_dim_list = []
-    
+
     if not expert_tokens_num_flag:
         expert_token_cumsum_or_count_dim_list = []
     elif (expert_tokens_num_type in range(0, 2)):   # [0, 1]
@@ -2974,7 +2974,12 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     if not is_1952:
         quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
         quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
-
+    else:
+        if is_a8w4_int:
+            torch._check(
+               x2.size(x2.dim() - 1) > 1 and x2.size(x2.dim() - 2) > 1,
+               lambda: "when x2 dtype is int32, the last two dim should greater than 1" + ops_error(ErrCode.VALUE),
+            )
     tensor_dtype = torch.int8
     if output_dtype is not None:
         tensor_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(output_dtype)
@@ -2983,6 +2988,17 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         if tensor_dtype is None or (tensor_dtype not in TORCH_DTYPE_MAP.keys() and tensor_dtype != torch.uint8):
             raise RuntimeError("Not supported output dtype is " + npu_dtype_to_str(output_dtype))
     return shape_long.new_empty(tuple(dim_list), dtype=tensor_dtype)
+
+
+@impl(m, "npu_fused_quant_matmul")
+def npu_fused_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, x3=None,
+                                fused_op_type='', output_dtype=None, x1_dtype=None, x2_dtype=None,
+                                pertoken_scale_dtype=None, scale_dtype=None, x3_dtype=None, group_sizes=None,
+                                y_scale=None):
+    return npu_quant_matmul_meta(x1, x2, scale, offset=offset, pertoken_scale=pertoken_scale, bias=bias,
+                                 output_dtype=output_dtype, x1_dtype=x1_dtype, x2_dtype=x2_dtype,
+                                 pertoken_scale_dtype=pertoken_scale_dtype, scale_dtype=scale_dtype,
+                                 group_sizes=group_sizes, y_scale=y_scale)
 
 
 @impl(m, "npu_quant_matmul_dequant")
@@ -4282,15 +4298,15 @@ def npu_cross_entropy_loss_meta(
 
 @impl(m, "npu_cross_entropy_loss_backward")
 def npu_cross_entropy_loss_backward_meta(
-    grad_loss, 
-    log_prob, 
-    target, 
-    weight=None, 
-    grad_zloss=None, 
-    lse_for_zloss=None, 
-    reduction='mean', 
-    ignore_index=-100, 
-    label_smoothing=0.0, 
+    grad_loss,
+    log_prob,
+    target,
+    weight=None,
+    grad_zloss=None,
+    lse_for_zloss=None,
+    reduction='mean',
+    ignore_index=-100,
+    label_smoothing=0.0,
     lse_square_scale_for_zloss=0.0
 ):
     result = torch.empty_like(log_prob)
