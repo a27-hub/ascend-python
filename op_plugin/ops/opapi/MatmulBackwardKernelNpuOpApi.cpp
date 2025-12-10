@@ -114,7 +114,6 @@ at::Tensor matmul_mat1_backward(const at::Tensor self,
         output = at_npu::native::OpPreparation::apply_tensor_without_format(mat1.sizes(), grad.options());
         mat2 = mat2.transpose(-2, -1);
         mat2 = mat2.reshape({-1, mat2.size(-1)});
-        grad = grad.view({grad.size(-2), -1});
 
         int64_t dim = grad.dim();
         c10::SmallVector<int64_t, op_infer::SIZE> permute_order;
