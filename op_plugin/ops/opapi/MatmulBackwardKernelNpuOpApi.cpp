@@ -115,6 +115,16 @@ at::Tensor matmul_mat1_backward(const at::Tensor self,
         mat2 = mat2.transpose(-2, -1);
         mat2 = mat2.reshape({-1, mat2.size(-1)});
         grad = grad.view({grad.size(-2), -1});
+
+        int64_t dim = grad.dim();
+        c10::SmallVector<int64_t, op_infer::SIZE> permute_order;
+        permute_order.reserve(dim);
+        permute_order.push_back(dim - 2);
+        for (int64_t i = 0; i < dim - 2; ++i) {
+            permute_order.push_back(i);
+        }
+        permute_order.push_back(dim - 1);
+        grad = grad.permute(permute_order).contiguous().reshape(grad.size(-2), -1);
         matmul_implement_npu(output, grad, mat2);
         output = output.reshape(self.sizes());
     } else { // bmm
