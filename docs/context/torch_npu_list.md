@@ -201,6 +201,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p12741142714357"><a name="p12741142714357"></a><a name="p12741142714357"></a>按元素计算self的双曲正切。</p>
 </td>
 </tr>
+<tr id="row115511438538"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p75511930538"><a name="p75511930538"></a><a name="p75511930538"></a><a href="（beta）torch_npu-npu_mla_prolog_v3.md">（beta）torch_npu.npu_mla_prolog_v3</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p12741142714357"><a name="p12741142714357"></a><a name="p12741142714357"></a>推理场景下，Multi-Head Latent Attention前处理计算接口。</p>
+</td>
+</tr>
 <tr id="row558010477110"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p17580147201113"><a name="p17580147201113"></a><a name="p17580147201113"></a><a href="（beta）torch_npu-npu_nms_rotated.md">（beta）torch_npu.npu_nms_rotated</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p2907120192218"><a name="zh-cn_topic_0000001655404257_p2907120192218"></a><a name="zh-cn_topic_0000001655404257_p2907120192218"></a>按分数降序选择旋转标注框的子集。</p>
