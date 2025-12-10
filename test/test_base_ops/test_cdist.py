@@ -3,6 +3,7 @@ import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion
 
 
 class Testcdist(TestCase):
@@ -12,6 +13,7 @@ class Testcdist(TestCase):
         x2 = np.random.uniform(min_n, max_n, shape_y).astype(src_type)
         return x1, x2
 
+    @SkipIfNotGteCANNVersion(base_version='8.5.0')
     def op_exec(self, x1, x2, p, device='cpu'):
         is_fp16 = x1.dtype == np.float16
         if device == 'cpu' and is_fp16:
