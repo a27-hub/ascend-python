@@ -123,7 +123,7 @@ at::Tensor matmul_mat1_backward(const at::Tensor self,
             permute_order.push_back(i);
         }
         permute_order.push_back(dim - 1);
-        grad = grad.permute(permute_order).contiguous().reshape(grad.size(-2), -1); // 2 for matmul specific dimension
+        grad = grad.permute(permute_order).contiguous().reshape({grad.size(-2), -1}); // 2 for matmul specific dimension
         matmul_implement_npu(output, grad, mat2);
         output = output.reshape(self.sizes());
     } else { // bmm
