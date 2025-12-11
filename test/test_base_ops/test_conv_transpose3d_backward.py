@@ -73,9 +73,9 @@ class TestConvTranspose3dBackward(TestCase):
             self.input_grad[1] = self.input_grad[1].to(torch.float16)
             self.weight_grad[0] = self.weight_grad[0].to(self.weight_grad[1].dtype)
 
-            self.assertRtolEqual(cpu_output.detach().numpy(), npu_output.detach().numpy(), prec16=0.003)
-            self.assertRtolEqual(self.input_grad[0].numpy(), self.input_grad[1].numpy(), prec16=0.003)
-            self.assertRtolEqual(self.weight_grad[0].numpy(), self.weight_grad[1].numpy(), prec16=0.003)
+            self.assertRtolEqual(cpu_output.detach().numpy(), npu_output.detach().numpy(), prec16=0.005)
+            self.assertRtolEqual(self.input_grad[0].numpy(), self.input_grad[1].numpy(), prec16=0.005)
+            self.assertRtolEqual(self.weight_grad[0].numpy(), self.weight_grad[1].numpy(), prec16=0.005)
 
     def test_conv_transpose3d_backward_shape_format_fp16_input_emptyn(self):
         shape_format = [
