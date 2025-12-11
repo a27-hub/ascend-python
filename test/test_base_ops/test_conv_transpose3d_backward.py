@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
 
 class TestConvTranspose3dBackward(TestCase):
@@ -77,8 +77,21 @@ class TestConvTranspose3dBackward(TestCase):
             self.assertRtolEqual(self.input_grad[0].numpy(), self.input_grad[1].numpy(), prec16=0.003)
             self.assertRtolEqual(self.weight_grad[0].numpy(), self.weight_grad[1].numpy(), prec16=0.003)
 
+    def test_conv_transpose3d_backward_shape_format_fp16_input_emptyn(self):
+        shape_format = [
+            [[np.float16, 30, [0, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 1, 1, 1]]],
+        ]
+        for item in shape_format:
+            npu_bias = torch.randn(item[1][2][1]).to(torch.float16).to('npu')
+            self.weight_grad.clear()
+            self.input_grad.clear()
+            _, npu_input = create_common_tensor(item[0], -2, 2)
+            _, npu_weight = create_common_tensor(item[1], -2, 2)
+            npu_output = nn.functional.conv_transpose3d(npu_input, npu_weight, padding=0, bias=npu_bias)
+            self.assertEqual(npu_output.shape, npu_input.shape)
+
     @SupportedDevices(['Ascend910A', 'Ascend910B'])
-    def test_conv_transpose3d_backward_shape_format_fp16_emptydhw(self):
+    def test_conv_transpose3d_backward_shape_format_fp16_filter_emptydhw(self):
         shape_format = [
             [[np.float16, 30, [1, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 0, 1, 1]]],
             [[np.float16, 30, [1, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 1, 0, 1]]],
@@ -94,6 +107,22 @@ class TestConvTranspose3dBackward(TestCase):
             with self.assertRaises(RuntimeError):
                 npu_output = self.npu_op_exec(npu_input, npu_weight, bias1=npu_bias, padding=0)
 
+    @SupportedDevices(['Ascend910_95'])
+    def test_conv_transpose3d_backward_shape_format_fp16_filter_emptydhw_91095(self):
+        shape_format = [
+            [[np.float16, 30, [1, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 0, 1, 1]]],
+            [[np.float16, 30, [1, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 1, 0, 1]]],
+            [[np.float16, 30, [1, 1, 1, 1, 1]], [np.float16, 30, [1, 1, 1, 1, 0]]],
+        ]
+        for item in shape_format:
+            npu_bias = torch.randn(item[1][2][1]).to(torch.float16).to('npu')
+            self.weight_grad.clear()
+            self.input_grad.clear()
+            _, npu_input = create_common_tensor(item[0], -2, 2)
+            _, npu_weight = create_common_tensor(item[1], -2, 2)
+            npu_output = nn.functional.conv_transpose3d(npu_input, npu_weight, padding=0, bias=npu_bias)
+            self.assertEqual(npu_output.shape, npu_weight.shape)
+            
     @unittest.skip("skip test_conv_transpose3d_backward_shape_format_fp32 now")
     def test_conv_transpose3d_backward_shape_format_fp32(self):
         shape_format = [
