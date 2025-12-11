@@ -223,7 +223,6 @@ class TestSparseFlashAttention(TestCase):
         act_seq_q = torch.tensor(act_seq_q).to(torch.int32).npu()
         act_seq_kv = torch.tensor(act_seq_kv).to(torch.int32).npu()
 
-        print(f'======================== PTA eager BEGIN ========================')
         # start run custom ops
         npu_out, npu_softmax_max, npu_softmax_sum = torch_npu.npu_sparse_flash_attention(
             query, key, value, sparse_indices, scale_value, block_table=None, 
@@ -247,10 +246,10 @@ class TestSparseFlashAttention(TestCase):
             print("cpu output:\n", cpu_out, cpu_out.shape)
             print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
         self.assertTrue(true_ratio > 0.99, "precision compare fail")
-        print(f'======================== PTA eager FINISH ========================')
+
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
-    def test_sfa_eager(self, device = "npu"):
+    def test_sfa_saprse_size_zero(self, device = "npu"):
         scale_value = 0.041666666666666664
         sparse_block_size = 1
         query_type = torch.float16
@@ -291,7 +290,6 @@ class TestSparseFlashAttention(TestCase):
         act_seq_q = torch.tensor(act_seq_q).to(torch.int32).npu()
         act_seq_kv = torch.tensor(act_seq_kv).to(torch.int32).npu()
 
-        print(f'======================== PTA eager BEGIN ========================')
         # start run custom ops
         npu_out, npu_softmax_max, npu_softmax_sum = torch_npu.npu_sparse_flash_attention(
             query, key, value, sparse_indices, scale_value, block_table=None, 
@@ -307,15 +305,7 @@ class TestSparseFlashAttention(TestCase):
             query_rope=query_rope, key_rope=key_rope,
             layout_query='BSND', layout_kv='BSND', sparse_mode=3, block_table=None)
         npu_out = npu_out.cpu().to(torch.float32).numpy()
-
-        res = np.isclose(npu_out, cpu_out, rtol=0.005, atol=0.0001, equal_nan=False)
-        true_ratio = np.mean(res)
-        if true_ratio < 0.99:
-            print("npu output:\n", npu_out, npu_out.shape)
-            print("cpu output:\n", cpu_out, cpu_out.shape)
-            print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
-        self.assertTrue(true_ratio > 0.99, "precision compare fail")
-        print(f'======================== PTA eager FINISH ========================')
+        self.assertRtolEqual(cpu_out, npu_out, prec=0.01)
 
 if __name__ == "__main__":
     run_tests()
