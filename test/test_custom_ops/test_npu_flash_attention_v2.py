@@ -6,8 +6,87 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
+PER_BLOCK_SIZE = 128
+FP8_MAX = 448.0
 
 class TestNPUFlashAttentionV2(TestCase):
+    def npu_block_quant(self, tensor, scale):
+        dim1 = tensor.shape[0]
+        dim2 = tensor.shape[1]
+        dim3 = tensor.shape[2]
+        dim4 = tensor.shape[3]
+        quanted_tensor = torch.zeros([dim1, dim2, dim3, dim4]).to(torch.float32)
+        for b in range(dim1):
+            for n in range(dim2):
+                for s in range(0, dim3, PER_BLOCK_SIZE):
+                s_start = s // PER_BLOCK_SIZE * PER_BLOCK_SIZE
+                s_end = min(s // PER_BLOCK_SIZE * PER_BLOCK_SIZE + PER_BLOCK_SIZE, dim3)
+                quanted_tensor[b, n, s_start:s_end, :] = tensor[b, n, s_start:s_end, :] *
+                    scale[b, n, s // PER_BLOCK_SIZE, 0]
+        return quanted_tensor
+
+    def calc_quant_scale(self, tensor):
+        dim1 = tensor.shape[0]
+        dim2 = tensor.shape[1]
+        dim3 = tensor.shape[2]
+        dim4 = tensor.shape[3]
+        scale_for_tensor = torch.ones([dim1, dim2, math.ceil(dim3 / PER_BLOCK_SIZE), 1]).to(torch.float32)
+        for b in range(dim1):
+            for n in range(dim2):
+                for s in range(0, dim3, PER_BLOCK_SIZE):
+                    s_start = s // PER_BLOCK_SIZE * PER_BLOCK_SIZE
+                    s_end = min(s // PER_BLOCK_SIZE * PER_BLOCK_SIZE + PER_BLOCK_SIZE, dim3)
+                    chunk = tensor[b, n, s_start:s_end, :]
+                    max_val = torch.max(torch.abs(chunk))
+                    epsilon = 1e-8
+                    scale_for_tensor[b, n, s // PER_BLOCK_SIZE, 0] = FP8_MAX / (max_val + epsilon)
+        return scale_for_tensor
+    
+    def supported_op_exec_quant(self, query, key, value, d_scale_q, d_scale_k, d_scale_v, atten_mask):
+        scale = 0.08838
+        query = query.to(torch.float)
+        key = key.to(torch.float)
+        value = value.to(torch.float)
+
+        d_scale_qf = torch.zeros(1, 8, 256, 1, dtype=torch.float)
+        d_scale_kf = torch.zeros(1, 8, 256, 1, dtype=torch.float)
+        d_scale_vf = torch.zeros(1, 8, 256, 1, dtype=torch.float)
+        for i in range(256):
+            d_scale_qf[:, :, i, :] = d_scale_q[:, :, i // PER_BLOCK_SIZE, :]
+            d_scale_kf[:, :, i, :] = d_scale_k[:, :, i // PER_BLOCK_SIZE, :]
+            d_scale_vf[:, :, i, :] = d_scale_v[:, :, i // PER_BLOCK_SIZE, :]
+        qk = torch.matmul(query * d_scale_qf, (key * d_scale_kf).transpose(2, 3)).mul(scale)
+        qk = qk + atten_mask * (torch.finfo(torch.float).min)
+        max = torch.max(qk, dim=-1, keepdim=True)[0]
+        softmax_res = torch.exp(qk - max).to(torch.float8_e4m3fn).to(torch.float)
+        sum = torch.sum(softmax_res, dim=-1, keepdim=True)
+        attention_out = torch.matmul(softmax_res, value * d_scale_vf)
+        attention_out_res = attention_out / sum
+        return attention_out_res
+    
+    def custom_op_exec_quant(self, query, key, value, d_scale_q, d_scale_k, d_scale_v, sparse_params):
+        scale = 0.08838
+        atten_mask = None
+        if sparse_params[0] == 0:
+            shape = [1, 8, 256, 256]
+            atten_mask_u = np.triu(np.ones(shape), k=sparse_params[1] + 1)
+            atten_mask_l = np.tril(np.ones(shape), k=-sparse_params[2] - 1)
+            atten_masks = atten_mask_u + atten_mask_l
+            atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
+        return torch_npu.npu_fusion_attention_v2(
+            query, key, value, head_num=8, input_layout="BNSD", scale=scale, sparse_mode=sparse_params[0],
+            atten_mask=atten_mask, per_tokens=sparse_params[1], next_tokens=sparse_params[2])
+
+    def get_atten_mask(self, sparse_mode=0, pre_tokens=65536, next_tokens=65536):
+        atten_masks = []
+        shape = [1, 8, 256, 256]
+        if sparse_mode == 0:
+            atten_mask_u = np.triu(np.ones(shape), k=next_tokens + 1)
+            atten_mask_l = np.tril(np.ones(shape), k=-pre_tokens - 1)
+            atten_masks = atten_mask_u + atten_mask_l
+        atten_mask = torch.tensor(atten_masks).to(torch.float16)
+        return atten_mask
+
     def supported_op_exec(self, query, key, value, drop_mask=None, keep_prob=1.0):
         scale = 0.08838
         qk = torch.matmul(query, key.transpose(2, 3)).mul(scale)
@@ -62,6 +141,22 @@ class TestNPUFlashAttentionV2(TestCase):
         value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
         keep_prob = 0.9
         drop_mask = self.get_drop_mask(query, 1, 32, 256, 256, seed=2, gen_p=1-keep_prob)
+
+        q_npu = self.trans_BNSD2BSH(query).npu()
+        k_npu = self.trans_BNSD2BSH(key).npu()
+        v_npu = self.trans_BNSD2BSH(value).npu()
+        output = self.supported_op_exec(query.to(torch.float32), key.to(torch.float32), value.to(torch.float32),
+                                        drop_mask, keep_prob).to(torch.float16)
+        attention_score, _, _, _, _, _, _ = self.custom_op_exec(q_npu, k_npu, v_npu, keep_prob)
+        self.assertRtolEqual(output, attention_score)
+    
+    @SupportedDevices(['Ascend910_95'])
+    def test_npu_flash_attention_v2_with_fp8(self, device="npu"):
+        query = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+        key = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+        value = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+        keep_prob = 0.9
+        drop_mask = self.get_drop_mask(query, 1, 8, 256, 256, seed=2, gen_p=1-keep_prob)
 
         q_npu = self.trans_BNSD2BSH(query).npu()
         k_npu = self.trans_BNSD2BSH(key).npu()
