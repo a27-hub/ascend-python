@@ -1,6 +1,7 @@
 import torch
 import torch_npu
 
+from torch._subclasses import FakeTensorMode
 from torch_npu.testing.testcase import TestCase, run_tests
 
 
@@ -66,6 +67,18 @@ class TestOneHot(TestCase):
         npu_output = self.npu_op_exec(input1, 4)
 
         self.assertRtolEqual(cpu_output, npu_output)
+    
+    def test_ont_hot_compile_fake(self):
+        mode = FakeTensorMode()
+
+        def fn(x):
+            return torch.nn.functional.one_hot(x, 128)
+        compiled = torch.compile(fn, backend="aot_eager")
+        input1 = mode.from_tensor(torch.zeros(5, 8, device="npu")).to(torch.long)
+        output1 = compiled(input1)
+
+        self.assertEqual(output1.shape, (5, 8, 128))
+        self.assertEqual(output1.device.type, "npu")
 
 
 if __name__ == "__main__":
