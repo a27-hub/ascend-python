@@ -3383,3 +3383,12 @@ def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, 
         result_3 = None
 
     return (result_1, result_2, result_3)
+
+
+@impl(m, "npu_grouped_matmul_add_")
+def npu_grouped_matmul_add__meta(y, x, weight, group_list, transpose_x=True, transpose_weight=False, group_type=2):
+    torch._check(
+        group_type == 2,
+        lambda: f"group_type only supports 2, but got {group_type} {ops_error(ErrCode.VALUE)}",
+    )
+    return y
