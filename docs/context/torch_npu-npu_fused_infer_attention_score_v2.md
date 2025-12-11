@@ -56,10 +56,11 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     -   Q\_S为1，当`pse_shift`为`float16`类型时，要求`query`为`float16`类型；当`pse_shift`为`bfloat16`类型时，要求`query`为`bfloat16`类型。输入shape类型需为\(B, Q\_N, 1, KV\_S\)或\(1, Q\_N, 1, KV\_S\)。对于`pse_shift`的KV\_S为非32对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。
 
 -   **atten\_mask**（`Tensor`）：可选参数，对QK结果进行mask，用来指示是否计算Token间的相关性。数据类型支持`bool`、`int8`和`uint8`。不支持非连续的Tensor，数据格式支持ND。如不使用该功能可传入None。
-
-    -   Q\_S不为1时，建议shape输入\(Q\_S, KV\_S\)、\(B, Q\_S, KV\_S\)、\(1, Q\_S, KV\_S\)、\(B, 1, Q\_S, KV\_S\)、\(1, 1, Q\_S, KV\_S\)。
-    -   Q\_S为1时，建议shape输入\(B, KV\_S\)、\(B, 1, KV\_S\)、\(B, 1, 1, KV\_S\)。
-
+    - spareseMode = 0、1时
+        - 支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+        - 另外输入Layout为BSH、BSND、BNSD、BNSD_BSND时，且query与key的D等于value的D，并且不传query rope和key rope时，Q_S=1可支持传入（B,KV_S），Q_S>1时可支持传入(Q_S,KV_S)。
+    - spareseMode = 2、3、4时，attenMaskOptional的shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。    
+    
     如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
 -   **actual\_seq\_qlen**（`List[Int]`）：可选参数，表示不同Batch中`query`的有效seqlen，数据类型支持`int64`。如果不指定seqlen可传入None，表示和`query`的shape的S长度相同。
