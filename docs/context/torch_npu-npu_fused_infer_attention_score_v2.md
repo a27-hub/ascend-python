@@ -58,6 +58,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 -   **atten\_mask**（`Tensor`）：可选参数，对QK结果进行mask，用来指示是否计算Token间的相关性。数据类型支持`bool`、`int8`和`uint8`。不支持非连续的Tensor，数据格式支持ND。如不使用该功能可传入None。
 
     -   Q\_S不为1时，建议shape输入\(Q\_S, KV\_S\)、\(B, Q\_S, KV\_S\)、\(1, Q\_S, KV\_S\)、\(B, 1, Q\_S, KV\_S\)、\(1, 1, Q\_S, KV\_S\)。
+    sparseMode = 0、1时，如果传入rope或D等于192时，attenMaskOptional的shape建议输入(B、Q_S,KV_S);如果不传rope且D等于128时，输入Layout为BSH、BSND、BNSD_BSND时，attenMaskOptional的shape建议输入为(B,KV_S)、(Q_S,KV_S)、(B,Q_S,KV_S)、(1,Q_S,KV_S);
     -   Q\_S为1时，建议shape输入\(B, KV\_S\)、\(B, 1, KV\_S\)、\(B, 1, 1, KV\_S\)。
 
     如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
