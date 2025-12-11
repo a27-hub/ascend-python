@@ -3942,6 +3942,28 @@ class TestNpuDSA(TestCase):
             self.assertEqual(loss.shape, expect_loss.shape)
 
 
+class TestNpuFusionAttention(TestCase):
+    def test_npu_fusion_attention_input_layout_is_BSND(self):
+        
+        with FakeTensorMode():
+            B, N, S, D = 4, 8, 32, 32
+            shape = (B, S, N, D)
+            query = torch.randn(shape, dtype=torch.float32, device="npu", requires_grad=True)
+            key = torch.randn(shape, dtype=torch.float32, device="npu", requires_grad=True)
+            value = torch.randn(shape, dtype=torch.float32, device="npu", requires_grad=True)
+            scale = 0.08838
+            softmax_max_sum = torch.randn((B, N, S, 8), dtype=torch.float32).npu()
+
+            res = torch_npu.npu_fusion_attention(query, key, value, head_num=N, input_layout="BSND", scale=scale)
+
+            self.assertEqual(query.shape, res[0].shape)
+            self.assertEqual(query.dtype, res[0].dtype)
+            self.assertEqual(softmax_max_sum.shape, res[1].shape)
+            self.assertEqual(softmax_max_sum.dtype, res[1].dtype)
+            self.assertEqual(softmax_max_sum.shape, res[2].shape)
+            self.assertEqual(softmax_max_sum.dtype, res[2].dtype)
+
+
 class TestNpuConv2d(TestCase):
     def test_npu_conv2d(self):
         with FakeTensorMode():

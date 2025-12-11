@@ -1482,6 +1482,10 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
         S1 = query.size(0)
         S2 = key.size(0)
 
+    if input_layout == "BSND":
+        S1 = query.size(1)
+        S2 = key.size(1)
+
     seed = 0
     offset = 0
     numels = 0
