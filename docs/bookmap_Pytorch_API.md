@@ -41,6 +41,7 @@
         -   [（beta）torch_npu.npu_max](./context/（beta）torch_npu-npu_max.md)
         -   [（beta）torch_npu.npu_min](./context/（beta）torch_npu-npu_min.md)
         -   [（beta）torch_npu.npu_mish](./context/（beta）torch_npu-npu_mish.md)
+        -   [（beta）torch_npu.npu_mla_prolog_v3](./context/（beta）torch_npu-npu_mla_prolog_v3.md)
         -   [（beta）torch_npu.npu_nms_rotated](./context/（beta）torch_npu-npu_nms_rotated.md)
         -   [（beta）torch_npu.npu_nms_v4](./context/（beta）torch_npu-npu_nms_v4.md)
         -   [（beta）torch_npu.npu_nms_with_mask](./context/（beta）torch_npu-npu_nms_with_mask.md)
