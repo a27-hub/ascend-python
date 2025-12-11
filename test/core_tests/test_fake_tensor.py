@@ -17,6 +17,7 @@ import torch._prims as prims
 
 import torch_npu
 import torch_npu.testing
+from torch_npu.testing.common_utils import SupportedDevices
 import torch.testing._internal.optests as optests
 from torch import distributed as dist
 from torch._dynamo.testing import rand_strided
@@ -4016,6 +4017,7 @@ class TestNpuConv2d(TestCase):
 
 
 class TestCrossEntropyLoss(TestCase):
+    @SupportedDevices(['Ascend910B'])
     def test_npu_cross_entropy_loss(self):
         N = 8
         C = 8
@@ -4048,6 +4050,7 @@ class TestCrossEntropyLoss(TestCase):
             self.assertEqual(log_prob_none.dtype, log_prob_fake_tensor_none.dtype)
 
     
+    @SupportedDevices(['Ascend910B'])
     def test_npu_cross_entropy_loss_backward(self):
         N = 8
         C = 8
@@ -4069,6 +4072,7 @@ class TestCrossEntropyLoss(TestCase):
 
 
 class TestNpuGroupedMatmulAdd_(TestCase):
+    @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_add_(self):
         x = torch.randn(512, 256, dtype=torch.float16, device="npu")
         weight = torch.randn(512, 256, dtype=torch.float16, device="npu")

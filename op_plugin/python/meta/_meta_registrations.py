@@ -4128,7 +4128,7 @@ def npu_cross_entropy_loss_meta(x, target, weight=None, reduction="mean", *, ign
     loss_shape = (x.size(0),) if reduction == "none" else (1,)
     log_prob_shape = x.size()
     zloss_shape = loss_shape if return_zloss else (0,)
-    lse_for_zloss_shape = (x.size(0),) if abs(lse_square_scale_for_zloss - 0.0) < 1e-9 else (0,)
+    lse_for_zloss_shape = (x.size(0),) if abs(lse_square_scale_for_zloss - 0.0) < 1e-7 else (0,)
 
     loss = torch.empty(loss_shape, dtype=x.dtype, device='meta')
     log_prob = torch.empty(log_prob_shape, dtype=x.dtype, device='meta')
