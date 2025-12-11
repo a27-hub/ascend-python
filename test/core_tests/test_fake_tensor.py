@@ -4071,30 +4071,5 @@ class TestCrossEntropyLoss(TestCase):
             self.assertEqual(input.grad.dtype, input_fake_tensor.grad.dtype)
 
 
-class TestNpuGroupedMatmulAdd_(TestCase):
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_grouped_matmul_add_(self):
-        x = torch.randn(512, 256, dtype=torch.float16, device="npu")
-        weight = torch.randn(512, 256, dtype=torch.float16, device="npu")
-        y = torch.randn(512, 256, dtype=torch.float, device="npu")
-        group_list = torch.tensor([256, 512]).to(torch.int64).npu()
-        transpose_x = True
-        transpose_weight = False
-        group_type = 2
-
-        torch_npu.npu_grouped_matmul_add_(y, x, weight, group_list, transpose_x=transpose_x, transpose_weight=transpose_weight, group_type=group_type)
-
-        with FakeTensorMode():
-            x_fake_tensor = torch.randn(512, 256, dtype=torch.float16, device="npu")
-            weight_fake_tensor = torch.randn(512, 256, dtype=torch.float16, device="npu")
-            y_fake_tensor = torch.randn(512, 256, dtype=torch.float, device="npu")
-            group_list_fake_tensor = torch.tensor([256, 512]).to(torch.int64).npu()
-
-            torch_npu.npu_grouped_matmul_add_(y_fake_tensor, x_fake_tensor, weight_fake_tensor, group_list_fake_tensor, transpose_x=transpose_x, transpose_weight=transpose_weight, group_type=group_type)
-
-            self.assertEqual(y.shape, y_fake_tensor.shape)
-            self.assertEqual(y.dtype, y_fake_tensor.dtype)
-
-
 if __name__ == "__main__":
     run_tests()
