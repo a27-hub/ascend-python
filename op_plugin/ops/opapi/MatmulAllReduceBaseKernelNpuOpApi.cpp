@@ -110,6 +110,16 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
     TORCH_CHECK((comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) ||
                 (!comm_quant_scale_1.has_value() && !comm_quant_scale_2.has_value()),
                 "comm_quant_scale_1 and comm_quant_scale_2 should both be null or not null", OPS_ERROR(ErrCode::TYPE));
+    
+    printf("********************* CHUGUOWEI The case step here. \n");
+
+    if(comm_quant_scale_1.has_value()){
+        printf("********************* CHUGUOWEI comm_quant_scale_1: %d. \n", comm_quant_scale_1.has_value().dim());
+    } else {
+        printf("********************* CHUGUOWEI comm_quant_scale_1 do not has value.");
+    }
+    
+    
     if (comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) {
         const at::Tensor& comm_quant_scale_1_real = comm_quant_scale_1.value();
         const at::Tensor& comm_quant_scale_2_real = comm_quant_scale_2.value();
