@@ -27,8 +27,8 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
 
 ## 参数说明
 
->**说明：**<br>
->Tensor中shape使用的变量说明：
+> [!NOTE]  
+> Tensor中shape使用的变量说明：
 >-   A：表示token个数，取值要求Sum\(expert\_token\_num\_per\_rank\)=A。
 >-   H：表示token长度，取值要求0<H<16384。
 >-   N：表示卡数，取值无限制。

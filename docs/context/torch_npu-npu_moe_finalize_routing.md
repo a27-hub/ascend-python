@@ -24,8 +24,8 @@ torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2, bias, s
 ```
 
 ## 参数说明
->**说明：**<br>
->shape中的符号说明：
+> [!NOTE]  
+> shape中的符号说明：
 >-   $NUM\_ROWS$：为行数。
 >-   $K$：表示从总的专家$E$中选出$K$个专家。
 >-   $H$：表示每个token序列长度，为列数。
