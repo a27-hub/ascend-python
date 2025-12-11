@@ -47,8 +47,8 @@ torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=N
 
 ## 参数说明
 
->**说明：**<br>
->Tensor中shape使用的变量说明：
+> [!NOTE]  
+> Tensor中shape使用的变量说明：
 >-   G：表示group_index分组数量，取值\>0。
 >-   N：计算输入`x`的最后一维大小的二分之一，取值\>0。
 

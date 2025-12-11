@@ -46,8 +46,8 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
 
 ## 参数说明<a name="zh-cn_topic_0000002236535552_section1723416525369"></a>
 
->**说明：**<br> 
->Tensor中shape使用的变量说明：
+> [!NOTE]   
+> Tensor中shape使用的变量说明：
 >-   batch\_size：batch的大小。
 >-   seq\_len：sequence的长度。
 >-   hidden\_size：表示MLA输入的向量长度，取值仅支持576。
