@@ -4115,3 +4115,61 @@ if _is_pytorch_version_ge("2.6.0"):
     @impl(m, "npu_sim_exponential_")
     def npu_sim_exponential__meta(self, lambd=1, generator=None):
         return torch.empty_like(self)
+
+
+@impl(m, "npu_cross_entropy_loss")
+def npu_cross_entropy_loss_meta(input, target, weight=None, reduction="mean", *, ignore_index=-100, label_smoothing=0.0, lse_square_scale_for_zloss=0.0, return_zloss=False):
+    batch_size = input.size(0)
+
+    loss_shape = (input.size(0),) if reduction == "none" else (1,)
+    log_prob_shape = input.size()
+    zloss_shape = loss_shape if return_zloss else (0,)
+    lse_for_zloss_shape = (input.size(0),) if lse_square_scale_for_zloss != 0.0 else (0,)
+
+    loss = torch.empty(loss_shape, dtype=input.dtype, device='meta')
+    log_prob = torch.empty(log_prob_shape, dtype=input.dtype, device='meta')
+    zloss = torch.empty(zloss_shape, dtype=input.dtype, device='meta')
+    lse_for_zloss = torch.empty(lse_for_zloss_shape, dtype=input.dtype, device='meta')
+
+    return loss, log_prob, zloss, lse_for_zloss
+
+
+@impl(m, "npu_cross_entropy_loss_backward")
+def npu_cross_entropy_loss_backward_meta(grad_loss, log_prob, target, weight=None, grad_zloss=None, lse_for_zloss=None, reduction='mean', ignore_index=-100, label_smoothing=0.0, lse_square_scale_for_zloss=0.0):
+    result = torch.empty_like(log_prob)
+
+    return result
+
+
+@impl(m, "npu_conv2d")
+def npu_conv2d_meta(input, weight, bias, stride, padding, dilation, groups):
+    N = input.size(0)
+    H = input.size(2)
+    W = input.size(3)
+    Co = weight.size(0)
+    kernel_size = weight.shape[2:]
+
+    Ho = int((H + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+    Wo = int((W + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+    result_shape = (N, Co, Ho, Wo,)
+
+    result = torch.empty(result_shape, dtype=input.dtype, device='meta')
+
+    return result
+
+
+@impl(m, "npu_conv2d_backward")
+def npu_conv2d_backward_meta(input, grad_output, weight, stride, padding, dilation, groups, output_mask):
+    Co = weight.size(0)
+
+    result3_shape = (Co,)
+
+    result_1 = torch.empty(input.size(), dtype=input.dtype, device='meta')
+    result_2 = torch.empty(weight.size(), dtype=weight.dtype, device='meta')
+    if output_mask[2] == True:
+        result_3 = torch.empty(result3_shape, dtype=input.dtype, device='meta')
+    else:
+        result_3 = None
+
+    return (result_1, result_2, result_3)
