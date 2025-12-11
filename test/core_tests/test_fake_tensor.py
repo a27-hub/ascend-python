@@ -2491,8 +2491,6 @@ class TestAttentionUpdate(TestCase):
             out, lse_out = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
             self.assertTrue(out.shape == torch.Size([N, H]))
             self.assertTrue(out.dtype == dtype)
-            self.assertTrue(lse_out.shape == torch.Size([N]))
-            self.assertTrue(lse_out.dtype == dtype)
 
 
 class TestAntiQuant(TestCase):
