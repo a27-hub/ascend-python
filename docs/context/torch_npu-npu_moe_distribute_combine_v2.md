@@ -91,9 +91,9 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 
 -   **ori\_x** (`Tensor`)：可选参数，表示未经过FFN的token数据，在`copy_expert_num`不为0或`const_expert_num`不为0的场景下需要本输入数据。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-         - `comm_alg`设置为"fullmesh"时，可选择传入有效数据或填None，当`copy_expert_num`不为0时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
+         - `comm_alg`设置为"fullmesh"时，可选择传入有效数据或填None，当`copy_expert_num`不为0时必须传入有效数据；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
          - `comm_alg`设置为"hierarchy"时，当前版本不支持，传默认值None即可。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填None，当`copy_expert_num`不为0或`const_expert_num`不为0时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填None，当`copy_expert_num`不为0或`const_expert_num`不为0时必须传入有效数据；当传入有效数据时，要求是一个2D的Tensor，shape为(BS,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
 -   **const\_expert\_alpha\_1** (`Tensor`)：可选参数，在`const_expert_num`不为0的场景下需要输入的计算系数。	
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：预留参数，当前版本不支持，传None即可。
