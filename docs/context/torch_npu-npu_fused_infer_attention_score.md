@@ -48,8 +48,10 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 
 - **atten_mask** (`Tensor`)：可选参数。对Q（`query`）、K（`key`）的结果进行mask，用于指示是否计算Token间的相关性，数据类型支持`bool`、`int8`和`uint8`。不支持非连续的Tensor，数据格式支持$ND$。如果不使用该功能可传入None。
 
-    -   Q\_S不为1时建议shape输入\(Q\_S, KV\_S\)、\(B, Q\_S, KV\_S\)、\(1, Q\_S, KV\_S\)、\(B, 1, Q\_S, KV\_S\)、\(1, 1, Q\_S, KV\_S\)。
-    -   Q\_S为1时建议shape输入\(B, KV\_S\)、\(B, 1, KV\_S\)、\(B, 1, 1, KV\_S\)。
+    - spareseMode = 0、1时
+        - 支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+        - 另外输入Layout为BSH、BSND、BNSD、BNSD_BSND时，且query与key的D等于value的D，并且不传query_rope和key_rope时，Q_S=1可支持传入(B,KV_S)，Q_S>1时可支持传入(Q_S,KV_S)。
+    - spareseMode = 2、3、4时，attenMaskOptional的shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 
     其中Q\_S为`query`的shape中的S，KV\_S为`key`和`value`的shape中的S，但如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
