@@ -110,6 +110,16 @@ void check_params(const at::Tensor& x1, const at::Tensor& x2,
     TORCH_CHECK((comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) ||
                 (!comm_quant_scale_1.has_value() && !comm_quant_scale_2.has_value()),
                 "comm_quant_scale_1 and comm_quant_scale_2 should both be null or not null", OPS_ERROR(ErrCode::TYPE));
+    
+    printf("********************* CHUGUOWEI The case step here. \n");
+
+    if(comm_quant_scale_1.has_value()){
+        printf("********************* CHUGUOWEI comm_quant_scale_1: %d. \n", comm_quant_scale_1.has_value().dim());
+    } else {
+        printf("********************* CHUGUOWEI comm_quant_scale_1 do not has value.");
+    }
+    
+    
     if (comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) {
         const at::Tensor& comm_quant_scale_1_real = comm_quant_scale_1.value();
         const at::Tensor& comm_quant_scale_2_real = comm_quant_scale_2.value();
@@ -216,7 +226,7 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     }
     if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) && !is_fp8 && !is_a4) {
         const at::Tensor& dequant_scale_real = dequant_scale.value_or(at::Tensor());
-        if (comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) {
+        if (comm_quant_scale_1.has_value() || comm_quant_scale_2.has_value()) {
             const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
             EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV3, x1, x2, bias_real, x3_real, dequant_scale_real,
                          pertoken_scale_real, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr,
