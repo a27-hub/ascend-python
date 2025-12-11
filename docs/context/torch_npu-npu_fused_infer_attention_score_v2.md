@@ -56,9 +56,13 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     -   Q\_S为1，当`pse_shift`为`float16`类型时，要求`query`为`float16`类型；当`pse_shift`为`bfloat16`类型时，要求`query`为`bfloat16`类型。输入shape类型需为\(B, Q\_N, 1, KV\_S\)或\(1, Q\_N, 1, KV\_S\)。对于`pse_shift`的KV\_S为非32对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。
 
 -   **atten\_mask**（`Tensor`）：可选参数，对QK结果进行mask，用来指示是否计算Token间的相关性。数据类型支持`bool`、`int8`和`uint8`。不支持非连续的Tensor，数据格式支持ND。如不使用该功能可传入None。
+    - spareseMode = 0、1时
+        - 如果传入rope或D等于192，attenMaskOptional的shape输入支持(B,Q_S,KV_S)、(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+        - 如果不传rope且D等于128
+            - 输入Layout为BSH、BSND、BNSD、BNSD_BSND，attenMaskOptional的shape输入支持(B,KV_S)、(Q_S,KV_S)、(B,Q_S,KV_S)、(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)，二维输入下Q_S=1仅支持（B,KV_S），Q_S>1仅支持(Q_S,KV_S)。
+            - 其他输入Layout输入支持(B,Q_S,KV_S)、(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。 
+    - spareseMode = 2、3、4时，attenMaskOptional的shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。    
 
-    -   Q\_S不为1时，建议shape输入\(Q\_S, KV\_S\)、\(B, Q\_S, KV\_S\)、\(1, Q\_S, KV\_S\)、\(B, 1, Q\_S, KV\_S\)、\(1, 1, Q\_S, KV\_S\)。
-    -   Q\_S为1时，建议shape输入\(B, KV\_S\)、\(B, 1, KV\_S\)、\(B, 1, 1, KV\_S\)。
 
     如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
