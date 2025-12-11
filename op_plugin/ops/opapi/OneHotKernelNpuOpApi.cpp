@@ -28,11 +28,8 @@ static const int64_t MIN_NUM_CLASSES = 0;
 at::Tensor one_hot(const at::Tensor& self, int64_t num_classes)
 {
     auto ks = self.key_set();
-    bool is_fake_or_meta = ks.has_all(
-                               c10::DispatchKeySet(c10::BackendComponent::MetaBit)
-                           ) || ks.has_all(
-                               c10::DispatchKeySet(c10::DispatchKey::Python)
-                           );
+    bool is_fake_or_meta = ks.has_all(c10::DispatchKeySet(c10::BackendComponent::MetaBit)) ||
+        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python));
     if (is_fake_or_meta) {
         TORCH_CHECK(num_classes != -1, "FakeTensorMode does not support num_classes == -1.");
         auto options = self.options().dtype(at::kLong);
