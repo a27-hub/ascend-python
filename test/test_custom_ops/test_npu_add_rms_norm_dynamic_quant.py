@@ -174,7 +174,6 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertFalse(torch.isnan(tt).any().item())
             self.assertFalse(torch.isinf(tt).any().item())
 
-    @unittest.skip("skip until CANN is updated to support aclnnAddRmsNormDynamicQuantV2")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes(self):
         shape_list = [
@@ -198,7 +197,6 @@ class TestAddRmsNormDynamicQuant(TestCase):
 
             self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
 
-    @unittest.skip("skip until CANN is updated to support aclnnAddRmsNormDynamicQuantV2")
     @SupportedDevices(['Ascend910B'])
     def test_forward_various_shapes_bf16(self):
         shape_list = [
@@ -221,6 +219,25 @@ class TestAddRmsNormDynamicQuant(TestCase):
             smooth_scale2 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
 
             self._run_and_check(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
-            
+    
+    @SupportedDevices(['Ascend910B'])
+    def test_forward_output_mask_true_false_bf16(self):
+        x_shape = [2, 3, 32]
+        last_dim = x_shape[-1]
+
+        x1 = torch.randn(x_shape, dtype=torch.bfloat16, device='npu')
+        x2 = torch.randn(x_shape, dtype=torch.bfloat16, device='npu')
+        gamma = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+        beta = torch.zeros(last_dim, dtype=torch.bfloat16, device='npu')
+        smooth_scale1 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+        smooth_scale2 = torch.ones(last_dim, dtype=torch.bfloat16, device='npu')
+
+        self._run_and_check(
+            x1, x2, gamma,
+            smooth_scale1=smooth_scale1,
+            smooth_scale2=smooth_scale2,
+            beta=beta,
+            output_mask=[True, False],
+        )
 if __name__ == "__main__":
     run_tests()
