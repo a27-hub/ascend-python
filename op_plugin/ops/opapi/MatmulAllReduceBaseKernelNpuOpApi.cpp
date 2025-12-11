@@ -153,7 +153,7 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
     // size of last dim of output should be the same as size of last dim of x2
     auto output_size = op_infer::array_to_small_vector(x1.sizes());
-    output_size[x1.dim() - 1] = x2.size(1);
+    output_size[x1.dim() - 1] = x2.size(-1);
     // a8w8: dtype of output should be half.
     auto output_dtype = get_output_dtype(x1, dequant_scale);
     bool is_a8 = (x1_dtype.has_value() ?
@@ -216,7 +216,7 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     }
     if (isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) && !is_fp8 && !is_a4) {
         const at::Tensor& dequant_scale_real = dequant_scale.value_or(at::Tensor());
-        if (comm_quant_scale_1.has_value() && comm_quant_scale_2.has_value()) {
+        if (comm_quant_scale_1.has_value() || comm_quant_scale_2.has_value()) {
             const at::Tensor& pertoken_scale_real = pertoken_scale.value_or(at::Tensor());
             EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV3, x1, x2, bias_real, x3_real, dequant_scale_real,
                          pertoken_scale_real, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr,
