@@ -299,9 +299,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t pre_tockens,
     int64_t next_tockens,
     int64_t inner_precise,
-    int64_t seed,
-    int64_t offset,
-    int64_t numels,
+    const c10::optional<at::Tensor> &seed_tensor,
+    const c10::optional<at::Tensor> &offset_tensor,
+    const c10::optional<at::Tensor> &numels_tensor,
     c10::OptionalIntArrayRef prefix,
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
@@ -346,6 +346,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
         "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
         input_layout, OPS_ERROR(ErrCode::PARAM));
 
+    const at::Tensor &seed_const = seed_tensor.value_or(at::Tensor());
+    int64_t seed = seed_const.item<int64_t>();
+    const at::Tensor &offset_const = offset_tensor.value_or(at::Tensor());
+    int64_t offset = offset_const.item<int64_t>();
+    const at::Tensor &numels_const = numels_tensor.value_or(at::Tensor());
+    int64_t numels = numels_const.item<int64_t>();
+
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
@@ -367,7 +374,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     return result;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_fusion_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention(
     const at::Tensor &query, const at::Tensor &key,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
@@ -560,6 +567,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
         input_layout_str, actual_seq_qlen, actual_seq_kvlen);
 
+    at::Tensor seed_tensor = at::tensor(seed, query.options().dtype(at::kLong));
+    at::Tensor offset_tensor = at::tensor(offset, query.options().dtype(at::kLong));
+    at::Tensor numels_tensor = at::tensor(numels, query.options().dtype(at::kLong));
+
     if (!sync) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
@@ -567,7 +578,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     }
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
-        seed, offset, numels);
+        seed_tensor, offset_tensor, numels_tensor);
 }
 
 at::Tensor npu_prompt_flash_attention(
@@ -786,9 +797,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     int64_t pre_tockens,
     int64_t next_tockens,
     int64_t inner_precise,
-    int64_t seed,
-    int64_t offset,
-    int64_t numels,
+    const c10::optional<at::Tensor> &seed_tensor,
+    const c10::optional<at::Tensor> &offset_tensor,
+    const c10::optional<at::Tensor> &numels_tensor,
     c10::OptionalIntArrayRef prefix,
     c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen,
@@ -834,6 +845,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
         "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
         input_layout, OPS_ERROR(ErrCode::PARAM));
 
+    const at::Tensor &seed_const = seed_tensor.value_or(at::Tensor());
+    int64_t seed = seed_const.item<int64_t>();
+    const at::Tensor &offset_const = offset_tensor.value_or(at::Tensor());
+    int64_t offset = offset_const.item<int64_t>();
+    const at::Tensor &numels_const = numels_tensor.value_or(at::Tensor());
+    int64_t numels = numels_const.item<int64_t>();
+
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
@@ -855,7 +873,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     return result;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_fusion_attention(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention(
     const at::Tensor &query, const at::Tensor &key,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
@@ -1048,6 +1066,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
                input_layout_str, actual_seq_qlen, actual_seq_kvlen);
 
+    at::Tensor seed_tensor = at::tensor(seed, query.options().dtype(at::kLong));
+    at::Tensor offset_tensor = at::tensor(offset, query.options().dtype(at::kLong));
+    at::Tensor numels_tensor = at::tensor(numels, query.options().dtype(at::kLong));
+
     if (!sync) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
@@ -1055,7 +1077,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     }
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
-        seed, offset, numels);
+        seed_tensor, offset_tensor, numels_tensor);
 }
 
 at::Tensor npu_prompt_flash_attention(
