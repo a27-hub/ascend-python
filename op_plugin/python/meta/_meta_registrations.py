@@ -1069,6 +1069,10 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
         S1 = query.size(0)
         S2 = key.size(0)
 
+    if input_layout == "BSND":
+        S1 = query.size(1)
+        S2 = key.size(1)
+
     seed = 0
     offset = 0
     numels = 0
@@ -3321,3 +3325,70 @@ if _is_pytorch_version_ge("2.6.0"):
     @impl(m, "npu_sim_exponential_")
     def npu_sim_exponential__meta(self, lambd=1, generator=None):
         return torch.empty_like(self)
+    
+
+@impl(m, "npu_cross_entropy_loss")
+def npu_cross_entropy_loss_meta(x, target, weight=None, reduction="mean", *, ignore_index=-100, label_smoothing=0.0, lse_square_scale_for_zloss=0.0, return_zloss=False):
+    batch_size = x.size(0)
+
+    loss_shape = (x.size(0),) if reduction == "none" else (1,)
+    log_prob_shape = x.size()
+    zloss_shape = loss_shape if return_zloss else (0,)
+    lse_for_zloss_shape = (x.size(0),) if abs(lse_square_scale_for_zloss - 0.0) < 1e-7 else (0,)
+
+    loss = torch.empty(loss_shape, dtype=x.dtype, device='meta')
+    log_prob = torch.empty(log_prob_shape, dtype=x.dtype, device='meta')
+    zloss = torch.empty(zloss_shape, dtype=x.dtype, device='meta')
+    lse_for_zloss = torch.empty(lse_for_zloss_shape, dtype=x.dtype, device='meta')
+
+    return loss, log_prob, zloss, lse_for_zloss
+
+
+@impl(m, "npu_cross_entropy_loss_backward")
+def npu_cross_entropy_loss_backward_meta(grad_loss, log_prob, target, weight=None, grad_zloss=None, lse_for_zloss=None, reduction='mean', ignore_index=-100, label_smoothing=0.0, lse_square_scale_for_zloss=0.0):
+    result = torch.empty_like(log_prob)
+
+    return result
+
+
+@impl(m, "npu_conv2d")
+def npu_conv2d_meta(x, weight, bias, stride, padding, dilation, groups):
+    N = x.size(0)
+    H = x.size(2)
+    W = x.size(3)
+    Co = weight.size(0)
+    kernel_size = weight.shape[2:]
+
+    Ho = int((H + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+    Wo = int((W + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+
+    result_shape = (N, Co, Ho, Wo,)
+
+    result = torch.empty(result_shape, dtype=x.dtype, device='meta')
+
+    return result
+
+
+@impl(m, "npu_conv2d_backward")
+def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, groups, output_mask):
+    Co = weight.size(0)
+
+    result3_shape = (Co,)
+
+    result_1 = torch.empty(x.size(), dtype=x.dtype, device='meta')
+    result_2 = torch.empty(weight.size(), dtype=weight.dtype, device='meta')
+    if output_mask[2]:
+        result_3 = torch.empty(result3_shape, dtype=x.dtype, device='meta')
+    else:
+        result_3 = None
+
+    return (result_1, result_2, result_3)
+
+
+@impl(m, "npu_grouped_matmul_add_")
+def npu_grouped_matmul_add__meta(y, x, weight, group_list, transpose_x=True, transpose_weight=False, group_type=2):
+    torch._check(
+        group_type == 2,
+        lambda: f"group_type only supports 2, but got {group_type} {ops_error(ErrCode.VALUE)}",
+    )
+    return y
