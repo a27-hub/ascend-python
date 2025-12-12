@@ -50,7 +50,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     - `sparse_mode`为0、1时
         - 支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
         - 当输入`input_layout`为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传`query_rope`和`key_rope`时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
-        - 如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+        - 如果Q\_S、KV\_S非16或32对齐，可以取到向上对齐的值。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
     - `sparse_mode`为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 
 - **actual_seq_lengths** (`List[int]`)：可选参数。代表不同Batch中`query`的有效seqlen，数据类型支持`int64`。如果不指定seqlen可以传入None，表示和`query`的shape的s长度相同。
