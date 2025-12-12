@@ -1,0 +1,12 @@
+cpp_namespace: at_npu::native
+
+custom:
+  - func: npu_change_data_ptr(Tensor dst, Tensor src, int index) -> int
+  - func: npu_test(Tensor a, Scalar alpha, float prob, int dim) -> Tensor
+    gen_opapi:
+      out:
+        size: a
+        dtype: a
+      exec: aclnnTest
+# symint:
+#   - func: npu_test(Tensor self, SymInt[] padding) -> Tensor
