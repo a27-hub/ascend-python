@@ -4115,3 +4115,62 @@ if _is_pytorch_version_ge("2.6.0"):
     @impl(m, "npu_sim_exponential_")
     def npu_sim_exponential__meta(self, lambd=1, generator=None):
         return torch.empty_like(self)
+
+
+@impl(m, "npu_dynamic_mx_quant_with_dual_axis")
+def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0):
+    dim_num = input_dummy.dim()
+    mxscale1_shape = []
+    mxscale2_shape = []
+    # if axis < -dim_num or axis >= dim_num:
+    #     raise RuntimeError("Parameter axis is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
+    #                        ops_error(ErrCode.PARAM))
+    # if not (block_size % 32 == 0 and block_size > 0 and block_size <= 1024):
+    #     raise RuntimeError("Parameter block_size must be divisible by 32 and no greater than 1024, greater than 0" +
+    #                        ops_error(ErrCode.PARAM))
+    if scale_alg != 0:
+        raise RuntimeError("Invalid scale_alg value: {scale_alg}. Expected 0." +
+                            ops_error(ErrCode.PARAM))
+    axis1 = -1
+    axis2 = -2
+    axis1_change = axis if axis >= 0 else axis + dim_num
+    axis2_change = axis if axis >= 0 else axis + dim_num
+    for dim in range(dim_num):
+        mxscale1_shape.append(input_dummy.size(dim))
+        mxscale2_shape.append(input_dummy.size(dim))
+    mxscale1_shape.append(2)
+    mxscale2_shape.append(2)
+
+    block_size = 32
+    dim1_size = int(math.ceil(mxscale1_shape[axis1_change] / block_size))
+    dim1_size = (dim1_size + 2 - 1) // 2
+    dim2_size = int(math.ceil(mxscale2_shape[axis2_change] / block_size))
+    dim2_size = (dim2_size + 2 - 1) // 2
+    mxscale1_shape[axis1_change] = dim1_size
+    mxscale2_shape[axis2_change] = dim2_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == 291:
+        output = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == 292:
+        output = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        # output_shape = []
+        y1_shape = []
+        y2_shape = []
+        for dim in range(dim_num - 1):
+            y1_shape.append(input_dummy.size(dim))
+            y2_shape.append(input_dummy.size(dim))
+        # output_shape.append(input_dummy.size(dim_num - 1) // 2)
+        # output = input_dummy.new_empty(output_shape, dtype=torch.uint8)
+        y1_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y1 = input_dummy.new_empty(y1_shape, dtype=torch.uint8)        
+        y2_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y2 = input_dummy.new_empty(y2_shape, dtype=torch.uint8)
+    mxscale1 = input_dummy.new_empty(mxscale1_shape, dtype=torch.uint8)
+    mxscale2 = input_dummy.new_empty(mxscale2_shape, dtype=torch.uint8)
+    return (y1, mxscale1, y2, mxscale2)
