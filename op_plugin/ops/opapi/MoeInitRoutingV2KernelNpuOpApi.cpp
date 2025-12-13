@@ -114,7 +114,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     }
 
     at::Tensor expanded_scale =
-        npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
+        npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x,
         expert_idx,
