@@ -7234,3 +7234,7 @@ quant:
 
   - func: _empty_affine_quantized(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, float scale=1, int zero_point=0, MemoryFormat? memory_format=contiguous_format) -> Tensor
     acl_op: [v2.2, newest]
+
+  - func: npu_dynamic_mx_quant_with_dual_axis(Tensor input, *, str round_mode="rint", int dst_type=296, int scale_alg=0) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: [v2.1, newest]
+    exposed: [v2.1, newest]
