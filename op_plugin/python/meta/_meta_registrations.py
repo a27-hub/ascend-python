@@ -638,12 +638,15 @@ def npu_quant_mm_reduce_scatter_meta(self, x2, hcom, world_size, reduce_op='sum'
 
 @impl(m, "npu_quant_all_reduce")
 def npu_quant_all_reduce_meta(x, scales, hcom_name, world_size, reduce_op='sum',
-                              output_dtype=None, x_dtype=None, scales_dtype=None):
+                              output_dtype=27, x_dtype=None, scales_dtype=None):
     world_size = 2
-    size = x.size()
+    size = [x.size(0), x.size(1)]
+    if x.dim() == 3:
+        size = [x.size(0), x.size(1), x.size(2)]
+
     dtype = x.dtype
     if output_dtype is not None:
-        dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[output_dtype]
+        dtype = output_dtype
     else:
         dtype = torch.bfloat16
 
@@ -869,23 +872,20 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         x.size(0) == expert_idx.size(0),
         lambda: "the first dim of expert_idx and x should be the same" + ops_error(ErrCode.VALUE),
     )
-    if active_expert_range:
-        torch._check(
-            active_expert_range is not None and isinstance(active_expert_range, list) and len(active_expert_range) == 2,
-            lambda: "active_expert_range is None or invalid. must be int[2]"
-        )
-        torch._check(
-            active_expert_range[1] > active_expert_range[0],
-            lambda: "active_expert_range is invalid. must be increasing"
-        )
-        torch._check(
-            active_expert_range[0] >= 0 and active_expert_range[1] <= 10240,
-            lambda: "active_expert_range must be within [0, 10240]"
-        )
-        expert_range_length = active_expert_range[1] - active_expert_range[0]
-    else:
-        expert_range_length = expert_num
-        
+    torch._check(
+        active_expert_range is not None and isinstance(active_expert_range, list) and len(active_expert_range) == 2,
+        lambda: "active_expert_range is None or invalid. must be int[2]"
+    )
+    torch._check(
+        active_expert_range[1] > active_expert_range[0],
+        lambda: "active_expert_range is invalid. must be increasing"
+    )
+    torch._check(
+        active_expert_range[0] >= 0 and active_expert_range[1] <= 10240,
+        lambda: "active_expert_range must be within [0, 10240]"
+    )
+    expert_range_length = active_expert_range[1] - active_expert_range[0]
+
     torch._check(
         drop_pad_mode is not None and isinstance(drop_pad_mode, int) and drop_pad_mode in [0, 1],
         lambda: "drop_pad_mode is None or invalid. must be in [0, 1]"
@@ -893,10 +893,6 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     torch._check(
         expert_tokens_num_type is not None and isinstance(expert_tokens_num_type, int) and expert_tokens_num_type in [0, 1, 2],
         lambda: "expert_tokens_num_type is None or invalid. must be in [0, 1, 2]"
-    )
-    torch._check(
-        expert_tokens_num_flag is not None and isinstance(expert_tokens_num_flag, bool) and expert_tokens_num_flag in [True, False],
-        lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
         quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1],
@@ -920,22 +916,30 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             )
         elif quant_mode == 0:
             torch._check(
-                scale_dim == 1,
-                lambda: "the scale shape support only 1D in static quant mode" + ops_error(ErrCode.VALUE),
+                scale_dim == 2 or scale_dim == 1,
+                lambda: "the scale shape should be (end-start, 1) or (end-start,) in static quant mode" + ops_error(ErrCode.VALUE),
             )
             torch._check(
-                scale.size(0) == 1,
-                lambda: "the shape of scale should be 1" + ops_error(ErrCode.VALUE),
+                expert_range_length == scale.size(0),
+                lambda: "the first dim of scale and expert_range_length should be the same" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                scale_dim == 1 or x.size(1) == scale.size(1) or 1 == scale.size(1),
+                lambda: "the 2nd dim of scale should be 1 or the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
             )
             if offset is not None:
                 offset_dim = offset.dim()
                 torch._check(
-                    offset_dim == 1,
-                    lambda: "the offset shape support only 1D" + ops_error(ErrCode.VALUE),
+                    offset_dim == 2 or offset_dim == 1,
+                    lambda: "the offset shape should be (end-start, 1) or (end-start,)" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
                     scale.size(0) == offset.size(0),
                     lambda: "the 1st dim of offset and the 1st dim of scale should be the same" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    offset_dim == 1 or x.size(1) == offset.size(1) or 1 == offset.size(1),
+                    lambda: "the 2nd dim of offset and the 2nd dim of scale should be the same" + ops_error(ErrCode.VALUE),
                 )
         else:
             torch._check(
@@ -943,8 +947,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                 lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
             )
             torch._check(
-                scale.size(0) in [expert_range_length, 1],
-                lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
+                expert_range_length == scale.size(0),
+                lambda: "the first dim of scale and expert_range_length should be the same" + ops_error(ErrCode.VALUE),
             )
             torch._check(
                 x.size(1) == scale.size(1),
@@ -954,25 +958,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     bs = x.size(0)
     h = x.size(1)
     k = expert_idx.size(1)
-
-    if active_num == 0:
-        active_num = bs * k 
+    expanded_x_dim_list = [bs * k, h]
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
-    if drop_pad_mode == 1:
-        expanded_x_dim_list = [expert_num, expert_capacity, h]
-        expanded_scale_dim_list = [expert_num * expert_capacity]
-    else:
-        expanded_x_dim_list = [min(active_num, bs * k), h]
-        expanded_scale_dim_list = [min(active_num, bs * k)]  
-
     expanded_row_idx_dim_list = [bs * k]
-    
-    if quant_mode == 0:
-        expanded_scale_dim_list = []
-    
-    if not expert_tokens_num_flag:
-        expert_token_cumsum_or_count_dim_list = []
-    elif (expert_tokens_num_type in range(0, 2)):   # [0, 1]
+    expanded_scale_dim_list = [bs * k]
+
+    if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
         expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
@@ -4362,3 +4353,55 @@ has_side_effect(torch.ops.npu.npu_ffn_to_attention.default)
 def npu_ffn_to_attention_meta(x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, group, world_size,
                               token_info_table_shape, token_data_shape, attn_rank_table=None):
     return
+
+
+@impl(m, "npu_dynamic_mx_quant_with_dual_axis")
+def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0):
+    dim_num = input_dummy.dim()
+    mxscale1_shape = []
+    mxscale2_shape = []
+    if scale_alg != 0:
+        raise RuntimeError("Invalid scale_alg value: {0}. Expected 0.".format(scale_alg) +
+                            ops_error(ErrCode.PARAM))
+    last_axis = -1
+    second_to_last_axis = -2
+    last_axis_change = last_axis + dim_num
+    second_to_last_axis_change = second_to_last_axis + dim_num
+    for dim in range(dim_num):
+        mxscale1_shape.append(input_dummy.size(dim))
+        mxscale2_shape.append(input_dummy.size(dim))
+    mxscale1_shape.append(2)
+    mxscale2_shape.append(2)
+
+    block_size = 32
+    last_dim_size = int(math.ceil(mxscale1_shape[last_axis_change] / block_size))
+    last_dim_size = (last_dim_size + 2 - 1) // 2
+    second_to_last_dim_size = int(math.ceil(mxscale2_shape[second_to_last_axis_change] / block_size))
+    second_to_last_dim_size = (second_to_last_dim_size + 2 - 1) // 2
+    mxscale1_shape[last_axis_change] = last_dim_size
+    mxscale2_shape[second_to_last_axis_change] = second_to_last_dim_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == 291:
+        y1 = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+        y2 = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == 292:
+        y1 = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+        y2 = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y1_shape = []
+        y2_shape = []
+        for dim in range(dim_num - 1):
+            y1_shape.append(input_dummy.size(dim))
+            y2_shape.append(input_dummy.size(dim))
+        y1_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y1 = input_dummy.new_empty(y1_shape, dtype=torch.uint8)        
+        y2_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y2 = input_dummy.new_empty(y2_shape, dtype=torch.uint8)
+    mxscale1 = input_dummy.new_empty(mxscale1_shape, dtype=torch.uint8)
+    mxscale2 = input_dummy.new_empty(mxscale2_shape, dtype=torch.uint8)
+    return (y1, mxscale1, y2, mxscale2)
