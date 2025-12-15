@@ -2,6 +2,7 @@ import unittest
 import itertools
 from os import scandir
 import numpy as np
+import random
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
@@ -36,7 +37,7 @@ class MoeInitRoutingV2Model(torch.nn.Module):
 
 class TestNpuMoeInitRoutingV2(TestCase):
 
-    def adapter_capacity(sorted_row_idx, sorted_expert_idx, capacity):
+    def adapter_capacity(seldf, sorted_row_idx, sorted_expert_idx, capacity):
         count = 0
         last = sorted_expert_idx[0]
         for i, val in enumerate(sorted_expert_idx):
@@ -52,7 +53,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
     def cpu_op_exec(self, x, expert_idx, scale, offset, expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity):
         expert_start = expert_range[0]
         expert_end = expert_range[1]
-        expert_num = expert_end - expert_start
+        expert_num = 32
         num_rows = x.shape[0]
         h = x.shape[1]
         k = expert_idx.shape[-1]
@@ -63,11 +64,11 @@ class TestNpuMoeInitRoutingV2(TestCase):
         sorted_expert_indices = np.argsort(expert_idx_in, axis=-1, kind="stable")
         sorted_expert_idx = expert_idx_in[sorted_expert_indices]
         if row_idx_type == 1:
-            expanded_row_idx = sorted_expert_indices[:actual_expert_total_num]
+            expanded_row_idx = sorted_expert_indices.astype(np.int32)
         else:
             expanded_row_idx = np.ones(num_rows * k).astype(np.int32) * -1
             tmp_indices = np.arange(actual_expert_total_num)
-        expanded_row_idx[sorted_expert_indices[:actual_expert_total_num]] = tmp_indices
+            expanded_row_idx[sorted_expert_indices[:actual_expert_total_num]] = tmp_indices
 
         if not expert_tokens_num_flag:
             expert_tokens_count = None
@@ -106,7 +107,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             if scale is not None and quant_mode == -1:
                 expanded_scale = scale[sorted_expert_indices[:active_num] // k]
         else:
-            adapter_capacity(sorted_expert_indices, sorted_expert_idx, expert_capacity)
+            self.adapter_capacity(sorted_expert_indices, sorted_expert_idx, expert_capacity)
 
             sort_row_tmp = np.full((expert_num * expert_capacity), -1, dtype=int)
             offset_tmp = 0
@@ -182,12 +183,12 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expanded_x = np.ma.array(expanded_x, mask=expanded_x_mask).filled(0)
             expanded_x = expanded_x.reshape(expert_num, expert_capacity, h)
 
-        return expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale
+        return expanded_x, expanded_row_idx.astype(np.int32), expert_tokens_count, expanded_scale
 
     def npu_op_exec(self, x, expert_idx, scale, offset, active_expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity):
         bs = x.shape[0]
         k = expert_idx.shape[1]
-        expert_num = active_expert_range[1] - active_expert_range[0]
+        expert_num = 32
         expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2(
             x, expert_idx, scale=scale, offset=offset,
             active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num,
@@ -228,8 +229,8 @@ class TestNpuMoeInitRoutingV2(TestCase):
 
         expert_tokens_num_type = 1 if drop_pad_mode == 1 else random.choice([0, 1, 2])
         row_idx_type = 0 if drop_pad_mode == 1 else random.choice([0, 1])
-        active_num = bs * k if drop_pad_mode == 1 else random.randint(0, bs * k)
-        expert_capacity = -1 if drop_pad_mode == 0 else random.randint(0, bs)
+        active_num = 0 if drop_pad_mode == 1 else random.randint(0, bs * k)
+        expert_capacity = -1 if drop_pad_mode == 0 else random.randint(1, bs)
 
         return x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity
 
@@ -250,19 +251,28 @@ class TestNpuMoeInitRoutingV2(TestCase):
         local_expert_tokens_count_npu = expert_tokens_count_npu.cpu()
         local_expanded_scale_npu = expanded_scale_npu.cpu()
 
-        actual_expert_count = np.sum(local_expert_tokens_count_npu.numpy())
-        local_expanded_x_npu[actual_expert_count:] = 0
-        local_expanded_scale_npu[actual_expert_count:] = 0
+        actual_expert_total_num = np.sum((expert_idx >= expert_range[0]) & (expert_idx < expert_range[1]))
+        if drop_pad_mode == 0:
+            if active_num == 0:
+                actual_expert_count = actual_expert_total_num
+            else:
+                actual_expert_count = min(active_num, actual_expert_total_num)
+            local_expanded_x_npu = local_expanded_x_npu[:actual_expert_count]
+            local_expanded_scale_npu = local_expanded_scale_npu[:actual_expert_count]
+
+        if expert_tokens_num_flag == True and expert_tokens_num_type == 2:
+            length = expert_tokens_count.shape[0]
+            local_expert_tokens_count_npu = local_expert_tokens_count_npu[:length]
 
         return expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
             expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_init_routing_no_quant(self):
-        bs_list = [4]
+        bs_list = [32]
         h_list = [14, 200]
         k_list = [5]
-        expert_range_list = [[0, 8]]
+        expert_range_list = [[0, 16]]
         quant_mode_list = [-1]
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
@@ -271,12 +281,13 @@ class TestNpuMoeInitRoutingV2(TestCase):
         none_scales = [True, False]
         none_offsets = [True]
         for bs, h, k, expert_range, quant_mode, row_idx_type, dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
-                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list, expert_tokens_num_flags, drop_pad_mode_list,
-                dtype_list, none_scales, none_offsets):
+                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
+                dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
             scale_shape = (bs,)
+            expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-
+            
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
                 expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
                 = self.calc_npu_vs_golden(x, expert_idx, scale, offset,
@@ -293,10 +304,10 @@ class TestNpuMoeInitRoutingV2(TestCase):
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_init_routing_static_quant(self):
-        bs_list = [4]
+        bs_list = [32]
         h_list = [14, 200]
         k_list = [5, 128]
-        expert_range_list = [[0, 8]]
+        expert_range_list = [[0, 16]]
         quant_mode_list = [0]
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
@@ -305,29 +316,30 @@ class TestNpuMoeInitRoutingV2(TestCase):
         none_scales = [False]
         none_offsets = [False]
         for bs, h, k, expert_range, quant_mode, row_idx_type, dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
-                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list, expert_tokens_num_flags, drop_pad_mode_list,
-                dtype_list, none_scales, none_offsets):
+                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
+                dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
             scale_shape = (1,)
+            expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-
+            
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
                 expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
                 = self.calc_npu_vs_golden(x, expert_idx, scale, offset,
                                           x_npu, expert_idx_npu, scale_npu, offset_npu,
                                           expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity)
 
-            self.assertExpandedXRtolEqual(expanded_x, local_expanded_x_npu, dtype)
+            self.assertExpandedXRtolEqual(expanded_x, local_expanded_x_npu, np.int8)
             self.assertRtolEqual(expanded_row_idx, local_expanded_row_idx_npu.numpy())
             if expert_tokens_num_flag:
                 self.assertRtolEqual(expert_tokens_count, local_expert_tokens_count_npu.numpy())
 
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_init_routing_dynamic_quant(self):
-        bs_list = [4]
+        bs_list = [32]
         h_list = [14, 200]
         k_list = [8]
-        expert_range_list = [[0, 8]]
+        expert_range_list = [[0, 16]]
         quant_mode_list = [1]
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
@@ -336,10 +348,11 @@ class TestNpuMoeInitRoutingV2(TestCase):
         none_scales = [True, False]
         none_offsets = [True]
         for bs, h, k, expert_range, quant_mode, row_idx_type, dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
-                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,expert_tokens_num_flags, drop_pad_mode_list,
-                dtype_list, none_scales, none_offsets):
+                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
+                dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
             expert_range_length = expert_range[1] - expert_range[0]
             scale_shape = (expert_range_length, h)
+            expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
 
