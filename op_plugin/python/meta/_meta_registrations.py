@@ -939,8 +939,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                 lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
             )
             torch._check(
-                expert_range_length == scale.size(0),
-                lambda: "the first dim of scale and expert_range_length should be the same" + ops_error(ErrCode.VALUE),
+                scale.size(0) in [expert_range_length, 1],
+                lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
             )
             torch._check(
                 x.size(1) == scale.size(1),
