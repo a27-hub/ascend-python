@@ -94,25 +94,25 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 -   **x** (`Tensor`)：必选参数，表示MoE的输入即token特征输入，要求为2维张量，shape为(NUM_ROWS, H)。数据类型支持`float16`、`bfloat16`、`float32`、`int8`，数据格式要求为$ND$。
 -   **expert_idx** (`Tensor`)：必选参数，表示[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)输出每一行特征对应的K个处理专家，要求是2维张量，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持`int32`，数据格式要求为$ND$。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
--   **scale** (`Tensor`)：可选参数，用于计算量化结果的参数。数据类型支持`float32`，数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
+-   **scale** (`Tensor`)：可选参数，默认为None，用于计算量化结果的参数。数据类型支持`float32`，数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
     -   非量化场景下，如果输入则要求为1维张量，shape为(NUM_ROWS,)。
     -   静态量化场景必须输入，输入要求为1D的Tensor，shape为(1,)
     -   动态quant场景下，如果输入则要求为2维张量，shape为(expert_end-expert_start, H)或(1, H)。
 
--   **offset** (`Tensor`)：可选参数，用于计算量化结果的偏移值。数据类型支持`float32`，数据格式要求为$ND$。
+-   **offset** (`Tensor`)：可选参数，默认为None，用于计算量化结果的偏移值。数据类型支持`float32`，数据格式要求为$ND$。
     -   在非量化场景下不输入。
     -   静态量化场景必须输入，输入要求为1维张量，shape为(1,)
     -   动态quant场景下不输入。
 
 -   **active_num** (`int`)：可选参数，默认值为-1，表示总的最大处理row数，输出`expanded_x`只有这么多行是有效的，入参校验需大于等于0，0表示Dropless场景，大于0时表示Active场景，约束所有专家共同处理tokens总量。
 -   **expert_capacity** (`int`)：可选参数，默认值为-1，表示每个专家能够处理的tokens数，入参校验大于0小于NUM_ROWS。
--   **expert_num** (`int`)：可选参数，表示专家数。`expert_tokens_num_type`为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
--   **drop_pad_mode** (`int`)：可选参数，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验`expert_capacity`。1表示drop_pad场景。
--   **expert_tokens_num_type** (`int`)：可选参数，表示直方图的不同模式。取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。
--   **expert_tokens_num_flag** (`bool`)：可选参数，取值为False和True，表示是否输出`expert_token_cumsum_or_count`。
--   **quant_mode** (`int`)：可选参数，表示量化模式，支持取值为0、1、-1。0表示静态量化（，-1表示不量化场景；1表示动态quant场景。
--   **active_expert_range** (`List[int]`)：可选参数，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expertStart等于0, expertEnd等于`expert_num`.
--   **row_idx_type** (`int`)：可选参数，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
+-   **expert_num** (`int`)：可选参数，默认值为-1，表示专家数。`expert_tokens_num_type`为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
+-   **drop_pad_mode** (`int`)：可选参数，默认值为0，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验`expert_capacity`。1表示drop_pad场景。
+-   **expert_tokens_num_type** (`int`)：可选参数，默认值为0，表示直方图的不同模式。取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。
+-   **expert_tokens_num_flag** (`bool`)：可选参数，默认值为False，取值为False和True，表示是否输出`expert_token_cumsum_or_count`。
+-   **quant_mode** (`int`)：可选参数，默认值为0，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。
+-   **active_expert_range** (`List[int]`)：可选参数，默认为空，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expert_start等于0, expert_end等于`expert_num`.
+-   **row_idx_type** (`int`)：可选参数，默认为0，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
 
 ## 返回值说明<a name="zh-cn_topic_0000002271534921_section18510124618368"></a>
 
