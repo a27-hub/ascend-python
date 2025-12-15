@@ -130,6 +130,10 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     -   row_idx_type=1
     -   expert_tokens_num_type=1
 
+-   在算子输入shape较小的场景，操作间的多核同步时间占比较高，成为性能瓶颈。因此，针对这种特化场景，添加全载性能模板。该模板中，搬入、排序、计算都在同一个kernel内完成。需要满足如下条件：
+    -   drop_pad_mode=0
+
+
 ## 调用示例<a name="zh-cn_topic_0000002271534921_section12510194643618"></a>
 
 -   单算子模式调用
