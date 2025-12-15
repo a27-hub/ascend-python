@@ -18,6 +18,8 @@ ATTR_DIM_LIMIT_QUANTCONV2D = 2
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
 
+aaa = 1
+
 TORCH_DTYPE_MAP = {
     torch.float16: 5,
     torch.bfloat16: 15,
