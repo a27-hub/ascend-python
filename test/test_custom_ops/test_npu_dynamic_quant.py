@@ -10,7 +10,7 @@ from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 from torch.testing import assert_close
 
-
+# test
 class TestDynamicQuant(TestCase):
     def supported_op_exec(self, input_tensor, smooth_scales=None, group_index=None, dst_type=torch.int8):
         input_tensor = input_tensor.float()
