@@ -19,20 +19,23 @@
     $$
 
   2.以sortedRowIdx做位置映射得出expandedRowIdxOut：
-
-    $$
-    expandedRowIdxOut[sortedRowIdx[i]]=i
-    $$
-
-  3.在drop模式下，对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
+    - rowIdxType等于1时, 输出scatter索引
+      $$
+      expandedRowIdxOut[i]=sortedRowIdx[i]
+      $$
+    - rowIdxType等于0时, 输出gather索引
+      $$
+      expandedRowIdxOut[sortedRowIdx[i]]=i
+      $$
+      
+  3.对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
 
     $$
     expertTokensCountOrCumsumOutOptional[i]=Histogram(sortedExpertIdx)
     $$
 
-  4.计算quant结果：
+  4.如果quantMode不等于-1, 计算quant结果：
      - 静态quant
-     
      $$
      quantResult=round((x∗scaleOptional)+offsetOptional)
      $$
@@ -55,11 +58,25 @@
             quantResult = round(x / dynamicQuantScaleOutOptional)
             $$
   
-  5.对quantResult取前NUM\_ROWS个sortedRowIdx的对应位置的值，得出expandedXOut：
-
-    $$
-    expandedXOut[i]=quantResult[sortedRowIdx[i]// K]
-    $$
+  5.若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
+    - 非量化场景
+      - 按照Scatter索引搬运
+      $$
+      expandedXOut[i]=x[scatterRowIdx[i]// K]
+      $$
+      - 按照Gather索引搬运
+      $$
+      expandedXOut[gatherRowIdx[i]]=x[gatherRowIdx[i]// K]
+      $$
+    - 量化场景
+      - 按照Scatter索引搬运
+      $$
+      expandedXOut[i]=quantResult[catterRowIdx[i]// K]
+      $$
+      - 按照Gather索引搬运
+      $$
+      expandedXOut[gatherRowIdx[i]]=quantResult[gatherRowIdx[i]// K]
+      $$
 
   6.expandedRowIdxOut的有效元素数量availableIdxNum，计算方式为expertIdx中activeExpertRangeOptional范围内的元素的个数
     $$
@@ -88,10 +105,10 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     -   动态quant场景下不输入。
 
 -   **active_num** (`int`)：可选参数，默认值为-1，表示总的最大处理row数，输出`expanded_x`只有这么多行是有效的，入参校验需大于等于0，0表示Dropless场景，大于0时表示Active场景，约束所有专家共同处理tokens总量。
--   **expert_capacity** (`int`)：可选参数，表示每个专家能够处理的tokens数，取值范围大于等于0。
+-   **expert_capacity** (`int`)：可选参数，默认值为-1，表示每个专家能够处理的tokens数，入参校验大于0小于NUM_ROWS。
 -   **expert_num** (`int`)：可选参数，表示专家数。`expert_tokens_num_type`为key_value模式时，取值范围为[0, 5120]；其他模式取值范围为[0, 10240]。
 -   **drop_pad_mode** (`int`)：可选参数，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验`expert_capacity`。1表示drop_pad场景。
--   **expert_tokens_num_type** (`int`)：可选参数，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。
+-   **expert_tokens_num_type** (`int`)：可选参数，表示直方图的不同模式。取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。
 -   **expert_tokens_num_flag** (`bool`)：可选参数，取值为False和True，表示是否输出`expert_token_cumsum_or_count`。
 -   **quant_mode** (`int`)：可选参数，表示量化模式，支持取值为0、1、-1。0表示静态量化（，-1表示不量化场景；1表示动态quant场景。
 -   **active_expert_range** (`List[int]`)：可选参数，表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expertStart等于0, expertEnd等于`expert_num`.
@@ -101,15 +118,15 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
 -   **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，Dropless场景shape为[NUM_ROWS * K, H]。Active场景shape为[min(activeNum, NUM_ROWS * K), H]。Drop/Pad场景下要求是一个3D的Tensor，shape为[expertNum, expertCapacity, H]。非量化场景下数据类型同`x`；量化场景下数据类型为`int8`。数据格式要求为$ND$。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
 -   **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS\*K, )，数据类型支持`int32`，数据格式要求为$ND$。前available_idx_num\*H个元素为有效数据，其余由`row_idx_type`决定。当rowIdxType为0时，无效数据由-1填充；当rowIdxType为1时，无效数据未初始化。
--   **expert_token_cumsum_or_count** (`Tensor`)：表示输出每个专家处理的token数量的统计结果及累加值。
+-   **expert_token_cumsum_or_count** (`Tensor`)：表示输出每个专家处理的token数量的统计结果或累加值。
     -   在`expertTokensNumType`为0时，表示`active_expert_range`范围内expert在排序后处理token总数的前缀和。
     -   在`expert_tokens_num_type`为1的场景下，要求是1维张量，表示`active_expert_range`范围内expert对应的处理token的总数，shape为(expert_end-expert_start, )。shape为(expert_end-expert_start, )；
     -   在`expert_tokens_num_type`为2的场景下，要求是2维张量，shape为(expert_num, 2)，表示`active_expert_range`范围内token总数为非0的expert，以及对应expert处理token的总数；
 
     expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`int64`，数据格式要求为$ND$。
 -   **expanded_scale** (`Tensor`)：数据类型支持`float32`，数据格式要求为$ND$。输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积。令available_idx_num为`active_expert_range`范围的元素的个数。
-    -   非量化场景下，当`scale`未输入时，输出值无意义；当`scale`输入时，输出表示一个1维张量，前`available_idx_num`个元素为有效数据，其余为无效数据。
-    -   动态quant场景下，输出量化计算过程中`scale`的中间值，shape为(NUM_ROWS \*K)。当`scale`未输入时，输出值无意义，输出表示一个1维张量，前available_idx_num个元素为有效数据，其余为无效数据，若`x`的输入类型为`int8`，输出值无意义。
+    -   非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
+    -   动态quant场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
     -   静态量化场景下不输出。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
