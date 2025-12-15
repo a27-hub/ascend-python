@@ -17,6 +17,9 @@ ATTR_DIM_LIMIT_QUANTCONV2D = 2
 #meta register implementation
 m = Library("npu", "IMPL", "Meta")
 m_aten = Library("aten", "IMPL", "Meta")
+# print(f"BIT_NUMBER: {BIT_NUMBER}")
+
+aaa = 1
 
 TORCH_DTYPE_MAP = {
     torch.float16: 5,
