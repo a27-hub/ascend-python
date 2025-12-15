@@ -2177,6 +2177,16 @@ def npu_moe_update_expert_meta(expert_ids, eplb_table, expert_scales=None, pruni
     return (expert_ids.new_empty(tuple(dim_list), dtype=expert_ids.dtype), expert_ids.new_empty(tuple(dim_list), dtype=torch.bool))
 
 
+has_side_effect(torch.ops.npu.npu_attention_to_ffn.default)
+
+
+@impl(m, "npu_attention_to_ffn")
+def npu_attention_to_ffn_meta(x, session_id, micro_batch_id, layer_id, expert_ids, expert_rank_table, group, world_size,
+                              ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, moe_expert_num,
+                              scales=None, active_mask=None, quant_mode=0, sync_flag=0, ffn_start_rank_id=0):
+    return
+
+
 @impl(m, "npu_ffn")
 def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None,
                  bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None,
