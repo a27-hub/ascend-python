@@ -18,8 +18,8 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
         raise ValueError("local_out_list must not be empty.")
     if len(lse_list) != len(local_out_list):
         raise ValueError("lse_list and local_out_list must have the same length.")
-    if update_type != 0:
-        raise ValueError("update_type must be 0.")
+    if update_type != 0 and update_type != 1:
+        raise ValueError("update_type must be 0 or 1.")
 
     N = None
     H = None
