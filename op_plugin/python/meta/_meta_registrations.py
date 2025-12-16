@@ -962,8 +962,13 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dim_list = [min(active_num, bs * k)]  
 
     expanded_row_idx_dim_list = [bs * k]
-
-    if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
+    
+    if quant_mode == -1:
+        expanded_scale_dim_list = []
+    
+    if not expert_tokens_num_flag:
+        expert_token_cumsum_or_count_dim_list = []
+    elif (expert_tokens_num_type in range(0, 2)):   # [0, 1]
         expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
