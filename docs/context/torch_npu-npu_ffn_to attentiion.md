@@ -24,8 +24,8 @@ torch_npu.npu_ffn_to_attention(x, session_ids, mirco_batch_ids, token_ids, exper
 -   **sessionIds** (`Tensor`)：必选参数，每个token的Attention Worker节点索引，决定每个token要发给哪些Attention Worker节点。要求为1维张量，shape为\(Y, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, attnRankNum-1]。
 -   **microBatchIds** (`Tensor`)：必选参数，表示每个token的microBatch索引，要求为1维张量，shape为\(Y, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, MircoBatchNum-1]。
 -   **tokenIds** (`Tensor`)：必选参数，表示每个token在microBatch中的token索引，要求为1维张量，shape为\(Y, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, BS-1]。
--   **expertOffsets** (`Tensor`)：必选参数，表示每个token在tokenInfoTableShape中PerTokenExpertNum的索引，要求为1维张量，shape为\(Y, \)，数据类型支持`in32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, K-1]。
--   **actualTokenNum** (`Tensor`)：必选参数，表示本卡发送的token总数，要求为1维张量，shape为\(Y, \)，数据类型支持`in64`，数据格式为$ND$，支持非连续的Tensor。张量里value取值为Y。
+-   **expertOffsets** (`Tensor`)：必选参数，表示每个token在tokenInfoTableShape中PerTokenExpertNum的索引，要求为1维张量，shape为\(Y, \)，数据类型支持`in32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, ExpertNumPerToken-1]。
+-   **actualTokenNum** (`Tensor`)：必选参数，表示本卡发送的token总数，要求为1维张量，shape为\(1, \)，数据类型支持`in64`，数据格式为$ND$，支持非连续的Tensor。张量里value取值为[0, Y]。
 -   **group** (`str`)：必选参数，通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。
 -   **worldsize**(`int64`)：必选参数，通信域size。取值支持\[2, 768\]。
 -   **tokenInfoTableShape**(`List`)：必选参数，Token信息列表大小。包含microBatch的大小（MircoBatchNum）、BatchSize大小（Bs）、以及每个Token对应的Expert数量（ExpertNumPerToken）。
@@ -38,31 +38,26 @@ torch_npu.npu_ffn_to_attention(x, session_ids, mirco_batch_ids, token_ids, exper
 -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 
 - 参数说明里shape格式说明：
-    - Y：表示本卡需要分发的最大token数量，取值范围如下：
-        - 对于部署共享专家的FFNworker，要满足`Y` = `Bs` * `worldSize` * `sharedExpertNum` / `sharedExpertRankNum`。
-        - 对于部署Moe专家的FFNworker，要满足`Y` = `Bs` * `worldSize` * `min(localExpertNum, K)`。
+    - Y：表示本卡需要分发的最大token数量。
 
     - BS：示各Attention节点上的发送token数，取值范围为0 < `BS` ≤ 512。
 
     - H：表示hidden size隐藏层大小，取值范围为1152 ≤ `H` ≤ 8320
 
-    - HS：表示hidden与scale 隐藏层大小，取值范围为1024 ≤ `H` ≤ 8192。
+    - HS：表示hidden与scale 隐藏层大小，取值范围为1024 ≤ `HS` ≤ 8192。
 
-    - ffnRankNum：表示选取ffnRankNum个卡作为FFnWorker，取值范围为0 < `ffnRankNum` < `worldSize`,且满足`ffnRankNum` = `sharedExpertRankNum` + `moeExpertRankNum`。
+    - MircoBatchNum：表示microBatch的大小，前仅支持MircoBatchNum = 1。
+
+    - ExpertNumPerToken：表示每个Token对应的发送的Expert数量，`ExpertNumPerToken` = `K` + `sharedExpertNum`。
+
+    - K：表示选取topK个专家，取值范围为0 < `K` ≤ 16。
+
+    - ffnRankNum：表示选取ffnRankNum个卡作为FFnWorker,取值范围为0 < `ffnRankNum` < `worldSize`
 
     - attnRankNum：表示选取attnRankNum个卡作为AttnWorker，取值范围为0 < `attnRankNum` < `worldSize`,且满足`worldSize` = `attnRankNum` + `ffnRankNum`。
 
     - sharedExpertNum：表示共享专家数量（一个共享专家可以复制部署到多个ffnRank卡上），取值范围为0 ≤ `sharedExpertNum` ≤ 4。
 
-    - sharedExpertRankNum：表示部署共享专家FFnWorker数量，取值范围为0 ≤ `sharedExpertRankNum` ≤ `ffnRankNum`。
-
-    - moeExpertRankNum：表示部署Moe专家FFnWorker数量，取值范围为0 ≤ `moeExpertRankNum` ≤ `ffnRankNum`。
-
-    - moeExpertNum：表示MoE专家数量，取值范围为`moeExpertNum` % `moeExpertRankNum` = 0。
-
-    - localExpertNum：表示本卡专家数量。
-        - 于部署共享专家的FFNworker，`localExpertNum` = 1
-        - 对于部署Moe专家的FFNworker，`localExpertNum` = `moeExpertNum` / `emoeExpertRankNum`。
 
 
 -   通信域使用约束：
