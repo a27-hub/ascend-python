@@ -66,7 +66,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     TORCH_CHECK(x.dim() >= DIM_2, "x dim should greater than 2, but the actual value is ", x.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight_scale[0].sizes().empty(), "weight_scale[0] is empty", OPS_ERROR(ErrCode::PARAM));
     auto x_size = x.sizes();
-    int n = weight_scale[0].sizes().back();
+    int n = weight[0].sizes()[2];
     int m = x_size[0];
     int k = x_size[1];
 
