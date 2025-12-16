@@ -186,13 +186,13 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             - sparse：支持0/3/4；
             - `query_rope`配置时要求`query`的N为1/2/4/8/16/32/64/128，`query_rope`的shape中D为64，其余维度与`query`一致；
             - `key_rope`配置时要求`key`的N为1、D为512，`key_rope`的shape中D为64，其余维度与`key`一致;
-            - 支持 `key`、`value`、`key_rope`的数据格式为ND或NZ。当数据格式为NZ时，若数据类型为float16或bf16，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/16, blockSize, 16\]；若数据类型为int8，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/32, blockSize, 32\]；
-            - `input\_layout`形状支持BSH、BSND、BNSD、BNSD\_NBSD、BSND\_NBSD、BSH\_NBSD、TND、TND\_NTD；
+            - 支持 `key`、`value`、`key_rope`的数据格式为ND或NZ。当数据格式为NZ时，若数据类型为float16或bfloat16，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/16, blockSize, 16\]；若数据类型为int8，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/32, blockSize, 32\]；
+            - `input_layout`形状支持BSH、BSND、BNSD、BNSD\_NBSD、BSND\_NBSD、BSH\_NBSD、TND、TND\_NTD；
             - 支持开启page attention，此时`block_size`支持16的倍数且不大于1024；
             - 不支持开启SoftMaxLse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
         -   当query的D等于128时：
-            - `input\_layout`：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。  
+            - `input_layout`：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。  
             - `query_rope`配置时要求`query_rope`的shape中D为64，其余维度与`query`一致。  
             - `key_rope`配置时要求`key_rope`的shape中D为64，其余维度与`key`一致。  
             - 不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
@@ -203,8 +203,8 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         -   当query的D等于512时：
             -   sparse：支持0/3/4；
             -   支持TND、TND\_NTD；
-            -   支持开启page attention，此时actual\_seq\_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV\_S；
-            -   要求`query`的n为1/2/4/8/16/32/64/128，`key`、`value`的N为1；
+            -   支持开启page attention，此时`actual_seq_lengths_kv`长度等于`key`/`value`的batch值，代表每个batch的实际长度，值不大于KV\_S；
+            -   要求`query`的N为1/2/4/8/16/32/64/128，`key`、`value`的N为1；
             -   要求`query_rope`和`key_rope`不等于空，`query_rope`和`key_rope`的D为64；
             -   不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 

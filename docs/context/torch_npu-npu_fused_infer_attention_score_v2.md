@@ -182,14 +182,14 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
             - 支持开启page attention，此时block\_size支持16的倍数且不大于1024；
             - 不支持开启左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
             - 支持全量化场景，即输入query/key/value全为int8，query\_rope和key\_rope为bfloat16，输出为bfloat16的场景：
-                - 入参dequant\_scale\_query、dequant\_scale\_key、dequant\_scale\_value需要同时存在，且其数据类型仅支持FP32。
+                - 入参dequant\_scale\_query、dequant\_scale\_key、dequant\_scale\_value需要同时存在，且其数据类型仅支持float32。
                 - 不支持传入quant\_scale\_out、quant\_offset\_out、dequant\_offset\_key、dequant\_offset\_value，否则报错并返回。
                 - query\_quant\_mode仅支持pertoken叠加perhead模式，key\_quant\_mode和value\_quant\_mode仅支持pertensor模式。
                 - 支持key、value、key\_rope的input\_layout格式为NZ。
         -   
             当query的D等于128时：
             - input\_layout：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。    
-            - query\_rope配置时要求query\_rope的shape中d为64，其余维度与query一致。  
+            - query\_rope配置时要求query\_rope的shape中D为64，其余维度与query一致。  
             - key\_rope配置时要求key\_rope的shape中D为64，其余维度与key一致。  
             - 不支持开启左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor。
             - 其余约束同TND、NTD\_TND场景下的综合限制保持一致。
