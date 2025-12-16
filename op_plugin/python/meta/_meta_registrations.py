@@ -4202,7 +4202,7 @@ def npu_cross_entropy_loss_meta(
     loss_out_shape = [
         input_shape[0],
     ]
-    if reduction is None:
+    if reduction != "none":
         loss_out_shape = [
             1,
         ]
