@@ -21,7 +21,6 @@
 #include <dlfcn.h>
 #include <vector>
 #include <filesystem>
-#include <regex>
 #include <functional>
 #include <type_traits>
 #include <ATen/Tensor.h>
