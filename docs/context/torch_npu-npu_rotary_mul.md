@@ -59,7 +59,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half') -> Tensor
+torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tensor
 ```
 
 >**说明：**<br>
@@ -70,6 +70,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half') -> Tensor
 - **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
+- **rotate** (`Tensor`)：可选参数，用于生成旋转矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，默认为空。
 - **rotary_mode** (`str`)：可选参数，数据类型支持`str`，用于选择计算模式，支持`half`、`interleave`两种模式。默认值为`half`。
 
 ## 返回值说明
@@ -176,4 +177,41 @@ tensor([[[-0.1200, -0.2515, -0.3189,  ...,  0.2283,  1.1038,  0.3439],
          [-0.1946,  0.6020, -0.6751,  ...,  0.8629,  0.5454,  0.1392],
          [ 0.0772,  0.5112, -0.4875,  ...,  0.7065,  0.6798,  0.1513]]],
        device='npu:0')
+```
+
+- rotate生成示例：
+```python
+import torch
+
+def get_interleave_matrix(n):
+    matrix = torch.zeros(n, n, dtype=torch.bfloat16)
+    for i in range(0, n, 2):
+        matrix[i + 0, i + 1] = 1
+        matrix[i + 1, i + 0] = 1
+    return matrix
+
+def get_half_matrix(n):
+    matrix = torch.zeros(n, n, dtype=torch.bfloat16)
+    half = n // 2
+    matrix[:half, half:] = torch.eye(half)
+    matrix[half:, :half] = -torch.eye(half)
+    return matrixs
+
+def compose_2matrix(A, B):
+    total_rows = A.size(0) + B.size(0)
+    total_cols = A.size(1) + B.size(1)
+    result = torch.zeros(total_rows, total_cols, dtype=torch.bfloat16)
+    result[:A.size(0), :A.size(1)] = A
+    b_row_start = A.size(0)
+    b_col_start = A.size(1)
+    result[b_row_start:b_row_start + B.size(0), 
+           b_col_start:b_col_start + B.size(1)] = B
+    return result
+
+def main():
+    # interleave
+    inter_mat_128 = get_interleave_matrix(128)
+    inter_mat_64 = get_interleave_matrix(64)
+    # interleave 2D
+    inter_mat_128_64 = compose_2matrix(inter_mat_128, inter_mat_64) 
 ```
