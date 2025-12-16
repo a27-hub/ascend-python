@@ -37,7 +37,7 @@ class MoeInitRoutingV2Model(torch.nn.Module):
 
 class TestNpuMoeInitRoutingV2(TestCase):
 
-    def adapter_capacity(seldf, sorted_row_idx, sorted_expert_idx, capacity):
+    def adapter_capacity(self, sorted_row_idx, sorted_expert_idx, capacity):
         count = 0
         last = sorted_expert_idx[0]
         for i, val in enumerate(sorted_expert_idx):
