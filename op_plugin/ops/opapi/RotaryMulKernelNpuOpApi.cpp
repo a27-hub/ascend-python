@@ -40,7 +40,8 @@ at::Tensor npu_rotary_mul(
     const at::Tensor& self,
     const at::Tensor& r1,
     const at::Tensor& r2,
-    c10::string_view rotary_mode)
+    c10::string_view rotary_mode,
+    const c10::optional<at::Tensor>& rotate)
 {
     static bool notNeedCheck = false;
     TORCH_CHECK((notNeedCheck || (rotary_mode == "half" || rotary_mode == "interleave")),
@@ -54,6 +55,22 @@ at::Tensor npu_rotary_mul(
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options());
     bool isMixDataType = isRotaryMulMixDtypeSupport(self, r1, r2);
+    if (rotate.has_value()) {
+        static const bool is_v2_available = check_aclnn_kernel_available("aclnnRotaryPositionEmbeddingV2");
+        if (!is_v2_available) {
+            TORCH_NPU_WARN_ONCE("CAUTION: The operator npu_rotary_mul is "
+                    "not support rotate, Please try to update your CANN version.");
+        } else {
+            if (isMixDataType) {
+                at::Tensor cosCast = npu_dtype_cast_impl_op_api(r1, self.scalar_type());
+                at::Tensor sinCast = npu_dtype_cast_impl_op_api(r2, self.scalar_type());
+                EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingV2, self, cosCast, sinCast, mode, rotate, result);
+            } else {
+                EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingV2, self, r1, r2, mode, rotate, result);
+            }
+            return result;
+        }
+    }
     if (isMixDataType) {
         at::Tensor cosCast = npu_dtype_cast_impl_op_api(r1, self.scalar_type());
         at::Tensor sinCast = npu_dtype_cast_impl_op_api(r2, self.scalar_type());
