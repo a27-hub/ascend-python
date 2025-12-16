@@ -26,6 +26,13 @@ class TestRotaryMul(TestCase):
         npu_input = cpu_input.npu()
         return cpu_input, npu_input
 
+    def get_interleave_matrix(n, dtype_q):
+        matrix = torch.zeros(n, n, dtype=dtype_q)
+        for i in range(0, n, 2):
+            matrix[i + 0, i + 1] = 1
+            matrix[i + 1, i + 0] = 1
+        return matrix
+
     def cpu_to_exec(self, x, r1, r2, mode='half'):
         if mode == 'half':
             out = self.rotary_mul(x, r1, r2)
@@ -81,6 +88,26 @@ class TestRotaryMul(TestCase):
             cpu_r2, npu_r2 = self.gen_data(shape[2], dtype)
             cpu_out = self.cpu_to_exec(cpu_x, cpu_r1, cpu_r2, mode='interleave')
             npu_out = self.npu_to_exec(npu_x, npu_r1, npu_r2, mode='interleave')
+            self.assertRtolEqual(cpu_out, npu_out)
+        
+    @SupportedDevices(['Ascend910B'])
+    def test_rotary_mul_mode(self):
+        dtype_list = [torch.float16]
+        shape_list = [
+            [[2, 24, 5, 128], [1, 1, 5, 128], [1, 1, 5, 128]],
+        ]
+        items = [
+            [shape, dtype]
+            for shape in shape_list
+            for dtype in dtype_list
+        ]
+        for shape, dtype in items:
+            cpu_x, npu_x = self.gen_data(shape[0], dtype)
+            cpu_r1, npu_r1 = self.gen_data(shape[1], dtype)
+            cpu_r2, npu_r2 = self.gen_data(shape[2], dtype)
+            rotate = get_interleave_matrix(shape[0][3], dtype).npu()
+            cpu_out = self.cpu_to_exec(cpu_x, cpu_r1, cpu_r2, mode='interleave')
+            npu_out = self.npu_to_exec(npu_x, npu_r1, npu_r2, mode='interleave', rotate)
             self.assertRtolEqual(cpu_out, npu_out)
 
     @unittest.skip("skip") # CI版本不支持
