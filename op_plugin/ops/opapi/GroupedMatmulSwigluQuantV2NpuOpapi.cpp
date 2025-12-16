@@ -99,7 +99,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         output = npu_preparation::apply_tensor_without_format({m, n/ MXFP_MULTI_BASE_SIZE}, c10::dtype(c10::ScalarType::Char));
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
     } else {
-        dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value_or(0)));
+        if (dequant_dtype.has_value()) {
+            dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
+        }
+        
         c10::TensorOptions options_output = x.options().dtype(quant_dtype.has_value()
                     ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(quant_dtype.value()))
                     : x[0].scalar_type());
