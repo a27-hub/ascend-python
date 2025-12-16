@@ -59,7 +59,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half') -> Tensor
+npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tensor
 ```
 
 >**说明：**<br>
@@ -70,6 +70,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half') -> Tensor
 - **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
+- **rotate** (`Tensor`)：可选参数，用于生成旋转矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，默认为空。
 - **rotary_mode** (`str`)：可选参数，数据类型支持`str`，用于选择计算模式，支持`half`、`interleave`两种模式。默认值为`half`。
 
 ## 返回值说明
