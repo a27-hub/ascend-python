@@ -2262,17 +2262,17 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     if split_item == 0:
         for i in range(num_x):
             ni = n if singleWeight else weight[i].shape[1]
-            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 and not is_transpose_weight(weight[i]) else ni
             y.append(x[i].new_empty((*x[i].shape[:-1], dim_n), dtype=output_dtype))
     elif split_item == 1:
         num_group_list = group_list.shape[0] if isinstance(group_list, torch.Tensor) else len(group_list)
         pre_offset = group_list[0]
-        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 and not is_transpose_weight(weight[0]) else n
         y.append(x[0].new_empty((pre_offset, dim_n), dtype=output_dtype))
         for i in range(1, num_group_list):
             ni = n if singleWeight else weight[i].shape[1]
             cur_offset = group_list[i]
-            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 and not is_transpose_weight(weight[i]) else ni
             y.append(x[0].new_empty((cur_offset - pre_offset, dim_n), dtype=output_dtype))
             pre_offset = cur_offset
     elif split_item == 2:

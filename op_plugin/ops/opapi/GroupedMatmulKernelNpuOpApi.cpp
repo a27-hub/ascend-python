@@ -225,6 +225,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
     if (mxfp4_valid) {
         TORCH_CHECK(x[0].size(1) != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
     }
+
     if (split_item_value == IN_NOT_SPLIT_OUT_NOT_SPLIT || split_item_value == IN_SPLIT_OUT_NOT_SPLIT) {
         if (num_group_list > 0) {
             y.reserve(num_group_list);
@@ -256,7 +257,7 @@ std::vector<at::Tensor> npu_grouped_matmul(const at::TensorList x,
             for (size_t i = 0; i < num_x; i++) {
                 dim_m += static_cast<size_t>(x[i].size(0));
             }
-            weight[0].dtype() == at::ScalarType::Int ?
+            (weight[0].dtype() == at::ScalarType::Int && (!weight_trans)) ?
                 create_new_tensor(y, dim_m, n0 * INT4_NUMS_IN_INT32, options) :
                 create_new_tensor(y, dim_m, n_new, options);
         } else if (num_x == 1) {
