@@ -214,7 +214,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     // TensorWrapper output_scale_wrapper = {output_scale,
     //     weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
     TensorWrapper x_wrapper = make_wrapper(x, x_dtype);
-    TensorListWrapper weight_wrapper = make_wrapper(x, weight_dtype);
+    TensorListWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
     TensorListWrapper weight_scale_wrapper = make_wrapper(weight_scale, weight_scale_dtype);
     TensorWrapper x_scale_wrapper = make_wrapper(x_scale, x_scale_dtype);
     TensorWrapper output_wrapper = make_wrapper(output, quant_dtype);
