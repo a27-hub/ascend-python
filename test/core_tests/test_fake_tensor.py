@@ -4056,7 +4056,7 @@ class TestNpuCrossEntropyLoss(TestCase):
             loss, log_prob, _, _ = torch_npu.npu_cross_entropy_loss(
                 input, target, reduction="sum", ignore_index=100
             )
-            expect_loss = torch.empty([N,], dtype=torch.float32)
+            expect_loss = torch.empty([1], dtype=torch.float32)
             expect_log_prob = torch.empty([N, C], dtype=torch.float32)
             self.assertEqual(loss.dtype, expect_loss.dtype)
             self.assertEqual(loss.shape, expect_loss.shape)
