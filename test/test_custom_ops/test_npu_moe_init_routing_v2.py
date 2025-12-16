@@ -1,38 +1,11 @@
 import unittest
 import itertools
-from os import scandir
 import numpy as np
 import random
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
-
-
-class MoeInitRoutingV2Model(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x, expert_idx, *, scale=None, offset=None,
-                active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0,
-                expert_tokens_num_type=0, expert_tokens_num_flag=False,
-                quant_mode=0, active_expert_range=0, row_idx_type=0):
-        ddd = dict(x=x, expert_idx=expert_idx, scale=scale, offset=offset,
-                   active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num,
-                   drop_pad_mode=drop_pad_mode,
-                   expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
-                   quant_mode=quant_mode, active_expert_range=active_expert_range, row_idx_type=row_idx_type)
-        for k, v in ddd.items():
-            print(k, v)
-        expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = \
-            torch.ops.npu.npu_moe_init_routing_v2(
-                x, expert_idx, scale=scale, offset=offset,
-                active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num,
-                drop_pad_mode=drop_pad_mode,
-                expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
-                active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type
-            )
-        return expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale
 
 
 class TestNpuMoeInitRoutingV2(TestCase):
