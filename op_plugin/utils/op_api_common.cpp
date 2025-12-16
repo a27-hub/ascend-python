@@ -176,8 +176,9 @@ std::vector<std::string> GetAllOpApiSoFiles()
                 continue;
             }
             std::string fileName = entry.path().filename().string();
-            std::regex pattern("^libopapi_.*\\.so$");
-            if (std::regex_match(fileName, pattern)) {
+            std::string prefixStr = "libopapi_";
+            std::string suffixStr = ".so";
+            if (fileName.starts_with(prefixStr) && fileName.ends_with(suffixStr)) {
                 opApiSoFiles.push_back(fileName);
             }
         }
