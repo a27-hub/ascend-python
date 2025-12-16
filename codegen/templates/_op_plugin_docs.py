@@ -3038,7 +3038,7 @@ tensor([[[[ 4.5000,  6.5000,  8.5000],
 _add_torch_npu_docstr(
     "npu_rotary_mul",
     """
-torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='half') -> Tensor
+torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='half', Tensor? rotate=None) -> Tensor
 功能描述
 实现RotaryEmbedding旋转位置编码。支持FakeTensor模式。
     half模式：
@@ -3054,6 +3054,7 @@ torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='ha
 input：必选输入，4维Tensor，数据类型float16, bfloat16, float32
 cos: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
 sin: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
+rotate：可选参数，2维Tensor，用于生成旋转矩阵，数据类型float16，bfloat16，float32，缺省为空。
 rotary_mode: 可选属性，数据类型string，用于选择计算模式，支持'half'、'interleave'两种模式。缺省为half。
 约束说明
 jit_compile=False场景：
