@@ -160,7 +160,8 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
     at::Tensor assist_info_forcombine = npu_preparation::apply_tensor_without_format({std::max(bs * k, a * 128)}, x.options().dtype(at::kInt));
 
     // a2分层方案
-    at::Tensor expand_scales = npu_preparation::apply_tensor_without_format({a}, x.options().dtype(at::kFloat));
+    auto expand_scales_dtype = (quant_mode != op_plugin::utils::QuantMode::QUANT_MODE_MX) ? at::kFloat : at::kInt;
+    at::Tensor expand_scales = npu_preparation::apply_tensor_without_format({a}, x.options().dtype(expand_scales_dtype));
     if (expert_scales.has_value() && expert_scales.value().defined()) {
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num + 2 * global_bs_real * k * (ep_world_size / 8); // 2: 2 buffer, 8 ranknum per server
         ep_recv_counts = npu_preparation::apply_tensor_without_format({ep_recv_cnt_num}, x.options().dtype(at::kInt));
