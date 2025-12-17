@@ -40,7 +40,10 @@ at::Tensor linalg_vector_norm(
     at::optional<at::ScalarType> opt_dtype)
 {
     if (check_use_aclop(scalar_ord)) {
-        return acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype);
+        TORCH_CHECK(!self.is_complex(), "linalg_vector_norm does not support complex numbers. "
+                    "should be in dtype support list [DT_FLOAT,DT_FLOAT16,DT_BFLOAT16,]."
+                    + OPS_ERROR(ErrCode::TYPE));
+        return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
@@ -61,6 +64,9 @@ at::Tensor& linalg_vector_norm_out(
     at::Tensor& result)
 {
     if (check_use_aclop(scalar_ord)) {
+        TORCH_CHECK(!self.is_complex(), "linalg_vector_norm does not support complex numbers. "
+                    "should be in dtype support list [DT_FLOAT,DT_FLOAT16,DT_BFLOAT16,]."
+                    + OPS_ERROR(ErrCode::TYPE));
         return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
