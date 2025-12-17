@@ -3768,13 +3768,14 @@ def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, b
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
 
-@impl(m, "npu_clipped_swiglu")
-def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
-    output_size = []
-    for i in range(x.dim()):
-        output_size.append(x.size(i))
-    output_size[dim] = math.floor(output_size[dim] / 2)
-    return torch.empty(output_size, dtype=x.dtype, device=x.device)
+if _is_pytorch_version_ge("2.6.0"):
+    @impl(m, "npu_clipped_swiglu")
+    def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
+        output_size = []
+        for i in range(x.dim()):
+            output_size.append(x.size(i))
+        output_size[dim] = math.floor(output_size[dim] / 2)
+        return torch.empty(output_size, dtype=x.dtype, device=x.device)
 
 
 @impl(m, "npu_dequant_rope_quant_kvcache")
