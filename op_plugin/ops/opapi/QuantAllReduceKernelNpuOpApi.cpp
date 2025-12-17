@@ -23,6 +23,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 static const int DIM_TWO = 2;
 static const int DIM_THREE = 3;
+static const int DIM_FOUR = 4;
 static const int NUM_64 = 64;
 static const int NUM_128 = 128;
 static const int H_LOWER_LIMIT = 1024;
@@ -60,8 +61,17 @@ at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c
                                 c10::optional<int64_t> scales_dtype)
 {
     // 校验x的shape, 2维(bs, h)或3维(b, s, h)
-    TORCH_CHECK(x.dim() == DIM_TWO || x.dim() == DIM_THREE, "The input of mm is required to be 2D, but the actual input is ",
+    TORCH_CHECK(x.dim() == DIM_TWO || x.dim() == DIM_THREE,
+                "The input x tensor shape is required to be 2 or 3 dim, but the actual input shape is ",
                 x.dim(), OPS_ERROR(ErrCode::PARAM));
+    // x不能为空tensor
+    if (x.dim() == DIM_TWO) {
+        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0, "The input 2 dim tensor x can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+    } else if (x.dim() == DIM_THREE) {
+        TORCH_CHECK(x.size(0) != 0 && x.size(1) != 0 && x.size(2) != 0, "The input 3 dim tensor x tensor can not be empty tensor",
+                    OPS_ERROR(ErrCode::PARAM));
+    }
+
     // 校验x的dtype
     if (x_dtype.has_value()) {
         TORCH_CHECK(SUPPORT_X_DTYPE_LIST.find(x_dtype.value()) != SUPPORT_X_DTYPE_LIST.end(),
@@ -86,6 +96,23 @@ at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c
     uint32_t axis_h = (x.dim() == DIM_THREE ? 2 : 1);
     TORCH_CHECK(x.size(axis_h) >= H_LOWER_LIMIT && x.size(axis_h) <= H_UPPER_LIMIT && x.size(axis_h) % NUM_128 == 0,
                 "The x H-axis should be in [1024, 8192] and divisible by 128", OPS_ERROR(ErrCode::PARAM));
+
+    // 校验scales的shape
+    TORCH_CHECK(scales.dim() == DIM_TWO || scales.dim() == DIM_THREE || scales.dim() == DIM_FOUR,
+                "The input scales tensor shape is required to be equal to x in TG QuantMode, "
+                "or be equal to x plus 1 in MX QuantMode, but the actual input scales shape is ",
+                scales.dim(), OPS_ERROR(ErrCode::PARAM));
+    // 校验scales是否为空tensor
+    if (scales.dim() == DIM_TWO) {
+        TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0, "The input 2 dim tensor scales can not be empty tensor",
+                    OPS_ERROR(ErrCode::PARAM));
+    } else if (scales.dim() == DIM_THREE) {
+        TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0 && scales.size(2) != 0,
+                    "The input 3 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+    } else if (scales.dim() == DIM_FOUR) {
+        TORCH_CHECK(scales.size(0) != 0 && scales.size(1) != 0 && scales.size(2) != 0 && scales.size(3) != 0,
+                    "The input 4 dim tensor scales can not be empty tensor", OPS_ERROR(ErrCode::PARAM));
+    }
 
     // 校验scales的dtype
     if (scales_dtype.has_value()) {
