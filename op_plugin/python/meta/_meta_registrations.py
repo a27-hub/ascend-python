@@ -1354,8 +1354,12 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
         if out_dtype is not None:
             output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
         attention_out = torch.empty_like(tmp_out, dtype=output_type)
-    elif query.dtype == torch.int8 or query.dtype == torch.float8_e4m3fn:
-        if query_rope is not None:
+    elif query.dtype == torch.int8 or query.dtype == torch.float8_e4m3fn or (query.dtype == torch.uint8 and query_dtype == torch_npu.hifloat8):
+        output_type = torch.half
+        if out_dtype is not None:
+            output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
+            attention_out = torch.empty_like(tmp_out, dtype=output_type)
+        elif query_rope is not None:
             attention_out = torch.empty_like(tmp_out, dtype=query_rope.dtype)
         else:
             attention_out = torch.empty_like(tmp_out, dtype=torch.half)
