@@ -102,7 +102,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         if (dequant_dtype.has_value()) {
             dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
         }
-        n = weight[0].sizes()[2]; // In mx quant mode, n needs to be obtained from the second dimension of weight.
+        n = weight[0].sizes()[2]; // In mx quant mode, n needs to be obtained from the dim 2 of weight.
         c10::TensorOptions options_output = x.options().dtype(quant_dtype.has_value()
                     ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(quant_dtype.value()))
                     : x[0].scalar_type());
