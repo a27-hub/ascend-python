@@ -66,9 +66,6 @@ def npu_attention_update_golden(lse_list, local_out_list, update_type=0):
     O = torch.sum(out_stack * weights.unsqueeze(-1), dim=0)
     return O.contiguous().to(out_dtype), lse_m
 
-def npu_attention_update(lse_list, local_out_list, update_type=0):
-    out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
-    return out_npu, lse_out_npu
 
 class TestNpuAttentionUpdate(TestCase):
     def setUp(self):
@@ -124,7 +121,7 @@ class TestNpuAttentionUpdate(TestCase):
             raise ValueError(f"K must be > 0, got {K}")
         if H % 8 != 0:
             raise ValueError(f"H must be divisible by 8, got {H}")
-        if H >= 512:
+        if H > 512:
             raise ValueError(f"H must be less than 512, got {H}")
 
         device = 'npu'
@@ -132,7 +129,7 @@ class TestNpuAttentionUpdate(TestCase):
         lse_list = [torch.randn(N, dtype=torch.float32, device=device) for _ in range(K)]
         local_out_list = [torch.randn(N, H, dtype=dtype, device=device) for _ in range(K)]
 
-        out_npu, lse_out_npu = npu_attention_update(lse_list, local_out_list, update_type)
+        out_npu, lse_out_npu = torch_npu.npu_attention_update(lse_list, local_out_list, update_type)
 
         out_cpu, lse_out_cpu = npu_attention_update_golden([t.to("cpu") for t in lse_list],
                                               [t.to("cpu") for t in local_out_list],
