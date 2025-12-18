@@ -133,8 +133,9 @@ std::tuple<at::Tensor &, at::Tensor &> max_pool2d_with_indices_out(const at::Ten
     c10::SmallVector<int64_t, SIZE> output_size = {n_batch, n_input_plane, output_height, output_width};
 
     const int64_t BLOCKSIZE = 16;
+    int64_t shape_factor = (self.scalar_type() == at::kFloat) ? 8 : 16;
     int64_t mask_H = kernel_sizes[0] * kernel_sizes[1];
-    int64_t mask_W = (op_infer::CeilDiv(output_height * output_width, BLOCKSIZE) + 1);
+    int64_t mask_W = (op_infer::CeilDiv(output_height * output_width, BLOCKSIZE) + 1) * shape_factor;
     c10::SmallVector<int64_t, SIZE> indices_size = {n_batch, n_input_plane, mask_H, mask_W};
 
     npu_preparation::CheckOut({self}, output, self, output_size);
@@ -207,8 +208,9 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(const at::Tensor &sel
     c10::SmallVector<int64_t, SIZE> output_size = {n_batch, n_input_plane, output_height, output_width};
 
     const int64_t BLOCKSIZE = 16;
+    int64_t shape_factor = (self.scalar_type() == at::kFloat) ? 8 : 16;
     int64_t mask_H = kernel_sizes[0] * kernel_sizes[1];
-    int64_t mask_W = (op_infer::CeilDiv(output_height * output_width, BLOCKSIZE) + 1);
+    int64_t mask_W = (op_infer::CeilDiv(output_height * output_width, BLOCKSIZE) + 1) * shape_factor;
     c10::SmallVector<int64_t, SIZE> indices_size = {n_batch, n_input_plane, mask_H, mask_W};
 
     at::Tensor output = npu_preparation::apply_tensor(self, output_size);
