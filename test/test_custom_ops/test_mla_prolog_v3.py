@@ -128,7 +128,7 @@ def get_dtype_range(dt):
     if "float4_e1m2" in str(dt):
         return -float.fromhex("0x1.Cp0"), float.fromhex("0x1.Cp0")
     if "float8_e8m0" in str(dt):
-        return -float.fromhex("0x1.p-127"), float.fromhex("0x1.p127")
+        return float.fromhex("0x1.p-127"), float.fromhex("0x1.p127")
     if "float8_e5m2" in str(dt):
         return -float.fromhex("0x1.Cp15"), float.fromhex("0x1.Cp15")
     if "float8_e4m3fn" in str(dt):
@@ -159,12 +159,12 @@ def _mx_reshape_to_blocks(fp_array: np.ndarray, axis: int, block_size: int):
     fp_array = fp_array.reshape(reshape)
     return fp_array, orig_shape, padded_shape
 
-def _mx_calculate_share_exp(fp_array: np.ndarray, sacle_axis: int, mx_ele_dtype: str):
+def _mx_calculate_share_exp(fp_array: np.ndarray, scale_axis: int, mx_ele_dtype: str):
     FP32_EXPONENT_BIAS = 127
     FP32_MIN_NORMAL = 2 ** (-FP32_EXPONENT_BIAS + 1)
     max_norm = get_dtype_range(mx_ele_dtype)[1]
     ele_emax = int(np.log2(max_norm))
-    fp_abs_max = np.max(np.abs(fp_array), axis=sacle_axis, keepdim=True)
+    fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdim=True)
     res = np.floor(
         np.log2(fp_abs_max.astype(np.float32) + FP32_MIN_NORMAL * (fp_abs_max == 0))
     ) - ele_emax
@@ -186,7 +186,7 @@ def _mx_round_mantissa(fp_array: np.ndarray, round_mode: str):
     elif round_mode == "trunc":  # round to zero
         fp_array = np.trunc(fp_array)
     else:
-        raise Exception(f"Unrecognied round method {round_mode}")
+        raise Exception(f"Unrecognized round method {round_mode}")
     return fp_array
 
 def _mx_quantize_to_element_format(fp_array: np.ndarray, share_exp: np.ndarray,
@@ -194,7 +194,7 @@ def _mx_quantize_to_element_format(fp_array: np.ndarray, share_exp: np.ndarray,
     mx_dtype = str(mx_ele_dtype)
     match = re.search(r'e(\d+)m(\d+)', mx_dtype)
     if match:
-        exp_bits = int(math.group(1))
+        exp_bits = int(match.group(1))
         mantissa_bits = int(match.group(2))
     else:
         raise ValueError(f'mx element dtype [{mx_ele_dtype}] is not recognized.')
@@ -204,9 +204,9 @@ def _mx_quantize_to_element_format(fp_array: np.ndarray, share_exp: np.ndarray,
     # The minimum representable exponent
     min_exp = 0 if "float4_e1m2" in mx_dtype else -(2 ** (exp_bits - 1)) + 2
     private_exp = private_exp.clip(min=min_exp)
-    # Scale up so appropriate number of bias are in the integer portion of the number
+    # Scale up so appropriate number of bits are in the integer portion of the number
     ret = ret / (2 ** private_exp) * (2 ** mantissa_bits)
-    ret = _max_round_mantissa(ret, round_mode)
+    ret = _mx_round_mantissa(ret, round_mode)
     # Undo scaling
     ret = ret / (2 ** mantissa_bits) * (2 ** private_exp)
     # Set values > max_norm to Inf if desired, else clamp them
@@ -232,19 +232,19 @@ def pad_to_even(tensor: np.ndarry, axis: int) ->np.ndarray:
     padded_tensor = np.pad(tensor, pad_width, mode='constant', constant_values=2 ** -127)
     return padded_tensor
 
-def interleave(tensor:np.ndarry, axis: int, n_group: int = 2)-> np.ndarry:
+def interleave(tensor:np.ndarray, axis: int, n_group: int = 2)-> np.ndarry:
     if not isinstance(tensor, np.ndarray):
-        raise ValueError("Input must be a ndarray")
+        raise ValueError("Input must be a numpy ndarray")
     if axis < 0 or axis >= tensor.ndim:
         raise ValueError(f"Axis {axis} is out of bounds for tensor with {tensor.ndim} dimensions.")
     length = tensor.shape[axis]
     if length % n_group != 0:
-        raise ValueError(f"Axis length ({lenght}) must be divisible by n_group ({n_group})")
+        raise ValueError(f"Axis length ({length}) must be divisible by n_group ({n_group})")
     group_length = length // n_group
     shape = list(tensor.shape)
 
     new_shape = (
-        shape=[:axis] +
+        shape[:axis] +
         [group_length, 2] +
         shape[axis + 1:])
     reshaped = tensor.reshape(new_shape)
@@ -259,10 +259,13 @@ def interleave(tensor:np.ndarry, axis: int, n_group: int = 2)-> np.ndarry:
     return transposed
 
 def _mx_undo_reshape_to_blocks(fp_array: np.ndarray, axis: int, orig_shape: tuple, padded_shape: tuple):
+    # Undo tile reshaping
     fp_array = fp_array.reshape(padded_shape)
+    # Undo padding
     if tuple(padded_shape) != tuple(orig_shape):
         slices = [slice(0, x) for x in orig_shape]
         fp_array = fp_array[tuple(slices)]
+    # Remove extra dimension
     fp_array = np.squeeze(fp_array, axis=axis + 1)
     return fp_array
 
@@ -273,7 +276,7 @@ def numpy_float8_e4m3fn():
         raise RuntimeError("ml_dtypes is needed to support float8_e4m3fn dtype!!! "
                         "Please install with pip3 install ml-dtypes")
 
-def dynamic_mx_quant_cq(fp_array: np.ndarray, mx_ele_dtype: str = "float4_42m1", 
+def dynamic_mx_quant_cq(fp_array: np.ndarray, mx_ele_dtype: str = "float4_e2m1", 
                         axis: int = -1, block_size: int = 32, round_mode: str = "rint") -> tuple:
     if not isinstance(fp_array, np.ndarray):
         raise RuntimeError(f"Input tensor to be quantized should be numpy array. But got {type(fp_array)}")
@@ -324,7 +327,7 @@ def dynamic_mx_quant_qn(x):
     x = x.astype("float32")
     input_mul = x
     input_abs = np.abs(input_mul)
-    input_max = np.max(input_abs, axis=-1, keepdim=True)
+    input_max = np.max(input_abs, axis=-1, keepdims=True)
     scale = input_max * (np.float32(1.0) / scale_max)
     input_scaled = input_mul / scale
     output_data = input_scaled.astype("float8_e4m3fn", copy=False)
@@ -575,20 +578,20 @@ class TestPromptFlashAttetion(TestCase):
         norm1_res = norm1_res.to(torch.bfloat16)
         deq_scale_qcqr_np, norm1_res_np = dynamic_mx_quant_cq(norm1_res.float().numpy(), "float8_e4m3fn")
         norm1_res = torch.tensor(norm1_res_np.astype(np.float32)).to(torch.float8_e4m3fn)
-        dequant_scale_qcqr = torch.from_numpy(deq_scale_qcqr_np)
-        dequant_scale_qcqr = dequant_scale_qcqr.reshape(dequant_scale_qcqr.shape[0], dequant_scale_qcqr.shape[1] * dequant_scale_qcqr.shape[2])
+        deq_scale_qcqr = torch.from_numpy(deq_scale_qcqr_np)
+        deq_scale_qcqr = deq_scale_qcqr.reshape(deq_scale_qcqr.shape[0], deq_scale_qcqr.shape[1] * deq_scale_qcqr.shape[2])
         norm1_res = norm1_res.to(torch.bfloat16)
 
-        # dequant_scale_qcqr 类型转换
-        dequant_scale_qcqr = trans_torch_fp8_e8m0_to_bf16(dequant_scale_qcqr)
-        qcqrs0 = dequant_scale_qcqr.shape[0]
-        qcqrs1 = dequant_scale_qcqr.shape[1]
+        # deq_scale_qcqr 类型转换
+        deq_scale_qcqr = trans_torch_fp8_e8m0_to_bf16(deq_scale_qcqr)
+        qcqrs0 = deq_scale_qcqr.shape[0]
+        qcqrs1 = deq_scale_qcqr.shape[1]
         for qcqrs0_idx in range(qcqrs0):
             for qcqrs1_idx in range(qcqrs1):
                 # copy from
                 normal_cur = norm1_res[qcqrs0_idx : qcqrs0_idx + 1, qcqrs1_idx * grp_size : (qcqrs1_idx + 1) * grp_size]
                 # broadcast
-                scale_qcqr = dequant_scale_qcqr[qcqrs0_idx : qcqrs0_idx + 1, qcqrs1_idx : qcqrs1_idx + 1]
+                scale_qcqr = deq_scale_qcqr[qcqrs0_idx : qcqrs0_idx + 1, qcqrs1_idx : qcqrs1_idx + 1]
                 scale_qcqr = torch.full((1, grp_size), scale_qcqr.item())
                 # mul
                 normal_cur *= scale_qcqr
@@ -612,7 +615,7 @@ class TestPromptFlashAttetion(TestCase):
         splitd1_res1 = splitd1_res1.to(torch.bfloat16)
         query_mla = torch.zeros((N1, T, Hckv))
         for n1_index in range(N1):
-            query_mla[n1_index, :, :] = torch.matmul(splitd1_res1[n1_index, :, :], w_uk[n1_index, :, :]).to(torch.float32)
+            query_mla[n1_index, :, :] = torch.matmul(splitd1_res1[n1_index, :, :].to(torch.float32), w_uk[n1_index, :, :].to(torch.float32)).to(torch.float32)
         query_mla = query_mla.transpose(0, 1)
         query_mla = query_mla.to(torch.bfloat16).to(torch.float32)
 
