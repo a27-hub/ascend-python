@@ -104,7 +104,11 @@ inline std::string convert_info(const at::Tensor &at_tensor)
        << static_cast<int>(at_tensor.device().index())
        << ", data_ptr: ";
     if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
-        ss << at_tensor.data_ptr();
+        ss << at_tensor.data_ptr()
+          << ", storage_ptr: "
+          << at_tensor.storage().data()
+          << ", storage nbytes: "
+          << at_tensor.storage().nbytes();
     } else {
         ss << "FakeTensor does not have data_ptr";
     }
@@ -324,46 +328,7 @@ inline std::string convert_info(char* char_value)
 
 inline std::string convert_info(const TensorWrapper &tensor_r)
 {
-    const at::Tensor &at_tensor = tensor_r.tensor_;
-    std::stringstream ss;
-    if (!at_tensor.defined()) {
-        ss << "Undefined Tensor!" << "\n";
-        return ss.str();
-    }
-
-    if (at_tensor.dim() == 0) {
-        if (torch_npu::utils::is_npu(at_tensor)) {
-            ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
-            std::string res = ss.str();
-            replace_and_append_newline(res);
-            return res;
-        } else {
-            ss << "CPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
-            std::string res = ss.str();
-            replace_and_append_newline(res);
-            return res;
-        }
-    }
-
-    ss << "Tensor size: "
-       << at_tensor.sizes()
-       << ", stride: "
-       << at_tensor.strides()
-       << ", offset: "
-       << at_tensor.storage_offset()
-       << ", dtype: "
-       << at_tensor.dtype()
-       << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: ";
-    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
-        ss << at_tensor.data_ptr();
-    } else {
-        ss << "FakeTensor does not have data_ptr";
-    }
-    ss << "\n";
-
-    return ss.str();
+    return convert_info(tensor_r.tensor_);
 }
 
 inline std::string convert_info(const TensorListWrapper &tensor_list_wrapper)
