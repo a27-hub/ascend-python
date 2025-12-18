@@ -43,6 +43,8 @@ at::Tensor linalg_vector_norm(
         TORCH_CHECK(!self.is_complex(), "linalg_vector_norm does not support complex numbers. "
                     "should be in dtype support list [DT_FLOAT,DT_FLOAT16,DT_BFLOAT16,]."
                     + OPS_ERROR(ErrCode::TYPE));
+        return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
+    }
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
