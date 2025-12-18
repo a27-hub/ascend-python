@@ -426,28 +426,28 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_v2_symint(
 
     at::TensorList valueTensors = value;
     at::TensorList keyTensors = key;
+    at::Tensor null_tensor;
 
-    bool is_postquant_hifp8 = quant_scale_out.has_value() && out_dtype.has_value() && c10_npu::GetAclDataType(out_dtype.value()) == aclDataType::ACL_HIFLOAT8;
-    bool use_wrapper = query_dtype.has_value() || key_dtype.has_value() || value_dtype.has_value() || is_postquant_hifp8;
-    if (use_wrapper) {
-        TensorWrapper query_wrapper = make_wrapper(query, query_dtype);
-        TensorListWrapper keyTensors_wrapper = make_wrapper(keyTensors, key_dtype);
-        TensorListWrapper valueTensors_wrapper = make_wrapper(valueTensors, value_dtype);
-        TensorWrapper outTensor_wrapper = make_wrapper(output, out_dtype);
-        TensorWrapper query_rope_wrapper = make_wrapper(query_rope, query_rope_dtype);
-        TensorWrapper key_rope_wrapper = make_wrapper(key_rope, key_rope_dtype);
-        TensorWrapper dequant_scale_key_wrapper = make_wrapper(dequant_scale_key, dequant_scale_key_dtype);
-        TensorWrapper dequant_scale_value_wrapper = make_wrapper(dequant_scale_value, dequant_scale_value_dtype);
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV4, query_wrapper, keyTensors_wrapper, valueTensors_wrapper, pse_shift, atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2,
-            quant_scale_out, quant_offset_out, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key_wrapper, dequant_offset_key, dequant_scale_value_wrapper,
-            dequant_offset_value, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope_wrapper, key_rope_wrapper, dequant_scale_key_rope, dequant_scale_query, learnable_sink, num_query_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr,
-            num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode, value_quant_mode, query_quant_mode, outTensor_wrapper, softmax_lse);
-    } else {
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV4, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2,
-            quant_scale_out, quant_offset_out, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key, dequant_offset_key, dequant_scale_value,
-            dequant_offset_value, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, dequant_scale_key_rope, dequant_scale_query, learnable_sink, num_query_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr,
-            num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode, value_quant_mode, query_quant_mode, output, softmax_lse);
-    }
+    TensorWrapper query_wrapper = make_wrapper(query, (query_dtype.has_value()) ? query_dtype : c10::nullopt);
+    TensorListWrapper keyTensors_wrapper = make_wrapper(keyTensors, (key_dtype.has_value()) ? key_dtype : c10::nullopt);
+    TensorListWrapper valueTensors_wrapper = make_wrapper(valueTensors, (value_dtype.has_value()) ? value_dtype : c10::nullopt);
+    TensorWrapper outTensor_wrapper = make_wrapper(output, (out_dtype.has_value()) ? out_dtype : c10::nullopt);
+    TensorWrapper query_rope_wrapper = query_rope.has_value() ?
+        make_wrapper(query_rope, (query_rope_dtype.has_value()) ? query_rope_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper key_rope_wrapper = key_rope.has_value() ?
+        make_wrapper(key_rope, (key_rope_dtype.has_value()) ? key_rope_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper dequant_scale_key_wrapper = dequant_scale_key.has_value() ?
+        make_wrapper(dequant_scale_key, (dequant_scale_key_dtype.has_value()) ? dequant_scale_key_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper dequant_scale_value_wrapper = dequant_scale_value.has_value() ?
+        make_wrapper(dequant_scale_value, (dequant_scale_value_dtype.has_value()) ? dequant_scale_value_dtype : c10::nullopt) : null_tensor;
+
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV4, query_wrapper, keyTensors_wrapper, valueTensors_wrapper, pse_shift,
+        atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2, quant_scale_out, quant_offset_out,
+        antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key_wrapper, dequant_offset_key,
+        dequant_scale_value_wrapper, dequant_offset_value, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope_wrapper,
+        key_rope_wrapper, dequant_scale_key_rope, dequant_scale_query, learnable_sink, num_query_heads, softmax_scale, pre_tokens, next_tokens,
+        input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode,
+        value_quant_mode, query_quant_mode, outTensor_wrapper, softmax_lse);
 
     return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
 }
@@ -575,11 +575,28 @@ at::Tensor _npu_fused_infer_attention_score_v2_get_max_workspace_symint(
 
     at::TensorList valueTensors = value;
     at::TensorList keyTensors = key;
+    at::Tensor null_tensor;
 
-    uint64_t workspace_size = EXEC_GET_MAX_WORKSPACE_CMD(aclnnFusedInferAttentionScoreV4, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2,
-        quant_scale_out, quant_offset_out, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key, dequant_offset_key, dequant_scale_value,
-        dequant_offset_value, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, dequant_scale_key_rope, dequant_scale_query, learnable_sink, num_query_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr,
-        num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode, value_quant_mode, query_quant_mode, output, softmax_lse);
+    TensorWrapper query_wrapper = make_wrapper(query, (query_dtype.has_value()) ? query_dtype : c10::nullopt);
+    TensorListWrapper keyTensors_wrapper = make_wrapper(keyTensors, (key_dtype.has_value()) ? key_dtype : c10::nullopt);
+    TensorListWrapper valueTensors_wrapper = make_wrapper(valueTensors, (value_dtype.has_value()) ? value_dtype : c10::nullopt);
+    TensorWrapper outTensor_wrapper = make_wrapper(output, (out_dtype.has_value()) ? out_dtype : c10::nullopt);
+    TensorWrapper query_rope_wrapper = query_rope.has_value() ?
+        make_wrapper(query_rope, (query_rope_dtype.has_value()) ? query_rope_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper key_rope_wrapper = key_rope.has_value() ?
+        make_wrapper(key_rope, (key_rope_dtype.has_value()) ? key_rope_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper dequant_scale_key_wrapper = dequant_scale_key.has_value() ?
+        make_wrapper(dequant_scale_key, (dequant_scale_key_dtype.has_value()) ? dequant_scale_key_dtype : c10::nullopt) : null_tensor;
+    TensorWrapper dequant_scale_value_wrapper = dequant_scale_value.has_value() ?
+        make_wrapper(dequant_scale_value, (dequant_scale_value_dtype.has_value()) ? dequant_scale_value_dtype : c10::nullopt) : null_tensor;
+
+    uint64_t workspace_size = EXEC_GET_MAX_WORKSPACE_CMD(aclnnFusedInferAttentionScoreV4, query_wrapper, keyTensors_wrapper, valueTensors_wrapper, pse_shift,
+        atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2, quant_scale_out, quant_offset_out,
+        antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key_wrapper, dequant_offset_key,
+        dequant_scale_value_wrapper, dequant_offset_value, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope_wrapper,
+        key_rope_wrapper, dequant_scale_key_rope, dequant_scale_query, learnable_sink, num_query_heads, softmax_scale, pre_tokens, next_tokens,
+        input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode,
+        value_quant_mode, query_quant_mode, outTensor_wrapper, softmax_lse);
     at::Tensor workspace_tensor = npu_preparation::apply_tensor_without_format({workspace_size}, query.options().dtype(query.dtype()));
     return workspace_tensor;
 }
