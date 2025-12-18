@@ -115,7 +115,7 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
 
 at::ScalarType abs_out_dtype(const at::Tensor& self)
 {
-    at::ScalarType output = self.scalar_dtype();
+    at::ScalarType output = self.scalar_type();
     if (output == at::ScalarType::ComplexFloat) {
         output = at::ScalarType::Float;
     } else if (output == at::ScalarType::ComplexDouble) {
