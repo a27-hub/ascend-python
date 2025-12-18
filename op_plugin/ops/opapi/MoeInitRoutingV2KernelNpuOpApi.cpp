@@ -109,10 +109,20 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     bool using_v2 = CheckV2Case(h, expert_num, active_expert_range, expert_tokens_num_type, quant_mode);
 
     at::Tensor expanded_x;
-    if (IsQuantModeON(quant_mode)) {
-        expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kChar));
-    } else {  // quant_mode == QUANT_MODE_UNQUANT
-        expanded_x = npu_preparation::apply_tensor_without_format(x, {bs * k, h});
+    switch (quant_mode) {
+        case QUANT_MODE_MXFP8_E5M2:
+            expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kFloat8_e5m2));
+            break;
+        case QUANT_MODE_MXFP8_E4M3FN:
+            expanded_x =
+                npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kFloat8_e4m3fn));
+            break;
+        case QUANT_MODE_STATIC:
+        case QUANT_MODE_DYNAMIC:
+            expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kChar));
+            break;
+        default:  // quant_mode == QUANT_MODE_UNQUANT
+            expanded_x = npu_preparation::apply_tensor_without_format(x, {bs * k, h});
     }
     at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
     at::Tensor expert_tokens_count_or_cumsum;
@@ -160,28 +170,48 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             if (m % 2 != 0) {
                 m++;
             }
-            expanded_scale = npu_preparation::apply_tensor_without_format({bs * k, m}, x.options().dtype(at::kChar));
+            at::ScalarType scalar_type = npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0);
+            expanded_scale = npu_preparation::apply_tensor_without_format({bs * k, m}, x.options().dtype(scalar_type));
+            TensorWrapper expanded_scale_wrapper = {expanded_scale, aclDataType::ACL_FLOAT8_E8M0};
+            EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
+                x,
+                expert_idx,
+                p_scale,
+                p_offset,
+                active_num,
+                expert_capacity,
+                expert_num,
+                drop_pad_mode,
+                expert_tokens_num_type,
+                expert_tokens_num_flag,
+                quant_mode,
+                active_expert_range,
+                row_idx_type,
+                expanded_x,
+                expanded_row_idx,
+                expert_tokens_count_or_cumsum,
+                expanded_scale_wrapper);
         } else {
             expanded_scale = npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
+            EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
+                x,
+                expert_idx,
+                p_scale,
+                p_offset,
+                active_num,
+                expert_capacity,
+                expert_num,
+                drop_pad_mode,
+                expert_tokens_num_type,
+                expert_tokens_num_flag,
+                quant_mode,
+                active_expert_range,
+                row_idx_type,
+                expanded_x,
+                expanded_row_idx,
+                expert_tokens_count_or_cumsum,
+                expanded_scale);
         }
-        EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
-            x,
-            expert_idx,
-            p_scale,
-            p_offset,
-            active_num,
-            expert_capacity,
-            expert_num,
-            drop_pad_mode,
-            expert_tokens_num_type,
-            expert_tokens_num_flag,
-            quant_mode,
-            active_expert_range,
-            row_idx_type,
-            expanded_x,
-            expanded_row_idx,
-            expert_tokens_count_or_cumsum,
-            expanded_scale);
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
     }
 }
