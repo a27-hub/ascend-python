@@ -4302,6 +4302,9 @@ def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, 
     return (result_1, result_2, result_3)
 
 
+has_side_effect(torch.ops.npu.npu_attention_to_ffn.default)
+
+
 @impl(m, "npu_attention_to_ffn")
 def npu_attention_to_ffn_meta(x, session_id, micro_batch_id, layer_id, expert_ids, expert_rank_table, group, world_size,
                               ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, moe_expert_num,
