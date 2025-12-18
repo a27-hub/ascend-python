@@ -3,8 +3,7 @@ import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor
-
+from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
 class TestNorm(TestCase):
     def norm_output_size(self, data, dimVal, keepdimVal):
@@ -69,6 +68,7 @@ class TestNorm(TestCase):
         exception = cm.exception
         self.assertTrue("Dimension out of range (expected to be in range of [-1, 0], but got 2)" in str(exception))
 
+    @SupportedDevices(['Ascend910B'])
     def test_norm_complex_input_check(self):
         x = torch.randn(32, 32, 32, dtype=torch.complex64).npu()
         with self.assertRaises(RuntimeError) as cm:
