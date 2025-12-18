@@ -54,7 +54,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, mirco_batch_ids, token_ids, exper
 
     - ffnRankNum：表示选取ffnRankNum个卡作为FFnWorker,取值范围为0 < `ffnRankNum` < `worldSize`
 
-    - attnRankNum：表示选取attnRankNum个卡作为AttnWorker，取值范围为0 < `attnRankNum` < `worldSize`,且满足`worldSize` = `attnRankNum` + `ffnRankNum`。
+    - attnRankNum：表示选取attnRankNum个卡作为AttnWorker，取值范围为0 < `attnRankNum` < `worldSize`。
 
     - sharedExpertNum：表示共享专家数量（一个共享专家可以复制部署到多个ffnRank卡上），取值范围为0 ≤ `sharedExpertNum` ≤ 4。
 
