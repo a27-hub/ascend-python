@@ -116,11 +116,19 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
 at::ScalarType abs_out_dtype(const at::Tensor& self)
 {
     at::ScalarType output = self.scalar_dtype();
+<<<<<<< HEAD
     if (output == at::ScalarType::ComplexFloat) {
         output = at::ScalarType::Float;
     } else if (output == at::ScalarType::ComplexDouble) {
         output = at::ScalarType::Double;
     } else if (output == at::ScalarType::ComplexHalf) {
+=======
+    if (self.scalar_dtype() == at::ScalarType::ComplexFloat) {
+        output = at::ScalarType::Float;
+    } else if (self.scalar_dtype() == at::ScalarType::ComplexDouble) {
+        output = at::ScalarType::Double;
+    } else if (self.scalar_dtype() == at::ScalarType::ComplexHalf) {
+>>>>>>> 2a509e7df3110fc68d738b5ed8f752b443a1fca1
         output = at::ScalarType::Half;
     }
     return output;
