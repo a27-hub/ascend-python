@@ -232,7 +232,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 return
             self.assertRtolEqual(expanded_scale, local_expanded_scale_npu.numpy())
 
-    @unittest.skip("Skipping test_npu_moe_init_routing_static_quant due to unsupported quant_mode=0 in current CANN version")
+    # @unittest.skip("Skipping test_npu_moe_init_routing_static_quant due to unsupported quant_mode=0 in current CANN version")
     @SupportedDevices(['Ascend910B'])
     def test_npu_moe_init_routing_static_quant(self):
         bs_list = [4]

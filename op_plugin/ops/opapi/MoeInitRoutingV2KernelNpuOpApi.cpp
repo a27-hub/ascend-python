@@ -24,14 +24,27 @@ constexpr int64_t LENGTH_ACTIVE_EXPERT_RANGE = 2;
 constexpr int64_t EXPERT_TOKENS_COUNT = 1;
 constexpr int64_t EXPERT_TOKENS_KEY_VALUE = 2;
 constexpr int64_t QUANT_MODE_UNQUANT = -1;
-constexpr int64_t QUANT_MODE_DYNAMIC_QUANT = 1;
+constexpr int64_t QUANT_MODE_STATIC = 0;
+constexpr int64_t QUANT_MODE_DYNAMIC = 1;
+constexpr int64_t QUANT_MODE_MXFP8_E5M2 = 2;
+constexpr int64_t QUANT_MODE_MXFP8_E4M3FN = 3;
+constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
 constexpr int64_t EXPERT_NUM_MAX_V2 = 128;
 constexpr int64_t HIDDEN_DIM_VAL_V2 = 2048;
-
 };  // namespace
+
+inline bool IsQuantModeMXQUANT(int64_t quantMode)
+{
+    return quantMode == QUANT_MODE_MXFP8_E5M2 || quantMode == QUANT_MODE_MXFP8_E4M3FN;
+}
+
+inline bool IsQuantModeON(int64_t quantMode)
+{
+    return quantMode == QUANT_MODE_STATIC || quantMode == QUANT_MODE_DYNAMIC || IsQuantModeMXQUANT(quantMode);
+}
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -96,7 +109,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     bool using_v2 = CheckV2Case(h, expert_num, active_expert_range, expert_tokens_num_type, quant_mode);
 
     at::Tensor expanded_x;
-    if (quant_mode == QUANT_MODE_DYNAMIC_QUANT) {
+    if (IsQuantModeON(quant_mode)) {
         expanded_x = npu_preparation::apply_tensor_without_format({bs * k, h}, x.options().dtype(at::kChar));
     } else {  // quant_mode == QUANT_MODE_UNQUANT
         expanded_x = npu_preparation::apply_tensor_without_format(x, {bs * k, h});
@@ -140,8 +153,17 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             expert_tokens_before_capacity);
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
     } else {
-        at::Tensor expanded_scale =
-            npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
+        at::Tensor expanded_scale;
+        if (IsQuantModeMXQUANT(quant_mode)) {
+            // m为h向上整除32后向上对齐到偶数倍
+            int64_t m = (h + MXQUANT_BLOCK_SIZE - 1) / MXQUANT_BLOCK_SIZE;
+            if (m % 2 != 0) {
+                m++;
+            }
+            expanded_scale = npu_preparation::apply_tensor_without_format({bs * k, m}, x.options().dtype(at::kChar));
+        } else {
+            expanded_scale = npu_preparation::apply_tensor_without_format({bs * k}, x.options().dtype(at::kFloat));
+        }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
             x,
             expert_idx,

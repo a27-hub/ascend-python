@@ -895,8 +895,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_type is None or invalid. must be in [0, 1, 2]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -941,7 +941,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     offset_dim == 1 or x.size(1) == offset.size(1) or 1 == offset.size(1),
                     lambda: "the 2nd dim of offset and the 2nd dim of scale should be the same" + ops_error(ErrCode.VALUE),
                 )
-        else:
+        elif quant_mode == 1:
             torch._check(
                 scale_dim == 2,
                 lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
@@ -954,14 +954,33 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                 x.size(1) == scale.size(1),
                 lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
             )
+        else:
+            pass # quant_mode为[2, 3]时，不使用scale因此也不需要校验
 
     bs = x.size(0)
     h = x.size(1)
     k = expert_idx.size(1)
+
     expanded_x_dim_list = [bs * k, h]
-    expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
+    expanded_x_dtype = x.dtype
+    if quant_mode in [0, 1]:
+        expanded_x_dtype = torch.int8
+    elif quant_mode == 2:
+        expanded_x_dtype = torch.float8_e5m2
+    elif quant_mode == 3:
+        expanded_x_dtype = torch.float8_e4m3fn
+    
     expanded_row_idx_dim_list = [bs * k]
+
     expanded_scale_dim_list = [bs * k]
+    expanded_scale_dtype = torch.float32
+    if quant_mode in  [2, 3]:
+        MXQUANT_BLOCK_SIZE = 32
+        m = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
+        if m % 2 != 0:
+            m += 1
+        expanded_scale_dim_list = [bs * k, m]
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
         expert_token_cumsum_or_count_dim_list = [expert_range_length]
@@ -971,7 +990,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
-            x.new_empty(tuple(expanded_scale_dim_list), dtype=torch.float32))
+            x.new_empty(tuple(expanded_scale_dim_list), dtype=expanded_scale_dtype))
 
 
 @impl(m, "ffn_worker_scheduler_")
