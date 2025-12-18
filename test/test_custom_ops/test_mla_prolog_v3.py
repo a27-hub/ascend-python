@@ -214,7 +214,7 @@ def _mx_quantize_to_element_format(fp_array: np.ndarray, share_exp: np.ndarray,
     np.clip(ret, a_min=-max_norm, a_max=max_norm, out=ret)
     return ret
 
-def pad_to_even(tensor: np.ndarry, axis: int) ->np.ndarray:
+def pad_to_even(tensor: np.ndarray, axis: int) ->np.ndarray:
     if not isinstance(tensor, np.ndarray):
         raise ValueError("Input must be a numpy ndarray.")
     if axis < 0 or axis >= tensor.ndim:
