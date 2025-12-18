@@ -37,7 +37,7 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 ## 参数说明
 
 - **x** (`Tensor`)：必选参数，输入张量，数据类型支持`float16`、`bfloat16`，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。
-- **min_scale** (`float`)：可选参数，参与`scale`计算的最小`scale`值。当前仅支持取值0。
+- **min_scale** (`float`)：可选参数，参与`scale`计算的最小`scale`值。当前支持取值大于等于0。
 - **round_mode** (`str`)：可选参数，指定`cast`到输出的转换方式。当前仅支持取值`rint`。
 - **dst_type** (`int`)：可选参数，指定输出y的数据类型。当前仅支持取值1，表示代码输出y的数据类型为`int8`。
 - **row_block_size** (`int`)：可选参数，指定一个`block`的行大小。当前仅支持取值1。
