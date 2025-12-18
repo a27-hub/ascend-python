@@ -232,7 +232,7 @@ def pad_to_even(tensor: np.ndarray, axis: int) ->np.ndarray:
     padded_tensor = np.pad(tensor, pad_width, mode='constant', constant_values=2 ** -127)
     return padded_tensor
 
-def interleave(tensor:np.ndarray, axis: int, n_group: int = 2)-> np.ndarry:
+def interleave(tensor:np.ndarray, axis: int, n_group: int = 2)-> np.ndarray:
     if not isinstance(tensor, np.ndarray):
         raise ValueError("Input must be a numpy ndarray")
     if axis < 0 or axis >= tensor.ndim:
