@@ -113,4 +113,17 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
     return at::native::result_type(state);
 }
 
+at::ScalarType abs_out_dtype(const at::Tensor& self)
+{
+    at::ScalarType output_type = self.scalar_type();
+    if (self.scalar_type() == at::ScalarType::ComplexFloat) {
+        output_type = at::ScalarType::Float;
+    } else if (self.scalar_type() == at::ScalarType::ComplexDouble) {
+        output_type = at::ScalarType::Double;
+    } else if (self.scalar_type() == at::ScalarType::ComplexHalf) {
+        output_type = at::ScalarType::Half;
+    }
+    return output_type;
+}
+
 } // namespace op_infer
