@@ -4660,5 +4660,8 @@
   },
   "func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor": {
     "version": ["all_version"]
+  },
+  "func: save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()": {
+    "version": ["all_version"]
   }
 }
