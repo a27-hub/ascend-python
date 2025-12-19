@@ -4115,3 +4115,9 @@ if _is_pytorch_version_ge("2.6.0"):
     @impl(m, "npu_sim_exponential_")
     def npu_sim_exponential__meta(self, lambd=1, generator=None):
         return torch.empty_like(self)
+
+has_side_effect(torch.ops.npu.npu_save_tensor_to_file.default)
+
+@impl(m, "npu_save_tensor_to_file")
+def npu_save_tensor_to_file_meta(self, *, save_path=None):
+    return
