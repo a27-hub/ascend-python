@@ -184,7 +184,7 @@ std::vector<std::string> GetAllOpApiSoFiles()
     }
 
     try {
-        for (const auto& entry : std::filesystem::directory_iterator(allOpApiSoPath)) {
+        for (const auto& entry : std::filesystem::directory_iterator(allOpApiSoRealPath)) {
             if (!entry.is_regular_file()) {
                 continue;
             }
