@@ -695,6 +695,9 @@
   "func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_grouped_matmul_add(Tensor self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: npu_grouped_matmul_add_(Tensor(a!) self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor(a!)": {
     "version": ["all_version"]
   },
@@ -3882,9 +3885,6 @@
     "version": ["all_version"]
   },
   "func: zeros.out(SymInt[] size, *, Tensor(a!) out) -> Tensor(a!)": {
-    "version": ["all_version"]
-  },
-  "func: zeros_like(Tensor self, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, MemoryFormat? memory_format=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: celu(Tensor self, Scalar alpha=1.0) -> Tensor": {
