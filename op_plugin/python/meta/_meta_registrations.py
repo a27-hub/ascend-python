@@ -4407,3 +4407,37 @@ def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
     result = torch.empty_like(x)
 
     return result
+
+
+has_side_effect(torch.ops.npu.npu_attention_to_ffn.default)
+
+
+@impl(m, "npu_attention_to_ffn")
+def npu_attention_to_ffn_meta(x, session_id, micro_batch_id, layer_id, expert_ids, expert_rank_table, group, world_size,
+                              ffn_token_info_table_shape, ffn_token_data_shape, attn_token_info_table_shape, moe_expert_num,
+                              scales=None, active_mask=None, quant_mode=0, sync_flag=0, ffn_start_rank_id=0):
+    return
+
+
+has_side_effect(torch.ops.npu.npu_ffn_to_attention.default)
+
+
+@impl(m, "npu_ffn_to_attention")
+def npu_ffn_to_attention_meta(x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, group, world_size,
+                              token_info_table_shape, token_data_shape, attn_rank_table=None):
+    return
+
+
+@impl(m, "repeat_interleave_backward_int")
+def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
+    result = torch.empty_like(x)
+
+    return result
+
+
+has_side_effect(torch.ops.npu.save_npugraph_tensor.default)
+
+
+@impl(m, "save_npugraph_tensor")
+def save_npugraph_tensor_meta(self, *, save_path=None):
+    return
