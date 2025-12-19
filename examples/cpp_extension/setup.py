@@ -11,6 +11,7 @@ from setuptools.command.build_ext import build_ext
 import torch
 import torch_npu
 from torch_npu.utils.cpp_extension import NpuExtension
+from torch.utils.cpp_extension import BuildExtension
 
 
 BUILD_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
@@ -59,7 +60,6 @@ class CPPLibBuild(build_clib, object):
         self.cmake = cmake
         build_py = self.get_finalized_command("build_py")
         extension_dir = os.path.join(BASE_DIR, build_py.build_lib, build_py.get_package_dir("op_extension"))
-
         build_dir = os.path.join(BASE_DIR, "build")
         build_type_dir = os.path.join(build_dir)
         output_lib_path = os.path.join(build_type_dir, "lib")
@@ -93,29 +93,50 @@ class CPPLibBuild(build_clib, object):
                 os.chmod(file_path, mode=BUILD_PERMISSION)
 
         subprocess.check_call(['make'] + build_args, cwd=build_type_dir, env=os.environ)
-        dst_dir = os.path.join(extension_dir, 'lib')
+        dst_dir = os.path.join(extension_dir,'lib')
         if os.path.exists(dst_dir):
             shutil.rmtree(dst_dir)
         shutil.copytree(output_lib_path, dst_dir)
 
 
-class Build(build_ext, object):
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+class Build(BuildExtension):
 
     def run(self):
         self.run_command('build_clib')
-        self.build_lib = os.path.relpath(os.path.join(BASE_DIR, "build"))
+        build_py = self.get_finalized_command("build_py")
+        self.package_root = os.path.join(BASE_DIR, build_py.build_lib, build_py.get_package_dir("op_extension"))
+        self.build_lib = self.package_root
         self.build_temp = os.path.relpath(os.path.join(BASE_DIR, "build/temp"))
-        self.library_dirs.append(
-            os.path.relpath(os.path.join(BASE_DIR, "build/lib")))
+        self.library_dirs.append(os.path.join(BASE_DIR, "build/lib"))
         super(Build, self).run()
 
 
 setup(name='op_extension',
       description='NPU bridge for Torchvision',
       packages=find_packages(),
-        ext_modules=[NpuExtension("op_extension._C", sources=[])],
+      ext_modules=[NpuExtension("op_extension_ops",
+                    sources=["csrc/host/pybind/pybind.cpp"],
+                    extra_compile_args=[
+                    '-D_GLIBCXX_USE_CXX11_ABI=1' if torch.compiled_with_cxx11_abi() else '-D_GLIBCXX_USE_CXX11_ABI=0',
+                    ],
+                    include_dirs=[
+                        os.path.join(BASE_DIR, "build/include"),
+                        os.path.join(os.path.realpath(os.path.dirname(torch.__file__)), 'include'),
+                        os.path.join(os.path.realpath(os.path.dirname(torch.__file__)), 'include/torch/csrc/api/include'),
+                        os.path.join(os.path.realpath(os.path.dirname(torch_npu.__file__)), 'include')
+                    ],
+                    libraries=[
+                    'op_extension'],
+                    library_dirs=[os.path.join(BASE_DIR, "build/lib")],
+                    extra_link_args=['-Wl,-rpath,$ORIGIN'],
+                    )],
+     package_data={'op_extension': ['lib/*.so', '**/*.so']},
+       include_package_data=True,             
       cmdclass={
           'build_clib': CPPLibBuild,
-          'build_ext': Build,
+          'build_ext': Build.with_options(no_python_abi_suffix=True),
                 }
       )

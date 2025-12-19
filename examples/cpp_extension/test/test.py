@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 import op_extension
+import op_extension.op_extension_ops
 
 
 class TestCustomAdd(TestCase):
@@ -15,6 +16,7 @@ class TestCustomAdd(TestCase):
         x_npu = x.npu()
         y_npu = y.npu()
         output = torch.ops.npu.my_add(x_npu, y_npu)
+        output = op_extension.op_extension_ops.add_custom(x_npu, y_npu)
         cpuout = torch.add(x, y)
 
         self.assertRtolEqual(output, cpuout)
