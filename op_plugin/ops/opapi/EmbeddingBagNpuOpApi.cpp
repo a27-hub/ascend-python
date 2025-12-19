@@ -50,17 +50,26 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _embedding_bag(
     at::Tensor offset2bag = npu_preparation::apply_tensor_without_format(indices, indices.size(0));
 
     at::Tensor bag_size;
-    if (include_last_offset) {
-        bag_size = npu_preparation::apply_tensor_without_format(offsets, offsets.size(0) - 1);
-    } else {
+    if (c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend910_95) {
         bag_size = npu_preparation::apply_tensor_without_format(offsets);
+    } else {
+        if (include_last_offset) {
+            bag_size = npu_preparation::apply_tensor_without_format(offsets, offsets.size(0) - 1);
+        } else {
+            bag_size = npu_preparation::apply_tensor_without_format(offsets);
+        }
     }
 
     at::Tensor max_indices;
     if (mode == 0 || mode == 1) {
-        max_indices = npu_preparation::apply_tensor_without_format(offsets);
-        if (include_last_offset) {
-            max_indices = npu_preparation::apply_tensor_without_format(offsets, offsets.size(0) - 1);
+        if (c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend910_95) {
+            max_indices = npu_preparation::apply_tensor_without_format({0}, offsets.options());
+        } else {
+            if (include_last_offset) {
+                max_indices = npu_preparation::apply_tensor_without_format(offsets, offsets.size(0) - 1);
+            } else {
+                max_indices = npu_preparation::apply_tensor_without_format(offsets);
+            }
         }
     } else {
         c10::SmallVector<int64_t, SIZE> max_indices_size =
