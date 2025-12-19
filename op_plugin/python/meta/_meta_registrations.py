@@ -987,10 +987,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
 
-    return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
-            x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
-            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
-            x.new_empty(tuple(expanded_scale_dim_list), dtype=expanded_scale_dtype))
+    return (x.new_empty(tuple(expanded_x_dim_list), dtype = expanded_x_dtype),
+            x.new_empty(tuple(expanded_row_idx_dim_list), dtype = torch.int32),
+            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype = torch.int64),
+            x.new_empty(tuple(expanded_scale_dim_list), dtype = expanded_scale_dtype))
 
 
 @impl(m, "ffn_worker_scheduler_")
