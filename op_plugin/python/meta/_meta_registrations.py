@@ -4299,3 +4299,11 @@ def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, 
         result_3 = None
 
     return (result_1, result_2, result_3)
+
+
+has_side_effect(torch.ops.npu.save_npugraph_tensor.default)
+
+
+@impl(m, "save_npugraph_tensor")
+def save_npugraph_tensor_meta(self, *, save_path=None):
+    return
