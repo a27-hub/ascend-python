@@ -36,17 +36,17 @@ include(${ASCENDC_CMAKE_DIR}/ascendc.cmake)
 FILE(GLOB _OPPLUGIN_PYBIND_OPS_SRCS
    csrc/host/*.cpp
    csrc/host/tiling/*.cpp)
-
+FILE(GLOB NO_WORKSPACE
+   csrc/kernel/no_workspace/*.cpp)
+FILE(GLOB WORKSPACE
+   csrc/kernel/workspace/*.cpp)
 set(_OPPLUGIN_PYBIND_NAME op_extension)
-
 ascendc_library(no_workspace_kernel STATIC
-    csrc/kernel/add_custom.cpp
+    ${NO_WORKSPACE}
 )
-
 ascendc_library(workspace_kernel STATIC
-    csrc/kernel/matmul_leakyrelu_custom.cpp
+    ${WORKSPACE}
 )
-
 ascendc_compile_definitions(workspace_kernel PRIVATE
   -DHAVE_WORKSPACE
   -DHAVE_TILING
@@ -54,7 +54,7 @@ ascendc_compile_definitions(workspace_kernel PRIVATE
 
 add_library(${_OPPLUGIN_PYBIND_NAME} SHARED ${_OPPLUGIN_PYBIND_OPS_SRCS})
 
-target_link_libraries(${_OPPLUGIN_PYBIND_NAME} PRIVATE
+target_link_libraries(${_OPPLUGIN_PYBIND_NAME} PUBLIC
   workspace_kernel
   no_workspace_kernel
   torch_npu
@@ -65,12 +65,11 @@ target_link_libraries(${_OPPLUGIN_PYBIND_NAME} PRIVATE
   ascendalog
   dl
 )
-
-target_link_directories(${_OPPLUGIN_PYBIND_NAME} PRIVATE
+target_link_directories(${_OPPLUGIN_PYBIND_NAME} PUBLIC
   ${TORCH_PATH}/lib
   ${TORCH_NPU_PATH}/lib
 )
-target_include_directories(${_OPPLUGIN_PYBIND_NAME} PRIVATE
+target_include_directories(${_OPPLUGIN_PYBIND_NAME} PUBLIC
   ${TORCH_NPU_PATH}/include
   ${TORCH_PATH}/include
   ${TORCH_PATH}/include/torch/csrc/api/include
