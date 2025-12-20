@@ -29,6 +29,10 @@
          x_1 = x[..., ::2], x_2 = x[..., 1::2]\\
          rotate(x) = rearrange(torch.stack((-x_2, x_1), dim=-1), “... d two -> ...(d two)", two=2)\\
          $$
+     - 当输入rotate时，旋转矩阵的生成方式为：
+         $$
+         rotate(x) = x \cdot rotate\\
+         $$
 
 -   等价计算逻辑：
     
@@ -63,15 +67,15 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 ```
 
 >**说明：**<br>
->在模型训练场景中，正向算子的输入`input`将被保留以供反向计算时使用。在`r1`，`r2`不需要计算反向梯度场景下（`requires_grad=False`），使用该接口相较融合前小算子使用的设备内存占用会有所增加。
+>在模型训练场景中，正向算子的输入`input`将被保留以供反向计算时使用。在`r1`，`r2`不需要计算反向梯度场景下（`requires_grad=False`），使用该接口相较融合前小算子使用的设备内存占用会有所增加。输入`rotate`不支持反向传播。
 
 ## 参数说明
 
 - **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
-- **rotate** (`Tensor`)：可选参数，用于生成旋转矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，默认为空。
 - **rotary_mode** (`str`)：可选参数，数据类型支持`str`，用于选择计算模式，支持`half`、`interleave`两种模式。默认值为`half`。
+- **rotate** (`Tensor`)：可选参数，表示实现input位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，构造方式参考调用示例，默认为空。
 
 ## 返回值说明
 `Tensor`
@@ -182,6 +186,7 @@ tensor([[[-0.1200, -0.2515, -0.3189,  ...,  0.2283,  1.1038,  0.3439],
 - rotate生成示例：
 ```python
 import torch
+import torch_npu
 
 def get_interleave_matrix(n):
     matrix = torch.zeros(n, n, dtype=torch.bfloat16)
@@ -195,7 +200,7 @@ def get_half_matrix(n):
     half = n // 2
     matrix[:half, half:] = torch.eye(half)
     matrix[half:, :half] = -torch.eye(half)
-    return matrixs
+    return matrix
 
 def compose_2matrix(A, B):
     total_rows = A.size(0) + B.size(0)
@@ -213,5 +218,10 @@ def main():
     inter_mat_128 = get_interleave_matrix(128)
     inter_mat_64 = get_interleave_matrix(64)
     # interleave 2D
-    inter_mat_128_64 = compose_2matrix(inter_mat_128, inter_mat_64) 
+    inter_mat_128_64 = compose_2matrix(inter_mat_128, inter_mat_64)
+
+    x = torch.rand(2, 2, 5, 128).npu()
+    r1 = torch.rand(1, 2, 1, 128).npu()
+    r2 = torch.rand(1, 2, 1, 128).npu()
+    out = torch_npu.npu_rotary_mul(x, r1, r2，"interleave", inter_mat_128.npu())
 ```

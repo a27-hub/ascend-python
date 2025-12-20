@@ -3050,12 +3050,15 @@ torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='ha
     x2 = input[..., 1::2]
     x_new = rearrange(torch.stack((-x2, x1), dim=-1), "... d two -> ...(d two)", two=2)
     output = r1 * input + r2 * x_new
+    输入rotate时：
+    x_new = input @ rotate
+    output = r1 * input + r2 * x_new
 参数说明
 input：必选输入，4维Tensor，数据类型float16, bfloat16, float32
 cos: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
 sin: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
-rotate：可选参数，2维Tensor，用于生成旋转矩阵，数据类型float16，bfloat16，float32，缺省为空。
 rotary_mode: 可选属性，数据类型string，用于选择计算模式，支持'half'、'interleave'两种模式。缺省为half。
+rotate：可选参数，表示实现input位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，默认为空，不支持反向传播。
 约束说明
 jit_compile=False场景：
     half模式：
