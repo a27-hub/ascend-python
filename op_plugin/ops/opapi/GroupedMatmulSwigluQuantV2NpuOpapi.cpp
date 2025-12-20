@@ -195,31 +195,31 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     }
 
     // todo use make_wrapper
-    // TensorWrapper x_wrapper = {x,
-    //     x_dtype.has_value() ? c10_npu::GetAclDataType(x_dtype.value())
-    //                         : npu_preparation::convert_to_acl_data_type(x.scalar_type())};
-    // TensorListWrapper weight_wrapper = {weight,
-    //     weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
-    //                              : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
-    // TensorListWrapper weight_scale_wrapper = {weight_scale,
-    //     weight_scale_dtype.has_value() ? c10_npu::GetAclDataType(weight_scale_dtype.value())
-    //                             : (weight_scale.empty() ? aclDataType::ACL_FLOAT
-    //                             : npu_preparation::convert_to_acl_data_type(weight_scale[0].scalar_type()))};
-    // TensorWrapper x_scale_wrapper = {x_scale,
-    //     x_scale_dtype.has_value() ? c10_npu::GetAclDataType(x_scale_dtype.value())
-    //                             : (!x_scale.numel() ? aclDataType::ACL_FLOAT
-    //                             : npu_preparation::convert_to_acl_data_type(x_scale.scalar_type()))};
-    // TensorWrapper output_wrapper = {output,
-    //     quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()): aclDataType::ACL_FLOAT}; // todo
-    // TensorWrapper output_scale_wrapper = {output_scale,
-    //     weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
+    TensorWrapper x_wrapper = {x,
+        x_dtype.has_value() ? c10_npu::GetAclDataType(x_dtype.value())
+                            : npu_preparation::convert_to_acl_data_type(x.scalar_type())};
+    TensorListWrapper weight_wrapper = {weight,
+        weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
+                                 : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+    TensorListWrapper weight_scale_wrapper = {weight_scale,
+        weight_scale_dtype.has_value() ? c10_npu::GetAclDataType(weight_scale_dtype.value())
+                                : (weight_scale.empty() ? aclDataType::ACL_FLOAT
+                                : npu_preparation::convert_to_acl_data_type(weight_scale[0].scalar_type()))};
+    TensorWrapper x_scale_wrapper = {x_scale,
+        x_scale_dtype.has_value() ? c10_npu::GetAclDataType(x_scale_dtype.value())
+                                : (!x_scale.numel() ? aclDataType::ACL_FLOAT
+                                : npu_preparation::convert_to_acl_data_type(x_scale.scalar_type()))};
+    TensorWrapper output_wrapper = {output,
+        quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()): aclDataType::ACL_FLOAT}; // todo
+    TensorWrapper output_scale_wrapper = {output_scale,
+        weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
     // todo check make_wrapper
-    TensorWrapper x_wrapper = make_wrapper(x, x_dtype);
-    TensorListWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
-    TensorListWrapper weight_scale_wrapper = make_wrapper(weight_scale, weight_scale_dtype);
-    TensorWrapper x_scale_wrapper = make_wrapper(x_scale, x_scale_dtype);
-    TensorWrapper output_wrapper = make_wrapper(output, quant_dtype);
-    TensorWrapper output_scale_wrapper = make_wrapper(output_scale, aclDataType::ACL_FLOAT8_E8M0);
+    // TensorWrapper x_wrapper = make_wrapper(x, x_dtype);
+    // TensorListWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
+    // TensorListWrapper weight_scale_wrapper = make_wrapper(weight_scale, weight_scale_dtype);
+    // TensorWrapper x_scale_wrapper = make_wrapper(x_scale, x_scale_dtype);
+    // TensorWrapper output_wrapper = make_wrapper(output, quant_dtype);
+    // TensorWrapper output_scale_wrapper = make_wrapper(output_scale, aclDataType::ACL_FLOAT8_E8M0);
 
     const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[0]) == ACL_FORMAT_FRACTAL_NZ;
     if (is_weight_nz) {
