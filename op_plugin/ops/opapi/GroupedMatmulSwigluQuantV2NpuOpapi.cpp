@@ -140,18 +140,18 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     
         auto acl_data_type = c10_npu::GetAclDataType(quant_dtype.value());
         auto scalar_type = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(quant_dtype.value()));
-        std::cout << "! [op-plugin] after infer y_options  " << std::endl;
-        std::cout << "! [op-plugin]  quant_dtype(y_options), acl_data_type: " << acl_data_type << ", scalar_type: " << scalar_type << std::endl;
+        // std::cout << "! [op-plugin] after infer y_options  " << std::endl;
+        // std::cout << "! [op-plugin]  quant_dtype(y_options), acl_data_type: " << acl_data_type << ", scalar_type: " << scalar_type << std::endl;
    
 
-        std::cout << "!  [op-plugin]  x.shape: " << x.sizes();
-        std::cout << ",  [op-plugin] x_dtype: " << c10_npu::GetAclDataType(x_dtype.value()) << std::endl;
-        std::cout << "!  [op-plugin] weight.shape: " << weight[0].sizes();
-        std::cout << ",  [op-plugin] weight_dtype: " << c10_npu::GetAclDataType(weight_dtype.value()) << std::endl;
-        std::cout << "!  [op-plugin] xScale.shape: " << x_scale.sizes();
-        std::cout << ",  [op-plugin] xScale_dtype: " << c10_npu::GetAclDataType(x_scale_dtype.value()) << std::endl;
-        std::cout << "!  [op-plugin] weightScale.shape: " << weight_scale[0].sizes();
-        std::cout << ",  [op-plugin] weightScale_dtype: " << c10_npu::GetAclDataType(weight_scale_dtype.value()) << std::endl;
+        // std::cout << "!  [op-plugin]  x.shape: " << x.sizes();
+        // std::cout << ",  [op-plugin] x_dtype: " << c10_npu::GetAclDataType(x_dtype.value()) << std::endl;
+        // std::cout << "!  [op-plugin] weight.shape: " << weight[0].sizes();
+        // std::cout << ",  [op-plugin] weight_dtype: " << c10_npu::GetAclDataType(weight_dtype.value()) << std::endl;
+        // std::cout << "!  [op-plugin] xScale.shape: " << x_scale.sizes();
+        // std::cout << ",  [op-plugin] xScale_dtype: " << c10_npu::GetAclDataType(x_scale_dtype.value()) << std::endl;
+        // std::cout << "!  [op-plugin] weightScale.shape: " << weight_scale[0].sizes();
+        // std::cout << ",  [op-plugin] weightScale_dtype: " << c10_npu::GetAclDataType(weight_scale_dtype.value()) << std::endl;
 
 
         if (mxfp4_valid) { // 输入是mxfp4
@@ -213,6 +213,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     //     quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()): aclDataType::ACL_FLOAT}; // todo
     // TensorWrapper output_scale_wrapper = {output_scale,
     //     weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
+    // todo check make_wrapper
     TensorWrapper x_wrapper = make_wrapper(x, x_dtype);
     TensorListWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
     TensorListWrapper weight_scale_wrapper = make_wrapper(weight_scale, weight_scale_dtype);
