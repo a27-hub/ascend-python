@@ -16,7 +16,6 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "torch_npu/csrc/core/npu/GetCANNInfo.h"
 
 namespace {
 constexpr int64_t DIM_X = 2;
@@ -149,7 +148,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 
-    if (using_v2 && !IsGteCANNVersion("8.5.0.alpha003", "CANN")) {
+    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
