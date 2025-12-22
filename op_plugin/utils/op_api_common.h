@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <vector>
+#include <filesystem>
 #include <functional>
 #include <type_traits>
 #include <ATen/Tensor.h>
@@ -77,6 +78,8 @@ extern thread_local char g_hash_buf[g_hash_buf_size];
 extern thread_local int g_hash_offset;
 extern const std::vector<std::string> g_custom_lib_path;
 extern const std::vector<std::string> g_default_custom_lib_path;
+extern const std::vector<std::string> g_opApiSoFiles;
+extern const std::vector<void *> g_opApiHandlers;
 
 namespace {
 constexpr int64_t MAX_DIM_NUM = 5;
@@ -191,11 +194,17 @@ inline void *GetOpApiFuncAddr(const char *apiName)
         ASCEND_LOGI("%s is not in default custom lib.", apiName);
     }
 
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiMathHandler, "libopapi_math.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiNnHandler, "libopapi_nn.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiCvHandler, "libopapi_cv.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiTransformerHandler, "libopapi_transformer.so", apiName);
-    GET_OP_API_FUNC_FROM_FEATURE_LIB(opapiLegacyHandler, "libopapi_legacy.so", apiName);
+    if (!g_opApiHandlers.empty()) {
+        for (size_t i = 0; i < g_opApiHandlers.size(); ++i) {
+            if (g_opApiHandlers[i] != nullptr) {
+                auto funcAddr = GetOpApiFuncAddrInLib(g_opApiHandlers[i], g_opApiSoFiles[i].c_str(), apiName);
+                if (funcAddr != nullptr) {
+                    ASCEND_LOGI("%s is found in %s.", apiName, g_opApiSoFiles[i].c_str());
+                    return funcAddr;
+                }
+            }
+        }
+    }
 
     static auto opApiHandler = GetOpApiLibHandler(GetOpApiLibName());
     if (opApiHandler != nullptr) {
@@ -488,7 +497,7 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4) {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
                 if (at_tensor.sizes().size() == 1) {
                     wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
@@ -611,7 +620,7 @@ inline aclTensor *ConvertTypeV2(TensorStructPtr at_tensor)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK((*at_tensor).itemsize > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2) {
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4) {
                 storageDims.push_back((*at_tensor).nbytes / (*at_tensor).itemsize * FP4_IN_INT8);
                 if ((*at_tensor).sizes.size() == 1) {
                     wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;

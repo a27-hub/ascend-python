@@ -13,7 +13,7 @@
 
 通过张量融合实现的高性能RMSprop优化器，核心功能和`torch.optim.RMSprop`兼容。
 
-RMSprop的功能和原理可参考[RMSPROP](https://pytorch.org/docs/2.1/generated/torch.optim.RMSprop.html#rmsprop)。
+RMSprop的功能和原理可参考[RMSprop](https://pytorch.org/docs/stable/generated/torch.optim.RMSprop.html#rmsprop)。
 
 ## 函数原型
 
@@ -46,7 +46,7 @@ class torch_npu.optim.NpuFusedRMSprop(params, lr=1e-2, alpha=0.99, eps=1e-8, wei
 - 将模型参数对象指向新的对象
 - 将模型参数对象置为None
 
-对模型参数对象进行inplace计算，或者读取参数的值，`NpuFusedRMSprop`可正常工作。
+对模型参数对象进行inplace计算，或读取参数的值时，`NpuFusedRMSprop`都可以正常工作。
 
 
 ## 调用示例
