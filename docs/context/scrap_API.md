@@ -76,7 +76,7 @@
 </tr>
 <tr id="row0331103454113"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p19331734194116"><a name="p19331734194116"></a><a name="p19331734194116"></a><a href="（beta）torch_npu-npu_nms_rotated.md">torch_npu.npu_nms_rotated</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p208131543205314"><a name="p208131543205314"></a><a name="p208131543205314"></a>该接口计划废弃，可以参考<a href="https://gitcode.com/ascend/pytorch/blob/v2.1.0-6.0.rc1/test/network_ops/test_nms_rotated.py" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p208131543205314"><a name="p208131543205314"></a><a name="p208131543205314"></a>该接口计划废弃，可以参考<a href="https://gitcode.com/Ascend/op-plugin/blob/7.3.0/test/test_base_ops/test_nms_rotated.py" target="_blank" rel="noopener noreferrer">小算子拼接方案</a>进行替换。</p>
 </td>
 </tr>
 <tr id="row43319341418"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p63313347411"><a name="p63313347411"></a><a name="p63313347411"></a><a href="（beta）torch_npu-npu_ptiou.md">torch_npu.npu_ptiou</a></p>
@@ -164,27 +164,27 @@
 <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p12865714111912"><a name="p12865714111912"></a><a name="p12865714111912"></a>该接口计划废弃，可以使用torch_npu.contrib.module.LinearQuant接口进行替换。</p>
 </td>
 </tr>
-<tr id="row1597725217179"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p11977252111717"><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-contrib-npu_fused_attention_with_layernorm.md">torch_npu.contrib.npu_fused_attention_with_layernorm</a></p>
+<tr id="row1597725217179"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-contrib-npu_fused_attention_with_layernorm.md">torch_npu.contrib.npu_fused_attention_with_layernorm</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p169771352131719"><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用torch_npu.npu_fusion_attention与torch.nn.LayerNorm接口进行替换。</p>
 </td>
 </tr>
 </tr>
-<tr id="row1597725217179"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p11977252111717"><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_conv3d.md">torch_npu.npu_conv3d</a></p>
+<tr><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_conv3d.md">torch_npu.npu_conv3d</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p169771352131719"><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.nn.functional.conv3d`接口进行替换。</p>
-</td>
-</tr>
-</tr>
-<tr id="row1597725217179"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p11977252111717"><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_bmmV2.md">torch_npu.npu_bmmV2</a></p>
-</td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p169771352131719"><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.bmm`和`torch.view`接口进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.nn.functional.conv3d`接口进行替换。</p>
 </td>
 </tr>
 </tr>
-<tr id="row1597725217179"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p11977252111717"><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_confusion_transpose.md">torch_npu.npu_confusion_transpose</a></p>
+<tr><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_bmmV2.md">torch_npu.npu_bmmV2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p169771352131719"><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.view`和`torch.permute`接口进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.bmm`和`torch.view`接口进行替换。</p>
+</td>
+</tr>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p><a name="p11977252111717"></a><a name="p11977252111717"></a><a href="（beta）torch_npu-npu_confusion_transpose.md">torch_npu.npu_confusion_transpose</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p><a name="p169771352131719"></a><a name="p169771352131719"></a>该接口计划废弃，可以使用`torch.view`和`torch.permute`接口进行替换。</p>
 </td>
 </tr>
 </tbody>

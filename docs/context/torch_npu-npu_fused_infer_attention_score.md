@@ -43,15 +43,15 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **pse_shift** (`Tensor`)：可选参数。在attention结构内部的位置编码参数，数据类型支持`float16`、`bfloat16`，数据类型与`query`的数据类型需满足数据类型推导规则。不支持非连续的Tensor，数据格式支持$ND$。如不使用该功能时可传入None。
-    -   Q_S不为1，要求在`pse_shift`为`float16`类型时，此时的`query`为`float16`或`int8`类型；而在`pse_shift`为`bfloat16`类型时，要求此时的`query`为`bfloat16`类型。输入shape类型需为(B, Q\_N, Q_S, KV_S)或(1, Q\_N, Q_S, KV_S)，其中Q_S为`query`的shape中的S，KV_S为`key`和`value`的shape中的S。对于`pse_shift`的KV_S为非32对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。
+    -   Q_S大于1，要求在`pse_shift`为`float16`类型时，此时的`query`为`float16`或`int8`类型；而在`pse_shift`为`bfloat16`类型时，要求此时的`query`为`bfloat16`类型。输入shape类型需为(B, Q\_N, Q_S, KV_S)或(1, Q\_N, Q_S, KV_S)，其中Q_S为`query`的shape中的S，KV_S为`key`和`value`的shape中的S。对于`pse_shift`的KV_S为非32对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。
     -   Q_S为1，要求在`pse_shift`为`float16`类型时，此时的`query`为`float16`类型；而在`pse_shift`为`bfloat16`类型时，要求此时的`query`为`bfloat16`类型。输入shape类型需为(B, Q\_N, 1, KV_S)或(1, Q\_N, 1, KV_S)，KV_S为`key`和`value`的shape中的S。对于`pse_shift`的KV_S为非32对齐的场景，建议padding到32字节来提高性能，多余部分的填充值不做要求。
 
 - **atten_mask** (`Tensor`)：可选参数。对Q（`query`）、K（`key`）的结果进行mask，用于指示是否计算Token间的相关性，数据类型支持`bool`、`int8`和`uint8`。不支持非连续的Tensor，数据格式支持$ND$。如果不使用该功能可传入None。
-
-    -   Q\_S不为1时建议shape输入\(Q\_S, KV\_S\)、\(B, Q\_S, KV\_S\)、\(1, Q\_S, KV\_S\)、\(B, 1, Q\_S, KV\_S\)、\(1, 1, Q\_S, KV\_S\)。
-    -   Q\_S为1时建议shape输入\(B, KV\_S\)、\(B, 1, KV\_S\)、\(B, 1, 1, KV\_S\)。
-
-    其中Q\_S为`query`的shape中的S，KV\_S为`key`和`value`的shape中的S，但如果Q\_S、KV\_S非16或32对齐，可以向上取到对齐的S。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+    - `sparse_mode`为0、1时
+        - 支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+        - 当输入`input_layout`为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传`query_rope`和`key_rope`时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
+        - 如果Q\_S、KV\_S非16或32对齐，可以取到向上对齐的值。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+    - `sparse_mode`为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 
 - **actual_seq_lengths** (`List[int]`)：可选参数。代表不同Batch中`query`的有效seqlen，数据类型支持`int64`。如果不指定seqlen可以传入None，表示和`query`的shape的s长度相同。
 
@@ -181,56 +181,38 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     -   `query_rope`的数据类型、数据格式与`query`一致。
     -   `key_rope`的数据类型、数据格式与`key`一致。
     -   `query_rope`和`key_rope`要求同时配置或同时不配置，不支持只配置其中一个。
-    -   当`query_rope`和`key_rope`非空时，支持如下特性：
-        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`query`的D只支持512、128；
-    -   当query\_rope和key\_rope非空时，支持如下特性：
-        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：query的D只支持512、128；
+    -   当`query_rope`和`key_rope`非空时，`query`的D只支持512、128：
         -   当query的D等于512时：
-            - sparse：支持sparse=0，sparse=3，sparse=4；
-            - query\_rope配置时要求query的N为1/2/4/8/16/32/64/128，query\_rope shape中D为64，其余维度与query一致；
-            - key\_rope配置时要求key的N为1、D为512，key\_rope shape中D为64，其余维度与key一致；
-            - 支持开启PageAttention，此时block\_size支持16的倍数且不大于1024；
-            - 支持key、value、key\_rope的input\_layout格式为ND或NZ。当input\_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为\[blockNum, KV\_N, D/16, blockSize, 16\]；当数据类型为int8时，输入参数key和value的格式为\[blockNum, KV\_N, D/32, blockSize, 32\]；
-            - input\_layout形状支持BSH、BSND、BNSD、BNSD\_NBSD、BSND\_NBSD、BSH\_NBSD、TND、TND\_NTD；
-            - 不支持开启softmax\_lse、左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
-            - 支持全量化场景，即输入query/key/value全为int8，query\_rope和key\_rope为bfloat16，输出为bfloat16的场景：
-                - 入参dequant\_scale\_query、dequant\_scale\_key、dequant\_scale\_value需要同时存在，且其数据类型仅支持FP32。
-                - 不支持传入quant\_scale\_out、quant\_offset\_out、dequant\_offset\_key、dequant\_offset\_value，否则报错并返回。
-                - query\_quant\_mode仅支持pertoken叠加perhead模式，key\_quant\_mode和value\_quant\_mode仅支持pertensor模式。
-                - 支持key、value、key\_rope的input\_layout格式为NZ。
+            - sparse：支持0/3/4；
+            - `query_rope`配置时要求`query`的N为1/2/4/8/16/32/64/128，`query_rope`的shape中D为64，其余维度与`query`一致；
+            - `key_rope`配置时要求`key`的N为1、D为512，`key_rope`的shape中D为64，其余维度与`key`一致;
+            - 支持 `key`、`value`、`key_rope`的数据格式为ND或NZ。当数据格式为NZ时，若数据类型为float16或bfloat16，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/16, blockSize, 16\]；若数据类型为int8，输入参数`key`和`value`的格式为\[blockNum, KV\_N, D/32, blockSize, 32\]；
+            - `input_layout`形状支持BSH、BSND、BNSD、BNSD\_NBSD、BSND\_NBSD、BSH\_NBSD、TND、TND\_NTD；
+            - 支持开启page attention，此时`block_size`支持16的倍数且不大于1024；
+            - 不支持开启SoftMaxLse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
         -   当query的D等于128时：
-            -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>约束如下：
-
-                - `input\_layout`：TND、NTD\_TND。  
-                
-                - `query\_rope`配置时要求query\_rope的shape中D为64，其余维度与`query`一致。  
-                
-                - `key_rope`配置时要求`key_rope`的shape中D为64，其余维度与`key`一致。  
-                
-                - 不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化。
-
+            - `input_layout`：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。  
+            - `query_rope`配置时要求`query_rope`的shape中D为64，其余维度与`query`一致。  
+            - `key_rope`配置时要求`key_rope`的shape中D为64，其余维度与`key`一致。  
+            - 不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
             -   其余约束同TND、NTD\_TND场景下的综合限制保持一致。
 
     -   TND、TND\_NTD、NTD\_TND场景下`query`、`key`、`value`输入的综合限制：
         -   `actual_seq_lengths`和`actual_seq_lengths_kv`必须传入，且以该入参元素数量作为Batch值（注意入参元素数量要小于等于4096）。该入参中每个元素的值表示当前Batch与之前所有Batch的Sequence Length和，因此后一个元素的值必须大于等于前一个元素的值；
         -   当query的D等于512时：
-            -   支持sparse=0，sparse=3，sparse=4；
+            -   sparse：支持0/3/4；
             -   支持TND、TND\_NTD；
-            -   支持开启page attention，此时actual\_seq\_kvlen长度等于key/value的batch值，代表每个batch的实际长度，值不大于KV\_S；
-            -   要求query的n为1/2/4/8/16/32/64/128，key、value的n为1；
-            -   要求query\_rope和key\_rope不等于空，query\_rope和key\_rope的d为64；
-            -   不支持开启softmax\_lse、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化、空Tensor。
+            -   支持开启page attention，此时`actual_seq_lengths_kv`长度等于`key`/`value`的batch值，代表每个batch的实际长度，值不大于KV\_S；
+            -   要求`query`的N为1/2/4/8/16/32/64/128，`key`、`value`的N为1；
+            -   要求`query_rope`和`key_rope`不等于空，`query_rope`和`key_rope`的D为64；
+            -   不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
         -   当query的D不等于512时：
-            -   当`query_rope`和`key_rope`为空时：TND场景，要求Q\_D、K\_D、V\_D等于128，或者Q\_D、K\_D等于192，V\_D等于128/192；NTD\_TND场景，要求Q\_D、K\_D等于128/192，V\_D等于128。当`query_rope`和`key_rope`不为空时，要求Q\_D、K\_D、V\_D等于128；
-            -   支持TND、NTD\_TND；
-            -   数据类型仅支持`bfloat16`；
-            -   当sparse=3时，要求每个batch单独的actualSeqLengths<actualSeqLengthsKv；
-            -   sparse模式支持sparse\_mode=4且传入mask；当sparse\_mode=4时，要求preTokens >= -actual\_seq\_qlen、nextTokens >= -actual\_seq\_kvlen、preTokens + nextTokens >= 0；
-            -   不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化；
-            -   **不支持图模式配置Tiling调度优化**（tiling\_schedule\_optimize=True）、**reduce-overhead执行模式**（config.mode="reduce-overhead"）。
-            -   `actual_seq_lengths`和`actual_seq_lengths_kv`的元素个数不大于4096。
+            -   当`query_rope`和`key_rope`为空时：TND场景，要求Q\_D、K\_D、V\_D等于128，或者Q\_D、K\_D等于192，V\_D等于128/192；NTD场景，不支持V\_D等于192；NTD\_TND场景，要求Q\_D、K\_D等于128/192，V\_D等于128。当`query_rope`和`key_rope`不为空时，要求Q\_D、K\_D、V\_D等于128；
+            -   支持TND、NTD、NTD\_TND；
+            -   page attention场景下仅支持blocksize为16对齐且小于等于1024；
+            -   不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
 -   GQA伪量化场景下KV为NZ格式时的参数约束如下：
     - 支持perchannel和pertoken模式，`query`数据类型固定为`bfloat16`，`key`&`value`固定为`int8`；`query`&`key`&`value`的D仅支持128；query Sequence Length仅支持1-16；

@@ -468,6 +468,9 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
         Do = (D + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1;
         Ho = (H + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1;
         Wo = (W + 2 * padding[2] - dilation[2] * (kernel_size[2] - 1) - 1) / stride[2] + 1;
+        TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
     } else {
         Co = weight.size(1) * groups;
         auto kernel_size = weight.sizes().slice(2);
@@ -475,9 +478,6 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
         Ho = (H - 1) * stride[1] - 2 * padding[1] + dilation[1] * (kernel_size[1] - 1) + output_padding[1] + 1;
         Wo = (W - 1) * stride[2] - 2 * padding[2] + dilation[2] * (kernel_size[2] - 1) + output_padding[2] + 1;
     }
-    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
 
     c10::SmallVector<int64_t, SIZE> output_size = {N_, Co, Do, Ho, Wo};
     return output_size;
@@ -1953,8 +1953,14 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::
     auto check_perm_x1 = (perm_x1_real[0] == 0 && perm_x1_real[1] == 1 && perm_x1_real[2] == 2) ||
                          (perm_x1_real[0] == 1 && perm_x1_real[1] == 0 && perm_x1_real[2] == 2);
     TORCH_CHECK(check_perm_x1, "perm_x1 should be [0, 1, 2] or [1, 0, 2]" + OPS_ERROR(ErrCode::PARAM));
-    auto check_perm_x2 = perm_x2_real[0] == 0 && perm_x2_real[1] == 1 && perm_x2_real[2] == 2;
-    TORCH_CHECK(check_perm_x2, "perm_x2 should be [0, 1, 2]" + OPS_ERROR(ErrCode::PARAM));
+    if (op_plugin::utils::is_gte_cann_version_850()) {
+        auto check_perm_x2 = (perm_x2_real[0] == 0 && perm_x2_real[1] == 1 && perm_x2_real[2] == 2) ||
+                             (perm_x2_real[0] == 0 && perm_x2_real[1] == 2 && perm_x2_real[2] == 1);
+        TORCH_CHECK(check_perm_x2, "perm_x2 should be [0, 1, 2] or [0, 2, 1]" + OPS_ERROR(ErrCode::PARAM));
+    } else {
+        auto check_perm_x2 = (perm_x2_real[0] == 0 && perm_x2_real[1] == 1 && perm_x2_real[2] == 2);
+        TORCH_CHECK(check_perm_x2, "perm_x2 should be [0, 1, 2]" + OPS_ERROR(ErrCode::PARAM));
+    }
     auto check_perm_y = perm_y_real[0] == 1 && perm_y_real[1] == 0 && perm_y_real[2] == 2;
     TORCH_CHECK(check_perm_y, "perm_y should be [1, 0, 2]" + OPS_ERROR(ErrCode::PARAM));
     auto m_dim = input.size(perm_x1_real[1]);
