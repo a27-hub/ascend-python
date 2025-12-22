@@ -1879,7 +1879,7 @@ c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self,
     }
     TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
         "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-        outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
+    outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
     return outputSize;
 }
 
