@@ -71,18 +71,18 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
             y_scalar_type = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
             if (y_scalar_type == at::kHalf) {
                 TORCH_CHECK(y_scalar_type == self.scalar_type(), "When input is float16 or bfloat16, output should",
-                        "be the same as input dtype. Expected output dtype:",
-                        c10::toString(self.scalar_type()), ", but got: float16",
-                        OPS_ERROR(ErrCode::PARAM));
+                            "be the same as input dtype. Expected output dtype:",
+                            c10::toString(self.scalar_type()), ", but got: float16",
+                            OPS_ERROR(ErrCode::PARAM));
             } else if (self.scalar_type() == at:kHalf) {
                 TORCH_CHECK(y_scalar_type == self.scalar_type(), "When input is float16 or bfloat16, output should",
-                        "be the same as input dtype. Expected output dtype: float16, but got:",
-                        c10::toString(y_scalar_type), OPS_ERROR(ErrCode::PARAM));
+                            "be the same as input dtype. Expected output dtype: float16, but got:",
+                            c10::toString(y_scalar_type), OPS_ERROR(ErrCode::PARAM));
             } else {
                 TORCH_CHECK(y_scalar_type == self.scalar_type(), "When input is float16 or bfloat16, output should",
-                        "be the same as input dtype. Expected output dtype:",
-                        c10::toString(self.scalar_type()), ", but got:", c10::toString(y_scalar_type),
-                        OPS_ERROR(ErrCode::PARAM));
+                            "be the same as input dtype. Expected output dtype:",
+                            c10::toString(self.scalar_type()), ", but got:", c10::toString(y_scalar_type),
+                            OPS_ERROR(ErrCode::PARAM));
             }
             
         }
@@ -117,9 +117,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
                                       (x2_scale_dtype.has_value())
                                           ? c10_npu::GetAclDataType(x2_scale_dtype.value())
                                           : npu_preparation::convert_to_acl_data_type(x2_scale_scalar_dtype)};
+    const char* comm_mode = "ccu";
     EXEC_NPU_CMD(aclnnAllGatherMatmulV2, x1_wrapper, x2_wrapper, bias_value, x1_scale_wrapper, x2_scale_wrapper,
-                 quant_scale_value, block_size, hcom_value, gather_index, comm_turn, stream_mode, group_size, y,
-                 gather_out_wrapper, amax);
+                 quant_scale_value, block_size, hcom_value, gather_index, comm_turn, stream_mode, group_size, comm_mode,
+                 y, gather_out_wrapper, amax);
     return std::tie(y, gather_out, amax);
 }
 }  // namespace op_api

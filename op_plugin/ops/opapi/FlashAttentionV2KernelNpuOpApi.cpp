@@ -343,15 +343,33 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             }
         }
     } else {
-        EXEC_NPU_CMD(
-            aclnnFlashAttentionScoreGradVX, format_query, format_key, format_value, format_dy,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
-            format_softmax_sum, format_softmax, format_attention, format_query_rope, format_key_rope,
-            format_d_scale_q, format_d_scale_k, format_d_scale_v, format_d_scale_dy, format_d_scale_o,
-            prefixN, ac_seq_qlen, ac_seq_kvlen,
-            q_start_idx_val, kv_start_idx_val, scale_value, keep_prob, pre_tokens, next_tokens, head_num,
-            input_layout_char, inner_precise, sparse_mode, pse_type, seed, offset, out_dtype,
-            dq, dk, dv, dq_rope, dk_rope, dpse);
+        std::string softmax_layout_str = std::string(softmax_layout);
+        softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
+        char softmax_layout_char[LAYOUT_MAX_LENGTH];
+        strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+        softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+        static const bool is_aclnnfagv4_available = check_aclnn_kernel_available("aclnnFlashAttentionScoreV4");
+        if (is_aclnnfagv4_available) {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScoreGradV4, format_query, format_key, format_value, format_dy,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                format_softmax_sum, format_softmax, format_attention, format_sink, format_query_rope, format_key_rope,
+                format_d_scale_q, format_d_scale_k, format_d_scale_v, format_d_scale_dy, format_d_scale_o,
+                prefixN, ac_seq_qlen, ac_seq_kvlen,
+                q_start_idx_val, kv_start_idx_val, scale_value, keep_prob, pre_tokens, next_tokens, head_num,
+                input_layout_char, softmax_layout_char, inner_precise, sparse_mode, pse_type, seed, offset, out_dtype,
+                dq, dk, dv, dq_rope, dk_rope, dpse, dsink);
+        } else {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScoreGradVX, format_query, format_key, format_value, format_dy,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                format_softmax_sum, format_softmax, format_attention, format_query_rope, format_key_rope,
+                format_d_scale_q, format_d_scale_k, format_d_scale_v, format_d_scale_dy, format_d_scale_o,
+                prefixN, ac_seq_qlen, ac_seq_kvlen,
+                q_start_idx_val, kv_start_idx_val, scale_value, keep_prob, pre_tokens, next_tokens, head_num,
+                input_layout_char, inner_precise, sparse_mode, pse_type, seed, offset, out_dtype,
+                dq, dk, dv, dq_rope, dk_rope, dpse);
+        }
     }
 
     FLOP_COUNT(FlopCounter::flash_attention_backward_flop, query, key, value,
@@ -530,8 +548,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         TORCH_CHECK(key_rope_const.dim() == DIMENSION_3D || key_rope_const.dim() == DIMENSION_4D,
             "The shapes of the input key_rope should be 3 or 4 dimensional, but got ",
             key_rope_const.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(ac_seq_qlen.size() != 0 && ac_seq_kvlen.size() != 0,
-            "the size of actual_seq_qlen and actual_seq_kvlen cannot be empty." + OPS_ERROR(ErrCode::PARAM));
+        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
+            TORCH_CHECK(ac_seq_qlen.size() != 0 && ac_seq_kvlen.size() != 0,
+                "the size of actual_seq_qlen and actual_seq_kvlen cannot be empty." + OPS_ERROR(ErrCode::PARAM));
+        }
     }
     TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
         "The shapes of the input value should be 3 or 4 dimensional, but got ", value.dim(),
@@ -762,12 +782,26 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
             }
         }
     } else {
-        EXEC_NPU_CMD(
-            aclnnFlashAttentionScoreVX, format_query, format_key, format_value,
-            format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_query_rope, format_key_rope,
-            format_d_scale_q, format_d_scale_k, format_d_scale_v, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val,
-            kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
-            sparse_mode, out_dtype_val, pse_type, seed, offset, softmax_max, softmax_sum, softmax_out, attention_score);
+        softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
+        char softmax_layout_char[LAYOUT_MAX_LENGTH];
+        strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+        softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+        static const bool is_aclnnfav4_available = check_aclnn_kernel_available("aclnnFlashAttentionScoreV4");
+        if (is_aclnnfav4_available) {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScoreV4, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_query_rope, format_key_rope,
+                format_d_scale_q, format_d_scale_k, format_d_scale_v, format_sink, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val,
+                kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
+                sparse_mode, out_dtype_val, pse_type, softmax_layout_char, seed, offset, softmax_max, softmax_sum, softmax_out, attention_score);
+        } else {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScoreVX, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_query_rope, format_key_rope,
+                format_d_scale_q, format_d_scale_k, format_d_scale_v, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val,
+                kv_start_idx_val, scale, keep_prob, pre_tokens, next_tokens, head_num, input_layout_char, inner_precise,
+                sparse_mode, out_dtype_val, pse_type, seed, offset, softmax_max, softmax_sum, softmax_out, attention_score);
+        }
     }
 
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
