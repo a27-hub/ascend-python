@@ -153,7 +153,8 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
     // size of last dim of output should be the same as size of last dim of x2
     auto output_size = op_infer::array_to_small_vector(x1.sizes());
-    output_size[x1.dim() - 1] = x2.size(1);
+    TORCH_CHECK(x2.dim() > 1, "x2 must have at least 2 dimensions, but got: ", x2.dim(), " dimensionss.", OPS_ERROR(ErrCode::VALUE));
+    output_size[x1.dim() - 1] = x2.size(x2.dim() - 1);
     // a8w8: dtype of output should be half.
     auto output_dtype = get_output_dtype(x1, dequant_scale);
     bool is_a8 = (x1_dtype.has_value() ?
