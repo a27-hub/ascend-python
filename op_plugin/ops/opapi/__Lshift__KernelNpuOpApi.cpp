@@ -24,7 +24,9 @@ at::Tensor &__lshift__(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnLeftShift, acl_op::__lshift__(self, other));
     DO_COMPATIBILITY(aclnnLeftShifts, acl_op::__lshift__(self, other));
-    at::Tensor result = npu_preparation::apply_tensor(self);
+    auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+    at::ScalarType high_type = at::native::result_type(self, other);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(high_type));
     if (!torch_npu::utils::is_npu(other)) {
         const at::Scalar other_value = other.item();
         EXEC_NPU_CMD(aclnnLeftShifts, self, other_value, result);
