@@ -6459,11 +6459,11 @@ custom:
     op_api: all_version
     gen_opapi:
       out:
-        size: kronecker_quant_out_size(x, dst_type)
-        dtype: npu_kronecker_quant_dst_type(dst_dtype)
+        size: kronecker_quant_out_size(x, dst_dtype)
+        dtype: npu_kronecker_quant_out_type(dst_dtype)
       quant_scale:
-        size: kronecker_quant_scale_size(x, dst_type)
-        dtype: npu_kronecker_quant_scale_type(dst_type)
+        size: kronecker_quant_scale_size(x, dst_dtype)
+        dtype: npu_kronecker_quant_scale_type(dst_dtype)
       new_params:
         clip_ratio_attr: clip_ratio.value_or(1.0)
       exec: aclnnFlatQuant, x, kronecker_p1, kronecker_p2, clip_ratio_attr, out, quant_scale
@@ -7081,7 +7081,7 @@ custom:
       new_params:
         restore_shape_value: 'restore_shape.value_or(at::IntArrayRef{1})'
       exec: aclnnMoeTokenUnpermute, permuted_tokens, sorted_indices, probs, padded_mode, restore_shape_value, unpermuted_tokens
-  
+
   - func: npu_attention_to_ffn(Tensor x, Tensor session_id, Tensor micro_batch_id, Tensor layer_id, Tensor expert_ids, Tensor expert_rank_table, str group, int world_size, int[] ffn_token_info_table_shape, int[] ffn_token_data_shape, int[] attn_token_info_table_shape, int moe_expert_num, *, Tensor? scales=None, Tensor? active_mask=None, int quant_mode=0, int sync_flag=0, int ffn_start_rank_id=0) -> ()
     op_api: all_version
     gen_opapi:

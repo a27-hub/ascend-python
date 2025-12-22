@@ -17,7 +17,8 @@
 #include "torch_npu/csrc/core/npu/NPUException.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "op_plugin/utils/KernelNpuOutputDtype.h"
-
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 namespace op_infer {
 
 at::ScalarType angle_out_dtype(const at::Tensor& self)
@@ -128,20 +129,20 @@ at::ScalarType abs_out_dtype(const at::Tensor& self)
 
 at::ScalarType npu_kronecker_quant_out_type(c10::optional<int64_t> dst_dtype)
 {
+    aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
         aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-        return npu_preparation::convert_to_scalar_type(dst_acltype);
     }
-    return at::kInt;
+    return dst_acltype == aclDataType::ACL_FLOAT4_E2M1? at_npu::native::OpPreparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1) : at::kInt;
 }
 
 at::ScalarType npu_kronecker_quant_scale_type(c10::optional<int64_t> dst_dtype)
 {
+    aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
-        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-        return npu_preparation::convert_to_scalar_type(dst_acltype);
+        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
     }
-    return at::kFloat;
+    return dst_acltype == aclDataType::ACL_FLOAT4_E2M1? at_npu::native::OpPreparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0) : at::kFloat;
 }
 
 } // namespace op_infer
