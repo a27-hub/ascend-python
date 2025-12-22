@@ -4050,20 +4050,19 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     if weight_scale_dtype is not None:
         torch._check(
             weight_scale_dtype == torch_npu.float8_e8m0fnu,
-            lambda: "weight_scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(weight_scale_dtype),
+            lambda: "The weight_scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(weight_scale_dtype),
         )
-        print("x_dtype:", x_dtype)
-        print("weight_dtype:", weight_dtype)
+
         torch._check(x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2,
-            lambda: "x only supports mxfp8 or mxfp4 for now, but it is " + npu_dtype_to_str(x.dtype),
+            lambda: "The x only supports mxfp8 or mxfp4 for now, but it is " + npu_dtype_to_str(x.dtype),
         )
         torch._check(weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn or weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2,
-            lambda: "weight only supports mxfp8 or mxfp4 for now, but it is " + npu_dtype_to_str(weight[0].dtype),
+            lambda: "The weight only supports mxfp8 or mxfp4 for now, but it is " + npu_dtype_to_str(weight[0].dtype),
         )
     if x_scale_dtype is not None:
         torch._check(
             x_scale_dtype == torch_npu.float8_e8m0fnu,
-            lambda: "x_scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(x_scale_dtype),
+            lambda: "The x_scale_dtype only supports float8_e8m0fnu for now, but it is " + npu_dtype_to_str(x_scale_dtype),
         )
     # todo
     torch._check(quant_dtype == 0 or quant_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2] or quant_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]
@@ -4078,18 +4077,16 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
                    (weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn) 
     is_a4w4_input = None
     if x_dtype is not None and weight_dtype is not None:
-        print("![meta] x_dtype is not None and weight_dtype is not None")
         is_a4w4_input = (x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2) and \
                    (weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2)
+    
     FP4_IN_INT8 = 2
     weight_trans = (x.size(-1) == weight[0].size(-2))
-    print("!weight_trans=", weight_trans)
-    print("!is_a4w4_input=", is_a4w4_input)
-    print("!is_a8w8_input=", is_a8w8_input)
-
     mxfp_multi_base_size = 2
     mxfp_divisor_size = 64
-    
+    div_num = 2
+    output_n = n // mxfp_multi_base_size
+    output_scale_n = n // mxfp_multi_base_size / mxfp_divisor_size
     output_n_new = ((n // mxfp_multi_base_size) * FP4_IN_INT8)
     output_scale_n_new = (math.ceil(n * FP4_IN_INT8 // mxfp_multi_base_size / mxfp_divisor_size))
     if weight[0].dtype == torch.int8:
@@ -4097,41 +4094,34 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
         output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
     if quant_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2]:
         if is_a8w8_input:
-            output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=torch.float8_e5m2, device=x.device)
-            output_scale_shape = torch.empty([batch_size, math.ceil(n // mxfp_multi_base_size / mxfp_divisor_size), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
+            output_shape = torch.empty([batch_size, output_n], dtype=torch.float8_e5m2, device=x.device)
+            output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
         elif is_a4w4_input:
-            if weight_trans == False:
+            if not weight_trans:
                 output_shape = torch.empty([batch_size, output_n_new], dtype=torch.float8_e5m2, device=x.device)
                 output_scale_shape = torch.empty([batch_size, output_scale_n_new, mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
             else:
-                output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=torch.float8_e5m2, device=x.device)
-                output_scale_shape = torch.empty([batch_size, math.ceil(n // mxfp_multi_base_size / mxfp_divisor_size), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
+                output_shape = torch.empty([batch_size, output_n], dtype=torch.float8_e5m2, device=x.device)
+                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
     elif quant_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]:
-        print("![meta] y is float8_e4m3fn")
         if is_a8w8_input:
-            print("![meta] enter is_a8w8_input")
-            output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=torch.float8_e4m3fn, device=x.device)
-            output_scale_shape = torch.empty([batch_size, math.ceil(n // mxfp_multi_base_size / mxfp_divisor_size), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
+            output_shape = torch.empty([batch_size, output_n], dtype=torch.float8_e4m3fn, device=x.device)
+            output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
         elif is_a4w4_input:
-            print("![meta] enter is_a4w4_input")
-            if weight_trans == False:
-                print("![meta] weight_trans == False")
+            if not weight_trans:
                 output_shape = torch.empty([batch_size, output_n_new], dtype=torch.float8_e4m3fn, device=x.device)
                 output_scale_shape = torch.empty([batch_size, output_scale_n_new, mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
             else:
-                output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=torch.float8_e4m3fn, device=x.device)
-                output_scale_shape = torch.empty([batch_size, math.ceil(n // mxfp_multi_base_size / mxfp_divisor_size), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
+                output_shape = torch.empty([batch_size, output_n], dtype=torch.float8_e4m3fn, device=x.device)
+                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
     elif quant_dtype == torch_npu.float4_e1m2fn_x2 or quant_dtype == torch_npu.float4_e2m1fn_x2:
         if is_a4w4_input:
-            if weight_trans == False:
-                output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
+            if not weight_trans:
+                output_shape = torch.empty([batch_size, output_n], dtype=torch.uint8, device=x.device)
                 output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n_new), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
             else:
-                output_shape = torch.empty([batch_size, n // mxfp_multi_base_size // 2], dtype=torch.uint8, device=x.device)
-                output_scale_shape = torch.empty([batch_size, math.ceil(n // mxfp_multi_base_size / mxfp_divisor_size), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)     
-    print("!! [meta]output_shape=",output_shape.shape)
-    print("!! [meta]output_scale_shape=",output_scale_shape.shape)
-    print("!! [meta]return ")
+                output_shape = torch.empty([batch_size, output_n // div_num], dtype=torch.uint8, device=x.device)
+                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)     
     return output_shape, output_scale_shape
 
 @impl(m, "npu_recurrent_gated_delta_rule")
