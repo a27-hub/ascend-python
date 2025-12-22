@@ -1414,6 +1414,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
         }                                                                                                              \
         auto acl_call = [copied_params, acl_stream, deterministic_status, aic_num, aiv_num]()->int {                     \
+            auto t_begin = std::chrono::steady_clock::now();     \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
             }                                                                                                          \
@@ -1444,7 +1445,13 @@ auto DecodeDevice(Ts&... args) -> at::Device
                 workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
+            auto t_befor_op = std::chrono::steady_clock::now();     \
+            auto prepare_us = std::chrono::duration_cast<std::chrono::microseconds>(t_befor_op - t_begin).count();     \
+            ASCEND_LOGE("%s prepare time %lld us.", #aclnn_api, static_cast<long long>(prepare_us));               \
             api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
+            auto t_after_op = std::chrono::steady_clock::now();     \
+            auto op_us = std::chrono::duration_cast<std::chrono::microseconds>(t_after_op - t_befor_op).count();     \
+            ASCEND_LOGE("%s exec time %lld us.", #aclnn_api, static_cast<long long>(op_us));               \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
