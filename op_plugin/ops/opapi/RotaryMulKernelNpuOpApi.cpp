@@ -28,7 +28,7 @@ static bool isRotaryMulMixDtypeSupport(
     const at::Tensor& r1,
     const at::Tensor& r2)
 {
-    return self.dtype() == r1.dtype() && self.dtype() == r2.dtype() ? f alse : true;
+    return self.dtype() == r1.dtype() && self.dtype() == r2.dtype() ? false : true;
 }
 
 static at::Tensor npu_dtype_cast_impl_op_api(const at::Tensor& self, at::ScalarType dtype)
