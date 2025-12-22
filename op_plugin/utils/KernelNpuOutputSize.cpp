@@ -1862,20 +1862,45 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self)
+c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
 {
+    if (dst_dtype.has_value()) {
+        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
+        dst_dtype = npu_preparation::convert_to_scalar_type(dst_acltype);
+    } else {
+        dst_dtype = at::kInt;
+    }
     auto outputSize = op_infer::array_to_small_vector(self.sizes());
-    auto self_dim_num = self.dim();
-    TORCH_CHECK(outputSize[self_dim_num - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
+    auto dimNum = self.dim();
+    if (dst_dtype == at::ScalarType::Int) {
+        TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
         "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-    outputSize[self_dim_num - 1] /= INT4_NUMS_IN_INT32_SPACE;
+        outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
+    } else if (dst_dtype == at::ScalarType::Float4_e2m1fn_x2) {
+        c10::SmallVector<int64_t, SIZE> output;
+        output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2]};
+        return output;
+    }
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self)
+c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
 {
+    if (dst_dtype.has_value()) {
+        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
+        dst_dtype = npu_preparation::convert_to_scalar_type(dst_acltype);
+    } else {
+        dst_dtype = at::kInt;
+    }
     int64_t resultSize = self.size(0);
-    at::SmallVector<int64_t, SIZE> outputSize = {resultSize};
+    at::SmallVector<int64_t, SIZE> outputSize;
+    if (dst_dtype == at::ScalarType::Float4_e2m1fn_x2) {
+        int64_t alignBase = 64UL;
+        auto alignSize = (outputSize[dimNum - 1] * outputSize[dimNum - 2] + alignBase - 1) / alignBase * alignBase;
+        outputSize = {resultSize, alignSize, 2};
+    } else {
+        outputSize = {resultSize};
+    }
     return outputSize;
 }
 
@@ -2112,7 +2137,7 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tenso
                 "The dims of input permuted_tokens should be 2 dimensional, but got ", permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(sorted_indices.dim() == DIM_1,
                 "The dims of input sorted_indices should be 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
-    
+
     int64_t topk = probs.has_value() ? probs.value().size(1) : DEFAULT_TOPK;
     TORCH_CHECK(topk > 0, "The topk should be greater than zero in npu_moe_token_unpermute_out_size, but got ", topk, OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> output_shape;

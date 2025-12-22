@@ -126,4 +126,22 @@ at::ScalarType abs_out_dtype(const at::Tensor& self)
     return output;
 }
 
+at::ScalarType npu_kronecker_quant_out_type(c10::optional<int64_t> dst_dtype)
+{
+    if (dst_dtype.has_value()) {
+        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
+        return npu_preparation::convert_to_scalar_type(dst_acltype);
+    }
+    return at::kInt;
+}
+
+at::ScalarType npu_kronecker_quant_scale_type(c10::optional<int64_t> dst_dtype)
+{
+    if (dst_dtype.has_value()) {
+        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
+        return npu_preparation::convert_to_scalar_type(dst_acltype);
+    }
+    return at::kFloat;
+}
+
 } // namespace op_infer
