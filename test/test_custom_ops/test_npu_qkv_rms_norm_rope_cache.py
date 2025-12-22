@@ -183,14 +183,14 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         # k计算
         k_4 = RmsNorm(k_4, epsilon, k_gamma)
         k_4 = Rope(k_4, cos, sin, rope_range)
-        k_cache_proto = k_4.clone()
-        k_cache_proto = rearrange(k_cache_proto, 'b s n d -> (b s)  (n d)')
+        k_out_before_quant = k_4.clone()
+        k_out_before_quant = rearrange(k_out_before_quant, 'b s n d -> (b s)  (n d)')
         k_4 = Quant(k_4, k_scale, k_offset)
         k_cache_res = Scatter(k_4, k_cache, cache_mode, index)
 
         # v计算
-        v_cache_proto = v_4.clone()
-        v_cache_proto = rearrange(v_cache_proto, 'b s n d -> (b s)  (n d)')
+        v_out_before_quant = v_4.clone()
+        v_out_before_quant = rearrange(v_out_before_quant, 'b s n d -> (b s)  (n d)')
         v_4 = Quant(v_4, v_scale, v_offset)
         v_cache_res = Scatter(v_4, v_cache, cache_mode, index)
 
@@ -199,11 +199,11 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         k_cache_res = k_cache_res.to(torch.int8)
         v_cache_res = v_cache_res.to(torch.int8)
         q_proto_out = q_proto_out.to(torch.float16)
-        k_cache_proto = k_cache_proto.to(torch.float16)
-        v_cache_proto = v_cache_proto.to(torch.float16)
+        k_out_before_quant = k_out_before_quant.to(torch.float16)
+        v_out_before_quant = v_out_before_quant.to(torch.float16)
 
         if is_output_qkv:
-            return q_out_res, k_cache_res, v_cache_res, q_proto_out, k_cache_proto, v_cache_proto
+            return q_out_res, k_cache_res, v_cache_res, q_proto_out, k_out_before_quant, v_out_before_quant
         return q_out_res, k_cache_res, v_cache_res, None, None, None
         
 
@@ -223,7 +223,7 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
             k_scale = k_scale.npu()
         if v_scale is not None:
             v_scale = v_scale.npu()
-        q_out_proto_npu, k_cache_proto_npu, v_cache_proto_npu = torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma,
+        q_out_before_quant_npu, k_out_before_quant_npu, v_out_before_quant_npu = torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma,
                                                                                                     cos, sin, index, 
                                                                                                     q_out, k_cache, v_cache,
                                                                                                     k_scale=k_scale,
@@ -238,11 +238,11 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         q_out_cpu = q_out.cpu()
         k_cache_cpu = k_cache.cpu()
         v_cache_cpu = v_cache.cpu()
-        q_out_proto_cpu = q_out_proto_npu.cpu()
-        k_cache_proto_cpu = k_cache_proto_npu.cpu()
-        v_cache_proto_cpu = v_cache_proto_npu.cpu()
+        q_out_before_quant_cpu = q_out_before_quant_npu.cpu()
+        k_out_before_quant_cpu = k_out_before_quant_npu.cpu()
+        v_out_before_quant_cpu = v_out_before_quant_npu.cpu()
         torch._dynamo.reset()
-        return q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_proto_cpu, k_cache_proto_cpu, v_cache_proto_cpu
+        return q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_before_quant_cpu, k_out_before_quant_cpu, v_out_before_quant_cpu
 
     def test_npu_qkv_rmsnorm_rope_cache_PA_NZ(self, device="npu"):
         qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, k_scale, v_scale, qkv_size, num_heads, cache_mode, is_output_qkv, input_dtype = self.generate_inputs(
@@ -257,8 +257,8 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
                                     k_offset=None, v_offset=None, qkv_size=qkv_size, num_heads=num_heads,
                                     epsilon=1e-06, cache_mode=cache_mode, is_output_qkv=is_output_qkv)
 
-        q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_proto_cpu, k_cache_proto_cpu, v_cache_proto_cpu = npu_out
-        q_out_res, k_cache_res, v_cache_res, q_out_proto, k_cache_proto, v_cache_proto = golden_out
+        q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_before_quant_cpu, k_out_before_quant_cpu, v_out_before_quant_cpu = npu_out
+        q_out_res, k_cache_res, v_cache_res, q_out_before_quant, k_out_before_quant, v_out_before_quant = golden_out
 
         # comparison
         if input_dtype == torch.float16:
@@ -276,31 +276,31 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         self.assertRtolEqual(v_cache_cpu, v_cache_res, prec=rtol)
     
         if is_output_qkv:
-            self.assertEqual(q_out_proto_cpu.shape, q_out_proto.shape)
-            self.assertEqual(k_cache_proto_cpu.shape, k_cache_proto.shape)
-            self.assertEqual(v_cache_proto_cpu.shape, v_cache_proto.shape)
-            self.assertEqual(q_out_proto_cpu.dtype, q_out_proto.dtype)
-            self.assertEqual(k_cache_proto_cpu.dtype, k_cache_proto.dtype)
-            self.assertEqual(v_cache_proto_cpu.dtype, v_cache_proto.dtype)
+            self.assertEqual(q_out_before_quant_cpu.shape, q_out_before_quant.shape)
+            self.assertEqual(k_out_before_quant_cpu.shape, k_out_before_quant.shape)
+            self.assertEqual(v_out_before_quant_cpu.shape, v_out_before_quant.shape)
+            self.assertEqual(q_out_before_quant_cpu.dtype, q_out_before_quant.dtype)
+            self.assertEqual(k_out_before_quant_cpu.dtype, k_out_before_quant.dtype)
+            self.assertEqual(v_out_before_quant_cpu.dtype, v_out_before_quant.dtype)
 
             try:
-                self.assertRtolEqual(q_out_proto_cpu, q_out_proto, prec=rtol)
+                self.assertRtolEqual(q_out_before_quant_cpu, q_out_before_quant, prec=rtol)
             except AssertionError:
-                max_diff = torch.max(torch.abs(q_out_proto_cpu - q_out_proto))
+                max_diff = torch.max(torch.abs(q_out_before_quant_cpu - q_out_before_quant))
                 self.assertLessEqual(
                     max_diff, 1, f"Output mismatch. Max diff: {max_diff}")
 
             try:
-                self.assertRtolEqual(k_cache_proto_cpu, k_cache_proto, prec=rtol)
+                self.assertRtolEqual(k_out_before_quant_cpu, k_out_before_quant, prec=rtol)
             except AssertionError:
-                max_diff = torch.max(torch.abs(k_cache_proto_cpu - k_cache_proto))
+                max_diff = torch.max(torch.abs(k_out_before_quant_cpu - k_out_before_quant))
                 self.assertLessEqual(
                     max_diff, 1, f"Output mismatch. Max diff: {max_diff}")
 
             try:
-                self.assertRtolEqual(v_cache_proto_cpu, v_cache_proto, prec=rtol)
+                self.assertRtolEqual(v_out_before_quant_cpu, v_out_before_quant, prec=rtol)
             except AssertionError:
-                max_diff = torch.max(torch.abs(v_cache_proto_cpu - v_cache_proto))
+                max_diff = torch.max(torch.abs(v_out_before_quant_cpu - v_out_before_quant))
                 self.assertLessEqual(
                     max_diff, 1, f"Output mismatch. Max diff: {max_diff}")
 

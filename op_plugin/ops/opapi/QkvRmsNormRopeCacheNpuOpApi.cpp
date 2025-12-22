@@ -45,19 +45,24 @@ namespace op_api {
         int64_t Nv = head_nums[2];
         int64_t D = qkv_size[3];
         
-        c10::SmallVector<int64_t, 2> q_out_proto_shape = {qkv.size(0), Nq * D};
-        c10::SmallVector<int64_t, 2> k_cache_proto_shape = {qkv.size(0), Nk * D};
-        c10::SmallVector<int64_t, 2> v_cache_proto_shape = {qkv.size(0), Nv * D};
+        c10::SmallVector<int64_t, 2> q_out_before_quant_shape = {qkv.size(0), Nq * D};
+        c10::SmallVector<int64_t, 2> k_out_before_quant_shape = {qkv.size(0), Nk * D};
+        c10::SmallVector<int64_t, 2> v_out_before_quant_shape = {qkv.size(0), Nv * D};
         char * cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor q_out_proto = npu_preparation::apply_tensor_without_format(q_out_proto_shape, qkv.options());
-        at::Tensor k_cache_proto = npu_preparation::apply_tensor_without_format(k_cache_proto_shape, qkv.options());
-        at::Tensor v_cache_proto = npu_preparation::apply_tensor_without_format(v_cache_proto_shape, qkv.options());
+        if (is_output_qkv) {
+            at::Tensor q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
+            at::Tensor k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
+            at::Tensor v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
+        } else {
+            at::Tensor q_out_before_quant = at::Tensor();
+            at::Tensor k_out_before_quant = at::Tensor();
+            at::Tensor v_out_before_quant = at::Tensor();
+        }
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, 
+                                    v_cache, k_scale, v_scale, k_offset, v_offset, qkv_size, head_nums, epsilon, 
+                                    cache_mode_ptr, q_out_before_quant, k_out_before_quant, v_out_before_quant);
 
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache,
-                                    k_scale, v_scale, k_offset, v_offset, qkv_size, head_nums, epsilon, cache_mode_ptr,
-                                    is_output_qkv, q_out_proto, k_cache_proto, v_cache_proto);
-
-        return std::tie(q_out_proto, k_cache_proto, v_cache_proto);
+        return std::tie(q_out_before_quant, k_out_before_quant, v_out_before_quant);
     }
 
     std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(
@@ -85,21 +90,27 @@ namespace op_api {
         int64_t Nv = head_nums[2];
         int64_t D = qkv_size[3];
         
-        c10::SmallVector<int64_t, 2> q_out_proto_shape = {qkv.size(0), Nq * D};
-        c10::SmallVector<int64_t, 2> k_cache_proto_shape = {qkv.size(0), Nk * D};
-        c10::SmallVector<int64_t, 2> v_cache_proto_shape = {qkv.size(0), Nv * D};
+        c10::SmallVector<int64_t, 2> q_out_before_quant_shape = {qkv.size(0), Nq * D};
+        c10::SmallVector<int64_t, 2> k_out_before_quant_shape = {qkv.size(0), Nk * D};
+        c10::SmallVector<int64_t, 2> v_out_before_quant_shape = {qkv.size(0), Nv * D};
         char * cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor q_out_proto = npu_preparation::apply_tensor_without_format(q_out_proto_shape, qkv.options());
-        at::Tensor k_cache_proto = npu_preparation::apply_tensor_without_format(k_cache_proto_shape, qkv.options());
-        at::Tensor v_cache_proto = npu_preparation::apply_tensor_without_format(v_cache_proto_shape, qkv.options());
+        if (is_output_qkv) {
+            at::Tensor q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
+            at::Tensor k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
+            at::Tensor v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
+        } else {
+            at::Tensor q_out_before_quant = at::Tensor();
+            at::Tensor k_out_before_quant = at::Tensor();
+            at::Tensor v_out_before_quant = at::Tensor();
+        }
         at::Tensor q_out_inplace = q_out.clone();
         at::Tensor k_cache_inplace = k_cache.clone();
         at::Tensor v_cache_inplace = v_cache.clone();
 
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out_inplace, 
                                     k_cache_inplace, v_cache_inplace, k_scale, v_scale, k_offset, v_offset, qkv_size, 
-                                    head_nums, epsilon, cache_mode_ptr, is_output_qkv, q_out_proto, k_cache_proto, v_cache_proto);
+                                    head_nums, epsilon, cache_mode_ptr, q_out_before_quant, k_out_before_quant, v_out_before_quant);
 
-        return std::tie(q_out_proto, k_cache_proto, v_cache_proto, q_out_inplace, k_cache_inplace, v_cache_inplace);
+        return std::tie(q_out_before_quant, k_out_before_quant, v_out_before_quant, q_out_inplace, k_cache_inplace, v_cache_inplace);
     }
 }

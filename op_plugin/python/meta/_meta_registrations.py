@@ -3437,18 +3437,18 @@ def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_o
         raise RuntimeError("2D tensor expected for input cos" + ops_error(ErrCode.PARAM))
     if sin.dim() != 2:
         raise RuntimeError("2D tensor expected for input sin" + ops_error(ErrCode.PARAM))
-    q_out_proto_size = []
-    k_cache_proto_size = []
-    v_cache_proto_size = []
-    q_out_proto_size.append(qkv.size(0))
-    k_cache_proto_size.append(qkv.size(0))
-    v_cache_proto_size.append(qkv.size(0))
-    q_out_proto_size.append(head_nums[0] * qkv_size[3])
-    k_cache_proto_size.append(head_nums[1] * qkv_size[3])
-    v_cache_proto_size.append(head_nums[2] * qkv_size[3])
-    return (torch.empty(q_out_proto_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(k_cache_proto_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(v_cache_proto_size, dtype=qkv.dtype, device=qkv.device))
+    q_out_before_quant_size = []
+    k_out_before_quant_size = []
+    v_out_before_quant_size = []
+    q_out_before_quant_size.append(qkv.size(0))
+    k_out_before_quant_size.append(qkv.size(0))
+    v_out_before_quant_size.append(qkv.size(0))
+    q_out_before_quant_size.append(head_nums[0] * qkv_size[3])
+    k_out_before_quant_size.append(head_nums[1] * qkv_size[3])
+    v_out_before_quant_size.append(head_nums[2] * qkv_size[3])
+    return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+            torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+            torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device))
 
 @impl(m, "npu_qkv_rms_norm_rope_cache_functional")
 def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
@@ -3464,18 +3464,18 @@ def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin,
         raise RuntimeError("2D tensor expected for input cos" + ops_error(ErrCode.PARAM))
     if sin.dim() != 2:
         raise RuntimeError("2D tensor expected for input sin" + ops_error(ErrCode.PARAM))
-    q_out_proto_size = []
-    k_cache_proto_size = []
-    v_cache_proto_size = []
-    q_out_proto_size.append(qkv.size(0))
-    k_cache_proto_size.append(qkv.size(0))
-    v_cache_proto_size.append(qkv.size(0))
-    q_out_proto_size.append(head_nums[0] * qkv_size[3])
-    k_cache_proto_size.append(head_nums[1] * qkv_size[3])
-    v_cache_proto_size.append(head_nums[2] * qkv_size[3])
-    return (torch.empty(q_out_proto_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(k_cache_proto_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(v_cache_proto_size, dtype=qkv.dtype, device=qkv.device),
+    q_out_before_quant_size = []
+    k_out_before_quant_size = []
+    v_out_before_quant_size = []
+    q_out_before_quant_size.append(qkv.size(0))
+    k_out_before_quant_size.append(qkv.size(0))
+    v_out_before_quant_size.append(qkv.size(0))
+    q_out_before_quant_size.append(head_nums[0] * qkv_size[3])
+    k_out_before_quant_size.append(head_nums[1] * qkv_size[3])
+    v_out_before_quant_size.append(head_nums[2] * qkv_size[3])
+    return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+            torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+            torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
             torch.empty_like(q_out), torch.empty_like(k_cache), torch.empty_like(v_cache))
 
 
