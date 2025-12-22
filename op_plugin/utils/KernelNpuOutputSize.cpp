@@ -20,6 +20,8 @@
 #include "op_plugin/utils/AdvancedIndex.h"
 #include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 
 namespace op_infer {
 using tuple_array_vector = std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::SmallVector<int64_t, SIZE>>;
@@ -1864,37 +1866,33 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
 
 c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
 {
+    aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
-        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-        dst_dtype = npu_preparation::convert_to_scalar_type(dst_acltype);
-    } else {
-        dst_dtype = at::kInt;
+        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
     }
     auto outputSize = op_infer::array_to_small_vector(self.sizes());
     auto dimNum = self.dim();
-    if (dst_dtype == at::ScalarType::Int) {
-        TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
-        "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-        outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
-    } else if (dst_dtype == at::ScalarType::Float4_e2m1fn_x2) {
+    if (dst_acltype == aclDataType::ACL_FLOAT4_E2M1) {
         c10::SmallVector<int64_t, SIZE> output;
         output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2]};
         return output;
     }
+    TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
+        "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
+        outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
     return outputSize;
 }
 
 c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
 {
+    aclDataType dst_acltype = aclDataType::ACL_INT32;
     if (dst_dtype.has_value()) {
-        aclDataType dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-        dst_dtype = npu_preparation::convert_to_scalar_type(dst_acltype);
-    } else {
-        dst_dtype = at::kInt;
+        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
     }
     int64_t resultSize = self.size(0);
     at::SmallVector<int64_t, SIZE> outputSize;
-    if (dst_dtype == at::ScalarType::Float4_e2m1fn_x2) {
+    auto dimNum = self.dim();
+    if (dst_acltype == aclDataType::ACL_FLOAT4_E2M1) {
         int64_t alignBase = 64UL;
         auto alignSize = (outputSize[dimNum - 1] * outputSize[dimNum - 2] + alignBase - 1) / alignBase * alignBase;
         outputSize = {resultSize, alignSize, 2};
