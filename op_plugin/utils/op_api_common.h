@@ -1619,7 +1619,10 @@ auto DecodeDevice(Ts&... args) -> at::Device
             static bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&    \
                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) || \
                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);      \
-            if (op_plugin::utils::is_nd_nz_format(input1, input2) && is_support_soc) {                       \
+            static bool is_dtype_valid = c10_npu::IsAclnnOnly() ||                                           \
+                                             (input1.scalar_type() != at::ScalarType::Float &&               \
+                                                input2.scalar_type() != at::ScalarType::Float);              \                     
+            if (op_plugin::utils::is_nd_nz_format(input1, input2) && is_support_soc && is_dtype_valid) {     \
                 DO_COMPATIBILITY(aclnn_nz_api, aclop_func_call);                                             \
             } else {                                                                                         \
                 if (!c10_npu::IsAclnnOnly()) {                                                               \
