@@ -30,7 +30,7 @@
          $$\ alltoall\_x\_out= \ alltoallv(\ quant\_out)$$
 
          $$
-         \ enpand\_x=
+         \ expand\_x=
          \begin{cases}
          \ allgatherv(alltoall\_x\_out), & \quad \ 有TP通信域 \\
          \ alltoall\_x\_out & \quad \ 无TP通信域 \\
@@ -50,7 +50,7 @@
          $$\ alltoall\_dynamic\_scales\_out = alltoall(1.0/dynamic\_scales)$$
 
          $$
-         \ enpand\_x=
+         \ expand\_x=
          \begin{cases}
          \ allgatherv(alltoall\_x\_out), & \quad \ 有TP通信域 \\
          \ alltoall\_x\_out & \quad \ 无TP通信域 \\
@@ -68,11 +68,11 @@
 
     - 特殊专家场景：
 
-      零专家场景，即`zero_Expert_Num`不为0：
+      零专家场景，即`zero_expert_num`不为0：
 
          $$Moe(ori\_x)=0$$
 
-      拷贝专家场景，即`copy_Expert_Num`不为0：
+      拷贝专家场景，即`copy_expert_num`不为0：
 
          $$Moe(ori\_x)=ori\_x$$
 
@@ -92,7 +92,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
 -   **x** (`Tensor`)：必选参数，表示计算使用的token数据，需根据`expert_ids`来发送给其他卡。要求为2维张量，shape为\(BS, H\)，表示有BS个token，数据类型支持`bfloat16`、`float16`，数据格式为$ND$，支持非连续的Tensor。
 -   **expert\_ids** (`Tensor`)：必选参数，表示每个token的topK个专家索引，决定每个token要发给哪些专家。要求为2维张量，shape为\(BS, K\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。对应[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)的`expert_ids`输入，张量里value取值范围为\[0, moe\_expert\_num\)，且同一行中的K个value不能重复。
--   **group\_ep** (`str`)：必选参数，EP通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>时不能和`group_tp`相同。
+-   **group\_ep** (`str`)：必选参数，EP通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>时，`group_ep`不能与`group_tp`相同。
 -   **ep\_world\_size**(`int`)：必选参数，EP通信域size。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`ep_world_size`的取值范围如下所示。
          - `comm_alg`设置为"fullmesh"时，`ep_world_size`取值范围为16、32、64、128、256。
@@ -106,8 +106,8 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   **scales** (`Tensor`)：可选参数，表示每个专家的权重，非量化场景不传，动态量化场景可传可不传。若传值要求为2维张量，如果有共享专家，shape为\(shared\_expert\_num+moe\_expert\_num, H\)，如果没有共享专家，shape为\(moe\_expert\_num, H\)，数据类型支持`float`，数据格式为$ND$，不支持非连续的Tensor。
 -   **x\_active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-         - `comm_alg`设置为"fullmesh"时，要求为一个1维张量。shape为\(BS, \)，数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
-         - `comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值即可。
+         - `comm_alg`设置为"fullmesh"时，要求是一个1维或者2维张量。当输入为1维时，shape为\(BS, \); 当输入为2维时，shape为\(BS, K\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。当输入为1维时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2D时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。支持2维张量属于零计算专家特性，此特性尚在实验阶段，请谨慎使用。
+         - `comm_alg`设置为"hierarchy"时，当前版本不支持，使用默认值None即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：要求是一个1维或者2维张量。当输入为1维时，shape为\(BS, \); 当输入为2维时，shape为\(BS, K\)。数据类型支持`bool`，数据格式要求为$ND$，支持非连续的Tensor。当输入为1维时，参数为true表示对应的token参与通信，true必须排到false之前，例：{true, false, true} 为非法输入；当输入为2D时，参数为true表示当前token对应的`expert_ids`参与通信，若当前token对应的K个`bool`值全为false，表示当前token不会参与通信。默认所有token都会参与通信。当每张卡的BS数量不一致时，所有token必须全部有效。
 
 -   **expert\_scales** (`Tensor`)：可选参数，表示每个token的topK个专家权重。
@@ -118,7 +118,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
 -   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。若有TP域通信需要传参，若无TP域通信，使用默认值""即可。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：eager模式使用默认值即可，图模式传入与`group_ep`相同。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：字符串长度范围为\[1, 128\)，不能和`group_ep`相同。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：字符串长度范围为\[0, 128\)，不能和`group_ep`相同，仅在无TP域时支持传空。
 
 -   **tp\_world\_size** (`int`)：可选参数，TP通信域size。有TP域通信才需要传参。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP域通信，使用默认值0即可。
@@ -156,11 +156,15 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - "fullmesh_v2"：使能fullmesh_v2模板，其中commAlg仅在tp\_world\_size取值为1时生效，且不支持在各卡Bs不一致、输入xActiveMask和特殊专家场景下使能。
 
 -   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+         - `comm_alg`设置为"fullmesh"时，取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。参数为非0时属于零计算专家特性，此特性尚在实验阶段，请谨慎使用。
+         - `comm_alg`设置为"hierarchy"时，当前版本不支持，传默认值0即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。
 
 -   **copy\_expert\_num** (`int`)：可选参数，表示拷贝专家的数量。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前版本不支持，传0即可。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+         - `comm_alg`设置为"fullmesh"时，取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num+zero\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。参数为非0时属于零计算专家特性，此特性尚在实验阶段，请谨慎使用。
+         - `comm_alg`设置为"hierarchy"时，当前版本不支持，传默认值0即可。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围[0, MAX_INT32)，MAX_INT32 = 2^31 - 1，合法的拷贝专家的ID值是\[moe\_expert\_num+zero\_expert\_num, moe\_expert\_num+zero\_expert\_num+copy\_expert\_num\)。
 
 -   **const\_expert\_num** (`int`)：可选参数，表示常量专家的数量。	
