@@ -148,8 +148,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                         (weight[0].scalar_type() == at::ScalarType::Float8_e5m2 ||
                                         weight[0].scalar_type() == at::ScalarType::Float8_e4m3fn);
         TORCH_CHECK(dtypeValid,
-                    "The dtype of x and weight only supports Float8_e4m3fn/Float8_e5m2, but now x_dtype is",
-                    x.scalar_type(), "weight_dtype is", weight[0].scalar_type(),
+                    "The dtype of x and weight only supports Float8_e4m3fn/Float8_e5m2, but now x_dtype is ",
+                    x.scalar_type(), ", weight_dtype is ", weight[0].scalar_type(),
                     "." + OPS_ERROR(ErrCode::VALUE));
 
         EXEC_NPU_CMD(
