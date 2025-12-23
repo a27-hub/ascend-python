@@ -28,12 +28,6 @@ static bool is_nz_format(const at::Tensor& w)
     return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ;
 }
 
-static bool is_expected_dtype(c10::optional<int64_t> x_dtype)
-{
-    return x_dtype.value() == static_cast<int64_t>(c10_npu::DType::float4_e2m1fn_x2)
-        || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::float4_e1m2fn_x2);
-}
-
 static bool is_weight_trans(const at::Tensor &tensor)
 {
     int64_t dim1 = tensor.dim() - 1;
@@ -74,8 +68,8 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     constexpr int EXPECTED_X_DIM = 2;
     constexpr int EXPECTED_W_DIM = 3;
-_
-    TORCH_CHECK(x_dim_num == EXPECTED_XDIM && w_dim_num == EXPECTED_W_DIM,
+
+    TORCH_CHECK(x_dim_num == EXPECTED_X_DIM && w_dim_num == EXPECTED_W_DIM,
                 "x dim is ", EXPECTED_X_DIM, " weight dim is ", EXPECTED_W_DIM,
                 OPS_ERROR(ErrCode::PARAM));
     
@@ -110,8 +104,6 @@ _
     auto w_n_dim = w.size(w_dim_num - 1);
     auto w_k_dim = w.size(w_dim_num - LAST_SECOND_DIM_INDEX);
 
-    weight_trans = is_weight_trans(w);
-
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0));
     if (output_bs_real == 0) {
@@ -119,12 +111,12 @@ _
     }
     output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
 
-    static const bool mxfp4_valid = x_dtype.has_value() && weight_dtype.has_value() &&
-                                   (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-                                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
-                                   (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
-                                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
-
+    static const bool mxfp4_valid = x_dtype.has_value() && w_dtype.has_value() &&
+                                    (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
+                                    (w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                     w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    bool weight_trans = is_weight_trans(w);
     if (w.dtype() == at::kInt) {
         output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
     } else if (mxfp4_valid && !weight_trans) {
@@ -198,7 +190,6 @@ _
                      group_list, shared_input_real, logit_real, row_index_real, dtype_real, shared_input_weight_real, shared_input_offset_real, transposeX, transposeW,
                      group_list_type_real, result);
     }
-
     return result;
 }
 
