@@ -173,7 +173,7 @@
 </tr>
 <tr id="row10579184741114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p35791247141119"><a name="p35791247141119"></a><a name="p35791247141119"></a><a href="（beta）torch_npu-npu_layer_norm_eval.md">（beta）torch_npu.npu_layer_norm_eval</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p75791547101117"><a name="p75791547101117"></a><a name="p75791547101117"></a>对层归一化结果进行计数。与torch.nn.functional.layer_norm相同，优化NPU设备实现。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p75791547101117"><a name="p75791547101117"></a><a name="p75791547101117"></a>对层归一化结果进行计算。与torch.nn.functional.layer_norm相同，优化NPU设备实现。</p>
 </td>
 </tr>
 <tr id="row11579104721117"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p135794473113"><a name="p135794473113"></a><a name="p135794473113"></a><a href="（beta）torch_npu-npu_linear.md">（beta）torch_npu.npu_linear</a></p>
@@ -188,12 +188,12 @@
 </tr>
 <tr id="row3579194701112"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p16579184717113"><a name="p16579184717113"></a><a name="p16579184717113"></a><a href="（beta）torch_npu-npu_max.md">（beta）torch_npu.npu_max</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1758054719115"><a name="p1758054719115"></a><a name="p1758054719115"></a>使用dim对最大结果进行计数。类似于torch.max，优化NPU设备实现。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1758054719115"><a name="p1758054719115"></a><a name="p1758054719115"></a>使用dim对最大结果进行计算。类似于torch.max，优化NPU设备实现。</p>
 </td>
 </tr>
 <tr id="row2580347161118"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p12580124781118"><a name="p12580124781118"></a><a name="p12580124781118"></a><a href="（beta）torch_npu-npu_min.md">（beta）torch_npu.npu_min</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p1171133519333"><a name="zh-cn_topic_0000001655404257_p1171133519333"></a><a name="zh-cn_topic_0000001655404257_p1171133519333"></a>使用dim对最小结果进行计数。类似于torch.min，优化NPU设备实现。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p1171133519333"><a name="zh-cn_topic_0000001655404257_p1171133519333"></a><a name="zh-cn_topic_0000001655404257_p1171133519333"></a>使用dim对最小结果进计算。类似于torch.min，优化NPU设备实现。</p>
 </td>
 </tr>
 <tr id="row115511438538"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p75511930538"><a name="p75511930538"></a><a name="p75511930538"></a><a href="（beta）torch_npu-npu_mish.md">（beta）torch_npu.npu_mish</a></p>
