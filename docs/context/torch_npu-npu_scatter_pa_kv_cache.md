@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-更新KvCache中指定位置的`key`和`value`。
+更新KVCache中指定位置的`key`和`value`。
 
 输入输出支持以下场景：
 
