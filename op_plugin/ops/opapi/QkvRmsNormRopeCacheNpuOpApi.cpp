@@ -49,14 +49,17 @@ namespace op_api {
         c10::SmallVector<int64_t, 2> k_out_before_quant_shape = {qkv.size(0), Nk * D};
         c10::SmallVector<int64_t, 2> v_out_before_quant_shape = {qkv.size(0), Nv * D};
         char * cache_mode_ptr = const_cast<char *>(cache_mode.data());
+        at::Tensor q_out_before_quant;
+        at::Tensor k_out_before_quant;
+        at::Tensor v_out_before_quant;
         if (is_output_qkv) {
-            at::Tensor q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
-            at::Tensor k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
-            at::Tensor v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
+            q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
+            k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
+            v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
         } else {
-            at::Tensor q_out_before_quant = at::Tensor();
-            at::Tensor k_out_before_quant = at::Tensor();
-            at::Tensor v_out_before_quant = at::Tensor();
+            q_out_before_quant = at::Tensor();
+            k_out_before_quant = at::Tensor();
+            v_out_before_quant = at::Tensor();
         }
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, 
                                     v_cache, k_scale, v_scale, k_offset, v_offset, qkv_size, head_nums, epsilon, 
@@ -94,14 +97,17 @@ namespace op_api {
         c10::SmallVector<int64_t, 2> k_out_before_quant_shape = {qkv.size(0), Nk * D};
         c10::SmallVector<int64_t, 2> v_out_before_quant_shape = {qkv.size(0), Nv * D};
         char * cache_mode_ptr = const_cast<char *>(cache_mode.data());
+        at::Tensor q_out_before_quant;
+        at::Tensor k_out_before_quant;
+        at::Tensor v_out_before_quant;
         if (is_output_qkv) {
-            at::Tensor q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
-            at::Tensor k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
-            at::Tensor v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
+            q_out_before_quant = npu_preparation::apply_tensor_without_format(q_out_before_quant_shape, qkv.options());
+            k_out_before_quant = npu_preparation::apply_tensor_without_format(k_out_before_quant_shape, qkv.options());
+            v_out_before_quant = npu_preparation::apply_tensor_without_format(v_out_before_quant_shape, qkv.options());
         } else {
-            at::Tensor q_out_before_quant = at::Tensor();
-            at::Tensor k_out_before_quant = at::Tensor();
-            at::Tensor v_out_before_quant = at::Tensor();
+            q_out_before_quant = at::Tensor();
+            k_out_before_quant = at::Tensor();
+            v_out_before_quant = at::Tensor();
         }
         at::Tensor q_out_inplace = q_out.clone();
         at::Tensor k_cache_inplace = k_cache.clone();
