@@ -268,7 +268,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         return expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
             expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu
 
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
     def test_npu_moe_init_routing_no_quant(self):
         bs_list = [32]
         h_list = [14, 200]
@@ -337,7 +337,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             if expert_tokens_num_flag:
                 self.assertRtolEqual(expert_tokens_count, local_expert_tokens_count_npu.numpy())
 
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
     def test_npu_moe_init_routing_dynamic_quant(self):
         bs_list = [32]
         h_list = [14, 200]
