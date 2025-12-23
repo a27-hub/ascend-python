@@ -34,6 +34,13 @@ static bool is_expected_dtype(c10::optional<int64_t> x_dtype)
         || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::float4_e1m2fn_x2);
 }
 
+static bool is_weight_trans(const at::Tensor &tensor)
+{
+    int64_t dim1 = tensor.dim() - 1;
+    int64_t dim2 = tensor.dim() - 2;
+    return tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2);
+}
+
 at::Tensor npu_grouped_matmul_finalize_routing(
     const at::Tensor &x,
     const at::Tensor &w,
@@ -67,18 +74,22 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     constexpr int EXPECTED_X_DIM = 2;
     constexpr int EXPECTED_W_DIM = 3;
-
-    TORCH_CHECK(x_dim_num == EXPECTED_X_DIM && w_dim_num == EXPECTED_W_DIM,
+_
+    TORCH_CHECK(x_dim_num == EXPECTED_XDIM && w_dim_num == EXPECTED_W_DIM,
                 "x dim is ", EXPECTED_X_DIM, " weight dim is ", EXPECTED_W_DIM,
                 OPS_ERROR(ErrCode::PARAM));
     
     if (x_dtype.has_value()) {
-        TORCH_CHECK(is_expected_dtype(),"The optional parameter x_dtype only supports float4_e2m1fn_x2,float4_e1m2fn_x2 or None, but now is ",
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+                    "The optional parameter x_dtype only supports float4_e1m2fn_x2,float4_e2m1fn_x2 or None, but now is ",
                     c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     if (w_dtype.has_value()) {
-        TORCH_CHECK(is_expected_dtype(),"The optional parameter w_dtype only supports float4_e2m1fn_x2,float4_e1m2fn_x2 or None, but now is ",
+        TORCH_CHECK(w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                 || w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+                    "The optional parameter w_dtype only supports float4_e1m2fn_x2,float4_e2m1fn_x2 or None, but now is ",
                     c10_npu::CustomDataTypeToString(w_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     
@@ -89,7 +100,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     }
 
     if (pertoken_scale_dtype.has_value()) {
-        TORCH_CHECK(x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
+        TORCH_CHECK(pertoken_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter pertoken_scale_dtype only supports float8_e8m0fnu or None, but now is ",
                     c10_npu::CustomDataTypeToString(pertoken_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
@@ -99,15 +110,27 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     auto w_n_dim = w.size(w_dim_num - 1);
     auto w_k_dim = w.size(w_dim_num - LAST_SECOND_DIM_INDEX);
 
+    weight_trans = is_weight_trans(w);
+
     auto output_size = op_infer::array_to_small_vector(x.sizes());
     int32_t output_bs_real = static_cast<int32_t>(output_bs.value_or(0));
     if (output_bs_real == 0) {
         output_bs_real = x_m_dim;
     }
     output_size[x_dim_num - LAST_SECOND_DIM_INDEX] = output_bs_real;
+
+    static const bool mxfp4_valid = x_dtype.has_value() && weight_dtype.has_value() &&
+                                   (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
+                                   (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+
     if (w.dtype() == at::kInt) {
         output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
-    } else {
+    } else if (mxfp4_valid && !weight_trans) {
+        output_size[x_dim_num - 1] = w_n_dim * FP4_IN_INT8;
+    }
+    else {
         output_size[x_dim_num - 1] = w_n_dim;
     }
 
@@ -129,7 +152,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     TensorWrapper w_wrapper = make_wrapper(w, w_dtype);
     TensorWrapper scale_wrapper = make_wrapper(scale_real, scale_dtype);
     TensorWrapper pertoken_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
-    
+
     at::ScalarType dst_type = c10::value_or_else(dtype, [] {return at::ScalarType::Float;});
     TORCH_CHECK(dst_type == at::ScalarType::Float,
         "The dtype should be float", OPS_ERROR(ErrCode::PARAM));
@@ -140,7 +163,6 @@ at::Tensor npu_grouped_matmul_finalize_routing(
                     OPS_ERROR(ErrCode::PARAM));
     }
     c10::TensorOptions options = x.options().dtype(dst_type);
-
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
     bool transposeX = false;
