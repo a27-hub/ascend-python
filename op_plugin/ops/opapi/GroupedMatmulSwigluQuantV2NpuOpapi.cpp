@@ -80,13 +80,11 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
-                    "The optional parameter weight_dtype only supports mxfp4 or None, but the actual valueis ",
+                    "The optional parameter weight_dtype only supports mxfp4 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
-                    "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None, but the actual valueis ",
-                    c10_npu::CustomDataTypeToString(x_dtype.value()), ", weight_dtype is ", 
-                    c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None.", OPS_ERROR(ErrCode::VALUE));
 
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
@@ -204,14 +202,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             output,
             output_scale_wrapper);
     } else {
-        static const bool mxfp8_input = (x.scalar_type() == at::ScalarType::Float8_e4m3fn ||
-                                        x.scalar_type() == at::ScalarType::Float8_e5m2) &&
-                                        (weight[DIM_0].scalar_type() == at::ScalarType::Float8_e5m2 ||
-                                        weight[DIM_0].scalar_type() == at::ScalarType::Float8_e4m3fn);
-        TORCH_CHECK(mxfp8_input || mxfp4_input,
-                    "The dtype of x and weight only supports Float8_e4m3fn/Float8_e5m2/Float4_e2m1/Float4_e1m2, but the actual value is ",
-                    x.scalar_type(), ", weight_dtype is ", weight[DIM_0].scalar_type(),
-                    "." + OPS_ERROR(ErrCode::VALUE));
         EXEC_NPU_CMD(
             aclnnGroupedMatmulSwigluQuantV2,
             x_wrapper,
