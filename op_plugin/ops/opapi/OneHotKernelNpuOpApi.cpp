@@ -17,6 +17,9 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
+#include <ATen/DTensorState.h>
+#endif
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -34,7 +37,10 @@ at::Tensor one_hot(const at::Tensor& self, int64_t num_classes)
     if (is_fake_or_meta) {
         TORCH_CHECK(num_classes != -1, "FakeTensorMode does not support num_classes == -1.");
         auto options = self.options().dtype(at::kLong);
-        at::Tensor index = at::arange(num_classes, options);
+#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
+        at::DTensorAllowImplicitReplication guard;
+#endif
+	at::Tensor index = at::arange(num_classes, options);
         return at::eq(self.unsqueeze(-1), index).to(at::kLong);
     }
     DO_COMPATIBILITY(aclnnOneHot, acl_op::one_hot(self, num_classes));
