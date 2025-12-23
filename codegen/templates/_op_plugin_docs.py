@@ -8738,7 +8738,7 @@ _add_torch_npu_docstr(
 随着大模型上下文长度的增加，Sparse Attention的重要性与日俱增，这一技术通过“只计算关键部分”大幅减少计算量，然而会引入大量的离散访存，造成数据搬运时间增加，进而影响整体性能。
 
 接口原型
-custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int sparse_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3) -> Tensor    
+custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3) -> Tensor    
 
 参数说明
 key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16和float16，layout_kv为PA_BSND时shape为[block_num, block_size, KV_N, D]，其中block_num为PageAttention时block总数，block_size为一个block的token数。
@@ -8793,7 +8793,7 @@ _add_torch_npu_docstr(
 QuantSparseFlashAttentionAnti在SparseFlashAttention的基础上支持了Per-Token-Head-Tile-128量化输入。
 
 接口原型
-custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
+custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
 
 query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16，query相同dtype的q_nope和q_rope按D维度拼接得到。
 
