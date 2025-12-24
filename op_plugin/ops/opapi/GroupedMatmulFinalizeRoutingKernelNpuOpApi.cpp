@@ -76,14 +76,14 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     if (x_dtype.has_value()) {
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
-                    "The optional parameter x_dtype only supports float4_e1m2fn_x2,float4_e2m1fn_x2 or None, but now is ",
+                    "The optional parameter x_dtype only supports float4_e1m2fn_x2, float4_e2m1fn_x2 or None, but now is ",
                     c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
     if (w_dtype.has_value()) {
         TORCH_CHECK(w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
-                    "The optional parameter w_dtype only supports float4_e1m2fn_x2,float4_e2m1fn_x2 or None, but now is ",
+                    "The optional parameter w_dtype only supports float4_e1m2fn_x2, float4_e2m1fn_x2 or None, but now is ",
                     c10_npu::CustomDataTypeToString(w_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     
@@ -121,8 +121,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
         output_size[x_dim_num - 1] = w_n_dim * INT4_NUMS_IN_INT32;
     } else if (mxfp4_valid && !weight_trans) {
         output_size[x_dim_num - 1] = w_n_dim * FP4_IN_INT8;
-    }
-    else {
+    } else {
         output_size[x_dim_num - 1] = w_n_dim;
     }
 
