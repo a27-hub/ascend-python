@@ -41,8 +41,6 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 
-
-
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
     const at::TensorList weight,
@@ -85,7 +83,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
                     "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None.", OPS_ERROR(ErrCode::VALUE));
-
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but the actual valueis ",
@@ -135,16 +132,18 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 
         if (mxfp4_input) { // input is mxfp4
             if (!weight_trans) {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) == 35 || c10_npu::GetAclDataType(quant_dtype.value()) == 36) { // output is mxfp8
+                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) 
+                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) { // output is mxfp8
                     create_new_tensor(output, m, ((n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8), options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
-                                             MXFP_MULTI_BASE_SIZE, options);
+                                            MXFP_MULTI_BASE_SIZE, options);
                 } else { // output is mxfp4
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 }
             } else {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) == 35 || c10_npu::GetAclDataType(quant_dtype.value()) == 36) { // output is mxfp8
+                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) 
+                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) { // output is mxfp8
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 } else { // output is mxfp4
