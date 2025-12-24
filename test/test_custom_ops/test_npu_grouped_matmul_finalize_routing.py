@@ -2,7 +2,7 @@ import torch
 import torch_npu
 import unittest
 import numpy as np
-import match
+import math
 import torch.nn.functional as F
 
 from torch_npu.testing.testcase import TestCase, run_tests
