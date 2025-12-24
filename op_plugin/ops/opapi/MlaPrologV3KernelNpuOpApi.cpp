@@ -25,6 +25,9 @@ const int DIM_3 = 3;
 const int MODE_1 = 1;
 const int MODE_2 = 2;
 const int MODE_3 = 3;
+const char* const REQUIRED_CANN_VERSION = "8.5.0.alpha002";
+const char* const CANN_PRODUCT = "CANN";
+bool cann_flag = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT);
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
@@ -92,8 +95,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     }
 
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
-
-    bool cann_flag = IsGteCANNVersion("8.5.0.alpha002", "CANN");
 
     if (weight_quant_mode == MODE_3) {
         const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
@@ -220,8 +221,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
     at::Tensor kv_cache_inplace = kv_cache.clone();
     at::Tensor kr_cache_inplace = kr_cache.clone();
-
-    bool cann_flag = IsGteCANNVersion("8.5.0.alpha002", "CANN");
 
     if (weight_quant_mode == MODE_3) {
         const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
