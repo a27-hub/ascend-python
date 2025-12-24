@@ -922,7 +922,7 @@ class TestGroupedMatmul(TestCase):
                                                 output_dtype=output_dtype)
 
             self.assertRtolEqual(x[0], x_clone[0], 1)
-            self.assertRtolEqual(supported_output[0], custom_output[0].to(torch.int8), 1)
+            self.assertRtolEqual(supported_output[0], custom_output[0], 1)
 
 if __name__ == "__main__":
     run_tests()
