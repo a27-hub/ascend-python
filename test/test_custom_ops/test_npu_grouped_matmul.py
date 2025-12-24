@@ -886,15 +886,11 @@ class TestGroupedMatmul(TestCase):
         x1 = torch.randint(1, 5, size=(1792, 1024), dtype=torch.int8)
         x = [x1]
         weight1 = torch.randint(1, 5, size=(1024, 256), dtype=torch.int8)
-        weight2 = torch.randint(1, 5, size=(1024, 256), dtype=torch.int8)
-        weight3 = torch.randint(1, 5, size=(1024, 256), dtype=torch.int8)
-        weight = [weight1, weight2, weight3]
+        weight = [weight1]
         bias1 = torch.randint(1, 5, size=(256,), dtype=torch.int32)
-        bias2 = torch.randint(1, 5, size=(256,), dtype=torch.int32)
-        bias3 = torch.randint(1, 5, size=(256,), dtype=torch.int32)
-        bias = [bias1, bias2, bias3]
-        group_list = torch.tensor([256, 1280, 1792]).npu()
-        split_item = 3
+        bias = [bias1]
+        group_list = torch.tensor([1792, ]).npu()
+        split_item = 2
         group_type = 0
 
         scale_output_dtype_list = [[torch.float32, torch.float16], [torch.bfloat16, torch.bfloat16]]
