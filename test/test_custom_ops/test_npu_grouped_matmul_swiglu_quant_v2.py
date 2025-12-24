@@ -195,7 +195,6 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         groupList = torch.tensor([M//2, M//2], dtype=torch.int64)
         return x, weight, weightScale, xScale, groupList
     def gen_input_data_91095_mxfp4(self, E, M, K, N, transpose):
-
         x = torch.randint(0, 256, (M, K), dtype=torch.uint8)
         weight = torch.randint(0, 256, (E, K * 2, N), dtype=torch.uint8)
         weightScale = torch.randint(low=0, high=256, size=(E, math.ceil(K / 64), N * 2, 2), dtype=torch.uint8)
