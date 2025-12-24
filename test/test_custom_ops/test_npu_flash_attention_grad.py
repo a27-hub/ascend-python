@@ -49,7 +49,7 @@ class TestNPUFlashAttention(TestCase):
         dv = dv.reshape(dv.shape[0], dv.shape[1], -1)
         return y, softmax_res, x_max, x_sum, dq, dk, dv
 
-    def custom_op_exec(self, query, key, value, dy, softmax_max, softmax_sum, attention_in, keep_prob=1.0, numels=0, seed=2, offset=0):
+    def custom_op_exec(self, query, key, value, dy, softmax_max, softmax_sum, attention_in, keep_prob=1.0, numels=torch.tensor([0], device="npu"), seed=torch.tensor([2], device="npu"), offset=torch.tensor([0], device="npu")):
         scale = 0.08838
         return torch_npu.npu_fusion_attention_grad(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max,
@@ -95,7 +95,7 @@ class TestNPUFlashAttention(TestCase):
         value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
         dy = torch.randn(1, 32, 256, 128, dtype=torch.float16)
         keep_prob = 0.9
-        numels = 1 * 32 * 256 * 256
+        numels = torch.tensor([1 * 32 * 256 * 256], device="npu")
         drop_mask = self.get_drop_mask(query, 1, 32, 256, 256, seed=2, gen_p=1-keep_prob)
 
         q_npu = self.trans_BNSD2BSH(query).npu()
