@@ -2177,4 +2177,54 @@ c10::SmallVector<int64_t, SIZE> npu_gelu_mul_output_size(const at::Tensor &input
     return shape;
 }
 
+c10::SmallVector<int64_t, SIZE> lstm_npu_output_size(const at::Tensor &input, at::TensorList params, bool bidirectional, bool batch_first)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t output_last_dim = D * hidden_size;
+    int64_t batch_size = batch_first ? input.size(0) : input.size(1);
+    int64_t time_step = batch_first ? input.size(1) : input.size(0);
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (batch_first) {
+        output_shape = {batch_size, time_step, output_last_dim};
+    } else {
+        output_shape = {time_step, batch_size, output_last_dim};
+    }
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_npu_ijfo_tanhc_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool train, bool bidirectional, bool batch_first)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t list_length = D * num_layers;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t batch_size = batch_first ? input.size(0) : input.size(1);
+    int64_t time_step = batch_first ? input.size(1) : input.size(0);
+    c10::SmallVector<int64_t, SIZE> single_tensor_shape;
+    if (train) {
+    single_tensor_shape = {time_step, batch_size, hidden_size};
+    } else {
+        return {};
+    }
+    return single_tensor_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_npu_hc_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool train, bool bidirectional, bool batch_first)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t list_length = D * num_layers; 
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t batch_size = batch_first ? input.size(0) : input.size(1);
+    int64_t time_step = batch_first ? input.size(1) : input.size(0);
+    c10::SmallVector<int64_t, SIZE> single_tensor_shape;
+    if (train) {
+        single_tensor_shape = {time_step, batch_size, hidden_size};
+    } else {
+        single_tensor_shape = {batch_size, hidden_size};
+    }
+    return single_tensor_shape;
+}
 } // namespace op_infer
