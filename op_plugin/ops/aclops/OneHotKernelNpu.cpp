@@ -36,7 +36,7 @@ at::Tensor one_hot(const at::Tensor& self, int64_t num_classes) {
         at::DTensorAllowImplicitReplication guard;
 #endif
 	
-	at::Tensor index = at::arange(num_classes, options);
+        at::Tensor index = at::arange(num_classes, options);
         return at::eq(self.unsqueeze(-1), index).to(at::kLong);
     }
     at::Scalar on_value = 1;
