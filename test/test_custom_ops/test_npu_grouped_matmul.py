@@ -883,13 +883,13 @@ class TestGroupedMatmul(TestCase):
     @SupportedDevices(['Ascend910_95'])
     def test_npu_grouped_matmul_quant_int8_nz(self): # 全量化 NZ
         torch.manual_seed(0)
-        x1 = torch.randint(1, 5, size=(1792, 1024), dtype=torch.int8)
+        x1 = torch.randint(1, 5, size=(16384, 7168), dtype=torch.int8)
         x = [x1]
-        weight1 = torch.randint(1, 5, size=(1024, 256), dtype=torch.int8)
+        weight1 = torch.randint(1, 5, size=(4, 4096, 7168), dtype=torch.int8)
         weight = [weight1]
-        bias1 = torch.randint(1, 5, size=(256,), dtype=torch.int32)
+        bias1 = torch.randint(1, 5, size=(4, 4096), dtype=torch.int32)
         bias = [bias1]
-        group_list = torch.tensor([1792, ]).npu()
+        group_list = torch.tensor([8403, 808, 3101, 4072]).npu()
         split_item = 2
         group_type = 0
 
