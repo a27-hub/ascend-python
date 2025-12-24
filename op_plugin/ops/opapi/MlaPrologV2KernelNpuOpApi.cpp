@@ -14,7 +14,6 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#warning "kv_cache and kr_cache will be updated in place (input and output share the same address, so please be cautious when processing the input)."
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;

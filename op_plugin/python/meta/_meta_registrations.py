@@ -5,7 +5,7 @@ from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
 from torch_npu.npu.utils import get_cann_version
-improt warning
+import warning
 
 '''
 Registering Meta implementations for custom ops
@@ -251,8 +251,8 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
                     rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
                     quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None,
                     rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, cache_mode="PA_BSND"):
-    warning.warn(
-        "kv_cache and kr_cache will be updated in place (input and output share the same address, so please be cautious when processing the input).",
+    warnings.warn(
+        "Warning: kv_cache and kr_cache are updated in-place (input and output share memory). Handle input with caution.",
         FutureWarning,
         stacklevel=2
     )
