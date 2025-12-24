@@ -137,6 +137,9 @@
   "op_api: torch_npu.npu_dynamic_block_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu._lstm_npu(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_gelu_mul(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
@@ -510,6 +513,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_dynamic_block_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu._lstm_npu(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)": {
@@ -2395,6 +2401,9 @@
   },
   "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
     "version": ["v2.6", "newest"]
+  },
+  "func: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[])": {
+    "version": ["all_version"]
   },
   "func: npu_fused_floyd_attention(Tensor query_ik, Tensor key_ij, Tensor value_ij, Tensor key_jk, Tensor value_jk, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)": {
     "version": ["v2.6", "newest"]
