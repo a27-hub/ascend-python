@@ -29,6 +29,7 @@ constexpr int64_t QUANT_MODE_DYNAMIC = 1;
 constexpr int64_t QUANT_MODE_MXFP8_E5M2 = 2;
 constexpr int64_t QUANT_MODE_MXFP8_E4M3FN = 3;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
+constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
@@ -193,13 +194,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     at::Tensor expanded_scale;
     if (IsQuantModeMXFP8(quant_mode)) {
-        // m为h向上整除32后向上对齐到偶数倍
-        int64_t m = (h + MXQUANT_BLOCK_SIZE - 1) / MXQUANT_BLOCK_SIZE;
-        if (m % 2 != 0) {
-            m++;
-        }
+        // scale_cols为h向上整除32后向上对齐到偶数倍
+        int64_t scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) / MXQUANT_BLOCK_SIZE;
+        scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
-            {expanded_scale_len, m}, x.options().dtype(at::kFloat8_e8m0fnu));
+            {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));

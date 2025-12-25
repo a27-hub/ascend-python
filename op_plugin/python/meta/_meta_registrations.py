@@ -975,10 +975,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_x_dim_list = [num_expanded_rows, h]
         if quant_mode in [2, 3]:
             MXQUANT_BLOCK_SIZE = 32
-            m = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
-            if m % 2 != 0:
-                m += 1
-            expanded_scale_dim_list = [num_expanded_rows, m]
+            PAD_TO_EVEN_FACTOR = 2
+            scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
+            scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols]
         elif quant_mode in [-1, 1]: # quant_mode in [-1, 0, 1]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode == 0:
