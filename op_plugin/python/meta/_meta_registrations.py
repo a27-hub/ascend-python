@@ -4078,6 +4078,7 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
     output_offset_shape = torch.empty([], dtype=torch.float32, device=x.device)
     return output_shape, output_scale_shape, output_offset_shape
 
+
 @impl(m, "npu_grouped_matmul_swiglu_quant_v2")
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=0,
@@ -4170,6 +4171,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
                 output_shape = torch.empty([batch_size, output_n // div_num], dtype=torch.uint8, device=x.device)
                 output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)     
     return output_shape, output_scale_shape
+
 
 @impl(m, "npu_recurrent_gated_delta_rule")
 def npu_recurrent_gated_delta_rule_meta(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None):
