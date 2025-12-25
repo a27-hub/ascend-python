@@ -252,7 +252,7 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
                     quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None,
                     rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, cache_mode="PA_BSND"):
     warnings.warn(
-        "KVCache and KRCache will be updated in place (input and output share the same address)."
+        "KVCache and KRCache will be updated in place (input and output share the same address). "
         "Please be cautious when processing the input.",
         UserWarning,
         stacklevel=2
