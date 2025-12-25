@@ -266,6 +266,31 @@ v (Tensor) - 变量方差。
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_apply_adam_w_out",
+    """
+torch_npu.npu_apply_adam_w_out(beta1_power, beta2_power, lr, weight_decay, 
+                               beta1, beta2, epsilon, grad, max_grad_norm, amsgrad, maximize, var, m, v) -> (Tensor(a!),Tensor(b!),Tensor(c!))
+功能描述
+实现adamW优化器功能
+
+参数说明
+beta1_power (Scalar) - beta1的幂，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+beta2_power (Scalar) - beta2的幂，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+lr (Scalar) - 学习率，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+weight_decay (Scalar) - 权重衰减系数，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+beta1 (Scalar) - beta1参数，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+beta2 (Scalar) - beta1参数，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+epsilon (Scalar) - 防止除数为0，shape要求为[1]，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+grad (Tensor) - 梯度数据，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+max_grad_norm (Tensor，可选) - 保存参数v的最大值，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+amsgrad (Bool，可选) - 是否使用max_grad_norm变量，数据类型支持BOOL。
+maximize (Bool，可选) - 是否对梯度grad取反，应用梯度上升方向优化权重使损失函数最大化，数据类型为BOOL。
+var (Tensor) - 待计算的权重输入同时也是输出，shape支持1-8维度，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+m (Tensor) - adamW优化器的m参数，shape支持1-8维度，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+v (Tensor) - adamW优化器的v参数，shape支持1-8维度，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_batch_gather_matmul",
@@ -1253,7 +1278,7 @@ _add_torch_npu_docstr(
 QuantLightningIndexer在LightningIndexer的基础上支持了Per-Token-Head量化输入。
 
 接口原型
-custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, query_quant_mode=0, key_quant_mode=0, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3) -> Tensor
+custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> Tensor
 
 参数说明
 
@@ -2290,7 +2315,7 @@ _add_torch_npu_docstr(
     "npu_attention_update",
     """
 接口原型：
-npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lse_out=None) -> Tensor
+npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
 
 功能描述
 将各SP域PA算子的输出的中间结果lse, attention out 两个局部结果更新成全局结果。
@@ -2303,12 +2328,12 @@ O = ΣOi * exp(lsei - lsem)
 
 参数说明
 lse：Device侧的TensorList，每个Tensor形状为 (batch * seqLen * headNum)，各sp域计算的lse。数据类型支持 FLOAT，格式支持 ND。
-localOut：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，格式支持 ND。
-updateType：int64_t 类型，指定执行的操作类型。目前仅支持 0（DECODE_UPDATE）。
+local_out：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，FLOAT16，BFLOAT16，格式支持 ND。
+update_type：int64_t 类型，指定执行的操作类型。
 
 输出说明
-out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，格式为 ND。
-lse_out: Tensor类型
+out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，FLOAT16，BFLOAT16，格式为 ND。
+lse_out: Device侧的Tensor，形状为 (batch * seqLen * headNum)，数据类型为 FLOAT格式为 ND。update_type=1时有效。
 
 支持的型号
 ----------------
@@ -2335,7 +2360,7 @@ local_out = [
 ]
 
 update_type = 0  
-output, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
+out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
 """
 )
 
@@ -6845,12 +6870,14 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float1
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(int32). 
 *: 代表其之前的变量是位置相关, 需要按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S大于1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
-Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
-Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
-其中Q_S为query的shape中的S, KV_S为key和value的shape中的S, 但如果Q_S、KV_S非16或32对齐, 可以向上取到对齐的S. 综合约束请见约束说明. 
+sparse_mode为0、1时
+    支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+    当输入input_layout为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传query_rope和key_rope时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
+    如果Q_S、KV_S非16或32对齐，可以向上取到对齐的S。综合约束请见约束声明。
+sparse_mode为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 actual_seq_lengths: int类型数组, 代表不同Batch中query的有效seqlen, 数据类型支持int64. 如果不指定seqlen可以传入None, 表示和query的shape的s长度相同. 限制: 该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen, Q_S为1时该参数无效. seqlen的传入长度为1时, 每个Batch使用相同seqlen; 传入长度大于等于Batch时取seqlen的前Batch个数. 其他长度不支持. 当query的input_layout为TND时, 该入参必须传入, 且以该入参元素的数量作为Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 actual_seq_lengths_kv: int类型数组, 代表不同Batch中key/value的有效seqlenKv, 数据类型支持int64. 如果不指定None, 表示和key/value的shape的S长度相同. 不同O_S值有不同的约束, 具体参见约束说明. 
 dequant_scale1: Tensor类型, 数据类型支持uint64、float32. 数据格式支持ND, 表示BMM1后面的反量化因子, 支持per-tensor. 如不使用该功能时传入None. 
@@ -7246,6 +7273,50 @@ tensor([0., 0., ..., 0., 0., 0.],
 )
 
 _add_torch_npu_docstr(
+    "_npu_fused_infer_attention_score_infer_output",
+    """
+功能描述:
+算子功能：用于npu_fused_infer_attention_score算子aclgraph tilling下沉场景，推算output tensor 并创建一个此size大小的tensor， 实际返回output_tensor 和 softmax_lse_tensor。
+
+接口原型:
+torch_npu._npu_fused_infer_attention_score_infer_output(Tensor query, Tensor value, *, str input_layout="BSH", Tensor? quant_scale2=None, Tensor? block_table=None, int num_heads=1, int num_key_value_heads=0, bool softmax_lse_flag=False, Tensor? query_rope=None) -> (Tensor, Tensor)
+
+参数说明:
+输入为npu_fused_infer_attention_score的子集
+输出类型为(Tensor, Tensor), 由适配层推导，计算返回对应的output_tensor 和 softmax_lse_tensor。
+约束说明:
+当Q_S等于1时：请参考Incre_Flash_Attention限制
+当Q_S大于1时：请参考Prompt_Flash_Attention限制
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+# 单算子调用方式
+import torch
+import torch_npu
+import math
+
+# 生成随机数据, 并发送到npu
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+
+# 调用FIA算子
+out，softmax_lse = torch_npu._npu_fused_infer_attention_score_infer_output(q, k, v, num_heads = 8, input_layout = "BNSD")
+
+# 执行上述代码的输出类似如下
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+
+# 入图方式
+暂不支持入图
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_fused_infer_attention_score.out",
     """
 功能描述:
@@ -7325,11 +7396,14 @@ Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(
 query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S大于1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
-Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
-Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
+sparse_mode为0、1时
+    支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+    当输入input_layout为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传query_rope和key_rope时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
+    如果Q_S、KV_S非16或32对齐，可以向上取到对齐的S。综合约束请见约束声明。
+sparse_mode为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S, 但如果Q_S、KV_S非16或32对齐, 可以向上取到对齐的S. 综合约束请见约束说明. 
 actual_seq_qlen: int类型数组, 代表不同Batch中query的有效seqlen, 数据类型支持int64. 如果不指定seqlen可以传入None, 表示和query的shape的s长度相同. 限制: 该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen, Q_S为1时该参数无效. seqlen的传入长度为1时, 每个Batch使用相同seqlen; 传入长度大于等于Batch时取seqlen的前Batch个数. 其他长度不支持. 当query的input_layout为TND时, 该入参必须传入, 且以该入参元素的数量作为Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 actual_seq_kvlen: int类型数组, 代表不同Batch中key/value的有效seqlenKv, 数据类型支持int64. 如果不指定None, 表示和key/value的shape的S长度相同. 不同O_S值有不同的约束, 具体参见约束说明. 
@@ -7424,7 +7498,7 @@ key_rope配置时要求key的n为1，d为512，keyRope的shape中d为64，其余
 支持key、value、keyRope的input_layout格式为ND或NZ。当input_layout为NZ时，数据类型为float16或bfloat16时，输入参数key和value的格式为[blockNum, KV_N, D/16, blockSize, 16]，数据类型为int8时，输入参数key和value的格式为[blockNum, KV_N, D/32, blockSize, 32]；
 input_layout形状支持BSH、BSND、BNSD、BNSD_NBSD、BSND_NBSD、BSH_NBSD、TND、TND_NTD，当数据格式为NZ时input_layout不支持BNSD、BNSD_NBSD。
 该场景下，必须开启PageAttention，此时block_size支持16、128，其中数据格式为NZ时block_size不支持配置16。
-不支持开启softmax_lse、左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
+不支持开启左padding、tensorlist、pse、prefix、伪量化、后量化、空Tensor。
 支持全量化场景，即输入query/key/value全为int8，query_rope和key_rope为bfloat16，输出为bfloat16的场景：
 入参dequant_scale_query、dequant_scale_key、dequant_scale_value需要同时存在，且其数据类型仅支持FP32。
 不支持传入quant_scale_out、quant_offset_out、dequant_offset_key、dequant_offset_value（即不为nullptr），否则报错并返回。
@@ -10553,6 +10627,7 @@ scale2: Tensor类型，第二路量化scale输出，shape同scale1，数据类�
 当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
 当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
+如果y2Out为有效输出时，shape需要与y1Out保持一致；如果y2Out为无效输出时，shape为[1]。
 
 支持的型号
 Atlas A3训练系列产品/Atlas A3推理系列产品
