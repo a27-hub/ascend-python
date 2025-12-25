@@ -1337,6 +1337,9 @@
   "func: npu_quant_all_reduce(Tensor x, Tensor scales, str hcom, int world_size, *, str? reduce_op='sum', int? output_dtype=None, int? x_dtype=None, int? scales_dtype=None) -> Tensor": {
     "version": ["v2.6", "newest"]
   },
+  "func: npu_all_to_all_matmul(Tensor x1, Tensor x2, str hcom, Tensor? bias=None, int[]? all2all_axes=None, bool all2all_out_flag=True) -> Tensor": {
+    "version": ["v2.6, v2.7, newest"]
+  },
   "func: npu_scatter_list(Tensor[] self, Tensor indices, Tensor updates, Tensor? mask=None, str reduce='update', int axis=-2) -> Tensor[]": {
     "version": ["all_version"]
   },
