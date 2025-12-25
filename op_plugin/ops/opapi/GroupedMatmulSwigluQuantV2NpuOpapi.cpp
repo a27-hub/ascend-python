@@ -143,10 +143,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                 }
             } else {
                 if (c10_npu::GetAclDataType(quant_dtype.value()) == 35 || c10_npu::GetAclDataType(quant_dtype.value()) == 36) { // output is mxfp8
-                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
+                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / 2, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 } else { // output is mxfp4
-                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / NUM_TWO, options_output);
+                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / 4, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 }
             }
