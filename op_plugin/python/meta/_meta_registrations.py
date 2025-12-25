@@ -971,14 +971,14 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_x_dim_list = [expert_num, expert_capacity, h]
         expanded_scale_dim_list = [expert_num * expert_capacity]
     else:
-        num_expanded_rows = bs*k if active_num<=0 else min(active_num, bs*k)
+        num_expanded_rows = bs * k if active_num <= 0 else min(active_num, bs * k)
         expanded_x_dim_list = [num_expanded_rows, h]
         if quant_mode in [2, 3]:
             MXQUANT_BLOCK_SIZE = 32
-            m = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
-            if m % 2 != 0:
-                m += 1
-            expanded_scale_dim_list = [num_expanded_rows, m]
+            PAD_TO_EVEN_FACTOR = 2
+            scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
+            scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols]
         elif quant_mode in [-1, 1]: # quant_mode in [-1, 0, 1]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode == 0:
@@ -993,10 +993,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
 
-    return (x.new_empty(tuple(expanded_x_dim_list), dtype = expanded_x_dtype),
-            x.new_empty(tuple(expanded_row_idx_dim_list), dtype = torch.int32),
-            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype = torch.int64),
-            x.new_empty(tuple(expanded_scale_dim_list), dtype = expanded_scale_dtype))
+    return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype), 
+            x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32), 
+            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64), 
+            x.new_empty(tuple(expanded_scale_dim_list), dtype=expanded_scale_dtype))
 
 
 @impl(m, "ffn_worker_scheduler_")
