@@ -24,8 +24,8 @@ constexpr int64_t DIM_2 = 2;
 constexpr int64_t DIM_1 = 1;
 constexpr int64_t DIM_0 = 0;
 constexpr int64_t WEIGHT_MAX_DIM_NUM = 3;
-constexpr int64_t WEIGHT_PENULTIMATE_DIM = -2;
-constexpr int64_t WEIGHT_LAST_DIM = -1;
+constexpr int64_t WEIGHT_PENULTIMATE_DIM = 1;
+constexpr int64_t WEIGHT_LAST_DIM = 2;
 constexpr int64_t DIM_3 = 3;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
