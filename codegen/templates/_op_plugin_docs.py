@@ -3414,7 +3414,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_sort_v2(self, dim=-1, descending=False, out=None) -> Tensor
 功能描述
-沿给定维度，按无index值对输入张量元素进行升序排序。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。
+沿给定维度，对输入张量元素进行升序排序（不返回索引）。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。
 
 参数说明
 self (Tensor) - 输入张量。
@@ -9893,7 +9893,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_prefetch(Tensor input, Tensor? dependency, int max_size, int offset=0) -> ()
 
 功能描述
-提供网络weight预取功能, 将需要预取的权重搬到L2 Cache中. 尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时, 可通过该接口提前预取权重, 适当提高模型性能, 具体效果基于用户对并行的处理. 
+提供网络weight预取功能, 将需要预取的权重搬到L2 Cache中. 尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时, 可通过该接口提前预取权重, 适当提高模型性能, 具体效果取决与用户采用的并行方式和配置. 
 
 参数说明
 input: Tensor类型, 表示需要预取的权重, 不做数据处理, 与数据类型和数据格式无关; 输入不能含有为None. 

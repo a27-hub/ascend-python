@@ -288,7 +288,7 @@
 </tr>
 <tr id="row1084224211115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p188421442111120"><a name="p188421442111120"></a><a name="p188421442111120"></a><a href="（beta）torch_npu-npu_sort_v2.md">（beta）torch_npu.npu_sort_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5842442111110"><a name="p5842442111110"></a><a name="p5842442111110"></a>沿给定维度，按无index值对输入张量元素进行升序排序。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5842442111110"><a name="p5842442111110"></a><a name="p5842442111110"></a>沿给定维度，对输入张量元素进行升序排序（不返回索引）。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。</p>
 </td>
 </tr>
 <tr id="row884254219118"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1784284271118"><a name="p1784284271118"></a><a name="p1784284271118"></a><a href="（beta）torch_npu-npu_transpose.md">（beta）torch_npu.npu_transpose</a></p>
@@ -499,7 +499,7 @@
 </tr>
 <tr id="row1531023733"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7819527225"><a name="p7819527225"></a><a name="p7819527225"></a><a href="torch_npu-npu_prefetch.md">torch_npu.npu_prefetch</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p11819162142215"><a name="p11819162142215"></a><a name="p11819162142215"></a>提供网络weight预取功能，将需要预取的权重搬到L2 Cache中（当前仅支持权重的预取，暂不支持KV cache的预取）。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果基于用户对并行的处理。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p11819162142215"><a name="p11819162142215"></a><a name="p11819162142215"></a>提供网络weight预取功能，将需要预取的权重搬到L2 Cache中（当前仅支持权重的预取，暂不支持KV cache的预取）。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果取决与用户采用的并行方式和配置。</p>
 </td>
 </tr>
 <tr id="row13116234313"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p35366207112"><a name="p35366207112"></a><a name="p35366207112"></a><a href="torch_npu-npu_prompt_flash_attention.md">torch_npu.npu_prompt_flash_attention</a></p>
