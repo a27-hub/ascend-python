@@ -9,6 +9,30 @@ from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
 
+FP8_DTYPE_MAP_NUMPY_TO_TORCH = {
+    "bfloat16": torch.bfloat16,
+    "float8_e5m2": torch.float8_e5m2,
+    "float8_e4m3fn": torch.float8_e4m3fn,
+    "float8_e8m0": torch.float8_e8m0fnu
+}
+
+
+def _bitcast_float8_to_torch(np_arr):
+    np_dtype = np_arr.dtype
+    torch_dtype = FP8_DTYPE_MAP_NUMPY_TO_TORCH[str(np_dtype)]
+    np_uint8 = np_arr.view(np.uint8)
+    t_uint8 = torch.from_numpy(np_uint8)
+    return t_uint8.view(torch_dtype)
+
+
+def numpy_to_torch(np_arr):
+    if not isinstance(np_arr, np.ndarray):
+        raise TypeError(f"输入必须是 numpy.ndarray，实际是 {type(np_arr)}")
+    if str(np_arr.dtype) in list(FP8_DTYPE_MAP_NUMPY_TO_TORCH.keys()):
+        return _bitcast_float8_to_torch(np_arr)
+    return torch.from_numpy(np_arr)
+
+
 def assert_tensors_close(x: torch.Tensor, y: torch.Tensor, rtol=1e-3, atol=1e-5, label="Tensor"):
     # 1. 确保在 CPU
     if x.device.type != "cpu": x = x.cpu()
@@ -76,22 +100,6 @@ def assert_tensors_close(x: torch.Tensor, y: torch.Tensor, rtol=1e-3, atol=1e-5,
             f"  x: {x_final[max_idx].item()}\n"
             f"  y: {y_final[max_idx].item()}\n"
         )
-        raise AssertionError(error_msg)
-
-
-def assert_fp8_equal(x: torch.Tensor, y: torch.Tensor, prec=1e-3):
-    if x.device.type != "cpu":
-        x = x.cpu()
-    if y.device.type != "cpu":
-        y = y.cpu()
-    x_fp32 = x.to(torch.float32)
-    y_fp32 = y.to(torch.float32)
-
-    diff = torch.abs(x-y)
-    max_diff = diff.max().item()
-    if max_diff > prec:
-        error_msg = f"\nFP8 x, y of type {x.dtype} assert equal failed.\n" \
-                    f"Max diff is {max_diff}, threshold is {prec}\n"
         raise AssertionError(error_msg)
 
 
@@ -387,7 +395,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_scale == None
         
         if quant_mode == 2 or quant_mode == 3:
-            expanded_x = expanded_x[:actual_expert_total_num, :]
+            # expanded_x = expanded_x[:actual_expert_total_num, :]
             quant_mode_dtype_str_map = {2: "float8_e5m2", 3: "float8_e4m3fn"}
             expanded_scale, expanded_x = simplified_mx_quantize(expanded_x, mx_ele_dtype=quant_mode_dtype_str_map[quant_mode])
             ess = expanded_scale.shape
@@ -618,10 +626,10 @@ class TestNpuMoeInitRoutingV2(TestCase):
                                           x_npu, expert_idx_npu, scale_npu, offset_npu,
                                           expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity)
             # compare
-            assert_tensors_close(expanded_x, local_expanded_x_npu)
-            assert_tensors_close(expanded_row_idx, local_expanded_row_idx_npu)
-            assert_tensors_close(expert_tokens_count, local_expert_tokens_count_npu)
-            assert_tensors_close(expanded_scale, local_expanded_scale_npu)
+            assert_tensors_close(numpy_to_torch(expanded_x), local_expanded_x_npu)
+            assert_tensors_close(numpy_to_torch(expanded_row_idx), local_expanded_row_idx_npu)
+            assert_tensors_close(numpy_to_torch(expert_tokens_count), local_expert_tokens_count_npu)
+            assert_tensors_close(numpy_to_torch(expanded_scale), local_expanded_scale_npu)
 
 if __name__ == "__main__":
     run_tests()
