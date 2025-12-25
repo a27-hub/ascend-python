@@ -70,19 +70,19 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     int k = x_size[DIM_1];
 
     if (x_dtype.has_value()) {
-        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter x_dtype only supports mxfp4 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
-        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter weight_dtype only supports mxfp4 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
-                    "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None.", OPS_ERROR(ErrCode::VALUE));
+                "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None.", OPS_ERROR(ErrCode::VALUE));
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but the actual valueis ",
@@ -130,31 +130,31 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         c10::TensorOptions options = x.options().dtype(
             npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(weight_scale_dtype.value())));
 
-        if (mxfp4_input) { // input is mxfp4
+        if (mxfp4_input) {
             if (!weight_trans) {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) 
-                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) { // output is mxfp8
+                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) {
                     create_new_tensor(output, m, ((n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8), options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
                                             MXFP_MULTI_BASE_SIZE, options);
-                } else { // output is mxfp4
+                } else {
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 }
             } else {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) 
-                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) { // output is mxfp8
+                if (c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                    || c10_npu::GetAclDataType(quant_dtype.value()) != static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) {
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-                } else { // output is mxfp4
+                } else {
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / NUM_TWO, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
                 }
             }
-        } else { // input is mxfp8
+        } else {
             create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
             create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-        }          
+        }
     }
 
     TensorWrapper x_wrapper = {x,
