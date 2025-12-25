@@ -8,6 +8,21 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
+def assert_fp8_equal(x: torch.Tensor, y: torch.Tensor, prec=1e-3):
+    if x.device.type != "cpu":
+        x = x.cpu()
+    if y.device.type != "cpu":
+        y = y.cpu()
+    x_fp32 = x.to(torch.float32)
+    y_fp32 = y.to(torch.float32)
+
+    diff = torch.abs(x-y)
+    max_diff = diff.max().item()
+    if max_diff > prec:
+        error_msg = f"\nFP8 x, y of type {x.dtype} assert equal failed.\n" \
+                    f"Max diff is {max_diff}, threshold is {prec}\n"
+        raise AssertionError(error_msg)
+
 
 class MoeInitRoutingV2Model(torch.nn.Module):
     def __init__(self):
@@ -374,6 +389,42 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 return
             self.assertRtolEqual(expanded_scale, local_expanded_scale_npu.numpy())
 
+    @SupportedDevices(['Ascend910_95'])
+    def test_npu_moe_init_routing_mxfp8_quant(self):
+        #TODO: here
+        bs_list = [32]
+        h_list = [7168, 7184]
+        k_list = [8]
+        expert_range_list = [[0, 16], [0, 32]]
+        quant_mode_list = [2, 3]
+        drop_pad_mode_list = [0]
+        row_idx_type_list = [0, 1]
+        expert_tokens_num_flags = [True]
+        dtype_list = [torch.float16, torch.bfloat16]
+        none_scales = [True, False]
+        none_offsets = [True]
+
+        for bs, h, k, expert_range, quant_mode, row_idx_type, x_dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
+                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
+                dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
+            # generate inputs
+            scale_shape = (bs*k, h)
+            x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
+                bs, h, k, x_dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
+            # run npu&cpu
+            expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
+                expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
+                = self.calc_npu_vs_golden(x, expert_idx, scale, offset,
+                                          x_npu, expert_idx_npu, scale_npu, offset_npu,
+                                          expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity)
+            # compare
+            # expanded_x_dtype = {2:torch.float8_e5m2, 3:torch.float8_e4m3fn}[quant_mode]
+            # self.assertExpandedXRtolEqual(expanded_x, local_expanded_x_npu, expanded_x_dtype)
+            assert_fp8_equal(expanded_x, local_expanded_x_npu)
+            self.assertRtolEqual(expanded_row_idx, local_expanded_row_idx_npu.numpy())
+            if expert_tokens_num_flag:
+                self.assertRtolEqual(expert_tokens_count, local_expert_tokens_count_npu.numpy())
+            assert_fp8_equal(expanded_scale, local_expanded_scale_npu)
 
 if __name__ == "__main__":
     run_tests()
