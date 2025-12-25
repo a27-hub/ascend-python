@@ -1,11 +1,11 @@
 import math
+import warnings
 import torch
 import torch_npu
 from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
 from torch_npu.npu.utils import get_cann_version
-import warnings
 
 '''
 Registering Meta implementations for custom ops
