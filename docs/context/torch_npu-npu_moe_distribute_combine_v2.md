@@ -108,8 +108,8 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：可选择传入有效数据或填None，当`const_expert_num`不为0时必须传入有效输入；当传入有效数据时，要求是一个2D的Tensor，shape为(const_expert_num,H)，数据类型需跟expand_x保持一致；数据格式要求为ND，支持非连续的Tensor。
 
 -   **performance\_info** (`Tensor`)：可选参数，表示各卡通信耗时打点信息。结合DeepXTrace工具使用，可动态记录各卡通信时间。单次算子调用各卡通信耗时会累加到该Tensor上，用户使用前按需清零。	
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：可选择传入有效数据或填空指针，传入空指针时表示不使能记录通信耗时功能；当传入有效数据时，要求是一个1D的Tensor，shape为(ep_world_size,)，数据类型支持int64；数据格式要求为ND，支持非连续的Tensor。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：预留参数，当前版本不支持，传空指针即可。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：可选择传入有效数据或填None，传入None时表示不使能记录通信耗时功能；当传入有效数据时，要求是一个1D的Tensor，shape为(ep_world_size,)，数据类型支持int64；数据格式要求为ND，支持非连续的Tensor。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：预留参数，当前版本不支持，传None即可。
 
 -   **group\_tp** (`string`)：可选参数，TP通信域名称，数据并行的通信域。有TP域通信才需要传参，若无TP域通信，使用默认值""即可。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：eager模式使用默认值即可，图模式传入与`group_ep`相同。
