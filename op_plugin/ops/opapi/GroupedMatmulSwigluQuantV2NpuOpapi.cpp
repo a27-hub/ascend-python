@@ -16,17 +16,17 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
-constexpr int64_t MXFP_DIVISOR_SIZE = 64LL;
-constexpr int64_t MXFP_MULTI_BASE_SIZE = 2LL;
-constexpr int64_t NUM_TWO = 2LL;
-constexpr int64_t NUM_ONE = 1LL;
-constexpr int64_t DIM_2 = 2LL;
-constexpr int64_t DIM_1 = 1LL;
-constexpr int64_t DIM_0 = 0LL;
-constexpr int64_t WEIGHT_MAX_DIM_NUM = 3LL;
-constexpr int64_t WEIGHT_PENULTIMATE_DIM = -2LL;
-constexpr int64_t WEIGHT_LAST_DIM = -1LL;
-constexpr int64_t DIM_3 = 3LL;
+constexpr int64_t MXFP_DIVISOR_SIZE = 64;
+constexpr int64_t MXFP_MULTI_BASE_SIZE = 2;
+constexpr int64_t NUM_TWO = 2;
+constexpr int64_t NUM_ONE = 1;
+constexpr int64_t DIM_2 = 2;
+constexpr int64_t DIM_1 = 1;
+constexpr int64_t DIM_0 = 0;
+constexpr int64_t WEIGHT_MAX_DIM_NUM = 3;
+constexpr int64_t WEIGHT_PENULTIMATE_DIM = -2;
+constexpr int64_t WEIGHT_LAST_DIM = -1;
+constexpr int64_t DIM_3 = 3;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
