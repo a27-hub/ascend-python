@@ -27,7 +27,7 @@ const int MODE_2 = 2;
 const int MODE_3 = 3;
 const char* const REQUIRED_CANN_VERSION = "8.5.0.alpha003";
 const char* const CANN_PRODUCT = "CANN";
-bool is_cann_version_850alpha003 = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT); // whether cann version >= 8.5.0.alpha003
+bool is_cann_version_gte_required = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT); // whether cann version >= 8.5.0.alpha003
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_prolog_v3(
     const at::Tensor& token_x, const at::Tensor& weight_dq, const at::Tensor& weight_uq_qr,
@@ -107,7 +107,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
         TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
 
-        if (is_cann_version_850alpha003) {
+        if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
                 rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x_wrapper, dequant_scale_w_dq_wrapper,
                 dequant_scale_w_uq_qr_wrapper, dequant_scale_w_dkv_kr_wrapper, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
@@ -123,7 +123,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
                 dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
         }
     } else {
-        if (is_cann_version_850alpha003) {
+        if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
                 rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
                 dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
@@ -233,7 +233,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
         TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
 
-        if (is_cann_version_850alpha003) {
+        if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
                 rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x_wrapper, dequant_scale_w_dq_wrapper,
                 dequant_scale_w_uq_qr_wrapper, dequant_scale_w_dkv_kr_wrapper, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
@@ -249,7 +249,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                 dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
         }
     } else {
-        if (is_cann_version_850alpha003) {
+        if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
                 rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
                 dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
