@@ -1,5 +1,6 @@
 import unittest
 import itertools
+import importlib.util
 from os import scandir
 import numpy as np
 import random
@@ -395,7 +396,6 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_scale == None
         
         if quant_mode == 2 or quant_mode == 3:
-            # expanded_x = expanded_x[:actual_expert_total_num, :]
             quant_mode_dtype_str_map = {2: "float8_e5m2", 3: "float8_e4m3fn"}
             expanded_scale, expanded_x = simplified_mx_quantize(expanded_x, mx_ele_dtype=quant_mode_dtype_str_map[quant_mode])
             ess = expanded_scale.shape
@@ -596,6 +596,12 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 return
             self.assertRtolEqual(expanded_scale, local_expanded_scale_npu.numpy())
 
+    @unittest.skipIf(
+        torch.__version__ < "2.7" or
+        importlib.util.find_spec("ml_dtypes") is None or 
+        importlib.util.find_spec("en_dtypes") is None,
+        "Unittest for mxfp8 need torch.version>=2.7 and package ml_dtypes, en_dtypes"
+    )
     @SupportedDevices(['Ascend910_95'])
     def test_npu_moe_init_routing_mxfp8_quant(self):
         bs_list = [32]
@@ -610,8 +616,6 @@ class TestNpuMoeInitRoutingV2(TestCase):
         dtype_list = [torch.float16, torch.bfloat16]
         none_scales = [True, False]
         none_offsets = [True]
-
-
         for bs, h, k, expert_range, quant_mode, row_idx_type, x_dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
                 bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
                 dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
