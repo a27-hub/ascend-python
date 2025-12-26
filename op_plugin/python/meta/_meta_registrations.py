@@ -1,5 +1,4 @@
 import math
-import warnings
 import torch
 import torch_npu
 from torch.library import Library, impl
@@ -251,12 +250,7 @@ def npu_mla_prolog_v2_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
                     rope_sin, rope_cos, cache_index, kv_cache, kr_cache, *, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None,
                     quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None,
                     rmsnorm_epsilon_cq=1e-5, rmsnorm_epsilon_ckv=1e-5, cache_mode="PA_BSND"):
-    warnings.warn(
-        "KVCache and KRCache will be updated in place (input and output share the same address). "
-        "Please be cautious when processing the input.",
-        UserWarning,
-        stacklevel=2
-    )
+
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "cache_index": cache_index, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
     for item_name, item in require_param.items():
@@ -420,6 +414,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    result = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha002","CANN")
     # kvcache量化
     if weight_quant_mode == 3 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.float8_e4m3fn, device='meta')
@@ -429,7 +424,10 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if result :
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
+        else :
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
 
     # 输出query_norm
     if query_norm_flag:
@@ -437,10 +435,17 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if result :
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+            else :
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if result :
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+        else :
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -536,6 +541,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    result = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha002","CANN")
     # kvcache量化
     if weight_quant_mode == 3 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.float8_e4m3fn, device='meta')
@@ -545,7 +551,10 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if result :
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
+        else :
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -556,10 +565,17 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if result :
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+            else :
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if result :
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
+        else :
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
 
     kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
     kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
