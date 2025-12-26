@@ -2481,7 +2481,21 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
     if output_bs == 0:
         y_dimm = dimm
 
-    dim_n = dimn * INT4_IN_INT32 if w.dtype == torch.int32 else dimn
+    FP4_IN_INT8 = 2
+    w_trans = False
+    if w.stride(-2) == 1:
+        w_trans = True
+    is_a4w4_input = False
+    if x_dtype is not None and w_dtype is not None:
+        is_a4w4_input = (x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2) and \
+                        (w_dtype == torch_npu.float4_e1m2fn_x2 or w_dtype == torch_npu.float4_e2m1fn_x2)
+    if w.dtype == torch.int32:
+        dim_n = dimn * INT4_IN_INT32
+    elif is_a4w4_input and not w_trans:
+        dim_n = dimn * FP4_IN_INT8
+    else:
+        dim_n = dimn
+
     dim_list = [y_dimm, dim_n]
 
     if dtype == torch.float32:
