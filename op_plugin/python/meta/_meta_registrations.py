@@ -4164,10 +4164,10 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     elif quant_dtype == torch_npu.float4_e1m2fn_x2 or quant_dtype == torch_npu.float4_e2m1fn_x2:
         if is_a4w4_input:
             if not weight_trans:
-                output_shape = torch.empty([batch_size, output_n_new], dtype=torch.uint8, device=x.device)
+                output_shape = torch.empty([batch_size, output_n], dtype=torch.uint8, device=x.device)
                 output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n_new), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
             else:
-                output_shape = torch.empty([batch_size, output_n], dtype=torch.uint8, device=x.device)
+                output_shape = torch.empty([batch_size, output_n // FP4_IN_INT8], dtype=torch.uint8, device=x.device)
                 output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)     
     return output_shape, output_scale_shape
 
