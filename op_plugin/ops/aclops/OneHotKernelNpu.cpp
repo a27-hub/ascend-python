@@ -16,13 +16,13 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
+#include <ATen/DTensorState.h>
+#endif
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_compile_type = at_npu::native::CompileType;
-#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
-#include <ATen/DTensorState.h>
-#endif
 
 at::Tensor one_hot(const at::Tensor& self, int64_t num_classes) {
     auto ks = self.key_set();
