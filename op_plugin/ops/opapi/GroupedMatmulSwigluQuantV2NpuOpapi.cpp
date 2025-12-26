@@ -140,7 +140,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     create_new_tensor(output, m, ((n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8), options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
                                             MXFP_MULTI_BASE_SIZE, options);
-                } else { 
+                } else {
                     std::cout << "fp4进 fp4出, 非转置" << std::endl;
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
@@ -150,7 +150,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     std::cout << "fp4进 fp8出, 转置" << std::endl;
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-                } else { 
+                } else {
                     std::cout << "fp4进 fp4出, 转置" << std::endl;
                     create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / NUM_TWO, options_output);
                     create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
