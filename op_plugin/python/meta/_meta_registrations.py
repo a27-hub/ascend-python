@@ -2504,9 +2504,7 @@ def npu_grouped_matmul_finalize_routing_meta(x, w, group_list, *, scale=None, bi
         y_dimm = dimm
 
     FP4_IN_INT8 = 2
-    w_trans = False
-    if w.stride(-2) == 1:
-        w_trans = True
+    w_trans = x.size(-1) == w.size(-2)
     is_a4w4_input = False
     if x_dtype is not None and w_dtype is not None:
         is_a4w4_input = (x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2) and \
