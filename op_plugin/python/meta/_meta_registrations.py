@@ -303,7 +303,7 @@ def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
 
 @impl(m, "npu_all_gather_base_mm")
 def npu_all_gather_base_mm_meta(self, x2, hcom, world_size, bias=None,
-                                x1_scale=None, x2_scale=None, 
+                                x1_scale=None, x2_scale=None,
                                 gather_index=0, gather_output=True, comm_turn=0,
                                 output_dtype=None, comm_mode=None):
     if world_size <= 0:
@@ -454,12 +454,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -639,7 +639,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
         if block_table is not None: # IFA目前TND只支持PA场景，PFA目前TND只支持非PA场景
             tmp_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
         else:
-            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')           
+            tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
     if input_layout == "TND_NTD":
         token_x_dim = query.dim()
         torch._check(
@@ -1099,7 +1099,7 @@ def npu_add_rms_norm_meta(x1, x2, gamma, epsilon=1e-6):
 def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06):
     return torch.empty(x.size(), dtype=torch.int8, device=x.device)
 
-    
+
 @impl(m, "npu_add_rms_norm_cast")
 def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
     rstd_dim = x1.dim() - gamma.dim()
@@ -1121,7 +1121,7 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
 
-            
+
 @impl(m, "npu_rms_norm_backward")
 def npu_rms_norm_backward_meta(dy, self, gamma, rstd):
     return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(gamma, dtype=gamma.dtype))
@@ -1306,7 +1306,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1381,8 +1381,8 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 
 
 @impl(m, "npu_moe_distribute_combine_v2")
-def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
-                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, 
+def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
+                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0,
                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
@@ -1391,7 +1391,7 @@ def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_com
 
 @impl(m, "npu_moe_distribute_combine_add_rms_norm")
 def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
-                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, 
+                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None,
                                     group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, comm_alg="", norm_eps=0, zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_list = []
     dim_list.append(expert_ids.size(0))
@@ -1455,31 +1455,43 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
 
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
-    if split_item == 0:
+    # if split_item == 0:
+    #     for i in range(num_x):
+    #         ni = n if singleWeight else weight[i].shape[1]
+    #         dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+    #         y.append(x[i].new_empty((*x[i].shape[:-1], dim_n), dtype=output_dtype))
+    # elif split_item == 1:
+    #     num_group_list = group_list.shape[0] if isinstance(group_list, torch.Tensor) else len(group_list)
+    #     pre_offset = group_list[0]
+    #     dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+    #     y.append(x[0].new_empty((pre_offset, dim_n), dtype=output_dtype))
+    #     for i in range(1, num_group_list):
+    #         ni = n if singleWeight else weight[i].shape[1]
+    #         cur_offset = group_list[i]
+    #         dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
+    #         y.append(x[0].new_empty((cur_offset - pre_offset, dim_n), dtype=output_dtype))
+    #         pre_offset = cur_offset
+    # elif split_item == 2:
+    #     dim_m = 0
+    #     dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+    #     for i in range(num_x):
+    #         dim_m += x[i].shape[0]
+    #     y.append(x[0].new_empty((dim_m, dim_n), dtype=output_dtype))
+    # elif split_item == 3:
+    #     dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
+    #     y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
+
+    if split_item == 0 or split_item == 1:
         for i in range(num_x):
             ni = n if singleWeight else weight[i].shape[1]
             dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
             y.append(x[i].new_empty((*x[i].shape[:-1], dim_n), dtype=output_dtype))
-    elif split_item == 1:
-        num_group_list = group_list.shape[0] if isinstance(group_list, torch.Tensor) else len(group_list)
-        pre_offset = group_list[0]
-        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
-        y.append(x[0].new_empty((pre_offset, dim_n), dtype=output_dtype))
-        for i in range(1, num_group_list):
-            ni = n if singleWeight else weight[i].shape[1]
-            cur_offset = group_list[i]
-            dim_n = ni * INT4_IN_INT32 if weight[i].dtype == torch.int32 else ni
-            y.append(x[0].new_empty((cur_offset - pre_offset, dim_n), dtype=output_dtype))
-            pre_offset = cur_offset
-    elif split_item == 2:
+    elif split_item == 2 or split_item == 3:
         dim_m = 0
         dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
         for i in range(num_x):
             dim_m += x[i].shape[0]
         y.append(x[0].new_empty((dim_m, dim_n), dtype=output_dtype))
-    elif split_item == 3:
-        dim_n = n * INT4_IN_INT32 if weight[0].dtype == torch.int32 else n
-        y.append(x[0].new_empty((x[0].shape[0], dim_n), dtype=output_dtype))
 
     return y
 
@@ -2074,7 +2086,8 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
     )
     torch._check(
         bias is None,
-        lambda: "The bias is not supported in TranpsposeBatchMatMul" + str(weight.dtype) + ops_error(ErrCode.TYPE),
+        # lambda: "The bias is not supported in TranpsposeBatchMatMul" + str(weight.dtype) + ops_error(ErrCode.TYPE),# 帮高翔删除中间的 str(weight.dtype)
+        lambda: "The bias is not supported in TranpsposeBatchMatMul" + ops_error(ErrCode.TYPE),
     )
     M = input_.size(perm_x1.index(1))
     batchM = input_.size(perm_x1.index(0))
@@ -2543,7 +2556,7 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
 
 @impl(m, "npu_dequant_swiglu_quant")
 def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, bias=None, quant_scale=None,
-                                  quant_offset=None, group_index=None, activate_left=False, quant_mode=0, 
+                                  quant_offset=None, group_index=None, activate_left=False, quant_mode=0,
                                   swiglu_mode=0, clamp_limit=7.0, glu_alpha=1.702, glu_bias=1.0):
     y_size = []
     scale_size = []
@@ -2620,7 +2633,7 @@ def npu_moe_token_permute_with_routing_map_meta(tokens, routing_map, *, probs=No
     out2 = None
     if probs is not None:
         out2 = torch.empty(output_size_1, dtype=probs.dtype, device=tokens.device)
-    
+
     return out1, out2, out3
 
 
@@ -2702,7 +2715,7 @@ def npu_attention_update_meta(lse, local_out, update_type):
     ref = local_out[0]
     return torch.empty(ref.size(), dtype=ref.dtype, device=ref.device)
 
-    
+
 @impl(m, "npu_mrope")
 def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
     return (torch.empty_like(query), torch.empty_like(key))
@@ -2731,7 +2744,7 @@ def npu_gather_sparse_index(inputs, index):
 
     for i in range(1, input_dim):
         output_size.append(input_size[i])
-    
+
     return torch.empty(output_size, dtype=inputs.dtype, device=inputs.device)
 
 
@@ -2766,11 +2779,11 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 
