@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import torch
 import torch.distributed as dist

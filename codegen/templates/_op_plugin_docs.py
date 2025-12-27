@@ -6631,32 +6631,38 @@ _add_torch_npu_docstr(
     "npu_matmul_all_to_all",
     """
 功能描述:
-算子功能: 该融合算子提供matmul和alltoall的计算功能. 目前支持1种量化场景和1种非量化场景
+算子功能: 该融合算子提供matmul和alltoall的计算功能. 
 计算公式: 
 output=alltoall(x1@x2+bias)
 
 接口原型:
-torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, Tensor? bias=None, int[]? all2all_axes=None, bool transpose_x1=False, bool transpose_x2=False) -> Tensor
+torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None) -> Tensor
     
 参数说明:
 输入说明:
 x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
 x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
-bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float, 数据格式支持ND.
+bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float32, 数据格式支持ND.
 
 输出说明:
 y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
 
 属性说明:
-transpose_x1: 布尔类型, 是否对x1转置, 目前只支持为false. 
-transpose_x2: 布尔类型, 是否对x2转置, 默认为false. 
-all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-2,-1]，传入空时默认按[-2,-1]处理.
+hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
+world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2].
 
 约束说明:
-该算子目前支持两种场景，非量化，pertoken-perchannel量化.
+假设x1为[BS,H1]，x2为[H1,H2]
+默认支持确定性计算
+右矩阵和输出矩阵的H2必须整除rankSize
+H1范围仅支持[1, 65535]
+rankSize仅支持2,4,8,16
+通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
+不支持跨超节点通信，只支持超节点内。
 
 支持的PyTorch版本
-PyTorch 2.6
+PyTorch 2.7.1
 
 
 支持的型号:
@@ -6664,9 +6670,28 @@ PyTorch 2.6
 
 调用示例:
 单算子模式调用
-待补充
-图模式调用
-暂不支持
+import torch
+import torch_npu
+import math
+
+# 初始化输入
+x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
+x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
+bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+# 其他参数
+hcom = "fake group info"
+world_size = 2
+# 调用MatmulAlltoAll算子
+res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias, [-1,-2])
+# 输出res的形状类似于
+tensor([[ 0.7483, -0.2262, -0.5252,  ..., -0.6810,  1.5576, -0.3997],
+        [ 0.3010,  0.9226,  0.7723,  ..., -1.0785,  0.8963, -0.4670],
+        [-1.6897, -0.6455,  0.0328,  ..., -0.6632, -0.0950, -0.0679],
+        ...,
+        [ 0.2493, -0.2285,  1.1562,  ..., -0.2299,  0.1272,  0.4843],
+        [-0.2058, -0.5962, -0.2101,  ...,  1.2606,  0.8451,  1.1243],
+        [-0.8396,  1.3138, -0.4066,  ..., -0.7683,  1.3133,  0.7471]])
+
 """
 )
 
@@ -6674,59 +6699,97 @@ _add_torch_npu_docstr(
     "npu_quant_matmul_all_to_all",
     """
 功能描述:
-算子功能: 该融合算子提供matmul和alltoall的计算功能. 目前支持1种量化场景和1种非量化场景
+算子功能: 该融合算子提供量化matmul和alltoall的计算功能. 目前支持pertoken-perchannel量化
 计算公式: 
-output=alltoall(x1@x2+bias)
+output=alltoall((x1@x2+bias) * x1Scale * x2Scale)
 
 接口原型:
-torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=0, int x2_quant_mode=0, int common_quant_mode=0, int group_sizes=0, int[]? all2all_axes=None, bool transpose_x1=False, bool transpose_x2=False, bool all2all_out_flag=True, int comm_quant_dtype=-1, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
-    
+torch_npu.npu_quant_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=3, int x2_quant_mode=2, int common_quant_mode=0, int[]? group_sizes=None, int[]? all2all_axes=None, int comm_quant_dtype=0, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
+
 参数说明:
 输入说明:
-x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8，数据格式支持ND.
-x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8，数据格式支持ND.
-bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float，数据格式支持ND.
-x1_scale: Tensor类型, 可选输入参数，左矩阵的量化scale，数据类型支持float32，float8_e8m0， 数据格式支持ND.
-x2_scale: Tensor类型, 可选输入参数，右矩阵的量化scale，数据类型支持float32，float8_e8m0， 数据格式支持ND.
-common_scale: Tensor类型, The type support float. The format supports ND.
-x1_offset: Tensor类型, The type support float. The format supports ND.
-x2_offset: Tensor类型, The type support float, float16. The format supports ND.
-y_offset: Tensor类型, The type support float. The format supports ND.
+x1: Tensor类型， 左矩阵输入张量，对应公式中的x1，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
+x2: Tensor类型，右矩阵输入张量，对应公式中的x2，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
+biasOptional: Tensor类型,可选输入张量，偏置项，仅在传入非空时生效，数据类型为FLOAT32。
+x1Scale: Tensor类型，左矩阵的量化系数，对应公式中的x1Scale，数据类型为FLOAT32。
+x2Scale: Tensor类型，右矩阵的量化系数，对应公式中的x2Scale，数据类型为FLOAT32。
+commScaleOptional: Tensor类型，可选输入，低比特通信的量化系数，暂不支持。
+x1OffsetOptional: Tensor类型，可选输入，左矩阵的量化偏置，暂不支持。
+x2OffsetOptional: Tensor类型，可选输入，右矩阵的量化偏置，暂不支持。
+x1QuantMode: Int类型，左矩阵的量化方式，当前仅支持配置为3，表示PerToken。
+x2QuantMode: Int类型，右矩阵的量化方式，当前仅支持配置为2，表示PerChannel。
+commQuantMode: Int类型，低比特通信的量化方式，预留参数，当前仅支持配置为0，表示不量化。
+commQuantDtype: Int类型，低比特通信的量化类型，预留参数，当前仅支持配置为-1，表示ACL_DT_UNDEFINED。
+groupSize: 数组类型，用于Matmul计算三个方向上的量化分组大小，预留参数，K-C量化模式下仅支持配置为0，取值不生效。
 
 输出说明:
-y: A matrix Tensor. The type support bfloat16, float16, float. The format supports ND.
-all2all_out: A matrix Tensor. The type support bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8. The format supports ND.
+y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, float32, 数据格式支持ND.
 
 属性说明:
-group: A string. Communication domain identifier.
-world_size: An int.
-y_dtype: An int. Declare the output dtype. Default: static_cast<int64_t>(ge::DT_UNDEFINED) 为28.
-x1_quant_mode: An int. Calculation mode of x1. Default: 0.
-x2_quant_mode: An int. Calculation mode of x2. Default: 0.
-y_quant_mode: An int. Calculation mode of y. Default: 0.
-comm_quant_mode: An int. Quantitative types of communication. Default: 0.
-comm_quant_dtype: An int. Communication accuracy. Default: static_cast<int64_t>(ge::DT_UNDEFINED) 为28.
-transpose_x1: A bool. x1 is transposed if true. Default: false.
-transpose_x2: A bool. x2 is transposed if true. Default: false.
-group_size: An int. Default: 0.
-alltoall_out_flag: A bool. Default: true.
+hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
+world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2].
 
 约束说明:
-该算子目前支持两种场景，非量化，pertoken-perchannel量化，pertensor-pertensor量化，mx quant量化
+假设x1为[BS,H1]，x2为[H1,H2]
+默认支持确定性计算
+右矩阵和输出矩阵的H2必须整除rankSize
+仅支持BS为0的空tensor
+H1范围仅支持[1, 65535]
+rankSize仅支持2,4,8,16
+通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
+不支持跨超节点通信，只支持超节点内。
 
 支持的PyTorch版本
-PyTorch 2.6
-
+PyTorch 2.7.1
 
 支持的型号:
-? Atlas A2 训练系列产品/Atlas 800I A2 推理产品
-? Atlas A3 训练系列产品
+? Atlas A5 训练系列产品
 
 调用示例:
 单算子模式调用
-待补充
-图模式调用
-暂不支持
+import torch
+import torch_npu
+import math
+
+# 初始化输入
+x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float8_e4m3fn).npu()
+x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float8_e4m3fn).npu()
+bias = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+x1Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+x2Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+# 其他参数
+hcom = "fake group info"
+world_size = 2
+common_scale = None
+x1_offset = None
+x2_offset = None
+x1_quant_mode = 3
+x2_quant_mode = 2
+common_quant_mode = 0
+group_size = [0]
+all2all_axes=[-1,-2]
+comm_quant_dtype = 0
+x1_dtype = None
+x2_dtype = None
+x1_scale_dtype = None
+x2_scale_dtype = None
+output_scale_dtype = None
+comm_scale_dtype = None
+y_dtype = None
+# 调用QuantMatmulAlltoAll算子
+res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size, bias, x1Scale, x2Scale, common_scale, x1_offset, x2_offset,
+    x1_quant_mode, x2_quant_mode, common_quant_mode, group_size, all2all_axes, comm_quant_dtype, x1_dtype, x2_dtype, x1_scale_dtype,
+    x2_scale_dtype, output_scale_dtype, comm_scale_dtype, y_dtype)
+# 输出res的形状类似于
+tensor([[-1.3330,  0.3899,  0.3205,  ...,  0.3482, -0.4815,  0.4637],
+        [ 0.3511,  1.7768, -0.2588,  ..., -0.3826,  0.7349, -0.0110],
+        [ 1.2357, -1.0084, -1.4964,  ..., -0.4084, -0.9424, -0.5332],
+        ...,
+        [ 1.2147, -1.7824,  1.6442,  ...,  0.6114, -1.6988,  1.1249],
+        [ 0.5168, -0.7395, -0.3615,  ...,  1.6038,  0.0826,  0.8413],
+        [ 1.0905, -0.1828,  0.7823,  ...,  0.2952, -0.7067,  0.9949]])
+
 """
 )
 

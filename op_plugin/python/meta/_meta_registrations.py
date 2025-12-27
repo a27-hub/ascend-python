@@ -2378,13 +2378,11 @@ def npu_matmul_all_to_all_meta(x1, x2, hcom, world_size, bias=None, all2all_axes
     # world_size为设备卡数，这里假设卡数为2
     world_size = 2
     # 推导output的shape
-    # 因为该算子目前不支持x1转置，所以output的m维度==x1的m维度
+    # 因为该算子目前不支持转置，所以output的m维度==x1.size[0]，output的n维度==x2.size[1]
     out_m = x1.size(0) * world_size
-    # output的n维度根据x2是否转置，取x2的k维度或者n维度
-    if x2.size(0) == x1.size(1):
+    out_n = x2.size(1)
+    if world_size != 0:
         out_n = x2.size(1) // world_size
-    else:
-        out_n = x2.size(0) // world_size
     size = [out_m, out_n]
     # matmul_all_to_all算子的输出dtype，必须等于输入x1和x2的dtype
     dtype = x1.dtype
@@ -2400,15 +2398,13 @@ def npu_quant_matmul_all_to_all_meta(x1, x2, hcom, world_size, bias=None, x1_sca
     # world_size为设备卡数，这里假设卡数为2
     world_size = 2
     # 推导output的shape
-    # 因为该算子目前不支持x1转置，所以output的m维度==x1的m维度
+    # 因为该算子目前不支持转置，所以output的m维度==x1.size[0]，output的n维度==x2.size[1]
     out_m = x1.size(0) * world_size
-    # output的n维度根据x2是否转置，取x2的k维度或者n维度
-    if x2.size(0) == x1.size(1):
+    out_n = x2.size(1)
+    if world_size != 0:
         out_n = x2.size(1) // world_size
-    else:
-        out_n = x2.size(0) // world_size
     size = [out_m, out_n]
-    # 推导output的dtype
+    # 推导output的dtype，默认为float32
     if y_dtype is None:
         dtype = torch.float32
     else:

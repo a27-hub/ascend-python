@@ -48,7 +48,7 @@ at::Tensor npu_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x2, c10
         TORCH_CHECK(x2.size(1) % world_size == 0, "The x2 n-axis should be divisible by world_size", OPS_ERROR(ErrCode::PARAM));
     }
 
-    // pta主要是为了推导output的shape和dtype，如果这里的output_dtype没有传入，则默认是bf16
+    // pta主要是为了推导output的shape和dtype，非量化matmulalltoall的output_dtype和输入x1一致
     aclDataType output_acl_type = npu_preparation::convert_to_acl_data_type(x1.scalar_type());
     at::ScalarType output_scalar_type = npu_preparation::convert_to_scalar_type(output_acl_type);
 

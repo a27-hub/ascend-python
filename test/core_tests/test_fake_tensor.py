@@ -3693,7 +3693,8 @@ class TestMatmulAlltoAll(TestCase):
             hcom = "fake group info"
             world_size = 2
             # 断言
-            res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias, all2all_axes=[-1,-2])
+            res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias, [-1,-2])
+            # 因为是假张量，所以只匹配shape是否对应
             self.assertTrue(len(res.shape) == 2)
             self.assertTrue(x1.shape[0] * world_size == res.shape[0])
             if world_size != 0:
@@ -3707,9 +3708,9 @@ class TestQuantMatmulAlltoAll(TestCase):
             # 设置随机数种子
             torch.manual_seed(0)
             # 初始化输入
-            x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
-            x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
-            bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+            x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float8_e4m3fn).npu()
+            x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float8_e4m3fn).npu()
+            bias = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
             x1Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
             x2Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
             # 其他参数
@@ -3730,10 +3731,17 @@ class TestQuantMatmulAlltoAll(TestCase):
             x2_scale_dtype = None
             output_scale_dtype = None
             comm_scale_dtype = None
-            y_dtype = 0
-            # res等于调用npu_quant_matmul_all_to_all，shape断言后面再补充
+            y_dtype = None
+
             # 断言
-            self.assertTrue(2 == 2)
+            res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size, bias, x1Scale, x2Scale, common_scale, x1_offset, x2_offset,
+                x1_quant_mode, x2_quant_mode, common_quant_mode, group_size, all2all_axes, comm_quant_dtype, x1_dtype, x2_dtype, x1_scale_dtype,
+                x2_scale_dtype, output_scale_dtype, comm_scale_dtype, y_dtype)
+            # 因为是假张量，所以只匹配shape是否对应
+            self.assertTrue(len(res.shape) == 2)
+            self.assertTrue(x1.shape[0] * world_size == res.shape[0])
+            if world_size != 0:
+                self.assertTrue(x2.shape[1] / world_size == res.shape[1])
 
 
 class TestNpuDSA(TestCase):
