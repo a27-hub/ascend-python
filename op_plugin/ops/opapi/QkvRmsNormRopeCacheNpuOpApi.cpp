@@ -68,7 +68,7 @@ namespace op_api {
         return std::tie(q_out_before_quant, k_out_before_quant, v_out_before_quant);
     }
 
-    std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(
+    std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(
         const at::Tensor& qkv,
         const at::Tensor& q_gamma,
         const at::Tensor& k_gamma,
