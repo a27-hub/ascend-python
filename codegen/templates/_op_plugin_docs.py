@@ -2315,7 +2315,7 @@ _add_torch_npu_docstr(
     "npu_attention_update",
     """
 接口原型：
-npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lse_out=None) -> Tensor
+npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
 
 功能描述
 将各SP域PA算子的输出的中间结果lse, attention out 两个局部结果更新成全局结果。
@@ -2328,12 +2328,12 @@ O = ΣOi * exp(lsei - lsem)
 
 参数说明
 lse：Device侧的TensorList，每个Tensor形状为 (batch * seqLen * headNum)，各sp域计算的lse。数据类型支持 FLOAT，格式支持 ND。
-localOut：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，格式支持 ND。
-updateType：int64_t 类型，指定执行的操作类型。目前仅支持 0（DECODE_UPDATE）。
+local_out：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，FLOAT16，BFLOAT16，格式支持 ND。
+update_type：int64_t 类型，指定执行的操作类型。
 
 输出说明
-out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，格式为 ND。
-lse_out: Tensor类型
+out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，FLOAT16，BFLOAT16，格式为 ND。
+lse_out: Device侧的Tensor，形状为 (batch * seqLen * headNum)，数据类型为 FLOAT格式为 ND。update_type=1时有效。
 
 支持的型号
 ----------------
@@ -2360,7 +2360,7 @@ local_out = [
 ]
 
 update_type = 0  
-output, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
+out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
 """
 )
 
@@ -7264,6 +7264,50 @@ scale = 1/math.sqrt(128.0)
 out = torch_npu._npu_fused_infer_attention_score_get_max_workspace(q, k, v, num_heads = 8, input_layout = "BNSD", scale = scale, pre_tokens=65535, next_tokens=65535)
 
 # 执行上述代码的输出类似如下
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+
+# 入图方式
+暂不支持入图
+"""
+)
+
+_add_torch_npu_docstr(
+    "_npu_fused_infer_attention_score_infer_output",
+    """
+功能描述:
+算子功能：用于npu_fused_infer_attention_score算子aclgraph tilling下沉场景，推算output tensor 并创建一个此size大小的tensor， 实际返回output_tensor 和 softmax_lse_tensor。
+
+接口原型:
+torch_npu._npu_fused_infer_attention_score_infer_output(Tensor query, Tensor value, *, str input_layout="BSH", Tensor? quant_scale2=None, Tensor? block_table=None, int num_heads=1, int num_key_value_heads=0, bool softmax_lse_flag=False, Tensor? query_rope=None) -> (Tensor, Tensor)
+
+参数说明:
+输入为npu_fused_infer_attention_score的子集
+输出类型为(Tensor, Tensor), 由适配层推导，计算返回对应的output_tensor 和 softmax_lse_tensor。
+约束说明:
+当Q_S等于1时：请参考Incre_Flash_Attention限制
+当Q_S大于1时：请参考Prompt_Flash_Attention限制
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+# 单算子调用方式
+import torch
+import torch_npu
+import math
+
+# 生成随机数据, 并发送到npu
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+
+# 调用FIA算子
+out，softmax_lse = torch_npu._npu_fused_infer_attention_score_infer_output(q, k, v, num_heads = 8, input_layout = "BNSD")
+
+# 执行上述代码的输出类似如下
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
 tensor([0., 0., ..., 0., 0., 0.],
         device='npu:0', dtype=torch.float16)
 
