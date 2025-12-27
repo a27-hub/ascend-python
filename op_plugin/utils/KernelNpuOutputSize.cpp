@@ -1864,44 +1864,6 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
-{
-    aclDataType dst_acltype = aclDataType::ACL_INT32;
-    if (dst_dtype.has_value()) {
-        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-    }
-    auto outputSize = op_infer::array_to_small_vector(self.sizes());
-    auto dimNum = self.dim();
-    if (dst_acltype == aclDataType::ACL_FLOAT4_E2M1) {
-        c10::SmallVector<int64_t, SIZE> output;
-        output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2]};
-        return output;
-    }
-    TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
-        "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-    outputSize[dimNum - 1] /= INT4_NUMS_IN_INT32_SPACE;
-    return outputSize;
-}
-
-c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self, c10::optional<int64_t> dst_dtype)
-{
-    aclDataType dst_acltype = aclDataType::ACL_INT32;
-    if (dst_dtype.has_value()) {
-        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-    }
-    int64_t resultSize = self.size(0);
-    auto outputSize = op_infer::array_to_small_vector(self.sizes());
-    auto dimNum = self.dim();
-    if (dst_acltype == aclDataType::ACL_FLOAT4_E2M1) {
-        int64_t alignBase = 64UL;
-        auto alignSize = (outputSize[dimNum - 1] * outputSize[dimNum - 2] + alignBase - 1) / alignBase;
-        outputSize = {resultSize, alignSize, 2};
-    } else {
-        outputSize = {resultSize};
-    }
-    return outputSize;
-}
-
 c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
     c10::SmallVector<int64_t, SIZE> output_size;

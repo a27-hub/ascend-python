@@ -21,6 +21,7 @@
 
 namespace op_api {
 const int64_t INT4_NUMS_IN_INT32_SPACE = 8;
+const int64_t FP4_IN_UINT8_NUM = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 
 c10::SmallVector<int64_t, SIZE> cal_out_size(const at::Tensor& self, aclDataType dst_type)
@@ -28,8 +29,11 @@ c10::SmallVector<int64_t, SIZE> cal_out_size(const at::Tensor& self, aclDataType
     auto outputSize = op_infer::array_to_small_vector(self.sizes());
     auto dimNum = self.dim();
     if (dst_type == aclDataType::ACL_FLOAT4_E2M1) {
+        TORCH_CHECK(outputSize[dimNum - 1] % FP4_IN_UINT8_NUM == 0,
+                    "The last dim input shape must be divisible by 2 if "
+                    "output dtype is torch_npu.float4_e2m1" + OPS_ERROR(ErrCode::PARAM));
         c10::SmallVector<int64_t, SIZE> output;
-        output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2]};
+        output = {outputSize[0], outputSize[dimNum - 1] * outputSize[dimNum - 2] / FP4_IN_UINT8_NUM};
         return output;
     }
     TORCH_CHECK(outputSize[dimNum - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
