@@ -6628,6 +6628,109 @@ graph output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694,  0.1
 )
 
 _add_torch_npu_docstr(
+    "npu_matmul_all_to_all",
+    """
+功能描述:
+算子功能: 该融合算子提供matmul和alltoall的计算功能. 目前支持1种量化场景和1种非量化场景
+计算公式: 
+output=alltoall(x1@x2+bias)
+
+接口原型:
+torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, Tensor? bias=None, int[]? all2all_axes=None, bool transpose_x1=False, bool transpose_x2=False) -> Tensor
+    
+参数说明:
+输入说明:
+x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float, 数据格式支持ND.
+
+输出说明:
+y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
+
+属性说明:
+transpose_x1: 布尔类型, 是否对x1转置, 目前只支持为false. 
+transpose_x2: 布尔类型, 是否对x2转置, 默认为false. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-2,-1]，传入空时默认按[-2,-1]处理.
+
+约束说明:
+该算子目前支持两种场景，非量化，pertoken-perchannel量化.
+
+支持的PyTorch版本
+PyTorch 2.6
+
+
+支持的型号:
+? Atlas A5 训练系列产品
+
+调用示例:
+单算子模式调用
+待补充
+图模式调用
+暂不支持
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_quant_matmul_all_to_all",
+    """
+功能描述:
+算子功能: 该融合算子提供matmul和alltoall的计算功能. 目前支持1种量化场景和1种非量化场景
+计算公式: 
+output=alltoall(x1@x2+bias)
+
+接口原型:
+torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=0, int x2_quant_mode=0, int common_quant_mode=0, int group_sizes=0, int[]? all2all_axes=None, bool transpose_x1=False, bool transpose_x2=False, bool all2all_out_flag=True, int comm_quant_dtype=-1, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
+    
+参数说明:
+输入说明:
+x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8，数据格式支持ND.
+x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8，数据格式支持ND.
+bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float，数据格式支持ND.
+x1_scale: Tensor类型, 可选输入参数，左矩阵的量化scale，数据类型支持float32，float8_e8m0， 数据格式支持ND.
+x2_scale: Tensor类型, 可选输入参数，右矩阵的量化scale，数据类型支持float32，float8_e8m0， 数据格式支持ND.
+common_scale: Tensor类型, The type support float. The format supports ND.
+x1_offset: Tensor类型, The type support float. The format supports ND.
+x2_offset: Tensor类型, The type support float, float16. The format supports ND.
+y_offset: Tensor类型, The type support float. The format supports ND.
+
+输出说明:
+y: A matrix Tensor. The type support bfloat16, float16, float. The format supports ND.
+all2all_out: A matrix Tensor. The type support bfloat16, float16, float8_e4m3fn, float8_e5m2, hifloat8. The format supports ND.
+
+属性说明:
+group: A string. Communication domain identifier.
+world_size: An int.
+y_dtype: An int. Declare the output dtype. Default: static_cast<int64_t>(ge::DT_UNDEFINED) 为28.
+x1_quant_mode: An int. Calculation mode of x1. Default: 0.
+x2_quant_mode: An int. Calculation mode of x2. Default: 0.
+y_quant_mode: An int. Calculation mode of y. Default: 0.
+comm_quant_mode: An int. Quantitative types of communication. Default: 0.
+comm_quant_dtype: An int. Communication accuracy. Default: static_cast<int64_t>(ge::DT_UNDEFINED) 为28.
+transpose_x1: A bool. x1 is transposed if true. Default: false.
+transpose_x2: A bool. x2 is transposed if true. Default: false.
+group_size: An int. Default: 0.
+alltoall_out_flag: A bool. Default: true.
+
+约束说明:
+该算子目前支持两种场景，非量化，pertoken-perchannel量化，pertensor-pertensor量化，mx quant量化
+
+支持的PyTorch版本
+PyTorch 2.6
+
+
+支持的型号:
+? Atlas A2 训练系列产品/Atlas 800I A2 推理产品
+? Atlas A3 训练系列产品
+
+调用示例:
+单算子模式调用
+待补充
+图模式调用
+暂不支持
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_prompt_flash_attention",
     """
 功能描述:
