@@ -4167,9 +4167,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
                    (weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2)
     
     FP4_IN_INT8 = 2
-    weight_trans = False
-    if weight[0].stride(-2) == 1:
-        weight_trans = True
+    weight_trans = (x.size(-1) == weight[0].size(-2))
     mxfp_multi_base_size = 2
     mxfp_divisor_size = 64
     output_n = n // mxfp_multi_base_size
