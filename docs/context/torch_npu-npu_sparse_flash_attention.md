@@ -21,7 +21,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_value, *, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, attention_mode=0, return_softmax_lse=False) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_value, *, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, key_rope=None, sparse_block_size=1, layout_query='BSND', layout_kv='BSND', sparse_mode=3, pre_tokens=2**63-1, next_tokens=2**63-1, attention_mode=0, return_softmax_lse=False) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -68,13 +68,13 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 -   **attention\_mode**（`int`）：可选参数，表示attention的模式，数据类型支持`int64`，仅支持传入2，表示MLA-absorb模式，即计算过程中会将query和key的nope部分分别和query_rope和key_rope的rope部分沿头维度（D）拼接，合并形成最终的query和key用于后续计算，且key和value共享同一份底层张量数据。
 
--   **return\_softamx\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
+-   **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
 
 ## 返回值说明
 
 -   **attention\_out**（`Tensor`）：公式中的输出。数据格式支持ND，数据类型支持`bfloat16`和`float16`。当layout\_query为BSND时shape为[B,S1,N1,D]，当layout\_query为TND时shape为[T1,N1,D]。
--   **softmax\_max**（`Tensor`）：可选输出，Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持`float`。当layout\_query为BSND时shape为[B,N2,S1,N1/N2]，当layout\_query为TND时shape为[N2,T1,N1/N2]。
--   **softmax\_sum**（`Tensor`）：可选输出，Attention算法query乘key的结果减去softmax_max, 再取exp，接着求sum，得到softmax_sum，数据类型支持`float`。当layout\_query为BSND时shape为[B,N2,S1,N1/N2]，当layout\_query为TND时shape为[N2,T1,N1/N2]。
+-   **softmax\_max**（`Tensor`）：输出Attention算法对query乘key的结果，取max得到softmax_max，数据类型支持`float`。当`return\_softmax\_lse`为True时，layout\_query为BSND时shape为[B,N2,S1,N1/N2]，layout\_query为TND时shape为[N2,T1,N1/N2]；当`return\_softmax\_lse`为False时，输出shape为\[1\]的值为0的tensor。
+-   **softmax\_sum**（`Tensor`）：输出Attention算法query乘key的结果减去softmax_max, 再取exp，接着求sum，得到softmax_sum，数据类型支持`float`。当`return\_softmax\_lse`为True时，layout\_query为BSND时shape为[B,N2,S1,N1/N2]，layout\_query为TND时shape为[N2,T1,N1/N2]；当`return\_softmax\_lse`为False时，输出shape为\[1\]的值为0的tensor。
 
 ## 约束说明
 
