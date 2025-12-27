@@ -19,7 +19,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, return_value=False) -> (Tensor, Tensor)
+torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3, pre_tokens=2**63-1, next_tokens=2**63-1, return_value=False) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -61,7 +61,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 
 -   **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。仅支持默认值2^63-1。
 
--   **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，但图模式下不支持，False表示不输出；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
+-   **return\_value**（`bool`）：可选参数，为True表示输出`sparse_values`，但图模式下不支持，False表示`sparse_values`为`None`或空张量；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
 
 ## 返回值说明
 
@@ -73,7 +73,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 
 -   该接口支持图模式。
 -   参数query中的N支持64，key中的N支持1。
--   参数query中的D和参数key中的D值相等为128。
+-   参数query中的D和参数key中的D值相等，且均为128。
 -   参数query、key、weights的数据类型应保持一致。
 
 ## 调用示例
