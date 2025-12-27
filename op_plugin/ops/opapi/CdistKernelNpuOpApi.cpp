@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -20,8 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-static at::Tensor &cdist_out_op_api(const at::Tensor &x1, const at::Tensor &x2, float p, 
-                                    c10::optional<int64_t> compute_mode, at::Tensor &out)
+static at::Tensor &cdist_out_op_api(const at::Tensor &x1, const at::Tensor &x2, float p, c10::optional<int64_t> compute_mode, at::Tensor &out)
 {
     int64_t compute_mode_value = compute_mode.has_value() ? compute_mode.value() : 0;
     EXEC_NPU_CMD(aclnnCdist, x1, x2, p, compute_mode_value, out);
