@@ -3351,7 +3351,7 @@ def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_
             raise RuntimeError("the dim num of input x must be 3" + ops_error(ErrCode.NOT_SUPPORT))
         output_shape = [x.size(0), x.size(dim_num - 1) * x.size(dim_num - 2)]
         align_base = 64
-        align_size = (x.size(dim_num - 1) * x.size(dim_num - 2) + align_base -1) / align_base + align_base
+        align_size = (x.size(dim_num - 1) * x.size(dim_num - 2) + align_base -1) / align_base
         scale_shape = [x.size(0), align_size, 2]
         return x.new_empty(output_shape, dtype=torch_npu.float4_e2m1fn_x2), x.new_empty(scale_shape, dtype=torch_npu.float8_e8m0fnu)
     else:
@@ -4269,15 +4269,15 @@ def npu_cross_entropy_loss_meta(
 
 @impl(m, "npu_cross_entropy_loss_backward")
 def npu_cross_entropy_loss_backward_meta(
-    grad_loss, 
-    log_prob, 
-    target, 
-    weight=None, 
-    grad_zloss=None, 
-    lse_for_zloss=None, 
-    reduction='mean', 
-    ignore_index=-100, 
-    label_smoothing=0.0, 
+    grad_loss,
+    log_prob,
+    target,
+    weight=None,
+    grad_zloss=None,
+    lse_for_zloss=None,
+    reduction='mean',
+    ignore_index=-100,
+    label_smoothing=0.0,
     lse_square_scale_for_zloss=0.0
 ):
     result = torch.empty_like(log_prob)

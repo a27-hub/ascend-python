@@ -1890,11 +1890,11 @@ c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &sel
         dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
     }
     int64_t resultSize = self.size(0);
-    at::SmallVector<int64_t, SIZE> outputSize;
+    auto outputSize = op_infer::array_to_small_vector(self.sizes());
     auto dimNum = self.dim();
     if (dst_acltype == aclDataType::ACL_FLOAT4_E2M1) {
         int64_t alignBase = 64UL;
-        auto alignSize = (outputSize[dimNum - 1] * outputSize[dimNum - 2] + alignBase - 1) / alignBase * alignBase;
+        auto alignSize = (outputSize[dimNum - 1] * outputSize[dimNum - 2] + alignBase - 1) / alignBase;
         outputSize = {resultSize, alignSize, 2};
     } else {
         outputSize = {resultSize};
