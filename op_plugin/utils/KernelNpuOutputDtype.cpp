@@ -127,26 +127,4 @@ at::ScalarType abs_out_dtype(const at::Tensor& self)
     return output;
 }
 
-at::ScalarType npu_kronecker_quant_out_type(c10::optional<int64_t> dst_dtype)
-{
-    aclDataType dst_acltype = aclDataType::ACL_INT32;
-    if (dst_dtype.has_value()) {
-        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-    }
-    return dst_acltype == aclDataType::ACL_FLOAT4_E2M1 ?
-               at_npu::native::OpPreparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1) :
-               at::kInt;
-}
-
-at::ScalarType npu_kronecker_quant_scale_type(c10::optional<int64_t> dst_dtype)
-{
-    aclDataType dst_acltype = aclDataType::ACL_INT32;
-    if (dst_dtype.has_value()) {
-        dst_acltype = c10_npu::GetAclDataType(dst_dtype.value());
-    }
-    return dst_acltype == aclDataType::ACL_FLOAT4_E2M1 ?
-               at_npu::native::OpPreparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0) :
-               at::kFloat;
-}
-
 } // namespace op_infer
