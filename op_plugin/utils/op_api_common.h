@@ -1276,7 +1276,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
-                    "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
+                    " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", __VA_ARGS__);                                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
@@ -1335,7 +1335,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
-                    "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
+                    " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", __VA_ARGS__);                                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
@@ -1417,7 +1417,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");                                       \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
-                    "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
+                    " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
@@ -1482,7 +1482,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");                             \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
-                    "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
+                    " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
@@ -1547,34 +1547,36 @@ auto DecodeDevice(Ts&... args) -> at::Device
         }                                                                                                              \
     } while (false)
 
-#define DO_MATMUL_COMPATIBILITY(aclnn_nz_api, aclnn_nd_api, input1, input2, aclop_func_call)                 \
-    do {                                                                                                     \
-        if (op_plugin::utils::is_two_tensor_base_format(input1, input2)) {                                   \
-            DO_COMPATIBILITY(aclnn_nd_api, aclop_func_call);                                                 \
-        } else {                                                                                             \
-            static bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&    \
-                                             c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) || \
-                                         (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);      \
-            if (op_plugin::utils::is_nd_nz_format(input1, input2) && is_support_soc) {                       \
-                DO_COMPATIBILITY(aclnn_nz_api, aclop_func_call);                                             \
-            } else {                                                                                         \
-                if (!c10_npu::IsAclnnOnly()) {                                                               \
-                    return aclop_func_call;                                                                  \
-                }                                                                                            \
-                const torch_npu::NPUStorageDesc &tensor_desc1 =                                              \
-                    torch_npu::NPUBridge::GetNpuStorageImpl(input1)->npu_desc_;                              \
-                const torch_npu::NPUStorageDesc &tensor_desc2 =                                              \
-                    torch_npu::NPUBridge::GetNpuStorageImpl(input2)->npu_desc_;                              \
-                TORCH_CHECK(false,                                                                           \
-                    "matmul got not support format in current device: ",                                     \
-                    "(",                                                                                     \
-                    tensor_desc1.npu_format_,                                                                \
-                    ", ",                                                                                    \
-                    tensor_desc2.npu_format_,                                                                \
-                    ")",                                                                                     \
-                    OPS_ERROR(ErrCode::PARAM));                                                              \
-            }                                                                                                \
-        }                                                                                                    \
+#define DO_MATMUL_COMPATIBILITY(aclnn_nz_api, aclnn_nd_api, input1, input2, aclop_func_call)                           \
+    do {                                                                                                               \
+        if (op_plugin::utils::is_two_tensor_base_format(input1, input2)) {                                             \
+            DO_COMPATIBILITY(aclnn_nd_api, aclop_func_call);                                                           \
+        } else {                                                                                                       \
+            static bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&              \
+                                             c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||           \
+                                         (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);                \
+            bool is_nz_dtype_valid = (c10_npu::IsAclnnOnly() || ((input1).scalar_type() != at::ScalarType::Float &&    \
+                                        (input2).scalar_type() != at::ScalarType::Float));                             \
+            if (op_plugin::utils::is_nd_nz_format(input1, input2) && is_support_soc && is_nz_dtype_valid) {            \
+                DO_COMPATIBILITY(aclnn_nz_api, aclop_func_call);                                                       \
+            } else {                                                                                                   \
+                if (!c10_npu::IsAclnnOnly()) {                                                                         \
+                    return aclop_func_call;                                                                            \
+                }                                                                                                      \
+                const torch_npu::NPUStorageDesc &tensor_desc1 =                                                        \
+                    torch_npu::NPUBridge::GetNpuStorageImpl(input1)->npu_desc_;                                        \
+                const torch_npu::NPUStorageDesc &tensor_desc2 =                                                        \
+                    torch_npu::NPUBridge::GetNpuStorageImpl(input2)->npu_desc_;                                        \
+                TORCH_CHECK(false,                                                                                     \
+                    "matmul got not support format in current device: ",                                               \
+                    "(",                                                                                               \
+                    tensor_desc1.npu_format_,                                                                          \
+                    ", ",                                                                                              \
+                    tensor_desc2.npu_format_,                                                                          \
+                    ")",                                                                                               \
+                    OPS_ERROR(ErrCode::PARAM));                                                                        \
+            }                                                                                                          \
+        }                                                                                                              \
     } while (0)
 
 template <typename Tuple> class ConvertedParams {
@@ -1648,7 +1650,7 @@ private:
         static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");                             \
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " and ",              \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
-                    "not found.", OPS_ERROR(ErrCode::PTR));                                                            \
+                    " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
