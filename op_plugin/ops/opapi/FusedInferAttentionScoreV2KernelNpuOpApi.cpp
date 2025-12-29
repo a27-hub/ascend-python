@@ -447,9 +447,9 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_v2_symint(
         TensorWrapper query_rope_wrapper = make_wrapper(query_rope_tmp, query_rope_dtype);
         auto key_rope_tmp = key_rope.has_value() ? key_rope.value() : null_tensor;
         TensorWrapper key_rope_wrapper = make_wrapper(key_rope_tmp, key_rope_dtype);
-        auto dequant_scale_key_tmp = dequant_scale_key.has_value() ? dequant_scale_key.value() : null_tensor;
-        TensorWrapper dequant_scale_query_wrapper = make_wrapper(dequant_scale_query_tmp, dequant_scale_query_dtype);
         auto dequant_scale_query_tmp = dequant_scale_query.has_value() ? dequant_scale_query.value() : null_tensor;
+        TensorWrapper dequant_scale_query_wrapper = make_wrapper(dequant_scale_query_tmp, dequant_scale_query_dtype);
+        auto dequant_scale_key_tmp = dequant_scale_key.has_value() ? dequant_scale_key.value() : null_tensor;
         TensorWrapper dequant_scale_key_wrapper = make_wrapper(dequant_scale_key_tmp, dequant_scale_key_dtype);
         auto dequant_scale_value_tmp = dequant_scale_value.has_value() ? dequant_scale_value.value() : null_tensor;
         TensorWrapper dequant_scale_value_wrapper = make_wrapper(dequant_scale_value_tmp, dequant_scale_value_dtype);
