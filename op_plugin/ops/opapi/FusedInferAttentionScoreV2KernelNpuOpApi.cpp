@@ -354,9 +354,8 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_v2(
         }
         output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), output_type);
     } else if (query.dtype() == at::kChar || query.dtype() == at::ScalarType::Float8_e4m3fn || is_hifloat8_input) {
-        at::ScalarType output_type = at::ScalarType::Char;
         if (out_dtype.has_value()) {
-            output_type = c10_npu::GetATenDType(out_dtype.value());
+            at::ScalarType output_type = c10_npu::GetATenDType(out_dtype.value());
             output = npu_preparation::apply_tensor_without_format(tmp_output.sizes(), output_type);
         } else if (query_rope.has_value()) {
             const at::Tensor &query_rope_tensor = c10::value_or_else(query_rope, [] { return at::Tensor(); });
