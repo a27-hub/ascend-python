@@ -445,15 +445,15 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_v2_symint(
 
         at::Tensor null_tensor;
         auto query_rope_tmp = query_rope.has_value() ? query_rope.value() : null_tensor;
-        TensorWrapper query_rope_wrapper = make_wrapper(query_rope, query_rope_dtype);
+        TensorWrapper query_rope_wrapper = make_wrapper(query_rope_tmp, query_rope_dtype);
         auto key_rope_tmp = key_rope.has_value() ? key_rope.value() : null_tensor;
-        TensorWrapper key_rope_wrapper = make_wrapper(key_rope, key_rope_dtype);
+        TensorWrapper key_rope_wrapper = make_wrapper(key_rope_tmp, key_rope_dtype);
         auto dequant_scale_key_tmp = dequant_scale_key.has_value() ? dequant_scale_key.value() : null_tensor;
-        TensorWrapper dequant_scale_query_wrapper = make_wrapper(dequant_scale_query, dequant_scale_query_dtype);
+        TensorWrapper dequant_scale_query_wrapper = make_wrapper(dequant_scale_query_tmp, dequant_scale_query_dtype);
         auto dequant_scale_query_tmp = dequant_scale_query.has_value() ? dequant_scale_query.value() : null_tensor;
-        TensorWrapper dequant_scale_key_wrapper = make_wrapper(dequant_scale_key, dequant_scale_key_dtype);
+        TensorWrapper dequant_scale_key_wrapper = make_wrapper(dequant_scale_key_tmp, dequant_scale_key_dtype);
         auto dequant_scale_value_tmp = dequant_scale_value.has_value() ? dequant_scale_value.value() : null_tensor;
-        TensorWrapper dequant_scale_value_wrapper = make_wrapper(dequant_scale_value, dequant_scale_value_dtype);
+        TensorWrapper dequant_scale_value_wrapper = make_wrapper(dequant_scale_value_tmp, dequant_scale_value_dtype);
 
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV4, query_wrapper, keyTensors_wrapper, valueTensors_wrapper, pse_shift, atten_mask, actual_seq_qlen, actual_seq_kvlen, dequant_scale1, quant_scale1, dequant_scale2,
             quant_scale_out, quant_offset_out, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, dequant_scale_key_wrapper, dequant_offset_key, dequant_scale_value_wrapper,
