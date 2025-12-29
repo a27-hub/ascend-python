@@ -7826,7 +7826,7 @@ k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
 v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
 
 # 调用FIA算子
-out，softmax_lse = torch_npu._npu_fused_infer_attention_score_v2_infer_output(q, v, num_heads = 8, input_layout = "BNSD")
+out，softmax_lse = torch_npu._npu_fused_infer_attention_score_v2_infer_output(q, v, num_query_heads = 8, input_layout = "BNSD")
 
 # 执行上述代码的输出类似如下
 tensor([0., 0., ..., 0., 0., 0.],
