@@ -600,8 +600,8 @@ std::tuple<at::Tensor, at::Tensor> _npu_fused_infer_attention_score_v2_infer_out
     std::string input_layout_str = std::string(input_layout);
     // construct the output tensor
     std::tuple<at::Tensor, at::Tensor> fia_output = op_api::construct_fia_output_tensor_v2(query, value, value_dtype, input_layout_str,
-                                                                                        quant_scale2, block_table, num_heads, num_key_value_heads,
-                                                                                        softmax_lse_flag, query_rope, out_dtype);
+                                                                                           quant_scale2, block_table, num_heads, num_key_value_heads,
+                                                                                           softmax_lse_flag, query_rope, out_dtype);
     return fia_output;
 }
 
