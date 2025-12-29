@@ -4666,3 +4666,24 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
     mxscale1 = input_dummy.new_empty(mxscale1_shape, dtype=torch.uint8)
     mxscale2 = input_dummy.new_empty(mxscale2_shape, dtype=torch.uint8)
     return (y1, mxscale1, y2, mxscale2)
+
+
+@impl(m, "npu_grouped_dynamic_block_quant")
+def npu_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type):
+    dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
+    y = torch.empty(x.shape, dtype=dtype, device=x.device)
+    scale_shape = list(x.shape)
+
+    if len(scale_shape) == 2:
+        scale_shape[0] = scale_shape[0] / row_block_size + group_list
+        scale_shape[1] = math.ceil(scale_shape[1] / col_block_size)
+    elif len(scale_shape) == 3:
+        scale_shape[1] = scale_shape[1] / row_block_size + group_list
+        scale_shape[2] = math.ceil(scale_shape[2] / col_block_size)
+    else:
+        raise RuntimeError(f"Expected x to have 2 or 3 dimensions, but got {x.dim()}.")
+
+    scale_shape = torch.Size(scale_shape)
+
+    scale = torch.empty(scale_shape, dtype=torch.float32, device=x.device)
+    return y, scale
