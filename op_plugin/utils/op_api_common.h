@@ -224,6 +224,8 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
     at::ScalarType scalar_data_type = at_tensor.scalar_type();
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperStride = op_infer::array_to_small_vector(at_tensor.strides());
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperShape = op_infer::array_to_small_vector(at_tensor.sizes());
 
     const auto dimNum = at_tensor.sizes().size();
     aclFormat format = ACL_FORMAT_ND;
@@ -253,7 +255,32 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
         if (acl_data_type != ACL_STRING) {
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
-            storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4) {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
+                if (at_tensor.sizes().size() == 1) {
+                    wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
+                } else if (at_tensor.sizes().size() > 1) {
+                    if (wrapperStride[at_tensor.sizes().size() - 1] == 1) {
+                        wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                            wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                        wrapperShape[at_tensor.sizes().size() - 1] =
+                            wrapperShape[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                    } else if (wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] == 1) {
+                        wrapperStride[at_tensor.sizes().size() - 1] =
+                            wrapperStride[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
+                        wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] =
+                            wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+                    }
+                    
+                    for (auto i = 0; i < at_tensor.sizes().size() - PENULTIMATE_DIM; i++) {
+                        wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
+                    }
+                } else {
+                    TORCH_CHECK(false, "unsupported tensor strides in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
+                }
+            } else {
+                storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
+            }
         }
     }
 
@@ -266,7 +293,7 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
     }
 
     auto acl_tensor =
-        aclCreateTensor(at_tensor.sizes().data(), at_tensor.sizes().size(), acl_data_type, at_tensor.strides().data(),
+        aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
                         at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
                         const_cast<void *>(at_tensor.storage().data()));
     return acl_tensor;
