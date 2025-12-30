@@ -1,7 +1,7 @@
 # torch_npu.npu_mla_prolog_v2
 
 > [!NOTICE]  
->该接口计划废弃，可以使用`torch_npu.npu_mla_prolog_v3`、`torch_npu.npu_mla_prolog_v3_functional`接口进行替换。
+>该接口计划废弃，可以使用`torch_npu.npu_mla_prolog_v3`接口进行替换。
 
 ## 产品支持情况
 
