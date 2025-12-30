@@ -977,6 +977,9 @@
   "func: npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode=\"rint\", int dst_type=296, int block_size=32) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_dynamic_mx_quant_with_dual_axis(Tensor input, *, str round_mode=\"rint\", int dst_type=296, int scale_alg=0) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_lstm_backward(Tensor? grady, Tensor? gradh, Tensor? gradc, Tensor input, Tensor weight, Tensor bias, Tensor hx, Tensor cx, Tensor y_output, Tensor h_output, Tensor c_output, Tensor i, Tensor j, Tensor f, Tensor o, Tensor tanhc) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -4613,7 +4616,7 @@
   "func: npu_grouped_matmul_swiglu_quant(Tensor x, Tensor weight, Tensor group_list, Tensor weight_scale, Tensor x_scale, *, Tensor? bias=None, Tensor? offset=None) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=0, int? group_list_type=0, int[]? tuning_config=None) -> (Tensor, Tensor)": {
+  "func: npu_grouped_matmul_swiglu_quant_v2(Tensor x, Tensor[] weight, Tensor[] weight_scale, Tensor x_scale, Tensor group_list, *, Tensor? smooth_scale=None, Tensor[]? weight_assist_matrix=None, Tensor? bias=None, int? dequant_mode=0, int? dequant_dtype=0, int? quant_mode=0, int? quant_dtype=1, int? group_list_type=0, int[]? tuning_config=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_recurrent_gated_delta_rule(Tensor query, Tensor key, Tensor value, Tensor(a!) state, *, Tensor? beta=None, float? scale=None, Tensor? actual_seq_lengths=None, Tensor? ssm_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? g=None, Tensor? gk=None) -> Tensor": {
