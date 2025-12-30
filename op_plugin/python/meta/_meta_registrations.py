@@ -3351,7 +3351,7 @@ def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_
             raise RuntimeError("the dim num of input x must be 3" + ops_error(ErrCode.NOT_SUPPORT))
         output_shape = [x.size(0), x.size(dim_num - 1) * x.size(dim_num - 2)]
         align_base = 64
-        align_size = (x.size(dim_num - 1) * x.size(dim_num - 2) + align_base -1) // align_base
+        align_size = (x.size(dim_num - 1) * x.size(dim_num - 2) + align_base - 1) // align_base
         scale_shape = [x.size(0), align_size, 2]
         return x.new_empty(output_shape, dtype=torch.uint8), x.new_empty(scale_shape, dtype=torch.uint8)
     else:
