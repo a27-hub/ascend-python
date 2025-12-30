@@ -923,7 +923,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expert_range_length = active_expert_range[1] - active_expert_range[0]
     else:
         expert_range_length = expert_num
-        
+
     torch._check(
         drop_pad_mode is not None and isinstance(drop_pad_mode, int) and drop_pad_mode in [0, 1],
         lambda: "drop_pad_mode is None or invalid. must be in [0, 1]"
@@ -1031,9 +1031,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
 
-    return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype), 
-            x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32), 
-            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64), 
+    return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
+            x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
+            x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
             x.new_empty(tuple(expanded_scale_dim_list), dtype=expanded_scale_dtype))
 
 
@@ -3402,7 +3402,7 @@ def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_
     if quant_mode == "perchannel":
         scale_shape.append(input_dummy.size(dim_num - 1))
     else:
-        scale_shape.append(input_dummy.size(dim_num - 2)) 
+        scale_shape.append(input_dummy.size(dim_num - 2))
 
     scale = input_dummy.new_empty(scale_shape, dtype=torch.float32)
     if quant_mode == "pertensor":
@@ -3435,7 +3435,7 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
     if quant_mode == "perchannel":
         scale_offset_shape.append(input_dummy.size(dim_num - 1))
     else:
-        scale_offset_shape.append(input_dummy.size(dim_num - 2))    
+        scale_offset_shape.append(input_dummy.size(dim_num - 2))
     scale = input_dummy.new_empty(scale_offset_shape, dtype=torch.float32)
     offset = input_dummy.new_empty(scale_offset_shape, dtype=torch.float32)
     if quant_mode == "pertensor":
@@ -3553,13 +3553,13 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
 def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=None):
     if dst_dtype is None:
         dst_dtype = torch.int32
-    if dst_dtype != torch.int32 and dst_dtype != torch.int4 and dst_dtype != torch_npu.float4_e2m1fn_x2:
-        raise RuntimeError("the dtype of dst_dtype must be int32, int4 or mxfp4" + ops_error(ErrCode.NOT_SUPPORT))
+    if dst_dtype != torch.int32 and dst_dtype != torch_npu.float4_e2m1fn_x2:
+        raise RuntimeError("the dtype of dst_dtype must be int32, or mxfp4" + ops_error(ErrCode.NOT_SUPPORT))
     dim_num = x.dim()
     if (dst_dtype == torch_npu.float4_e2m1fn_x2):
         if dim_num != 3:
             raise RuntimeError("the dim num of input x must be 3" + ops_error(ErrCode.NOT_SUPPORT))
-        output_shape = [x.size(0), x.size(dim_num - 1) * x.size(dim_num - 2)]
+        output_shape = [x.size(0), x.size(dim_num - 1) * x.size(dim_num - 2) // 2]
         align_base = 64
         align_size = (x.size(dim_num - 1) * x.size(dim_num - 2) + align_base - 1) // align_base
         scale_shape = [x.size(0), align_size, 2]
@@ -4297,16 +4297,16 @@ def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_
 def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, group_list, *, smooth_scale=None,
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
     group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
-    
+
     if x_dtype is not None:
         torch._check(
-            x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2, 
+            x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2,
             lambda: "The optional parameter x_dtype only supports mxfp4 or None, but the actual value is " + npu_dtype_to_str(x_dtype),
         )
 
     if weight_dtype is not None:
         torch._check(
-            weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2, 
+            weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2,
             lambda: "The optional parameter weight_dtype only supports mxfp4 or None, but the actual value is " + npu_dtype_to_str(weight_dtype),
         )
 
@@ -4336,12 +4336,12 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     dim_n = 2
     n = weight[0].size(dim_n)
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
-                   (weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn) 
+                   (weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn)
     is_a4w4_input = False
     if x_dtype is not None and weight_dtype is not None:
         is_a4w4_input = (x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2) and \
                    (weight_dtype == torch_npu.float4_e1m2fn_x2 or weight_dtype == torch_npu.float4_e2m1fn_x2)
-    
+
     FP4_IN_INT8 = 2
     weight_trans = (x.size(-1) == weight[0].size(-2))
     mxfp_multi_base_size = 2
@@ -4382,7 +4382,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
                 output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n_new), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
             else:
                 output_shape = torch.empty([batch_size, output_n // FP4_IN_INT8], dtype=torch.uint8, device=x.device)
-                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)     
+                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
     return output_shape, output_scale_shape
 
 
@@ -4674,7 +4674,7 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
             y1_shape.append(input_dummy.size(dim))
             y2_shape.append(input_dummy.size(dim))
         y1_shape.append(input_dummy.size(dim_num - 1) // 2)
-        y1 = input_dummy.new_empty(y1_shape, dtype=torch.uint8)        
+        y1 = input_dummy.new_empty(y1_shape, dtype=torch.uint8)
         y2_shape.append(input_dummy.size(dim_num - 1) // 2)
         y2 = input_dummy.new_empty(y2_shape, dtype=torch.uint8)
     mxscale1 = input_dummy.new_empty(mxscale1_shape, dtype=torch.uint8)
