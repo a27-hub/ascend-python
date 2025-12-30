@@ -1,5 +1,6 @@
 import math
 import torch
+import torch_npu
 from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
@@ -278,13 +279,17 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    is_cann_version_gte_required = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha003", "CANN") # whether cann version >= 8.5.0.alpha003
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     # 输出query_norm
     if query_norm_flag:
@@ -292,10 +297,17 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if is_cann_version_gte_required:
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            else:
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -391,13 +403,17 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    is_cann_version_gte_required = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha003", "CANN") # whether cann version >= 8.5.0.alpha003
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -408,10 +424,17 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if is_cann_version_gte_required:
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            else:
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
 
     kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
     kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
@@ -1068,6 +1091,10 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
         B = query.size(1)
         S1 = query.size(0)
         S2 = key.size(0)
+
+    if input_layout == "BSND":
+        S1 = query.size(1)
+        S2 = key.size(1)
 
     seed = 0
     offset = 0
@@ -3224,7 +3251,7 @@ def npu_lightning_indexer_grad_meta(query, key, dy, sparse_indices, weights, act
 
 
 @impl(m, "npu_sparse_lightning_indexer_grad_kl_loss")
-def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     d_query_index = query_index.new_empty(query_index.shape, dtype=query_index.dtype, device='meta')
     d_key_index = key_index.new_empty(key_index.shape, dtype=key_index.dtype, device='meta')
     d_weights = weights.new_empty(weights.shape, dtype=weights.dtype, device='meta')
@@ -3382,7 +3409,7 @@ def npu_cross_entropy_loss_meta(
     loss_out_shape = [
         input_shape[0],
     ]
-    if reduction is None:
+    if reduction != "none":
         loss_out_shape = [
             1,
         ]
@@ -3398,6 +3425,24 @@ def npu_cross_entropy_loss_meta(
         torch.empty(lse_for_zloss_shape, dtype=input_.dtype,
                     device=input_.device),
     )
+
+
+@impl(m, "npu_cross_entropy_loss_backward")
+def npu_cross_entropy_loss_backward_meta(
+    grad_loss, 
+    log_prob, 
+    target, 
+    weight=None, 
+    grad_zloss=None, 
+    lse_for_zloss=None, 
+    reduction='mean', 
+    ignore_index=-100, 
+    label_smoothing=0.0, 
+    lse_square_scale_for_zloss=0.0
+):
+    result = torch.empty_like(log_prob)
+
+    return result
 
 
 @impl(m, "npu_apply_adam_w.out")
@@ -3446,3 +3491,26 @@ def npu_conv2d_meta(input_, weight, bias, strides, pads, dilations, groups):
     output_dim_list = [nout, cout, hout, wout]
 
     return torch.empty(tuple(output_dim_list), dtype=input_.dtype, device=input_.device)
+
+
+@impl(m, "npu_conv2d_backward")
+def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, groups, output_mask):
+    Co = weight.size(0)
+
+    result3_shape = (Co,)
+
+    result_1 = torch.empty(x.size(), dtype=x.dtype, device='meta')
+    result_2 = torch.empty(weight.size(), dtype=weight.dtype, device='meta')
+    if output_mask[2]:
+        result_3 = torch.empty(result3_shape, dtype=x.dtype, device='meta')
+    else:
+        result_3 = None
+
+    return (result_1, result_2, result_3)
+
+
+@impl(m, "repeat_interleave_backward_int")
+def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
+    result = torch.empty_like(x)
+
+    return result
