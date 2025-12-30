@@ -366,13 +366,92 @@ class TestNpuCompressAttentionInfer(TestCase):
         return golden_atten_out, high_percision_atten_out, golden_topk_out, topk_check_out
 
     # pylint:disable = huawei-too-many-arguments
-    def npu_op_exec(self, query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, layout, block_table, atten_mask, topk_mask, actual_seq_qlen, actual_cmp_seq_kvlen, actual_sel_seq_kvlen):
+    def npu_op_exec(self, query, key, value, scale_value, head_num, key_value_head_num, select_block_size,
+                    select_block_count, page_block_size, compress_block_size, compress_stride, layout, block_table, 
+                    atten_mask, topk_mask, actual_seq_qlen, actual_cmp_seq_kvlen, actual_sel_seq_kvlen,
+                    importance_score_param=None):
         output = torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, 
                                                             select_block_size, select_block_count, page_block_size, 
                                                             compress_block_size, compress_stride, layout=layout, block_table=block_table, 
                                                             atten_mask=None, topk_mask=None, actual_seq_qlen=None, 
-                                                            actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None)
+                                                            actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=None,
+                                                            importance_score_param = importance_score_param)
         return output
+
+    @staticmethod
+    def get_coef_matrix(slc_sz: int, cmp_sz: int, cmp_strd: int, parm_row: int) -> torch.Tensor:
+        assert slc_sz % cmp_strd == 0
+        assert cmp_sz % cmp_strd == 0
+
+        slc_num = slc_sz // cmp_strd
+        cmp_num = cmp_sz // cmp_strd # cmp_num == 1 => non-overlap
+        assert 128 % slc_num == 0
+
+        slc_coef = torch.zeros((slc_num + cmp_num - 1, 1))
+        for i in range(slc_num):
+            slc_coef[i:i+cmp_num, :] += 1.0
+
+        coefs = torch.zeros((parm_row, parm_row//slc_num + 1))
+        for i in range(coefs.shape[1]):
+            if i == 0:
+                coefs[:cmp_num-1, i] = slc_coef[slc_num:, 0]
+            elif i == coefs.shape[1] - 1:
+                coefs[-slc_num:, i] = slc_coef[:slc_num, 0]
+            else:
+                strt = (i-1)*slc_num
+                end = strt + slc_coef.shape[0]
+                coefs[strt : end, i] = slc_coef[:, 0]
+
+        if not torch.any(coefs[:, 0]):
+            coefs = coefs[:, 1:]
+
+        return coefs
+
+    @SupportedDevices(['Ascend910B'])
+    def execute_npu_nsa_compress_attention_infer(self, batch, seq_len, layout="TND"):
+        head_num = 16
+        q_head_dim = 192
+        v_head_dim = 128
+        dtype = torch.float16
+        query = torch.randn([batch, head_num, q_head_dim], dtype=dtype)
+        key_value_head_num = 1
+        page_block_size = 128
+        block_count = seq_len // page_block_size * batch
+        key = torch.randn([block_count, page_block_size, q_head_dim * key_value_head_num], dtype=dtype)
+        value = torch.randn([block_count, page_block_size, v_head_dim * key_value_head_num], dtype=dtype)
+        scale_value = 0.01
+
+        select_block_size = 64
+        select_block_count = 16
+
+        compress_block_size = 32
+        compress_stride = 16
+        block_table = torch.tensor([
+            [23, 2, 20, 22, 4, 21, 7, 12, 3, 20, 20, 0, 15, 0, 4, 8, 10, 20, 21, 18, 18, 18, 11, 12, 20,
+             23, 2, 20, 22, 4, 21, 7, 12, 3, 20, 20, 0, 15, 0, 4, 8, 10, 20, 21, 18, 18, 18, 11, 12, 20,
+             23, 2, 20, 22, 4, 21, 7, 12, 3, 20, 20, 0, 15, 0, 4, 8, 10, 20, 21, 18, 18, 18, 11, 12, 20]] * batch).int()
+        actual_cmp_seq_kvlen = [seq_len] * batch
+        atten_mask = None
+        topk_mask = None
+        actual_seq_qlen = None
+        actual_sel_seq_kvlen = None
+
+        importance_score_param = self.get_coef_matrix(select_block_size, compress_block_size, compress_stride, 128)
+        importance_score_param = importance_score_param.to(torch.float32).npu()
+        npuout = self.npu_op_exec(query.npu(), key.npu(), value.npu(), scale_value, head_num, key_value_head_num,
+                                  select_block_size, select_block_count, page_block_size, compress_block_size, 
+                                  compress_stride, layout, block_table.npu(), atten_mask, topk_mask,
+                                  actual_seq_qlen, actual_cmp_seq_kvlen, actual_sel_seq_kvlen, importance_score_param
+                                  )
+        golden_atten_out, _, golden_topk_out, _ = self.cpu_op_exec(
+            query, key, value, block_table, actual_cmp_seq_kvlen,  head_num, key_value_head_num, select_block_size,
+            select_block_count, compress_block_size, compress_stride, scale_value, page_block_size, layout=layout)
+
+        res_attention = npuout[0]
+        res_topk = npuout[1]
+
+        self.assertRtolEqual(golden_atten_out.numpy(), res_attention.cpu().numpy(), 0.001, 0.001)
+        self.assertEqual(torch.sort(golden_topk_out)[0], torch.sort(res_topk)[0])
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
@@ -446,6 +525,18 @@ class TestNpuCompressAttentionInfer(TestCase):
                                                     scale_value, page_block_size, layout=layout)
 
         self.assertRtolEqual(golden_atten_out.numpy(), npuout[0].reshape(1, 32, 18).cpu().numpy(), 0.001, 0.001)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    def test_npu_nsa_compress_attention_infer_10batch_4K(self):
+        self.execute_npu_nsa_compress_attention_infer(10, 4096)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    def test_npu_nsa_compress_attention_infer_15batch_2K(self):
+        self.execute_npu_nsa_compress_attention_infer(15, 2048)
+
+    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
+    def test_npu_nsa_compress_attention_infer_15batch_1K(self):
+        self.execute_npu_nsa_compress_attention_infer(15, 1024)
 
 if __name__ == "__main__":
     run_tests()
