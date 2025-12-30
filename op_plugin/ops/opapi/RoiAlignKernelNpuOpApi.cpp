@@ -1,3 +1,5 @@
+
+
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
@@ -12,29 +14,23 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_roi_alignbk(const at::Tensor& self, const at::Tensor& rois, at::IntArrayRef xdiff_shape,
-                           int64_t pooled_width, int64_t pooled_height, double spatial_scale, int64_t sample_num,
-                           c10::optional<int64_t> roi_end_mode)
+at::Tensor npu_roi_align(const at::Tensor& self, const at::Tensor& rois, double spatial_scale, int64_t pooled_height,
+                         int64_t pooled_width, int64_t sample_num, int64_t roi_end_mode)
 {
-    DO_COMPATIBILITY(
-        aclnnROIAlignBackward,
-        acl_op::npu_roi_alignbk(
-            self,
-            rois,
-            xdiff_shape,
-            pooled_width,
-            pooled_height,
-            spatial_scale,
-            sample_num,
-            roi_end_mode));
-    at::Tensor result = npu_preparation::apply_tensor_without_format(self, xdiff_shape);
-    int64_t roi_end_mode_value = 1; // roi_end_mode default value
-    if (roi_end_mode.has_value()) {
-        roi_end_mode_value = roi_end_mode.value();
-    }
+    DO_COMPATIBILITY(aclnnRoiAlignV2, acl_op::npu_roi_align(self, rois, spatial_scale, pooled_height, pooled_width,
+                                                          sample_num, roi_end_mode));
+    TORCH_CHECK(rois.dim() >= 1, "The dim of input tensor [rois] is less than 1.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(self.dim() >= 2, "The dim of input tensor [self] is less than 2.", OPS_ERROR(ErrCode::PARAM));
+    c10::SmallVector<int64_t, SIZE> output_size = {rois.size(0), self.size(1), pooled_height, pooled_width};
+    at::Tensor result = npu_preparation::apply_tensor_without_format(self, output_size);
     float spatial_scale_value = static_cast<float>(spatial_scale);
-    EXEC_NPU_CMD(aclnnROIAlignBackward, self, rois, xdiff_shape, pooled_width, pooled_height, spatial_scale_value,
-                 sample_num, roi_end_mode_value, result);
+    bool aligned = false;
+    if (roi_end_mode_value > 0) {
+        aligned = true;
+    }
+    EXEC_NPU_CMD(aclnnRoiAlignV2, self, rois, pooled_height, pooled_width, spatial_scale_value, sample_num, aligned,
+                 result);
     return result;
 }
 }
+
