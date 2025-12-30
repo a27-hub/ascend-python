@@ -3446,9 +3446,13 @@ def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_o
     q_out_before_quant_size.append(head_nums[0] * qkv_size[3])
     k_out_before_quant_size.append(head_nums[1] * qkv_size[3])
     v_out_before_quant_size.append(head_nums[2] * qkv_size[3])
-    return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device))
+    if is_output_qkv:        
+        return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+                torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+                torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device))
+    return (torch.empty([], dtype=qkv.dtype, device=qkv.device),
+                torch.empty([], dtype=qkv.dtype, device=qkv.device),
+                torch.empty([], dtype=qkv.dtype, device=qkv.device))
 
 @impl(m, "npu_qkv_rms_norm_rope_cache_functional")
 def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
@@ -3473,9 +3477,14 @@ def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin,
     q_out_before_quant_size.append(head_nums[0] * qkv_size[3])
     k_out_before_quant_size.append(head_nums[1] * qkv_size[3])
     v_out_before_quant_size.append(head_nums[2] * qkv_size[3])
-    return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
-            torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+    if is_output_qkv:        
+        return (torch.empty(q_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+                torch.empty(k_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+                torch.empty(v_out_before_quant_size, dtype=qkv.dtype, device=qkv.device),
+                torch.empty_like(q_out), torch.empty_like(k_cache), torch.empty_like(v_cache))
+    return (torch.empty([], dtype=qkv.dtype, device=qkv.device),
+            torch.empty([], dtype=qkv.dtype, device=qkv.device),
+            torch.empty([], dtype=qkv.dtype, device=qkv.device),
             torch.empty_like(q_out), torch.empty_like(k_cache), torch.empty_like(v_cache))
 
 
