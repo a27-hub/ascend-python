@@ -15,7 +15,7 @@
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
 ```
-torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None, scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None, scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0, gen_mask_parallel=True, sync=False, softmax_layout="", sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000001742717129_section112637109429"></a>
@@ -25,7 +25,9 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
 -   **value**（`Tensor`）：数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
 -   **head\_num**（`int`）：代表head个数，数据类型支持`int64`。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
 -   **input\_layout**（`string`）：代表输入`query`、`key`、`value`的数据排布格式，支持BSH、SBH、BSND、BNSD、TND（`actual_seq_qlen`/`actual_seq_kvlen`需传值，`input_layou`t为TND时即为varlen场景）；后续章节如无特殊说明，S表示`query`或`key`、`value`的sequence length，Sq表示query的sequence length，Skv表示`key`、`value`的sequence length，SS表示Sq\*Skv。
--   **pse**（`Tensor`）：可选参数，表示位置编码。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$。非varlen场景支持四维输入，包含BNSS格式、BN1Skv格式、1NSS格式。如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse\_mode为0、2、3的下三角掩码场景，可使能alibi位置编码压缩，此时只需要输入原始PSE最后1024行进行内存优化，即alibi\_compress = ori\_pse\[:, :, -1024:, :\]，参数每个batch不相同时，输入BNHSkv\(H=1024\)，每个batch相同时，输入1NHSkv\(H=1024\)。
+-   **pse**（`Tensor`）：可选参数，表示位置编码。数据类型支持`float16`、`bfloat16`、`float32`，数据格式支持$ND$。
+     - 非varlen场景支持四维输入，包含BNSS格式、BN1Skv格式、1NSS格式。
+     - 若非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse\_mode为0、2、3的下三角掩码场景，可使能alibi位置编码压缩，此时只需要输入原始PSE最后1024行进行内存优化，即alibi\_compress = ori\_pse\[:, :, -1024:, :\]，参数每个batch不相同时，输入BNHSkv\(H=1024\)，每个batch相同时，输入1NHSkv\(H=1024\)。
 -   **padding\_mask**（`Tensor`）：暂不支持该传参。
 -   **atten\_mask**（`Tensor`）：可选参数，取值为1代表该位不参与计算（不生效），为0代表该位参与计算，数据类型支持`bool`、`uint8`，数据格式支持$ND$，输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式。varlen场景只支持SS格式，SS分别是maxSq和maxSkv。综合约束请见[约束说明](#zh-cn_topic_0000001742717129_section12345537164214)。
 -   **scale**（`float`）：可选参数，代表缩放系数，作为计算流中Muls的scalar值，数据类型支持`float`，默认值为1。
@@ -129,6 +131,7 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
 -   **gen\_mask\_parallel**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为True：同AI Core并行计算；设为False：同AI Core串行计算。
 -   **sync**（`bool`）：DSA生成dropout随机数向量mask的控制开关。默认值为False：dropout mask异步生成；设为True：dropout mask同步生成。
 -   **softmax_layout**（`string`）：可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
+-   **sink**（`Tensor`）：可选参数，每个注意力头的偏置。shape为`[head_num]`，数据类型仅支持`float32`。
 
 ## 输出说明<a name="zh-cn_topic_0000001742717129_section22231435517"></a>
 
@@ -202,13 +205,12 @@ class TestNPUFlashAttention(TestCase):
         atten_mask = None
         if sparse_params[0] == 0:
             shape = [1, 8, 256, 256]
-            atten_mask_u = np.triu(np.ones(shape), k=sparse_params[1] + 1)
-            atten_mask_l = np.tril(np.ones(shape), k=-sparse_params[2] - 1)
-            atten_masks = atten_mask_u + atten_mask_l
-            atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
+            mask = torch.ones(shape, dtype=torch.bool, device='npu')
+            atten_mask_u = torch.triu(mask, diagonal=sparse_params[1] + 1)
+            atten_mask_l = torch.tril(mask, diagonal=-sparse_params[2] - 1)
+            atten_mask = atten_mask_u | atten_mask_l
         if sparse_params[0] == 2 or sparse_params[0] == 3 or sparse_params[0] == 4:
-            atten_masks = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1))
-            atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
+            atten_mask = torch.triu(torch.ones(2048, 2048, dtype=torch.bool, device='npu'), diagonal=1)
         return torch_npu.npu_fusion_attention(
             query, key, value, head_num=8, input_layout="BNSD", scale=scale, sparse_mode=sparse_params[0],
             atten_mask=atten_mask, pre_tockens=sparse_params[1], next_tockens=sparse_params[2])
