@@ -1324,6 +1324,21 @@ class TestNpuRotaryMul(TestCase):
             self.assertEqual(embedding.shape, ret.shape)
             self.assertEqual(embedding.dtype, ret.dtype)
 
+    @unittest.skip("skip test_npu_rotary_mul_matrix now")
+    def test_npu_rotary_mul_matrix(self):
+        with FakeTensorMode():
+            embedding = torch.randn(2, 2, 8192, 128, dtype=torch.bfloat16).npu()
+            cosine = torch.randn(1, 1, 8192, 128, dtype=torch.bfloat16).npu()
+            sine = torch.randn(1, 1, 8192, 128, dtype=torch.bfloat16).npu()
+            rotate = torch.zeros(128, 128, dtype=torch.bfloat16)
+            half = 128 // 2
+            rotate[:half, half:] = torch.eye(half)
+            rotate[half:, :half] = -torch.eye(half)
+            ret = torch_npu.npu_rotary_mul(embedding, cosine, sine, "half", rotate.npu())
+
+            self.assertEqual(embedding.shape, ret.shape)
+            self.assertEqual(embedding.dtype, ret.dtype)
+
 
 class TestNpuRotaryMulBackward(TestCase):
     def test_npu_rotary_mul_backward(self):
@@ -3645,6 +3660,40 @@ class TestGroupedMatmulAdd(TestCase):
             self.assertTrue(y.shape[2] == res_1.shape[2])
 
 
+class TestQuantAllReduce(TestCase):
+    def test_npu_quant_all_reduce(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            # T-G量化
+            x = torch.randint(-5, 5, (128, 5120), dtype=torch.int8).npu()
+            scales = torch.randint(-5, 5, (128, 40), dtype=torch.float32).npu()
+            # 其他参数
+            hcom = "fake group info"
+            world_size = 2
+            res = torch_npu.npu_quant_all_reduce(x, scales, hcom, world_size)
+            self.assertTrue(len(x.shape) == len(res.shape))
+            # bs轴
+            self.assertTrue(x.shape[0] == res.shape[0])
+            self.assertTrue(x.shape[1] == res.shape[1])
+
+
+class TestQuantReduceScatter(TestCase):
+    def test_npu_quant_reduce_scatter(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            # T-G量化
+            x = torch.randint(-5, 5, (128, 5120), dtype=torch.int8).npu()
+            scales = torch.randint(-5, 5, (128, 40), dtype=torch.float32).npu()
+            # 其他参数
+            hcom = "fake group info"
+            world_size = 2
+            # 断言
+            res = torch_npu.npu_quant_reduce_scatter(x, scales, hcom, world_size)
+            self.assertTrue(len(res.shape) == 2)
+            self.assertTrue(x.shape[0] // world_size == res.shape[0])
+            self.assertTrue(x.shape[1] == res.shape[1])
+
+
 class TestNpuDSA(TestCase):
     def setup_sparse_flash_attention_test_params(self, requires_grad=False, return_softmax_lse=False):
         scale_value = 0.041666666666666664
@@ -4138,6 +4187,27 @@ class TestNpuFusionAttention(TestCase):
             self.assertEqual(softmax_max_sum.shape, res[2].shape)
             self.assertEqual(softmax_max_sum.dtype, res[2].dtype)
 
+
+class TestNpuRepeatInterleave(TestCase):
+    def test_npu_repeat_interleave_backward(self):
+        x = torch.randn(2, 2, device="npu", requires_grad=True)
+        repeats_value = 3
+
+        output = torch.repeat_interleave(x, repeats_value)
+        grad = torch.randn(output.size(), device="npu")
+        output.backward(grad)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.randn(2, 2, device="npu", requires_grad=True)
+            repeats_value = 3
+
+            output_fake_tensor = torch.repeat_interleave(x_fake_tensor, repeats_value)
+            grad_fake_tensor = torch.randn(output_fake_tensor.size(), device="npu")
+            output_fake_tensor.backward(grad_fake_tensor)
+
+            self.assertEqual(x.shape, x_fake_tensor.shape)
+            self.assertEqual(x.dtype, x_fake_tensor.dtype)
+            
 
 if __name__ == "__main__":
     run_tests()
