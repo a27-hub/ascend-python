@@ -1324,6 +1324,21 @@ class TestNpuRotaryMul(TestCase):
             self.assertEqual(embedding.shape, ret.shape)
             self.assertEqual(embedding.dtype, ret.dtype)
 
+    @unittest.skip("skip test_npu_rotary_mul_matrix now")
+    def test_npu_rotary_mul_matrix(self):
+        with FakeTensorMode():
+            embedding = torch.randn(2, 2, 8192, 128, dtype=torch.bfloat16).npu()
+            cosine = torch.randn(1, 1, 8192, 128, dtype=torch.bfloat16).npu()
+            sine = torch.randn(1, 1, 8192, 128, dtype=torch.bfloat16).npu()
+            rotate = torch.zeros(128, 128, dtype=torch.bfloat16)
+            half = 128 // 2
+            rotate[:half, half:] = torch.eye(half)
+            rotate[half:, :half] = -torch.eye(half)
+            ret = torch_npu.npu_rotary_mul(embedding, cosine, sine, "half", rotate.npu())
+
+            self.assertEqual(embedding.shape, ret.shape)
+            self.assertEqual(embedding.dtype, ret.dtype)
+
 
 class TestNpuRotaryMulBackward(TestCase):
     def test_npu_rotary_mul_backward(self):
@@ -3677,6 +3692,93 @@ class TestQuantReduceScatter(TestCase):
             self.assertTrue(len(res.shape) == 2)
             self.assertTrue(x.shape[0] // world_size == res.shape[0])
             self.assertTrue(x.shape[1] == res.shape[1])
+
+
+class TestMatmulAlltoAll(TestCase):
+    def test_npu_matmul_all_to_all(self):
+        # 使用模拟模式，在不实际占用设备内存的情况下运行张量操作，用假张量代替真实张量
+        with FakeTensorMode():
+            # 设置随机数种子
+            torch.manual_seed(0)
+            # 初始化输入
+            x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
+            x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
+            bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+            # 其他参数
+            hcom = "fake group info"
+            world_size = 2
+            # 断言
+            res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias=bias, all2all_axes=[-1,-2])
+            # 因为是假张量，所以只匹配shape和dtype是否对应
+            self.assertTrue(len(res.shape) == 2)
+            self.assertTrue(x1.shape[0] * world_size == res.shape[0])
+            self.assertTrue(x2.shape[1] / world_size == res.shape[1])
+            self.assertTrue(res.dtype == x1.dtype)
+
+
+class TestQuantMatmulAlltoAll(TestCase):
+    def test_npu_quant_matmul_all_to_all(self):
+        # 使用模拟模式，在不实际占用设备内存的情况下运行张量操作，用假张量代替真实张量
+        with FakeTensorMode():
+            # 设置随机数种子
+            torch.manual_seed(0)
+            # 初始化输入
+            x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float8_e4m3fn).npu()
+            x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float8_e4m3fn).npu()
+            bias = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+            x1Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+            x2Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+            # 其他参数
+            hcom = "fake group info"
+            world_size = 2
+            common_scale = None
+            x1_offset = None
+            x2_offset = None
+            x1_quant_mode = 3
+            x2_quant_mode = 2
+            common_quant_mode = 0
+            group_size = [0]
+            all2all_axes=[-1,-2]
+            comm_quant_dtype = 0
+            x1_dtype = None
+            x2_dtype = None
+            x1_scale_dtype = None
+            x2_scale_dtype = None
+            output_scale_dtype = None
+            comm_scale_dtype = None
+            y_dtype = None
+
+            # 断言
+            res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size, bias, x1Scale, x2Scale, common_scale, x1_offset, x2_offset,
+                                                        x1_quant_mode, x2_quant_mode, common_quant_mode, group_size, all2all_axes, comm_quant_dtype, x1_dtype, x2_dtype, x1_scale_dtype,
+                                                        x2_scale_dtype, output_scale_dtype, comm_scale_dtype, y_dtype)
+            # 因为是假张量，所以只匹配shape和dtype是否对应
+            self.assertTrue(len(res.shape) == 2)
+            self.assertTrue(x1.shape[0] * world_size == res.shape[0])
+            self.assertTrue(x2.shape[1] / world_size == res.shape[1])
+            self.assertTrue(res.dtype == torch.float32)
+
+
+class TestAlltoAllMatmul(TestCase):
+    def test_npu_all_to_all_matmul(self):
+        # 使用模拟模式，在不实际占用设备内存的情况下运行张量操作，用假张量代替真实张量
+        with FakeTensorMode():
+            # 设置随机数种子
+            torch.manual_seed(0)
+            # 初始化输入
+            x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
+            x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
+            bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+            # 其他参数
+            hcom = "fake group info"
+            world_size = 2
+            # 断言
+            res , _ = torch_npu.npu_all_to_all_matmul(x1, x2, hcom, world_size, bias=bias, all2all_axes=[-2,-1], all2all_out_flag=True)
+            # 因为是假张量，所以只匹配shape和dtype是否对应
+            self.assertTrue(len(res.shape) == 2)
+            self.assertTrue(x1.shape[0] / world_size == res.shape[0])
+            self.assertTrue(x2.shape[1] == res.shape[1])
+            self.assertTrue(res.dtype == x1.dtype)
 
 
 class TestNpuDSA(TestCase):
