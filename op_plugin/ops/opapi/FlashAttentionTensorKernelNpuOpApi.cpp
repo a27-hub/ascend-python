@@ -503,7 +503,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
-        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
+        const at::Tensor &seed_const = seed.value_or(at::Tensor());
+        const at::Tensor &offset_const = offset.value_or(at::Tensor());
+        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed_const, offset_const, numels, gen_mask_parallel, sync);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
     }
