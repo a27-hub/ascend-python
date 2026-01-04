@@ -1,5 +1,6 @@
 import math
 import torch
+import torch_npu
 from torch.library import Library, impl
 from torch.fx.node import has_side_effect
 from torch_npu.utils._error_code import ErrCode, ops_error
@@ -278,13 +279,17 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    is_cann_version_gte_required = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha003", "CANN") # whether cann version >= 8.5.0.alpha003
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     # 输出query_norm
     if query_norm_flag:
@@ -292,10 +297,17 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if is_cann_version_gte_required:
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            else:
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -391,13 +403,17 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         dequant_scale_q_norm_shape.append(token_x.size(0))
         dequant_scale_q_norm_shape.append(1)
 
+    is_cann_version_gte_required = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha003", "CANN") # whether cann version >= 8.5.0.alpha003
     # kvcache量化
     if weight_quant_mode == 2 and kv_cache_quant_mode == 1:
         query = torch.empty(query_shape, dtype=torch.int8, device='meta')
         dequant_scale_q_nope = torch.empty(dequant_scale_q_nope_shape, dtype=torch.float32, device='meta')
     else:
         query = torch.empty(query_shape, dtype=rope_sin.dtype, device='meta')
-        dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            dequant_scale_q_nope = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            dequant_scale_q_nope = torch.empty([1], dtype=torch.float32, device='meta')
 
     query_rope = torch.empty(query_rope_shape, dtype=torch.bfloat16, device='meta') # default dtype bfloat16
 
@@ -408,10 +424,17 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
         if weight_quant_mode == 1 or weight_quant_mode == 2:
             dequant_scale_q_norm = torch.empty(dequant_scale_q_norm_shape, dtype=torch.float32, device='meta')
         else:
-            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            if is_cann_version_gte_required:
+                dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+            else:
+                dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
     else:
-        query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
-        dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        if is_cann_version_gte_required:
+            query_norm = torch.empty([0], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([0], dtype=torch.float32, device='meta')
+        else:
+            query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
+            dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
 
     kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache.dtype, device='meta')
     kr_cache_out = torch.empty_like(kr_cache, dtype=kr_cache.dtype, device='meta')
@@ -420,7 +443,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
 if "2.1." in torch.__version__:
     @impl(m, "npu_prompt_flash_attention")
-    def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147473647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
+    def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147483647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
         tmp_out = torch.empty_like(query, dtype=query.dtype, device='meta')
         if input_layout == "BNSD_BSND":
             tmp_out = torch.empty([query.size(0), query.size(2), query.size(1), query.size(3)], dtype=query.dtype, device='meta')
@@ -449,7 +472,7 @@ if "2.1." in torch.__version__:
             return torch.empty_like(tmp_out, dtype=query.dtype)
 else:
     @impl(m, "npu_prompt_flash_attention")
-    def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147473647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
+    def npu_prompt_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147483647, next_tokens=0, input_layout="BSH", num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0):
         tmp_out = torch.empty_like(query, dtype=query.dtype, device='meta')
         if input_layout == "TND":
             tmp_out = torch.empty([query.size(0), query.size(1), value.size(2)], dtype=query.dtype, device='meta')
@@ -543,7 +566,7 @@ def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
 
 @impl(m, "npu_all_gather_base_mm")
 def npu_all_gather_base_mm_meta(self, x2, hcom, world_size, bias=None,
-                                x1_scale=None, x2_scale=None, 
+                                x1_scale=None, x2_scale=None,
                                 gather_index=0, gather_output=True, comm_turn=0,
                                 output_dtype=None, comm_mode=None):
     if world_size <= 0:
@@ -694,12 +717,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_x_dtype = x.dtype if quant_mode == -1 else torch.int8
     expanded_row_idx_dim_list = [bs * k]
     expanded_scale_dim_list = [bs * k]
-    
+
     if (expert_tokens_num_type in range(0, 2)):   # [0, 1]
-        expert_token_cumsum_or_count_dim_list = [expert_range_length] 
+        expert_token_cumsum_or_count_dim_list = [expert_range_length]
     elif (expert_tokens_num_type == 2): # 2: key_value
         expert_token_cumsum_or_count_dim_list = [expert_num, 2]
-    
+
     return (x.new_empty(tuple(expanded_x_dim_list), dtype=expanded_x_dtype),
             x.new_empty(tuple(expanded_row_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(expert_token_cumsum_or_count_dim_list), dtype=torch.int64),
@@ -1272,7 +1295,7 @@ def npu_add_rms_norm_meta(x1, x2, gamma, epsilon=1e-6):
 def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06):
     return torch.empty(x.size(), dtype=torch.int8, device=x.device)
 
-    
+
 @impl(m, "npu_add_rms_norm_cast")
 def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
     rstd_dim = x1.dim() - gamma.dim()
@@ -1294,7 +1317,7 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
 
-            
+
 @impl(m, "npu_rms_norm_backward")
 def npu_rms_norm_backward_meta(dy, self, gamma, rstd):
     return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(gamma, dtype=gamma.dtype))
@@ -1479,7 +1502,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
             f"{ops_error(ErrCode.VALUE)}."
         ),
     )
-    
+
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
@@ -1554,8 +1577,8 @@ def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_co
 
 
 @impl(m, "npu_moe_distribute_combine_v2")
-def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
-                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, performance_info=None, group_tp="", tp_world_size=0, 
+def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_combine, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
+                                       tp_send_counts=None, x_active_mask=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, performance_info=None, group_tp="", tp_world_size=0,
                                        tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_alg="", zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_tuple = (expert_ids.size(0), expand_x.size(1))
 
@@ -1564,7 +1587,7 @@ def npu_moe_distribute_combine_v2_meta(expand_x, expert_ids, assist_info_for_com
 
 @impl(m, "npu_moe_distribute_combine_add_rms_norm")
 def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
-                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, 
+                                    tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None,
                                     group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, comm_alg="", norm_eps=0, zero_expert_num=0, copy_expert_num=0, const_expert_num=0):
     dim_list = []
     dim_list.append(expert_ids.size(0))
@@ -1617,7 +1640,7 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
                             activation_input=None, activation_quant_scale=None, activation_quant_offset=None,
                             split_item=0, group_type=None, group_list_type=0, act_type=0, tuning_config=None, output_dtype=None):
     torch._check(
-        group_type == -1 or group_type == 0,
+        group_type == -1 or group_type == 0 or (isinstance(group_list, list) and group_type is None),
         lambda: f"group_type only support -1 and 0, but got {group_type} {ops_error(ErrCode.VALUE)}",
     )
     y = []
@@ -2737,7 +2760,7 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
 
 @impl(m, "npu_dequant_swiglu_quant")
 def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, bias=None, quant_scale=None,
-                                  quant_offset=None, group_index=None, activate_left=False, quant_mode=0, 
+                                  quant_offset=None, group_index=None, activate_left=False, quant_mode=0,
                                   swiglu_mode=0, clamp_limit=7.0, glu_alpha=1.702, glu_bias=1.0):
     y_size = []
     scale_size = []
@@ -2823,7 +2846,7 @@ def npu_moe_token_permute_with_routing_map_meta(tokens, routing_map, *, probs=No
     out2 = None
     if probs is not None:
         out2 = torch.empty(output_size_1, dtype=probs.dtype, device=tokens.device)
-    
+
     return out1, out2, out3
 
 
@@ -2905,7 +2928,7 @@ def npu_attention_update_meta(lse, local_out, update_type):
     ref = local_out[0]
     return torch.empty(ref.size(), dtype=ref.dtype, device=ref.device)
 
-    
+
 @impl(m, "npu_mrope")
 def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
     return (torch.empty_like(query), torch.empty_like(key))
@@ -2934,7 +2957,7 @@ def npu_gather_sparse_index(inputs, index):
 
     for i in range(1, input_dim):
         output_size.append(input_size[i])
-    
+
     return torch.empty(output_size, dtype=inputs.dtype, device=inputs.device)
 
 
@@ -2969,11 +2992,11 @@ def npu_moe_token_unpermute_meta(permuted_tokens, sorted_indices, probs=None, pa
 
     torch._check(permuted_tokens.dim() == 2, lambda: f"The dims of input permuted_tokens should be 2 dimensional, but got {permuted_tokens.dim()}-dimensional.")
     torch._check(sorted_indices.dim() == 1, lambda: f"The dims of input sorted_indices should be 1 dimensional, but got {sorted_indices.dim()}-dimensional.")
-    
+
     topk = DEFAULT_TOPK if probs is None else probs.size(1)
-    
+
     output_shape = (sorted_indices.size(0) // topk, permuted_tokens.size(-1))
-    
+
     return torch.empty(output_shape, dtype=permuted_tokens.dtype, device=permuted_tokens.device)
 
 
@@ -3093,11 +3116,11 @@ def npu_dynamic_block_quant_meta(x, *, min_scale=0.0, round_mode="rint", dst_typ
 
 
 @impl(m, "npu_sparse_flash_attention")
-def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None, 
-                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None, 
-                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", 
+def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None,
+                                         key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND",
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
-                                         attention_mode=0, return_softmax_lse=False):  
+                                         attention_mode=0, return_softmax_lse=False):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
@@ -3228,7 +3251,7 @@ def npu_lightning_indexer_grad_meta(query, key, dy, sparse_indices, weights, act
 
 
 @impl(m, "npu_sparse_lightning_indexer_grad_kl_loss")
-def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     d_query_index = query_index.new_empty(query_index.shape, dtype=query_index.dtype, device='meta')
     d_key_index = key_index.new_empty(key_index.shape, dtype=key_index.dtype, device='meta')
     d_weights = weights.new_empty(weights.shape, dtype=weights.dtype, device='meta')
@@ -3406,15 +3429,15 @@ def npu_cross_entropy_loss_meta(
 
 @impl(m, "npu_cross_entropy_loss_backward")
 def npu_cross_entropy_loss_backward_meta(
-    grad_loss, 
-    log_prob, 
-    target, 
-    weight=None, 
-    grad_zloss=None, 
-    lse_for_zloss=None, 
-    reduction='mean', 
-    ignore_index=-100, 
-    label_smoothing=0.0, 
+    grad_loss,
+    log_prob,
+    target,
+    weight=None,
+    grad_zloss=None,
+    lse_for_zloss=None,
+    reduction='mean',
+    ignore_index=-100,
+    label_smoothing=0.0,
     lse_square_scale_for_zloss=0.0
 ):
     result = torch.empty_like(log_prob)
@@ -3484,3 +3507,10 @@ def npu_conv2d_backward_meta(x, grad_output, weight, stride, padding, dilation, 
         result_3 = None
 
     return (result_1, result_2, result_3)
+
+
+@impl(m, "repeat_interleave_backward_int")
+def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
+    result = torch.empty_like(x)
+
+    return result
