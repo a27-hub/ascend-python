@@ -24,13 +24,9 @@ torch_npu.contrib.npu_giou(boxes1, boxes2, is_permuted=True)
 
 ## 参数说明
 
-- **boxes1**（`Tensor`）：格式为xywh、shape为(4, n)的预测检测框。
-- **boxes2**（`Tensor`）：相应的gt检测框，shape为(4, n)。
+- **boxes1**（`Tensor`）：格式为xywh、shape为(n, 4)的预测检测框。
+- **boxes2**（`Tensor`）：相应的gt检测框，shape为(n, 4)。
 - **is_permuted**（`bool`）：坐标值是否已经标准化。默认为True。
-
-## 约束说明
-
-仅trans=True（仅支持xywh，不支持xyxy），is_cross=False（仅支持a.shape==b.shape的场景，不支持((n,4),(m,4))的场景）。
 
 ## 调用示例
 
