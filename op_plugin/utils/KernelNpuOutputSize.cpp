@@ -20,6 +20,8 @@
 #include "op_plugin/utils/AdvancedIndex.h"
 #include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 
 namespace op_infer {
 using tuple_array_vector = std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::SmallVector<int64_t, SIZE>>;
@@ -615,7 +617,7 @@ ctc_loss_npu_output_size(const at::Tensor &log_probs, int64_t max_length)
     }
     c10::SmallVector<int64_t, SIZE> neg_log_likelihood_size = {batch_size};
     int64_t alpha_tail_size = 2 * max_length + 1;
-    static bool isRegBaseSoc = false;
+    static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95;
     // Apply for a 32 byte aligned space to avoid address shifting in the OP.
     int64_t alpha_tail_size_align = isRegBaseSoc ? alpha_tail_size : (alpha_tail_size + 7) / 8 * 8;
     c10::SmallVector<int64_t, SIZE> log_alpha_size = {batch_size, time_size, alpha_tail_size_align};
@@ -1862,23 +1864,6 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self)
-{
-    auto outputSize = op_infer::array_to_small_vector(self.sizes());
-    auto self_dim_num = self.dim();
-    TORCH_CHECK(outputSize[self_dim_num - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
-        "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-    outputSize[self_dim_num - 1] /= INT4_NUMS_IN_INT32_SPACE;
-    return outputSize;
-}
-
-c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self)
-{
-    int64_t resultSize = self.size(0);
-    at::SmallVector<int64_t, SIZE> outputSize = {resultSize};
-    return outputSize;
-}
-
 c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
     c10::SmallVector<int64_t, SIZE> output_size;
@@ -2112,7 +2097,7 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tenso
                 "The dims of input permuted_tokens should be 2 dimensional, but got ", permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(sorted_indices.dim() == DIM_1,
                 "The dims of input sorted_indices should be 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
-    
+
     int64_t topk = probs.has_value() ? probs.value().size(1) : DEFAULT_TOPK;
     TORCH_CHECK(topk > 0, "The topk should be greater than zero in npu_moe_token_unpermute_out_size, but got ", topk, OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> output_shape;

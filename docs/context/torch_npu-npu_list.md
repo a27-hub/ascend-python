@@ -18,7 +18,7 @@
 </tr>
 <tr id="row1066418791520"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p166411751513"><a name="p166411751513"></a><a name="p166411751513"></a><a href="（beta）torch_npu-npu-clear_npu_overflow_flag.md">（beta）torch_npu.npu.clear_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对npu芯片溢出检测为进行清零。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对npu芯片溢出检测进行清零。</p>
 </td>
 </tr>
 <tr id="row2074316127585"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7858135417578"><a name="p7858135417578"></a><a name="p7858135417578"></a><a href="torch_npu-npu-enable_deterministic_with_backward.md">torch_npu.npu.enable_deterministic_with_backward</a></p>
@@ -242,7 +242,7 @@
 </thead>
 <tbody><tr id="zh-cn_topic_0000001788617484_row1616454104711"><td class="cellrowborder" valign="top" width="38.76%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001788617484_p16616105411477"><a name="zh-cn_topic_0000001788617484_p16616105411477"></a><a name="zh-cn_topic_0000001788617484_p16616105411477"></a>（<span id="zh-cn_topic_0000001788617484_ph168289415199"><a name="zh-cn_topic_0000001788617484_ph168289415199"></a><a name="zh-cn_topic_0000001788617484_ph168289415199"></a>beta</span>）torch_npu.npu.get_rng_state</p>
 </td>
-<td class="cellrowborder" rowspan="9" valign="top" width="61.24000000000001%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001788617484_p45278137545"><a name="zh-cn_topic_0000001788617484_p45278137545"></a><a name="zh-cn_topic_0000001788617484_p45278137545"></a>Torch_npu提供随机数相关的部分接口，具体可参考<a href="https://www.hiascend.com/document/detail/zh/Pytorch/720/apiref/PyTorchNativeapi/ptaoplist_000237.html">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="9" valign="top" width="61.24000000000001%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001788617484_p45278137545"><a name="zh-cn_topic_0000001788617484_p45278137545"></a><a name="zh-cn_topic_0000001788617484_p45278137545"></a>torch_npu提供随机数相关的部分接口，具体可参考<a href="https://www.hiascend.com/document/detail/zh/Pytorch/720/apiref/PyTorchNativeapi/ptaoplist_000237.html">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001788617484_row1661655484720"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001788617484_p116160540479"><a name="zh-cn_topic_0000001788617484_p116160540479"></a><a name="zh-cn_topic_0000001788617484_p116160540479"></a>（<span id="zh-cn_topic_0000001788617484_ph81516268336"><a name="zh-cn_topic_0000001788617484_ph81516268336"></a><a name="zh-cn_topic_0000001788617484_ph81516268336"></a>beta</span>）torch_npu.npu.set_rng_state</p>
@@ -283,7 +283,7 @@
 </thead>
 <tbody><tr id="zh-cn_topic_0000001835217389_row939163412547"><td class="cellrowborder" valign="top" width="54.559999999999995%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001835217389_p13919348541"><a name="zh-cn_topic_0000001835217389_p13919348541"></a><a name="zh-cn_topic_0000001835217389_p13919348541"></a>（<span id="zh-cn_topic_0000001835217389_ph168289415199"><a name="zh-cn_topic_0000001835217389_ph168289415199"></a><a name="zh-cn_topic_0000001835217389_ph168289415199"></a>beta</span>）torch_npu.npu.is_initialized</p>
 </td>
-<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001835217389_p20972816174218"><a name="zh-cn_topic_0000001835217389_p20972816174218"></a><a name="zh-cn_topic_0000001835217389_p20972816174218"></a>Torch_npu提供设备相关的部分接口，具体可参考<a href="https://www.hiascend.com/document/detail/zh/Pytorch/720/apiref/PyTorchNativeapi/ptaoplist_000237.html">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001835217389_p20972816174218"><a name="zh-cn_topic_0000001835217389_p20972816174218"></a><a name="zh-cn_topic_0000001835217389_p20972816174218"></a>torch_npu提供设备相关的部分接口，具体可参考<a href="https://www.hiascend.com/document/detail/zh/Pytorch/720/apiref/PyTorchNativeapi/ptaoplist_000237.html">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001835217389_row13391173465410"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001835217389_p173915341547"><a name="zh-cn_topic_0000001835217389_p173915341547"></a><a name="zh-cn_topic_0000001835217389_p173915341547"></a>（<span id="zh-cn_topic_0000001835217389_ph1943317523417"><a name="zh-cn_topic_0000001835217389_ph1943317523417"></a><a name="zh-cn_topic_0000001835217389_ph1943317523417"></a>beta</span>）torch_npu.npu.init</p>
