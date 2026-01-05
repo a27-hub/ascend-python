@@ -11806,7 +11806,7 @@ Atlas A2训练系列产品
 _add_torch_npu_docstr(
     "npu_nsa_compress_attention_infer",
     """
-torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, layout='TND', atten_mask=None, block_table=None, topk_mask=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
+torch_npu.npu_nsa_compress_attention_infer(query, key, value, scale_value, head_num, key_value_head_num, select_block_size, select_block_count, page_block_size, compress_block_size, compress_stride, layout='TND', atten_mask=None, block_table=None, topk_mask=None, importance_score_param=None, actual_seq_qlen=None, actual_cmp_seq_kvlen=None, actual_sel_seq_kvlen=None)
 功能描述
 Native Sparse Attention算法中推理场景下，实现对KV压缩的计算。
 
@@ -11826,6 +11826,7 @@ layout(str)：可选输入，表示输入的数据排布格式，支持TND、BSN
 atten_mask(Tensor)：可选输入，当前不支持。
 block_table**(Tensor)：可选输入，shape支持2维输入，数据类型支持‘int32’，page_attention场景下kv缓存使用的block映射表，不支持非连续的Tensor，不支持空tensor，不支持inf，nan。
 topk_mask**(Tensor)：可选输入，当前不支持。
+importance_score_param(Tensor)：可选输入，通过select_block_size，compress_block_size，compress_stride计算得到的参数，用于计算重要性得分。当非空时重要性分数计算通过importance_score_param来计算。
 actual_seq_qlen(list[int])：可选输入，当前不支持。
 actual_cmp_seq_kvlen(list[int])：必选输入，表示压缩注意力的key/value的每个S的长度。
 actual_sel_seq_kvlen(list[int])：可选输入，当前不支持。
