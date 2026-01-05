@@ -6681,7 +6681,7 @@ _add_torch_npu_docstr(
   output = AlltoAll(permutedOut).view(worldSize*BS, H2/worldSize)
 
 接口原型:
-torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None) -> Tensor
+torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int[]? all2all_axes=None) -> Tensor
     
 参数说明:
 输入说明:
@@ -6758,7 +6758,7 @@ _add_torch_npu_docstr(
       output = AlltoAll(permutedOut).view(worldSize * BS, H2 / worldSize)
 
 接口原型:
-torch_npu.npu_quant_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=3, int x2_quant_mode=2, int common_quant_mode=0, int[]? group_sizes=None, int[]? all2all_axes=None, int comm_quant_dtype=0, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
+torch_npu.npu_quant_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=3, int x2_quant_mode=2, int common_quant_mode=0, int[]? group_sizes=None, int[]? all2all_axes=None, int comm_quant_dtype=0, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
 
 参数说明:
 输入说明:
@@ -6846,7 +6846,7 @@ _add_torch_npu_docstr(
     output = permutedOut @ x2 + bias 
 
 接口原型:
-torch_npu.npu_all_to_all_matmul(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None, bool all2all_out_flag=True) -> (Tensor, Tensor)
+torch_npu.npu_all_to_all_matmul(Tensor x1, Tensor x2, str hcom, int world_size, *, Tensor? bias=None, int[]? all2all_axes=None, bool all2all_out_flag=True) -> (Tensor, Tensor)
     
 参数说明:
 输入说明:
