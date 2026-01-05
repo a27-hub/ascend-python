@@ -84,7 +84,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 
     支持BSH、BSND、BNSD、BNSD\_BSND（输入为BNSD时，输出格式为BSND，仅支持Q\_S大于1）、BSH\_NBSD、BSND\_NBSD、BNSD\_NBSD（输出格式为NBSD时，仅支持Q\_S大于1且小于等于16）、TND、TND\_NTD、NTD\_TND（TND相关场景综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)）。其中BNSD\_BSND含义指当输入为BNSD，输出格式为BSND，仅支持Q\_S大于1。
 
-- **num_key_value_heads** (`int`)：可选参数。代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，数据类型支持`int64`。默认值为0，表示`key`/`value`和`query`的head个数相等，需要满足`num_heads`整除`num_key_value_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64。在BSND、BNSD、BNSD\_BSND（仅支持Q\_S大于1）场景下，还需要与`key`/`value`的N轴shape值相同，否则执行异常。
+- **num_key_value_heads** (`int`)：可选参数。代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，数据类型支持`int64`。默认值为0，表示`key`/`value`和`query`的head个数相等，需要满足`num_key_value_heads`整除`num_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64。在BSND、BNSD、BNSD\_BSND（仅支持Q\_S大于1）场景下，还需要与`key`/`value`的N轴shape值相同，否则执行异常。
 - **sparse_mode** (`int`)：可选参数。表示sparse的模式。数据类型支持`int64`。Q\_S为1且不带rope输入时该参数无效。input\_layout为TND、TND\_NTD、NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
     -   `sparse_mode`为0时，代表defaultMask模式，如果`atten_mask`未传入则不做mask操作，忽略`pre_tokens`和`next_tokens`（内部赋值为INT\_MAX）；如果传入，则需要传入完整的`atten_mask`矩阵（S1\*S2），表示`pre_tokens`和`next_tokens`之间的部分需要计算。
     -   `sparse_mode`为1时，代表allMask，必须传入完整的attenmask矩阵（S1\*S2）。
