@@ -9,7 +9,7 @@
         -   [（beta）torch_npu.fast_gelu](./context/（beta）torch_npu-fast_gelu.md)
         -   [（beta）torch_npu.npu_alloc_float_status](./context/（beta）torch_npu-npu_alloc_float_status.md)
         -   [（beta）torch_npu.npu_anchor_response_flags](./context/（beta）torch_npu-npu_anchor_response_flags.md)
-        -   [（beta）torch_npu.npu_apply_adam](./context/（beta）torch_npu-npu_apply_adam.md)
+        -   [（beta）torch_npu.npu_apply_adam](./context/)
         -   [（beta）torch_npu.npu_batch_nms](./context/（beta）torch_npu-npu_batch_nms.md)
         -   [（beta）torch_npu.npu_bert_apply_adam](./context/（beta）torch_npu-npu_bert_apply_adam.md)
         -   [（beta）torch_npu.npu_bmmV2](./context/（beta）torch_npu-npu_bmmV2.md)
