@@ -62,10 +62,7 @@ class TestQuantMatmulAlltoAll(TestCase):
         y_dtype = None
 
         # Call NPU operator
-        out = torch_npu.npu_quant_matmul_all_to_all(
-            x1, x2, hcom_name, world_size, bias, x1_scale, x2_scale, common_scale, x1_offset, x2_offset,
-            x1_quant_mode, x2_quant_mode, common_quant_mode, group_size, all2all_axes, comm_quant_dtype,
-            x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype, output_scale_dtype, comm_scale_dtype, y_dtype)
+        out = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom_name, world_size, bias=bias, x1_scale=x1_scale, x2_scale=x2_scale, group_size=[0], all2all_axes=[-1,-2])
 
         # Return result
         c2p.put((rank, out.cpu()))

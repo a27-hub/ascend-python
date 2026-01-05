@@ -3749,9 +3749,7 @@ class TestQuantMatmulAlltoAll(TestCase):
             y_dtype = None
 
             # 断言
-            res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size, bias, x1Scale, x2Scale, common_scale, x1_offset, x2_offset,
-                                                        x1_quant_mode, x2_quant_mode, common_quant_mode, group_size, all2all_axes, comm_quant_dtype, x1_dtype, x2_dtype, x1_scale_dtype,
-                                                        x2_scale_dtype, output_scale_dtype, comm_scale_dtype, y_dtype)
+            res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size, bias=bias, x1_scale=x1Scale, x2_scale=x2Scale, group_size=[0], all2all_axes=[-1,-2])
             # 因为是假张量，所以只匹配shape和dtype是否对应
             self.assertTrue(len(res.shape) == 2)
             self.assertTrue(x1.shape[0] * world_size == res.shape[0])
