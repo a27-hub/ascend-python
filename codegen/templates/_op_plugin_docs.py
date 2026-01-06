@@ -13347,3 +13347,140 @@ model = torch.compile(model, backend=npu_backend)
 model(x)
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_grad_kl_loss",
+    """
+接口原型: 
+npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor, Tensor, Tensor)
+
+功能描述:
+该接口实现了npu_lightning_indexer warmup阶段训练的反向功能(dense计算)，并融合了Loss的计算。npu_lightning_indexer用于筛选Attention的query与key间最高内在联系的Top-k项，以减少长序列场景下的Attention计算量，提升训练性能。该API为稠密场景下对应的接口，相比较于npu_sparse_lightning_indexer_grad_kl_loss接口的输入，key、key_index不用做稀疏化处理。该函数与npu_dense_lightning_indexer_softmax_lse函数搭配使用，使用后者计算出来的softmax_max_index与softmax_sum_index降低算子显存占用。
+
+参数说明: 
+query（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, D)、(T1, N1, D)。
+key（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, D)、(T2, N2, D)。
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_sum（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_max_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+softmax_sum_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+scale_value（float）：必选参数，表示缩放系数，数据类型支持FLOAT。
+query_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, Dr)、(T1, N1, Dr)。
+key_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, Dr)、(T2, N2, Dr)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+d_query_index（Tensor）：表示query_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_key_index（Tensor）：表示key_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_weights（Tensor）：表示weights的梯度，数据类型支持BFLOAT16、FLOAT16。
+loss（Tensor）：表示网络正向输出和golden值的差异，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.1
+PyTorch 2.5及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = N1
+N1_index = 64
+N2_index = 1
+S1 = 128
+S2 = 256
+D = 128
+Dr = 64
+output_dtype = torch.float16
+q = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
+k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
+
+q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+q_rope = torch.randn(B, S1, N1, Dr, dtype=output_dtype, device=torch.device('npu'))
+k_rope = torch.randn(B, S2, N2, Dr, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+softmax_max = (torch.randn(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
+softmax_sum = torch.ones(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+
+input_layout = 'BSND'
+sparse_mode = 3
+scale = 1.0
+
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+
+torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale, query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_softmax_lse",
+    """
+接口原型: 
+npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
+
+功能描述:
+是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把lightning_indexer部分的Softmax的求最大值和求和运算提前来降低算子的显存占用。
+
+参数说明: 
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+softmax_max_index（Tensor）：表示softmax计算使用的max值，数据类型支持FLOAT。
+softmax_sum_index（Tensor）：表示softmax计算使用的sum值，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.1
+PyTorch 2.5及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = 1
+S1 = 128
+S2 = 256
+D = 128
+output_dtype = torch.float16
+
+q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+input_layout = 'BSND'
+sparse_mode = 3
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+"""
+)
