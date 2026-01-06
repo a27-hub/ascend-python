@@ -83,6 +83,7 @@ class TestQuantReduceScatter(TestCase):
             else:
                 out = torch.add(out, out_single)
         out = out.to(torch.float32)
+        # x给的2维
         index = x_list[0].shape[0] // world_size
         return [out[index * i:index * (i + 1), :] for i in range(world_size)]
 
