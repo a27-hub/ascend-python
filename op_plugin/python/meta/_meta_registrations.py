@@ -1268,15 +1268,17 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads, nu
     #q_d/q_h is empty but kv not empty or q not empty but kv_h/kv_d is empty
     if query_layout == "BSH":
         query_d = query.size(2) // num_heads
-    if query_layout == "BNSD" or query_layout == "BSND":
+    elif query_layout in ("BNSD", "BSND"):
         query_d = query.size(3)
-    if query_layout == "TND" or query_layout == "NTD" or query_layout == "NSD":
+    elif query_layout in ("TND", "NTD", "NSD"):
         query_d = query.size(2) 
+    else:
+        raise ValueError(f"Unsupported query_layout: {query_layout}")
 
-    if  query_d != 0 and value_d == 0:
-        value_d = query_d
-    elif query_d == 0 and value_d != 0:
+    if query_d == 0:
         value_d = 0
+    elif value_d == 0:
+        value_d = query_d
 
     return value_d
 
