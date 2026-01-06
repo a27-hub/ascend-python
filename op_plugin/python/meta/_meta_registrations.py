@@ -1236,7 +1236,7 @@ def get_query_t_n(query, query_layout):
     return t, n1
 
 
-def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
+def get_value_d(block_table, value, query, query_layout, num_key_value_heads, num_heads):
     if block_table is not None:
         if value.dim() == 3:
             value_d = value.size(2) // num_key_value_heads
@@ -1264,6 +1264,20 @@ def get_value_d(block_table, value, query, query_layout, num_key_value_heads):
             value_d = value.size(3)
         if query_layout == "TND" or query_layout == "NTD" or query_layout == "NSD":
             value_d = value.size(2)
+
+    #q_d/q_h is empty but kv not empty or q not empty but kv_h/kv_d is empty
+    if query_layout == "BSH":
+        query_d = query.size(2) // num_heads
+    if query_layout == "BNSD" or query_layout == "BSND":
+        query_d = query.size(3)
+    if query_layout == "TND" or query_layout == "NTD" or query_layout == "NSD":
+        query_d = query.size(2) 
+
+    if  query_d != 0 and value_d == 0:
+        value_d = query_d
+    elif query_d == 0 and value_d != 0:
+        value_d = 0
+
     return value_d
 
 
@@ -1353,7 +1367,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
 
     # get value_d
-    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads, num_heads)
     # 获取change_d_scale
     change_d_scale = get_change_d_scale(value)
     value_d = value_d * change_d_scale
@@ -1403,7 +1417,7 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
     query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
 
     # get value_d
-    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads, num_query_heads)
     # 获取change_d_scale
     change_d_scale = get_change_d_scale_v2(value, value_dtype)
     value_d = value_d * change_d_scale
