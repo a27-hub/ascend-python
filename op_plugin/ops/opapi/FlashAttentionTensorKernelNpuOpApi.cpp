@@ -505,7 +505,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         const at::Tensor &seed_const = seed.value_or(at::Tensor());
         const at::Tensor &offset_const = offset.value_or(at::Tensor());
-        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, &seed_const, &offset_const, numels, gen_mask_parallel, sync);
+
+        uint64_t offset_intragraph = 0;
+        c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+        if (is_capture != c10_npu::CaptureStatus::None) {
+            const auto gen = at_npu::detail::getDefaultNPUGenerator();
+            auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
+            offset_intragraph = gen_state_.offset_intragraph_;
+        }
+        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, &seed_const, &offset_const, numels, gen_mask_parallel, sync, is_capture, offset_intragraph);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
     }
