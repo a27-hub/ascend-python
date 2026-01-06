@@ -662,8 +662,7 @@ def npu_quant_mm_reduce_scatter_meta(self, x2, hcom, world_size, reduce_op='sum'
 def npu_quant_reduce_scatter_meta(x, scales, hcom_name, world_size, reduce_op='sum',
                                   output_dtype=None, x_dtype=None, scales_dtype=None):
     world_size = 2
-    out_m = x.size(0) // world_size
-    size = [out_m, x.size(1)]
+    size = x.size()
 
     dtype = x.dtype
     if output_dtype is not None:

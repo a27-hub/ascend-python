@@ -82,9 +82,7 @@ class TestQuantReduceScatter(TestCase):
                 out = out_single
             else:
                 out = torch.add(out, out_single)
-        out = out.to(torch.float32)
-        index = x_list[0].shape[0] // world_size
-        return [out[index * i:index * (i + 1), :] for i in range(world_size)]
+        return out.to(torch.float32)
 
     @skipIfUnsupportMultiNPU(2)
     @SupportedDevices(['Ascend910_95'])

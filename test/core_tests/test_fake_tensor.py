@@ -3689,8 +3689,8 @@ class TestQuantReduceScatter(TestCase):
             world_size = 2
             # 断言
             res = torch_npu.npu_quant_reduce_scatter(x, scales, hcom, world_size)
-            self.assertTrue(len(res.shape) == 2)
-            self.assertTrue(x.shape[0] // world_size == res.shape[0])
+            self.assertTrue(len(x.shape) == len(res.shape))
+            self.assertTrue(x.shape[0] == res.shape[0])
             self.assertTrue(x.shape[1] == res.shape[1])
 
 
