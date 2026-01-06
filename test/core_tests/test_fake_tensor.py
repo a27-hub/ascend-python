@@ -4115,6 +4115,82 @@ class TestNpuDSA(TestCase):
             self.assertEqual(loss.dtype, expect_loss.dtype)
             self.assertEqual(loss.shape, expect_loss.shape)
 
+    def gen_npu_dense_lightning_indexer_grad_kl_loss_inputs(self, isTnd):
+        B = 1
+        N1 = 64
+        N2 = N1
+        N1_index = 64
+        N2_index = 1
+        S1 = 128
+        S2 = 256
+        D = 128
+        Dr = 64
+        output_dtype = torch.float16
+        q = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
+        k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
+    
+        q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+        k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+        if Dr != 0:
+            q_rope = torch.randn(B, S1, N1, Dr, dtype=output_dtype, device=torch.device('npu'))
+            k_rope = torch.randn(B, S2, N2, Dr, dtype=output_dtype, device=torch.device('npu'))
+        else:
+            q_rope = None
+            k_rope = None
+        weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+        if isTnd:
+            q_tnd = q.squeeze(dim=0)
+            k_tnd = k.squeeze(dim=0)
+            q_index_tnd = q_index.squeeze(dim=0)
+            k_index_tnd = k_index.squeeze(dim=0)
+            if q_rope is not None:
+                q_rope_tnd = q_rope.squeeze(dim=0)
+                k_rope_tnd = k_rope.squeeze(dim=0)
+            else :
+                q_rope_tnd = None
+                k_rope_tnd = None
+            weights_tnd = weights.squeeze(dim=0)
+            
+            softmax_max = (torch.randn(N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
+            softmax_sum = torch.ones(N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
+            actual_seq_qlen = [S1]
+            actual_seq_klen = [S2]
+            return q_tnd, k_tnd, q_index_tnd, k_index_tnd, q_rope_tnd, k_rope_tnd, weights_tnd, softmax_max, softmax_sum, actual_seq_qlen, actual_seq_klen
+        else :
+            softmax_max = (torch.randn(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
+            softmax_sum = torch.ones(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
+            actual_seq_qlen = None
+            actual_seq_klen = None
+            return q, k, q_index, k_index, q_rope, k_rope, weights, softmax_max, softmax_sum, actual_seq_qlen, actual_seq_klen
+
+    def test_dsa_npu_dense_lightning_indexer_grad_kl_loss(self):
+        with FakeTensorMode():
+            input_layout = 'TND'
+            isTnd = True
+            sparse_mode = 3
+            scale = 1.0
+            q, k, q_index, k_index, q_rope, k_rope, weights, softmax_max, softmax_sum, actual_seq_qlen, actual_seq_klen = self.gen_npu_dense_lightning_indexer_grad_kl_loss_inputs(isTnd)
+            softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights,
+                    actual_seq_qlen=actual_seq_qlen,
+                    actual_seq_klen=actual_seq_klen,
+                    layout=input_layout,
+                    sparse_mode=sparse_mode)
+            
+            d_query_index, d_key_index, d_weights, loss = torch_npu.npu_dense_lightning_indexer_grad_kl_loss(
+                    q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale,
+                    query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,
+                    actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+            expect_loss = torch.empty([1], dtype=torch.float32)
+
+            self.assertEqual(d_query_index.dtype, q_index.dtype)
+            self.assertEqual(d_query_index.shape, q_index.shape)
+            self.assertEqual(d_key_index.dtype, k_index.dtype)
+            self.assertEqual(d_key_index.shape, k_index.shape)
+            self.assertEqual(d_weights.dtype, weights.dtype)
+            self.assertEqual(d_weights.shape, weights.shape)
+            self.assertEqual(loss.dtype, expect_loss.dtype)
+            self.assertEqual(loss.shape, expect_loss.shape)
+
 class TestNpuConv2d(TestCase):
     def test_npu_conv2d_meta_0(self):
         with FakeTensorMode():
