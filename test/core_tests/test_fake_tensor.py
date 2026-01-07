@@ -4295,6 +4295,28 @@ class TestNpuRepeatInterleave(TestCase):
             self.assertEqual(x.shape, x_fake_tensor.shape)
             self.assertEqual(x.dtype, x_fake_tensor.dtype)
             
+class TestQuantMatmulInplaceAdd(TestCase):
+    def test_npu_quant_batch_matmul_inplace_add_meta_0(self):
+        with FakeTensorMode():
+            torch.manual_seed(0)
+            y = torch.randint(-1, 1, (7168, 576), dtype=torch.float32).npu()
+            x1 = torch.randint(-1, 1, (7168, 512), dtype=torch.int8).npu()
+            x2 = torch.randint(-1, 1, (512, 576), dtype=torch.int8).npu()
+            x2_scale = torch.randint(-1, 1, (7168, 8, 2), dtype=torch.float32).npu()
+            x1_scale = torch.randint(-1, 1, (8, 576, 2), dtype=torch.float32).npu()
+
+            res_1 = torch_npu.npu_add_quant_matmul_(y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=None)
+            # x1 shape is k,m; x2 shape is e,k,n; y shape is e,m,n
+            self.assertTrue(len(res_1.shape) == 2)
+            self.assertTrue(x1.shape[0] == res_1.shape[0])
+            self.assertTrue(x2.shape[1] == res_1.shape[1])
+            self.assertTrue(res_1.dtype == torch.float32)
+
+            res_2 = torch_npu.npu_add_quant_matmul(y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=None)
+            self.assertTrue(len(res_1.shape) == 2)
+            self.assertTrue(x1.shape[0] == res_1.shape[0])
+            self.assertTrue(x2.shape[1] == res_1.shape[1])
+            self.assertTrue(res_1.dtype == torch.float32)
 
 if __name__ == "__main__":
     run_tests()
