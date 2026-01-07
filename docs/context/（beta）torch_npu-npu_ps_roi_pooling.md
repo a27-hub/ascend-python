@@ -30,6 +30,8 @@ torch_npu.npu_ps_roi_pooling(x, rois, spatial_scale, group_size, output_dim) -> 
 ## 调用示例
 
 ```python
+>>> import torch
+>>> import torch_npu
 >>> roi = torch.tensor([[[1], [2], [3], [4], [5]],
                         [[6], [7], [8], [9], [10]]], dtype = torch.float16).npu()
 >>> x = torch.tensor([[[[ 1]], [[ 2]], [[ 3]], [[ 4]],
