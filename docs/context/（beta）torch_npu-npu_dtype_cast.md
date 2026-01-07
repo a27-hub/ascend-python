@@ -32,6 +32,7 @@ torch_npu.npu_dtype_cast(input, dtype) -> Tensor
 示例一：
 
 ```python
+>>> import torch, torch_npu
 >>> torch_npu.npu_dtype_cast(torch.tensor([0, 0.5, -1.]).npu(), dtype=torch.int)
 tensor([ 0,  0, -1], device='npu:0', dtype=torch.int32)
 ```
@@ -39,7 +40,8 @@ tensor([ 0,  0, -1], device='npu:0', dtype=torch.int32)
 示例二：
 
 ```python
-//FakeTensor模式
+>>> import torch, torch_npu
+#FakeTensor模式
 >>> from torch._subclasses.fake_tensor import FakeTensorMode
 >>> with FakeTensorMode():
 ...     x = torch.rand(2, dtype=torch.float32).npu()
