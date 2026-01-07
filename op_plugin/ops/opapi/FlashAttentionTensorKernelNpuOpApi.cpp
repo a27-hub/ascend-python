@@ -135,8 +135,8 @@ c10_npu::CaptureStatus stream_capture_status_may_init_ctx(const c10_npu::NPUStre
     return c10_npu::CaptureStatus(is_capturing);
 }
 
-at::Tensor dropout_gen_mask_tensor_impl(const at::Tensor &query, double keep_prob, const at::Tensor* seed,
-    const at::Tensor* offset, const int64_t numels, c10_npu::CaptureStatus is_capture, const uint64_t offset_intragraph)
+at::Tensor dropout_gen_mask_tensor_impl(const at::Tensor &query, double keep_prob, const at::Tensor &seed,
+    const at::Tensor &offset, const int64_t numels, c10_npu::CaptureStatus is_capture, const uint64_t offset_intragraph)
 {
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     c10::TensorOptions options = query.options();
@@ -148,19 +148,19 @@ at::Tensor dropout_gen_mask_tensor_impl(const at::Tensor &query, double keep_pro
     prob = probScalar.toDouble();
     aclDataType probDataType = at_npu::native::OpPreparation::convert_to_acl_data_type(query.scalar_type());
     if (is_capture == c10_npu::CaptureStatus::None) {
-        int64_t seedValue = extract_value(*seed);
-        int64_t offsetValue = extract_value(*offset);
+        int64_t seedValue = extract_value(seed);
+        int64_t offsetValue = extract_value(offset);
         DO_COMPATIBILITY(aclnnDropoutGenMaskV2,
             stateless_dropout_gen_mask_aclop(query, keep_prob, seedValue, offsetValue, numels, mask));
         EXEC_NPU_CMD(aclnnDropoutGenMaskV2, shapeArray, prob, seedValue, offsetValue, probDataType, mask);
     } else {
-        EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, prob, *seed, *offset, offset_intragraph, probDataType, mask);
+        EXEC_NPU_CMD(aclnnDropoutGenMaskV2Tensor, shapeArray, prob, seed, offset, offset_intragraph, probDataType, mask);
     }
     return mask;
 }
 
-at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep_prob, const at::Tensor* seed,
-    const at::Tensor* offset, const int64_t numels, const bool gen_mask_parallel, const bool sync,
+at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep_prob, const at::Tensor &seed,
+    const at::Tensor &offset, const int64_t numels, const bool gen_mask_parallel, const bool sync,
     c10_npu::CaptureStatus is_capture, const uint64_t offset_intragraph = 0)
 {
     at::Tensor mask;
@@ -209,7 +209,7 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
 }
 
 at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &key, double keep_prob, int64_t head_num,
-    std::string input_layout, bool gen_mask_parallel, bool sync, at::Tensor*& seed, at::Tensor*& offset,
+    std::string input_layout, bool gen_mask_parallel, bool sync, at::Tensor& seed, at::Tensor& offset,
     int64_t& numels, c10_npu::CaptureStatus is_capture)
 {
     at::Tensor drop_mask;
@@ -230,18 +230,12 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
         if (is_capture == c10_npu::CaptureStatus::None) {
             auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
             auto options = at::TensorOptions().device(at::kCPU).dtype(at::kLong);
-            if (!seed) {
-                seed = new at::Tensor();
-            }
-            if (!offset) {
-                offset = new at::Tensor();
-            }
-            *seed = at::empty({1}, options).fill_(static_cast<int64_t>(pair.first));
-            *offset = at::empty({1}, options).fill_(static_cast<int64_t>(pair.second));
+            seed = at::empty({1}, options).fill_(static_cast<int64_t>(pair.first));
+            offset = at::empty({1}, options).fill_(static_cast<int64_t>(pair.second));
         } else {
             auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(10);
-            seed = gen_state_.seed_.ptr;
-            offset = gen_state_.offset_.ptr;
+            seed = *gen_state_.seed_.ptr;
+            offset = *gen_state_.offset_.ptr;
             offset_intragraph = gen_state_.offset_intragraph_;
         }
         if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
@@ -520,7 +514,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
             auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
             offset_intragraph = gen_state_.offset_intragraph_;
         }
-        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, &seed_const, &offset_const, numels, gen_mask_parallel, sync, is_capture, offset_intragraph);
+        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed_const, offset_const, numels, gen_mask_parallel, sync, is_capture, offset_intragraph);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
     }
@@ -671,8 +665,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor format_atten_mask = format_trans(atten_mask_const);
     at::Tensor format_sink = format_trans(sink_const);
 
-    at::Tensor* seed = nullptr;
-    at::Tensor* offset = nullptr;
+    at::Tensor seed ;
+    at::Tensor offset;
     int64_t numels = 0;
 
     if (input_layout_str == "TND") {
@@ -786,7 +780,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     }
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
-        *seed, *offset);
+        seed, offset);
 }
 #endif
 }
