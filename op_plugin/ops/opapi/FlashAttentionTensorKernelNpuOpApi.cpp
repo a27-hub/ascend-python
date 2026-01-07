@@ -209,7 +209,7 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
 }
 
 at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &key, double keep_prob, int64_t head_num,
-    std::string input_layout, bool gen_mask_parallel, bool sync, at::Tensor* seed, at::Tensor* offset,
+    std::string input_layout, bool gen_mask_parallel, bool sync, at::Tensor*& seed, at::Tensor*& offset,
     int64_t& numels, c10_npu::CaptureStatus is_capture)
 {
     at::Tensor drop_mask;
@@ -230,6 +230,12 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
         if (is_capture == c10_npu::CaptureStatus::None) {
             auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
             auto options = at::TensorOptions().device(at::kCPU).dtype(at::kLong);
+            if (!seed) {
+                seed = new at::Tensor();
+            }
+            if (!offset) {
+                offset = new at::Tensor();
+            }
             *seed = at::empty({1}, options).fill_(static_cast<int64_t>(pair.first));
             *offset = at::empty({1}, options).fill_(static_cast<int64_t>(pair.second));
         } else {
