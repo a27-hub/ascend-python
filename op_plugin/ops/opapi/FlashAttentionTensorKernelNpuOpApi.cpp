@@ -671,8 +671,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor format_atten_mask = format_trans(atten_mask_const);
     at::Tensor format_sink = format_trans(sink_const);
 
-    at::Tensor* seed;
-    at::Tensor* offset;
+    at::Tensor* seed = nullptr;
+    at::Tensor* offset = nullptr;
     int64_t numels = 0;
 
     if (input_layout_str == "TND") {
