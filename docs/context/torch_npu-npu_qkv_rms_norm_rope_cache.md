@@ -125,17 +125,17 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 
 ## 返回值说明
 
-- **q_out** (`Tensor`)：和输入`q_out`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- **q_out** (`Tensor`)：原地更新，和输入`q_out`的数据类型、维度、数据格式完全一致（本质in-place更新）。
 
-- **k_cache** (`Tensor`)：和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- **k_cache** (`Tensor`)：原地更新，和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
 
-- **v_cache** (`Tensor`)：和输入`v_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- **v_cache** (`Tensor`)：原地更新，和输入`v_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
 
-- **q_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{q}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+- **q_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时有效，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{q}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
 
-- **k_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{k}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+- **k_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时有效，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{k}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
 
-- **v_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时，表示量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{v}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+- **v_out_before_quant** (`Tensor`)：仅当`is_output_qkv`为True时有效，表示量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{v}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
 
 
 ## 约束说明
@@ -145,7 +145,7 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 -   `qkv`张量为二维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}},\ N_q \times D_{\text{qkv}} + N_k \times D_{\text{qkv}} + N_v \times D_{\text{qkv}}]$。
 -   $B_{\text{qkv}}$为输入`qkv`的batch size。
 -   $S_{\text{qkv}}$为输入`qkv`的sequence length（大小由`qkv_size`属性决定）。
--   $N_{\text{qkv}}$为输入`qkv`的总head number，$N_q$为Q分量的head number，$N_k$为K分量的head number，$N_v$为V分量的head number。$N_{\text{qkv}} = N_q + N_k + N_v$。
+-   $N_{\text{qkv}}$为输入`qkv`的总head number，$N_q$为Q分量的head number，$N_k$为K分量的head number，$N_v$为V分量的head number。需要满足：$N_{\text{qkv}} = N_q + N_k + N_v$且$N_q = T \times N_k$，$N_k = N_v$，$T \geq 1$。
 -   $D_{\text{qkv}}$为输入qkv的head dimension，要求$D_{\text{qkv}} = D_q = D_k = D_v$。当前仅支持$D_{\text{qkv}} = 128$。
 -   当`cacheMode`为`"PA_NZ"`场景时，`k_cache`的shape中`BlockSize`必须能被32整除，`v_cache`的shape中`BlockSize`必须与k_cache保持一致。
 
@@ -161,8 +161,6 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   
   torch_npu.npu.set_compile_mode(jit_compile=True)
   device = torch.device("npu:0")
-  
-  torch.set_printoptions(threshold=torch.inf)
   
   # 参数
   B, S = 16, 3
@@ -202,41 +200,14 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   index = torch.tensor(sampled_data, dtype=torch.int64, device=device)
   
   q_out = torch.zeros(B * S, Nq * D, dtype=dtype, device=device)
-  
-  # 0: 不量化，1: 对称量化，2: 非对称量化
-  quant_mode_k = 1
-  quant_mode_v = 1
-  
-  if quant_mode_k == 0:  # k不量化
-      k_cache = torch.ones(block_num, Nk * D // 16,
-                           block_size, 16, dtype=dtype, device=device)
-      k_scale = None
-      k_offset = None
-  elif quant_mode_k == 1:  # k对称量化
-      k_cache = torch.ones(block_num, Nk * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
-      k_offset = None
-  else:  # k非对称量化
-      k_cache = torch.ones(block_num, Nk * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
-      k_offset = torch.randn(Nk, D, dtype=torch.float32, device=device)
-  if quant_mode_v == 0:  # v不量化
-      v_cache = torch.ones(block_num, Nv * D // 16,
-                           block_size, 16, dtype=dtype, device=device)
-      v_scale = None
-      v_offset = None
-  elif quant_mode_v == 1:  # v对称量化
-      v_cache = torch.ones(block_num, Nv * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
-      v_offset = None
-  else:  # v非对称量化
-      v_cache = torch.ones(block_num, Nv * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
-      v_offset = torch.randn(Nv, D, dtype=torch.float32, device=device)
+  # k对称量化
+  k_cache = torch.ones(block_num, Nk * D // 32,
+                       block_size, 32, dtype=torch.int8, device=device)
+  k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
+  # v对称量化
+  v_cache = torch.ones(block_num, Nv * D // 32,
+                       block_size, 32, dtype=torch.int8, device=device)
+  v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
   
   # 单算子调用
   _, _, _ = torch_npu.npu_qkv_rms_norm_rope_cache(
@@ -264,7 +235,7 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   print(f"k_cache:\n{k_cache}")
   print(f"v_cache:\n{v_cache}")
   ```
-
+  
 - 图模式调用
 
   ```python
@@ -276,7 +247,6 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   
   torch_npu.npu.set_compile_mode(jit_compile=True)
   device = torch.device("npu:0")
-  
   
   class Model(torch.nn.Module):
       def __init__(self):
@@ -344,41 +314,14 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   index = torch.tensor(sampled_data, dtype=torch.int64, device=device)
   
   q_out = torch.zeros(B * S, Nq * D, dtype=torch.float16, device=device)
-  
-  # 0: 不量化，1: 对称量化，2: 非对称量化
-  quant_mode_k = 1
-  quant_mode_v = 1
-  
-  if quant_mode_k == 0:  # k不量化
-      k_cache = torch.ones(block_num, Nk * D // 16,
-                           block_size, 16, dtype=dtype, device=device)
-      k_scale = None
-      k_offset = None
-  elif quant_mode_k == 1:  # k对称量化
-      k_cache = torch.ones(block_num, Nk * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
-      k_offset = None
-  else:  # k非对称量化
-      k_cache = torch.ones(block_num, Nk * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
-      k_offset = torch.randn(Nk, D, dtype=torch.float32, device=device)
-  if quant_mode_v == 0:  # v不量化
-      v_cache = torch.ones(block_num, Nv * D // 16,
-                           block_size, 16, dtype=dtype, device=device)
-      v_scale = None
-      v_offset = None
-  elif quant_mode_v == 1:  # v对称量化
-      v_cache = torch.ones(block_num, Nv * D // 32,
-                         block_size, 32, dtype=torch.int8, device=device)
-      v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
-      v_offset = None
-  else:  # v非对称量化
-      v_cache = torch.ones(block_num, Nv * D // 32,
-                           block_size, 32, dtype=torch.int8, device=device)
-      v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
-      v_offset = torch.randn(Nv, D, dtype=torch.float32, device=device)
+  # k对称量化
+  k_cache = torch.ones(block_num, Nk * D // 32,
+                       block_size, 32, dtype=torch.int8, device=device)
+  k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
+  # v对称量化
+  v_cache = torch.ones(block_num, Nv * D // 32,
+                       block_size, 32, dtype=torch.int8, device=device)
+  v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
   
   # 实例化模型model
   model = Model().to(device)
