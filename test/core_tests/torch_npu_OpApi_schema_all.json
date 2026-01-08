@@ -500,6 +500,18 @@
   "op_api: torch_npu.npu_dequant_swiglu_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache_functional(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache_functional(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "op_api: torch_npu.npu_transpose_batchmatmul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
@@ -4659,10 +4671,10 @@
     "version": ["all_version"]
   },
   "func: npu_qkv_rms_norm_rope_cache(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos, Tensor sin, Tensor index, Tensor(a!) q_out, Tensor(b!) k_cache, Tensor(c!) v_cache, *, Tensor? k_scale=None, Tensor? v_scale=None, Tensor? k_offset=None, Tensor? v_offset=None, int[] qkv_size=[], int[] head_nums=[], float epsilon=1e-6, str cache_mode='PA_NZ', bool is_output_qkv=False) -> (Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
+    "version": ["v2.6", "newest"]
   },
   "func: npu_qkv_rms_norm_rope_cache_functional(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos, Tensor sin, Tensor index, Tensor q_out, Tensor k_cache, Tensor v_cache, *, Tensor? k_scale=None, Tensor? v_scale=None, Tensor? k_offset=None, Tensor? v_offset=None, int[] qkv_size=[], int[] head_nums=[], float epsilon=1e-6, str cache_mode='PA_NZ', bool is_output_qkv=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
-    "version": ["all_version"]
+    "version": ["v2.6", "newest"]
   },
   "func: _quantize_per_tensor_impl.out(Tensor inputs, Tensor scales, Tensor zero_points, ScalarType dtype, *, Tensor(a!) result) -> Tensor(a!)": {
     "version": ["all_version"]
