@@ -60,7 +60,7 @@
   d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
   $$
 
-  其中，$S$为$\tilde{q}$和$K$矩阵乘的结果。
+  其中，$S$为$\tilde{q}$和$\tilde{K}$矩阵乘的结果。
 
 ## 函数原型
 

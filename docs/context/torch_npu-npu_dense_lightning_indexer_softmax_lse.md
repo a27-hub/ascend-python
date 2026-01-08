@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把lightning_indexer部分的softmax的求最大值和求和运算提前来降低算子的显存占用。
+- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把lightning_indexer部分的Softmax的求最大值和求和运算提前来降低算子的显存占用。
 
 - 计算公式：
 
