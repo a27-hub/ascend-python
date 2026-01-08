@@ -243,7 +243,7 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
                 gen_mask_parallel, sync, is_capture, offset_intragraph);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
-        drop_mask = at::zeros_symint({length}, query.options().dtype(at::kByte));
+        drop_mask = at::zeros({length}, query.options().dtype(at::kByte));
     }
 
     return drop_mask;
