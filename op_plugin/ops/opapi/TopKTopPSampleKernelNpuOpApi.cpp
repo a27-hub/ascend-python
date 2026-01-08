@@ -35,8 +35,8 @@ tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &t
     auto batch = logits_size[0];
     auto voc_size = logits_size[1];
 
-    at::Tensor logtis_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, x.options().dtype(at::kInt));
-    at::Tensor logtis_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, x.options().dtype(at::kFloat));
+    at::Tensor logtis_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, logits.options().dtype(at::kInt));
+    at::Tensor logtis_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
     EXEC_NPU_CMD(aclnnTopKTopPSample, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, post_sample_ptr, logtis_select_idx, logtis_top_kp_select);
     return std::tie(logtis_select_idx, logtis_top_kp_select);
 }
