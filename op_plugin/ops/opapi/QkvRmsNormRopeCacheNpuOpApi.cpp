@@ -74,8 +74,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(const
     return std::tie(q_out_before_quant, k_out_before_quant, v_out_before_quant);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-    npu_qkv_rms_norm_rope_cache_functional(const at::Tensor &qkv, const at::Tensor &q_gamma, const at::Tensor &k_gamma,
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(const at::Tensor &qkv, 
+        const at::Tensor &q_gamma, const at::Tensor &k_gamma,
         const at::Tensor &cos, const at::Tensor &sin, const at::Tensor &index, const at::Tensor &q_out,
         const at::Tensor &k_cache, const at::Tensor &v_cache, const c10::optional<at::Tensor> &k_scale,
         const c10::optional<at::Tensor> &v_scale, const c10::optional<at::Tensor> &k_offset,
