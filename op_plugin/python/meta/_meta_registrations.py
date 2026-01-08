@@ -3735,10 +3735,15 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
             torch.empty(c_kv_size, dtype=kv.dtype, device=kv.device),
             torch.empty_like(k_cache), torch.empty_like(ckv_cache))
 
+
 @impl(m, "npu_qkv_rms_norm_rope_cache")
 def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
-                                        v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6,
+                                        v_scale=None, k_offset=None, v_offset=None, qkv_size=None, head_nums=None, epsilon=1e-6,
                                         cache_mode='PA_NZ', is_output_qkv=False):
+    if qkv_size is None:
+        raise RuntimeError("qkv_size must not be None" + ops_error(ErrCode.PARAM))
+    if head_nums is None:
+        raise RuntimeError("head_nums must not be None" + ops_error(ErrCode.PARAM))
     if qkv.dim() != 2:
         raise RuntimeError("2D tensor expected for input qkv" + ops_error(ErrCode.PARAM))
     if q_gamma.dim() != 1:
@@ -3766,10 +3771,15 @@ def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_o
                 torch.empty([], dtype=qkv.dtype, device=qkv.device),
                 torch.empty([], dtype=qkv.dtype, device=qkv.device))
 
+
 @impl(m, "npu_qkv_rms_norm_rope_cache_functional")
 def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
-                                        v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6,
+                                        v_scale=None, k_offset=None, v_offset=None, qkv_size=None, head_nums=None, epsilon=1e-6,
                                         cache_mode='PA_NZ', is_output_qkv=False):
+    if qkv_size is None:
+        raise RuntimeError("qkv_size must not be None" + ops_error(ErrCode.PARAM))
+    if head_nums is None:
+        raise RuntimeError("head_nums must not be None" + ops_error(ErrCode.PARAM))
     if qkv.dim() != 2:
         raise RuntimeError("2D tensor expected for input qkv" + ops_error(ErrCode.PARAM))
     if q_gamma.dim() != 1:
