@@ -21,6 +21,9 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+#include "torch_npu/csrc/logging/LogContext.h"
+std::shared_ptr<npu_logging::Logger> logger = npu_logging::logging().getLogger("torch_npu.memory");
+
 namespace op_api {
 const int DIM_0 = 0;
 const int DIM_1 = 1;
@@ -165,9 +168,12 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
 {
     at::Tensor mask;
 
+    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch start, is_capture is %d.", (int)is_capture);
     if (gen_mask_parallel) {
         auto original_stream = c10_npu::getCurrentNPUStream();
         auto secondary_stream = c10_npu::getCurrentSecondaryStream();
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch true, original_stream id is %lld, secondary_stream id is %lld.",
+            static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
         if (is_capture == c10_npu::CaptureStatus::None) {
             // During the life cycle of this raii instance, the calcu stream is set as the
             // secondary stream, and tasks are distributed to the secondary stream. At the
@@ -180,8 +186,11 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             }
         } else {
             c10_npu::CaptureStatus secondary_stream_capture_state = stream_capture_status_may_init_ctx(secondary_stream);
+            logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, original_stream id is %lld, secondary_stream_capture_state is %d, secondary_stream id is %lld.",
+                static_cast<int64_t>(original_stream.id()), (int)secondary_stream_capture_state, static_cast<int64_t>(secondary_stream.id()));
             const auto gen = at_npu::detail::getDefaultNPUGenerator();
             if (secondary_stream_capture_state == c10_npu::CaptureStatus::None) {
+                logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, second stream record!!");
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
                 capture_event_begin.record(original_stream);
                 capture_event_begin.block(secondary_stream);
@@ -202,6 +211,9 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             }
         }
     } else {
+        auto original_stream = c10_npu::getCurrentNPUStream();
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch false, original_stream id is %lld, is_capture is %d.",
+            static_cast<int64_t>(original_stream.id()), (int)is_capture);
         mask = dropout_gen_mask_tensor_impl(query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
     }
     return mask;
@@ -225,6 +237,8 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_NORMAL, numels is %lld, is_capture is %d.",
+            numels, (int)is_capture);
         const auto gen = at_npu::detail::getDefaultNPUGenerator();
         uint64_t offset_intragraph = 0;
         if (is_capture == c10_npu::CaptureStatus::None) {
@@ -243,7 +257,11 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
                 gen_mask_parallel, sync, is_capture, offset_intragraph);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_ALL, is_capture is %d.", (int)is_capture);
         drop_mask = at::zeros({length}, query.options().dtype(at::kByte));
+    } else {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor other, numels is %lld, is_capture is %d.",
+            numels, (int)is_capture);
     }
 
     return drop_mask;
@@ -511,12 +529,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     at::Tensor drop_mask;
+    c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         const at::Tensor &seed_const = seed.value_or(at::Tensor());
         const at::Tensor &offset_const = offset.value_or(at::Tensor());
 
         uint64_t offset_intragraph = 0;
-        c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
         if (is_capture != c10_npu::CaptureStatus::None) {
             const auto gen = at_npu::detail::getDefaultNPUGenerator();
             auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
@@ -531,7 +549,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
         softmax_max, softmax_sum, softmax_in, attention_in, scale_value, keep_prob, pre_tockens,
         next_tockens, inner_precise, seed, offset, prefixN, ac_seq_qlen, ac_seq_kvlen, sparse_mode,
         softmax_layout, sink);
-    if (!sync) {
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
         npu_event.block(c10_npu::getCurrentSecondaryStream());
@@ -552,6 +570,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 {
     TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95, "Ascend910_95 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
 
+    std::string input_layout_str1(input_layout);
+    std::string softmax_layout_str1(softmax_layout);
+    logger->info("npu_flash_attention_symint start, head_num is %lld, input_layout is %s, scale is %f, keep_prob is %f, pre_tockens is %lld.",
+        head_num, input_layout_str1.c_str(), scale, keep_prob, pre_tockens);
+    logger->info("npu_flash_attention_symint start, next_tockens is %lld, inner_precise is %lld, sparse_mode is %lld, gen_mask_parallel is %d, sync is %d, softmax_layout is %s.",
+        next_tockens, inner_precise, sparse_mode, gen_mask_parallel, sync, softmax_layout_str1.c_str());
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
@@ -686,6 +710,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         numels *= accum;
     }
     c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor before, is_capture is %d.", (int)is_capture);
     at::Tensor format_drop_mask = dropout_gen_mask_tensor(format_query, format_key, keep_prob, head_num, input_layout_str,
         gen_mask_parallel, sync, seed, offset, numels, is_capture);
 
@@ -711,6 +736,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (format_sink.defined()) { // sink is defined
+            logger->info("npu_flash_attention_symint aclnnFlashAttentionVarLenScoreV5, is_capture is %d.", (int)is_capture);
             auto format_query_rope = at::Tensor();
             auto format_key_rope = at::Tensor();
             auto q_start_idx_val = at::IntArrayRef{};
@@ -747,6 +773,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             }
         } else { // sink is undefined
             if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+                logger->info("npu_flash_attention_symint aclnnFlashAttentionVarLenScoreV4, is_capture is %d.", (int)is_capture);
                 if (softmax_layout_str == "TND" && is_fa_V4_available) {
                     softmax_layout_str = "same_as_input";
                     char softmax_layout_char[LAYOUT_MAX_LENGTH];
@@ -768,6 +795,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                         softmax_out, attention_score);
                 }
             } else {
+                logger->info("npu_flash_attention_symint aclnnFlashAttentionScore, is_capture is %d.", (int)is_capture);
                 EXEC_NPU_CMD(
                     aclnnFlashAttentionScore, format_query, format_key, format_value,
                     format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
@@ -781,11 +809,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
                input_layout_str, ac_seq_qlen, ac_seq_kvlen);
 
-    if (!sync) {
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        logger->info("npu_flash_attention_symint !sync, is_capture is %d.", (int)is_capture);
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
         npu_event.block(c10_npu::getCurrentSecondaryStream());
     }
+    
+    auto original_stream = c10_npu::getCurrentNPUStream();
+    auto secondary_stream = c10_npu::getCurrentSecondaryStream();
+    logger->info("npu_flash_attention_symint end, original_stream id is %lld, secondary_stream id is %lld.",
+        static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset);
