@@ -10883,6 +10883,60 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+    "npu_qkv_rms_norm_rope_cache",
+    """
+接口原型: 
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+
+功能描述：
+输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作，输出q_out、k_cache、v_cache、q_out_before_quant(可选)、k_out_before_quant(可选)、v_out_before_quant(可选)。
+
+参数说明：
+- qkv（`Tensor`）：必选参数，表示融合的QKV矩阵输入，要求是一个2D张量，数据格式为$ND$，数据类型支持`bfloat16`和`float16`。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{qkv}} \times D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
+- q_gamma（`Tensor`）：必选参数，表示RMSNorm计算中Q分量使用的gamma参数，要求是一个1D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
+- k_gamma（`Tensor`）：必选参数，表示RMSNorm计算中K分量使用的gamma参数，要求是一个1D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
+- cos（`Tensor`）：必选参数，表示RoPE位置编码中的cos系数，要求是一个2D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, 1 \times D_{\text{rope}}]$，其中要求$D_{\text{rope}} = D_{\text{qkv}}$ = 128。目前仅支持$N_{\text{rope}}=1$，不支持每个头使用不同的RoPE系数。
+- sin（`Tensor`）：必选参数，表示RoPE位置编码中的sin系数，要求是一个2D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape格式与`cos`保持一致。
+- index（`Tensor`）：必选参数，表示更新cache时使用的索引，数据格式为$ND$，数据类型支持`int64`。要求是一个1D张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}]$。要求索引值满足：$\text{value}$不能重复，且$\text{value} \in [-1, \text{BlockNum} \times \text{BlockSize})$。同时需满足约束：$\text{BlockNum} \geq \lceil S_{\text{qkv}} / \text{BlockSize} \rceil \times B_{\text{qkv}}$。
+- q_out（`Tensor`）：必选参数，表示Q输出的预分配内存（输入输出同地址复用），数据格式为$ND$，数据类型与`qkv`相同。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_q \times D_{\text{qkv}}]$的2D矩阵，使用TH分形格式。
+- k_cache（`Tensor`）：必选参数，表示K cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在K不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在K量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。
+- v_cache（`Tensor`）：必选参数，表示V cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在V不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在V量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。注意：`k_cache`和`v_cache`中的BlockNum和BlockSize必须保持一致。
+- k_scale（`Tensor`）：可选参数，当`k_cache`为`int8`类型时需要提供，表示K分量的量化scale参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_k, D_{\text{qkv}}]$。
+- v_scale（`Tensor`）：可选参数，当`v_cache`为`int8`类型时需要提供，表示V分量的量化scale参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_v, D_{\text{qkv}}]$。
+- k_offset（`Tensor`）：可选参数，当K采用非对称量化时需要提供，表示K分量的量化offset参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_k, D_{\text{qkv}}]$。注意：此参数依赖`k_scale`输入，且仅在`k_cache`为`int8`数据类型时有效。
+- v_offset（`Tensor`）：可选参数，当V采用非对称量化时需要提供，表示V分量的量化offset参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_v, D_{\text{qkv}}]$。注意：此参数依赖`v_scale`输入，且仅在`v_cache`为`int8`数据类型时有效。
+- qkv_size（`List[int]`）：必选属性，按$[B_{\text{qkv}}, S_{\text{qkv}}, N_{\text{qkv}}, D_{\text{qkv}}]$顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求$N_{\text{qkv}} = N_k + N_v + N_q$。
+- head_nums（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
+- epsilon（`float`）：可选属性，表示RMSNorm中防止除零的小常数，默认值为$10^{-6}$。
+- cache_mode（`str`）：可选属性，表示cache的格式类型，目前支持值为`"PA_NZ"`。
+- is_output_qkv（`bool`）：可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值。
+
+返回值说明：
+- q_out (`Tensor`)：和输入`q_out`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- k_cache (`Tensor`)：和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- v_cache (`Tensor`)：和输入`v_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- q_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{q}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+- k_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{k}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+- v_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{v}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
+
+约束说明
+- qkv张量为二维张量，shape为[B_qkv * S_qkv, N_qkv * D_qkv]。
+- B_qkv为输入qkv的batch size。
+- S_qkv为输入qkv的sequence length（大小由qkv_size属性决定）。
+- N_qkv为输入qkv的总head number，N_q为Q分量的head number，N_k为K分量的head number，N_v为V分量的head number。N_qkv = N_q + N_k + N_v。
+- D_qkv为输入qkv的head dimension，要求D_qkv = D_q = D_k = D_v。当前仅支持D_qkv = 128。
+- 当cacheMode为"PA_NZ"场景时，k_cache的shape中BlockSize必须能被32整除，v_cache的shape中BlockSize必须与k_cache保持一致。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
@@ -13357,60 +13411,5 @@ x = torch.randn([10, 10]).npu()
 model = Model()
 model = torch.compile(model, backend=npu_backend)
 model(x)
-"""
-)
-
-
-_add_torch_npu_docstr(
-    "npu_qkv_rms_norm_rope_cache",
-    """
-接口原型: 
-torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
-
-功能描述：
-输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作，输出q_out、k_cache、v_cache、q_out_before_quant(可选)、k_out_before_quant(可选)、v_out_before_quant(可选)。
-
-参数说明：
-- qkv（`Tensor`）：必选参数，表示融合的QKV矩阵输入，要求是一个2D张量，数据格式为$ND$，数据类型支持`bfloat16`和`float16`。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{qkv}} \times D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
-- q_gamma（`Tensor`）：必选参数，表示RMSNorm计算中Q分量使用的gamma参数，要求是一个1D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
-- k_gamma（`Tensor`）：必选参数，表示RMSNorm计算中K分量使用的gamma参数，要求是一个1D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[D_{\text{qkv}}]$，其中$D_{\text{qkv}}$必须是128。
-- cos（`Tensor`）：必选参数，表示RoPE位置编码中的cos系数，要求是一个2D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, 1 \times D_{\text{rope}}]$，其中要求$D_{\text{rope}} = D_{\text{qkv}}$ = 128。目前仅支持$N_{\text{rope}}=1$，不支持每个头使用不同的RoPE系数。
-- sin（`Tensor`）：必选参数，表示RoPE位置编码中的sin系数，要求是一个2D张量，数据格式为$ND$，数据类型与`qkv`保持一致。shape格式与`cos`保持一致。
-- index（`Tensor`）：必选参数，表示更新cache时使用的索引，数据格式为$ND$，数据类型支持`int64`。要求是一个1D张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}]$。要求索引值满足：$\text{value}$不能重复，且$\text{value} \in [-1, \text{BlockNum} \times \text{BlockSize})$。同时需满足约束：$\text{BlockNum} \geq \lceil S_{\text{qkv}} / \text{BlockSize} \rceil \times B_{\text{qkv}}$。
-- q_out（`Tensor`）：必选参数，表示Q输出的预分配内存（输入输出同地址复用），数据格式为$ND$，数据类型与`qkv`相同。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_q \times D_{\text{qkv}}]$的2D矩阵，使用TH分形格式。
-- k_cache（`Tensor`）：必选参数，表示K cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在K不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在K量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。
-- v_cache（`Tensor`）：必选参数，表示V cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在V不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在V量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。注意：`k_cache`和`v_cache`中的BlockNum和BlockSize必须保持一致。
-- k_scale（`Tensor`）：可选参数，当`k_cache`为`int8`类型时需要提供，表示K分量的量化scale参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_k, D_{\text{qkv}}]$。
-- v_scale（`Tensor`）：可选参数，当`v_cache`为`int8`类型时需要提供，表示V分量的量化scale参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_v, D_{\text{qkv}}]$。
-- k_offset（`Tensor`）：可选参数，当K采用非对称量化时需要提供，表示K分量的量化offset参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_k, D_{\text{qkv}}]$。注意：此参数依赖`k_scale`输入，且仅在`k_cache`为`int8`数据类型时有效。
-- v_offset（`Tensor`）：可选参数，当V采用非对称量化时需要提供，表示V分量的量化offset参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_v, D_{\text{qkv}}]$。注意：此参数依赖`v_scale`输入，且仅在`v_cache`为`int8`数据类型时有效。
-- qkv_size（`List[int]`）：必选属性，按$[B_{\text{qkv}}, S_{\text{qkv}}, N_{\text{qkv}}, D_{\text{qkv}}]$顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求$N_{\text{qkv}} = N_k + N_v + N_q$。
-- head_nums（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
-- epsilon（`float`）：可选属性，表示RMSNorm中防止除零的小常数，默认值为$10^{-6}$。
-- cache_mode（`str`）：可选属性，表示cache的格式类型，目前支持值为`"PA_NZ"`。
-- is_output_qkv（`bool`）：可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值。
-
-返回值说明：
-- q_out (`Tensor`)：和输入`q_out`的数据类型、维度、数据格式完全一致（本质in-place更新）。
-- k_cache (`Tensor`)：和输入`k_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
-- v_cache (`Tensor`)：和输入`v_cache`的数据类型、维度、数据格式完全一致（本质in-place更新）。
-- q_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{q}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
-- k_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{k}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
-- v_out_before_quant (`Tensor`)：仅当`is_output_qkv`为True时，表示量化处理前的值。要求为2维张量，shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_{\text{v}} \times D_{\text{qkv}}]$，数据类型和格式同输入`qkv`一致。
-
-约束说明
-- qkv张量为二维张量，shape为[B_qkv * S_qkv, N_qkv * D_qkv]。
-- B_qkv为输入qkv的batch size。
-- S_qkv为输入qkv的sequence length（大小由qkv_size属性决定）。
-- N_qkv为输入qkv的总head number，N_q为Q分量的head number，N_k为K分量的head number，N_v为V分量的head number。N_qkv = N_q + N_k + N_v。
-- D_qkv为输入qkv的head dimension，要求D_qkv = D_q = D_k = D_v。当前仅支持D_qkv = 128。
-- 当cacheMode为"PA_NZ"场景时，k_cache的shape中BlockSize必须能被32整除，v_cache的shape中BlockSize必须与k_cache保持一致。
-
-支持版本: 
-PyTorch 2.6及更高版本
-
-支持的型号: 
-Atlas A2训练系列产品
-Atlas A3训练系列产品
 """
 )
