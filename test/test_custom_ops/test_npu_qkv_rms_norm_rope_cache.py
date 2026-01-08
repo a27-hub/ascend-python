@@ -56,11 +56,11 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
             v_scale = None
 
         # call golden
-        qkv = (-2 + 10) * qkv - 10
-        q_gamma = (-10 + 1000) * q_gamma - 1000
-        k_gamma = (-10 + 1000) * k_gamma - 1000
-        sin = (0.01 + 0.01) * sin - 0.01
-
+        qkv = 200 * qkv - 100
+        q_gamma = 200 * q_gamma - 100
+        k_gamma = 200 * k_gamma - 100
+        sin = 2 * sin - 1
+        cos = 2 * cos - 1
         qkv_size = [batch_size, seq_len, Nqkv, dim]
         num_heads = [Nq, Nk, Nv]
 
