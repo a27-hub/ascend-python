@@ -20,33 +20,18 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
-using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
-const int DIM_TWO = 2;
+using tensor_list = std::tuple<at::Tensor, at::Tensor>;
 
-tensor_list npu_moe_gating_top_k(const at::Tensor &x, int64_t k, const c10::optional<at::Tensor> &bias_opt, int64_t k_group, int64_t group_count, int64_t group_select_mode, int64_t renorm, int64_t norm_type, bool out_flag, double routed_scaling_factor, double eps)
+tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, int64_t eps, bool is_need_logits, int64_t top_k_guess, double ks_max, bool input_is_logits, string post_sample)
 {
-    TORCH_CHECK(x.dim() == DIM_TWO, "The x should be 2D");
-    TORCH_CHECK(
-        x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
-        "float16、float32 or bfloat16 tensor expected but got a tensor with dtype: ",
-        x.scalar_type());
+    auto logits_size = logits.sizes();
+    auto batch = logits_size[0];
+    auto voc_size = logits_size[1];
 
-    auto x_size = x.sizes();
-    auto rows = x_size[0];
-    auto expert_num = x_size[1];
-    const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
-    if (bias.defined()) {
-        TORCH_CHECK(x.scalar_type() == bias.scalar_type(), "The dtype of x and bias should be same");
-        TORCH_CHECK(bias.dim() == 1, "The bias should be 1D");
-        auto bias_size = bias.sizes();
-        TORCH_CHECK(bias_size[0] == expert_num, "The bias first dim should be same as x second dim");
-    }
-
-    at::Tensor y = npu_preparation::apply_tensor_without_format(x, {rows, k});
-    at::Tensor expert_idx = npu_preparation::apply_tensor_without_format({rows, k}, x.options().dtype(at::kInt));
-    at::Tensor out = npu_preparation::apply_tensor_without_format({rows, expert_num}, x.options().dtype(at::kFloat));
-    EXEC_NPU_CMD(aclnnMoeGatingTopK, x, bias, k, k_group, group_count, group_select_mode, renorm, norm_type, out_flag, routed_scaling_factor, eps, y, expert_idx, out);
-    return std::tie(y, expert_idx, out);
+    at::Tensor logtis_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, x.options().dtype(at::kInt));
+    at::Tensor logtis_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, x.options().dtype(at::kFloat));
+    EXEC_NPU_CMD(aclnnTopKTopPSample, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, post_sample, logtis_select_idx, logtis_top_kp_select);
+    return std::tie(logtis_select_idx, logtis_top_kp_select);
 }
 
 }
