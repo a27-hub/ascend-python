@@ -22,15 +22,20 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 using tensor_list = std::tuple<at::Tensor, at::Tensor>;
 
-tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, int64_t eps, bool is_need_logits, int64_t top_k_guess, double ks_max, bool input_is_logits, string post_sample)
+tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, double eps, bool is_need_logits, int64_t top_k_guess, c10::optional<int64_t> ks_max_potion, c10::optional<bool> input_is_logits_option,  c10::optional<c10::string_view> post_sample_option)
 {
+    int64_t ks_max = c10::value_or_else(ks_max_potion, [] {return 1024;});
+    bool input_is_logits = c10::value_or_else(input_is_logits_option, [] {return true; });
+    c10::string_view post_sample = post_sample_option.value_or("qSample");
+    char *post_sample_ptr = const_cast<char *>(post_sample.data());
+
     auto logits_size = logits.sizes();
     auto batch = logits_size[0];
     auto voc_size = logits_size[1];
 
     at::Tensor logtis_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, x.options().dtype(at::kInt));
     at::Tensor logtis_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, x.options().dtype(at::kFloat));
-    EXEC_NPU_CMD(aclnnTopKTopPSample, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, post_sample, logtis_select_idx, logtis_top_kp_select);
+    EXEC_NPU_CMD(aclnnTopKTopPSample, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, post_sample_ptr, logtis_select_idx, logtis_top_kp_select);
     return std::tie(logtis_select_idx, logtis_top_kp_select);
 }
 
