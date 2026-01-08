@@ -1747,20 +1747,19 @@ def npu_sparse_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_
     return (d_query_index, d_key_index, d_weights, loss)
 
 
-@impl(m, "npu_dense_lightning_indexer_grad_kl_loss")
-def npu_dense_lightning_indexer_grad_kl_loss_meta(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+@impl(m, "npu_dense_lightning_indexer_softmax_lse")
+def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     if layout == "TND":
         output_size = [key_index.size(1), query_index.size(0)]
     else:
         output_size = [query_index.size(0), key_index.size(2), query_index.size(1)]
-    }
     softmax_max_out = torch.empty(output_size, dtype=torch.float32, device='meta')
     softmax_sum_out = torch.empty(output_size, dtype=torch.float32, device='meta')
     return (softmax_max_out, softmax_sum_out)
 
 
-@impl(m, "npu_sparse_dense_indexer_grad_kl_loss_meta")
-def npu_sparse_dense_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+@impl(m, "npu_dense_lightning_indexer_grad_kl_loss")
+def npu_dense_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     d_query_index = query_index.new_empty(query_index.shape, dtype=query_index.dtype, device='meta')
     d_key_index = key_index.new_empty(key_index.shape, dtype=key_index.dtype, device='meta')
     d_weights = weights.new_empty(weights.shape, dtype=weights.dtype, device='meta')
