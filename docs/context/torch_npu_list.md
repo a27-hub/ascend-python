@@ -516,6 +516,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p20536122017115"><a name="p20536122017115"></a><a name="p20536122017115"></a>全量FA实现。</p>
 </td>
 </tr>
+<tr id="row13116234314"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p35366207113"><a name="p35366207113"></a><a name="p35366207113"></a><a href="torch_npu-npu_qkv_rms_norm_rope_cache.md">torch_npu.npu_qkv_rms_norm_rope_cache</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p20536122017116"><a name="p20536122017116"></a><a name="p20536122017116"></a>输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作。</p>
+</td>
+</tr>
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_quant_lightning_indexer.md">torch_npu.npu_quant_lightning_indexer</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1281815913362"><a name="p1281815913362"></a><a name="p1281815913362"></a>获取每一个token对应的Top-k个位置。</p>
