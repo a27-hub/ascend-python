@@ -498,6 +498,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
             accum += ((ac_seq_qlen[i] - ac_seq_qlen[i - 1]) * (ac_seq_kvlen[i] - ac_seq_kvlen[i - 1]));
         }
         numels *= accum;
+    } else if (input_layout == "BSH") {
+        numels = query.size(0) * head_num * query.size(1) * key.size(1); // [B,N,S,S]
+    } else if (input_layout == "SBH") {
+        numels = query.size(1) * head_num * query.size(0) * key.size(0); // [B,N,S,S]
+    } else if (input_layout == "BNSD") {
+        numels = query.size(0) * query.size(1) * query.size(THIRD_ELEMENT) * key.size(THIRD_ELEMENT); // [B,N,S,S]
+    } else if (input_layout == "BSND") {
+        numels = query.size(0) * query.size(THIRD_ELEMENT) * query.size(1) * key.size(1); // [B,N,S,S]
     }
 
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
