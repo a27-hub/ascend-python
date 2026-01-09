@@ -10883,6 +10883,139 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
+    "npu_qkv_rms_norm_rope_cache",
+    """
+接口原型: 
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+
+功能描述：
+输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作，输出q_out、k_cache、v_cache、q_out_before_quant(可选)、k_out_before_quant(可选)、v_out_before_quant(可选)。
+
+参数说明：
+- qkv: Tensor类型，必选参数，表示融合的QKV矩阵输入，要求是一个2D张量，数据格式为ND，数据类型支持bfloat16和float16。shape为[B_qkv * S_qkv, N_qkv * D_qkv]，其中D_qkv必须是128。
+- q_gamma: Tensor类型，必选参数，表示RMSNorm计算中Q分量使用的gamma参数，要求是一个1D张量，数据格式为ND，数据类型与qkv保持一致。shape为[D_qkv]，其中D_qkv必须是128。
+- k_gamma: Tensor类型，必选参数，表示RMSNorm计算中K分量使用的gamma参数，要求是一个1D张量，数据格式为ND，数据类型与qkv保持一致。shape为[D_qkv]，其中D_qkv必须是128。
+- cos: Tensor类型，必选参数，表示RoPE位置编码中的cos系数，要求是一个2D张量，数据格式为ND，数据类型与qkv保持一致。shape为[B_qkv * S_qkv, 1 * D_rope]，其中要求D_rope = D_qkv = 128。目前仅支持N_rope=1，不支持每个头使用不同的RoPE系数。
+- sin: Tensor类型，必选参数，表示RoPE位置编码中的sin系数，要求是一个2D张量，数据格式为ND，数据类型与qkv保持一致。shape格式与cos保持一致。
+- index: Tensor类型，必选参数，表示更新cache时使用的索引，数据格式为ND，数据类型支持int64。要求是一个1D张量，shape为[B_qkv * S_qkv]。要求索引值满足：value不能重复，且value ∈ [-1, BlockNum * BlockSize)。同时需满足约束：BlockNum ≥ ⌈ S_qkv / BlockSize ⌉ * B_qkv。
+- q_out: Tensor类型，必选参数，表示Q输出的预分配内存（输入输出同地址复用），数据格式为ND，数据类型与qkv相同。shape为[B_qkv * S_qkv, N_q * D_qkv]的2D矩阵，使用TH分形格式。
+- k_cache: Tensor类型，必选参数，表示K cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为ND。在K不量化场景下，数据类型与qkv相同，shape为[BlockNum, N_k * D_qkv ÷ 16, BlockSize, 16]；在K量化场景下，数据类型为int8，shape为[BlockNum, N_k * D_qkv ÷ 32, BlockSize, 32]。
+- v_cache: Tensor类型，必选参数，表示V cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为ND。在V不量化场景下，数据类型与qkv相同，shape为[BlockNum, N_v * D_qkv ÷ 16, BlockSize, 16]；在V量化场景下，数据类型为int8，shape为[BlockNum, N_v * D_qkv ÷ 32, BlockSize, 32]。注意：k_cache和v_cache中的BlockNum和BlockSize必须保持一致。
+- k_scale: Tensor类型，可选参数，当k_cache为int8类型时需要提供，表示K分量的量化scale参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_k, D_qkv]。
+- v_scale: Tensor类型，可选参数，当v_cache为int8类型时需要提供，表示V分量的量化scale参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_v, D_qkv]。
+- k_offset: Tensor类型，可选参数，当K采用非对称量化时需要提供，表示K分量的量化offset参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_k, D_qkv]。注意：此参数依赖k_scale输入，且仅在k_cache为int8数据类型时有效。
+- v_offset: Tensor类型，可选参数，当V采用非对称量化时需要提供，表示V分量的量化offset参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_v, D_qkv]。注意：此参数依赖v_scale输入，且仅在v_cache为int8数据类型时有效。
+- qkv_size: List[int]类型，必选属性，按[B_qkv, S_qkv, N_qkv, D_qkv]顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求N_qkv = N_k + N_v + N_q。
+- head_nums: List[int]类型，必选属性，按[N_q, N_k, N_v]顺序提供QKV分量中N维度的具体尺寸。要求元素数量必须为3，传入实际原始值，不可进行约化。需要满足：N_q = T * N_k，N_k = N_v，且T ≥ 1。
+- epsilon: float类型，可选属性，表示RMSNorm中防止除零的小常数，默认值为1e-6。
+- cache_mode: str类型，可选属性，表示cache的格式类型，目前支持值为"PA_NZ"。
+- is_output_qkv: bool类型，可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值。
+
+返回值说明：
+- q_out: Tensor类型，原地更新，和输入q_out的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- k_cache: Tensor类型，原地更新，和输入k_cache的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- v_cache: Tensor类型，原地更新，和输入v_cache的数据类型、维度、数据格式完全一致（本质in-place更新）。
+- q_out_before_quant: Tensor类型，仅当is_output_qkv为True时有效，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为[B_qkv * S_qkv, N_q * D_qkv]，数据类型和格式同输入qkv一致。
+- k_out_before_quant: Tensor类型，仅当is_output_qkv为True时有效，表示RoPE处理后，量化处理前的值。要求为2维张量，shape为[B_qkv * S_qkv, N_k * D_qkv]，数据类型和格式同输入qkv一致。
+- v_out_before_quant: Tensor类型，仅当is_output_qkv为True时有效，表示量化处理前的值。要求为2维张量，shape为[B_qkv * S_qkv, N_v * D_qkv]，数据类型和格式同输入qkv一致。
+
+
+约束说明
+- qkv张量为二维张量，shape为[B_qkv * S_qkv, N_qkv * D_qkv]。
+- B_qkv为输入qkv的batch size。
+- S_qkv为输入qkv的sequence length（大小由qkv_size属性决定）。
+- N_qkv为输入qkv的总head number，N_q为Q分量的head number，N_k为K分量的head number，N_v为V分量的head number。需要满足N_qkv = N_q + N_k + N_v且N_q = T * N_k，N_k = N_v，T ≥ 1。
+- D_qkv为输入qkv的head dimension，要求D_qkv = D_q = D_k = D_v。当前仅支持D_qkv = 128。
+- 当cacheMode为"PA_NZ"场景时，k_cache的shape中BlockSize必须能被32整除，v_cache的shape中BlockSize必须与k_cache保持一致。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例:
+import torch
+import torch_npu
+import random
+
+torch_npu.npu.set_compile_mode(jit_compile=True)
+device = torch.device("npu:0")
+
+B, S = 16, 3
+Nq, Nk, Nv = 16, 1, 1
+D = 128
+N = Nq + Nk + Nv
+
+qkv_size = [B, S, N, D]
+head_nums = [Nq, Nk, Nv]
+
+block_size = 128
+block_num = (S + block_size - 1) // block_size * B
+
+dtype = torch.float16
+eps = 1e-6
+
+valueRange = [-100, 100]
+
+qkv = torch.randn(B * S, N * D, dtype=dtype, device=device) * \
+    (valueRange[1] - valueRange[0]) + valueRange[0]
+q_gamma = torch.randn(D, dtype=dtype, device=device) * \
+    (valueRange[1] - valueRange[0]) + valueRange[0]
+k_gamma = torch.randn(D, dtype=dtype, device=device) * \
+    (valueRange[1] - valueRange[0]) + valueRange[0]
+
+cos = torch.randn(B * S, D, dtype=dtype, device=device)
+sin = torch.randn(B * S, D, dtype=dtype, device=device)
+
+data = list(range(-1, block_num * block_size))
+if B*S > block_num*block_size:
+    sampled_data = random.sample(data,  block_num*block_size)
+    for _ in range(B*S-block_num*block_size):
+        sampled_data.append(-1)
+else:
+    sampled_data = random.sample(data, B*S)
+index = torch.tensor(sampled_data, dtype=torch.int64, device=device)
+
+q_out = torch.zeros(B * S, Nq * D, dtype=dtype, device=device)
+# k对称量化
+k_cache = torch.ones(block_num, Nk * D // 32,
+                     block_size, 32, dtype=torch.int8, device=device)
+k_scale = torch.randn(Nk, D, dtype=torch.float32, device=device)
+# v对称量化
+v_cache = torch.ones(block_num, Nv * D // 32,
+                     block_size, 32, dtype=torch.int8, device=device)
+v_scale = torch.randn(Nv, D, dtype=torch.float32, device=device)
+
+_, _, _ = torch_npu.npu_qkv_rms_norm_rope_cache(
+    qkv=qkv,
+    q_gamma=q_gamma,
+    k_gamma=k_gamma,
+    cos=cos,
+    sin=sin,
+    index=index,
+    q_out=q_out,
+    k_cache=k_cache,
+    v_cache=v_cache,
+    k_scale=k_scale,
+    v_scale=v_scale,
+    k_offset=None,
+    v_offset=None,
+    qkv_size=qkv_size,
+    head_nums=head_nums,
+    epsilon=eps,
+    cache_mode="PA_NZ",
+    is_output_qkv=False,
+)
+
+print(f"q_out:\n{q_out}")
+print(f"k_cache:\n{k_cache}")
+print(f"v_cache:\n{v_cache}")
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
