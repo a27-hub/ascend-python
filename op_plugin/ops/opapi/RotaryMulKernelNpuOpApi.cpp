@@ -45,7 +45,7 @@ at::Tensor npu_rotary_mul(
     static bool notNeedCheck = false;
     TORCH_CHECK((notNeedCheck || (rotary_mode == "half" || rotary_mode == "interleave" ||
         rotary_mode == "interleave-half")),
-        "The rotary_mode of npu_rotary_mul should be half or interleave, but got ", rotary_mode,
+        "The rotary_mode of npu_rotary_mul should be half or interleave or interleave-half, but got ", rotary_mode,
         OPS_ERROR(ErrCode::PARAM));
     DO_COMPATIBILITY(aclnnRotaryPositionEmbedding, acl_op::npu_rotary_mul(self, r1, r2, rotary_mode));
 
