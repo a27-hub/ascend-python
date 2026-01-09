@@ -10886,7 +10886,7 @@ _add_torch_npu_docstr(
     "npu_qkv_rms_norm_rope_cache",
     """
 接口原型: 
-torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
 
 功能描述：
 输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作，输出q_out、k_cache、v_cache、q_out_before_quant(可选)、k_out_before_quant(可选)、v_out_before_quant(可选)。
@@ -10906,7 +10906,7 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 - k_offset: Tensor类型，可选参数，当K采用非对称量化时需要提供，表示K分量的量化offset参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_k, D_qkv]。注意：此参数依赖k_scale输入，且仅在k_cache为int8数据类型时有效。
 - v_offset: Tensor类型，可选参数，当V采用非对称量化时需要提供，表示V分量的量化offset参数。数据格式为ND，数据类型支持float32。必须为2D张量，shape为[N_v, D_qkv]。注意：此参数依赖v_scale输入，且仅在v_cache为int8数据类型时有效。
 - qkv_size: List[int]类型，必选属性，按[B_qkv, S_qkv, N_qkv, D_qkv]顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求N_qkv = N_k + N_v + N_q。
-- head_nums: List[int]类型，必选属性，按[N_q, N_k, N_v]顺序提供QKV分量中N维度的具体尺寸。要求传入实际原始值，不可进行约化。需要满足：N_q = T * N_k，N_k = N_v，且T ≥ 1。
+- head_nums: List[int]类型，必选属性，按[N_q, N_k, N_v]顺序提供QKV分量中N维度的具体尺寸。要求元素数量必须为3，传入实际原始值，不可进行约化。需要满足：N_q = T * N_k，N_k = N_v，且T ≥ 1。
 - epsilon: float类型，可选属性，表示RMSNorm中防止除零的小常数，默认值为1e-6。
 - cache_mode: str类型，可选属性，表示cache的格式类型，目前支持值为"PA_NZ"。
 - is_output_qkv: bool类型，可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值。

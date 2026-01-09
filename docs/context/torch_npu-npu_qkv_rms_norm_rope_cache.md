@@ -79,7 +79,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size=[], head_nums=[], epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -114,7 +114,7 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 
 - **qkv_size**（`List[int]`）：必选属性，按$[B_{\text{qkv}}, S_{\text{qkv}}, N_{\text{qkv}}, D_{\text{qkv}}]$顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求$N_{\text{qkv}} = N_k + N_v + N_q$。
 
-- **head_nums**（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
+- **head_nums**（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求元素数量必须为3，传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
 
 - **epsilon**（`float`）：可选属性，表示RMSNorm中防止除零的小常数，默认值为$10^{-6}$。
 
