@@ -83,6 +83,12 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
+    if (x_dtype.has_value() and weight_dtype.has_value()){
+        TORCH_CHECK(x_dtype.value() == weight_dtype.value(),
+                    "x dtype and weight dtype should be the same, but x dtype is ", c10_npu::CustomDataTypeToString(x_dtype.value()),
+                    "weight dtype is ", c10_npu::CustomDataTypeToString(weight_dtype.value()),
+                     "." + OPS_ERROR(ErrCode::VALUE));
+    }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
                 "The optional parameter x_dtype and weight_dtype should both be torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None.", OPS_ERROR(ErrCode::VALUE));
 
