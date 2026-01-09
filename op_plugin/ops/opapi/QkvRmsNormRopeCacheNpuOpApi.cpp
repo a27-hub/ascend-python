@@ -21,11 +21,11 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 constexpr int64_t DIM_ZERO = 0;
 constexpr int64_t DIM_TWO = 2;
-std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(const at::Tensor &qkv,
-    const at::Tensor &q_gamma, const at::Tensor &k_gamma, const at::Tensor &cos, const at::Tensor &sin,
-    const at::Tensor &index, at::Tensor &q_out, at::Tensor &k_cache, at::Tensor &v_cache,
-    const c10::optional<at::Tensor> &k_scale, const c10::optional<at::Tensor> &v_scale,
-    const c10::optional<at::Tensor> &k_offset, const c10::optional<at::Tensor> &v_offset, at::IntArrayRef qkv_size,
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(
+    const at::Tensor& qkv, const at::Tensor& q_gamma, const at::Tensor& k_gamma, const at::Tensor& cos,
+    const at::Tensor& sin, const at::Tensor& index, at::Tensor& q_out, at::Tensor& k_cache, at::Tensor& v_cache,
+    const c10::optional<at::Tensor>& k_scale, const c10::optional<at::Tensor>& v_scale,
+    const c10::optional<at::Tensor>& k_offset, const c10::optional<at::Tensor>& v_offset, at::IntArrayRef qkv_size,
     at::IntArrayRef head_nums, double epsilon, c10::string_view cache_mode, bool is_output_qkv)
 {
     int64_t Nq = head_nums[0];
@@ -36,7 +36,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(const
     c10::SmallVector<int64_t, DIM_TWO> q_out_before_quant_shape = {qkv.size(DIM_ZERO), Nq * D};
     c10::SmallVector<int64_t, DIM_TWO> k_out_before_quant_shape = {qkv.size(DIM_ZERO), Nk * D};
     c10::SmallVector<int64_t, DIM_TWO> v_out_before_quant_shape = {qkv.size(DIM_ZERO), Nv * D};
-    char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
+    char* cache_mode_ptr = const_cast<char*>(cache_mode.data());
     at::Tensor q_out_before_quant;
     at::Tensor k_out_before_quant;
     at::Tensor v_out_before_quant;
@@ -49,38 +49,21 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(const
         k_out_before_quant = at::Tensor();
         v_out_before_quant = at::Tensor();
     }
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache,
-        qkv,
-        q_gamma,
-        k_gamma,
-        cos,
-        sin,
-        index,
-        q_out,
-        k_cache,
-        v_cache,
-        k_scale,
-        v_scale,
-        k_offset,
-        v_offset,
-        qkv_size,
-        head_nums,
-        epsilon,
-        cache_mode_ptr,
-        q_out_before_quant,
-        k_out_before_quant,
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(
+        aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, k_scale, v_scale,
+        k_offset, v_offset, qkv_size, head_nums, epsilon, cache_mode_ptr, q_out_before_quant, k_out_before_quant,
         v_out_before_quant);
 
     return std::tie(q_out_before_quant, k_out_before_quant, v_out_before_quant);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(const at::Tensor &qkv, 
-        const at::Tensor &q_gamma, const at::Tensor &k_gamma,
-        const at::Tensor &cos, const at::Tensor &sin, const at::Tensor &index, const at::Tensor &q_out,
-        const at::Tensor &k_cache, const at::Tensor &v_cache, const c10::optional<at::Tensor> &k_scale,
-        const c10::optional<at::Tensor> &v_scale, const c10::optional<at::Tensor> &k_offset,
-        const c10::optional<at::Tensor> &v_offset, at::IntArrayRef qkv_size, at::IntArrayRef head_nums, double epsilon,
-        c10::string_view cache_mode, bool is_output_qkv)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_qkv_rms_norm_rope_cache_functional(
+    const at::Tensor& qkv, const at::Tensor& q_gamma, const at::Tensor& k_gamma, const at::Tensor& cos,
+    const at::Tensor& sin, const at::Tensor& index, const at::Tensor& q_out, const at::Tensor& k_cache,
+    const at::Tensor& v_cache, const c10::optional<at::Tensor>& k_scale, const c10::optional<at::Tensor>& v_scale,
+    const c10::optional<at::Tensor>& k_offset, const c10::optional<at::Tensor>& v_offset, at::IntArrayRef qkv_size,
+    at::IntArrayRef head_nums, double epsilon, c10::string_view cache_mode, bool is_output_qkv)
 {
     int64_t Nq = head_nums[0];
     int64_t Nk = head_nums[1];
@@ -90,7 +73,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     c10::SmallVector<int64_t, DIM_TWO> q_out_before_quant_shape = {qkv.size(DIM_ZERO), Nq * D};
     c10::SmallVector<int64_t, DIM_TWO> k_out_before_quant_shape = {qkv.size(DIM_ZERO), Nk * D};
     c10::SmallVector<int64_t, DIM_TWO> v_out_before_quant_shape = {qkv.size(DIM_ZERO), Nv * D};
-    char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
+    char* cache_mode_ptr = const_cast<char*>(cache_mode.data());
     at::Tensor q_out_before_quant;
     at::Tensor k_out_before_quant;
     at::Tensor v_out_before_quant;
@@ -107,29 +90,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor k_cache_inplace = k_cache.clone();
     at::Tensor v_cache_inplace = v_cache.clone();
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQkvRmsNormRopeCache,
-        qkv,
-        q_gamma,
-        k_gamma,
-        cos,
-        sin,
-        index,
-        q_out_inplace,
-        k_cache_inplace,
-        v_cache_inplace,
-        k_scale,
-        v_scale,
-        k_offset,
-        v_offset,
-        qkv_size,
-        head_nums,
-        epsilon,
-        cache_mode_ptr,
-        q_out_before_quant,
-        k_out_before_quant,
-        v_out_before_quant);
+    EXEC_NPU_NO_FORMAT_CHECK_CMD(
+        aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out_inplace, k_cache_inplace,
+        v_cache_inplace, k_scale, v_scale, k_offset, v_offset, qkv_size, head_nums, epsilon, cache_mode_ptr,
+        q_out_before_quant, k_out_before_quant, v_out_before_quant);
 
     return std::tie(
         q_out_before_quant, k_out_before_quant, v_out_before_quant, q_out_inplace, k_cache_inplace, v_cache_inplace);
 }
-}  // namespace op_api
+} // namespace op_api
