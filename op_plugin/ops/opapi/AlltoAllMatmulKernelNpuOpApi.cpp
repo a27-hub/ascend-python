@@ -57,25 +57,20 @@ std::tuple<at::Tensor, at::Tensor> npu_all_to_all_matmul(const at::Tensor &x1, c
     // output_tensor按照实际的shape和dtype去创建
     at::Tensor output_tensor = npu_preparation::apply_tensor_without_format(output_size, c10::dtype(output_scalar_type));
 
+    // 推导输出推导alltoallOutput的shape和dtype
+    aclDataType alltoall_out_acl_type = npu_preparation::convert_to_acl_data_type(x1.scalar_type());
+    at::ScalarType alltoall_out_scalar_type = npu_preparation::convert_to_scalar_type(alltoall_out_acl_type);
+    auto alltoall_out_size = {out_m, x1.size(1) * world_size};
+    at::Tensor alltoall_out_tensor = all2all_out_flag ? npu_preparation::apply_tensor_without_format(
+    	alltoall_out_size, c10::dtype(alltoall_out_scalar_type)) : at::empty(alltoall_out_size, x1.options());
+
     // 生成aclnn接口需要的默认值
     char *group_ptr = const_cast<char *>(hcom.data());
     bool transpose_x1 = false;
     bool transpose_x2 = false;
 
-    // 推导alltoallOutput
-    if (all2all_out_flag) {
-        aclDataType alltoall_out_acl_type = npu_preparation::convert_to_acl_data_type(x1.scalar_type());
-        at::ScalarType alltoall_out_scalar_type = npu_preparation::convert_to_scalar_type(alltoall_out_acl_type);
-        auto alltoall_out_size = {out_m, x1.size(1) * world_size};
-        at::Tensor alltoall_out_tensor = npu_preparation::apply_tensor_without_format(alltoall_out_size, c10::dtype(alltoall_out_scalar_type));
-        // 调用aclnn接口
-        EXEC_NPU_CMD(aclnnAlltoAllMatmul, x1, x2, bias, all2all_axes, group_ptr, transpose_x1, transpose_x2, output_tensor, alltoall_out_tensor);
-        return std::tuple<at::Tensor, at::Tensor>(output_tensor, alltoall_out_tensor);
-    } else {
-        const std::nullptr_t& alltoalloutNullptr = nullptr;
-        // 调用aclnn接口
-        EXEC_NPU_CMD(aclnnAlltoAllMatmul, x1, x2, bias, all2all_axes, group_ptr, transpose_x1, transpose_x2, output_tensor, alltoalloutNullptr);
-        return std::tuple<at::Tensor, at::Tensor>(output_tensor, alltoalloutNullptr);
-    }
+    // 调用aclnn接口
+    EXEC_NPU_CMD(aclnnAlltoAllMatmul, x1, x2, bias, all2all_axes, group_ptr, transpose_x1, transpose_x2, output_tensor, alltoall_out_tensor);
+    return std::tuple<at::Tensor, at::Tensor>(output_tensor, alltoall_out_tensor);
 }
 } // namespace op_api
