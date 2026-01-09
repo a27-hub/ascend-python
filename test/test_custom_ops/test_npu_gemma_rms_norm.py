@@ -58,5 +58,36 @@ class TestNPUGemmaRmsNorm(TestCase):
         self.assertRtolEqual(supported_output0, custom_output0)
         self.assertRtolEqual(supported_output1, custom_output1)
 
+    
+    @SupportedDevices(['Ascend910B'])
+    def test_gemma_rms_norm_meta(self):
+        cpu_input0 = np.random.uniform(0, 100, [256, 512]).astype(np.float32)
+        cpu_input1 = np.random.uniform(0, 100, [512]).astype(np.float32)
+        npu_input0 = torch.from_numpy(cpu_input0).to("npu")
+        npu_input1 = torch.from_numpy(cpu_input1).to("npu")
+        meta_input0 = torch.from_numpy(cpu_input0).to("meta")
+        meta_input1 = torch.from_numpy(cpu_input1).to("meta")
+
+        custom_output0, custom_output1 = self.custom_op_exec(npu_input0, npu_input1)
+        y, rstd = torch_npu.npu_gemma_rms_norm(meta_input0, meta_input1)
+        self.assertRtolEqual(custom_output0.shape, y.shape)
+        self.assertRtolEqual(custom_output1.shape, rstd.shape)
+
+
+    @SupportedDevices(['Ascend910B'])
+    def test_gemma_rms_norm_fp16_meta(self):
+        cpu_input0 = np.random.uniform(0, 100, [256, 512]).astype(np.float16)
+        cpu_input1 = np.random.uniform(0, 100, [512]).astype(np.float16)
+        npu_input0 = torch.from_numpy(cpu_input0).to("npu")
+        npu_input1 = torch.from_numpy(cpu_input1).to("npu")
+        meta_input0 = torch.from_numpy(cpu_input0).to("meta")
+        meta_input1 = torch.from_numpy(cpu_input1).to("meta")
+
+        custom_output0, custom_output1 = self.custom_op_exec(npu_input0, npu_input1)
+        y, rstd = torch_npu.npu_gemma_rms_norm(meta_input0, meta_input1)
+        self.assertRtolEqual(custom_output0.shape, y.shape)
+        self.assertRtolEqual(custom_output1.shape, rstd.shape)
+        
+
 if __name__ == "__main__":
     run_tests()
