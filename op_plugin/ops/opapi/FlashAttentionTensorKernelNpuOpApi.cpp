@@ -809,12 +809,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     FLOP_COUNT(FlopCounter::flash_attention_forward_flop, query, key, value, head_num,
                input_layout_str, ac_seq_qlen, ac_seq_kvlen);
 
-    if (!sync) {
-        logger->info("npu_flash_attention_symint !sync, is_capture is %d.", (int)is_capture);
-        c10_npu::NPUEvent npu_event;
-        npu_event.record(c10_npu::getCurrentNPUStream());
-        npu_event.block(c10_npu::getCurrentSecondaryStream());
-    }
+    // if (!sync) {
+    //     logger->info("npu_flash_attention_symint !sync, is_capture is %d.", (int)is_capture);
+    //     c10_npu::NPUEvent npu_event;
+    //     npu_event.record(c10_npu::getCurrentNPUStream());
+    //     npu_event.block(c10_npu::getCurrentSecondaryStream());
+    // }
     
     auto original_stream = c10_npu::getCurrentNPUStream();
     auto secondary_stream = c10_npu::getCurrentSecondaryStream();
