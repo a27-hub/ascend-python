@@ -815,6 +815,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         npu_event.record(c10_npu::getCurrentNPUStream());
         npu_event.block(c10_npu::getCurrentSecondaryStream());
     }
+    
+    auto original_stream = c10_npu::getCurrentNPUStream();
+    auto secondary_stream = c10_npu::getCurrentSecondaryStream();
+    logger->info("npu_flash_attention_symint end, original_stream id is %lld, secondary_stream id is %lld.",
+        static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset);
