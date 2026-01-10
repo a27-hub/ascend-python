@@ -13371,3 +13371,122 @@ model = torch.compile(model, backend=npu_backend)
 model(x)
 """
 )
+
+
+_add_torch_npu_docstr(
+    "_lstm_npu",
+    """
+接口原型: 
+_lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[])
+
+
+功能描述:
+LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。
+
+计算公式：
+  
+  $$
+  f_t =\sigma(W_f[h_{t-1}, x_t] + b_f) （1）\\
+  i_t =\sigma(W_i[h_{t-1}, x_t] + b_i) （2）\\
+  o_t =\sigma(W_o[h_{t-1}, x_t] + b_o) （3）\\
+  \tilde{c}_t =tanh(W_c[h_{t-1}, x_t] + b_c) （4）\\
+  c_t =f_t ⊙ c_{t-1} + i_t ⊙ \tilde{c}_t （5）\\
+  c_{o}^{t} =tanh(c_t) （6）\\
+  h_t =o_t ⊙ c_{o}^{t} （7）\\
+  $$
+
+  - $x_t ∈ R^{d}$：LSTM单元的输入向量。
+  - $f_t ∈ (0, 1)^{h}$：遗忘门激活向量。
+  - $i_t ∈ (0, 1)^{h}$：输入门、更新门激活向量。
+  - $o_t ∈ (0, 1)^{h}$：输出门激活向量。
+  - $h_i ∈ (-1, 1)^{h}$：隐藏状态向量，也称为LSTM单元的输出向量。
+  - $\tilde{c}_t ∈ (-1, 1)^{h}$：cell输入激活向量。
+  - $c_t ∈ R^{h}$：cell状态向量。
+  - $W ∈ R^{h×d}，(U ∈ R^{h×h})∩(b ∈ R^{h})$：训练中需要学习的权重矩阵和偏置向量参数。
+
+
+参数说明: 
+input (Tensor类型)：必选参数，LSTM单元的输入向量，数据格式支持ND，数据类型支持FLOAT16、FLOAT32，非连续Tensor。
+(1)若batch_sizes传入空指针：当batch_first=False时shape应为（time_step, batch_size, input_size）, 否则为（batch_size, time_step, input_size）。其中，batch_first表示batch是否在第一维；time_step表示时间维度；batch_size表示每个时刻需要处理的batch数量；input_size表示输入的特征数量。
+(2)若传入有效batch_sizes：shape应为(time_step * batch_size, input_size)，其内存排列与(time_step, batch_size, input_size)相同。
+hx (TensorList)：必选入参，表示LSTM运算中的初始hidden和cell状态列表，Device侧的TensorList,数据类型支持FLOAT16、FLOAT32，列表长度为2，列表中每个shape支持三维（D * num_layers, batch_size, hidden_size），若输入为空，则表示输入的初始hidden和cell状态为0。
+params (TensorList)：必选入参，表示LSTM运算中的权重和偏置张量列表,Device侧的TensorList，数据格式支持ND，数据类型支持FLOAT16、FLOAT32。
+                     列表长度为 2 * D * B * num_layers, 其中，num_layers对应参数numLayers，表示LSTM层数，bidirection为True时 D = 2， 否则 D = 1, has_biases为True时 B = 2, 否则 B = 1；
+                     其中bidirection为True， 且has_biases为True时，参数排布如下：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0], 
+                     其中 weight_ih_0 表示第0层输入的权重参数，其shape为（4 * hidden_size, cur_input_size），其中cur_intput_size 表示LSTM每层计算时的输入的特征数量（首层为input_size, 后续层为hidden_size, 如果bidirection为True，则为2 * hidden_size）；
+                     weight_hh_0 表示第0层隐藏层的权重参数，其shape为（4 * hidden_size, hidden_size）,bias_ih_0 表示第0层输入权重参数的偏置，其shape为（4 * hidden_size）,bias_hh_0 表示第0层隐藏层权重参数的偏置，其shape为（4 * hidden_size）。
+has_biases (bool)：必选入参，表示是否有biases。
+num_layers (int)：必选入参，表示LSTM层数。
+dropout (float)：表示随机掩码的概率。当前不支持该功能。
+train (bool)：必选入参，表示是否是训练模式。其中train = True时，在计算前向LSTM时会保存中间结果用于反向传播，train = False的时候，前向计算过程不保存中间结果。
+bidirectional(bool):必选入参，表示是否是双向。
+batch_first(bool):可选入参，表示输入数据格式是否是Batch在第一轴（B, T, H）。
+batch_sizes(Tensor类型):可选参数，表示每个时间步实际参与计算的有效Batch数。传入nullptr时，代表输入input为定长模式数据，否则为不定长模式。shape为(time_step,)，其中元素应按降序排列，元素值为正整数且最大不超过总Batch数量，且第一位元素值应与总Batch数量相等。
+
+输出说明:
+
+output (Tensor)：输出张量，表示LSTM运算中最后一层每个时间步的输出结果,数据类型支持FLOAT16、FLOAT32，非连续Tensor。当batch_first=False时shape支持三维（time_step, batch_size, D * hidden_size），否则支持三维（batch_size,time_step, D * hidden_size）。
+i_out(TensorList)：输出张量，表示LSTM运算中每层输入门的激活值（sigmoid输出，公式（2）的输出），数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。
+j_out(TensorList)：输出张量，表示LSTM运算中每层的候选cell状态（tanh输出，公式（4）的输出），数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。
+f_out(TensorList)：输出张量，表示进行LSTM运算中每层遗忘门的激活值（sigmoid输出），数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。
+o_out(TensorList)：输出张量，表示进行LSTM运算中每层输出门的激活值（sigmoid输出，公式（3）的输出）,数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。
+h_out(TensorList)：输出张量，表示进行LSTM运算中每层的隐藏层（公式（7）的输出），数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，不保存每个时间步的结果，只保存最后一个时间步的结果，故而列表中每个shape支持两维（batch_size, hidden_size），列表长度为 D * num_layers。
+c_out(TensorList)：输出张量，表示进行LSTM运算中每层的最终Cell状态（公式（5）的输出）,数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，不保存每个时间步的结果，只保存最后一个时间步的结果，故而列表中每个shape支持两维（batch_size, hidden_size），列表长度为 D * num_layers。
+tanh_c_out(TensorList)：输出张量，表示进行LSTM运算中每层最终cell状态经过tanh激活函数后的输出（公式（6）的输出）,数据类型支持FLOAT16、FLOAT32。列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。
+
+约束说明
+确定性计算：_lstm_npu默认支持确定性实现。
+
+支持版本: 
+PyTorch 2.1、2.5及更高版本
+
+支持的型号: 
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas 推理系列产品
+Atlas 训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+torch.npu.set_device(0)
+device = torch.device("npu:0")
+dtype = torch.float32
+
+input_tensor = torch.randn((2, 3, 8), dtype=dtype, device=device)
+h0 = torch.randn((2, 2, 4), dtype=dtype, device=device)
+c0 = torch.randn((2, 2, 4), dtype=dtype, device=device)
+hx = [h0, c0]
+hidden_size = 4
+gate_size = 4 * hidden_size
+weight_ih = torch.randn((gate_size, 8), dtype=dtype, device=device)
+weight_hh = torch.randn((gate_size, 4), dtype=dtype, device=device)
+params = [weight_ih, weight_hh, weight_hh, weight_hh]
+c0 = torch.randn((1, 2, 16), dtype=dtype, device=device)
+batch_sizes = torch.randn((4*hidden_size), dtype=dtype, device=device)
+input_tensor = input_tensor.to(device, dtype=dtype)
+hx = [
+    t.to(device=device, dtype=dtype)
+    for t in hx
+]
+params = [
+    p.to(device=device, dtype=dtype)
+    for p in params
+]
+
+out, _, _, _, _, hn_list, cn_list, _ = torch_npu._lstm_npu(
+    input_tensor,    # 1. input
+    hx,              # 2. hx
+    params,          # 3. params
+    False,           # 4. has_biases
+    2,               # 5. num_layers
+    0.0,             # 6. dropout
+    False,           # 7. train
+    False,           # 8. bidirectional
+    batch_first=True,            # 9. batch_first（位置参数，非关键字）
+    batch_sizes=None             # 10. batch_sizes
+)
+
+"""
+)
