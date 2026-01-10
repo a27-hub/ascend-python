@@ -105,6 +105,7 @@
         -   [torch_npu.npu_moe_init_routing](./context/torch_npu-npu_moe_init_routing.md)
         -   [torch_npu.npu_prefetch](./context/torch_npu-npu_prefetch.md)
         -   [torch_npu.npu_prompt_flash_attention](./context/torch_npu-npu_prompt_flash_attention.md)
+        -   [torch_npu.npu_qkv_rms_norm_rope_cache](./context/torch_npu-npu_qkv_rms_norm_rope_cache.md)
         -   [torch_npu.npu_quant_lightning_indexer](./context/torch_npu-npu_quant_lightning_indexer.md)
         -   [torch_npu.npu_quant_matmul](./context/torch_npu-npu_quant_matmul.md)
         -   [torch_npu.npu_quant_matmul_reduce_sum](./context/torch_npu-npu_quant_matmul_reduce_sum.md)
