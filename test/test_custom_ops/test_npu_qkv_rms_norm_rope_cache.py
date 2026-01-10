@@ -64,7 +64,7 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         qkv_size = [batch_size, seq_len, Nqkv, dim]
         num_heads = [Nq, Nk, Nv]
 
-        return qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, k_scale, v_scale, qkv_size, num_heads, cache_mode, output_mode, input_dtype
+        return qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, num_heads, k_scale, v_scale, cache_mode, output_mode, input_dtype
 
     def supported_op_exec(self,
                           qkv,
@@ -76,12 +76,12 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
                           q_out,
                           k_cache,
                           v_cache,
+                          qkv_size,
+                          num_heads,
                           k_scale=None,
                           v_scale=None,
                           k_offset=None,
                           v_offset=None,
-                          qkv_size=None,
-                          num_heads=None,
                           epsilon=1e-06,
                           cache_mode="PA_NZ",
                           is_output_qkv=False):
@@ -208,7 +208,8 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         
 
     def custom_op_exec(self, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache,
-                       k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size=None, num_heads=None,
+                       qkv_size=None, num_heads=None,
+                       k_scale=None, v_scale=None, k_offset=None, v_offset=None, 
                        epsilon=1e-06, cache_mode="PA_NZ", is_output_qkv=False):
         qkv = qkv.npu()
         q_gamma = q_gamma.npu()
@@ -226,12 +227,12 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         q_out_before_quant_npu, k_out_before_quant_npu, v_out_before_quant_npu = torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma,
                                                                                                     cos, sin, index, 
                                                                                                     q_out, k_cache, v_cache,
+                                                                                                    qkv_size = qkv_size,
+                                                                                                    head_nums = num_heads,
                                                                                                     k_scale=k_scale,
                                                                                                     v_scale=v_scale,
                                                                                                     k_offset=k_offset,
                                                                                                     v_offset=v_offset,
-                                                                                                    qkv_size = qkv_size,
-                                                                                                    head_nums = num_heads,
                                                                                                     epsilon=epsilon,
                                                                                                     cache_mode=cache_mode,
                                                                                                     is_output_qkv=is_output_qkv)
@@ -245,16 +246,17 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         return q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_before_quant_cpu, k_out_before_quant_cpu, v_out_before_quant_cpu
 
     def test_npu_qkv_rmsnorm_rope_cache_PA_NZ(self, device="npu"):
-        qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, k_scale, v_scale, qkv_size, num_heads, cache_mode, is_output_qkv, input_dtype = self.generate_inputs(
+        qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, num_heads, k_scale, v_scale, cache_mode, is_output_qkv, input_dtype = self.generate_inputs(
             72, 2, 16, 1, 1, 128, 11898, 128, 1, "PA_NZ", True, torch.float16)
         golden_out = self.supported_op_exec(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache,
+                                            qkv_size=qkv_size,
+                                            num_heads=num_heads,
                                             k_scale=k_scale, v_scale=v_scale,
-                                            k_offset=None, v_offset=None, qkv_size=qkv_size,
-                                            num_heads=num_heads, epsilon=1e-06, cache_mode=cache_mode, is_output_qkv=is_output_qkv)
+                                            k_offset=None, v_offset=None, epsilon=1e-06, cache_mode=cache_mode,   is_output_qkv=is_output_qkv)
         # call npu api
-        npu_out = self.custom_op_exec(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache,
+        npu_out = self.custom_op_exec(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size=qkv_size, num_heads=num_heads,
                                     k_scale=k_scale, v_scale=v_scale,
-                                    k_offset=None, v_offset=None, qkv_size=qkv_size, num_heads=num_heads,
+                                    k_offset=None, v_offset=None, 
                                     epsilon=1e-06, cache_mode=cache_mode, is_output_qkv=is_output_qkv)
 
         q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_before_quant_cpu, k_out_before_quant_cpu, v_out_before_quant_cpu = npu_out

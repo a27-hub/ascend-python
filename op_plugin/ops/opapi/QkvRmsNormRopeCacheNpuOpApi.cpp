@@ -24,9 +24,9 @@ constexpr int64_t DIM_TWO = 2;
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(
     const at::Tensor& qkv, const at::Tensor& q_gamma, const at::Tensor& k_gamma, const at::Tensor& cos,
     const at::Tensor& sin, const at::Tensor& index, at::Tensor& q_out, at::Tensor& k_cache, at::Tensor& v_cache,
-    const c10::optional<at::Tensor>& k_scale, const c10::optional<at::Tensor>& v_scale,
-    const c10::optional<at::Tensor>& k_offset, const c10::optional<at::Tensor>& v_offset, at::IntArrayRef qkv_size,
-    at::IntArrayRef head_nums, double epsilon, c10::string_view cache_mode, bool is_output_qkv)
+    at::IntArrayRef qkv_size, at::IntArrayRef head_nums, const c10::optional<at::Tensor>& k_scale,
+    const c10::optional<at::Tensor>& v_scale, const c10::optional<at::Tensor>& k_offset,
+    const c10::optional<at::Tensor>& v_offset, double epsilon, c10::string_view cache_mode, bool is_output_qkv)
 {
     int64_t Nq = head_nums[0];
     int64_t Nk = head_nums[1];
@@ -60,9 +60,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_functional(
     const at::Tensor& qkv, const at::Tensor& q_gamma, const at::Tensor& k_gamma, const at::Tensor& cos,
     const at::Tensor& sin, const at::Tensor& index, const at::Tensor& q_out, const at::Tensor& k_cache,
-    const at::Tensor& v_cache, const c10::optional<at::Tensor>& k_scale, const c10::optional<at::Tensor>& v_scale,
-    const c10::optional<at::Tensor>& k_offset, const c10::optional<at::Tensor>& v_offset, at::IntArrayRef qkv_size,
-    at::IntArrayRef head_nums, double epsilon, c10::string_view cache_mode, bool is_output_qkv)
+    const at::Tensor& v_cache, at::IntArrayRef qkv_size, at::IntArrayRef head_nums,
+    const c10::optional<at::Tensor>& k_scale, const c10::optional<at::Tensor>& v_scale,
+    const c10::optional<at::Tensor>& k_offset, const c10::optional<at::Tensor>& v_offset, double epsilon,
+    c10::string_view cache_mode, bool is_output_qkv)
 {
     int64_t Nq = head_nums[0];
     int64_t Nk = head_nums[1];

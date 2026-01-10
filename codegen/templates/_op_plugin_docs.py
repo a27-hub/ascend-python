@@ -10886,7 +10886,7 @@ _add_torch_npu_docstr(
     "npu_qkv_rms_norm_rope_cache",
     """
 接口原型: 
-torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, head_nums, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
 
 功能描述：
 输入qkv融合张量，通过SplitVD拆分q、k、v张量。q和k执行RmsNorm、ApplyRotaryPosEmb，k和v执行Quant(可选)、Scatter融合操作，输出q_out、k_cache、v_cache、q_out_before_quant(可选)、k_out_before_quant(可选)、v_out_before_quant(可选)。
@@ -10998,12 +10998,12 @@ _, _, _ = torch_npu.npu_qkv_rms_norm_rope_cache(
     q_out=q_out,
     k_cache=k_cache,
     v_cache=v_cache,
+    qkv_size=qkv_size,
+    head_nums=head_nums,
     k_scale=k_scale,
     v_scale=v_scale,
     k_offset=None,
     v_offset=None,
-    qkv_size=qkv_size,
-    head_nums=head_nums,
     epsilon=eps,
     cache_mode="PA_NZ",
     is_output_qkv=False,

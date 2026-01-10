@@ -79,7 +79,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, head_nums, *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, epsilon=1e-6, cache_mode='PA_NZ', is_output_qkv=False) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -220,12 +220,12 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
       q_out=q_out,
       k_cache=k_cache,
       v_cache=v_cache,
+      qkv_size=qkv_size,
+      head_nums=head_nums,
       k_scale=k_scale,
       v_scale=v_scale,
       k_offset=None,
       v_offset=None,
-      qkv_size=qkv_size,
-      head_nums=head_nums,
       epsilon=eps,
       cache_mode="PA_NZ",
       is_output_qkv=False,
@@ -253,8 +253,8 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
           super().__init__()
   
       def forward(self, qkv, q_gamma, k_gamma, cos, sin, index,
-                  q_out, k_cache, v_cache, k_scale, v_scale,
-                  qkv_size, head_nums, eps):
+                  q_out, k_cache, v_cache, qkv_size, head_nums,
+                  k_scale, v_scale, eps):
           return torch_npu.npu_qkv_rms_norm_rope_cache(
               qkv=qkv,
               q_gamma=q_gamma,
@@ -265,12 +265,12 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
               q_out=q_out,
               k_cache=k_cache,
               v_cache=v_cache,
+              qkv_size=qkv_size,
+              head_nums=head_nums,
               k_scale=k_scale,
               v_scale=v_scale,
               k_offset=None,
               v_offset=None,
-              qkv_size=qkv_size,
-              head_nums=head_nums,
               epsilon=eps,
               cache_mode="PA_NZ",
               is_output_qkv=False,
@@ -335,9 +335,8 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
   # 静态图执行
   _, _, _ = model(
       qkv, q_gamma, k_gamma, cos, sin, index,
-      q_out, k_cache, v_cache,
-      k_scale, v_scale,
-      qkv_size, head_nums, eps
+      q_out, k_cache, v_cache, qkv_size, head_nums,
+      k_scale, v_scale, eps
   )
   
   print(f"q_out:\n{q_out}")
