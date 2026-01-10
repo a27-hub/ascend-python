@@ -3227,10 +3227,12 @@ official:
 
   - func: lstm.data(Tensor data, Tensor batch_sizes, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
     device_check: NoCheck
 
   - func: lstm.input(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: lstm_cell(Tensor input, Tensor[] hx, Tensor w_ih, Tensor w_hh, Tensor? b_ih=None, Tensor? b_hh=None) -> (Tensor, Tensor)
     acl_op: all_version
@@ -6165,6 +6167,10 @@ custom:
 
   - func: npu_lstm_cell(Tensor input, Tensor w_ih, Tensor w_hh, Tensor h, Tensor c, Tensor? b_ih=None, Tensor? b_hh=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
+
+  - func: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[], Tensor[])
+    op_api: all_version
+    tags: nondeterministic_seeded
 
   - func: npu_lstm_cell_backward(Tensor? grady, Tensor? gradh, Tensor? gradc, Tensor input, Tensor w_ih, Tensor w_hh, Tensor h, Tensor c, Tensor y_output, Tensor h_output, Tensor c_output, Tensor i, Tensor j, Tensor f, Tensor o, Tensor tanhc) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
