@@ -1962,6 +1962,41 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::
     return output_size;
 }
 
+c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(const at::Tensor &x1, const at::Tensor &x2, 
+    int32_t dtype, const at::Tensor &x1_scale_real, const at::Tensor &x2_scale_real, int32_t group_size_value, 
+    at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, at::IntArrayRef perm_y_real, 
+    int32_t batch_split_factor_value)
+{
+    c10::SmallVector<int64_t, SIZE> output_size;
+    auto x1_dim_num = x1.dim();
+    auto x2_dim_num = x2.dim();
+    constexpr int EXPECTED_DIM = 3;
+
+    TORCH_CHECK(x1_dim_num == EXPECTED_DIM && x2_dim_num == EXPECTED_DIM,
+        "x1 dim is ",
+        input_dim_num,
+        "but expected is ",
+        EXPECTED_DIM,
+        "x2 dim is ",
+        x2_dim_num,
+        "but expected is ",
+        EXPECTED_DIM,
+        OPS_ERROR(ErrCode::PARAM));
+
+    auto m_dim = x1.size(perm_x1_real[1]);
+    auto batch_dim = x2.size(perm_x1_real[0]);
+    auto n_dim = weight.size(perm_x2_real[2]);
+
+    output_size = {m_dim, batch_dim, n_dim};
+    if (x1_scale_real.defined() || x2_scale_real.defined()) {
+        output_size = {m_dim, 1, batch_dim * n_dim};
+    }
+    if (batch_split_factor_value > 1) {
+        output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
+    }
+    return output_size;
+}
+
 c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype)
 {
     at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Char;});
