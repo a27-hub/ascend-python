@@ -21,6 +21,9 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+#include "torch_npu/csrc/logging/LogContext.h"
+std::shared_ptr<npu_logging::Logger> logger = npu_logging::logging().getLogger("torch_npu.memory");
+
 namespace op_api {
 const int DIM_0 = 0;
 const int DIM_1 = 1;
@@ -180,8 +183,11 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             }
         } else {
             c10_npu::CaptureStatus secondary_stream_capture_state = stream_capture_status_may_init_ctx(secondary_stream);
+            logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, original_stream id is %lld, secondary_stream_capture_state is %d, secondary_stream id is %lld.",
+                static_cast<int64_t>(original_stream.id()), (int)secondary_stream_capture_state, static_cast<int64_t>(secondary_stream.id()));
             const auto gen = at_npu::detail::getDefaultNPUGenerator();
             if (secondary_stream_capture_state == c10_npu::CaptureStatus::None) {
+                logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, second stream record!!");
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
                 capture_event_begin.record(original_stream);
                 capture_event_begin.block(secondary_stream);
@@ -225,6 +231,8 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor, numels is %lld, is_capture is %d.",
+            numels, (int)is_capture);
         const auto gen = at_npu::detail::getDefaultNPUGenerator();
         uint64_t offset_intragraph = 0;
         if (is_capture == c10_npu::CaptureStatus::None) {
@@ -552,6 +560,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 {
     TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95, "Ascend910_95 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
 
+    std::string input_layout_str(input_layout);
+    std::string softmax_layout_str(softmax_layout);
+    logger->info("npu_flash_attention_symint start, head_num is %lld, input_layout is %s, scale is %f, keep_prob is %f, pre_tockens is %lld.",
+        head_num, input_layout_str.c_str(), scale, keep_prob, pre_tockens);
+    logger->info("npu_flash_attention_symint start, next_tockens is %lld, inner_precise is %lld, sparse_mode is %lld, gen_mask_parallel is %d, sync is %d, softmax_layout is %s.",
+        next_tockens, inner_precise, sparse_mode, gen_mask_parallel, sync, softmax_layout_str.c_str());
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
