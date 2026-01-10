@@ -259,6 +259,9 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_ALL, is_capture is %d.", (int)is_capture);
         drop_mask = at::zeros({length}, query.options().dtype(at::kByte));
+    } else {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor other, numels is %lld, is_capture is %d.",
+            numels, (int)is_capture);
     }
 
     return drop_mask;
@@ -733,6 +736,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
         if (format_sink.defined()) { // sink is defined
+            logger->info("npu_flash_attention_symint aclnnFlashAttentionVarLenScoreV5, is_capture is %d.", (int)is_capture);
             auto format_query_rope = at::Tensor();
             auto format_key_rope = at::Tensor();
             auto q_start_idx_val = at::IntArrayRef{};
@@ -769,6 +773,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             }
         } else { // sink is undefined
             if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+                logger->info("npu_flash_attention_symint aclnnFlashAttentionVarLenScoreV4, is_capture is %d.", (int)is_capture);
                 if (softmax_layout_str == "TND" && is_fa_V4_available) {
                     softmax_layout_str = "same_as_input";
                     char softmax_layout_char[LAYOUT_MAX_LENGTH];
@@ -790,6 +795,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                         softmax_out, attention_score);
                 }
             } else {
+                logger->info("npu_flash_attention_symint aclnnFlashAttentionScore, is_capture is %d.", (int)is_capture);
                 EXEC_NPU_CMD(
                     aclnnFlashAttentionScore, format_query, format_key, format_value,
                     format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
@@ -804,6 +810,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                input_layout_str, ac_seq_qlen, ac_seq_kvlen);
 
     if (!sync) {
+        logger->info("npu_flash_attention_symint !sync, is_capture is %d.", (int)is_capture);
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
         npu_event.block(c10_npu::getCurrentSecondaryStream());
