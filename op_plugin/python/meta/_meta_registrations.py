@@ -3735,8 +3735,8 @@ def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_c
 
 
 @impl(m, "npu_qkv_rms_norm_rope_cache")
-def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
-                                     qkv_size, head_nums, v_scale=None, k_offset=None, v_offset=None, epsilon=1e-6,
+def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, head_nums, 
+                                     *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, epsilon=1e-6,
                                      cache_mode='PA_NZ', is_output_qkv=False):
     if qkv_size is None:
         raise RuntimeError("qkv_size must not be None" + ops_error(ErrCode.PARAM))
@@ -3775,8 +3775,8 @@ def npu_qkv_rms_norm_rope_cache_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_o
 
 
 @impl(m, "npu_qkv_rms_norm_rope_cache_functional")
-def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, *, k_scale=None,
-                                        v_scale=None, k_offset=None, v_offset=None, qkv_size, head_nums, epsilon=1e-6,
+def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, head_nums, 
+                                        *, k_scale=None, v_scale=None, k_offset=None, v_offset=None, epsilon=1e-6,
                                         cache_mode='PA_NZ', is_output_qkv=False):
     if qkv_size is None:
         raise RuntimeError("qkv_size must not be None" + ops_error(ErrCode.PARAM))
