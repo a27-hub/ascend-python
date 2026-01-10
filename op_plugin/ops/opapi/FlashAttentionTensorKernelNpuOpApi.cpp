@@ -168,9 +168,12 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
 {
     at::Tensor mask;
 
+    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch start, is_capture is %d.", (int)is_capture);
     if (gen_mask_parallel) {
         auto original_stream = c10_npu::getCurrentNPUStream();
         auto secondary_stream = c10_npu::getCurrentSecondaryStream();
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch true, original_stream id is %lld, secondary_stream id is %lld.",
+            static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
         if (is_capture == c10_npu::CaptureStatus::None) {
             // During the life cycle of this raii instance, the calcu stream is set as the
             // secondary stream, and tasks are distributed to the secondary stream. At the
@@ -208,6 +211,9 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             }
         }
     } else {
+        auto original_stream = c10_npu::getCurrentNPUStream();
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch false, original_stream id is %lld, is_capture is %d.",
+            static_cast<int64_t>(original_stream.id()), (int)is_capture);
         mask = dropout_gen_mask_tensor_impl(query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
     }
     return mask;
@@ -231,7 +237,7 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
-        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor, numels is %lld, is_capture is %d.",
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_NORMAL, numels is %lld, is_capture is %d.",
             numels, (int)is_capture);
         const auto gen = at_npu::detail::getDefaultNPUGenerator();
         uint64_t offset_intragraph = 0;
@@ -251,6 +257,7 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
                 gen_mask_parallel, sync, is_capture, offset_intragraph);
         }
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
+        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_ALL, is_capture is %d.", (int)is_capture);
         drop_mask = at::zeros({length}, query.options().dtype(at::kByte));
     }
 
@@ -700,6 +707,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         numels *= accum;
     }
     c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor before, is_capture is %d.", (int)is_capture);
     at::Tensor format_drop_mask = dropout_gen_mask_tensor(format_query, format_key, keep_prob, head_num, input_layout_str,
         gen_mask_parallel, sync, seed, offset, numels, is_capture);
 
