@@ -560,12 +560,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 {
     TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95, "Ascend910_95 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
 
-    std::string input_layout_str(input_layout);
-    std::string softmax_layout_str(softmax_layout);
+    std::string input_layout_str1(input_layout);
+    std::string softmax_layout_str1(softmax_layout);
     logger->info("npu_flash_attention_symint start, head_num is %lld, input_layout is %s, scale is %f, keep_prob is %f, pre_tockens is %lld.",
-        head_num, input_layout_str.c_str(), scale, keep_prob, pre_tockens);
+        head_num, input_layout_str1.c_str(), scale, keep_prob, pre_tockens);
     logger->info("npu_flash_attention_symint start, next_tockens is %lld, inner_precise is %lld, sparse_mode is %lld, gen_mask_parallel is %d, sync is %d, softmax_layout is %s.",
-        next_tockens, inner_precise, sparse_mode, gen_mask_parallel, sync, softmax_layout_str.c_str());
+        next_tockens, inner_precise, sparse_mode, gen_mask_parallel, sync, softmax_layout_str1.c_str());
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
