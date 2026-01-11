@@ -2,7 +2,7 @@
 
 ## 概述
 
-本样例展示了如何使用PyTorch的torch.library机制注册自定义算子，通过<<<>>>内核调用符调用核函数，并适配aclgraph使用该自定义算子，以简单的Add算子为例，实现两个向量的逐元素相加。
+本样例展示了如何使用PyTorch的torch.library机制注册自定义算子，通过<<<>>>内核调用符调用核函数，并适配aclgraph使用该自定义算子，以简单的Add算子和三角函数计算的原地算子为例，实现aclgraph下自定义算子的调用。
 
 ## 支持的产品
 
@@ -21,14 +21,14 @@
 ```
 
 ## 算子描述
-- Add算子
-1. 算子功能：
-  Add算子实现了两个数据相加，返回相加结果的功能。对应的数学表达式为：
+### Add算子
+- 算子功能：
+  Add算子实现了两个数据相加，返回相加结果的功能。对应的算子原型为：
   
   ```
-  z = x + y
+  ascendc_add(Tensor x, Tensor y) -> Tensor
   ```
-2. 算子规格：
+- 算子规格：
   
   <table>
    <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">add_custom</td></tr>
@@ -43,40 +43,42 @@
  
   </table>
 
-- 原地三角函数算子
-1. 算子功能：
+### 原地三角函数算子
+- 算子功能：
+  该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回tan(x)计算结果。对应的算子原型为：
+  
   ```
-  sin_out, cos_out, tan_out = sin(x), cos(x), tan(x)
+  ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
   ```
-2. 算子规格：
+- 算子规格：
+
   <table>
   <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">trig_inplace_custom</td></tr>
   </tr>
   <tr><td rowspan="4" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">x</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  <tr><td align="center">sin_out</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  <tr><td align="center">cos_out</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
+  <tr><td align="center">out_sin</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
+  <tr><td align="center">out_cos</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   
   </tr>
   </tr>
-  <tr><td rowspan="3" align="center">算子输出</td><td align="center">sin_out</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  <tr><td align="center">cos_out</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  <tr><td align="center">tan_out</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
+  <tr><td rowspan="3" align="center">算子输出</td><td align="center">out_sin</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
+  <tr><td align="center">out_cos</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
+  <tr><td align="center">out_tan</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   </tr>
  
   </table>
 
-## 关键代码介绍  
+## 代码实现介绍
 
-  本样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。
-  
+  以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。
   PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
   
   ```c++
   TORCH_LIBRARY_FRAGMENT(ascendc_ops, m) {
       m.def(ascendc_add"(Tensor x, Tensor y) -> Tensor");
   }
-  
+  ```
   
   `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
   
@@ -86,8 +88,7 @@
       m.impl("ascendc_add", TORCH_FN(ascendc_ops::ascendc_add));
   }
   ```
-- <<<>>>调用Kernel函数：
-  例如，在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
+<<<>>>调用Kernel函数，在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
   
   ```c++
     add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
