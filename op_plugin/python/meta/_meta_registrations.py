@@ -4355,6 +4355,14 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
     group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
 
+    torch._check(
+        length(weight) == 1,
+        lambda: "Expected weight to have exactly one tensor, but the actual value is {len(weight)}.",
+    )
+    torch._check(
+        length(weight_scale) == 1,
+        lambda: "Expected weight_scale to have exactly one tensor, but the actual value is {len(weight_scale)}.",
+    )
     if x_dtype is not None:
         torch._check(
             x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2,
