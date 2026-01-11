@@ -22,23 +22,26 @@ class Model(torch.nn.Module):
         return out_tan
 
 
+length = [8, 2048]
+
+
 class TestCustomTrig(TestCase):
 
-    # Test single custom operator call
-    def test_trig_inplace_ops(self):
-        length = [8, 2048]
+    def get_rand_input(self):
         x = torch.rand(length, device='npu', dtype=torch.float32)
         out_sin = torch.empty_like(x)
         out_cos = torch.empty_like(x)
+        return x, out_sin, out_cos
+
+    # Test single custom operator call
+    def test_trig_inplace_ops(self):
+        x, out_sin, out_cos = self.get_rand_input()
         out_tan = torch.ops.ascendc_ops.ascendc_trig(x, out_sin, out_cos)
         self.check_res(x, out_sin, out_cos, out_tan)
 
     # torch.npu.NPUGraph()使能方式
     def test_npugraph(self):
-        length = [8, 2048]
-        static_x = torch.rand(length, device='npu', dtype=torch.float32)
-        static_out_sin = torch.rand(length, device='npu', dtype=torch.float32)
-        static_out_cos = torch.rand(length, device='npu', dtype=torch.float32)
+        static_x, static_out_sin, static_out_cos = self.get_rand_input()
         static_out_tan = torch.rand(length, device='npu', dtype=torch.float32)
 
         g = torch.npu.NPUGraph()
@@ -46,9 +49,7 @@ class TestCustomTrig(TestCase):
         with torch.npu.graph(g):
             static_out_tan = model(static_x, static_out_sin, static_out_cos)
 
-        real_x = torch.rand_like(static_x)
-        real_out_sin = torch.rand_like(static_out_sin)
-        real_out_cos = torch.rand_like(static_out_cos)
+        real_x, real_out_sin, real_out_cos = self.get_rand_input()
 
         static_x.copy_(real_x)
         static_out_sin.copy_(real_out_sin)
@@ -59,11 +60,8 @@ class TestCustomTrig(TestCase):
 
     # Test using torch.npu.NPUGraph
     def test_make_graphed_callables(self):
-        length = [8, 2048]
         model = Model().npu()
-        x = torch.rand(length, device='npu', dtype=torch.float32)
-        out_sin = torch.empty_like(x)
-        out_cos = torch.empty_like(x)
+        x, out_sin, out_cos = self.get_rand_input()
         model = torch.npu.make_graphed_callables(model, (x, out_sin, out_cos))
 
         real_x = torch.rand_like(x)
@@ -72,12 +70,9 @@ class TestCustomTrig(TestCase):
 
     # Test using make_graphed_callables
     def test_npugraph_ex_backend(self):
-        length = [8, 2048]
         model = Model().npu()
         compiled_model = torch.compile(model, backend="npugraph_ex", fullgraph=True, dynamic=True)
-        x = torch.rand(length, device='npu', dtype=torch.float32)
-        out_sin = torch.empty_like(x)
-        out_cos = torch.empty_like(x)
+        x, out_sin, out_cos = self.get_rand_input()
         out_tan = compiled_model(x, out_sin, out_cos)
         self.check_res(x, out_sin, out_cos, out_tan)
 
@@ -86,8 +81,6 @@ class TestCustomTrig(TestCase):
         cpu_out_sin = torch.sin(x)
         cpu_out_cos = torch.cos(x)
         cpu_out_tan = torch.tan(x)
-        print(out_sin)
-        print(cpu_out_sin)
         self.assertRtolEqual(out_sin, cpu_out_sin)
         self.assertRtolEqual(out_cos, cpu_out_cos)
         self.assertRtolEqual(out_tan, cpu_out_tan)
