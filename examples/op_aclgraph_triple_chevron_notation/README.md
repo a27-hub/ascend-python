@@ -15,7 +15,7 @@
 ├── add_custom.asc       // Add算子实现 & 自定义算子注册
 ├── add_aclgraph_test.py   // Add算子aclgraph测试demo
 ├── trig_inplace_custom.asc // 原地三角函数算子实现 & 自定义算子注册
-├── inplace_aclgraph_test.py // 原地三角函数aclgraph测试demo
+├── trig_aclgraph_test.py // 原地三角函数aclgraph测试demo
 ├── CMakeLists.txt           // 编译工程文件
 ├── README.md                //示例介绍
 ```
@@ -45,7 +45,7 @@
 
 ### 原地三角函数算子
 - 算子功能：
-  该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回tan(x)计算结果。对应的算子原型为：
+  该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回值tan(x)计算结果。对应的算子原型为：
   
   ```
   ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
@@ -99,8 +99,8 @@
 在add_custom_aclgraph_test.py中，首先通过`torch.ops.load_library`加载生成的自定义算子库，调用注册的ascendc_add函数，并通过对比NPU输出与CPU标准加法结果来验证自定义算子的数值正确性。
 
 - 注册Meta函数：
-
-aclgraph调用算子需要注册Meta函数，本示例在add_custom_aclgraph_test.py开头注册代码如下：
+  
+  aclgraph调用算子需要注册Meta函数，本示例在add_custom_aclgraph_test.py开头注册代码如下：
 
 ```python
  m = Library("ascendc_ops", "IMPL", "Meta")
@@ -123,20 +123,20 @@ aclgraph调用算子需要注册Meta函数，本示例在add_custom_aclgraph_tes
 - 环境安装
   
 1. 请参考与您当前使用的版本配套的[《Ascend Extension for PyTorch
-   软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和torch_npu详细的安装步骤，torch_npu支持`backend="npugraph_ex"`需7.3.0版本以上。
+   软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和torch_npu详细的安装步骤。
+   
+   本样例需torch2.6.0版本以上，支持`backend="npugraph_ex"`需7.3.0版本以上。
 2. 根据实际环境安装CANN toolkit包，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
-3. 运行算子前必须安装社区版CANN legacy包（运行态依赖），若仅编译算子，可跳过本操作。
+3. 根据实际环境安装安装CANN ops包。根据产品型号和环境架构，下载对应安装包，下载链接如下：
    
-   根据产品型号和环境架构，下载对应`cann-${soc_name}-ops-legacy_${cann_version}_linux-${arch}.run`包，下载链接如下：
-   
-   - Atlas A2 训练系列产品/Atlas A2 推理系列产品：[legacy x86_64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/x86_64/ops/cann-910b-ops-legacy_8.5.0-beta.1_linux-x86_64.run)、[legacy aarch64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/aarch64/ops/cann-910b-ops-legacy_8.5.0-beta.1_linux-aarch64.run)。
-   - Atlas A3 训练系列产品/Atlas A3 推理系列产品：[legacy x86_64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/x86_64/ops/cann-910_93-ops-legacy_8.5.0-beta.1_linux-x86_64.run)、[legacy aarch64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/aarch64/ops/cann-910_93-ops-legacy_8.5.0-beta.1_linux-aarch64.run)。
+   - Atlas A2 训练系列产品/Atlas A2 推理系列产品：[legacy x86_64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/x86_64/Ascend-cann-910b-ops_8.5.0-beta.1_linux-x86_64.run)、[legacy aarch64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/aarch64/Ascend-cann-910b-ops_8.5.0-beta.1_linux-aarch64.run)。
+   - Atlas A3 训练系列产品/Atlas A3 推理系列产品：[legacy x86_64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/x86_64/Ascend-cann-A3-ops_8.5.0-beta.1_linux-x86_64.run)、[legacy aarch64包](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/aarch64/Ascend-cann-A3-ops_8.5.0-beta.1_linux-aarch64.run)。
    
    ```bash
    # 确保安装包具有可执行权限
-   chmod +x cann-${soc_name}-ops-legacy_${cann_version}_linux-${arch}.run
+   chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
    # 安装命令
-   ./cann-${soc_name}-ops-legacy_${cann_version}_linux-${arch}.run --full --install-path=${install_path}
+   ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run  --install --quiet --install-path=${install_path}
    ```
    
    - \$\{soc\_name\}：表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。

@@ -6,20 +6,23 @@ from torch.library import Library
 
 # Load the custom operator library
 torch.ops.load_library("libcustom_ops.so")
-
 # Register Meta function
 m = Library("ascendc_ops", "IMPL", "Meta")
+
+
 @torch.library.impl(m, "ascendc_trig")
 def ascendc_trig_meta(x, out_sin, out_cos):
     return torch.empty_like(x)
 
+
 # Define a simple model using the custom operation
 class Model(torch.nn.Module):
-    def forward(self,x, out_sin, out_cos):
+    def forward(self, x, out_sin, out_cos):
         out_tan = torch.ops.ascendc_ops.ascendc_trig(x, out_sin, out_cos)
         return out_tan
 
-class TestCustomAdd(TestCase):
+
+class TestCustomTrig(TestCase):
 
     # Test single custom operator call
     def test_trig_inplace_ops(self):
@@ -33,7 +36,7 @@ class TestCustomAdd(TestCase):
     # torch.npu.NPUGraph()使能方式
     def test_npugraph(self):
         length = [8, 2048]
-        static_x =  torch.rand(length, device='npu', dtype=torch.float32)
+        static_x = torch.rand(length, device='npu', dtype=torch.float32)
         static_out_sin = torch.rand(length, device='npu', dtype=torch.float32)
         static_out_cos = torch.rand(length, device='npu', dtype=torch.float32)
         static_out_tan = torch.rand(length, device='npu', dtype=torch.float32)
@@ -53,7 +56,7 @@ class TestCustomAdd(TestCase):
         # replay
         g.replay()
         self.check_res(real_x, static_out_sin, static_out_cos, static_out_tan)
-        
+
     # Test using torch.npu.NPUGraph
     def test_make_graphed_callables(self):
         length = [8, 2048]
@@ -61,7 +64,7 @@ class TestCustomAdd(TestCase):
         x = torch.rand(length, device='npu', dtype=torch.float32)
         out_sin = torch.empty_like(x)
         out_cos = torch.empty_like(x)
-        model = torch.npu.make_graphed_callables(model,(x, out_sin, out_cos))
+        model = torch.npu.make_graphed_callables(model, (x, out_sin, out_cos))
 
         real_x = torch.rand_like(x)
         real_out_tan = model(real_x, out_sin, out_cos)
@@ -77,12 +80,14 @@ class TestCustomAdd(TestCase):
         out_cos = torch.empty_like(x)
         out_tan = compiled_model(x, out_sin, out_cos)
         self.check_res(x, out_sin, out_cos, out_tan)
-     
+
     # Test using the npugraph_ex backend for model compilation
-    def check_res(self,x, out_sin, out_cos, out_tan):
+    def check_res(self, x, out_sin, out_cos, out_tan):
         cpu_out_sin = torch.sin(x)
         cpu_out_cos = torch.cos(x)
         cpu_out_tan = torch.tan(x)
+        print(out_sin)
+        print(cpu_out_sin)
         self.assertRtolEqual(out_sin, cpu_out_sin)
         self.assertRtolEqual(out_cos, cpu_out_cos)
         self.assertRtolEqual(out_tan, cpu_out_tan)
