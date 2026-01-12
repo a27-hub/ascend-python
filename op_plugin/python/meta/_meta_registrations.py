@@ -4357,12 +4357,13 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
 
     torch._check(
         length(weight) == 1,
-        lambda: "Expected weight to have exactly one tensor, but the actual value is {len(weight)}.",
+        lambda: "Expected weight to have exactly 1 tensor, but the actual value is {len(weight)}.",
     )
     torch._check(
         length(weight_scale) == 1,
-        lambda: "Expected weight_scale to have exactly one tensor, but the actual value is {len(weight_scale)}.",
+        lambda: "Expected weight_scale to have exactly 1 tensor, but the actual value is {len(weight_scale)}.",
     )
+
     if x_dtype is not None:
         torch._check(
             x_dtype == torch_npu.float4_e1m2fn_x2 or x_dtype == torch_npu.float4_e2m1fn_x2,
@@ -4411,6 +4412,13 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     batch_size = x.size(0)
     dim_n = 2
     n = weight[0].size(dim_n)
+    m = x.size(0)
+    k = x.size(1)
+    torch._check(
+        m > 0 and n >0 and k > 0,
+        lambda: f"The m,k,n dim should be greater than 0, but the actual value is {m}, {k}, {n}",
+    )
+
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
                    (weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn)
     is_a4w4_input = False
