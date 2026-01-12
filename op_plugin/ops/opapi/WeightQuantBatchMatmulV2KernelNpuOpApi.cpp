@@ -86,11 +86,13 @@ at::Tensor npu_weight_quant_batchmatmul(const at::Tensor &x, const at::Tensor &w
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
     TensorWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
-
+    static const bool is_weight_quant_matmul_nz_available =
+        check_aclnn_kernel_available("aclnnWeightQuantBatchMatmulNz");
     int64_t weight_format = at_npu::native::custom_ops::get_npu_format(weight);
     const bool is_weight_nz = (weight_format == ACL_FORMAT_FRACTAL_NZ) ||
                               (weight_format == ACL_FORMAT_FRACTAL_NZ_C0_2);
-    if (is_weight_nz && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
+    if (is_weight_nz && is_weight_quant_matmul_nz_available &&
+        c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
         EXEC_NPU_CMD(aclnnWeightQuantBatchMatmulNz, x, weight_wrapper, antiquant_scale, antiquant_offset_real,
                      quant_scale_real, quant_offset_real, bias_real, antiquant_group_size_real, result);
     } else if (quant_scale.has_value() && quant_scale_real.dtype() == at::kFloat) {
