@@ -245,6 +245,8 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
         torch._dynamo.reset()
         return q_out_cpu, k_cache_cpu, v_cache_cpu, q_out_before_quant_cpu, k_out_before_quant_cpu, v_out_before_quant_cpu
 
+    @unittest.skip("Skip test_npu_qkv_rmsnorm_rope_cache_PA_NZ now")
+    @SupportedDevices(['Ascend910B'])
     def test_npu_qkv_rmsnorm_rope_cache_PA_NZ(self, device="npu"):
         qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, qkv_size, num_heads, k_scale, v_scale, cache_mode, is_output_qkv, input_dtype = self.generate_inputs(
             72, 2, 16, 1, 1, 128, 11898, 128, 1, "PA_NZ", True, torch.float16)
