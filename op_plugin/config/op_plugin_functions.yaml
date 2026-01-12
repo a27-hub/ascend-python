@@ -5778,7 +5778,9 @@ custom:
 
   - func: npu_confusion_transpose(Tensor self, int[] perm, int[] shape, bool transpose_first) -> Tensor
     acl_op: all_version
+    op_api: all_version
     exposed: all_version
+    internal_format_opapi: all_version
 
   - func: npu_confusion_transpose_backward(Tensor grad, int[] perm, SymInt[] shape, bool transpose_first) -> Tensor
     acl_op: [v2.1, newest]
