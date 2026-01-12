@@ -111,6 +111,144 @@ class TestNPUFlashAttention(TestCase):
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
         dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
         self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_graph(self, device="npu"):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        scale = 0.08838
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+        output = torch_npu.npu_flash_attention(
+            query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
+
+        output1 = torch_npu.npu_flash_attention_grad(
+            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+            softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
+
+        resultq1 = output1[0].clone()
+        resultk1 = output1[1].clone()
+        resultv1 = output1[2].clone()
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+        output = torch_npu.npu_flash_attention(
+            query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
+
+        output1 = torch_npu.npu_flash_attention_grad(
+            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+            softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
+
+        resultq2 = output1[0].clone()
+        resultk2 = output1[1].clone()
+        resultv2 = output1[2].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+            output = torch_npu.npu_flash_attention(
+                query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
+
+            output1 = torch_npu.npu_flash_attention_grad(
+                query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+                softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
+
+        torch.npu.set_rng_state(s)
+        output1[0].copy_(torch.zeros_like(output1[0], devuce="npu"))
+        output1[1].copy_(torch.zeros_like(output1[1], devuce="npu"))
+        output1[2].copy_(torch.zeros_like(output1[2], devuce="npu"))
+        g.replay()
+        self.assertEqual(output1[0], resultq1)
+        self.assertEqual(output1[1], resultk1)
+        self.assertEqual(output1[2], resultv1)
+        g.replay()
+        self.assertEqual(output1[0], resultq2)
+        self.assertEqual(output1[1], resultk2)
+        self.assertEqual(output1[2], resultv2)
+    
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_with_dropmask_graph(self, device="npu"):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        scale = 0.08838
+        keep_prob = 0.9
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+        output = torch_npu.npu_flash_attention(
+            query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
+
+        output1 = torch_npu.npu_flash_attention_grad(
+            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+            softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
+
+        resultq1 = output1[0].clone()
+        resultk1 = output1[1].clone()
+        resultv1 = output1[2].clone()
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+        dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+        output = torch_npu.npu_flash_attention(
+            query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
+
+        output1 = torch_npu.npu_flash_attention_grad(
+            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+            softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
+
+        resultq2 = output1[0].clone()
+        resultk2 = output1[1].clone()
+        resultv2 = output1[2].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            query = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            key = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            value = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+            dy = torch.randn(1, 128, 4096, dtype=torch.float16, devuce="npu")
+
+            output = torch_npu.npu_flash_attention(
+                query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
+
+            output1 = torch_npu.npu_flash_attention_grad(
+                query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
+                softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
+
+        torch.npu.set_rng_state(s)
+        output1[0].copy_(torch.zeros_like(output1[0], devuce="npu"))
+        output1[1].copy_(torch.zeros_like(output1[1], devuce="npu"))
+        output1[2].copy_(torch.zeros_like(output1[2], devuce="npu"))
+        g.replay()
+        self.assertEqual(output1[0], resultq1)
+        self.assertEqual(output1[1], resultk1)
+        self.assertEqual(output1[2], resultv1)
+        g.replay()
+        self.assertEqual(output1[0], resultq2)
+        self.assertEqual(output1[1], resultk2)
+        self.assertEqual(output1[2], resultv2)
+
 
 if __name__ == "__main__":
     run_tests()

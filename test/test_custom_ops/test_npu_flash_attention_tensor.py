@@ -340,6 +340,254 @@ class TestNPUFlashAttention(TestCase):
         self.assertRtolEqual(dk_golden, dk_npu)
         self.assertRtolEqual(dv_golden, dv_npu)
 
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_graph(self):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+
+        result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH")
+        result1 = result[0].clone()
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        
+        result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH")
+        result2 = result[0].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            
+            result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH")
+
+        torch.npu.set_rng_state(s)
+        result[0].copy_(torch.zeros_like(result[0], devuce="npu"))
+        result[1].copy_(torch.zeros_like(result[1], devuce="npu"))
+        result[2].copy_(torch.zeros_like(result[2], devuce="npu"))
+        result[3].copy_(torch.zeros_like(result[3], devuce="npu"))
+        g.replay()
+        self.assertEqual(result[0], result1)
+        g.replay()
+        self.assertEqual(result[0], result2)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_tnd_graph(self, device="npu"):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        B, N1, N2, D = 3, 8, 2, 128
+        scale = 1 / (D ** 0.5)
+        seqlens_list_q = np.array([1, 2, 3])
+        seqlens_list_k = np.array([3, 4, 5])
+        cu_seqlens_q = get_cu_seqlens(seqlens_list_q)
+        cu_seqlens_k = get_cu_seqlens(seqlens_list_k)
+        S1 = seqlens_list_q.sum()
+        S2 = seqlens_list_k.sum()
+        pttype = torch.float16
+        q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        q.requires_grad = True
+        k.requires_grad = True
+        v.requires_grad = True
+        result = self.custom_op_exec(
+            q, k, v, N1,
+            scale=scale,
+            input_layout="TND",
+            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            softmax_layout="TND")
+
+        # 反向精度比对
+        result.backward(dy)
+        result1 = result[0].clone()
+
+        q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        q.requires_grad = True
+        k.requires_grad = True
+        v.requires_grad = True
+        result = self.custom_op_exec(
+            q, k, v, N1,
+            scale=scale,
+            input_layout="TND",
+            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            softmax_layout="TND")
+
+        # 反向精度比对
+        result.backward(dy)
+        result2 = result[0].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+            k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+            v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+            dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            result = self.custom_op_exec(
+                q, k, v, N1,
+                scale=scale,
+                input_layout="TND",
+                actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+                actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+                softmax_layout="TND")
+
+        torch.npu.set_rng_state(s)
+        result[0].copy_(torch.zeros_like(result[0], devuce="npu"))
+        result[1].copy_(torch.zeros_like(result[1], devuce="npu"))
+        result[2].copy_(torch.zeros_like(result[2], devuce="npu"))
+        result[3].copy_(torch.zeros_like(result[3], devuce="npu"))
+        g.replay()
+        self.assertEqual(result[0], result1)
+        g.replay()
+        self.assertEqual(result[0], result2)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_with_dropmask_graph(self, device="npu"):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        keep_prob = 0.9
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+
+        result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH",
+                                     keep_prob=keep_prob)
+        result1 = result[0].clone()
+
+        query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+        
+        result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH",
+                                     keep_prob=keep_prob)
+        result2 = result[0].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            query = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            key = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
+            
+            result = self.custom_op_exec(query, key, value, head_num=32, scale=0.08838, input_layout="BSH",
+                                         keep_prob=keep_prob)
+
+        torch.npu.set_rng_state(s)
+        result[0].copy_(torch.zeros_like(result[0], devuce="npu"))
+        result[1].copy_(torch.zeros_like(result[1], devuce="npu"))
+        result[2].copy_(torch.zeros_like(result[2], devuce="npu"))
+        result[3].copy_(torch.zeros_like(result[3], devuce="npu"))
+        g.replay()
+        self.assertEqual(result[0], result1)
+        g.replay()
+        self.assertEqual(result[0], result2)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_tnd_with_dropmask(self, device="npu"):
+        seed = 558
+        torch.manual_seed(seed)
+        torch.npu.manual_seed(seed)
+        s = torch.npu.get_rng_state()
+
+        B, N1, N2, D = 3, 8, 2, 128
+        scale = 1 / (D ** 0.5)
+        seqlens_list_q = np.array([1, 2, 3])
+        seqlens_list_k = np.array([3, 4, 5])
+        cu_seqlens_q = get_cu_seqlens(seqlens_list_q)
+        cu_seqlens_k = get_cu_seqlens(seqlens_list_k)
+        S1 = seqlens_list_q.sum()
+        S2 = seqlens_list_k.sum()
+        pttype = torch.float16
+        keep_prob = 0.9
+        q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        q.requires_grad = True
+        k.requires_grad = True
+        v.requires_grad = True
+        result = self.custom_op_exec(
+            q, k, v, N1,
+            scale=scale,
+            input_layout="TND",
+            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            softmax_layout="TND",
+            keep_prob=keep_prob)
+
+        # 反向精度比对
+        result.backward(dy)
+        result1 = result[0].clone()
+
+        q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+        dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+        q.requires_grad = True
+        k.requires_grad = True
+        v.requires_grad = True
+        result = self.custom_op_exec(
+            q, k, v, N1,
+            scale=scale,
+            input_layout="TND",
+            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            softmax_layout="TND",
+            keep_prob=keep_prob)
+
+        # 反向精度比对
+        result.backward(dy)
+        result2 = result[0].clone()
+
+        g = torch_npu.npu.NPUGraph()
+        with torch_npu.npu.graph(g):
+            q = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+            k = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+            v = 2 * (torch.rand([S2, N2, D], devuce="npu") - 0.5).to(pttype)
+            dy = 2 * (torch.rand([S1, N1, D], devuce="npu") - 0.5).to(pttype)
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            result = self.custom_op_exec(
+                q, k, v, N1,
+                scale=scale,
+                input_layout="TND",
+                actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
+                actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+                softmax_layout="TND",
+                keep_prob=keep_prob)
+
+        torch.npu.set_rng_state(s)
+        result[0].copy_(torch.zeros_like(result[0], devuce="npu"))
+        result[1].copy_(torch.zeros_like(result[1], devuce="npu"))
+        result[2].copy_(torch.zeros_like(result[2], devuce="npu"))
+        result[3].copy_(torch.zeros_like(result[3], devuce="npu"))
+        g.replay()
+        self.assertEqual(result[0], result1)
+        g.replay()
+        self.assertEqual(result[0], result2)
+
 
 if __name__ == "__main__":
     run_tests()
