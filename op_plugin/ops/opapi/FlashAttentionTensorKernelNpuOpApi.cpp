@@ -549,7 +549,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
         softmax_max, softmax_sum, softmax_in, attention_in, scale_value, keep_prob, pre_tockens,
         next_tockens, inner_precise, seed, offset, prefixN, ac_seq_qlen, ac_seq_kvlen, sparse_mode,
         softmax_layout, sink);
-    if (!sync) {
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
         c10_npu::NPUEvent npu_event;
         npu_event.record(c10_npu::getCurrentNPUStream());
         npu_event.block(c10_npu::getCurrentSecondaryStream());
