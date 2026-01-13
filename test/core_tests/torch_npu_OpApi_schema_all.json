@@ -500,18 +500,6 @@
   "op_api: torch_npu.npu_dequant_swiglu_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
-  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
-  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
-  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache_functional(*args, **kwargs)": {
-    "version": ["v2.6", "v2.7"]
-  },
-  "op_api: torch_npu.npu_qkv_rms_norm_rope_cache_functional(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
-  },
   "op_api: torch_npu.npu_transpose_batchmatmul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
