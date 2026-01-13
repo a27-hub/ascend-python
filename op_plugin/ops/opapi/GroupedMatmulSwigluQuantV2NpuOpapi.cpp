@@ -130,6 +130,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 
     std::cout << "test" << (c10_npu::CustomDataTypeToString(dequant_dtype.value()) == c10_npu::CustomDataTypeToString(static_cast<int64_t>(c10_npu::DType::FLOAT))) << std::endl;
 
+    std::cout << "dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)   " << dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float) << std::endl;
+
+    std::cout << "c10_npu::CustomDataTypeToString(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float))   " << c10_npu::CustomDataTypeToString(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)) << std::endl;
+
     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) || dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8),
                          "The optional parameter dequant_dtype only support torch.float32,but the actual value is ",
                          c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
