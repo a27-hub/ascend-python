@@ -41,10 +41,6 @@ namespace op_api {
             }
         }
         at::Tensor y = npu_preparation::apply_tensor_without_format(output_size, self.options());
-        if (op_plugin::utils::is_nz_format(self)) {
-            y = at_npu::native::custom_ops::npu_format_cast(y, ACL_FORMAT_FRACTAL_NZ);
-        }
-
         EXEC_NPU_CMD(aclnnConfusionTranspose, self, perm, shape, transpose_first, y);
         return y;
     }
