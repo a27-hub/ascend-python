@@ -116,6 +116,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     std::cout <<  "1========================================" << (dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8)) << std::endl;
     std::cout << "1@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << dequant_dtype.value() << std::endl;
     std::cout << "c10_npu::CustomDataTypeToString(dequant_dtype.value())" << c10_npu::CustomDataTypeToString(dequant_dtype.value()) << std::endl;
+    int64_t dequant_dtype_real = dequant_dtype.value_or(0);
     dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
     std::cout << "dequant_dtype_real" << dequant_dtype_real << std::endl;
     std::cout << "020202020020202020" << (dequant_dtype_real == static_cast<int64_t>(c10_npu::DType::FLOAT)) << std::endl;
@@ -125,7 +126,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                          c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
-    int64_t dequant_dtype_real = dequant_dtype.value_or(0);
+    
     int64_t quant_mode_real = quant_mode.value_or(0);
     int64_t group_list_type_real = group_list_type.value_or(0);
     auto weight_assist_matrix_real = weight_assist_matrix.value_or(at::TensorList());
