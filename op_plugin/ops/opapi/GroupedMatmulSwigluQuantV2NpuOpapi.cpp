@@ -124,11 +124,11 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 
     std::cout << "static_cast<int64_t>(c10_npu::DType::INT8)" << static_cast<int64_t>(c10_npu::DType::INT8) << std::endl;
 
-    std::cout << "c10_npu::CustomDataTypeToString(c10_npu::DType::FLOAT)   " <<  c10_npu::CustomDataTypeToString(c10_npu::DType::FLOAT) << std::endl;
+    std::cout << "c10_npu::CustomDataTypeToString(c10_npu::DType::FLOAT)   " <<  c10_npu::CustomDataTypeToString(static_cast<int64_t>(c10_npu::DType::FLOAT)) << std::endl;
 
     std::cout << "static_cast<int64_t>(dequant_dtype.value())    " << static_cast<int64_t>(dequant_dtype.value()) << std:endl;
 
-    std::cout << "test" << (c10_npu::CustomDataTypeToString(dequant_dtype.value()) == c10_npu::CustomDataTypeToString(c10_npu::DType::FLOAT) ) << std::endl;
+    std::cout << "test" << (c10_npu::CustomDataTypeToString(dequant_dtype.value()) == c10_npu::CustomDataTypeToString(static_cast<int64_t>(c10_npu::DType::FLOAT))) << std::endl;
 
     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) || dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8),
                          "The optional parameter dequant_dtype only support torch.float32,but the actual value is ",
