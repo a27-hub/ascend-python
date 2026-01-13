@@ -1,10 +1,7 @@
-import os
-os.environ['ASCEND_LAUNCH_BLOCKING'] = '1'
 import torch
 import torch_npu
 import op_extension
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch.library import Library
 
 
 # Define a simple model using the custom operation
