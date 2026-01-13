@@ -24,12 +24,18 @@ constexpr int64_t DIM_TWO = 2;
 constexpr int64_t DIM_THREE = 3;
 constexpr int64_t DIM_FOUR = 4;
 void prepare_before_quant(
-    at::IntArrayRef qkv_size, at::IntArrayRef head_nums, const at::Tensor& qkv, bool is_output_qkv, 
+    at::IntArrayRef qkv_size, at::IntArrayRef head_nums, const at::Tensor& qkv, bool is_output_qkv,
     at::Tensor& q_out_before_quant, at::Tensor& k_out_before_quant, at::Tensor& v_out_before_quant)
 {
-    TORCH_CHECK((qkv_size.size() == DIM_FOUR), "npu_qkv_rms_norm_rope_cache: the size of qkv_size must be 4." + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((head_nums.size() == DIM_THREE), "npu_qkv_rms_norm_rope_cache: the size of head_nums must be 3." + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK((qkv.dim() == DIM_TWO), "npu_qkv_rms_norm_rope_cache: 2D tensor expected for input qkv" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        (qkv_size.size() == DIM_FOUR),
+        "npu_qkv_rms_norm_rope_cache: the size of qkv_size must be 4." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        (head_nums.size() == DIM_THREE),
+        "npu_qkv_rms_norm_rope_cache: the size of head_nums must be 3." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        (qkv.dim() == DIM_TWO),
+        "npu_qkv_rms_norm_rope_cache: 2D tensor expected for input qkv" + OPS_ERROR(ErrCode::PARAM));
     int64_t Nq = head_nums[0];
     int64_t Nk = head_nums[1];
     int64_t Nv = head_nums[2];
@@ -46,7 +52,7 @@ void prepare_before_quant(
         q_out_before_quant = at::Tensor();
         k_out_before_quant = at::Tensor();
         v_out_before_quant = at::Tensor();
-    } 
+    }
 }
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(
     const at::Tensor& qkv, const at::Tensor& q_gamma, const at::Tensor& k_gamma, const at::Tensor& cos,
@@ -58,9 +64,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache(
     at::Tensor q_out_before_quant;
     at::Tensor k_out_before_quant;
     at::Tensor v_out_before_quant;
-    prepare_before_quant(qkv_size, head_nums, qkv, is_output_qkv, q_out_before_quant, k_out_before_quant, v_out_before_quant);
+    prepare_before_quant(
+        qkv_size, head_nums, qkv, is_output_qkv, q_out_before_quant, k_out_before_quant, v_out_before_quant);
     char* cache_mode_ptr = const_cast<char*>(cache_mode.data());
-    
+
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnQkvRmsNormRopeCache, qkv, q_gamma, k_gamma, cos, sin, index, q_out, k_cache, v_cache, k_scale, v_scale,
         k_offset, v_offset, qkv_size, head_nums, epsilon, cache_mode_ptr, q_out_before_quant, k_out_before_quant,
@@ -80,9 +87,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor q_out_before_quant;
     at::Tensor k_out_before_quant;
     at::Tensor v_out_before_quant;
-    prepare_before_quant(qkv_size, head_nums, qkv, is_output_qkv, q_out_before_quant, k_out_before_quant, v_out_before_quant);
+    prepare_before_quant(
+        qkv_size, head_nums, qkv, is_output_qkv, q_out_before_quant, k_out_before_quant, v_out_before_quant);
     char* cache_mode_ptr = const_cast<char*>(cache_mode.data());
-    
+
     at::Tensor q_out_inplace = q_out.clone();
     at::Tensor k_cache_inplace = k_cache.clone();
     at::Tensor v_cache_inplace = v_cache.clone();
