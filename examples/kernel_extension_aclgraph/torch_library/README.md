@@ -128,7 +128,7 @@
    
    本样例需torch2.6.0版本以上，支持`backend="npugraph_ex"`需7.3.0版本以上。
 2. 根据实际环境安装CANN toolkit包，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
-3. 根据实际环境安装安装CANN ops包。根据产品型号和环境架构，下载对应安装包，可参考[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)并执行如下命令安装：
+3. 根据实际环境安装CANN ops包。根据产品型号和环境架构，下载对应安装包，可参考[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)并执行如下命令安装：
    
    ```bash
    # 确保安装包具有可执行权限
