@@ -1,4 +1,4 @@
-# torch_npu-npu_qkv_rms_norm_rope_cache
+# torch_npu.npu_qkv_rms_norm_rope_cache
 
 ## 产品支持情况
 | 产品                               | 是否支持 |
@@ -98,9 +98,13 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 
 - **q_out**（`Tensor`）：必选参数，表示Q输出的预分配内存（输入输出同地址复用），数据格式为$ND$，数据类型与`qkv`相同。shape为$[B_{\text{qkv}} \times S_{\text{qkv}}, N_q \times D_{\text{qkv}}]$的2D矩阵，使用TH分形格式。
 
-- **k_cache**（`Tensor`）：必选参数，表示K cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在K不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在K量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。
+- **k_cache**（`Tensor`）：必选参数，表示K cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在K不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} / 16, \text{BlockSize}, 16]$；在K量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_k \times D_{\text{qkv}} / 32, \text{BlockSize}, 32]$。
 
-- **v_cache**（`Tensor`）：必选参数，表示V cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在V不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 16, \text{BlockSize}, 16]$；在V量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} \div 32, \text{BlockSize}, 32]$。注意：`k_cache`和`v_cache`中的BlockNum和BlockSize必须保持一致。
+- **v_cache**（`Tensor`）：必选参数，表示V cache的预分配内存（输入输出同地址复用），要求是一个4D张量，数据格式为$ND$。在V不量化场景下，数据类型与`qkv`相同，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} / 16, \text{BlockSize}, 16]$；在V量化场景下，数据类型为`int8`，shape为$[\text{BlockNum}, N_v \times D_{\text{qkv}} / 32, \text{BlockSize}, 32]$。注意：`k_cache`和`v_cache`中的BlockNum和BlockSize必须保持一致。
+
+- **qkv_size**（`List[int]`）：必选属性，按$[B_{\text{qkv}}, S_{\text{qkv}}, N_{\text{qkv}}, D_{\text{qkv}}]$顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求$N_{\text{qkv}} = N_k + N_v + N_q$。
+
+- **head_nums**（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求元素数量必须为3，传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
 
 - <strong>*</strong>：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
@@ -112,15 +116,11 @@ torch_npu.npu_qkv_rms_norm_rope_cache(qkv, q_gamma, k_gamma, cos, sin, index, q_
 
 - **v_offset**（`Tensor`）：可选参数，当V采用非对称量化时需要提供，表示V分量的量化offset参数。数据格式为$ND$，数据类型支持`float32`。必须为2D张量，shape为$[N_v, D_{\text{qkv}}]$。注意：此参数依赖`v_scale`输入，且仅在`v_cache`为`int8`数据类型时有效。
 
-- **qkv_size**（`List[int]`）：必选属性，按$[B_{\text{qkv}}, S_{\text{qkv}}, N_{\text{qkv}}, D_{\text{qkv}}]$顺序提供输入qkv矩阵的维度尺寸。元素数量必须为4，各元素必须为非零有效正整数。要求$N_{\text{qkv}} = N_k + N_v + N_q$。
-
-- **head_nums**（`List[int]`）：必选属性，按$[N_q, N_k, N_v]$顺序提供QKV分量中N维度的具体尺寸。要求元素数量必须为3，传入实际原始值，不可进行约化。需要满足：$N_q = T \times N_k$，$N_k = N_v$，且$T \geq 1$。
-
 - **epsilon**（`float`）：可选属性，表示RMSNorm中防止除零的小常数，默认值为$10^{-6}$。
 
 - **cache_mode**（`str`）：可选属性，表示cache的格式类型，目前支持值为`"PA_NZ"`。
 
-- **is_output_qkv**（`bool`）：可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值。
+- **is_output_qkv**（`bool`）：可选属性，表示是否需要输出各cache在未经量化和scatter前的原始值，默认值为`False`。
 
 
 ## 返回值说明
