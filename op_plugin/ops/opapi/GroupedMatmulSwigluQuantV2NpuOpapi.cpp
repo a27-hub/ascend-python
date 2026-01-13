@@ -112,9 +112,18 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
 
+    std::cout << "dequant_dtype.value()   " << dequant_dtype.value() << std::endl;
+    std::cout << "c10_npu::CustomDataTypeToString(dequant_dtype.value())    " << c10_npu::CustomDataTypeToString(dequant_dtype.value()) << std::endl;
+    std::cout << "c10_npu::CustomDataTypeToString(c10::ScalarType::Float)   " << c10_npu::CustomDataTypeToString(c10::ScalarType::Float) << std::endl;
+    std::cout << "c10_npu::CustomDataTypeToString(c10::ScalarType::Char)   " << c10_npu::CustomDataTypeToString(c10::ScalarType::Char) << std::endl;
+    
+
     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float) || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
                          "The optional parameter dequant_dtype only support torch.float32 and torch.int8,but the actual value is ",
-                         dequant_dtype.value(), "." + OPS_ERROR(ErrCode::VALUE));
+                         (dequant_dtype.value() >= static_cast<int64_t>(c10::ScalarType::Undefined) && 
+                         dequant_dtype.value() <= static_cast<int64_t>(c10::ScalarType::NumOptions)) ?
+                         c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value())) :
+                         std::to_string(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
