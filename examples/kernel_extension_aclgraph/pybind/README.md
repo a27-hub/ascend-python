@@ -155,7 +155,7 @@
   
   ```bash
   python setup.py bdist_wheel
-  pip install dist/*.whl --force-reinstall;
+  pip install dist/*.whl --force-reinstall
   cd test
   python ./add_aclgraph_test.py
   ```

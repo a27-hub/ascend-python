@@ -1,3 +1,5 @@
+import os
+os.environ['ASCEND_LAUNCH_BLOCKING'] = '1'
 import torch
 import torch_npu
 import op_extension
