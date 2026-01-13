@@ -1,12 +1,8 @@
-import sys
-import os
 import torch
 import torch_npu
+import op_extension
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch.library import Library
-
-# Load the custom operator library
-torch.ops.load_library("libcustom_ops.so")
 
 # Register Meta function
 m = Library("ascendc_ops", "IMPL", "Meta")

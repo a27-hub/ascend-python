@@ -2,7 +2,7 @@
 
 ## 概述
 
-本样例展示了如何使用PyTorch的torch.library机制注册自定义算子，通过<<<>>>内核调用符调用核函数，并适配aclgraph使用该自定义算子，以简单的Add算子和三角函数计算的原地算子为例，实现aclgraph下自定义算子的调用。
+本样例展示了如何使用PyTorch的torch.library注册自定义算子，通过<<<>>>内核调用符调用核函数，并适配aclgraph使用该自定义算子，以简单的Add算子和三角函数计算的原地算子为例，实现aclgraph下自定义算子的调用。
 
 ## 支持的产品
 
@@ -12,12 +12,17 @@
 ## 目录结构介绍
 
 ```
-├── add_custom.asc       // Add算子实现 & 自定义算子注册
-├── add_aclgraph_test.py   // Add算子aclgraph测试demo
-├── trig_inplace_custom.asc // 原地三角函数算子实现 & 自定义算子注册
-├── trig_aclgraph_test.py // 原地三角函数aclgraph测试demo
-├── CMakeLists.txt           // 编译工程文件
-├── README.md                //示例介绍
+├── README.md                   // 示例介绍
+├── setup.py                    // setup文件
+├── csrc
+│   ├── add_custom.asc          // Add算子实现 & 自定义算子注册
+│   └── trig_inplace_custom.asc // 原地三角函数算子实现 & 自定义算子注册
+├── op_extension
+│   ├── __init__.py             // python初始化文件
+│   └── _load.py                // 加载模块
+└── test
+    ├── add_aclgraph_test.py    // Add算子aclgraph测试demo
+    └── trig_aclgraph_test.py   // 原地三角函数aclgraph测试demo             
 ```
 
 ## 算子描述
@@ -71,46 +76,41 @@
 
 ## 代码实现介绍
 
-  以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。
-  PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
+  - 以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
+    ```c++
+      add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
+    ```
   
-  ```c++
-  TORCH_LIBRARY_FRAGMENT(ascendc_ops, m) {
-      m.def(ascendc_add"(Tensor x, Tensor y) -> Tensor");
-  }
-  ```
+  - PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
   
-  `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
+    ```c++
+    TORCH_LIBRARY_FRAGMENT(ascendc_ops, m) {
+        m.def(ascendc_add"(Tensor x, Tensor y) -> Tensor");
+    }
+    ```
   
-  ```c++
-  TORCH_LIBRARY_IMPL(ascendc_ops, PrivateUse1, m)
-  {
-      m.impl("ascendc_add", TORCH_FN(ascendc_ops::ascendc_add));
-  }
-  ```
-<<<>>>调用Kernel函数，在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
+  - `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
   
-  ```c++
-    add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
-  ```
-
-## Python测试脚本介绍
-
-在add_custom_aclgraph_test.py中，首先通过`torch.ops.load_library`加载生成的自定义算子库，调用注册的ascendc_add函数，并通过对比NPU输出与CPU标准加法结果来验证自定义算子的数值正确性。
+    ```c++
+    TORCH_LIBRARY_IMPL(ascendc_ops, PrivateUse1, m)
+    {
+        m.impl("ascendc_add", TORCH_FN(ascendc_ops::ascendc_add));
+    }
+    ```
 
 - 注册Meta函数：
   
-  aclgraph调用算子需要注册Meta函数，本示例在add_custom_aclgraph_test.py开头注册代码如下：
+  aclgraph调用算子需要注册Meta函数，本示例在add_aclgraph_test.py开头注册代码如下：
 
-```python
- m = Library("ascendc_ops", "IMPL", "Meta")
-  @torch.library.impl(m, "ascendc_add")
-  def ascendc_add_meta(a, b):
-      return torch.empty_like(a)
-```
+  ```python
+  m = Library("ascendc_ops", "IMPL", "Meta")
+    @torch.library.impl(m, "ascendc_add")
+    def ascendc_add_meta(a, b):
+        return torch.empty_like(a)
+  ```
 
 - aclgraph的调用：
-  [示例代码](./add_custom_aclgraph_test.py)中展示了3种aclgraph的使能方式，
+  [示例代码](./test/add_aclgraph_test.py)中，通过`torch.ops.load_library`加载生成的自定义算子库，并展示了3种aclgraph的使能方式，通过对比NPU输出与CPU标准加法结果来验证自定义算子的数值正确性。
 
 1. torch.npu.NPUGraph()
 2. torch.npu.make_graphed_callables
@@ -155,9 +155,10 @@
 - 样例执行
   
   ```bash
-  mkdir -p build && cd build;     # 创建并进入build目录
-  cmake ..;make -j;               # 编译工程
-  python3 ../add_custom_aclgraph_test.py   # 执行测试脚本
+  python setup.py bdist_wheel
+  pip install dist/*.whl --force-reinstall;     # 创建并进入build目录
+  cd test
+  python ./add_aclgraph_test.py   # 执行测试脚本
   ```
 
 执行结果如下，说明精度对比成功。
