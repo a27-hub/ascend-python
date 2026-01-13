@@ -25,6 +25,7 @@ const int DIM_3 = 3;
 const int MODE_1 = 1;
 const int MODE_2 = 2;
 const int MODE_3 = 3;
+const int FP8_E4M3_BLOCK_SIZE = 32;
 const char* const REQUIRED_CANN_VERSION = "8.5.0.alpha003";
 const char* const CANN_PRODUCT = "CANN";
 bool is_cann_version_gte_required = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT); // whether cann version >= 8.5.0.alpha003
@@ -72,6 +73,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
+            } else if (weight_quant_mode == MODE_3) {
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, at::kFloat8_e8m0fnu);
             }
         }
     } else {
@@ -90,6 +93,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
+            } else if (weight_quant_mode == MODE_3) {
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, at::kFloat8_e8m0fnu);
             }
         }
     }
@@ -147,7 +152,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
     }
     if (!dequant_scale_q_norm.defined()) {
-        dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+        if (weight_quant_mode == 3) {
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat8_e8m0fnu);
+        } else {
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+        }
     }
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm);
@@ -196,6 +205,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
+            } else if (weight_quant_mode == MODE_3) {
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, at::kFloat8_e8m0fnu);
             }
         }
     } else {
@@ -214,6 +225,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
+            } else if (weight_quant_mode == MODE_3) {
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, at::kFloat8_e8m0fnu);
             }
         }
     }
@@ -273,7 +286,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         dequant_scale_q_nope = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
     }
     if (!dequant_scale_q_norm.defined()) {
-        dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+        if (weight_quant_mode == 3) {
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat8_e8m0fnu);
+        } else {
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
+        }
     }
 
     return std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>(query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm, kv_cache_inplace, kr_cache_inplace);
