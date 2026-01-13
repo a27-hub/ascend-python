@@ -43,7 +43,7 @@ class TestCustomTrig(TestCase):
         out_cos = torch.empty_like(x)
         return x, out_sin, out_cos
 
-    # torch.npu.NPUGraph()使能方式
+    # Test using torch.npu.NPUGraph
     def test_npugraph(self):
         static_x, static_out_sin, static_out_cos = self.get_rand_input()
         static_out_tan = torch.rand(length, device='npu', dtype=torch.float32)
