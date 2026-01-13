@@ -117,7 +117,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     std::cout << "c10_npu::CustomDataTypeToString(c10::ScalarType::Float)   " << c10_npu::CustomDataTypeToString(static_cast<int64_t>(c10::ScalarType::Float)) << std::endl;
     std::cout << "c10_npu::CustomDataTypeToString(c10::ScalarType::Char)   " << c10_npu::CustomDataTypeToString(static_cast<int64_t>(c10::ScalarType::Char)) << std::endl;
     std::cout << "static_cast<int64_t>(c10::ScalarType::Undefined)   " << static_cast<int64_t>(c10::ScalarType::Undefined) << std::endl;
-    std::cout << "static_cast<int64_t>(c10::ScalarType::NumOptions))   " << static_cast<int64_t>(c10::ScalarType::NumOptions)) << std::endl;
+    std::cout << "static_cast<int64_t>(c10::ScalarType::NumOptions))   " << static_cast<int64_t>(c10::ScalarType::NumOptions) << std::endl;
     std::cout << "c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value()))   " << c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value())) << std::endl;
     std::cout << "std::to_string(dequant_dtype.value())   " << std::to_string(dequant_dtype.value()) << std::endl;
 
