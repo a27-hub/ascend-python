@@ -120,7 +120,7 @@ class TestNPUQkvRmsNormRopeCache(TestCase):
 
         def Quant(out, scale, offset):
             if scale is not None:
-                out = out * scale
+                out = out / scale
             if offset is not None:
                 out = out + offset
             if scale is not None:
