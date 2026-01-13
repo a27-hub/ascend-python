@@ -3242,12 +3242,12 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
                 is_output_qkv=True,
             )
 
-            self.assertEqual(q_out_before_quant.shape, q_out.shape)
-            self.assertEqual(q_out_before_quant.dtype, q_out.dtype)
-            self.assertEqual(k_out_before_quant.shape, k_cache.shape)
-            self.assertEqual(k_out_before_quant.dtype, k_cache.dtype)
-            self.assertEqual(v_out_before_quant.shape, v_cache.shape)
-            self.assertEqual(v_out_before_quant.dtype, v_cache.dtype)
+            self.assertEqual(q_out_before_quant.shape, torch.Size(B * S, Nq * D))
+            self.assertEqual(q_out_before_quant.dtype, dtype)
+            self.assertEqual(k_out_before_quant.shape, torch.Size(B * S, Nk * D))
+            self.assertEqual(k_out_before_quant.dtype, dtype)
+            self.assertEqual(v_out_before_quant.shape, torch.Size(B * S, Nv * D))
+            self.assertEqual(v_out_before_quant.dtype, dtype)
 
             
 class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
