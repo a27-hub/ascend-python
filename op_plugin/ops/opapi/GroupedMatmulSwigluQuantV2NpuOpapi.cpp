@@ -114,10 +114,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) || dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8),
                          "The optional parameter dequant_dtype only support torch.float32,but the actual value is ",
                          c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    std::cout << "1----------------------------------------" << static_cast<int64_t>(c10_npu::DType::FLOAT) << endl;
-    std::cout << "1****************************************" << dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) << endl;
-    std::cout <<  "1========================================" << dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8) << endl;
-    std::cout << "1@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << dequant_dtype.value() << endl;
+    std::cout << "1----------------------------------------" << static_cast<int64_t>(c10_npu::DType::FLOAT) << std::endl;
+    std::cout << "1****************************************" << dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) << std::endl;
+    std::cout <<  "1========================================" << dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::INT8) << std::endl;
+    std::cout << "1@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << dequant_dtype.value() << std::endl;
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
     int64_t quant_mode_real = quant_mode.value_or(0);
@@ -145,8 +145,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT),
                          "The optional parameter dequant_dtype only support torch.float32,but the actual value is ",
                          c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-            std::cout << "2----------------------------------------" <<static_cast<int64_t>(c10_npu::DType::FLOAT) << endl;
-            std::cout << "2****************************************" <<dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) << endl;
+            std::cout << "2----------------------------------------" <<static_cast<int64_t>(c10_npu::DType::FLOAT) << std::endl;
+            std::cout << "2****************************************" <<dequant_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT) << std::endl;
             dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
         }
         TORCH_CHECK(!weight[DIM_0].sizes().empty(), "weight[0] is empty.", OPS_ERROR(ErrCode::PARAM));
