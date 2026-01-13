@@ -424,7 +424,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
         dpse = dpse_required;
     }
 
-    return std::make_tuple(dq, dk, dv, dpse, dsink);
+    return std::make_tuple(dq, dk, dv, dpse, dsink, format_drop_mask);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_grad_symint(
@@ -822,7 +822,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
-        seed, offset);
+        seed, offset, format_drop_mask);
 }
 #endif
 }
