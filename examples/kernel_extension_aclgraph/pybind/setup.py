@@ -1,13 +1,13 @@
 import os
 import glob
+import sysconfig
+from distutils.errors import CompileError
+from distutils.spawn import find_executable
 import torch
 import torch_npu
-import sysconfig
 import torch.utils.cpp_extension as cpp_extension
 from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
-from distutils.errors import CompileError
-from distutils.spawn import find_executable
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
@@ -50,7 +50,6 @@ class AscendBuildExtension(build_ext):
         bisheng_compiler = find_executable('bisheng')
         if not bisheng_compiler:
             raise RuntimeError("bisheng command not found!")
-        return bisheng_compiler
 
     def build_extension(self, ext):
         self._check_bisheng_compiler()

@@ -4,6 +4,7 @@ import op_extension
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch.library import Library
 
+
 # Define a simple model using the custom operation
 class Model(torch.nn.Module):
     def forward(self, x, out_sin, out_cos):
