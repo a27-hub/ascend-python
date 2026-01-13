@@ -4,15 +4,6 @@ import op_extension
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch.library import Library
 
-# Register Meta function
-m = Library("ascendc_ops", "IMPL", "Meta")
-
-
-@torch.library.impl(m, "ascendc_add")
-def ascendc_add_meta(a, b):
-    return torch.empty_like(a)
-
-
 # Define a simple model using the custom operation
 class Model(torch.nn.Module):
     def forward(self, x, y):
@@ -28,13 +19,6 @@ class TestCustomAdd(TestCase):
         x = torch.randint(low=1, high=100, size=length, device='npu', dtype=torch.int)
         y = torch.randint(low=1, high=100, size=length, device='npu', dtype=torch.int)
         return x, y
-
-    # Test single custom operator call
-    def test_add_custom_ops(self):
-        x, y = self.get_rand_input()
-        output = torch.ops.ascendc_ops.ascendc_add(x.npu(), y.npu()).cpu()
-        cpuout = torch.add(x, y)
-        self.assertEqual(output, cpuout)
 
     # Test using torch.npu.NPUGraph
     def test_npugraph(self):
@@ -74,6 +58,14 @@ class TestCustomAdd(TestCase):
         output = compiled_model(x, y)
         cpuout = torch.add(x, y)
         self.assertEqual(output, cpuout)
+
+    # Test single custom operator call
+    def test_add_custom_ops(self):
+        x, y = self.get_rand_input()
+        output = torch.ops.ascendc_ops.ascendc_add(x.npu(), y.npu()).cpu()
+        cpuout = torch.add(x, y)
+        self.assertEqual(output, cpuout)
+
 
 
 if __name__ == "__main__":

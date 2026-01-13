@@ -4,15 +4,6 @@ import op_extension
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch.library import Library
 
-# Register Meta function
-m = Library("ascendc_ops", "IMPL", "Meta")
-
-
-@torch.library.impl(m, "ascendc_trig")
-def ascendc_trig_meta(x, out_sin, out_cos):
-    return torch.empty_like(x)
-
-
 # Define a simple model using the custom operation
 class Model(torch.nn.Module):
     def forward(self, x, out_sin, out_cos):
@@ -31,13 +22,7 @@ class TestCustomTrig(TestCase):
         out_cos = torch.empty_like(x)
         return x, out_sin, out_cos
 
-    # Test single custom operator call
-    def test_trig_inplace_ops(self):
-        x, out_sin, out_cos = self.get_rand_input()
-        out_tan = torch.ops.ascendc_ops.ascendc_trig(x, out_sin, out_cos)
-        self.check_res(x, out_sin, out_cos, out_tan)
-
-    # torch.npu.NPUGraph()使能方式
+    # Test using torch.npu.NPUGraph
     def test_npugraph(self):
         static_x, static_out_sin, static_out_cos = self.get_rand_input()
         static_out_tan = torch.rand(length, device='npu', dtype=torch.float32)
@@ -72,6 +57,12 @@ class TestCustomTrig(TestCase):
         compiled_model = torch.compile(model, backend="npugraph_ex", fullgraph=True, dynamic=True)
         x, out_sin, out_cos = self.get_rand_input()
         out_tan = compiled_model(x, out_sin, out_cos)
+        self.check_res(x, out_sin, out_cos, out_tan)
+
+    # Test single custom operator call
+    def test_trig_inplace_ops(self):
+        x, out_sin, out_cos = self.get_rand_input()
+        out_tan = torch.ops.ascendc_ops.ascendc_trig(x, out_sin, out_cos)
         self.check_res(x, out_sin, out_cos, out_tan)
 
     # Test using the npugraph_ex backend for model compilation

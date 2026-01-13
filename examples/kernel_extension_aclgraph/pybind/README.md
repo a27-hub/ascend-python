@@ -103,8 +103,7 @@
   ```
 
 - 注册Meta函数：
-  
-  aclgraph调用算子需要注册Meta函数，本示例在add_aclgraph_test.py开头注册代码如下：
+  注册Meta函数使faketensor流程正常工作，在使用fx, compile等功能涉及，本示例在add_aclgraph_test.py开头注册代码如下：
 
   ```python
   @library.impl(ascendc_ops, "ascendc_add", "Meta")

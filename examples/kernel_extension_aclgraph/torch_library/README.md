@@ -84,7 +84,8 @@
   - PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
   
     ```c++
-    TORCH_LIBRARY_FRAGMENT(ascendc_ops, m) {
+    TORCH_LIBRARY_FRAGMENT(ascendc_ops, m)
+    {
         m.def(ascendc_add"(Tensor x, Tensor y) -> Tensor");
     }
     ```
@@ -100,13 +101,13 @@
 
 - 注册Meta函数：
   
-  aclgraph调用算子需要注册Meta函数，本示例在add_aclgraph_test.py开头注册代码如下：
+  注册Meta函数使faketensor流程正常工作，在使用fx, compile等功能涉及，注册代码如下：
 
-  ```python
-  m = Library("ascendc_ops", "IMPL", "Meta")
-    @torch.library.impl(m, "ascendc_add")
-    def ascendc_add_meta(a, b):
-        return torch.empty_like(a)
+  ```c++
+  TORCH_LIBRARY_IMPL(ascendc_ops, Meta, m)
+  {
+    m.impl("ascendc_add", &add_impl_meta);
+  }
   ```
 
 - aclgraph的调用：
@@ -156,9 +157,9 @@
   
   ```bash
   python setup.py bdist_wheel
-  pip install dist/*.whl --force-reinstall;     # 创建并进入build目录
+  pip install dist/*.whl --force-reinstall;
   cd test
-  python ./add_aclgraph_test.py   # 执行测试脚本
+  python ./add_aclgraph_test.py
   ```
 
 执行结果如下，说明精度对比成功。

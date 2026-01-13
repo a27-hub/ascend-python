@@ -6,16 +6,20 @@ import torch.library as library
 from torch_npu.testing.testcase import TestCase, run_tests
 import op_extension
 
-ascendc_ops = library.Library("ascendc_ops", "DEF")  # "DEF" 表示定义新算子
+# Define Ascend custom operator library
+ascendc_ops = library.Library("ascendc_ops", "DEF")  # "DEF" means defining new operators
 
+# Define a new operator
 ascendc_ops.define("ascendc_add(Tensor a, Tensor b) -> Tensor")
 
 
+# Register a meta function
 @library.impl(ascendc_ops, "ascendc_add", "Meta")
 def ascendc_add_meta(a, b):
     return torch.empty_like(a)
 
 
+# Register implementation for the "PrivateUse1" backend
 @library.impl(ascendc_ops, "ascendc_add", "PrivateUse1")
 def add_custom_ops(a, b):
     return op_extension.run_add_custom(a, b)
@@ -36,13 +40,6 @@ class TestCustomAdd(TestCase):
         x = torch.randint(low=1, high=100, size=length, device='npu', dtype=torch.int)
         y = torch.randint(low=1, high=100, size=length, device='npu', dtype=torch.int)
         return x, y
-
-    # Test single custom operator call
-    def test_add_custom_ops(self):
-        x, y = self.get_rand_input()
-        output = torch.ops.ascendc_ops.ascendc_add(x.npu(), y.npu()).cpu()
-        cpuout = torch.add(x, y)
-        self.assertEqual(output, cpuout)
 
     # Test using torch.npu.NPUGraph
     def test_npugraph(self):
@@ -80,6 +77,13 @@ class TestCustomAdd(TestCase):
         compiled_model = torch.compile(model, backend="npugraph_ex", fullgraph=True, dynamic=True)
         x, y = self.get_rand_input()
         output = compiled_model(x, y)
+        cpuout = torch.add(x, y)
+        self.assertEqual(output, cpuout)
+
+    # Test single custom operator call
+    def test_add_custom_ops(self):
+        x, y = self.get_rand_input()
+        output = torch.ops.ascendc_ops.ascendc_add(x.npu(), y.npu()).cpu()
         cpuout = torch.add(x, y)
         self.assertEqual(output, cpuout)
 
