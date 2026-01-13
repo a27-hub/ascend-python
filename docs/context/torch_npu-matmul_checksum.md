@@ -25,7 +25,7 @@ torch_npu.matmul_checksum(a, b, c) -> Tensor
 ## 返回值说明
 `Tensor`
 
-返回NPU上的bool标量。结果为True时，表示存在aicore错误的硬件故障。
+返回NPU上的bool标量。结果为True时，表示存在AIcore错误的硬件故障。
 
 ## 约束说明
 
