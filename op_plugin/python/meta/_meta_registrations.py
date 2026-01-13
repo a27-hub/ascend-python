@@ -4357,11 +4357,11 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
 
     torch._check(
         length(weight) == 1,
-        lambda: "Expected weight to have exactly 1 tensor, but the actual value is {len(weight)}.",
+        lambda: "The size of weight should be 1, current size is {len(weight)}.",
     )
     torch._check(
         length(weight_scale) == 1,
-        lambda: "Expected weight_scale to have exactly 1 tensor, but the actual value is {len(weight_scale)}.",
+        lambda: "The size of weight_scale should be 1, current size is {len(weight_scale)}.",
     )
 
     if x_dtype is not None:
@@ -4415,8 +4415,12 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     m = x.size(0)
     k = x.size(1)
     torch._check(
-        m > 0 and n >0 and k > 0,
-        lambda: f"The m,k,n dim should be greater than 0, but the actual value is {m}, {k}, {n}",
+        m > 0,
+        lambda: f"The m dim should be greater than 0, but the actual value is {m}",
+    )
+    torch._check(
+        n > 0,
+        lambda: f"The n dim should be greater than 0, but the actual value is {n}",
     )
 
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
