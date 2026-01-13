@@ -6,6 +6,7 @@
     "v2.6": [
       "npu_gelu_mul",
       "npu_clipped_swiglu",
+      "npu_qkv_rms_norm_rope_cache",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
@@ -14,6 +15,7 @@
     "v2.7": [
       "npu_gelu_mul",
       "npu_clipped_swiglu",
+      "npu_qkv_rms_norm_rope_cache",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
@@ -22,6 +24,7 @@
     "v2.8": [
       "npu_gelu_mul",
       "npu_clipped_swiglu",
+      "npu_qkv_rms_norm_rope_cache",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
@@ -30,6 +33,7 @@
     "v2.9": [
       "npu_gelu_mul",
       "npu_clipped_swiglu",
+      "npu_qkv_rms_norm_rope_cache",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
@@ -38,6 +42,7 @@
     "v2.10": [
       "npu_gelu_mul",
       "npu_clipped_swiglu",
+      "npu_qkv_rms_norm_rope_cache",
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
