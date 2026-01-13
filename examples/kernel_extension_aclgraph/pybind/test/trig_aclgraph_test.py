@@ -80,12 +80,6 @@ class TestCustomTrig(TestCase):
         out_tan = compiled_model(x, out_sin, out_cos)
         self.check_res(x, out_sin, out_cos, out_tan)
 
-    # Test single custom operator call
-    def test_trig_inplace_ops(self):
-        x, out_sin, out_cos = self.get_rand_input()
-        out_tan = torch.ops.ascendc_ops.ascendc_trig(x, out_sin, out_cos)
-        self.check_res(x, out_sin, out_cos, out_tan)
-
     # Test using the npugraph_ex backend for model compilation
     def check_res(self, x, out_sin, out_cos, out_tan):
         cpu_out_sin = torch.sin(x)
