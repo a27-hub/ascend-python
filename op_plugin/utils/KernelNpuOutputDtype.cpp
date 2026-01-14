@@ -20,7 +20,7 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/OpApiInterface.h"
 namespace op_infer {
-
+using npu_preparation = at_npu::native::OpPreparation;
 at::ScalarType angle_out_dtype(const at::Tensor& self)
 {
     auto out_dtype = self.scalar_type();
@@ -137,6 +137,19 @@ at::ScalarType abs_out_dtype(const at::Tensor& self)
         output = at::ScalarType::Half;
     }
     return output;
+}
+
+at::ScalarType npu_moe_distribute_dispatch_setup_out_dtype(c10::optional<int64_t> y_dtype)
+{
+    auto output_dtype = at::kChar;
+    output_dtype = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
+    return output_dtype;
+}
+
+at::ScalarType npu_moe_distribute_dispatch_teardown_out_dtype()
+{
+    auto output_dtype = npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0));
+    return output_dtype;
 }
 
 } // namespace op_infer

@@ -2485,6 +2485,106 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
         expand_scales = x.new_empty((a), dtype=torch.float32)
     return (expand_x, dynamic_scales, expand_idx, expert_token_nums, ep_recv_counts, tp_recv_counts, expand_scales)
 
+def AlignX(x, align_len):
+    return ((x + align_len - 1) // align_len) * align_len
+
+def CeilX(x, align_len):
+    return (x + align_len - 1) // align_len
+
+@impl(m, "npu_moe_distribute_dispatch_setup")
+def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
+                                           scales=None, x_active_mask=None, expert_shard_type=0, shared_expert_num=1, 
+                                           shared_expert_rank_num=0, quant_mode=0, global_bs=0, comm_type=0, 
+                                           comm_alg="", y_dtype=None):
+    bs = x.size(0)
+    h = x.size(1)
+    k = expert_ids.size(1)
+    if quant_mode == 0 :
+        hs = AlignX(h, 512)
+    elif quant_mode == 1:
+        hs = AlignX(AlignX(h * 1, 32),512)
+    elif quant_mode == 2:
+        hs = AlignX(AlignX(h * 1, 32) + 4,512)
+    elif quant_mode == 3:
+        hs = AlignX((AlignX(h, 128) * 1 + CeilX(h, 128) * 4), 512)
+    elif quant_mode == 4:
+        hs = AlignX(AlignX(h, 256) * 1 + AlignX(CeilX(h, 32), 2) * 1, 512)
+
+    local_moe_expert_num = 0
+    if expert_shard_type == 0:
+        if ep_rank_id < shared_expert_rank_num:
+            local_moe_expert_num = 1
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+    local_moe_expert_num = int(local_moe_expert_num)
+
+    outDtype = x.dtype
+    if scales is not None or quant_mode != 0:
+        # outDtype = torch.int8
+        outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
+
+    y = x.new_empty((bs * (k + shared_expert_num), hs), dtype=outDtype)
+    expand_idx = x.new_empty((bs * k), dtype=torch.int32)
+    comm_cmd_info = x.new_empty(((bs * (k + shared_expert_num) + ep_world_size * local_moe_expert_num) * 16), dtype=torch.int32)
+    return (y, expand_idx, comm_cmd_info)
+
+
+@impl(m, "npu_moe_distribute_dispatch_teardown")
+def npu_moe_distribute_dispatch_teardown_meta(x, y, expert_ids, comm_cmd_info, group_ep, ep_world_size, ep_rank_id, 
+                                              moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
+                                              shared_expert_rank_num=0, quant_mode=0, global_bs=0, 
+                                              expert_token_nums_type=1, comm_type=0, comm_alg=""):
+    bs = x.size(0)
+    h = x.size(1)
+    k = expert_ids.size(1)
+
+    local_moe_expert_num = 0
+    global_bs_real = (bs * ep_world_size) if global_bs == 0 else global_bs
+    a = 0
+    if expert_shard_type == 0:
+        if ep_rank_id < shared_expert_rank_num:
+            local_moe_expert_num = 1
+            a = global_bs_real // shared_expert_rank_num
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+            a = global_bs_real * min(local_moe_expert_num, k)
+    else:
+        if ep_rank_id >= ep_world_size - shared_expert_rank_num:
+            local_moe_expert_num = 1
+            a = global_bs_real // shared_expert_rank_num
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+            a = global_bs_real * min(local_moe_expert_num, k)
+
+    local_moe_expert_num = int(local_moe_expert_num)
+
+    outDtype = torch.int8 if (quant_mode != 0) else x.dtype
+    expand_x = x.new_empty(tuple([a, h]), dtype=outDtype)
+    dynamic_scales = x.new_empty(tuple([a]), dtype=torch.float32)
+    assist_info_for_combine = x.new_empty(tuple([a * 128]), dtype=torch.int32)
+    expert_token_nums = x.new_empty(tuple([local_moe_expert_num]), dtype=torch.int64)
+    return (expand_x, dynamic_scales, assist_info_for_combine, expert_token_nums)
+
+
+@impl(m, "npu_moe_distribute_combine_setup")
+def npu_moe_distribute_combine_setup_meta(expand_x, expert_ids, assist_info_for_combine, group_ep, ep_world_size, 
+                                          ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
+                                          shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0, 
+                                          comm_alg="", y_dtype=0):
+    a = expand_x.size(0)
+    h = expand_x.size(1)
+    hs = AlignX(AlignX(h, 32) + AlignX(h, 8) // 8 * 4, 512)
+    quant_expand_x = expand_x.new_empty(tuple([a, hs]), dtype=torch.int8)
+    comm_cmd_info = expand_x.new_empty(tuple([(a + ep_world_size) * 16]), dtype=torch.int32)
+    return (quant_expand_x, comm_cmd_info)
+
+
+@impl(m, "npu_moe_distribute_combine_teardown")
+def npu_moe_distribute_combine_teardown_meta(expand_x, quant_expand_x, expert_ids, expand_idx, expert_scales, 
+                                             group_ep, ep_world_size, ep_rank_id, moe_expert_num, x_active_mask=None, 
+                                             shared_expert_x=None, expert_shard_type=0, shared_expert_num=1, 
+                                             shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0):
+    return (expand_x.new_empty(tuple([expert_ids.size(0), expand_x.size(1)]), dtype=expand_x.dtype))
 
 @impl(m, "npu_moe_distribute_combine")
 def npu_moe_distribute_combine_meta(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, group_ep, ep_world_size, ep_rank_id, moe_expert_num,
