@@ -103,10 +103,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
                     format_dtype_value(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    std::cout << "x_dtype.value()" << x_dtype.value() << std::endl;
-    std::cout << "weight_dtype.value()" << weight_dtype.value() << std::endl;
-    std::cout << "static_cast<int64_t>(weight[0].scalar_type()" << static_cast<int64_t>(weight[0].scalar_type()) << std::endl;
-    std::cout << "static_cast<int64_t>(x.scalar_type())" << static_cast<int64_t>(x.scalar_type()) << std::endl;
     if (x_dtype.has_value() && weight_dtype.has_value()){
         TORCH_CHECK(x_dtype.value() == weight_dtype.value(),
                     "x_dtype and weight_dtype should be the same, but x_dtype is ", format_dtype_value(x_dtype.value()),
@@ -132,9 +128,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     format_dtype_value(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    std::cout << "c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value()))" << c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value())) << std::endl;
-    std::cout << "c10_npu::CustomDataTypeToString(static_cast<c10::ScalarType>(dequant_dtype.value()))" << c10_npu::CustomDataTypeToString(static_cast<int64_t>(dequant_dtype.value())) << std::endl;
-    std::cout << "static_cast<c10::ScalarType>(dequant_dtype.value())" << static_cast<c10::ScalarType>(dequant_dtype.value()) << std::endl;
     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float) || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
                          "The optional parameter dequant_dtype only support torch.float32 and torch.int8, but the actual value is ",
                          format_dtype_value(dequant_dtype.value()),  "." + OPS_ERROR(ErrCode::VALUE));
