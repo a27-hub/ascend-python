@@ -55,6 +55,7 @@ std::string format_dtype_for_error(int64_t dtype_value) {
         {static_cast<int64_t>(c10::ScalarType::Byte),     "torch.uint8"},
         {static_cast<int64_t>(c10::ScalarType::Bool),     "torch.bool"},
         {static_cast<int64_t>(c10::ScalarType::BFloat16), "torch.bfloat16"},
+        {}
     };
     auto it = dtype_map.find(dtype_value);
     if (it != dtype_map.end()) {
@@ -106,16 +107,20 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
+    std::cout << "x_dtype.value()" << x_dtype.value() << std::endl;
+    std::cout << "weight_dtype.value()" << weight_dtype.value() << std::endl;
+    std::cout << "static_cast<int64_t>(weight[0].scalar_type()" << static_cast<int64_t>(weight[0].scalar_type()) << std::endl;
+    std::cout << "static_cast<int64_t>(x.scalar_type())" << static_cast<int64_t>(x.scalar_type()) << std::endl;
     if (x_dtype.has_value() && weight_dtype.has_value()){
         TORCH_CHECK(x_dtype.value() == weight_dtype.value(),
-                    "x_dtype and weight_dtype should be the same, but x_dtype is ", c10_npu::CustomDataTypeToString(x_dtype.value()),
-                    ", weight_dtype is ", c10_npu::CustomDataTypeToString(weight_dtype.value()),
+                    "x_dtype and weight_dtype should be the same, but x_dtype is ", format_dtype_for_error(x_dtype.value()),
+                    ", weight_dtype is ",  format_dtype_for_error(weight_dtype.value()),
                      "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (x.defined() && x.numel() > 0 && !weight.empty() && weight[0].numel() > 0){
         TORCH_CHECK(x.scalar_type() == weight[0].scalar_type(),
-                    "x type and weight type should be the same, but x type is ", c10_npu::CustomDataTypeToString(static_cast<int64_t>(x.scalar_type())),
-                    ", weight type is ", c10_npu::CustomDataTypeToString(static_cast<int64_t>(weight[0].scalar_type())),
+                    "x type and weight type should be the same, but x type is ", format_dtype_for_error(static_cast<int64_t>(x.scalar_type())),
+                    ", weight type is ",  format_dtype_for_error(static_cast<int64_t>(weight[0].scalar_type())),
                      "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
