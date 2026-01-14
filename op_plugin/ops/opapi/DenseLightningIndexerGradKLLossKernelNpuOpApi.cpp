@@ -52,7 +52,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_dense_lightning_i
     int64_t sparse_mode_const = sparse_mode.value_or(3);
     int64_t pre_tokens_const = pre_tokens.value_or(9223372036854775807);
     int64_t next_tokens_const = next_tokens.value_or(9223372036854775807);
-    bool deterministic_const = true;
     TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
         "The shapes of the input query should be 3 or 4 dimensional, but got ",
         query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
@@ -78,7 +77,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_dense_lightning_i
         aclnnDenseLightningIndexerGradKLLoss, query, key, query_index, key_index, weights,
         softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, query_rope_const, key_rope_const, 
         actual_seq_qlen, actual_seq_klen, scale_value, layout_ptr, sparse_mode_const, pre_tokens_const, 
-        next_tokens_const, deterministic_const, d_query_index, d_key_index, d_weights, loss);
+        next_tokens_const, d_query_index, d_key_index, d_weights, loss);
 
     return std::make_tuple(d_query_index, d_key_index, d_weights, loss);
 }
