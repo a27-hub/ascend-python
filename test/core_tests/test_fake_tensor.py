@@ -3242,11 +3242,11 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
                 is_output_qkv=True,
             )
 
-            self.assertEqual(q_out_before_quant.shape, torch.Size(B * S, Nq * D))
+            self.assertEqual(q_out_before_quant.shape, torch.Size([B * S, Nq * D]))
             self.assertEqual(q_out_before_quant.dtype, dtype)
-            self.assertEqual(k_out_before_quant.shape, torch.Size(B * S, Nk * D))
+            self.assertEqual(k_out_before_quant.shape, torch.Size([B * S, Nk * D]))
             self.assertEqual(k_out_before_quant.dtype, dtype)
-            self.assertEqual(v_out_before_quant.shape, torch.Size(B * S, Nv * D))
+            self.assertEqual(v_out_before_quant.shape, torch.Size([B * S, Nv * D]))
             self.assertEqual(v_out_before_quant.dtype, dtype)
 
             
