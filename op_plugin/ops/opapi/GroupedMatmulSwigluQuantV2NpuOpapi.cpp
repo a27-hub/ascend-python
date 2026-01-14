@@ -109,13 +109,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     if (x_dtype.has_value() && weight_dtype.has_value()){
         TORCH_CHECK(x_dtype.value() == weight_dtype.value(),
                     "x_dtype and weight_dtype should be the same, but x_dtype is ", c10_npu::CustomDataTypeToString(x_dtype.value()),
-                    " weight_dtype is ", c10_npu::CustomDataTypeToString(weight_dtype.value()),
+                    ", weight_dtype is ", c10_npu::CustomDataTypeToString(weight_dtype.value()),
                      "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (x.defined() && x.numel() > 0 && !weight.empty() && weight[0].numel() > 0){
         TORCH_CHECK(x.scalar_type() == weight[0].scalar_type(),
-                    "x type and weight type should be the same, but x type is ", c10_npu::CustomDataTypeToString(x_dtype.value()),
-                    " weight type is ", c10_npu::CustomDataTypeToString(weight_dtype.value()),
+                    "x type and weight type should be the same, but x type is ", c10_npu::CustomDataTypeToString(x.scalar_type()),
+                    ", weight type is ", c10_npu::CustomDataTypeToString(weight[0].scalar_type()),
                      "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
