@@ -43,6 +43,7 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 
+// 直调函数，直接调用aclnn接口
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
     const at::TensorList weight,
@@ -71,26 +72,32 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     int m = x_size[DIM_0];
     int k = x_size[DIM_1];
 
+    // 增加HIFLOAT8
     if (x_dtype.has_value()) {
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8), 
                     "The optional parameter x_dtype only supports mxfp4 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
+    // 增加HIFLOAT8
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
-                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
+                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
                     "The optional parameter weight_dtype only supports mxfp4 or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
                 "The optional parameter x_dtype and weight_dtype should both be mxfp4 or None.", OPS_ERROR(ErrCode::VALUE));
 
+    // float32 ，float16不管，bf16应该也不需要
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
+    // float32不管
     if (x_scale_dtype.has_value()) {
         TORCH_CHECK(x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
@@ -116,6 +123,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
     at::Tensor output;
     at::Tensor output_scale;
+    // 默认实现有了，好像没问题，不用管。
     if (!weight_scale_dtype.has_value()) {
         output = npu_preparation::apply_tensor_without_format({m, n / MXFP_MULTI_BASE_SIZE}, c10::dtype(c10::ScalarType::Char));
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
