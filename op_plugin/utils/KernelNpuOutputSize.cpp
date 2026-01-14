@@ -1989,7 +1989,7 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(cons
 
     output_size = {m_dim, batch_dim, n_dim};
     if (x1_scale_real.defined() || x2_scale_real.defined()) {
-        output_size = {m_dim, 1, batch_dim * n_dim};
+        output_size = {m_dim, batch_dim, n_dim};
     }
     if (batch_split_factor_value > 1) {
         output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};

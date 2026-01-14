@@ -6735,7 +6735,7 @@ custom:
         cubeMathType: 'npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32())'
       exec: aclnnTransposeBatchMatMul, input, weight, bias, scale_real, perm_x1_real, perm_x2_real, perm_y_real, cubeMathType, batch_split_factor_value, out
 
-  - func: npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? group_size=0, int? batch_split_factor=1) -> Tensor
+  - func: npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int? group_size=0, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
     op_api: all_version
     exposed: all_version
     gen_opapi:

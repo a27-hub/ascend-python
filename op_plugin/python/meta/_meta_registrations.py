@@ -3370,15 +3370,6 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
 @impl(m, "npu_transpose_quant_batchmatmul")
 def npu_transpose_quant_batchmatmul_meta(input_, weight, dtype, bias=None, x1_scale=None, x2_scale=None, group_size=0, 
                                    perm_x1=None, perm_x2=None, perm_y=None, batch_split_factor=1):
-    dtype_supported_list = [torch.float16, torch.bfloat16]
-    torch._check(
-        dtype in dtype_supported_list,
-        lambda: "dtype supported for float16 and bfloat16, but now is " + str(dtype) + ops_error(ErrCode.TYPE),
-    )
-    torch._check(
-        bias is None,
-        lambda: "The bias is not supported in TransposeBatchMatMul" + ops_error(ErrCode.TYPE),
-    )
     M = input_.size(perm_x1.index(1))
     batchM = input_.size(perm_x1.index(0))
     N = weight.size(perm_x2.index(2))
