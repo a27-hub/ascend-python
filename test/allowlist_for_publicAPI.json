@@ -143,7 +143,11 @@
       "npu_confusion_transpose",
       "npu_dense_lightning_indexer_grad_kl_loss",
       "npu_dense_lightning_indexer_softmax_lse",
-      "npu_one_hot"
+      "npu_one_hot",
+      "npu_moe_distribute_dispatch_setup",
+      "npu_moe_distribute_dispatch_teardown",
+      "npu_moe_distribute_combine_setup",
+      "npu_moe_distribute_combine_teardown"
     ]
   }
   
