@@ -114,8 +114,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     }
     if (x.defined() && x.numel() > 0 && !weight.empty() && weight[0].numel() > 0){
         TORCH_CHECK(x.scalar_type() == weight[0].scalar_type(),
-                    "x type and weight type should be the same, but x type is ", c10_npu::CustomDataTypeToString(x.scalar_type()),
-                    ", weight type is ", c10_npu::CustomDataTypeToString(weight[0].scalar_type()),
+                    "x type and weight type should be the same, but x type is ", c10_npu::CustomDataTypeToString(static_cast<int64_t>(x.scalar_type())),
+                    ", weight type is ", c10_npu::CustomDataTypeToString(static_cast<int64_t>(weight[0].scalar_type())),
                      "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
