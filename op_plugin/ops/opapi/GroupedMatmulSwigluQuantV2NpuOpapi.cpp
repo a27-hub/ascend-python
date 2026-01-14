@@ -125,7 +125,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                          "The optional parameter dequant_dtype only support torch.float32 and torch.int8,but the actual value is ",
                          (dequant_dtype.value() >= static_cast<int64_t>(c10::ScalarType::Char) && 
                          dequant_dtype.value() <= static_cast<int64_t>(c10::ScalarType::BFloat16)) ?
-                         c10::toString(static_cast<c10::ScalarType>(dequant_dtype.value())) :
+                         c10_npu::CustomDataTypeToString(dequant_dtype.value()) :
                          std::to_string(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
