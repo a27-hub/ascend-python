@@ -23,6 +23,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
             B = len(actual_seq_lengths_query)
             _, q_head_num, head_dim = query_index.shape
             _, k_head_num, _ = key_index.shape
+            q_seq_len = actual_seq_lengths_query[0] # each batch has same length
         else:
             print(f"not support layout {layout}, only support BSND and TND")
             return False
@@ -44,16 +45,16 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
                     k_seq_len_1batch = actual_seq_lengths_key[i]
                     q_index_1batch = query_index[0:actual_seq_lengths_query[0], :, :]
                     k_index_1batch = key_index[0:actual_seq_lengths_query[0], :, :]
-                    w = weights[0:actual_seq_lengths_query[0], :, :]
+                    w = weights[0:actual_seq_lengths_query[0], :]
                 else:
                     q_seq_len_1batch = actual_seq_lengths_query[i] - actual_seq_lengths_query[i-1]
                     k_seq_len_1batch = actual_seq_lengths_key[i] - actual_seq_lengths_key[i-1]
                     q_index_1batch = query_index[actual_seq_lengths_query[i-1]:actual_seq_lengths_query[i], :, :]
                     k_index_1batch = key_index[actual_seq_lengths_key[i-1]:actual_seq_lengths_key[i], :, :]
-                    w = weights[actual_seq_lengths_query[i-1]:actual_seq_lengths_query[i], :, :]
+                    w = weights[actual_seq_lengths_query[i-1]:actual_seq_lengths_query[i], :]
 
             q_index_1batch = torch.permute(q_index_1batch, (1, 0, 2)) #(s1, n1, d) -> (n1, s1, d)
-            k_index_1batch = torch.permute(k_index_1batch, (1, 0, 2)) #(s2, n2, d) -> (n2, s2, d)
+            k_index_1batch = torch.permute(k_index_1batch, (1, 2, 0)) #(s2, n2, d) -> (n2, d, s2)
             score = self.batch_matmul_gqa(q_head_num, k_head_num, q_index_1batch, k_index_1batch)  #(n1, s1, s2)
             score = torch.nn.functional.relu(score)
 
@@ -64,7 +65,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
 
             if sparse_mode == 3:
                 for s1_idx in range(q_seq_len_1batch):
-                    p_reduce_sum[s1_idx, (k_seq_len_1batch - q_seq_len_1batch + s1_idx + 1):] = -np.finfo(np.float32).max
+                    p_reduce_sum[s1_idx, (k_seq_len_1batch - q_seq_len_1batch + s1_idx + 1):] = float('-inf')
 
             max_out, _ = torch.max(p_reduce_sum, dim=-1, keepdim=False)
             max_res, _ = torch.max(p_reduce_sum, dim=-1, keepdim=True)
@@ -93,7 +94,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         actual_seq_lengths_query = None
         actual_seq_lengths_key = None
         sparse_mode = 3
-        cpu_out = self._dense_lightning_indexer_softmax_lse(query_index, key_index, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout, sparse_mode)
+        cpu_out, cpu_out1 = self._dense_lightning_indexer_softmax_lse(query_index, key_index, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout, sparse_mode)
 
         query_index = query_index.npu()
         key_index = key_index.npu()
@@ -107,8 +108,12 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         # compare result
         npu_out = npu_out.reshape(-1, b*n2*s1).cpu()
         cpu_out = cpu_out.reshape(-1, b*n2*s1).cpu()
+        npu_out1 = npu_out1.reshape(-1, b*n2*s1).cpu()
+        cpu_out1 = cpu_out1.reshape(-1, b*n2*s1).cpu()
         res = npu_out.equal(cpu_out)
+        res1 = npu_out.equal(cpu_out1)
         self.assertRtolEqual(res, True)
+        self.assertRtolEqual(res1, True)
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_tnd_dense_lightning_indexer_softmax_lse_eager(self):
@@ -121,16 +126,16 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         layout = 'TND'
 
         np.random.seed(3)
-        query = torch.tensor(np.random.uniform(-10, 10, (b*s1, n1, d))).to(torch.bfloat16)
-        key = torch.tensor(np.random.uniform(-10, 10, (b*s2, n2, d))).to(torch.bfloat16)
+        query_index = torch.tensor(np.random.uniform(-10, 10, (b*s1, n1, d))).to(torch.bfloat16)
+        key_index = torch.tensor(np.random.uniform(-10, 10, (b*s2, n2, d))).to(torch.bfloat16)
         weights = torch.tensor(np.random.uniform(-1, 1, (b*s1, n1))).to(torch.bfloat16)
         actual_seq_lengths_query = torch.tensor([s1*(i+1) for i in range(b)]).to(torch.int32)
         actual_seq_lengths_key = torch.tensor([s2*(i+1) for i in range(b)]).to(torch.int32)
         sparse_mode = 3
-        cpu_out = self._dense_lightning_indexer_softmax_lse(query_index, key_index, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout, sparse_mode)
+        cpu_out, cpu_out1 = self._dense_lightning_indexer_softmax_lse(query_index, key_index, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout, sparse_mode)
 
-        query = query.npu()
-        key = key.npu()
+        query_index = query_index.npu()
+        key_index = key_index.npu()
         weights = weights.npu()
         actual_seq_lengths_query = actual_seq_lengths_query.npu()
         actual_seq_lengths_key = actual_seq_lengths_key.npu()
@@ -143,8 +148,12 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         # compare result
         npu_out = npu_out.reshape(-1, b*n2*s1).cpu()
         cpu_out = cpu_out.reshape(-1, b*n2*s1).cpu()
+        npu_out1 = npu_out1.reshape(-1, b*n2*s1).cpu()
+        cpu_out1 = cpu_out1.reshape(-1, b*n2*s1).cpu()
         res = npu_out.equal(cpu_out)
+        res1 = npu_out.equal(cpu_out1)
         self.assertRtolEqual(res, True)
+        self.assertRtolEqual(res1, True)
 
 
 if __name__ == "__main__":

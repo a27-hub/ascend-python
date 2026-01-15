@@ -4176,7 +4176,7 @@ class TestNpuDSA(TestCase):
                     layout=input_layout,
                     sparse_mode=sparse_mode)
             
-            d_query_index, d_key_index, d_weights, loss = torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(
+            d_query_index, d_key_index, d_weights, loss = torch_npu.npu_dense_lightning_indexer_grad_kl_loss(
                     q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale,
                     query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,
                     actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
