@@ -394,6 +394,30 @@ class TestDeformableConv2d(TestCase):
         self.assertRtolEqual(dcn_bk_golden_list[2].cpu().detach(), dcn_do.cpu().detach(), 0.0003)
         self.assertRtolEqual(dcn_bk_golden_list[3].cpu().detach(), dcn_db.cpu().detach())
 
+    def test_deformable_conv2d_meta(self):
+
+        @torch.compile(backend="inductor", dynamic=False)
+        def fn(input, weight, offset):
+            x, y = torch_npu.npu_deformable_conv2d(
+                input,
+                weight, 
+                offset,
+                None,
+                kernel_size=[5, 5],
+                stride=[1, 1, 1, 1],
+                padding=[4, 6, 8, 2]
+            )
+            return x, y
+        
+        input = torch.rand(16, 32, 32, 32).npu()
+        weight = torch.rand(32, 32, 5, 5).npu()
+        offset = torch.rand(16, 75, 38, 38).npu()
+
+        out, deformOut = fn(input, weight, offset)
+
+        self.assertEqual(out.shape, (16, 32, 38, 38))
+        self.assertEqual(deformOut.shape, (16, 32, 190, 190))
+        
 
 if __name__ == "__main__":
     np.random.seed(123)
