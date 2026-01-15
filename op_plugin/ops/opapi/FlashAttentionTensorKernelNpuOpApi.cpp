@@ -185,11 +185,14 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
                 OPS_CHECK_ERROR(c10_npu::acl::AclrtSynchronizeStreamWithTimeout(original_stream));
             }
         } else {
+            const auto gen = at_npu::detail::getDefaultNPUGenerator();
+            auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
+
             c10_npu::CaptureStatus secondary_stream_capture_state = stream_capture_status_may_init_ctx(secondary_stream);
             logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, original_stream id is %lld, secondary_stream_capture_state is %d, secondary_stream id is %lld.",
                 static_cast<int64_t>(original_stream.id()), (int)secondary_stream_capture_state, static_cast<int64_t>(secondary_stream.id()));
             const auto gen = at_npu::detail::getDefaultNPUGenerator();
-            if (secondary_stream_capture_state == c10_npu::CaptureStatus::None) {
+            if (!gen_state_.secondary_stream_capture_state_) {
                 logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, second stream record!!");
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
                 capture_event_begin.record(original_stream);
@@ -202,7 +205,7 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             // alloced from the pool of the secondary stream.
             c10_npu::SecondaryStreamGuard guard(secondary_stream);
             mask = dropout_gen_mask_tensor_impl(query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
-            if (secondary_stream_capture_state == c10_npu::CaptureStatus::None) {
+            if (!gen_state_.secondary_stream_capture_state_) {
                 ASCEND_LOGI("Event: record and block in dropout op capture end is successfully executed");
                 at::check_generator<at_npu::NPUGeneratorImpl>(gen)->set_secondary_stream_capture_state(true);
             }
@@ -248,9 +251,9 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
             offset = at::empty({1}, options).fill_(static_cast<int64_t>(pair.second));
         } else {
             auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(10);
-            seed = *gen_state_.seed_.ptr;
-            offset = *gen_state_.offset_.ptr;
-            offset_intragraph = gen_state_.offset_intragraph_;
+            seed = gen_state_.seed_.ptr->clone();
+            offset = gen_state_.offset_.ptr->clone();
+            offset.add_(gen_state_.offset_intragraph_);
         }
         if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
             drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed, offset, numels,
@@ -533,14 +536,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash
     if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         const at::Tensor &seed_const = seed.value_or(at::Tensor());
         const at::Tensor &offset_const = offset.value_or(at::Tensor());
-
-        uint64_t offset_intragraph = 0;
-        if (is_capture != c10_npu::CaptureStatus::None) {
-            const auto gen = at_npu::detail::getDefaultNPUGenerator();
-            auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
-            offset_intragraph = gen_state_.offset_intragraph_;
-        }
-        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed_const, offset_const, numels, gen_mask_parallel, sync, is_capture, offset_intragraph);
+        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed_const, offset_const, numels, gen_mask_parallel, sync, is_capture);
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
     }
