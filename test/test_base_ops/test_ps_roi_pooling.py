@@ -22,6 +22,19 @@ class TestPsRoiPooling(TestCase):
                                    ], dtype=torch.float16)
         self.assertRtolEqual(expect_out, out.cpu())
 
+    def test_ps_roi_pooling_meta(self):
+
+        @torch.compile(backend="inductor", dynamic=False)
+        def fn(roi, x):
+            return torch_npu.npu_ps_roi_pooling(x, roi, 0.5, 2, 2)
+        
+        x = torch.rand((8, 68, 32, 32, 1), dtype=torch.float).npu()
+        roi = torch.rand((8, 5, 2), dtype=torch.float).npu()
+
+        out = fn(roi, x)
+
+        self.assertEqual(out.shape, (16, 2, 2, 2))
+        
 
 if __name__ == "__main__":
     run_tests()
