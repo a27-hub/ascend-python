@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 
@@ -233,4 +232,5 @@ std::tuple<at::Tensor, at::Tensor> npu_deformable_conv2d(const at::Tensor &input
     return deformable_conv2d_nocheck(input, weight, offset, bias_opt, kernel_size, stride, padding, dilation, groups,
                                      deformable_groups, modulated);
 }
+
 } // namespace acl_op

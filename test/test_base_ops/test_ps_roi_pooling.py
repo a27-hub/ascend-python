@@ -21,7 +21,7 @@ class TestPsRoiPooling(TestCase):
                                     [[0., 0.], [0., 0.]]]
                                    ], dtype=torch.float16)
         self.assertRtolEqual(expect_out, out.cpu())
-
+        
 
 if __name__ == "__main__":
     run_tests()
