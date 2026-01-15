@@ -168,7 +168,7 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
 {
     at::Tensor mask;
 
-    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch start, is_capture is %d, offset_intragraph is %d.", (int)is_capture, offset_intragraph);
+    logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch start, is_capture is %d.", (int)is_capture);
     if (gen_mask_parallel) {
         auto original_stream = c10_npu::getCurrentNPUStream();
         auto secondary_stream = c10_npu::getCurrentSecondaryStream();
@@ -255,8 +255,6 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
             offset.add_(gen_state_.offset_intragraph_);
         }
         if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
-        logger->info("npu_flash_attention_symint dropout_gen_mask_tensor DROPOUT_NORMAL, numels is %lld, offset_intragraph is %d.",
-            numels, offset_intragraph);
             drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed, offset, numels,
                 gen_mask_parallel, sync, is_capture, offset_intragraph);
         }
@@ -271,7 +269,7 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     return drop_mask;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_backward(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_backward(
     const at::Tensor &query,
     const at::Tensor &key,
     const at::Tensor &value,
@@ -428,10 +426,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         dpse = dpse_required;
     }
 
-    return std::make_tuple(dq, dk, dv, dpse, dsink, format_drop_mask);
+    return std::make_tuple(dq, dk, dv, dpse, dsink);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_grad_symint(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_grad_symint(
     const at::Tensor &query,
     const at::Tensor &key,
     const at::Tensor &value,
@@ -555,7 +553,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     return result;
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_symint(
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_symint(
     const at::Tensor &query, const at::Tensor &key,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
@@ -819,7 +817,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         static_cast<int64_t>(original_stream.id()), static_cast<int64_t>(secondary_stream.id()));
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
-        seed, offset, format_drop_mask);
+        seed, offset);
 }
 #endif
 }
