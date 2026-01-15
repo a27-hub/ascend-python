@@ -3073,5 +3073,37 @@ class TestFusedLinearCrossEntropyLossMeta(TestCase):
             self.compare_tensor_lists(results_3, npu_results_3)
 
 
+class TestNpuDeformableConv2d(TestCase):
+    def test_npu_deformable_conv2d(self):
+        with FakeTensorMode():
+            input = torch.rand(16, 32, 32, 32).npu()
+            weight = torch.rand(32, 32, 5, 5).npu()
+            offset = torch.rand(16, 75, 38, 38).npu()
+
+            out, deformOut = torch_npu.npu_deformable_conv2d(
+                input,
+                weight,
+                offset,
+                None,
+                kernel_size=[5, 5],
+                stride=[1, 1, 1, 1],
+                padding=[4, 6, 8, 2]
+            )
+
+            self.assertEqual(out.shape, (16, 32, 38, 38))
+            self.assertEqual(deformOut.shape, (16, 32, 190, 190))
+
+
+class TestNpuPsRoiPooling(TestCase):
+    def test_npu_ps_roi_pooling(self):
+        with FakeTensorMode():
+            x = torch.rand((8, 68, 32, 32, 1), dtype=torch.float).npu()
+            roi = torch.rand((8, 5, 2), dtype=torch.float).npu()
+
+            out = torch_npu.npu_ps_roi_pooling(x, roi, 0.5, 2, 2)
+
+            self.assertEqual(out.shape, (16, 2, 2, 2))
+
+
 if __name__ == "__main__":
     run_tests()
