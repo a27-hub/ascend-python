@@ -2905,3 +2905,95 @@ def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weig
     weight_grad = torch.empty(output_size_1, dtype=output_dtype_0, device='meta')
 
     return (input_grad, weight_grad)
+
+
+@impl(m, "npu_deformable_conv2d")
+def npu_deformable_conv2d_meta(input, weight, offset, bias, kernel_size, stride, padding,
+                               dilation=None, groups=1, deformable_groups=1):
+    if dilation is None:
+        dilation = [1, 1, 1, 1]
+
+    MIN_DIM = 4
+    torch._check(input.dim() >= MIN_DIM, lambda: f"input has to be more than {MIN_DIM}D, but got Tensor of dimension {input.dim()}.")
+    torch._check(offset.dim() >= MIN_DIM, lambda: f"offset has to be more than {MIN_DIM}D, but got Tensor of dimension {offset.dim()}.")
+    torch._check(len(stride) >= MIN_DIM, lambda: f"stride must have at least 4 elements.")
+    torch._check(len(dilation) >= MIN_DIM, lambda: f"dilation must have at least 4 elements.")
+
+    N, in_C, in_H, in_W = input.shape
+    out_C, inC_or_groups, k_H, k_W = weight.shape
+
+    dil_H = (k_H - 1) * dilation[2] + 1
+    dil_W = (k_W - 1) * dilation[3] + 1
+
+    out_H = (in_H + padding[0] + padding[1] - dil_H) // stride[2] + 1
+    out_W = (in_W + padding[2] + padding[3] - dil_W) // stride[3] + 1
+
+    out_shape = (N, out_C, out_H, out_W)
+    deformOut_shape = (N, in_C, out_H * k_H, out_W * k_W)
+
+    out = input.new_empty(out_shape)
+    deformOut = input.new_empty(deformOut_shape)
+
+    return out, deformOut
+
+
+@impl(m, "npu_ps_roi_pooling")
+def npu_ps_roi_pooling_meta(x, rois, spatial_scale, group_size, output_dim):
+    MIN_ROIS_DIM = 3
+    torch._check(
+        rois.dim() >= MIN_ROIS_DIM,
+        lambda: f"rois only supports at least {MIN_ROIS_DIM}D tensors, rois got: {rois.dim()}D."
+    )
+
+    batch_size, _, rois_num = rois.shape
+    total_rois = batch_size * rois_num
+
+    out = x.new_empty((total_rois, output_dim, group_size, group_size))
+
+    return out
+
+
+@impl(m, "npu_convolution")
+def npu_convolution_meta(input, weight, bias, stride, padding, dilation, groups):
+    N = input.size(0)
+    out_channels = weight.size(0)
+    in_channels = input.size(1)
+    spatial_dims = input.dim() - 2
+    output_shape = [N, out_channels]
+
+    for i in range(spatial_dims):
+        in_size = input.size(i + 1)
+        k_size = weight.size(i + 1)
+        p = padding[i]
+        s = stride[i]
+        d = dilation[i]
+
+        kernel_extent = d * (k_size - 1) + 1
+        out_dim_size = (in_size + 2 * p - kernel_extent) // s + 1
+
+        output_shape.append(out_dim_size)
+    
+    return input.new_empty(output_shape)
+
+
+@impl(m, "npu_convolution_transpose")
+def npu_convolution_transpose_meta(input, weight, bias, padding, output_padding, stride, dilation, groups):
+    dim = input.dim()
+    spatial_dim = dim - 2
+    N = input.size(0)
+    out_channels = weight.size(1) * groups
+
+    output_shape = [N, out_channels]
+    for i in range(spatial_dim):
+        in_size = input.size(i + 2)
+        k_size = weight.size(i + 2)
+        s = stride[i]
+        p = padding[i]
+        d = dilation[i]
+        op = output_padding[i]
+
+        out_dim_size = (in_size - 1) * s - 2 * p + d * (k_size - 1) + op + 1
+
+        output_shape.append(out_dim_size)
+
+    return input.new_empty(output_shape)
