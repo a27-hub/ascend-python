@@ -12,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include <torch/library.h>
+#include <ATen/ATen.h>
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
@@ -233,4 +235,49 @@ std::tuple<at::Tensor, at::Tensor> npu_deformable_conv2d(const at::Tensor &input
     return deformable_conv2d_nocheck(input, weight, offset, bias_opt, kernel_size, stride, padding, dilation, groups,
                                      deformable_groups, modulated);
 }
+
+std::tuple<at::Tensor, at::Tensor> npu_deformable_conv2d_meta(
+    const at::Tensor &input, const at::Tensor &weight, const at::Tensor &offset, const c10::optional<at::Tensor> &bias_opt,
+    at::IntArrayRef kernel_size, at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation,
+    int64_t groups, int64_t deformable_groups, bool modulated)
+{
+    TORCH_CHECK(input.dim() >= 4, "input has to be more than 4D, but got Tensor of dimension ", input.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(offset.dim() >= 4, "offset has to more than 4D, but got Tensor of dimension ", offset.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(stride.size() >= 4, "stride has to contain more than 4 elements, but got ", stride.size(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dilation.size() >= 4, "dilation has to contain more than 4 elements, but got ", dilation.size(),
+        OPS_ERROR(ErrCode::PARAM));
+    
+    int64_t N = input.size(0);
+    int64_t in_C = input.size(1);
+    int64_t in_H = input.size(2);
+    int64_t in_W = input.size(3);
+
+    int64_t out_C = weight.size(0);
+    int64_t inC_or_groups = weight.size(1);
+    int64_t k_H = weight.size(2);
+    int64_t k_W = weight.size(3);
+
+    int64_t dil_H = (k_H - 1) * dilation[2] + 1;
+    int64_t dil_W = (k_W - 1) * dilation[3] + 1;
+
+    int64_t out_H = (in_H + padding[0] + padding[1] - dil_H) / stride[2] + 1;
+    int64_t out_W = (in_W + padding[2] + padding[3] - dil_W) / stride[3] + 1;
+
+    TORCH_CHECK(out_H > 0 && out_W > 0, "Calculate output size is too small. out_H: ", out_H, ", out_W: ", out_W);
+
+    auto options = input.options().dtype(at::kFloat);
+
+    at::Tensor out = at::empty({N, out_C, out_H, out_W}, options);
+    at::Tensor deformOut = at::empty({N, in_C, out_H * k_H, out_W * k_W}, options);
+
+    return std::make_tuple(out, deformOut);
+}
 } // namespace acl_op
+
+TORCH_LIBRARY_IMPL(npu, Meta, m)
+{
+    m.impl("npu_deformable_conv2d", acl_op::npu_deformable_conv2d_meta);
+}

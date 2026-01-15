@@ -12,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include <torch/library.h>
+#include <ATen/ATen.h>
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
@@ -95,4 +97,30 @@ at::Tensor npu_ps_roi_pooling(
     return result;
 }
 
+at::Tensor npu_ps_roi_pooling_meta(
+    const at::Tensor &self,
+    const at::Tensor &rois,
+    double spatial_scale,
+    int64_t group_size,
+    int64_t output_dim)
+{
+    TORCH_CHECK(rois.dim() >= 3,
+        "rois only supports at least 3D tensors, rois got: ", rois.dim(), "D"
+        + OPS_ERROR(ErrCode::PARAM));
+    
+    int64_t batch_size = rois.size(0);
+    int64_t rois_num = rois.size(2);
+    int64_t total_rois = batch_size * rois_num;
+
+    auto options = self.options().dtype(at::kFloat);
+    at::Tensor out = at::empty({total_rois, rois_num, group_size, group_size}, options);
+
+    return out;
+}
+
 } // namespace acl_op
+
+TORCH_LIBRARY_IMPL(npu, Meta, m)
+{
+    m.impl("npu_ps_roi_pooling", acl_op::npu_ps_roi_pooling_meta);
+}
