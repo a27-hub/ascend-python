@@ -2905,3 +2905,46 @@ def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weig
     weight_grad = torch.empty(output_size_1, dtype=output_dtype_0, device='meta')
 
     return (input_grad, weight_grad)
+
+
+@impl(m, "npu_deformable_conv2d")
+def npu_deformable_conv2d_meta(input, weight, offset, bias, kernel_size, stride, padding,
+                               dilation=[1, 1, 1, 1], groups=1, deformable_groups=1):
+    MIN_DIM = 4
+    torch._check(input.dim() >= MIN_DIM, lambda: f"input has to be more than {MIN_DIM}D, but got Tensor of dimension {input.dim()}.")
+    torch._check(offset.dim() >= MIN_DIM, lambda: f"offset has to be more than {MIN_DIM}D, but got Tensor of dimension {offset.dim()}.")
+    torch._check(len(stride) >= MIN_DIM, lambda: f"stride must have at least 4 elements.")
+    torch._check(len(dilation) >= MIN_DIM, lambda: f"dilation must have at least 4 elements.")
+    
+    N, in_C, in_H, in_W = input.shape
+    out_C, inC_or_groups, k_H, k_W = weight.shape
+
+    dil_H = (k_H - 1) * dilation[2] + 1
+    dil_W = (k_W - 1) * dilation[3] + 1
+
+    out_H = (in_H + padding[0] + padding[1] - dil_H) // stride[2] + 1
+    out_W = (in_W + padding[2] + padding[3] - dil_W) // stride[3] + 1
+
+    out_shape = (N, out_C, out_H, out_W)
+    deformOut_shape = (N, in_C, out_H * k_H, out_W * k_W)
+
+    out = input.new_empty(out_shape)
+    deformOut = input.new_empty(deformOut_shape)
+
+    return out, deformOut
+
+
+@impl(m, "npu_ps_roi_pooling")
+def npu_ps_roi_pooling_meta(x, rois, spatial_scale, group_size, output_dim):
+    MIN_ROIS_DIM = 3
+    torch._check(
+        rois.dim() >= MIN_ROIS_DIM,
+        lambda: f"rois only supports at least {MIN_ROIS_DIM}D tensors, rois got: {rois.dim()}D."
+    )
+
+    batch_size, _, rois_num = rois.shape
+    total_rois = batch_size * rois_num
+
+    out = x.new_empty((total_rois, output_dim, group_size, group_size))
+
+    return out
