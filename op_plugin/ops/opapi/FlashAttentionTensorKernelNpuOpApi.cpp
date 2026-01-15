@@ -191,7 +191,6 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
             c10_npu::CaptureStatus secondary_stream_capture_state = stream_capture_status_may_init_ctx(secondary_stream);
             logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, original_stream id is %lld, secondary_stream_capture_state is %d, secondary_stream id is %lld.",
                 static_cast<int64_t>(original_stream.id()), (int)secondary_stream_capture_state, static_cast<int64_t>(secondary_stream.id()));
-            const auto gen = at_npu::detail::getDefaultNPUGenerator();
             if (!gen_state_.secondary_stream_capture_state_) {
                 logger->info("npu_flash_attention_symint dropout_gen_mask_tensor_dispatch, second stream record!!");
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
