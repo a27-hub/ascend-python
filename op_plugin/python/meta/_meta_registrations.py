@@ -4403,14 +4403,6 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     torch._check(dequant_dtype == TORCH_DTYPE_MAP[torch.int8] or dequant_dtype == TORCH_DTYPE_MAP[torch.float32],
         lambda: "dequant_dtype only supports torch.int8, torch.float32 for now, but it is " + npu_dtype_to_str(dequant_dtype),
         )
-    # if x.dtype is not None and weight[0].dtype is not None:
-    #     torch._check(x.dtype == weight[0].dtype,
-    # lambda: "x dtype and weight dtype should be the same, but x dtype is " + npu_dtype_to_str(x.dtype) + " weight dtype is " +  npu_dtype_to_str(weight[0].dtype),
-    # )
-    # if x.dtype is not None and weight_dtype is not None:
-    #     torch._check(x_dtype == weight_dtype,
-    # lambda: "x_dtype and weight_dtype should be the same, but x_dtype is " + npu_dtype_to_str(x_dtype) + " weight_dtype is " +  npu_dtype_to_str(weight_dtype),
-    # )
     
     batch_size = x.size(0)
     dim_n = 2
