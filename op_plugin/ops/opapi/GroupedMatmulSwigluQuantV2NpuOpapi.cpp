@@ -29,6 +29,9 @@ constexpr int64_t WEIGHT_LAST_DIM = 2LL;
 constexpr int64_t DIM_3 = 3LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
+constexpr int64_t FLOAT8_E8M0 = 37LL;
+constexpr int64_t FLOAT4_E2M1FN_X2 = 296LL;
+constexpr int64_t FLOAT4_E1M2FN_X2 = 297LL;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
@@ -43,20 +46,14 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 std::string format_dtype_value(int64_t dtype_value) {
-    // 情况1：标准PyTorch类型 (1-16范围) - Char(1) 到 BFloat16(16)
     if (dtype_value >= 1 && dtype_value <= 16) {
         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
     }
-    
-    // 情况2：NPU特有类型
-    // 假设NPU类型值：特定值(35, 36, 37, 296, 297)
-    if ((dtype_value >= 35 && dtype_value <= 37) || dtype_value == 296 || dtype_value == 297) {
+    if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
         if (c10_npu::CustomDataTypeToString) {
             return c10_npu::CustomDataTypeToString(dtype_value);
         }
     }
-    
-    // 情况3：纯数字
     return std::to_string(dtype_value);
 }
 
