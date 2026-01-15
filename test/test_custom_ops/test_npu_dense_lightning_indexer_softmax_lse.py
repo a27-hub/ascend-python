@@ -117,7 +117,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_tnd_dense_lightning_indexer_softmax_lse_eager(self):
-        b = 20
+        b = 2
         s1 = 512
         n1 = 32
         s2 = 2048

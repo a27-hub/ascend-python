@@ -42,7 +42,7 @@
   D_{KL}(a||b){=}\sum_ia_i\mathrm{log}{\left(\frac{a_i}{b_i}\right)}
   $$
 
-  4.通过求导可得Loss的梯度表达式：
+  4. 通过求导可得Loss的梯度表达式：
   $$
   dI\mathop{{}}\nolimits_{{t,:}}=Softmax \left( I\mathop{{}}\nolimits_{{t,:}} \left) -p\mathop{{}}\nolimits_{{t,:}}\right. \right.
   $$
