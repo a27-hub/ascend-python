@@ -49,7 +49,7 @@ std::string format_dtype_value(int64_t dtype_value) {
     }
     
     // 情况2：NPU特有类型
-    // 假设NPU类型值：特定值(37, 296, 297) 或 200-300范围
+    // 假设NPU类型值：特定值(35, 36, 37, 296, 297)
     if ((dtype_value >= 35 && dtype_value <= 37) || dtype_value == 296 || dtype_value == 297) {
         if (c10_npu::CustomDataTypeToString) {
             return c10_npu::CustomDataTypeToString(dtype_value);
