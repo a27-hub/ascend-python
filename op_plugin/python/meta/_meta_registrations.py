@@ -4417,6 +4417,10 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
         n > 0,
         lambda: f"The n dim should be greater than 0, but the actual value is {n}",
     )
+    torch._check(
+        k > 0,
+        lambda: f"The k dim should be greater than 0, but the actual value is {k}",
+    )
 
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
                    (weight[0].dtype == torch.float8_e5m2 or weight[0].dtype == torch.float8_e4m3fn)
