@@ -61,8 +61,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dense_lightning_indexer_softmax_lse_symin
     at::Tensor softmax_sum_out = OpPreparation::apply_tensor_without_format(output_size, query_index.options().dtype(at::kFloat));
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
-        aclnnDenseLightningIndexerSoftmaxLse, query_index, key_index, weights, 
-        actual_seq_qlen, actual_seq_klen, layout_ptr, sparse_mode_const, pre_tokens_const,  
+        aclnnDenseLightningIndexerSoftmaxLse, query_index, key_index, weights,
+        actual_seq_qlen, actual_seq_klen, layout_ptr, sparse_mode_const, pre_tokens_const,
         next_tokens_const, softmax_max_out, softmax_sum_out);
 
     return std::make_tuple(softmax_max_out, softmax_sum_out);
