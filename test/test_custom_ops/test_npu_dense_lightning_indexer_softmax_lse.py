@@ -44,7 +44,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
                     q_seq_len_1batch = actual_seq_lengths_query[i]
                     k_seq_len_1batch = actual_seq_lengths_key[i]
                     q_index_1batch = query_index[0:actual_seq_lengths_query[0], :, :]
-                    k_index_1batch = key_index[0:actual_seq_lengths_query[0], :, :]
+                    k_index_1batch = key_index[0:actual_seq_lengths_key[0], :, :]
                     w = weights[0:actual_seq_lengths_query[0], :]
                 else:
                     q_seq_len_1batch = actual_seq_lengths_query[i] - actual_seq_lengths_query[i-1]
@@ -75,7 +75,7 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
             softmax_max_out[i, :, :] = max_out
             softmax_sum_out[i, :, :] = sum_out
 
-        return softmax_max_out.reshape(-1, B*k_head_num*q_seq_len_1batch), softmax_sum_out.reshape(B*k_head_num*q_seq_len_1batch)
+        return softmax_max_out.reshape(-1, B*k_head_num*q_seq_len_1batch), softmax_sum_out.reshape(-1, B*k_head_num*q_seq_len_1batch)
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_bsnd_dense_lightning_indexer_softmax_lse_eager(self):
@@ -110,10 +110,8 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         cpu_out = cpu_out.reshape(-1, b*n2*s1).cpu()
         npu_out1 = npu_out1.reshape(-1, b*n2*s1).cpu()
         cpu_out1 = cpu_out1.reshape(-1, b*n2*s1).cpu()
-        res = npu_out.equal(cpu_out)
-        res1 = npu_out.equal(cpu_out1)
-        self.assertRtolEqual(res, True)
-        self.assertRtolEqual(res1, True)
+        self.assertRtolEqual(npu_out, cpu_out, prec=1.e-3)
+        self.assertRtolEqual(npu_out1, cpu_out1, prec=1.e-3)
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_tnd_dense_lightning_indexer_softmax_lse_eager(self):
@@ -150,10 +148,8 @@ class TestDenseLightningIndexerSoftmaxLse(TestCase):
         cpu_out = cpu_out.reshape(-1, b*n2*s1).cpu()
         npu_out1 = npu_out1.reshape(-1, b*n2*s1).cpu()
         cpu_out1 = cpu_out1.reshape(-1, b*n2*s1).cpu()
-        res = npu_out.equal(cpu_out)
-        res1 = npu_out.equal(cpu_out1)
-        self.assertRtolEqual(res, True)
-        self.assertRtolEqual(res1, True)
+        self.assertRtolEqual(npu_out, cpu_out, prec=1.e-3)
+        self.assertRtolEqual(npu_out1, cpu_out1, prec=1.e-3)
 
 
 if __name__ == "__main__":
