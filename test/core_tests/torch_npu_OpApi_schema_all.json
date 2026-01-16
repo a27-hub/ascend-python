@@ -518,6 +518,12 @@
   "op_api: torch_npu.save_npugraph_tensor(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_confusion_transpose(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["all_version"]
+  }, 
+  "op_api: torch_npu.npu_confusion_transpose_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["all_version"]
+  },
   "func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)": {
     "version": ["all_version"]
   },
