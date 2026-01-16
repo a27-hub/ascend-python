@@ -79,7 +79,7 @@ backward:
 
 - name: npu_confusion_transpose(Tensor self, int[] perm, int[] shape, bool transpose_first) -> Tensor
   self: npu_confusion_transpose_backward(grad, perm, self.sym_sizes(), !transpose_first)
-  version: [v2.1, newest]
+  version: all_version
 
 - name: npu_convolution(Tensor input, Tensor weight, Tensor? bias, int[] stride, int[] padding, int[] dilation, int groups) -> Tensor
   input, weight, bias: npu_convolution_backward(input, grad, weight, stride, padding, dilation, groups, grad_input_mask)
