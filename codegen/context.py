@@ -18,9 +18,9 @@ import functools
 import contextlib
 from typing import TypeVar, Union, Iterator, Callable, Dict
 
-from codegen.utils import S, T, context
-from codegen.model import (NativeFunction, NativeFunctionsGroup, BackendIndex, DispatchKey)
-import codegen.local as local
+from .utils import S, T, context
+from .model import (NativeFunction, NativeFunctionsGroup, BackendIndex, DispatchKey)
+from . import local
 
 # Helper functions for defining generators on things in the model
 
