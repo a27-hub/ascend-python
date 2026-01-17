@@ -46,7 +46,7 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 std::string format_dtype_value(int64_t dtype_value) {
-    if (dtype_value >= 1 && dtype_value <= 16) {
+    if (dtype_value >= c10::ScalarType::Char && dtype_value <= c10::ScalarType::BFloat16) {
         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
     }
     if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
