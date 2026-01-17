@@ -92,9 +92,9 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
     return output_size;
 }
 
-at::Tensor npu_matmul_batch_invariant_mat1_backward(const at::Tensor self,
-                                const at::Tensor other,
-                                const at::Tensor grad_output)
+at::Tensor npu_matmul_batch_invariant_mat1_backward(const at::Tensor &self,
+                                const at::Tensor &other,
+                                const at::Tensor &grad_output)
 {
     at::Tensor mat1 = self;
     at::Tensor mat2 = other;
@@ -139,9 +139,9 @@ at::Tensor npu_matmul_batch_invariant_mat1_backward(const at::Tensor self,
     return output;
 }
 
-at::Tensor npu_matmul_batch_invariant_mat2_backward(const at::Tensor self,
-                                const at::Tensor other,
-                                const at::Tensor grad_output)
+at::Tensor npu_matmul_batch_invariant_mat2_backward(const at::Tensor &self,
+                                const at::Tensor &other,
+                                const at::Tensor &grad_output)
 {
     at::Tensor mat1 = self;
     at::Tensor mat2 = other;
