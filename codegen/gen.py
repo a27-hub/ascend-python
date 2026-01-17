@@ -23,13 +23,12 @@ from typing import (List, Dict, Optional, Set, Callable, Any,
 from collections import defaultdict
 import yaml
 
-from codegen.code_template import CodeTemplate
-from codegen.model import (NativeFunction, SelfArgument,
-                           TensorOptionsArguments,
-                           assert_never)
-from codegen.api.types.signatures import NativeSignature
-from codegen.context import native_function_manager
-from codegen.utils import concatMap, context
+from .code_template import CodeTemplate
+from .model import (NativeFunction, SelfArgument,
+                    TensorOptionsArguments, assert_never)
+from .api.types.signatures import NativeSignature
+from .context import native_function_manager
+from .utils import concatMap, context
 
 
 
