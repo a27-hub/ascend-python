@@ -18,9 +18,9 @@ import os
 import argparse
 import yaml
 
-from codegen.gen import FileManager, parse_native_yaml_struct
-from codegen.struct.struct_codegen import parse_struct_yaml, gen_op_api
-from codegen.utils import PathManager
+from ..gen import FileManager, parse_native_yaml_struct
+from ..struct.struct_codegen import parse_struct_yaml, gen_op_api
+from ..utils import PathManager
 
 
 def main() -> None:

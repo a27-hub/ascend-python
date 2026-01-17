@@ -4,7 +4,7 @@ import os
 import stat
 import yaml
 
-from codegen.utils import PathManager, get_version
+from .utils import PathManager, get_version
 
 
 def main():

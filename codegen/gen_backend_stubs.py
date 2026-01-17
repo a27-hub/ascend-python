@@ -1,8 +1,8 @@
 import os
 import argparse
 
-from codegen.gen import parse_native_yaml, FileManager
-from codegen.utils import concatMap, PathManager
+from .gen import parse_native_yaml, FileManager
+from .utils import concatMap, PathManager
 
 
 def main() -> None:
