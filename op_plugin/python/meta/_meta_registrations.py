@@ -1584,6 +1584,53 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
     return (dq, dk, dv, dpse, dsink)
 
 
+@impl(m, "npu_flash_attention")
+def npu_flash_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
+                                atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
+                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
+                                 gen_mask_parallel=True, sync=False, softmax_layout="", sink=None):
+    B = query.size(0)
+    N = head_num
+    S1 = query.size(2)
+    S2 = key.size(2)
+
+    if input_layout == "BSH":
+        B = query.size(0)
+        S1 = query.size(1)
+        S2 = key.size(1)
+
+    if input_layout == "SBH":
+        B = query.size(1)
+        S1 = query.size(0)
+        S2 = key.size(0)
+
+    if input_layout == "BSND":
+        S1 = query.size(1)
+        S2 = key.size(1)
+
+    seed = 0
+    offset = 0
+    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta')
+    softmax_max = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
+    softmax_sum = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
+    softmax_out = torch.empty([0], dtype=query.dtype, device='meta')
+    return (attention_score, softmax_max, softmax_sum, softmax_out, seed, offset)
+
+
+@impl(m, "npu_flash_attention_grad")
+def npu_flash_attention_backward(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
+                                  softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, scale_value=1.0,
+                                  keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=None, offset=None,
+                                  prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
+                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None):
+    dq = query.new_empty(query.shape, dtype=query.dtype, device='meta')
+    dk = key.new_empty(key.shape, dtype=query.dtype, device='meta')
+    dv = value.new_empty(value.shape, dtype=query.dtype, device='meta')
+    dpse = torch.empty([0], dtype=query.dtype, device='meta')
+    dsink = torch.empty([], device='meta') if sink is None else torch.empty(sink.shape, dtype=sink.dtype, device='meta')
+    return (dq, dk, dv, dpse, dsink)
+
+
 @impl(m, "npu_quant_fusion_attention")
 def npu_quant_fusion_attention_forward(query, key, value, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None, query_rope=None,
                                 key_rope=None, d_scale_q=None, d_scale_k=None, d_scale_v=None, scale=1.0, keep_prob=1.0,
