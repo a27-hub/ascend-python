@@ -6223,7 +6223,7 @@ custom:
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_matmul_batch_invariant_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
+  - func: npu_matmul_batch_invariant_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
 
   - func: npu_matmul_batch_invariant_mat1_backward(Tensor self, Tensor other, Tensor grad_output) -> Tensor
