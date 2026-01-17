@@ -70,12 +70,12 @@ backward:
 
 - name: npu_mm_batch_invariant(Tensor self, Tensor mat2) -> Tensor
   output_differentiability: [true]
-  self, mat2: npu_matmul_batch_invariant_backward(grad, self, other, grad_input_mask)
+  self, mat2: npu_matmul_batch_invariant_backward(grad, self, mat2, grad_input_mask)
   version: [v2.1, newest]
 
 - name: npu_matmul_batch_invariant_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
   output_differentiability: [true, true]
-  grad_out, self, other: npu_matmul_batch_invariant_double_backward(grad_self, grad_other, grad_out, self, other, grad_input_mask)
+  grad_out, self, other: npu_matmul_batch_invariant_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)
   version: [v2.1, newest]
 
 - name: npu_addmm_batch_invariant(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
