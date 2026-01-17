@@ -63,6 +63,28 @@ backward:
   grad_out, self, other: matmul_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)
   version: [v2.1, newest]
 
+- name: npu_matmul_batch_invariant(Tensor self, Tensor other) -> Tensor
+  output_differentiability: [true]
+  self, other: npu_matmul_batch_invariant_backward(grad, self, other, grad_input_mask)
+  version: [v2.1, newest]
+
+- name: npu_mm_batch_invariant(Tensor self, Tensor mat2) -> Tensor
+  output_differentiability: [true]
+  self, mat2: npu_matmul_batch_invariant_backward(grad, self, other, grad_input_mask)
+  version: [v2.1, newest]
+
+- name: npu_matmul_batch_invariant_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
+  output_differentiability: [true, true]
+  grad_out, self, other: npu_matmul_batch_invariant_double_backward(grad_self, grad_other, grad_out, self, other, grad_input_mask)
+  version: [v2.1, newest]
+
+- name: npu_addmm_batch_invariant(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
+  output_differentiability: [true]
+  self: maybe_multiply(grad, beta.conj())
+  mat1: maybe_multiply(npu_matmul_batch_invariant_mat1_backward(grad, mat1, mat2), alpha.conj())
+  mat2: maybe_multiply(npu_matmul_batch_invariant_mat2_backward(grad, mat1, mat2), alpha.conj())
+  version: [v2.1, newest]
+
 - name: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [true, false, false, true]
   x1, x2, gamma, beta: npu_add_layer_norm_backward(grads[0], x1, x2, result2, result1, gamma, grads[1])
