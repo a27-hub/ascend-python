@@ -50,9 +50,7 @@ std::string format_dtype_value(int64_t dtype_value) {
         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
     }
     if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
-        if (c10_npu::CustomDataTypeToString) {
-            return c10_npu::CustomDataTypeToString(dtype_value);
-        }
+        return c10_npu::CustomDataTypeToString(dtype_value);
     }
     return std::to_string(dtype_value);
 }
