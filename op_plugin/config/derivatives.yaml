@@ -68,9 +68,9 @@ backward:
   self, other: npu_matmul_batch_invariant_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask)
   version: [v2.1, newest]
 
-- name: npu_mm_batch_invariant(Tensor self, Tensor other) -> Tensor
+- name: npu_mm_batch_invariant(Tensor self, Tensor mat2) -> Tensor
   output_differentiability: [true]
-  self, other: npu_matmul_batch_invariant_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask)
+  self, mat2: npu_matmul_batch_invariant_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask)
   version: [v2.1, newest]
 
 - name: npu_matmul_batch_invariant_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
