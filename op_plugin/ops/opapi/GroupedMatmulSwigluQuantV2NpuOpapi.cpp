@@ -114,7 +114,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     }
     if (dequant_dtype.has_value()) {
         TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float) 
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float),
+                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
                          "The optional parameter dequant_dtype only support torch.float32 or torch.int8, but the actual value is ",
                          format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
             dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
@@ -143,12 +143,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         output = npu_preparation::apply_tensor_without_format({m, n / MXFP_MULTI_BASE_SIZE}, c10::dtype(c10::ScalarType::Char));
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
     } else {
-        // if (dequant_dtype.has_value()) {
-        //     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float),
-        //                  "The optional parameter dequant_dtype only support torch.float32,but the actual value is ",
-        //                  format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-        //     dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
-        // }
         TORCH_CHECK(!weight[DIM_0].sizes().empty(), "weight[0] is empty.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(weight[DIM_0].dim() == DIM_3, "weight[0] dim should be equal to 3, but the actual value is ",
                     weight[DIM_0].dim(), OPS_ERROR(ErrCode::PARAM));
