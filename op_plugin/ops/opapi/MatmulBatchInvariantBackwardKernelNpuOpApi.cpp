@@ -34,7 +34,7 @@ static inline void matmul_batch_invariant_implement_npu(at::Tensor &out,
         if (cube_math_type_passthrough >= 0) {
             cube_math_type = cube_math_type_passthrough;
     }
-    EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
+    EXEC_NPU_CMD(aclnnMatmulBatchInvariant, self, mat2, out, cube_math_type);
     FLOP_COUNT(FlopCounter::mm_flop, self, mat2);
     return;
 }
@@ -92,7 +92,7 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
     return output_size;
 }
 
-at::Tensor matmul_batch_invariant_mat1_backward(const at::Tensor self,
+at::Tensor npu_matmul_batch_invariant_mat1_backward(const at::Tensor self,
                                 const at::Tensor other,
                                 const at::Tensor grad_output)
 {
@@ -139,7 +139,7 @@ at::Tensor matmul_batch_invariant_mat1_backward(const at::Tensor self,
     return output;
 }
 
-at::Tensor matmul_batch_invariant_mat2_backward(const at::Tensor self,
+at::Tensor npu_matmul_batch_invariant_mat2_backward(const at::Tensor self,
                                 const at::Tensor other,
                                 const at::Tensor grad_output)
 {
@@ -188,11 +188,11 @@ std::tuple<at::Tensor, at::Tensor> npu_matmul_batch_invariant_backward(const at:
     at::Tensor self_grad;
     at::Tensor other_grad;
     if (grad_input_mask[1]) {
-        other_grad = matmul_batch_invariant_mat2_backward(self, other, grad);
+        other_grad = npu_matmul_batch_invariant_mat2_backward(self, other, grad);
     }
 
     if (grad_input_mask[0]) {
-        self_grad = matmul_batch_invariant_mat1_backward(self, other, grad);
+        self_grad = npu_matmul_batch_invariant_mat1_backward(self, other, grad);
     }
 
     // strip added dim: (5,1)->(5)

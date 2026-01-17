@@ -6226,6 +6226,12 @@ custom:
   - func: npu_matmul_batch_invariant_backward(Tensor grad, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
 
+  - func: npu_matmul_batch_invariant_mat1_backward(Tensor self, Tensor other, Tensor grad_output) -> (Tensor)
+    op_api: [v2.1, newest]
+
+  - func: npu_matmul_batch_invariant_mat2_backward(Tensor self, Tensor other, Tensor grad_output) -> (Tensor)
+    op_api: [v2.1, newest]
+
   - func: npu_matmul_batch_invariant_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
 

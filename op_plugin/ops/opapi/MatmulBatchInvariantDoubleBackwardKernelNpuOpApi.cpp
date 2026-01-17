@@ -90,12 +90,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_matmul_batch_invariant_double
     if (grad_input_mask[1] && grad_other.defined()) {
         /* self_grad = grad_out * grad_other^T
         Because matmul_mat1_backward(mat1, mat2, grad) calculates mat1_grad = grad * mat2^T, we have: */
-        self_grad = op_api::matmul_mat1_backward(self, grad_other, grad_out);
+        self_grad = op_api::npu_matmul_batch_invariant_mat1_backward(self, grad_other, grad_out);
     }
     if (grad_input_mask[2] && grad_self.defined()) {
         /* other_grad = grad_self^T * grad_out
         Because matmul_mat2_backward(mat1, mat2, grad) calculates mat2_grad = mat1^T * grad, we have: */
-        other_grad = op_api::matmul_mat2_backward(grad_self, other, grad_out);
+        other_grad = op_api::npu_matmul_batch_invariant_mat2_backward(grad_self, other, grad_out);
     }
 
     // strip added dim: (5,1)->(5)
