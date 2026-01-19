@@ -67,7 +67,7 @@ at::Tensor multinomial_top_k_top_p_sample(
 
 tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q,
                                    const c10::optional<at::Tensor> &min_ps, c10::optional<int64_t> eps, c10::optional<bool> is_need_logits,
-                                   int64_t c10::optional<top_k_guess>, c10::optional<double> ks_max, c10::optional<bool> input_is_logits, 
+                                   c10::optional<int64_t> top_k_guess, c10::optional<double> ks_max, c10::optional<bool> input_is_logits, 
                                    c10::optional<c10::string_view> post_sample, c10::optional<at::Generator> generator)
 {
     /*output shape construct*/
