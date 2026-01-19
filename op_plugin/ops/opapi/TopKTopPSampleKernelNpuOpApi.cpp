@@ -65,7 +65,10 @@ at::Tensor multinomial_top_k_top_p_sample(
     return result;
 }
 
-tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, int64_t eps, bool is_need_logits, int64_t top_k_guess, double ks_max, bool input_is_logits, string post_sample, c10::optional<at::Generator> generator)
+tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q,
+                                   const c10::optional<at::Tensor> &min_ps, c10::optional<int64_t> eps, c10::optional<bool> is_need_logits,
+                                   int64_t c10::optional<top_k_guess>, c10::optional<double> ks_max, c10::optional<bool> input_is_logits, 
+                                   c10::optional<c10::string_view> post_sample, c10::optional<at::Generator> generator)
 {
     /*output shape construct*/
     auto logits_size = logits.sizes();
@@ -80,7 +83,8 @@ tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &t
     at::Tensor logits_sort_masked = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
     at::Tensor logits_idx = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kInt));
 
-    if (post_sample == "multiNomial") {
+    std::string post_sample_str = std::string(post_sample);
+    if (post_sample_str == "multiNomial") {
         is_need_sample_result = true;
         EXEC_NPU_CMD(aclnnTopKTopPSampleV2, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, is_need_sample_result, logits_select_idx, logits_top_kp_select, logits_sort_masked, logits_idx);
         at::Tensor multinomial_result = multinomial_top_k_top_p_sample(logits_sort_masked, 1, true, generator);
