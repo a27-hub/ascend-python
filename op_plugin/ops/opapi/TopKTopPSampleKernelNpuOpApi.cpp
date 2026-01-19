@@ -24,33 +24,6 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 using tensor_list = std::tuple<at::Tensor, at::Tensor>;
 
-tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, int64_t eps, bool is_need_logits, int64_t top_k_guess, double ks_max, bool input_is_logits, string post_sample, c10::optional<at::Generator> generator)
-{
-    /*output shape construct*/
-    auto logits_size = logits.sizes();
-    auto batch = logits_size[0];
-    auto voc_size = logits_size[1];
-
-    at::Tensor logits_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, logits.options().dtype(at::kInt));
-    at::Tensor logits_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
-
-    at::Tensor logits_sort_masked = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
-    at::Tensor logits_idx = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kInt));
-
-    if (post_sample == "multiNomial") {
-        EXEC_NPU_CMD(aclnnTopKTopPSampleV2, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, true, logits_select_idx, logits_top_kp_select, logits_sort_masked, logits_idx);
-        at::Tensor multinomial_result = multinomial_top_k_top_p_sample(logits_sort_masked, 1, true, generator);
-        for (uint32_t i = 0; i < batch; ++i) {
-            int64_t real_index = logits_idx[multinomial_result[i]];
-            logits_select_idx[i] = real_index;
-        }
-    }else {
-        EXEC_NPU_CMD(aclnnTopKTopPSampleV2, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, false, logits_select_idx, logits_top_kp_select, logits_sort_masked, logits_idx);
-    }
-
-    return std::tie(logits_select_idx, logits_top_kp_select);
-}
-
 at::Tensor& multinomial_top_k_top_p_sample_op_api(
     at::Tensor& result,
     const at::Tensor& self,
@@ -91,5 +64,37 @@ at::Tensor multinomial_top_k_top_p_sample(
     multinomial_top_k_top_p_sample_op_api(result, self, num_samples, replacement, generator);
     return result;
 }
+
+tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q, const c10::optional<at::Tensor> &min_ps, int64_t eps, bool is_need_logits, int64_t top_k_guess, double ks_max, bool input_is_logits, string post_sample, c10::optional<at::Generator> generator)
+{
+    /*output shape construct*/
+    auto logits_size = logits.sizes();
+    auto batch = logits_size[0];
+    auto voc_size = logits_size[1];
+
+    bool is_need_sample_result = false;
+
+    at::Tensor logits_select_idx = npu_preparation::apply_tensor_without_format({batch, 1}, logits.options().dtype(at::kInt));
+    at::Tensor logits_top_kp_select = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
+
+    at::Tensor logits_sort_masked = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kFloat));
+    at::Tensor logits_idx = npu_preparation::apply_tensor_without_format({batch, voc_size}, logits.options().dtype(at::kInt));
+
+    if (post_sample == "multiNomial") {
+        is_need_sample_result = true;
+        EXEC_NPU_CMD(aclnnTopKTopPSampleV2, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, is_need_sample_result, logits_select_idx, logits_top_kp_select, logits_sort_masked, logits_idx);
+        at::Tensor multinomial_result = multinomial_top_k_top_p_sample(logits_sort_masked, 1, true, generator);
+        for (uint32_t i = 0; i < batch; ++i) {
+            int64_t real_index = logits_idx[multinomial_result[i].item<int64_t>()].item<int64_t>();
+            logits_select_idx[i] = real_index;
+        }
+    }else {
+        EXEC_NPU_CMD(aclnnTopKTopPSampleV2, logits, top_k, top_p, q, min_ps, eps, is_need_logits, top_k_guess, ks_max, input_is_logits, is_need_sample_result, logits_select_idx, logits_top_kp_select, logits_sort_masked, logits_idx);
+    }
+
+    return std::tie(logits_select_idx, logits_top_kp_select);
+}
+
+
 
 }
