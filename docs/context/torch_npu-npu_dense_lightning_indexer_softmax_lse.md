@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把lightning_indexer部分的Softmax的求最大值和求和运算提前来降低算子的显存占用。
+- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低接口的显存占用。
 
 - 计算公式：
 
@@ -24,7 +24,7 @@ $$
 \text{sumIndex}=\text{ReduceSum}\left(\text{exp}\left(res-maxIndex\right)\right)
 $$
 
-maxIndex，sumIndex作为输出传递给接口npu_dense_lightning_indexer_grad_kl_loss作为输入计算Softmax使用。
+$maxIndex$，$sumIndex$作为输出传递给接口npu_dense_lightning_indexer_grad_kl_loss作为输入计算Softmax使用。
 
 ## 函数原型
 
@@ -55,8 +55,9 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 
 
 ## 返回值说明
--   **softmax_max_index**(`Tensor`)：表示softmax计算使用的max值，数据格式支持$ND$，数据类型支持`float`。
--   **softmax_sum_index**(`Tensor`)：表示softmax计算使用的sum值，数据格式支持$ND$，数据类型支持`float`。
+-   **softmax_max_index**(`Tensor`)：表示softmax计算使用的max值，对应公式中的$maxIndex$，数据格式支持$ND$，数据类型支持`float`。
+-   **softmax_sum_index**(`Tensor`)：表示softmax计算使用的sum值，对应公式中的$sumIndex
+$，数据格式支持$ND$，数据类型支持`float`。
 
 ## 约束说明
 shape数值约束：
