@@ -13380,7 +13380,7 @@ _add_torch_npu_docstr(
 npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
 
 功能描述:
-是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把lightning_indexer部分的Softmax的求最大值和求和运算提前来降低算子的显存占用。
+是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低算子的显存占用。
 
 参数说明: 
 query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
