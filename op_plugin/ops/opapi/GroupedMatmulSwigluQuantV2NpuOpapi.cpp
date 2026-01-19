@@ -87,13 +87,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
-                    c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    format_dtype_value(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
-                    c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    format_dtype_value(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
                 "The optional parameter x_dtype and weight_dtype should both be torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None.", OPS_ERROR(ErrCode::VALUE));
@@ -111,7 +111,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
                     || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
                     "The optional parameter dequant_dtype only support torch.float32 or torch.int8, but the actual value is ",
-                    c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
