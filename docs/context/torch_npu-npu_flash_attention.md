@@ -12,7 +12,7 @@
 
 ![](./figures/zh-cn_formulaimage_0000002272066629.png)
 
-该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_flash_attention一致。
+该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_fusion_attention一致。
 
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
@@ -137,7 +137,7 @@ torch_npu.npu_flash_attention(query, key, value, head_num, input_layout, pse=Non
 
 ## 输出说明<a name="zh-cn_topic_0000001742717129_section22231435517"></a>
 
-共7个输出，类型依次为**Tensor、Tensor、Tensor、Tensor、Tensor、Tensor。**
+共6个输出，类型依次为**Tensor、Tensor、Tensor、Tensor、Tensor、Tensor。**
 
 -   第1个输出为`Tensor`，计算公式的最终输出$attention\_out$，数据类型支持`float16`、`bfloat16`、`float32`。
 -   第2个输出为`Tensor`，Softmax计算的Max中间结果，用于反向计算，数据类型支持`float`。
