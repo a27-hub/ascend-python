@@ -29,9 +29,6 @@ constexpr int64_t WEIGHT_LAST_DIM = 2LL;
 constexpr int64_t DIM_3 = 3LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
-// constexpr int64_t FLOAT8_E8M0 = 37LL;
-// constexpr int64_t FLOAT4_E2M1FN_X2 = 296LL;
-// constexpr int64_t FLOAT4_E1M2FN_X2 = 297LL;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
@@ -45,17 +42,6 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
-
-// std::string format_dtype_value(int64_t dtype_value)
-// {
-//     if (dtype_value >= static_cast<int64_t>(c10::ScalarType::Char) && dtype_value <= static_cast<int64_t>(c10::ScalarType::BFloat16)) {
-//         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
-//     }
-//     if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
-//         return c10_npu::CustomDataTypeToString(dtype_value);
-//     }
-//     return std::to_string(dtype_value);
-// }
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
