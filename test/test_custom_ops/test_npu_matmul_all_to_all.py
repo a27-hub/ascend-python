@@ -42,7 +42,7 @@ class TestMatmulAlltoAll(TestCase):
         bias = bias.npu()
 
         # Call NPU operator
-        out = torch_npu.npu_matmul_all_to_all(x1, x2, hcom_name, world_size, bias=bias, all2all_axes=[-1,-2])
+        out = torch_npu.npu_matmul_all_to_all(x1, x2, hcom_name, world_size, bias=bias, all2all_axes=[-1,-2], y_dtype=None)
 
         # Return result
         c2p.put((rank, out.cpu()))
