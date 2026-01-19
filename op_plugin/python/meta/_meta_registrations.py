@@ -4399,18 +4399,6 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     torch._check(quant_dtype == 1 or quant_dtype == TORCH_DTYPE_MAP[torch.float8_e5m2] or quant_dtype == TORCH_DTYPE_MAP[torch.float8_e4m3fn]
         or quant_dtype == torch_npu.float4_e1m2fn_x2 or quant_dtype == torch_npu.float4_e2m1fn_x2,
         lambda: "quant_dtype only supports torch.int8, torch.float8_e5m2, torch.float8_e4m3fn, torch_npu.float4_e1m2fn_x2, torch_npu.float4_e2m1fn_x2 for now, but it is " + npu_dtype_to_str(quant_dtype),
-<<<<<<< HEAD
-        )
-    
-    batch_size = x.size(0)
-    dim_n = 2
-    n = weight[0].size(dim_n)
-    m = x.size(0)
-    k = x.size(1)
-    torch._check(
-        m > 0,
-        lambda: f"The m dim should be greater than 0, but the actual value is {m}",
-=======
         )
     torch._check(dequant_dtype == TORCH_DTYPE_MAP[torch.int8] or dequant_dtype == TORCH_DTYPE_MAP[torch.float32],
         lambda: "dequant_dtype only supports torch.int8, torch.float32 for now, but it is " + npu_dtype_to_str(dequant_dtype),
@@ -4423,7 +4411,6 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     torch._check(
         mDim > 0,
         lambda: f"The m dim should be greater than 0, but the actual value is {mDim}",
->>>>>>> ae97911d531d14875156d92f58029a1a40d413ba
     )
     torch._check(
         n > 0,
