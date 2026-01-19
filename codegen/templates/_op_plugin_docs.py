@@ -1676,7 +1676,7 @@ _add_torch_npu_docstr(
 “Transformer Attention Score”的融合计算, 实现的计算公式如下: 
 $y=Softmax(Mask(scale*(pse+query*key^{T}),atten_mask),keep_prob)$
 $attention=Dropout(y)*value$
-该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_flash_attention一致。
+该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_fusion_attention一致。
 
 接口原型
 torch_npu.npu_flash_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
@@ -1743,7 +1743,7 @@ gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关
 sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
 
 输出说明
-共7个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、int、int、int. 
+共6个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、Tensor、Tensor. 
 第1个输出为Tensor, 计算公式的最终输出attention_out, 数据类型支持float16、bfloat16、float32. 
 第2个输出为Tensor, Softmax计算的Max中间结果, 用于反向计算, 数据类型支持float. 
 第3个输出为Tensor, Softmax计算的Sum中间结果, 用于反向计算, 数据类型支持float. 
