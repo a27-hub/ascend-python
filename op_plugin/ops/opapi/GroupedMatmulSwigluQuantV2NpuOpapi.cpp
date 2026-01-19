@@ -42,11 +42,16 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
-std::string format_dtype_value(int64_t dtype_value) {
+
+std::string format_dtype_value(int64_t dtype_value) 
+{
     if (dtype_value >= static_cast<int64_t>(c10::ScalarType::Char) && dtype_value <= static_cast<int64_t>(c10::ScalarType::BFloat16)) {
         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
     }
-    if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0) || dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) || dtype_value == dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) {
+    if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN
+        || dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)
+        || dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+        || dtype_value == dtype_value == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) {
         return c10_npu::CustomDataTypeToString(dtype_value);
     }
     return std::to_string(dtype_value);
@@ -100,12 +105,12 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
-                    format_dtype_value(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (x_scale_dtype.has_value()) {
         TORCH_CHECK(x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
-                    format_dtype_value(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (dequant_dtype.has_value()) {
         TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
