@@ -4404,11 +4404,11 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     batch_size = x.size(0)
     dim_n = 2
     n = weight[0].size(dim_n)
-    m = x.size(0)
+    mDim = x.size(0)
     k = x.size(1)
     torch._check(
-        m > 0,
-        lambda: f"The m dim should be greater than 0, but the actual value is {m}",
+        mDim > 0,
+        lambda: f"The m dim should be greater than 0, but the actual value is {mDim}",
     )
     torch._check(
         n > 0,

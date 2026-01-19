@@ -45,7 +45,8 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
-std::string format_dtype_value(int64_t dtype_value) {
+std::string format_dtype_value(int64_t dtype_value) 
+{
     if (dtype_value >= static_cast<int64_t>(c10::ScalarType::Char) && dtype_value <= static_cast<int64_t>(c10::ScalarType::BFloat16)) {
         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
     }
@@ -77,7 +78,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 {
     TORCH_CHECK(weight.size() == 1, "The size of weight should be 1, current size is ", weight.size(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(weight_scale.size() == 1, "The size of weight_scale should be 1, current size is ", 
-               weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
+                weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(x.dim() >= DIM_2, "The x dim should greater than 2, but the actual value is ", x.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight_scale[DIM_0].sizes().empty(), "The weight_scale[0] is empty.", OPS_ERROR(ErrCode::PARAM));
 
@@ -113,8 +114,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     if (dequant_dtype.has_value()) {
         TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float) 
                     || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
-                         "The optional parameter dequant_dtype only support torch.float32 or torch.int8, but the actual value is ",
-                         format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    "The optional parameter dequant_dtype only support torch.float32 or torch.int8, but the actual value is ",
+                    format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
