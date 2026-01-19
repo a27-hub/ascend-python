@@ -42,7 +42,7 @@ class TestAlltoAllMatmul(TestCase):
         bias = bias.npu()
 
         # Call NPU operator
-        out, _ = torch_npu.npu_all_to_all_matmul(x1, x2, hcom_name, world_size, bias=bias, all2all_axes=[-2,-1], all2all_out_flag=True)
+        out, _ = torch_npu.npu_all_to_all_matmul(x1, x2, hcom_name, world_size, bias=bias, all2all_axes=[-2,-1], all2all_out_flag=True, y_dtype=None)
 
         # Return result
         c2p.put((rank, out.cpu()))
@@ -116,18 +116,18 @@ class TestAlltoAllMatmul(TestCase):
 
     @skipIfUnsupportMultiNPU(2)
     @SupportedDevices(['Ascend910_95'])
-    def test_npu_matmul_all_to_all(self):
+    def test_npu_all_to_all_matmul(self):
         # 设备卡数
         world_size = 2
         # 初始化dtype，因为matmul_all_to_all的x1、x2和output的dtype一致，bias可以等于x1也可以为float32，这里统一使用bfloat16
         dtype = torch.bfloat16  # Simulate supported dtype
         # 初始化shape
-        m, k, n = 16, 32, 32
+        m, k1, k2, n = 16, 32, 64, 32
         # 初始化format，取-1是因为后续要使用create_common_tensor生成张量，format为-1时，不会做特殊处理。
         data_format = -1
         # 初始化create_common_tensor需要的参数
-        x1_shape = [dtype, data_format, [m, k]]
-        x2_shape = [dtype, data_format, [k, n]]
+        x1_shape = [dtype, data_format, [m, k1]]
+        x2_shape = [dtype, data_format, [k2, n]]
         bias_shape = [dtype, data_format, [n]]
         # 生成tensors (one per NPU)
         x1_list = []
