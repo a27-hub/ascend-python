@@ -87,7 +87,7 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
 
     // pta主要是为了推导output的shape和dtype，如果这里的output_dtype没有传入，则默认是fp32
     int64_t output_default_dtype = static_cast<int64_t>(at::ScalarType::Float);
-    if (y_dtype.has_value()) {
+    if (y_dtype.has_value() && y_dtype.value() != -1) {
         // 这里应该校验output_dtype，但是目前没有bfloat16的类型定义。怕影响正常功能，因此这里不校验了
         output_default_dtype = y_dtype.value();
     }
