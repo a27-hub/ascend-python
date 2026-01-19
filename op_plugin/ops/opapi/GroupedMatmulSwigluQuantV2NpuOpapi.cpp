@@ -29,9 +29,9 @@ constexpr int64_t WEIGHT_LAST_DIM = 2LL;
 constexpr int64_t DIM_3 = 3LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
-constexpr int64_t FLOAT8_E8M0 = 37LL;
-constexpr int64_t FLOAT4_E2M1FN_X2 = 296LL;
-constexpr int64_t FLOAT4_E1M2FN_X2 = 297LL;
+// constexpr int64_t FLOAT8_E8M0 = 37LL;
+// constexpr int64_t FLOAT4_E2M1FN_X2 = 296LL;
+// constexpr int64_t FLOAT4_E1M2FN_X2 = 297LL;
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
@@ -46,16 +46,16 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 
-std::string format_dtype_value(int64_t dtype_value)
-{
-    if (dtype_value >= static_cast<int64_t>(c10::ScalarType::Char) && dtype_value <= static_cast<int64_t>(c10::ScalarType::BFloat16)) {
-        return c10::toString(static_cast<c10::ScalarType>(dtype_value));
-    }
-    if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
-        return c10_npu::CustomDataTypeToString(dtype_value);
-    }
-    return std::to_string(dtype_value);
-}
+// std::string format_dtype_value(int64_t dtype_value)
+// {
+//     if (dtype_value >= static_cast<int64_t>(c10::ScalarType::Char) && dtype_value <= static_cast<int64_t>(c10::ScalarType::BFloat16)) {
+//         return c10::toString(static_cast<c10::ScalarType>(dtype_value));
+//     }
+//     if (dtype_value == FLOAT8_E5M2 || dtype_value == FLOAT8_E4M3FN || dtype_value == FLOAT8_E8M0 || dtype_value == FLOAT4_E2M1FN_X2 || dtype_value == FLOAT4_E1M2FN_X2) {
+//         return c10_npu::CustomDataTypeToString(dtype_value);
+//     }
+//     return std::to_string(dtype_value);
+// }
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
@@ -92,31 +92,31 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
-                    format_dtype_value(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
         TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
                  || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1),
                     "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None, but the actual value is ",
-                    format_dtype_value(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
                 "The optional parameter x_dtype and weight_dtype should both be torch_npu.float4_e2m1fn_x2/torch_npu.float4_e1m2fn_x2 or None.", OPS_ERROR(ErrCode::VALUE));
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter weight_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
-                    format_dtype_value(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(weight_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (x_scale_dtype.has_value()) {
         TORCH_CHECK(x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
-                    format_dtype_value(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (dequant_dtype.has_value()) {
         TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
                     || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char),
                     "The optional parameter dequant_dtype only support torch.float32 or torch.int8, but the actual value is ",
-                    format_dtype_value(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+                    c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
