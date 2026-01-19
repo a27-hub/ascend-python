@@ -65,11 +65,21 @@ at::Tensor multinomial_top_k_top_p_sample(
     return result;
 }
 
-tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q,
-                                   const c10::optional<at::Tensor> &min_ps, c10::optional<int64_t> eps, c10::optional<bool> is_need_logits,
-                                   c10::optional<int64_t> top_k_guess, c10::optional<double> ks_max, c10::optional<bool> input_is_logits, 
-                                   c10::optional<c10::string_view> post_sample, c10::optional<at::Generator> generator)
+tensor_list npu_top_k_top_p_sample(const at::Tensor &logits, const at::Tensor &top_k, const at::Tensor &top_p, const c10::optional<at::Tensor> &q_option,
+                                   const c10::optional<at::Tensor> &min_ps_option, c10::optional<double> eps_option, c10::optional<bool> is_need_logits_option,
+                                   c10::optional<int64_t> top_k_guess_option, c10::optional<int64_t> ks_max_potion, c10::optional<bool> input_is_logits_option, 
+                                   c10::optional<c10::string_view> post_sample_option, c10::optional<at::Generator> generator)
 {
+    const at::Tensor &q = c10::value_or_else(q_option, [] { return at::Tensor(); });
+    const at::Tensor &min_ps = c10::value_or_else(min_ps_option, [] { return at::Tensor(); });
+    double eps = c10::value_or_else(eps_option, [] {return 1e-8;});
+    bool is_need_logits = c10::value_or_else(is_need_logits_option, [] {return false; });
+    int64_t top_k_guess = c10::value_or_else(top_k_guess_option, [] {return 32;});
+    int64_t ks_max = c10::value_or_else(ks_max_potion, [] {return 1024;});
+    bool input_is_logits = c10::value_or_else(input_is_logits_option, [] {return true; });
+    c10::string_view post_sample = post_sample_option.value_or("qSample");
+    // char *post_sample_ptr = const_cast<char *>(post_sample.data());
+
     /*output shape construct*/
     auto logits_size = logits.sizes();
     auto batch = logits_size[0];
