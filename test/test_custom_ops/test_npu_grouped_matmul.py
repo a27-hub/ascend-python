@@ -832,7 +832,7 @@ class TestGroupedMatmul(TestCase):
                                     split_item=split_item)
 
     @SupportedDevices(['Ascend910_95', 'Ascend950'])
-    def test_npu_grouped_matmul_quant_910_95(self): # 量化 单单单
+    def test_npu_grouped_matmul_quant_950(self): # 量化 单单单
         torch.manual_seed(0)
         group_list = torch.tensor([16, ]).to(torch.int64).npu()
         split_item = 2
@@ -900,7 +900,7 @@ class TestGroupedMatmul(TestCase):
         self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
 
     @SupportedDevices(['Ascend910_95', 'Ascend950'])
-    def test_npu_grouped_matmul_quant_910_95_mxfp4(self): # 量化 单单单
+    def test_npu_grouped_matmul_quant_950_mxfp4(self): # 量化 单单单
         torch.manual_seed(0)
         group_list = torch.tensor([16, ]).to(torch.int64).npu()
         split_item = 2
