@@ -641,7 +641,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         importlib.util.find_spec("en_dtypes") is None,
         "Unittest for mxfp8 need torch.version>=2.7 and package ml_dtypes, en_dtypes"
     )
-    @SupportedDevices(['Ascend950'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_moe_init_routing_mxfp8_quant(self):
         bs_list = [32]
         h_list = [7168, 7184]
