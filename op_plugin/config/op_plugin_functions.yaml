@@ -5449,6 +5449,7 @@ custom:
 
   - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, *, Tensor? q=None, Tensor? min_ps=None, float? eps=1e-8, bool? is_need_logits=False, int? top_k_guess=32, int? ks_max=1024, bool? input_is_logits=True, str? post_sample='qSample', Generator? generator=None) -> (Tensor, Tensor)
     op_api: all_version
+    tags: nondeterministic_seeded
 
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
