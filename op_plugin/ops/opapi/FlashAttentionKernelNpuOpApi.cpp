@@ -1449,8 +1449,8 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
             seed = at::empty({1}, options);
             offset = at::empty({1}, options);
         } else {
-           seed = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
-           offset = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
+            seed = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
+            offset = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
         }
     }
 
