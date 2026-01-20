@@ -24,6 +24,9 @@ namespace op_api {
 using namespace at_npu::native;
 const int DIMENSION_3D = 3;
 const int DIMENSION_4D = 4;
+const char* const REQUIRED_CANN_VERSION = "9.0.0";
+const char* const CANN_PRODUCT = "CANN";
+bool is_cann_version_gte_required = IsGteCANNVersion(REQUIRED_CANN_VERSION, CANN_PRODUCT);
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention_grad(
     const at::Tensor &query,
@@ -88,17 +91,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
     c10::string_view layout_str_view = layout.value_or("BSND");
     char *layout_ptr = const_cast<char *>(layout_str_view.data());
 
-    const int64_t sparse_mode_const = sparse_mode.value_or(3);
+    
     const int64_t pre_tokens_const = pre_tokens.value_or(9223372036854775807);
     const int64_t next_tokens_const = next_tokens.value_or(9223372036854775807);
     const bool deterministic_const = true;
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(
-        aclnnSparseFlashAttentionGrad, query, key, value, sparse_indices, d_out,
-        out, softmax_max, softmax_sum, ac_seq_qlen, ac_seq_kvlen, query_rope_const, key_rope_const,
-        scale_value, sparse_block_size, layout_ptr, sparse_mode_const, pre_tokens_const, next_tokens_const,
-        deterministic_const, d_query, d_key, d_value, d_query_rope, d_key_rope);
-
+    if (is_cann_version_gte_required) {
+ 	    const int64_t attention_mode_const = attention_mode.value_or(0);
+ 	    EXEC_NPU_NO_FORMAT_CHECK_CMD(
+ 	        aclnnSparseFlashAttentionGrad, query, key, value, sparse_indices, d_out,
+ 	        out, softmax_max, softmax_sum, ac_seq_qlen, ac_seq_kvlen, query_rope_const, key_rope_const,
+ 	        scale_value, sparse_block_size, layout_ptr, sparse_mode_const, pre_tokens_const, next_tokens_const,
+ 	        deterministic_const, attention_mode_const, d_query, d_key, d_value, d_query_rope, d_key_rope);
+ 	} else {
+ 	            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                    aclnnSparseFlashAttentionGrad, query, key, value, sparse_indices, d_out,
+                    out, softmax_max, softmax_sum, ac_seq_qlen, ac_seq_kvlen, query_rope_const, key_rope_const,
+                    scale_value, sparse_block_size, layout_ptr, sparse_mode_const, pre_tokens_const, next_tokens_const,
+                    deterministic_const, d_query, d_key, d_value, d_query_rope, d_key_rope);
+ 	        }
     return std::make_tuple(d_query, d_key, d_value, d_query_rope, d_key_rope);
 }
 }
