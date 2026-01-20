@@ -245,6 +245,9 @@
   "op_api: torch_npu.npu_transpose_batchmatmul(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_transpose_quant_batchmatmul(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_cross_entropy_loss(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -501,6 +504,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_transpose_batchmatmul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_transpose_quant_batchmatmul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.scatter_update(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {

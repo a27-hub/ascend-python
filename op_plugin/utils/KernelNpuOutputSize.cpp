@@ -1974,7 +1974,7 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(cons
 
     TORCH_CHECK(x1_dim_num == EXPECTED_DIM && x2_dim_num == EXPECTED_DIM,
         "x1 dim is ",
-        input_dim_num,
+        x1_dim_num,
         "but expected is ",
         EXPECTED_DIM,
         "x2 dim is ",
@@ -1982,10 +1982,10 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(cons
         "but expected is ",
         EXPECTED_DIM,
         OPS_ERROR(ErrCode::PARAM));
-
+        
     auto m_dim = x1.size(perm_x1_real[1]);
-    auto batch_dim = x2.size(perm_x1_real[0]);
-    auto n_dim = weight.size(perm_x2_real[2]);
+    auto batch_dim = x1.size(perm_x1_real[0]);
+    auto n_dim = x2.size(perm_x2_real[2]);
 
     output_size = {m_dim, batch_dim, n_dim};
     if (x1_scale_real.defined() || x2_scale_real.defined()) {
