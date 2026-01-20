@@ -85,8 +85,8 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 128, 8).npu()
         x_sum = x_sum.expand(1, 32, 128, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        result = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        self.assertRtolEqual(dq_cpu, result[0].to(torch.float32), prec=0.005, prec16=0.005)
     
     @SupportedDevices(['Ascend910B'])
     def test_npu_flash_attention_with_dropmask(self, device="npu"):
@@ -107,8 +107,8 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 256, 8).npu()
         x_sum = x_sum.expand(1, 32, 256, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        result = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
+        self.assertRtolEqual(dq_cpu, result[0].to(torch.float32), prec=0.005, prec16=0.005)
 
     def custom_op_tensor_exec(self, query, key, value, dy, softmax_max, softmax_sum, attention_in, keep_prob=1.0, numels=0, seed=2, offset=0):
         scale = 0.08838
@@ -133,8 +133,8 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 128, 8).npu()
         x_sum = x_sum.expand(1, 32, 128, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse, dsink = self.custom_op_tensor_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        result = self.custom_op_tensor_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        self.assertRtolEqual(dq_cpu, result[0].to(torch.float32), prec=0.005, prec16=0.005)
     
     @SupportedDevices(['Ascend910B'])
     def test_npu_flash_attention_tensor_with_dropmask(self, device="npu"):
@@ -155,8 +155,8 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 256, 8).npu()
         x_sum = x_sum.expand(1, 32, 256, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse, dsink = self.custom_op_tensor_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        result = self.custom_op_tensor_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
+        self.assertRtolEqual(dq_cpu, result[0].to(torch.float32), prec=0.005, prec16=0.005)
         
     @SupportedDevices(['Ascend910B'])
     def test_npu_flash_attention_tensor_graph(self, device="npu"):
