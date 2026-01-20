@@ -232,6 +232,16 @@ at::Tensor dropout_gen_mask_tensor(const at::Tensor &query, const at::Tensor &ke
     } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
         drop_mask = at::zeros({length}, query.options().dtype(at::kByte));
     }
+    if (get_dropout_status(keep_prob) != DropOutStatus::DROPOUT_NORMAL) {
+        if (is_capture == c10_npu::CaptureStatus::None) {
+            auto options = at::TensorOptions().device(at::kCPU).dtype(at::kLong);
+            seed = at::empty({1}, options);
+            offset = at::empty({1}, options);
+        } else {
+           seed = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
+           offset = npu_preparation::apply_tensor_without_format({1}, query.options().dtype(at::kLong));
+        }
+    }
 
     return drop_mask;
 }
