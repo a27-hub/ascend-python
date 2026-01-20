@@ -13374,6 +13374,7 @@ model(x)
 
 
 _add_torch_npu_docstr(
+<<<<<<< HEAD
     "npu_dense_lightning_indexer_grad_kl_loss",
     """
 接口原型: 
@@ -13395,6 +13396,20 @@ softmax_sum_index（Tensor）：必选参数，数据格式支持ND，数据类�
 scale_value（float）：必选参数，表示缩放系数，数据类型支持FLOAT。
 query_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, Dr)、(T1, N1, Dr)。
 key_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, Dr)、(T2, N2, Dr)。
+=======
+    "npu_dense_lightning_indexer_softmax_lse",
+    """
+接口原型: 
+npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
+
+功能描述:
+是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低算子的显存占用。
+
+参数说明: 
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+>>>>>>> upstream/master
 actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
 actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
 layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
@@ -13403,10 +13418,15 @@ pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1�
 next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
 
 输出说明: 
+<<<<<<< HEAD
 d_query_index（Tensor）：表示query_index的梯度，数据类型支持BFLOAT16、FLOAT16。
 d_key_index（Tensor）：表示key_index的梯度，数据类型支持BFLOAT16、FLOAT16。
 d_weights（Tensor）：表示weights的梯度，数据类型支持BFLOAT16、FLOAT16。
 loss（Tensor）：表示网络正向输出和golden值的差异，数据类型支持FLOAT。
+=======
+softmax_max_index（Tensor）：表示softmax计算使用的max值，数据类型支持FLOAT。
+softmax_sum_index（Tensor）：表示softmax计算使用的sum值，数据类型支持FLOAT。
+>>>>>>> upstream/master
 
 支持版本: 
 PyTorch 2.1
