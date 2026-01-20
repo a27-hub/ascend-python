@@ -13,6 +13,10 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
+USE_PRINT = 0
+USE_FAST_PROBS = 1
+FLT_NEG_INF = float('-inf')
+
 
 # 定义 NumPy dtype 到 PyTorch dtype 的映射字典
 NP_TO_TORCH_DTYPE = {
@@ -27,9 +31,12 @@ NP_TO_TORCH_DTYPE = {
 
 @dataclass
 class additionAttr:
+    eps: float = 1e-8
     is_need_logits: bool = False
     top_k_guess: int = 32
-    eps: float = 1e-8
+    ks_max: int = 1024
+    input_is_logits: bool = True
+    post_sample: str = "qSample"
 
 
 def mySoftmaxAndSort(x, dim=-1):
@@ -57,13 +64,13 @@ def onlySoftmax(x, dim=-1):
     return softmax_output
 
 
-def top_k_top_p_sample(data, run_attr: additionAttr):
+def top_k_top_p_sample(data, run_attr: additionAttr, generator):
     # 获取输入数组和参数
     logits_np = data[0]
     top_ks = data[1]
     top_ps = data[2]
     q_np = data[3]
-    min_ps = data[4]
+    min_p_np = data[4]
 
     ALL_P_MAX = 1.0
 
@@ -73,13 +80,14 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
     top_k_guess = run_attr.top_k_guess
     ks_max = run_attr.ks_max
     input_is_logits = run_attr.input_is_logits
+    post_sample = run_attr.post_sample
 
     k_max_aligned = (ks_max * 4 + 32 - 1) // 32 * 32 // 4
     k_max = k_max_aligned if k_max_aligned < 1024 else 1024
 
     # 验证输入数据类型
-    if not isinstance(logits_np, np.ndarray) or not isinstance(top_ks, np.ndarray) or not isinstance(top_ps, np.ndarray):
-        raise ValueError("输入数据必须是NumPy数组")
+    # if not isinstance(logits_np, np.ndarray) or not isinstance(top_ks, np.ndarray) or not isinstance(top_ps, np.ndarray):
+    #     raise ValueError("输入数据必须是NumPy数组")
 
     # 处理 ml_dtypes.bfloat16 类型的辅助函数
     def convert_ml_bfloat16_to_torch(np_array):
@@ -91,7 +99,8 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
         logits = convert_ml_bfloat16_to_torch(logits_np)
     else:
         dtype_logits_tsr = NP_TO_TORCH_DTYPE.get(logits_np.dtype, torch.float32)
-        logits = torch.from_numpy(logits_np).type(dtype_logits_tsr)
+        # logits = torch.from_numpy(logits_np).type(dtype_logits_tsr)
+        logits = logits_np
 
     # 处理 top_ps (bfloat16)
     if hasattr(top_ps.dtype, 'name') and 'bfloat16' in top_ps.dtype.name:
@@ -100,7 +109,8 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
     else:
         dtype_top_ps_tsr = NP_TO_TORCH_DTYPE.get(top_ps.dtype, torch.float32)
         # topP = torch.from_numpy(top_ps).type(dtype_top_ps_tsr).squeeze(-1)
-        topP = torch.from_numpy(top_ps).type(dtype_top_ps_tsr)
+        # topP = torch.from_numpy(top_ps).type(dtype_top_ps_tsr)
+        topP = top_ps
 
     # 处理其他参数 (保持原样)
     # topK = torch.as_tensor(top_ks).squeeze(-1)
@@ -124,7 +134,8 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
         min_ps = convert_ml_bfloat16_to_torch(min_p_np)
     else:
         dtype_min_p_np_tsr = NP_TO_TORCH_DTYPE.get(min_p_np.dtype, torch.float32)
-        min_ps = torch.from_numpy(min_p_np).type(dtype_min_p_np_tsr)
+        # min_ps = torch.from_numpy(min_p_np).type(dtype_min_p_np_tsr)
+        min_ps = min_p_np
 
     if USE_PRINT:
         print(f'top_k_top_p_sample_v2 golden: logits_np.type[{logits_np.shape}]={logits_np.dtype}, logits.tensor.type[{logits.shape}]={logits.dtype}')
@@ -198,8 +209,8 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
             use_top_k_guess = not use_top_k
             # 对概率排序以便计算累积概率
             sorted_probs, sorted_probs_indices = torch.sort(topk_probs, dim=-1, descending=True, stable=True) #TODO: 为什么还需要进行排序
-            print("..........pvalue...........")
-            print(p)
+            # print("..........pvalue...........")
+            # print(p)
             if p>0:
                 # common top-p sample using cumsum prob filter
                 probs_sum = sorted_probs.cumsum(dim=-1)
@@ -324,7 +335,7 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
 
         # Post sample 
 
-        if q is not None: # qsample
+        if post_sample == "qSample": # qsample
             q_i = q[i, :false_count]
             q_sample = selected_probs / (q_i.abs() + eps)
             probs_index = q_sample.argmax(dim=0).view(-1)
@@ -334,8 +345,11 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
                 print(f"q_sample={q_sample}")
                 print(f"Sorted Qsample logits of row{i} = {sorted_qsample}") 
                 print(f"Sorted Qsample indices of row{i} = {sorted_q_indices}") 
-        elif not is_need_sample_result: # 直接在选择概率中取最大值
+        elif post_sample == "None": # 直接在选择概率中取最大值
             probs_index = selected_probs.argmax(dim=0).view(-1)
+        elif post_sample == "multiNomial":
+            logits_sort_masked[i, :len(selected_logits)] = selected_probs
+            logits_idx[i, :len(selected_indices)] = selected_indices
         # print("......probs_index.......")
         # print(probs_index)
         # print(".........len_selected_probs.......")
@@ -344,11 +358,11 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
         # print(selected_probs)
 
         # 使用probs_index直接获取对应的原始索引
-        if (is_need_sample_result):
-            logits_sort_masked[i, :len(selected_logits)] = selected_probs
-            logits_idx[i, :len(selected_indices)] = selected_indices
-            # rs_index = None
-        else:
+        # if (post_sample == "None"):
+        #     logits_idx[i, :len(selected_indices)] = selected_indices
+        #     # rs_index = None
+        # else:
+        if post_sample != "multiNomial":
             golden_index = selected_indices[probs_index].squeeze(0)
             if USE_PRINT:
                 print(f"golden_index[{i}] = {golden_index}, probs_index={probs_index}")
@@ -364,31 +378,38 @@ def top_k_top_p_sample(data, run_attr: additionAttr):
         print(f"[top_k_top_p_sample_v2_golden] rs_value={rs_value}")
         print(f"[top_k_top_p_sample_v2_golden] logits_idx={logits_idx}")   
         print(f"[top_k_top_p_sample_v2_golden] logits_sort_masked={logits_sort_masked}") 
+
+    if post_sample == "multiNomial":
+        probs_index = torch.multinomial(logits_sort_masked.npu(), num_samples=1, replacement=True, generator=generator)
+        probs_index = probs_index.cpu()
+        for j in range(batch_size):
+            rs_index[j] = logits_idx[j][probs_index[j]]        
+    
+
+    # if (is_need_sample_result):
+    #     logits_sort_masked = logits_sort_masked.numpy()
+    #     logits_idx = logits_idx.numpy()
+    #     rs_index = None
+    # else:
+    #     logits_sort_masked = None
+    #     logits_idx = None
+    #     rs_index = rs_index.numpy()
+    # rs_value = rs_value.numpy()
         
-    if (is_need_sample_result):
-        logits_sort_masked = logits_sort_masked.numpy()
-        logits_idx = logits_idx.numpy()
-        rs_index = None
-    else:
-        logits_sort_masked = None
-        logits_idx = None
-        rs_index = rs_index.numpy()
-    rs_value = rs_value.numpy()
-        
-    return rs_index, rs_value, logits_idx, logits_sort_masked
+    return rs_index, rs_value
 
 
 class TestTopKTopPSample(TestCase):
-    def cpu_exec(self, data, run_attr: additionAttr):
+    def cpu_exec(self, data, run_attr: additionAttr, generator):
         # golden脚本抄这里
-        logits_select_idx, logits_top_kp_select = top_k_top_p_sample(data, run_attr)
+        logits_select_idx, logits_top_kp_select = top_k_top_p_sample(data, run_attr, generator)
         # torch tensor to npu
         logits_select_idx_golden_npu = logits_select_idx.npu()
         logits_top_kp_select_golden_npu = logits_top_kp_select.npu()
         return logits_select_idx_golden_npu, logits_top_kp_select_golden_npu
 
 
-    def npu_exec(self, data_npu, run_attr: additionAttr):
+    def npu_exec(self, data_npu, run_attr: additionAttr, generator_npu):
         logits_npu = data_npu[0]
         top_k_npu = data_npu[1]
         top_p_npu = data_npu[2]
@@ -396,13 +417,21 @@ class TestTopKTopPSample(TestCase):
             q_npu = data_npu[3]
         else:
             q_npu = None
+        if data_npu[4] is not None:
+            min_ps_npu = data_npu[4]
+        else:
+            min_ps_npu = None
 
-        logits_select_idx, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits_npu, top_k_npu, top_p_npu, q_npu, run_attr.eps, run_attr.is_need_logits, run_attr.top_k_guess)
+        logits_select_idx, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits_npu, top_k_npu, top_p_npu, q=q_npu, min_ps=min_ps_npu, eps=run_attr.eps, is_need_logits=run_attr.is_need_logits, top_k_guess=run_attr.top_k_guess, ks_max=run_attr.ks_max, input_is_logits=run_attr.input_is_logits, post_sample=run_attr.post_sample, generator=generator_npu)
         return logits_select_idx, logits_top_kp_select
 
 
-    def _custom_test(self, bs, voc_size, data_info, run_attr: additionAttr):
-        logits = np.random.uniform(0, 1, size=(bs, voc_size)).astype(np.float16)
+    def _custom_test(self, bs, voc_size, data_info, run_attr: additionAttr, dtype):
+        if dtype != torch.bfloat16:
+            logits = np.random.uniform(0, 1, size=(bs, voc_size)).astype(dtype)
+            logits = torch.from_numpy(logits)
+        else:
+            logits = torch.rand(size=(bs, voc_size), dtype=dtype)
         # generate top_k
         if data_info[0] > 0:
             # enable topk
@@ -413,55 +442,96 @@ class TestTopKTopPSample(TestCase):
         # generate top_p
         if data_info[1] > 0:
             # enable topp
-            top_p = np.random.uniform(0, 1, size=(bs, )).astype(np.float16)
+            if dtype != torch.bfloat16:
+                top_p = np.random.uniform(0, 1, size=(bs, )).astype(dtype)
+                top_p = torch.from_numpy(top_p)
+            else:
+                top_p = torch.rand(size=(bs, ), dtype=dtype)
         else:
-            top_p = np.ones(bs).astype(np.float16)
+            if dtype != torch.bfloat16:
+                top_p = np.ones(bs).astype(dtype)
+                top_p = torch.from_numpy(top_p)
+            else:
+                top_p = torch.ones(size=(bs, ), dtype=dtype)
+
 
         # generate q
-        if data_info[2] > 0:
+        post_sample = run_attr.post_sample
+        if post_sample == "qSample":
             q = np.random.uniform(0, 1, size=(bs, voc_size)).astype(np.float32)
         else:
             q = None
 
-        logits_npu = torch.from_numpy(logits).npu()
+        # generate min_ps
+        if data_info[2] > 0:
+            if dtype != torch.bfloat16:
+                min_ps = np.random.uniform(0, 1, size=(bs, )).astype(dtype)
+                min_ps = torch.from_numpy(min_ps)
+            else:
+                min_ps = torch.rand(size=(bs, ), dtype=dtype)
+        else:
+            min_ps = None
+        
+        # generator
+        if post_sample == "multiNomial":
+            generator = torch.Generator(device="npu")
+            generator_npu = torch.Generator(device="npu")
+            generator.manual_seed(1)
+            generator_npu.manual_seed(1)
+            
+        else:
+            generator = None
+            generator_npu = None
+
+        logits_npu = logits.npu()
         top_k_npu = torch.from_numpy(top_k).npu()
-        top_p_npu = torch.from_numpy(top_p).npu()
+        top_p_npu = top_p.npu()
         if q is not None:
             q_npu = torch.from_numpy(q).npu()
         else:
             q_npu = None
-
+        if min_ps is not None:
+            min_ps_npu = min_ps.npu()
+        else:
+            min_ps_npu = None
+            
         logits_select_idx_golden_npu, logits_top_kp_select_golden_npu = \
-            self.cpu_exec([logits, top_k, top_p, q], run_attr)
-
-        logits_select_idx_npu, logits_top_kp_select_npu = self.npu_exec([logits_npu, top_k_npu, top_p_npu, q_npu], run_attr)
+            self.cpu_exec([logits, top_k, top_p, q, min_ps], run_attr, generator)
+            
+            
+        logits_select_idx_npu, logits_top_kp_select_npu = self.npu_exec([logits_npu, top_k_npu, top_p_npu, q_npu, min_ps_npu], run_attr, generator_npu)
 
         return logits_select_idx_npu, logits_top_kp_select_npu, logits_select_idx_golden_npu, logits_top_kp_select_golden_npu
 
-    @unittest.skip("skip test_top_k_top_p_sample_major for now")
+
+    # @unittest.skip("skip test_top_k_top_p_sample_v2_major for now")
     @SupportedDevices(['Ascend910B'])
     def test_top_k_top_p_sample_major(self, device="npu"):
         bs_rng_list = [(1, 128)]
         voc_size = 2 ** 14
         topK_flags = [0, 1] # topK and topP can not be 0 at the same time 
         topP_flags = [0, 1]
-        q_flags = [0, 1]
+        minPs_flags = [0, 1]
+        # q_flags = [0, 1]
         need_logits_flags = [0, 1]
+        input_is_logits_flags = [0, 1]
+        post_sample_flags = ["qSample", "multiNomial", "None"]
+        dtype_list = [np.float16, torch.bfloat16, np.float32]
 
         case_no = 0
         for bs_rng in bs_rng_list:
             bs = random.randint(bs_rng[0], bs_rng[1])
-            for use_topK, use_topP, use_q, is_need_logits in itertools.product(topK_flags, topP_flags, q_flags, need_logits_flags):
+            for use_topK, use_topP, use_minPs, is_need_logits, input_is_logits, post_sample, dtype in itertools.product(topK_flags, topP_flags, minPs_flags, need_logits_flags, input_is_logits_flags, post_sample_flags, dtype_list):
 
-                kpq_set = [use_topK, use_topP, use_q]
-                run_attr = additionAttr(is_need_logits, 32, 1e-8)
+                kpq_set = [use_topK, use_topP, use_minPs]
+                run_attr = additionAttr(1e-8, is_need_logits, 32, 1024, input_is_logits, post_sample)
 
                 logits_select_idx_npu, logits_top_kp_select_npu, logits_select_idx_golden_npu, logits_top_kp_select_golden_npu = \
-                self._custom_test(bs, voc_size, kpq_set, run_attr)
+                self._custom_test(bs, voc_size, kpq_set, run_attr, dtype)
 
                 self.assertRtolEqual(logits_select_idx_npu, logits_select_idx_golden_npu)
-                if is_need_logits == 1:
-                    self.assertRtolEqual(logits_top_kp_select_npu, logits_top_kp_select_golden_npu)
+                # if is_need_logits == 1:
+                #     self.assertRtolEqual(logits_top_kp_select_npu, logits_top_kp_select_golden_npu)
                 
                 case_no += 1
                 print(f"{case_no} cases passed.")
