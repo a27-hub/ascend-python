@@ -6724,7 +6724,7 @@ PyTorch 2.6.0+
 
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
+昇腾950 AI处理器
 
 调用示例:
 单算子模式调用
@@ -6805,7 +6805,7 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
 H1范围仅支持[1, 65535]
 worldSize仅支持2,4,8,16
 - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：支持2、4、8卡
-- 昇腾910_95 AI处理器：支持2,4,8,16卡
+- 昇腾950 AI处理器：支持2,4,8,16卡
 通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
 不支持跨超节点通信，只支持超节点内。
 
@@ -6814,7 +6814,7 @@ PyTorch 2.6.0+
 
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
+昇腾950 AI处理器
 
 调用示例:
 单算子模式调用
@@ -6888,7 +6888,7 @@ PyTorch 2.6.0+
 
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
+昇腾950 AI处理器
 
 调用示例:
 单算子模式调用
@@ -12221,7 +12221,7 @@ class TestMoeUpdateExpert(TestCase):
             self.balanced_active_mask.append(torch.from_numpy(balanced_active_mask).to(torch.bool))        
 
 
-    @SupportedDevices(['Ascend910_'])
+    @SupportedDevices(['Ascend910_', 'Ascend950'])
     def test_npu_moe_update_expert(self):
         ctx = mp.get_context('spawn')
         c2p = ctx.Queue(self.world_size)

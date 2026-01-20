@@ -45,7 +45,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
 
         return quantOutput, quantScaleOutput
 
-    def GMM_Swiglu_quant_910_95(self, i, x: torch.Tensor, weight: torch.Tensor, weightScale: torch.Tensor, xScale: torch.Tensor, m: int):
+    def GMM_Swiglu_quant_950(self, i, x: torch.Tensor, weight: torch.Tensor, weightScale: torch.Tensor, xScale: torch.Tensor, m: int):
         """
         执行量化的 GMM（通用矩阵乘法）操作，并使用 SwiGLU 激活函数。
 
@@ -140,7 +140,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             start_idx += tempV  # 更新起始索引以处理下一组
         return quantOutput, quantScaleOutput
 
-    def process_groups_910_95(self, x: torch.Tensor, weight: torch.Tensor, weightScale: torch.Tensor, xScale: torch.Tensor, groupList: torch.Tensor):
+    def process_groups_950(self, x: torch.Tensor, weight: torch.Tensor, weightScale: torch.Tensor, xScale: torch.Tensor, groupList: torch.Tensor):
         """
         按组处理输入数据，并调用 GMM_Swiglu_quant 函数进行量化计算。
 
@@ -170,7 +170,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             if (tempV > 0):
             # 调用 GMM_Swiglu_quant 处理当前组
                 quantOutput[start_idx:start_idx + tempV], quantScaleOutput[start_idx:start_idx + tempV] = \
-                    self.GMM_Swiglu_quant_910_95(i, x[start_idx:start_idx + tempV], 
+                    self.GMM_Swiglu_quant_950(i, x[start_idx:start_idx + tempV], 
                                     weight[i], 
                                     weightScale[i], 
                                     xScale[start_idx:start_idx + tempV], 
@@ -222,7 +222,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self.assertRtolEqual(output1_valid, output1_npu_valid.cpu())
 
     @unittest.skip("skip case")
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_grouped_matmul_swiglu_quant_mxfp8(self, device="npu"):
         # 生成数据
         E = 2
@@ -231,7 +231,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         N = 4096
         transpose = False
         x, weight, weightScale, xScale, groupList = self.gen_input_data_91095(E, M, K, N, transpose)
-        output0, output1 = self.process_groups_910_95(x, weight, weightScale, xScale, groupList)
+        output0, output1 = self.process_groups_950(x, weight, weightScale, xScale, groupList)
         # 注：有效数据截至到groupList[-1] 即output0[:groupList[-1],:],output0[:groupList[-1]]
         output0_valid = output0[:groupList[-1], :]
         output1_valid = output1[:groupList[-1]]
@@ -243,7 +243,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self.assertRtolEqual(output1_valid, output1_npu_valid.cpu())
     
     @unittest.skip("skip case")
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_grouped_matmul_swiglu_quant_mxfp4(self, device="npu"):
         # 生成数据
         E = 2
@@ -252,7 +252,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         N = 896
         transpose = False
         x, weight, weightScale, xScale, groupList = self.gen_input_data_91095_mxfp4(E, M, K, N, transpose)
-        output0, output1 = self.process_groups_910_95(x, weight, weightScale, xScale, groupList)
+        output0, output1 = self.process_groups_950(x, weight, weightScale, xScale, groupList)
         # 注：有效数据截至到groupList[-1] 即output0[:groupList[-1],:],output0[:groupList[-1]]
         output0_valid = output0[:groupList[-1], :]
         output1_valid = output1[:groupList[-1]]
