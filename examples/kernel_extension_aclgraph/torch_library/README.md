@@ -151,6 +151,7 @@
 
 
 - 样例执行
+
   参考[表格](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/BishengCompiler/atlas_bisheng_10_0010.html#ZH-CN_TOPIC_0000002502723142__table547713114286)，根据实际昇腾AI处理器架构修改[setup.py](./setup.py)中的--npu-arch参数，并执行如下命令：
   ```bash
   python setup.py bdist_wheel
