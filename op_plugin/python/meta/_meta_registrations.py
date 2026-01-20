@@ -3113,7 +3113,8 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
     is_a8w8_int = x1_dtype is None and x2_dtype is None and x1.dtype == torch.int8 and x2.dtype == torch.int8
     if is_a8w8_int:
         torch._check(
-            (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0),
+            (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0) or \
+            (group_sizes[0] == 1 and group_sizes[1] == 128 and group_sizes[2] == 128),
             lambda: "when the dtype of input is int8, group_sizes's value must be 0, please check group_sizes's value" + ops_error(ErrCode.VALUE),
         )
     if pertoken_scale is None:
@@ -3121,7 +3122,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
             group_sizes[0] == 0 or group_sizes[1] == 0 or group_sizes[2] == 0,
             lambda: "when the pertoken_scale is None, group_sizes's value must be 0, please check group_sizes's value" + ops_error(ErrCode.VALUE),
         )
-    group_input_dtype_lst = [torch.uint8, torch.bits8, torch.float8_e4m3fn, torch.float8_e5m2]
+    group_input_dtype_lst = [torch.uint8, torch.bits8, torch.float8_e4m3fn, torch.float8_e5m2, torch.uint8]
     group_scale_dtype_lst = [torch.float32]
     has_group = (group_sizes[0] > 1 or group_sizes[1] > 1 or group_sizes[2] > 1)
     if group_sizes is not None and has_group:
