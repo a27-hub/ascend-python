@@ -34,6 +34,11 @@ def matmul_backward_meta(grad, self, other, mask):
     return (torch.empty_like(self), torch.empty_like(other))
 
 
+@impl(m, "repeat_interleave_backward_int")
+def repeat_interleave_backward_int_meta(grad, self, repeats, dim=None):
+    return torch.empty_like(self)
+
+
 @impl(m, "npu_incre_flash_attention")
 def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, atten_mask=None, pse_shift=None, actual_seq_lengths=None,
                                       antiquant_scale=None, antiquant_offset=None, block_table=None,
