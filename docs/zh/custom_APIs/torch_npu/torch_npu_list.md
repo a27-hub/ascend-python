@@ -749,6 +749,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>该接口实现了npu_lightning_indexer的softmax求最大值和求和计算，是dense_lightning_indexer_grad_kl_loss的前置接口。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_dense_lightning_indexer_grad_kl_loss.md">torch_npu.npu_dense_lightning_indexer_grad_kl_loss</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>该接口实现了npu_lightning_indexer的反向功能(dense)，并融合了Loss的计算。</p>
+</td>
+</tr>
 </tbody>
 </table>
 
