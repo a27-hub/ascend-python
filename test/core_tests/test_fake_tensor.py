@@ -4365,8 +4365,8 @@ class TestNpuRepeatInterleave(TestCase):
             output_fake_tensor.backward(grad_fake_tensor)
 
             self.assertEqual(x.shape, x_fake_tensor.shape)
-            self.assertEqual(x.dtype, x_fake_tensor.dtype)
-            
+            self.assertEqual(x.dtype, x_fake_tensor.dtype)            
+
 
 if __name__ == "__main__":
     run_tests()
