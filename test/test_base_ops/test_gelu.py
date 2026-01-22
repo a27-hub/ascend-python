@@ -4,6 +4,7 @@ import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion
 
 
 class TestGelu(TestCase):
@@ -75,7 +76,48 @@ class TestGelu(TestCase):
         npu_output = self.npu_op_exec_fp16(npu_input1)
         self.assertRtolEqual(cpu_output, npu_output)
 
+    def get_golden(self, input_self_tensor, approximate="none"):
+        output = torch.nn.functional.gelu(input_self_tensor, approximate=approximate)
+        return output
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_float32_none(self):
+        shape = [100, 400]
+        mode = "none"
+        input_self_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        output = torch.nn.functional.gelu(input_self_tensor, approximate=mode)
+        golden = self.get_golden(input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_float32_tanh(self):
+        shape = [512, 1024]
+        mode = "tanh"
+        input_self_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        output = torch.nn.functional.gelu(input_self_tensor, approximate=mode)
+        golden = self.get_golden(input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_float16_none(self):
+        shape = [200, 300]
+        mode = "none"
+        input_self_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        output = torch.nn.functional.gelu(input_self_tensor, approximate=mode)
+        golden = self.get_golden(input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_float16_tanh(self):
+        shape = [128, 256]
+        mode = "tanh"
+        input_self_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        output = torch.nn.functional.gelu(input_self_tensor, approximate=mode)
+        golden = self.get_golden(input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
 
 if __name__ == "__main__":
     np.random.seed(1234)
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()
