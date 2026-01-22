@@ -4368,5 +4368,14 @@ class TestNpuRepeatInterleave(TestCase):
             self.assertEqual(x.dtype, x_fake_tensor.dtype)
             
 
+class TestLogSpace(TestCase):
+    def test_logspace_fake_tensor(self):
+        with FakeTensorMode():
+            out = torch.logspace(start=0, end=3, steps=10, base=10.0, device="npu", dtype=torch.float32)
+
+            self.assertEqual(out.shape, (10,))
+            self.assertEqual(out.dtype, torch.float32)
+
+
 if __name__ == "__main__":
     run_tests()
