@@ -17,6 +17,7 @@ import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion
 
 
 class TestLayerNorm(TestCase):
@@ -53,6 +54,7 @@ class TestLayerNorm(TestCase):
         grad_weight = m.weight.grad.cpu().detach().numpy()
         return grad_output, grad_weight, grad_bias
 
+    @SkipIfNotGteCANNVersion("9.0.0")
     def test_layernorm_shape_format(self, device="npu"):
         shape_format = [
             [np.float32, 3, [1, 32, 11, 112]],
@@ -89,4 +91,5 @@ class TestLayerNorm(TestCase):
 
 if __name__ == "__main__":
     np.random.seed(20)
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()

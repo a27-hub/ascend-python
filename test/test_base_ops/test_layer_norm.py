@@ -5,6 +5,7 @@ import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion
 
 
 class TestLayerNorm(TestCase):
@@ -35,6 +36,7 @@ class TestLayerNorm(TestCase):
         output = output.to("cpu")
         return output
 
+    @SkipIfNotGteCANNVersion("9.0.0")
     def test_layer_norm_shape_format(self):
         shape_format = [
             [np.float32, 0, (64, 10)],
@@ -51,6 +53,7 @@ class TestLayerNorm(TestCase):
             npu_output = self.npu_op_exec(npu_input)
             self.assertRtolEqual(cpu_output.detach().numpy(), npu_output.detach().numpy())
 
+    @SkipIfNotGteCANNVersion("9.0.0")
     def test_layer_norm_float16_format(self):
         shape_format = [
             [np.float16, 0, (64, 10)],
@@ -69,6 +72,7 @@ class TestLayerNorm(TestCase):
             cpu_output = cpu_output.to(torch.float16)
             self.assertRtolEqual(cpu_output.detach().numpy(), npu_output.detach().numpy())
 
+    @SkipIfNotGteCANNVersion("9.0.0")
     def test_layer_norm_case_in_trocr(self):
         cpu_input = torch.rand(10, 1, 1024).uniform_(-22., 66.).half()
         cpu_weight = torch.rand(1024).uniform_(0.5, 1.1).half()
@@ -91,6 +95,7 @@ class TestLayerNorm(TestCase):
                                     eps, torch.backends.cudnn.enabled)
         self.assertRtolEqual(cpu_out2, npu_out2.cpu())
 
+    @SkipIfNotGteCANNVersion("9.0.0")
     def test_layer_norm_abnormal_input(self):
         npu_input = torch.randn(10, 5).npu()
         with self.assertRaises(RuntimeError) as cm:
@@ -100,4 +105,5 @@ class TestLayerNorm(TestCase):
 
 
 if __name__ == "__main__":
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()
