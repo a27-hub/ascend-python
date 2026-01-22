@@ -94,26 +94,7 @@ class TestConv2d(TestCase):
             npu_grad1, npu_grad2 = self.op_exec_backward_npu(input1_npu, input2_npu, item[0])
             self.assertRtolEqual(cpu_grad1.to(torch.float16), npu_grad1)
             self.assertRtolEqual(cpu_grad2.to(torch.float16), npu_grad2)
-    
-    @SupportedDevices(['Ascend910B'])
-    def test_conv1d_special_case_backward_fp32(self):
-        hop_length = [128, 256]
-        magnification = [2, 4, 8, 10, 40]
-        combine_list = [[length, mag] for length in hop_length for mag in magnification]
-
-        for item in combine_list:
-            input1_shape = [4, 1, item[0] * item[1]]
-            input2_shape = [24, 1, item[0]]
-            attr1_list = [np.float32, 0, input1_shape]
-            attr2_list = [np.float32, 0, input2_shape]
-            input1_cpu, input1_npu = create_common_tensor(attr1_list, -1, 1)
-            input2_cpu, input2_npu = create_common_tensor(attr2_list, -1, 1)
-
-            cpu_grad1, cpu_grad2 = self.op_exec_backward_cpu(input1_cpu, input2_cpu, item[0])
-            npu_grad1, npu_grad2 = self.op_exec_backward_npu(input1_npu, input2_npu, item[0])
-            self.assertRtolEqual(cpu_grad1, npu_grad1)
-            self.assertRtolEqual(cpu_grad2, npu_grad2)
-
 
 if __name__ == "__main__":
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()

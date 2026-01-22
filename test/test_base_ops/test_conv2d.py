@@ -124,4 +124,5 @@ class TestConv2d(TestCase):
 
 
 if __name__ == "__main__":
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()
