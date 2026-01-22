@@ -73,8 +73,10 @@ tensor_list3 native_layer_norm_backward(const at::Tensor &grad_out, const at::Te
                                            LEGACY_CONTIGUOUS_MEMORY_FORMAT);
     }
     // 调用HostAPI接口
+    static auto gelu_sc = at_npu::native::env::CheckStrongConsistency();
     EXEC_NPU_CMD(aclnnLayerNormBackward, grad_out, input, normalized_shape, mean_refined, variance_refined, weight_refined,
                  bias_refined, output_mask, grad_input, grad_weight, grad_bias);
+
     return std::tie(grad_input, grad_weight, grad_bias);
 }
 
