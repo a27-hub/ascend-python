@@ -1052,6 +1052,12 @@ def ffn_worker_scheduler_meta(self, *, sync_group_size=1, execute_mode=0):
     return torch.empty_like(self)
 
 
+@impl(m, "logspace")
+def logspace_meta(start, end, steps, base=10.0, *, dtype=None, device=None):
+    return torch.empty_like((steps,), dtype=dtype, device='meta')
+    
+
+
 @impl(m, "attention_worker_scheduler")
 def attention_worker_scheduler_meta(self):
     return torch.empty_like(self)
