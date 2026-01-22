@@ -123,6 +123,10 @@ at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tens
 {
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout_backward(grad_output, mask, scale));
 
+    std::cout<<"scale: "<<scale<<std::endl;
+    TORCH_CHECK(scale == 0 || scale >= 1, "native_dropout_backward scale has to be 0 or greater than 1, but got ", scale,
+                OPS_ERROR(ErrCode::VALUE));
+                
     double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {
         return grad_output;
