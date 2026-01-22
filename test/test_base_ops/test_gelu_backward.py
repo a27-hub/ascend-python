@@ -4,6 +4,7 @@ import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SkipIfNotGteCANNVersion
 
 
 class TestGeluBackward(TestCase):
@@ -58,7 +59,52 @@ class TestGeluBackward(TestCase):
         npu_output = self.npu_op_exec(input1)
         self.assertRtolEqual(cpu_output, npu_output)
 
+    def get_golden(self, grad_tensor, input_self_tensor, approximate="none"):
+        output = torch.ops.aten.gelu_backward(grad_tensor, input_self_tensor, approximate=approximate)
+        return output
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_backward_float32_none(self):
+        shape = [100, 400]
+        mode = "none"
+        input_self_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        grad_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        output = torch.ops.aten.gelu_backward(grad_tensor, input_self_tensor, approximate=mode)
+        golden = self.get_golden(grad_tensor.cpu(), input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_backward_float32_tanh(self):
+        shape = [5, 10, 100]
+        mode = "none"
+        input_self_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        grad_tensor = torch.rand(shape, dtype=torch.float32).npu()
+        output = torch.ops.aten.gelu_backward(grad_tensor, input_self_tensor, approximate=mode)
+        golden = self.get_golden(grad_tensor.cpu(), input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_backward_float16_none(self):
+        shape = [4, 4]
+        mode = "none"
+        input_self_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        grad_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        output = torch.ops.aten.gelu_backward(grad_tensor, input_self_tensor, approximate=mode)
+        golden = self.get_golden(grad_tensor.cpu(), input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
+    @SkipIfNotGteCANNVersion("9.0.0")
+    def test_gelu_backward_float16_tanh(self):
+        shape = [4, 3, 1, 1]
+        mode = "tanh"
+        input_self_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        grad_tensor = torch.rand(shape, dtype=torch.float16).npu()
+        output = torch.ops.aten.gelu_backward(grad_tensor, input_self_tensor, approximate=mode)
+        golden = self.get_golden(grad_tensor.cpu(), input_self_tensor.cpu(), mode)
+        self.assertRtolEqual(output, golden)
+
 
 if __name__ == "__main__":
     np.random.seed(20)
+    torch_npu.npu.use_consistent_algorithms(True)
     run_tests()
