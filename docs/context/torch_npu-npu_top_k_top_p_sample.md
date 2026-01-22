@@ -272,7 +272,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     - 若该参数取值为True，输入的logits中的数值不能确保在[0,1]区间内。由于logits未进行归一化，在进行top_p采样等后续步骤之前，先对输入进行softmax处理。logits_top_kp_select中的无效logits默认值defLogit=-inf。
     - 若该参数取值为False，输入logits中的所有元素都确保在[0,1]区间内。输入logits已经归一化，为避免梯度平滑化，top_p采样等后续步骤直接使用前级处理的结果。logits_top_kp_select中的无效logits默认值defLogit=0。
 -   **post_sample**（`int`）：可选参数，该参数控制topk-topp采样之后的后继处理策略。第一优先级：判断q是否为None，如果q=None，则无视参数提供的post_sample内容，强制后继处理模式一概设为None。参数合法值允许：
-    - qSample(默认值)：倾向于使用QSample采样（为了不影响现网已有的调用）。
+    - qSample(默认值)：倾向于使用QSample采样。
     - multinomial：使用multinomial采样（多项式随机抽样），此时入参中的q矩阵将被解析为随机种子，执行multinomial-gather。
     - None：显式强调不使用任何后继处理，此时传入任何q!=None都被无视。
 -   **generator**（`int`）：可选参数，MultiNomial使用的随机数生成器，必须指定seed才能传入。
