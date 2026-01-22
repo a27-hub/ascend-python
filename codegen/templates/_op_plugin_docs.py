@@ -11977,7 +11977,7 @@ _add_torch_npu_docstr(
     "npu_top_k_top_p",
     """
 接口原型: 
-torch_npu.npu_top_k_top_p(logits, p, k) -> torch.Tensor
+torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
 
 功能描述: 
 对原始输入logits进行top-k和top-p采样过滤
