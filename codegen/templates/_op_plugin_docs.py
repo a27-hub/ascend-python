@@ -12763,8 +12763,6 @@ A200I A2 Box 异构组件
 >>> post_sample = 'multiNomial'
 >>> if post_sample == "multiNomial":
 >>>     generator_npu = torch.Generator(device="npu")
->>> if post_sample == "multiNomial":
->>>     generator_npu = torch.Generator(device="npu")
 >>>     generator_npu.manual_seed(1)
 >>> else:
 >>>     generator_npu = None
