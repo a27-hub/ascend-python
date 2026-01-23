@@ -12499,7 +12499,6 @@ A200I A2 Box 异构组件
 )
 
 
-
 _add_torch_npu_docstr(
     "npu_moe_token_permute",
     """
