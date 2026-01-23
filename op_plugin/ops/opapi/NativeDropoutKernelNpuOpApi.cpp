@@ -136,6 +136,8 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, doubl
 at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tensor& mask, double scale)
 {
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout_backward(grad_output, mask, scale));
+    TORCH_CHECK(scale == 0 || scale >= 1, "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ", scale,
+                OPS_ERROR(ErrCode::VALUE));
 
     double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {
