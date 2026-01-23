@@ -305,7 +305,6 @@ post_sample = 'multiNomial'
 if post_sample == "multiNomial":
     generator_npu = torch.Generator(device="npu")
     generator_npu.manual_seed(1)
-    
 else:
     generator_npu = None
 npu_out_index, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits, top_ks, top_ps, q=q, min_ps=min_ps, eps=1e-8, is_need_logits=True, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample=post_sample, generator=generator_npu)

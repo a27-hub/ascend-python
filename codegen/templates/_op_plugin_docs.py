@@ -2475,7 +2475,7 @@ dim (Int) - 待降低维度。
 keepdim (Bool，默认值为False) - 输出张量是否保留dim。
 输出说明
 values (Tensor) - 输入张量中的最大值。
-indices (Tensor) - 输入张量中最大值的indices。
+indices (Tensor) - 输入张量中最大值的index。
 示例
 >>> input = torch.randn(2, 2, 2, 2, dtype = torch.float32).npu()
 >>> input
@@ -2520,10 +2520,8 @@ dim (Int) - 待降低维度。
 keepdim (Bool) - 输出张量是否保留dim。
 输出说明
 values (Tensor) - 输入张量中的最小值。
-indices (Tensor) - 输入张量中最小值的indices。
+indices (Tensor) - 输入张量中最小值的index。
 示例
->>> import torch
->>> import torch_npu
 >>> input = torch.randn(2, 2, 2, 2, dtype = torch.float32).npu()
 >>> input
 tensor([[[[-0.9909, -0.2369],
@@ -2722,10 +2720,8 @@ scores_threshold (Tensor) - 0D浮点张量，表示决定何时删除框的分�
 pad_to_max_output_size (Bool，默认值为False) - 如果为True，则输出的selected_indices将填充为max_output_size长度。
 输出说明
 selected_indices (Tensor) - shape为[M]的1D整数张量，表示从boxes张量中选定的index，其中M <= max_output_size。
-valid_outputs (Tensor) - 0D整数张量，表示selected_indices中有效元素的数量，有效元素首先出现。
+valid_outputs (Tensor) - 0D整数张量，表示selected_indices中有效元素的数量，有效元素首先呈现。
 示例
->>> import torch
->>> import torch_npu
 >>> boxes=torch.randn(100,4).npu()
 >>> scores=torch.randn(100).npu()
 >>> boxes.uniform_(0,100)
@@ -2926,7 +2922,7 @@ torch_npu.npu_random_choice_with_mask(x, count=256, seed=0, seed2=0) -> (Tensor,
 x (Tensor) - 输入张量。
 count (Int，默认值为256) - 输出计数。如果值为0，则输出所有非零元素。
 seed (Int，默认值为0) - 数据类型：int32，int64。
-seed2 (Int，默认值为0) - 数据类型：int32，int64。
+seed2 (Int，默认值为2) - 数据类型：int32，int64。
 输出说明
 y (Tensor) - 2D张量, 非零元素的index。
 mask (Tensor) - 1D张量, 确定对应index是否有效。
@@ -3243,9 +3239,6 @@ mode (Int，默认值为0) - 计算模式，取值为0或1。0表示IoU，1表�
 v_threshold (Float，可选，默认值为0.0) - provide condition relaxation for intersection calculation.
 e_threshold (Float，可选，默认值为0.0) - provide condition relaxation for intersection calculation.
 示例
->>> import torch
->>> import torch_npu
->>> import numpy as np
 >>> a=np.random.uniform(0,1,(2,2,5)).astype(np.float16)
 >>> b=np.random.uniform(0,1,(2,3,5)).astype(np.float16)
 >>> box1=torch.from_numpy(a).to("npu")
@@ -3273,9 +3266,6 @@ self (Tensor) -梯度增量数据，shape为(B, 5, N)数据类型为float32的3D
 query_boxes (Tensor) - 标注框，shape为(B, 5, K) 数据类型为float32的3D张量。
 trans (Bool，默认值为False) - 值为True表示“xyxyt”，值为False表示“xywht”。
 示例
->>> import torch
->>> import torch_npu
->>> import numpy as np
 >>> a=np.random.uniform(0,1,(1,3,5)).astype(np.float16)
 >>> b=np.random.uniform(0,1,(1,2,5)).astype(np.float16)
 >>> box1=torch.from_numpy(a).to("npu")
@@ -3409,7 +3399,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_silu(self) -> Tensor
 功能描述
-计算self的Swish。Swish是一种激活函数，计算公式为' x * sigmoid(x) '。
+计算self的Swish。
 
 参数说明
 self (Tensor) - 数据类型：float16、float32
@@ -6678,6 +6668,290 @@ single op output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694, 
 graph output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694,  0.1142, -2.2266]],
         [[-0.9595, -0.9609, -0.6602,  ...,  0.7959,  1.7920,  0.0783]]],
        device='npu:0', dtype=torch.float16) torch.Size([2, 1, 5120])
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_matmul_all_to_all",
+    """
+功能描述:
+算子功能: 该融合算子完成Matmul计算、Permute(保证通信后地址连续)和AlltoAll通信的融合，先计算后通信。
+计算公式: 
+假设x1的shape为(BS, H1), x2的shape为(H1, H2)
+  computeOut = x1 @ x2 + bias 
+  permutedOut = computeOut.view(BS, worldSize, H2/worldSize).permute(1, 0, 2) 
+  output = AlltoAll(permutedOut).view(worldSize*BS, H2/worldSize)
+
+接口原型:
+torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None) -> Tensor
+    
+参数说明:
+输入说明:
+x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float32, 数据格式支持ND.
+
+输出说明:
+y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
+
+属性说明:
+hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
+world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2], 表示将输入由`(BS, H2)`转为`(BS * worldSize, H2 / worldSize)`。
+
+约束说明:
+默认支持确定性计算
+右矩阵和输出矩阵的H2必须整除worldSize
+H1范围仅支持[1, 65535]
+worldSize仅支持2,4,8,16
+x1、x2的数据类型必须一致
+bias的数据类型可以为x1 x2的数据类型，也可以为float32
+通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
+不支持跨超节点通信，只支持超节点内。
+
+支持的PyTorch版本
+PyTorch 2.6.0+ 
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+昇腾910_95 AI处理器
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 初始化输入
+x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
+x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
+bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+# 其他参数
+hcom = "fake group info"
+world_size = 2
+# 调用MatmulAlltoAll算子
+res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias, [-1,-2])
+print(res)
+# 输出res的形状类似于
+tensor([[ 0.7483, -0.2262, -0.5252,  ..., -0.6810,  1.5576, -0.3997],
+        [ 0.3010,  0.9226,  0.7723,  ..., -1.0785,  0.8963, -0.4670],
+        [-1.6897, -0.6455,  0.0328,  ..., -0.6632, -0.0950, -0.0679],
+        ...,
+        [ 0.2493, -0.2285,  1.1562,  ..., -0.2299,  0.1272,  0.4843],
+        [-0.2058, -0.5962, -0.2101,  ...,  1.2606,  0.8451,  1.1243],
+        [-0.8396,  1.3138, -0.4066,  ..., -0.7683,  1.3133,  0.7471]])
+
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_quant_matmul_all_to_all",
+    """
+功能描述:
+算子功能: 该融合算子完成量化的Matmul计算、Permute(保证通信后地址连续)和AlltoAll通信的融合，先计算后通信。支持K-C量化模式。
+计算公式: 
+假设x1的shape为(BS, H1), x2的shape为(H1, H2)
+    - K-C量化模式：
+      computeOut = (x1 @ x2 + bias) * x1Scale * x2Scale
+      permutedOut = computeOut.view(BS, worldSize, H2 / worldSize).permute(1, 0, 2)
+      output = AlltoAll(permutedOut).view(worldSize * BS, H2 / worldSize)
+    - K-C量化模式带bias：
+      computeOut = (x1 @ x2) * x1Scale * x2Scale  + bias
+      permutedOut = computeOut.view(BS, worldSize, H2 / worldSize).permute(1, 0, 2)
+      output = AlltoAll(permutedOut).view(worldSize * BS, H2 / worldSize)
+
+接口原型:
+torch_npu.npu_quant_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=3, int x2_quant_mode=2, int common_quant_mode=0, int[]? group_sizes=None, int[]? all2all_axes=None, int comm_quant_dtype=0, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
+
+参数说明:
+输入说明:
+x1: Tensor类型， 左矩阵输入张量，对应公式中的x1，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
+x2: Tensor类型，右矩阵输入张量，对应公式中的x2，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
+biasOptional: Tensor类型,可选输入张量，偏置项，仅在传入非空时生效，数据类型为FLOAT32。
+x1Scale: Tensor类型，左矩阵的量化系数，对应公式中的x1Scale，数据类型为FLOAT32。
+x2Scale: Tensor类型，右矩阵的量化系数，对应公式中的x2Scale，数据类型为FLOAT32。
+commScaleOptional: Tensor类型，可选输入，低比特通信的量化系数，暂不支持。
+x1OffsetOptional: Tensor类型，可选输入，左矩阵的量化偏置，暂不支持。
+x2OffsetOptional: Tensor类型，可选输入，右矩阵的量化偏置，暂不支持。
+x1QuantMode: Int类型，左矩阵的量化方式，当前仅支持配置为3，表示PerToken。
+x2QuantMode: Int类型，右矩阵的量化方式，当前仅支持配置为2，表示PerChannel。
+commQuantMode: Int类型，低比特通信的量化方式，预留参数，当前仅支持配置为0，表示不量化。
+commQuantDtype: Int类型，低比特通信的量化类型，预留参数，当前仅支持配置为-1，表示ACL_DT_UNDEFINED。
+groupSize: 数组类型，用于Matmul计算三个方向上的量化分组大小，预留参数，当前仅支持配置为0，取值不生效。
+
+输出说明:
+y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, float32, 数据格式支持ND.
+
+属性说明:
+hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
+world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2],表示将输入由`(BS, H2)`转为`(BS * worldSize, H2 / worldSize)`。
+
+约束说明:
+默认支持确定性计算
+右矩阵和输出矩阵的H2必须整除worldSize
+仅支持左矩阵perToken量化，x1QuantMode=3，右矩阵perChannel量化,x2QuantMode=2
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：传入的x1、x2、biasOptional、x1Scale、x2Scale或者output不为空指针
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：x1、x2计算输入的数据类型必须为INT8，output计算输出的数据类型为BFLOAT16时，biasOptional的数据类型为FLOAT或BFLOAT16，output的数据类型为FLOAT16时，biasOptional的数据类型为FLOAT16
+H1范围仅支持[1, 65535]
+worldSize仅支持2,4,8,16
+- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：支持2、4、8卡
+- 昇腾910_95 AI处理器：支持2,4,8,16卡
+通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
+不支持跨超节点通信，只支持超节点内。
+
+支持的PyTorch版本
+PyTorch 2.6.0+ 
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+昇腾910_95 AI处理器
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 初始化输入
+x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float8_e4m3fn).npu()
+x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float8_e4m3fn).npu()
+bias = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+x1Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+x2Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
+# 其他参数
+hcom = "fake group info"
+world_size = 2
+# 调用QuantMatmulAlltoAll算子
+res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size,
+    bias=bias, x1_scale=x1Scale, x2_scale=x2Scale, group_size=[0], all2all_axes=[-1, -2])
+print(res)
+# 输出res的形状类似于
+tensor([[-1.3330,  0.3899,  0.3205,  ...,  0.3482, -0.4815,  0.4637],
+        [ 0.3511,  1.7768, -0.2588,  ..., -0.3826,  0.7349, -0.0110],
+        [ 1.2357, -1.0084, -1.4964,  ..., -0.4084, -0.9424, -0.5332],
+        ...,
+        [ 1.2147, -1.7824,  1.6442,  ...,  0.6114, -1.6988,  1.1249],
+        [ 0.5168, -0.7395, -0.3615,  ...,  1.6038,  0.0826,  0.8413],
+        [ 1.0905, -0.1828,  0.7823,  ...,  0.2952, -0.7067,  0.9949]])
+
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_all_to_all_matmul",
+    """
+功能描述:
+算子功能: 该融合算子完成AlltoAll通信、Permute(保证通信后地址连续)和Matmul计算的融合，先通信后计算。
+计算公式: 
+    假设x1输入shape为(BS, H)
+    commOut = AlltoAll(x1.view(worldSize, BS/worldSize, H)) 
+    permutedOut = commOut.permute(1, 0, 2).view(BS/worldSize, worldSize*H) 
+    output = permutedOut @ x2 + bias 
+
+接口原型:
+torch_npu.npu_all_to_all_matmul(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None, bool all2all_out_flag=True) -> (Tensor, Tensor)
+    
+参数说明:
+输入说明:
+x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
+bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float32, 数据格式支持ND.
+
+输出说明:
+y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
+
+属性说明:
+hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
+world_size: int类型, 通信域内的rank总数, 对应公式中的worldSize, 仅支持为2、4、8、16. 
+all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-2,-1],表示将输入由 `(BS, H)` 转为 `(BS / worldSize, worldSize * H)`。
+all2all_out_flag: bool类型，标识是否保存alltoall通信结果，默认为true.
+
+约束说明:
+默认支持确定性计算
+BS必须整除worldSize
+x1、x2的数据类型必须一致
+H范围仅支持[1, 65535]
+通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
+不支持跨超节点通信，只支持超节点内。
+
+支持的PyTorch版本
+PyTorch 2.6.0+ 
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+昇腾910_95 AI处理器
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 初始化输入
+x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
+x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
+bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
+# 其他参数
+hcom = "fake group info"
+world_size = 2
+# 调用MatmulAlltoAll算子
+res, _  = torch_npu.npu_all_to_all_matmul(x1, x2, hcom, world_size, bias=bias, all2all_axes=[-1,-2])
+print(res)
+# 输出res的形状类似于
+tensor([[-1.0321e+00,  6.2289e-01,  1.4179e-01,  1.1582e+00, -1.8747e-01,
+        2.3165e+00, -3.4849e-01, -4.4494e-01,  1.1038e+00, -1.5604e+00,
+        6.9800e-01,  1.6987e+00, -8.8242e-01, -1.0305e+00, -1.6537e+00,
+        2.7214e+00, -5.1618e-01, -1.8200e-01,  1.8188e+00,  7.0063e-01,
+       -8.0380e-01, -9.7834e-01,  7.0777e-01, -4.7582e-02, -2.5839e-01,
+        1.3785e-01,  1.7807e+00,  7.9090e-02, -8.9851e-01, -4.9518e-01,
+       -1.1189e+00, -8.6247e-01],
+      [-1.3052e+00,  1.1661e-01, -1.3945e+00,  7.4178e-01, -9.5440e-01,
+        5.0529e-02, -2.0327e+00, -1.8708e-01, -1.2583e+00, -1.9664e-01,
+        4.3981e-01,  1.2337e-01, -4.5290e-01,  1.7786e+00, -7.9361e-01,
+       -7.8097e-01, -1.3808e+00,  1.6942e+00, -1.1622e+00,  6.3309e-01,
+        7.2297e-01,  8.0443e-01, -3.1231e-01, -2.6240e-02, -1.9015e+00,
+        2.4308e-01, -3.7747e-02,  4.2124e-01,  7.4770e-01, -1.7556e+00,
+        9.7620e-01,  3.2943e-01],
+      [-6.9184e-01,  3.0648e-01,  2.6679e-01, -2.7126e-01, -2.3982e+00,
+       -3.7244e-01, -3.3400e-01, -1.1101e-01,  9.1360e-01,  2.2194e+00,
+       -7.2461e-02,  9.4988e-02,  5.3438e-01, -7.5926e-01, -6.2325e-01,
+        1.2285e+00,  1.1827e+00,  6.7400e-01, -6.4264e-01, -1.4517e+00,
+        3.2716e-01, -1.0468e+00,  6.2546e-01, -3.1762e+00,  9.7306e-01,
+        1.8830e-01, -1.0312e+00, -2.2427e-01,  1.1527e+00, -6.1190e-01,
+        8.3790e-01,  4.8933e-01],
+      [ 1.6508e-02,  2.3683e+00,  6.4964e-01, -1.0908e+00, -4.6451e-01,
+        8.3218e-01,  3.2308e-01, -4.6733e-01, -2.2168e+00,  2.0731e+00,
+        7.9789e-01, -6.0773e-01,  4.0600e-01,  3.6759e-01,  6.1818e-01,
+       -4.3798e-01, -2.8660e+00,  3.7701e-02,  2.8182e-01, -8.5863e-02,
+       -1.1137e-02,  4.8926e-01,  1.0670e+00, -9.0587e-01,  1.6926e+00,
+       -1.2680e+00,  6.7200e-01,  3.2650e-01,  1.6260e+00, -4.0430e-01,
+       -1.3591e-01, -2.5671e-02],
+      [ 1.1498e+00,  1.4875e-01,  3.7689e-01, -7.4506e-01,  9.6234e-01,
+        2.0656e-01,  3.9347e-01, -5.7313e-01,  2.1519e-01,  4.8783e-01,
+       -2.9576e-03,  1.5790e+00,  8.5187e-01,  1.4114e+00,  6.7917e-01,
+        1.9349e+00, -9.8073e-01, -1.7973e-01, -7.6273e-01,  3.8086e-01,
+       -6.9003e-01,  2.8973e-01, -2.0242e+00, -8.0495e-02, -6.5029e-01,
+        1.5070e-01, -1.2915e+00, -7.5784e-01,  1.0086e+00,  5.1528e-01,
+       -1.4057e+00,  2.3254e+00],
+      [-9.7377e-01, -2.1214e-01,  1.2309e+00, -5.2911e-01, -4.7966e-01,
+       -7.3101e-02, -9.3732e-01,  1.0623e+00, -1.0705e-01,  3.9100e-01,
+       -9.5188e-02,  1.0662e+00, -4.1645e-01, -3.1083e-01, -1.4358e-01,
+       -8.4679e-01,  1.1195e+00, -1.3657e+00,  9.5275e-01, -1.1579e+00,
+        4.7903e-01,  1.0085e+00,  1.6431e+00,  1.1976e+00,  3.8353e-01,
+        6.8370e-02, -8.3445e-01,  2.4800e+00, -9.7962e-01,  6.3613e-01,
+        1.5859e-01, -7.1362e-01],
+      [ 4.4330e-01,  2.9458e+00,  1.4342e+00,  8.7591e-03,  7.1487e-01,
+        2.6754e-02,  7.6820e-01, -1.0667e+00,  1.1269e+00, -6.4609e-01,
+       -7.7547e-01,  7.7234e-01,  2.5073e-01,  5.6560e-01, -5.9784e-01,
+       -3.7445e-01, -4.1680e-01,  1.9751e+00, -4.9059e-01, -2.3908e-01,
+       -8.5928e-01,  1.7069e+00, -1.1442e+00,  2.2217e+00,  3.5738e-01,
+        6.8612e-01,  2.3320e+00, -1.9791e+00, -2.9414e-01, -1.0079e-01,
+       -5.0897e-01, -5.1150e-01],
+      [-8.3146e-02,  4.2937e-01,  7.8852e-01,  7.1765e-01, -6.6637e-02,
+       -6.1625e-02, -1.3684e+00,  2.3891e-02,  2.2617e-02, -1.0367e+00,
+       -2.5522e-02,  1.2772e-02,  5.5996e-01,  6.6306e-01, -1.9994e+00,
+       -7.5787e-01,  5.2938e-01,  5.5434e-01, -9.0300e-01,  6.7917e-01,
+        4.3156e-01,  7.3735e-01, -8.1547e-02,  1.5977e+00,  5.8575e-01,
+        6.3603e-01, -3.4108e-01, -1.5309e+00, -2.4153e-01, -1.3761e+00,
+       -9.1386e-01,  2.1079e-01]])
 """
 )
 
@@ -11977,7 +12251,7 @@ _add_torch_npu_docstr(
     "npu_top_k_top_p",
     """
 接口原型: 
-torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
+torch_npu.npu_top_k_top_p(logits, p, k) -> torch.Tensor
 
 功能描述: 
 对原始输入logits进行top-k和top-p采样过滤
@@ -12306,101 +12580,159 @@ _add_torch_npu_docstr(
     "npu_top_k_top_p_sample",
     """
 接口原型: 
-torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need_logits=False, top_k_guess=32) -> (torch.Tensor, torch.Tensor)
+torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
 
 功能描述: 
-根据输入词频logits、top_k/top_p采样参数、随机采样权重分布q，进行topK-topP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
-算子包含三个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、指数采样（Sample）。它们可以构成八种计算场景。如下表所示：
-  | 计算场景 | topK采样 | topP采样 | 指数分布采样 |备注|
-  | :-------:| :------:|:-------:|:-------:|:-------:|
-  |Softmax-Argmax采样|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|
-  |topK采样|√|×|×|无|
-  |topP采样|×|√|×|无|
-  |Sample采样|×|×|√|无|
-  |topK-topP采样|√|√|×|无|
-  |topK-Sample采样|√|×|√|无|
-  |topP-Sample采样|×|√|√|无|
-  |topK-topP-Sample采样|√|√|√|无|
+  根据输入词频logits、top_k/top_p/min_ps采样参数、随机采样权重分布q，进行topK-topP-Min_p-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
+
+  算子包含4个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、Min_p显著性采样、不采样 / 指数采样 / 多项式随机采样 。目前支持以下12种计算场景。如下表所示：
+  | 计算场景 | topK采样 | topP采样 | Min_P采样 | 后继处理 |备注|
+  | :-------:| :------:|:-------:|:-------:|:-------:|:-------:|
+  |Argmax采样|×|×|×|None|对输入logits每个batch取最大Logtis和对应索引，结果作为logits_select_idx[batch,1]。|
+  |topK采样|√|×|×|None|无|
+  |topP采样|×|√|×|None|无|
+  |QSample采样|×|×|×|QSample|对输入logits每个batch使用q[i]进行指数采样，从结果中取最大值和索引，作为logits_select_idx[batch,1]。|
+  |topK-topP采样|√|√|×|None|无|
+  |topK-QSample采样|√|×|×|QSample|无|
+  |topK-Multinomial采样|√|×|×|Multinomial|无| 
+  |topK-minP-Multinomial采样|√|×|√|Multinomial|无| 
+  |topP-QSample采样|×|√|×|QSample|无|
+  |topK-topP-QSample采样|√|√|×|QSample|VLLM框架标准完整功能。|
+  |topK-topP-Multinomial采样|√|√|×|Multinomial|Min_p为无效值，但仍执行多项式采样|
+  |topK-topP-minP-Multinomial采样|√|√|√|Multinomial|Sglang框架标准完整功能。|
 
 计算公式：
-输入logits为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
-logtis中的每一行logtis[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]，执行不同的计算场景。<br>
-下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
-    topK采样
-    1.按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
-    2.top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch],1024)，如果top_k[k]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。
-    具体计算流程如下所示：
-    对当前batch分割为若干子段，滚动计算top_k_value[b]：
+  输入logits为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
+  logits中的每一行logits[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]、min_ps[batch]，执行不同的计算场景。<br> 
+  下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
+    topK采样  
+    1. 按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
+    2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
+    * 具体计算流程如下所示：
+    * 根据输入top_k[b]与`ks_max`的关系，判断是否进行topK采样：top_k[b]≤0,跳过topK采样；
+    (1)1≤topK≤min(voc_size,ks_max),执行topK采样
+    (2)top_k>min(voc_size,ks_max),跳过topK采样
+    * 对当前batch分割为若干子段，滚动计算top_k_value[b]：
     top_k_value[b]={Max(top_k[b])}_{s=1}^{lceilfrac{S}{v}rceil}{top_k_value[b]{s-1}cup{logits[b][v]getop_k_min[b][s-1]}}
     Card(top_k_value[b])=top_k[b]
     其中：
     top_k_min[b][s]=Min(top_k_value[b]{s})
     v表示预设的滚动topK时固定的分段长度：
-    v=8*1024
-    *生成需要过滤的mask：
-    sorted_value[b]=sort(top_k_value[b],descendant)
-    top_k_mask[b]=sorted_value[b]<Min(top_k_value[b])
-
-    *将小于阈值的部分通过mask置为-inf：
-    sorted_value[b][v]=begin{cases} -inf&text{top_k_mask[b][v]=true}
-    sorted_value[b][v]&text{top_k_mask[b][v]=false}&
-    end{cases}
-
-    通过softmax将经过topK过滤后的logits按最后一轴转换为概率分布：
-    probs_value[b]=sorted_value[b].softmax(dim=-1)
-
-    按最后一轴计算累积概率（从最小的概率开始累加）：
-    probs_sum[b]=probs_value[b].cumcum(dim=-1)
+    v=8*ks\_max
+    ks_max有效取值范围[1,1024]，默认为1024，并且需要向上对齐到8的整数倍。
+    * 生成需要过滤的mask：
+    top_k_mask = sorted_value>top_k_value
+    * 将小于阈值的部分通过mask置为默认无效值defLogit:
+    sorted_value[b][v]=begin{cases} -inf & top_k_mask[b][v]=true} 
+    sorted_value[b][v] & top_k_mask[b][v]=false} & end{cases}
+    * 其中defLogits取决于入参属性Attr.optional.Bool.input_is_logits，该属性控制输入Logits和输出logits_top_kp_select的归一化：
+    defLogit = begin{cases} -inf, & inputIsLogits = True 0, & inputIsLogits = False end{cases}
 
     topP采样
-    如果前序topK采样已有排序输出结果，则根据topK采样输出计算累积词频，并根据topP截断采样：
-    top_p_mask[b]=probs_sum[b][*]<top_p[b]
+    * 根据入参约束属性Attr.optional.Bool.input_is_logits(false)，如果该属性为True，则对排序后结果进行归一化：
+    logit_sortProb = begin{cases} softmax(logits_sort), & inputIsLogits = True 
+    logits_sort, & inputIsLogits = False
+     * 根据输入top_p[b]的数值，本模块的处理策略如下：top_p[b]≤0，保留1个最大词频token
+     (1)0<top_p<1,执行topP采样
+     (2)top_p≥1,跳过topP采样
+     * 如果执行常规topP采样，且如果前序topK环节已有排序输出结果，则根据topK采样输出计算累积词频，并根据top_p截断采样：
+    topPMask[b] = begin{cases} 0, & sum_{topKMask[b]}^{} {logits_sortProb}[b][*] > p[b] 
+    1, & sum_{topKMask[b]}^{} logits_sortProb[b][*] leq p[b] end{cases}
+     * 如果执行常规topP采样，但前序topK环节被跳过，则计算top-p的mask:
+    topPMask[b] = begin{cases} topKMask[b][0:GuessK], & sum_{GuessK}^{} probValue[b][*] ge p[b] probSum[b][v] le 1 - p[b], & others end{cases}
+    * 将需要过滤的位置设置为默认无效值defLogit，得到logits_sort，记为sortedValue[b][v]:
+    sortedValue[b][v] = begin{cases}
+    defLogit & \quad topPMask[b][v] = false logit_sortProb[b][v] & quad topPMask[b][v] = true end{cases}
+    * 取过滤后sortedValue[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
+    logitsIdx[b][v] = Index(sortedValue[b][v] in Logits)
+    * 从输入Logtis中按logitsIdx顺序遍历取出元素，其余位置填入defLogit，作为logitsSortMasked：
+    logitsSortMasked[b, :Len(logitsIdx[b][:])] = Logits[b, logitsIdx[b][:]]
+    logitsSortMasked[b, Len(logitsIdx[b][:]):] = defLogit
+    * (sglang框架支持更新)直接使用截断后的sortedValue作为logitsSortMasked：
+    logitsSortMasked[b,:] = sortedValue[b]
 
-    如果topK采样被跳过，则先对输入logits[b]进行softmax处理：
-    logits_value[b]=logits[b].softmax(dim=-1)
+    min_p采样
+    * 如果min_ps[b]∈(0, 1)，则执行min_p采样：
+    logitsMax[b] = Max(logitsSortMasked[b])
+    minPThd = logitsMax[b] * minPs[b]
+    minPMask[b] = begin{cases} 0, & logitsSortMasked[b] < minPThd  1, & logitsSortMasked[b] geq minPThd end{cases}
+    logitsSortMasked[b,:] = begin{cases} defLogit, & minPMask[b] = 0 logitsSortMasked[b,:], & minPMask[b] = 1 end{cases}
 
-    尝试使用top_k_guess，对logits进行滚动排序，获取计算topP采样的mask：
-    top_p_value[b]={Max(top_k_guess)}_{s=1}^{lceilfrac{S}{v}rceil}{top_p_value[b]{s-1}cup{logits_value[b][v]getop_k_min[b][s-1]}}
+    * 其他情况：
+    logitsSortMasked[b, :] = begin{cases} logitsSortMasked[b, :], & if minPs[b] leq 0 max(logitsSortMasked[b, :]), & if minPs[b] geq 1 end{cases}
+    min_ps[b]≥1时，每个batch仅取1个最大token，其余位置填充defLogit。
 
-    如果在访问到logits_value[b]的第1e4个元素之前，如下条件得到满足，则视为top_k_guess成功：
-    sum^{top_k_guess}(top_p_value[b])getop_p[b]
-    top_p_mask[b][Index(top_p_value[b])]=false
+    可选输出
+    * 如果​入参属性Attr.Bool.is_need_logits=True，则使用topK-topP-minP联合采样后的logitsIndexMasked，进行logits_top_kp_select输出。
+    logitsIndex[b][v] = Index(logitsSortMasked[b][v] in Logits)
+    logitsIndexMasked[b,:] = logitsIndex[b,:] * topKMask[b] * topPMask[b] * minPMask[b]
+    其中，topK、topP、minP采样环节如果被跳过，则相应mask为全1。
+     * 接下来使用logitsIndexMasked对输入Logits进行Select，过滤输入Logits中的高频token作为logits_top_kp_select输出：
+    logitsTopKpSelect}[b][v] = begin{cases} logits[b][v], & if logitsIndexMasked[b,v] = True 
+    defLogit, & if logitsIndexMasked[b,v] = False end{cases}
 
-    如果top_k_guess失败，则对当前序logits_value[b]进行全排序和cumsum，按top_p[b]截断采样：
-    sorted_logits[b]=sort(logits_value[b],descendant)
-    probs_sum[b]=sorted_logits[b].cumcum(dim=-1)
-    top_p_mask[b]=(probs_sum[b]-sorted_logits[b])>top_p[b]
+    后继处理
+    * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
+    * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性Attr.optional.Bool.input_is_logits，即：
+    inputIsLogits = begin{cases} True, & Logits notin [0,1] 
+    False, & Logits in [0,1] end{cases}
+    使得
+    probs[b] = logitsSortMasked[b, :]
+    接下来有三种模式：None，QSample，Multinomial，通过入参约束属性attr.optional.Str.post_sample加以控制。
+    * None 
+    * 直接对每个batch通过Argmax取最大元素和索引，并通过gatherOut输出。
+    logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probs[b][:])]
+    * QSample
+    * 先对probs进行指数分布采样：
+    qCnt = Sum(MinPMask == 1)
+    probsOpt[b] = frac{probs[b]}{q[b, :qCnt] + eps}
+    * 再进行Argmax-GatherOut输出结果：
+    logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probsOpt[b][:])]
+    * Multinomial
+    * 使用多项式随机采样，根据logitsSortMasked中的概率值，执行无放回的多项式采样，对每个batch取1个样本，将采样结果作为当期batch的输出：
+    sampleIdx}[b] = multinomial(logitsSortMasked[b,:], numSamples=1, seed[b], offset[b])
+    logitsSelectIdx[b] = LogitsIdx[b][sampleIdx[b]]
 
-    将需要过滤的位置设置为-inf，得到sorted_value[b][v]：
-    sorted_value[b][v]=begin{cases}-inf&text{top_p_mask[b][v]=true}sorted_value[b][v]&text{top_p_mask[b][v]=false}end{cases}
+  * 对于采样种子，当attr.optional.Str.post_sample="multinomial"时，q约束为INT64，分别从第一列和第二列获取Multinomial采样的seed和offset：
+    seed[b] = begin{cases} q[b, 0], & b < qRows 
+    q[-1, 0], & b ge qRows end{cases}
 
-    取过滤后sorted_value[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
-    logits_idx[b][v]=Index(sorted_value[b][v]inlogits)
-
-    指数采样（Sample）
-    如果is_need_logits设置为True，则根据logits_idx，选取采样后结果输出到logits_top_kp_select：
-    logits_top_kp_select[b][logits_idx[b][v]]=sorted_value[b][v]
-
-    对sorted_value进行指数分布采样：
-    probs=softmax(sorted_value)
-    probs_opt=frac{probs}{q+eps}
-
-    从probs_opt中取出每个batch的最大元素，从logits_idx中gather相应元素的输入索引，作为输出logits_select_idx：
-    logits_select_idx[b]=logits_idx[b][argmax(probs_opt[b][:])]
-    其中0≤b<sorted_value.size(0)，0≤v<sorted_value.size(1)。
+    offset[b] = begin{cases} q[b, 1], & b < qRows 
+    q[-1, 1], & b ge qRows end{cases}
+  * 该采样过程以aclnn.Multinomial为基准，可参看：https://gitcode.com/cann/ops-math-dev/blob/master/random/dsa_random_uniform/docs/aclnnMultinomial.md
+  * pta调用时，采样种子和偏移默认使用内建值，可参看：https://gitcode.com/Ascend/op-plugin/blob/master/op_plugin/ops/opapi/MultinomialKernelNpuOpApi.cpp
 
 参数说明:
-logits（Tensor）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持float16和bfloat16，数据格式支持ND，支持非连续Tensor。
-top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持int32,数据格式支持ND，支持非连续Tensor。
-top_p（Tensor）：必选参数，表示每个batch采样的p值，有效范围为0<top_p[batch]<1，目前支持1维。数据类型和数据格式与logits保持一致，支持非连续Tensor。
-q（Tensor）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持float32，数据格式支持ND，支持非连续Tensor，默认值为None。
-eps（float）：可选参数，在softmax和权重采样中防止除零，默认值1e-8。
-is_need_logits（bool）：可选参数，控制logits_top_kp_select的输出条件，默认为False。
-top_k_guess（int）：可选参数，表示每个batch在尝试topP部分遍历采样时的候选logits大小，必须为正整数，默认值为32。
+   logits（Tensor）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持`float16`、`bfloat16`和`float32`，数据格式支持$ND$，支持非连续Tensor。
+   top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
+   top_p（Tensor）：必选参数，表示每个batch采样的p值，有效范围为0<$top\_p[batch]<1$，目前支持1维。数据类型和数据格式与`logits`保持一致，支持非连续Tensor。
+    - 在任何情况下，topP对每个batch的输出都会保留至少1个token。
+    - top_p[batch] ≤0时，对当前batch仅保留概率最大的1个token。
+    - top_p[batch]处于合法值范围(0,1)时，对当前batch执行标准topP采样。
+    - p>=1时跳过相应batch的topP步骤，提取整个batch信息并生成ones掩模作为输出。
+   q（Tensor）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持`float32`，数据格式支持$ND$，支持非连续Tensor，默认值为None, 此时跳过后继采样，从probs计算logits_select_idx。
+    - 根据post_sample的模式不同，该参数约束如下：
+    - post_sample = qSample时, 尺寸约束为[batch, voc_size], 数据类型必须为float32，指数分布采样矩阵，维度需与logits的一致。
+    - post_sample = multinomial时, multinomial随机采样参数矩阵，数据类型必须为int64，用于为aclnnMultinomial采样提供控制参数。合法的尺寸为[q_row, 2]，其中q_row≥1：
+        - 第1列对应aclnnMultinomial.seed参数：对应当前batch的随机数种子。
+        - 第2列对应aclnnMultinomial.offset参数：随机数生成器的偏移量，它影响生成的随机数序列的位置。设置偏移量后，生成的随机数序列会从指定位置开始。
+        - 如果qrow<batch，则默认使用最后一个batch的采样参数作为后续batch的multinomial采样参数。
+   eps（double）：可选参数，在softmax和权重采样中防止除零，默认值为1e-8。
+   is_need_logits（bool）：可选参数，控制`logits_top_kp_select`的输出条件，默认值为False。
+   top_k_guess（int）：可选参数，仅在当前batch的top_k为无效值时使能，适用于跳过topK的top_k_guess-TopP加速采样。有效值范围top_k_guess>0，默认为32，用于TopP加速采样中基于top_k_guess的直接索引过滤。如果传入非正数，视为跳过top_k_guess环节，直接使用基于cumsum的标准topP实现，对当前batch做topP全排序采样，保持基准性能。
+   ks_max（int）：可选参数，约束topK采样中允许的topk[batch]合法值上限，影响跳过topK采样的条件，允许传入任意非零正整数。有效值范围[1,1024]之间的整数，传入超过1024的值会自动设为1024。
+   input_is_logits（int）：可选参数，该参数控制输入logits在topP及后续步骤之前，是否进行归一化处理，并决定可选输出logits_top_kp_select中的无效logits默认值类型。Logits表示“未经归一化的原始值”，而相对地已经过归一化的则定义为“probs”。该参数的取值影响如下：
+    - 若该参数取值为True，输入的logits中的数值不能确保在[0,1]区间内。由于logits未进行归一化，在进行top_p采样等后续步骤之前，先对输入进行softmax处理。logits_top_kp_select中的无效logits默认值defLogit=-inf。
+    - 若该参数取值为False，输入logits中的所有元素都确保在[0,1]区间内。输入logits已经归一化，为避免梯度平滑化，top_p采样等后续步骤直接使用前级处理的结果。logits_top_kp_select中的无效logits默认值defLogit=0。
+   post_sample（int）：可选参数，该参数控制topk-topp采样之后的后继处理策略。第一优先级：判断q是否为None，如果q=None，则无视参数提供的post_sample内容，强制后继处理模式一概设为None。参数合法值允许：
+    - qSample(默认值)：倾向于使用QSample采样。
+    - multinomial：使用multinomial采样（多项式随机抽样），此时入参中的q矩阵将被解析为随机种子，执行multinomial-gather。
+    - None：显式强调不使用任何后继处理，此时传入任何q!=None都被无视。
+   generator（int）：可选参数，MultiNomial使用的随机数生成器，必须指定seed才能传入。
 
 输出说明: 
 logits_select_idx（Tensor）：表示经过topK-topP-sample计算流程后，每个batch中词频最大元素max(probs_opt[batch, :])在输入logits中的位置索引。数据类型支持int64，数据格式支持ND。
-logits_top_kp_select（Tensor）：表示经过topK-topP计算流程后，输入logtis中剩余未被过滤的logits。数据类型支持float32，数据格式支持ND。
+logits_top_kp_select（Tensor）：表示经过topK-topP-minP采样获得mask，对原输入logits中高频token的过滤结果。仅在is_need_logits=true时使能输出计算和搬运，否则直接输出相应尺寸的空tensor。数据类型支持float32，数据格式支持$ND$。
 
 约束说明:
 该接口支持推理场景下使用。
@@ -12410,7 +12742,7 @@ logits、top_k、top_p、logits_select_idx除最后一维以外的所有维度�
 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
 如果1024<top_k[batch]<voc_size[batch]，则视为选择当前batch的全部有效元素并跳过topK环节。
 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。
-如果需要单独跳过sample模块，使用其默认值或设置q为None；如需使用sample模块，则必须传入尺寸为[batch, voc_size]的Tensor。
+如果需要单独跳过sample模块，使用其默认值或设置q为None；如需使用Sample模块，则必须传入对应尺寸的Tensor。
 
 支持的型号: 
 Atlas A3 训练系列产品
@@ -12426,9 +12758,17 @@ A200I A2 Box 异构组件
 >>> logits = torch.from_numpy(np.random.uniform(-2, 2, size=[2, 4])).type(torch.float16).npu()
 >>> top_ks = torch.from_numpy(np.random.uniform(1, 2, size=[2, ])).type(torch.int32).npu()
 >>> top_ps = torch.from_numpy(np.random.uniform(0.4, 0.5, size=[2, ])).type(torch.float16).npu()
->>> q = torch.from_numpy(np.random.uniform(0.1, 0.5, size=[2, 4])).type(torch.float32).npu()
-
->>> npu_out_index, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits, top_ks, top_ps, q, 1E-8, True)
+>>> q = None
+>>> min_ps = torch.from_numpy(np.random.uniform(0.1, 0.5, size=[2, ])).type(torch.float16).npu()
+>>> post_sample = 'multiNomial'
+>>> if post_sample == "multiNomial":
+>>>     generator_npu = torch.Generator(device="npu")
+>>> if post_sample == "multiNomial":
+>>>     generator_npu = torch.Generator(device="npu")
+>>>     generator_npu.manual_seed(1)
+>>> else:
+>>>     generator_npu = None
+>>> npu_out_index, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits, top_ks, top_ps, q=q, min_ps=min_ps, eps=1e-8, is_need_logits=True, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample=post_sample, generator=generator_npu)
 >>> print(npu_out_index)
 >>> print(logits_top_kp_select)
 """
@@ -13085,61 +13425,5 @@ x = torch.randn([10, 10]).npu()
 model = Model()
 model = torch.compile(model, backend=npu_backend)
 model(x)
-"""
-)
-
-
-_add_torch_npu_docstr(
-    "npu_dense_lightning_indexer_softmax_lse",
-    """
-接口原型: 
-npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
-
-功能描述:
-是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低算子的显存占用。
-
-参数说明: 
-query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
-key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
-weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
-actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
-actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
-layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
-sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
-pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
-next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
-
-输出说明: 
-softmax_max_index（Tensor）：表示softmax计算使用的max值，数据类型支持FLOAT。
-softmax_sum_index（Tensor）：表示softmax计算使用的sum值，数据类型支持FLOAT。
-
-支持版本: 
-PyTorch 2.1
-PyTorch 2.5及更高版本
-
-支持的型号: 
-Atlas A2训练系列产品
-Atlas A3训练系列产品
-
-调用示例: 
-import torch
-import torch_npu
-
-B = 1
-N1 = 64
-N2 = 1
-S1 = 128
-S2 = 256
-D = 128
-output_dtype = torch.float16
-
-q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
-k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
-weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
-actual_seq_qlen = None
-actual_seq_klen = None
-input_layout = 'BSND'
-sparse_mode = 3
-softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
 """
 )
