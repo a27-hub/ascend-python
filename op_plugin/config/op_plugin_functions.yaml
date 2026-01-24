@@ -6295,6 +6295,18 @@ custom:
     exposed: all_version
     internal_format_opapi: all_version
 
+  - func: npu_quant_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? gmm_x_scale=None, 
+                                  Tensor? gmm_weight_scale=None, Tensor? gmm_x_offset=None, Tensor? gmm_weight_offset=None,
+                                  Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None,
+                                  Tensor? mm_x_scale=None, Tensor? mm_weight_scale=None, Tensor? mm_x_offset=None, Tensor? mm_weight_offset=None,
+                                  bool trans_gmm_weight=False, bool trans_mm_weight=False,
+                                  int gmm_x_quant=1, int gmm_weight_quant=1, int mm_x_quant=1, int mm_weight_quant=1,
+                                  int? gmm_x_dtype=None, int? gmm_weight_dtype=None, int? gmm_x_scale_dtype=None, int? gmm_weight_scale_dtype=None,
+                                  int? mm_x_dtype=None, int? mm_weight_dtype=None, int? mm_x_scale_dtype=None, int? mm_weight_scale_dtype=None,
+                                  int? gmm_y_dtype=None, int? mm_y_dtype=None) -> (Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+
   - func: npu_kronecker_quant(Tensor x, Tensor kronecker_p1, Tensor kronecker_p2, float? clip_ratio=None, ScalarType? dst_dtype=None) -> (Tensor out, Tensor quant_scale)
     op_api: all_version
     gen_opapi:
