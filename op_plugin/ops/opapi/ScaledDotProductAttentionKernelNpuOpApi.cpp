@@ -151,10 +151,10 @@ at::Tensor scaled_dot_product_attention(
         c10::optional<at::Tensor> nulltensor = c10::nullopt;
         c10::OptionalIntArrayRef nulllen = c10::nullopt;
         auto output =
-            at_npu::native::custom_ops::npu_fusion_attention(query, key, value, head_num, input_layout, nulltensor,
-                                                             nulltensor, atten_mask, input_scale.as_float_unchecked(),
-                                                             keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
-                                                             nulllen, nulllen, sparse_mode, true, false);
+            at_npu::native::custom_ops::_npu_fusion_attention_tensor(query, key, value, head_num, input_layout, nulltensor,
+                                                                     nulltensor, atten_mask, input_scale.as_float_unchecked(),
+                                                                     keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
+                                                                     nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
     } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
@@ -250,10 +250,10 @@ at::Tensor scaled_dot_product_attention(
         c10::optional<at::Tensor> nulltensor = c10::nullopt;
         c10::OptionalIntArrayRef nulllen = c10::nullopt;
         auto output =
-            at_npu::native::custom_ops::npu_fusion_attention(query, key, value, head_num, input_layout, nulltensor,
-                                                             nulltensor, atten_mask, input_scale.as_float_unchecked(),
-                                                             keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
-                                                             nulllen, nulllen, sparse_mode, true, false);
+            at_npu::native::custom_ops::_npu_fusion_attention_tensor(query, key, value, head_num, input_layout, nulltensor,
+                                                                     nulltensor, atten_mask, input_scale.as_float_unchecked(),
+                                                                     keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
+                                                                     nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
     } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
