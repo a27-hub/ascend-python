@@ -13,8 +13,8 @@ from torchgen.api.autograd import NativeFunctionWithDifferentiabilityInfo, Diffe
 from torchgen.model import NativeFunction, FunctionSchema
 from torchgen.packaged.autograd.gen_inplace_or_view_type import gen_inplace_or_view_type_env
 from torchgen.packaged.autograd.gen_autograd_functions import process_function
-from torch_npu_gen.utils import get_torchgen_dir
-from torch_npu_gen.custom_functions import parse_custom_yaml
+from torchnpugen.utils import get_torchgen_dir
+from torchnpugen.custom_functions import parse_custom_yaml
 
 from .gen_variable_type import gen_variable_type, gen_variable_type_head    
 

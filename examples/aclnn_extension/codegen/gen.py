@@ -35,8 +35,8 @@ from torchgen.context import with_native_function, native_function_manager, meth
 from torchgen.api.types import DispatcherSignature
 from torchgen.api import cpp
 from torchgen.dest.register_dispatch_key import RegisterDispatchKey
-from torch_npu_gen.custom_functions import parse_custom_yaml, gen_custom_functions_dispatch
-from torch_npu_gen.utils import rename_privateuse1_dispatch_key, get_torchgen_dir
+from torchnpugen.custom_functions import parse_custom_yaml, gen_custom_functions_dispatch
+from torchnpugen.utils import rename_privateuse1_dispatch_key, get_torchgen_dir
 
 
 METHOD_DEFINITION = CodeTemplate("""\
@@ -211,8 +211,8 @@ def gen_custom_register(fm: FileManager, custom_functions: Sequence[NativeFuncti
 def get_torch_npu_gen_dir():
     # get path of torchgen, then get tags.yaml and native_functions.yaml
     try:
-        import torch_npu_gen
-        return os.path.dirname(os.path.realpath(torch_npu_gen.__file__))
+        import torchnpugen
+        return os.path.dirname(os.path.realpath(torchnpugen.__file__))
     except Exception:
         _, _, exc_traceback = sys.exc_info()
         frame_summary = traceback.extract_tb(exc_traceback)[-1]
