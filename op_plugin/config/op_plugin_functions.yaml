@@ -5985,10 +5985,11 @@ custom:
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
-  - func: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.6, newest]
+    device_check: NoCheck
 
-  - func: npu_fusion_attention_grad_v3(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, Tensor? seed=None, Tensor? offset=None, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fusion_attention_grad_v3(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, Tensor? seed=None, Tensor? offset=None, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.6, newest]
     device_check: NoCheck
 
@@ -7213,10 +7214,11 @@ symint:
   - func: npu_bmm_v2_mat2_backward(Tensor grad, Tensor mat1, Tensor mat2, SymInt[] size) -> Tensor
     acl_op: [v2.1, newest]
 
-  - func: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.6, newest]
+    device_check: NoCheck
 
-  - func: npu_fusion_attention_grad_v3(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, Tensor? seed=None, Tensor? offset=None, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_fusion_attention_grad_v3(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, Tensor? seed=None, Tensor? offset=None, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.6, newest]
     device_check: NoCheck
 

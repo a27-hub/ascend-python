@@ -395,8 +395,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND")
 
         attention_score_npu = result[0]
@@ -469,8 +469,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND",
             keep_prob=keep_prob)
 
@@ -557,8 +557,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND")
 
         # 反向精度比对
@@ -576,8 +576,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND")
 
         # 反向精度比对
@@ -597,8 +597,8 @@ class TestNPUFlashAttention(TestCase):
                 q, k, v, N1,
                 scale=scale,
                 input_layout="TND",
-                actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-                actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+                actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+                actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
                 softmax_layout="TND")
             # 反向精度比对
             result[0].backward(dy)
@@ -684,8 +684,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND",
             keep_prob=keep_prob)
 
@@ -704,8 +704,8 @@ class TestNPUFlashAttention(TestCase):
             q, k, v, N1,
             scale=scale,
             input_layout="TND",
-            actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-            actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+            actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+            actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
             softmax_layout="TND",
             keep_prob=keep_prob)
 
@@ -726,8 +726,8 @@ class TestNPUFlashAttention(TestCase):
                 q, k, v, N1,
                 scale=scale,
                 input_layout="TND",
-                actual_seq_qlen=tuple(cu_seqlens_q[1:].cpu().numpy().tolist()),
-                actual_seq_kvlen=tuple(cu_seqlens_k[1:].cpu().numpy().tolist()),
+                actual_seq_qlen=cu_seqlens_q[1:].cpu(),
+                actual_seq_kvlen=cu_seqlens_k[1:].cpu(),
                 softmax_layout="TND",
                 keep_prob=keep_prob)
             # 反向精度比对

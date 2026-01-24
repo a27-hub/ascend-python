@@ -162,6 +162,47 @@ int64_t extract_value(const at::Tensor& cpu_tensor)
     return cpu_tensor.item().to<int64_t>();
 }
 
+at::IntArrayRef ToIntArrayRef(const c10::optional<at::Tensor>& opt_tensor, std::vector<int64_t>& buffer)
+{
+    // 如果是 nullopt，返回空 IntArrayRef
+    if (!opt_tensor.has_value()) {
+        return at::IntArrayRef{};
+    }
+
+    const at::Tensor& tensor = opt_tensor.value();
+
+    // 如果是未定义 tensor（如默认构造的 Tensor()），也视为空
+    if (!tensor.defined()) {
+        return at::IntArrayRef{};
+    }
+
+    TORCH_CHECK(tensor.device().is_cpu(), "tensor must be on CPU", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(tensor.dim() == 1, "tensor must be 1-dimensional", OPS_ERROR(ErrCode::PARAM));
+
+    if (tensor.numel() == 0) {
+        return at::IntArrayRef{};
+    }
+
+    // 零拷贝路径：连续 + int64
+    if (tensor.is_contiguous() && tensor.scalar_type() == at::kLong) {
+        return at::IntArrayRef(tensor.data_ptr<int64_t>(), tensor.size(0));
+    }
+
+    // 需要拷贝：先转为 contiguous int64
+    at::Tensor contig = tensor.contiguous();
+    if (contig.scalar_type() != at::kLong) {
+        contig = contig.to(at::kLong);
+    }
+
+    // 将数据拷贝到 buffer
+    buffer.resize(contig.size(0));
+    std::copy(contig.data_ptr<int64_t>(),
+              contig.data_ptr<int64_t>() + contig.size(0),
+              buffer.begin());
+
+    return at::IntArrayRef(buffer);
+}
+
 at::Tensor dropout_gen_mask_tensor_impl(const at::Tensor &query, double keep_prob, const at::Tensor &seed,
     const at::Tensor &offset, const int64_t numels, c10_npu::CaptureStatus is_capture, const uint64_t offset_intragraph)
 {
@@ -1639,8 +1680,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
     const c10::optional<at::Tensor> &seed,
     const c10::optional<at::Tensor> &offset,
     c10::OptionalArrayRef<c10::SymInt> prefix,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_qlen,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_kvlen,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
     int64_t sparse_mode,
     bool gen_mask_parallel,
     bool sync,
@@ -1687,8 +1728,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         input_layout, OPS_ERROR(ErrCode::PARAM));
 
     auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
-    auto ac_seq_qlen = actual_seq_qlen.has_value() ? c10::asIntArrayRefUnchecked(actual_seq_qlen.value()) : at::IntArrayRef{};
-    auto ac_seq_kvlen = actual_seq_kvlen.has_value() ? c10::asIntArrayRefUnchecked(actual_seq_kvlen.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;  // 仅在非连续时使用
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;  // 仅在非连续时使用
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
     int64_t N_local = 0; // N for npu_fusion_attention
 
     if (input_layout_str == "BNSD") {
@@ -1747,8 +1790,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
     const c10::optional<at::Tensor> &atten_mask,
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
-    c10::OptionalArrayRef<c10::SymInt> prefix, c10::OptionalArrayRef<c10::SymInt> actual_seq_qlen,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::OptionalArrayRef<c10::SymInt> prefix, const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
     c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
 {
     TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95, "Ascend910_95 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
@@ -1760,8 +1803,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
     const at::Tensor &sink_const = sink.value_or(at::Tensor());
     auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
-    auto ac_seq_qlen = actual_seq_qlen.has_value() ? c10::asIntArrayRefUnchecked(actual_seq_qlen.value()) : at::IntArrayRef{};
-    auto ac_seq_kvlen = actual_seq_kvlen.has_value() ? c10::asIntArrayRefUnchecked(actual_seq_kvlen.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;  // 仅在非连续时使用
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;  // 仅在非连续时使用
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
 
     TORCH_CHECK(head_num > 0, "head_num must > 0, but got ", head_num, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,

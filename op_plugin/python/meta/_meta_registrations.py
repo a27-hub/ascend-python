@@ -1590,29 +1590,46 @@ def npu_fusion_attention_forward_v3(query, key, value, head_num, input_layout, p
                                 inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None):
     B = query.size(0)
-    N = head_num
     S1 = query.size(2)
-    S2 = key.size(2)
+    T = query.size(0)
+    N_L = query.size(1)
+    aten_score_shape = query.shape
 
     if input_layout == "BSH":
-        B = query.size(0)
         S1 = query.size(1)
-        S2 = key.size(1)
-
-    if input_layout == "SBH":
+        H = query.size(2)
+        D = H / head_num
+        D2 = 0 if D == 0 or key.size(2) == 0 else value.size(2) / (key.size(2) / D)
+        aten_score_shape = [B, S1, head_num * D2]
+    elif input_layout == "SBH":
         B = query.size(1)
         S1 = query.size(0)
-        S2 = key.size(0)
-
-    if input_layout == "BSND":
+        H = query.size(2)
+        D = H / head_num
+        D2 = 0 if D == 0 or key.size(2) == 0 else value.size(2) / (key.size(2) / D)
+        aten_score_shape = [S1, B, head_num * D2]
+    elif input_layout == "BNSD":
+        D2 = value.size(3)
+        aten_score_shape = [B, N_L, S1, D2]
+    elif input_layout == "BSND":
         S1 = query.size(1)
-        S2 = key.size(1)
+        N_L = query.size(2)
+        D2 = value.size(3)
+        aten_score_shape = [B, S1, N_L, D2]
+    elif input_layout == "TND":
+        D2 = value.size(2)
+        aten_score_shape = [T, N_L, D2]
+
+    if input_layout == "TND":
+        softmax_shape = [T, N_L, 8]
+    else:
+        softmax_shape = [B, head_num, S1, 8]
 
     seed = torch.empty([1], dtype=torch.long, device='meta')
     offset = torch.empty([1], dtype=torch.long, device='meta')
-    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta')
-    softmax_max = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
-    softmax_sum = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
+    attention_score = query.new_empty(aten_score_shape, dtype=query.dtype, device='meta')
+    softmax_max = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
+    softmax_sum = torch.empty(softmax_shape, dtype=torch.float32, device='meta')
     softmax_out = torch.empty([0], dtype=query.dtype, device='meta')
     return (attention_score, softmax_max, softmax_sum, softmax_out, seed, offset)
 
