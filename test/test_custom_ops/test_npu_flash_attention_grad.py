@@ -114,7 +114,7 @@ class TestNPUFlashAttention(TestCase):
         scale = 0.08838
         seed_tensor = torch.tensor(seed)
         offset_tensor = torch.tensor(offset)
-        return torch_npu.npu_flash_attention_grad(
+        return torch_npu.npu_fusion_attention_grad_v3(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max,
             softmax_sum=softmax_sum, attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, seed=seed_tensor, offset=offset_tensor)
 
@@ -172,10 +172,10 @@ class TestNPUFlashAttention(TestCase):
         value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
         dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-        output = torch_npu.npu_flash_attention(
+        output = torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
 
-        output1 = torch_npu.npu_flash_attention_grad(
+        output1 = torch_npu.npu_fusion_attention_grad_v3(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
             softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
 
@@ -188,10 +188,10 @@ class TestNPUFlashAttention(TestCase):
         value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
         dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-        output = torch_npu.npu_flash_attention(
+        output = torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
 
-        output1 = torch_npu.npu_flash_attention_grad(
+        output1 = torch_npu.npu_fusion_attention_grad_v3(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
             softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
 
@@ -206,10 +206,10 @@ class TestNPUFlashAttention(TestCase):
             value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
             dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-            output = torch_npu.npu_flash_attention(
+            output = torch_npu.npu_fusion_attention_v3(
                 query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=1.0)
 
-            output1 = torch_npu.npu_flash_attention_grad(
+            output1 = torch_npu.npu_fusion_attention_grad_v3(
                 query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
                 softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=1.0, seed=output[4], offset=output[5])
 
@@ -241,10 +241,10 @@ class TestNPUFlashAttention(TestCase):
         value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
         dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-        output = torch_npu.npu_flash_attention(
+        output = torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
 
-        output1 = torch_npu.npu_flash_attention_grad(
+        output1 = torch_npu.npu_fusion_attention_grad_v3(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
             softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
 
@@ -257,10 +257,10 @@ class TestNPUFlashAttention(TestCase):
         value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
         dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-        output = torch_npu.npu_flash_attention(
+        output = torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
 
-        output1 = torch_npu.npu_flash_attention_grad(
+        output1 = torch_npu.npu_fusion_attention_grad_v3(
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
             softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
 
@@ -275,10 +275,10 @@ class TestNPUFlashAttention(TestCase):
             value = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
             dy = torch.randn(1, 128, 4096, dtype=torch.float16, device="npu")
 
-            output = torch_npu.npu_flash_attention(
+            output = torch_npu.npu_fusion_attention_v3(
                 query, key, value, head_num=32, input_layout="BSH", scale=scale, keep_prob=keep_prob)
 
-            output1 = torch_npu.npu_flash_attention_grad(
+            output1 = torch_npu.npu_fusion_attention_grad_v3(
                 query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=output[1],
                 softmax_sum=output[2], attention_in=output[0], scale_value=scale, keep_prob=keep_prob, seed=output[4], offset=output[5])
 

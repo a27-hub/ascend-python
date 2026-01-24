@@ -1670,7 +1670,7 @@ if __name__ == "__main__":
 
 
 _add_torch_npu_docstr(
-    "npu_flash_attention",
+    "npu_fusion_attention_v3",
     """
 功能描述实现
 “Transformer Attention Score”的融合计算, 实现的计算公式如下: 
@@ -1679,7 +1679,7 @@ $attention=Dropout(y)*value$
 该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_fusion_attention一致。
 
 接口原型
-torch_npu.npu_flash_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明
 query: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
@@ -1813,7 +1813,7 @@ class TestNPUFlashAttention(TestCase):
         if sparse_params[0] == 2 or sparse_params[0] == 3 or sparse_params[0] == 4:
             atten_masks = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1))
             atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
-        return torch_npu.npu_flash_attention(
+        return torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=8, input_layout="BNSD", scale=scale, sparse_mode=sparse_params[0],
             atten_mask=atten_mask, pre_tockens=sparse_params[1], next_tockens=sparse_params[2])
 

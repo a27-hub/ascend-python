@@ -343,7 +343,7 @@ class TestNPUFlashAttention(TestCase):
     # pylint:disable = huawei-too-many-arguments
     def custom_op_tensor_exec(self, query, key, value, head_num, scale, input_layout, actual_seq_qlen=None,
                        actual_seq_kvlen=None, softmax_layout="", keep_prob=1.0):
-        return torch_npu.npu_flash_attention(
+        return torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=head_num, input_layout=input_layout, scale=scale,
             actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen, softmax_layout=softmax_layout,
             keep_prob=keep_prob)

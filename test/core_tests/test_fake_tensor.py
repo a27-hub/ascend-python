@@ -1556,7 +1556,7 @@ class TestFlashAttentionTensorScore(TestCase):
             q.requires_grad = True
             k.requires_grad = True
             v.requires_grad = True
-            res = torch.ops.npu.npu_flash_attention(q, k, v, head_num=40, input_layout="BNSD")
+            res = torch.ops.npu.npu_fusion_attention_v3(q, k, v, head_num=40, input_layout="BNSD")
 
             self.assertEqual(q.shape, res[0].shape)
             self.assertEqual(q.dtype, res[0].dtype)
@@ -1583,7 +1583,7 @@ class TestFlashAttentionTensorScoreGrad(TestCase):
             attention_in.requires_grad = True
             softmax_max.requires_grad = True
             softmax_sum.requires_grad = True
-            res = torch.ops.npu.npu_flash_attention_grad(q, k, v, dy, head_num=40, input_layout="BNSD",
+            res = torch.ops.npu.npu_fusion_attention_grad_v3(q, k, v, dy, head_num=40, input_layout="BNSD",
                             softmax_max=softmax_max, softmax_sum=softmax_sum, attention_in=attention_in)
 
             self.assertEqual(q.shape, res[0].shape)

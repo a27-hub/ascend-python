@@ -1584,8 +1584,8 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
     return (dq, dk, dv, dpse, dsink)
 
 
-@impl(m, "npu_flash_attention")
-def npu_flash_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
+@impl(m, "npu_fusion_attention_v3")
+def npu_fusion_attention_forward_v3(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
                                 inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None):
@@ -1617,8 +1617,8 @@ def npu_flash_attention_forward(query, key, value, head_num, input_layout, pse=N
     return (attention_score, softmax_max, softmax_sum, softmax_out, seed, offset)
 
 
-@impl(m, "npu_flash_attention_grad")
-def npu_flash_attention_backward(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
+@impl(m, "npu_fusion_attention_grad_v3")
+def npu_fusion_attention_backward_v3(query, key, value, dy, head_num, input_layout, *, pse=None, padding_mask=None, atten_mask=None,
                                   softmax_max=None, softmax_sum=None, softmax_in=None, attention_in=None, scale_value=1.0,
                                   keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=None, offset=None,
                                   prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
