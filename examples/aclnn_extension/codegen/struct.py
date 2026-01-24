@@ -9,13 +9,13 @@ from typing import (List, Dict, Optional, Set, Callable, Any,
 import yaml
 from torchgen.model import (BackendIndex, DispatchKey, NativeFunctionsGroup, OperatorName,
                             BackendMetadata, is_cuda_dispatch_key)
-from torch_npu_gen.op_codegen.gen import FileManager
-from torch_npu_gen.op_codegen.struct.struct_codegen import parse_struct_yaml, gen_op_api
-from torch_npu_gen.op_codegen.struct.model import StructInfo
-from torch_npu_gen.op_codegen.utils import PathManager, context
-from torch_npu_gen.custom_functions import parse_custom_yaml
-from torch_npu_gen.utils import rename_privateuse1_dispatch_key, get_torchgen_dir
-from torch_npu_gen.op_codegen.model import NativeFunction
+from torchnpugen.gen import FileManager
+from torchnpugen.struct.struct_codegen import parse_struct_yaml, gen_op_api
+from torchnpugen.struct.model import StructInfo
+from torchnpugen.op_codegen_utils import PathManager, context
+from torchnpugen.custom_functions import parse_custom_yaml
+from torchnpugen.utils import rename_privateuse1_dispatch_key, get_torchgen_dir
+from torchnpugen.model import NativeFunction
 
 
 USED_KEYS = ['custom']
