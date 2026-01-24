@@ -55,6 +55,12 @@ class TestNPUFlashAttention(TestCase):
             query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max,
             softmax_sum=softmax_sum, attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, numels=numels, seed=seed, offset=offset)
 
+    def custom_op_exec_tensor(self, query, key, value, dy, softmax_max, softmax_sum, attention_in, keep_prob=1.0, numels=torch.tensor([0], device="npu"), seed=torch.tensor([2], device="npu"), offset=torch.tensor([0], device="npu")):
+        scale = 0.08838
+        return torch_npu._npu_fusion_attention_grad_tensor(
+            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max,
+            softmax_sum=softmax_sum, attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, numels=numels, seed=seed, offset=offset)
+
     def trans_BNSD2BSH(self, tensor: torch.Tensor):
         tensor = torch.transpose(tensor, 1, 2)
         tensor = torch.reshape(tensor, (tensor.shape[0], tensor.shape[1], -1))
@@ -85,7 +91,25 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 128, 8).npu()
         x_sum = x_sum.expand(1, 32, 128, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        dq, dk, dv, dpse, dsink = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
+        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_tensor(self, device="npu"):
+        query = torch.randn(1, 32, 128, 128, dtype=torch.float16)
+        key = torch.randn(1, 32, 128, 128, dtype=torch.float16)
+        value = torch.randn(1, 32, 128, 128, dtype=torch.float16)
+        dy = torch.randn(1, 32, 128, 128, dtype=torch.float16)
+
+        q_npu = self.trans_BNSD2BSH(query).npu()
+        k_npu = self.trans_BNSD2BSH(key).npu()
+        v_npu = self.trans_BNSD2BSH(value).npu()
+        dy_npu = self.trans_BNSD2BSH(dy).npu()
+        out, softmax_res, x_max, x_sum, dq_cpu, dk_cpu, dv_cpu = self.supported_op_exec(query.to(torch.float32), key.to(torch.float32), value.to(torch.float32), dy.to(torch.float32))
+        x_max = x_max.expand(1, 32, 128, 8).npu()
+        x_sum = x_sum.expand(1, 32, 128, 8).npu()
+        out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
+        dq, dk, dv, dpse, dsink = self.custom_op_exec_tensor(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
         self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
     
     @SupportedDevices(['Ascend910B'])
@@ -107,7 +131,29 @@ class TestNPUFlashAttention(TestCase):
         x_max = x_max.expand(1, 32, 256, 8).npu()
         x_sum = x_sum.expand(1, 32, 256, 8).npu()
         out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
+        dq, dk, dv, dpse, dsinl = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
+        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_flash_attention_with_dropmask_tensor(self, device="npu"):
+        query = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        key = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        dy = torch.randn(1, 32, 256, 128, dtype=torch.float16)
+        keep_prob = 0.9
+        numels = torch.tensor([1 * 32 * 256 * 256], device="npu")
+        drop_mask = self.get_drop_mask(query, 1, 32, 256, 256, seed=2, gen_p=1-keep_prob)
+
+        q_npu = self.trans_BNSD2BSH(query).npu()
+        k_npu = self.trans_BNSD2BSH(key).npu()
+        v_npu = self.trans_BNSD2BSH(value).npu()
+        dy_npu = self.trans_BNSD2BSH(dy).npu()
+        out, softmax_res, x_max, x_sum, dq_cpu, dk_cpu, dv_cpu = self.supported_op_exec(query.to(torch.float32),
+                        key.to(torch.float32), value.to(torch.float32), dy.to(torch.float32), drop_mask, keep_prob)
+        x_max = x_max.expand(1, 32, 256, 8).npu()
+        x_sum = x_sum.expand(1, 32, 256, 8).npu()
+        out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
+        dq, dk, dv, dpse, dsink = self.custom_op_exec_forpass(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu, keep_prob, numels)
         self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
 
 if __name__ == "__main__":
