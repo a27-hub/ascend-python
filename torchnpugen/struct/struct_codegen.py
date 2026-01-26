@@ -32,8 +32,6 @@ from .model import StructInfo, ResInfo, filt_input_tensor
 USED_KEYS = ['official', 'custom', 'autograd']
 SYMINT_OPS = set()
 
-PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
-
 
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
@@ -91,16 +89,15 @@ auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
 def is_support_version(op):
     op_api_version = op.get('op_api', None)
+    PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
     version = f"v{PYTORCH_VERSION[0]}.{PYTORCH_VERSION[1]}"
 
-    def parse_version(v):
-        return tuple(map(int, v.lstrip('v').split('.')))
     if op_api_version is None:
         is_support = False
     elif op_api_version == 'all_version':
         is_support = True
     elif isinstance(op_api_version, list):
-        is_support = parse_version(version) >= parse_version(op_api_version[0])
+        is_support = version >= op_api_version[0]
     else:
         is_support = version in op_api_version
     return is_support
@@ -109,7 +106,8 @@ def is_support_version(op):
 def filt_op_branch(struct_ops: Dict) -> Dict:
     support_ops = []
     for key in USED_KEYS:
-        support_ops += struct_ops[key]
+        if struct_ops.get(key, None):
+                support_ops += struct_ops[key]
 
     def filt_gen_opapi(op) -> bool:
         return 'gen_opapi' in op.keys() and is_support_version(op)
