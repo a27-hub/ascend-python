@@ -18,11 +18,11 @@ from typing import List, Dict, Sequence
 import copy
 from dataclasses import dataclass
 
-from codegen.model import (BaseTy, SchemaKind, BaseType,
+from torchnpugen.model import (BaseTy, SchemaKind, BaseType,
                            Argument, NativeFunction, ListType)
-from codegen.context import native_function_manager
-from codegen.api.types import NativeSignature
-from codegen.api import cpp
+from torchnpugen.context import native_function_manager
+from torchnpugen.api.types import NativeSignature
+from torchnpugen.api import cpp
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
@@ -115,6 +115,8 @@ class StructInfo:
     def from_yaml(
         es: Sequence[Dict[str, object]],
         native_functions: Sequence[NativeFunction],
+        *,
+        only_opapi=False
     ) -> "List[StructInfo]":
         '''
         Parse a StructInfo from a dictionary as directly parsed 
@@ -160,10 +162,12 @@ class StructInfo:
 
             func_kind = schema_function.func.kind()
 
-            if 'op_api' not in schema_function.impl_ns:
-                raise RuntimeError(f"The Aten function {schema_str} has no op_opi"
-                                   " implement in op_plugin_functions yaml")
-            acl_op = 'acl_op' in schema_function.impl_ns
+            acl_op = None
+            if not only_opapi:
+                if 'op_api' not in schema_function.impl_ns:
+                    raise RuntimeError(f"The Aten function {schema_str} has no op_api"
+                                    " implement in op_plugin_functions yaml")
+                acl_op = 'acl_op' in schema_function.impl_ns
 
             gen_opapi_info = e.get('gen_opapi')
             structured_inherit = gen_opapi_info.pop('structured_inherit', None)
