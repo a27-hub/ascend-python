@@ -2924,9 +2924,10 @@ class TestTransposeQuantBatchMatmul(TestCase):
             M, K, N, Batch = 32, 512, 128, 16
             x1 = torch.randn((M, Batch, K), dtype=torch.float8_e5m2)
             x2 = torch.randn((Batch, K, N), dtype=torch.float8_e5m2)
-            scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.float32)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
             result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.float16,
-                                                        x1_scale=scale.npu(), x2_scale=scale.npu(), 
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
             expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.float16)
             self.assertTrue(result.shape == expect_ret.shape)
@@ -2938,7 +2939,8 @@ class TestTransposeQuantBatchMatmul(TestCase):
             M, K, N, Batch = 32, 512, 128, 16
             x1 = torch.randn((M, Batch, K), dtype=torch.float8_e4m3fn)
             x2 = torch.randn((Batch, K, N), dtype=torch.float8_e4m3fn)
-            scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.float32)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
             result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.float16,
                                                         x1_scale=scale.npu(), x2_scale=scale.npu(), 
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
@@ -2952,9 +2954,10 @@ class TestTransposeQuantBatchMatmul(TestCase):
             M, K, N, Batch = 32, 512, 128, 16
             x1 = torch.randn((M, Batch, K), dtype=torch.float8_e4m3fn)
             x2 = torch.randn((Batch, K, N), dtype=torch.float8_e4m3fn)
-            scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.float32)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
             result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.bfloat16,
-                                                        x1_scale=scale.npu(), x2_scale=scale.npu(), 
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
             expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.bfloat16)
             self.assertTrue(result.shape == expect_ret.shape)
@@ -2966,9 +2969,10 @@ class TestTransposeQuantBatchMatmul(TestCase):
             M, K, N, Batch = 32, 512, 128, 16
             x1 = torch.randn((M, Batch, K), dtype=torch.float8_e5m2)
             x2 = torch.randn((Batch, K, N), dtype=torch.float8_e5m2)
-            scale = torch.randint(1, 10, (Batch * N, ), dtype=torch.float32)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
             result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.bfloat16,
-                                                        x1_scale=scale.npu(), x2_scale=scale.npu(), 
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
             expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.bfloat16)
             self.assertTrue(result.shape == expect_ret.shape)
