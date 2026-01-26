@@ -152,6 +152,9 @@ void check_a5_required_inputs(const at::Tensor& x1, const at::Tensor& x2, bool i
             "x2 must be an int8 or uint8 tensor for weight quant, but x2 actual type is ",
             c10::toString(x2.scalar_type()),
             OPS_ERROR(ErrCode::TYPE));
+        if (x2.scalar_type() == at::kInt) {
+            TORCH_CHECK(x2.dim() == A16W4_WEIGHT_DIM, "x2 must be 2D for a16w4 weight quant, but got: ", x2.dim(), "D", OPS_ERROR(ErrCode::VALUE));
+        }
     } else if (isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type())) {
         TORCH_CHECK(false, "when neither dtype of x1 or dtype of x2 is vaild, current x1 dtype is ",
             c10::toString(x1.scalar_type()), " and x2 dtype is ", c10::toString(x2.scalar_type()),
