@@ -421,6 +421,8 @@ class TestTopKTopPSample(TestCase):
                 self._custom_test(bs, voc_size, kpq_set, run_attr, dtype)
 
                 self.assertRtolEqual(logits_select_idx_npu, logits_select_idx_golden_npu)
+                if is_need_logits == 1:
+                    self.assertEqual(logits_top_kp_select_npu, logits_top_kp_select_golden_npu)
                 
                 case_no += 1
                 print(f"{case_no} cases passed.")
