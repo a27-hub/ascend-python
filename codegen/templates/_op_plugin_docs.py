@@ -12309,23 +12309,23 @@ _add_torch_npu_docstr(
 torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
 
 功能描述: 
-  根据输入词频logits、top_k/top_p/min_ps采样参数、随机采样权重分布q，进行topK-topP-Min_p-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
+  根据输入词频logits、top_k/top_p/min_ps采样参数、随机采样权重分布q，进行topK-topP-minP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
 
-  算子包含4个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、Min_p显著性采样、不采样 / 指数采样 / 多项式随机采样 。目前支持以下12种计算场景。如下表所示：
-  | 计算场景 | topK采样 | topP采样 | Min_P采样 | 后继处理 |备注|
+  算子包含4个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、minP显著性采样、不采样 / 指数采样 / 多项式随机采样 。目前支持以下12种计算场景。如下表所示：
+  | 计算场景 | topK采样 | topP采样 | minP采样 | 后继处理 |备注|
   | :-------:| :------:|:-------:|:-------:|:-------:|:-------:|
-  |Argmax采样|×|×|×|None|对输入logits每个batch取最大Logtis和对应索引，结果作为logits_select_idx[batch,1]。|
+  |Argmax采样|×|×|×|None|对输入logits每个batch取最大logits和对应索引，结果作为logits_select_idx[batch,1]。|
   |topK采样|√|×|×|None|无|
   |topP采样|×|√|×|None|无|
-  |QSample采样|×|×|×|QSample|对输入logits每个batch使用q[i]进行指数采样，从结果中取最大值和索引，作为logits_select_idx[batch,1]。|
+  |qSample采样|×|×|×|qSample|对输入logits每个batch使用q[i]进行指数采样，从结果中取最大值和索引，作为logits_select_idx[batch,1]。|
   |topK-topP采样|√|√|×|None|无|
-  |topK-QSample采样|√|×|×|QSample|无|
-  |topK-Multinomial采样|√|×|×|Multinomial|无| 
-  |topK-minP-Multinomial采样|√|×|√|Multinomial|无| 
-  |topP-QSample采样|×|√|×|QSample|无|
-  |topK-topP-QSample采样|√|√|×|QSample|VLLM框架标准完整功能。|
-  |topK-topP-Multinomial采样|√|√|×|Multinomial|Min_p为无效值，但仍执行多项式采样|
-  |topK-topP-minP-Multinomial采样|√|√|√|Multinomial|Sglang框架标准完整功能。|
+  |topK-qSample采样|√|×|×|qSample|无|
+  |topK-multiNomial采样|√|×|×|multiNomial|无| 
+  |topK-minP-multiNomial采样|√|×|√|multiNomial|无| 
+  |topP-qSample采样|×|√|×|qSample|无|
+  |topK-topP-qSample采样|√|√|×|qSample|VLLM框架标准完整功能。|
+  |topK-topP-multiNomial采样|√|√|×|multiNomial|min_ps为无效值，但仍执行多项式采样|
+  |topK-topP-minP-multiNomial采样|√|√|√|multiNomial|Sglang框架标准完整功能。|
 
 计算公式：
   输入logits为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
@@ -12336,7 +12336,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
     * 具体计算流程如下所示：
     * 根据输入top_k[b]与`ks_max`的关系，判断是否进行topK采样：top_k[b]≤0,跳过topK采样；
-    (1)1≤topK≤min(voc_size,ks_max),执行topK采样
+    (1)1≤top_k≤min(voc_size,ks_max),执行topK采样
     (2)top_k>min(voc_size,ks_max),跳过topK采样
     * 对当前batch分割为若干子段，滚动计算top_k_value[b]：
     top_k_value[b]={Max(top_k[b])}_{s=1}^{lceilfrac{S}{v}rceil}{top_k_value[b]{s-1}cup{logits[b][v]getop_k_min[b][s-1]}}
@@ -12351,7 +12351,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     * 将小于阈值的部分通过mask置为默认无效值defLogit:
     sorted_value[b][v]=begin{cases} -inf & top_k_mask[b][v]=true} 
     sorted_value[b][v] & top_k_mask[b][v]=false} & end{cases}
-    * 其中defLogits取决于入参属性Attr.optional.Bool.input_is_logits，该属性控制输入Logits和输出logits_top_kp_select的归一化：
+    * 其中defLogits取决于入参属性Attr.optional.Bool.input_is_logits，该属性控制输入logits和输出logits_top_kp_select的归一化：
     defLogit = begin{cases} -inf, & inputIsLogits = True 0, & inputIsLogits = False end{cases}
 
     topP采样
@@ -12377,8 +12377,8 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     * (sglang框架支持更新)直接使用截断后的sortedValue作为logitsSortMasked：
     logitsSortMasked[b,:] = sortedValue[b]
 
-    min_p采样
-    * 如果min_ps[b]∈(0, 1)，则执行min_p采样：
+    minP采样
+    * 如果min_ps[b]∈(0, 1)，则执行minP采样：
     logitsMax[b] = Max(logitsSortMasked[b])
     minPThd = logitsMax[b] * minPs[b]
     minPMask[b] = begin{cases} 0, & logitsSortMasked[b] < minPThd  1, & logitsSortMasked[b] geq minPThd end{cases}
@@ -12393,33 +12393,33 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     logitsIndex[b][v] = Index(logitsSortMasked[b][v] in Logits)
     logitsIndexMasked[b,:] = logitsIndex[b,:] * topKMask[b] * topPMask[b] * minPMask[b]
     其中，topK、topP、minP采样环节如果被跳过，则相应mask为全1。
-     * 接下来使用logitsIndexMasked对输入Logits进行Select，过滤输入Logits中的高频token作为logits_top_kp_select输出：
+     * 接下来使用logitsIndexMasked对输入logits进行Select，过滤输入logits中的高频token作为logits_top_kp_select输出：
     logitsTopKpSelect}[b][v] = begin{cases} logits[b][v], & if logitsIndexMasked[b,v] = True 
     defLogit, & if logitsIndexMasked[b,v] = False end{cases}
 
     后继处理
     * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
-    * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性Attr.optional.Bool.input_is_logits，即：
+    * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入logits的实际情况，配置入参约束属性Attr.optional.Bool.input_is_logits，即：
     inputIsLogits = begin{cases} True, & Logits notin [0,1] 
     False, & Logits in [0,1] end{cases}
     使得
     probs[b] = logitsSortMasked[b, :]
-    接下来有三种模式：None，QSample，Multinomial，通过入参约束属性attr.optional.Str.post_sample加以控制。
+    接下来有三种模式：None，qSample，multiNomial，通过入参约束属性attr.optional.Str.post_sample加以控制。
     * None 
     * 直接对每个batch通过Argmax取最大元素和索引，并通过gatherOut输出。
     logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probs[b][:])]
-    * QSample
+    * qSample
     * 先对probs进行指数分布采样：
     qCnt = Sum(MinPMask == 1)
     probsOpt[b] = frac{probs[b]}{q[b, :qCnt] + eps}
     * 再进行Argmax-GatherOut输出结果：
     logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probsOpt[b][:])]
-    * Multinomial
+    * multiNomial
     * 使用多项式随机采样，根据logitsSortMasked中的概率值，执行无放回的多项式采样，对每个batch取1个样本，将采样结果作为当期batch的输出：
     sampleIdx}[b] = multinomial(logitsSortMasked[b,:], numSamples=1, seed[b], offset[b])
     logitsSelectIdx[b] = LogitsIdx[b][sampleIdx[b]]
 
-  * 对于采样种子，当attr.optional.Str.post_sample="multinomial"时，q约束为INT64，分别从第一列和第二列获取Multinomial采样的seed和offset：
+  * 对于采样种子，当attr.optional.Str.post_sample="multinomial"时，q约束为INT64，分别从第一列和第二列获取multiNomial采样的seed和offset：
     seed[b] = begin{cases} q[b, 0], & b < qRows 
     q[-1, 0], & b ge qRows end{cases}
 
@@ -12439,7 +12439,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
    q（Tensor）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持`float32`，数据格式支持$ND$，支持非连续Tensor，默认值为None, 此时跳过后继采样，从probs计算logits_select_idx。
     - 根据post_sample的模式不同，该参数约束如下：
     - post_sample = qSample时, 尺寸约束为[batch, voc_size], 数据类型必须为float32，指数分布采样矩阵，维度需与logits的一致。
-    - post_sample = multinomial时, multinomial随机采样参数矩阵，数据类型必须为int64，用于为aclnnMultinomial采样提供控制参数。合法的尺寸为[q_row, 2]，其中q_row≥1：
+    - post_sample = multinomial时, multinomial随机采样参数矩阵，数据类型必须为int64，用于为aclnnmultiNomial采样提供控制参数。合法的尺寸为[q_row, 2]，其中q_row≥1：
         - 第1列对应aclnnMultinomial.seed参数：对应当前batch的随机数种子。
         - 第2列对应aclnnMultinomial.offset参数：随机数生成器的偏移量，它影响生成的随机数序列的位置。设置偏移量后，生成的随机数序列会从指定位置开始。
         - 如果qrow<batch，则默认使用最后一个batch的采样参数作为后续batch的multinomial采样参数。
@@ -12451,10 +12451,10 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
     - 若该参数取值为True，输入的logits中的数值不能确保在[0,1]区间内。由于logits未进行归一化，在进行top_p采样等后续步骤之前，先对输入进行softmax处理。logits_top_kp_select中的无效logits默认值defLogit=-inf。
     - 若该参数取值为False，输入logits中的所有元素都确保在[0,1]区间内。输入logits已经归一化，为避免梯度平滑化，top_p采样等后续步骤直接使用前级处理的结果。logits_top_kp_select中的无效logits默认值defLogit=0。
    post_sample（int）：可选参数，该参数控制topk-topp采样之后的后继处理策略。第一优先级：判断q是否为None，如果q=None，则无视参数提供的post_sample内容，强制后继处理模式一概设为None。参数合法值允许：
-    - qSample(默认值)：倾向于使用QSample采样。
+    - qSample(默认值)：倾向于使用qSample采样。
     - multinomial：使用multinomial采样（多项式随机抽样），此时入参中的q矩阵将被解析为随机种子，执行multinomial-gather。
     - None：显式强调不使用任何后继处理，此时传入任何q!=None都被无视。
-   generator（int）：可选参数，MultiNomial使用的随机数生成器，必须指定seed才能传入。
+   generator（int）：可选参数，Multinomial使用的随机数生成器，必须指定seed才能传入。
 
 输出说明: 
 logits_select_idx（Tensor）：表示经过topK-topP-sample计算流程后，每个batch中词频最大元素max(probs_opt[batch, :])在输入logits中的位置索引。数据类型支持int64，数据格式支持ND。
