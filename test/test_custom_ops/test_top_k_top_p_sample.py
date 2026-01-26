@@ -85,10 +85,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
     k_max_aligned = (ks_max * 4 + 32 - 1) // 32 * 32 // 4
     k_max = k_max_aligned if k_max_aligned < 1024 else 1024
 
-    # 验证输入数据类型
-    # if not isinstance(logits_np, np.ndarray) or not isinstance(top_ks, np.ndarray) or not isinstance(top_ps, np.ndarray):
-    #     raise ValueError("输入数据必须是NumPy数组")
-
     # 处理 ml_dtypes.bfloat16 类型的辅助函数
     def convert_ml_bfloat16_to_torch(np_array):
         """将 ml_dtypes.bfloat16 转换为 PyTorch bfloat16"""
@@ -99,21 +95,16 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
         logits = convert_ml_bfloat16_to_torch(logits_np)
     else:
         dtype_logits_tsr = NP_TO_TORCH_DTYPE.get(logits_np.dtype, torch.float32)
-        # logits = torch.from_numpy(logits_np).type(dtype_logits_tsr)
         logits = logits_np
 
     # 处理 top_ps (bfloat16)
     if hasattr(top_ps.dtype, 'name') and 'bfloat16' in top_ps.dtype.name:
-        # topP = convert_ml_bfloat16_to_torch(top_ps).squeeze(-1)
         topP = convert_ml_bfloat16_to_torch(top_ps)
     else:
         dtype_top_ps_tsr = NP_TO_TORCH_DTYPE.get(top_ps.dtype, torch.float32)
-        # topP = torch.from_numpy(top_ps).type(dtype_top_ps_tsr).squeeze(-1)
-        # topP = torch.from_numpy(top_ps).type(dtype_top_ps_tsr)
         topP = top_ps
 
     # 处理其他参数 (保持原样)
-    # topK = torch.as_tensor(top_ks).squeeze(-1)
     topK = torch.as_tensor(top_ks)
 
     # 处理 q：若为 None，则设为 None，后续跳过 q 采样
@@ -134,7 +125,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
         min_ps = convert_ml_bfloat16_to_torch(min_p_np)
     else:
         dtype_min_p_np_tsr = NP_TO_TORCH_DTYPE.get(min_p_np.dtype, torch.float32)
-        # min_ps = torch.from_numpy(min_p_np).type(dtype_min_p_np_tsr)
         min_ps = min_p_np
 
     if USE_PRINT:
@@ -172,10 +162,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
         k_val = topK[i].item()  # 获取标量值
         top_ks_max = min(k_max, vocab_size)
         use_top_k = (k_val >=1 and k_val<=top_ks_max)
-        # print("k_val")
-        # print(k_val)
-        # print("print(top_ks_max)")
-        # print(top_ks_max)
 
         # topPSample switch
         p = topP[i].item()
@@ -209,8 +195,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
             use_top_k_guess = not use_top_k
             # 对概率排序以便计算累积概率
             sorted_probs, sorted_probs_indices = torch.sort(topk_probs, dim=-1, descending=True, stable=True) #TODO: 为什么还需要进行排序
-            # print("..........pvalue...........")
-            # print(p)
             if p>0:
                 # common top-p sample using cumsum prob filter
                 probs_sum = sorted_probs.cumsum(dim=-1)
@@ -238,7 +222,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
             # 映射回原始索引
             if USE_FAST_PROBS:
                 # 统一使用截断的top_p采样结果
-                #selected_indices = selected_probs_indices 
                 selected_indices = topk_indices[selected_probs_indices]  
                 selected_logits = sorted_probs[top_p_sel]   # Logits
             else:
@@ -246,12 +229,8 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
                 selected_logits = topk_logits[selected_probs_indices] # 待定
 
             # 获取非掩码部分的数量（即保留的token数量）
-            # top_p_sel = torch.tensor(top_p_sel).int()
-            # false_count = torch.sum(top_p_sel)
             false_count = (top_p_sel>0).sum().item()
-            # print(f"topKP第{i}行,topPNum={false_count}")
         else:
-            # print("*********************Skipping TopP*******************\n")
             # 不使用 Top-P，继承top-P的输入
             selected_indices = topk_indices  # 所有通过TopK筛选的token
             selected_logits = topk_probs
@@ -265,13 +244,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
             print(f"topPNum = {false_count}")
             print(f'selected_logits={selected_logits}')
             print(f'selected_indices={selected_indices}')
-            
-        # if not use_top_k and not use_top_p and minp < 1: # 没做过top_k、top_p时，kernel中未进行排序
-        #     selected_indices = torch.arange(len(original_logits))
-        #     if input_is_logits:
-        #         selected_logits = onlySoftmax(original_logits, dim = -1)
-        #     else:
-        #         selected_logits = original_logits
         
         if p <= 0 and input_is_logits: # kernel侧p小于零时取最大值，并且概率为1
             selected_logits[0] = 1
@@ -299,15 +271,11 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
             min_p_sel = [a and b for a,b in zip(top_p_sel, sel_prob_mask)]
         else:
             # reserve only 1 max token for current batch
-            # min_p_sel = [False] * top_p_sel.numel()
             min_p_sel = [False] * false_count
             min_p_sel[0] = True
-            
-            # print("top_p_sel.numel()")
-            # print(top_p_sel.numel())
+
         min_p_sel = torch.tensor(min_p_sel)
         # if not use_top_k and not use_top_p: # 当不使能topK、topP时，对logits归一化结果直接进行minP采样
-
         
         selected_logits = selected_logits[min_p_sel]
         selected_indices = selected_indices[min_p_sel]
@@ -350,18 +318,7 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
         elif post_sample == "multiNomial":
             logits_sort_masked[i, :len(selected_logits)] = selected_probs
             logits_idx[i, :len(selected_indices)] = selected_indices
-        # print("......probs_index.......")
-        # print(probs_index)
-        # print(".........len_selected_probs.......")
-        # print(selected_probs.shape)
-        # print(len(selected_indices))
-        # print(selected_probs)
 
-        # 使用probs_index直接获取对应的原始索引
-        # if (post_sample == "None"):
-        #     logits_idx[i, :len(selected_indices)] = selected_indices
-        #     # rs_index = None
-        # else:
         if post_sample != "multiNomial":
             golden_index = selected_indices[probs_index].squeeze(0)
             if USE_PRINT:
@@ -384,17 +341,6 @@ def top_k_top_p_sample(data, run_attr: additionAttr, generator):
         probs_index = probs_index.cpu()
         for j in range(batch_size):
             rs_index[j] = logits_idx[j][probs_index[j]]        
-    
-
-    # if (is_need_sample_result):
-    #     logits_sort_masked = logits_sort_masked.numpy()
-    #     logits_idx = logits_idx.numpy()
-    #     rs_index = None
-    # else:
-    #     logits_sort_masked = None
-    #     logits_idx = None
-    #     rs_index = rs_index.numpy()
-    # rs_value = rs_value.numpy()
         
     return rs_index, rs_value
 
@@ -530,8 +476,6 @@ class TestTopKTopPSample(TestCase):
                 self._custom_test(bs, voc_size, kpq_set, run_attr, dtype)
 
                 self.assertRtolEqual(logits_select_idx_npu, logits_select_idx_golden_npu)
-                # if is_need_logits == 1:
-                #     self.assertRtolEqual(logits_top_kp_select_npu, logits_top_kp_select_golden_npu)
                 
                 case_no += 1
                 print(f"{case_no} cases passed.")
