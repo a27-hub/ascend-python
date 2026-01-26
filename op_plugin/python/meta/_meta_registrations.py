@@ -2905,3 +2905,26 @@ def npu_fused_linear_cross_entropy_loss_with_max_sum_grad_meta(grad, input, weig
     weight_grad = torch.empty(output_size_1, dtype=output_dtype_0, device='meta')
 
     return (input_grad, weight_grad)
+
+
+@impl(m_aten, "_convolution")
+def convolution_meta(input, weight, bias, stride, padding, dilation, transposed,
+                     output_padding, groups, benchmark, deterministic, cudnn_enabled, *args):
+
+    def _get_param_tuple(param):
+        return (param, param) if not isinstance(param, (tuple, list)) else param
+
+    batch_size, in_channels = input.shape[0], input.shape[1]
+    out_channels = weight.shape[0]
+    kernel_h, kernel_w = weight.shape[2], weight.shape[3]
+    input_h, input_w = input.shape[2], input.shape[3]
+
+    stride_h, stride_w = _get_param_tuple(stride)
+    pad_h, pad_w = _get_param_tuple(padding)
+    dilation_h, dilation_w = _get_param_tuple(dilation)
+
+    output_h = (input_h + 2 * pad_h - dilation_h * (kernel_h - 1) - 1) // stride_h + 1
+    output_w = (input_w + 2 * pad_w - dilation_w * (kernel_w - 1) - 1) // stride_w + 1
+    
+    output_shape = (batch_size, out_channels, output_h, output_w)
+    return torch.empty(output_shape, dtype=input.dtype, device='meta')
