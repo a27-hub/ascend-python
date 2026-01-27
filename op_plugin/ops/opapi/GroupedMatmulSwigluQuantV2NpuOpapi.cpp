@@ -110,6 +110,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
+    TORCH_CHECK("zzz test log dequant_dtype",dequant_dtype_real);
     int64_t quant_mode_real = quant_mode.value_or(0);
     int64_t group_list_type_real = group_list_type.value_or(0);
     auto weight_assist_matrix_real = weight_assist_matrix.value_or(at::TensorList());
@@ -134,6 +135,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         if (dequant_dtype.has_value()) {
                 dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
         }
+        TORCH_CHECK("zzz test log dequant_dtype",dequant_dtype_real);
         TORCH_CHECK(!weight[DIM_0].sizes().empty(), "weight[0] is empty.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(weight[DIM_0].dim() == DIM_3, "weight[0] dim should be equal to 3, but the actual value is ",
                     weight[DIM_0].dim(), OPS_ERROR(ErrCode::PARAM));
@@ -188,6 +190,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
 
     const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ;
+    TORCH_CHECK("zzz test log dequant_dtype",dequant_dtype_real);
     if (is_weight_nz) {
         static const bool is_weight_nz_available = check_aclnn_kernel_available("aclnnGroupedMatmulSwigluQuantWeightNzV2");
         TORCH_CHECK(is_weight_nz_available,
