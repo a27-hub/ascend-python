@@ -41,7 +41,7 @@ class TestTransposeQuantBatchMatmul(TestCase):
         x2_scale = torch.ones((N, ), dtype=torch.float32)
         supported_output = self.supported_op_exec(x1, x2, x1_scale, x2_scale)
         custom_output = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=1, 
-                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu()
+                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                             perm_x1=[1, 0, 2], perm_x2=[0, 1, 2], perm_y=[1, 0, 2]).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.01)
 
@@ -55,7 +55,7 @@ class TestTransposeQuantBatchMatmul(TestCase):
         x2_scale = torch.ones((N, ), dtype=torch.float32)
         supported_output = self.supported_op_exec(x1, x2, x1_scale, x2_scale)
         custom_output = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=27, 
-                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu()
+                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                             perm_x1=[1, 0, 2], perm_x2=[0, 1, 2], perm_y=[1, 0, 2]).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.01)
 
@@ -69,7 +69,7 @@ class TestTransposeQuantBatchMatmul(TestCase):
         x2_scale = torch.ones((N, ), dtype=torch.float32)
         supported_output = self.supported_op_exec(x1, x2, x1_scale, x2_scale)
         custom_output = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=1, 
-                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu()
+                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                             perm_x1=[1, 0, 2], perm_x2=[0, 1, 2], perm_y=[1, 0, 2]).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
@@ -83,7 +83,7 @@ class TestTransposeQuantBatchMatmul(TestCase):
         x2_scale = torch.ones((N, ), dtype=torch.float32)
         supported_output = self.supported_op_exec(x1, x2, x1_scale, x2_scale)
         custom_output = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=27, 
-                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu()
+                                                            x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
                                                             perm_x1=[1, 0, 2], perm_x2=[0, 1, 2], perm_y=[1, 0, 2]).to("cpu")
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
