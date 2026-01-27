@@ -3115,7 +3115,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
         torch._check(
             (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0) or \
             (group_sizes[0] == 1 and group_sizes[1] == 128 and group_sizes[2] == 128),
-            lambda: "when the dtype of input is int8, group_sizes's value must be 0, please check group_sizes's value" + ops_error(ErrCode.VALUE),
+            lambda: "when the dtype of input is int8, group_sizes's value must be 0 or [1,128,28], please check group_sizes's value" + ops_error(ErrCode.VALUE),
         )
     if pertoken_scale is None:
         torch._check(
@@ -3133,7 +3133,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
         )
         torch._check(
             (x1_dtype is not None and x2_dtype is not None) or (x1.dtype in group_input_dtype_lst or x2.dtype in group_input_dtype_lst),
-            lambda: "When group_sizes's value is not 0, x1_dtype and x2_dtype are None, dtype of input must be uint8, float8_e4m3fn, float8_e5m2 or int32, but x1's dtype is " +
+            lambda: "When group_sizes's value is not 0, x1_dtype and x2_dtype are None, dtype of input must be uint8, float8_e4m3fn, float8_e5m2 , int8 or int32, but x1's dtype is " +
                     str(x1.dtype) + " x2's dtype is " + str(x2.dtype) + ops_error(ErrCode.TYPE),
         )
         if group_sizes[0] > 1:
