@@ -1676,10 +1676,10 @@ _add_torch_npu_docstr(
 “Transformer Attention Score”的融合计算, 实现的计算公式如下: 
 $y=Softmax(Mask(scale*(pse+query*key^{T}),atten_mask),keep_prob)$
 $attention=Dropout(y)*value$
-该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_fusion_attention一致。
+该接口为torch_npu.npu_fusion_attention支持图模式的版本，aclgraph支持input_layout为BNSD的场景。
 
 接口原型
-torch_npu.npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 
 参数说明
 query: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
@@ -1698,9 +1698,9 @@ inner_precise: 整型, 用于提升精度, 数据类型支持int64, 默认值为
 当前0、1为保留配置值, 2为使能无效行计算, 其功能是避免在计算过程中存在整行mask进而导致精度有损失, 但是该配置会导致性能下降. 
 如果算子可判断出存在无效行场景, 会自动使能无效行计算, 例如sparse_mode为3, Sq > Skv场景. 
 prefix: int类型数组, 可选参数, 代表prefix稀疏计算场景每个Batch的N值. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
-actual_seq_qlen: int类型数组, 可选参数, varlen场景时需要传入此参数. 表示query每个S的累加和长度, 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
+actual_seq_qlen: Tensor类型, 可选参数, varlen场景时需要传入此参数. 表示query每个S的累加和长度, 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
 比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_qlen传: 2 4 6 8 10. 
-actual_seq_kvlen: int类型数组, 可选参数, varlen场景时需要传入此参数. 表示key/value每个S的累加和长度. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
+actual_seq_kvlen: Tensor类型, 可选参数, varlen场景时需要传入此参数. 表示key/value每个S的累加和长度. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
 比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_kvlen传: 2 4 6 8 10. 
 sparse_mode: 整型, 表示sparse的模式, 可选参数. 数据类型支持int64, 默认值为0, 支持配置值为0、1、2、3、4、5、6、7、8. 当整网的atten_mask都相同且shape小于2048*2048时, 建议使用defaultMask模式, 来减少内存使用量. 综合约束请见约束说明. 
 softmax_layout: string类型，可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input\_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
@@ -1748,8 +1748,8 @@ sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值�
 第2个输出为Tensor, Softmax计算的Max中间结果, 用于反向计算, 数据类型支持float. 
 第3个输出为Tensor, Softmax计算的Sum中间结果, 用于反向计算, 数据类型支持float. 
 第4个输出为Tensor, 预留参数, 暂未使用. 
-第5个输出为Tensor, DSA生成dropoutmask中, Philox算法的seed. 
-第6个输出为Tensor, DSA生成dropoutmask中, Philox算法的offset. 
+第5个输出为Tensor, DSA生成dropoutmask中, Philox算法的seed. 在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor.
+第6个输出为Tensor, DSA生成dropoutmask中, Philox算法的offset. 在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor.
 
 约束说明
 该接口仅在训练场景下使用. 
