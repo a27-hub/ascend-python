@@ -12,7 +12,7 @@
 
 ![](../../figures/zh-cn_formulaimage_0000002272066629.png)
 
-该接口为torch_npu.npu_fusion_attention支持图模式和aclgraph的版本，具体功能与torch_npu.npu_fusion_attention一致。
+该接口为`torch_npu.npu_fusion_attention`支持图模式的版本，aclgraph支持`input_layout`为`BNSD`的场景。
 
 ## 函数原型<a name="zh-cn_topic_0000001742717129_section45077510411"></a>
 
@@ -143,8 +143,8 @@ torch_npu.npu_fusion_attention_v3(query, key, value, head_num, input_layout, pse
 -   第2个输出为`Tensor`，Softmax计算的Max中间结果，用于反向计算，数据类型支持`float`。
 -   第3个输出为`Tensor`，Softmax计算的Sum中间结果，用于反向计算，数据类型支持`float`。
 -   第4个输出为`Tensor`，预留参数，暂未使用。
--   第5个输出为`Tensor`，DSA生成dropout mask中，Philox算法的seed。
--   第6个输出为`Tensor`，DSA生成dropout mask中，Philox算法的offset。
+-   第5个输出为`Tensor`，DSA生成dropout mask中，Philox算法的seed。在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor。
+-   第6个输出为`Tensor`，DSA生成dropout mask中，Philox算法的offset。在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor。
 
 ## 约束说明<a name="zh-cn_topic_0000001742717129_section12345537164214"></a>
 
