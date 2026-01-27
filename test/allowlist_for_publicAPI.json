@@ -43,6 +43,14 @@
       "npu_fused_floyd_attention_backward",
       "save_npugraph_tensor"
     ],
+    "v2.11": [
+      "npu_gelu_mul",
+      "npu_clipped_swiglu",
+      "npu_sim_exponential_",
+      "npu_fused_floyd_attention",
+      "npu_fused_floyd_attention_backward",
+      "save_npugraph_tensor"
+    ],
     "all_version": [
       "_npu_dropout",
       "copy_memory_",
@@ -131,6 +139,10 @@
       "ffn_worker_scheduler",
       "npu_moe_gating_top_k_softmax_v2",
       "npu_confusion_transpose",
+<<<<<<< HEAD
+=======
+      "npu_dense_lightning_indexer_grad_kl_loss",
+>>>>>>> 93345a81d98f8ec8fb9ffdc1d86b02cf6e1151de
       "npu_dense_lightning_indexer_softmax_lse"
     ]
   }
