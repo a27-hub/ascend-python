@@ -24,6 +24,14 @@ constexpr uint64_t MIX_STEP1 = 18397679294719823053LLU;
 constexpr uint64_t MIX_STEP2 = 14181476777654086739LLU;
 constexpr int OWNER_ROOT_UID = 0;
 
+std::string getEnvName() {
+    const char* env = std::getenv("operator");
+    if (env) {
+        return std::string(env);
+    }
+    return "";
+}
+
 
 typedef void(*AddTensorAddrToCachedList) (void *addr);
 

@@ -87,6 +87,7 @@ constexpr int64_t FP4_IN_INT8 = 2;
 constexpr int64_t PENULTIMATE_DIM = 2;
 }
 
+std::string getEnvName();
 std::string real_path(const std::string &path);
 bool checkOwner(string cusLibPath);
 
@@ -1346,7 +1347,10 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", __VA_ARGS__);                                     \
+        std::string env_opi = getEnvName();  \
+        if (std::string(#aclnn_api) == env_opi) { \
+            OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", __VA_ARGS__); \
+        } \                                         \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
@@ -1405,7 +1409,10 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", __VA_ARGS__);                                     \
+        std::string env_opi = getEnvName();  \
+        if (std::string(#aclnn_api) == env_opi) { \
+            OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", __VA_ARGS__); \
+        } \                                         \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
