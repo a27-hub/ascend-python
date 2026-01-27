@@ -1818,7 +1818,7 @@ def npu_fusion_attention_backward_v2(query, key, value, dy, head_num, input_layo
 
 
 @impl(m, "npu_rotary_mul")
-def npu_rotary_mul_meta(embedding, cosine, sine, mode='half', rotate=None):
+def npu_rotary_mul_meta(embedding, cosine, sine, mode='half'):
     return torch.empty_like(embedding)
 
 
