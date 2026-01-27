@@ -31,6 +31,36 @@ enum class fft_mode {
     c2r,
 };
 
+void conjugate_symmetry(at::Tensor& input, int64_t dim) {
+    const auto ndim = input.dim();
+    if (dim < 0) {
+        dim = ndim + dim;
+        TORCH_CHECK(dim < ndim && dim >= 0, "Dimension out of range", OPS_ERROR(ErrCode::PARAM));
+    }
+
+    const auto nfft_dim_size = input.size(dim);
+
+    if (input.numel() == 0 || nfft_dim_size <= 2) {
+        return ;
+    }
+
+    const auto half = (nfft_dim_size + 1) / 2;
+    const auto fill_len = nfft_dim_size - half;
+    const auto high_freq_start = (nfft_dim_size % 2 == 0) ? half + 1 : half;
+    const auto high_len = (nfft_dim_size % 2 == 0) ? fill_len - 1 : fill_len;
+    const auto slow_freq_start = 1;
+
+    if (fill_len == 0) {
+        return;
+    }
+
+    auto low_freq = input.slice(dim, slow_freq_start, half).contiguous();
+    auto high_freq = input.narrow(dim, high_freq_start, high_len);
+
+    at::flip_out(high_freq, low_freq, dim);
+    at::imag(high_freq).neg_();
+}
+
 double _fft_normalization_scale(int64_t normalization, at::IntArrayRef sizes, at::IntArrayRef dims)
 {
     auto norm = static_cast<fft_norm_mode>(normalization);
@@ -138,11 +168,11 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
     const auto signal_ndim = dim.size();
     const auto batch_dims = ndim - signal_ndim;
 
-    if (mode == fft_mode::c2c && signal_ndim == 1 && self_.sizes().back() == 1) {
-        out_.copy_(self_);
-        return out_;
-    }
-    
+    if (mode == fft_mode::c2c && signal_ndim == 1 && self_.sizes().back() == 1) { 
+        out_.copy_(self_); 
+        return out_; 
+    } 
+     
     // Permute dimensions so [signal_dims | batch_dims], and in each stride order
     at::DimVector dim_permute(ndim);
     std::iota(dim_permute.begin(), dim_permute.end(), int64_t{0});
@@ -520,10 +550,18 @@ at::Tensor _fft_r2c(const at::Tensor& self, at::IntArrayRef dim, int64_t normali
         out_sizes, self.options().dtype(c10::toComplexType(self.scalar_type())));
 
     DO_ASDSIP_COMPATIBILITY(R2C, _exec_fft(out, self, out_sizes, dim, normalization, true, 1));
-    if ((!onesided) || dim.size() > 1 || self.scalar_type() == at::ScalarType::Half) {
+    if (dim.size() > 1 || self.scalar_type() == at::ScalarType::Half) {
         _exec_fft(out, self, out_sizes, dim, normalization, true, 1);
     } else {
-        _exec_fft_asdsip(out, self, out_sizes, dim, normalization, true, 1);
+        if (!onesided) {
+            out_sizes[last_dim] = last_dim_halfsize;
+            at::Tensor slice_out = out.slice(last_dim, 0, last_dim_halfsize).contiguous();
+            _exec_fft_asdsip(slice_out, self, out_sizes, dim, normalization, true, 1);
+            out.slice(last_dim, 0, last_dim_halfsize).copy_(slice_out);
+            conjugate_symmetry(out, last_dim);
+        } else {
+            exec_fft_asdsip(out, self, out_sizes, dim, normalization, true, 1);
+        }
     }
     return out;
 }
@@ -541,10 +579,18 @@ at::Tensor &_fft_r2c_out(const at::Tensor &self, at::IntArrayRef dim,
         out_sizes[last_dim] = last_dim_halfsize;
     }
     DO_ASDSIP_COMPATIBILITY(R2C, _exec_fft(out, self, out_sizes, dim, normalization, true, 1));
-    if ((!onesided) || dim.size() > 1 || self.scalar_type() == at::ScalarType::Half) {
+    if (dim.size() > 1 || self.scalar_type() == at::ScalarType::Half) {
         _exec_fft(out, self, out_sizes, dim, normalization, true, 1);
     } else {
-        _exec_fft_asdsip(out, self, out_sizes, dim, normalization, true, 1);
+        if (!onesided) {
+            out_sizes[last_dim] = last_dim_halfsize;
+            at::Tensor slice_out = out.slice(last_dim, 0, last_dim_halfsize).contiguous();
+            _exec_fft_asdsip(slice_out, self, out_sizes, dim, normalization, true, 1);
+            out.slice(last_dim, 0, last_dim_halfsize).copy_(slice_out);
+            conjugate_symmetry(out, last_dim);
+        } else {
+            exec_fft_asdsip(out, self, out_sizes, dim, normalization, true, 1);
+        }
     }
     return out;
 }
