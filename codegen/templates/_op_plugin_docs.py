@@ -12430,7 +12430,7 @@ torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=
 
 参数说明:
    logits（Tensor）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持`float16`、`bfloat16`和`float32`，数据格式支持$ND$，支持非连续Tensor。
-   top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
+   top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，无效范围则跳过topK，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
    top_p（Tensor）：必选参数，表示每个batch采样的p值，有效范围为0<$top\_p[batch]<1$，目前支持1维。数据类型和数据格式与`logits`保持一致，支持非连续Tensor。
     - 在任何情况下，topP对每个batch的输出都会保留至少1个token。
     - top_p[batch] ≤0时，对当前batch仅保留概率最大的1个token。
