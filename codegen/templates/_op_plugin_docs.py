@@ -12307,7 +12307,7 @@ _add_torch_npu_docstr(
     """
 接口原型: 
 torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need_logits=False, top_k_guess=32) -> (torch.Tensor, torch.Tensor)
-
+test
 功能描述: 
 根据输入词频logits、top_k/top_p采样参数、随机采样权重分布q，进行topK-topP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
 算子包含三个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、指数采样（Sample）。它们可以构成八种计算场景。如下表所示：
