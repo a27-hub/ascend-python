@@ -1,4 +1,4 @@
-# torch_npu.npu.empty_pin_memory_cache
+# torch_npu.npu.host_empty_cache
 
 ## 产品支持情况
 不涉及
