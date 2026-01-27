@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <vector>
+
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
@@ -26,21 +27,19 @@ constexpr int DIM_TWO = 2;
 constexpr int SHAPE_SIZE_TWO = 2;
 const int64_t FP4_NUMS_IN_FP8 = 2;
 
-static bool is_nz_format(const at::Tensor& x2)
+static bool is_nz_format(const at::Tensor &x2)
 {
-    const torch_npu::NPUStorageDesc &tensor_desc =
-        torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
+    const torch_npu::NPUStorageDesc &tensor_desc = torch_npu::NPUBridge::GetNpuStorageImpl(x2)->npu_desc_;
     return tensor_desc.npu_format_ == ACL_FORMAT_FRACTAL_NZ;
 }
 
-at::Tensor npu_dual_quant_matmul(const at::Tensor &x1, const at::Tensor &x2,
-                                 const at::Tensor &x1_l0_scale, const at::Tensor &x1_l1_scale,
-                                 const at::Tensor &x2_l0_scale, const at::Tensor &x2_l1_scale,
-                                 const c10::optional<at::Tensor> &bias, c10::optional<int64_t> output_dtype,
-                                 int64_t l0_group_size, int64_t l1_group_size)
+at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at::Tensor &x1_level0_scale,
+                                       const at::Tensor &x2_level0_scale, const at::Tensor &x1_level1_scale,
+                                       const at::Tensor &x2_level1_scale, const c10::optional<at::Tensor> &bias,
+                                       c10::optional<int64_t> output_dtype)
 {
-    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95,
-                "This interface is only supported on the Ascend910_95 platform.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+                "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
 
     auto x1_dim_num = x1.dim();
     TORCH_CHECK(x1_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
@@ -50,11 +49,9 @@ at::Tensor npu_dual_quant_matmul(const at::Tensor &x1, const at::Tensor &x2,
     TORCH_CHECK(x2_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
                 x2_dim_num, OPS_ERROR(ErrCode::PARAM));
     bool trans_x2 = op_plugin::utils::is_transpose_last_two_dims(x2);
-    TORCH_CHECK(trans_x2 == true,
-                "x2 only supports transposed inputs.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(trans_x2 == true, "x2 only supports transposed inputs.", OPS_ERROR(ErrCode::PARAM));
     bool is_weight_nz = is_nz_format(x2);
-    TORCH_CHECK(is_weight_nz,
-                "x2 only supports NZ format.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(is_weight_nz, "x2 only supports NZ format.", OPS_ERROR(ErrCode::PARAM));
 
     auto x1_k_dim = x1.size(DIM_ONE);
     // npu_dual_quant_matmul 只接受传入 x2 为非转置的 view shape
@@ -70,13 +67,8 @@ at::Tensor npu_dual_quant_matmul(const at::Tensor &x1, const at::Tensor &x2,
     output_size[DIM_ONE] = trans_x2 ? x2.size(DIM_ONE) : x2.size(DIM_ONE) * FP4_NUMS_IN_FP8;
 
     const at::Tensor &bias_v = bias.value_or(at::Tensor());
-    int l0_group_size = static_cast<int>(l0_group_size);
-    int l1_group_size = static_cast<int>(l1_group_size);
-    bool is_group_size_vaild = l0_group_size == 512 && l1_group_size == 32;
-    TORCH_CHECK(is_group_size_vaild,
-                "l0_group_size should be 512 and l1_group_size should be 32, but now l0_group_size is", l0_group_size,
-                ", l1_group_size is", l1_group_size,
-                OPS_ERROR(ErrCode::PARAM));
+    int l0_group_size = 512;
+    int l1_group_size = 32;
 
     c10::TensorOptions options;
     if (!output_dtype.has_value()) {
@@ -87,10 +79,9 @@ at::Tensor npu_dual_quant_matmul(const at::Tensor &x1, const at::Tensor &x2,
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-    EXEC_NPU_CMD(aclnnDualQuantMatmulWeightNz,
-                 x1, x2, x1_l0_scale, x1_l0_scale, x1_l1_scale, x2_l0_scale,
-                 bias_v, l0_group_size, l1_group_size, result);
+    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulWeightNz, x1, x2, x1_level0_scale, x2_level0_scale, x1_level1_scale,
+                 x2_level1_scale, bias_v, l0_group_size, l1_group_size, result);
 
     return result;
 }
-}
+}  // namespace op_api
