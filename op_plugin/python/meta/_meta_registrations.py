@@ -3115,7 +3115,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
         torch._check(
             (group_sizes[0] == 0 and group_sizes[1] == 0 or group_sizes[2] == 0) or \
             (group_sizes[0] == 1 and group_sizes[1] == 128 and group_sizes[2] == 128),
-            lambda: "when the dtype of input is int8, group_sizes's value must be 0 or [1,128,28], please check group_sizes's value" + ops_error(ErrCode.VALUE),
+            lambda: "when the dtype of input is int8, group_sizes's value must be 0 or [1,128,128], please check group_sizes's value" + ops_error(ErrCode.VALUE),
         )
     if pertoken_scale is None:
         torch._check(
