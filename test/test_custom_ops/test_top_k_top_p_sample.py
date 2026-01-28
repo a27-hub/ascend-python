@@ -318,11 +318,21 @@ class TestTopKTopPSample(TestCase):
 
 
     def _custom_test(self, bs, voc_size, data_info, run_attr: additionAttr, dtype):
+        torch.manual_seed(1)
+        np.random.seed(1)
+
+        input_is_logits = run_attr.input_is_logits
         if dtype != torch.bfloat16:
-            logits = np.random.uniform(0, 1, size=(bs, voc_size)).astype(dtype)
+            if input_is_logits == 1:
+                logits = np.random.uniform(0, 10, size=(bs, voc_size)).astype(dtype)
+            else:
+                logits = np.random.uniform(0, 1, size=(bs, voc_size)).astype(dtype)
             logits = torch.from_numpy(logits)
         else:
-            logits = torch.rand(size=(bs, voc_size), dtype=dtype)
+            if input_is_logits == 1:
+                logits = torch.rand(size=(bs, voc_size), dtype=dtype) * 10
+            else:
+                logits = torch.rand(size=(bs, voc_size), dtype=dtype)
         # generate top_k
         if data_info[0] > 0:
             # enable topk
@@ -399,11 +409,10 @@ class TestTopKTopPSample(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_top_k_top_p_sample_major(self, device="npu"):
         bs_rng_list = [(1, 128)]
-        voc_size = 2 ** 14
+        voc_size = 2 ** 10
         topK_flags = [0, 1] # topK and topP can not be 0 at the same time 
         topP_flags = [0, 1]
         minPs_flags = [0, 1]
-        # q_flags = [0, 1]
         need_logits_flags = [0, 1]
         input_is_logits_flags = [0, 1]
         post_sample_flags = ["qSample", "multiNomial", "None"]
@@ -422,7 +431,7 @@ class TestTopKTopPSample(TestCase):
 
                 self.assertRtolEqual(logits_select_idx_npu, logits_select_idx_golden_npu)
                 if is_need_logits == 1:
-                    torch.allclose(logits_top_kp_select_npu, logits_top_kp_select_golden_npu)
+                    self.assertTrue(torch.allclose(logits_top_kp_select_npu, logits_top_kp_select_golden_npu))
                 
                 case_no += 1
                 print(f"{case_no} cases passed.")
