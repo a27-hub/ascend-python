@@ -627,7 +627,7 @@ class TestFfnWorkerBatching(TestCase):
 
         max_out_shape = [A, BS, K_plus_1, H]
         y_npu, group_list_npu, session_ids_npu, micro_batch_ids_npu, token_ids_npu, expert_offsets_npu, dynamic_scale_npu, actual_token_num_npu = \
-            torch_npu.npu_ffn_worker_batching(schedule_context_npu, expert_num, max_out_shape, tokenDtype, need_schedule=need_schedule, layer_num=0)
+            torch_npu.npu_ffn_worker_batching(schedule_context_npu, expert_num, max_out_shape, token_dtype=tokenDtype, need_schedule=need_schedule, layer_num=0)
         torch_npu.npu.synchronize()
         self.assertRtolEqual(y_cpu, y_npu)
 
