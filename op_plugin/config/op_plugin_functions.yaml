@@ -6425,7 +6425,7 @@ custom:
     exposed: all_version
     internal_format_opapi: all_version
 
-  - func: npu_dual_level_quant_matmul(Tensor x1, Tensor x2, Tensor x1_level0_scale, Tensor x2_level0_scale, Tensor x1_level1_scale, Tensor x2_level1_scale, *, Tensor? bias=None,, int output_dtype=?) -> Tensor
+  - func: npu_dual_level_quant_matmul(Tensor x1, Tensor x2, Tensor x1_level0_scale, Tensor x2_level0_scale, Tensor x1_level1_scale, Tensor x2_level1_scale, *, Tensor? bias=None, int? output_dtype=None) -> Tensor
     op_api: [v2.1, newest]
     exposed: all_version
     internal_format_opapi: all_version

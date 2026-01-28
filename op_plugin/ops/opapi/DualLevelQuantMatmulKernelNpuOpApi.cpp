@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License (the "License");
@@ -25,7 +25,7 @@ constexpr int DIM_ZERO = 0;
 constexpr int DIM_ONE = 1;
 constexpr int DIM_TWO = 2;
 constexpr int SHAPE_SIZE_TWO = 2;
-const int64_t FP4_NUMS_IN_FP8 = 2;
+const int64_t B4_NUMS_IN_B8 = 2;
 
 static bool is_nz_format(const at::Tensor &x2)
 {
@@ -38,8 +38,8 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
                                        const at::Tensor &x2_level1_scale, const c10::optional<at::Tensor> &bias,
                                        c10::optional<int64_t> output_dtype)
 {
-    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
-                "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
+    // TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+    //             "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
 
     auto x1_dim_num = x1.dim();
     TORCH_CHECK(x1_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
@@ -49,26 +49,33 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
     TORCH_CHECK(x2_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
                 x2_dim_num, OPS_ERROR(ErrCode::PARAM));
     bool trans_x2 = op_plugin::utils::is_transpose_last_two_dims(x2);
-    TORCH_CHECK(trans_x2 == true, "x2 only supports transposed inputs.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(trans_x2, "x2 only supports transposed inputs.", OPS_ERROR(ErrCode::PARAM));
     bool is_weight_nz = is_nz_format(x2);
     TORCH_CHECK(is_weight_nz, "x2 only supports NZ format.", OPS_ERROR(ErrCode::PARAM));
 
-    auto x1_k_dim = x1.size(DIM_ONE);
-    // npu_dual_quant_matmul 只接受传入 x2 为非转置的 view shape
+    auto x1_k_dim = x1.size(DIM_ONE) * B4_NUMS_IN_B8; // x1 shape (m, k/2)
+    // 当前只接受传入 x2 为非转置的 view shape，为后续拓展方便，仍保留相关处理逻辑
     // trans_x2 == true 时，x2_view_shape 为 (k/2, n)
-    // trans_x2 == false 时，x2_view_shape 为 (k, n/2)（前面的校验会拦截，为后续拓展方便，仍保留相关处理逻辑）
-    auto x2_k_dim = trans_x2 ? weight.size(DIM_ZERO) * FP4_NUMS_IN_FP8 : weight.size(DIM_ZERO);
+    // trans_x2 == false 时，x2_view_shape 为 (k, n/2)
+    auto x2_k_dim = trans_x2 ? x2.size(DIM_ZERO) * B4_NUMS_IN_B8 : x2.size(DIM_ZERO);
     TORCH_CHECK(x1_k_dim == x2_k_dim, "The k of x1 and x2 should be equal. but x1_k_dim is ", x1_k_dim,
                 ", x2_k_dim is ", x2_k_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto out_dim_num = x1_dim_num;
     auto output_size = op_infer::array_to_small_vector(x1.sizes());
     output_size[DIM_ZERO] = x1.size(DIM_ZERO);
-    output_size[DIM_ONE] = trans_x2 ? x2.size(DIM_ONE) : x2.size(DIM_ONE) * FP4_NUMS_IN_FP8;
+    output_size[DIM_ONE] = trans_x2 ? x2.size(DIM_ONE) : x2.size(DIM_ONE) * B4_NUMS_IN_B8;
 
     const at::Tensor &bias_v = bias.value_or(at::Tensor());
     int l0_group_size = 512;
     int l1_group_size = 32;
+
+    TensorWrapper x1_wrapper =
+        make_wrapper(x1, c10::optional<int64_t>(static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)));
+    TensorWrapper x1_level1_scale_wrapper =
+        make_wrapper(x1_level1_scale, c10::optional<int64_t>(static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)));
+    TensorWrapper x2_level1_scale_wrapper =
+        make_wrapper(x2_level1_scale, c10::optional<int64_t>(static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)));
 
     c10::TensorOptions options;
     if (!output_dtype.has_value()) {
@@ -79,8 +86,8 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulWeightNz, x1, x2, x1_level0_scale, x2_level0_scale, x1_level1_scale,
-                 x2_level1_scale, bias_v, l0_group_size, l1_group_size, result);
+    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulWeightNz, x1_wrapper, x2, x1_level0_scale, x2_level0_scale,
+                 x1_level1_scale_wrapper, x2_level1_scale_wrapper, bias_v, l0_group_size, l1_group_size, result);
 
     return result;
 }
