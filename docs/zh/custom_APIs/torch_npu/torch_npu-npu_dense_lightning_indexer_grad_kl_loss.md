@@ -63,7 +63,7 @@
      d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
      $$
 
-     其中，$S$为$\tilde{Q}$和$\tilde{K}$矩阵乘的结果，$S_{t,:}$是$S$矩阵中第$t$行。$dW_{t,:}$是$dW$矩阵中第$t$行，$dq_{t,：}$是$dQ$矩阵中第$t$行，$d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}$是$dK$矩阵中$t$行累加值。
+     其中，$S$为$\tilde{Q}$和$\tilde{K}$矩阵乘的结果，$S_{t,:}$是$S$矩阵中第$t$行。$dW_{t,:}$是$dW$矩阵中第$t$行，$d\mathop{{\tilde{q}}}\nolimits_{{t,:}}$是$d\tilde{Q}$矩阵中第$t$行，$d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}$是$d\tilde{K}$矩阵中$t$行累加值。
 
 ## 函数原型
 
