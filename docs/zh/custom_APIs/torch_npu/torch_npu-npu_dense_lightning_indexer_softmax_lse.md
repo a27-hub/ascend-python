@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低接口的显存占用。
+- API功能：是`npu_dense_lightning_indexer_grad_kl_loss`接口的前置接口，通过把Lightning Indexer组件的Softmax求最大值和求和运算提前来降低接口的显存占用。
 
 - 计算公式：
 
@@ -33,11 +33,11 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 ```
 
 ## 参数说明
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入query，对应公式中的$\tilde{Q}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
+**query_index**(`Tensor`)：必选参数，表示Lightning Indexer正向的输入query，对应公式中的$\tilde{Q}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入key，对应公式中的$\tilde{K}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
+**key_index**(`Tensor`)：必选参数，表示Lightning Indexer正向的输入key，对应公式中的$\tilde{K}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
 
-**weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
+**weights**(`Tensor`)：必选参数，表示Lightning Indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
 **actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
