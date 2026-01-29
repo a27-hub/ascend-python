@@ -13,15 +13,15 @@
 - 计算公式：
 
 $$
-\text{res}=\text{AttentionMask}\left(\text{ReduceSum}\left(W\odot\text{ReLU}\left(Q_{index}@K_{index}^T\right)\right)\right)
+res=\text{AttentionMask}\left(\text{ReduceSum}\left(W\odot\text{ReLU}\left(\tilde{Q}@\tilde{K}^T\right)\right)\right)
 $$
 
 $$
-\text{maxIndex}=\text{max}\left(res\right)
+maxIndex=\text{max}\left(res\right)
 $$
 
 $$
-\text{sumIndex}=\text{ReduceSum}\left(\text{exp}\left(res-maxIndex\right)\right)
+sumIndex=\text{ReduceSum}\left(\text{exp}\left(res-maxIndex\right)\right)
 $$
 
 $maxIndex$，$sumIndex$作为输出传递给接口npu_dense_lightning_indexer_grad_kl_loss作为输入计算Softmax使用。
@@ -33,9 +33,9 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 ```
 
 ## 参数说明
-**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`query`，对应公式中的$Q_{index}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
+**query_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入query，对应公式中的$\tilde{Q}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index, D)$、$(T1, N1index, D)$。
 
-**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入`key`，对应公式中的$K_{index}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
+**key_index**(`Tensor`)：必选参数，表示lightning_indexer正向的输入key，对应公式中的$\tilde{K}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
 
 **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
@@ -43,7 +43,7 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 
 **actual_seq_klen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
-**layout**(`str`)：可选参数，用于标识输入`query`的数据排布格式。当前支持$BSND$、$TND$，默认值为$BSND$。
+**layout**(`str`)：可选参数，用于标识输入`query_index`的数据排布格式。当前支持$BSND$、$TND$，默认值为$BSND$。
 
 **sparse_mode**(`int`)：可选参数，表示sparse的模式，数据类型支持`int32`，默认值为`3`。当前仅支持模式`3`。
 
