@@ -36,8 +36,9 @@ static bool is_nz_format(const at::Tensor &x2)
 at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at::Tensor &x1_level0_scale,
                                        const at::Tensor &x2_level0_scale, const at::Tensor &x1_level1_scale,
                                        const at::Tensor &x2_level1_scale, const c10::optional<at::Tensor> &bias,
-                                       c10::optional<int64_t> output_dtype)
+                                       int64_t output_dtype)
 {
+    // TODO 待验证91095改名
     // TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
     //             "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
 
@@ -46,14 +47,14 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
                 x1_dim_num, OPS_ERROR(ErrCode::PARAM));
 
     auto x2_dim_num = x2.dim();
-    TORCH_CHECK(x2_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
+    TORCH_CHECK(x2_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x2 is only supported to be 2, but it is ",
                 x2_dim_num, OPS_ERROR(ErrCode::PARAM));
     bool trans_x2 = op_plugin::utils::is_transpose_last_two_dims(x2);
     TORCH_CHECK(trans_x2, "x2 only supports transposed inputs.", OPS_ERROR(ErrCode::PARAM));
     bool is_weight_nz = is_nz_format(x2);
     TORCH_CHECK(is_weight_nz, "x2 only supports NZ format.", OPS_ERROR(ErrCode::PARAM));
 
-    auto x1_k_dim = x1.size(DIM_ONE) * B4_NUMS_IN_B8; // x1 shape (m, k/2)
+    auto x1_k_dim = x1.size(DIM_ONE) * B4_NUMS_IN_B8;  // x1 shape (m, k/2)
     // 当前只接受传入 x2 为非转置的 view shape，为后续拓展方便，仍保留相关处理逻辑
     // trans_x2 == true 时，x2_view_shape 为 (k/2, n)
     // trans_x2 == false 时，x2_view_shape 为 (k, n/2)
@@ -78,16 +79,13 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
         make_wrapper(x2_level1_scale, c10::optional<int64_t>(static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)));
 
     c10::TensorOptions options;
-    if (!output_dtype.has_value()) {
-        options = x1.options().dtype(at::kHalf);
-    } else {
-        aclDataType output_acltype = c10_npu::GetAclDataType(output_dtype.value());
-        options = x1.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
-    }
+    aclDataType output_acltype = c10_npu::GetAclDataType(output_dtype);
+    options = x1.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulWeightNz, x1_wrapper, x2, x1_level0_scale, x2_level0_scale,
-                 x1_level1_scale_wrapper, x2_level1_scale_wrapper, bias_v, l0_group_size, l1_group_size, result);
+    // TODO 等aclnn改名
+    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulNz, x1_wrapper, x2, x1_level0_scale, x2_level0_scale, x1_level1_scale_wrapper,
+                 x2_level1_scale_wrapper, bias_v, l0_group_size, l1_group_size, result);
 
     return result;
 }
