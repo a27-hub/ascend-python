@@ -2447,7 +2447,7 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(x[0].shape[0] == res[0].shape[0])
             self.assertTrue(w[0].shape[2] == res[0].shape[1])
 
-    def test_npu_grouped_matmul_meta_910_95_fp8_1(self):
+    def test_npu_grouped_matmul_meta_950_fp8_1(self):
         with FakeTensorMode():
             torch.manual_seed(0)
             x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
@@ -2464,7 +2464,7 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(dim0 == res[0].shape[0])
             self.assertTrue(dim1 == res[0].shape[1])
 
-    def test_npu_grouped_matmul_meta_910_95_fp8_group_type_2(self):
+    def test_npu_grouped_matmul_meta_950_fp8_group_type_2(self):
         with FakeTensorMode():
             torch.manual_seed(0)
             x1 = torch.randint(2, 3, size=(128, 4096), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
@@ -2913,6 +2913,68 @@ class TestTransposeBatchMatmul(TestCase):
                                                         perm_x1=[1, 0, 2], perm_y=[1, 0, 2],
                                                         batch_split_factor=batch_split_factor)
             expect_ret = torch.randn((batch_split_factor, M, Batch * N // batch_split_factor), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+
+class TestTransposeQuantBatchMatmul(TestCase):
+    @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
+    def test_npu_transpose_quant_batchmatmul_meta_1(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float8_e5m2)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float8_e5m2)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
+            result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.float16,
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+    @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
+    def test_npu_transpose_quant_batchmatmul_meta_2(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float8_e4m3fn)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float8_e4m3fn)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
+            result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.float16,
+                                                        x1_scale=scale.npu(), x2_scale=scale.npu(), 
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+    @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
+    def test_npu_transpose_quant_batchmatmul_meta_3(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float8_e4m3fn)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float8_e4m3fn)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
+            result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.bfloat16,
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.bfloat16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
+    @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
+    def test_npu_transpose_quant_batchmatmul_meta_4(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float8_e5m2)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float8_e5m2)
+            x1_scale = torch.randint(1, 10, (M, ), dtype=torch.float32)
+            x2_scale = torch.randint(1, 10, (N, ), dtype=torch.float32)
+            result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.bfloat16,
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(), 
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, 1, Batch * N), dtype=torch.bfloat16)
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
@@ -4448,7 +4510,29 @@ class TestNpuRepeatInterleave(TestCase):
 
             self.assertEqual(x.shape, x_fake_tensor.shape)
             self.assertEqual(x.dtype, x_fake_tensor.dtype)
-            
+
+
+class TestQuantMatmulInplaceAdd(TestCase):
+    def test_npu_quant_batch_matmul_inplace_add(self):
+        M = 7168
+        N = 576
+        K = 512
+        with FakeTensorMode():
+            y = torch.randint(-1, 1, (M, N), dtype=torch.float32).npu()
+            x1 = torch.randint(-1, 1, (M, math.ceil(K/64)), dtype=torch.int8).npu()
+            x2 = torch.randint(-1, 1, (K, N), dtype=torch.int8).npu()
+            x2_scale = torch.randint(-1, 1, (M, math.ceil(K/64), 2), dtype=torch.float32).npu()
+            x1_scale = torch.randint(-1, 1, (math.ceil(K/64), 576, 2), dtype=torch.float32).npu()
+            res_1 = torch_npu.npu_add_quant_matmul_(y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=None)
+            self.assertTrue(len(res_1.shape) == 2)
+            self.assertTrue(x1.shape[0] == res_1.shape[0])
+            self.assertTrue(x2.shape[1] == res_1.shape[1])
+            self.assertTrue(res_1.dtype == torch.float32)
+            res_2 = torch_npu.npu_add_quant_matmul(y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=None)
+            self.assertTrue(len(res_1.shape) == 2)
+            self.assertTrue(x1.shape[0] == res_1.shape[0])
+            self.assertTrue(x2.shape[1] == res_1.shape[1])
+            self.assertTrue(res_1.dtype == torch.float32)
 
 if __name__ == "__main__":
     run_tests()
