@@ -101,24 +101,23 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    if (dequant_dtype.has_value()) {
-        TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char) || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half) 
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
-                    "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
-                    c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    }
+    // if (dequant_dtype.has_value()) {
+    //     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
+    //                 || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char) || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half) 
+    //                 || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
+    //                 "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
+    //                 c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    // }
     
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
-    if(dequant_dtype_real == 6){
+    if (dequant_dtype.value() == 6){
         dequant_dtype_real = 0;
     }
-    else if(dequant_dtype_real == 5){
+    else if (dequant_dtype.value() == 5){
         dequant_dtype_real = 1;
     }
-    else if (dequant_dtype_real == 15)
-    {
+    else if (dequant_dtype.value() == 15){
         dequant_dtype_real = 27;
     }
     int64_t quant_mode_real = quant_mode.value_or(0);
