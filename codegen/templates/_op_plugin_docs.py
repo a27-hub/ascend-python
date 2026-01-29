@@ -4539,6 +4539,53 @@ y = model(x1.npu(), x2.npu(), scale.npu())
 )
 
 _add_torch_npu_docstr(
+    "npu_transpose_quant_batchmatmul",
+    """
+功能描述: 
+该接口用于实现矩阵乘计算输入和输出的transpose操作。
+
+接口原型: 
+npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int? group_size=0, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
+参数说明: 
+- x1(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的左矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
+- x2(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的右矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
+- dtype(Int, 计算输入): 必选参数，声明output的数据类型，支持1和27, 1表示torch.float16，27表示torch.bfloat16。
+- bias(Tensor, 计算输入): 可选参数, 一个1D的Device侧Tensor输入，矩阵计算的bias参数。数据类型支持float32、float16、bfloat16，数据格式支持ND。当前仅支持配置为空。
+- x1_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，左矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
+- x2_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，右矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
+- group_size(Int, 计算输入): 可选参数, 默认为0, 表示量化分组大小，预留参数，当前仅支持配置为0，取值不生效。
+- perm_x1(ListInt, 计算输入): 可选参数, int类型列表，将input在矩阵乘之前排列成[B, M, K]。
+- perm_x2(ListInt, 计算输入): 可选参数, int类型列表，将weight在矩阵乘之前排列成[B, K, N]。
+- perm_y(ListInt, 计算输入): 可选参数, int类型列表，将y在矩阵乘后重新排列成[M, B, N]。
+- batch_split_factor(Int, 计算输入): 可选参数，默认为1, 表示output_batch的系数，当前为预留参数，仅支持配置为1。
+- y(Tensor, 计算输出): 一个3D的Tensor，输出数据类型支持float16、bfloat16，由dtype参数决定。
+
+约束说明:
+-右矩阵K仅支持512, N仅支持128
+-当前暂不支持bias、group_size、batch_split_factor
+-x1_scale和x2_scale当前暂不支持非1D输入
+
+支持的芯片型号:
+-昇腾910_95 AI处理器
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+M, K, N, Batch = 32, 512, 128, 32
+x1 = torch.randint(-3, 3, (M, Batch, K), dtype=torch.float8_e4m3fn).npu
+x2 = torch.randint(-3, 3, (Batch, K, N), dtype=torch.float8_e4m3fn).npu
+x1_scale = torch.rand(-3, 3, (M, ), dtype=torch.float32).npu
+x2_scale = torch.rand(-3, 3, (N, ), dtype=torch.float32).npu
+y = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype=1, x1_scale=x1_scale,
+                                        x2_scale=x2_scale, perm_x1=[1, 0, 2], 
+                                        perm_x2=[0, 1, 2], perm_y=[1, 0, 2])
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_convert_weight_to_int4pack",
     """
 功能描述:
@@ -6678,290 +6725,6 @@ single op output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694, 
 graph output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694,  0.1142, -2.2266]],
         [[-0.9595, -0.9609, -0.6602,  ...,  0.7959,  1.7920,  0.0783]]],
        device='npu:0', dtype=torch.float16) torch.Size([2, 1, 5120])
-"""
-)
-
-_add_torch_npu_docstr(
-    "npu_matmul_all_to_all",
-    """
-功能描述:
-算子功能: 该融合算子完成Matmul计算、Permute(保证通信后地址连续)和AlltoAll通信的融合，先计算后通信。
-计算公式: 
-假设x1的shape为(BS, H1), x2的shape为(H1, H2)
-  computeOut = x1 @ x2 + bias 
-  permutedOut = computeOut.view(BS, worldSize, H2/worldSize).permute(1, 0, 2) 
-  output = AlltoAll(permutedOut).view(worldSize*BS, H2/worldSize)
-
-接口原型:
-torch_npu.npu_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None) -> Tensor
-    
-参数说明:
-输入说明:
-x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
-x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
-bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float32, 数据格式支持ND.
-
-输出说明:
-y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
-
-属性说明:
-hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
-world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
-all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2], 表示将输入由`(BS, H2)`转为`(BS * worldSize, H2 / worldSize)`。
-
-约束说明:
-默认支持确定性计算
-右矩阵和输出矩阵的H2必须整除worldSize
-H1范围仅支持[1, 65535]
-worldSize仅支持2,4,8,16
-x1、x2的数据类型必须一致
-bias的数据类型可以为x1 x2的数据类型，也可以为float32
-通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
-不支持跨超节点通信，只支持超节点内。
-
-支持的PyTorch版本
-PyTorch 2.6.0+ 
-
-支持的型号:
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
-
-调用示例:
-单算子模式调用
-import torch
-import torch_npu
-
-# 初始化输入
-x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
-x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
-bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
-# 其他参数
-hcom = "fake group info"
-world_size = 2
-# 调用MatmulAlltoAll算子
-res = torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias, [-1,-2])
-print(res)
-# 输出res的形状类似于
-tensor([[ 0.7483, -0.2262, -0.5252,  ..., -0.6810,  1.5576, -0.3997],
-        [ 0.3010,  0.9226,  0.7723,  ..., -1.0785,  0.8963, -0.4670],
-        [-1.6897, -0.6455,  0.0328,  ..., -0.6632, -0.0950, -0.0679],
-        ...,
-        [ 0.2493, -0.2285,  1.1562,  ..., -0.2299,  0.1272,  0.4843],
-        [-0.2058, -0.5962, -0.2101,  ...,  1.2606,  0.8451,  1.1243],
-        [-0.8396,  1.3138, -0.4066,  ..., -0.7683,  1.3133,  0.7471]])
-
-"""
-)
-
-_add_torch_npu_docstr(
-    "npu_quant_matmul_all_to_all",
-    """
-功能描述:
-算子功能: 该融合算子完成量化的Matmul计算、Permute(保证通信后地址连续)和AlltoAll通信的融合，先计算后通信。支持K-C量化模式。
-计算公式: 
-假设x1的shape为(BS, H1), x2的shape为(H1, H2)
-    - K-C量化模式：
-      computeOut = (x1 @ x2 + bias) * x1Scale * x2Scale
-      permutedOut = computeOut.view(BS, worldSize, H2 / worldSize).permute(1, 0, 2)
-      output = AlltoAll(permutedOut).view(worldSize * BS, H2 / worldSize)
-    - K-C量化模式带bias：
-      computeOut = (x1 @ x2) * x1Scale * x2Scale  + bias
-      permutedOut = computeOut.view(BS, worldSize, H2 / worldSize).permute(1, 0, 2)
-      output = AlltoAll(permutedOut).view(worldSize * BS, H2 / worldSize)
-
-接口原型:
-torch_npu.npu_quant_matmul_all_to_all(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, Tensor? common_scale=None, Tensor? x1_offset=None, Tensor? x2_offset=None, int x1_quant_mode=3, int x2_quant_mode=2, int common_quant_mode=0, int[]? group_sizes=None, int[]? all2all_axes=None, int comm_quant_dtype=0, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None, int? output_scale_dtype=None, int? comm_scale_dtype=None, int? y_dtype=None) -> Tensor
-
-参数说明:
-输入说明:
-x1: Tensor类型， 左矩阵输入张量，对应公式中的x1，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
-x2: Tensor类型，右矩阵输入张量，对应公式中的x2，数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2。
-biasOptional: Tensor类型,可选输入张量，偏置项，仅在传入非空时生效，数据类型为FLOAT32。
-x1Scale: Tensor类型，左矩阵的量化系数，对应公式中的x1Scale，数据类型为FLOAT32。
-x2Scale: Tensor类型，右矩阵的量化系数，对应公式中的x2Scale，数据类型为FLOAT32。
-commScaleOptional: Tensor类型，可选输入，低比特通信的量化系数，暂不支持。
-x1OffsetOptional: Tensor类型，可选输入，左矩阵的量化偏置，暂不支持。
-x2OffsetOptional: Tensor类型，可选输入，右矩阵的量化偏置，暂不支持。
-x1QuantMode: Int类型，左矩阵的量化方式，当前仅支持配置为3，表示PerToken。
-x2QuantMode: Int类型，右矩阵的量化方式，当前仅支持配置为2，表示PerChannel。
-commQuantMode: Int类型，低比特通信的量化方式，预留参数，当前仅支持配置为0，表示不量化。
-commQuantDtype: Int类型，低比特通信的量化类型，预留参数，当前仅支持配置为-1，表示ACL_DT_UNDEFINED。
-groupSize: 数组类型，用于Matmul计算三个方向上的量化分组大小，预留参数，当前仅支持配置为0，取值不生效。
-
-输出说明:
-y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, float32, 数据格式支持ND.
-
-属性说明:
-hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
-world_size: int类型, 通信域内的rank总数, 仅支持为2、4、8、16. 
-all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-1,-2],表示将输入由`(BS, H2)`转为`(BS * worldSize, H2 / worldSize)`。
-
-约束说明:
-默认支持确定性计算
-右矩阵和输出矩阵的H2必须整除worldSize
-仅支持左矩阵perToken量化，x1QuantMode=3，右矩阵perChannel量化,x2QuantMode=2
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：传入的x1、x2、biasOptional、x1Scale、x2Scale或者output不为空指针
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：x1、x2计算输入的数据类型必须为INT8，output计算输出的数据类型为BFLOAT16时，biasOptional的数据类型为FLOAT或BFLOAT16，output的数据类型为FLOAT16时，biasOptional的数据类型为FLOAT16
-H1范围仅支持[1, 65535]
-worldSize仅支持2,4,8,16
-- Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：支持2、4、8卡
-- 昇腾910_95 AI处理器：支持2,4,8,16卡
-通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
-不支持跨超节点通信，只支持超节点内。
-
-支持的PyTorch版本
-PyTorch 2.6.0+ 
-
-支持的型号:
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
-
-调用示例:
-单算子模式调用
-import torch
-import torch_npu
-
-# 初始化输入
-x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float8_e4m3fn).npu()
-x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float8_e4m3fn).npu()
-bias = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
-x1Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
-x2Scale = torch.randint(-1, 2, (32,), dtype=torch.float32).npu()
-# 其他参数
-hcom = "fake group info"
-world_size = 2
-# 调用QuantMatmulAlltoAll算子
-res = torch_npu.npu_quant_matmul_all_to_all(x1, x2, hcom, world_size,
-    bias=bias, x1_scale=x1Scale, x2_scale=x2Scale, group_size=[0], all2all_axes=[-1, -2])
-print(res)
-# 输出res的形状类似于
-tensor([[-1.3330,  0.3899,  0.3205,  ...,  0.3482, -0.4815,  0.4637],
-        [ 0.3511,  1.7768, -0.2588,  ..., -0.3826,  0.7349, -0.0110],
-        [ 1.2357, -1.0084, -1.4964,  ..., -0.4084, -0.9424, -0.5332],
-        ...,
-        [ 1.2147, -1.7824,  1.6442,  ...,  0.6114, -1.6988,  1.1249],
-        [ 0.5168, -0.7395, -0.3615,  ...,  1.6038,  0.0826,  0.8413],
-        [ 1.0905, -0.1828,  0.7823,  ...,  0.2952, -0.7067,  0.9949]])
-
-"""
-)
-
-_add_torch_npu_docstr(
-    "npu_all_to_all_matmul",
-    """
-功能描述:
-算子功能: 该融合算子完成AlltoAll通信、Permute(保证通信后地址连续)和Matmul计算的融合，先通信后计算。
-计算公式: 
-    假设x1输入shape为(BS, H)
-    commOut = AlltoAll(x1.view(worldSize, BS/worldSize, H)) 
-    permutedOut = commOut.permute(1, 0, 2).view(BS/worldSize, worldSize*H) 
-    output = permutedOut @ x2 + bias 
-
-接口原型:
-torch_npu.npu_all_to_all_matmul(Tensor x1, Tensor x2, str hcom, int world_size, Tensor? bias=None, int[]? all2all_axes=None, bool all2all_out_flag=True) -> (Tensor, Tensor)
-    
-参数说明:
-输入说明:
-x1: Tensor类型, 输入参数, 计算左矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
-x2: Tensor类型, 输入参数, 计算右矩阵，数据类型支持bfloat16, float16, 数据格式支持ND.
-bias: Tensor类型, 可选输入参数，偏置量，数据类型支持bfloat16, float16, float32, 数据格式支持ND.
-
-输出说明:
-y: Tensor类型, 输出参数, 接口的输出结果, 数据类型支持bfloat16, float16, 数据格式支持ND.
-
-属性说明:
-hcom: String类型, 通信域handle名, 通过get_hccl_comm_name接口获取. 
-world_size: int类型, 通信域内的rank总数, 对应公式中的worldSize, 仅支持为2、4、8、16. 
-all2all_axes: 数组类型, AlltoAll和Permute数据交换的方向，支持配置空或[-2,-1],表示将输入由 `(BS, H)` 转为 `(BS / worldSize, worldSize * H)`。
-all2all_out_flag: bool类型，标识是否保存alltoall通信结果，默认为true.
-
-约束说明:
-默认支持确定性计算
-BS必须整除worldSize
-x1、x2的数据类型必须一致
-H范围仅支持[1, 65535]
-通算融合算子不支持并发调用，不同的通算融合算子也不支持并发调用。
-不支持跨超节点通信，只支持超节点内。
-
-支持的PyTorch版本
-PyTorch 2.6.0+ 
-
-支持的型号:
-Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
-昇腾910_95 AI处理器
-
-调用示例:
-单算子模式调用
-import torch
-import torch_npu
-
-# 初始化输入
-x1 = torch.randint(-1, 2, (16, 32), dtype=torch.float16).npu()
-x2 = torch.randint(-1, 2, (32, 32), dtype=torch.float16).npu()
-bias = torch.randint(-1, 2, (32,), dtype=torch.float16).npu()
-# 其他参数
-hcom = "fake group info"
-world_size = 2
-# 调用MatmulAlltoAll算子
-res, _  = torch_npu.npu_all_to_all_matmul(x1, x2, hcom, world_size, bias=bias, all2all_axes=[-1,-2])
-print(res)
-# 输出res的形状类似于
-tensor([[-1.0321e+00,  6.2289e-01,  1.4179e-01,  1.1582e+00, -1.8747e-01,
-        2.3165e+00, -3.4849e-01, -4.4494e-01,  1.1038e+00, -1.5604e+00,
-        6.9800e-01,  1.6987e+00, -8.8242e-01, -1.0305e+00, -1.6537e+00,
-        2.7214e+00, -5.1618e-01, -1.8200e-01,  1.8188e+00,  7.0063e-01,
-       -8.0380e-01, -9.7834e-01,  7.0777e-01, -4.7582e-02, -2.5839e-01,
-        1.3785e-01,  1.7807e+00,  7.9090e-02, -8.9851e-01, -4.9518e-01,
-       -1.1189e+00, -8.6247e-01],
-      [-1.3052e+00,  1.1661e-01, -1.3945e+00,  7.4178e-01, -9.5440e-01,
-        5.0529e-02, -2.0327e+00, -1.8708e-01, -1.2583e+00, -1.9664e-01,
-        4.3981e-01,  1.2337e-01, -4.5290e-01,  1.7786e+00, -7.9361e-01,
-       -7.8097e-01, -1.3808e+00,  1.6942e+00, -1.1622e+00,  6.3309e-01,
-        7.2297e-01,  8.0443e-01, -3.1231e-01, -2.6240e-02, -1.9015e+00,
-        2.4308e-01, -3.7747e-02,  4.2124e-01,  7.4770e-01, -1.7556e+00,
-        9.7620e-01,  3.2943e-01],
-      [-6.9184e-01,  3.0648e-01,  2.6679e-01, -2.7126e-01, -2.3982e+00,
-       -3.7244e-01, -3.3400e-01, -1.1101e-01,  9.1360e-01,  2.2194e+00,
-       -7.2461e-02,  9.4988e-02,  5.3438e-01, -7.5926e-01, -6.2325e-01,
-        1.2285e+00,  1.1827e+00,  6.7400e-01, -6.4264e-01, -1.4517e+00,
-        3.2716e-01, -1.0468e+00,  6.2546e-01, -3.1762e+00,  9.7306e-01,
-        1.8830e-01, -1.0312e+00, -2.2427e-01,  1.1527e+00, -6.1190e-01,
-        8.3790e-01,  4.8933e-01],
-      [ 1.6508e-02,  2.3683e+00,  6.4964e-01, -1.0908e+00, -4.6451e-01,
-        8.3218e-01,  3.2308e-01, -4.6733e-01, -2.2168e+00,  2.0731e+00,
-        7.9789e-01, -6.0773e-01,  4.0600e-01,  3.6759e-01,  6.1818e-01,
-       -4.3798e-01, -2.8660e+00,  3.7701e-02,  2.8182e-01, -8.5863e-02,
-       -1.1137e-02,  4.8926e-01,  1.0670e+00, -9.0587e-01,  1.6926e+00,
-       -1.2680e+00,  6.7200e-01,  3.2650e-01,  1.6260e+00, -4.0430e-01,
-       -1.3591e-01, -2.5671e-02],
-      [ 1.1498e+00,  1.4875e-01,  3.7689e-01, -7.4506e-01,  9.6234e-01,
-        2.0656e-01,  3.9347e-01, -5.7313e-01,  2.1519e-01,  4.8783e-01,
-       -2.9576e-03,  1.5790e+00,  8.5187e-01,  1.4114e+00,  6.7917e-01,
-        1.9349e+00, -9.8073e-01, -1.7973e-01, -7.6273e-01,  3.8086e-01,
-       -6.9003e-01,  2.8973e-01, -2.0242e+00, -8.0495e-02, -6.5029e-01,
-        1.5070e-01, -1.2915e+00, -7.5784e-01,  1.0086e+00,  5.1528e-01,
-       -1.4057e+00,  2.3254e+00],
-      [-9.7377e-01, -2.1214e-01,  1.2309e+00, -5.2911e-01, -4.7966e-01,
-       -7.3101e-02, -9.3732e-01,  1.0623e+00, -1.0705e-01,  3.9100e-01,
-       -9.5188e-02,  1.0662e+00, -4.1645e-01, -3.1083e-01, -1.4358e-01,
-       -8.4679e-01,  1.1195e+00, -1.3657e+00,  9.5275e-01, -1.1579e+00,
-        4.7903e-01,  1.0085e+00,  1.6431e+00,  1.1976e+00,  3.8353e-01,
-        6.8370e-02, -8.3445e-01,  2.4800e+00, -9.7962e-01,  6.3613e-01,
-        1.5859e-01, -7.1362e-01],
-      [ 4.4330e-01,  2.9458e+00,  1.4342e+00,  8.7591e-03,  7.1487e-01,
-        2.6754e-02,  7.6820e-01, -1.0667e+00,  1.1269e+00, -6.4609e-01,
-       -7.7547e-01,  7.7234e-01,  2.5073e-01,  5.6560e-01, -5.9784e-01,
-       -3.7445e-01, -4.1680e-01,  1.9751e+00, -4.9059e-01, -2.3908e-01,
-       -8.5928e-01,  1.7069e+00, -1.1442e+00,  2.2217e+00,  3.5738e-01,
-        6.8612e-01,  2.3320e+00, -1.9791e+00, -2.9414e-01, -1.0079e-01,
-       -5.0897e-01, -5.1150e-01],
-      [-8.3146e-02,  4.2937e-01,  7.8852e-01,  7.1765e-01, -6.6637e-02,
-       -6.1625e-02, -1.3684e+00,  2.3891e-02,  2.2617e-02, -1.0367e+00,
-       -2.5522e-02,  1.2772e-02,  5.5996e-01,  6.6306e-01, -1.9994e+00,
-       -7.5787e-01,  5.2938e-01,  5.5434e-01, -9.0300e-01,  6.7917e-01,
-        4.3156e-01,  7.3735e-01, -8.1547e-02,  1.5977e+00,  5.8575e-01,
-        6.3603e-01, -3.4108e-01, -1.5309e+00, -2.4153e-01, -1.3761e+00,
-       -9.1386e-01,  2.1079e-01]])
 """
 )
 
@@ -12221,7 +11984,7 @@ class TestMoeUpdateExpert(TestCase):
             self.balanced_active_mask.append(torch.from_numpy(balanced_active_mask).to(torch.bool))        
 
 
-    @SupportedDevices(['Ascend910_'])
+    @SupportedDevices(['Ascend910_93', 'Ascend950'])
     def test_npu_moe_update_expert(self):
         ctx = mp.get_context('spawn')
         c2p = ctx.Queue(self.world_size)
@@ -13369,5 +13132,142 @@ x = torch.randn([10, 10]).npu()
 model = Model()
 model = torch.compile(model, backend=npu_backend)
 model(x)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_softmax_lse",
+    """
+接口原型: 
+npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
+
+功能描述:
+是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把npu_lightning_indexer的Softmax求最大值和求和运算提前来降低算子的显存占用。
+
+参数说明: 
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+softmax_max_index（Tensor）：表示softmax计算使用的max值，数据类型支持FLOAT。
+softmax_sum_index（Tensor）：表示softmax计算使用的sum值，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = 1
+S1 = 128
+S2 = 256
+D = 128
+output_dtype = torch.float16
+
+q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+
+input_layout = 'BSND'
+sparse_mode = 3
+
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_grad_kl_loss",
+    """
+接口原型: 
+npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor, Tensor, Tensor)
+
+功能描述:
+该接口实现了npu_lightning_indexer warmup阶段训练的反向功能(dense计算)，并融合了Loss的计算。npu_lightning_indexer用于筛选Attention的query与key间最高内在联系的Top-k项，以减少长序列场景下的Attention计算量，提升训练性能。该API为稠密场景下对应的接口，相比较于npu_sparse_lightning_indexer_grad_kl_loss接口的输入，key、key_index不用做稀疏化处理。该函数与npu_dense_lightning_indexer_softmax_lse函数搭配使用，使用后者计算出来的softmax_max_index与softmax_sum_index降低算子显存占用。
+
+参数说明: 
+query（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, D)、(T1, N1, D)。
+key（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, D)、(T2, N2, D)。
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_sum（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_max_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+softmax_sum_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+scale_value（float）：必选参数，表示缩放系数，数据类型支持FLOAT。
+query_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, Dr)、(T1, N1, Dr)。
+key_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, Dr)、(T2, N2, Dr)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+d_query_index（Tensor）：表示query_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_key_index（Tensor）：表示key_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_weights（Tensor）：表示weights的梯度，数据类型支持BFLOAT16、FLOAT16。
+loss（Tensor）：表示网络正向输出和golden值的差异，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = N1
+N1_index = 64
+N2_index = 1
+S1 = 128
+S2 = 256
+D = 128
+Dr = 64
+output_dtype = torch.float16
+q = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
+k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
+
+q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+q_rope = torch.randn(B, S1, N1, Dr, dtype=output_dtype, device=torch.device('npu'))
+k_rope = torch.randn(B, S2, N2, Dr, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+softmax_max = (torch.randn(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
+softmax_sum = torch.ones(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+
+input_layout = 'BSND'
+sparse_mode = 3
+scale = 1.0
+
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+
+torch_npu.npu_dense_lightning_indexer_grad_kl_loss(q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale, query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
 """
 )

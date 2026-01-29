@@ -617,7 +617,7 @@ ctc_loss_npu_output_size(const at::Tensor &log_probs, int64_t max_length)
     }
     c10::SmallVector<int64_t, SIZE> neg_log_likelihood_size = {batch_size};
     int64_t alpha_tail_size = 2 * max_length + 1;
-    static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95;
+    static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
     // Apply for a 32 byte aligned space to avoid address shifting in the OP.
     int64_t alpha_tail_size_align = isRegBaseSoc ? alpha_tail_size : (alpha_tail_size + 7) / 8 * 8;
     c10::SmallVector<int64_t, SIZE> log_alpha_size = {batch_size, time_size, alpha_tail_size_align};
@@ -1956,6 +1956,24 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::
     if (scale_real.defined()) {
         output_size = {m_dim, 1, batch_dim * n_dim};
     }
+    if (batch_split_factor_value > 1) {
+        output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
+    }
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(const at::Tensor &x1, const at::Tensor &x2,
+    int32_t dtype, const at::Tensor &x1_scale_real, const at::Tensor &x2_scale_real, int32_t group_size_value,
+    at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, at::IntArrayRef perm_y_real,
+    int32_t batch_split_factor_value)
+{
+    c10::SmallVector<int64_t, SIZE> output_size;
+    auto m_dim = x1.size(perm_x1_real[1]);
+    auto batch_dim = x1.size(perm_x1_real[0]);
+    auto n_dim = x2.size(perm_x2_real[2]);
+
+    output_size = {m_dim, batch_dim, n_dim};
+
     if (batch_split_factor_value > 1) {
         output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
     }
