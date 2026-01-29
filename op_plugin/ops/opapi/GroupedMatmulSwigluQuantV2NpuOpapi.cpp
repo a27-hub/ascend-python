@@ -101,24 +101,25 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    // if (dequant_dtype.has_value()) {
-    //     TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
-    //                 || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char) || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half) 
-    //                 || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
-    //                 "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
-    //                 c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
-    // }
-    
+    if (dequant_dtype.has_value()) {
+        TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
+                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char) 
+                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half) 
+                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
+                    "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
+                    c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    }
+
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
-    if (dequant_dtype.value() == 6){
-        dequant_dtype_real = 0;
-    }
-    else if (dequant_dtype.value() == 5){
-        dequant_dtype_real = 1;
-    }
-    else if (dequant_dtype.value() == 15){
-        dequant_dtype_real = 27;
+    // 从torch的枚举值转化为Ge的枚举值
+    const std::map<int64_t, int64_t> TorchToGeMap = {
+        {6, 0},
+        {5, 1},
+        {15, 27}};
+    auto it = TorchToGeMap.find(dequant_dtype.value_or(0));
+    if(it != TorchToGeMap.end()) {
+        dequant_dtype_real = it->second;
     }
     int64_t quant_mode_real = quant_mode.value_or(0);
     int64_t group_list_type_real = group_list_type.value_or(0);
@@ -138,8 +139,18 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     at::Tensor output;
     at::Tensor output_scale;
     if (!weight_scale_dtype.has_value()) {
-        output = npu_preparation::apply_tensor_without_format({m, n / MXFP_MULTI_BASE_SIZE}, c10::dtype(c10::ScalarType::Char));
+        if (c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E5M2 || c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E4M3FN 
+        ||  quant_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8)){
+            c10::TensorOptions options_output = x.options().dtype(quant_dtype.has_value()
+                                                                      ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(quant_dtype.value()))
+                                                                      : x[DIM_0].scalar_type());
+            create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
+        }
+        else {
+            output = npu_preparation::apply_tensor_without_format({m, n / MXFP_MULTI_BASE_SIZE}, c10::dtype(c10::ScalarType::Char));
+        }
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
+        
     } else {
         if (dequant_dtype.has_value()) {
                 dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
