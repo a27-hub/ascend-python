@@ -5,7 +5,7 @@
 
 ## 功能说明
 
-释放当前无引用的`pin_memory`物理内存，如环境变量`PYTORCH_NPU_ALLOC_CONF`的值设置为`pin_memory_expandable_segments:True`时，同时解除虚拟内存物理内存映射。
+释放当前由缓存持有的所有未占用的host物理内存。
 
 
 ## 定义文件
