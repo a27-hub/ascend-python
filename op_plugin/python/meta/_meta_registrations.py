@@ -482,6 +482,11 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             x.new_empty(tuple(expert_idx_dim_list), dtype=torch.int32),
             x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
 
+@impl(m, "npu_chunk_bwd_dv_local")
+# pylint:disable = huawei-too-many-arguments
+def npu_chunk_bwd_dv_local(q, k, d_o, g, upper_tri_matrix, g_gamma, A, cu_seqlens, chunk_indices, scale, chunk_size):
+    return torch.empty(d_o.shape, dtype=d_o.dtype, device=d_o.device)
+
 
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
