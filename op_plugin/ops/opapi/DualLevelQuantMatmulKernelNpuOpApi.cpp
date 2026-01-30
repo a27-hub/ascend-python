@@ -1,11 +1,8 @@
 // Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
-// Licensed under the BSD 3-Clause License (the "License");
+// Licensed under the BSD 3-Clause License  (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://opensource.org/licenses/BSD-3-Clause
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,9 +35,8 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
                                        const at::Tensor &x2_level1_scale, const c10::optional<at::Tensor> &bias,
                                        int64_t output_dtype)
 {
-    // TODO 待验证91095改名
-    // TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
-    //             "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
+                "This interface is only supported on the Ascend950 platform.", OPS_ERROR(ErrCode::PARAM));
 
     auto x1_dim_num = x1.dim();
     TORCH_CHECK(x1_dim_num == SHAPE_SIZE_TWO, "The shape dimension of x1 is only supported to be 2, but it is ",
@@ -83,8 +79,7 @@ at::Tensor npu_dual_level_quant_matmul(const at::Tensor &x1, const at::Tensor &x
     options = x1.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, options);
 
-    // TODO 等aclnn改名
-    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulNz, x1_wrapper, x2, x1_level0_scale, x2_level0_scale, x1_level1_scale_wrapper,
+    EXEC_NPU_CMD(aclnnDualLevelQuantMatmulWeightNz, x1_wrapper, x2, x1_level0_scale, x2_level0_scale, x1_level1_scale_wrapper,
                  x2_level1_scale_wrapper, bias_v, l0_group_size, l1_group_size, result);
 
     return result;
