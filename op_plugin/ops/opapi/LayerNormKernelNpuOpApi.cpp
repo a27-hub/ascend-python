@@ -41,10 +41,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
         " and normalized_shape = ", normalized_shape,
         OPS_ERROR(ErrCode::PARAM));
 
-    at::Tensor input_weight =
-        weight_op.defined() ? weight_op.resize_(normalized_shape) : at::ones(normalized_shape, input.options());
-    at::Tensor input_bias =
-        bias_op.defined() ? bias_op.resize_(normalized_shape) : at::zeros(normalized_shape, input.options());
+    at::Tensor input_weight;
+    if (weight_op.defined()) {
+        input_weight = weight_op.resize_(normalized_shape);
+    }
+    at::Tensor input_bias;
+    if (bias_op.defined()) {
+        input_bias = bias_op.resize_(normalized_shape);
+    }
 
     // construct output for hostapi
     auto output = at_npu::native::OpPreparation::apply_tensor_without_format(input);
@@ -89,7 +93,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
             at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
     }
     // call HostAPI function
-    EXEC_NPU_CMD(aclnnLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
+    static auto layer_sc = at_npu::native::env::CheckCompatibleImpl();
+    if (!layer_sc) {
+        EXEC_NPU_CMD(aclnnLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
+    } else {
+        EXEC_NPU_CMD(aclnnFastLayerNorm, input, normalized_shape, input_weight, input_bias, eps, output, mean_out, rstd_out);
+    }
     return std::tie(output, mean_out, rstd_out);
 }
 
