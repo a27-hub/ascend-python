@@ -1586,7 +1586,7 @@ def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=
     seed = 0
     offset = 0
     numels = 0
-    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta')
+    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta').contiguous()
     softmax_max = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
     softmax_sum = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
     softmax_out = torch.empty([0], dtype=query.dtype, device='meta')
@@ -1599,9 +1599,9 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
                                   keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647, inner_precise=0, seed=0, offset=0,
                                   numels=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                   gen_mask_parallel=True, sync=False, softmax_layout="", sink=None):
-    dq = query.new_empty(query.shape, dtype=query.dtype, device='meta')
-    dk = key.new_empty(key.shape, dtype=query.dtype, device='meta')
-    dv = value.new_empty(value.shape, dtype=query.dtype, device='meta')
+    dq = query.new_empty(query.shape, dtype=query.dtype, device='meta').contiguous()
+    dk = key.new_empty(key.shape, dtype=query.dtype, device='meta').contiguous()
+    dv = value.new_empty(value.shape, dtype=query.dtype, device='meta').contiguous()
     dpse = torch.empty([0], dtype=query.dtype, device='meta')
     dsink = torch.empty([], device='meta') if sink is None else torch.empty(sink.shape, dtype=sink.dtype, device='meta')
     return (dq, dk, dv, dpse, dsink)
