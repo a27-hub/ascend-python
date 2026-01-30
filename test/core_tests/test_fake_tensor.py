@@ -2533,7 +2533,7 @@ class TestGroupedMatmul(TestCase):
             self.assertTrue(x[0].shape[0] == res[0].shape[0])
             self.assertTrue(w[0].shape[2] == res[0].shape[1])
 
-    def test_npu_grouped_matmul_meta_11(self): # 单多单fp32
+    def test_npu_grouped_matmul_meta_12(self): # 单多单fp32
         with FakeTensorMode():
             torch.manual_seed(0)
             x1 = torch.randn(1792, 1024, dtype=torch.float32).npu()
