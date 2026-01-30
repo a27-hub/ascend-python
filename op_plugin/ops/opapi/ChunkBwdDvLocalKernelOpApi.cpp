@@ -35,8 +35,13 @@ at::Tensor npu_chunk_bwd_dv_local(
     int64_t chunk_size)
 {
     at::Tensor dv = npu_preparation::apply_tensor_without_format(d_o.sizes(), d_o.options().dtype());
+    const at::Tensor &upper_tri_matrix_ = c10::value_or_else(upper_tri_matrix, [] { return at::Tensor(); });
+    const at::Tensor &g_gamma_ = c10::value_or_else(g_gamma, [] { return at::Tensor(); });
+    const at::Tensor &A_ = c10::value_or_else(A, [] { return at::Tensor(); });
+    const at::Tensor &cu_seqlens_ = c10::value_or_else(cu_seqlens, [] { return at::Tensor(); });
+    const at::Tensor &chunk_indices_ = c10::value_or_else(chunk_indices, [] { return at::Tensor(); });
     EXEC_NPU_CMD(aclnnChunkBwdDvLocal,
-        q, k, d_o, g, upper_tri_matrix, g_gamma, A, cu_seqlens, chunk_indices, scale, chunk_size, dv);
+        q, k, d_o, g, upper_tri_matrix_, g_gamma_, A_, cu_seqlens_, chunk_indices_, scale, chunk_size, dv);
     return dv;
 }
 
