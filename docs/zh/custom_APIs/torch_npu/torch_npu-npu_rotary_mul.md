@@ -29,7 +29,7 @@
          x_1 = x[..., ::2], x_2 = x[..., 1::2]\\
          rotate(x) = rearrange(torch.stack((-x_2, x_1), dim=-1), "... d two -> ...(d two)", two=2)\\
          $$
-     - 当输入rotate时，旋转矩阵的生成方式为：
+     - 当输入rotate时，旋转矩阵的生成方式为（暂不支持该输入）：
          $$
          rotate(x) = x \cdot rotate\\
          $$
