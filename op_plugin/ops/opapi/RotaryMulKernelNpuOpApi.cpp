@@ -54,15 +54,20 @@ at::Tensor npu_rotary_mul(
         return acl_op::npu_rotary_mul(self, r1, r2, rotary_mode);
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options());
-    static const bool is_v2_available = check_aclnn_kernel_available("aclnnRotaryPositionEmbeddingV2");
     bool isMixDataType = isRotaryMulMixDtypeSupport(self, r1, r2);
-    if (is_v2_available) {
-        if (isMixDataType) {
-            at::Tensor cosCast = npu_dtype_cast_impl_op_api(r1, self.scalar_type());
-            at::Tensor sinCast = npu_dtype_cast_impl_op_api(r2, self.scalar_type());
-            EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingV2, self, cosCast, sinCast, mode, rotate, result);
+    if rotate.has_value(){
+        static const bool is_matrix_available = check_aclnn_kernel_available("aclnnMatrixTransformerRope");
+        if (is_matrix_available) {
+            if (isMixDataType) {
+                at::Tensor cosCast = npu_dtype_cast_impl_op_api(r1, self.scalar_type());
+                at::Tensor sinCast = npu_dtype_cast_impl_op_api(r2, self.scalar_type());
+                EXEC_NPU_CMD(aclnnMatrixTransformerRope, self, cosCast, sinCast, rotate, result);
+            } else {
+                EXEC_NPU_CMD(aclnnMatrixTransformerRope, self, r1, r2, rotate, result);
+            }
         } else {
-            EXEC_NPU_CMD(aclnnRotaryPositionEmbeddingV2, self, r1, r2, mode, rotate, result);
+            TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::npu_rotary_mul is not support rotate,"
+                                " Please try to update your CANN version.");
         }
     } else {
         if (isMixDataType) {
