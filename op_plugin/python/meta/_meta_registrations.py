@@ -2098,8 +2098,10 @@ def npu_add_rms_norm_v2_functional_meta(x1, x2, gamma, epsilon=1e-6):
 
 
 @impl(m, "npu_rms_norm_quant")
-def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06):
-    return torch.empty(x.size(), dtype=torch.int8, device=x.device)
+def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06, dst_type=None):
+    dst_type = dst_type if dst_type is not None else 1
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    return torch.empty(x.size(), dtype=dst_torch_dtype, device=x.device)
 
 
 @impl(m, "npu_add_rms_norm_cast")
