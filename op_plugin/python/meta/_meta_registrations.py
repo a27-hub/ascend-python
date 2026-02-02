@@ -2489,7 +2489,7 @@ def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_
 def gmm_get_dtype(output_dtype):
     if not output_dtype:
         return output_dtype
-    elif output_dtype not in [TORCH_DTYPE_MAP[torch.float16], TORCH_DTYPE_MAP[torch.bfloat16], TORCH_DTYPE_MAP[torch.float32], TORCH_DTYPE_MAP[torch.int32]]:
+    elif output_dtype not in [TORCH_DTYPE_MAP[torch.float16], TORCH_DTYPE_MAP[torch.bfloat16], TORCH_DTYPE_MAP[torch.float32], TORCH_DTYPE_MAP[torch.int32], TORCH_DTYPE_MAP[torch.int8]]:
         raise RuntimeError("The output dtype ", str(output_dtype), " is not supported for now.")
     else:
         return TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(output_dtype)
