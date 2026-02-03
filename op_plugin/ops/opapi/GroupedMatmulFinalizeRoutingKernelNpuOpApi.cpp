@@ -86,7 +86,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
     if (w_dtype.has_value()) {
         TORCH_CHECK(w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                         w_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-                        x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
+                        w_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
             "The optional parameter w_dtype only supports float4_e1m2fn_x2, float4_e2m1fn_x2, hifloat8 or None, but "
             "now is ",
             c10_npu::CustomDataTypeToString(w_dtype.value()),
