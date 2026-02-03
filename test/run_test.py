@@ -9,7 +9,6 @@ from typing import Optional, List
 
 import torch
 from torch.testing._internal.common_utils import shell
-
 import torch_npu
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
