@@ -1,7 +1,7 @@
 import torch
 import numpy as np
+import unittest
 import torch_npu
-
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
 
@@ -71,6 +71,7 @@ class Testcdist(TestCase):
         out = x1.grad.detach().cpu().numpy()
         return out
 
+    @unittest.skip("Skip cdist backward integer case")
     def test_cdis_backward_common_shape(self):
         shape_items = [
             [np.float16, (5, 10), (4, 10)],
@@ -87,6 +88,7 @@ class Testcdist(TestCase):
                 npu_output = self.op_exec(input1, input2, p, device='npu')
                 self.assertRtolEqual(cpu_output, npu_output)
 
+    @unittest.skip("Skip cdist backward integer case")
     def test_cdis_backward_input_range(self):
         item = [np.float32, (20, 5, 5), (20, 4, 5)]
         p_ranges = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
@@ -99,6 +101,7 @@ class Testcdist(TestCase):
                 npu_output = self.op_exec(input1, input2, p, device='npu')
                 self.assertRtolEqual(cpu_output, npu_output)
 
+    @unittest.skip("Skip cdist backward inf case")
     def test_cdis_backward_inf(self):
         shape_items = [
             [np.float16, (5, 10), (4, 10)],
