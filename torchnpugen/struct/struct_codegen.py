@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${extra_checks}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -164,6 +165,24 @@ def compute_op_api_definition(struct: StructInfo):
         args_exprs_str = ', '.join(a.name for a in args)
         return_type = cpp.returns_type(f.func.returns).cpp_type()
 
+        # Generate storage initialization checks for input tensor parameters.
+        # We only check:
+        #   1. true input tensors (non-out arguments in the function schema), and
+        #   2. tensors whose generated C++ type is "const at::Tensor &"
+        # This avoids touching out / inplace tensors, which are mutable and
+        # typically have type "at::Tensor &".
+        input_arg_names = {arg.name for arg in f.func.arguments.flat_non_out}
+        extra_checks_lines = []
+        for a in args:
+            if a.name in input_arg_names and a.type == "const at::Tensor &":
+                extra_checks_lines.append(
+                    f'    if ({a.name}.numel() > 0) {{\n'
+                    f'        TORCH_CHECK({a.name}.unsafeGetTensorImpl()->storage_initialized(), '
+                    '"The tensor has a non-zero number of elements, but its data is not allocated yet.\\n");\n'
+                    f'    }}'
+                )
+        extra_checks = "\n".join(extra_checks_lines)
+
         res_infos = struct.results
 
         # The inplace interface inherits out interface and implements a direct call to the out interface.
@@ -251,6 +270,7 @@ def compute_op_api_definition(struct: StructInfo):
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
+                extra_checks=extra_checks,
                 new_params_def=new_params_def,
                 define_size_or_dtype=define_size_or_dtype,
                 args_str=args_str,
