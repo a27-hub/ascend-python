@@ -73,10 +73,12 @@ std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(const at::Tensor& self, a
     at::Tensor indices;
     if (c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend950) {
         int32_t input_dim = self.dim();
+        TORCH_CHECK((input_dim == 4 || input_dim == 5), "4D or 5D (batch mode) tensor expected for input"
+        + OPS_ERROR(ErrCode::PARAM));
         auto input_size = self.sizes();
         int64_t dhw_size = input_size[input_dim + D_DIM] * input_size[input_dim + H_DIM] * input_size[input_dim + W_DIM];
-        at::ScalarType indices_dtype_dav = dhw_size <= MAX_INT32 ? at::kInt : at::kLong;
-        indices = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(indices_dtype_dav));
+        at::ScalarType indices_dtype_950 = dhw_size <= MAX_INT32 ? at::kInt : at::kLong;
+        indices = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(indices_dtype_950));
     } else {
         indices = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(at::kInt));
     }
