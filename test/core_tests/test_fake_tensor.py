@@ -2096,6 +2096,34 @@ class TestRmsNormQuant(TestCase):
             self.assertTrue(y.dtype == torch.int8)
 
 
+class TestNpuCdistBackward(TestCase):
+    def test_npu_cdist_backward(self):
+        with FakeTensorMode():
+            x1 = torch.randn([4, 8], dtype=torch.float32).npu()
+            x2 = torch.randn([6, 8], dtype=torch.float32).npu()
+            cdist = torch.empty([4, 6], dtype=torch.float32, device=x1.device)
+            grad = torch.randn_like(cdist)
+            p = 2.0
+            dx1 = torch.ops.npu.npu_cdist_backward(
+                grad, x1, x2, cdist, p
+            )
+            self.assertTrue(dx1.shape == x1.shape)
+            self.assertTrue(dx1.dtype == grad.dtype)
+            self.assertTrue(dx1.device == x1.device)
+
+ 
+            x1 = torch.randn([2, 16], dtype=torch.float16).npu()
+            x2 = torch.randn([3, 16], dtype=torch.float16).npu()
+            cdist = torch.empty([2, 3], dtype=torch.float16, device=x1.device)
+            grad = torch.randn_like(cdist)
+            dx1 = torch.ops.npu.npu_cdist_backward(
+                grad, x1, x2, cdist, p
+            )
+            self.assertTrue(dx1.shape == x1.shape)
+            self.assertTrue(dx1.dtype == grad.dtype)
+            self.assertTrue(dx1.device == x1.device)
+
+
 class TestNpuRmsNorm(TestCase):
     def test_npu_rms_norm(self):
         with FakeTensorMode():

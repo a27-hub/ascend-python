@@ -5205,6 +5205,46 @@ if __name__ == '__main__':
 )
 
 _add_torch_npu_docstr(
+    "npu_cdist_backward"
+    """
+接口原型
+npu_cdist_backward(Tensor grad, Tensor x1, Tensor x2, Tensor cdist, float p) -> Tensor
+
+功能描述
+完成cdist的反向
+
+参数说明
+grad：Device侧的Tensor类型，梯度。shape支持2-8维，数据类型支持FLOAT16、BFLOAT16，格式支持ND。支持非连续的Tensor，支持空Tensor。
+x1：Device侧的Tensor类型，标准化输入张量。维度与grad相等，除最后一维外，shape与grad一致，数据类型支持FLOAT16、BFLOAT16，格式支持ND。支持非连续的Tensor，支持空Tensor。
+x2：Device侧的Tensor类型，标准化输入张量。维度与grad相等，倒数第二维与grad的倒数第一维相等，倒数第一维与x1的倒数第一维相等，其余维度与grad应满足broadcast关系，数据类型支持FLOAT16、BFLOAT16，格式支持ND。支持非连续的Tensor，支持空Tensor。
+cdist：Device侧的Tensor类型，前向 torch.cdist 的输出结果。shape与grad一致，数据类型支持FLOAT16、BFLOAT16，格式支持ND，支持非连续的Tensor，支持空Tensor。
+p：表示范数的系数，对应公式中的p。数据类型支持float，取值范围[0, +Inf]。
+
+输出说明
+out：Device侧的Tensor类型，表示Cdistbackward的输出。数据类型与grad一致，shape与x1一致，格式支持ND。支持非连续的Tensor，支持空Tensor。
+
+约束说明
+默认支持确定性计算。
+
+支持的型号
+Atlas A3 训练系列产品/Atlas A3 推理系列产品<
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+
+调用示例
+import torch
+import torch_npu
+
+x1 = torch.randn((4, 3), dtype=torch.float32).npu()
+x2 = torch.randn((5, 3), dtype=torch.float32).npu()
+grad = torch.randn((4, 5), dtype=torch.float32).npu()
+cdist = torch.randn((4, 5), dtype=torch.float32).abs().npu()
+p = 1.7
+
+result = torch_npu.npu_cdist_backward(grad, x1, x2, cdist, p)
+    """
+)
+
+_add_torch_npu_docstr(
     "npu_rms_norm_quant",
     """
 接口原型

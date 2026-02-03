@@ -5045,3 +5045,8 @@ def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_
 
     scale = torch.empty(scale_shape, dtype=torch.float32, device=x.device)
     return y, scale
+
+
+@impl(m,"npu_cdist_backward")
+def npu_cdist_backward_meta(grad,x1,x2,cdist,p):
+    return torch.empty(x1.size(),dtype=grad.dtype,device=x1.device)
