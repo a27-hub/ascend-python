@@ -4477,6 +4477,155 @@ else:
 )
 
 _add_torch_npu_docstr(
+    "npu_quant_matmul_gelu",
+    """
+功能描述:
+完成量化矩阵乘和GELU激活函数的融合计算, 支持A8W8和A4W4量化. 该接口融合了量化矩阵乘和GELU激活, 减少内存访问, 提升性能.
+
+接口原型:
+torch_npu.npu_quant_matmul_gelu(Tensor x1, Tensor x2, Tensor x1_scale, Tensor x2_scale, str fused_op_type, *, bool transpose_x1=False, bool transpose_x2=False, Tensor? bias=None) -> Tensor
+
+参数说明:
+x1: Tensor类型, 输入激活值, 数据格式支持ND, shape需要在2-6维范围. 
+数据类型支持int8(A8W8量化)、int32(A4W4量化, 每个int32数据存放8个int4数据). 
+x2: Tensor类型(权重), 数据格式支持ND或NZ, shape需要在2-6维范围. 
+数据类型与x1的数据类型保持一致. 支持昇腾亲和的NZ数据排布格式, 可通过torch_npu.npu_format_cast转换为NZ格式以提升性能. 
+x1_scale: Tensor类型, x1的量化scale参数, 数据格式支持ND. 
+数据类型支持float32. shape需要是1维(m,), 其中m与x1的m一致. 采用per-token量化方式, 每个token(行)有一个独立的scale值. 
+x2_scale: Tensor类型, x2的量化scale参数, 数据格式支持ND. 
+数据类型支持float32或bfloat16. shape需要是1维(n,)或(1,), 其中n与x2的n一致. 采用per-channel量化方式, 每个输出通道有一个独立的scale值, 或使用per-tensor量化(shape为(1,)). 
+fused_op_type: str类型, 指定GELU激活函数的类型. 
+支持"gelu_tanh"(GELU的tanh近似版本)和"gelu_erf"(GELU的erf精确版本). 
+transpose_x1: bool类型, 可选参数, 默认值为False. 表示x1是否转置. A4W4量化场景下仅支持False, A8W8量化场景下支持True或False. 
+transpose_x2: bool类型, 可选参数, 默认值为False. 表示x2是否转置. 
+bias: Tensor类型, 可选参数, 偏置项, 数据格式支持ND. 
+数据类型支持int32、float32、bfloat16、float16. 
+A4W4量化场景下: shape仅支持1维(n,), n与x2的n一致. 
+A8W8量化场景下: shape支持1维(n,)或3维(batch, 1, n), n与x2的n一致. 
+
+输出说明:
+result: Tensor类型, 代表量化矩阵乘融合GELU激活的计算结果. 
+如果x2_scale的数据类型为float32, 输出的数据类型为float16. 
+如果x2_scale的数据类型为bfloat16, 输出的数据类型为bfloat16. 
+输出shape为(batch, m, n), 其中batch根据x1和x2的batch维度广播得到. 
+
+约束说明:
+该接口支持推理场景下使用. 
+x1、x2、x1_scale、x2_scale不能为空. 
+x1、x2的数据类型和数据格式需要在支持的范围之内. 
+x1、x2最后一维的shape大小不能超过65535. 
+fused_op_type必须为"gelu_tanh"或"gelu_erf". 
+对于A4W4量化(int32类型输入): 
+  每个int32数据存放8个int4数据. 
+  transpose_x1仅支持false. 
+  x1和x2的内轴(k轴)必须为偶数. 
+  当transpose_x2为false时, x2的shape为(k, n//8), n必须是8的倍数. 
+  当transpose_x2为true时, x2的shape为(n, k//8), k必须是8的倍数. 
+  A4W4量化仅支持ND格式, 不支持NZ格式. 
+对于A8W8量化: 
+  支持ND格式和NZ格式. 
+  当x2为ND格式时, 自动调用aclnnFusedQuantMatmul接口. 
+  当x2为NZ格式时, 自动调用aclnnFusedQuantMatmulWeightNz接口. 
+  如果需要使用NZ格式以提升性能, 可以手动调用torch_npu.npu_format_cast完成输入x2(weight)的NZ格式转换. 
+
+支持的PyTorch版本
+PyTorch 2.5
+PyTorch 2.4
+PyTorch 2.3
+PyTorch 2.2
+PyTorch 2.1
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品
+
+调用示例:
+单算子调用(A8W8量化, ND格式, gelu_tanh激活)
+import torch
+import torch_npu
+
+# 准备输入数据
+m, k, n = 128, 256, 512
+x1 = torch.randint(-5, 5, (m, k), dtype=torch.int8).npu()
+x2 = torch.randint(-5, 5, (k, n), dtype=torch.int8).npu()
+x1_scale = torch.randn(m, dtype=torch.float32).abs().npu() * 0.01
+x2_scale = torch.randn(n, dtype=torch.float32).abs().npu() * 0.01
+
+# 调用融合算子
+output = torch_npu.npu_quant_matmul_gelu(x1, x2, x1_scale, x2_scale, "gelu_tanh")
+print(output.shape)  # torch.Size([128, 512])
+print(output.dtype)  # torch.float16
+
+单算子调用(A8W8量化, ND格式, gelu_erf激活, 带bias)
+import torch
+import torch_npu
+
+m, k, n = 128, 256, 512
+x1 = torch.randint(-5, 5, (m, k), dtype=torch.int8).npu()
+x2 = torch.randint(-5, 5, (k, n), dtype=torch.int8).npu()
+x1_scale = torch.randn(m, dtype=torch.float32).abs().npu() * 0.01
+x2_scale = torch.randn(n, dtype=torch.float32).abs().npu() * 0.01
+bias = torch.randn(n, dtype=torch.float32).npu() * 0.1
+
+# 使用gelu_erf激活并添加bias
+output = torch_npu.npu_quant_matmul_gelu(
+    x1, x2, x1_scale, x2_scale, "gelu_erf", bias=bias
+)
+
+单算子调用(A8W8量化, NZ格式, gelu_tanh激活)
+import torch
+import torch_npu
+
+m, k, n = 128, 256, 512
+x1 = torch.randint(-5, 5, (m, k), dtype=torch.int8).npu()
+x2 = torch.randint(-5, 5, (k, n), dtype=torch.int8).npu()
+
+# 将x2转换为NZ格式以提升性能
+x2_nz = torch_npu.npu_format_cast(x2.contiguous(), 29)  # 29为ACL_FORMAT_FRACTAL_NZ
+
+x1_scale = torch.randn(m, dtype=torch.float32).abs().npu() * 0.01
+x2_scale = torch.randn(n, dtype=torch.float32).abs().npu() * 0.01
+
+# 自动识别NZ格式并调用对应接口
+output = torch_npu.npu_quant_matmul_gelu(x1, x2_nz, x1_scale, x2_scale, "gelu_tanh")
+
+单算子调用(A8W8量化, BF16输出)
+import torch
+import torch_npu
+
+m, k, n = 64, 128, 256
+x1 = torch.randint(-5, 5, (m, k), dtype=torch.int8).npu()
+x2 = torch.randint(-5, 5, (k, n), dtype=torch.int8).npu()
+x1_scale = torch.randn(m, dtype=torch.float32).abs().npu() * 0.01
+x2_scale = torch.randn(n, dtype=torch.bfloat16).abs().npu() * 0.01  # BF16 scale
+
+# 输出数据类型由x2_scale的类型决定, 此处输出为bfloat16
+output = torch_npu.npu_quant_matmul_gelu(x1, x2, x1_scale, x2_scale, "gelu_tanh")
+print(output.dtype)  # torch.bfloat16
+
+单算子调用(A4W4量化)
+import torch
+import torch_npu
+
+m, k, n = 128, 256, 512
+# 生成INT4数据(以INT32格式存储)
+x1_fp = torch.randn(m, k, dtype=torch.float32).npu()
+x2_fp = torch.randn(k, n, dtype=torch.float32).npu()
+
+# 量化为INT4
+scale_tmp = torch.ones(1, dtype=torch.float32).npu()
+x1 = torch_npu.npu_quantize(x1_fp, scale_tmp, None, torch.quint4x2, -1, False)
+x2 = torch_npu.npu_quantize(x2_fp, scale_tmp, None, torch.quint4x2, -1, False)
+
+x1_scale = torch.randn(m, dtype=torch.float32).abs().npu() * 0.01
+x2_scale = torch.randn(n, dtype=torch.float32).abs().npu() * 0.01
+
+# A4W4量化仅支持ND格式, 不支持NZ格式
+output = torch_npu.npu_quant_matmul_gelu(x1, x2, x1_scale, x2_scale, "gelu_tanh")
+
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_weight_quant_batchmatmul",
     """
 功能描述:
