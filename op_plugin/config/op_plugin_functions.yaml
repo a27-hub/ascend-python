@@ -6409,6 +6409,9 @@ custom:
     op_api: [v2.1, newest]
     internal_format_opapi: [v2.1, newest]
 
+  - func: npu_quant_matmul_gelu(Tensor x1, Tensor x2, Tensor x1_scale, Tensor x2_scale, str fused_op_type, *, bool transpose_x1=False, bool transpose_x2=False, Tensor? bias=None) -> Tensor
+    op_api: all_version
+
   - func: npu_fused_matmul(Tensor x1, Tensor x2, *, Tensor? bias=None, Tensor? x3=None, str fused_op_type='') -> Tensor
     op_api: all_version
 
