@@ -1385,8 +1385,6 @@ std::vector<int64_t> CopyTypeV2(const at::ArrayRef<c10::SymInt> &at_array)
     return int_array.vec();
 }
 
-
-
 aclBoolArray *ConvertTypeV2(const std::vector<bool> &value)
 {
     static const auto aclCreateBoolArray = GET_OP_API_FUNC(aclCreateBoolArray);
@@ -1533,19 +1531,8 @@ std::string CopyTypeV2(char* str)
     return result;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-void MemcpyToBufImpl(const void* data, size_t size) {
+void MemcpyToBufImpl(const void* data, size_t size)
+{
     if (g_hash_offset + size > g_hash_buf_size) {
         g_hash_offset = g_hash_buf_max_size;
         return;

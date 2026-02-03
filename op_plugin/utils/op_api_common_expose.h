@@ -43,32 +43,32 @@
 #include "torch_npu/csrc/custom_dtype/Init.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 
-typedef struct aclOpExecutor aclOpExecutor;
-typedef struct aclTensor aclTensor;
-typedef struct aclScalar aclScalar;
-typedef struct aclIntArray aclIntArray;
-typedef struct aclFloatArray aclFloatArray;
-typedef struct aclBoolArray aclBoolArray;
-typedef struct aclTensorList aclTensorList;
-typedef struct aclScalarList aclScalarList;
+using aclOpExecutor = struct aclOpExecutor;
+using aclTensor = struct aclTensor;
+using aclScalar = struct aclScalar;
+using aclIntArray = struct aclIntArray;
+using aclFloatArray = struct aclFloatArray;
+using aclBoolArray = struct aclBoolArray;
+using aclTensorList = struct aclTensorList;
+using aclScalarList = struct aclScalarList;
 
-typedef aclTensor *(*_aclCreateTensor)(const int64_t *view_dims, uint64_t view_dims_num, aclDataType data_type,
-                                       const int64_t *stride, int64_t offset, aclFormat format,
-                                       const int64_t *storage_dims, uint64_t storage_dims_num, void *tensor_data);
-typedef aclScalar *(*_aclCreateScalar)(void *value, aclDataType data_type);
-typedef aclIntArray *(*_aclCreateIntArray)(const int64_t *value, uint64_t size);
-typedef aclFloatArray *(*_aclCreateFloatArray)(const float *value, uint64_t size);
-typedef aclBoolArray *(*_aclCreateBoolArray)(const bool *value, uint64_t size);
-typedef aclTensorList *(*_aclCreateTensorList)(const aclTensor *const *value, uint64_t size);
-typedef aclScalarList *(*_aclCreateScalarList)(const aclScalar *const *value, uint64_t size);
+using _aclCreateTensor = aclTensor* (*)(const int64_t* view_dims, uint64_t view_dims_num, aclDataType data_type,
+                                       const int64_t* stride, int64_t offset, aclFormat format,
+                                       const int64_t* storage_dims, uint64_t storage_dims_num, void* tensor_data);
+using _aclCreateScalar = aclScalar* (*)(void* value, aclDataType data_type);
+using _aclCreateIntArray = aclIntArray* (*)(const int64_t* value, uint64_t size);
+using _aclCreateFloatArray = aclFloatArray* (*)(const float* value, uint64_t size);
+using _aclCreateBoolArray = aclBoolArray* (*)(const bool* value, uint64_t size);
+using _aclCreateTensorList = aclTensorList* (*)(const aclTensor* const* value, uint64_t size);
+using _aclCreateScalarList = aclScalarList* (*)(const aclScalar* const* value, uint64_t size);
 
-typedef int (*_aclDestroyTensor)(const aclTensor *tensor);
-typedef int (*_aclDestroyScalar)(const aclScalar *scalar);
-typedef int (*_aclDestroyIntArray)(const aclIntArray *array);
-typedef int (*_aclDestroyFloatArray)(const aclFloatArray *array);
-typedef int (*_aclDestroyBoolArray)(const aclBoolArray *array);
-typedef int (*_aclDestroyTensorList)(const aclTensorList *array);
-typedef int (*_aclDestroyScalarList)(const aclScalarList *array);
+using _aclDestroyTensor = int (*)(const aclTensor* tensor);
+using _aclDestroyScalar = int (*)(const aclScalar* scalar);
+using _aclDestroyIntArray = int (*)(const aclIntArray* array);
+using _aclDestroyFloatArray = int (*)(const aclFloatArray* array);
+using _aclDestroyBoolArray = int (*)(const aclBoolArray* array);
+using _aclDestroyTensorList = int (*)(const aclTensorList* array);
+using _aclDestroyScalarList = int (*)(const aclScalarList* array);
 
 using OpApiFunc = int (*)(void *, uint64_t, aclOpExecutor *, const aclrtStream);
 
