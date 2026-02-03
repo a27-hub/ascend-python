@@ -5613,6 +5613,9 @@ custom:
   - func: npu_add_rms_norm_quant(Tensor x1, Tensor x2, Tensor gamma, Tensor scales1, Tensor? zero_points1, Tensor? beta=None, Tensor? scales2=None, Tensor? zero_points2=None, *, int axis=-1, float epsilon=1e-06, bool div_mode=True, int? dst_type=None) -> (Tensor, Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_cdist_backward(Tensor grad, Tensor x1, Tensor x2, Tensor cdist, float p) -> Tensor
+    op_api: all_version
+
   - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
     op_api: all_version
 

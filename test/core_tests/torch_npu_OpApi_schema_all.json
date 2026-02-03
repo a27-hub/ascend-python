@@ -4725,5 +4725,8 @@
   },
   "func: save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()": {
     "version": ["v2.6", "newest"]
+  },
+  "func: npu_cdist_backward(Tensor grad, Tensor x1, Tensor x2, Tensor cdist, float p) -> Tensor":{
+    "veision": ["all_version"]
   }
 }
