@@ -6631,6 +6631,12 @@ custom:
         reduction_char: 'const_cast<char *>(reduction.data())'
       exec: aclnnCrossEntropyLossGrad, grad_loss, log_prob, target, weight, grad_zloss, lse_for_zloss, reduction_char, ignore_index, label_smoothing, lse_square_scale_for_zloss, x_grad_out
 
+  - func: npu_chunk_gated_delta_rule_fwd_h(Tensor k, Tensor w, Tensor u, Tensor g, Tensor? initial_state, Tensor? cu_seqlens, Tensor? chunk_indices, bool? output_final_state, int? chunk_size) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+
+  - func: npu_chunk_fwd_o(Tensor q, Tensor k, Tensor v, Tensor h, Tensor g, Tensor? cu_seqlens, Tensor? chunk_indices, float scale, int? chunk_size) -> Tensor
+    op_api: all_version
+    
   - func: npu_group_norm_swish(Tensor input, int num_groups, Tensor weight, Tensor bias, float? eps=1e-5, float? swish_scale=1.0) -> (Tensor, Tensor, Tensor)
     op_api: all_version
     exposed: all_version
