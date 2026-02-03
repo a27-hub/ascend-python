@@ -218,8 +218,8 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
         w_transpose = False
 
         x_clone = torch.randint(1, 2, (m, k), dtype=torch.int8).npu()
-        weight_clone = torch.randint(1, 2, (group_num, k, n), dtype=torch.int8).npu()
-        weightNz_clone = torch_npu.npu_format_cast(weight_clone.npu(), 29)
+        weight = torch.randint(1, 2, (group_num, k, n), dtype=torch.int8)
+        weightNz_clone = torch_npu.npu_format_cast(weight.npu(), 29)
         scale_clone = torch.normal(0, 0.01, (group_num, n), dtype=torch.float32).npu()
         pertoken_scale_clone = torch.normal(0, 0.01, (m), dtype=torch.float32).npu()
         groupList = torch.tensor([m//2, m//2], dtype=torch.int64).npu()
