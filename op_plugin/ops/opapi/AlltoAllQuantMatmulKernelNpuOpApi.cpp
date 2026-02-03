@@ -55,10 +55,6 @@ std::tuple<at::Tensor, at::Tensor> npu_all_to_all_quant_matmul(const at::Tensor 
     if (world_size != 0) {
         TORCH_CHECK(x1.size(0) % world_size == 0, "The x1 first-axis should be divisible by world_size", OPS_ERROR(ErrCode::PARAM));
     }
-    TORCH_CHECK(x1.size(1) * world_size == x2.size(0),
-        "In AlltoAllQuantMatmul, before Matmul, the x1 will go through alltoall, the K-axis of x1 will change to ", x1.size(1) * world_size,
-        " However, the K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ",
-        x1.size(1) * world_size, " and the K-axis of x2 is ", x2.size(0), "." + OPS_ERROR(ErrCode::PARAM));
 
     // pta主要是为了推导output的shape和dtype，如果这里的y_dtype没有传入，则默认是fp32
     int64_t output_default_dtype = (y_dtype.has_value() && y_dtype.value() != ACL_UNDEFINED) ? y_dtype.value() : static_cast<int64_t>(at::ScalarType::Float);
