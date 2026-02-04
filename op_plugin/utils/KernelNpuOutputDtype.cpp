@@ -17,7 +17,8 @@
 #include "torch_npu/csrc/core/npu/NPUException.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "op_plugin/utils/KernelNpuOutputDtype.h"
-
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 namespace op_infer {
 
 at::ScalarType angle_out_dtype(const at::Tensor& self)
@@ -50,7 +51,7 @@ at::ScalarType npu_group_norm_silu_dst_type(const at::Tensor& input, const c10::
     at::native::ResultTypeState state = {};
     state = at::native::update_result_type_state(input, state);
 
-    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         if (weight.has_value()) {
             state = at::native::update_result_type_state(weight.value(), state);
         } else if (bias.has_value()) {
@@ -111,6 +112,19 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
     }
 
     return at::native::result_type(state);
+}
+
+at::ScalarType abs_out_dtype(const at::Tensor& self)
+{
+    at::ScalarType output = self.scalar_type();
+    if (output == at::ScalarType::ComplexFloat) {
+        output = at::ScalarType::Float;
+    } else if (output == at::ScalarType::ComplexDouble) {
+        output = at::ScalarType::Double;
+    } else if (output == at::ScalarType::ComplexHalf) {
+        output = at::ScalarType::Half;
+    }
+    return output;
 }
 
 } // namespace op_infer

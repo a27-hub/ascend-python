@@ -20,6 +20,8 @@
 #include "op_plugin/utils/AdvancedIndex.h"
 #include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 
 namespace op_infer {
 using tuple_array_vector = std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::SmallVector<int64_t, SIZE>>;
@@ -468,6 +470,9 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
         Do = (D + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1;
         Ho = (H + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1;
         Wo = (W + 2 * padding[2] - dilation[2] * (kernel_size[2] - 1) - 1) / stride[2] + 1;
+        TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
+        TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
     } else {
         Co = weight.size(1) * groups;
         auto kernel_size = weight.sizes().slice(2);
@@ -475,9 +480,6 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
         Ho = (H - 1) * stride[1] - 2 * padding[1] + dilation[1] * (kernel_size[1] - 1) + output_padding[1] + 1;
         Wo = (W - 1) * stride[2] - 2 * padding[2] + dilation[2] * (kernel_size[2] - 1) + output_padding[2] + 1;
     }
-    TORCH_CHECK(Do > 0, "Do has to be positive, but got ", Do, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Ho > 0, "Ho has to be positive, but got ", Ho, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
 
     c10::SmallVector<int64_t, SIZE> output_size = {N_, Co, Do, Ho, Wo};
     return output_size;
@@ -615,7 +617,7 @@ ctc_loss_npu_output_size(const at::Tensor &log_probs, int64_t max_length)
     }
     c10::SmallVector<int64_t, SIZE> neg_log_likelihood_size = {batch_size};
     int64_t alpha_tail_size = 2 * max_length + 1;
-    static bool isRegBaseSoc = false;
+    static bool isRegBaseSoc = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
     // Apply for a 32 byte aligned space to avoid address shifting in the OP.
     int64_t alpha_tail_size_align = isRegBaseSoc ? alpha_tail_size : (alpha_tail_size + 7) / 8 * 8;
     c10::SmallVector<int64_t, SIZE> log_alpha_size = {batch_size, time_size, alpha_tail_size_align};
@@ -1862,23 +1864,6 @@ at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(
     return outputSize;
 }
 
-c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self)
-{
-    auto outputSize = op_infer::array_to_small_vector(self.sizes());
-    auto self_dim_num = self.dim();
-    TORCH_CHECK(outputSize[self_dim_num - 1] % INT4_NUMS_IN_INT32_SPACE == 0,
-        "input shape last dim must be divded by 8" + OPS_ERROR(ErrCode::PARAM));
-    outputSize[self_dim_num - 1] /= INT4_NUMS_IN_INT32_SPACE;
-    return outputSize;
-}
-
-c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self)
-{
-    int64_t resultSize = self.size(0);
-    at::SmallVector<int64_t, SIZE> outputSize = {resultSize};
-    return outputSize;
-}
-
 c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2)
 {
     c10::SmallVector<int64_t, SIZE> output_size;
@@ -1971,6 +1956,24 @@ c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::
     if (scale_real.defined()) {
         output_size = {m_dim, 1, batch_dim * n_dim};
     }
+    if (batch_split_factor_value > 1) {
+        output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
+    }
+    return output_size;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(const at::Tensor &x1, const at::Tensor &x2,
+    int32_t dtype, const at::Tensor &x1_scale_real, const at::Tensor &x2_scale_real, int32_t group_size_value,
+    at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, at::IntArrayRef perm_y_real,
+    int32_t batch_split_factor_value)
+{
+    c10::SmallVector<int64_t, SIZE> output_size;
+    auto m_dim = x1.size(perm_x1_real[1]);
+    auto batch_dim = x1.size(perm_x1_real[0]);
+    auto n_dim = x2.size(perm_x2_real[2]);
+
+    output_size = {m_dim, batch_dim, n_dim};
+
     if (batch_split_factor_value > 1) {
         output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
     }
@@ -2112,7 +2115,7 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tenso
                 "The dims of input permuted_tokens should be 2 dimensional, but got ", permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(sorted_indices.dim() == DIM_1,
                 "The dims of input sorted_indices should be 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
-    
+
     int64_t topk = probs.has_value() ? probs.value().size(1) : DEFAULT_TOPK;
     TORCH_CHECK(topk > 0, "The topk should be greater than zero in npu_moe_token_unpermute_out_size, but got ", topk, OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> output_shape;

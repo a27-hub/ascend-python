@@ -32,6 +32,8 @@ torch_npu._npu_dropout(self, p) -> (Tensor, Tensor)
 self (Tensor) - 输入张量。
 p (Float) - 丢弃概率。
 示例
+>>> import torch
+>>> import torch_npu
 >>> input = torch.tensor([1.,2.,3.,4.]).npu()
 >>> input
 tensor([1., 2., 3., 4.], device='npu:0')
@@ -54,8 +56,8 @@ torch_npu.copy_memory_(dst, src, non_blocking=False) -> Tensor
 从src拷贝元素到self张量，并返回self。
 
 参数说明
-dst (Tensor) - 拷贝源张量。
-src (Tensor) - 返回张量所需数据类型。
+dst (Tensor) - 拷贝目标张量（即接收数据的张量）。
+src (Tensor) - 拷贝源张量（即提供数据的张量）。
 non_blocking (Bool,默认值为False) - 如果设置为True且此拷贝位于CPU和NPU之间，则拷贝可能相对于主机异步发生。在其他情况下，此参数没有效果。
 约束说明
 copy_memory_仅支持NPU张量。copy_memory_的输入张量应具有相同的dtype和设备index。
@@ -211,6 +213,8 @@ torch_npu.npu_alloc_float_status(self) -> Tensor
 self (Tensor) - 任何张量。
 
 示例
+>>> import torch
+>>> import torch_npu
 >>> input    = torch.randn([1,2,3]).npu()
 >>> output = torch_npu.npu_alloc_float_status(input)
 >>> input
@@ -587,6 +591,8 @@ stds1 (Float) - index。
 stds2 (Float) - index。
 stds3 (Float, 默认值：[1.0,1.0,1.0,1.0]) -index。 "deltas" = "deltas" x "stds" + "means"
 示例
+>>> import torch
+>>> import torch_npu
 >>> anchor_box = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> ground_truth_box = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, 0, 0, 0, 0, 0.1, 0.1, 0.2, 0.2)
@@ -1278,7 +1284,7 @@ _add_torch_npu_docstr(
 QuantLightningIndexer在LightningIndexer的基础上支持了Per-Token-Head量化输入。
 
 接口原型
-custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, query_quant_mode=0, key_quant_mode=0, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3) -> Tensor
+custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> Tensor
 
 参数说明
 
@@ -1333,7 +1339,7 @@ _add_torch_npu_docstr(
 随着大模型上下文长度的增加，Sparse Attention的重要性与日俱增，这一技术通过“只计算关键部分”大幅减少计算量，然而会引入大量的离散访存，造成数据搬运时间增加，进而影响整体性能。
 
 接口原型
-custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int sparse_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3) -> Tensor    
+custom.npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3) -> Tensor    
 
 参数说明
 key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16和float16，layout_kv为PA_BSND时shape为[block_num, block_size, KV_N, D]，其中block_num为PageAttention时block总数，block_size为一个block的token数。
@@ -1342,7 +1348,7 @@ value（Tensor）：必选参数，不支持非连续，数据格式支持ND，�
 
 sparse_indices（Tensor）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持ND,数据类型支持int32。当query的layout为BSND时，shape需要传入[B, Q_S, KV_N, sparse_size]，当query的layout为TND时，shape需要传入[Q_T, KV_N, sparse_size]，其中sparse_size为一次离散选取的token数，需要保证每行有效值均在前半部分，无效值均在后半部分。
 
-scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持float。
+scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持double。
 
 sparse_block_size（int）：必选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持int64。
 
@@ -1388,7 +1394,7 @@ _add_torch_npu_docstr(
 QuantSparseFlashAttentionAnti在SparseFlashAttention的基础上支持了Per-Token-Head-Tile-128量化输入。
 
 接口原型
-custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
+custom.npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, double scale_value, int sparse_block_size, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, str layout_query='BSND', str layout_kv='BSND', int sparse_mode=3, int attention_mode=0, int quant_scale_repo_mode=0, int tile_size=0, int rope_head_dim=0) -> Tensor
 
 query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16，query相同dtype的q_nope和q_rope按D维度拼接得到。
 
@@ -1398,7 +1404,7 @@ value（Tensor）：必选参数，不支持非连续，数据格式支持ND，�
 
 sparse_indices（Tensor）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持ND,数据类型支持int32，shape需要传入[B, Q_S, KV_N, sparse_size]，其中sparse_size为一次离散选取的token数，需要保证每行有效值均在前半部分，无效值均在后半部分。
 
-scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持float。
+scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持double。
 
 sparse_block_size（int）：必选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持int64。
 
@@ -1533,7 +1539,7 @@ sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值�
 
 约束说明
 该接口仅在训练场景下使用. 
-该接口暂不支持图模式. 
+该接口暂不支持图模式, 不支持aclgraph. 
 输入query、key、value、pse的数据类型必须一致. 
 输入query、key、value的input_layout必须一致. 
 输入query、key、value的shape说明:
@@ -1600,6 +1606,214 @@ class TestNPUFlashAttention(TestCase):
             atten_masks = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1))
             atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
         return torch_npu.npu_fusion_attention(
+            query, key, value, head_num=8, input_layout="BNSD", scale=scale, sparse_mode=sparse_params[0],
+            atten_mask=atten_mask, pre_tockens=sparse_params[1], next_tockens=sparse_params[2])
+
+    def get_atten_mask(self, sparse_mode=0, pre_tokens=65536, next_tokens=65536):
+        atten_masks = []
+        shape = [1, 8, 256, 256]
+        if sparse_mode == 0:
+            atten_mask_u = np.triu(np.ones(shape), k=next_tokens + 1)
+            atten_mask_l = np.tril(np.ones(shape), k=-pre_tokens - 1)
+            atten_masks = atten_mask_u + atten_mask_l
+
+        elif sparse_mode == 1:
+            atten_masks = np.zeros(shape)
+            pre_tokens = 65536
+            next_tokens = 65536
+
+        elif sparse_mode == 2:
+            atten_masks = np.triu(np.ones(shape), k=1)
+
+        elif sparse_mode == 3:
+            atten_masks = np.triu(np.ones(shape), k=1)
+
+        elif sparse_mode == 4:
+            atten_mask_u = np.triu(np.ones(shape), k=next_tokens + 1)
+            atten_mask_l = np.tril(np.ones(shape), k=-pre_tokens - 1)
+            atten_masks = atten_mask_u + atten_mask_l
+
+        atten_mask = torch.tensor(atten_masks).to(torch.float16)
+        return atten_mask
+
+    # sparse_params = [sparse_mode, pre_tokens, next_tokens]
+    # Prec and prec16 indicate the precision comparison standards for float32 and float16 respectively.
+    # In this example, 0.01 is used as the standard. You can change the value as required. 
+    def check_result(self, query, key, value, sparse_params):
+        atten_mask = self.get_atten_mask(sparse_params[0], sparse_params[1], sparse_params[2])
+        output = self.supported_op_exec(query.float(), key.float(), value.float(), atten_mask)
+        fa_result = self.custom_op_exec(query.npu(), key.npu(), value.npu(), sparse_params)
+        self.assertRtolEqual(output.half(), fa_result[0], prec=0.01, prec16=0.01)
+
+
+    def test_npu_flash_attention(self, device="npu"):
+        query = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+        key = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+        value = torch.randn(1, 8, 256, 256, dtype=torch.float16)
+
+        # sparse_params: [sparse_mode, pre_tokens, next_tokens]
+        sparse_params_list = [
+            [0, 128, 128],
+            [1, 65536, 65536],
+            [2, 65536, 0],
+            [3, 65536, 0],
+            [4, 128, 128]
+        ]
+
+        for sparse_params in sparse_params_list:
+            self.check_result(query, key, value, sparse_params)
+
+if __name__ == "__main__":
+    run_tests()
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_fusion_attention_v3",
+    """
+功能描述实现
+“Transformer Attention Score”的融合计算, 实现的计算公式如下: 
+$y=Softmax(Mask(scale*(pse+query*key^{T}),atten_mask),keep_prob)$
+$attention=Dropout(y)*value$
+该接口为torch_npu.npu_fusion_attention支持图模式的版本，aclgraph支持input_layout为BNSD的场景。
+
+接口原型
+torch_npu.npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+
+参数说明
+query: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
+key: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
+value: Tensor类型, 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 综合约束请见约束说明. 
+head_num: int类型, 代表head个数, 数据类型支持int64. 综合约束请见约束说明. 
+input_layout: string类型, 代表输入query、key、value的数据排布格式, 支持BSH、SBH、BSND、BNSD、TND(actual_seq_qlen/actual_seq_kvlen需传值); 后续章节如无特殊说明, S表示query或key、value的sequence length, Sq表示query的sequence length, Skv表示key、value的sequence length, SS表示Sq*Skv. 
+pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 非varlen场景支持四维输入, 包含BNSS格式、BN1Skv格式、1NSS格式. 如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse_mode为0、2、3的下三角掩码场景, 可使能alibi位置编码压缩, 此时只需要输入原始PSE最后1024行进行内存优化, 即alibi_compress = ori_pse[:, :, -1024:, :], 参数每个batch不相同时, 输入BNHSkv(H=1024), 每个batch相同时, 输入1NHSkv(H=1024). 
+padding_mask: Tensor类型, 暂不支持该传参. 
+atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明. 
+scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1. 
+keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留. 
+pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明. 
+next_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. next_tockens和pre_tockens取值与atten_mask的关系请参见sparse_mode参数, 参数取值与atten_mask分布不一致会导致精度问题. 综合约束请见约束说明. 
+inner_precise: 整型, 用于提升精度, 数据类型支持int64, 默认值为0. 
+当前0、1为保留配置值, 2为使能无效行计算, 其功能是避免在计算过程中存在整行mask进而导致精度有损失, 但是该配置会导致性能下降. 
+如果算子可判断出存在无效行场景, 会自动使能无效行计算, 例如sparse_mode为3, Sq > Skv场景. 
+prefix: int类型数组, 可选参数, 代表prefix稀疏计算场景每个Batch的N值. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
+actual_seq_qlen: Tensor类型, 可选参数, varlen场景时需要传入此参数. 表示query每个S的累加和长度, 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
+比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_qlen传: 2 4 6 8 10. 
+actual_seq_kvlen: Tensor类型, 可选参数, varlen场景时需要传入此参数. 表示key/value每个S的累加和长度. 数据类型支持int64, 数据格式支持ND. 综合约束请见约束说明. 
+比如真正的S长度列表为: 2 2 2 2 2, 则actual_seq_kvlen传: 2 4 6 8 10. 
+sparse_mode: 整型, 表示sparse的模式, 可选参数. 数据类型支持int64, 默认值为0, 支持配置值为0、1、2、3、4、5、6、7、8. 当整网的atten_mask都相同且shape小于2048*2048时, 建议使用defaultMask模式, 来减少内存使用量. 综合约束请见约束说明. 
+softmax_layout: string类型，可选参数，用于控制TND场景下softmax的输出（softmax_max和softmax_sum）的数据排布方式。当前仅在input\_layout=“TND”时进行配置，仅支持传入“TND”。默认情况下，softmax的输出排布为NTD排布；传入TND时，softmax的输出排布为TND排布。
+表1 sparse_mode不同取值场景说明
+sparse_mode
+0: defaultMask模式. 
+1: allMask模式. 
+2: leftUpCausal模式. 
+3: rightDownCausal模式. 
+4: band模式. 
+5: prefix非压缩模式. varlen场景不支持. 
+6: prefix压缩模式. 
+7: varlen外切场景, rightDownCausal模式. 仅varlen场景支持. 
+8: varlen外切场景, leftUpCausal模式. 仅varlen场景支持. 
+atten_mask的工作原理为, 在Mask为True的位置遮蔽query(Q)与key(K)的转置矩阵乘积的值. QKT矩阵在atten_mask为True的位置会被遮蔽
+说明: 保留该值, atten_mask中, 应该配置为False; 遮蔽该值, atten_mask中应配置为True. sparse_mode为0时, 代表defaultMask模式. 不传mask: 如果atten_mask未传入则不做mask操作, atten_mask取值为None, 忽略pre_tockens和next_tockens取值. 
+next_tockens取值为0, pre_tockens大于等于Sq, 表示causal场景sparse, atten_mask应传入下三角矩阵, 此时pre_tockens和next_tockens之间的部分需要计算,atten_mask应传入下三角矩阵
+pre_tockens小于Sq, next_tockens小于Skv, 且都大于等于0, 表示band场景, 此时pre_tockens和next_tockens之间的部分需要计算. atten_mask应传入band形状矩阵
+next_tockens为负数, 以pre_tockens=9, next_tockens=-3为例, pre_tockens和next_tockens之间的部分需要计算. 说明: next_tockens为负数时, pre_tockens取值必须大于等于next_tockens的绝对值, 且next_tockens的绝对值小于Skv. 
+pre_tockens为负数, 以next_tockens=7, pre_tockens=-3为例, pre_tockens和next_tockens之间的部分需要计算. 说明: pre_tockens为负数时, next_tockens取值必须大于等于pre_tockens的绝对值, 且pre_tockens的绝对值小于Sq. 
+sparse_mode为1时, 代表allMask, 即传入完整的atten_mask矩阵. 该场景下忽略next_tockens、pre_tockens取值
+sparse_mode为2时, 代表leftUpCausal模式的mask, 对应以左上顶点划分的下三角场景(参数起点为左上角). 该场景下忽略pre_tockens、next_tockens取值.传入的atten_mask为优化后的压缩下三角矩阵(2048*2048)
+sparse_mode为3时, 代表rightDownCausal模式的mask, 对应以右下顶点划分的下三角场景(参数起点为右下角). 该场景下忽略pre_tockens、next_tockens取值. atten_mask为优化后的压缩下三角矩阵(2048*2048)
+sparse_mode为4时, 代表band场景, 即计算pre_tockens和next_tockens之间的部分, 参数起点为右下角, pre_tockens和next_tockens之间需要有交集. atten_mask为优化后的压缩下三角矩阵(2048*2048). 
+sparse_mode为5时, 代表prefix非压缩场景, 即在rightDownCasual的基础上, 左侧加上一个长为Sq, 宽为N的矩阵, N的值由可选输入prefix获取, 例如下图中表示batch=2场景下prefix传入数组[4,5], 每个batch轴的N值可以不一样, 参数起点为左上角. 该场景下忽略pre_tockens、next_tockens取值, atten_mask矩阵数据格式须为BNSS或B1SS
+sparse_mode为6时, 代表prefix压缩场景, 即prefix场景时, attenMask为优化后的压缩下三角+矩形的矩阵(3072*2048): 其中上半部分[2048, 2048]的下三角矩阵, 下半部分为[1024,2048]的矩形矩阵, 矩形矩阵左半部分全0, 右半部分全1. 该场景下忽略pre_tockens、next_tockens取值. 
+sparse_mode为7时, 表示varlen且为长序列外切场景(即长序列在模型脚本中进行多卡切query的sequence length); 用户需要确保外切前为使用sparse_mode 3的场景; 当前mode下用户需要设置pre_tockens和next_tockens(起点为右下顶点), 且需要保证参数正确, 否则会存在精度问题. Masked QKT矩阵示意如下, 在第二个batch对query进行切分, key和value不切分, 4x6的mask矩阵被切分成2x6和2x6的mask, 分别在卡1和卡2上计算: 卡1的最后一块mask为band类型的mask, 配置pre_tockens=6(保证大于等于最后一个Skv), next_tockens=-2, actual_seq_qlen应传入{3,5}, actual_seq_kvlen应传入{3,9}. 卡2的mask类型切分后不变, sparse_mode为3, actual_seq_qlen应传入{2,7,11}, actual_seq_kvlen应传入{6,11,15}. 
+如果配置sparse_mode=7, 但实际只存在一个batch, 用户需按照band模式的要求来配置参数; sparse_mode=7时, 用户需要输入2048x2048的下三角mask作为该融合算子的输入. 
+基于sparse_mode=3进行外切产生的band模式的sparse的参数应符合以下条件: 
+pre_tockens >= last_Skv. 
+next_tockens <= 0. 
+当前模式下不支持可选输入pse. 
+sparse_mode为8时, 表示varlen且为长序列外切场景; 用户需要确保外切前为使用sparse_mode 2的场景; 当前mode下用户需要设置pre_tockens和next_tockens(起点为右下顶点), 且需要保证参数正确, 否则会存在精度问题. Masked QKT矩阵示意如下, 在第二个batch对query进行切分, key和value不切分, 5x4的mask矩阵被切分成2x4和3x4的mask, 分别在卡1和卡2上计算: 卡1的mask类型切分后不变, sparse_mode为2, actual_seq_qlen应传入{3,5}, actual_seq_kvlen应传入{3,7}. 卡2的第一块mask为band类型的mask, 配置pre_tockens=4(保证大于等于第一个Skv), next_tockens=1, actual_seq_qlen应传入{3,8,12}, actual_seq_kvlen应传入{4,9,13}. 
+如果配置sparse_mode=8, 但实际只存在一个batch, 用户需按照band模式的要求来配置参数; sparse_mode=8时, 用户需要输入2048x2048的下三角mask作为该融合算子的输入. 
+基于sparse_mode=2进行外切产生的band模式的sparse的参数应符合以下条件: 
+pre_tockens >= first_Skv. 
+next_tockens范围无约束, 根据实际情况进行配置. 
+当前模式下不支持可选输入pse. 
+gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为True: 同AI Core计算并行; 设为False: 同AI Core计算串行. 
+sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
+
+输出说明
+共6个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、Tensor、Tensor. 
+第1个输出为Tensor, 计算公式的最终输出attention_out, 数据类型支持float16、bfloat16、float32. 
+第2个输出为Tensor, Softmax计算的Max中间结果, 用于反向计算, 数据类型支持float. 
+第3个输出为Tensor, Softmax计算的Sum中间结果, 用于反向计算, 数据类型支持float. 
+第4个输出为Tensor, 预留参数, 暂未使用. 
+第5个输出为Tensor, DSA生成dropoutmask中, Philox算法的seed. 在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor.
+第6个输出为Tensor, DSA生成dropoutmask中, Philox算法的offset. 在aclgraph场景下，返回的是npu Tensor，在非aclgraph场景下，返回的是cpu Tensor.
+
+约束说明
+该接口仅在训练场景下使用. 
+输入query、key、value、pse的数据类型必须一致. 
+输入query、key、value的input_layout必须一致. 
+输入query、key、value的shape说明:
+1. 输入key和value的shape必须一致. 
+2. B: batchsize必须相等; 非varlen场景B取值范围1~2M; varlen场景B取值范围1~2K. 
+3. D: Head Dim必须满足Dq=Dk和Dk≥Dv，取值范围1~768. 
+4. S: sequence length, 取值范围1~1M. 
+varlen场景下:
+1. 要求T(B*S)取值范围1~1M. 
+2. atten_mask输入不支持补pad，即atten_mask中不能存在某一行全1的场景.
+支持输入query的N和key/value的N不相等, 但必须成比例关系, 即Nq/Nkv必须是非0整数, Nq取值范围1~256. 当Nq/Nkv > 1时, 即为GQA\(grouped-query attention); 当Nq/Nkv=1时，即为MHA(multi-head attention). 本文如无特殊说明, N表示的是Nq. 
+输入key/value的shape必须一致. 
+sparse_mode取值说明:
+1. sparse_mode为1、2、3、4、5、6、7、8时, 应传入对应正确的atten_mask, 否则将导致计算结果错误. 当atten_mask输入为None时, sparse_mode, pre_tockens, next_tockens参数不生效, 固定为全计算. 
+2. sparse_mode配置为1、2、3、5、6时, 用户配置的pre_tockens、next_tockens不会生效. 
+3. sparse_mode配置为0、4时, 需保证atten_mask与pre_tockens、next_tockens的范围一致.
+4. sparse_mode配置为7、8时，不支持可选参数pse. 
+prefix稀疏计算场景B不大于32, varlen场景不支持非压缩prefix, 即不支持sparse_mode=5; 当Sq>Skv时, prefix的N值取值范围[0, Skv], 当Sq<=Skv时, prefix的N值取值范围[Skv-Sq, Skv]. 
+支持actual_seq_qlen中某个Batch上的S长度为0; 如果存在S为0的情况, 不支持pse输入, 假设真实的S长度为[2, 2, 0, 2, 2], 则传入的actual_seq_qlen为[2, 4, 4, 6, 8]. actual_seq_qlen的长度取值范围为1~2K, varlen场景下长度最大支持1K. 
+TND格式下, 支持尾部部分Batch不参与计算, 此时actual_seq_qlen和actual_seq_kvlen尾部传入对应个数个0即可. 假设真实的S长度为[2, 3, 4, 5, 6], 此时后两个Batch不参与计算, 则传入的actual_seq_qlen为[2, 5, 9, 0, 0]. 
+部分场景下, 如果计算量过大可能会导致算子执行超时(aicore error类型报错, errorStr为: timeout or trap error), 此时建议做轴切分处理, 注: 这里的计算量会受B、S、N、D等参数的影响, 值越大计算量越大.
+
+支持的PyTorch版本
+PyTorch 2.6+
+
+支持的型号
+Atlas A2 训练系列产品
+
+调用示例
+单算子模式调用: 
+import math
+import unittest
+import numpy as np
+import torch
+import torch_npu
+from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
+
+
+class TestNPUFlashAttention(TestCase):
+    def supported_op_exec(self, query, key, value, atten_mask):
+        scale = 0.08838
+        qk = torch.matmul(query, key.transpose(2, 3)).mul(scale)
+        qk = qk + atten_mask * (-10000.0)
+        softmax_res = torch.nn.functional.softmax(qk, dim=-1)
+        attention_out = torch.matmul(softmax_res, value)
+        return attention_out
+
+    def custom_op_exec(self, query, key, value, sparse_params):
+        scale = 0.08838
+        atten_mask = None
+        if sparse_params[0] == 0:
+            shape = [1, 8, 256, 256]
+            atten_mask_u = np.triu(np.ones(shape), k=sparse_params[1] + 1)
+            atten_mask_l = np.tril(np.ones(shape), k=-sparse_params[2] - 1)
+            atten_masks = atten_mask_u + atten_mask_l
+            atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
+        if sparse_params[0] == 2 or sparse_params[0] == 3 or sparse_params[0] == 4:
+            atten_masks = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1))
+            atten_mask = torch.tensor(atten_masks).to(torch.float16).bool().npu()
+        return torch_npu.npu_fusion_attention_v3(
             query, key, value, head_num=8, input_layout="BNSD", scale=scale, sparse_mode=sparse_params[0],
             atten_mask=atten_mask, pre_tockens=sparse_params[1], next_tockens=sparse_params[2])
 
@@ -2273,7 +2487,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_layer_norm_eval(input, normalized_shape, weight=None, bias=None, eps=1e-05) -> Tensor
 功能描述
-对层归一化结果进行计数。与torch.nn.functional.layer_norm相同, 优化NPU设备实现。
+对层归一化结果进行计算。与torch.nn.functional.layer_norm相同, 优化NPU设备实现。
 
 参数说明
 input (Tensor) - 输入张量。
@@ -2315,7 +2529,7 @@ _add_torch_npu_docstr(
     "npu_attention_update",
     """
 接口原型：
-npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type, Tensor? lse_out=None) -> Tensor
+npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
 
 功能描述
 将各SP域PA算子的输出的中间结果lse, attention out 两个局部结果更新成全局结果。
@@ -2328,12 +2542,12 @@ O = ΣOi * exp(lsei - lsem)
 
 参数说明
 lse：Device侧的TensorList，每个Tensor形状为 (batch * seqLen * headNum)，各sp域计算的lse。数据类型支持 FLOAT，格式支持 ND。
-localOut：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，格式支持 ND。
-updateType：int64_t 类型，指定执行的操作类型。目前仅支持 0（DECODE_UPDATE）。
+local_out：Device侧的TensorList，TensorList长度为sp，每个Tensor形状为 (batch * seqLen * headNum, head_dim)，各sp域计算的output。数据类型支持 FLOAT，FLOAT16，BFLOAT16，格式支持 ND。
+update_type：int64_t 类型，指定执行的操作类型。
 
 输出说明
-out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，格式为 ND。
-lse_out: Tensor类型
+out：Device侧的Tensor，形状为 (batch * seqLen * headNum, head_dim)，数据类型为 FLOAT，FLOAT16，BFLOAT16，格式为 ND。
+lse_out: Device侧的Tensor，形状为 (batch * seqLen * headNum)，数据类型为 FLOAT格式为 ND。update_type=1时有效。
 
 支持的型号
 ----------------
@@ -2360,7 +2574,7 @@ local_out = [
 ]
 
 update_type = 0  
-output, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
+out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
 """
 )
 
@@ -2461,7 +2675,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_max(self, dim, keepdim=False) -> (Tensor, Tensor)
 功能描述
-使用dim对最大结果进行计数。类似于torch.max, 优化NPU设备实现。
+使用dim对最大结果进行计算。类似于torch.max, 优化NPU设备实现。
 
 参数说明
 self (Tensor) - 输入张量。
@@ -2469,7 +2683,7 @@ dim (Int) - 待降低维度。
 keepdim (Bool，默认值为False) - 输出张量是否保留dim。
 输出说明
 values (Tensor) - 输入张量中的最大值。
-indices (Tensor) - 输入张量中最大值的index。
+indices (Tensor) - 输入张量中最大值的indices。
 示例
 >>> input = torch.randn(2, 2, 2, 2, dtype = torch.float32).npu()
 >>> input
@@ -2506,7 +2720,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_min(self, dim, keepdim=False) -> (Tensor, Tensor)
 功能描述
-使用dim对最小结果进行计数。类似于torch.min, 优化NPU设备实现。
+使用dim对最小结果进行计算。类似于torch.min, 优化NPU设备实现。
 
 参数说明
 self (Tensor) - 输入张量。
@@ -2514,8 +2728,10 @@ dim (Int) - 待降低维度。
 keepdim (Bool) - 输出张量是否保留dim。
 输出说明
 values (Tensor) - 输入张量中的最小值。
-indices (Tensor) - 输入张量中最小值的index。
+indices (Tensor) - 输入张量中最小值的indices。
 示例
+>>> import torch
+>>> import torch_npu
 >>> input = torch.randn(2, 2, 2, 2, dtype = torch.float32).npu()
 >>> input
 tensor([[[[-0.9909, -0.2369],
@@ -2585,12 +2801,12 @@ query_bias: Tensor类型，仅支持float16
 key_bias: Tensor类型，仅支持float16
 value_bias: Tensor类型，仅支持float16
 out_proj _bias: Tensor类型，仅支持float16
-dropout_mask_input: Tensor类型，仅支持float16
+dropout_mask: Tensor类型，仅支持float16
 attn_head_num： Attention Head numbers, Int型
 attn_dim_per_head：Attention dim of a Head , Int型
 src_len：source length, Int型
 tgt_len：target length, Int型
-keep_prob：dropout keep probability, Float型
+dropout_prob：dropout keep probability, Float型
 softmax_use_float：SoftMax Use Float32 to keep precision, Bool型
 输出说明
 y: Tensor类型，仅支持float16
@@ -2636,9 +2852,9 @@ query_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("fl
 key_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
 value_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
 out_proj_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
-dropout_mask_input = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
+dropout_mask = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
 
-npu_result, npu_dropout_mask, npu_query_res, npu_key_res, npu_value_res, npu_attn_scores, npu_attn_res, npu_context = torch_npu.npu_multi_head_attention (query, key, value, query_weight, key_weight, value_weight, attn_mask, out_proj_weight, query_bias, key_bias, value_bias, out_proj_bias,  dropout_mask_input, attn_head_num, attn_dim_per_head, src_len, tgt_len, dropout_prob, softmax_use_float)
+npu_result, npu_dropout_mask, npu_query_res, npu_key_res, npu_value_res, npu_attn_scores, npu_attn_res, npu_context = torch_npu.npu_multi_head_attention (query, key, value, query_weight, key_weight, value_weight, attn_mask, out_proj_weight, query_bias, key_bias, value_bias, out_proj_bias,  dropout_mask, attn_head_num, attn_dim_per_head, src_len, tgt_len, dropout_prob, softmax_use_float)
 
 print(npu_result)
 
@@ -2714,8 +2930,10 @@ scores_threshold (Tensor) - 0D浮点张量，表示决定何时删除框的分�
 pad_to_max_output_size (Bool，默认值为False) - 如果为True，则输出的selected_indices将填充为max_output_size长度。
 输出说明
 selected_indices (Tensor) - shape为[M]的1D整数张量，表示从boxes张量中选定的index，其中M <= max_output_size。
-valid_outputs (Tensor) - 0D整数张量，表示selected_indices中有效元素的数量，有效元素首先呈现。
+valid_outputs (Tensor) - 0D整数张量，表示selected_indices中有效元素的数量，有效元素首先出现。
 示例
+>>> import torch
+>>> import torch_npu
 >>> boxes=torch.randn(100,4).npu()
 >>> scores=torch.randn(100).npu()
 >>> boxes.uniform_(0,100)
@@ -2746,10 +2964,12 @@ selected_boxes (Tensor) - shape为[N,5]的2D张量，表示filtered box，包括
 selected_idx (Tensor) - shape为[N]的1D张量，表示输入建议框的index。
 selected_mask (Tensor) - shape为[N]的1D张量，判断输出建议框是否有效。
 约束说明
-输入box_scores的2nd-dim必须等于8。
+输入input的2nd-dim必须等于8。
 
 示例
->>> input = torch.tensor([[0.0, 1.0, 2.0, 3.0, 0.6], [6.0, 7.0, 8.0, 9.0, 0.4]], dtype=torch.float16).to("npu")
+>>> import torch
+>>> import torch_npu
+>>> input = torch.tensor([[0.0, 1.0, 2.0, 3.0, 0.6, 0.5, 0.4, 0.3], [6.0, 7.0, 8.0, 9.0, 0.4, 0.5, 0.6, 0.7]], dtype=torch.float16).to("npu")
 >>> iou_threshold = 0.5
 >>> output1, output2, output3, = torch_npu.npu_nms_with_mask(input, iou_threshold)
 >>> output1
@@ -2886,6 +3106,8 @@ bboxes (Tensor) - 输入张量。
 gtboxes (Tensor) - 输入张量。
 mode (Int，默认值为0) - 0为IoU模式，1为IoF模式。
 示例
+>>> import torch
+>>> import torch_npu
 >>> bboxes = torch.tensor([[0, 0, 10, 10],
                            [10, 10, 20, 20],
                            [32, 32, 38, 42]], dtype=torch.float16).to("npu")
@@ -2912,7 +3134,7 @@ torch_npu.npu_random_choice_with_mask(x, count=256, seed=0, seed2=0) -> (Tensor,
 x (Tensor) - 输入张量。
 count (Int，默认值为256) - 输出计数。如果值为0，则输出所有非零元素。
 seed (Int，默认值为0) - 数据类型：int32，int64。
-seed2 (Int，默认值为2) - 数据类型：int32，int64。
+seed2 (Int，默认值为0) - 数据类型：int32，int64。
 输出说明
 y (Tensor) - 2D张量, 非零元素的index。
 mask (Tensor) - 1D张量, 确定对应index是否有效。
@@ -3010,14 +3232,16 @@ torch_npu.npu_roi_align(features, rois, spatial_scale, pooled_height, pooled_wid
 从特征图中获取ROI特征矩阵。自定义FasterRcnn算子。
 
 参数说明
-features (Tensor) - 5HD张量
-rois (Tensor) - ROI位置，shape为(N, 5)的2D张量。“N”表示ROI的数量，“5”表示ROI所在图像的index，分别为“x0”、“y0”、“x1”和“y1”。
+features (Tensor) - 4HD张量
+rois (Tensor) - ROI位置，shape为(N, 4)的2D张量。“N”表示ROI的数量，“4”表示ROI所在图像的index，分别为“x0”、“y0”、“x1”和“y1”。
 spatial_scale (Float32) - 指定“features”与原始图像的缩放比率。
 pooled_height (Int32) - 指定H维度。
 pooled_width (Int32) - 指定W维度。
 sample_num (Int32，默认值为2) - 指定每次输出的水平和垂直采样频率。若此属性设置为0，则采样频率等于“rois”的向上取整值(一个浮点数)。
 roi_end_mode (Int32，默认值为1)
 示例
+>>> import torch
+>>> import torch_npu
 >>> x = torch.FloatTensor([[[[1, 2, 3 , 4, 5, 6],
                             [7, 8, 9, 10, 11, 12],
                             [13, 14, 15, 16, 17, 18],
@@ -3038,23 +3262,28 @@ tensor([[[[ 4.5000,  6.5000,  8.5000],
 _add_torch_npu_docstr(
     "npu_rotary_mul",
     """
-torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='half') -> Tensor
+torch_npu.npu_rotary_mul(Tensor input, Tensor r1, Tensor r2, str rotary_mode='half', Tensor? rotate=None) -> Tensor
 功能描述
 实现RotaryEmbedding旋转位置编码。支持FakeTensor模式。
-    half模式：
-    x1, x2 = torch.chunk(input, 2, -1)
-    x_new = torch.cat((-x2, x1), dim=-1)
-    output = r1 * input + r2 * x_new
-    interleave模式：
-    x1 = input[..., ::2]
-    x2 = input[..., 1::2]
-    x_new = rearrange(torch.stack((-x2, x1), dim=-1), "... d two -> ...(d two)", two=2)
-    output = r1 * input + r2 * x_new
+    不传入rotate参数：
+        half模式：
+            x1, x2 = torch.chunk(input, 2, -1)
+            x_new = torch.cat((-x2, x1), dim=-1)
+            output = r1 * input + r2 * x_new
+        interleave模式：
+            x1 = input[..., ::2]
+            x2 = input[..., 1::2]
+            x_new = rearrange(torch.stack((-x2, x1), dim=-1), "... d two -> ...(d two)", two=2)
+            output = r1 * input + r2 * x_new
+    传入rotate时（由开发者生成rotate矩阵，生成方式参考示例）：
+        x_new = input @ rotate
+        output = r1 * input + r2 * x_new
 参数说明
 input：必选输入，4维Tensor，数据类型float16, bfloat16, float32
 cos: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
 sin: 必选输入，4维Tensor，数据类型float16, bfloat16, float32
 rotary_mode: 可选属性，数据类型string，用于选择计算模式，支持'half'、'interleave'两种模式。缺省为half。
+rotate：可选参数，表示实现input位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，默认为空，不支持反向传播。
 约束说明
 jit_compile=False场景：
     half模式：
@@ -3078,12 +3307,38 @@ jit_compile=True场景：
     shape要求输入为4维，其中B维度和N维度数值需小于等于1000，D维度数值为128。
     广播场景下，广播轴的总数据量不能超过1024
     支持Atlas训练系列产品，Atlas A2训练系列产品, Atlas 推理系列产品。
-
-示例
+rotate推荐使用场景
+  interleave模式
+  half模式仅在以下场景时推荐使用：输入矩阵x需要在最后一个维度切分多份时，可以通过构造旋转编码矩阵实现一次调用获得性能收益，以x的layout为BSND需要切分为3份为例：
+     x切分为3份，$x = [x1|x2|x3]_{(dim=4)} ∈ R^{B×S×N×D}, x1 ∈ R^{B×S×N×D1},x2 ∈ R^{B×S×N×D2},x3 ∈ R^{B×S×N×D3}, 其中D = D1 + D2 + D3$，
+     那么可以构造一个rotate矩阵，实现调用一次完成x的旋转位置编码计算功能，rotate矩阵构造如下：
+     $$rotate = diag(rotate1, rotate2, rotate3) = \begin{pmatrix}rotate1&0&0\\0&rotate2&0\\0&0&rotate3\\\end{pmatrix}$$
+     其中rotate1、rotate2、rotate3分别为x1、x2、x3的旋转编码矩阵，单个旋转矩阵构建参考调用示例。
+示例1
     >>>x = torch.rand(2, 2, 5, 128).npu()
     >>>r1 = torch.rand(1, 2, 1, 128).npu()
     >>>r2 = torch.rand(1, 2, 1, 128).npu()
     >>>out = torch_npu.npu_rotary_mul(x, r1, r2)
+示例2
+    >>>n = 128
+    >>>rotate = torch.zeros(n, n, dtype=torch.bfloat16) # interleave
+    >>>for i in range(0, n, 2):
+    ...    rotate[i + 0, i + 1] = 1
+    ...    rotate[i + 1, i + 0] = 1
+    >>>x = torch.rand(2, 2, 5, n).npu()
+    >>>r1 = torch.rand(1, 1, 5, n).npu()
+    >>>r2 = torch.rand(1, 1, 5, n).npu()
+    >>>out = torch_npu.npu_rotary_mul(x, r1, r2, "interleave", rotate)
+示例3
+    >>>n = 128
+    >>>rotate = torch.zeros(n, n, dtype=torch.bfloat16) # half
+    >>>half = n // 2
+    >>>rotate[:half, half:] = torch.eye(half)
+    >>>rotate[half:, :half] = -torch.eye(half)
+    >>>x = torch.rand(2, 2, 5, n).npu()
+    >>>r1 = torch.rand(1, 1, 5, n).npu()
+    >>>r2 = torch.rand(1, 1, 5, n).npu()
+    >>>out = torch_npu.npu_rotary_mul(x, r1, r2, "half", rotate)
 """
 )
 
@@ -3196,6 +3451,9 @@ mode (Int，默认值为0) - 计算模式，取值为0或1。0表示IoU，1表�
 v_threshold (Float，可选，默认值为0.0) - provide condition relaxation for intersection calculation.
 e_threshold (Float，可选，默认值为0.0) - provide condition relaxation for intersection calculation.
 示例
+>>> import torch
+>>> import torch_npu
+>>> import numpy as np
 >>> a=np.random.uniform(0,1,(2,2,5)).astype(np.float16)
 >>> b=np.random.uniform(0,1,(2,3,5)).astype(np.float16)
 >>> box1=torch.from_numpy(a).to("npu")
@@ -3223,6 +3481,9 @@ self (Tensor) -梯度增量数据，shape为(B, 5, N)数据类型为float32的3D
 query_boxes (Tensor) - 标注框，shape为(B, 5, K) 数据类型为float32的3D张量。
 trans (Bool，默认值为False) - 值为True表示“xyxyt”，值为False表示“xywht”。
 示例
+>>> import torch
+>>> import torch_npu
+>>> import numpy as np
 >>> a=np.random.uniform(0,1,(1,3,5)).astype(np.float16)
 >>> b=np.random.uniform(0,1,(1,2,5)).astype(np.float16)
 >>> box1=torch.from_numpy(a).to("npu")
@@ -3356,7 +3617,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_silu(self) -> Tensor
 功能描述
-计算self的Swish。
+计算self的Swish。Swish是一种激活函数，计算公式为' x * sigmoid(x) '。
 
 参数说明
 self (Tensor) - 数据类型：float16、float32
@@ -3414,7 +3675,7 @@ _add_torch_npu_docstr(
     """
 torch_npu.npu_sort_v2(self, dim=-1, descending=False, out=None) -> Tensor
 功能描述
-沿给定维度，按无index值对输入张量元素进行升序排序。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。
+沿给定维度，对输入张量元素进行升序排序（不返回索引）。若dim未设置，则选择输入的最后一个维度。如果descending为True，则元素将按值降序排序。
 
 参数说明
 self (Tensor) - 输入张量。
@@ -3654,7 +3915,7 @@ cpu_x2 = torch.randint(-1, 1, (15, 512, 128), dtype=torch.int8)
 scale = torch.randn(1, dtype=torch.float32)
 offset = torch.randn(1, dtype=torch.float32)
 bias = torch.randint(-1,1, (15, 1, 128), dtype=torch.int32)
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 npu_out = model(cpu_x1.npu(), cpu_x2.npu(), scale.npu(), offset.npu(), bias.npu())
 """
 )
@@ -3944,7 +4205,7 @@ PyTorch2.1及以上
 
     cpu_model = MyModel()
     model = cpu_model.npu()
-    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False)
+    model = torch.compile(model, backend=npu_backend, dynamic=False)
 
     b,m,k,n = (2,3,4,5)
     x1 = torch.ones((b, m, k), dtype=torch.int8).npu()
@@ -4097,7 +4358,7 @@ scale = torch.randn(1, dtype=torch.float32)
 scale_1 = torch_npu.npu_trans_quant_param(scale.npu(), None)
 bias = torch.randint(-1,1, (15, 1, 128), dtype=torch.int32)
 # dynamic=True: 动态图模式,  dynamic=False: 静态图模式
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 npu_out = model(cpu_x1.npu(), cpu_x2.npu(), scale_1, None, bias.npu())
 输出bfloat16, 示例代码如下, 仅支持如下产品: 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
@@ -4133,7 +4394,7 @@ scale = torch.randint(-1,1, (n,), dtype=torch.bfloat16)
 pertoken_scale = torch.randint(-1,1, (m,), dtype=torch.float32)
 
 bias = torch.randint(-1,1, (n,), dtype=torch.bfloat16)
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 if bias_flag:
     npu_out = model(cpu_x1.npu(), cpu_x2.npu(), scale.npu(), None, bias.npu(), pertoken_scale.npu())
 else:
@@ -4170,7 +4431,7 @@ offset = torch.randn(1, dtype=torch.float32).npu()
 bias = torch.randint(-1,1, (128,), dtype=torch.int32).npu()
 # Process scale from float32 to int64 offline to improve performance
 scale_1 = torch_npu.npu_trans_quant_param(scale, offset)
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=False)
+model = torch.compile(model, backend=npu_backend, dynamic=False)
 npu_out = model(cpu_x1, cpu_x2_t_29, scale_1, offset, bias)
 将x2非转置(batch, k, n)后转format, 示例代码如下, 仅支持如下产品: 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
@@ -4207,7 +4468,7 @@ scale = torch.randint(-1,1, (n,), dtype=torch.bfloat16)
 pertoken_scale = torch.randint(-1,1, (m,), dtype=torch.float32)
 
 bias = torch.randint(-1,1, (n,), dtype=torch.bfloat16)
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 if bias_flag:
     npu_out = model(cpu_x1.npu(), x2_notranspose_29, scale.npu(), None, bias.npu(), pertoken_scale.npu())
 else:
@@ -4353,7 +4614,7 @@ class MyModel(torch.nn.Module):
 
 cpu_model = MyModel()
 model = cpu_model.npu()
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 npu_out = model(cpu_x.npu(), cpu_weight.npu(), cpu_antiquantscale.npu(), cpu_antiquantoffset.npu(), None, None, None, 0)
 Atlas 推理系列加速卡产品: weight输入为FRACTAL_NZ格式
 import torch_npu
@@ -4486,6 +4747,53 @@ y = model(x1.npu(), x2.npu(), scale.npu())
 )
 
 _add_torch_npu_docstr(
+    "npu_transpose_quant_batchmatmul",
+    """
+功能描述: 
+该接口用于实现矩阵乘计算输入和输出的transpose操作。
+
+接口原型: 
+npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int? group_size=0, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
+参数说明: 
+- x1(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的左矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
+- x2(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的右矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
+- dtype(Int, 计算输入): 必选参数，声明output的数据类型，支持1和27, 1表示torch.float16，27表示torch.bfloat16。
+- bias(Tensor, 计算输入): 可选参数, 一个1D的Device侧Tensor输入，矩阵计算的bias参数。数据类型支持float32、float16、bfloat16，数据格式支持ND。当前仅支持配置为空。
+- x1_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，左矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
+- x2_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，右矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
+- group_size(Int, 计算输入): 可选参数, 默认为0, 表示量化分组大小，预留参数，当前仅支持配置为0，取值不生效。
+- perm_x1(ListInt, 计算输入): 可选参数, int类型列表，将input在矩阵乘之前排列成[B, M, K]。
+- perm_x2(ListInt, 计算输入): 可选参数, int类型列表，将weight在矩阵乘之前排列成[B, K, N]。
+- perm_y(ListInt, 计算输入): 可选参数, int类型列表，将y在矩阵乘后重新排列成[M, B, N]。
+- batch_split_factor(Int, 计算输入): 可选参数，默认为1, 表示output_batch的系数，当前为预留参数，仅支持配置为1。
+- y(Tensor, 计算输出): 一个3D的Tensor，输出数据类型支持float16、bfloat16，由dtype参数决定。
+
+约束说明:
+-右矩阵K仅支持512, N仅支持128
+-当前暂不支持bias、group_size、batch_split_factor
+-x1_scale和x2_scale当前暂不支持非1D输入
+
+支持的芯片型号:
+-昇腾910_95 AI处理器
+
+调用示例:
+# 单算子调用
+import torch
+import torch_npu
+
+M, K, N, Batch = 32, 512, 128, 32
+x1 = torch.randint(-3, 3, (M, Batch, K), dtype=torch.float8_e4m3fn).npu
+x2 = torch.randint(-3, 3, (Batch, K, N), dtype=torch.float8_e4m3fn).npu
+x1_scale = torch.rand(-3, 3, (M, ), dtype=torch.float32).npu
+x2_scale = torch.rand(-3, 3, (N, ), dtype=torch.float32).npu
+y = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype=1, x1_scale=x1_scale,
+                                        x2_scale=x2_scale, perm_x1=[1, 0, 2], 
+                                        perm_x2=[0, 1, 2], perm_y=[1, 0, 2])
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_convert_weight_to_int4pack",
     """
 功能描述:
@@ -4591,7 +4899,7 @@ class MyModel(torch.nn.Module):
 
 cpu_model = MyModel()
 model = cpu_model.npu()
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True, fullgraph=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True, fullgraph=True)
 
 npu_out = model(cpu_x.npu(), weight_int4pack, cpu_antiquantscale.npu(), cpu_antiquantoffset.npu(), None, None, None, 0)
 """
@@ -5963,9 +6271,9 @@ if name=="main":
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
-    cpu_model = Model().npu()
+    model = Model().npu()
     # 图模式调用
-    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
     model(key_npu, value_npu, slot_mapping_npu, key_cache_npu_cast, value_cache_npu_cast)
 
 
@@ -6072,7 +6380,8 @@ class Model(torch.nn.Module):
     def forward(self,x,scale,offset):
         return torch_npu.npu_anti_quant(x, scale, offset=offset, dst_dtype=torch.float16)
 cpu_model = Model()
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+model = cpu_model.npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
 output = model(x_tensor,scale,offset)
 """
 )
@@ -6451,7 +6760,7 @@ cpu_weight2 = torch.randn((16, 5120, 2560),device='npu',dtype=torch.float16)
 activation = "fastgelu"
 expert = [227, 62, 78, 126, 178, 27, 122, 1, 19, 182, 166, 118, 66, 217, 122, 243]
 model = cpu_model.npu()
-model = torch.compile(cpu_model, backend=npu_backend, dynamic=True)
+model = torch.compile(model, backend=npu_backend, dynamic=True)
 npu_out = model(cpu_x.npu(), cpu_weight1.npu(), cpu_weight2.npu(), activation, expert)
 """
 )
@@ -6504,7 +6813,7 @@ num_heads: int类型, 代表query的头数, 即query的N, 默认值为1; 数据�
 scale_value: float类型, 代表缩放系数, 用来约束梯度, 其默认值为1.0, 典型值为$\frac{1}{\sqrt{D}}$; 数据类型为float32. 
 input_layout: 字符串类型, 代表query、key、value的布局, 根据输入的query、key、value的shape确定, 三维Tensor是BSH, 四维Tensor是BNSD或BSND, 默认值为BSH, 不支持其他值; 数据类型为string. 
 query、key、value数据排布格式支持从多种维度解读, 其中B(Batch)表示输入样本批量大小、S(Seq-Length)表示输入样本序列长度、H(Head-Size)表示隐藏层的大小、N(Head-Num)表示多头数、D(Head-Dim)表示隐藏层最小的单元尺寸, 且满足D=H/N. 
-num_key_value_heads: int类型, 代表key、value的头数, 用于支持GQA(Grouped-Query Attention, 分组查询注意力)场景, 默认值为0, 表示与query的头数相同, 否则表示key、value的头数, 需要能被query的头数(num_heads)整除; num_heads与num_key_value_heads的比值不能大于64. 数据类型为int64. 
+num_key_value_heads: int类型, 代表key、value的头数, 用于支持GQA(Grouped-Query Attention, 分组查询注意力)场景, 默认值为0, 表示与query的头数相同, 否则表示key、value的头数, 且num_heads需要能被num_key_value_heads整除; num_heads与num_key_value_heads的比值不能大于64. 数据类型为int64. 
 block_size: int类型, PageAttention中KV存储每个block中最大的token个数, 默认为0, 通常为128、256等值, 数据类型支持int64. 
 inner_precise: int类型, 代表高精度/高性能选择, 0代表高精度, 1代表高性能, 默认值为1(高性能),  数据类型支持int64. 
 
@@ -6519,7 +6828,7 @@ atten_out: Tensor类型, 计算的最终结果, shape与query保持一致.
 query、key、value的维度必须保持一致, key、value的shape必须保持一致. 
 num_heads的值要等于query的N. 
 input_layout的值与query的shape相关, 三维是BSH, 四维是BNSD或BSND. 
-num_key_value_heads的值要等于key、value的N, 需要能被query的头数(num_heads)整除. 
+num_key_value_heads的值要等于key、value的N, 且num_heads需要能被num_key_value_heads整除. 
 query, key, value输入, 功能使用限制如下: 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品支持B轴小于等于65535, 支持N轴小于等于256, 支持S轴小于等于262144, 支持D轴小于等于512. 
 Atlas 推理系列加速卡产品支持B轴小于等于256, 支持N轴小于等于256, 支持S轴小于等于65536, 支持D轴小于等于512. 
@@ -6635,7 +6944,7 @@ _add_torch_npu_docstr(
 atten_out=softmax(scale*(Q*K)+atten_mask)*V
 
 接口原型:
-torch_npu.npu_prompt_flash_attention(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, padding_mask=None, Tensor? atten_mask=None, int[]? actual_seq_lengths=None, Tensor? deq_scale1=None, Tensor? quant_scale1=None, Tensor? deq_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, int num_heads=1, float scale_value=1.0, int pre_tokens=2147473647, int next_tokens=0, str input_layout="BSH", int num_key_value_heads=0, int[]? actual_seq_lengths_kv=None, int sparse_mode=0) -> Tensor
+torch_npu.npu_prompt_flash_attention(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, padding_mask=None, Tensor? atten_mask=None, int[]? actual_seq_lengths=None, Tensor? deq_scale1=None, Tensor? quant_scale1=None, Tensor? deq_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, int num_heads=1, float scale_value=1.0, int pre_tokens=2147483647, int next_tokens=0, str input_layout="BSH", int num_key_value_heads=0, int[]? actual_seq_lengths_kv=None, int sparse_mode=0) -> Tensor
 
 参数说明:
 query、key、value数据排布格式支持从多种维度解读, 其中B(Batch)表示输入样本批量大小、S(Seq-Length)表示输入样本序列长度、H(Head-Size)表示隐藏层的大小、N(Head-Num)表示多头数、D(Head-Dim)表示隐藏层最小的单元尺寸, 且满足D=H/N、T表示所有Batch输入样本序列长度的累加和. 
@@ -6870,12 +7179,14 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 数据类型支持float1
 Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(int32). 
 *: 代表其之前的变量是位置相关, 需要按照顺序输入, 必选; 之后的变量是键值对赋值的, 位置无关, 可选(不输入会使用默认值). 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S大于1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
-Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
-Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
-其中Q_S为query的shape中的S, KV_S为key和value的shape中的S, 但如果Q_S、KV_S非16或32对齐, 可以向上取到对齐的S. 综合约束请见约束说明. 
+sparse_mode为0、1时
+    支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+    当输入input_layout为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传query_rope和key_rope时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
+    如果Q_S、KV_S非16或32对齐，可以向上取到对齐的S。综合约束请见约束声明。
+sparse_mode为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 actual_seq_lengths: int类型数组, 代表不同Batch中query的有效seqlen, 数据类型支持int64. 如果不指定seqlen可以传入None, 表示和query的shape的s长度相同. 限制: 该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen, Q_S为1时该参数无效. seqlen的传入长度为1时, 每个Batch使用相同seqlen; 传入长度大于等于Batch时取seqlen的前Batch个数. 其他长度不支持. 当query的input_layout为TND时, 该入参必须传入, 且以该入参元素的数量作为Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 actual_seq_lengths_kv: int类型数组, 代表不同Batch中key/value的有效seqlenKv, 数据类型支持int64. 如果不指定None, 表示和key/value的shape的S长度相同. 不同O_S值有不同的约束, 具体参见约束说明. 
 dequant_scale1: Tensor类型, 数据类型支持uint64、float32. 数据格式支持ND, 表示BMM1后面的反量化因子, 支持per-tensor. 如不使用该功能时传入None. 
@@ -7271,6 +7582,50 @@ tensor([0., 0., ..., 0., 0., 0.],
 )
 
 _add_torch_npu_docstr(
+    "_npu_fused_infer_attention_score_infer_output",
+    """
+功能描述:
+算子功能：用于npu_fused_infer_attention_score算子aclgraph tilling下沉场景，推算output tensor 并创建一个此size大小的tensor， 实际返回output_tensor 和 softmax_lse_tensor。
+
+接口原型:
+torch_npu._npu_fused_infer_attention_score_infer_output(Tensor query, Tensor value, *, str input_layout="BSH", Tensor? quant_scale2=None, Tensor? block_table=None, int num_heads=1, int num_key_value_heads=0, bool softmax_lse_flag=False, Tensor? query_rope=None) -> (Tensor, Tensor)
+
+参数说明:
+输入为npu_fused_infer_attention_score的子集
+输出类型为(Tensor, Tensor), 由适配层推导，计算返回对应的output_tensor 和 softmax_lse_tensor。
+约束说明:
+当Q_S等于1时：请参考Incre_Flash_Attention限制
+当Q_S大于1时：请参考Prompt_Flash_Attention限制
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+# 单算子调用方式
+import torch
+import torch_npu
+import math
+
+# 生成随机数据, 并发送到npu
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+
+# 调用FIA算子
+out，softmax_lse = torch_npu._npu_fused_infer_attention_score_infer_output(q, k, v, num_heads = 8, input_layout = "BNSD")
+
+# 执行上述代码的输出类似如下
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+
+# 入图方式
+暂不支持入图
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_fused_infer_attention_score.out",
     """
 功能描述:
@@ -7350,11 +7705,14 @@ Atlas A3 训练系列产品: 数据类型支持float16、bfloat16、int8、int4(
 query_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的query的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 key_rope: Tensor类型, 表示MLA(Multi-head Latent Attention)结构中的key的rope信息, 数据类型支持float16、bfloat16, 不支持非连续的Tensor, 数据格式支持ND. 
 pse_shift: Tensor类型, 在attention结构内部的位置编码参数, 数据类型支持float16、bfloat16, 数据类型与query的数据类型需满足数据类型推导规则. 不支持非连续的Tensor, 数据格式支持ND. 如不使用该功能时可传入None. 
-Q_S不为1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
+Q_S大于1, 要求在pse_shift为float16类型时, 此时的query为float16或int8类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, Q_S, KV_S)或(1, Q_N, Q_S, KV_S), 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 Q_S为1, 要求在pse_shift为float16类型时, 此时的query为float16类型; 而在pse_shift为bfloat16类型时, 要求此时的query为bfloat16类型. 输入shape类型需为(B, Q_N, 1, KV_S)或(1, Q_N, 1, KV_S), KV_S为key和value的shape中的S. 对于pse_shift的KV_S为非32对齐的场景, 建议padding到32字节来提高性能, 多余部分的填充值不做要求. 
 atten_mask: Tensor类型, 对QK的结果进行mask, 用于指示是否计算Token间的相关性, 数据类型支持bool、int8和uint8. 不支持非连续的Tensor, 数据格式支持ND. 如果不使用该功能可传入None. 
-Q_S不为1时建议shape输入(Q_S, KV_S)、(B, Q_S, KV_S)、(1, Q_S, KV_S)、(B, 1, Q_S, KV_S)、(1, 1, Q_S, KV_S). 
-Q_S为1时建议shape输入(B, KV_S)、(B, 1, KV_S)、(B, 1, 1, KV_S). 
+sparse_mode为0、1时
+    支持shape传入(1,Q_S,KV_S)、(B,1,Q_S,KV_S)、(1,1,Q_S,KV_S)。
+    当输入input_layout为BSH、BSND、BNSD、BNSD_BSND时，且query、key、value的D相等，并且不传query_rope和key_rope时，Q_S为1可支持传入(B,KV_S)，Q_S大于1时可支持传入(Q_S,KV_S)。
+    如果Q_S、KV_S非16或32对齐，可以向上取到对齐的S。综合约束请见约束声明。
+sparse_mode为2、3、4时，shape输入支持(2048,2048)或(1,2048,2048)或(1,1,2048,2048)。
 其中Q_S为query的shape中的S, KV_S为key和value的shape中的S, 但如果Q_S、KV_S非16或32对齐, 可以向上取到对齐的S. 综合约束请见约束说明. 
 actual_seq_qlen: int类型数组, 代表不同Batch中query的有效seqlen, 数据类型支持int64. 如果不指定seqlen可以传入None, 表示和query的shape的s长度相同. 限制: 该入参中每个batch的有效seqlen应该不大于query中对应batch的seqlen, Q_S为1时该参数无效. seqlen的传入长度为1时, 每个Batch使用相同seqlen; 传入长度大于等于Batch时取seqlen的前Batch个数. 其他长度不支持. 当query的input_layout为TND时, 该入参必须传入, 且以该入参元素的数量作为Batch值. 该入参中每个元素的值表示当前Batch与之前所有Batch的seqlen和, 因此后一个元素的值必须大于等于前一个元素的值, 且不能出现负值. 
 actual_seq_kvlen: int类型数组, 代表不同Batch中key/value的有效seqlenKv, 数据类型支持int64. 如果不指定None, 表示和key/value的shape的S长度相同. 不同O_S值有不同的约束, 具体参见约束说明. 
@@ -7747,6 +8105,50 @@ tensor([0., 0., ..., 0., 0., 0.],
 )
 
 _add_torch_npu_docstr(
+    "_npu_fused_infer_attention_score_v2_infer_output",
+    """
+功能描述:
+算子功能：用于npu_fused_infer_attention_score_v2算子aclgraph tilling下沉场景，推算output tensor 并创建一个此size大小的tensor， 实际返回output_tensor 和 softmax_lse_tensor。
+
+接口原型:
+torch_npu._npu_fused_infer_attention_score_v2_infer_output(Tensor query, Tensor value, *, int? query_dtype=None, int? value_dtype=None, str input_layout="BSH", Tensor? quant_scale_out=None, Tensor? block_table=None, int num_query_heads=1, int num_key_value_heads=0, bool return_softmax_lse=False, Tensor? query_rope=None, int? out_dtype=None) -> (Tensor, Tensor)
+
+参数说明:
+输入为npu_fused_infer_attention_score_v2的子集
+输出类型为(Tensor, Tensor), 由适配层推导，计算返回对应的output_tensor 和 softmax_lse_tensor。
+约束说明:
+当Q_S等于1时：请参考Incre_Flash_Attention限制
+当Q_S大于1时：请参考Prompt_Flash_Attention限制
+
+支持的芯片型号:
+Atlas A2 训练系列产品
+
+调用示例:
+# 单算子调用方式
+import torch
+import torch_npu
+import math
+
+# 生成随机数据, 并发送到npu
+q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
+k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
+
+# 调用FIA算子
+out，softmax_lse = torch_npu._npu_fused_infer_attention_score_v2_infer_output(q, v, num_query_heads = 8, input_layout = "BNSD")
+
+# 执行上述代码的输出类似如下
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+tensor([0., 0., ..., 0., 0., 0.],
+        device='npu:0', dtype=torch.float16)
+
+# 入图方式
+暂不支持入图
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_fused_infer_attention_score_v2.out",
     """
 功能描述:
@@ -8041,6 +8443,8 @@ graph output: tensor([[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.014
 _add_torch_npu_docstr(
     "npu_mla_prolog_v2",
     """
+该接口中kv_cache和kr_cache进行原地计算，未按in-place算子实现接口，推荐使用`torch_npu.npu_mla_prolog_v3`接口进行替换。
+
 功能描述:
 推理场景，Multi-Head Latent Attention前处理的计算。主要计算过程分五路，首先对输入x乘以WeightDq进行下采样和RmsNorm后分成两路，第一路乘以WeightUq和WeightUk经过两次上采样后得到query；第二路乘以WeightQr后经过旋转位置编码（ROPE)得到query_rope；第三路是输入x乘以WeightDkv进行下采样和RmsNorm后传入Cache中得到kvCache；第四路是输入x乘以Wkr后经过旋转位置编码后传入另一个Cache中得到krCache；第五路是输出query经过DynamicQuant后得到的量化参数。
 
@@ -8258,9 +8662,9 @@ if name=="main":
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
-    cpu_model = Model_ds().npu()
+    model = Model_ds().npu()
     # 图模式调用
-    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
     query, query_rope, kvcache, krcache,dequant_scale_q_nope = model(token_x, w_dq, w_uq_qr, w_uk,
         w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, cache_index, kv_cache, kr_cache, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
@@ -8533,9 +8937,9 @@ if name=="main":
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
-    cpu_model = Model_ds().npu()
+    model = Model_ds().npu()
     # 图模式调用
-    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
     query, query_rope, dequant_scale_q_nope, query_norm, dequant_scale_q_norm = model(token_x, w_dq, w_uq_qr, w_uk,
         w_dkv_kr, gamma_cq, gamma_ckv, sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x, 
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, 
@@ -8841,9 +9245,9 @@ if name=="main":
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
-    cpu_model = Model_ds().npu()
+    model = Model_ds().npu()
     # 图模式调用
-    model = torch.compile(cpu_model, backend=npu_backend, dynamic=False, fullgraph=True)
+    model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
     query_mla, query_rope_mla, dequant_scale_q_nope_mla, _, _, kv_cache_mla, kr_cache_mla = model(token_x, w_dq, w_uq_qr, w_uk, w_dkv_kr, gamma_cq, gamma_ckv,
         sin, cos, kv_cache, kr_cache, cache_index=cache_index, dequant_scale_x=dequant_scale_x,
         dequant_scale_w_dq=dequant_scale_w_dq, dequant_scale_w_uq_qr=dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr=dequant_scale_w_dkv_kr,
@@ -9306,7 +9710,7 @@ torch_npu.npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1,
 算子功能: MoE计算中, 最后处理合并MoE FFN的输出结果. 
 计算公式: 
 expertid=exportForSourceRow[i,k]
-out(i,j)=skip1_{i,j}+skip2Optional_{i,j}+$\sum_{k=0}^{K}$(sclaes_{i,k}*(expandPermutedRowx_{expandedSrcRowToDstRowx_{i}+k*num_rows_{j}}+bias_{expertid_{j}}))
+out(i,j)=skip1_{i,j}+skip2Optional_{i,j}+\sum_{k=0}^{K}(scales_{i,k}*(expandPermutedRows_{expandedSrcToDstRow_{i+k*num_rows},j}+bias_{expertid,j}))
 
 参数说明
 expanded_permuted_rows: Tensor类型, 必选参数, 经过专家处理过的结果, 要求是一个2D的Tensor, 数据类型支持float16、bfloat16、float32, 数据格式要求为ND. shape支持(NUM_ROWS * K, H), NUM_ROWS为行数, K为从总的专家E中选出K个专家, H为列数. 
@@ -9888,7 +10292,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_prefetch(Tensor input, Tensor? dependency, int max_size, int offset=0) -> ()
 
 功能描述
-提供网络weight预取功能, 将需要预取的权重搬到L2 Cache中. 尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时, 可通过该接口提前预取权重, 适当提高模型性能, 具体效果基于用户对并行的处理. 
+提供网络weight预取功能, 将需要预取的权重搬到L2 Cache中. 尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时, 可通过该接口提前预取权重, 适当提高模型性能, 具体效果取决与用户采用的并行方式和配置. 
 
 参数说明
 input: Tensor类型, 表示需要预取的权重, 不做数据处理, 与数据类型和数据格式无关; 输入不能含有为None. 
@@ -10965,6 +11369,7 @@ import os
 import shutil
 import unittest
 
+import numpy as np
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
@@ -11787,7 +12192,7 @@ class TestMoeUpdateExpert(TestCase):
             self.balanced_active_mask.append(torch.from_numpy(balanced_active_mask).to(torch.bool))        
 
 
-    @SupportedDevices(['Ascend910_'])
+    @SupportedDevices(['Ascend910_93', 'Ascend950'])
     def test_npu_moe_update_expert(self):
         ctx = mp.get_context('spawn')
         c2p = ctx.Queue(self.world_size)
@@ -12156,101 +12561,159 @@ _add_torch_npu_docstr(
     "npu_top_k_top_p_sample",
     """
 接口原型: 
-torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need_logits=False, top_k_guess=32) -> (torch.Tensor, torch.Tensor)
+torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
 
 功能描述: 
-根据输入词频logits、top_k/top_p采样参数、随机采样权重分布q，进行topK-topP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
-算子包含三个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、指数采样（Sample）。它们可以构成八种计算场景。如下表所示：
-  | 计算场景 | topK采样 | topP采样 | 指数分布采样 |备注|
-  | :-------:| :------:|:-------:|:-------:|:-------:|
-  |Softmax-Argmax采样|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|
-  |topK采样|√|×|×|无|
-  |topP采样|×|√|×|无|
-  |Sample采样|×|×|√|无|
-  |topK-topP采样|√|√|×|无|
-  |topK-Sample采样|√|×|√|无|
-  |topP-Sample采样|×|√|√|无|
-  |topK-topP-Sample采样|√|√|√|无|
+  根据输入词频logits、top_k/top_p/min_ps采样参数、随机采样权重分布q，进行topK-topP-minP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
+
+  算子包含4个可单独使能，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、minP显著性采样、不采样 / 指数采样 / 多项式随机采样 。目前支持以下12种计算场景。如下表所示：
+  | 计算场景 | topK采样 | topP采样 | minP采样 | 后继处理 |备注|
+  | :-------:| :------:|:-------:|:-------:|:-------:|:-------:|
+  |Argmax采样|×|×|×|None|对输入logits每个batch取最大logits和对应索引，结果作为logits_select_idx[batch,1]。|
+  |topK采样|√|×|×|None|无|
+  |topP采样|×|√|×|None|无|
+  |qSample采样|×|×|×|qSample|对输入logits每个batch使用q[i]进行指数采样，从结果中取最大值和索引，作为logits_select_idx[batch,1]。|
+  |topK-topP采样|√|√|×|None|无|
+  |topK-qSample采样|√|×|×|qSample|无|
+  |topK-multiNomial采样|√|×|×|multiNomial|无| 
+  |topK-minP-multiNomial采样|√|×|√|multiNomial|无| 
+  |topP-qSample采样|×|√|×|qSample|无|
+  |topK-topP-qSample采样|√|√|×|qSample|VLLM框架标准完整功能。|
+  |topK-topP-multiNomial采样|√|√|×|multiNomial|min_ps为无效值，但仍执行多项式采样|
+  |topK-topP-minP-multiNomial采样|√|√|√|multiNomial|Sglang框架标准完整功能。|
 
 计算公式：
-输入logits为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
-logtis中的每一行logtis[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]，执行不同的计算场景。<br>
-下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
-    topK采样
-    1.按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
-    2.top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch],1024)，如果top_k[k]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。
-    具体计算流程如下所示：
-    对当前batch分割为若干子段，滚动计算top_k_value[b]：
+  输入logits为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
+  logits中的每一行logits[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]、min_ps[batch]，执行不同的计算场景。<br> 
+  下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
+    topK采样  
+    1. 按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
+    2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
+    * 具体计算流程如下所示：
+    * 根据输入top_k[b]与`ks_max`的关系，判断是否进行topK采样：top_k[b]≤0,跳过topK采样；
+    (1)1≤top_k≤min(voc_size,ks_max),执行topK采样
+    (2)top_k>min(voc_size,ks_max),跳过topK采样
+    * 对当前batch分割为若干子段，滚动计算top_k_value[b]：
     top_k_value[b]={Max(top_k[b])}_{s=1}^{lceilfrac{S}{v}rceil}{top_k_value[b]{s-1}cup{logits[b][v]getop_k_min[b][s-1]}}
     Card(top_k_value[b])=top_k[b]
     其中：
     top_k_min[b][s]=Min(top_k_value[b]{s})
     v表示预设的滚动topK时固定的分段长度：
-    v=8*1024
-    *生成需要过滤的mask：
-    sorted_value[b]=sort(top_k_value[b],descendant)
-    top_k_mask[b]=sorted_value[b]<Min(top_k_value[b])
-
-    *将小于阈值的部分通过mask置为-inf：
-    sorted_value[b][v]=begin{cases} -inf&text{top_k_mask[b][v]=true}
-    sorted_value[b][v]&text{top_k_mask[b][v]=false}&
-    end{cases}
-
-    通过softmax将经过topK过滤后的logits按最后一轴转换为概率分布：
-    probs_value[b]=sorted_value[b].softmax(dim=-1)
-
-    按最后一轴计算累积概率（从最小的概率开始累加）：
-    probs_sum[b]=probs_value[b].cumcum(dim=-1)
+    v=8*ks\_max
+    ks_max有效取值范围[1,1024]，默认为1024，并且需要向上对齐到8的整数倍。
+    * 生成需要过滤的mask：
+    top_k_mask = sorted_value>top_k_value
+    * 将小于阈值的部分通过mask置为默认无效值defLogit:
+    sorted_value[b][v]=begin{cases} -inf & top_k_mask[b][v]=true} 
+    sorted_value[b][v] & top_k_mask[b][v]=false} & end{cases}
+    * 其中defLogits取决于入参属性Attr.optional.Bool.input_is_logits，该属性控制输入logits和输出logits_top_kp_select的归一化：
+    defLogit = begin{cases} -inf, & inputIsLogits = True 0, & inputIsLogits = False end{cases}
 
     topP采样
-    如果前序topK采样已有排序输出结果，则根据topK采样输出计算累积词频，并根据topP截断采样：
-    top_p_mask[b]=probs_sum[b][*]<top_p[b]
+    * 根据入参约束属性Attr.optional.Bool.input_is_logits(false)，如果该属性为True，则对排序后结果进行归一化：
+    logit_sortProb = begin{cases} softmax(logits_sort), & inputIsLogits = True 
+    logits_sort, & inputIsLogits = False
+     * 根据输入top_p[b]的数值，本模块的处理策略如下：top_p[b]≤0，保留1个最大词频token
+     (1)0<top_p<1,执行topP采样
+     (2)top_p≥1,跳过topP采样
+     * 如果执行常规topP采样，且如果前序topK环节已有排序输出结果，则根据topK采样输出计算累积词频，并根据top_p截断采样：
+    topPMask[b] = begin{cases} 0, & sum_{topKMask[b]}^{} {logits_sortProb}[b][*] > p[b] 
+    1, & sum_{topKMask[b]}^{} logits_sortProb[b][*] leq p[b] end{cases}
+     * 如果执行常规topP采样，但前序topK环节被跳过，则计算top-p的mask:
+    topPMask[b] = begin{cases} topKMask[b][0:GuessK], & sum_{GuessK}^{} probValue[b][*] ge p[b] probSum[b][v] le 1 - p[b], & others end{cases}
+    * 将需要过滤的位置设置为默认无效值defLogit，得到logits_sort，记为sortedValue[b][v]:
+    sortedValue[b][v] = begin{cases}
+    defLogit & \quad topPMask[b][v] = false logit_sortProb[b][v] & quad topPMask[b][v] = true end{cases}
+    * 取过滤后sortedValue[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
+    logitsIdx[b][v] = Index(sortedValue[b][v] in Logits)
+    * 从输入Logtis中按logitsIdx顺序遍历取出元素，其余位置填入defLogit，作为logitsSortMasked：
+    logitsSortMasked[b, :Len(logitsIdx[b][:])] = Logits[b, logitsIdx[b][:]]
+    logitsSortMasked[b, Len(logitsIdx[b][:]):] = defLogit
+    * (sglang框架支持更新)直接使用截断后的sortedValue作为logitsSortMasked：
+    logitsSortMasked[b,:] = sortedValue[b]
 
-    如果topK采样被跳过，则先对输入logits[b]进行softmax处理：
-    logits_value[b]=logits[b].softmax(dim=-1)
+    minP采样
+    * 如果min_ps[b]∈(0, 1)，则执行minP采样：
+    logitsMax[b] = Max(logitsSortMasked[b])
+    minPThd = logitsMax[b] * minPs[b]
+    minPMask[b] = begin{cases} 0, & logitsSortMasked[b] < minPThd  1, & logitsSortMasked[b] geq minPThd end{cases}
+    logitsSortMasked[b,:] = begin{cases} defLogit, & minPMask[b] = 0 logitsSortMasked[b,:], & minPMask[b] = 1 end{cases}
 
-    尝试使用top_k_guess，对logits进行滚动排序，获取计算topP采样的mask：
-    top_p_value[b]={Max(top_k_guess)}_{s=1}^{lceilfrac{S}{v}rceil}{top_p_value[b]{s-1}cup{logits_value[b][v]getop_k_min[b][s-1]}}
+    * 其他情况：
+    logitsSortMasked[b, :] = begin{cases} logitsSortMasked[b, :], & if minPs[b] leq 0 max(logitsSortMasked[b, :]), & if minPs[b] geq 1 end{cases}
+    min_ps[b]≥1时，每个batch仅取1个最大token，其余位置填充defLogit。
 
-    如果在访问到logits_value[b]的第1e4个元素之前，如下条件得到满足，则视为top_k_guess成功：
-    sum^{top_k_guess}(top_p_value[b])getop_p[b]
-    top_p_mask[b][Index(top_p_value[b])]=false
+    可选输出
+    * 如果​入参属性Attr.Bool.is_need_logits=True，则使用topK-topP-minP联合采样后的logitsIndexMasked，进行logits_top_kp_select输出。
+    logitsIndex[b][v] = Index(logitsSortMasked[b][v] in Logits)
+    logitsIndexMasked[b,:] = logitsIndex[b,:] * topKMask[b] * topPMask[b] * minPMask[b]
+    其中，topK、topP、minP采样环节如果被跳过，则相应mask为全1。
+     * 接下来使用logitsIndexMasked对输入logits进行Select，过滤输入logits中的高频token作为logits_top_kp_select输出：
+    logitsTopKpSelect}[b][v] = begin{cases} logits[b][v], & if logitsIndexMasked[b,v] = True 
+    defLogit, & if logitsIndexMasked[b,v] = False end{cases}
 
-    如果top_k_guess失败，则对当前序logits_value[b]进行全排序和cumsum，按top_p[b]截断采样：
-    sorted_logits[b]=sort(logits_value[b],descendant)
-    probs_sum[b]=sorted_logits[b].cumcum(dim=-1)
-    top_p_mask[b]=(probs_sum[b]-sorted_logits[b])>top_p[b]
+    后继处理
+    * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
+    * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入logits的实际情况，配置入参约束属性Attr.optional.Bool.input_is_logits，即：
+    inputIsLogits = begin{cases} True, & Logits notin [0,1] 
+    False, & Logits in [0,1] end{cases}
+    使得
+    probs[b] = logitsSortMasked[b, :]
+    接下来有三种模式：None，qSample，multiNomial，通过入参约束属性attr.optional.Str.post_sample加以控制。
+    * None 
+    * 直接对每个batch通过Argmax取最大元素和索引，并通过gatherOut输出。
+    logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probs[b][:])]
+    * qSample
+    * 先对probs进行指数分布采样：
+    qCnt = Sum(MinPMask == 1)
+    probsOpt[b] = frac{probs[b]}{q[b, :qCnt] + eps}
+    * 再进行Argmax-GatherOut输出结果：
+    logitsSelectIdx[b] = LogitsIdx[b][ArgMax(probsOpt[b][:])]
+    * multiNomial
+    * 使用多项式随机采样，根据logitsSortMasked中的概率值，执行无放回的多项式采样，对每个batch取1个样本，将采样结果作为当期batch的输出：
+    sampleIdx}[b] = multinomial(logitsSortMasked[b,:], numSamples=1, seed[b], offset[b])
+    logitsSelectIdx[b] = LogitsIdx[b][sampleIdx[b]]
 
-    将需要过滤的位置设置为-inf，得到sorted_value[b][v]：
-    sorted_value[b][v]=begin{cases}-inf&text{top_p_mask[b][v]=true}sorted_value[b][v]&text{top_p_mask[b][v]=false}end{cases}
+  * 对于采样种子，当attr.optional.Str.post_sample="multinomial"时，q约束为INT64，分别从第一列和第二列获取multiNomial采样的seed和offset：
+    seed[b] = begin{cases} q[b, 0], & b < qRows 
+    q[-1, 0], & b ge qRows end{cases}
 
-    取过滤后sorted_value[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
-    logits_idx[b][v]=Index(sorted_value[b][v]inlogits)
-
-    指数采样（Sample）
-    如果is_need_logits设置为True，则根据logits_idx，选取采样后结果输出到logits_top_kp_select：
-    logits_top_kp_select[b][logits_idx[b][v]]=sorted_value[b][v]
-
-    对sorted_value进行指数分布采样：
-    probs=softmax(sorted_value)
-    probs_opt=frac{probs}{q+eps}
-
-    从probs_opt中取出每个batch的最大元素，从logits_idx中gather相应元素的输入索引，作为输出logits_select_idx：
-    logits_select_idx[b]=logits_idx[b][argmax(probs_opt[b][:])]
-    其中0≤b<sorted_value.size(0)，0≤v<sorted_value.size(1)。
+    offset[b] = begin{cases} q[b, 1], & b < qRows 
+    q[-1, 1], & b ge qRows end{cases}
+  * 该采样过程以aclnn.Multinomial为基准，可参看：https://gitcode.com/cann/ops-math-dev/blob/master/random/dsa_random_uniform/docs/aclnnMultinomial.md
+  * pta调用时，采样种子和偏移默认使用内建值，可参看：https://gitcode.com/Ascend/op-plugin/blob/master/op_plugin/ops/opapi/MultinomialKernelNpuOpApi.cpp
 
 参数说明:
-logits（Tensor）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持float16和bfloat16，数据格式支持ND，支持非连续Tensor。
-top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，目前支持1维。数据类型支持int32,数据格式支持ND，支持非连续Tensor。
-top_p（Tensor）：必选参数，表示每个batch采样的p值，有效范围为0<top_p[batch]<1，目前支持1维。数据类型和数据格式与logits保持一致，支持非连续Tensor。
-q（Tensor）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持float32，数据格式支持ND，支持非连续Tensor，默认值为None。
-eps（float）：可选参数，在softmax和权重采样中防止除零，默认值1e-8。
-is_need_logits（bool）：可选参数，控制logits_top_kp_select的输出条件，默认为False。
-top_k_guess（int）：可选参数，表示每个batch在尝试topP部分遍历采样时的候选logits大小，必须为正整数，默认值为32。
+   logits（Tensor）：必选参数，表示待采样的输入词频，目前支持2维，词频索引固定为最后一维。数据类型支持`float16`、`bfloat16`和`float32`，数据格式支持$ND$，支持非连续Tensor。
+   top_k（Tensor）：必选参数，表示每个batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，无效范围则跳过topK，目前支持1维。数据类型支持`int32`，数据格式支持$ND$，支持非连续Tensor。
+   top_p（Tensor）：必选参数，表示每个batch采样的p值，有效范围为0<$top\_p[batch]<1$，目前支持1维。数据类型和数据格式与`logits`保持一致，支持非连续Tensor。
+    - 在任何情况下，topP对每个batch的输出都会保留至少1个token。
+    - top_p[batch] ≤0时，对当前batch仅保留概率最大的1个token。
+    - top_p[batch]处于合法值范围(0,1)时，对当前batch执行标准topP采样。
+    - p>=1时跳过相应batch的topP步骤，提取整个batch信息并生成ones掩模作为输出。
+   q（Tensor）：可选参数，topK-topP采样输出的随机采样权重分布矩阵，数据类型支持`float32`，数据格式支持$ND$，支持非连续Tensor，默认值为None, 此时跳过后继采样，从probs计算logits_select_idx。
+    - 根据post_sample的模式不同，该参数约束如下：
+    - post_sample = qSample时, 尺寸约束为[batch, voc_size], 数据类型必须为float32，指数分布采样矩阵，维度需与logits的一致。
+    - post_sample = multinomial时, multinomial随机采样参数矩阵，数据类型必须为int64，用于为aclnnmultiNomial采样提供控制参数。合法的尺寸为[q_row, 2]，其中q_row≥1：
+        - 第1列对应aclnnMultinomial.seed参数：对应当前batch的随机数种子。
+        - 第2列对应aclnnMultinomial.offset参数：随机数生成器的偏移量，它影响生成的随机数序列的位置。设置偏移量后，生成的随机数序列会从指定位置开始。
+        - 如果qrow<batch，则默认使用最后一个batch的采样参数作为后续batch的multinomial采样参数。
+   eps（float）：可选参数，在softmax和权重采样中防止除零，默认值为1e-8。
+   is_need_logits（bool）：可选参数，控制`logits_top_kp_select`的输出条件，默认值为False。
+   top_k_guess（int）：可选参数，仅在当前batch的top_k为无效值时使能，适用于跳过topK的top_k_guess-TopP加速采样。有效值范围top_k_guess>0，默认为32，用于TopP加速采样中基于top_k_guess的直接索引过滤。如果传入非正数，视为跳过top_k_guess环节，直接使用基于cumsum的标准topP实现，对当前batch做topP全排序采样，保持基准性能。
+   ks_max（int）：可选参数，约束topK采样中允许的topk[batch]合法值上限，影响跳过topK采样的条件，允许传入任意非零正整数。有效值范围[1,1024]之间的整数，传入超过1024的值会自动设为1024。
+   input_is_logits（int）：可选参数，该参数控制输入logits在topP及后续步骤之前，是否进行归一化处理，并决定可选输出logits_top_kp_select中的无效logits默认值类型。Logits表示“未经归一化的原始值”，而相对地已经过归一化的则定义为“probs”。该参数的取值影响如下：
+    - 若该参数取值为True，输入的logits中的数值不能确保在[0,1]区间内。由于logits未进行归一化，在进行top_p采样等后续步骤之前，先对输入进行softmax处理。logits_top_kp_select中的无效logits默认值defLogit=-inf。
+    - 若该参数取值为False，输入logits中的所有元素都确保在[0,1]区间内。输入logits已经归一化，为避免梯度平滑化，top_p采样等后续步骤直接使用前级处理的结果。logits_top_kp_select中的无效logits默认值defLogit=0。
+   post_sample（int）：可选参数，该参数控制topk-topp采样之后的后继处理策略。第一优先级：判断q是否为None，如果q=None，则无视参数提供的post_sample内容，强制后继处理模式一概设为None。参数合法值允许：
+    - qSample(默认值)：倾向于使用qSample采样。
+    - multinomial：使用multinomial采样（多项式随机抽样），此时入参中的q矩阵将被解析为随机种子，执行multinomial-gather。
+    - None：显式强调不使用任何后继处理，此时传入任何q!=None都被无视。
+   generator（int）：可选参数，Multinomial使用的随机数生成器，必须指定seed才能传入。
 
 输出说明: 
 logits_select_idx（Tensor）：表示经过topK-topP-sample计算流程后，每个batch中词频最大元素max(probs_opt[batch, :])在输入logits中的位置索引。数据类型支持int64，数据格式支持ND。
-logits_top_kp_select（Tensor）：表示经过topK-topP计算流程后，输入logtis中剩余未被过滤的logits。数据类型支持float32，数据格式支持ND。
+logits_top_kp_select（Tensor）：表示经过topK-topP-minP采样获得mask，对原输入logits中高频token的过滤结果。仅在is_need_logits=true时使能输出计算和搬运，否则直接输出相应尺寸的空tensor。数据类型支持float32，数据格式支持$ND$。
 
 约束说明:
 该接口支持推理场景下使用。
@@ -12260,7 +12723,7 @@ logits、top_k、top_p、logits_select_idx除最后一维以外的所有维度�
 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
 如果1024<top_k[batch]<voc_size[batch]，则视为选择当前batch的全部有效元素并跳过topK环节。
 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。
-如果需要单独跳过sample模块，使用其默认值或设置q为None；如需使用sample模块，则必须传入尺寸为[batch, voc_size]的Tensor。
+如果需要单独跳过sample模块，使用其默认值或设置q为None；如需使用Sample模块，则必须传入对应尺寸的Tensor。
 
 支持的型号: 
 Atlas A3 训练系列产品
@@ -12270,12 +12733,21 @@ Atlas 800I A2 推理产品
 A200I A2 Box 异构组件
 
 调用示例: 
+>>> import numpy as np
+>>> import torch
+>>> import torch_npu
 >>> logits = torch.from_numpy(np.random.uniform(-2, 2, size=[2, 4])).type(torch.float16).npu()
 >>> top_ks = torch.from_numpy(np.random.uniform(1, 2, size=[2, ])).type(torch.int32).npu()
 >>> top_ps = torch.from_numpy(np.random.uniform(0.4, 0.5, size=[2, ])).type(torch.float16).npu()
->>> q = torch.from_numpy(np.random.uniform(0.1, 0.5, size=[2, 4])).type(torch.float32).npu()
-
->>> npu_out_index, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits, top_ks, top_ps, q, 1E-8, True)
+>>> q = None
+>>> min_ps = torch.from_numpy(np.random.uniform(0.1, 0.5, size=[2, ])).type(torch.float16).npu()
+>>> post_sample = 'multiNomial'
+>>> if post_sample == "multiNomial":
+>>>     generator_npu = torch.Generator(device="npu")
+>>>     generator_npu.manual_seed(1)
+>>> else:
+>>>     generator_npu = None
+>>> npu_out_index, logits_top_kp_select = torch_npu.npu_top_k_top_p_sample(logits, top_ks, top_ps, q=q, min_ps=min_ps, eps=1e-8, is_need_logits=True, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample=post_sample, generator=generator_npu)
 >>> print(npu_out_index)
 >>> print(logits_top_kp_select)
 """
@@ -12628,7 +13100,7 @@ _add_torch_npu_docstr(
     "npu_sparse_lightning_indexer_grad_kl_loss",
     """
 接口原型: 
-npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
+npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
 
 功能描述:
 该接口实现了npu_lightning_indexer的反向功能，并融合了Loss的计算。npu_lightning_indexer用于筛选Attention的query与key间最高内在联系的Top-k项，存放在sparse_indices中，以减少长序列场景下的Attention计算量，提升训练性能。
@@ -12637,7 +13109,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 query（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, D)、(T1, N1, D)。
 key（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, D)、(T2, N2, D)。
 query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
-key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
 weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1)、(T1, N1)。
 sparse_indices（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, topK)、(T1, topK)。
 softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
@@ -12882,5 +13354,192 @@ x_max_npu, x_sum_npu, output_npu = torch_npu.npu_fused_floyd_attention(
     atten_mask = atten_mask,
     scale_value = scale
 )
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "save_npugraph_tensor",
+    """
+接口原型: 
+save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()
+
+功能描述：
+支持将aclgraph的图内计算节点保存到文件中，可以使用torch.load接口读取保存的tensor。
+
+参数说明：
+self(Tensor)：必选参数，源数据张量，被保存的tensor。
+save_path(str):：可选参数，文件的保存位置。
+
+返回值说明：
+不涉及。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+import torchair
+from torchair.configs.compiler_config import CompilerConfig
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, x):
+        output = torch.square(x)
+        torch_npu.save_npugraph_tensor(output, save_path="./tensor.pt")
+        return output
+
+config = CompilerConfig()
+config.mode = "reduce-overhead"
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+
+x = torch.randn([10, 10]).npu()
+model = Model()
+model = torch.compile(model, backend=npu_backend)
+model(x)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_softmax_lse",
+    """
+接口原型: 
+npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor)
+
+功能描述:
+是npu_dense_lightning_indexer_grad_kl_loss接口的前置接口，通过把Lightning Indexer组件的Softmax求最大值和求和运算提前来降低接口的显存占用。
+
+参数说明: 
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+softmax_max_index（Tensor）：表示softmax计算使用的max值，数据类型支持FLOAT。
+softmax_sum_index（Tensor）：表示softmax计算使用的sum值，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = 1
+S1 = 128
+S2 = 256
+D = 128
+output_dtype = torch.float16
+
+q_index = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1, dtype=output_dtype, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+
+input_layout = 'BSND'
+sparse_mode = 3
+
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_dense_lightning_indexer_grad_kl_loss",
+    """
+接口原型: 
+npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807) -> (Tensor, Tensor, Tensor, Tensor)
+
+功能描述:
+该接口实现了Lightning Indexer组件warmup阶段训练的反向梯度计算，并融合了Loss的计算。
+
+参数说明: 
+query（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, D)、(T1, N1, D)。
+key（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, D)、(T2, N2, D)。
+query_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index, D)、(T1, N1index, D)。
+key_index（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2index, D)、(T2, N2index, D)。
+weights（Tensor）：必选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1index)、(T1, N1index)。
+softmax_max（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_sum（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2, S1, G)、(N2, T1, G)。
+softmax_max_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+softmax_sum_index（Tensor）：必选参数，数据格式支持ND，数据类型支持FLOAT。支持输入shape(B, N2index, S1)、(N2index, T1)。
+scale_value（float）：必选参数，表示缩放系数，数据类型支持FLOAT。
+query_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S1, N1, Dr)、(T1, N1, Dr)。
+key_rope（Tensor）：可选参数，数据格式支持ND，数据类型支持BFLOAT16、FLOAT16。支持输入shape(B, S2, N2, Dr)、(T2, N2, Dr)。
+actual_seq_qlen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+actual_seq_klen（int[]）：可选参数，int类型数组，TND场景时需传入此参数。表示key每个S的累加和长度，数据类型支持INT64，数据格式支持ND，默认值为None。
+layout（str）：可选参数，用于标识输入query的数据排布格式，数据类型支持str。当前支持BSND、TND，默认值为"BSND"。
+sparse_mode（int）：可选参数，表示sparse的模式，数据类型支持INT32，默认值为3。
+pre_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+next_tokens（int）：可选参数，数据类型支持INT64，默认值2^63-1。
+
+输出说明: 
+d_query_index（Tensor）：表示query_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_key_index（Tensor）：表示key_index的梯度，数据类型支持BFLOAT16、FLOAT16。
+d_weights（Tensor）：表示weights的梯度，数据类型支持BFLOAT16、FLOAT16。
+loss（Tensor）：表示网络正向输出和golden值的差异，数据类型支持FLOAT。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+
+B = 1
+N1 = 64
+N2 = N1
+N1_index = 64
+N2_index = 1
+S1 = 128
+S2 = 256
+D = 128
+Dr = 64
+output_dtype = torch.float16
+q = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
+k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
+
+q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
+k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
+q_rope = torch.randn(B, S1, N1, Dr, dtype=output_dtype, device=torch.device('npu'))
+k_rope = torch.randn(B, S2, N2, Dr, dtype=output_dtype, device=torch.device('npu'))
+weights = torch.randn(B, S1, N1_index, dtype=output_dtype, device=torch.device('npu'))
+softmax_max = (torch.randn(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
+softmax_sum = torch.ones(B, N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
+actual_seq_qlen = None
+actual_seq_klen = None
+
+input_layout = 'BSND'
+sparse_mode = 3
+scale = 1.0
+
+softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
+
+torch_npu.npu_dense_lightning_indexer_grad_kl_loss(q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale, query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
 """
 )

@@ -56,7 +56,7 @@ def cpu_quant_matmul_a4w4_pergroup(x, weight, x1scale, x2scale, x2offset, groups
 
 class TestQuantMatmul(TestCase):
 
-    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_a8w8(self):
         torch.manual_seed(0)
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
@@ -157,7 +157,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone, x2_clone.t(), scale_quant, output_dtype=torch.float16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.01)
 
-    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_bf16(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
         x2 = torch.randint(-5, 5, (320, 2560), dtype=torch.int8)
@@ -168,7 +168,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale.npu(), output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.01)
 
-    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_bf16_nz(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
         x2 = torch.randint(-5, 5, (320, 2560), dtype=torch.int8)
@@ -180,7 +180,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_nz.npu(), scale.npu(), output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.01)
 
-    @SupportedDevices(['Ascend910B', 'Ascend910_95'])
+    @SupportedDevices(['Ascend910B', 'Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_fp16_nz(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.int8)
         x2 = torch.randint(-5, 5, (320, 2560), dtype=torch.int8)
@@ -203,7 +203,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale.npu(), output_dtype=torch.int32)
         self.assertRtolEqual(supported_output.cpu().numpy().astype(np.float32), custom_output.cpu().numpy().astype(np.float32), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_fp8_pertensor(self):
         x1 = torch.randint(-5, 5, (16, 38), dtype=torch.float8_e4m3fn)
         x2 = torch.randint(-5, 5, (16, 112), dtype=torch.float8_e5m2)
@@ -211,27 +211,25 @@ class TestQuantMatmul(TestCase):
         x2_clone = x2.clone()
         scale = torch.randn(1, dtype=torch.float32)
         scale_clone = scale_clone.clone()
-        scale_quant = torch_npu.npu_trans_quant_param(scale_clone.npu(), None)
         supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
-        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu().t(), x2_clone.npu(), scale_quant, output_dtype=torch.float32)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu().t(), x2_clone.npu(), scale_clone.npu(), output_dtype=torch.float32)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.0001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_hif8_perchannel(self):
-        x1 = torch.randint(0, 255, (224, 64), dtype=torch.uint8)
-        x2 = torch.randint(0, 255, (64, 8360), dtype=torch.uint8)
+        x1 = torch.randint(0, 255, (224, 64), dtype=torch.int8)
+        x2 = torch.randint(0, 255, (64, 8360), dtype=torch.int8)
         x1_clone = x1.clone()
         x2_clone = x2.clone()
         x1 = torch.from_numpy(trans_np_hifuint8_tensor_to_float32(x1.numpy()))
         x2 = torch.from_numpy(trans_np_hifuint8_tensor_to_float32(x2.numpy()))
         scale = torch.randn(8360, dtype=torch.float32)
         scale_clone = scale_clone.clone()
-        scale_quant = torch_npu.npu_trans_quant_param(scale_clone.npu(), None)
         supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
-        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_quant, x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.float16)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_int8_pertoken(self):
         x1 = torch.randint(-5, 5, (4183, 1088), dtype=torch.int8)
         x2 = torch.randint(-5, 5, (960, 1088), dtype=torch.int8)
@@ -245,7 +243,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu().t(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_fp8_pertoken(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.float8_e4m3fn)
         x2 = torch.randint(-5, 5, (320, 2560), dtype=torch.float8_e4m3fn)
@@ -259,7 +257,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_hif8_pertoken(self):
         x1 = torch.randint(0, 255, (8192, 320), dtype=torch.uint8)
         x2 = torch.randint(0, 255, (320, 2560), dtype=torch.uint8)
@@ -275,7 +273,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.float32)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.0001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_fp8_doublescale(self):
         x1 = torch.randint(-5, 5, (544, 236), dtype=torch.float8_e5m2)
         x2 = torch.randint(-5, 5, (544, 568), dtype=torch.float8_e5m2)
@@ -290,7 +288,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu().t(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float32)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.0001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_hif8_doublescale(self):
         x1 = torch.randint(0, 255, (30, 32), dtype=torch.uint8)
         x2 = torch.randint(0, 255, (32, 8), dtype=torch.uint8)
@@ -307,7 +305,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_mxfp8_odd_scaleK(self):
         x1 = torch.randint(-5, 5, (185, 480), dtype=torch.float8_e4m3fn)
         x2 = torch.randint(-5, 5, (1880, 480), dtype=torch.float8_e4m3fn)
@@ -337,7 +335,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu().t(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), scale_dtype=torch_npu.float8_e8m0fnu, pertoken_scale_dtype=torch_npu.float8_e8m0fnu, output_dtype=torch.float16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_mxfp8_even_scaleK(self):
         x1 = torch.randint(-5, 5, (112, 944), dtype=torch.float8_e4m3fn)
         x2 = torch.randint(-5, 5, (184, 944), dtype=torch.float8_e4m3fn)
@@ -367,7 +365,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu().t(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), scale_dtype=torch_npu.float8_e8m0fnu, pertoken_scale_dtype=torch_npu.float8_e8m0fnu, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_mxfp4(self):
         x1 = torch.randint(-5, 5, (112, 944), dtype=torch.int8)
         x2 = torch.randint(-5, 5, (184, 944), dtype=torch.int8)
@@ -397,7 +395,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu().t(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.float4_e1m2fn_x2, x2_dtype=torch_npu.float4_e2m1fn_x2, scale_dtype=torch_npu.float8_e8m0fnu, pertoken_scale_dtype=torch_npu.float8_e8m0fnu, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_hif8_perblock(self):
         x1 = torch.randint(0, 255, (8192, 320), dtype=torch.uint8)
         x2 = torch.randint(0, 255, (320, 2560), dtype=torch.uint8)
@@ -414,7 +412,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend910_95'])
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
     def test_npu_quant_matmul_fp8_pertile(self):
         x1 = torch.randint(-5, 5, (8192, 320), dtype=torch.float8_e5m2)
         x2 = torch.randint(-5, 5, (320, 2560), dtype=torch.float8_e5m2)
@@ -428,6 +426,17 @@ class TestQuantMatmul(TestCase):
         supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * double_scale
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu().t(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float32)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.0001)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_matmul_fp8_pertile_invaild_trans(self):
+        x1 = torch.randint(-5, 5, (10, 256), dtype=torch.float8_e5m2)
+        x2 = torch.randint(-5, 5, (512, 256), dtype=torch.float8_e5m2)
+        scale = torch.randint(-5, 5, (4, 2), dtype=torch.float32)
+        pertoken_scale = torch.randint(-5, 5, (10, 2), dtype=torch.float32)
+        try:
+            custom_output = torch_npu.npu_quant_matmul(x1.npu(), x2.npu().t(), scale.npu(), pertoken_scale=pertoken_scale.npu(), output_dtype=torch.float32)
+        except RuntimeError as e:
+            self.assertTrue("transpose are not same, please check input" in str(e))
 
     # pylint:disable = huawei-too-many-arguments
     def a8w4_quant_golden(self, x, weight, scale, perTokenScale, groupList, bias, output_dtype):

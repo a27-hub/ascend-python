@@ -1,4 +1,4 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11]
 backward:
 - name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
   self: cholesky_backward(grad, upper, result)
@@ -56,11 +56,6 @@ backward:
 - name: l1_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
   self: l1_loss_backward(grad, self, target, reduction)
   target: l1_loss_backward(grad, self, target, reduction) * -1
-  version: [v2.1, newest]
-
-- name: matmul_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
-  output_differentiability: [true, true]
-  grad_out, self, other: matmul_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)
   version: [v2.1, newest]
 
 - name: npu_add_layer_norm(Tensor x1, Tensor x2, Tensor gamma, Tensor beta, float epsilon=1e-05, bool additional_output=False) -> (Tensor, Tensor, Tensor, Tensor)
@@ -125,14 +120,24 @@ backward:
   query_layer, key_layer, value_layer: npu_fused_attention_score_backward(grad, result1, query_layer, key_layer, value_layer, result2, scale, keep_prob, query_transpose, key_transpose, value_transpose, dx_transpose)
   version: [v2.1, newest]
 
-- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+- name: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, true, false, false]
+  query, key, value, pse, sink: npu_fusion_attention_grad_v3(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout, sink)
+  version: [v2.6, newest]
+
+- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
   output_differentiability: [true, true, true, true, false, false, false]
-  query, key, value, pse: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout)
+  query, key, value, pse, sink: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout, sink)
   version: [v2.1, newest]
 
-- name: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? d_scale_q=None, Tensor? d_scale_k=None, Tensor? d_scale_v=None, Tensor? d_scale_dy=None, Tensor? d_scale_o=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, int? out_dtype=None, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+- name: npu_quant_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? d_scale_q=None, Tensor? d_scale_k=None, Tensor? d_scale_v=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, int? out_dtype=None, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None, int? query_quant_mode=0, int? query_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
   output_differentiability: [true, true, true, true, false, false, false]
-  query, key, value, pse, query_rope, key_rope, sink: npu_fusion_attention_grad_v2(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, d_scale_q, d_scale_k, d_scale_v, d_scale_dy, d_scale_o, result1, result2, result3, result0, query_rope, key_rope, scale, keep_prob, pre_tokens, next_tokens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, out_dtype, gen_mask_parallel, sync, pse_type, q_start_idx, kv_start_idx, softmax_layout, sink)
+  query, key, value, pse, query_rope, key_rope, sink: npu_quant_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, d_scale_q, d_scale_k, d_scale_v, result1, result2, result3, result0, query_rope, key_rope, scale, keep_prob, pre_tokens, next_tokens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, out_dtype, gen_mask_parallel, sync, pse_type, q_start_idx, kv_start_idx, softmax_layout, sink, query_quant_mode, query_dtype)
+  version: [v2.1, newest]
+
+- name: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+  output_differentiability: [true, true, true, true, false, false, false]
+  query, key, value, pse, query_rope, key_rope, sink: npu_fusion_attention_grad_v2(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, query_rope, key_rope, scale, keep_prob, pre_tokens, next_tokens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, pse_type, q_start_idx, kv_start_idx, softmax_layout, sink)
   version: [v2.1, newest]
 
 - name: npu_fused_floyd_attention(Tensor query_ik, Tensor key_ij, Tensor value_ij, Tensor key_jk, Tensor value_jk, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)
@@ -200,8 +205,9 @@ backward:
   self, gamma: npu_rms_norm_backward(grad, self, gamma, result1)
   version: [v2.1, newest]
 
-- name: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, str rotary_mode='half') -> Tensor
+- name: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, str rotary_mode='half', Tensor? rotate=None) -> Tensor
   self, r1, r2: npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode)
+  rotate: non_differentiable
   version: [v2.1, newest]
 
 - name: npu_scaled_masked_softmax(Tensor x, Tensor mask, Scalar scale=1, bool fixed_triu_mask=False) -> Tensor
@@ -303,4 +309,8 @@ backward:
 - name: npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_key=None, Tensor? block_table=None, str layout_query="BSND", str layout_key="BSND", int sparse_count=2048, int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, bool return_value=False) -> (Tensor, Tensor)
   output_differentiability: [false, true]
   query, key, weights: npu_lightning_indexer_grad(query, key, grad, result0, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout_query, sparse_mode, pre_tokens, next_tokens)
+  version: all_version
+
+- name: native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)
+  input: "native_dropout_backward(grad, result1, (!train.has_value() || !train.value() ? 1 : (p == 1 ? 0.0 : 1.0 / (1.0 - p))))"
   version: all_version

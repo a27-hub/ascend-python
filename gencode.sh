@@ -21,7 +21,7 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 cd $CDIR/
 
 # Following updates only add incompatible ops files in corresponding branch folder.
-newest_minor_version=10
+newest_minor_version=11
 for minor_version in $(seq 1 ${newest_minor_version}); do
     # Merge base info and version related info (unsupported ops)
     sed -i "1r test/unsupported_ops_info_base.yaml" test/test_v2r${minor_version}_ops/unsupported_ops_info.yaml
@@ -43,24 +43,24 @@ if [ "$PYTORCH_VERSION_DIR" == "v1r11" ]; then
     cp $CDIR/op_plugin/config/aclnn_derivatives.yaml $OUTPUT_DIR
 fi
 
-${python_execute} -m codegen.gen_op_plugin_functions  \
+${python_execute} -m torchnpugen.gen_op_plugin_functions  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$OUTPUT_DIR/" \
   --source_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
 
-${python_execute} -m codegen.gen_derivatives  \
+${python_execute} -m torchnpugen.gen_derivatives  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$OUTPUT_DIR/" \
   --source_yaml="$CDIR/op_plugin/config/derivatives.yaml"
 
-${python_execute} -m codegen.gen_backend_stubs  \
+${python_execute} -m torchnpugen.gen_op_backend  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$CDIR/op_plugin/" \
   --source_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
   --deprecate_yaml="$CDIR/op_plugin/config/deprecated.yaml" \
   --impl_path="$CDIR/torch_npu/csrc/aten"  # Used to double-check the yaml file definitions.
 
-${python_execute} -m codegen.struct.gen_struct_opapi  \
+${python_execute} -m torchnpugen.struct.gen_struct_opapi  \
   --output_dir="$CDIR/op_plugin/ops/opapi/" \
   --native_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
   --struct_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"

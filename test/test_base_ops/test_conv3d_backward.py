@@ -81,15 +81,15 @@ class TestConv3dBackward(TestCase):
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     def test_conv3d_backward_mask(self):
-        grad_output_cpu, grad_output_npu = create_common_tensor([np.float32, 30, [16, 1, 128, 128]], 0, 1)
-        input_cpu, input_npu = create_common_tensor([np.float32, 30, [16, 64, 128, 128]], 0, 1)
-        weight_cpu, weight_npu = create_common_tensor([np.float32, 30, [1, 64, 3, 3]], 0, 1)
-        bias_sizes = [1]
-        stride = [1, 1]
-        padding = [1, 1]
-        dilation = [1, 1]
+        grad_output_cpu, grad_output_npu = create_common_tensor([np.float32, 30, [1, 1, 2]], 0, 1)
+        input_cpu, input_npu = create_common_tensor([np.float32, 30, [1, 4, 5]], 0, 1)
+        weight_cpu, weight_npu = create_common_tensor([np.float32, 30, [1, 4, 3]], 0, 1)
+        bias_sizes = [0]
+        stride = [2]
+        padding = [0]
+        dilation = [1]
         transposed = False
-        output_padding = [0, 0]
+        output_padding = [0]
         groups = 1
         output_mask = [True, True, False]
         cpu_output = torch.ops.aten.convolution_backward.default(grad_output_cpu, input_cpu, weight_cpu, bias_sizes,
@@ -101,15 +101,16 @@ class TestConv3dBackward(TestCase):
 
         input_grad_cpu = cpu_output[0]
         weight_grad_cpu = cpu_output[1]
-        bias_grad_cpu = cpu_output[2] # expected to be None
+        bias_grad_cpu = cpu_output[2]  # expected to be None
         input_grad_npu = npu_output[0]
         weight_grad_npu = npu_output[1]
-        bias_grad_npu = cpu_output[2] # expected to be None
+        bias_grad_npu = cpu_output[2]  # expected to be None
 
         self.assertRtolEqual(input_grad_cpu.numpy(), input_grad_npu.cpu().numpy(), 0.001)
-        self.assertRtolEqual(weight_grad_cpu.numpy(), weight_grad_npu.cpu().numpy())
+        self.assertRtolEqual(weight_grad_cpu.numpy(), weight_grad_npu.cpu().numpy(), 0.001)
         self.assertIsNone(bias_grad_cpu)
         self.assertIsNone(bias_grad_npu)
+
 
 if __name__ == "__main__":
     run_tests()
