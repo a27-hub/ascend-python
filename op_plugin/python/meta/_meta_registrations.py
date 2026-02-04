@@ -5139,6 +5139,6 @@ def npu_convolution_transpose_meta(input, weight, bias, padding, output_padding,
 
 @impl(m, "batch_norm_reduce")
 def batch_norm_reduce_meta(self, eps):
-    sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
-    square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
-    return (sum, square_sum)
+    out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    return (out_sum, out_square_sum)

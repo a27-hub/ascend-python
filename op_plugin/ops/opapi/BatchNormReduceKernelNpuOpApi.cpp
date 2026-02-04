@@ -20,7 +20,6 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor> batch_norm_reduce(const at::Tensor& self, double eps)
 {
-    
     TORCH_CHECK(self.dim() > 1, "The dim input tensor [self] must more than 1." + OPS_ERROR(ErrCode::PARAM));
 
     // 获取C轴的大小
@@ -47,6 +46,5 @@ std::tuple<at::Tensor, at::Tensor> batch_norm_reduce(const at::Tensor& self, dou
     EXEC_NPU_CMD(aclnnBatchNormReduce, self_copy, sum, square_sum);
 
     return std::make_tuple(sum, square_sum);
-
 }
 }
