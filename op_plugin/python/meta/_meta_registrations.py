@@ -487,6 +487,18 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
 def npu_chunk_bwd_dv_local(q, k, d_o, g, upper_tri_matrix, g_gamma, A, cu_seqlens, chunk_indices, scale, chunk_size):
     return torch.empty(d_o.shape, dtype=d_o.dtype, device=d_o.device)
 
+@impl(m, "npu_chunk_gated_delta_rule_bwd_dhu")
+def npu_chunk_gated_delta_rule_bwd_dhu(q, k, w, d_o, dv, g, gK, h0, dht, cu_seqlens, chunk_indices, scale, chunk_size):
+    chunk_num = len(cu_seqlens.size) - 1
+    B = q.size(0)
+    H = q.size(1)
+    T = q.size(2)
+    K = q.size(3)
+    V = dv.size(3)
+    dh_shape = [B,H,chunk_num,K,V]
+    return (torch.empty(tuple(dh_shape), dtype=q.dtype, device=q.device), 
+           torch.empty(tuple(dh_shape), dtype=q.dtype, device=q.device),
+           torch.empty(dv.shape, dtype=dv.dtype, device=dv.device))
 
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
