@@ -182,6 +182,9 @@
   "op_api: torch_npu._npu_dropout(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },  
   "op_api: torch_npu.npu_add_rms_norm_cast(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
