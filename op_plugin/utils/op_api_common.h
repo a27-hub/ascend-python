@@ -243,6 +243,18 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
     }
 }
 
+// Check a tensor is on NPU and that a tensor with non-zero elements has allocated storage.
+inline void CheckNpuTensorValid(const at::Tensor& at_tensor)
+{
+    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
+        "Expected all tensors to be on the same device. "
+        "Expected NPU tensor, please check whether the input tensor device is correct.",
+        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(at_tensor.numel() <= 0 || at_tensor.unsafeGetTensorImpl()->storage_initialized(),
+        "The tensor has a non-zero number of elements, but its data is not allocated yet.",
+        OPS_ERROR(ErrCode::VALUE));
+}
+
 inline aclTensor *ConvertType(const at::Tensor &at_tensor)
 {
     static const auto aclCreateTensor = GET_OP_API_FUNC(aclCreateTensor);
@@ -253,10 +265,7 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
     if (!at_tensor.defined()) {
         return nullptr;
     }
-    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
-        "Expected all tensors to be on the same device. "
-        "Expected NPU tensor, please check whether the input tensor device is correct.",
-        OPS_ERROR(ErrCode::TYPE));
+    CheckNpuTensorValid(at_tensor);
     at::ScalarType scalar_data_type = at_tensor.scalar_type();
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(scalar_data_type);
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
@@ -493,10 +502,7 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
     if (!at_tensor.defined()) {
         return nullptr;
     }
-    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
-        "Expected all tensors to be on the same device. "
-        "Expected NPU tensor, please check whether the input tensor device is correct.",
-        OPS_ERROR(ErrCode::TYPE));
+    CheckNpuTensorValid(at_tensor);
 
     aclDataType acl_data_type = tensor_r.dtype;
     c10::SmallVector<int64_t, MAX_DIM_NUM> storageDims;
@@ -675,10 +681,7 @@ inline TensorStructPtr CopyTypeV2(const at::Tensor &at_tensor)
     if (!at_tensor.defined()) {
         return nullptr;
     }
-    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
-        "Expected all tensors to be on the same device. "
-        "Expected NPU tensor, please check whether the input tensor device is correct.",
-        OPS_ERROR(ErrCode::TYPE));
+    CheckNpuTensorValid(at_tensor);
     aclDataType acl_data_type = at_npu::native::OpPreparation::convert_to_acl_data_type(at_tensor.scalar_type());
     return std::make_shared<TensorStruct>(
         const_cast<void *>(at_tensor.storage().data()),
@@ -698,10 +701,7 @@ inline TensorStructPtr CopyTypeV2(const TensorWrapper &tensor_r)
     if (!at_tensor.defined()) {
         return nullptr;
     }
-    TORCH_CHECK(torch_npu::utils::is_npu(at_tensor),
-        "Expected all tensors to be on the same device. "
-        "Expected NPU tensor, please check whether the input tensor device is correct.",
-        OPS_ERROR(ErrCode::TYPE));
+    CheckNpuTensorValid(at_tensor);
     return std::make_shared<TensorStruct>(
         const_cast<void *>(at_tensor.storage().data()),
         tensor_r.dtype,
