@@ -168,6 +168,7 @@ at::Tensor add(const at::Tensor &self, const at::Scalar &other, const at::Scalar
 
 at::Tensor &add_(at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
 {
+    bool ge950 = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950;
     at::ScalarType result_type = at::native::result_type(self, other);
     at::ScalarType self_type = self.scalar_type();
     TORCH_CHECK(canCast(result_type, self_type), "result type ", result_type,
