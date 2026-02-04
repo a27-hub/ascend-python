@@ -10952,6 +10952,57 @@ y, rstd = torch_npu.npu_gemma_rms_norm(input_x, input_gamma)
 )
 
 _add_torch_npu_docstr(
+    "npu_add_rms_norm",
+    """
+接口原型：
+npu_add_rms_norm(Tensor x1, Tensor x2, Tensor gamma, float epsilon=1e-06) -> (Tensor, Tensor, Tensor)
+
+功能描述
+该算子将Add计算与RMSNorm归一化融合，常用于大模型中将残差连接后的张量进行归一化处理。
+
+参数说明
+x1：必选参数，表示用于Add计算的第一个输入，数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型支持float32、float16、bfloat16。支持1-8维张量。
+x2：必选参数，表示用于Add计算的第二个输入，对应公式中的x2。数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型支持float32、float16、bfloat16。支持1-8维张量。
+gamma：必选参数，表示RmsNorm的缩放因子（权重）。对应公式中的gamma。数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型与x1的数据类型保持一致，shape需要与x1后几维保持一致，后几维为x1需要归一化处理的维度。
+epsilon：可选参数，表示添加到分母中的值，以确保数值稳定，对应公式中的epsilon。默认值为1e-6。
+
+输出说明
+yOut：Tensor类型，对应公式中的RmsNorm(x)，表示最后的输出。数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型和shape与输入x1的数据类型和shape保持一致。
+rstdOut：Tensor类型，对应公式中Rms(x)的倒数，表示归一化后标准差的倒数。数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型支持float32。shape与x1前几维保持一致，前几维表示不需要归一化处理的维度。rstdOut shape与x1 shape，gamma shape关系举例：
+- 若x1 shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；
+- 若x1 shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。
+xOut：Tensor类型，对应公式中的x，表示add计算的结果。数据格式支持ND，不支持空Tensor，支持非连续Tensor。数据类型和shape与输入x1的数据类型和shape保持一致。
+
+约束说明
+边界值场景说明：
+- 当输入是Inf时，输出为Inf。
+- 当输入是NaN时，输出为NaN。
+Atlas 推理系列产品：
+- 参数x1、x2、gamma、yOut、xOut的数据类型不支持bfloat16。
+- 参数`rstdOut`在当前产品使用场景下无效。
+
+支持的型号
+Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A2训练系列产品/Atlas A2推理产品
+Atlas 推理系列产品
+
+调用示例:
+import torch
+import torch_npu
+
+x1 = torch.rand(4, 8, dtype=torch.float16, device='npu') * 100
+x2 = torch.rand(4, 8, dtype=torch.float16, device='npu') * 100
+gamma = torch.rand(8, dtype=torch.float16, device='npu') * 100
+epsilon = 1e-6
+
+y, rstd, x = torch_npu.npu_add_rms_norm(x1, x2, gamma, epsilon=epsilon)
+"""
+)
+
+
+
+
+_add_torch_npu_docstr(
     "npu_add_rms_norm_dynamic_quant",
     """
 接口原型：
