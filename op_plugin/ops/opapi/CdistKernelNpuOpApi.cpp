@@ -44,6 +44,6 @@ at::Tensor _cdist_forward(const at::Tensor &x1, const at::Tensor &x2, const doub
 
 at::Tensor cdist(const at::Tensor &x1, const at::Tensor &x2, const double p, c10::optional<int64_t> compute_mode)
 {
-    return op_api::_cdist_forward(x1, x2, p, compute_mode);
+    return at::_cdist_forward(x1, x2, p, compute_mode);
 }
 }
