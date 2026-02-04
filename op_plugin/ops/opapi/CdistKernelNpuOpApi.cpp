@@ -23,15 +23,14 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor _cdist_forward(const at::Tensor &x1, const at::Tensor &x2, const double p, c10::optional<int64_t> compute_mode)
 {
     auto soc_version = c10_npu::GetSocVersion();
-    bool is_target_chip_series = 
+    bool is_target_chip_series =
         (soc_version >= c10_npu::SocVersion::Ascend910B1 && soc_version <  c10_npu::SocVersion::Ascend310B1) ||
         (soc_version >= c10_npu::SocVersion::Ascend910_9391 && soc_version <  c10_npu::SocVersion::Ascend910_95) ||
         soc_version == c10_npu::SocVersion::Ascend910B ||
         soc_version == c10_npu::SocVersion::Ascend910ProB;
     if (is_target_chip_series) {
         int64_t mode = compute_mode.value_or(0);
-        float p_float;
-        p_float = static_cast<float>(p);
+        float p_float = static_cast<float>(p);
         auto output_size = op_infer::cdist_npu_output_size(x1, x2);
         auto type = x1.scalar_type();
         at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, x1.options().dtype(type));
