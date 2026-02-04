@@ -4662,5 +4662,17 @@ class TestQuantMatmulInplaceAdd(TestCase):
             self.assertTrue(x2.shape[1] == res_1.shape[1])
             self.assertTrue(res_1.dtype == torch.float32)
 
+
+class TestBatchNormReduce(TestCase):
+    def test_batch_norm_reduce(self):
+        with FakeTensorMode():
+            input_fake_tensor = torch.randn(2, 3, 12, 12, device="npu", requires_grad=True)
+            eps = 1e-5
+            output_fake_tensor1, output_fake_tensor2 = torch_npu.batch_norm_reduce(input_fake_tensor, eps)
+            self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor1.shape[0])
+            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor1.dtype)
+            self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor2.shape[0])
+            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor2.dtype)
+
 if __name__ == "__main__":
     run_tests()

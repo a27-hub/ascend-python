@@ -5045,3 +5045,10 @@ def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_
 
     scale = torch.empty(scale_shape, dtype=torch.float32, device=x.device)
     return y, scale
+
+
+@impl(m, "batch_norm_reduce")
+def batch_norm_reduce_meta(self, eps):
+    sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    return (sum, square_sum)
