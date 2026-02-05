@@ -1,0 +1,26 @@
+[
+  {
+    "line": "26",
+    "review_comment": "在函数 `get_output_size_mm` 中，直接访问 `x1.size(0)` 和 `x2.size(1)`，但没有检查张量 `x1` 和 `x2` 的维度数量是否至少为1和至少为2。如果输入张量维度不足（例如 `x1` 为零维或 `x2` 为一维），调用 `size` 方法访问索引0或1可能引发越界访问，导致未定义行为或程序异常终止。建议在访问前使用 `x1.dim()` 和 `x2.dim()` 验证维度数量。",
+    "severity": "严重",
+    "categories": "数组访问，必须进行越界保护",
+    "id": "mlgpfif2ls879vzg09",
+    "status": "pending"
+  },
+  {
+    "line": "26",
+    "review_comment": "在函数 `get_output_size_mm` 中，计算 `out_x = x1.size(0) * world_size`，其中 `x1.size(0)` 和 `world_size` 均为 `int64_t` 类型。虽然 `world_size` 被限制在 [2, 32] 范围，但 `x1.size(0)` 可能非常大（例如接近 `INT64_MAX`），乘法操作可能溢出 `INT64_MAX`，导致有符号整数溢出（未定义行为）或回绕，进而产生错误的大小计算结果，影响后续内存分配和操作。建议在乘法前检查 `x1.size(0)` 是否超过 `INT64_MAX / world_size`。",
+    "severity": "严重",
+    "categories": "加法、乘法和减法操作，必须进行溢出和减翻保护",
+    "id": "mlgpfif24svn4z1ay6g",
+    "status": "pending"
+  },
+  {
+    "line": "43",
+    "review_comment": "在第43行，`const char* hcom_value = (char*)hcom.data();`，其中 `hcom` 是 `c10::string_view` 类型，其 `data()` 方法可能返回 `nullptr`（例如当字符串为空时）。未进行空指针检查就将 `hcom_value` 传递给 `EXEC_NPU_CMD` 宏（第57行），底层操作可能直接使用该指针，导致访问空指针，引发程序崩溃。建议在使用前添加对 `hcom.data()` 的非空校验，例如 `TORCH_CHECK(hcom.data() != nullptr, \"hcom string is empty\")`。",
+    "severity": "严重",
+    "categories": "指针操作，必须先赋值后访问，并进行空指针保护",
+    "id": "mlgpfif21huwv6kcbhm",
+    "status": "pending"
+  }
+]
