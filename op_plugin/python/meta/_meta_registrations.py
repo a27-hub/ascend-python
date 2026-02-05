@@ -107,6 +107,15 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
     else:
         return torch.empty_like(query)
 
+@impl(m, "batch_norm_gather_stats_update")
+def batch_norm_gather_stats_update_meta(input, mean, invstd, running_mean, running_var, momentum, eps, counts):
+    C = input.shape[1]
+    out_shape = (C,)
+    dtype = mean.dtype
+    device = input.device
+    batch_mean = torch.empty(out_shape, dtype=dtype, device=device)
+    batch_invstd = torch.empty(out_shape, dtype=dtype, device=device)
+    return (batch_mean, batch_invstd)
 
 @impl(m, "npu_sparse_flash_attention")
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
