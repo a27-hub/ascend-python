@@ -282,7 +282,7 @@ template <std::size_t I = 0, typename...Ts>
 typename std::enable_if<I == sizeof...(Ts), void>::type GetFirstTensor(const std::tuple<Ts...>& t, at::Tensor& res) {}
 
 template <std::size_t I = 0, typename... Ts>
-typename std::enable_if<I<sizeof...(Ts), void>::type GetFirstTensor(const std::tuple<Ts...>& t, at::Tensor &res)
+typename std::enable_if<I <sizeof...(Ts), void>::type GetFirstTensor(const std::tuple<Ts...>& t, at::Tensor& res)
 {
     if constexpr (is_at_tensor<typename std::tuple_element<I, std::tuple<Ts...>>::type>::value) {
         res = std::get<I>(t);
