@@ -43,7 +43,7 @@ std::tuple<at::Tensor&, at::Tensor&> adaptive_max_pool3d_out(const at::Tensor& s
     }
     auto out_size = op_infer::max_pool3d_output_size(self, output_size);
     npu_preparation::check_tensor({self}, out, self.scalar_type(), out_size);
-    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         at::ScalarType indices_dtype = indices.scalar_type() == at::kLong ? at::kLong : at::kInt;
         npu_preparation::check_tensor({self}, indices, indices_dtype, out_size);
     } else {
@@ -66,7 +66,7 @@ std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(const at::Tensor& self, a
     auto out_size = op_infer::max_pool3d_output_size(self, output_size);
     at::Tensor out = npu_preparation::apply_tensor_without_format(out_size, self.options());
     at::Tensor indices;
-    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910_95) {
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         indices = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(at::kLong));
     } else {
         indices = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(at::kInt));
