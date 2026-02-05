@@ -5096,7 +5096,7 @@ def npu_ps_roi_pooling_meta(x, rois, spatial_scale, group_size, output_dim):
 @impl(m, "npu_convolution")
 def npu_convolution_meta(input, weight, bias, stride, padding, dilation, groups):
     torch._check(input.dim() >= 4, lambda: f"Convolution input must be at least 4D.")
-
+    
     HW_START_DIM = 2
     N = input.size(0)
     out_channels = weight.size(0)
@@ -5111,7 +5111,7 @@ def npu_convolution_meta(input, weight, bias, stride, padding, dilation, groups)
         O_size = (spatial_num + 2 * padding_num - dilation_num * (kernel_num - 1) - 1) // stride_num + 1
         torch._check(O_size > 0, lambda: f"Invalid output size at dim {i}: {O_size}.")
         out_shape.append(O_size)
-
+    
     return input.new_empty((N, out_channels, *out_shape))
 
 
@@ -5133,8 +5133,34 @@ def npu_convolution_transpose_meta(input, weight, bias, padding, output_padding,
         O_size = ((spatial_num - 1) * stride_num - 2 * padding_num + dilation_num * (kernel_num - 1) + op_num + 1)
         torch._check(O_size > 0, lambda: f"Invalid output size at dim {i}: {O_size}.")
         out_shape.append(O_size)
-
+    
     return input.new_empty((N, out_channels, *out_shape))
+
+
+@impl(m_aten, "_convolution")
+def convolution_meta(input_tensor, weight, bias, stride, padding, dilation, transposeds,
+                    output_padding, groups, benchmark, deterministic, cudnn_enabled, *args):
+
+    batch_size, in_channels = input_tensor.shape[0], input_tensor.shape[1]
+    out_channels = weight.shape[0]
+    if isinstance(stride, (tuple, list)):
+        stride_h, stride_w = stride
+    else:
+        stride_h = stride_w = stride
+    if isinstance(padding, (tuple, list)):
+        pad_h, pad_w = padding
+    else:
+        pad_h = pad_w = padding
+    if isinstance(dilation, (tuple, list)):
+        dilation_h, dilation_w = dilation
+    else:
+        dilation_h = dilation_w = dilation
+    kernel_h, kernel_w = weight.shape[2], weight.shape[3]
+    input_h, input_w = input.shape[2], input.shape[3]
+    output_h = (input_h + 2 * pad_h - dilation_h * (kernel_h - 1) - 1) // stride_h + 1
+    output_w = (input_w + 2 * pad_w - dilation_w * (kernel_w - 1) - 1) // stride_w + 1
+    output_shape = (batch_size, out_channels, output_h, output_w)
+    return torch.empty(output_shape, dtype=input.dtype, device='meta')
 
 
 @impl(m, "batch_norm_reduce")
