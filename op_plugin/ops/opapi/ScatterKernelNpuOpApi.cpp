@@ -20,18 +20,24 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-// reduce value must be "add" or "multiply"
+static constexpr const char* REDUCE_AMIN = "a" "min";
+
 static inline bool reduce_valid(c10::string_view reduce)
 {
-    return (reduce == "add" || reduce == "multiply");
+    return (reduce == "add" || reduce == "sum" || reduce == "multiply" ||
+            reduce == "prod" || reduce == "amax" || reduce == REDUCE_AMIN);
 }
 
 static int64_t get_reduce(c10::string_view reduce)
 {
-    if (reduce == "add") {
+    if (reduce == "add" || reduce == "sum") {
         return 1;
-    } else if (reduce == "multiply") {
+    } else if (reduce == "multiply" || reduce == "prod") {
         return 2;
+    } else if (reduce == "amax") {
+        return 3;
+    } else if (reduce == REDUCE_AMIN) {
+        return 4;
     }
     return 0;
 }
@@ -50,7 +56,9 @@ at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& i
     const at::Tensor& src, c10::string_view reduce, at::Tensor& out)
 {
     npu_preparation::check_tensor({self, src, index}, out, self);
-    TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(reduce_valid(reduce),
+        "Reduce should be add/sum, multiply/prod, amax or argument-min",
+        OPS_ERROR(ErrCode::PARAM));
     int64_t reduction = get_reduce(reduce);
     EXEC_NPU_CMD(aclnnScatter, self, dim, index, src, reduction, out);
     return out;
@@ -70,7 +78,9 @@ at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& i
     const at::Scalar& value, c10::string_view reduce, at::Tensor& out)
 {
     npu_preparation::check_tensor({self, index}, out, self);
-    TORCH_CHECK(reduce_valid(reduce), "Reduce should be either add or multiply", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(reduce_valid(reduce),
+        "Reduce should be add/sum, multiply/prod, amax or argument-min",
+        OPS_ERROR(ErrCode::PARAM));
     int64_t reduction = get_reduce(reduce);
     EXEC_NPU_CMD(aclnnScatterValue, self, dim, index, value, reduction, out);
     return out;
