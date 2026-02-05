@@ -16,11 +16,6 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-
-const int64_t MAX_INT32 = 2147483647;
-const int32_t W_DIM = -1;
-const int32_t H_DIM = -2;
-const int32_t D_DIM = -3;
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
