@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <unordered_map>
-
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -22,23 +20,28 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-// reduce value mapping: add/sum -> 1, multiply/prod -> 2, amax -> 3, amin -> 4
-static const std::unordered_map<c10::string_view, int64_t> REDUCE_MAP = {
-    {"add", 1}, {"sum", 1},
-    {"multiply", 2}, {"prod", 2},
-    {"amax", 3},
-    {"amin", 4}
-};
-
 static inline bool reduce_valid(c10::string_view reduce)
 {
-    return REDUCE_MAP.find(reduce) != REDUCE_MAP.end();
+    return reduce == "add" || reduce == "sum" ||
+           reduce == "multiply" || reduce == "prod" ||
+           reduce == "amax" || reduce == "amin";
 }
 
 static int64_t get_reduce(c10::string_view reduce)
 {
-    auto it = REDUCE_MAP.find(reduce);
-    return it != REDUCE_MAP.end() ? it->second : 0;
+    if (reduce == "add" || reduce == "sum") {
+        return 1;
+    }
+    if (reduce == "multiply" || reduce == "prod") {
+        return 2;
+    }
+    if (reduce == "amax") {
+        return 3;
+    }
+    if (reduce == "amin") {
+        return 4;
+    }
+    return 0;
 }
 
 at::Tensor& scatter_out(const at::Tensor& self, int64_t dim, const at::Tensor& index,
