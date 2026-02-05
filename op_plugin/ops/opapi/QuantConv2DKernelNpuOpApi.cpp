@@ -34,25 +34,6 @@ void CheckParams(const at::Tensor& input, const at::Tensor& weight,
                  c10::optional<int64_t> input_dtype, c10::optional<int64_t> weight_dtype,
                  const c10::optional<at::Tensor>& offset)
 {
-    TORCH_CHECK((input_dtype.has_value() && weight_dtype.has_value()) ||
-                (!input_dtype.has_value() && !weight_dtype.has_value()),
-                "input_dtype and weight_dtype are only support both None or not None, but now they are different.",
-                OPS_ERROR(ErrCode::PARAM));
-    if (input_dtype.has_value()) {
-        TORCH_CHECK(input_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8) &&
-                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "input_dtype and weight_dtype are only support torch_npu.hifloat8, but got input_dtype: ",
-                    c10_npu::CustomDataTypeToString(input_dtype.value()), " and weight_dtype: ",
-                    c10_npu::CustomDataTypeToString(weight_dtype.value()), OPS_ERROR(ErrCode::PARAM));
-    }
-    if (input_dtype.has_value()) {
-        TORCH_CHECK((input.scalar_type() == at::ScalarType::Byte || input.scalar_type() == at::ScalarType::Char) &&
-            (weight.scalar_type() == at::ScalarType::Byte || weight.scalar_type() == at::ScalarType::Char),
-            "input and weight tensor dtype must be torch.uint8 or torch.int8, ",
-            "when input_dtype and weight_dtype is hifloat8, but got input tensor dtype: ",
-            input.scalar_type(), " and weight tensor dtype: ",
-            weight.scalar_type(), OPS_ERROR(ErrCode::PARAM));
-    }
     TORCH_CHECK(input.dim() >= TENSORS_DIM, "input has to be more than 4D, but got Tensor of dimension ",
                 input.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(weight.dim() >= TENSORS_DIM, "weight has to be more than 4D, but got Tensor of dimension ",
@@ -115,18 +96,11 @@ at::Tensor npu_quant_conv2d_out(const at::Tensor& input, const at::Tensor& weigh
 
     bool transposed = false; // transposed is not used in npu
     c10::IntArrayRef outputPadding; // outputPadding is not used in npu
-    if (input_dtype.has_value()) {
-        TensorWrapper input_wrapper = {input, c10_npu::GetAclDataType(input_dtype.value())};
-        TensorWrapper weight_wrapper = {weight, c10_npu::GetAclDataType(weight_dtype.value())};
-        TensorWrapper output_wrapper = {output, (output_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8)) ?
-            c10_npu::GetAclDataType(output_dtype.value()) :
-            npu_preparation::convert_to_acl_data_type(output.scalar_type())};
-        EXEC_NPU_CMD(aclnnQuantConvolution, input_wrapper, weight_wrapper, bias, scale, offset, strides, pads, dilations,
-            transposed, outputPadding, groups, offset_x, round_mode_ptr, output_wrapper);
-    } else {
-        EXEC_NPU_CMD(aclnnQuantConvolution, input, weight, bias, scale, offset, strides, pads, dilations, transposed,
-                     outputPadding, groups, offset_x, round_mode_ptr, output);
-    }
+    TensorWrapper input_wrapper = make_wrapper(input, input_dtype);
+    TensorWrapper weight_wrapper = make_wrapper(weight, weight_dtype);
+    TensorWrapper output_wrapper = make_wrapper(output, output_dtype);
+    EXEC_NPU_CMD(aclnnQuantConvolution, input_wrapper, weight_wrapper, bias, scale, offset, strides, pads, dilations,
+        transposed, outputPadding, groups, offset_x, round_mode_ptr, output_wrapper);
     return output;
 }
 
