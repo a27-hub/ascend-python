@@ -5,7 +5,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-// https://opensource.org/licenses/BSD-3-Clause
+//
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -55,7 +55,7 @@ at::Tensor adaptive_avg_pool3d_backward(
 {
     if (!is_npu_supported(self.scalar_type())) {
         TORCH_WARN_ONCE("adaptive_avg_pool3d_backward is not supported by NPU currently. Now this kernel is running on CPU.");
-        auto grad_input_cpu = at::adaptive_avg_pool3d_backward(grad_output.cpu(), self.cpu());
+        auto grad_input_cpu = at::_adaptive_avg_pool3d_backward(grad_output.cpu(), self.cpu());
         auto grad_input_npu = grad_input_cpu.to(grad_output.device());
         return grad_input_npu;
     }
