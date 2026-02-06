@@ -1580,9 +1580,9 @@ void GetApiFunc(
     getWorkspaceSizeFuncAddr = GetOpApiFuncAddr(workspace_api_name);
 
     TORCH_CHECK(opApiFuncAddr != nullptr && getWorkspaceSizeFuncAddr != nullptr,
-                   api_name, " or ", workspace_api_name, " not in ", GetOpApiLibName(),
-                   ", or ", GetOpApiLibName(), " not found.",
-                   OPS_ERROR(ErrCode::PTR));
+        api_name, " or ", workspace_api_name, " not in ", GetOpApiLibName(),
+        ", or ", GetOpApiLibName(), " not found.",
+        OPS_ERROR(ErrCode::PTR));
 }
 
 void InitExecCommonCtx()
