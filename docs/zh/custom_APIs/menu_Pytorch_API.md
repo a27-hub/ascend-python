@@ -247,6 +247,9 @@
             -   [（beta）torch_npu.npu.set_autocast_enabled](./torch_npu-npu/（beta）torch_npu-npu-set_autocast_enabled.md)
             -   [（beta）torch_npu.npu.get_autocast_dtype](./torch_npu-npu/（beta）torch_npu-npu-get_autocast_dtype.md)
             -   [（beta）torch_npu.npu.set_autocast_dtype](./torch_npu-npu/（beta）torch_npu-npu-set_autocast_dtype.md)
+            -   [torch_npu.npu.set_deterministic_level](./context/torch_npu-npu-set_deterministic_level.md)
+            -   [torch_npu.npu.use_compatible_algorithms](./context/torch_npu-npu-use_compatible_algorithms.md)
+            -   [torch_npu.npu.are_compatible_algorithms_enabled](./context/torch_npu-npu-are_compatible_impl_enabled.md)
     
         -   [Random Number Generator](./torch_npu-npu/Random-Number-Generator.md)
         -   [NPU Device](./torch_npu-npu/NPU-Device.md)
