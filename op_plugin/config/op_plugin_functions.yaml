@@ -3225,6 +3225,7 @@ official:
 
   - func: lstm_cell(Tensor input, Tensor[] hx, Tensor w_ih, Tensor w_hh, Tensor? b_ih=None, Tensor? b_hh=None) -> (Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: lt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
