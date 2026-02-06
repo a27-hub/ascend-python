@@ -1540,19 +1540,23 @@ void MemcpyToBufImpl(const void* data, size_t size)
     g_hash_offset += size;
 }
 
-bool CacheParams::GetDeterministicStatus() const {
+bool CacheParams::GetDeterministicStatus() const
+{
     return deterministic_status_;
 }
 
-uint32_t CacheParams::GetAicNum() const {
+uint32_t CacheParams::GetAicNum() const
+{
     return aic_num_;
 }
 
-uint32_t CacheParams::GetAivNum() const {
+uint32_t CacheParams::GetAivNum() const
+{
     return aiv_num_;
 }
 
-CacheParams GetCacheParams() {
+CacheParams GetCacheParams()
+{
     CacheParams params;
 
     params.deterministic_status_ = at::globalContext().deterministicAlgorithms();
@@ -1570,7 +1574,8 @@ void GetApiFunc(
     const char* workspace_api_name,
     void*& opApiFuncAddr,
     void*& getWorkspaceSizeFuncAddr
-) {
+)
+{
     opApiFuncAddr = GetOpApiFuncAddr(api_name);
     getWorkspaceSizeFuncAddr = GetOpApiFuncAddr(workspace_api_name);
 
@@ -1590,13 +1595,15 @@ void InitExecCommonCtx() {
     }
 }
 
-void InitExecSubTheadCtx(aclrtStream acl_stream) {
+void InitExecSubTheadCtx(aclrtStream acl_stream)
+{
     if (c10_npu::check_dequeue_need_use(acl_stream)) {
         c10_npu::UseStreamResInCurrentThread(acl_stream);
     }
 }
 
-void UnInitExecCommonCtx() {
+void UnInitExecCommonCtx()
+{
     void* unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");
     void* releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");
 
@@ -1613,7 +1620,8 @@ void UnInitExecCommonCtx() {
     UnInitCacheThreadLocal();
 }
 
-aclrtStream GetAclStream() {
+aclrtStream GetAclStream()
+{
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
     if (c10_npu::check_enqueue_need_use(acl_stream)) {
         c10_npu::UseStreamResInCurrentThread(acl_stream);
@@ -1621,7 +1629,8 @@ aclrtStream GetAclStream() {
     return acl_stream;
 }
 
-void SetExecConfig() {
+void SetExecConfig()
+{
     at_npu::native::SetDeterministic();
 }
 
@@ -1645,7 +1654,8 @@ int ExecuteApiFunc(
     aclrtStream acl_stream,
     uint64_t workspace_size,
     aclOpExecutor* executor
-) {
+)
+{
     auto workspace_addr = GetWorkSpaceAddr(workspace_size);
     OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);
     auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
@@ -1653,7 +1663,8 @@ int ExecuteApiFunc(
     return api_ret;
 }
 
-bool CheckAndInitFunc(const char* aclnn_api) {
+bool CheckAndInitFunc(const char* aclnn_api)
+{
     static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
     static const auto setPTAHashKeyAddr = GetOpApiFuncAddr("SetPTAHashKey");
@@ -1682,7 +1693,8 @@ bool CheckAndInitFunc(const char* aclnn_api) {
     return true;
 }
 
-bool CheckAndInitFuncV2(const char* aclnn_api) {
+bool CheckAndInitFuncV2(const char* aclnn_api)
+{
     static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
     static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");
@@ -1711,7 +1723,8 @@ bool CheckAndInitFuncV2(const char* aclnn_api) {
     return true;
 }
 
-void AddCacheConfigParams(aclrtStream acl_stream, CacheParams cache_params) {
+void AddCacheConfigParams(aclrtStream acl_stream, CacheParams cache_params)
+{
     bool deterministic_status = cache_params.GetDeterministicStatus();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
@@ -1726,7 +1739,8 @@ void AddCacheConfigParams(aclrtStream acl_stream, CacheParams cache_params) {
     add_param_to_buf(reinterpret_cast<uintptr_t>(acl_stream));
 }
 
-void AddCacheConfigParamsV2(aclrtStream acl_stream, CacheParams cache_params, const char* aclnn_api) {
+void AddCacheConfigParamsV2(aclrtStream acl_stream, CacheParams cache_params, const char* aclnn_api)
+{
     bool deterministic_status = cache_params.GetDeterministicStatus();
     uint32_t aic_num = cache_params.GetAicNum();
     uint32_t aiv_num = cache_params.GetAivNum();
@@ -1740,7 +1754,8 @@ void AddCacheConfigParamsV2(aclrtStream acl_stream, CacheParams cache_params, co
     add_param_to_buf_v2(reinterpret_cast<uintptr_t>(acl_stream));
 }
 
-aclOpExecutor* GetCacheExecutorV2(uint64_t* workspace_size) {
+aclOpExecutor* GetCacheExecutorV2(uint64_t* workspace_size)
+{
     static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto setPTACacheHashKeyAddr = GetOpApiFuncAddr("SetPTACacheHashKey");
 
@@ -1756,7 +1771,8 @@ aclOpExecutor* GetCacheExecutorV2(uint64_t* workspace_size) {
         g_hash_offset, workspace_size);
 }
 
-aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size) {
+aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size)
+{
     uint64_t hashId = calc_hash_id();
 
     static const auto ptaGetExecCacheAddr = GetOpApiFuncAddr("PTAGetExecCache");
@@ -1770,7 +1786,8 @@ aclOpExecutor* GetCacheExecutor(uint64_t* workspace_size) {
     return ptaGetExecCacheFunc(hashId, workspace_size);
 }
 
-bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase2) {
+bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase2)
+{
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = GetCacheExecutor(&workspace_size);
     if (executor == nullptr) {
@@ -1796,7 +1813,8 @@ bool ExecuteCachedOp(aclrtStream acl_stream, const char* aclnn_api, void* phrase
     return true;
 }
 
-bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret) {
+bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret)
+{
     uint64_t workspace_size = 0;
     aclOpExecutor* executor = GetCacheExecutorV2(&workspace_size);
     if (executor == nullptr) {
@@ -1817,6 +1835,7 @@ bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phra
     return true;
 }
 
-void RunAclCall(const string &op_name, const PROC_FUNC &func) {
+void RunAclCall(const string &op_name, const PROC_FUNC &func)
+{
     at_npu::native::OpCommand::RunOpApiV2(op_name, func);
 }

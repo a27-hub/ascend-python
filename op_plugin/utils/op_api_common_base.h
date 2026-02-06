@@ -404,7 +404,8 @@ TORCH_NPU_API void AddCacheConfigParamsV2(aclrtStream acl_stream, CacheParams ca
 TORCH_NPU_API bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, int* api_ret);
 
 template <typename... Args>
-void BuildCacheHashParams(aclrtStream acl_stream, const char* aclnn_api, Args&&... args) {
+void BuildCacheHashParams(aclrtStream acl_stream, const char* aclnn_api, Args&&... args)
+{
     std::cout << "ERRERR in BuildCacheHashParams" << std::endl;
     CacheParams cache_params = GetCacheParams();
     AddCacheConfigParams(acl_stream, cache_params);
@@ -412,14 +413,16 @@ void BuildCacheHashParams(aclrtStream acl_stream, const char* aclnn_api, Args&&.
 }
 
 template <typename... Ts>
-void BuildCacheHashParamsV2(aclrtStream acl_stream, CacheParams cache_params, const char* aclnn_api, const std::tuple<Ts...> &args) {
+void BuildCacheHashParamsV2(aclrtStream acl_stream, CacheParams cache_params, const char* aclnn_api, const std::tuple<Ts...> &args)
+{
     std::cout << "ERRERR in BuildCacheHashParamsV2" << std::endl;
     AddCacheConfigParamsV2(acl_stream, cache_params, aclnn_api);
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
 }
 
 template <typename... Args>
-bool hit_cache_ext(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, Args&&... args) {
+bool hit_cache_ext(aclrtStream acl_stream, const char* aclnn_api, void* phrase2, Args&&... args)
+{
     // 步骤1：检查缓存功能是否可用
     if (!CheckAndInitFunc(aclnn_api)) {
         return false;
@@ -532,11 +535,11 @@ TORCH_NPU_API void RunAclCall(const string &op_name, const PROC_FUNC &func);
             {                                                                                                          \
                 return api_ret;                                                                                        \
             }                                                                                                          \
-            /* 5.3.设置执行配置（一定要在缓存查询后？） */                                                                   \
+            /* 5.3.设置执行配置 */                                                                                       \
             SetExecConfigV2(cache_params);                                                                             \
-            /* 5.4.初始化执行上下文：内存管理相关*/                                                                         \
+            /* 5.4.初始化执行上下文：内存管理相关 */                                                                         \
             InitExecCommonCtx();                                                                                       \
-            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装）*/                                             \
+            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                            \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
@@ -544,9 +547,9 @@ TORCH_NPU_API void RunAclCall(const string &op_name, const PROC_FUNC &func);
             auto converted_params = ConvertTypesV2(copied_params, workspace_size_addr, executor_addr);                 \
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
-            /* 5.6.执行aclnn函数*/                                                                                      \
+            /* 5.6.执行aclnn函数 */                                                                                     \
             api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
-            /* 5.6.清理参数、内存*/                                                                                       \
+            /* 5.7.清理参数、内存 */                                                                                      \
             ReleaseConvertTypes(converted_params);                                                                     \
             UnInitExecCommonCtx();                                                                                     \
             return api_ret;                                                                                            \
@@ -555,13 +558,13 @@ TORCH_NPU_API void RunAclCall(const string &op_name, const PROC_FUNC &func);
         RunAclCall(#aclnn_api, acl_call);                                                                              \
     } while (false)
 
-#define EXEC_NPU_CMD_EXT(aclnn_api, ...)                                                                                   \
+#define EXEC_NPU_CMD_EXT(aclnn_api, ...)                                                                               \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
         if (task_queue_enable == 2) {                                                                                  \
-            EXEC_NPU_CMD_V2_EXT(aclnn_api, __VA_ARGS__);                                                                   \
+            EXEC_NPU_CMD_V2_EXT(aclnn_api, __VA_ARGS__);                                                               \
         } else {                                                                                                       \
-            EXEC_NPU_CMD_V1_EXT(aclnn_api, __VA_ARGS__);                                                                   \
+            EXEC_NPU_CMD_V1_EXT(aclnn_api, __VA_ARGS__);                                                               \
         }                                                                                                              \
     } while (false)
 
