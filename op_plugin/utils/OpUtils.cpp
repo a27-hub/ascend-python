@@ -498,5 +498,19 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
+std::string list_to_string(const std::set<int64_t> &list)
+{
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < list.size(); i++) {
+        if (i > 0) {
+            oss << ",";
+        }
+        oss << list[i];
+    }
+    oss << "]";
+    return oss.str();
+}
+
 }  // namespace utils
 }  // namespace op_plugin
