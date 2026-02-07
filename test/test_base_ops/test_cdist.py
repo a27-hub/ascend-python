@@ -4,10 +4,9 @@ import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
 
-
 class Testcdist(TestCase):
     def generate_data(self, min_n, max_n, shape_x, shape_y, src_type):
-        np.random.seed(10086)
+        np.random.seed(42)
         x1 = np.random.uniform(min_n, max_n, shape_x).astype(src_type)
         x2 = np.random.uniform(min_n, max_n, shape_y).astype(src_type)
         return x1, x2

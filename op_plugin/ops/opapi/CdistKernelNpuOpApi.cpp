@@ -18,7 +18,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-using npu_preparation = at_npu::native::OpPreparation;
 
 static at::Tensor &cdist_out_op_api(const at::Tensor &x1, const at::Tensor &x2, float p, c10::optional<int64_t> compute_mode, at::Tensor &out)
 {
@@ -36,8 +35,6 @@ at::Tensor cdist(const at::Tensor &x1, const at::Tensor &x2, const double p, c10
         if (std::isinf(p)) {
             p_float = -1;
         } else {
-            TORCH_CHECK(p <= std::numeric_limits<float>::max(), "npu does not support float64"
-                + OPS_ERROR(ErrCode::TYPE));
             p_float = static_cast<float>(p);
         }
         auto output_size = op_infer::cdist_npu_output_size(x1, x2);
