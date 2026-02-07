@@ -108,6 +108,17 @@ def npu_incre_flash_attention_forward(query, key, value, *, padding_mask=None, a
         return torch.empty_like(query)
 
 
+@impl(m, "batch_norm_gather_stats_update")
+def batch_norm_gather_stats_update_meta(inp, mean, invstd, running_mean, running_var, momentum, eps, counts):
+    C = inp.shape[1]
+    out_shape = (C,)
+    dtype = mean.dtype
+    device = inp.device
+    batch_mean = torch.empty(out_shape, dtype=dtype, device=device)
+    batch_invstd = torch.empty(out_shape, dtype=dtype, device=device)
+    return (batch_mean, batch_invstd)
+
+
 @impl(m, "npu_sparse_flash_attention")
 def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None,
@@ -1427,6 +1438,63 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
 
     return attention_out, lse_out
 
+@impl(m, "npu_fused_infer_attention_score_sink")
+def npu_fused_infer_attention_score_sink_forward(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None,
+                                         block_table=None, dequant_scale_query=None, dequant_scale_key=None, dequant_offset_key=None, dequant_scale_value=None,
+                                         dequant_offset_value=None, dequant_scale_key_rope=None, quant_scale_out=None, quant_offset_out=None, learnable_sink=None,
+                                         num_query_heads=1, num_key_value_heads=0, softmax_scale=1.0, pre_tokens=2147483647, next_tokens=2147483647, sink_number=0,
+                                         input_layout="BSH", sparse_mode=0, block_size=0, query_quant_mode=0, key_quant_mode=0, value_quant_mode=0, inner_precise=0,
+                                         return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
+                                         key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None,
+                                         dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None, out_dtype=None):
+    torch._check(
+        num_query_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
+    query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
+
+    # get value_d
+    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    # 获取change_d_scale
+    change_d_scale = get_change_d_scale_v2(value, value_dtype)
+    value_d = value_d * change_d_scale
+
+    # infer attention out shape
+    tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_query_heads, value_d)
+
+    # input is hifloat8
+    is_hifloat8_input = query.dtype == torch.uint8 and query_dtype is not None and query_dtype == torch_npu.hifloat8
+
+    # handle quant
+    if quant_scale_out is not None:
+        output_type = torch.int8
+        if out_dtype is not None:
+            output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
+        attention_out = torch.empty_like(tmp_out, dtype=output_type)
+    elif query.dtype == torch.int8 or query.dtype == torch.float8_e4m3fn or is_hifloat8_input:
+        if out_dtype is not None:
+            output_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[out_dtype]
+            attention_out = torch.empty_like(tmp_out, dtype=output_type)
+        elif query_rope is not None:
+            attention_out = torch.empty_like(tmp_out, dtype=query_rope.dtype)
+        else:
+            attention_out = torch.empty_like(tmp_out, dtype=torch.half)
+    else:
+        attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
+
+    # infer lse out shape
+    tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_query_heads)
+
+    if return_softmax_lse:
+        lse_out = torch.empty_like(tmp_lse_out, dtype=torch.float32)
+    else:
+        lse_out = torch.empty([0], dtype=torch.float32, device='meta')
+
+    return attention_out, lse_out
 
 @impl(m, "npu_fused_infer_attention_score_v2")
 def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None,
