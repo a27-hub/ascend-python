@@ -60,6 +60,9 @@ at::Tensor npu_quant_all_reduce(const at::Tensor &x, const at::Tensor &scales, c
                                 c10::optional<int64_t> output_dtype, c10::optional<int64_t> x_dtype,
                                 c10::optional<int64_t> scales_dtype)
 {
+    TORCH_CHECK(x != nullptr && scales != nullptr,
+                "The input tensor x and scales cannot be nullptr",
+                OPS_ERROR(ErrCode::PARAM));
     // 校验x的shape, 2维(bs, h)或3维(b, s, h)
     TORCH_CHECK(x.dim() == DIM_TWO || x.dim() == DIM_THREE,
                 "The input x tensor shape is required to be 2 or 3 dim, but the actual input shape is ",
