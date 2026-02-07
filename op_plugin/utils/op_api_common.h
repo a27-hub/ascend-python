@@ -272,6 +272,10 @@ inline aclTensor *ConvertType(const at::Tensor &at_tensor)
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                         OPS_ERROR(ErrCode::VALUE));
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4) {
+                storageDims.back() *= FP4_IN_INT8;
+                CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
+            }
         }
     } else {
         switch (dimNum) {
@@ -512,6 +516,10 @@ inline aclTensor *ConvertType(const TensorWrapper &tensor_r)
             TORCH_CHECK(at_tensor.itemsize() > 0, "the itemsize of tensor must be greater than 0.",
                 OPS_ERROR(ErrCode::VALUE));
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
+            if (acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4) {
+                storageDims.back() *= FP4_IN_INT8;
+                CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
+            }
         }
     } else {
         switch (dimNum) {
