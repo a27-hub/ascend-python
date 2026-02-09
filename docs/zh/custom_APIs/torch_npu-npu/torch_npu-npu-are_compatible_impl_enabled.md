@@ -18,7 +18,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu.are_compatible_algorithms_enabled()
+torch_npu.npu.are_compatible_impl_enabled()
 ```
 
 ## 参数说明

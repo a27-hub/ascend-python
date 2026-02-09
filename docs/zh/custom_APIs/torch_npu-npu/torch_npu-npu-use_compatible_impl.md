@@ -1,4 +1,4 @@
-# torch_npu.npu.use_compatible_algorithms
+# torch_npu.npu.use_compatible_impl
 
 ## 产品支持情况
 
@@ -19,7 +19,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu.use_compatible_algorithms(is_enable)
+torch_npu.npu.use_compatible_impl(is_enable)
 ```
 
 ## 参数说明
