@@ -74,5 +74,4 @@ std::tuple<at::Tensor, at::Tensor> adaptive_max_pool3d(const at::Tensor& self, a
     EXEC_NPU_CMD(aclnnAdaptiveMaxPool3d, self, output_size, out, indices);
     return std::tuple<at::Tensor, at::Tensor>(out, indices);
 }
-
 }
