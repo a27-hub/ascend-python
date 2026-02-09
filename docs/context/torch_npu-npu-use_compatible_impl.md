@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-控制算子API的实现是否与Pytorch社区完全对齐。该接口仅用于切换计算API所调用的底层算子。
+该接口用于控制算子API的实现是否与PyTorch社区完全对齐。该接口仅用于切换算子API所调用的底层算子。
 该功能是否开启，可通过`torch_npu.npu.are_compatible_impl_enabled`进行查询。
 
 ## 函数原型
@@ -26,8 +26,8 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 **is_enable**(`bool`)：控制是否开启兼容性实现。
 
-        - True: 开启兼容性算子替换。
-        - False: 关闭兼容性算子替换。
+ - True: 开启兼容性算子替换。
+ - False: 关闭兼容性算子替换。
 
 ## 返回值说明
 
@@ -35,7 +35,7 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 ## 约束说明
 
-- 目前仅支持`torch.nn.functional.gelu`。
+目前仅支持`torch.nn.functional.gelu`。
 
 ## 调用示例
 
