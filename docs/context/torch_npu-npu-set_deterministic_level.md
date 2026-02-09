@@ -22,7 +22,10 @@
 | 1                        | aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 1)<br>aclrtSetSysParamOpt(ACL_OPT_STRONG_CONSISTENCY, 0) | 仅开启确定性 |
 | 2                        | aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 1)<br>aclrtSetSysParamOpt(ACL_OPT_STRONG_CONSISTENCY, 1) | 开启强一致性 |
 
-其中，`torch_npu.npu.set_deterministic_level(0)`相当于原先配置`torch.use_deterministic_algorithms(False)`；`torch_npu.npu.set_deterministic_level(1)`相当于原先配置`torch.use_deterministic_algorithms(True)`；`torch_npu.npu.set_deterministic_level(2)`则用于解决部分场景下，某些算子因为累加顺序不一致而导致结果不一致的问题。
+其中的对应关系为：
+ - level 0 ≈ torch.use_deterministic_algorithms(False)
+ - level 1 ≈ torch.use_deterministic_algorithms(True)
+ - level 2 用于解决部分场景下，某些算子因为累加顺序不一致而导致结果不一致的问题。
 
 开启强一致性计算后，会导致算子执行速度变慢，影响性能。仅建议在需要严格保证不同位置上的相同数据计算结果一致，或进行精度调优时，才开启强一致性计算，以辅助模型调试和优化。
 
