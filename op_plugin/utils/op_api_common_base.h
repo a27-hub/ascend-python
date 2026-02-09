@@ -406,7 +406,6 @@ TORCH_NPU_API bool ExecuteCachedOpV2(aclrtStream acl_stream, const char* aclnn_a
 template <typename... Args>
 void BuildCacheHashParams(aclrtStream acl_stream, const char* aclnn_api, Args&&... args)
 {
-    std::cout << "ERRERR in BuildCacheHashParams" << std::endl;
     CacheParams cache_params = GetCacheParams();
     AddCacheConfigParams(acl_stream, cache_params);
     add_param_to_buf(std::string(aclnn_api), args...);
@@ -415,7 +414,6 @@ void BuildCacheHashParams(aclrtStream acl_stream, const char* aclnn_api, Args&&.
 template <typename... Ts>
 void BuildCacheHashParamsV2(aclrtStream acl_stream, CacheParams cache_params, const char* aclnn_api, const std::tuple<Ts...> &args)
 {
-    std::cout << "ERRERR in BuildCacheHashParamsV2" << std::endl;
     AddCacheConfigParamsV2(acl_stream, cache_params, aclnn_api);
     add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
 }
