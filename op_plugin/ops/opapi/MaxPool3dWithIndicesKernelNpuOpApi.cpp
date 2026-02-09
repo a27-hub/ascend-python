@@ -103,6 +103,9 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool3d_with_indices(
 
     // The indices tensor can only be of int32 type
     at::Tensor indices = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kInt));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        indices = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kLong));
+    }
 
     EXEC_NPU_CMD(aclnnMaxPool3dWithArgmax, self, kernel_size,
                  stride, padding, dilation, ceil_mode, output, indices);
