@@ -127,10 +127,10 @@ npu_manifold_constrained_hyper_connection_pre(
         mmRes = at::empty(mmResSize, hOptions);
         outHPre = at::empty(outHPreSize, hOptions);
     }
-
-    EXEC_NPU_CMD_V1(aclnnManifoldConstrainedHyperConnectionPre, x, phi,
+    std::cout << "before EXEC_NPU_CMD" << std::endl;
+    EXEC_NPU_CMD(aclnnManifoldConstrainedHyperConnectionPre, x, phi,
             alpha, bias, gamma, out_flag, norm_eps, hc_eps, outHin, outHpost, outHres, outInvRms, mmRes, outHPre);
-
+    std::cout << "after EXEC_NPU_CMD" << std::endl;
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, mmRes, outHPre);
 }
 }
