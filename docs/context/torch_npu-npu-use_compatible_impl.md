@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-控制算子API的实现是否与社区完全对齐。该接口仅用于切换计算API所调用的底层算子。
+控制算子API的实现是否与Pytorch社区完全对齐。该接口仅用于切换计算API所调用的底层算子。
 该功能是否开启，可通过`torch_npu.npu.are_compatible_impl_enabled`进行查询。
 
 ## 函数原型
