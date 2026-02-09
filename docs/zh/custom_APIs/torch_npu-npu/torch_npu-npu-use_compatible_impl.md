@@ -24,7 +24,9 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 ## 参数说明
 
-**is_enable**(`bool`)：控制是否开启强一致性算子替换。
+**is_enable**(`bool`)：控制是否开启兼容性实现。
+        - True: 开启兼容性算子替换。
+        - False: 关闭兼容性算子替换
 
 ## 返回值说明
 
