@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况，观察算子API的实现是否与社区完全对齐。
+该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况，查看算子API的实现是否与社区完全对齐。
 
 ## 函数原型
 
