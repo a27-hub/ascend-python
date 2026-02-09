@@ -249,7 +249,7 @@ at::Tensor scaled_dot_product_attention(
         int64_t sparse_mode = is_causal ? LEFT_UP_CAUSAL : 0;
         c10::optional<at::Tensor> nulltensor = c10::nullopt;
         c10::OptionalArrayRef<c10::SymInt> nullsymlen = c10::nullopt;
-        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910_95) {
+        if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
             auto outputv3 =
                 at_npu::native::custom_ops::npu_fusion_attention_v3(query, key, value, head_num, input_layout, nulltensor,
                                                                     nulltensor, atten_mask, input_scale.as_float_unchecked(),
