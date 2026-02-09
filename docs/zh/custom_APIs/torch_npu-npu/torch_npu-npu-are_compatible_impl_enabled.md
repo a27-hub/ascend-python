@@ -39,7 +39,9 @@ True为已开启，False为未开启。
 ## 调用示例
 
 ```python
-import torch
-import torch_npu
-torch_npu.npu.are_compatible_impl_enabled()
+>>> import torch
+>>> import torch_npu
+>>> torch_npu.npu.use_compatible_impl(True)
+>>> torch_npu.npu.are_compatible_impl_enabled()
+True
 ```
