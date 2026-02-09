@@ -1,4 +1,4 @@
-# torch_npu.npu.are_compatible_algorithms_enabled
+# torch_npu.npu.are_compatible_impl_enabled
 
 ## 产品支持情况
 
@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-该接口用于查询`torch_npu.npu.use_compatible_algorithm`的配置情况，观察算子API的实现是否与社区完全对齐。
+该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况，观察算子API的实现是否与社区完全对齐。
 
 ## 函数原型
 
@@ -41,5 +41,5 @@ True为已开启，False为未开启。
 ```python
 import torch
 import torch_npu
-torch_npu.npu.are_compatible_algorithms_enabled()
+torch_npu.npu.are_compatible_impl_enabled()
 ```

@@ -201,14 +201,14 @@
 <td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于控制底层强一致性功能。</p>
 </td>
 </tr>
-<tr id="row285193313385"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193822"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-use_compatible_algorithms.md">torch_npu.npu.use_compatible_algorithms</a></p>
+<tr id="row285193313385"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193822"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-use_compatible_impl.md">torch_npu.npu.use_compatible_impl</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于控制算子API的实现是否与社区完全对齐。</p>
 </td>
 </tr>
-<tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_algorithms_enabled.md">torch_npu.npu.are_compatible_algorithms_enabled</a></p>
+<tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_impl_enabled.md">torch_npu.npu.are_compatible_impl_enabled</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询`torch_npu.npu.use_compatible_algorithm`的配置情况。</p>
+<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况。</p>
 </td>
 </tr>
 </tbody>
