@@ -960,8 +960,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 6]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -1027,6 +1027,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     elif quant_mode == 3:
         expanded_x_dtype = torch.float8_e4m3fn
         expanded_scale_dtype = torch.float8_e8m0fnu
+    elif quant_mode == 6:
+        expanded_x_dtype = torch_npu.hifloat8
+        expanded_scale_dtype = torch.float32
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
@@ -1042,7 +1045,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
         elif quant_mode in [-1, 1]: # quant_mode in [-1, 0, 1]
             expanded_scale_dim_list = [num_expanded_rows]
-    if quant_mode == 0:
+    if quant_mode in [0, 6]:
         expanded_scale_dim_list = []
 
     expanded_row_idx_dim_list = [bs * k]

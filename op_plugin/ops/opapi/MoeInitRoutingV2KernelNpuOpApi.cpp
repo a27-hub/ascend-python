@@ -28,6 +28,7 @@ constexpr int64_t QUANT_MODE_STATIC = 0;
 constexpr int64_t QUANT_MODE_DYNAMIC = 1;
 constexpr int64_t QUANT_MODE_MXFP8_E5M2 = 2;
 constexpr int64_t QUANT_MODE_MXFP8_E4M3FN = 3;
+constexpr int64_t QUANT_MODE_HIF8_CAST = 6;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
 
@@ -148,9 +149,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #endif
             case QUANT_MODE_STATIC:
             case QUANT_MODE_DYNAMIC:
+            case QUANT_MODE_HIF8_CAST:
                 expanded_x =
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
                 break;
+            
             default:  // quant_mode == QUANT_MODE_UNQUANT
                 expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, h});
         }
