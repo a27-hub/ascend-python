@@ -1,4 +1,4 @@
-# torch_npu.npu.use_compatible_algorithms
+# torch_npu.npu.use_compatible_impl
 
 ## 产品支持情况
 
@@ -14,12 +14,12 @@
 ## 功能说明
 
 控制算子API的实现是否与社区完全对齐。该接口仅用于切换计算API所调用的底层算子。
-该功能是否开启，可通过`torch_npu.npu.are_compatible_algorithms_enabled`进行查询。
+该功能是否开启，可通过`torch_npu.npu.are_compatible_impl_enabled`进行查询。
 
 ## 函数原型
 
 ```
-torch_npu.npu.use_compatible_algorithms(is_enable)
+torch_npu.npu.use_compatible_impl(is_enable)
 ```
 
 ## 参数说明
@@ -40,7 +40,7 @@ torch_npu.npu.use_compatible_algorithms(is_enable)
 import torch
 import torch_npu
 
-torch_npu.npu.use_compatible_algorithms(True)
+torch_npu.npu.use_compatible_impl(True)
 shape = [100, 400]
 mode = "none"
 input = torch.rand(shape, dtype=torch.float16).npu()
