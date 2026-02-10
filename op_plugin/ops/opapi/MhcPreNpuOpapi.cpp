@@ -25,7 +25,7 @@ const static int64_t TND_DIMS = 4;
 
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-npu_manifold_constrained_hyper_connection_pre(
+npu_mhc_pre(
         const at::Tensor &x, const at::Tensor &phi,
         const at::Tensor &alpha, const at::Tensor &bias,
         const c10::optional<at::Tensor> &gamma, int64_t out_flag,
