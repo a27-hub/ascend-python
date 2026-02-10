@@ -127,7 +127,7 @@ npu_mhc_pre(
         mmRes = at::empty(mmResSize, hOptions);
         outHPre = at::empty(outHPreSize, hOptions);
     }
-    EXEC_NPU_CMD(aclnnManifoldConstrainedHyperConnectionPre, x, phi,
+    EXEC_NPU_CMD(aclnnMhcPre, x, phi,
             alpha, bias, gamma, out_flag, norm_eps, hc_eps, outHin, outHpost, outHres, outInvRms, mmRes, outHPre);
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, mmRes, outHPre);
 }
