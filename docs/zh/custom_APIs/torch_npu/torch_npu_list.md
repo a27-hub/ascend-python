@@ -756,6 +756,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>该接口实现了Lightning Indexer组件warmup阶段训练的反向梯度计算，并融合了Loss的计算。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.save_npugraph_tensor</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>提供类似原生print特性且不影响graph replay的tensor dump能力，允许将图中节点的tensor数据保存到指定文件中以便观察aclgraph的执行过程。</p>
+</td>
+</tr>
 </tbody>
 </table>
 
