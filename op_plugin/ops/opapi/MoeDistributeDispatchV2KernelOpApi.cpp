@@ -96,6 +96,7 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
     int64_t local_moe_expert_num = 1;
     int64_t global_bs_real = (global_bs == 0) ? (bs * ep_world_size) : global_bs;
     int64_t a = 0;
+    int64_t assist_info_A3_hierarchy_shape = 0;
     int64_t ep_recv_cnt_num = 0;
     bool is_shared_expert = (shared_front && ep_rank_id < shared_expert_rank_num);
     if (is_shared_expert) {
@@ -157,14 +158,14 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
     at::Tensor expert_token_nums = npu_preparation::apply_tensor_without_format({local_moe_expert_num}, x.options().dtype(at::kLong));
     at::Tensor ep_recv_counts = npu_preparation::apply_tensor_without_format({ep_recv_cnt_num}, x.options().dtype(at::kInt));
     at::Tensor tp_recv_counts = npu_preparation::apply_tensor_without_format({tp_world_size}, x.options().dtype(at::kInt));
-    at::Tensor assist_info_forcombine = npu_preparation::apply_tensor_without_format({std::max(bs * k, a * 128)}, x.options().dtype(at::kInt));
-
-    // a2分层方案
+    // a2&a3 分层方案
     at::Tensor expand_scales = npu_preparation::apply_tensor_without_format({a}, x.options().dtype(at::kFloat));
     if (expert_scales.has_value() && expert_scales.value().defined()) {
         ep_recv_cnt_num = ep_world_size * local_moe_expert_num + 2 * global_bs_real * k * (ep_world_size / 8); // 2: 2 buffer, 8 ranknum per server
         ep_recv_counts = npu_preparation::apply_tensor_without_format({ep_recv_cnt_num}, x.options().dtype(at::kInt));
+        assist_info_A3_hierarchy_shape = 2 * global_bs_real * k * (ep_world_size / 8); // 2: 2 buffer, 8 ranknum per server align with a2&a3&a5
     }
+    at::Tensor assist_info_forcombine = npu_preparation::apply_tensor_without_format({std::max(std::max(bs * k, a * 128), assist_info_A3_hierarchy_shape)}, x.options().dtype(at::kInt));
 
     std::string comm_alg_str = std::string(comm_alg);
     char *comm_alg_ptr = const_cast<char *>(comm_alg_str.c_str());
