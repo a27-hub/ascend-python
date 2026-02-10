@@ -28,8 +28,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 npu_mhc_pre(
         const at::Tensor &x, const at::Tensor &phi,
         const at::Tensor &alpha, const at::Tensor &bias,
-        const c10::optional<at::Tensor> &gamma, int64_t out_flag,
-        double norm_eps, double hc_eps)
+        const c10::optional<at::Tensor> &gamma, 
+        double norm_eps, double hc_eps, int64_t out_flag)
 {
     TORCH_CHECK(x.numel() > 0, "Tensor x is empty.");
     TORCH_CHECK(phi.numel() > 0, "Tensor phi is empty..");
