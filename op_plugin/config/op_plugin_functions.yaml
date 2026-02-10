@@ -6284,7 +6284,7 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_manifold_constrained_hyper_connection_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, int out_flag=0, float norm_eps=1e-6, float hc_eps=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, int out_flag=0, float norm_eps=1e-6, float hc_eps=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 
