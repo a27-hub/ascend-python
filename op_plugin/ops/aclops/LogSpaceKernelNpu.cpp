@@ -88,21 +88,4 @@ at::Tensor& logspace_out(
     }
     return out;
 }
-
-at::Tensor logspace(
-    const at::Scalar& start,
-    const at::Scalar& end,
-    int64_t steps,
-    double base,
-    c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory)
-{
-    auto device_opt = c10::device_or_default(device);
-    at::TensorOptions options = c10::TensorOptions()
-        .dtype(dtype).layout(layout).device(device_opt).pinned_memory(pin_memory);
-    at::Tensor result = npu_preparation::apply_tensor_with_format({steps}, options, ACL_FORMAT_ND);
-    return logspace_out_nocheck(result, start, end, steps, base);
-}
 } // namespace acl_op
