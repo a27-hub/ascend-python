@@ -91,6 +91,11 @@ class TestLogSpace(TestCase):
             npu_output = self.npu_op_exec_dtype(item[0], item[1], item[2], item[3], item[4])
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_logspace_non_contiguous(self):
+        x = torch.zeros(2, 3, device='npu', dtype=torch.float32)
+        torch.logspace(0, 3, 4, base=2, out=x.narrow(1, 1, 2))
+        self.assertRtolEqual(x, torch.tensor(((0, 1, 2), (0, 4, 8)), dtype=torch.float32))
+
 
 if __name__ == "__main__":
     run_tests()
