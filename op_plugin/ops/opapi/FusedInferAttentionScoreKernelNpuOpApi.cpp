@@ -431,11 +431,11 @@ std::tuple<at::Tensor, at::Tensor> npu_fused_infer_attention_score_symint(
                 num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
         }
     } else {
-        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer not supported on Ascend950 and later version
+        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer supported on Ascend950
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV5, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
-                quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
-                num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
+            quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
+            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+            num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
     }
     
     return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
@@ -526,11 +526,11 @@ std::tuple<at::Tensor &, at::Tensor &> npu_fused_infer_attention_score_out_symin
             }
         }
     } else {
-        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer not supported on Ascend950 and later version
+        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer supported on Ascend950
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV5, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
-                quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
-                num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
+            quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
+            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+            num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
     }
     
     return std::tuple<at::Tensor&, at::Tensor&>(attention_out, softmax_lse);
@@ -603,11 +603,11 @@ at::Tensor _npu_fused_infer_attention_score_get_max_workspace_symint(
             value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
             num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, output, softmax_lse);
     } else {
-        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer not supported on Ascend950 and later version
+        // Interface aclnnFusedInferAttentionScore versions V1 to V4 are no longer supported on Ascend950
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnFusedInferAttentionScoreV5, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv, dequant_scale1, quant_scale1, dequant_scale2,
-                quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
-                value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
-                num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
+            quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, query_padding_size, kv_padding_size, key_antiquant_scale, key_antiquant_offset, value_antiquant_scale,
+            value_antiquant_offset, key_shared_prefix, value_shared_prefix, actual_shared_prefix_len, query_rope, key_rope, key_rope_antiquant_scale, default_dequant_scale_query, default_learnable_sink, default_q_start_idx, default_kv_start_idx, num_heads, scale, pre_tokens, next_tokens, input_layout_ptr,
+            num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, value_antiquant_mode, default_query_quant_mode, default_pse_type_value, output, softmax_lse);
     }
 
     at::Tensor workspace_tensor = npu_preparation::apply_tensor_without_format({workspace_size}, query.options().dtype(query.dtype()));
