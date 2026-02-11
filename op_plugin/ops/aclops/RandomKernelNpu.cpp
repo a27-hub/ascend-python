@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <limits>
+#include <c10/core/ScalarTypeToTypeMeta.h>
 #include <climits>
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 
@@ -74,6 +76,58 @@ at::Tensor& random_out_npu(
   return result;
 }
 
+#define CHECK_OUT_OF_BOUNDS(var, name, min, max, dtype) \
+    TORCH_CHECK((var) >= (min) && (var) <= (max), (name), " is out of bounds for ", (dtype));
+
+#define WARN_OUT_OF_BOUNDS(var, name, digits, dtype) \
+    if ((var) < -(1LL << (digits)) || (var) > (1LL << (digits))) { \
+        TORCH_WARN((name), " is out of bounds [-(2^", (digits), "), 2^", (digits), "]. ", \
+            "Due to precision limitations ", (dtype), " can support discrete uniform distribution only within this range. ", \
+            "This warning will become an error in next release, please fix the code in advance"); \
+    }
+
+void check_random_bounds(caffe2::TypeMeta dtype, int64_t from, int64_t to)
+{
+    TORCH_CHECK(from < to, "random_ expects 'from' to be less than 'to', but got from=", from, " >= to=", to);
+
+    const auto scalar_type = c10::typeMetaToScalarType(dtype);
+    if (at::isFloatingType(scalar_type)) {
+        AT_DISPATCH_FLOATING_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16, scalar_type, "check_random_fp_bounds", [&] {
+            const auto min = static_cast<double>(std::numeric_limits<scalar_t>::lowest());
+            const auto max = static_cast<double>(std::numeric_limits<scalar_t>::max());
+            CHECK_OUT_OF_BOUNDS(from, "from", min, max, dtype);
+            CHECK_OUT_OF_BOUNDS((to - 1), "to - 1", min, max, dtype);
+
+            constexpr auto digits = std::numeric_limits<scalar_t>::digits;
+            WARN_OUT_OF_BOUNDS(from, "from", digits, dtype);
+            WARN_OUT_OF_BOUNDS((to - 1), "to - 1", digits, dtype);
+        });
+    } else if (scalar_type == at::kUInt64) {
+        const auto min = 0;
+        const auto max = std::numeric_limits<int64_t>::max();
+        CHECK_OUT_OF_BOUNDS(from, "from", min, max, dtype);
+        CHECK_OUT_OF_BOUNDS((to - 1), "to - 1", min, max, dtype);
+    } else if (at::isIntegralType(scalar_type, true)) {
+        if (scalar_type == at::kBool) {
+            const auto min = 0;
+            const auto max = 1;
+            CHECK_OUT_OF_BOUNDS(from, "from", min, max, dtype);
+            CHECK_OUT_OF_BOUNDS((to - 1), "to - 1", min, max, dtype);
+        } else {
+            AT_DISPATCH_ALL_TYPES_AND2(at::kUInt16, at::kUInt32, scalar_type, "check_random_integral_bounds", [&] {
+                if constexpr (std::is_integral_v<scalar_t>) {
+                    const auto min = static_cast<int64_t>(std::numeric_limits<scalar_t>::lowest());
+                    const auto max = static_cast<int64_t>(std::numeric_limits<scalar_t>::max());
+                    CHECK_OUT_OF_BOUNDS(from, "from", min, max, dtype);
+                    CHECK_OUT_OF_BOUNDS((to - 1), "to - 1", min, max, dtype);
+                }
+            });
+        }
+    } else {
+        TORCH_CHECK(false, "check_random_bounds handles only integral, floating-point and boolean types");
+    }
+}
+
 int64_t get_max(const caffe2::TypeMeta dtype)
 {
   if (dtype == at::kHalf) { return RANDOM_HALF_MAX + 1; }
@@ -89,6 +143,7 @@ int64_t get_max(const caffe2::TypeMeta dtype)
 } // namespace
 
 at::Tensor& random_npu_(at::Tensor& self, int64_t from, int64_t to, c10::optional<at::Generator> gen) {
+    check_random_bounds(self.dtype(), from, to);
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);
     random_out_npu(contiguous_self, contiguous_self, from, to, gen);
