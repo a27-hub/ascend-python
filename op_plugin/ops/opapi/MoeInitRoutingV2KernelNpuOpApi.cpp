@@ -73,7 +73,8 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
 tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &expert_idx,
     const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, int64_t active_num,
     int64_t expert_capacity, int64_t expert_num, int64_t drop_pad_mode, int64_t expert_tokens_num_type,
-    bool expert_tokens_num_flag, int64_t quant_mode, at::IntArrayRef active_expert_range, int64_t row_idx_type)
+    bool expert_tokens_num_flag, int64_t quant_mode, at::IntArrayRef active_expert_range, int64_t row_idx_type,
+    c10::optional<int64_t> x_dtype)
 {
 #if !VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     // 小于2.7的版本不支持MXFP8量化需要的float8_e8m0fnu类型
@@ -83,7 +84,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         " on this version of torch with torch_npu. Please upgrade to at least v2.7.",
         OPS_ERROR(ErrCode::PARAM));
 #endif
-
+    
     int64_t x_dim = x.dim();
     TORCH_CHECK(x_dim == DIM_X,
         "The x should be ",
@@ -149,6 +150,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #endif
             case QUANT_MODE_STATIC:
             case QUANT_MODE_DYNAMIC:
+                expanded_x =
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                break;
             case QUANT_MODE_HIF8_CAST:
                 expanded_x =
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
@@ -211,8 +215,12 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
 
+    TensorWrapper x1_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x1_dtype.value()): x.desc.dtype;
+    TensorWrapper expanded_x_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x1_dtype.value()): expanded_x.desc.dtype;
+
+
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
-        x,
+        x1_wrapper,
         expert_idx,
         p_scale,
         p_offset,
@@ -225,7 +233,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         quant_mode,
         active_expert_range,
         row_idx_type,
-        expanded_x,
+        expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);

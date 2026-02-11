@@ -915,7 +915,9 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 
 
 @impl(m, "npu_moe_init_routing_v2")
-def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0):
+def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0, x_dtype=None):
+    print(f"x_dtype: {x_dtype}")
+    print("x:", x)
     x_dim = x.dim()
     torch._check(
         x_dim == 2,
@@ -1021,6 +1023,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_scale_dtype = torch.float32
     if quant_mode in [0, 1]:
         expanded_x_dtype = torch.int8
+        if x_dtype is not None:
+            expanded_x_dtype = x_dtype
+            print(f"Using custom x_dtype: {expanded_x_dtype}")
     elif quant_mode == 2:
         expanded_x_dtype = torch.float8_e5m2
         expanded_scale_dtype = torch.float8_e8m0fnu

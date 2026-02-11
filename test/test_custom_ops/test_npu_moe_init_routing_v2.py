@@ -656,7 +656,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         h_list = [14, 200]
         k_list = [5, 128]
         expert_range_list = [[0, 16]]
-        quant_mode_list = [7]
+        quant_mode_list = [6]
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
         expert_tokens_num_flags = [True, False]
@@ -683,6 +683,46 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_row_idx), local_expanded_row_idx_npu)
             assert_tensors_close(numpy_to_torch(
                 expert_tokens_count), local_expert_tokens_count_npu)
+    
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    def test_npu_moe_init_routing_hif8_no_quant(self):
+        bs_list = [32]
+        h_list = [14, 200]
+        k_list = [5]
+        expert_range_list = [[0, 16]]
+        quant_mode_list = [-1]
+        drop_pad_mode_list = [0, 1]
+        row_idx_type_list = [0, 1]
+        expert_tokens_num_flags = [True, False]
+        dtype_list = [np.int8, np.float16, np.float32, torch.bfloat16, torch_npu.hifloat8]
+        none_scales = [True, False]
+        none_offsets = [True]
+        for bs, h, k, expert_range, quant_mode, row_idx_type, dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
+                bs_list, h_list, k_list, expert_range_list, quant_mode_list, row_idx_type_list,
+                dtype_list, none_scales, none_offsets, expert_tokens_num_flags, drop_pad_mode_list):
+            scale_shape = (bs,)
+            expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
+            x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
+                bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
+            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+                continue
+            expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
+                expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
+                = self.calc_npu_vs_golden(x, expert_idx, scale, offset,
+                                          x_npu, expert_idx_npu, scale_npu, offset_npu,
+                                          expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity)
+
+            self.assertExpandedXRtolEqual(
+                expanded_x, local_expanded_x_npu, dtype)
+            self.assertRtolEqual(
+                expanded_row_idx, local_expanded_row_idx_npu.numpy())
+            if expert_tokens_num_flag:
+                self.assertRtolEqual(expert_tokens_count,
+                                     local_expert_tokens_count_npu.numpy())
+            if none_scale:
+                return
+            self.assertRtolEqual(
+                expanded_scale, local_expanded_scale_npu.numpy())
 
     @unittest.skipIf(
         torch.__version__ < "2.7" or
