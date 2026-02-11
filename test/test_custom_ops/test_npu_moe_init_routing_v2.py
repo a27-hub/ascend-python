@@ -656,7 +656,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         h_list = [14, 200]
         k_list = [5, 128]
         expert_range_list = [[0, 16]]
-        quant_mode_list = [7]
+        quant_mode_list = [6]
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
         expert_tokens_num_flags = [True, False]
