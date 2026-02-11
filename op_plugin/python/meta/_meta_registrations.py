@@ -487,10 +487,35 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
 def npu_chunk_bwd_dv_local(q, k, d_o, g, upper_tri_matrix, g_gamma, A, cu_seqlens, chunk_indices, scale, chunk_size):
     return torch.empty(d_o.shape, dtype=d_o.dtype, device=d_o.device)
 
+@impl(m, "npu_prepare_wy_repr_bwd_da")
+def npu_prepare_wy_repr_bwd_da(k, v, beta, A, dw, du, g, cu_seqlens, chunk_indices, chunk_size):
+    return torch.empty(A.shape, dtype=A.dtype, device=A.device)
+
+@impl(m, "npu_chunk_gated_delta_rule_bwd_dhu")
+def npu_chunk_gated_delta_rule_bwd_dhu(q, k, w, d_o, dv, g, gK, h0, dht, cu_seqlens, chunk_indices, scale, chunk_size):
+    chunk_num = len(cu_seqlens.size) - 1
+    B = q.size(0)
+    H = q.size(1)
+    T = q.size(2)
+    K = q.size(3)
+    V = dv.size(3)
+    dh_shape = [B,H,chunk_num,K,V]
+    return (torch.empty(tuple(dh_shape), dtype=q.dtype, device=q.device), 
+           torch.empty(tuple(dh_shape), dtype=q.dtype, device=q.device),
+           torch.empty(dv.shape, dtype=dv.dtype, device=dv.device))
+
 @impl(m, "npu_prepare_wy_repr_bwd_full")
 def npu_prepare_wy_repr_bwd_full(k, v, beta, a, dA, dw, du, g, cu_seqlens, chunk_indices, chunk_size):
     return torch.empty(k.shape, dtype=k.dtype, device=k.device), torch.empty(v.shape, dtype=v.dtype, device=v.device), torch.empty(beta.shape, dtype=beta.dtype, device=beta.device), torch.empty(g.shape, dtype=g.dtype, device=g.device)
 
+@impl(m, "npu_chunk_gated_delta_rule_fwd_h")
+def npu_chunk_gated_delta_rule_fwd_h(k, w, u, g, initial_state, cu_seqlens, chunk_indices, output_final_state, chunk_size):
+    return torch.empty(k.shape, dtype=k.dtype, device=k.device), torch.empty(v.shape, dtype=v.dtype, device=v.device), torch.empty(beta.shape, dtype=beta.dtype, device=beta.device), torch.empty(g.shape, dtype=g.dtype, device=g.device)
+     
+@impl(m, "npu_chunk_fwd_o")
+def npu_chunk_fwd_o(q, k, v, h, g, cu_seqlens, chunk_indices, scale, chunk_size):
+    return torch.empty(v.shape, dtype=v.dtype, device=v.device)
+     
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
                                     dequant_scale1=None, quant_scale1=None, dequant_scale2=None, quant_scale2=None,
