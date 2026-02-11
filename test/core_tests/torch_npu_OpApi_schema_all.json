@@ -2455,9 +2455,6 @@
   "func: ge_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)": {
     "version": ["all_version"]
   },
-  "func: gelu(Tensor self, *, str approximate='none') -> Tensor": {
-    "version": ["all_version"]
-  },
   "func: gelu.out(Tensor self, *, str approximate='none', Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
