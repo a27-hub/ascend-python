@@ -86,6 +86,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #endif
     
     int64_t x_dim = x.dim();
+    std::cout << "x.scalar_type(): " << x.scalar_type() << std::endl;
+    std::cout << "x.sizes(): ";
+    for (const auto size : x.sizes()) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
+
     TORCH_CHECK(x_dim == DIM_X,
         "The x should be ",
         DIM_X,
@@ -155,7 +162,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                 break;
             case QUANT_MODE_HIF8_CAST:
                 expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kByte));
                 break;
             
             default:  // quant_mode == QUANT_MODE_UNQUANT
@@ -214,6 +221,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
+
+    std::cout << "expanded_x.scalar_type(): " << expanded_x.scalar_type() << std::endl;
+    std::cout << "expanded_x.sizes(): ";
+    for (const auto size : expanded_x.sizes()) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
 
     TensorWrapper x1_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
