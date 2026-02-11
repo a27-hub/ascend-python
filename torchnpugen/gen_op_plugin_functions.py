@@ -30,6 +30,11 @@ def main():
 
     # parse 'official', 'custom', 'symint', 'quant', 'autograd'
     for key in string:
+        # 确保 key 存在，且其对应的值不是 None
+        items = old_yaml.get(key)
+        if items is None:
+            continue        
+        
         for item in old_yaml[key]:
             item.pop('gen_opapi', None)
 
