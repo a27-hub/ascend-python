@@ -76,6 +76,12 @@ at::ScalarType npu_group_quant_dst_type(c10::optional<at::ScalarType> dst_dtype)
     return dst_type;
 }
 
+at::ScalarType npu_add_rms_norm_dynamic_quant_y_dtype(int out_dtype)
+{
+    TORCH_CHECK(out_dtype == 0 || out_dtype == 1, "out_dtype must be 0 (int8) or 1 (int4), but got ", out_dtype, OPS_ERROR(ErrCode::PARAM));
+    return out_dtype == 1 ? at::ScalarType::QUInt4x2 : at::ScalarType::Char;
+}
+
 at::ScalarType clamp_out_dtype(const at::Tensor& self, const c10::optional<at::Tensor>& min, const c10::optional<at::Tensor>& max)
 {
     TORCH_CHECK(min.has_value() || max.has_value(), "torch.clamp:At least one of 'min' or 'max' must be not None!");
