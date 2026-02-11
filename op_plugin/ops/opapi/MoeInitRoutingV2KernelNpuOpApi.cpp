@@ -215,8 +215,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
 
-    TensorWrapper x1_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x1_dtype.value()): x.desc.dtype;
-    TensorWrapper expanded_x_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x1_dtype.value()): expanded_x.desc.dtype;
+    TensorWrapper x1_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x_dtype.value()): npu_preparation::convert_to_acl_data_type(x.scalar_type());
+    TensorWrapper expanded_x_wrapper = (quant_mode == -1 && x_dtype.has_value()) ? c10_npu::GetAclDataType(x_dtype.value()): npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type());
 
 
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
