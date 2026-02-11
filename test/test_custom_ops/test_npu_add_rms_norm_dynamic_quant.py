@@ -124,6 +124,95 @@ class TestAddRmsNormDynamicQuant(TestCase):
         x_out = x.to(x1.dtype)
         return q1, q2, x_out, s1_out, s2_out
 
+    def npu_add_rms_norm_dynamic_quant_golden_int4(
+        self,
+        x1: torch.Tensor,
+        x2: torch.Tensor,
+        gamma: torch.Tensor,
+        smooth_scale1: torch.Tensor = None,
+        smooth_scale2: torch.Tensor = None,
+        beta: torch.Tensor = None,
+        epsilon: float = 1e-6,
+        output_mask=None,
+    ):
+        """Golden reference for int4 output: signed 4-bit (-8..7), scale = row_max_abs / 7."""
+        assert x1.shape == x2.shape
+        last_dim = x1.shape[-1]
+        assert gamma.dim() == 1 and gamma.shape[0] == last_dim
+        if smooth_scale1 is not None:
+            smooth_scale1 = smooth_scale1.detach().cpu()
+        if smooth_scale2 is not None:
+            smooth_scale2 = smooth_scale2.detach().cpu()
+        if beta is not None:
+            beta = beta.detach().cpu()
+
+        x1_fp = x1.detach().cpu().to(torch.float32)
+        x2_fp = x2.detach().cpu().to(torch.float32)
+        gamma_fp = gamma.detach().cpu().to(torch.float32)
+
+        x = x1_fp + x2_fp
+        rms = torch.sqrt(x.pow(2).mean(dim=-1, keepdim=True) + float(epsilon))
+        y = (x / rms) * gamma_fp
+        if beta is not None:
+            y = y + beta.to(torch.float32)
+
+        def row_max_abs(t: torch.Tensor):
+            return t.abs().amax(dim=-1, keepdim=True)
+
+        no_mask = (output_mask is None)
+        mask0 = True if no_mask else bool(output_mask[0])
+        mask1 = None if no_mask else bool(output_mask[1])
+
+        # int4 signed: range -8..7, scale = max / 7
+        if mask0:
+            input1 = y if smooth_scale1 is None else y * smooth_scale1.to(torch.float32)
+            scale1 = row_max_abs(input1) / 7.0
+            scale1 = torch.where(scale1 > 0, scale1, torch.ones_like(scale1))
+            q1 = torch.round(input1 / scale1).to(torch.int32)
+            q1 = torch.clamp(q1, -8, 7).to(torch.int8)
+            s1_out = scale1.squeeze(-1).to(torch.float32).contiguous()
+        else:
+            q1 = None
+            s1_out = None
+
+        compute_branch2 = False
+        if no_mask:
+            compute_branch2 = (smooth_scale1 is not None) and (smooth_scale2 is not None)
+        else:
+            compute_branch2 = bool(mask1)
+
+        if compute_branch2:
+            input2 = y if smooth_scale2 is None else y * smooth_scale2.to(torch.float32)
+            scale2 = row_max_abs(input2) / 7.0
+            scale2 = torch.where(scale2 > 0, scale2, torch.ones_like(scale2))
+            q2 = torch.round(input2 / scale2).to(torch.int32)
+            q2 = torch.clamp(q2, -8, 7).to(torch.int8)
+            s2_out = scale2.squeeze(-1).to(torch.float32).contiguous()
+        else:
+            q2 = None
+            s2_out = None
+
+        x_out = x.to(x1.dtype)
+        return q1, q2, x_out, s1_out, s2_out
+
+    @staticmethod
+    def _unpack_int32_int4_to_int8_signed(packed: torch.Tensor) -> torch.Tensor:
+        """Unpack int32 tensor (8 signed int4 per int32) to int8 (-8..7). packed shape (..., last/8) -> (..., last).
+        CANN packs with high nibble first (bits 28-31 = first element). Nibble 0-7 -> 0..7, 8-15 -> -8..-1.
+        """
+        flat = packed.reshape(-1).cpu()
+        n_packed = flat.numel()
+        n_unpacked = n_packed * 8
+        unpacked = torch.empty(n_unpacked, dtype=torch.int8, device='cpu')
+        for i in range(n_packed):
+            v = int(flat[i].item()) & 0xFFFFFFFF
+            for j in range(8):
+                nibble = (v >> ((7 - j) * 4)) & 0x0F
+                unpacked[i * 8 + j] = nibble if nibble < 8 else nibble - 16
+        out_shape = list(packed.shape)
+        out_shape[-1] *= 8
+        return unpacked.reshape(out_shape)
+
     def _run_and_check(
         self,
         x1,
@@ -295,5 +384,154 @@ class TestAddRmsNormDynamicQuant(TestCase):
             beta=beta,
             output_mask=[True, False],
         )
+
+    def _run_and_check_int4(
+        self,
+        x1,
+        x2,
+        gamma,
+        smooth_scale1=None,
+        smooth_scale2=None,
+        beta=None,
+        epsilon=1e-6,
+        output_mask=None,
+    ):
+        """Run with y_dtype=torch.quint4x2 (int4), check dtype/shape and NPU vs CPU numerical (y1/y2/s1/s2/x_out)."""
+        for t in [x1, x2, gamma, smooth_scale1, smooth_scale2, beta]:
+            if t is None:
+                continue
+            assert t.dtype in (torch.float16, torch.bfloat16)
+
+        x1_n = x1.npu()
+        x2_n = x2.npu()
+        gamma_n = gamma.npu()
+        s1_n = smooth_scale1.npu() if smooth_scale1 is not None else None
+        s2_n = smooth_scale2.npu() if smooth_scale2 is not None else None
+        beta_n = beta.npu() if beta is not None else None
+        eps_f = float(epsilon)
+        if output_mask is None:
+            output_mask = [True, True]
+
+        y1_npu, y2_npu, x_out_npu, s1_npu, s2_npu = torch_npu.npu_add_rms_norm_dynamic_quant(
+            x1_n, x2_n, gamma_n,
+            smooth_scale1=s1_n,
+            smooth_scale2=s2_n,
+            beta=beta_n,
+            epsilon=eps_f,
+            output_mask=output_mask,
+            y_dtype=torch.quint4x2,
+        )
+
+        y1_cpu, y2_cpu, x_out_cpu, s1_cpu, s2_cpu = self.npu_add_rms_norm_dynamic_quant_golden_int4(
+            x1, x2, gamma, smooth_scale1, smooth_scale2, beta, epsilon, output_mask
+        )
+
+        # int4: y1/y2 dtype is int32; y1 shape last_dim/8; when output_mask[1] is False, y2 shape is (1,)
+        expected_y_shape = (*x1.shape[:-1], x1.shape[-1] // 8)
+        if output_mask[0]:
+            self.assertEqual(y1_npu.dtype, torch.int32, "y1 should be int32 (packed int4) when y_dtype=torch.quint4x2")
+            self.assertEqual(tuple(y1_npu.shape), expected_y_shape)
+            self.assertEqual(s1_npu.dtype, torch.float32)
+            self.assertEqual(tuple(s1_npu.shape), tuple(x1.shape[:-1]))
+        if output_mask[1]:
+            self.assertEqual(y2_npu.dtype, torch.int32, "y2 should be int32 (packed int4) when y_dtype=torch.quint4x2")
+            self.assertEqual(tuple(y2_npu.shape), expected_y_shape)
+            self.assertEqual(s2_npu.dtype, torch.float32)
+            self.assertEqual(tuple(s2_npu.shape), tuple(x1.shape[:-1]))
+        else:
+            self.assertEqual(y2_npu.dtype, torch.int32)
+            self.assertEqual(y2_npu.numel(), 0, "y2 should have numel=0 when output_mask[1]=False")
+            self.assertEqual(s2_npu.numel(), 0)
+
+        self.assertEqual(x_out_npu.dtype, x1.dtype)
+        self.assertEqual(tuple(x_out_npu.shape), tuple(x1.shape))
+
+        benchmark = math.pow(2, -7)
+
+        # x_out: NPU vs CPU
+        x_out_npu_flat = x_out_npu.reshape(-1).cpu().to(torch.float32)
+        x_out_cpu_flat = x_out_cpu.reshape(-1).cpu().to(torch.float32)
+        self.assertTrue(self.compare(x_out_cpu_flat, x_out_npu_flat, benchmark))
+
+        # int4 (signed -8..7): unpack NPU y1/y2 and compare with CPU golden, allow diff <= 1
+        if output_mask[0]:
+            y1_npu_unpacked = self._unpack_int32_int4_to_int8_signed(y1_npu)
+            y1_diff = (y1_npu_unpacked.cpu().to(torch.int16) - y1_cpu.cpu().to(torch.int16)).abs()
+            self.assertTrue(int(y1_diff.max()) <= 1, f"max |y1_npu - y1_cpu| = {int(y1_diff.max())} > 1")
+
+            s1_npu_flat = s1_npu.reshape(-1).cpu().to(torch.float32)
+            s1_cpu_flat = s1_cpu.reshape(-1).cpu().to(torch.float32)
+            self.assertTrue(self.compare(s1_cpu_flat, s1_npu_flat, benchmark))
+
+        if output_mask[1]:
+            y2_npu_unpacked = self._unpack_int32_int4_to_int8_signed(y2_npu)
+            y2_diff = (y2_npu_unpacked.cpu().to(torch.int16) - y2_cpu.cpu().to(torch.int16)).abs()
+            self.assertTrue(int(y2_diff.max()) <= 1, f"max |y2_npu - y2_cpu| = {int(y2_diff.max())} > 1")
+
+            s2_npu_flat = s2_npu.reshape(-1).cpu().to(torch.float32)
+            s2_cpu_flat = s2_cpu.reshape(-1).cpu().to(torch.float32)
+            self.assertTrue(self.compare(s2_cpu_flat, s2_npu_flat, benchmark))
+
+        # no nan/inf
+        self.assertFalse(torch.isnan(x_out_npu.float()).any().item())
+        self.assertFalse(torch.isinf(x_out_npu.float()).any().item())
+        if output_mask[0]:
+            self.assertFalse(torch.isnan(s1_npu.float()).any().item())
+            self.assertFalse(torch.isinf(s1_npu.float()).any().item())
+        if output_mask[1]:
+            self.assertFalse(torch.isnan(s2_npu.float()).any().item())
+            self.assertFalse(torch.isinf(s2_npu.float()).any().item())
+
+    @SupportedDevices(['Ascend910B'])
+    def test_forward_int4_output(self):
+        """Test int4 output (y_dtype=torch.quint4x2): dtype int32, shape last_dim/8 (8 int4 per int32)."""
+        x_shape = [2, 3, 32]
+        last_dim = x_shape[-1]
+        x1 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+        x2 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+        gamma = torch.ones(last_dim, dtype=torch.float16, device='npu')
+        beta = torch.zeros(last_dim, dtype=torch.float16, device='npu')
+        smooth_scale1 = torch.ones(last_dim, dtype=torch.float16, device='npu')
+        smooth_scale2 = torch.ones(last_dim, dtype=torch.float16, device='npu')
+        self._run_and_check_int4(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_forward_int4_various_shapes(self):
+        """Test int4 output with various shapes."""
+        shape_list = [
+            [2, 8],
+            [3, 16],
+            [4, 5, 32],
+            [2, 3, 4, 64],
+        ]
+        for x_shape in shape_list:
+            last_dim = x_shape[-1]
+            x1 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+            x2 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+            gamma = torch.ones(last_dim, dtype=torch.float16, device='npu')
+            beta = torch.zeros(last_dim, dtype=torch.float16, device='npu')
+            smooth_scale1 = torch.ones(last_dim, dtype=torch.float16, device='npu')
+            smooth_scale2 = torch.ones(last_dim, dtype=torch.float16, device='npu')
+            self._run_and_check_int4(x1, x2, gamma, smooth_scale1, smooth_scale2, beta)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_forward_int4_output_mask(self):
+        """Test int4 output with output_mask [True, False]."""
+        x_shape = [2, 16]
+        last_dim = x_shape[-1]
+        x1 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+        x2 = torch.randn(x_shape, dtype=torch.float16, device='npu')
+        gamma = torch.ones(last_dim, dtype=torch.float16, device='npu')
+        beta = torch.zeros(last_dim, dtype=torch.float16, device='npu')
+        smooth_scale1 = torch.ones(last_dim, dtype=torch.float16, device='npu')
+        self._run_and_check_int4(
+            x1, x2, gamma,
+            smooth_scale1=smooth_scale1,
+            smooth_scale2=None,
+            beta=beta,
+            output_mask=[True, False],
+        )
+
+
 if __name__ == "__main__":
     run_tests()
