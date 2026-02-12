@@ -39,6 +39,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
     const c10::optional<at::Tensor>& actual_seq_len, const c10::optional<at::Tensor>& k_nope_clip_alpha,
+    c10::optional<int64_t> dequant_scale_x_dtype, c10::optional<int64_t> dequant_scale_w_dq_dtype, c10::optional<int64_t> dequant_scale_w_uq_qr_dtype,
+    c10::optional<int64_t> dequant_scale_w_dkv_kr_dtype, c10::optional<int64_t> dequant_scale_q_norm_dtype,
     double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, bool query_norm_flag, int64_t weight_quant_mode, int64_t kv_cache_quant_mode,
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
@@ -56,7 +58,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     at::Tensor dequant_scale_q_nope {nullptr};
     at::Tensor query_norm {nullptr};
     at::Tensor dequant_scale_q_norm {nullptr};
-    const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
+
+    c10::TensorOptions res_options;
+    aclDataType output_acltype = ACL_UINT8;
+    if (weight_quant_mode == MODE_3) {
+        if (!dequant_scale_q_norm_dtype.has_value()) {
+            res_options = token_x.options().dtype(at::kChar);
+        } else {
+            output_acltype = c10_npu::GetAclDataType(dequant_scale_q_norm_dtype.value());
+            res_options = token_x.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
+        }
+    }
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
@@ -75,7 +87,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, res_options);
             }
         }
     } else {
@@ -95,7 +107,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, res_options);
             }
         }
     }
@@ -103,15 +115,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
 
     if (weight_quant_mode == MODE_3) {
-        const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
-        const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
-        const at::Tensor& dequant_scale_w_dkv_kr_tensor = c10::value_or_else(dequant_scale_w_dkv_kr, [] {return at::Tensor();});
-
-        TensorWrapper dequant_scale_x_wrapper = {dequant_scale_x_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_dq_wrapper = {dequant_scale_w_dq_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_q_norm_wrapper = {dequant_scale_q_norm, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_x_wrapper = make_wrapper(dequant_scale_x, dequant_scale_x_dtype);
+        TensorWrapper dequant_scale_w_dq_wrapper = make_wrapper(dequant_scale_w_dq, dequant_scale_w_dq_dtype);
+        TensorWrapper dequant_scale_w_uq_qr_wrapper = make_wrapper(dequant_scale_w_uq_qr, dequant_scale_w_uq_qr_dtype);
+        TensorWrapper dequant_scale_w_dkv_kr_wrapper = make_wrapper(dequant_scale_w_dkv_kr, dequant_scale_w_dkv_kr_dtype);
+        TensorWrapper dequant_scale_q_norm_wrapper = make_wrapper(dequant_scale_q_norm, dequant_scale_q_norm_dtype);
 
         if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
@@ -154,7 +162,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     }
     if (!dequant_scale_q_norm.defined()) {
         if (weight_quant_mode == MODE_3) {
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, res_options);
         } else {
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
@@ -172,6 +180,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const c10::optional<at::Tensor>& dequant_scale_w_uq_qr, const c10::optional<at::Tensor>& dequant_scale_w_dkv_kr, const c10::optional<at::Tensor>& quant_scale_ckv,
     const c10::optional<at::Tensor>& quant_scale_ckr, const c10::optional<at::Tensor>& smooth_scales_cq,
     const c10::optional<at::Tensor>& actual_seq_len, const c10::optional<at::Tensor>& k_nope_clip_alpha,
+    c10::optional<int64_t> dequant_scale_x_dtype, c10::optional<int64_t> dequant_scale_w_dq_dtype, c10::optional<int64_t> dequant_scale_w_uq_qr_dtype,
+    c10::optional<int64_t> dequant_scale_w_dkv_kr_dtype, c10::optional<int64_t> dequant_scale_q_norm_dtype,
     double rmsnorm_epsilon_cq, double rmsnorm_epsilon_ckv, c10::string_view cache_mode, bool query_norm_flag, int64_t weight_quant_mode, int64_t kv_cache_quant_mode,
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
@@ -189,7 +199,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor dequant_scale_q_nope {nullptr};
     at::Tensor query_norm {nullptr};
     at::Tensor dequant_scale_q_norm {nullptr};
-    const at::Tensor& dequant_scale_x_tensor = c10::value_or_else(dequant_scale_x, [] {return at::Tensor();});
+    
+    c10::TensorOptions res_options;
+    aclDataType output_acltype = ACL_UINT8;
+    if (weight_quant_mode == MODE_3) {
+        if (!dequant_scale_q_norm_dtype.has_value()) {
+            res_options = token_x.options().dtype(at::kChar);
+        } else {
+            output_acltype = c10_npu::GetAclDataType(dequant_scale_q_norm_dtype.value());
+            res_options = token_x.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
+        }
+    }
 
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
@@ -208,7 +228,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, res_options);
             }
         }
     } else {
@@ -228,7 +248,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2) { // weight_quant_mode=1 半量化场景,weight_quant_mode=2 全量化场景
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
-                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+                dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, res_options);
             }
         }
     }
@@ -238,15 +258,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor kr_cache_inplace = kr_cache.clone();
 
     if (weight_quant_mode == MODE_3) {
-        const at::Tensor& dequant_scale_w_dq_tensor = c10::value_or_else(dequant_scale_w_dq, [] {return at::Tensor();});
-        const at::Tensor& dequant_scale_w_uq_qr_tensor = c10::value_or_else(dequant_scale_w_uq_qr, [] {return at::Tensor();});
-        const at::Tensor& dequant_scale_w_dkv_kr_tensor = c10::value_or_else(dequant_scale_w_dkv_kr, [] {return at::Tensor();});
-
-        TensorWrapper dequant_scale_x_wrapper = {dequant_scale_x_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_dq_wrapper = {dequant_scale_w_dq_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_uq_qr_wrapper = {dequant_scale_w_uq_qr_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_w_dkv_kr_wrapper = {dequant_scale_w_dkv_kr_tensor, aclDataType::ACL_FLOAT8_E8M0};
-        TensorWrapper dequant_scale_q_norm_wrapper = {dequant_scale_q_norm, aclDataType::ACL_FLOAT8_E8M0};
+        TensorWrapper dequant_scale_x_wrapper = make_wrapper(dequant_scale_x, dequant_scale_x_dtype);
+        TensorWrapper dequant_scale_w_dq_wrapper = make_wrapper(dequant_scale_w_dq, dequant_scale_w_dq_dtype);
+        TensorWrapper dequant_scale_w_uq_qr_wrapper = make_wrapper(dequant_scale_w_uq_qr, dequant_scale_w_uq_qr_dtype);
+        TensorWrapper dequant_scale_w_dkv_kr_wrapper = make_wrapper(dequant_scale_w_dkv_kr, dequant_scale_w_dkv_kr_dtype);
+        TensorWrapper dequant_scale_q_norm_wrapper = make_wrapper(dequant_scale_q_norm, dequant_scale_q_norm_dtype);
 
         if (is_cann_version_gte_required) {
             EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq,
@@ -289,7 +305,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     }
     if (!dequant_scale_q_norm.defined()) {
         if (weight_quant_mode == MODE_3) {
-            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, dequant_scale_x_tensor.options().dtype(dequant_scale_x_tensor.dtype()));
+            dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, res_options);
         } else {
             dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({0}, at::kFloat);
         }
