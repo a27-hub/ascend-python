@@ -154,10 +154,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
                 break;
             case QUANT_MODE_HIF8_CAST:
+            c10::TensorOptions options = npu_preparation::convert_to_scalar_type(static_cast<int64_t>(c10_npu::DType::HIFLOAT8));
                 expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                        npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, options);
                 break;
-            
             default:  // quant_mode == QUANT_MODE_UNQUANT
                 expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, h});
         }
@@ -221,9 +221,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper expanded_x_wrapper = {expanded_x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
-
-
-    EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
+    TensorWrapper expanded_x_wrapper;
+    if (quant_mode == -1 && x_dtype.has_value()) {
+        expanded_x_wrapper = {expanded_x, c10_npu::GetAclDataType(x_dtype.value())};
+        EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x1_wrapper,
         expert_idx,
         p_scale,
@@ -241,6 +242,53 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);
-    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    } else if (quant_mode == 6) {
+        int64_t expanded_x_len = (active_num <= 0) ? bs * k : std::min<int64_t>(active_num, bs * k);
+        c10::TensorOptions options = npu_preparation::convert_to_scalar_type(static_cast<int64_t>(c10_npu::DType::HIFLOAT8));
+        expanded_x = npu_preparation::apply_tensor_without_format(expanded_x_len, options);
+        expanded_x_wrapper = {expanded_x, c10_npu::GetAclDataType(static_cast<int64_t>(c10_npu::DType::HIFLOAT8))};
+        EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
+        x1_wrapper,
+        expert_idx,
+        p_scale,
+        p_offset,
+        active_num,
+        expert_capacity,
+        expert_num,
+        drop_pad_mode,
+        expert_tokens_num_type,
+        expert_tokens_num_flag,
+        quant_mode,
+        active_expert_range,
+        row_idx_type,
+        expanded_x_wrapper,
+        expanded_row_idx,
+        expert_tokens_count_or_cumsum,
+        expanded_scale);
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    } else {
+        
+        expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+        EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
+        x1_wrapper,
+        expert_idx,
+        p_scale,
+        p_offset,
+        active_num,
+        expert_capacity,
+        expert_num,
+        drop_pad_mode,
+        expert_tokens_num_type,
+        expert_tokens_num_flag,
+        quant_mode,
+        active_expert_range,
+        row_idx_type,
+        expanded_x_wrapper,
+        expanded_row_idx,
+        expert_tokens_count_or_cumsum,
+        expanded_scale);
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    } 
 }
 }  // namespace op_api
