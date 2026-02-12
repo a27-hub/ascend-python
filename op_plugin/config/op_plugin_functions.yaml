@@ -6407,7 +6407,7 @@ custom:
         out_sizes: 'npu_moe_distribute_combine_setup_out_size(expand_x, ep_world_size)'
         group_ep_ptr: 'const_cast<char *>(group_ep.data())'
         comm_alg_ptr: 'const_cast<char *>(comm_alg.data())'
-      exec: aclnnMoeDistributeCombineSetupV2, expand_x, expert_ids, assist_info_for_combine, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs, comm_quant_mode, comm_type, comm_alg_ptr, out_quant_expand_x, out_comm_cmd_info
+      exec: aclnnMoeDistributeCombineSetup, expand_x, expert_ids, assist_info_for_combine, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs, comm_quant_mode, comm_type, comm_alg_ptr, out_quant_expand_x, out_comm_cmd_info
 
   - func: npu_moe_distribute_combine_teardown(Tensor expand_x, Tensor quant_expand_x, Tensor expert_ids, Tensor expand_idx, Tensor expert_scales, Tensor comm_cmd_info, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? x_active_mask=None, Tensor? shared_expert_x=None, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, int comm_type=0, str comm_alg="") -> Tensor
     op_api: all_version
