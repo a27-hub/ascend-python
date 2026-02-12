@@ -1,19 +1,19 @@
 #!/bin/bash
 
-YAML_FILE="$1" # 第一个参数
-DERIVATIVES_YAML_FILE="$2"  # 第二个参数，可选
+YAML_FILE="$1" # the first parameter
+DERIVATIVES_YAML_FILE="$2"  # the second parameter, optional
 
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 
 cd $CDIR
 
-# 检查文件是否存在
+# check if the file exists
 if [ ! -f "$YAML_FILE" ]; then
     echo "错误: yaml文件 $YAML_FILE 不存在"
     exit 1
 fi
 
-# 获取torch版本
+# get the torch version
 PYTORCH_VERSION=$(python -c "import torch; print(torch.__version__.split('+')[0])")
 
 IFS='.' read -ra version_parts <<< "$PYTORCH_VERSION"
@@ -50,7 +50,7 @@ python3 -m torchnpugen.gen_op_plugin_functions \
   --output_dir="$OUTPUT_DIR/" \
   --source_yaml="$CDIR/$YAML_FILE"
 
-# 检查是否传入了第二个参数
+# check if the second parameter is passed
 if [ -n "$DERIVATIVES_YAML_FILE" ]; then
     python3 -m torchnpugen.gen_derivatives \
       --version="$PYTORCH_VERSION" \
