@@ -115,7 +115,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
 
     if (weight_quant_mode == MODE_3) {
-        // TODO 验证传None时，该wrapper值是否会影响其他通路，考虑删去if判断
         TensorWrapper dequant_scale_x_wrapper = make_wrapper(dequant_scale_x, dequant_scale_x_dtype);
         TensorWrapper dequant_scale_w_dq_wrapper = make_wrapper(dequant_scale_w_dq, dequant_scale_w_dq_dtype);
         TensorWrapper dequant_scale_w_uq_qr_wrapper = make_wrapper(dequant_scale_w_uq_qr, dequant_scale_w_uq_qr_dtype);
