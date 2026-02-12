@@ -63,7 +63,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     aclDataType output_acltype = ACL_UINT8;
     if (weight_quant_mode == MODE_3) {
         if (!dequant_scale_q_norm_dtype.has_value()) {
-            res_options = token_x.options().dtype(at::uint8_t);
+            res_options = token_x.options().dtype(at::kChar);
         } else {
             output_acltype = c10_npu::GetAclDataType(dequant_scale_q_norm_dtype.value());
             res_options = token_x.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
@@ -205,7 +205,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     aclDataType output_acltype = ACL_UINT8;
     if (weight_quant_mode == MODE_3) {
         if (!dequant_scale_q_norm_dtype.has_value()) {
-            res_options = token_x.options().dtype(at::uint8_t);
+            res_options = token_x.options().dtype(at::kChar);
         } else {
             output_acltype = c10_npu::GetAclDataType(dequant_scale_q_norm_dtype.value());
             res_options = token_x.options().dtype(npu_preparation::convert_to_scalar_type(output_acltype));
