@@ -22,6 +22,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
+void linalg_cross_check(const at::Tensor &self, const at::Tensor &other, int64_t dim)
+{
+    auto x_d = self.dim();
+    auto y_d = other.dim();
+    TORCH_CHECK(x_d == y_d, "linalg.cross: inputs must have the same number of dimensions.",
+                OPS_ERROR(ErrCode::PARAM));
+    auto wrap_dim = at::maybe_wrap_dim(dim, x_d);
+    TORCH_CHECK(self.size(wrap_dim) == 3 && other.size(wrap_dim) == 3,
+                "linalg.cross: inputs dimension ", wrap_dim, " must have length 3. Got ", self.size(wrap_dim),
+                " and ", other.size(wrap_dim), OPS_ERROR(ErrCode::PARAM));
+}
+
 at::Tensor linalg_cross_dest_output(const at::Tensor &self, const at::Tensor &other)
 {
     bool is_self_wrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
@@ -40,6 +52,8 @@ at::Tensor &linalg_cross_out_nocheck(at::Tensor &result, const at::Tensor &self,
 
 at::Tensor &linalg_cross_out(const at::Tensor &self, const at::Tensor &other, const int64_t dim, at::Tensor &out)
 {
+    linalg_cross_check(self, other, dim);
+    auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor output_tensor = linalg_cross_dest_output(self, other);
     npu_preparation::CheckOut({self}, out, npu_preparation::get_tensor_npu_format(output_tensor), self.scalar_type(),
@@ -47,20 +61,22 @@ at::Tensor &linalg_cross_out(const at::Tensor &self, const at::Tensor &other, co
 
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
-        linalg_cross_out_nocheck(contiguous_result, self, other, dim);
+        linalg_cross_out_nocheck(contiguous_result, self, other, wrap_dim);
         npu_utils::format_fresh_view(out, contiguous_result);
     } else {
-        linalg_cross_out_nocheck(out, self, other, dim);
+        linalg_cross_out_nocheck(out, self, other, wrap_dim);
     }
     return out;
 }
 
 at::Tensor linalg_cross(const at::Tensor &self, const at::Tensor &other, const int64_t dim)
 {
+    linalg_cross_check(self, other, dim);
+    auto wrap_dim = at::maybe_wrap_dim(dim, self.dim());
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor output_tensor = linalg_cross_dest_output(self, other);
     at::Tensor result = npu_preparation::apply_tensor(output_size, self.options(), output_tensor);
-    linalg_cross_out_nocheck(result, self, other, dim);
+    linalg_cross_out_nocheck(result, self, other, wrap_dim);
     return result;
 }
 } // namespace acl_op
