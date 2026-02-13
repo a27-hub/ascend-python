@@ -154,7 +154,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
                 break;
             case QUANT_MODE_HIF8_CAST: {
-               expanded_x =
+                expanded_x =
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kByte));
                 break;
             }
@@ -220,9 +220,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
-        expanded_x_wrapper = {expanded_x, c10_npu::GetAclDataType(x_dtype.value())};
+        expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
     } else if (quant_mode == QUANT_MODE_HIF8_CAST) {
-        expanded_x_wrapper = {expanded_x, aclDataType::ACL_HIFLOAT8};
+        expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x1_wrapper,
