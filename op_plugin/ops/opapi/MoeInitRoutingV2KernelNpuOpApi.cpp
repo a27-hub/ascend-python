@@ -237,7 +237,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len}, x.options().dtype(at::kFloat));
     }
-
+    TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+    if (IsQuantModeHIF8(quant_mode)) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+    }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x,
         expert_idx,
@@ -252,7 +255,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         quant_mode,
         active_expert_range,
         row_idx_type,
-        expanded_x,
+        expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);
