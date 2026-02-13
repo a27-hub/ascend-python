@@ -336,12 +336,11 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr,
         "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
-    if weight_quant_mode == 3 and (dequant_scale_x.dtype == torch.uint8 or dequant_scale_w_dq.dtype == torch.uint8 or
-                dequant_scale_w_uq_qr == torch.uint8 or dequant_scale_w_dkv_kr == torch.uint8):
+    if weight_quant_mode == 3:
         torch._check(
             dequant_scale_x.dtype == torch.float8_e8m0fnu and dequant_scale_w_dq.dtype == torch.float8_e8m0fnu and
                 dequant_scale_w_uq_qr == torch.float8_e8m0fnu and dequant_scale_w_dkv_kr == torch.float8_e8m0fnu,
-            lambda:"dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0",
+            lambda: "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0",
         )
 
     for item_name, item in require_param.items():
@@ -481,12 +480,11 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr,
             "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
-    if weight_quant_mode == 3 and (dequant_scale_x.dtype == torch.uint8 or dequant_scale_w_dq.dtype == torch.uint8 or
-                dequant_scale_w_uq_qr == torch.uint8 or dequant_scale_w_dkv_kr == torch.uint8):
+    if weight_quant_mode == 3:
         torch._check(
             dequant_scale_x.dtype == torch.float8_e8m0fnu and dequant_scale_w_dq.dtype == torch.float8_e8m0fnu and
                 dequant_scale_w_uq_qr == torch.float8_e8m0fnu and dequant_scale_w_dkv_kr == torch.float8_e8m0fnu,
-            lambda:"dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0",
+            lambda: "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0",
         )
 
     for item_name, item in require_param.items():
