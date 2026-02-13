@@ -1,4 +1,4 @@
-import os
+import os, re
 import argparse
 
 from torchnpugen.gen import parse_native_yaml, FileManager
@@ -80,6 +80,20 @@ def main() -> None:
             "declarations": dispatch_registrations_body,
         },
     )
+    
+    # If ACLNN_EXTENSION_SWITCH is true, remove torch_npu/ from include paths
+    env_aclnn_extension_switch = os.getenv('ACLNN_EXTENSION_SWITCH', 'false')
+    if env_aclnn_extension_switch:
+        op_interface_path = os.path.join(options.output_dir, "OpInterface.cpp")
+        
+        with open(op_interface_path, "r") as f:
+            content = f.read()
+        
+        # Replace "torch_npu/" with empty string in include statements
+        content = re.sub(r'#include "torch_npu/', '#include "', content)
+        
+        with open(op_interface_path, "w") as f:
+            f.write(content)
 
 
 if __name__ == '__main__':
