@@ -72,12 +72,17 @@ def main() -> None:
             },
         )
 
+    # Check if ACLNN_EXTENSION_SWITCH environment variable is set to "true"
+    env_aclnn_extension_switch = os.getenv('ACLNN_EXTENSION_SWITCH', 'false')
+    include_path = "" if env_aclnn_extension_switch.lower() == "true" else "torch_npu/"
+
     fm.write_with_template(
         "OpInterface.cpp",
         "OpInterface.cpp",
         lambda: {
             "namespace": "op_plugin",
             "declarations": dispatch_registrations_body,
+            "include_path": include_path,
         },
     )
 

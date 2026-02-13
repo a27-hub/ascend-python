@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "torch_npu/csrc/framework/interface/EnvVariables.h"
-#include "torch_npu/csrc/framework/FormatHelper.h"
-#include "torch_npu/csrc/core/npu/npu_log.h"
-#include "torch_npu/csrc/core/npu/NpuVariables.h"
-#include "torch_npu/csrc/core/npu/NPUException.h"
+#include "${include_path}csrc/framework/interface/EnvVariables.h"
+#include "${include_path}csrc/framework/FormatHelper.h"
+#include "${include_path}csrc/core/npu/npu_log.h"
+#include "${include_path}csrc/core/npu/NpuVariables.h"
+#include "${include_path}csrc/core/npu/NPUException.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/SparseOpsInterface.h"
