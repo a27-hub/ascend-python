@@ -56,7 +56,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         auto dequant_scale_w_dq_dtype = dequant_scale_w_dq.value().dtype();
         auto dequant_scale_w_uq_qr_dtype = dequant_scale_w_uq_qr.value().dtype();
         auto dequant_scale_w_dkv_kr_dtype = dequant_scale_w_dkv_kr.value().dtype();
-        TORCH_CHECK(dequant_scale_x_dtype == at::kByte || dequant_scale_w_dq_dtype == at::kByte || dequant_scale_w_uq_qr_dtype == at::kByte || dequant_scale_w_dkv_kr_dtype == at::kByte,
+        TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
             "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0, but them are ",
             dequant_scale_x_dtype, OPS_ERROR(ErrCode::PARAM));
     }
@@ -194,7 +194,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         auto dequant_scale_w_dq_dtype = dequant_scale_w_dq.value().dtype();
         auto dequant_scale_w_uq_qr_dtype = dequant_scale_w_uq_qr.value().dtype();
         auto dequant_scale_w_dkv_kr_dtype = dequant_scale_w_dkv_kr.value().dtype();
-        TORCH_CHECK(dequant_scale_x_dtype == at::kByte || dequant_scale_w_dq_dtype == at::kByte || dequant_scale_w_uq_qr_dtype == at::kByte || dequant_scale_w_dkv_kr_dtype == at::kByte,
+        TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
             "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be float8_e8m0, but them are ",
             dequant_scale_x_dtype, OPS_ERROR(ErrCode::PARAM));
     }
