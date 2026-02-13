@@ -132,6 +132,16 @@ class TestAddmv(TestCase):
         with self.assertRaisesRegex(RuntimeError, msg):
             torch.addmv(npu_input_a, npu_input_b, npu_input_c)
 
+    def test_addmv_bool_promotion_with_non_one_scalars(self):
+        mat = torch.tensor([[True, True], [True, True], [True, True]]).npu()
+        vec = torch.tensor([True, True]).npu()
+        input_vec = torch.tensor([True, True, True]).npu()
+
+        result = torch.addmv(input_vec, mat, vec, beta=2, alpha=2)
+        expected = torch.tensor([4, 4, 4], device='npu:0')
+
+        self.assertEqual(result.tolist(), expected.tolist())
+
 
 if __name__ == "__main__":
     run_tests()
