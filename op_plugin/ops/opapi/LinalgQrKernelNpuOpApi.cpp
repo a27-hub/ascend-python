@@ -27,6 +27,25 @@ static inline bool mode_valid(c10::string_view mode)
     return (mode == "reduced" || mode == "complete" || mode == "r");
 }
 
+static void check_linalg_qr_input(const at::Tensor& self, c10::string_view mode) {
+    static const std::string op_name = "linalg_qr";
+
+    TORCH_CHECK(
+        self.dim() >= 2,
+        op_name,
+        ": The input tensor must have at least 2 dimensions, but got ",
+        self.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+
+    TORCH_CHECK(
+        mode_valid(mode),
+        op_name,
+        ": received unrecognized mode '",
+        mode,
+        "', expected one of 'reduced'(default), 'r', or 'complete'",
+        OPS_ERROR(ErrCode::PARAM));
+}
+
 static inline int64_t get_mode(c10::string_view mode)
 {
     if (mode == "complete") {
@@ -67,11 +86,7 @@ std::tuple<at::Tensor &, at::Tensor &> linalg_qr_out(const at::Tensor &self, c10
 {
     DO_COMPATIBILITY(aclnnLinalgQr, acl_op::linalg_qr_out(self, mode, Q, R));
     // 输入至少为2维tensor
-    TORCH_CHECK(self.ndimension() >= 2, "Expected nonempty least 2D tensor, but got a tensor with sizes ",
-                self.dim(), OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(mode_valid(mode),
-                "qr received unrecognized mode but expected one of 'reduced'(default), 'r', or 'complete'",
-                OPS_ERROR(ErrCode::TYPE));
+    check_linalg_qr_input(self, mode);
     auto sizes = linalg_qr_infer_shape(self, mode);
     npu_preparation::check_tensor({self}, Q, self, std::get<0>(sizes));
     npu_preparation::check_tensor({self}, R, self, std::get<1>(sizes));
@@ -83,9 +98,7 @@ std::tuple<at::Tensor &, at::Tensor &> linalg_qr_out(const at::Tensor &self, c10
 std::tuple<at::Tensor, at::Tensor> linalg_qr(const at::Tensor &self, c10::string_view mode)
 {
     DO_COMPATIBILITY(aclnnLinalgQr, acl_op::linalg_qr(self, mode));
-    TORCH_CHECK(self.ndimension() >= 2, "Expected nonempty least 2D tensor, but got a tensor with sizes ",
-                self.dim(), OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(mode_valid(mode), "Mode should be reduced, complete or r", OPS_ERROR(ErrCode::TYPE));
+    check_linalg_qr_input(self, mode);
     auto sizes = linalg_qr_infer_shape(self, mode);
     at::Tensor Q = npu_preparation::apply_tensor_without_format(std::get<0>(sizes), self.options());
     at::Tensor R = npu_preparation::apply_tensor_without_format(std::get<1>(sizes), self.options());
