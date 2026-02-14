@@ -55,7 +55,7 @@ at::Tensor npu_mhc_post(const at::Tensor &x, const at::Tensor &h_res, const at::
         xDims == DIMS_THREE || xDims == DIMS_FOUR, 
         "x should be 3D or 4D.", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
-        xDims == hResDims, "The x should be 3D or 4D", OPS_ERROR(ErrCode::PARAM));
+        xDims == hResDims, "The dims of x and hRes should be equal, but xDims is ", xDims, "and hResDims is ", hResDims, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
         hOutDims == DIMS_THREE || hOutDims == DIMS_TWO, "h_out should be 2D or 3D.",
         OPS_ERROR(ErrCode::PARAM));
