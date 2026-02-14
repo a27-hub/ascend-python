@@ -9,7 +9,9 @@
  */
 #include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
+#include <torch/extension.h>
 #include "npu_cpp_extension.h"
+
 using torch::autograd::Function;
 using torch::autograd::AutogradContext;
 using variable_list = std::vector<at::Tensor>;
