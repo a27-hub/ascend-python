@@ -119,6 +119,9 @@
   "op_api: torch_npu.npu_moe_update_expert(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_mhc_post(*args, **kwargs)": {
+    "version": ["v2.7", "newest"]
+  },
   "op_api: torch_npu.npu_mrope(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
