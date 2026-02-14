@@ -1,8 +1,8 @@
+import copy
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 import custom_ops
-import copy
 
 torch.npu.config.allow_internal_format = False
 torch.npu.set_compile_mode(jit_compile=False)

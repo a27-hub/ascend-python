@@ -15,8 +15,8 @@
 
 #include <pwd.h>
 #include <sys/stat.h>
-#include "op_api_common.h"
 #include "op_api_common_base.h"
+#include "op_api_common.h"
 
 thread_local char g_hash_buf[g_hash_buf_size];
 thread_local int g_hash_offset = 0;

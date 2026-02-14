@@ -17,10 +17,10 @@ exts = []
 ext = NpuExtension(
     name="custom_ops_lib",
     sources=source_files,
-    extra_compile_args = [
+    extra_compile_args=[
         '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/acl/inc"),
-        '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op_plugin"),
-        '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op_plugin/op_plugin/include"),
+        '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op-plugin"),
+        '-I' + os.path.join(PYTORCH_NPU_INSTALL_PATH, "include/third_party/op-plugin/op-plugin/include"),
     ],
 )
 exts.append(ext)

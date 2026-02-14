@@ -14,7 +14,7 @@ import custom_ops
 def convert_npu_add_custom(x: Tensor, y: Tensor, z: Tensor = None, meta_outputs: Any = None):
     return torchair.ge.custom_op(
         "AddCustom",
-        inputs={"x": x, "y": y,},
+        inputs={"x": x, "y": y},
         outputs=['z']
     )
 
@@ -28,6 +28,7 @@ class TestTorchCompileCustomAdd(TestCase):
         from torchair.configs.compiler_config import CompilerConfig
         config = CompilerConfig()
         npu_backend = torchair.get_npu_backend(compiler_config=config)
+        
         class Module(torch.nn.Module):
             def __init__(self):
                 super().__init__()
