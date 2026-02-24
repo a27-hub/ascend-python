@@ -50,6 +50,7 @@ OP_PLUGIN_HIDDEN bool is_transpose_last_two_dims(const at::Tensor &tensor);
 OP_PLUGIN_HIDDEN bool is_two_tensor_base_format(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nz_format(const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2);
+OP_PLUGIN_HIDDEN bool is_nd_nz_format_3d(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_scalar_one(const c10::Scalar &scalar);
 OP_PLUGIN_HIDDEN float get_scalar_float_value(const c10::Scalar &scalar);
