@@ -1060,7 +1060,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_x_dtype = torch.float8_e4m3fn
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [7, 8]:
-        expanded_x_dtype = torch.uint8
+        expanded_x_dtype = torch_npu.hifloat8
         expanded_scale_dtype = torch.float32
 
     if drop_pad_mode == 1:

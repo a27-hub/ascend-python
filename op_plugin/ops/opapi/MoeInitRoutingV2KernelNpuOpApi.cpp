@@ -125,8 +125,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     int expert_length = current_active_expert_range[1] - current_active_expert_range[0];
     auto x_size = x.sizes();
     auto expert_idx_size = expert_idx.sizes();
-    const at::Tensor &p_scale = c10::value_or_else(scale, [] { return at::Tensor(); });
-    const at::Tensor &p_offset = c10::value_or_else(offset, [] { return at::Tensor(); });
+    const at::Tensor &p_scale = scale.value_or(at::Tensor());
+    const at::Tensor &p_offset = offset.value_or(at::Tensor());
 
     int bs = x_size[0];
     int h = x_size[1];
@@ -165,7 +165,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             case QUANT_MODE_HIF8_PERTENSOR:
             case QUANT_MODE_HIF8_PER_TOKEN_DIM:
                 expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at:kByte));
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kByte));
                 break;
             default:  // quant_mode == QUANT_MODE_UNQUANT
                 expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, h});
