@@ -61,7 +61,7 @@ at::Tensor npu_mhc_post(const at::Tensor &x, const at::Tensor &h_res, const at::
         h_res.size(hResDims - DIMS_ONE) == h_res.size(hResDims - DIMS_TWO),
         "The last two dims of hRes should be same.", OPS_ERROR(ErrCode::PARAM));
 
-    for(size_t i = 0; i < xDims - DIMS_ONE; i++) {
+    for (size_t i = 0; i < xDims - DIMS_ONE; i++) {
         int32_t xDimI = x.size(i);
         int32_t hResDimI = h_res.size(i);
         TORCH_CHECK(
