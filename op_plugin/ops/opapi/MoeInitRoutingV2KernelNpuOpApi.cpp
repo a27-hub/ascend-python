@@ -237,7 +237,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len}, x.options().dtype(at::kFloat));
     }
-    TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+    TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(aclDataType::ACL_HIFLOAT8)};
     if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     }
