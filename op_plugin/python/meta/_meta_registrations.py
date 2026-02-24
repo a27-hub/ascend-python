@@ -1048,14 +1048,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
-        elif quant_mode == 8:  # HIF8 7、8 核心新增
-            HIF8_PERTENSOR_BLOCK_SIZE = 1    
-            HIF8_PERTOKEN_BLOCK_SIZE = 32   
-            HIF8_PAD_FACTOR = 2                
-            scale_cols = (h + HIF8_PERTOKEN_BLOCK_SIZE - 1) // HIF8_PERTOKEN_BLOCK_SIZE
-            scale_cols = (scale_cols + HIF8_PAD_FACTOR - 1) // HIF8_PAD_FACTOR * HIF8_PAD_FACTOR
-            expanded_scale_dim_list = [num_expanded_rows, scale_cols]
-        elif quant_mode in [-1, 1]: # quant_mode in [-1, 0, 1]
+        elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode in [0, 7]:
         expanded_scale_dim_list = []
