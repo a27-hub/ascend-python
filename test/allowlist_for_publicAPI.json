@@ -123,6 +123,7 @@
       "npu_recurrent_gated_delta_rule_functional",
       "npu_alltoallv_gmm",
       "npu_gmm_alltoallv",
+      "npu_quant_gmm_alltoallv",
       "npu_nsa_compress",
       "npu_nsa_compress_infer",
       "npu_nsa_compress_attention",
