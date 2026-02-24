@@ -191,9 +191,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         drop_pad_mode = 0;
         int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
-        TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+        TensorWrapper expanded_x_wrapper_v2 = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
         if (IsQuantModeHIF8(quant_mode)) {
-            expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+            expanded_x_wrapper_v2.dtype = aclDataType::ACL_HIFLOAT8;
         }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
@@ -204,11 +204,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             drop_pad_mode,
             expert_tokens_count_or_cumsum_flag,
             expert_tokens_before_capacity_flag,
-            expanded_x_wrapper,
+            expanded_x_wrapper_v2,
             expanded_row_idx,
             expert_tokens_count_or_cumsum,
             expert_tokens_before_capacity);
-        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+        return std::tie(expanded_x_wrapper_v2, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
     }
 
     at::Tensor expanded_scale;
@@ -263,6 +263,6 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);
-    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    return std::tie(expanded_x_wrapper, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api
