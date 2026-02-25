@@ -107,14 +107,19 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, doubl
 
     bool dropout_train = !train.has_value() ? true : train.value();
     at::TensorOptions options = input.options();
+    int64_t length = (input.numel() + BIT_NUMBER - 1) / BIT_NUMBER * BIT_NUMBER / UINT8_BIT_NUMBER;
+    at::TensorOptions byte_options = options.dtype(at::kByte);
     if (p == 0 || !dropout_train) {
-        at::Tensor mask = at::ones(input.sizes(), options);
+        at::Tensor mask = at::ones({length}, byte_options);
         return std::make_tuple(input.clone(), mask);
     }
     if (p == 1) {
         at::Tensor output = at::zeros(input.sizes(), options);
-        at::Tensor mask = at::zeros(input.sizes(), options);
+        at::Tensor mask = at::zeros({length}, byte_options);
         return std::make_tuple(output, mask);
+    }
+    if (!at::isFloatingType(input.scalar_type())) {
+        TORCH_CHECK(false, "result type Float can't be cast to the desired output type Long");
     }
     return op_api::_npu_dropout(input, p);
 }
