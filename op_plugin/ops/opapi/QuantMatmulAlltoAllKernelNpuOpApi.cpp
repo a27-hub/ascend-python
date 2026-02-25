@@ -89,8 +89,25 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
     bool transpose_x1 = false;
     bool transpose_x2 = false;
 
+    // mx量化下scale为fp8_e8m0，需要wrapper包装
+    TensorWrapper x1_scale_wrapper = make_wrapper(x1_scale, x1_scale_dtype);
+    TensorWrapper x2_scale_wrapper = make_wrapper(x2_scale, x2_scale_dtype);
+
+    TORCH_CHECK(torch_npu::utils::is_npu(x1),
+        "Expected x1 tensors to be on the same device. ",
+        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(torch_npu::utils::is_npu(x1_scale),
+        "Expected x1_scale tensors to be on the same device. ",
+        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(torch_npu::utils::is_npu(x1_scale_wrapper),
+        "Expected x1_scale_wrapper tensors to be on the same device. ",
+        OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(torch_npu::utils::is_npu(x2_scale_wrapper),
+        "Expected x2_scale_wrapper tensors to be on the same device. ",
+        OPS_ERROR(ErrCode::TYPE));
+
     // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
-    EXEC_NPU_CMD(aclnnQuantMatmulAlltoAll, x1, x2, bias, x1_scale, x2_scale, common_scale, x1_offset, x2_offset,
+    EXEC_NPU_CMD(aclnnQuantMatmulAlltoAll, x1, x2, bias, x1_scale_wrapper, x2_scale_wrapper, common_scale, x1_offset, x2_offset,
         all2all_axes, group_ptr, x1QuantMode, x2QuantMode, commonQuantMode, commQuantDtype, group_size,
         transpose_x1, transpose_x2, output_tensor);
     return output_tensor;
