@@ -25,6 +25,7 @@ bool is_nd_nz_format_3d(const at::Tensor &self, const at::Tensor &mat2)
 {
     auto dim_tensor1 = self.dim();
     auto dim_tensor2 = mat2.dim();
+    
     // only support 3D ND * 3D NZ
     return dim_tensor1 == 3 && dim_tensor2 == 3 && op_plugin::utils::is_nz_format(mat2) && !op_plugin::utils::is_nz_format(self);
 }

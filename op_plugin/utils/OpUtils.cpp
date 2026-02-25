@@ -114,6 +114,7 @@ bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
     return dim_tensor1 == 2 && dim_tensor2 == 2 && is_nz_format(mat2) && !is_nz_format(self);
 }
 
+
 bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2)
 {
     const static int64_t kInnerAxisMinLimit = 128;
