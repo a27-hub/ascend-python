@@ -153,6 +153,8 @@ def gen_size_dtype_map(resinfos: List['ResInfo']) -> Tuple[Dict[str, str], Dict[
 
 
 def compute_op_api_definition(struct: StructInfo):
+    # 获取环境变量
+    env_aclnn_extension_switch = os.getenv('ACLNN_EXTENSION_SWITCH')
     f = struct.func
     is_symint = struct.name in SYMINT_OPS
     with native_function_manager(f):
@@ -203,25 +205,43 @@ def compute_op_api_definition(struct: StructInfo):
             [f"auto {name} = {size};\n" for size, name in size_map.items()])
         define_dtype = "".join(
             [f"auto {name} = {dtype};\n" for dtype, name in dtype_map.items()])
-        define_size_or_dtype = "" if kind == SchemaKind.inplace else "".join([define_size, define_dtype])
-
-        if kind == SchemaKind.out:
-            apply_tensor_list = list(concatMap(
-                lambda res_info:
-                [CHECK_TENSOR.substitute(input=tensor_arguments,
-                                         result_name=res_info.name,
-                                         size=size_map[res_info.size],
-                                         dtype=dtype_map[res_info.dtype])],
-                res_infos))
-        elif kind == SchemaKind.inplace:
-            apply_tensor_list = []
+        
+        # 当环境变量存在时，不生成大小和数据类型的定义
+        if env_aclnn_extension_switch:
+            define_size_or_dtype = "" 
         else:
-            apply_tensor_list = list(concatMap(
-                lambda res_info:
-                [APPLY_TENSOR.substitute(result_name=res_info.name,
-                                         size=size_map[res_info.size],
-                                         dtype=f'{res_info.option}.options().dtype({dtype_map[res_info.dtype]})')],
-                res_infos))
+            define_size_or_dtype = "" if kind == SchemaKind.inplace else "".join([define_size, define_dtype])
+
+        if env_aclnn_extension_switch:
+            # 如果环境变量存在，使用 at::empty_like
+            if kind == SchemaKind.out:
+                apply_tensor_list = []
+            elif kind == SchemaKind.inplace:
+                apply_tensor_list = []
+            else:
+                apply_tensor_list = list(concatMap(
+                    lambda res_info:
+                    [f"at::Tensor {res_info.name} = at::empty_like({res_info.option});\n"],
+                    res_infos))
+        else:
+            # 否则使用默认方式
+            if kind == SchemaKind.out:
+                apply_tensor_list = list(concatMap(
+                    lambda res_info:
+                    [CHECK_TENSOR.substitute(input=tensor_arguments,
+                                             result_name=res_info.name,
+                                             size=size_map[res_info.size],
+                                             dtype=dtype_map[res_info.dtype])],
+                    res_infos))
+            elif kind == SchemaKind.inplace:
+                apply_tensor_list = []
+            else:
+                apply_tensor_list = list(concatMap(
+                    lambda res_info:
+                    [APPLY_TENSOR.substitute(result_name=res_info.name,
+                                             size=size_map[res_info.size],
+                                             dtype=f'{res_info.option}.options().dtype({dtype_map[res_info.dtype]})')],
+                    res_infos))
         
         compute_name_list = []
         infer_name_list = []
@@ -248,6 +268,12 @@ def compute_op_api_definition(struct: StructInfo):
 
         apply_tensor = "".join(apply_tensor_list)
 
+        # 根据环境变量选择使用 EXEC_NPU_CMD 还是 EXEC_NPU_CMD_EXT
+        cmd_args = struct.cmd_args
+        if env_aclnn_extension_switch:
+            # 如果环境变量存在，使用 EXEC_NPU_CMD_EXT
+            cmd_args = cmd_args.replace("EXEC_NPU_CMD", "EXEC_NPU_CMD_EXT")
+
     return [remove_empty_lines(
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
@@ -258,18 +284,31 @@ def compute_op_api_definition(struct: StructInfo):
                 check_or_apply_tensor=apply_tensor,
                 do_compatibility=do_compatibility,
                 compute_names=compute_names,
-                aclnnargs=struct.cmd_args,
+                aclnnargs=cmd_args,
                 result=struct.return_args,
                 infer_name=infer_name))]
 
 
 def gen_op_api(
     fm: FileManager,
-    struct_functions: Sequence[StructInfo]
+    struct_functions: Sequence[StructInfo],
+    env_aclnn_extension_switch: bool
 ) -> None:
+    # 根据环境变量生成不同的include语句
+    if env_aclnn_extension_switch:
+        includes = """#include <torch/library.h>
+#include <torch/csrc/autograd/custom_function.h>
+#include <torch/extension.h>
+#include "op_plugin/include/npu_cpp_extension.h"""  
+    else:
+        includes = """#include <ATen/native/TypeProperties.h>
+#include "op_plugin/AclOpsInterface.h"
+#include "op_plugin/OpApiInterface.h"
+#include "op_plugin/utils/op_api_common.h"""  
 
     fm.write_with_template(
         f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
+            'includes': includes,
             'op_api_definition': list(concatMap(
                 lambda f: compute_op_api_definition(f),
                 struct_functions
