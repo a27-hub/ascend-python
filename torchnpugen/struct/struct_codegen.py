@@ -43,7 +43,7 @@ ${return_type} ${func_name}(${args_str})
     ${compute_names}
     ${define_size_or_dtype}
     ${check_or_apply_tensor}
-    EXEC_NPU_CMD(${aclnnargs});
+    ${exec_cmd}(${aclnnargs});
     ${infer_name}
     return${result};
 }
@@ -267,12 +267,9 @@ def compute_op_api_definition(struct: StructInfo):
         infer_name = "".join(infer_name_list)
 
         apply_tensor = "".join(apply_tensor_list)
-
+        
         # 根据环境变量选择使用 EXEC_NPU_CMD 还是 EXEC_NPU_CMD_EXT
-        cmd_args = struct.cmd_args
-        if env_aclnn_extension_switch:
-            # 如果环境变量存在，使用 EXEC_NPU_CMD_EXT
-            cmd_args = cmd_args.replace("EXEC_NPU_CMD", "EXEC_NPU_CMD_EXT")
+        exec_cmd = "EXEC_NPU_CMD_EXT" if env_aclnn_extension_switch else "EXEC_NPU_CMD"
 
     return [remove_empty_lines(
             ACLNN_FUNCTIONS_DEFINITION.substitute(
@@ -284,7 +281,8 @@ def compute_op_api_definition(struct: StructInfo):
                 check_or_apply_tensor=apply_tensor,
                 do_compatibility=do_compatibility,
                 compute_names=compute_names,
-                aclnnargs=cmd_args,
+                exec_cmd=exec_cmd,
+                aclnnargs=struct.cmd_args,
                 result=struct.return_args,
                 infer_name=infer_name))]
 
