@@ -77,8 +77,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_layer_norm(const at::Tenso
 
     // shape and dtype of mean and rstd depend on M value and input dtype
     if (M <= 0) {
-        mean_out = at_npu::native::OpPreparation::apply_tensor_without_format({M}, input.options().dtype(acc_type));
-        rstd_out = at_npu::native::OpPreparation::apply_tensor_without_format({M}, input.options().dtype(acc_type));
+        at::SmallVector<int64_t, 8> mean_shape;
+        for (size_t index = 0; index < begin_axis; index++) {
+            mean_shape.emplace_back(input.size(index));
+        }
+        for (size_t index = begin_axis; index < input_ndim; index ++) {
+            mean_shape.emplace_back(1);
+        }
+        mean_out = at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
+        rstd_out = at_npu::native::OpPreparation::apply_tensor_without_format(mean_shape, input.options().dtype(acc_type));
     } else {
         at::SmallVector<int64_t, 8> mean_shape;
         for (size_t index = 0; index < begin_axis; index++) {
