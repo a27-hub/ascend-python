@@ -50,10 +50,12 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
         unsigned int gridX = (nelem + BLOCK_SIZE - 1) / BLOCK_SIZE;
         gridX = std::min((unsigned int)MAX_PROCESSOR_COUNT * blocksPerSm, gridX);
         int64_t counterOffset = ((nelem - 1)/(BLOCK_SIZE * gridX * UNROLL) + 1) * UNROLL;
-
+        ASCEND_LOGI("dropout counterOffset: %ld", counterOffset);
+        
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(counterOffset);
         const uint64_t seed = pair.first;
         const uint64_t offset = pair.second;
+        ASCEND_LOGI("dropout offset: %llu", offset);
         c10::optional<at::Tensor> noiseOpt = c10::nullopt;
         at::Tensor optionalNoiseShape = c10::value_or_else(noiseOpt, [] { return at::Tensor(); });
         EXEC_NPU_CMD(aclnnDropoutV3, self, optionalNoiseShape, p, seed, offset, result, mask);
