@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- API功能：将Add计算与RMSNorm归一化及pertoken对称动态量化融合，常用于大模型推理场景中将残差连接后的张量进行归一化处理并量化为int8。
+- API功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。aclnnAddRmsNormDynamicQuantV2相较于aclnnAddRmsNormDynamicQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的beta，以及新增输出配置项outputMaskOptional参数，用于配置是否输出对应位置的量化结果 。
 
 - 计算公式：
 
@@ -86,17 +86,17 @@ torch_npu.npu_add_rms_norm_dynamic_quant(x1, x2, gamma, *, smooth_scale1=None, s
 
 ## 返回值说明
 
-- **y1**(`Tensor`)：第一路动态量化后的输出Tensor。当`output_mask[0]`为`True`时，数据类型为`int8`，shape与`x1`一致；当`output_mask[0]`为`False`时，返回空Tensor。
-- **y2**(`Tensor`)：第二路动态量化后的输出Tensor。当`output_mask[1]`为`True`时，数据类型为`int8`，shape与`x1`一致；当`output_mask[1]`为`False`时，返回空Tensor。
+- **y1**(`Tensor`)：第一路动态量化后的输出Tensor，对应公式中的$y1Out$。当`output_mask[0]`为`True`时，数据类型为`int8`，shape与`x1`一致；当`output_mask[0]`为`False`时，返回空Tensor。
+- **y2**(`Tensor`)：第二路动态量化后的输出Tensor，对应公式中的$y2Out$。当`output_mask[1]`为`True`时，数据类型为`int8`，shape与`x1`一致；当`output_mask[1]`为`False`时，返回空Tensor。
 - **x_out**(`Tensor`)：Add计算的结果，对应公式中的$x$。数据类型和shape与输入`x1`保持一致。
-- **scale1**(`Tensor`)：第一路动态量化的缩放系数。当`output_mask[0]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[0]`为`False`时，返回空Tensor。
-- **scale2**(`Tensor`)：第二路动态量化的缩放系数。当`output_mask[1]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[1]`为`False`时，返回空Tensor。
+- **scale1**(`Tensor`)：第一路动态量化的缩放系数，对应公式中的$scale1Out$。当`output_mask[0]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[0]`为`False`时，返回空Tensor。
+- **scale2**(`Tensor`)：第二路动态量化的缩放系数，对应公式中的$scale2Out$。当`output_mask[1]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[1]`为`False`时，返回空Tensor。
 
 ## 约束说明
 
-- 该接口支持推理场景下使用。
-- 输入`x1`和`x2`的shape必须完全一致。
-- `gamma`、`smooth_scale1`、`smooth_scale2`、`beta`均为一维Tensor，元素数量与`x1`最后一维大小一致。
+- 当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
+- 当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
+- 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
 
 ## 调用示例
 
