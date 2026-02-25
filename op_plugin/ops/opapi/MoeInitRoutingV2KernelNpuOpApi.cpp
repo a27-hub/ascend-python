@@ -32,7 +32,6 @@ constexpr int64_t QUANT_MODE_HIF8_PERTENSOR = 7;
 constexpr int64_t QUANT_MODE_HIF8_PER_TOKEN_DIM = 8;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
-constexpr int64_t HIF8_PERTOKEN_COL_SIZE = 1;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
@@ -217,13 +216,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         // 低版本MXFP8会被上方TORCH_CHECK禁止，此处为兜底
         TORCH_CHECK(false, "MXFP8 quant mode only support v2.7+", OPS_ERROR(ErrCode::PARAM));
 #endif
-    } else if (quant_mode == QUANT_MODE_HIF8_PER_TOKEN_DIM) {
-        // HIF8：无版本限制，所有版本执行（核心：移出版本宏，独立分支）
-            scale_cols = HIF8_PERTOKEN_COL_SIZE;
-            expanded_scale = npu_preparation::apply_tensor_without_format(
-                {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat));
     } else {
-        // 非Float8量化（静态/动态/未量化）
+        // 非Float8量化（静态/动态/未量化/hif8 pertensor pertoken量化）
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len}, x.options().dtype(at::kFloat));
     }
