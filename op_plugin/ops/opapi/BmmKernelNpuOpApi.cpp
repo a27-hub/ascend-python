@@ -23,6 +23,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 bool is_nd_nz_format_3d(const at::Tensor &self, const at::Tensor &mat2)
 {
+    
     auto dim_tensor1 = self.dim();
     auto dim_tensor2 = mat2.dim();
     // only support 3D ND * 3D NZ

@@ -1549,9 +1549,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
     } while (false)
 
 #define DO_MATMUL_COMPATIBILITY(aclnn_nz_api, aclnn_nd_api, input1, input2, aclop_func_call)                           \
-    do {                                                                                                               \
+    do {          
+                                                                                                             \
         if (op_plugin::utils::is_two_tensor_base_format(input1, input2)) {                                             \
-            DO_COMPATIBILITY(aclnn_nd_api, aclop_func_call);                                                           \
+            DO_COMPATIBILITY(aclnn_nd_api, aclop_func_call); 
+                                                                      \
         } else {                                                                                                       \
             static bool is_support_soc = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&              \
                                              c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||           \
