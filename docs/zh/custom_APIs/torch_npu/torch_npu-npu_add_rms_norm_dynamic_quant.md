@@ -14,31 +14,58 @@
 
 - 计算公式：
 
-  1. Add：
-
   $$
-  x_i=x1_{i}+x2_{i}
-  $$
-
-  2. RmsNorm：
-
-  $$
-  \operatorname{RmsNorm}(x_i)=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} \cdot gamma_i + beta_i, \quad \text{where} \quad \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
-  $$
-
-  3. 动态量化（以分支1为例，分支2类似）：
-
-  $$
-  input1 = \operatorname{RmsNorm}(x) \cdot smooth\_scale1
+  x=x_{1}+x_{2}
   $$
 
   $$
-  scale1 = \frac{\operatorname{rowMax}(\operatorname{abs}(input1))}{127}
+  y = \operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
   $$
 
   $$
-  y1 = \operatorname{round}\left(\frac{input1}{scale1}\right)
+  input1 =\begin{cases}
+    y\cdot smoothScale1Optional & \ \ smoothScale1Optional \\
+    y & !\ smoothScale1Optional
+    \end{cases}
   $$
+
+  $$
+  input2 =\begin{cases}
+    y\cdot smoothScale2Optional & \ \ smoothScale2Optional \\
+    y & !\ smoothScale2Optional
+    \end{cases}
+  $$
+
+  $$
+  scale1Out=\begin{cases}
+    row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ !outputMask \\
+    无效输出 & outputMask[0]=False
+    \end{cases}
+  $$
+
+  $$
+  y1Out=\begin{cases}
+    round(input1/scale1Out) & outputMask[0]=True\ ||\ !outputMask \\
+    无效输出 & outputMask[0]=False
+    \end{cases}
+  $$
+
+
+$$
+  scale2Out=\begin{cases}
+    row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional) \\
+    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ !smoothScale2Optional)
+    \end{cases}
+$$
+
+$$
+  y2Out=\begin{cases}
+    round(input2/scale2Out) & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)\\
+    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ !smoothScale2Optional)
+    \end{cases}
+$$
+
+  公式中的row\_max代表每行求最大值。
 
 ## 函数原型
 ```
@@ -70,7 +97,6 @@ torch_npu.npu_add_rms_norm_dynamic_quant(x1, x2, gamma, *, smooth_scale1=None, s
 - 该接口支持推理场景下使用。
 - 输入`x1`和`x2`的shape必须完全一致。
 - `gamma`、`smooth_scale1`、`smooth_scale2`、`beta`均为一维Tensor，元素数量与`x1`最后一维大小一致。
-- `output_mask`为长度为2的布尔数组。
 
 ## 调用示例
 
