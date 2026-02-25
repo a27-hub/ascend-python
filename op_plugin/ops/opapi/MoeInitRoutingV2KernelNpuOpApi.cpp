@@ -242,6 +242,6 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);
-    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    return std::tie(expanded_x_wrapper, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api
