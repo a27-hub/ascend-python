@@ -125,8 +125,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     int expert_length = current_active_expert_range[1] - current_active_expert_range[0];
     auto x_size = x.sizes();
     auto expert_idx_size = expert_idx.sizes();
-    const at::Tensor &p_scale = scale.value_or(at::Tensor());
-    const at::Tensor &p_offset = offset.value_or(at::Tensor());
+    const at::Tensor &p_scale = c10::value_or_else(scale, [] { return at::Tensor(); });
+    const at::Tensor &p_offset = c10::value_or_else(offset, [] { return at::Tensor(); });
 
     int bs = x_size[0];
     int h = x_size[1];
@@ -191,10 +191,6 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         drop_pad_mode = 0;
         int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
-        TensorWrapper expanded_x_wrapper_v2 = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
-        if (IsQuantModeHIF8(quant_mode)) {
-            expanded_x_wrapper_v2.dtype = aclDataType::ACL_HIFLOAT8;
-        }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
@@ -204,11 +200,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             drop_pad_mode,
             expert_tokens_count_or_cumsum_flag,
             expert_tokens_before_capacity_flag,
-            expanded_x_wrapper_v2,
+            expanded_x,
             expanded_row_idx,
             expert_tokens_count_or_cumsum,
             expert_tokens_before_capacity);
-        return std::tie(expanded_x_wrapper_v2, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
     }
 
     at::Tensor expanded_scale;
