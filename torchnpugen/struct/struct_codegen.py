@@ -152,9 +152,7 @@ def gen_size_dtype_map(resinfos: List['ResInfo']) -> Tuple[Dict[str, str], Dict[
     return size_map, dtype_map
 
 
-def compute_op_api_definition(struct: StructInfo):
-    # 获取环境变量
-    env_aclnn_extension_switch = os.getenv('ACLNN_EXTENSION_SWITCH')
+def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bool):
     f = struct.func
     is_symint = struct.name in SYMINT_OPS
     with native_function_manager(f):
@@ -297,18 +295,18 @@ def gen_op_api(
         includes = """#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
 #include <torch/extension.h>
-#include "op_plugin/include/npu_cpp_extension.h"""  
+#include "op_plugin/include/npu_cpp_extension.h" """
     else:
         includes = """#include <ATen/native/TypeProperties.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
-#include "op_plugin/utils/op_api_common.h"""  
+#include "op_plugin/utils/op_api_common.h" """
 
     fm.write_with_template(
         f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
             'includes': includes,
             'op_api_definition': list(concatMap(
-                lambda f: compute_op_api_definition(f),
+                lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
                 struct_functions
             ))}
     )
