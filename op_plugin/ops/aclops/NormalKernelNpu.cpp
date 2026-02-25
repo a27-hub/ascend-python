@@ -25,6 +25,18 @@ using npu_compile_type = at_npu::native::CompileType;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
+void check_normal_std(double std)
+{
+    TORCH_CHECK(std >= 0.0, "normal expects std >= 0.0, but found std ", std, OPS_ERROR(ErrCode::VALUE));
+}
+
+void check_normal_tensor_std(const at::Tensor& std)
+{
+    TORCH_CHECK(!std.is_complex(), "normal expects standard deviation to be non-complex", OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(std.numel() == 0 || std.is_meta() || std.min().ge(0).item<bool>(),
+        "normal expects all elements of std >= 0.0", OPS_ERROR(ErrCode::VALUE));
+}
+
 at::Tensor& normal_out_npu_nocheck(at::Tensor& result, c10::optional<at::Generator> gen)
 {
     auto gen_default =
@@ -56,8 +68,7 @@ at::Tensor& normal_out(
     c10::optional<at::Generator> generator,
     at::Tensor& result)
 {
-    TORCH_CHECK(std >= 0.0, "normal_ expects std >= 0.0, but found std=", std,
-        OPS_ERROR(ErrCode::VALUE));
+    check_normal_std(std);
 
     npu_preparation::CheckOut({mean}, result, mean);
     if (!npu_utils::check_match(&result)) {
@@ -77,6 +88,7 @@ at::Tensor& normal_out(
     c10::optional<at::Generator> generator,
     at::Tensor& result)
 {
+    check_normal_tensor_std(std);
     npu_preparation::CheckOut({std}, result, std);
 
     if (!npu_utils::check_match(&result)) {
@@ -97,6 +109,7 @@ at::Tensor& normal_out(
     c10::optional<at::Generator> generator,
     at::Tensor& result)
 {
+    check_normal_tensor_std(std);
     at::SmallVector<int64_t, SIZE> output_size = op_infer::broadcast_ops_npu_output_size(mean, std);
     npu_preparation::CheckOut({mean, std}, result, mean, output_size);
 
@@ -119,8 +132,7 @@ at::Tensor& normal_out(
     c10::optional<at::Generator> generator,
     at::Tensor& result)
 {
-    TORCH_CHECK(std >= 0.0, "normal_ expects std >= 0.0, but found std=", std,
-        OPS_ERROR(ErrCode::VALUE));
+    check_normal_std(std);
     npu_preparation::CheckOut({}, result, result, size);
 
     if (!npu_utils::check_match(&result)) {
@@ -140,6 +152,7 @@ at::Tensor normal(
     double std,
     c10::optional<at::Generator> generator)
 {
+    check_normal_std(std);
     at::Tensor result = npu_preparation::apply_tensor(mean);
     normal_out_npu_nocheck(result, generator);
     result.mul_(std).add_(mean);
@@ -151,6 +164,7 @@ at::Tensor normal(
     const at::Tensor& std,
     c10::optional<at::Generator> generator)
 {
+    check_normal_tensor_std(std);
     at::Tensor result = npu_preparation::apply_tensor(std);
     normal_out_npu_nocheck(result, generator);
     result.mul_(std).add_(mean);
@@ -162,6 +176,7 @@ at::Tensor normal(
     const at::Tensor& std,
     c10::optional<at::Generator> generator)
 {
+    check_normal_tensor_std(std);
     at::SmallVector<int64_t, SIZE> output_size = op_infer::broadcast_ops_npu_output_size(mean, std);
     at::Tensor result = npu_preparation::apply_tensor(mean, output_size);
     normal_out_npu_nocheck(result, generator);
@@ -178,6 +193,7 @@ at::Tensor normal(
     c10::optional<c10::Device> device_opt,
     c10::optional<bool> pin_memory_opt)
 {
+    check_normal_std(std);
     c10::TensorOptions option = c10::TensorOptions().dtype(dtype_opt)
                                                     .device(device_opt)
                                                     .layout(layout_opt)
