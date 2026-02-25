@@ -23,8 +23,9 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 static const int TWO_DIMS = 2;
-static const int DYN_PERTOKEN_QUANT_MODE = 7;
+static const int64_t DYN_PERTOKEN_QUANT_MODE = 7;
 static const int64_t PERCHANNEL_QUANT_MODE = 2;
+static const int64_t MX_QUANT_MODE = 6;
 static const int64_t NON_QUANT = 0;
 static const int64_t NON_GROUP = 0;
 static const int64_t ACL_UNDEFINED = -1;
@@ -81,7 +82,7 @@ std::tuple<at::Tensor, at::Tensor> npu_all_to_all_quant_matmul(const at::Tensor 
     int64_t x2QuantMode = x2_quant_mode.has_value() ? x2_quant_mode.value() : PERCHANNEL_QUANT_MODE;
     int64_t commonQuantMode = common_quant_mode.has_value() ? common_quant_mode.value() : NON_QUANT;
     bool transpose_x1 = false;
-    bool transpose_x2 = false;
+    bool transpose_x2 = (x1QuantMode == MX_QUANT_MODE && x2QuantMode == MX_QUANT_MODE);
     int64_t commQuantDtype = comm_quant_dtype.has_value() ? comm_quant_dtype.value() : ACL_UNDEFINED;
     int64_t x1QuantDtype = x1_quant_dtype.has_value() ? x1_quant_dtype.value() : ACL_FP8_E5M2;
 

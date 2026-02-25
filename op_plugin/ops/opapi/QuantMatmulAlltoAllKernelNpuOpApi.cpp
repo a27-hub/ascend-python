@@ -25,6 +25,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 static const int TWO_DIMS = 2;
 static const int64_t PERTOKEN_QUANT_MODE = 3;
 static const int64_t PERCHANNEL_QUANT_MODE = 2;
+static const int64_t MX_QUANT_MODE = 6;
 static const int64_t NON_QUANT = 0;
 static const int64_t ACL_UNDEFINED = -1;
 
@@ -87,9 +88,9 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
     int64_t commonQuantMode = common_quant_mode.has_value() ? common_quant_mode.value() : NON_QUANT;
     int64_t commQuantDtype = comm_quant_dtype.has_value() ? comm_quant_dtype.value() : ACL_UNDEFINED;
     bool transpose_x1 = false;
-    bool transpose_x2 = false;
+    bool transpose_x2 = (x1QuantMode == MX_QUANT_MODE && x2QuantMode == MX_QUANT_MODE);
 
-    // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
+    // 调用aclnn接口
     EXEC_NPU_CMD(aclnnQuantMatmulAlltoAll, x1, x2, bias, x1_scale, x2_scale, common_scale, x1_offset, x2_offset,
         all2all_axes, group_ptr, x1QuantMode, x2QuantMode, commonQuantMode, commQuantDtype, group_size,
         transpose_x1, transpose_x2, output_tensor);
