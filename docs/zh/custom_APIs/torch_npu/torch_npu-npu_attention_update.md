@@ -10,24 +10,24 @@
 
 ## 功能说明
 
-- API功能：将各SP（Sequence Parallelism）域PA算子输出的中间结果lse和attention out两个局部结果更新成全局结果。
+- API功能：将各SP域PA算子的输出的中间结果lse，O_i两个局部变量结果更新成全局结果。
 
 - 计算公式：
 
   $$
-  lsemax = \max(lse_i)
+  lse_{max} = \text{max}lse_i
   $$
 
   $$
-  lse\_sum = \sum \exp(lse_i - lsemax)
+  lse = \sum_i \text{exp}(lse_i - lse_{max})
   $$
 
   $$
-  lsem = lsemax + \log(lse\_sum)
+  lse_m = lse_{max} + \text{log}(lse)
   $$
 
   $$
-  O = \sum O_i \cdot \exp(lse_i - lsem)
+  O = \sum_i O_i \cdot \text{exp}(lse_i - lse_m)
   $$
 
 ## 函数原型
@@ -37,8 +37,8 @@ torch_npu.npu_attention_update(lse, local_out, update_type) -> (Tensor, Tensor)
 
 ## 参数说明
 
-- **lse**(`Tensor[]`)：必选参数，Device侧的TensorList，TensorList长度为SP数，每个Tensor形状为$(batch \times seqLen \times headNum)$，表示各SP域计算的lse。数据类型支持`float32`，数据格式支持$ND$。
-- **local_out**(`Tensor[]`)：必选参数，Device侧的TensorList，TensorList长度为SP数，每个Tensor形状为$(batch \times seqLen \times headNum, head\_dim)$，表示各SP域计算的output。数据类型支持`float32`、`float16`、`bfloat16`，数据格式支持$ND$。
+- **lse**(`Tensor[]`)：必选参数，长度为SP，每个Tensor形状为$(batch \times seqLen \times headNum)$，表示各SP域计算的lse。数据类型支持`float32`，数据格式支持$ND$。
+- **local_out**(`Tensor[]`)：必选参数，长度为SP，每个Tensor形状为$(batch \times seqLen \times headNum, head\_dim)$，表示各SP域计算的output。数据类型支持`float32`、`float16`、`bfloat16`，数据格式支持$ND$。
 - **update_type**(`int`)：必选参数，指定执行的操作类型。取值为`0`时，仅输出合并后的out；取值为`1`时，同时输出合并后的out和lse_out。
 
 ## 返回值说明
@@ -49,8 +49,6 @@ torch_npu.npu_attention_update(lse, local_out, update_type) -> (Tensor, Tensor)
 ## 约束说明
 
 - `lse`和`local_out`的TensorList长度必须一致。
-- `lse`中每个Tensor的数据类型必须为`float32`。
-- 所有输入输出Tensor的数据格式推荐使用ND格式。
 
 ## 调用示例
 
