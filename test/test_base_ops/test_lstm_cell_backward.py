@@ -4,6 +4,7 @@ import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
+from torch_npu.testing.common_utils import SupportedDevices
 
 option = {}
 option['NPU_FUZZY_COMPILE_BLACKLIST'] = "DynamicRNNV2"
@@ -118,6 +119,14 @@ class TestLstmCellBackward(TestCase):
             # error in accuracy
             self.assertRtolEqual(cpu_dw_ih.numpy(), npu_dw_ih.cpu().to(torch.float).numpy(), prec=0.004)
             self.assertRtolEqual(cpu_dw_hh.numpy(), npu_dw_hh.cpu().to(torch.float).numpy(), prec=0.004)
+    
+    @SupportedDevices(["Ascend910B", "Ascend910C"])
+    def test_thnn_fused_lstm_cell_backward(self):
+        torch.set_grad_enabled(False)
+        x = torch.randn(40, 8, dtype=torch.float32, device="npu")
+        input_list = [x.clone() for _ in range(5)]
+        grad_hy, grad_c, cx, cy, gates = input_list
+        torch.ops.aten._thnn_fused_lstm_cell_backward(grad_hy, grad_c, cx, cy, gates, True)
 
 
 if __name__ == "__main__":
