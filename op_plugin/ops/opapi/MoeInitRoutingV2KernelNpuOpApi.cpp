@@ -28,6 +28,8 @@ constexpr int64_t QUANT_MODE_STATIC = 0;
 constexpr int64_t QUANT_MODE_DYNAMIC = 1;
 constexpr int64_t QUANT_MODE_MXFP8_E5M2 = 2;
 constexpr int64_t QUANT_MODE_MXFP8_E4M3FN = 3;
+constexpr int64_t QUANT_MODE_HIF8_PERTENSOR = 7;
+constexpr int64_t QUANT_MODE_HIF8_PER_TOKEN_DIM = 8;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
 
@@ -40,6 +42,11 @@ constexpr int64_t HIDDEN_DIM_VAL_V2 = 2048;
 inline bool IsQuantModeMXFP8(int64_t quantMode)
 {
     return quantMode == QUANT_MODE_MXFP8_E5M2 || quantMode == QUANT_MODE_MXFP8_E4M3FN;
+}
+
+inline bool IsQuantModeHIF8(int64_t quantMode)
+{
+    return quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
 }
 
 namespace op_api {
@@ -151,6 +158,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                 expanded_x =
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
                 break;
+            case QUANT_MODE_HIF8_PERTENSOR:
+            case QUANT_MODE_HIF8_PER_TOKEN_DIM:
+                expanded_x =
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kByte));
+                break;
             default:  // quant_mode == QUANT_MODE_UNQUANT
                 expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, h});
         }
@@ -191,23 +203,28 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
     }
 
-#if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     at::Tensor expanded_scale;
+    int64_t scale_cols = 0;
     if (IsQuantModeMXFP8(quant_mode)) {
-        // scale_cols为h向上整除32后向上对齐到偶数倍
-        int64_t scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) / MXQUANT_BLOCK_SIZE;
+#if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
+        // MXFP8：仅V2R7+支持，保留版本宏
+        scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) / MXQUANT_BLOCK_SIZE;
         scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
-    } else {
-        expanded_scale =
-            npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
-    }
 #else
-    at::Tensor expanded_scale =
-        npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
+        // 低版本MXFP8会被上方TORCH_CHECK禁止，此处为兜底
+        TORCH_CHECK(false, "MXFP8 quant mode only support v2.7+", OPS_ERROR(ErrCode::PARAM));
 #endif
-
+    } else {
+        // 非Float8量化（静态/动态/未量化/hif8 pertensor pertoken量化）
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len}, x.options().dtype(at::kFloat));
+    }
+    TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+    if (IsQuantModeHIF8(quant_mode)) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+    }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x,
         expert_idx,
@@ -222,10 +239,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         quant_mode,
         active_expert_range,
         row_idx_type,
-        expanded_x,
+        expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
         expanded_scale);
-    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
+    return std::tie(expanded_x_wrapper, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api
