@@ -18,163 +18,33 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-
-using npu_preparation = at_npu::native::OpPreparation;
-
-
-// LSTMCell operator parameter validation function
-// Refer to validation logic in aclops/LstmCellKernelNpu.cpp
-static void lstm_cell_param_check(const at::Tensor &input,
-                                  const at::Tensor &w_ih,
-                                  const at::Tensor &w_hh,
-                                  const at::Tensor &h,
-                                  const at::Tensor &c,
-                                  const c10::optional<at::Tensor> &b_ih_opt,
-                                  const c10::optional<at::Tensor> &b_hh_opt)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tensor& input_gates,
+                                                                     const Tensor& hidden_gates,
+                                                                     const Tensor& cx,
+                                                                     const c10::optional<at::Tensor> &input_bias_opt,
+                                                                     const c10::optional<at::Tensor> &hidden_bias_opt)
 {
-    // Check input dimension - must be 1D(batch,) or 2D(batch, input_size)
-    TORCH_CHECK(input.dim() == 2 || input.dim() == 1,
-        "lstm_cell: input must be 1D or 2D tensor, but got ", input.dim(), "D tensor",
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check w_ih dimension - [4*hidden_size, input_size]
-    TORCH_CHECK(w_ih.dim() == 2,
-        "lstm_cell: w_ih must be 2D tensor, but got ", w_ih.dim(), "D tensor",
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check w_hh dimension - [4*hidden_size, hidden_size]
-    TORCH_CHECK(w_hh.dim() == 2,
-        "lstm_cell: w_hh must be 2D tensor, but got ", w_hh.dim(), "D tensor",
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check h dimension - [batch, hidden_size]
-    TORCH_CHECK(h.dim() == 2,
-        "lstm_cell: h must be 2D tensor, but got ", h.dim(), "D tensor",
-        OPS_ERROR(ErrCode::PARAM));
-    
-    // Check c dimension - [batch, hidden_size]
-    TORCH_CHECK(c.dim() == 2,
-        "lstm_cell: c must be 2D tensor, but got ", c.dim(), "D tensor",
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check w_ih shape: w_ih.size(0) == 4*hidden_size, w_ih.size(1) == input_size
-    int64_t input_size = input.dim() == 1 ? input.size(0) : input.size(1);
-    int64_t hidden_size = h.size(1);
-    
-    TORCH_CHECK(w_ih.size(0) == 4 * hidden_size,
-        "lstm_cell: w_ih should have ", 4 * hidden_size, " rows, but got ", w_ih.size(0),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(w_ih.size(1) == input_size,
-        "lstm_cell: w_ih should have ", input_size, " columns, but got ", w_ih.size(1),
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check w_hh shape: w_hh.size(0) == 4*hidden_size, w_hh.size(1) == hidden_size
-    TORCH_CHECK(w_hh.size(0) == 4 * hidden_size,
-        "lstm_cell: w_hh should have ", 4 * hidden_size, " rows, but got ", w_hh.size(0),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(w_hh.size(1) == hidden_size,
-        "lstm_cell: w_hh should have ", hidden_size, " columns, but got ", w_hh.size(1),
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check h and c shape consistency
-    TORCH_CHECK(h.sizes().equals(c.sizes()),
-        "lstm_cell: h and c must have the same shape, but got h:", h.sizes(), " c:", c.sizes(),
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check batch size consistency
-    int64_t batch_size = input.dim() == 1 ? 1 : input.size(0);
-    TORCH_CHECK(h.size(0) == batch_size,
-        "lstm_cell: h and input must have the same batch size, but got h:", h.size(0),
-        " input:", batch_size,
-        OPS_ERROR(ErrCode::PARAM));
-
-    // Check b_ih shape
-    const at::Tensor &b_ih = c10::value_or_else(b_ih_opt, [] { return at::Tensor(); });
-    if (b_ih.defined()) {
-        TORCH_CHECK(b_ih.dim() == 1,
-            "lstm_cell: b_ih must be 1D tensor if defined, but got ", b_ih.dim(), "D tensor",
-            OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(b_ih.size(0) == 4 * hidden_size,
-            "lstm_cell: b_ih should have ", 4 * hidden_size, " elements, but got ", b_ih.size(0),
-            OPS_ERROR(ErrCode::PARAM));
-    }
-
-    // Check b_hh shape
-    const at::Tensor &b_hh = c10::value_or_else(b_hh_opt, [] { return at::Tensor(); });
-    if (b_hh.defined()) {
-        TORCH_CHECK(b_hh.dim() == 1,
-            "lstm_cell: b_hh must be 1D tensor if defined, but got ", b_hh.dim(), "D tensor",
-            OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(b_hh.size(0) == 4 * hidden_size,
-            "lstm_cell: b_hh should have ", 4 * hidden_size, " elements, but got ", b_hh.size(0),
-            OPS_ERROR(ErrCode::PARAM));
-    }
-
-    // Check data type consistency
-    TORCH_CHECK(input.scalar_type() == w_ih.scalar_type(),
-        "lstm_cell: input and w_ih must have the same dtype, but got input:", input.scalar_type(),
-        " w_ih:", w_ih.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(input.scalar_type() == w_hh.scalar_type(),
-        "lstm_cell: input and w_hh must have the same dtype, but got input:", input.scalar_type(),
-        " w_hh:", w_hh.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(input.scalar_type() == h.scalar_type(),
-        "lstm_cell: input and h must have the same dtype, but got input:", input.scalar_type(),
-        " h:", h.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(input.scalar_type() == c.scalar_type(),
-        "lstm_cell: input and c must have the same dtype, but got input:", input.scalar_type(),
-        " c:", c.scalar_type(),
-        OPS_ERROR(ErrCode::TYPE));
-}
-
-
-std::tuple<at::Tensor, at::Tensor> npu_lstm_cell(const at::Tensor &input,
-                                                 at::TensorList hx,
-                                                 const at::Tensor &w_ih,
-                                                 const at::Tensor &w_hh,
-                                                 const c10::optional<at::Tensor> &b_ih_opt,
-                                                 const c10::optional<at::Tensor> &b_hh_opt)
-{
-    at::Tensor h = hx[0];
-    at::Tensor c = hx[1];
-    // TODO Execute parameter validation aclnn算子会自主校验，当前校验可删除
-    lstm_cell_param_check(input, w_ih, w_hh, h, c, b_ih_opt, b_hh_opt);
-
-    DO_COMPATIBILITY(aclnnLSTMCell, acl_op::lstm_cell(input, hx, w_ih, w_hh, b_ih_opt, b_hh_opt));
-
-    // Get actual bias tensors TODO (如果aclnn算子自主实现b_ih, b_hh，可删除)
-    const at::Tensor &b_ih = c10::value_or_else(b_ih_opt, [] { return at::Tensor(); });
-    const at::Tensor &b_hh = c10::value_or_else(b_hh_opt, [] { return at::Tensor(); });
-
-    // Prepare weights (transpose to match expected format)
-    at::Tensor weight_ih = w_ih.t().to(input.dtype());
-    at::Tensor weight_hh = w_hh.t().to(input.dtype());
-
-    // Calculate batch size and hidden size
-    int64_t batch_size = input.dim() == 1 ? 1 : input.size(0);
-    int64_t hidden_size = h.size(1);
-    auto output_size = std::vector<int64_t>{batch_size, hidden_size};
-
-    // Create output tensors
-    at::Tensor h_out = npu_preparation::apply_tensor_without_format(output_size, h.options());
-    at::Tensor c_out = npu_preparation::apply_tensor_without_format(output_size, c.options());
-
+    c10::MaybeOwned<at::Tensor> input_bias_maybe_owned = at::borrow_from_optional_tensor(input_bias_opt);
+    const at::Tensor& input_bias = *input_bias_maybe_owned;
+    const at::Tensor& hidden_bias = c10::value_or_else(hidden_bias_opt, [] { return at::Tensor(); });
+    at::Tensor storage = at::empty_like(input_gates, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+    at::Tensor hout = at::empty_like(cx, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+    at::Tensor cout = at::empty_like(cx, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
     // Call aclnnLSTMCell operator
-    EXEC_NPU_CMD(aclnnLSTMCell, input, weight_ih, weight_hh, h, c, b_ih, b_hh, h_out, c_out);
-
-    return std::make_tuple(h_out, c_out);
+    EXEC_NPU_CMD(aclnnThnnFusedLstmCell, input_gates, hidden_gates, cx, input_bias, hidden_bias, hout, cout, storage);
+    return std::make_tuple(std::move(hout), std::move(cout), std::move(storage));
 }
-
-std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input,
-                                             at::TensorList hx,
-                                             const at::Tensor &w_ih,
-                                             const at::Tensor &w_hh,
-                                             const c10::optional<at::Tensor> &b_ih_opt,
-                                             const c10::optional<at::Tensor> &b_hh_opt)
+ std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input,
+                                                   const at::Tensor &w_ih,
+                                                   const at::Tensor &w_hh,
+                                                   const at::Tensor &h,
+                                                   const at::Tensor &c,
+                                                   const c10::optional<at::Tensor> &b_ih_opt,
+                                                   const c10::optional<at::Tensor> &b_hh_opt)
 {
-    return op_api::npu_lstm_cell(input, hx, w_ih, w_hh, b_ih_opt, b_hh_opt);
+    auto igates = at::matmul(input, w_ih.t());
+    auto hgates = at::matmul(h, w_hh.t());
+    auto result = op_api::_thnn_fused_lstm_cell(igates, hgates, c, b_ih_opt, b_hh_opt);
+    return std::make_tuple(std::move(std::get<0>(result)), std::move(std::get<1>(result)));
 }
-
 }  // namespace op_api
