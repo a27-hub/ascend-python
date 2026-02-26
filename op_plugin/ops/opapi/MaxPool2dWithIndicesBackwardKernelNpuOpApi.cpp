@@ -32,7 +32,8 @@ at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& indices)
 {
     at::Tensor grad_input;
-    if (!c10_npu::IsAclnnOnly()) {
+    const bool use_mask_api = indices.scalar_type() == at::kChar;
+    if (use_mask_api) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
@@ -41,12 +42,13 @@ at::Tensor max_pool2d_with_indices_backward(
         EXEC_NPU_CMD(aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size,
                      stride, padding, dilation, ceil_mode, grad_input);
     } else {
+        at::Tensor indices_arg = indices.scalar_type() == at::kLong ? indices.to(at::kInt) : indices;
         DO_COMPATIBILITY(aclnnMaxPool2dWithIndicesBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
         grad_input = npu_preparation::apply_tensor_without_format(self);
 
-        EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices, kernel_size,
+        EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices_arg, kernel_size,
                      stride, padding, dilation, ceil_mode, grad_input);
     }
     
@@ -64,17 +66,19 @@ at::Tensor& max_pool2d_with_indices_backward_out(
     const at::Tensor& indices,
     at::Tensor& grad_input)
 {
-    if (!c10_npu::IsAclnnOnly()) {
+    const bool use_mask_api = indices.scalar_type() == at::kChar;
+    if (use_mask_api) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));
         EXEC_NPU_CMD(aclnnMaxPool2dWithMaskBackward, grad_output, self, indices, kernel_size,
                      stride, padding, dilation, ceil_mode, grad_input);
     } else {
+        at::Tensor indices_arg = indices.scalar_type() == at::kLong ? indices.to(at::kInt) : indices;
         DO_COMPATIBILITY(aclnnMaxPool2dWithIndicesBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));
-        EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices, kernel_size,
+        EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices_arg, kernel_size,
                      stride, padding, dilation, ceil_mode, grad_input);
     }
 
