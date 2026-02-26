@@ -91,7 +91,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         " on this version of torch with torch_npu. Please upgrade to at least v2.7.",
         OPS_ERROR(ErrCode::PARAM));
 #endif
-    
+
     int64_t x_dim = x.dim();
     TORCH_CHECK(x_dim == DIM_X,
         "The x should be ",
@@ -224,7 +224,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
 
-    TensorWrapper x1_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
+    TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
@@ -234,7 +234,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
-        x1_wrapper,
+        x_wrapper,
         expert_idx,
         p_scale,
         p_offset,
