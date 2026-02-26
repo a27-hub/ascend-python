@@ -1031,7 +1031,6 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode == 6:
         expanded_x_dtype = torch.uint8
-        expanded_scale_dtype = torch.float32
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
