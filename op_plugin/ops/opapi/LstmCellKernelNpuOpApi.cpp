@@ -39,9 +39,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tensor& input_gates,
-                                                                     const Tensor& hidden_gates,
-                                                                     const Tensor& cx,
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const at::Tensor& input_gates,
+                                                                     const at::Tensor& hidden_gates,
+                                                                     const at::Tensor& cx,
                                                                      const c10::optional<at::Tensor> &input_bias_opt,
                                                                      const c10::optional<at::Tensor> &hidden_bias_opt)
 {
@@ -57,13 +57,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tenso
 }
 
  std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input,
+                                              at::TensorList hx,
                                               const at::Tensor &w_ih,
                                               const at::Tensor &w_hh,
-                                              const at::Tensor &h,
-                                              const at::Tensor &c,
                                               const c10::optional<at::Tensor> &b_ih_opt,
                                               const c10::optional<at::Tensor> &b_hh_opt)
 {
+    at::Tensor h = hx[0];
+    at::Tensor c = hx[1];
     auto igates = at::matmul(input, w_ih.t());
     auto hgates = at::matmul(h, w_hh.t());
     auto result = op_api::_thnn_fused_lstm_cell(igates, hgates, c, b_ih_opt, b_hh_opt);
