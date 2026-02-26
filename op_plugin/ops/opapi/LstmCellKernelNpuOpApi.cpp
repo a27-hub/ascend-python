@@ -39,6 +39,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
 
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tensor& input_gates,
                                                                      const Tensor& hidden_gates,
                                                                      const Tensor& cx,
@@ -70,3 +71,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tenso
     return std::make_tuple(std::move(std::get<0>(result)), std::move(std::get<1>(result)));
 }
 } // namespace op_api
+
