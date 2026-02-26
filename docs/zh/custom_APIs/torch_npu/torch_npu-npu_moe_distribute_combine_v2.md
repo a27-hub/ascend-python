@@ -188,7 +188,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
     -   BS：表示待发送的token数量。
         -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`BS`的取值范围如下所示。
             - `comm_alg`设置为"fullmesh"时，`BS`的取值范围为0<BS≤256。
-            - `comm_alg`设置为"hierarchy"且驱动版本不低于25.0.RC1.1时，`BS`的取值范围为0<BS≤512。
+            - `comm_alg`设置为"hierarchy"且Ascend HDK版本不低于25.0.RC1.1时，`BS`的取值范围为0<BS≤512。
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512。
 
     -   K：表示选取topK个专家，取值范围为0<K≤16，同时满足0 < K ≤ moe\_expert\_num + zero_expert_num + copy_expert_num + const_expert_num。
