@@ -113,12 +113,35 @@ at::Tensor npu_one_hot(
             depth = MIN_DEPTH;
         }
     }
-    // construct on_value tensor
-    at::Tensor on_value_tensor = npu_preparation::apply_tensor_without_format({1}, self.options());
+    at::ScalarType on_type = on_value.type();
+    at::ScalarType off_type = off_value.type();
+    TORCH_CHECK(on_type == off_type,
+                "on_value and off_value must have the same dtype, but got ",
+                on_type, " and ", off_type, OPS_ERROR(ErrCode::TYPE));
+
+    auto output_dtype = on_type;
+    if (output_dtype == at::kDouble) {
+        double on_d = on_value.toDouble();
+        double off_d = off_value.toDouble();
+        constexpr float flt_max = std::numeric_limits<float>::max();
+        auto in_float_range = [flt_max](double val) {
+            return val >= -static_cast<double>(flt_max) && val <= static_cast<double>(flt_max);
+        };
+        if (in_float_range(on_d) && in_float_range(off_d)) {
+            output_dtype = at::kFloat;
+        } else {
+            TORCH_CHECK(false,
+                        "npu_one_hot: double type on_value/off_value are out of float range, "
+                        "which is not supported by NPU operator. Please use float values instead.",
+                        OPS_ERROR(ErrCode::TYPE));
+        }
+    }
+
+    at::Tensor on_value_tensor = npu_preparation::apply_tensor_without_format({1}, self.options().dtype(output_dtype));
     op_api::fill_(on_value_tensor, on_value);
-    // construct off_value tensor
-    at::Tensor off_value_tensor = npu_preparation::apply_tensor_without_format({1}, self.options());
+    at::Tensor off_value_tensor = npu_preparation::apply_tensor_without_format({1}, self.options().dtype(output_dtype));
     op_api::fill_(off_value_tensor, off_value);
+
     auto output_size = op_infer::array_to_small_vector(self.sizes());
     int64_t max_num_classes = static_cast<int64_t>(output_size.size());
     TORCH_CHECK(num_classes >= AUTO_DEPTH,
@@ -137,9 +160,7 @@ at::Tensor npu_one_hot(
     for (int64_t i = axis+1; i < max_num_classes+MIN_DEPTH; i++) {
         output_shape.emplace_back(self.size(i-1));
     }
-
-    // construct the output tensor of the NPU
-    at::Tensor result = npu_preparation::apply_tensor(output_shape, self.options(), self);
+    at::Tensor result = npu_preparation::apply_tensor(output_shape, self.options().dtype(output_dtype), self);
 
     EXEC_NPU_CMD(aclnnOneHot, self, depth, on_value_tensor, off_value_tensor, axis, result);
     return result;
