@@ -4844,8 +4844,6 @@ class TestMatmul(TestCase):
         output = torch.matmul(x, y)
         grad = torch.randn(output.size(), device="npu")
         output.backward(grad)
-        # x_grad = grad @ y.transpose(-1, -2)
-        # y_grad = x.transpose(-1, -2) @ grad
 
         with FakeTensorMode():
             x_fake_tensor = torch.randn(8, 4, 8, device="npu", requires_grad=True)

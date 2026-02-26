@@ -82,7 +82,10 @@ def npu_dtype_to_str(dtype):
 def matmul_backward_meta(grad, self, other, mask):
     self_len = len(self.size())
     other_len = len(other.size())
-    if self_len != other_len and self_len > other_len > 2:
+    if self_len == 1 and other_len == 1:
+        self_shape = [1] + list(self.size())
+        return (torch.empty(tuple(self_shape), dtype=self.dtype, device=self.device), torch.empty_like(other))
+    elif self_len != other_len and self_len > other_len > 2:
         other_shape = list(self.size()[:-2]) + [self.size()[-1] + grad.size()[-1]]
         return (torch.empty_like(self), torch.empty(tuple(other_shape), dtype=other.dtype, device=other.device))
     elif self_len != other_len and other_len > self_len > 2:
