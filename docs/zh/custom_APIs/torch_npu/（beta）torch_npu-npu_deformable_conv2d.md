@@ -8,6 +8,7 @@
 |<term>Atlas A2 训练系列产品</term>  | √   |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
+|<term>Ascend 950PR/Ascend 950DT</term>     |    √     |
 
 ## 功能说明
 
@@ -90,9 +91,12 @@ torch_npu.npu_deformable_conv2d(self, weight, offset, bias=None, kernel_size, st
 - **deformable_offset** (`Tensor`): 变形卷积中用于调整采样位置的偏移量张量，对应公式中的`deformOut`。不支持空Tensor，支持非连续的Tensor。shape为`[batch, in_channels, out_height * K_H, out_width * K_W]`数据格式需与`self`相同。
 
 ## 约束说明
+- Atlas A3 训练系列产品、Atlas A2 训练系列产品、Atlas 推理系列产品、Atlas 训练系列产品：
+  - 所有Tensor类型的输入参数，无论输入何种数据类型都会被自动转换为`float32`；输出参数的数据类型为`float32`。
 
-所有Tensor类型的输入参数，无论输入何种数据类型都会被自动转换为`float32`；输出参数的数据类型为`float32`。
-
+- Ascend 950PR/Ascend 950DT：
+  - 可选参数`modulated`仅支持配置为True。
+  - 所有Tensor类型的输入、输出参数，数据类型保持一致，支持`bfloat16`、`float16`、`float32`。
 
 ## 调用示例
 
