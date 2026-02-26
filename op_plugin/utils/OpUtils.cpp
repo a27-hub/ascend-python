@@ -108,10 +108,29 @@ bool is_two_tensor_base_format(const at::Tensor &self, const at::Tensor &mat2)
 
 bool is_nd_nz_format(const at::Tensor &self, const at::Tensor &mat2)
 {
+    constexpr int k2D = 2;
+    constexpr int k3D = 3;
+
     auto dim_tensor1 = self.dim();
     auto dim_tensor2 = mat2.dim();
-    // only support 2D ND * 2D NZ
-    return dim_tensor1 == 2 && dim_tensor2 == 2 && is_nz_format(mat2) && !is_nz_format(self);
+
+    const auto d1 = self.dim(), d2 = mat2.dim();
+
+    if (!is_nz_format(mat2) || is_nz_format(self))
+    {
+        return false;
+    }
+    // Case 1: 2D ND * 2D NZ
+    if (d1 == k2D && d2 == k2D)
+    {
+        return true;
+    }
+    // Case 2: 3D ND * 3D NZ
+    if (d1 == k3D && d2 == k3D && c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend950)
+    {
+        return true;
+    }
+    return false;
 }
 
 bool is_nd_to_nz_on_fly(const at::Tensor &self, const at::Tensor &mat2)
