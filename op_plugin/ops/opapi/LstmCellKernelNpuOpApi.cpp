@@ -20,8 +20,8 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_impl(
-    const std::optional<at::Tensor>& grad_hy_opt, const std::optional<at::Tensor>& grad_cy_opt,
-    const at::Tensor& cx, const at::Tensor& cy, const at::Tensor& workspace, bool has_bias)
+    const std::optional<at::Tensor>& grad_hy, const std::optional<at::Tensor>& grad_cy,
+    const at::Tensor& cx, const at::Tensor& cy, const at::Tensor& workspace, bool bias)
 {
     // check input tensor
     const unsigned int dim2D = 2;
@@ -34,36 +34,33 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
     at::Tensor grad_cx = npu_preparation::apply_tensor(cx);
     at::Tensor grad_bias = npu_preparation::apply_tensor_without_format(grad_bias_size, c10::dtype(cx.scalar_type()));
 
-    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy_opt, grad_cy_opt, cx, cy, workspace, has_bias, grad_gates,
+    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy, grad_cy, cx, cy, workspace, bias, grad_gates,
         grad_cx, grad_bias);
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const Tensor& input_gates,
-                                                                     const Tensor& hidden_gates,
-                                                                     const Tensor& cx,
-                                                                     const c10::optional<at::Tensor> &input_bias_opt,
-                                                                     const c10::optional<at::Tensor> &hidden_bias_opt)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const at::Tensor& i_gates,
+    const at::Tensor& h_gates, const at::Tensor& c, const c10::optional<at::Tensor> &input_bias_opt,
+    const c10::optional<at::Tensor> &hidden_bias_opt)
 {
-    c10::MaybeOwned<at::Tensor> input_bias_maybe_owned = at::borrow_from_optional_tensor(input_bias_opt);
-    const at::Tensor& input_bias = *input_bias_maybe_owned;
+    ASCEND_LOGW(">>>>>>>>>>>> in _thnn_fused_lstm_cell <<<<<<<<<<<<");
     const at::Tensor& hidden_bias = c10::value_or_else(hidden_bias_opt, [] { return at::Tensor(); });
-    at::Tensor storage = at::empty_like(input_gates, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
-    at::Tensor hout = at::empty_like(cx, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
-    at::Tensor cout = at::empty_like(cx, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+    c10::MaybeOwned<at::Tensor> input_bias_tmp = at::borrow_from_optional_tensor(input_bias_opt);
+    const at::Tensor& input_bias = *input_bias_tmp;
+    at::Tensor storage = at::empty_like(i_gates, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+    at::Tensor hout = at::empty_like(c, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
+    at::Tensor cout = at::empty_like(c, LEGACY_CONTIGUOUS_MEMORY_FORMAT);
     // Call aclnnLSTMCell operator
-    EXEC_NPU_CMD(aclnnThnnFusedLstmCell, input_gates, hidden_gates, cx, input_bias, hidden_bias, hout, cout, storage);
+    EXEC_NPU_CMD(aclnnThnnFusedLstmCell, i_gates, h_gates, c, input_bias, hidden_bias, hout, cout, storage);
     return std::make_tuple(std::move(hout), std::move(cout), std::move(storage));
 }
 
- std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input,
-                                              const at::Tensor &w_ih,
-                                              const at::Tensor &w_hh,
-                                              const at::Tensor &h,
-                                              const at::Tensor &c,
-                                              const c10::optional<at::Tensor> &b_ih_opt,
-                                              const c10::optional<at::Tensor> &b_hh_opt)
+std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input, at::TensorList hx, const at::Tensor &w_ih,
+    const at::Tensor &w_hh, const c10::optional<at::Tensor> &b_ih_opt, const c10::optional<at::Tensor> &b_hh_opt)
 {
+    ASCEND_LOGW(">>>>>>>>>>>> in lstm_cell <<<<<<<<<<<<");
+    at::Tensor h = hx[0];
+    at::Tensor c = hx[1];
     auto igates = at::matmul(input, w_ih.t());
     auto hgates = at::matmul(h, w_hh.t());
     auto result = op_api::_thnn_fused_lstm_cell(igates, hgates, c, b_ih_opt, b_hh_opt);
