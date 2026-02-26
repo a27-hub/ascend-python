@@ -210,11 +210,11 @@ std::vector<std::string> GetAllOpApiSoFiles()
 
 const std::vector<std::string> g_opApiSoFiles = GetAllOpApiSoFiles();
 
-std::vector<void *> GetAllOpApiHandlers()
+std::vector<void *> GetAllHandlers(const std::vector<std::string> soFiles, const std::string warningMsg)
 {
     std::vector<void *> opApiHandlers;
 
-    for (const auto& opApiSoFile : g_opApiSoFiles) {
+    for (const auto& opApiSoFile : soFiles) {
         auto opApiHandler = GetOpApiLibHandler(opApiSoFile.c_str());
         if (opApiHandler != nullptr) {
             ASCEND_LOGI("%s has got handler.", opApiSoFile.c_str());
@@ -223,13 +223,63 @@ std::vector<void *> GetAllOpApiHandlers()
     }
 
     if (opApiHandlers.empty()) {
-        ASCEND_LOGW("ASCEND_HOME_PATH does not get any libopapi_*.so handler");
+        ASCEND_LOGW(warningMsg);
     }
 
     return opApiHandlers;
 }
 
-const std::vector<void *> g_opApiHandlers = GetAllOpApiHandlers();
+const std::vector<void *> g_opApiHandlers = GetAllHandlers(g_opApiSoFiles,
+    "ASCEND_HOME_PATH does not get any libopapi_*.so handler");
+
+std::vector<std::string> GetAllCustomSoFiles()
+{
+    std::vector<std::string> opApiSoFiles;
+
+    const char *customKernelPath = std::getenv("CUSTOM_KERNEL_PATH");
+    if (customKernelPath == nullptr) {
+        ASCEND_LOGW("CUSTOM_KERNEL_PATH does not exist");
+        return opApiSoFiles;
+    }
+    std::string customKernelSoPath(customKernelPath);
+    std::string customKernelSoRealPath = real_path(customKernelSoPath);
+    if (customKernelSoRealPath.empty()) {
+        ASCEND_LOGW("CUSTOM_KERNEL_PATH so path does not exist");
+        return opApiSoFiles;
+    }
+    if (!is_file_exist(customKernelSoRealPath)) {
+        ASCEND_LOGW("CUSTOM_KERNEL_PATH does not exist or the path length is more than %d", PATH_MAX);
+        return opApiSoFiles;
+    }
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(customKernelSoRealPath)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            std::string fileName = entry.path().filename().string();
+            if (hasSuffix(fileName, ".so")) {
+                ASCEND_LOGI("%s is found.", fileName.c_str());
+                opApiSoFiles.push_back(fileName);
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        ASCEND_LOGW("Filesystem error: %s", e.what());
+    } catch (const std::exception& e) {
+        ASCEND_LOGW("Error: %s", e.what());
+    }
+
+    if (opApiSoFiles.empty()) {
+        ASCEND_LOGW("CUSTOM_KERNEL_PATH does not get any *.so file");
+    }
+
+    return opApiSoFiles;
+}
+
+const std::vector<std::string> g_customSoFiles = GetAllCustomSoFiles();
+
+const std::vector<void *> g_customHandlers = GetAllHandlers(g_customSoFiles,
+    "CUSTOM_KERNEL_PATH does not get any *.so handler");
 
 void add_param_to_buf(const at::Tensor &at_tensor)
 {
@@ -859,6 +909,19 @@ void *GetOpApiFuncAddr(const char *apiName)
             }
         }
         ASCEND_LOGI("%s is not in default custom lib.", apiName);
+    }
+
+    if (!g_customHandlers.empty()) {
+        for (size_t i = 0; i < g_customHandlers.size(); ++i) {
+            if (g_customHandlers[i] != nullptr) {
+                auto funcAddr = GetOpApiFuncAddrInLib(g_customHandlers[i], g_customSoFiles[i].c_str(), apiName);
+                if (funcAddr != nullptr) {
+                    ASCEND_LOGI("%s is found in %s.", apiName, g_customSoFiles[i].c_str());
+                    return funcAddr;
+                }
+            }
+        }
+        ASCEND_LOGI("%s is not in custom kernel lib.", apiName);
     }
 
     if (!g_opApiHandlers.empty()) {
