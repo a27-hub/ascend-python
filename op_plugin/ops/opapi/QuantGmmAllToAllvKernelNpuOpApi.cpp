@@ -70,13 +70,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         TORCH_CHECK(gmm_weight_quant_mode == pertensor, "gmm_weight_quant_mode only support 1 (pertensor), but got ",
             gmm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
 
-        TORCH_CHECK(mm_x_quant_mode == pertensor, "mm_x_quant_mode only support 1 (pertensor), but got ",
-            mm_x_quant_mode, OPS_ERROR(ErrCode::PARAM));
-        
-        TORCH_CHECK(mm_weight_quant_mode == pertensor, "mm_weight_quant_mode only support 1 (pertensor), but got ",
-            mm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
-
-        TORCH_CHECK(comm_quant_mode == 0, "comm_quant_mode only support 0, but got ",
+        TORCH_CHECK(comm_quant_mode.value_or(0) == 0, "comm_quant_mode only support 0, but got ",
             comm_quant_mode, OPS_ERROR(ErrCode::PARAM));
         // dim
         TORCH_CHECK(gmm_x.dim() == DIM_TWO, "The dimension of gmm_x should be 2D, but got ",
@@ -94,24 +88,46 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         }
         int64_t n1 = gmm_weight.size(2);
         if (mm_x.has_value() && mm_weight.has_value()) {
+            TORCH_CHECK(mm_x_quant_mode == pertensor, "mm_x_quant_mode only support 1 (pertensor), but got ",
+                mm_x_quant_mode, OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(mm_weight_quant_mode == pertensor, "mm_weight_quant_mode only support 1 (pertensor), but got ",
+                mm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(mm_x_scale.has_value() && mm_weight_scale.has_value(),
+                "mm_x_scale and mm_weight_scale are required when mm_x and mm_weight are provided",
+                OPS_ERROR(ErrCode::PARAM));
             const at::Tensor &mm_x_value = mm_x.value();
             const at::Tensor &mm_weight_value = mm_weight.value();
             int64_t bs = mm_x_value.size(0);   // shape (BS， H)
             int64_t n2 = trans_mm_weight ? mm_weight_value.size(0) : mm_weight_value.size(1);
-            mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bs, n2}, mm_x_value.options());
+            at::ScalarType mm_y_scalar_type = mm_y_dtype.has_value()
+                ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(mm_y_dtype.value()))
+                : mm_x_value.scalar_type();
+            mm_y = at_npu::native::OpPreparation::apply_tensor_without_format(
+                {bs, n2}, mm_x_value.options().dtype(mm_y_scalar_type));
         }
 
-        auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bsk, n1}, gmm_x.options());
+        aclDataType gmm_y_acl_type = c10_npu::GetAclDataType(gmm_y_dtype);
+        at::ScalarType gmm_y_scalar_type = npu_preparation::convert_to_scalar_type(gmm_y_acl_type);
+        auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format(
+            {bsk, n1}, gmm_x.options().dtype(gmm_y_scalar_type));
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         char* hcom_ptr = const_cast<char*>(hcom.data());
         
-        TensorWrapper gmm_x_wrapper = {gmm_x, c10_npu::GetAclDataType(gmm_x_dtype.value_or(0))};
-        TensorWrapper gmm_weight_wrapper = {gmm_weight, c10_npu::GetAclDataType(gmm_weight_dtype.value_or(0))};
+        TensorWrapper gmm_x_wrapper = {gmm_x, gmm_x_dtype.has_value()
+            ? c10_npu::GetAclDataType(gmm_x_dtype.value())
+            : npu_preparation::convert_to_acl_data_type(gmm_x.scalar_type())};
+        TensorWrapper gmm_weight_wrapper = {gmm_weight, gmm_weight_dtype.has_value()
+            ? c10_npu::GetAclDataType(gmm_weight_dtype.value())
+            : npu_preparation::convert_to_acl_data_type(gmm_weight.scalar_type())};
         TensorWrapper mm_x_wrapper = {mm_x.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_x_dtype.value_or(0))};
         TensorWrapper mm_weight_wrapper = {mm_weight.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_weight_dtype.value_or(0))};
-        TensorWrapper gmm_x_scale_wrapper = {gmm_x_scale, c10_npu::GetAclDataType(gmm_x_scale_dtype.value_or(0))};
-        TensorWrapper gmm_weight_scale_wrapper = {gmm_weight_scale, c10_npu::GetAclDataType(gmm_weight_scale_dtype.value_or(0))};
+        TensorWrapper gmm_x_scale_wrapper = {gmm_x_scale, gmm_x_scale_dtype.has_value()
+            ? c10_npu::GetAclDataType(gmm_x_scale_dtype.value())
+            : npu_preparation::convert_to_acl_data_type(gmm_x_scale.scalar_type())};
+        TensorWrapper gmm_weight_scale_wrapper = {gmm_weight_scale, gmm_weight_scale_dtype.has_value()
+            ? c10_npu::GetAclDataType(gmm_weight_scale_dtype.value())
+            : npu_preparation::convert_to_acl_data_type(gmm_weight_scale.scalar_type())};
         TensorWrapper mm_x_scale_wrapper = {mm_x_scale.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_x_scale_dtype.value_or(0))};
         TensorWrapper mm_weight_scale_wrapper = {mm_weight_scale.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_weight_scale_dtype.value_or(0))};
         TensorWrapper gmm_x_offset_wrapper = {gmm_x_offset.value_or(at::Tensor()), c10_npu::GetAclDataType(gmm_x_dtype.value_or(0))};
