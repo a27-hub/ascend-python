@@ -18,7 +18,7 @@ class TestFastGelu(TestCase):
         return output.cpu().detach()
 
     def custom_op_exec(self, input1):
-        output = torch_npu.npu_fast_gelu_custom(input1)
+        output = torch.ops.npu.npu_fast_gelu_custom(input1)
         return output.cpu().detach()
 
     def test_npu_fast_gelu_custom(self, device="npu"):
