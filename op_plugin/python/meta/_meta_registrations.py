@@ -5484,3 +5484,42 @@ def batch_norm_reduce_meta(self, eps):
     out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     return (out_sum, out_square_sum)
+
+
+@impl(m, "npu_dynamic_block_mx_quant")
+def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296):
+    dim_num = input_dummy.dim()
+    mxscale1_shape = []
+    mxscale2_shape = []
+    last_axis = -1
+    second_to_last_axis = -2
+    last_axis_change = last_axis + dim_num
+    second_to_last_axis_change = second_to_last_axis + dim_num
+    for dim in range(dim_num):
+        mxscale1_shape.append(input_dummy.size(dim))
+        mxscale2_shape.append(input_dummy.size(dim))
+
+    block_size = 32
+    last_dim_size = int(math.ceil(mxscale1_shape[last_axis_change] / block_size))
+    second_to_last_dim_size = int(math.ceil(mxscale2_shape[second_to_last_axis_change] / block_size))
+    mxscale1_shape[last_axis_change] = last_dim_size
+    mxscale2_shape[second_to_last_axis_change] = second_to_last_dim_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(input_dummy.size(dim))
+        y_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y = input_dummy.new_empty(y_shape, dtype=torch.uint8)
+    mxscale1 = input_dummy.new_empty(mxscale1_shape, dtype=torch.uint8)
+    mxscale2 = input_dummy.new_empty(mxscale2_shape, dtype=torch.uint8)
+    return (y, mxscale1, mxscale2)
