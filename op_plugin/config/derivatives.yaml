@@ -33,7 +33,11 @@ backward:
 
 - name: _npu_format_cast.aclnn(Tensor self, int acl_format, int customize_dtype) -> Tensor
   self: grad
-  version: [v2.1, newest]
+  version: [v2.1, v2.6]
+
+- name: _npu_format_cast.input_dtype(Tensor self, int acl_format, int customize_dtype, int input_dtype) -> Tensor
+  self: grad
+  version: [v2.6, newest]
 
 - name: binary_cross_entropy_with_logits(Tensor self, Tensor target, Tensor? weight=None, Tensor? pos_weight=None, int reduction=Mean) -> Tensor
   self: npu_binary_cross_entropy_with_logits_backward(grad, self, target, weight, pos_weight, reduction)
