@@ -3066,25 +3066,29 @@ def bias_shape_check(*args):
 
 
 def quant_matmul_shape_check(*args):
-    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes = args
+    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, weight_unpack_factor, is_a8w4 = args
     X_MAX_DIM = 6
     X_MIN_DIM = 2
-    INT4_IN_INT32 = 8
-    FP4_IN_INT8 = 2
     GROUP_SIZE_A8W4 = 256
     x1_dim_num = x1.dim()
     x2_dim_num = x2.dim()
     x1_m_dim = x1.size(x1_dim_num - 2)
     x1_k_dim = x1.size(x1_dim_num - 1)
     x2_k_dim = x2.size(x2_dim_num - 2)
-    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if ((is_a4w4 and not transpose_x2) or is_a8w4_int) else x2.size(x2_dim_num - 1)
+    x2_n_raw = x2.size(x2_dim_num - 1)
+    should_unpack_weight = (
+        (is_a4w4 and not transpose_x2)
+        or is_a8w4_int
+        or (is_a8w4 and not transpose_x2)
+    )
+    x2_n_dim = x2_n_raw * weight_unpack_factor if should_unpack_weight else x2_n_raw
     torch._check(
         x1_dim_num >= X_MIN_DIM and x1_dim_num <= X_MAX_DIM,
         lambda: f"x1 dim num should be 2 ~ 6, please check x1 dim num {ops_error(ErrCode.VALUE)}",
     )
     if is_a4w4 and not transpose_x2:
         torch._check(
-            x1_k_dim * INT4_IN_INT32 == x2_k_dim,
+            x1_k_dim * weight_unpack_factor == x2_k_dim,
             lambda: f"k dim of x2 should be 8 multiple of k dim of x1, \
                 please check k dim of x1 and x2 {ops_error(ErrCode.VALUE)}",
         )
@@ -3102,7 +3106,12 @@ def quant_matmul_shape_check(*args):
                 )
         else:
             torch._check(
-                x1_k_dim == x2_k_dim * FP4_IN_INT8,
+                x1_k_dim == x2_k_dim * weight_unpack_factor,
+                lambda: "a8w4_float nd only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
+            )
+    elif is_a8w4 and transpose_x2:
+        torch._check(
+                x1_k_dim == x2_k_dim * weight_unpack_factor,
                 lambda: "a8w4_float nd only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
             )
     else:
@@ -3262,7 +3271,7 @@ def quant_matmul_extra_dtype_check(*args):
 
 
 def quant_matmul_dtype_check(*args):
-    x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale = args
+    x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale, is_a8w4 = args
     if is_a8w4_int:
         torch._check(
             x1.dtype == torch.int8,
@@ -3316,6 +3325,12 @@ def quant_matmul_dtype_check(*args):
                 y_scale.dtype == torch.int64,
                 lambda: "y_scale's type supported for int64, but y_scale.dtype is " + str(y_scale.dtype) + ops_error(ErrCode.TYPE),
             )
+
+    if is_a8w4:
+        torch._check(
+            x2.dtype in [torch.uint8, torch.int8],
+            lambda: f"x2's type should be torch.uint8 or torch.int8 if x2_dtype is int4, but x2.dtype is {str(x2.dtype)} {ops_error(ErrCode.TYPE)}",
+        )
 
 
 def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4):
@@ -3435,8 +3450,19 @@ def obfuscation_finalize_meta(fd_to_close):
 def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bias=None, output_dtype=None,
                           x1_dtype=None, x2_dtype=None, pertoken_scale_dtype=None, scale_dtype=None,
                           group_sizes=None, y_scale=None):
-    INT4_IN_INT32 = 8
-    FP4_IN_FP32 = 8
+    BIT4_PER_BIT32 = 8
+    BIT4_PER_BIT8 = 2
+
+    def get_weight_unpack_factor(x2, x2_dtype):
+        # x2 是打包后的权重张量，x2_dtype 是逻辑上的 int4/float4 格式
+        if x2.dtype in (torch.int32, torch.float32):
+            return BIT4_PER_BIT32
+        if (x2_dtype == torch_npu.int4 or x2_dtype == torch_npu.float4_e2m1fn_x2):
+            return BIT4_PER_BIT8
+        # 其他情况默认不做 unpack
+        return 1
+    
+    weight_unpack_factor = get_weight_unpack_factor(x2, x2_dtype)
     batch_val = 1
     x1_dim_num = x1.dim()
     x2_dim_num = x2.dim()
@@ -3447,9 +3473,13 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
     is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32)
+    is_a8w4 = x1.dtype == torch.int8 and x2_dtype == torch_npu.int4
     dim_list = []
-    if is_a8w4_int:
-        dim_list = [x1.shape[0], x2.shape[1] * INT4_IN_INT32]
+    if is_a8w4:
+        dim_list = [x1.shape[0], x2.shape[1] * weight_unpack_factor]
+        transpose_x2 = is_transpose_weight(x2)
+    elif is_a8w4_int:
+        dim_list = [x1.shape[0], x2.shape[1] * weight_unpack_factor]
         transpose_x2 = False
     else:
         for i in range(0, out_dim_num - 2):
@@ -3467,9 +3497,9 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
 
         dimn = x2.size(x2.dim() - 1)
         if (is_a4w4 and not transpose_x2):
-            dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
+            dimn = x2.size(x2.dim() - 1) * weight_unpack_factor
         elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
-            dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
+            dimn = x2.size(x2.dim() - 1) * weight_unpack_factor
 
         dim_list.append(dimm)
         dim_list.append(dimn)
@@ -3485,8 +3515,8 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                                    x1_dtype, x2_dtype, scale_dtype, is_a8w4_float, pertoken_scale_dtype)
         quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes,
                                     x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype, is_a8w4_float)
-    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
+    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale, is_a8w4)
+    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, weight_unpack_factor, is_a8w4)
 
     tensor_dtype = torch.int8
     if output_dtype is not None:
