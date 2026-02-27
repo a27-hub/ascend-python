@@ -89,10 +89,6 @@ void isin_Tensor_Tensor_out_impl(const at::Tensor& elements,
                                  bool invert,
                                  const at::Tensor& out)
 {
-    if (elements.numel() == 0) {
-        return;
-    }
-
     // Heuristic taken from numpy's implementation.
     // See https://github.com/numpy/numpy/blob/fb215c76967739268de71aa4bda55dd1b062bc2e/numpy/lib/arraysetops.py#L575
     if (test_elements.numel() < static_cast<int64_t>(
