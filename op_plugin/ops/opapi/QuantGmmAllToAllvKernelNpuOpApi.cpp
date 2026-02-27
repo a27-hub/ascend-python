@@ -21,7 +21,7 @@
 namespace op_api {
 
 using npu_preparation = at_npu::native::OpPreparation;
-static const int pertensor = 1;
+static const int QUANT_MODE_PERTENSOR = 1;
 static const int DIM_TWO = 2;
 static const int DIM_THREE = 3;
 
@@ -64,10 +64,10 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                                                            )
     {
         // quant mode
-        TORCH_CHECK(gmm_x_quant_mode == pertensor, "gmm_x_quant_mode only support 1 (pertensor), but got ",
+        TORCH_CHECK(gmm_x_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR, "gmm_x_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
             gmm_x_quant_mode, OPS_ERROR(ErrCode::PARAM));
-        
-        TORCH_CHECK(gmm_weight_quant_mode == pertensor, "gmm_weight_quant_mode only support 1 (pertensor), but got ",
+
+        TORCH_CHECK(gmm_weight_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR, "gmm_weight_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
             gmm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
 
         TORCH_CHECK(comm_quant_mode.value_or(0) == 0, "comm_quant_mode only support 0, but got ",
@@ -88,9 +88,9 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         }
         int64_t n1 = gmm_weight.size(2);
         if (mm_x.has_value() && mm_weight.has_value()) {
-            TORCH_CHECK(mm_x_quant_mode == pertensor, "mm_x_quant_mode only support 1 (pertensor), but got ",
+            TORCH_CHECK(mm_x_quant_mode == QUANT_MODE_PERTENSOR, "mm_x_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
                 mm_x_quant_mode, OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK(mm_weight_quant_mode == pertensor, "mm_weight_quant_mode only support 1 (pertensor), but got ",
+            TORCH_CHECK(mm_weight_quant_mode == QUANT_MODE_PERTENSOR, "mm_weight_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
                 mm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
             TORCH_CHECK(mm_x_scale.has_value() && mm_weight_scale.has_value(),
                 "mm_x_scale and mm_weight_scale are required when mm_x and mm_weight are provided",
