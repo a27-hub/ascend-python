@@ -527,7 +527,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         S1 = key.size(1);
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
-        D2 = (D == 0 || !key.size(THIRD_ELEMENT)) ? 0 : value.size(THIRD_ELEMENT) / (key.size(THIRD_ELEMENT) / D);
+        D2 = (D == 0 || !key.size(THIRD_ELEMENT)) ? D : value.size(THIRD_ELEMENT) / (key.size(THIRD_ELEMENT) / D);
         atten_score_shape = {B, S0, head_num * D2};
     } else if (input_layout_str == "SBH") {
         B = query.size(1);
@@ -535,7 +535,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         S1 = key.size(0);
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
-        D2 = (D == 0 || !key.size(THIRD_ELEMENT)) ? 0 : value.size(THIRD_ELEMENT) / (key.size(THIRD_ELEMENT) / D);
+        D2 = (D == 0 || !key.size(THIRD_ELEMENT)) ? D : value.size(THIRD_ELEMENT) / (key.size(THIRD_ELEMENT) / D);
         atten_score_shape = {S0, B, head_num * D2};
     } else if (input_layout_str == "BNSD") {
         B = query.size(0);
