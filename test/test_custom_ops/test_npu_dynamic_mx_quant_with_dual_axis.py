@@ -19,9 +19,9 @@ class TestDynamicMxQuantWithDualAxis(TestCase):
         if torch.all(torch.eq(input_tensor, 0.0)) and input_tensor.shape == torch.Size([1, 2, 2]):
             device = input_tensor.device
             y1 = torch.tensor([[[0, 0], [0, 0]]], dtype=torch.float8_e5m2, device=device)
-            mxscale1 = torch.tensor([[[[5.87747e-39, 5.87747e-39]], [[5.87747e-39, 5.87747e-39]]]], dtype=torch.uint8, device=device)
+            mxscale1 = torch.tensor([[[[0, 0]], [[0, 0]]]], dtype=torch.uint8, device=device)
             y2 = torch.tensor([[[0, 0], [0, 0]]], dtype=torch.float8_e5m2, device=device)
-            mxscale2 = torch.tensor([[[[5.87747e-39, 5.87747e-39], [5.87747e-39, 5.87747e-39]]]], dtype=torch.uint8, device=device)
+            mxscale2 = torch.tensor([[[[0, 0], [0, 0]]]], dtype=torch.uint8, device=device)
             return y1, mxscale1, y2, mxscale2
 
     def generate_input(self, input, dtype="float16"):
