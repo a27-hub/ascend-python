@@ -110,3 +110,43 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
     cd test
     python test.py
     ``` 
+
+## 常见问题 (FAQ)
+ 
+### 1. 编译时提示 `bisheng command not found`
+**问题原因**：系统中未安装 bisheng 编译器或环境变量未正确配置。
+**解决方案**：
+- 确保已正确安装 CANN 工具包
+- 执行 `source /usr/local/Ascend/ascend-toolkit/set_env.sh` 设置环境变量
+- 验证 bisheng 编译器是否可用：`bisheng --version`
+ 
+### 2. 运行时提示 `ModuleNotFoundError: No module named 'op_extension'`
+**问题原因**：自定义扩展包未正确安装。
+**解决方案**：
+- 确保已成功编译并安装了 Wheel 包
+- 检查安装路径是否在 Python 的搜索路径中
+- 尝试使用 `pip install --force-reinstall *.whl` 重新安装
+ 
+### 3. 运行时提示 `RuntimeError: not find custom_ops_lib*.so`
+**问题原因**：编译生成的共享库文件未找到。
+**解决方案**：
+- 检查编译过程是否成功生成了 `.so` 文件
+- 确保安装路径正确，库文件在预期位置
+- 检查 `__init__.py` 中的库文件加载逻辑
+
+## 注意事项
+ 
+### 1. 数据类型支持
+- 当前实现仅支持 `int32` 数据类型
+- 如需支持其他数据类型（如 float32、float16），需修改内核实现
+- 修改时需注意数据类型的字节大小和对齐要求
+ 
+### 2. 硬件兼容性
+- 本示例基于 Ascend NPU 开发，仅支持 Ascend 系列硬件
+- 不同型号的 Ascend NPU 可能需要调整编译参数
+- 编译时需指定正确的 NPU 架构：`--npu-arch=dav-2201`
+ 
+### 4. 版本兼容性
+- 确保 PyTorch、torch_npu 和 CANN 版本兼容
+- 版本不匹配可能导致编译或运行时错误
+- 参考 [torch_npu 文档](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85) 获取兼容版本信息
