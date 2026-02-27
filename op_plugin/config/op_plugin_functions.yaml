@@ -7242,6 +7242,9 @@ custom:
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
 
+  - func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode="rint", int dst_type=296) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
