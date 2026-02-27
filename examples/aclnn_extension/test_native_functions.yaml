@@ -1,2 +1,2 @@
 backend: NPU
-cpp_namespace: at_npu::native
+cpp_namespace: at_npu::nativecpp_namespace: at_npu::native
