@@ -63,7 +63,6 @@ std::tuple<at::Tensor, at::Tensor> npu_block_sparse_attention(
 
     // 分配输出 Tensor
     auto attention_out_shape = query.sizes().vec();
-    attention_out_shape[attention_out_shape.size() - 1] = value.size(-1);
     at::Tensor attention_out = npu_preparation::apply_tensor_without_format(attention_out_shape, query.options());
 
     at::Tensor softmax_lse_out;
@@ -85,7 +84,7 @@ std::tuple<at::Tensor, at::Tensor> npu_block_sparse_attention(
     const at::Tensor atten_mask = at::Tensor();
     const at::Tensor block_table = at::Tensor();
     const int64_t mask_type = 0;
-    const int64_t block_size = 0;
+    const int64_t block_size = 128;
     const int64_t pre_tokens = 2147483647;
     const int64_t next_tokens = 2147483647;
 
