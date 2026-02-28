@@ -11644,9 +11644,9 @@ npu_quant_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Ten
 功能描述
 grouped matmul和alltoallv的融合算子，对grouped matmul计算后的结果进行alltoallv通信的输出做操作，通信时间和计算时间进行掩盖, 添加量化操作。
 参数说明
-    gmm_x: device侧Tensor，表示输入，数据类型支持float16，bfloat16。该输入进行AlltoAll通信，通信后作为GroupedMatmul计算的做矩阵
-    gmm_weight：device侧Tensor，表示输入，数据类型支持float16, bfloat16，类型需与gmmX保持一致，仅支持三维, 数据格式支持ND，GrouedMatMul计算的右矩阵
-    gmm_x_scale: 左矩阵的量化参数，数据类型为FLOAT32。
+    gmm_x（Tensor）：必选输入，表示GroupedMatMul计算的做矩阵Tensor。数据类型为hifloat8，支持ND格式，不支持非连续Tensor，维度为2维，Shape为（BSK，H1）。
+    gmm_weight（Tensor）：必选输入，GroupedMatmul的有矩阵，数据类型需与gmm_x一致（hifloat8），支持ND格式，不支持非连续Tensor，维度为3维，Shape为（e, H1, N1）。
+    gmm_x_scale（Tensor）：必选输入，表示左矩阵的量化缩放系数，数据类型为float32，支持ND格式，不支持非连续Tensor，维度为1维，Shape通常维（1,）
     gmm_weight_scale: 有矩阵的量化参数，数据类型为FLOAT32。
     hcom：char*类型,计算输入，专家并行的通信域名。字符串长度需大于0，小于128。
     ep_world_size：int类型，计算输入，ep通信域size，支持8/16/32/64。
@@ -11726,58 +11726,44 @@ def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port, gmm_x,
     mm_x_scale = torch.tensor([0.4], dtype=torch.float32).npu()
     mm_weight_scale = torch.tensor([0.2], dtype=torch.float32).npu()
 
-    gmm_x_offset = None
-    gmm_weight_offset = None
-    mm_x_offset = None
-    mm_weight_offset = None
-
-    gmm_x_quant_mode = 1
-    gmm_weight_quant_mode = 1
-    mm_quant_mode = 1
-    mm_weight_quant_mode = 1
-    comm_quant_mode = 1
-
-
     input = torch.randn(gmm_x, dtype=dtype).npu()
     weight = torch.randn(gmm_w, dtype=dtype).npu()
-    gmm_y _, _ = torch_npu.npu_quant_gmm_allto_allv(
-                                                    gmm_x=gmm_x,
+    gmm_y _, = torch_npu.npu_quant_gmm_allto_allv(gmm_x=gmm_x,
                                                     gmm_weight=gmm_weight,
                                                     gmm_x_scale = gmm_x_scale,
                                                     gmm_weight_scale = gmm_weight_scale,
-                                                    hcom = hcom_info,
-                                                    ep_world_size = world_size,
-                                                    send_counts=list(send_counts),
-                                                    recv_counts=list(recv_counts),
+                                                    hcom = hcom_name,
+                                                    ep_world_size = epWorldSize,
+                                                    send_counts=send_counts,
+                                                    recv_counts=recv_counts,
+                                                    gmm_y_dtype=gmm_y_dtype,
                                                     send_counts_tensor=None,
                                                     recv_counts_tensor=None,
                                                     mm_x=mm_x,
                                                     mm_weight=mm_weight,
                                                     mm_x_scale = mm_x_scale,
                                                     mm_weight_scale = mm_weight_scale,
-                                                    gmm_x_offset = gmm_x_offset,
-                                                    gmm_weight_offset = gmm_weight_offset,
-                                                    mm_x_offset = mm_x_offset,
-                                                    mm_weight_offset = mm_weight_offset,
+                                                    gmm_x_offset = None,
+                                                    gmm_weight_offset = None,
+                                                    mm_x_offset = None,
+                                                    mm_weight_offset = None,
                                                     comm_quant_scale = None,
-                                                    trans_gmm_weight=False,
-                                                    trans_mm_weight=False,
-                                                    gmm_x_quant_mode = gmm_x_quant_mode,
-                                                    gmm_weight_quant_mode = gmm_weight_quant_mode,
-                                                    mm_quant_mode = mm_quant_mode,
-                                                    mm_weight_quant_mode = mm_weight_quant_mode,
-                                                    comm_quant_mode = comm_quant_mode,
+                                                    gmm_x_quant_mode = 1,
+                                                    gmm_weight_quant_mode = 1,
+                                                    mm_x_quant_mode = 1,
+                                                    mm_weight_quant_mode = 1,
+                                                    comm_quant_mode = 0,
+                                                    group_size=0,
+                                                    gmm_x_dtype = torch_npu.hifloat8,
+                                                    gmm_weight_dtype = torch_npu.hifloat8,
+                                                    gmm_x_scale_dtype = torch.float32,
+                                                    gmm_weight_scale_dtype = torch.float32,
+                                                    mm_x_dtype = torch_npu.hifloat8,
+                                                    mm_weight_dtype = torch_npu.hifloat8,
+                                                    mm_x_scale_dtype = torch.float32,
+                                                    mm_weight_scale_dtype = torch.float32,
                                                     comm_quant_dtype = None,
-                                                    gmm_x_dtype = None,
-                                                    gmm_weight_dtype = None,
-                                                    gmm_x_scale_dtype = None,
-                                                    gmm_weight_dtype = None,
-                                                    mm_x_dtype = None,
-                                                    mm_weight_dtype = None,
-                                                    mm_x_scale_dtype = None,
-                                                    mm_weight_scale_dtype = None,
-                                                    gmm_y_dtype = None,
-                                                    mm_y_dtype = None,
+                                                    mm_y_dtype = mm_y_dtype,
                                                     )
 
 
