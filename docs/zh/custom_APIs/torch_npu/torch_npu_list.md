@@ -56,6 +56,16 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p12061132181116"><a name="p12061132181116"></a><a name="p12061132181116"></a>针对bert模型，获取adam优化器的计算结果。</p>
 </td>
 </tr>
+<tr id="row_block_sparse_attention"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p10326218132921"><a name="p10326218132921"></a><a name="p10326218132921"></a><a href="torch_npu-npu_block_sparse_attention.md">torch_npu.npu_block_sparse_attention</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p10326218132922"><a name="p10326218132922"></a><a name="p10326218132922"></a>BlockSparseAttention 稀疏注意力正向计算，支持块级稀疏模式，通过 block_sparse_mask 指定每个 Q 块选择的 KV 块，实现高效稀疏注意力。</p>
+</td>
+</tr>
+<tr id="row_block_sparse_attention_backward"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p10326218132923"><a name="p10326218132923"></a><a name="p10326218132923"></a><a href="torch_npu-npu_block_sparse_attention_backward.md">torch_npu.npu_block_sparse_attention_backward</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p10326218132924"><a name="p10326218132924"></a><a name="p10326218132924"></a>BlockSparseAttention 稀疏注意力反向计算，块级稀疏模式与正向一致，计算 query、key、value 的梯度。</p>
+</td>
+</tr>
 <tr id="row182061132151115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p52061332161110"><a name="p52061332161110"></a><a name="p52061332161110"></a><a href="（beta）torch_npu-npu_bmmV2.md">（beta）torch_npu.npu_bmmV2</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p1582323323616"><a name="zh-cn_topic_0000001655404257_p1582323323616"></a><a name="zh-cn_topic_0000001655404257_p1582323323616"></a>将矩阵“a”乘以矩阵“b”，生成“a*b”。</p>
