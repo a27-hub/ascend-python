@@ -24,10 +24,8 @@ npu_block_sparse_attention 正向算子单测。
 - GQA 约束 G=N1/N2：G<128 且 128%G==0（G=2,4,8,16,32,64）
 - 多块稀疏（block_shape=[8,128] 产生 4x1 块）
 - 稀疏掩码（对角块为 1，其余为 0）
-- autograd 前反向绑定
 """
 
-import unittest
 import math
 import numpy as np
 import torch
