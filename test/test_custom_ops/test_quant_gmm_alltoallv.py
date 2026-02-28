@@ -47,7 +47,7 @@ class TestQuantGmmAlltoAllv(TestCase):
             mm_x_scale = mm_x_scale.npu()
         if mm_weight_scale is not None:
             mm_weight_scale = mm_weight_scale.npu()
-        gmm_y _, = torch_npu.npu_quant_gmm_allto_allv(
+        gmmYOut mmYOut, = torch_npu.npu_quant_gmm_allto_allv(
                                                     gmm_x=gmm_x,
                                                     gmm_weight=gmm_weight,
                                                     gmm_x_scale = gmm_x_scale,
