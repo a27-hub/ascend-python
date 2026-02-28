@@ -507,6 +507,98 @@ tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
 
 
 _add_torch_npu_docstr(
+    "npu_block_sparse_attention",
+    """
+功能描述:
+BlockSparseAttention 稀疏注意力正向计算, 支持块级稀疏模式, 通过 block_sparse_mask 指定每个 Q 块选择的 KV 块, 实现高效稀疏注意力.
+
+接口原型:
+torch_npu.npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)
+
+参数说明:
+query: Tensor 类型, 公式中的 query. 数据格式 ND. TND: [totalQTokens, headNum, headDim]; BNSD: [batch, headNum, maxQSeqLength, headDim]. 数据类型：float16、bfloat16.
+key: Tensor 类型, 公式中的 key. TND: [totalKTokens, numKeyValueHeads, headDim]; BNSD: [batch, numKeyValueHeads, maxKvSeqLength, headDim]. 数据类型与 query 一致.
+value: Tensor 类型, 公式中的 value. shape 与 key 一致, 数据类型与 query 一致.
+block_sparse_mask: Tensor 类型, 必选, 块稀疏掩码. shape 为 [batch, headNum, ceilDiv(maxQSeqLength, blockShapeX), ceilDiv(maxKvSeqLength, blockShapeY)]. 底层算子数据类型为 INT8; PyTorch 侧通常使用 int8、int32 或 bool 表示 0/1 掩码.
+block_shape: list[int] 必选, 稀疏块形状 [blockShapeX, blockShapeY]. 至少两元素且大于 0; blockShapeY 必须为 128 的倍数.
+* 其后为关键字参数, 须以关键字形式传入.
+q_input_layout: str 类型, 可选, 默认 "TND". query 的排布, 仅支持 "TND"、"BNSD".
+kv_input_layout: str 类型, 可选, 默认 "TND". key、value 的排布, 仅支持 "TND"、"BNSD", 需与 q_input_layout 一致.
+num_key_value_heads: int 类型, 可选, 默认 1. key/value 的 head 数.
+scale_value: float 类型, 可选, 默认 0.0. 缩放系数, 一般取 D^-0.5.
+inner_precise: int 类型, 可选, 默认 1. Softmax 计算精度. 0 表示 fp32 中间结果, 1 表示 fp16 中间结果. 当 query/key/value 为 bfloat16 时仅支持 0.
+actual_seq_lengths: list[int] 可选, 各 batch 的 query 实际序列长度. q_input_layout 为 "TND" 时必选.
+actual_seq_lengths_kv: list[int] 可选, 各 batch 的 key/value 实际序列长度. kv_input_layout 为 "TND" 时必选.
+softmax_lse_flag: int 可选, 默认 0. 0 表示不输出 softmax_lse; 1 表示输出 softmax_lse.
+
+输出说明:
+(Tensor, Tensor). 第一个为 attention_out, 与 query 的 dtype 和 layout 一致; 第二个为 softmax_lse, 当 softmax_lse_flag=1 时有效.
+
+约束说明:
+q_input_layout、kv_input_layout 仅支持 "TND"、"BNSD". 
+query、key、value 数据类型必须一致且为 float16 或 bfloat16. 
+query 的 head 数 N1 与 key/value 的 head 数 N2，需满足 N1 >= N2 且 N1 % N2 == 0. 
+block_sparse_mask 必传，且shape必须为[batch, headNum, ceilDiv(maxQS, blockShapeX), ceilDiv(maxKVS, blockShapeY)]. 
+block_shape 必传，必须包含至少两个元素[blockShapeX, blockShapeY]，且值必须大于0；blockShapeY 必须为 128 的倍数。
+当 q_input_layout 为 "TND" 时 actual_seq_lengths 必选; 当 kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. 
+inner_precise 仅支持 0（表示float32 softmax） 或 1（表示float16 softmax）；当 query/key/value 为 bfloat16 时，仅支持 0.
+
+支持的PyTorch版本
+PyTorch 2.10
+PyTorch 2.9
+PyTorch 2.8
+PyTorch 2.7
+PyTorch 2.6
+
+支持的型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+
+调用示例:
+BNSD 布局
+import torch
+import torch_npu
+
+B, N, S, D = 2, 8, 32, 64
+num_kv_heads = 8
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [128, 128]  # blockShapeY 须为 128 的倍数
+ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int8).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask, block_shape,
+    q_input_layout="BNSD", kv_input_layout="BNSD",
+    num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+)
+print(attention_out.shape)  # (B, N, S, D)
+
+TND 布局
+T, N, D = 32, 8, 64
+num_kv_heads = 8
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [128, 128]  # blockShapeY 须为 128 的倍数
+ceil_q = (T + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (T + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(T, N, D, dtype=torch.float16).npu()
+key = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+value = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(1, N, ceil_q, ceil_kv, dtype=torch.int8).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask, block_shape,
+    q_input_layout="TND", kv_input_layout="TND",
+    num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+    actual_seq_lengths=[T], actual_seq_lengths_kv=[T], softmax_lse_flag=1
+)
+print(attention_out.shape)  # (T, N, D)
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_bmmV2",
     """
 torch_npu.npu_bmmV2(self, mat2, output_sizes) -> Tensor
@@ -10999,10 +11091,10 @@ torch_npu.npu_clipped_swiglu(x, *, group_index=None, dim=-1, alpha=1.702, limit=
 (4)根据输入参数 alpha、limit、bias 进行变体SwiGlu计算，公式如下：A = A.clamp(min=None, max=limit), B = B.clamp(min=-limit, max=limit)
                                                                 y_glu = A * sigmoid(alpha * A)
                                                                 y = y_glu * (B + bias)
-(5)重塑输出张量y的维度数量与合轴前的x的维度数量一致，dim轴上的大小为x的一半，其他维度与x相同。
+(5)重塑输出张量y的维度数量与合轴前的x的维度数量一致，第dim轴上的大小为x的一半，其他维度与x相同。
 
 参数说明:
-x：Tensor类型，必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，不支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，dim轴为偶数。
+x：Tensor类型，必选参数，表示目标张量。数据类型支持float16、bfloat16、float32，不支持非连续的Tensor，数据格式为ND，x的维数必须大于1维，第dim轴为偶数。
 group_index：Tensor类型，可选参数，表示对x进行分组的情况。要求为1维张量，第i个元素代表第i组需要处理的x合轴后的token数量，数据类型支持int64，数据格式ND。
 dim： int类型，可选参数，表示需要对x进行切分的维度序号，取值范围为[-x.dim(), x.dim()-1]，默认 -1。
 alpha：float类型，可选参数，表示glu激活函数系数，默认 1.702。
@@ -11021,30 +11113,61 @@ Atlas A2 推理系列产品
 Atlas A3 推理系列产品
 
 调用示例:
+
+单算子调用
 import torch
 import torch_npu
-from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import SupportedDevices
 
-class TestNPUClippedSwiglu(TestCase):
-    def test_npu_clipped_swiglu(self, device="npu"):
-        tokens_num = 4608
-        hidden_size = 2048
-        x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
-        group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+tokens_num = 4608
+hidden_size = 2048
+x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
+group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+y = torch_npu.npu_clipped_swiglu(
+    x.npu(),
+    group_index=group_index.npu(),
+    dim=-1,
+    alpha=1.702,
+    limit=7.0,
+    bias=1.0,
+    interleaved=True
+)
+
+图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+torch_npu.npu.set_compile_mode(jit_compile=True)
+config = CompilerConfig()
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+device = torch.device(f'npu:0')
+torch_npu.npu.set_device(device)
+
+class ClippedSwigluModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, group_index, dim, alpha, limit, bias, interleaved):
         y = torch_npu.npu_clipped_swiglu(
             x.npu(),
             group_index=group_index.npu(),
-            dim=-1,
-            alpha=1.702,
-            limit=7.0,
-            bias=1.0,
-            interleaved=True
+            dim=dim,
+            alpha=alpha,
+            limit=limit,
+            bias=bias,
+            interleaved=interleaved
         )
+        return y
 
-if __name__ == "__main__":
-    run_tests()
-
+tokens_num = 4608
+hidden_size = 2048
+x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)
+group_index = torch.randint(1, 101, (4, ), dtype=torch.int64)
+clipped_swiglu_model = ClippedSwigluModel().npu()
+clipped_swiglu_model = torch.compile(clipped_swiglu_model, backend=npu_backend, dynamic=True)
+y = clipped_swiglu_model(x, group_index, -1, 1.702, 7.0, 1.0, True)
 """
 )
 
