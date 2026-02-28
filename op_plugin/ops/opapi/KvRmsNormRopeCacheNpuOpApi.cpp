@@ -45,7 +45,9 @@ namespace op_api {
         const c10::optional<at::Tensor> &v,
         double epsilon,
         c10::string_view cache_mode,
-        bool is_output_kv)
+        bool is_output_kv,
+        c10::optional<at::ScalarType> k_cache_dtype,
+        c10::optional<at::ScalarType> c_kv_dtype)
     {
         TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
@@ -75,8 +77,12 @@ namespace op_api {
         }
 
         char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
-        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
+        
+        auto k_cache_dtype_scalar = k_cache_dtype.has_value() ? k_cache_dtype.value() : kv.scalar_type();
+        auto c_kv_dtype_scalar = c_kv_dtype.has_value() ? c_kv_dtype.value() : kv.scalar_type();
+        
+        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options().dtype(k_cache_dtype_scalar));
+        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options().dtype(c_kv_dtype_scalar));
 
         if (exec_v2_flag) {
             // V2 : v is ignored in V1
@@ -108,7 +114,9 @@ namespace op_api {
         const c10::optional<at::Tensor> &v,
         double epsilon,
         c10::string_view cache_mode,
-        bool is_output_kv)
+        bool is_output_kv,
+        c10::optional<at::ScalarType> k_cache_dtype,
+        c10::optional<at::ScalarType> c_kv_dtype)
     {
         TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
@@ -138,8 +146,12 @@ namespace op_api {
         }
 
         char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
-        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
+        
+        auto k_cache_dtype_scalar = k_cache_dtype.has_value() ? k_cache_dtype.value() : kv.scalar_type();
+        auto c_kv_dtype_scalar = c_kv_dtype.has_value() ? c_kv_dtype.value() : kv.scalar_type();
+        
+        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options().dtype(k_cache_dtype_scalar));
+        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options().dtype(c_kv_dtype_scalar));
 
         if (exec_v2_flag) {
             // V2 : v is ignored in V1
@@ -170,7 +182,9 @@ namespace op_api {
         const c10::optional<at::Tensor> &v,
         double epsilon,
         c10::string_view cache_mode,
-        bool is_output_kv)
+        bool is_output_kv,
+        c10::optional<at::ScalarType> k_cache_dtype,
+        c10::optional<at::ScalarType> c_kv_dtype)
     {
         TORCH_CHECK((kv.dim() == MAX_DIM), "4D tensor expected for input kv" + OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK((gamma.dim() == 1), "1D tensor expected for input gamma" + OPS_ERROR(ErrCode::PARAM));
@@ -200,8 +214,12 @@ namespace op_api {
         }
 
         char *cache_mode_ptr = const_cast<char *>(cache_mode.data());
-        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options());
-        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options());
+        
+        auto k_cache_dtype_scalar = k_cache_dtype.has_value() ? k_cache_dtype.value() : kv.scalar_type();
+        auto c_kv_dtype_scalar = c_kv_dtype.has_value() ? c_kv_dtype.value() : kv.scalar_type();
+        
+        at::Tensor k_rope = npu_preparation::apply_tensor_without_format(k_rope_shape, kv.options().dtype(k_cache_dtype_scalar));
+        at::Tensor c_kv = npu_preparation::apply_tensor_without_format(c_kv_shape, kv.options().dtype(c_kv_dtype_scalar));
 
         at::Tensor k_cache_inplace = k_cache.clone();
         at::Tensor ckv_cache_inplace = ckv_cache.clone();
