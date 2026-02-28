@@ -507,6 +507,136 @@ tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
 
 
 _add_torch_npu_docstr(
+    "npu_block_sparse_attention",
+    """
+功能描述:
+BlockSparseAttention 稀疏注意力正向计算, 支持块级稀疏模式, 通过 block_sparse_mask 指定每个 Q 块选择的 KV 块, 实现高效稀疏注意力.
+
+接口原型:
+torch_npu.npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, str q_input_layout, str kv_input_layout, int num_key_value_heads, float scale_value, int inner_precise, *, int[]? block_shape=None, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)
+
+参数说明:
+query: Tensor 类型, 公式中的 query. 数据格式 ND. TND: [totalQTokens, headNum, headDim]; BNSD: [batch, headNum, maxQSeqLength, headDim]. 数据类型 float16、bfloat16.
+key: Tensor 类型, 公式中的 key. TND: [totalKTokens, numKeyValueHeads, headDim]; BNSD: [batch, numKeyValueHeads, maxKvSeqLength, headDim]. 数据类型与 query 一致.
+value: Tensor 类型, 公式中的 value. shape 与 key 一致, 数据类型与 query 一致.
+block_sparse_mask: Tensor 类型, 必选, 块稀疏掩码. shape 为 [batch, headNum, ceilDiv(maxQSeqLength, blockShapeX), ceilDiv(maxKvSeqLength, blockShapeY)]. 数据格式 ND.
+q_input_layout: str 类型, query 的排布, 仅支持 "TND"、"BNSD".
+kv_input_layout: str 类型, key、value 的排布, 仅支持 "TND"、"BNSD", 需与 q_input_layout 一致.
+num_key_value_heads: int 类型, key/value 的 head 数.
+scale_value: float 类型, 缩放系数, 一般取 D^-0.5.
+inner_precise: int 类型, Softmax 计算精度. 0 表示 fp32 中间结果, 1 表示 fp16 中间结果.
+block_shape: list[int] 可选, 稀疏块形状 [blockShapeX, blockShapeY]. 若传入则至少两元素且大于 0.
+actual_seq_lengths: list[int] 可选, 各 batch 的 query 实际序列长度. q_input_layout 为 "TND" 时必选.
+actual_seq_lengths_kv: list[int] 可选, 各 batch 的 key/value 实际序列长度. kv_input_layout 为 "TND" 时必选.
+softmax_lse_flag: int 可选, 默认 0. 0 表示不输出 softmax_lse; 1 表示输出 softmax_lse.
+
+输出说明:
+(Tensor, Tensor). 第一个为 attention_out, 与 query 的 dtype 和 layout 一致; 第二个为 softmax_lse, 当 softmax_lse_flag=1 时有效.
+
+约束说明:
+q_input_layout、kv_input_layout 仅支持 "TND"、"BNSD". query、key、value 数据类型必须一致且为 float16 或 bfloat16. query 的 head 数 N1 与 key/value 的 head 数 N2 需满足 N1 >= N2 且 N1 % N2 == 0. block_sparse_mask 必传. 当 q_input_layout 为 "TND" 时 actual_seq_lengths 必选; 当 kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. inner_precise 仅支持 0 或 1.
+
+调用示例:
+BNSD 布局
+import torch
+import torch_npu
+
+B, N, S, D = 1, 2, 4, 8
+num_kv_heads = 2
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [1, 1]
+ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask,
+    "BNSD", "BNSD", num_key_value_heads=num_kv_heads,
+    scale_value=scale_value, inner_precise=1,
+)
+print(attention_out.shape)  # (B, N, S, D)
+
+TND 布局(需传 actual_seq_lengths / actual_seq_lengths_kv)
+T, N, D = 4, 2, 8
+query = torch.randn(T, N, D, dtype=torch.float16).npu()
+key = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+value = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(1, N, T, T, dtype=torch.int32).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask,
+    "TND", "TND", num_key_value_heads=num_kv_heads,
+    scale_value=scale_value, inner_precise=1,
+    actual_seq_lengths=[T], actual_seq_lengths_kv=[T],
+)
+print(attention_out.shape)  # (T, N, D)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_block_sparse_attention_backward",
+    """
+功能描述:
+BlockSparseAttention 稀疏注意力反向计算, 块级稀疏模式与正向一致, 通过 block_sparse_mask 指定稀疏块, 计算 query、key、value 的梯度.
+
+接口原型:
+torch_npu.npu_block_sparse_attention_backward(Tensor d_out, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_lse, Tensor block_sparse_mask, str q_input_layout, str kv_input_layout, int num_key_value_heads, float scale_value, *, int[]? block_shape=None, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None) -> (Tensor, Tensor, Tensor)
+
+参数说明:
+d_out: Tensor 类型, 正向输出的梯度. shape 与正向 attention_out 一致, 数据格式 ND, 数据类型 float16 或 bfloat16.
+query: Tensor 类型, 正向输入的 query.
+key: Tensor 类型, 正向输入的 key.
+value: Tensor 类型, 正向输入的 value.
+attention_out: Tensor 类型, 正向输出的注意力结果(npu_block_sparse_attention 的第一个返回值).
+softmax_lse: Tensor 类型, 正向输出的 softmax log-sum-exp(npu_block_sparse_attention 的第二个返回值).
+block_sparse_mask: Tensor 类型, 与正向相同的块稀疏掩码.
+q_input_layout: str 类型, 仅支持 "TND"、"BNSD".
+kv_input_layout: str 类型, 仅支持 "TND"、"BNSD", 需与 q_input_layout 一致.
+num_key_value_heads: int 类型, key/value 的 head 数.
+scale_value: float 类型, 与正向相同的缩放系数.
+block_shape: list[int] 可选, 若传入则至少两元素且大于 0.
+actual_seq_lengths: list[int] 可选, q_input_layout 为 "TND" 时必选.
+actual_seq_lengths_kv: list[int] 可选, kv_input_layout 为 "TND" 时必选.
+
+输出说明:
+(Tensor, Tensor, Tensor). 依次为 d_query、d_key、d_value, 与 query、key、value 的 shape 和 dtype 一致.
+
+约束说明:
+block_shape 若传入则至少两元素且大于 0. q_input_layout 为 "TND" 时 actual_seq_lengths 必选; kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. N1 >= N2 且 N1 % N2 == 0. head 维度 headDim <= 128.
+
+调用示例:
+BNSD 下先正向再反向
+import torch
+import torch_npu
+
+B, N, S, D = 1, 2, 4, 8
+num_kv_heads = 2
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [1, 1]
+ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask,
+    "BNSD", "BNSD", num_key_value_heads=num_kv_heads,
+    scale_value=scale_value, inner_precise=1,
+)
+d_out = torch.randn_like(attention_out).npu()
+d_query, d_key, d_value = torch_npu.npu_block_sparse_attention_backward(
+    d_out, query, key, value, attention_out, softmax_lse, block_sparse_mask,
+    "BNSD", "BNSD", num_key_value_heads=num_kv_heads, scale_value=scale_value,
+)
+print(d_query.shape, d_key.shape, d_value.shape)
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_bmmV2",
     """
 torch_npu.npu_bmmV2(self, mat2, output_sizes) -> Tensor
