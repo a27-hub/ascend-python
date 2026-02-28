@@ -455,10 +455,8 @@ class TestNpuMoeInitRoutingV2(TestCase):
             x_max_per_token = np.max(x_abs, axis=-1, keepdims=True)
             expanded_scale = x_max_per_token / 32768.0
 
-            if np.all(expand_scale == 0):
-                expanded_x = expanded_x
-            else:
-                expanded_x = expanded_x / expanded_scale 
+            expand_scale_safe = np.where(expanded_scale == 0, 1.0, expanded_scale)
+            expanded_x = expanded_x / expand_scale_safe
             expanded_x = np.clip(expanded_x, HIFLOAT8_MIN, HIFLOAT8_MAX)
             expanded_x = expanded_x.astype(numpy_hifloat8(), copy=False)
 
