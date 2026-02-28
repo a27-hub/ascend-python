@@ -11645,49 +11645,60 @@ npu_quant_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Ten
 grouped matmul和alltoallv的融合算子，对grouped matmul计算后的结果进行alltoallv通信的输出做操作，通信时间和计算时间进行掩盖, 添加量化操作。
 参数说明
     gmm_x（Tensor）：必选输入，表示GroupedMatMul计算的做矩阵Tensor。数据类型为hifloat8，支持ND格式，不支持非连续Tensor，维度为2维，Shape为（BSK，H1）。
-    gmm_weight（Tensor）：必选输入，GroupedMatmul的有矩阵，数据类型需与gmm_x一致（hifloat8），支持ND格式，不支持非连续Tensor，维度为3维，Shape为（e, H1, N1）。
-    gmm_x_scale（Tensor）：必选输入，表示左矩阵的量化缩放系数，数据类型为float32，支持ND格式，不支持非连续Tensor，维度为1维，Shape通常维（1,）
-    gmm_weight_scale: 有矩阵的量化参数，数据类型为FLOAT32。
-    hcom：char*类型,计算输入，专家并行的通信域名。字符串长度需大于0，小于128。
-    ep_world_size：int类型，计算输入，ep通信域size，支持8/16/32/64。
-    send_counts：int[]，计算输入，支持int数据类型，通信发送的数据量。
-    recv_counts：int[]，计算输入，支持int数据类型，通信接收的数据量。
-    send_counts_tensor：device侧Tensor，表示输入，暂不支持。
-    recv_counts_tensor：device侧Tensor，表示输入，暂不支持。
-    mm_x：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的左矩阵。
-    mm_weight：device侧Tensor，表示输入，数据类型支持float16，bfloat16，共享专家的右矩阵。
+    gmm_weight（Tensor）：必选输入，GroupedMatmul的右矩阵，数据类型需与gmm_x一致（hifloat8），支持ND格式，不支持非连续Tensor，维度为3维，Shape为（e, H1, N1）。
+    gmm_x_scale（Tensor）：必选输入，表示左矩阵的量化缩放系数，数据类型为float32，支持ND格式，不支持非连续Tensor，维度为1维，Shape通常为（1,）或（e,）。
+    gmm_weight_scale（Tensor）：必选输入，表示右矩阵的量化缩放系数，数据类型为float32，支持ND格式，不支持非连续Tensor，维度为1维，Shape通常为（1,）或（e,）。
+    hcom（str）：必选输入，表示专家并行的通信域名称，字符串长度需在（0,128）范围内。
+    ep_world_size（int）：必选输入，表示专家并行通信域的size，支持2、4、6、16、32、64、128、256等数值。
+    send_counts（List[int]）：必选输入，表示发送给其他卡的token数列表，数据类型支持int64，数组大小为e*ep_world_size，当前暂不支持且不支持非连续Tensor。
+    recv_counts（List[int]）：必选输入，表示发送给其他卡的token数列表，数据类型支持int64，数组大小为e*ep_world_size，当前暂不支持且不支持非连续Tensor。
+    gmm_y_dtype（int）：必选输入，表示GroupedMatmul输出矩阵y的目标数据类型，支持float16或bfloat16。
+    send_counts_tensor（Tensor）：可选输入，默认为None，表示设备侧接口计数Tensor，维度为1维，shape为（e*ep_world_size），当前暂不支持且不支持非连续Tensor。
+    recv_counts_tensor（Tensor）：可选输入，默认为None，表示设备侧接口计数Tensor，维度为1维，shape为（e*ep_world_size），当前暂不支持且不支持非连续Tensor。
+    mm_x（Tensor）：可选输入，默认为None，表示共享专家MatMul计算中的左矩阵，数据类型为hifloat8，支持ND格式，不支持非连续Tensor，维度为2维，Shape维（BS, H2）。
+    mm_weight（Tensor）：可选输入，默认为None，表示共享专家MatMul计算中的左矩阵，数据类型为hifloat8，支持ND格式，不支持非连续Tensor，维度为2维，Shape维（H2, N2）。
     mm_x_scale: 共享专家matmul计算中左矩阵的量化参数，数据类型为FLOAT32。
     mm_weight_scale: 共享专家matmul计算中的右矩阵中的量化参数，数据类型为FLOAT32.
-    gmm_x_offset: 可选输入，左矩阵的量化偏置，暂不支持。
-    gmm_weight_offset：可选输入，左矩阵的量化偏置，暂不支持。
-    mm_x_offset: 可选输入，共享专家matmul计算中左矩阵的量化偏置，暂不支持。
-    mm_weight_offset: 可选输入，共享专家matmul计算中的右矩阵的量化偏置，暂不支持。 
-    comm_quant_mode: 预留参数，低比特通信的量化模式，当前只支持0，表示不进行低比特通信。
-    gmm_x_quant_mode: 左矩阵的量化模式，支持以下模式：
-            - 0：无量化
-            - 1：PerTensor量化
-            - 2：PerChannel量化
-            - 3：PerToken量化
-            - 4：PerGroup量化
-            - 5：PerBlock量化
-            - 6：Mx Quant量化
-            - 7: Dyn PerToken量化
-            当前仅支持配置为1，先完成pertensor-pertensor量化功能打通。
-    gmm_weight_quant_mode: 右矩阵的量化模式，同上，当前配置为1。
-    mm_x_quant_mode: 共享专家matmul计算中的左矩阵的量化模式，同上，当前仅支持配置为1。
-    mm_weight_quant_mode: 共享专家matmul计算中的右矩阵的量化模式，同上，当前仅支持配置为1。
-    comm_quant_mode: 预留参数，低比特通信量化模式，当前仅支持0，表示不进行低比特通信。
-    comm_quant_dtype: 可选输入，低比特通信量化后的数据类型，当前不支持。
-    group: 计算输入，str。ep通信域名称，专家并行的通信域
-    group_size: 通信域名称大小。
-    ep_world_size: 计算输入，int。ep通信域size
-    send_counts: 计算输入，list int。通信发送的数据量
-    recv_counts: 计算输入，list int。通信接受的数据量
+    gmm_x_offset（Tensor）：可选输入，默认值None，表示左矩阵的量化偏置，数据类型为float32，不支持非连续Tensor，目前暂不支持此参数。
+    gmm_weight_offset（Tensor）：可选输入，默认值None，表示右矩阵的量化偏置，数据类型为float32，不支持非连续Tensor，目前暂不支持此参数。
+    mm_x_offset（Tensor）：可选输入，默认值None，表示共享专家左矩阵的量化偏置，数据类型为float32，不支持非连续Tensor，目前暂不支持此参数。
+    mm_weight_offset（Tensor）：可选输入，默认值None，表示共享专家左矩阵的量化偏置，数据类型为float32，不支持非连续Tensor，目前暂不支持此参数。
+    comm_quant_scale（Tensor）：可选输入，默认值None，低比特通信的量化参数，数据类型为float32，不支持非连续Tensor，当表示不进行低比特通信。
+    gmm_x_quant_mode（int）：可选输入，默认值为None，表示左矩阵量化模式，当前仅支持配置为1（pertensor量化）。
+    gmm_weight_quant_mode（int）：可选输入，默认值为None，表示右矩阵量化模式，当前仅支持配置为1（pertensor量化）。
+    mm_x_quant_mode（int）：可选输入，默认值为None，表示共享专家左矩阵量化模式，当前仅支持配置为1（pertensor量化）。
+    mm_weight_quant_mode（int）：可选输入，默认值为None，表示共享专家右矩阵量化模式，当前仅支持配置为1（pertensor量化）。
+    comm_quant_mode（int）：可选输入，默认值为None，低比特通信量化模式，当前仅支持0，表示不进行低比特通信。
+    group_size（int）：可选输入，默认值为None，表示通信域的规模属性列表，用于Matmul计算三个方向上的量化分组大小，预留参数，当前不支持。
+    gmm_x_dtype（int）:可选输入，默认值为None，表示左矩阵在计算内部的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    gmm_weight_dtype（int）:可选输入，默认值为None，表示右矩阵在计算内部的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    gmm_x_scale_dtype（int）:可选输入，默认值为None，表示左矩阵量化缩放系数精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    gmm_x_weight_scale_dtype（int）:可选输入，默认值为None，表示左矩阵量化缩放系数的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    mm_x_dtype（int）:可选输入，默认值为None，表示共享专家左矩阵在计算内部的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    mm_weight_dtype（int）:可选输入，默认值为None，表示共享专家左矩阵在计算内部的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    mm_x_scale_dtype（int）:可选输入，默认值为None，表示共享专家左矩阵量化缩放系数的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    mm_weight_scale_dtype（int）:可选输入，默认值为None，表示共享专家右矩阵量化缩放系数的精度类型，默认为输入Tensor的原始类型，用于适配pytorch原生不支持的数据类型（hifloat8）。
+    comm_quant_dtype（int）:可选输入，低比特通信量化后的数据类型，当前不支持。
+    mm_y_dtype（int）:可选输入，默认值为None，表示共享专家输出矩阵的目标数据类型。
 
 输出说明
-    y：device侧Tensor, 计算输出,数据类型支持float16, bfloat16。最终计算结果，数据类型与输入gmm_X保持一致。
-    mm_y：device侧Tensor, 数据类型支持float16, bfloat16，共享专家matmul的输出，仅当传入mm_x与mm_weight才输出，数据类型与mm_x保持一致。
+    y（Tensor）：主计算输出。GroupedMatmul的最终计算结果。支持2维Tensor，Shape维（BSH,N1），数据类型右输入参数gmm_y_dtype决定。
+    mm_y（Tensor）：共享专家计算输出，当且仅当输入参数中提供了mm_x与mm_weight时，该输出才包括有效数据。数据类型与mm_x保持一致，支持2维Tensor，形状为（BS,N2），未启用共享专家返回空的Tensor。
 
+约束说明
+    * 该接口支持训练、推理场景下使用
+    * 该接口仅支持单算子模式调用。
+    * 参数说明里shape使用的变量：
+        - BSK：本卡接收的token数，是recvCounts参数累加之和，取值范围(0, 52428800)。
+        - H1：表示路由专家hidden size隐藏层大小，取值范围(0, 65536)。
+        - H2：表示共享专家hidden size隐藏层大小，取值范围(0, 12288]。
+        - e：表示单卡上专家个数，e<=32，e * epWorldSize最大支持256。
+        - N1：表示路由专家的head_num，取值范围(0, 65536)。
+        - N2：表示共享专家的head_num，取值范围(0, 65536)。
+        - BS：batch sequence size。
+        - K：表示选取TopK个专家，K的范围[2, 8]。
+        - A：本卡发送的token数，是sendCounts参数累加之和。
+        - ep通信域内所有卡的 A 参数的累加和等于所有卡上的 BSK 参数的累加和。
 
 支持的型号
 Atlas A5训练系列产品

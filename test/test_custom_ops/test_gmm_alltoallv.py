@@ -136,7 +136,7 @@ class TestGmmAlltoAllv(TestCase):
         for p in ps:
             p.join()
     
-    def generate_matrix(self, e, ep_world_size, bsk, balance=True, name="quant_gmm_alltoallv", max_iter=10000):
+    def generate_matrix(self, e, ep_world_size, bsk, balance=True, name="alltoallv_gmm", max_iter=10000):
         if name is not None:
             import hashlib
             hash_bytes = hashlib.sha256(name.encode()).digest()
