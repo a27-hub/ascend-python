@@ -30,6 +30,7 @@ const std::set<int> SUPPORT_WORLD_SIZE_LIST{2, 4, 8, 16, 32, 64, 128, 256};
 const std::set<int64_t> SUPPORT_INPUT_DTYPE_LIST{
     static_cast<int64_t>(c10_npu::DType::HIFLOAT8)
 };
+
 // scale valid dtype
 const std::set<int64_t> SUPPORT_SCALE_DTYPE_LIST{
     static_cast<int64_t>(c10_npu::DType::FLOAT)
