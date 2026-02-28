@@ -23,7 +23,7 @@ class TestQuantGmmAlltoAllv(TestCase):
     @classmethod
     def _test_npu_quant_gmm_alltoallv(cls, rank, dtype, c2p, init_pg, input_list1, input_list2, expertTokenNum):
         gmmX, gmmWeight, gmm_x_scale, gmm_weight_scale, mmX, mmWeight, mm_x_scale, mm_weight_scale, gmm_y_dtype, mm_y_dtype = input_list1
- 	    epWorldSize, e_epWorldSize, mc2_send_counts, mc2_recv_counts, balance = input_list2
+        epWorldSize, e_epWorldSize, mc2_send_counts, mc2_recv_counts, balance = input_list2
         pg = init_pg(rank, epWorldSize)
         group = pg.distributed_c10d._get_default_group()
         if torch.__version__ >= '2.0':
