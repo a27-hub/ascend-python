@@ -12,6 +12,7 @@
         -   [（beta）torch_npu.npu_apply_adam](./torch_npu/（beta）torch_npu-npu_apply_adam.md)
         -   [（beta）torch_npu.npu_batch_nms](./torch_npu/（beta）torch_npu-npu_batch_nms.md)
         -   [（beta）torch_npu.npu_bert_apply_adam](./torch_npu/（beta）torch_npu-npu_bert_apply_adam.md)
+        -   [torch_npu.npu_block_sparse_attention](./torch_npu/torch_npu-npu_block_sparse_attention.md)
         -   [（beta）torch_npu.npu_bmmV2](./torch_npu/（beta）torch_npu-npu_bmmV2.md)
         -   [（beta）torch_npu.npu_bounding_box_decode](./torch_npu/（beta）torch_npu-npu_bounding_box_decode.md)
         -   [（beta）torch_npu.npu_bounding_box_encode](./torch_npu/（beta）torch_npu-npu_bounding_box_encode.md)
