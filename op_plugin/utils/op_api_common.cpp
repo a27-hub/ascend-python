@@ -860,6 +860,29 @@ void *GetOpApiFuncAddr(const char *apiName)
         }
         ASCEND_LOGI("%s is not in default custom lib.", apiName);
     }
+    
+    if (!g_default_custom_lib_path.empty()) {
+        for (auto &it : g_default_custom_lib_path) {
+            auto default_cust_opapi_lib = real_path(it + "/libascend_all_ops.so");
+            if (default_cust_opapi_lib.empty()) {
+                continue;
+            }
+            auto custOpApiHandler = GetOpApiLibHandler(default_cust_opapi_lib.c_str());
+            if (custOpApiHandler != nullptr) {
+                auto funcAddr =
+                    GetOpApiFuncAddrInLib(custOpApiHandler, "libascend_all_ops.so", apiName);
+                if (funcAddr != nullptr) {
+                    // check owner
+                    if (!checkOwner(default_cust_opapi_lib)) {
+                        continue;
+                    }
+                    ASCEND_LOGI("%s is found in %s.", apiName, default_cust_opapi_lib.c_str());
+                    return funcAddr;
+                }
+            }
+        }
+        ASCEND_LOGI("%s is not in default custom lib.", apiName);
+    }
 
     if (!g_opApiHandlers.empty()) {
         for (size_t i = 0; i < g_opApiHandlers.size(); ++i) {
