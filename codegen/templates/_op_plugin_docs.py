@@ -529,7 +529,7 @@ scale_value: float 类型, 可选, 默认 0.0. 缩放系数, 一般取 D^-0.5.
 inner_precise: int 类型, 可选, 默认 1. Softmax 计算精度. 0 表示 fp32 中间结果, 1 表示 fp16 中间结果. 当 query/key/value 为 bfloat16 时仅支持 0.
 actual_seq_lengths: list[int] 可选, 各 batch 的 query 实际序列长度. q_input_layout 为 "TND" 时必选.
 actual_seq_lengths_kv: list[int] 可选, 各 batch 的 key/value 实际序列长度. kv_input_layout 为 "TND" 时必选.
-softmax_lse_flag: int 可选, 默认 1. 0 表示不输出 softmax_lse; 1 表示输出 softmax_lse.
+softmax_lse_flag: int 可选, 默认 0. 0 表示不输出 softmax_lse; 1 表示输出 softmax_lse.
 
 输出说明:
 (Tensor, Tensor). 第一个为 attention_out, 与 query 的 dtype 和 layout 一致; 第二个为 softmax_lse, 当 softmax_lse_flag=1 时有效.
@@ -592,7 +592,7 @@ attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
     query, key, value, block_sparse_mask, block_shape,
     q_input_layout="TND", kv_input_layout="TND",
     num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
-    actual_seq_lengths=[T], actual_seq_lengths_kv=[T],
+    actual_seq_lengths=[T], actual_seq_lengths_kv=[T], softmax_lse_flag=1
 )
 print(attention_out.shape)  # (T, N, D)
 """
