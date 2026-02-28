@@ -41,10 +41,10 @@ at::Tensor npu_mhc_post(const at::Tensor &x, const at::Tensor &h_res, const at::
         h_res.scalar_type(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
         x.scalar_type() == h_out.scalar_type(), "The dtype of x and h_out should be same, but got ",
-        x.scalar_type(), "and ", h_out.scalar_type(), OPS_ERROR(ErrCode::PARAM));
+        x.scalar_type(), " and ", h_out.scalar_type(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
         h_res.scalar_type() == h_post.scalar_type(), "The dtype of h_res and h_post should be same, but got ",
-        h_res.scalar_type(), "and ", h_post.scalar_type(), OPS_ERROR(ErrCode::PARAM));
+        h_res.scalar_type(), " and ", h_post.scalar_type(), OPS_ERROR(ErrCode::PARAM));
     
     TORCH_CHECK(
         xDims == DIMS_THREE || xDims == DIMS_FOUR, "x should be 3D or 4D.", OPS_ERROR(ErrCode::PARAM));

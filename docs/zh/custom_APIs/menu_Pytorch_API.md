@@ -92,6 +92,7 @@
         -   [torch_npu.npu_grouped_matmul](./torch_npu/torch_npu-npu_grouped_matmul.md)
         -   [torch_npu.npu_grouped_matmul_finalize_routing](./torch_npu/torch_npu-npu_grouped_matmul_finalize_routing.md)
         -   [torch_npu.npu_grouped_matmul_swiglu_quant_v2](./torch_npu/torch_npu-npu_grouped_matmul_swiglu_quant_v2.md)
+        -   [torch_npu.npu_mhc_post](./torch_npu/torch_npu-npu_mhc_post.md)
         -   [torch_npu.npu_incre_flash_attention](./torch_npu/torch_npu-npu_incre_flash_attention.md)
         -   [torch_npu.npu_kv_quant_sparse_flash_attention](./torch_npu/torch_npu-npu_kv_quant_sparse_flash_attention.md)
         -   [torch_npu.npu_lightning_indexer](./torch_npu/torch_npu-npu_lightning_indexer.md)
