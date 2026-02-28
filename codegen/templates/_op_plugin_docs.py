@@ -47,7 +47,6 @@ tensor([ 98, 255, 188, 186, 120, 157, 175, 159,  77, 223, 127,  79, 247, 151,
 """
 )
 
-
 _add_torch_npu_docstr(
     "copy_memory_",
     """
@@ -70,7 +69,6 @@ tensor([1, 1, 1], device='npu:0', dtype=torch.int32)
 """
 )
 
-
 _add_torch_npu_docstr(
     "empty_with_format",
     """
@@ -91,7 +89,6 @@ tensor([[1., 1., 1.],
         [1., 1., 1.]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "fast_gelu",
@@ -190,7 +187,7 @@ class Network(nn.Module):
     def forward(self, x): 
         y = torch_npu.npu_fast_gelu(x)
         return y
-        
+
 npu_mode = Network()
 config = CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -225,7 +222,6 @@ tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_anchor_response_flags",
     """
@@ -245,7 +241,6 @@ num_base_anchors (Int) - base anchors的数量。
 torch.Size([32400])
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_apply_adam",
@@ -362,7 +357,6 @@ print(y2)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_batch_gather_matmul_",
     """
@@ -461,7 +455,6 @@ nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数�
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_bert_apply_adam",
     """
@@ -505,6 +498,97 @@ tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_block_sparse_attention",
+    """
+功能描述:
+BlockSparseAttention 稀疏注意力正向计算, 支持块级稀疏模式, 通过 block_sparse_mask 指定每个 Q 块选择的 KV 块, 实现高效稀疏注意力.
+
+接口原型:
+torch_npu.npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=1) -> (Tensor, Tensor)
+
+参数说明:
+query: Tensor 类型, 公式中的 query. 数据格式 ND. TND: [totalQTokens, headNum, headDim]; BNSD: [batch, headNum, maxQSeqLength, headDim]. 数据类型：float16、bfloat16.
+key: Tensor 类型, 公式中的 key. TND: [totalKTokens, numKeyValueHeads, headDim]; BNSD: [batch, numKeyValueHeads, maxKvSeqLength, headDim]. 数据类型与 query 一致.
+value: Tensor 类型, 公式中的 value. shape 与 key 一致, 数据类型与 query 一致.
+block_sparse_mask: Tensor 类型, 必选, 块稀疏掩码. shape 为 [batch, headNum, ceilDiv(maxQSeqLength, blockShapeX), ceilDiv(maxKvSeqLength, blockShapeY)]. 底层算子数据类型为 INT8; PyTorch 侧通常使用 int8、int32 或 bool 表示 0/1 掩码.
+block_shape: list[int] 必选, 稀疏块形状 [blockShapeX, blockShapeY]. 至少两元素且大于 0; blockShapeY 必须为 128 的倍数.
+* 其后为关键字参数, 须以关键字形式传入.
+q_input_layout: str 类型, 可选, 默认 "TND". query 的排布, 仅支持 "TND"、"BNSD".
+kv_input_layout: str 类型, 可选, 默认 "TND". key、value 的排布, 仅支持 "TND"、"BNSD", 需与 q_input_layout 一致.
+num_key_value_heads: int 类型, 可选, 默认 1. key/value 的 head 数.
+scale_value: float 类型, 可选, 默认 0.0. 缩放系数, 一般取 D^-0.5.
+inner_precise: int 类型, 可选, 默认 1. Softmax 计算精度. 0 表示 fp32 中间结果, 1 表示 fp16 中间结果. 当 query/key/value 为 bfloat16 时仅支持 0.
+actual_seq_lengths: list[int] 可选, 各 batch 的 query 实际序列长度. q_input_layout 为 "TND" 时必选.
+actual_seq_lengths_kv: list[int] 可选, 各 batch 的 key/value 实际序列长度. kv_input_layout 为 "TND" 时必选.
+softmax_lse_flag: int 可选, 默认 1. 0 表示不输出 softmax_lse; 1 表示输出 softmax_lse.
+
+输出说明:
+(Tensor, Tensor). 第一个为 attention_out, 与 query 的 dtype 和 layout 一致; 第二个为 softmax_lse, 当 softmax_lse_flag=1 时有效.
+
+约束说明:
+q_input_layout、kv_input_layout 仅支持 "TND"、"BNSD". 
+query、key、value 数据类型必须一致且为 float16 或 bfloat16. 
+query 的 head 数 N1 与 key/value 的 head 数 N2，需满足 N1 >= N2 且 N1 % N2 == 0. 
+block_sparse_mask 必传，且shape必须为[batch, headNum, ceilDiv(maxQS, blockShapeX), ceilDiv(maxKVS, blockShapeY)]. 
+block_shape 必传，必须包含至少两个元素[blockShapeX, blockShapeY]，且值必须大于0；blockShapeY 必须为 128 的倍数。
+当 q_input_layout 为 "TND" 时 actual_seq_lengths 必选; 当 kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. 
+inner_precise 仅支持 0（表示float32 softmax） 或 1（表示float16 softmax）；当 query/key/value 为 bfloat16 时，仅支持 0.
+
+支持的PyTorch版本
+PyTorch 2.10
+PyTorch 2.9
+PyTorch 2.8
+PyTorch 2.7
+PyTorch 2.6
+
+支持的型号:
+昇腾910_95 AI处理器
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+
+调用示例:
+BNSD 布局
+import torch
+import torch_npu
+
+B, N, S, D = 2, 8, 32, 64
+num_kv_heads = 8
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [128, 128]  # blockShapeY 须为 128 的倍数
+ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int8).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask, block_shape,
+    q_input_layout="BNSD", kv_input_layout="BNSD",
+    num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+)
+print(attention_out.shape)  # (B, N, S, D)
+
+TND 布局
+T, N, D = 32, 8, 64
+num_kv_heads = 8
+scale_value = 1.0 / (D ** 0.5)
+block_shape = [128, 128]  # blockShapeY 须为 128 的倍数
+ceil_q = (T + block_shape[0] - 1) // block_shape[0]
+ceil_kv = (T + block_shape[1] - 1) // block_shape[1]
+query = torch.randn(T, N, D, dtype=torch.float16).npu()
+key = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+value = torch.randn(T, num_kv_heads, D, dtype=torch.float16).npu()
+block_sparse_mask = torch.ones(1, N, ceil_q, ceil_kv, dtype=torch.int8).npu()
+attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+    query, key, value, block_sparse_mask, block_shape,
+    q_input_layout="TND", kv_input_layout="TND",
+    num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+    actual_seq_lengths=[T], actual_seq_lengths_kv=[T],
+)
+print(attention_out.shape)  # (T, N, D)
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_bmmV2",
@@ -540,7 +624,6 @@ FakeTensor(..., device='npu:0', size=(10, 3, 5))
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_bounding_box_decode",
     """
@@ -570,7 +653,6 @@ tensor([[2.5000, 6.5000, 9.0000, 9.0000],
         [9.0000, 9.0000, 9.0000, 9.0000]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_bounding_box_encode",
@@ -602,7 +684,6 @@ tensor([[13.3281, 13.3281,  0.0000,  0.0000],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_broadcast",
     """
@@ -625,7 +706,6 @@ tensor([[1, 1, 1, 1],
         [3, 3, 3, 3]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_ciou",
@@ -658,7 +738,6 @@ torch.Tensor：mask操作的结果。
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_clear_float_status",
     """
@@ -675,7 +754,6 @@ self (Tensor) - 数据类型为float32的张量。
 tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_confusion_transpose",
@@ -702,7 +780,6 @@ torch.Size([2, 6, 12])
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_conv2d",
     """
@@ -721,7 +798,6 @@ groups (Int) - 对输入进行分组。In_channels可被组数整除。
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_conv3d",
     """
@@ -739,7 +815,6 @@ dilation (ListInt) - 内核元素间距。
 groups (Int) - 对输入进行分组。In_channels可被组数整除。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_conv_transpose2d",
@@ -760,7 +835,6 @@ groups (Int) - 对输入进行分组。In_channels可被组数整除。
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_convolution",
     """
@@ -778,7 +852,6 @@ dilation (ListInt) - 内核元素间距。
 groups (Int) - 对输入进行分组。In_channels可被组数整除。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_convolution_transpose",
@@ -798,7 +871,6 @@ dilation (ListInt) - 内核元素间距。
 groups (Int) - 对输入进行分组。In_channels可被组数整除。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_deformable_conv2d",
@@ -830,7 +902,6 @@ torch.Size([16, 32, 32, 32])
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_diou",
     """
@@ -860,7 +931,6 @@ torch.Tensor (Tensor) - mask操作的结果。
     >>> l.backward()
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_dropout_with_add_softmax",
@@ -1109,7 +1179,6 @@ tensor([[[[0.0000, 0.0639, 0.0000,  ..., 0.0000, 0.0000, 0.0000],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_dtype_cast",
     """
@@ -1139,7 +1208,6 @@ FakeTensor(..., device='npu:0', size=(2,), dtype=torch.float16)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_format_cast",
     """
@@ -1160,7 +1228,6 @@ acl_format (Int) - 目标格式。
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_format_cast_",
     """
@@ -1179,7 +1246,6 @@ src (Tensor，int) - 目标格式。
 29
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_fused_attention_score",
@@ -1229,7 +1295,6 @@ tensor([[0.5010, 0.4709, 0.4841,  ..., 0.4321, 0.4448, 0.4834],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_lightning_indexer",
     """
@@ -1275,7 +1340,6 @@ S1表示query shape中的S，S2表示key shape中的S，N1表示query shape中�
 query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16和float16。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_quant_lightning_indexer",
@@ -1331,7 +1395,6 @@ query（Tensor）：必选参数，不支持非连续，数据格式支持ND，�
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_sparse_flash_attention",
     """
@@ -1385,7 +1448,6 @@ Q_S和S1表示query shape中的S，KV_S和S2表示key shape中的S，Q_N表示nu
 query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16和float16。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_kv_quant_sparse_flash_attention",
@@ -1668,7 +1730,6 @@ if __name__ == "__main__":
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_fusion_attention_v3",
     """
@@ -1875,7 +1936,6 @@ if __name__ == "__main__":
     run_tests()
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_geglu",
@@ -2130,7 +2190,6 @@ tensor([[[-1.5771e-01, -1.4331e-01, -1.0846e-01,  ..., -1.1133e-01,
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_get_float_status",
     """
@@ -2147,7 +2206,6 @@ self (Tensor) - 数据内存地址张量，数据类型为float32。
 tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_giou",
@@ -2182,7 +2240,6 @@ tensor([[1.],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_grid_assign_positive",
     """
@@ -2216,7 +2273,6 @@ torch.Size([4])
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_gru",
     """
@@ -2247,7 +2303,6 @@ new (Tensor) - 数据类型：float16, float32；格式：FRACTAL_NZ。
 hidden_new (Tensor) - 数据类型：float16, float32；格式：FRACTAL_NZ。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_hans_encode",
@@ -2295,7 +2350,6 @@ pdf, mantissa, fixed, var = torch_npu.npu_hans_encode(input_tensor, statistic, r
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_hans_decode",
     """
@@ -2339,7 +2393,6 @@ pdf, mantissa, fixed, var = torch_npu.npu_hans_encode(input_tensor, statistic, r
 recover = torch_npu.npu_hans_decode(mantissa, fixed, var, pdf, reshuff, out=recover)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_ifmr",
@@ -2414,7 +2467,6 @@ tensor(0., device='npu:0')
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_indexing",
     """
@@ -2444,7 +2496,6 @@ tensor([[1, 2],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_iou",
     """
@@ -2468,7 +2519,6 @@ tensor([[0.4985, 0.0000, 0.0000],
        [0.0000, 0.9961, 0.0000]], device='npu:0', dtype=torch.float16)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_layer_norm_eval",
@@ -2511,7 +2561,6 @@ tensor([[        nan,  6.7474e-41,  8.3182e-20,  2.0687e-40],
         [        nan, -6.2792e-42,  1.7902e-20,  2.1050e-40]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_attention_update",
@@ -2566,7 +2615,6 @@ out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_linear",
     """
@@ -2588,7 +2636,6 @@ tensor([[3.6335, 4.3713, 2.4440, 2.0081],
         [5.3273, 6.3089, 3.9601, 3.2410]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_lstm",
@@ -2624,7 +2671,6 @@ tanhct (Tensor) - 4D张量。数据类型：float16, float32；格式：FRACTAL_
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_masked_fill_range",
     """
@@ -2656,7 +2702,6 @@ tensor([[1.0000, 0.4919, 0.2874, 0.6560],
         [0.0366, 0.9738, 0.4689, 0.0979]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_max",
@@ -2701,7 +2746,6 @@ tensor([[[1, 1],
         [0, 0]]], device='npu:0', dtype=torch.int32)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_min",
@@ -2749,7 +2793,6 @@ tensor([[[0, 1],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_mish",
     """
@@ -2767,7 +2810,6 @@ self (Tensor) - 数据类型：float16、float32。
 torch.Size([10, 30, 10])
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_multi_head_attention",
@@ -2864,7 +2906,6 @@ tensor([[ 623.5000,   75.5000,  307.0000,  ...,   25.3125, -418.7500,
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_nms_rotated",
     """
@@ -2901,7 +2942,6 @@ tensor([62], device='npu:0', dtype=torch.int32)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_nms_v4",
     """
@@ -2936,7 +2976,6 @@ valid_outputs (Tensor) - 0D整数张量，表示selected_indices中有效元素�
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_nms_with_mask",
     """
@@ -2970,7 +3009,6 @@ tensor([1, 1], device='npu:0', dtype=torch.uint8)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_normalize_batch",
     """
@@ -3000,7 +3038,6 @@ tensor([[[ 1.1496, -0.6685, -0.4812,  1.7611, -0.5187,  0.7571],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_one_hot",
     """
@@ -3025,7 +3062,6 @@ tensor([[0., 0., 0., 0., 0.],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_pad",
     """
@@ -3046,7 +3082,6 @@ tensor([[ 0.,  0.,  0.,  0.,  0.,  0.],
         [ 0.,  0.,  0.,  0.,  0.,  0.]], device='npu:0', dtype=torch.float16)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_ps_roi_pooling",
@@ -3077,7 +3112,6 @@ tensor([[[[0., 0.],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_ptiou",
     """
@@ -3104,7 +3138,6 @@ tensor([[0.4985, 0.0000, 0.0000],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_random_choice_with_mask",
     """
@@ -3130,7 +3163,6 @@ tensor([True, True], device='npu:0')
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_reshape",
     """
@@ -3155,7 +3187,6 @@ tensor([[0.6657, 0.9857, 0.7614, 0.4368],
         [0.1009, 0.7133, 0.8118, 0.6193]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_rms_norm",
@@ -3205,7 +3236,6 @@ tensor([[[-0.1123,  0.3398,  0.0986,  ..., -2.1250, -0.8477, -0.3418]],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_roi_align",
     """
@@ -3239,7 +3269,6 @@ tensor([[[[ 4.5000,  6.5000,  8.5000],
 
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_rotary_mul",
@@ -3324,7 +3353,6 @@ rotate推荐使用场景
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_mrope",
     """
@@ -3366,7 +3394,6 @@ mrope模式下，mropeSection输入mropeSection[0]+mropeSection[1]+mropeSection[
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_rotated_box_decode",
     """
@@ -3392,7 +3419,6 @@ weight (Tensor，默认值为[1.0, 1.0, 1.0, 1.0, 1.0]) - “x0”、“x1”、
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_rotated_box_encode",
     """
@@ -3417,7 +3443,6 @@ weight (Tensor，默认值为[1.0, 1.0, 1.0, 1.0, 1.0]) - “x0”、“x1”、
             [ 1.1328]]], device='npu:0', dtype=torch.float16)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_rotated_iou",
@@ -3452,7 +3477,6 @@ tensor([[[3.3325e-01, 1.0162e-01],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_rotated_overlaps",
     """
@@ -3479,7 +3503,6 @@ tensor([[[0.0000, 0.1562, 0.0000],
         [0.0000, 0.0611, 0.0000]]], device='npu:0', dtype=torch.float16)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_scaled_masked_softmax",
@@ -3511,7 +3534,6 @@ fixed_triu_mask(bool，默认值为False)- 是否使用自动生成的上三角b
 torch.size([4, 4, 2048, 2048])
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_scatter",
@@ -3548,7 +3570,6 @@ tensor([[-1.1993,  0.1226],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_sign_bits_pack",
     """
@@ -3569,7 +3590,6 @@ Size可被float打包的输出整除。如果x的size可被8整除，则输出�
 tensor([[159],[15]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_sign_bits_unpack",
@@ -3595,7 +3615,6 @@ tensor([[1., 1., 1., 1., 1., -1., -1., 1.],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_silu",
     """
@@ -3615,7 +3634,6 @@ tensor([[0.4397, 0.7178, 0.5190, 0.2654, 0.2230, 0.2674, 0.6051, 0.3522],
        device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_slice",
@@ -3639,7 +3657,6 @@ tensor([[1., 2.],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_softmax_cross_entropy_with_logits",
     """
@@ -3652,7 +3669,6 @@ features (Tensor) - 张量，一个“batch_size * num_classes”矩阵。
 labels (Tensor) - 与“features”同类型的张量。一个“batch_size * num_classes”矩阵。
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_sort_v2",
@@ -3681,7 +3697,6 @@ tensor([[-1.7217, -0.0067,  0.5029,  1.7793],
         [-2.7441,  0.1880,  0.7378,  1.3975]], device='npu:0')
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_stride_add",
@@ -3719,7 +3734,6 @@ tensor([[[[[2.]]],
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_transpose",
     """
@@ -3740,7 +3754,6 @@ torch.Size([2, 3, 5])
 torch.Size([5, 2, 3])
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_yolo_boxes_encode",
@@ -3765,7 +3778,6 @@ torch.Size([5, 2, 3])
 torch.Size([5, 2, 3])
 """
 )
-
 
 _add_torch_npu_docstr(
     "one_",
@@ -3960,7 +3972,7 @@ Atlas A3 训练系列产品
 只有一个输入x
 import torch
 import torch_npu
- 
+
 x = torch.rand((3, 3), dtype = torch.float16).to("npu")
 output, scale = torch_npu.npu_dynamic_quant(x)
 print(output)
@@ -3968,7 +3980,7 @@ print(scale)
 使用smooth_scales输入
 import torch
 import torch_npu
- 
+
 x = torch.rand((3, 3), dtype = torch.float16).to("npu")
 smooth_scales = torch.rand((3,), dtype = torch.float16).to("npu")
 output, scale = torch_npu.npu_dynamic_quant(x, smooth_scales=smooth_scales)
@@ -4183,7 +4195,7 @@ PyTorch2.1及以上
     class MyModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
- 
+
         def forward(self, x1, x2, scale, pertoken_scale):
             return torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=pertoken_scale, x2_scale=scale)
 
@@ -4975,7 +4987,6 @@ y = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype=torch.bfloat16, x1_s
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_convert_weight_to_int4pack",
     """
@@ -5363,7 +5374,7 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 class GMMModel(nn.Module):
     def __init__(self):
         super().__init__()
-    
+
     def forward(self, x, weight):
         return torch_npu.npu_grouped_matmul(x, weight, group_type=-1)
 
@@ -5372,12 +5383,12 @@ def main():
     x2 = torch.randn(1024, 256, device='npu', dtype=torch.float16)
     x3 = torch.randn(512, 1024, device='npu', dtype=torch.float16)
     x = [x1, x2, x3]
-    
+
     weight1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
     weight2 = torch.randn(256, 1024, device='npu', dtype=torch.float16)
     weight3 = torch.randn(1024, 128, device='npu', dtype=torch.float16)
     weight = [weight1, weight2, weight3]
-    
+
     model = GMMModel().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     custom_output = model(x, weight)
@@ -5991,7 +6002,7 @@ class Network(nn.Module):
         # 调用目标接口
         res = torch_npu.npu_scatter_nd_update(var, indices, update)
         return res
-        
+
 npu_mode = Network()
 config = CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -6241,7 +6252,7 @@ class Network(nn.Module):
         # 调用目标接口
         res = torch_npu.npu_scatter_nd_update_(var, indices, update)
         return res
-        
+
 npu_mode = Network()
 config = CompilerConfig()
 npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -6287,7 +6298,7 @@ _add_torch_npu_docstr(
         slotMapping:[batch * seq_len]
 
     其中k_head_size与v_head_size 可以不同，也可以相同。
-    
+
     - 场景三：
         key:[batch, seq_len, num_head, k_head_size]
         value:[batch, seq_len, num_head, v_head_size]
@@ -9659,24 +9670,24 @@ Atlas 推理系列产品
 import torch
 import numpy as np
 import torch_npu
- 
+
 dtype = np.float32
 shape_x = [24,320,48,48]
 num_groups = 32
 shape_c = [320]
 eps = 0.00001
- 
+
 x_npu=torch.randn(shape_x,dtype=torch.float32).npu()
 gamma_npu=torch.randn(shape_c,dtype=torch.float32).npu()
 beta_npu=torch.randn(shape_c,dtype=torch.float32).npu()
 out_npu, mean_npu, rstd_out = torch_npu.npu_group_norm_silu(x_npu, gamma_npu, beta_npu, group=num_groups, eps=eps)
- 
- 
+
+
 x_npu=torch.randn(shape_x,dtype=torch.bfloat16).npu()
 gamma_npu=torch.randn(shape_c,dtype=torch.bfloat16).npu()
 beta_npu=torch.randn(shape_c,dtype=torch.bfloat16).npu()
 out_npu, mean_npu, rstd_out = torch_npu.npu_group_norm_silu(x_npu, gamma_npu, beta_npu, group=num_groups, eps=eps)
- 
+
 x_npu=torch.randn(shape_x,dtype=torch.float16).npu()
 gamma_npu=torch.randn(shape_c,dtype=torch.float16).npu()
 beta_npu=torch.randn(shape_c,dtype=torch.float16).npu()
@@ -9869,7 +9880,7 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 class GMMModel(nn.Module):
     def __init__(self):
         super().__init__()
-    
+
     def forward(self, sorted_experts, num_experts):
         return torch_npu.npu_moe_compute_expert_tokens(sorted_experts, num_experts)
 def main():
@@ -9952,7 +9963,7 @@ npu_backend = tng.get_npu_backend(compiler_config=config)
 class GMMModel(nn.Module):
     def __init__(self):
         super().__init__()
-    
+
     def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode):
         return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
 def main():
@@ -10094,7 +10105,7 @@ x = torch.randn((2, 4, 6),device='npu',dtype=torch.float16).npu()
 moe_gating_topk_softmax_model_v2 = MoeGatingTopkSoftmaxV2Model().npu()
 moe_gating_topk_softmax_model_v2 = torch.compile(moe_gating_topk_softmax_model_v2, backend=npu_backend, dynamic=True)
 res = moe_gating_topk_softmax_model_v2(x = x, finished = None, k = 2, renorm = 0, output_softmax = output_softmax = True)
-"""  
+"""
 )
 
 _add_torch_npu_docstr(
@@ -10110,7 +10121,7 @@ npu_moe_gating_top_k(x, k, bias=None, k_group=1, group_count=1, group_select_mod
 -   **k**（`int`）：必选参数，表示每个token最终筛选得到的专家个数，数据类型为`int64`。要求`1 <= k <= x_shape[-1] / group_count * k_group`。
 
 -   <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
- 
+
 -   **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
 
 -   **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
@@ -10348,7 +10359,7 @@ PyTorch 2.1
     单算子模式调用
 import torch 
 import torch_npu 
- 
+
 bs = 1 
 h = 613 
 k = 475 
@@ -10361,12 +10372,12 @@ expert_tokens_num_flag = True
 quant_mode = -1 
 active_expert_range = [23, 35] 
 row_idx_type = 0 
- 
+
 x = torch.randn((bs, h), dtype=torch.float32).npu() 
 expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu() 
 scale = torch.randn((bs,), dtype=torch.float32).npu() 
 offset = None 
- 
+
 expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2( 
                 x, expert_idx, scale=scale, offset=offset, 
                 active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
@@ -10378,14 +10389,14 @@ import torch.nn as nn
 import torch_npu 
 import torchair as tng 
 from torchair.configs.compiler_config import CompilerConfig 
- 
+
 config = CompilerConfig() 
 npu_backend = tng.get_npu_backend(compiler_config=config) 
- 
+
 class MoeInitRoutingV2Model(nn.Module): 
     def __init__(self): 
         super().__init__() 
- 
+
     def forward(self, x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, 
                 expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, 
                 quant_mode=0, active_expert_range=0, row_idx_type=0): 
@@ -10393,12 +10404,12 @@ class MoeInitRoutingV2Model(nn.Module):
                 active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
                 expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag, 
                 active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type) 
- 
+
 def main(): 
     bs = 1 
     h = 613 
     k = 475 
- 
+
     active_num = 475 
     expert_capacity = -1 
     expert_num = 226 
@@ -10408,12 +10419,12 @@ def main():
     quant_mode = -1 
     active_expert_range = [23, 35] 
     row_idx_type = 0 
- 
+
     x = torch.randn((bs, h), dtype=torch.float32).npu() 
     expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu() 
     scale = torch.randn((bs,), dtype=torch.float32).npu() 
     offset = None 
- 
+
     moe_init_routing_v2_model = MoeInitRoutingV2Model().npu() 
     moe_init_routing_v2_model = torch.compile(moe_init_routing_v2_model, backend=npu_backend, dynamic=False) 
     expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = moe_init_routing_v2_model(x, 
@@ -10421,12 +10432,11 @@ def main():
                                     expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,  
                                     expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag, 
                                     active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type) 
- 
+
 if __name__ == '__main__': 
     main()
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_moe_token_permute_with_routing_map",
@@ -10466,7 +10476,6 @@ pad_mode = False
 permuted_tokens_out, _, sorted_indices_out = torch_npu.npu_moe_token_permute_with_routing_map(x, rounting_map, num_out_tokens=numtoken, drop_and_pad=pad_mode)
     """
 )
-
 
 _add_torch_npu_docstr(
     "npu_prefetch",
@@ -10897,7 +10906,7 @@ torch_npu.npu_dequant_swiglu_quant(
     import os
     import shutil
     import unittest
-    
+
     import torch
     import torch_npu
     from torch_npu.testing.testcase import TestCase, run_tests
@@ -10938,7 +10947,7 @@ torch_npu.npu_dequant_swiglu_quant(
     import os
     import shutil
     import unittest
-    
+
     import torch
     import torch_npu
     from torch_npu.testing.testcase import TestCase, run_tests
@@ -10949,7 +10958,7 @@ torch_npu.npu_dequant_swiglu_quant(
     config.experimental_config.frozen_parameter = True
     config.experimental_config.tiling_schedule_optimize = True
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     class TestNPUDequantSwigluQuant(TestCase):
         def test_npu_dequant_swiglu_quant(self, device="npu"):
             tokens_num = 4608
@@ -10975,7 +10984,7 @@ torch_npu.npu_dequant_swiglu_quant(
                 glu_alpha=1.702,
                 glu_bias=1.0
             )
-    
+
     if __name__ == "__main__":
         run_tests()
 
@@ -11087,12 +11096,12 @@ Atlas A3 训练系列产品
 调用示例:
 import torch
 import torch_npu
-    
+
 N = 4096
 C = 8080
 input = torch.randn(N, C).npu()
 target = torch.arange(0, N).npu()
-    
+
 loss, log_prob, _, _ = torch_npu.npu_cross_entropy_loss(input, target)
 """
 )
@@ -12175,7 +12184,6 @@ Atlas A2训练系列产品
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_nsa_compress_infer",
     """
@@ -12226,7 +12234,6 @@ Atlas A2训练系列产品
 >>> torch_npu.npu_nsa_compress_infer(input, weight,slot_mapping,compress_block_size,compress_stride,page_block_size,actual_seq_len=act_seq_lens,block_table=block_table,cache=cache)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_nsa_compress_attention",
@@ -12291,7 +12298,6 @@ Atlas A2训练系列产品
 >>> torch_npu.npu_nsa_compress_attention(query, key, value, scale_value, head_num, compress_block_size, compress_stride, select_block_size, select_block_count, actual_seq_qlen=actual_seq_qlen, actual_cmp_seq_kvlen=actual_cmp_seq_kvlen, actual_sel_seq_kvlen=actual_sel_seq_kvlen)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_nsa_compress_attention_infer",
@@ -12375,7 +12381,6 @@ Atlas A2训练系列产品
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_nsa_select_attention",
     """
@@ -12436,7 +12441,6 @@ Atlas A2训练系列产品
 >>> torch_npu.npu_nsa_select_attention(query, key, value, topk_indices, scale_value, head_num, select_block_size, select_block_count, atten_mask=atten_mask, actual_seq_qlen=actual_seq_qlen, actual_seq_kvlen=actual_seq_kvlen)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_nsa_select_attention_infer",
@@ -12507,7 +12511,6 @@ Atlas A2训练系列产品
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_gather_sparse_index",
     """
@@ -12548,7 +12551,6 @@ out = torch_npu.npu_gather_sparse_index(inputs, index)
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_moe_update_expert",
     """
@@ -12567,7 +12569,7 @@ torch_npu.npu_moe_update_expert(Tensor expert_ids, Tensor eplb_table, *, Tensor?
     local_rank_id：本卡ID，数据类型支持INT64，当balance_mode设置0时，本属性取值范围为[0, world_ize)。
     world_size：通信域size，数据类型支持INT64，当balance_mode设置0时，本属性取值范围为[2, 768]
     balance_mode：均衡规则，数据类型支持INT64，取值支持0和1，0表示用local_rank_id进行负载均衡，1表示使用token_id进行负载均衡。当本属性取值为0时，local_rank_id和world_size必须传入有效值。
-    
+
 输出说明
     balanced_expert_ids：映射后每个token的topK个专家所在物理卡的卡号，Device侧的Tensor，要求是一个2D的Tensor，shape为(BS, K)，数据类型、数据格式与expert_ids保持一致。
     balanced_active_mask：剪枝后的active_mask，当expert_scales、pruning_threshold传入有效数据时该输出有效。Device侧的Tensor，要求是一个2的Tensor，shape为(BS, K)，数据类型支持BOOL，数据格式要求为ND，支持非连续的Tensor。
@@ -12631,7 +12633,7 @@ class TestMoeUpdateExpert(TestCase):
                                                    balance_mode=balance_mode)
         c2p.put((rank_id, out_expert_idx.cpu(), out_mask.cpu()))
         p2c.get()
-    
+
     def gen_exp_result(self):
         for rank_id in range(self.world_size):
             eplb_table = np.zeros((self.log_ep_size, self.F - 1))
@@ -12722,7 +12724,6 @@ if __name__ == '__main__':
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_top_k_top_p",
     """
@@ -12795,7 +12796,6 @@ out = torch_npu.npu_top_k_top_p(logits, p, k)
 """
 )
 
-
 _add_torch_npu_docstr(
     "ffn_worker_scheduler_",
     """
@@ -12842,7 +12842,7 @@ context_holder = torch_npu._afd.create_schedule_context_holder(schedule_mode = 0
     micro_batch_num = micro_batch_number, micro_batch_size = batch_size, selected_expert_num = top_k + 1,
     expert_num = expert_num, attn_to_ffn_token_size = attn_to_ffn_token_size, ffn_to_attn_token_size = ffn_to_attn_token_size, 
     ffn_window = ffn_window, ffn_window_size = window_size)
-    
+
 schedule_context = context_holder.get_schedule_context_tensor()
 
 
@@ -12857,7 +12857,6 @@ _set_all_flags()
 torch_npu.ffn_worker_scheduler_(schedule_context, sync_group_size = 2)
 """
 )
-
 
 _add_torch_npu_docstr(
     "ffn_worker_scheduler",
@@ -12908,7 +12907,7 @@ context_holder = torch_npu._afd.create_schedule_context_holder(schedule_mode = 0
     micro_batch_num = micro_batch_number, micro_batch_size = batch_size, selected_expert_num = top_k + 1,
     expert_num = expert_num, attn_to_ffn_token_size = attn_to_ffn_token_size, ffn_to_attn_token_size = ffn_to_attn_token_size, 
     ffn_window = ffn_window, ffn_window_size = window_size)
-    
+
 schedule_context = context_holder.get_schedule_context_tensor()
 
 
@@ -12923,7 +12922,6 @@ _set_all_flags()
 schedule_context_out = torch_npu.ffn_worker_scheduler(schedule_context, sync_group_size = 2)
 """
 )
-
 
 _add_torch_npu_docstr(
     "attention_worker_scheduler_",
@@ -12969,7 +12967,7 @@ context_holder = torch_npu._afd.create_schedule_context_holder(schedule_mode = 1
     micro_batch_num = micro_batch_number, micro_batch_size = batch_size, selected_expert_num = top_k + 1,
     expert_num = expert_num, attn_to_ffn_token_size = attn_to_ffn_token_size, ffn_to_attn_token_size = ffn_to_attn_token_size, 
     attention_window = attn_window, attention_window_size = window_size)
-    
+
 schedule_context = context_holder.get_schedule_context_tensor()
 
 def _set_all_flags():
@@ -12985,7 +12983,6 @@ torch_npu.attention_worker_scheduler_(schedule_context)
 
 """
 )
-
 
 _add_torch_npu_docstr(
     "attention_worker_scheduler",
@@ -13034,7 +13031,7 @@ context_holder = torch_npu._afd.create_schedule_context_holder(schedule_mode = 1
     micro_batch_num = micro_batch_number, micro_batch_size = batch_size, selected_expert_num = top_k + 1,
     expert_num = expert_num, attn_to_ffn_token_size = attn_to_ffn_token_size, ffn_to_attn_token_size = ffn_to_attn_token_size, 
     attention_window = attn_window, attention_window_size = window_size)
-    
+
 schedule_context = context_holder.get_schedule_context_tensor()
 
 def _set_all_flags():
@@ -13050,7 +13047,6 @@ schedule_context_out = torch_npu.attention_worker_scheduler(schedule_context)
 
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_top_k_top_p_sample",
@@ -13248,7 +13244,6 @@ A200I A2 Box 异构组件
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_moe_token_permute",
     """
@@ -13294,7 +13289,6 @@ probs = probs.npu().to(dtype)
 permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_moe_token_unpermute",
@@ -13348,7 +13342,6 @@ unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_in
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_dynamic_block_quant",
     """
@@ -13401,7 +13394,6 @@ tensor([[0.0063],
 """
 )
 
-
 _add_torch_npu_docstr(
     "obfuscation_initialize",
     """
@@ -13453,7 +13445,6 @@ fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=d
 """
 )
 
-
 _add_torch_npu_docstr(
     "obfuscation_finalize",
     """
@@ -13493,7 +13484,6 @@ fd = torch_npu.npu.obfuscation_initialize(hidden_size, tp_rank, cmd, data_type=d
 torch_npu.npu.obfuscation_finalize(fd)
 """
 )
-
 
 _add_torch_npu_docstr(
     "obfuscation_calculate",
@@ -13540,7 +13530,6 @@ param = torch.tensor([3584], device=device)
 x_obf_out = torch_npu.npu.obfuscation_calculate(fd, hidden_states, param, obf_coefficient=obf_cft)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_gelu_mul",
@@ -13589,7 +13578,6 @@ output = torch_npu.npu_gelu_mul(input, approximate=mode)
 
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_sparse_lightning_indexer_grad_kl_loss",
@@ -13675,7 +13663,7 @@ def gen_inputs(seqlens_list_array, seqlens_list_kv_array, isTnd):
                 s2RealSize = (int)((seqlens_list_kv_array[bIdx] - seqlens_list_array[bIdx]) + s1Idx + 1)
                 if s2RealSize <= 0:
                     s2RealSize = seqlens_list_kv_array[bIdx]
-                    
+
                 if s2RealSize > topK:
                     s2RealLen = topK
                 else:
@@ -13734,7 +13722,6 @@ torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(
 """
 )
 
-
 _add_torch_npu_docstr(
     "npu_sim_exponential_",
     """
@@ -13774,7 +13761,6 @@ torch_npu.npu_sim_exponential_(input, lambd=1, generator=gen)
 
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_fused_floyd_attention",
@@ -13852,7 +13838,6 @@ x_max_npu, x_sum_npu, output_npu = torch_npu.npu_fused_floyd_attention(
 """
 )
 
-
 _add_torch_npu_docstr(
     "save_npugraph_tensor",
     """
@@ -13888,7 +13873,7 @@ from torchair.configs.compiler_config import CompilerConfig
 class Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-    
+
     def forward(self, x):
         output = torch.square(x)
         torch_npu.save_npugraph_tensor(output, save_path="./tensor.pt")
@@ -13904,7 +13889,6 @@ model = torch.compile(model, backend=npu_backend)
 model(x)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_dense_lightning_indexer_softmax_lse",
@@ -13961,7 +13945,6 @@ sparse_mode = 3
 softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(q_index, k_index, weights, actual_seq_qlen=actual_seq_qlen, actual_seq_klen=actual_seq_klen, layout=input_layout, sparse_mode=sparse_mode)
 """
 )
-
 
 _add_torch_npu_docstr(
     "npu_dense_lightning_indexer_grad_kl_loss",
