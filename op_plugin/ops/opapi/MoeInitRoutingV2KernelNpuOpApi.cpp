@@ -47,7 +47,7 @@ inline bool IsQuantModeMXFP8(int64_t quantMode)
 
 inline bool IsQuantModeHIF8(int64_t quantMode)
 {
-    return quant_mode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
+    return quantMode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
 }
 
 namespace op_api {
