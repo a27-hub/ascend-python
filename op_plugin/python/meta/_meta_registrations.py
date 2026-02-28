@@ -2149,6 +2149,16 @@ def npu_block_sparse_attention_meta(query, key, value, block_sparse_mask, block_
     return (attention_out, softmax_lse)
 
 
+@impl(m, "npu_block_sparse_attention_backward")
+def npu_block_sparse_attention_backward_meta(d_out, query, key, value, attention_out, softmax_lse, block_sparse_mask,
+                                            block_shape, actual_seq_lengths, actual_seq_lengths_kv,
+                                            q_input_layout, kv_input_layout, num_key_value_heads, scale_value):
+    d_query = query.new_empty(query.size())
+    d_key = key.new_empty(key.size())
+    d_value = value.new_empty(value.size())
+    return (d_query, d_key, d_value)
+
+
 @impl(m, "npu_bmmV2")
 def npu_bmmV2_meta(self, mat2, output_sizes):
     dim1 = self.size(0)
@@ -2931,13 +2941,8 @@ def npu_all_to_all_quant_matmul_meta(x1, x2, hcom, world_size, all2all_out_flag=
         world_size != 0,
         lambda: "world_size should not be 0." + ops_error(ErrCode.VALUE),
     )
-    INT4_IN_INT32 = 8
-    is_w4 = x2.dtype == torch.int32
-    if is_w4:
-        out_n = x2.size(1) * INT4_IN_INT32
-    else:
-        out_n = x2.size(1)
     out_m = x1.size(0) // world_size
+    out_n = x2.size(1)
     size = [out_m, out_n]
     # 推导output的dtype，默认为float32
     if y_dtype is None:
