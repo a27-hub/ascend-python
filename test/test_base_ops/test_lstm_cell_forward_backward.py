@@ -40,8 +40,10 @@ class TestLSTMCellForwardBackward(TestCase):
         # Convert to NPU with specified dtype
         input_npu = input_cpu.to(dtype).npu()
         input_npu.requires_grad_(True)
+
         h0_npu = h0_cpu.to(dtype).npu()
         h0_npu.requires_grad_(True)
+
         c0_npu = c0_cpu.to(dtype).npu()
         c0_npu.requires_grad_(True)
 
@@ -68,13 +70,13 @@ class TestLSTMCellForwardBackward(TestCase):
         grad_c = torch.randn_like(c_cpu)
 
         # CPU backward
-        h_cpu.backward(grad_h)
+        h_cpu.backward(grad_h, retain_graph=True)
         c_cpu.backward(grad_c, retain_graph=True)
 
         # NPU backward (convert grad to NPU dtype)
         grad_h_npu = grad_h.to(dtype).npu()
         grad_c_npu = grad_c.to(dtype).npu()
-        h_npu.backward(grad_h_npu)
+        h_npu.backward(grad_h_npu, retain_graph=True)
         c_npu.backward(grad_c_npu, retain_graph=True)
 
         # Compare gradients for input

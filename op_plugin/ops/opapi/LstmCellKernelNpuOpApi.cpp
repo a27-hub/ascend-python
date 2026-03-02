@@ -29,12 +29,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
         "cx, cy and workspace must be a 2D Tensor", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(cx.sizes() == cy.sizes(), "cx and cy must be the same size", OPS_ERROR(ErrCode::PARAM));
 
+    c10::MaybeOwned<at::Tensor> grad_hy_tmp = at::borrow_from_optional_tensor(grad_hy_opt);
+    const at::Tensor& grad_hy = *grad_hy_tmp;
+    const at::Tensor& grad_cy = c10::value_or_else(grad_cy_opt, [] { return at::Tensor(); });
+    if (!grad_hy.defined() && !grad_cy.defined()) {
+        return std::tuple<at::Tensor, at::Tensor, at::Tensor>();
+    }
+
     at::SmallVector<int64_t, op_infer::SIZE> grad_bias_size = {workspace.size(1)};
     at::Tensor grad_gates = npu_preparation::apply_tensor(workspace);
     at::Tensor grad_cx = npu_preparation::apply_tensor(cx);
     at::Tensor grad_bias = npu_preparation::apply_tensor_without_format(grad_bias_size, c10::dtype(cx.scalar_type()));
 
-    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy_opt, grad_cy_opt, cx, cy, workspace, has_bias, grad_gates,
+    EXEC_NPU_CMD(aclnnThnnFusedLstmCellBackward, grad_hy, grad_cy, cx, cy, workspace, has_bias, grad_gates,
         grad_cx, grad_bias);
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
@@ -74,7 +81,7 @@ std::tuple<at::Tensor, at::Tensor> lstm_cell(const at::Tensor &input, at::Tensor
     at::Tensor c = hx[1];
     auto igates = at::matmul(input, w_ih.t());
     auto hgates = at::matmul(h, w_hh.t());
-    auto result = op_api::_thnn_fused_lstm_cell(igates, hgates, c, b_ih_opt, b_hh_opt);
+    auto result = at::_thnn_fused_lstm_cell(igates, hgates, c, b_ih_opt, b_hh_opt);
     return std::make_tuple(std::move(std::get<0>(result)), std::move(std::get<1>(result)));
 }
 } // namespace op_api
