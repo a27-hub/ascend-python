@@ -150,7 +150,9 @@ at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tens
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout_backward(grad_output, mask, scale));
     TORCH_CHECK(scale == NUMBER_ZERO || scale >= NUMBER_ONE, "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ", scale,
                 OPS_ERROR(ErrCode::VALUE));
-
+    if (mask.numel() == 0) {
+        return mask.clone();
+    }
     double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {
         return grad_output.clone();
