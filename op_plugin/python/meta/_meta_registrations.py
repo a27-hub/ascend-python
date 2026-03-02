@@ -3032,9 +3032,9 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
 
 
 def bias_shape_check(*args):
-    x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2 = args
+    x2, bias, batch_val, is_w4, is_a8w4_float, transpose_x2 = args
     bias_dim_num = bias.dim()
-    if is_a4w4:
+    if is_w4:
         torch._check(
             bias_dim_num == 1,
             lambda: "bias_dim_num should be 1 when x1's dtype is int32, please check bias dim num " + ops_error(ErrCode.VALUE),
@@ -3050,7 +3050,7 @@ def bias_shape_check(*args):
             lambda: "bias_dim_num should be 1 or 3 when x1's dtype is int8, please check bias dim num " + ops_error(ErrCode.VALUE),
         )
     x2_dim_num = x2.dim()
-    x2_n_dim = x2.size(x2_dim_num - 1) * 8 if (is_a4w4 and not transpose_x2) else x2.size(x2_dim_num - 1)
+    x2_n_dim = x2.size(x2_dim_num - 1) * 8 if (is_w4 and not transpose_x2) else x2.size(x2_dim_num - 1)
     bias_first_dim = bias.size(0)
     if bias_dim_num == 1:
         torch._check(
@@ -3457,7 +3457,8 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
     is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32)
     dim_list = []
-    if is_a8w4_int:
+    is_1952 = True
+    if is_a8w4_int and (not is_1952):
         dim_list = [x1.shape[0], x2.shape[1] * INT4_IN_INT32]
         transpose_x2 = False
     else:
@@ -3472,13 +3473,11 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             batch_val = batch_val * cur_batch_val
             dim_list.append(cur_batch_val)
         dimm = x1.size(x1.dim() - 2)
-        transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
-
-        dimn = x2.size(x2.dim() - 1)
-        if (is_a4w4 and not transpose_x2):
-            dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
-        elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
-            dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
+        if is_1952:
+            transpose_x2 = not x2.is_contiguous()
+        else:
+            transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
+        dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32 if ((is_a4w4 or is_a8w4_int) and not transpose_x2) else x2.size(x2.dim() - 1)
 
         dim_list.append(dimm)
         dim_list.append(dimn)
@@ -3488,14 +3487,22 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
                     len(dim_list) == 3,
                     lambda: "when bias dim is 3, out dim need to be 3" + ops_error(ErrCode.TYPE),
                 )
-            bias_shape_check(x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2)
+            bias_shape_check(x2, bias, batch_val, (is_a4w4 or is_a8w4_int), is_a8w4_float, transpose_x2)
         quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
         quant_matmul_extra_dtype_check(x1, x2, scale, pertoken_scale,
                                    x1_dtype, x2_dtype, scale_dtype, is_a8w4_float, pertoken_scale_dtype)
         quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes,
                                     x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype, is_a8w4_float)
-    quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
+    is_1952 = True
+    if not is_1952:
+        quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
+        quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
+    else:
+        if is_a8w4_int:
+            torch._check(
+            x2.size(x2.dim() - 1) > 1 and x2.size(x2.dim() - 2) > 1,
+            lambda: "when x2 dtype is int32, the last two dim should greater than 1" + ops_error(ErrCode.VALUE),
+            )
 
     tensor_dtype = torch.int8
     if output_dtype is not None:
