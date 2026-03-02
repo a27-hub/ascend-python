@@ -120,8 +120,12 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
 at::Tensor npu_dropout_backward(const at::Tensor& grad_output, const at::Tensor& mask, double scale)
 {
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::npu_dropout_backward(grad_output, mask, scale));
-
-    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(grad_output);
+    at::Tensor result;
+    if(mask.numel() == 0){
+        result = at_npu::native::OpPreparation::apply_tensor_without_format(mask);
+    } else {
+        result = at_npu::native::OpPreparation::apply_tensor_without_format(grad_output);
+    }
     EXEC_NPU_CMD(aclnnDropoutDoMask, grad_output, mask, scale, result);
     return result;
 }
@@ -150,7 +154,6 @@ at::Tensor native_dropout_backward(const at::Tensor& grad_output, const at::Tens
     DO_COMPATIBILITY(aclnnDropoutDoMask, acl_op::native_dropout_backward(grad_output, mask, scale));
     TORCH_CHECK(scale == NUMBER_ZERO || scale >= NUMBER_ONE, "native_dropout_backward scale has to be 0 or greater than or equal to 1, but got ", scale,
                 OPS_ERROR(ErrCode::VALUE));
-
     double p = (scale == 0.0) ? 1 : (1 - 1 / scale);
     if (p == 0) {
         return grad_output.clone();
