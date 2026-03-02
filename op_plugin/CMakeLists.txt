@@ -45,3 +45,17 @@ target_link_options(${_OPPLUGIN_ATB_NAME} PRIVATE "-Wl,-Bsymbolic-functions")
 
 target_link_libraries(${_OPPLUGIN_ATB_NAME} PUBLIC torch_npu)
 target_link_libraries(${_OPPLUGIN_ATB_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/third_party/op-plugin/op_plugin/third_party/atb/libs/libatb.so)
+
+# Add libop_plugin_overadpt.so
+set(_OPPLUGIN_OVERADPT_NAME op_plugin_overadpt)
+
+FILE(GLOB _OPPLUGIN_UTILS_SRCS
+    ops/overadpt/*.cpp)
+
+add_library(${_OPPLUGIN_OVERADPT_NAME} SHARED
+    ${_OPPLUGIN_UTILS_SRCS}
+)
+
+target_link_options(${_OPPLUGIN_OVERADPT_NAME} PRIVATE "-Wl,-Bsymbolic-functions")
+
+target_link_libraries(${_OPPLUGIN_OVERADPT_NAME} PUBLIC torch_npu)
