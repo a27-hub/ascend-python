@@ -39,6 +39,24 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward_im
     return std::tie(grad_gates, grad_cx, grad_bias);
 }
 
+// NB: This is a (composite) wrapper for _thnn_fused_lstm_cell_backward_impl.
+//     It duplicates the outputs of this function so the non-composite version doesn't have to.
+//     The point is so that we avoid triggering TensorImpl use count asserts in debug mode.
+//     Returns: (grad_input_gates, grad_hidden_gates, grad_cx, grad_input_bias, grad_hidden_bias)
+//     Note: grad_input_gates == grad_hidden_gates, grad_input_bias == grad_hidden_bias
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell_backward(
+    const std::optional<at::Tensor>& grad_hy_opt, const std::optional<at::Tensor>& grad_cy_opt,
+    const at::Tensor& cx, const at::Tensor& cy, const at::Tensor& workspace, bool has_bias)
+{
+    TORCH_INTERNAL_ASSERT(!c10::GradMode::is_enabled());
+    auto ret = op_api::_thnn_fused_lstm_cell_backward_impl(grad_hy_opt, grad_cy_opt, cx, cy, workspace, has_bias);
+    // ret = (grad_gates, grad_cx, grad_bias)
+    // Return: (grad_input_gates, grad_hidden_gates, grad_cx, grad_input_bias, grad_hidden_bias)
+    // grad_input_gates and grad_hidden_gates are the same (grad_gates)
+    // grad_input_bias and grad_hidden_bias are the same (grad_bias)
+    return std::make_tuple(std::get<0>(ret), std::get<0>(ret), std::get<1>(ret), std::get<2>(ret), std::get<2>(ret));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor> _thnn_fused_lstm_cell(const at::Tensor& i_gates,
     const at::Tensor& h_gates, const at::Tensor& c, const c10::optional<at::Tensor> &input_bias_opt,
     const c10::optional<at::Tensor> &hidden_bias_opt)

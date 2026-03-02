@@ -324,3 +324,8 @@ backward:
   x1: _cdist_backward(grad, x1, x2, p, result)
   x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
   version: all_version
+
+- name: _thnn_fused_lstm_cell(Tensor input_gates, Tensor hidden_gates, Tensor cx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [True, True, False]
+  input_gates, hidden_gates, cx, input_bias, hidden_bias: _thnn_fused_lstm_cell_backward(grads[0], grads[1], cx, result1, result2, input_bias.defined() || hidden_bias.defined())
+  version: all_version
