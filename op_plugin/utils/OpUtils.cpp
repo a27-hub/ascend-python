@@ -466,7 +466,7 @@ std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, 
     std::vector<int64_t> shape{a};
     if (quant_mode == QuantMode::QUANT_MODE_NO_QUANT && scales.has_value()) {
         TORCH_CHECK(scales.value().dim() >= DIM_TWO, "Expected scales to be at least 2D.", OPS_ERROR(ErrCode::PARAM));
-        shape = {a * scales.value().sizes()[1]};
+        shape = {a, scales.value().sizes()[1]};
     } else if (quant_mode == QuantMode::QUANT_MODE_PERTOKEN) {
         shape = {a};
     } else if (quant_mode == QuantMode::QUANT_MODE_PERGROUP) {
