@@ -42,13 +42,7 @@ class TestNpuMhcPost(TestCase):
             h_out = np.expand_dims(h_out, axis=0)
             h_post = np.expand_dims(h_post, axis=0)
 
-        x_tensor = torch.from_numpy(x)
-        h_res_tensor = torch.from_numpy(h_res)
-        h_out_tensor = torch.from_numpy(h_out)
-        h_post_tensor = torch.from_numpy(h_post)
-
-        y_tensor = hc_post(h_out_tensor, h_post_tensor, h_res_tensor, x_tensor)
-        y = y_tensor.numpy().astype(x_dtype)
+        y = hc_post(h_out_tensor, h_post_tensor, h_res_tensor, x_tensor)
 
         if (x_ndim == 3):
             y = np.squeeze(y, axis=0)
@@ -64,17 +58,17 @@ class TestNpuMhcPost(TestCase):
         h_res_shape = [1,1,4,4]
         h_out_shape = [1,1,512]
         h_post_shape = [1,1,4]
-        x = (torch.rand(x_shape, dtype=torch.float16) * 100).clamp(min=1e-4)
-        h_res = (torch.rand(h_res_shape, dtype=torch.float32) * 100).clamp(min=1e-4)
-        h_out = (torch.rand(h_out_shape, dtype=torch.float16) * 100).clamp(min=1e-4)
-        h_post = (torch.rand(h_post_shape, dtype=torch.float32) * 100).clamp(min=1e-4)
+        x = torch.rand(x_shape, dtype=torch.float16)
+        x = torch.rand(h_res_shape, dtype=torch.float32)
+        h_out = torch.rand(h_out_shape, dtype=torch.float16)
+        h_post = torch.rand(h_post_shape, dtype=torch.float32)
         x_npu = x.npu()
         h_res_npu = h_res.npu()
         h_out_npu = h_out.npu()
         h_post_npu = h_post.npu()
         y = self.cpu_op_exec(x, h_res, h_out, h_post)
         y_npu = self.npu_op_exec(x_npu, h_res_npu, h_out_npu, h_post_npu)
-        self.assertRtolEqual(y, y_npu.numpy())
+        self.assertRtolEqual(y.numpy(), y_npu.cpu().numpy())
 
 if __name__ == "__main__":
     run_tests()
