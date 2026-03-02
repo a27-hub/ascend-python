@@ -643,6 +643,12 @@ c10::SmallVector<int64_t, SIZE> embedding_dense_backward_npu_output_size(const a
     return {num_weights, grad_output.size(-1)};
 }
 
+c10::SmallVector<int64_t, SIZE> histc_npu_output_size(int64_t bins)
+{
+    TORCH_CHECK(bins > 0, "bins must be > 0", OPS_ERROR(ErrCode::VALUE));
+    return {bins};
+}
+
 int_array_ref_list layer_norm_backward_npu_output_size(const at::Tensor &X, const at::Tensor &gamma)
 {
     return std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::IntArrayRef>(X.sizes(), gamma.sizes(), gamma.sizes());

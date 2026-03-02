@@ -40,6 +40,7 @@ at::Tensor &histc_out_nocheck(at::Tensor &result, const at::Tensor &self, int64_
 at::Tensor &histc_out(const at::Tensor &self, int64_t bins, const at::Scalar &min, const at::Scalar &max,
                       at::Tensor &out)
 {
+    TORCH_CHECK(bins > 0, "bins must be > 0", OPS_ERROR(ErrCode::VALUE));
     npu_preparation::CheckOut({self}, out, self, {bins});
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
@@ -56,6 +57,7 @@ at::Tensor histc(const at::Tensor &self, int64_t bins, const at::Scalar &min, co
     TORCH_CHECK(self.dtype() == at::kInt || self.dtype() == at::kFloat || self.dtype() == at::kHalf,
         "histc input only supported Int32, Float16, Float32, but got", self.dtype(),
         OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(bins > 0, "bins must be > 0", OPS_ERROR(ErrCode::VALUE));
     bool is_fp = (self.dtype() == at::kInt) ? false : true;
     at::Tensor result =
         npu_preparation::apply_tensor({bins}, self.options().dtype(is_fp ? at::kFloat : at::kInt), self);

@@ -152,6 +152,8 @@ OP_PLUGIN_HIDDEN std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<in
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> embedding_dense_backward_npu_output_size(
     const at::Tensor& grad_output, int64_t num_weights);
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> histc_npu_output_size(int64_t bins);
+
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> index_npu_output_size(const at::Tensor& self, at::TensorList indices);
 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> index_select_npu_output_size(const at::Tensor& self, int64_t dim,

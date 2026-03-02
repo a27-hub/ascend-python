@@ -2612,7 +2612,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: '{bins}'
+        size: histc_npu_output_size(bins)
         dtype: self
       exec: aclnnHistc
 
