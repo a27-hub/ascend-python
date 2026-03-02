@@ -27,9 +27,11 @@ std::tuple<at::Tensor, at::Tensor> _mrope_v1(
     at::IntArrayRef mrope_section,
     int64_t head_size,
     bool is_neox_style,
+    const std::string &cache_mode,
     at::Tensor &query_out,
     at::Tensor &key_out)
 {
+    TORCH_CHECK(cache_mode == "default", "npu_mrope only support cache_mode='default', but got '", cache_mode, "'", OPS_ERROR(ErrCode::VALUE));
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnRopeWithSinCosCache, positions, query, key, cos_sin_cache,
         mrope_section, head_size, is_neox_style, query_out, key_out);
     return std::tie(query_out, key_out);
@@ -57,7 +59,7 @@ std::tuple<at::Tensor, at::Tensor> npu_mrope(
     
     DO_COMPATIBILITY(aclnnRopeWithSinCosCacheV2,
         _mrope_v1(positions, query, key, cos_sin_cache, mrope_section_value,
-            head_size, is_neox_style, query_out, key_out));
+            head_size, is_neox_style, cache_mode_str, query_out, key_out));
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnRopeWithSinCosCacheV2, positions, query, key, cos_sin_cache,
         mrope_section_value, head_size, is_neox_style, cache_mode_value, query_out, key_out);
