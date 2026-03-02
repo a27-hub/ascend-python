@@ -28,7 +28,7 @@ TORCH_NPU_API at::Tensor npu_dropout_gen_mask(const at::Tensor &self, at::IntArr
 }  // namespace at_npu
 
 namespace at {
-namespace npu{
+namespace npu {
 TORCH_NPU_API at::Tensor wrapper_NPU__matmul_overadpt(const at::Tensor & self, const at::Tensor & other);
 TORCH_NPU_API at::Tensor & wrapper_NPU_out_matmul_out_overadpt(const at::Tensor & self, const at::Tensor & other, at::Tensor & out);
 TORCH_NPU_API ::std::tuple<at::Tensor,at::Tensor> wrapper_NPU__matmul_backward_overadpt(const at::Tensor & grad_out, const at::Tensor & self, const at::Tensor & other, ::std::array<bool,2> mask);

@@ -19,9 +19,11 @@ OVERADPT_MODULE = types.ModuleType(OVERADPT_MODULE_NAME)
 NNAL_EX = None
 GLOBAL_E = None
 
+
 def _add_overadpt_module():
     setattr(torch_npu, OVERADPT_MODULE_NAME, OVERADPT_MODULE)
     sys.modules[f'torch_npu.{OVERADPT_MODULE_NAME}'] = OVERADPT_MODULE
+
 
 @lru_cache(None)
 def _register_overadpt_extensions():
