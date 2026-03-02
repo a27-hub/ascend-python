@@ -39,6 +39,18 @@ bool is_neox_style(std::string rotary_mode)
     }
 }
 
+int64_t cache_mode_to_int(std::string cache_mode)
+{
+    if (cache_mode == "default") {
+        return 0;
+    } else if (cache_mode == "interleaved") {
+        return 1;
+    } else {
+        TORCH_CHECK(false, "cache_mode only support default or interleaved", OPS_ERROR(ErrCode::VALUE));
+        return 0;
+    }
+}
+
 std::string get_reduction_str(int64_t reduction)
 {
     std::string reductionStr;
