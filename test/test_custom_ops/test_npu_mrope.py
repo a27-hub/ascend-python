@@ -100,7 +100,7 @@ class TestNPUMrope(TestCase):
         num_q_heads_list = [8, 16]
         head_size_list = [128]
         rotary_mode_list = ['half', 'interleave']
-        cache_mode_list = ['default', 'interleaved']
+        cache_mode_list = ['default', 'interleave']
         dtype_list = [torch.bfloat16, torch.float16, torch.float32]
 
         for (
@@ -172,7 +172,7 @@ class TestNPUMrope(TestCase):
         num_q_heads_list = [8, 16]
         head_size_list = [128]
         rotary_mode_list = ['half', 'interleave']
-        cache_mode_list = ['default', 'interleaved']
+        cache_mode_list = ['default', 'interleave']
         dtype_list = [torch.bfloat16, torch.float16, torch.float32]
 
         for (
@@ -246,7 +246,7 @@ class TestNPUMrope(TestCase):
         cos_sin_cache = torch.rand(num_tokens, head_size, dtype=torch.float16).npu()
         mrope_section = [0, 0, 0]
 
-        msg = "cache_mode only support default or interleaved"
+        msg = "cache_mode only support default or interleave"
         with self.assertRaisesRegex(RuntimeError, msg):
             torch_npu.npu_mrope(
                 positions,

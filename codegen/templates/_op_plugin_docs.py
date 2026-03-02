@@ -3358,7 +3358,7 @@ cosSinCache (Tensor): 参与计算的位置编码张量，要求shape为一个2D
 headSize(int): 表示每个注意力头维度大小。数据类型int64。
 mropeSection(int[]): 可选参数，multimodal section配置，用于整合输入的位置编码张量信息，输入mropeSection属性表示使能mrope模式。默认值为不使能mrope模式(即rope模式)输入为[0, 0, 0]。
 rotary_mode(str): 可选参数，旋转模式，'half'表示rotate_half(GPT-NeoX style)计算模式，'interleave'表示rotate_interleaved(GPT-J style)计算模式。默认值为'half'。
-cache_mode(str): 可选参数，cos和sin的拼接方式，'default'表示三段式拼接，'interleaved'表示交错式拼接。默认值为'default'。
+cache_mode(str): 可选参数，cos和sin的拼接方式，'default'表示三段式拼接，'interleave'表示交错式拼接。默认值为'default'。
 
 约束说明
 queryIn、keyIn、cosSinCache只支持2维shape输入。
