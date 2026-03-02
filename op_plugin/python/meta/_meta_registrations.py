@@ -4493,7 +4493,7 @@ def npu_attention_update_meta(lse, local_out, update_type):
 
 
 @impl(m, "npu_mrope")
-def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half'):
+def npu_mrope_meta(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half', cache_mode='default'):
     return (torch.empty_like(query), torch.empty_like(key))
 
 
