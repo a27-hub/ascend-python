@@ -287,10 +287,7 @@ c10::SmallVector<int64_t, SIZE> avg_pool3d_npu_output_size(const at::Tensor &sel
                                    ((self_h + 2 * padding[1] - kernel_size[1]) / stride[1] + 1);
     int64_t kernel_w = ceil_mode ? (CeilDiv(self_w + 2 * padding[2] - kernel_size[2], stride[2]) + 1) :
                                    ((self_w + 2 * padding[2] - kernel_size[2]) / stride[2] + 1);
-    TORCH_CHECK(kernel_d > 0, "kernel_d has to be positive, but got ", kernel_d, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(kernel_h > 0, "kernel_h has to be positive, but got ", kernel_h, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(kernel_w > 0, "kernel_w has to be positive, but got ", kernel_w, OPS_ERROR(ErrCode::VALUE));
-
+    
     if (ceil_mode) {
         if ((kernel_d - 1) * stride[0] >= self_d + padding[0]) {
             --kernel_d;
