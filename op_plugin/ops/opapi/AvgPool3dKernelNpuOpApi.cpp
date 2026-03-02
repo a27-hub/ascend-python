@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/native/Pool.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -47,6 +48,16 @@ small_vector calc_avg_pool3d_output_size(const at::Tensor &self, at::IntArrayRef
         !kernel_size.empty(),
         "kernel_size must either be a single int, or a tuple of three ints",
         OPS_ERROR(ErrCode::PARAM));
+    const int64_t nslices = self.size(-4);
+    const int64_t itime = self.size(-3);
+    const int64_t iheight = self.size(-2);
+    const int64_t iwidth = self.size(-1);
+    const int64_t otime =
+        at::native::pooling_output_shape<int64_t>(itime, kernel_size[0], padding[0], stride[0], 1, ceil_mode);
+    const int64_t oheight =
+        at::native::pooling_output_shape<int64_t>(iheight, kernel_size[1], padding[1], stride[1], 1, ceil_mode);
+    const int64_t owidth =
+        at::native::pooling_output_shape<int64_t>(iwidth, kernel_size[2], padding[2], stride[2], 1, ceil_mode);
     const int64_t k_d = kernel_size[0];
     const int64_t k_h = kernel_size.size() == 1 ? k_d : kernel_size[1];
     const int64_t k_w = kernel_size.size() == 1 ? k_d : kernel_size[2];
@@ -57,18 +68,25 @@ small_vector calc_avg_pool3d_output_size(const at::Tensor &self, at::IntArrayRef
     const int64_t s_h = stride.empty() ? k_h : stride.size() == 1 ? s_d : stride[1];
     const int64_t s_w = stride.empty() ? k_w : stride.size() == 1 ? s_d : stride[2];
     c10::SmallVector<int64_t, op_infer::SIZE> stride_sizes = {s_d, s_h, s_w};
-    TORCH_CHECK(s_d != 0 && s_h != 0 && s_w != 0, "stride should not be zero", OPS_ERROR(ErrCode::VALUE));
     at::IntArrayRef strides = at::IntArrayRef(stride_sizes);
 
     const int64_t pad_d = padding[0];
     const int64_t pad_h = padding.size() == 1 ? pad_d : padding[1];
     const int64_t pad_w = padding.size() == 1 ? pad_d : padding[2];
+ 
+    at::native::pool3d_shape_check(
+        self,
+        nslices,
+        k_d, k_h, k_w,
+        s_d, s_h, s_w,
+        pad_d, pad_h, pad_w,
+        1, 1, 1,
+        itime, iheight, iwidth,
+        otime, oheight, owidth,
+        "avg_pool3d()",
+        true);
+    
     c10::SmallVector<int64_t, op_infer::SIZE> padding_sizes = {pad_d, pad_h, pad_w};
-    TORCH_CHECK(pad_d >= 0 &&  pad_h >= 0 && pad_w >= 0, "pad should not be less than 0", OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(
-        pad_d <= k_d / 2 && pad_h <= k_h / 2 && pad_w <= k_w / 2,
-        "pad should be smaller than or equal to half of kernel size",
-        OPS_ERROR(ErrCode::VALUE));
     at::IntArrayRef paddings = at::IntArrayRef(padding_sizes);
 
     auto output_size = op_infer::avg_pool3d_npu_output_size(self, kernels, strides, paddings, ceil_mode);
