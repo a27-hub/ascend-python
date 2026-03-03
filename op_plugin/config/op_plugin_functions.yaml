@@ -7242,6 +7242,13 @@ custom:
   - func: save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
+    internal_format_opapi: [v2.6, newest]
+  
+  - func: save_npugraph_tensor.List(Tensor[] self, str op_name, *, str? save_dir=None, str? suffix=None) -> ()
+    op_api: [v2.6, newest]
+    exposed: [v2.6, newest]
+    internal_format_opapi: [v2.6, newest]
+  
 
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
