@@ -3,7 +3,6 @@ import pathlib
 import torch
 from . import ops
 
-__all__ = ["ops"]
 
 # Load the custom operator library
 def _load_opextension_so():
