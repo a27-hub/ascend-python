@@ -17,9 +17,22 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+namespace {
+inline bool is_aclnn_max_pool2d_with_indices_supported_soc()
+{
+    const auto soc = c10_npu::GetSocVersion();
+    const bool is_atlas_a2_series =
+        soc >= c10_npu::SocVersion::Ascend910B1 && soc <= c10_npu::SocVersion::Ascend910B4_1;
+    const bool is_atlas_a3_series =
+        soc >= c10_npu::SocVersion::Ascend910_9391 && soc <= c10_npu::SocVersion::Ascend910_9362;
+    return is_atlas_a2_series || is_atlas_a3_series;
+}
+} // namespace
 
 at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& grad_output,
@@ -32,7 +45,7 @@ at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& indices)
 {
     at::Tensor grad_input;
-    if (!c10_npu::IsAclnnOnly()) {
+    if (!is_aclnn_max_pool2d_with_indices_supported_soc()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
@@ -64,7 +77,7 @@ at::Tensor& max_pool2d_with_indices_backward_out(
     const at::Tensor& indices,
     at::Tensor& grad_input)
 {
-    if (!c10_npu::IsAclnnOnly()) {
+    if (!is_aclnn_max_pool2d_with_indices_supported_soc()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));

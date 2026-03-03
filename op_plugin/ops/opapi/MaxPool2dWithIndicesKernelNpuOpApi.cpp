@@ -17,12 +17,25 @@
 #include <ATen/native/Pool.h>
 
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+namespace {
+inline bool is_aclnn_max_pool2d_with_indices_supported_soc()
+{
+    const auto soc = c10_npu::GetSocVersion();
+    const bool is_atlas_a2_series =
+        soc >= c10_npu::SocVersion::Ascend910B1 && soc <= c10_npu::SocVersion::Ascend910B4_1;
+    const bool is_atlas_a3_series =
+        soc >= c10_npu::SocVersion::Ascend910_9391 && soc <= c10_npu::SocVersion::Ascend910_9362;
+    return is_atlas_a2_series || is_atlas_a3_series;
+}
+} // namespace
 
 void max_pool2d_with_indices_parameter_check(const at::Tensor &self, at::IntArrayRef kernel_size,
                                              at::IntArrayRef stride, at::IntArrayRef padding, at::IntArrayRef dilation)
@@ -101,7 +114,7 @@ std::tuple<at::Tensor, at::Tensor> exec_max_pool2d_with_indices(
     at::Tensor indices;
 
     at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, self.options());
-    if (!c10_npu::IsAclnnOnly()) {
+    if (!is_aclnn_max_pool2d_with_indices_supported_soc()) {
         // 5HD format return the indices with mask, dtype int8,size should be muls 16*2
         indices_size = self.ndimension() == DIM_SIZE ?
             c10::SmallVector<int64_t, SIZE>({n_batch, n_input_plane, mask_H, mask_W * 32}) :
@@ -128,7 +141,7 @@ std::tuple<at::Tensor, at::Tensor> max_pool2d_with_indices(
     at::IntArrayRef dilation,
     bool ceil_mode)
 {
-    if (!c10_npu::IsAclnnOnly()) {
+    if (!is_aclnn_max_pool2d_with_indices_supported_soc()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMask,
                          acl_op::max_pool2d_with_indices(self, kernel_size, stride, padding, dilation, ceil_mode));
     } else {
@@ -149,7 +162,7 @@ std::tuple<at::Tensor&, at::Tensor&> max_pool2d_with_indices_out(
     at::Tensor& output,
     at::Tensor& indices)
 {
-    if (!c10_npu::IsAclnnOnly()) {
+    if (!is_aclnn_max_pool2d_with_indices_supported_soc()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMask,
                          acl_op::max_pool2d_with_indices_out(self, kernel_size, stride,
                                                              padding, dilation, ceil_mode, output, indices));
