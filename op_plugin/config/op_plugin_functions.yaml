@@ -7199,6 +7199,18 @@ custom:
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
 
+  - func: npu_causal_conv1d_fn_functional(Tensor x, Tensor weight, Tensor? bias=None, Tensor conv_states, *, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? has_initial_state=None, int? activation=0, int? pad_slot_id=-1) -> (Tensor, Tensor)
+    op_api: [v2.6, newest]
+
+  - func: npu_causal_conv1d_update_functional(Tensor x, Tensor weight, Tensor? bias=None, Tensor conv_states, *, Tensor? conv_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? query_start_loc=None, int? activation=0, int? pad_slot_id=-1) -> (Tensor, Tensor)
+    op_api: [v2.6, newest]
+
+  - func: npu_causal_conv1d_fn(Tensor x, Tensor weight, Tensor? bias=None, Tensor(a!) conv_states, *, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? has_initial_state=None, int? activation=0, int? pad_slot_id=-1) -> Tensor
+    op_api: [v2.6, newest]
+  
+  - func: npu_causal_conv1d_update(Tensor x, Tensor weight, Tensor? bias=None, Tensor(a!) conv_states, *, Tensor? conv_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? query_start_loc=None, int? activation=0, int? pad_slot_id=-1) -> Tensor
+    op_api: [v2.6, newest]
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
