@@ -35,6 +35,12 @@
   "op_api: torch_npu.npu_format_cast_(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu._lstm_npu(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu._lstm_backward_npu(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_gelu_backward(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -156,6 +162,12 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_gelu_mul(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu._lstm_npu(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu._lstm_backward_npu(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_fused_floyd_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -2477,6 +2489,12 @@
     "version": ["all_version"]
   },
   "func: npu_gelu_mul(Tensor input, *, str approximate='none') -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: _lstm_backward_npu(Tensor grad_y, Tensor grad_hy, Tensor grad_cy, Tensor input, Tensor[] hx, Tensor[] params, Tensor i, Tensor j, Tensor f, Tensor o, Tensor h, Tensor c, Tensor tanhc, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor[])": {
     "version": ["v2.6", "newest"]
   },
   "func: npu_fused_floyd_attention(Tensor query_ik, Tensor key_ij, Tensor value_ij, Tensor key_jk, Tensor value_jk, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)": {

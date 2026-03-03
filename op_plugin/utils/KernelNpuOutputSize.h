@@ -386,7 +386,7 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_output_size(const at::
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_output1_2_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_ijfo_hc_tanhc_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool train, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
 
-OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_backward_npu_output_size(const at::Tensor &input, bool batch_first);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_backward_npu_output_size(const at::Tensor &input, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_backward_npu_hc_prev_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE
