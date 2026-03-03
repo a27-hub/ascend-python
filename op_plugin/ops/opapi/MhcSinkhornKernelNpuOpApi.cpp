@@ -28,6 +28,6 @@ at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, int64_t out_flag, float eps
     at::Tensor norm_out = npu_preparation::apply_tensor_without_format(h_res);
     at::Tensor sum_out = npu_preparation::apply_tensor_without_format(h_res);
     EXEC_NPU_CMD(aclnnMhcSinkhorn, h_res, out_flag, eps, num_iters, result, norm_out, sum_out);
-    return result;
+    return result, norm_out, sum_out;
 }
 } // namespace op_api
