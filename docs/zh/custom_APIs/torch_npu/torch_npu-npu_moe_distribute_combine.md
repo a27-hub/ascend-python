@@ -89,7 +89,7 @@ torch_npu.npu_moe_distribute_combine(expand_x, expert_ids, expand_idx, ep_send_c
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围\[0, ep\_world\_size\)。取0表示无共享专家，不取0时需满足ep\_world\_size%shared\_expert\_rank\_num=0。
 
 -   **global\_bs** (`int`)：可选参数，表示EP域全局的BS(batch size)大小。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size或者256\*ep\_world\_size，其中max\_bs表示单rank BS最大值，建议按max\_bs\*ep\_world\_size传入，固定按256\*ep\_world\_size传入，在后续版本BS大于256的场景下会无法支持；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size或者512\*ep\_world\_size，其中max\_bs表示单rank BS最大值，建议按max\_bs\*ep\_world\_size传入，固定按512\*ep\_world\_size传入，在后续版本BS大于512的场景下会无法支持；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当每个rank的BS不同时，支持传入max\_bs\*ep\_world\_size，其中max\_bs表示单rank BS最大值；当每个rank的BS相同时，支持取值0或BS\*ep\_world\_size。
 
 -   **out\_dtype** (`int`)：预留参数，暂未使用，使用默认值即可。
@@ -121,7 +121,7 @@ torch_npu.npu_moe_distribute_combine(expand_x, expert_ids, expand_idx, ep_send_c
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持 7168。
 
     -   BS：表示待发送的token数量。
-        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：取值范围为0<BS≤256。
+        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：取值范围为0<BS≤512。
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512。
 
     -   K：表示选取topK个专家，需满足0<K≤moe\_expert\_num。
