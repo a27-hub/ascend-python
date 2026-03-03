@@ -4085,6 +4085,10 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
     if dst_dtype is None:
         dst_dtype = torch.float16
 
+    if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x.dtype == torch_npu.hifloat8:
+        if scale.dtype != torch.float32 or (offset is not None and offset.dtype != torch.float32):
+            raise RuntimeError("Only supported for scale and offset is float32 when x dtype is fp8 or hifp8" + ops_error(ErrCode.NOT_SUPPORT))
+            
     if x.dtype == torch.int32:
         x_shape = x.size()
         if len(x_shape) == 0:
