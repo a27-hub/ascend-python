@@ -19,6 +19,14 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+static std::map<at::ScalarType, aclDataType> ANTI_QUANT_SUPPORT_MAP = {
+    {at::ScalarType::Byte, aclDataType::ACL_HIFLOAT8},
+    {at::ScalarType::Char, aclDataType::ACL_INT8},
+    {at::ScalarType::Int, aclDataType::ACL_INT4},
+    {at::ScalarType::Float8_e4m3fn, aclDataType::ACL_FLOAT8_E4M3FN},
+    {at::ScalarType::Float8_e5m2, aclDataType::ACL_FLOAT8_E5M2}
+};
+
 at::Tensor apply_anti_quant_out_tensor(const at::Tensor &x, at::ScalarType dst_type)
 {
     if (x.dtype() == at::ScalarType::Int) {
@@ -38,19 +46,23 @@ at::Tensor apply_anti_quant_out_tensor(const at::Tensor &x, at::ScalarType dst_t
 at::Tensor npu_anti_quant(const at::Tensor &x, const at::Tensor &scale, const c10::optional<at::Tensor> &offset,
                           c10::optional<at::ScalarType> dst_dtype, c10::optional<at::ScalarType> src_dtype)
 {
-    auto input_dtype = x.dtype();
-    if (input_dtype == at::ScalarType::Char) {
-        if (src_dtype.has_value()) {
-            TORCH_CHECK(src_dtype.value() == at::ScalarType::Char,
-                        "x datatype is Int8, src_dtype must be same to x " + OPS_ERROR(ErrCode::TYPE));
-        }
-    } else if (input_dtype == at::ScalarType::Int) {
-        if (src_dtype.has_value()) {
+    auto input_dtype = x.scalar_type();
+    if (ANTI_QUANT_SUPPORT_MAP.find(input_dtype) != ANTI_QUANT_SUPPORT_MAP.end()) {
+        if (src_dtype.has_value() && input_dtype == at::ScalarType::Int) {
             TORCH_CHECK(src_dtype.value() == at::ScalarType::QUInt4x2,
                         "x datatype is Int32, src_dtype must be Int4 " + OPS_ERROR(ErrCode::TYPE));
+        } else if (src_dtype.has_value() && src_dtype.value() != input_dtype) {
+            TORCH_CHECK(false, "The datatype of x must be the same as src_dtype, except for int32 " + OPS_ERROR(ErrCode::TYPE));
         }
     } else {
-        TORCH_CHECK(false, "Input x must be Int8 or Int32 " + OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(false, "Input x must be Int8, Int32, Hifloat8, Float8_e5m2 or Float8_e4m3fn " + OPS_ERROR(ErrCode::TYPE));
+    }
+
+    const at::Tensor &offset_real = offset.value_or(at::Tensor());
+    if (input_dtype == at::ScalarType::Byte || input_dtype == at::ScalarType::Float8_e4m3fn || input_dtype == at::ScalarType::Float8_e5m2) {
+        if (scale.scalar_type() != at::ScalarType::Float || (offset.has_value() && offset_real.scalar_type() != at::ScalarType::Float)) {
+            TORCH_CHECK(false, "x datatype is hifp8 or fp8, src_dtype and offset_dtype is only support Float " + OPS_ERROR(ErrCode::TYPE));
+        }
     }
 
     at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Half;});
@@ -61,13 +73,7 @@ at::Tensor npu_anti_quant(const at::Tensor &x, const at::Tensor &scale, const c1
     at::Tensor result = apply_anti_quant_out_tensor(x, dst_type);
 
     bool sqrt_mode = false;
-
-    if (src_dtype.has_value() && src_dtype.value() != input_dtype) {
-        at::Tensor converted = x.to(src_dtype.value());
-        EXEC_NPU_CMD(aclnnAscendAntiQuant, converted, scale, offset, dst_type, sqrt_mode, result);
-    } else {
-        EXEC_NPU_CMD(aclnnAscendAntiQuant, x, scale, offset, dst_type, sqrt_mode, result);
-    }
+    EXEC_NPU_CMD(aclnnAscendAntiQuant, x, scale, offset, dst_type, sqrt_mode, result);
 
     return result;
 }
