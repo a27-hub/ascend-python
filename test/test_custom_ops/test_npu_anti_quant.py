@@ -44,7 +44,11 @@ class TestAntiQuant(TestCase):
         output = torch_npu.npu_anti_quant(input_x, scale, offset=offset, dst_dtype=dst_dtype, src_dtype=src_dtype)
         return output.cpu().detach()
 
+<<<<<<< HEAD
     @SupportedDevices(['Ascend910B'])
+=======
+    @SupportedDevices(['Ascend950'])
+>>>>>>> 022bb4c9... modified AscendAntiQuantV2 to supported hifp8 and fp8
     def test_anti_quant(self, device="npu"):
         shape_format = [
             [[np.int8, -1, [10, 100]], [np.float32, -1, [100]], None, torch.float16, None],
@@ -55,8 +59,13 @@ class TestAntiQuant(TestCase):
             [[np.int8, -1, [10, 100]], [np.float32, -1, [100]], [np.float32, -1, [100]], torch.bfloat16, torch.int8],
             [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, None],
             [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], [np.float32, -1, [800]], torch.float16, None],
+<<<<<<< HEAD
             [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, torch.quint4x2],
             [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.bfloat16, torch.quint4x2],
+=======
+            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, None],
+            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.bfloat16, None],
+>>>>>>> 022bb4c9... modified AscendAntiQuantV2 to supported hifp8 and fp8
         ]
         
         for item in shape_format:
@@ -73,7 +82,11 @@ class TestAntiQuant(TestCase):
             self.assertRtolEqual(npu_output, custom_output)
 
 
+<<<<<<< HEAD
     @SupportedDevices(['Ascend910B'])
+=======
+    @SupportedDevices(['Ascend950'])
+>>>>>>> 022bb4c9... modified AscendAntiQuantV2 to supported hifp8 and fp8
     def test_anti_quant_invalid_dtype(self, device="npu"):
         npu_input_x = torch.tensor([1,2,3,4], dtype=torch.int8).npu()
         npu_scale = torch.tensor([2,0], dtype=torch.float32).npu()
@@ -85,7 +98,11 @@ class TestAntiQuant(TestCase):
                 npu_input_x,
                 npu_scale,
                 offset = npu_offset,
+<<<<<<< HEAD
                 dst_dtype = invalid_dst_type,
+=======
+                dst_type = invalid_dst_type,
+>>>>>>> 022bb4c9... modified AscendAntiQuantV2 to supported hifp8 and fp8
                 src_dtype = torch.int8
             )
             self.fail("Do not throw the expected exception")
