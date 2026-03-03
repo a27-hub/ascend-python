@@ -2422,10 +2422,10 @@ class TestMhcSinkhorn(TestCase):
     def test_npu_mhc_sinkhorn(self):
         with FakeTensorMode():
             h_res = torch.randn([1, 128, 4, 4], dtype=torch.float32).npu()
+            out_flag = 0
             eps = 1e-6
             num_iters = 20
-            out_flag = 0
-            y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, eps, num_iters, out_flag)
+            y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, out_flag, eps, num_iters)
             self.assertTrue(y.shape == h_res.shape)
             self.assertTrue(y.dtype == h_res.dtype)
             self.assertTrue(norm_out.shape == h_res.shape)

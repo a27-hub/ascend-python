@@ -15,7 +15,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, float eps, int64_t num_iters, int64_t out_flag)
+at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, int64_t out_flag, float eps, int64_t num_iters)
 {
     TORCH_CHECK(h_res.dim() == 3 || h_res.dim() == 4, "h_res's dim should be 3 or 4, but got ",
                 h_res.dim(), OPS_ERROR(ErrCode::VALUE));
@@ -25,7 +25,9 @@ at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, float eps, int64_t num_iter
                 out_flag, OPS_ERROR(ErrCode::VALUE));
 
     at::Tensor result = npu_preparation::apply_tensor_without_format(h_res);
-    EXEC_NPU_CMD(aclnnMhcSinkhorn, h_res, eps, num_iters, out_flag, result);
+    at::Tensor norm_out = npu_preparation::apply_tensor_without_format(h_res);
+    at::Tensor sum_out = npu_preparation::apply_tensor_without_format(h_res);
+    EXEC_NPU_CMD(aclnnMhcSinkhorn, h_res, out_flag, eps, num_iters, result, norm_out, sum_out);
     return result;
 }
 } // namespace op_api
