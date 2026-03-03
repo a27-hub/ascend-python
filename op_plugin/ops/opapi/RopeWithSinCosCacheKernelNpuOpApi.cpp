@@ -27,7 +27,6 @@ std::tuple<at::Tensor, at::Tensor> _mrope_v1(
     at::IntArrayRef mrope_section,
     int64_t head_size,
     bool is_neox_style,
-    const std::string &cache_mode,
     at::Tensor &query_out,
     at::Tensor &key_out)
 {
