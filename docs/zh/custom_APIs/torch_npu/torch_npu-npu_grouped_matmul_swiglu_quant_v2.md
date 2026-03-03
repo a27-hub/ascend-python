@@ -4,12 +4,13 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
-|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 
 ## 功能说明
 
-`npu_grouped_matmul_swiglu_quant_v2`是一种融合分组矩阵乘法（GroupedMatmul）、SwiGLU混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGLU激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
+`npu_grouped_matmul_swiglu_quant_v2`是一种融合分组矩阵乘法（GroupedMatmul）、SwiGLU混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGLU激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。支持 A8W8、A8W4、A4W4；**A4W4 场景下 smooth_scale 必填**（与 aclnnGroupedMatmulSwigluQuantV2 一致）。
 
 ## 函数原型
 
@@ -20,19 +21,17 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 ## 参数说明
 
 - **x**（`Tensor`）：必选输入，矩阵乘法的左矩阵。shape支持2维[m,k]，数据类型支持`int8`，数据格式支持ND，支持非连续的Tensor。
-- **weight**（`TensorList`）：必选输入，权重矩阵(矩阵乘法右矩阵)，shape支持3维[e,k,n]，数据类型支持`int8`、`int32`，数据格式支持FRACTAL_NZ(通过接口npu_format_cast，可实现格式转换)，支持非连续的Tensor。
+- **weight**（`TensorList`）：必选输入，权重矩阵(矩阵乘法右矩阵)。shape支持3维[e,k,n]、5维（FRACTAL_NZ 布局，与 aclnn 文档一致），数据类型支持`int8`、`int32`（A8W4/A4W4 下为 INT4 打包），数据格式支持 ND、FRACTAL_NZ，支持非连续的Tensor。
 - **weight\_scale**（`TensorList`）：必选输入，右矩阵的量化因子。`weight`数据类型为`int8`时，`weight_scale`的shape支持2维，`weight`数据类型为`int32`时，`weight_scale`的shape支持2维和3维。数据类型支持`float32`，数据格式支持ND，支持非连续的Tensor。
 - **x\_scale**（`Tensor`）：必选输入，左矩阵的量化因子。shape支持1维[m]，数据类型支持`float32`，数据格式支持ND，支持非连续的Tensor。
 - **group\_list**（`Tensor`）：必选输入，指示每个分组参与计算的Token个数。shape支持1维[e]，数据类型支持`int64`，数据格式支持ND，支持非连续的Tensor。
-- **smooth\_scale**（`Tensor`）：可选输入，量化的smooth_scales。数据类型为`float32`，当前仅支持传入默认值None。
-- **weight\_assist\_matrix**（`TensorList`）：可选输入，右矩阵的辅助矩阵，数据类型支持`float32`，当前仅支持传入默认值None。
-- **bias**（`Tensor`）：可选输入，矩阵乘计算的偏移值，公式中的bias，shape支持2维，数据类型支持`int32`，当前仅支持传入默认值None。
+- **smooth\_scale**（`Tensor`）：可选输入，平滑缩放因子，数据类型为`float32`。**A4W4 场景下必填**，形状 (E, N/2) 或 (E,)；其他场景传 None。
+- **weight\_assist\_matrix**（`TensorList`）：可选输入，右矩阵的辅助矩阵，数据类型支持`float32`。**仅 A8W4 场景使用**，其他场景传 None。
+- **bias**（`Tensor`）：可选输入，矩阵乘计算的偏移值，shape支持2维，数据类型支持`int32`，当前仅支持传入默认值None。
 - **dequant\_mode**（`int`）：可选输入，表示反量化模式，数据类型为`int32`。`weight`数据类型为`int8`时仅支持传入默认值0，`weight`数据类型为`int32`时支持传入0和1。
     - 取值为0时，表示左pertoken，右perchannel。
     - 取值为1时，表示左pertoken，右pergroup。
 - **dequant\_dtype**（`int`）：可选输入，表示反量化类型，数据类型为`int32`，预留输入，当前仅支持传入默认值0。
-    - 取值为0时，表示pertoken。
-    - 取值为1时，表示pergroup。
 - **quant\_dtype**（`int`）：可选输入，参数表示量化后低比特数据类型。0：`int8`；1：`float8_e8m0`；2：`float8_e5m2`；3：`float8_e4m3`，数据类型为`int32`，当前仅支持传入默认值0。
 - **quant\_mode**（`int`）：可选输入，参数表示SwiGLU后的量化模式。数据类型为`int32`，当前仅支持传入默认值0。
     - 取值为0时，表示pertoken。
