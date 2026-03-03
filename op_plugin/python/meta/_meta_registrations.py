@@ -2914,6 +2914,29 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None,
             torch.empty(x1.size(), dtype=torch.int8, device=x1.device),
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
+@impl(m, "npu_mhc_sinkhorn")
+def npu_add_rms_norm_quant(h_res, eps=1e-06, num_iters, out_flag=0):
+    h_res_shape = list(x.shape)
+    torch._check(
+        h_res_shape[-1] in [4, 6, 8],
+        lambda: f"The h_res's dim should be 4 or 6 or 8, but got {h_res_shape[-1]}.",
+        )
+    torch._check(
+        h_res.dim() == 3 or h_res.dim() == 4,
+        lambda: f"The h_res's dim should be 3 or 4, but got {h_res.dim()}.",
+        )
+    torch._check(
+        num_iters > 0 or num_iters <= 100,
+        lambda: f"num_iters must be within (0, 100], but got {num_iters}.",
+        )
+    torch._check(
+        out_flag == 0,
+        lambda: f"out_flag should be 0, but got {out_flag}.",
+        )
+    return (torch.empty(h_res.size(), dtype=h_res.dtype, device=h_res.device),
+            torch.empty(h_res.size(), dtype=h_res.dtype, device=h_res.device),
+            torch.empty(h_res.size(), dtype=h_res.dtype, device=h_res.device))
+
 
 @impl(m, "npu_attention_update")
 def npu_attention_update_meta(lse, local_out, update_type):
