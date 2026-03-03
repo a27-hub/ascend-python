@@ -34,23 +34,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     auto out1_shape = op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
     auto out2_shape = op_infer::lstm_npu_output1_2_size(input, params, num_layers, bidirectional, batch_first_1, batch_sizes);
     auto ijfo_hc_tanhc_shapes = op_infer::lstm_npu_ijfo_hc_tanhc_output_size(input, params, num_layers, train, bidirectional, batch_first_1, batch_sizes);
-    // auto hc_shapes = op_infer::lstm_npu_hc_output_size(input, params, num_layers, train, bidirectional, batch_first_1, batch_sizes);
 
     int64_t D = bidirectional ? 2 : 1;
-    // const at::Tensor &batch_sizes_1 = batch_sizes.value_or(at::Tensor());
     int64_t output_format = ACL_FORMAT_ND;
 
-    // at::Tensor out0 = npu_preparation::apply_tensor_with_format(input, out0_shape, output_format);
-    // at::Tensor out1 = npu_preparation::apply_tensor_with_format(input, out1_shape, output_format);
-    // at::Tensor out2 = npu_preparation::apply_tensor_with_format(input, out2_shape, output_format);
     at::Tensor out0 = npu_preparation::apply_tensor(input, out0_shape);
     at::Tensor out1 = npu_preparation::apply_tensor(input, out1_shape);
     at::Tensor out2 = npu_preparation::apply_tensor(input, out2_shape);
-    // c10::TensorOptions options = input.options().requires_grad(true);
-
-    // at::Tensor out0 = npu_preparation::apply_tensor(out0_shape, options, input);
-    // at::Tensor out1 = npu_preparation::apply_tensor(out1_shape, options, input);
-    // at::Tensor out2 = npu_preparation::apply_tensor(out2_shape, options, input);
     int64_t list_length = D * num_layers;
     std::vector<at::Tensor> i_list;
     std::vector<at::Tensor> j_list;
@@ -136,7 +126,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         c_list_,
         tanh_list_);
 
-    // 融合tensor列表为大Tensor
     at::Tensor i_tensor = i_list_.vec().empty() ? at::Tensor() : at::stack(i_list_.vec(), 0);
     at::Tensor j_tensor = j_list_.vec().empty() ? at::Tensor() : at::stack(j_list_.vec(), 0);
     at::Tensor f_tensor = f_list_.vec().empty() ? at::Tensor() : at::stack(f_list_.vec(), 0);
@@ -164,39 +153,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     int64_t num_layers, double dropout,
     bool train, bool bidirectional, bool batch_first)
 {
-    auto output = op_api::_lstm_npu(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
-    // std::vector<at::Tensor> output_h_list = std::get<5>(output); // 5 for output
-    // std::vector<at::Tensor> output_c_list = std::get<6>(output); // 6 for output
-    // std::vector<at::Tensor> output_h_list_res;
-    // std::vector<at::Tensor> output_c_list_res;
-    // at::Tensor final_output_h;
-    // at::Tensor final_output_c;
-    // if (train) {
-    //     int64_t dscale = bidirectional ? 2 : 1;
-    //     for (int64_t i = 0; i < num_layers; ++i) {
-    //         int64_t layer_idx = dscale * i;
-    //         at::Tensor h_layer = output_h_list[layer_idx];
-    //         at::Tensor c_layer = output_c_list[layer_idx];
-    //         at::Tensor h_last_step = h_layer.index({-1, at::indexing::Ellipsis});
-    //         at::Tensor c_last_step = c_layer.index({-1, at::indexing::Ellipsis});
-    //         output_h_list_res.emplace_back(h_last_step);
-    //         output_c_list_res.emplace_back(c_last_step);
-    //         if (bidirectional) {
-    //             int64_t layer_idx_1 = dscale * i + 1;
-    //             at::Tensor h_layer = output_h_list[layer_idx_1];
-    //             at::Tensor c_layer = output_c_list[layer_idx_1];
-    //             at::Tensor h_first_step = h_layer.index({0, at::indexing::Ellipsis});
-    //             at::Tensor c_first_step = c_layer.index({0, at::indexing::Ellipsis});
-    //             output_h_list_res.emplace_back(h_first_step);
-    //             output_c_list_res.emplace_back(c_first_step);
-    //         }
-    //     }
-    //     final_output_h = output_h_list_res.empty() ? at::Tensor() : at::stack(output_h_list_res, 0);
-    //     final_output_c = output_c_list_res.empty() ? at::Tensor() : at::stack(output_c_list_res, 0);
-    // } else {
-    //     final_output_h = at::stack(output_h_list, 0);
-    //     final_output_c = at::stack(output_c_list, 0);
-    // }
+    auto output = at_npu::native::custom_ops::_lstm_npu(input, hx, params, has_biases, num_layers, dropout, train, bidirectional, batch_first);
     return std::make_tuple(std::get<0>(output), std::get<1>(output), std::get<2>(output));
 }
 
@@ -206,39 +163,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
     int64_t num_layers, double dropout,
     bool train, bool bidirectional)
 {
-    auto output = op_api::_lstm_npu(data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes);
-    // std::vector<at::Tensor> output_h_list = std::get<5>(output); // 5 for output
-    // std::vector<at::Tensor> output_c_list = std::get<6>(output); // 6 for output
-    // std::vector<at::Tensor> output_h_list_res;
-    // std::vector<at::Tensor> output_c_list_res;
-    // at::Tensor final_output_h;
-    // at::Tensor final_output_c;
-    // if (train) {
-    //     int64_t dscale = bidirectional ? 2 : 1;
-    //     for (int64_t i = 0; i < num_layers; ++i) {
-    //         int64_t layer_idx = dscale * i;
-    //         at::Tensor h_layer = output_h_list[layer_idx];
-    //         at::Tensor c_layer = output_c_list[layer_idx];
-    //         at::Tensor h_last_step = h_layer.index({-1, at::indexing::Ellipsis});
-    //         at::Tensor c_last_step = c_layer.index({-1, at::indexing::Ellipsis});
-    //         output_h_list_res.emplace_back(h_last_step);
-    //         output_c_list_res.emplace_back(c_last_step);
-    //         if (bidirectional) {
-    //             int64_t layer_idx_1 = dscale * i + 1;
-    //             at::Tensor h_layer = output_h_list[layer_idx_1];
-    //             at::Tensor c_layer = output_c_list[layer_idx_1];
-    //             at::Tensor h_first_step = h_layer.index({0, at::indexing::Ellipsis});
-    //             at::Tensor c_first_step = c_layer.index({0, at::indexing::Ellipsis});
-    //             output_h_list_res.emplace_back(h_first_step);
-    //             output_c_list_res.emplace_back(c_first_step);
-    //         }
-    //     }
-    //     final_output_h = output_h_list_res.empty() ? at::Tensor() : at::stack(output_h_list_res, 0);
-    //     final_output_c = output_c_list_res.empty() ? at::Tensor() : at::stack(output_c_list_res, 0);
-    // } else {
-    //     final_output_h = at::stack(output_h_list, 0);
-    //     final_output_c = at::stack(output_c_list, 0);
-    // }
+    auto output = at_npu::native::custom_ops::_lstm_npu(data, hx, params, has_biases, num_layers, dropout, train, bidirectional, false, batch_sizes);
     return std::make_tuple(std::get<0>(output), std::get<1>(output), std::get<2>(output));
 }
 }
