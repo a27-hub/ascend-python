@@ -4776,5 +4776,8 @@
   },
   "func: save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()": {
     "version": ["v2.6", "newest"]
+  },
+  "func: save_npugraph_tensor.tensorlist(Tensor[] self, str save_name, *, str? save_dir=None, str? suffix=None) -> ()": {
+    "version": ["v2.6", "newest"]
   }
 }

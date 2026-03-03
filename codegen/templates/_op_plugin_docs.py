@@ -13882,6 +13882,59 @@ model(x)
 
 
 _add_torch_npu_docstr(
+    "save_npugraph_tensor.tensorlist",
+    """
+接口原型: 
+save_npugraph_tensor.tensorlist(Tensor[] self, str save_name, *, str? save_dir=None, str? suffix=None) -> ()
+
+功能描述：
+支持将aclgraph的图内计算多个节点分别保存到文件中，支持保存tensorlist/tuple。可以使用torch.load接口读取保存的tensor。
+
+参数说明：
+self(Tensor[])：必选参数，源数据张量集合，被保存的tensorlist/tuple。
+save_name(str)：必选参数，tensorlist/tuple中所有tensor的保存用名。
+save_dir(str)：可选参数，tensorlist/tuple中所有tensor的保存路径。
+suffix(str)：可选参数，tensorlist/tuple中所有tensor的保存后缀。
+
+返回值说明：
+不涉及。
+
+支持版本: 
+PyTorch 2.6及更高版本
+
+支持的型号: 
+Atlas A2训练系列产品
+Atlas A3训练系列产品
+
+调用示例: 
+import torch
+import torch_npu
+import torchair
+from torchair.configs.compiler_config import CompilerConfig
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, x):
+        output1 = torch.square(x)
+        output2 = torch.square(output1)
+        torch_npu.save_npugraph_tensor((output1, output2), "outputs")
+        return output2
+
+config = CompilerConfig()
+config.mode = "reduce-overhead"
+npu_backend = torchair.get_npu_backend(compiler_config=config)
+
+x = torch.randn([10, 10]).npu()
+model = Model()
+model = torch.compile(model, backend=npu_backend)
+model(x)
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_dense_lightning_indexer_softmax_lse",
     """
 接口原型: 
