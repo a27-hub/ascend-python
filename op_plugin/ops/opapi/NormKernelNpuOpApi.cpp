@@ -44,6 +44,10 @@ inline bool check_use_aclop(float pfloat)
     if (c10_npu::IsAclnnOnly()) {
         return false;
     }
+    if (op_plugin::utils::is_gte_cann_version_900()) {
+        // Version 9.0.0 of cann supports all norm operators in aclnn
+        return false;
+    }
     if (pfloat != 0.0 && pfloat != 1.0 && pfloat != 2.0 && pfloat != 3.0) {
         if (op_plugin::utils::is_gte_cann_version_810rc1() &&
             (pfloat == static_cast<float>(INT_MAX) || pfloat == static_cast<float>(INT_MIN))) {
