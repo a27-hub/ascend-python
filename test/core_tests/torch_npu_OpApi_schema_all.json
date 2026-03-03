@@ -119,7 +119,7 @@
   "op_api: torch_npu.npu_moe_update_expert(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
-  "op_api: torch_npu.npu_mhc_post(*args, **kwargs)": {
+  "op_api: torch_npu.npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor": {
     "version": ["v2.7", "newest"]
   },
   "op_api: torch_npu.npu_mrope(*args, **kwargs)": {
