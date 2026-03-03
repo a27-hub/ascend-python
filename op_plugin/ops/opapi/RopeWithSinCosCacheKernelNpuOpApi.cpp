@@ -31,7 +31,6 @@ std::tuple<at::Tensor, at::Tensor> _mrope_v1(
     at::Tensor &query_out,
     at::Tensor &key_out)
 {
-    TORCH_CHECK(cache_mode == "default", "npu_mrope only support cache_mode='default', but got '", cache_mode, "'", OPS_ERROR(ErrCode::VALUE));
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnRopeWithSinCosCache, positions, query, key, cos_sin_cache,
         mrope_section, head_size, is_neox_style, query_out, key_out);
     return std::tie(query_out, key_out);
@@ -54,12 +53,21 @@ std::tuple<at::Tensor, at::Tensor> npu_mrope(
     bool is_neox_style = op_plugin::utils::is_neox_style(rotary_mode_str);
     int64_t cache_mode_value = op_plugin::utils::cache_mode_to_int(cache_mode_str);
     
+    static const bool is_mrope_v2_available = check_aclnn_kernel_available("aclnnRopeWithSinCosCacheV2");
+    
+    TORCH_CHECK(
+        is_mrope_v2_available || cache_mode_value == 0,
+        "npu_mrope: cache_mode='", cache_mode_str,
+        "' requires aclnnRopeWithSinCosCacheV2, but current environment does not support it. "
+        "Please upgrade CANN or use cache_mode='default'.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT));
+    
     at::Tensor query_out = at::empty_like(query);
     at::Tensor key_out = at::empty_like(key);
     
     DO_COMPATIBILITY(aclnnRopeWithSinCosCacheV2,
         _mrope_v1(positions, query, key, cos_sin_cache, mrope_section_value,
-            head_size, is_neox_style, cache_mode_str, query_out, key_out));
+            head_size, is_neox_style, query_out, key_out));
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnRopeWithSinCosCacheV2, positions, query, key, cos_sin_cache,
         mrope_section_value, head_size, is_neox_style, cache_mode_value, query_out, key_out);
