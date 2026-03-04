@@ -2007,12 +2007,12 @@ def npu_dtype_cast_meta(self, dtype, input_dtype=None):
 
 @impl(m, "_npu_dtype_cast")
 def _npu_dtype_cast_meta(self, dtype):
-    return self.empty_like(self.shape, dtype=dtype)
+    return self.new_empty(self.shape, dtype=dtype)
 
 
 @impl(m, "_npu_dtype_cast_backward")
 def _npu_dtype_cast_backward_meta(self, dtype):
-    return self.empty_like(self.shape, dtype=dtype)
+    return self.new_empty(self.shape, dtype=dtype)
 
 
 @impl(m, "npu_dtype_cast_backward")
