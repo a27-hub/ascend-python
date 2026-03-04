@@ -12027,7 +12027,7 @@ import torch.multiprocessing as mp
 
 def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
     torch_npu.npu.set_device(rank)
-    init_method = 'tcp://' + master_ip + ':' + master_port
+    init_method = f"tcp://{master_ip}:{master_port}"
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
     from torch.distributed.distributed_c10d import _get_default_group
     default_pg = _get_default_group()
@@ -12036,26 +12036,26 @@ def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
     else:
         hcom_info = default_pg.get_hccl_comm_name(rank)
 
-    BS, K = 512, 8
-    H1, N1 = 2048, 2048
-    H2, N2 = 2048, 2048
-    e = 4
+    BS, K = 128, 2
+    H1, N1 = 256, 256
+    H2, N2 = 256, 128
+    e = 2
     ep_world_size = world_size
-    gmm_y_dtype = torch.float16
-    mm_y_dtype = torch.float16
+    total_tokens = BS * K
+    out_dtype = torch.float16
 
-    gmm_x = torch.randn(BS * K, H1, dtype=torch.float16).npu()
-    gmm_weight = torch.randn(e, H1, N1, dtype=torch.float16).npu()
-    mm_x = torch.randn(BS, H2, dtype=torch.float16).npu()
-    mm_weight = torch.randn(H2, N2, dtype=torch.float16).npu()
-
+    gmm_x = torch.randint(0, 255, (total_tokens, H1), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
+    gmm_weight = torch.randint(0, 255, (e, H1, N1), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
     gmm_x_scale = torch.tensor([0.5], dtype=torch.float32).npu()
     gmm_weight_scale = torch.tensor([0.3], dtype=torch.float32).npu()
+
+    mm_x = torch.randint(0, 255, (BS, H2), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
+    mm_weight = torch.randint(0, 255, (H2, N2), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
     mm_x_scale = torch.tensor([0.4], dtype=torch.float32).npu()
     mm_weight_scale = torch.tensor([0.2], dtype=torch.float32).npu()
 
-    send_counts = [BS * K // (e * ep_world_size)] * (e * ep_world_size)
-    recv_counts = [BS * K // (e * ep_world_size)] * (e * ep_world_size)
+    send_counts = [total_tokens // (e * ep_world_size)] * (e * ep_world_size)
+    recv_counts = [total_tokens // (e * ep_world_size)] * (e * ep_world_size)
 
     gmm_y, mm_y = torch_npu.npu_quant_gmm_alltoallv(
         gmm_x=gmm_x,
@@ -12066,7 +12066,7 @@ def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
         ep_world_size=ep_world_size,
         send_counts=send_counts,
         recv_counts=recv_counts,
-        gmm_y_dtype=gmm_y_dtype,
+        gmm_y_dtype=out_dtype,
         mm_x=mm_x,
         mm_weight=mm_weight,
         mm_x_scale=mm_x_scale,
@@ -12084,14 +12084,14 @@ def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
         mm_weight_dtype=torch_npu.hifloat8,
         mm_x_scale_dtype=torch.float32,
         mm_weight_scale_dtype=torch.float32,
-        mm_y_dtype=mm_y_dtype,
+        mm_y_dtype=out_dtype,
     )
 
 if __name__ == "__main__":
-    world_size = 8
+    world_size = 2
     master_ip = '127.0.0.1'
     master_port = '50001'
-    mp.spawn(run_npu_quant_gmm_alltoallv, args=(world_size, master_ip, master_port), nprocs=world_size)
+    mp.spawn(run_npu_quant_gmm_alltoallv, args=(world_size, master_ip, master_port), nprocs=world_size, join=True)
 """
 )
 
