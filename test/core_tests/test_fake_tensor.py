@@ -2425,7 +2425,7 @@ class TestMhcSinkhorn(TestCase):
             out_flag = 0
             eps = 1e-6
             num_iters = 20
-            y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, out_flag, eps, num_iters)
+            y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res=h_res, out_flag=out_flag, eps=eps, num_iters=num_iters)
             self.assertTrue(y.shape == h_res.shape)
             self.assertTrue(y.dtype == h_res.dtype)
             self.assertTrue(norm_out.shape == h_res.shape)

@@ -2915,7 +2915,7 @@ def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None,
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device))
 
 @impl(m, "npu_mhc_sinkhorn")
-def npu_mhc_sinkhorn(h_res, out_flag=0, eps=1e-06, num_iters):
+def npu_mhc_sinkhorn(h_res, out_flag=0, eps=1e-06, num_iters=20):
     h_res_shape = list(x.shape)
     torch._check(
         h_res_shape[-1] in [4, 6, 8],

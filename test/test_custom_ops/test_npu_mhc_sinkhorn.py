@@ -30,8 +30,8 @@ class TestMhcSinkhorn(TestCase):
         eps = 1e-6
         num_iters = 20
 
-        expected_output = self.mhc_sinkhorn_impl(h_res, out_flag, eps, num_iters)
-        custom_output = self.custom_op_exec(h_res, out_flag, eps, num_iters)
+        expected_output = self.mhc_sinkhorn_impl(h_res = h_res, out_flag = out_flag, eps = eps, num_iters = num_iters)
+        custom_output = self.custom_op_exec(h_res = h_res, out_flag = out_flag, eps = eps, num_iters = num_iters)
         self.assertRtolEqual(expected_output, custom_output)
 
 
