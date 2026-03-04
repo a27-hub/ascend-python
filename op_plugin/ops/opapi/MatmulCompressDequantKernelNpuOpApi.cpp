@@ -46,14 +46,14 @@ at::Tensor npu_matmul_compress_dequant(const at::Tensor &x1, const at::Tensor &x
                 "offsetX currently only supports 0, but got ", offset_x_val,
                 OPS_ERROR(ErrCode::PARAM));
 
-    TORCH_CHECK(x1.dim() >= MINIMUM_SHAPE_SIZE,
-                "x1 must have at least 2 dimensions, but got ", x1.dim(),
+    TORCH_CHECK(x1.dim() == MINIMUM_SHAPE_SIZE,
+                "x1 must have 2 dimensions, but got ", x1.dim(),
                 OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(scale.dim() >= MINIMUM_SHAPE_SIZE,
-                "scale must have at least 2 dimensions, but got ", scale.dim(),
+    TORCH_CHECK(scale.dim() == MINIMUM_SHAPE_SIZE,
+                "scale must have 2 dimensions, but got ", scale.dim(),
                 OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(bias.dim() >= MINIMUM_SHAPE_SIZE,
-                "bias must have at least 2 dimensions, but got ", bias.dim(),
+    TORCH_CHECK(bias.dim() == MINIMUM_SHAPE_SIZE,
+                "bias must have 2 dimensions, but got ", bias.dim(),
                 OPS_ERROR(ErrCode::PARAM));
 
     // 约束4: output 形状为 [M, N], M = x1 第1维, N = bias 第2维；格式 ND，数据类型 DT_FLOAT16
