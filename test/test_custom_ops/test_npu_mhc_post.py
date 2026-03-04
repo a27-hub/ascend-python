@@ -30,23 +30,29 @@ def hc_post(h_out, H_post, H_comb, x):
 class TestNpuMhcPost(TestCase):
 
     def cpu_op_exec(self, x, h_res, h_out, h_post):
+
         x_dtype = x.dtype
         x_ndim = x.ndim
         if (x_dtype == 'bfloat16'):
-                x = x.astype(np.float32)
-                h_out = h_out.astype(np.float32)
+            x = x.to(torch.float32)
+            h_out = h_out.to(torch.float32)
             
         if (x_ndim == 3):
-            x = np.expand_dims(x, axis=0)
-            h_res = np.expand_dims(h_res, axis=0)
-            h_out = np.expand_dims(h_out, axis=0)
-            h_post = np.expand_dims(h_post, axis=0)
-
-        y = hc_post(h_out_tensor, h_post_tensor, h_res_tensor, x_tensor)
+            x = torch.unsqueeze(x, dim=0)
+            h_res = torch.unsqueeze(h_res, dim=0)
+            h_out = torch.unsqueeze(h_out, dim=0)
+            h_post = torch.unsqueeze(h_post, dim=0)
+        
+        h_out_fp32 = h_out.float()
+        x_fp32 = x.float()
+        h_post_term = h_post.unsqueeze(-1) * h_out_fp32.unsqueeze(-2)
+        h_comb_term = torch.sum(h_res.unsqueeze(-1) * x_fp32.unsqueeze(-2), dim=-3)
+        y_tensor = h_post_term + h_comb_term
 
         if (x_ndim == 3):
-            y = np.squeeze(y, axis=0)
-        return y
+            y_tensor = torch.squeeze(y_tensor, dim=0)
+        y_tensor.to(x_dtype)
+        return y_tensor
 
     def npu_op_exec(self, x, h_res, h_out, h_post):
         y = torch_npu.npu_mhc_post(x, h_res, h_out, h_post)
