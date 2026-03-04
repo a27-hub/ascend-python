@@ -65,7 +65,7 @@ class TestNpuMhcPost(TestCase):
         h_out_shape = [1,1,512]
         h_post_shape = [1,1,4]
         x = torch.rand(x_shape, dtype=torch.float16)
-        x = torch.rand(h_res_shape, dtype=torch.float32)
+        h_res = torch.rand(h_res_shape, dtype=torch.float32)
         h_out = torch.rand(h_out_shape, dtype=torch.float16)
         h_post = torch.rand(h_post_shape, dtype=torch.float32)
         x_npu = x.npu()
