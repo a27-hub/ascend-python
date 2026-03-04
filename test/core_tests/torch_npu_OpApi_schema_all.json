@@ -1361,6 +1361,9 @@
   "func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, Symint num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: matmul_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },

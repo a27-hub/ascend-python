@@ -5440,6 +5440,9 @@ custom:
         dtype: at::kFloat
       exec: aclnnTopKTopPSample
       
+  - func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, Symint num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
