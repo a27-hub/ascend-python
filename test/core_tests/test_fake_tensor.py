@@ -2798,7 +2798,9 @@ class TestMatmulCompressDequant(TestCase):
         with FakeTensorMode():
             m, k, n = 16, 256, 128
             x1 = torch.ones((m, k), dtype=torch.int8).npu()
-            x2 = torch.zeros((k, n), dtype=torch.int8).npu()
+            # x2 为 1 维压缩权重，长度为小于 k*n 的 tensor
+            x2_len = k * n - 1
+            x2 = torch.zeros((x2_len,), dtype=torch.int8).npu()
             compress_index = torch.zeros(8, dtype=torch.int8).npu()
             bias = torch.zeros((1, n), dtype=torch.int32).npu()
             scale = torch.ones((1, n), dtype=torch.float32).npu()
