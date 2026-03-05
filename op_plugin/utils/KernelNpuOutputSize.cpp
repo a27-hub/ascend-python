@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #include <bitset>
 #include <ATen/native/LinearAlgebraUtils.h>
 #include "torch_npu/csrc/core/npu/NPUException.h"
@@ -287,10 +286,7 @@ c10::SmallVector<int64_t, SIZE> avg_pool3d_npu_output_size(const at::Tensor &sel
                                    ((self_h + 2 * padding[1] - kernel_size[1]) / stride[1] + 1);
     int64_t kernel_w = ceil_mode ? (CeilDiv(self_w + 2 * padding[2] - kernel_size[2], stride[2]) + 1) :
                                    ((self_w + 2 * padding[2] - kernel_size[2]) / stride[2] + 1);
-    TORCH_CHECK(kernel_d > 0, "kernel_d has to be positive, but got ", kernel_d, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(kernel_h > 0, "kernel_h has to be positive, but got ", kernel_h, OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(kernel_w > 0, "kernel_w has to be positive, but got ", kernel_w, OPS_ERROR(ErrCode::VALUE));
-
+    
     if (ceil_mode) {
         if ((kernel_d - 1) * stride[0] >= self_d + padding[0]) {
             --kernel_d;
@@ -2193,6 +2189,123 @@ c10::SmallVector<int64_t, SIZE> npu_gelu_mul_output_size(const at::Tensor &input
     int64_t last_dim_idx = input.dim() - 1;
     shape[last_dim_idx] = shape[last_dim_idx] / 2;
     return shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_npu_output_size(const at::Tensor &input, at::TensorList params, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t output_last_dim = D * hidden_size;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+        time_step = batch_first ? input.size(1) : input.size(0);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (batch_first) {
+        output_shape = {batch_size, time_step, output_last_dim};
+    } else {
+        output_shape = {time_step, batch_size, output_last_dim};
+    }
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_npu_output1_2_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape;
+
+    output_shape = {D * num_layers, batch_size, hidden_size};
+
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_npu_ijfo_hc_tanhc_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool train, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t list_length = D * num_layers;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+        time_step = batch_first ? input.size(1) : input.size(0);
+    }
+    c10::SmallVector<int64_t, SIZE> single_tensor_shape;
+    if (train) {
+    single_tensor_shape = {time_step, batch_size, hidden_size};
+    } else {
+        return {};
+    }
+    return single_tensor_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_backward_npu_output_size(const at::Tensor &input, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    if (batch_sizes.has_value()) {
+        output_shape = {input.size(0), input.size(1)};
+    } else {
+        if (batch_first) {
+            output_shape = {input.size(1), input.size(0), input.size(2)};
+        } else {
+            output_shape = {input.size(0), input.size(1), input.size(2)};
+        }
+    }
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> lstm_backward_npu_hc_prev_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes)
+{
+    const at::Tensor X1 = params[0];
+    int64_t D = bidirectional ? 2 : 1;
+    int64_t hidden_size = X1.size(0) / 4;
+    int64_t batch_size;
+    int64_t time_step;
+    if (batch_sizes.has_value()) {
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        time_step = bs_tensor.size(0);
+        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+        batch_size = input.size(0) / time_step;
+    } else {
+        batch_size = batch_first ? input.size(0) : input.size(1);
+    }
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    output_shape = {D * num_layers, batch_size, hidden_size};
+    return output_shape;
 }
 
 } // namespace op_infer
