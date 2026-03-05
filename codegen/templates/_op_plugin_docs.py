@@ -4642,7 +4642,7 @@ offsetX (int, 可选) - 输入量化偏移。当前仅支持 0，默认值为 0�
 返回 Tensor，形状 [M, N]，其中 M 为 x1 的第 0 维，N 为 bias 的第 1 维。数据格式为 ND，数据类型为 float16。
 
 约束说明:
-x1、scale、bias 必须为 2 维。offsetW 当前仅支持 None；offsetX 当前仅支持 0。压缩信息为 {8, 8, k, n, 1}，其中 k 为 x1 的第 1 维，n 为 scale 的第 1 维。依赖 CANN 提供的 aclnnMatmulCompressDequant，请确保 CANN 版本支持该算子。
+x1、scale、bias 必须为 2 维。offsetW 当前仅支持 None；offsetX 当前仅支持 0。依赖 CANN 提供的 aclnnMatmulCompressDequant，请确保 CANN 版本支持该算子。
 
 示例:
 >>> import torch
