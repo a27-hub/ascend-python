@@ -24,7 +24,7 @@ constexpr int64_t MINIMUM_SHAPE_SIZE = 2;
 
 at::Tensor npu_matmul_compress_dequant(const at::Tensor &x1, const at::Tensor &x2,
                                        const at::Tensor &compress_index, const at::Tensor &bias,
-                                       const at::Tensor &scale, const at::Tensor &compress_idx,
+                                       const at::Tensor &scale,
                                        const c10::optional<at::Tensor> &offsetW,
                                        c10::optional<int64_t> offsetX)
 {
