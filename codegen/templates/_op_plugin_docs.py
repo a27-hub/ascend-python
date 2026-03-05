@@ -4624,7 +4624,7 @@ _add_torch_npu_docstr(
     "npu_matmul_compress_dequant",
     """
 接口原型:
-torch_npu.npu_matmul_compress_dequant(Tensor x1, Tensor x2, Tensor compress_index, Tensor bias, Tensor scale, Tensor? offsetW=None, int? offsetX=None) -> Tensor
+torch_npu.npu_matmul_compress_dequant(Tensor x1, Tensor x2, Tensor compress_index, Tensor bias, Tensor scale, *, Tensor? offsetW=None, int? offsetX=None) -> Tensor
 
 功能描述:
 对压缩存储的权重重建后进行矩阵乘与反量化计算。即使用压缩索引(compress_index)对压缩权重(x2)解压，与输入(x1)做矩阵乘，加上偏置(bias)，再按 scale 做反量化，得到 float16 结果。适用于 8x8 块压缩的权重量化推理场景。
