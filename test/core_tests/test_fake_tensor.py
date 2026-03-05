@@ -2792,6 +2792,21 @@ class TestQuantMatmulGelu(TestCase):
             self.assertTrue(expect_ret_int32.dtype == res_int32_bias.dtype)
 
 
+class TestMatmulCompressDequant(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnMatmulCompressDequant; do not execute")
+    def test_npu_matmul_compress_dequant_meta(self):
+        with FakeTensorMode():
+            m, k, n = 16, 256, 128
+            x1 = torch.ones((m, k), dtype=torch.int8).npu()
+            x2 = torch.zeros((k, n), dtype=torch.int8).npu()
+            compress_index = torch.zeros(8, dtype=torch.int8).npu()
+            bias = torch.zeros((1, n), dtype=torch.int32).npu()
+            scale = torch.ones((1, n), dtype=torch.float32).npu()
+            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale)
+            self.assertEqual(res.shape, (m, n))
+            self.assertEqual(res.dtype, torch.float16)
+
+
 class TestRecurrentGatedDeltaRule(TestCase):
     def test_recurrent_gated_delta_rule(self):
         with FakeTensorMode():
