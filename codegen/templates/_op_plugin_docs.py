@@ -11080,6 +11080,18 @@ y = clipped_swiglu_model(x, group_index, -1, 1.702, 7.0, 1.0, True)
 )
 
 _add_torch_npu_docstr(
+    "npu_causal_conv1d_fn",
+    """
+    """
+)
+
+_add_torch_npu_docstr(
+    "npu_causal_conv1d_update",
+    """
+    """
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
