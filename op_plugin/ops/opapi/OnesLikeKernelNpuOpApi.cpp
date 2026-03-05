@@ -32,7 +32,9 @@ at::Tensor ones_like(const at::Tensor &self,
     auto device = c10::device_or_default(device_opt);
     if (!torch_npu::utils::is_npu(device)) {
         auto result = at::empty_like(self, dtype_opt, layout_opt, device_opt, pin_memory_opt, optional_memory_format);
-        return op_api::fill_(result, 1.);
+        // Important: `result` is NOT an NPU tensor in this branch (e.g. device=CPU),
+        // so we must not call NPU op_api kernels (they require NPU tensors).
+        return result.fill_(1);
     }
     c10::TensorOptions options_ = c10::TensorOptions().dtype(dtype_opt)
                                                     .device(device_opt)
