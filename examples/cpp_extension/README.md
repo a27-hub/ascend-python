@@ -3,37 +3,40 @@
 ├── examples
 |   ├── cpp_extension
 |   │   ├── csrc
-|   │   │   └── add_custom.asc      # Ascend C 内核实现
+|   │   │   ├── add_custom.asc      # Add算子实现
+|   │   │   ├── trig_inplace_custom.asc # 原地三角函数算子实现
+|   │   │   └── pybind11.asc      # Ascend C 内核实现
 |   |   ├── op_extension/
 |   |   │   ├── __init__.py         # 扩展加载逻辑
-|   |   │   └── ops.py              # Python API 定义
+|   |   │   └── ops/
+|   |   │       └── __init__.py     # Python API 定义及扩展加载逻辑
 |   |   ├── test
 |   │   |   └── test.py             # 测试脚本
 |   |   ├── setup.py                # 编译配置
 |   |   └── README.md               # 说明文档
 ```
 ## 新增自定义算子
-本示例展示了如何在 PyTorch 中使用Ascend C扩展自定义算子Kernel实现，并通过Pytorch的API调用实现的算子。
+本示例以Add算子为例，展示了如何在 PyTorch 中使用Ascend C扩展自定义算子Kernel实现，并通过Python的接口调用实现的算子。
 ### kernel实现
   本小节主要介绍如何实现Kernel算子，本样例基于Ascend C进行开发算子。如何使用Ascend C实现算子kernel，可以参考昇腾社区文档[昇腾Ascend C](https://www.hiascend.com/ascend-c)。
 
 
-  在./cpp_extension/csrc/ 目录下创建一个名为 `add_custom.asc` 的文件，这是我们自定义加法Kernel的实现文件。样例中实现了一个 `add_custom` 的核函数。
+  在./csrc/ 目录下创建一个名为`add_custom.asc`的文件，这是我们自定义加法Kernel的实现文件。样例中实现了一个`add_custom`的核函数。
 
-### 将Kernel实现与Pytorch集成
+### 将Kernel实现与集成
   本小节主要介绍如何封装实现的kernel算子，以及注册为pythorch的API。
-  代码实现在./cpp_extension/csrc/ 目录下。
+  代码实现在./csrc/ 目录下。
 
-#### Aten IR定义
-pytorch通过`TORCH_LIBRARY`宏提供了一个简单方法，将C++算子实现绑定到python。python侧可以通过`torch.ops.namespace.op_name`方式进行调用。这种方式包括Aten IR的定义和注册。我们通过`TORCH_LIBRARY`实现注册，如果相同namespace在不同文件中有注册，需要使用`TORCH_LIBRARY_FRAGMENT`。
-例如将自定义`ascendc_add`函数注册在`npu`命名空间下：
+#### 封装Python模块
+在`pybind11.asc`文件中使用了pybind11库来将C++代码封装成Python模块，在Python侧可以通过`import`方式进行调用。例如：
+  
   ```c++
-TORCH_LIBRARY_FRAGMENT(npu, m)
-{
-    m.def("ascendc_add(Tensor x, Tensor y) -> Tensor");
-}
+  PYBIND11_MODULE(custom_ops, m)
+  {
+      m.def("custom_add", &ascendc_ops::run_add_custom, "");
+  }
   ```
-  通过此注册，python侧可通过`torch.ops.npu.ascendc_add`调用自定义的API。
+  通过此绑定，python侧可通过`op_extension.ops.custom_add`调用自定义的API。
 
 #### Aten IR实现
 
@@ -45,7 +48,7 @@ TORCH_NPU的算子下发和执行是异步的，通过TASKQUEUE实现，
 #include "torch_npu/csrc/core/npu/NPUStream.h"
 #include "torch_npu/csrc/framework/OpCommand.h"
 namespace ascendc_ops {
-at::Tensor ascendc_add(const at::Tensor &x, const at::Tensor &y)
+at::Tensor run_add_custom(const at::Tensor &x, const at::Tensor &y)
 {
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(true);
     at::Tensor z = at::empty_like(x);
@@ -67,19 +70,10 @@ at::Tensor ascendc_add(const at::Tensor &x, const at::Tensor &y)
 
 }  // namespace ascendc_ops
   ```
-#### Aten IR注册
-通过pytorch提供的`TORCH_LIBRARY_IMPL`注册算子实现，运行在NPU设备上需要注册在`PrivateUse1`这个dispatchkey上。
-样例如下：
-  ```c++
-TORCH_LIBRARY_IMPL(npu, PrivateUse1, m)
-{
-    m.impl("ascendc_add", TORCH_FN(ascendc_ops::ascendc_add));
-}
-  ```
 
-上述主要介绍了一个自定义算子kernel如何集成在pytorch必备流程。
+上述主要介绍了一个自定义算子kernel如何集成必备流程。
 
-最后，通过创建ops.py文件，定义python接口，通过`module_name.ops.custom_add`可以调用自定义算子。setup.py文件中定义了`module_name`为`op_extension`，样例如下：
+最后，通过创建ops路径，定义python接口，通过`module_name.ops.custom_add`可以调用自定义算子。测试样例如下：
   ```c++
 import torch
 x = torch.randint(low=1, high=100, size=length, device='cpu', dtype=torch.int)
