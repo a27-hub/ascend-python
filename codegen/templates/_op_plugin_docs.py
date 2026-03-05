@@ -12024,27 +12024,14 @@ import torch
 import torch_npu
 import torch.distributed as dist
 import torch.multiprocessing as mp
-import numpy as np
-
-def generate_counts(ep_world_size, e, total_tokens, seed=None):
-    np.random.seed(seed if seed is not None else 42)
-    per_rank_total = total_tokens
-    base = per_rank_total // (ep_world_size * e)
-    remainder = per_rank_total % (ep_world_size * e)
-    send_counts = [base] * (ep_world_size * e)
-    for i in range(remainder):
-        send_counts[-1 - i] += 1
-    recv_counts = send_counts.copy()
-    return send_counts, recv_counts
 
 def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
     torch_npu.npu.set_device(rank)
     init_method = f"tcp://{master_ip}:{master_port}"
     dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
-
     from torch.distributed.distributed_c10d import _get_default_group
     default_pg = _get_default_group()
-    if torch.__version__ > "2.0.1":
+    if torch.__version__ > '2.0.1':
         hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
     else:
         hcom_info = default_pg.get_hccl_comm_name(rank)
@@ -12053,66 +12040,57 @@ def run_npu_quant_gmm_alltoallv(rank, world_size, master_ip, master_port):
     H1, N1 = 256, 256
     H2, N2 = 256, 128
     e = 2
+    ep_world_size = world_size
     total_tokens = BS * K
+    out_dtype = torch.float16
 
-    send_counts, recv_counts = generate_counts(world_size, e, total_tokens, seed=rank)
-
-    gmm_x = torch.randint(0, 255, (total_tokens, H1), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
-    gmm_weight = torch.randint(0, 255, (e, H1, N1), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
+    gmm_x = torch.randint(0, 30, (total_tokens, H1), dtype=torch.uint8).npu()
+    gmm_weight = torch.randint(0, 30, (e, H1, N1), dtype=torch.uint8).npu()
     gmm_x_scale = torch.tensor([0.5], dtype=torch.float32).npu()
     gmm_weight_scale = torch.tensor([0.3], dtype=torch.float32).npu()
 
-    mm_x = torch.randint(0, 255, (BS, H2), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
-    mm_weight = torch.randint(0, 255, (H2, N2), dtype=torch.uint8).npu().view(torch_npu.hifloat8)
+    mm_x = torch.randint(0, 30, (BS, H2), dtype=torch.uint8).npu()
+    mm_weight = torch.randint(0, 30, (H2, N2), dtype=torch.uint8).npu()
     mm_x_scale = torch.tensor([0.4], dtype=torch.float32).npu()
     mm_weight_scale = torch.tensor([0.2], dtype=torch.float32).npu()
 
-    quant_mode = 1
-    out_dtype = torch.float16
+    send_counts = [total_tokens // (e * ep_world_size)] * (e * ep_world_size)
+    recv_counts = [total_tokens // (e * ep_world_size)] * (e * ep_world_size)
 
-    gmm_y, mm_y = torch_npu.npu_quant_gmm_alltoallv(
-                                                gmm_x=gmm_x,
-                                                gmm_weight=gmm_weight,
-                                                gmm_x_scale = gmm_x_scale,
-                                                gmm_weight_scale = gmm_weight_scale,
-                                                hcom = hcom_info,
-                                                ep_world_size=world_size,
-                                                send_counts=send_counts,
-                                                recv_counts=recv_counts,
-                                                gmm_y_dtype=out_dtype,
-                                                mm_x=mm_x,
-                                                mm_weight=mm_weight,
-                                                mm_x_scale = mm_x_scale,
-                                                mm_weight_scale = mm_weight_scale,
-                                                gmm_x_quant_mode = quant_mode,
-                                                gmm_weight_quant_mode = quant_mode,
-                                                mm_x_quant_mode = quant_mode,
-                                                mm_weight_quant_mode = quant_mode,
-                                                comm_quant_mode = 0,
-                                                send_counts_tensor=None,
-                                                recv_counts_tensor=None,
-                                                gmm_x_offset = None,
-                                                gmm_weight_offset = None,
-                                                mm_x_offset = None,
-                                                mm_weight_offset = None,
-                                                comm_quant_scale = None,
-                                                group_size=None,
-                                                gmm_x_dtype=torch_npu.hifloat8,
-                                                gmm_weight_dtype=torch_npu.hifloat8,
-                                                gmm_x_scale_dtype=torch.float32,
-                                                gmm_weight_scale_dtype=torch.float32,
-                                                mm_x_dtype=torch_npu.hifloat8,
-                                                mm_weight_dtype=torch_npu.hifloat8,
-                                                mm_x_scale_dtype=torch.float32,
-                                                mm_weight_scale_dtype=torch.float32,
-                                                comm_quant_dtype = None,
-                                                mm_y_dtype=out_dtype)
+    y, mm_y = torch_npu.npu_quant_gmm_alltoallv(
+        gmm_x=gmm_x,
+        gmm_weight=gmm_weight,
+        gmm_x_scale=gmm_x_scale,
+        gmm_weight_scale=gmm_weight_scale,
+        hcom=hcom_info,
+        ep_world_size=ep_world_size,
+        send_counts=send_counts,
+        recv_counts=recv_counts,
+        gmm_y_dtype=out_dtype,
+        mm_x=mm_x,
+        mm_weight=mm_weight,
+        mm_x_scale=mm_x_scale,
+        mm_weight_scale=mm_weight_scale,
+        gmm_x_quant_mode=1,
+        gmm_weight_quant_mode=1,
+        mm_x_quant_mode=1,
+        mm_weight_quant_mode=1,
+        comm_quant_mode=0,
+        gmm_x_dtype=torch_npu.hifloat8,
+        gmm_weight_dtype=torch_npu.hifloat8,
+        gmm_x_scale_dtype=torch.float32,
+        gmm_weight_scale_dtype=torch.float32,
+        mm_x_dtype=torch_npu.hifloat8,
+        mm_weight_dtype=torch_npu.hifloat8,
+        mm_x_scale_dtype=torch.float32,
+        mm_weight_scale_dtype=torch.float32,
+        mm_y_dtype=out_dtype,
+    )
 
 if __name__ == "__main__":
     world_size = 2
-    master_ip = "127.0.0.1"
-    master_port = "50001"
-
+    master_ip = 'your-master-address'
+    master_port = 'your-master-port'
     mp.spawn(run_npu_quant_gmm_alltoallv, args=(world_size, master_ip, master_port), nprocs=world_size, join=True)
 """
 )
