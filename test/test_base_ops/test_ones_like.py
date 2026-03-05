@@ -77,6 +77,15 @@ class TestOnesLike(TestCase):
             self.assertEqual(cpu_dtype, npu_dtype)
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_ones_cpu_cases(self):
+        shape_format = [
+            [np.float16, -1, (3, )],
+        ]
+        cpu_input, npu_input = create_common_tensor(item, 0, 0)
+        cpu_output = self.cpu_op_exec(cpu_input)
+        npu_output = self.npu_op_exec(npu_input)
+        self.assertRtolEqual(cpu_output, npu_output)
+
 
 if __name__ == "__main__":
     run_tests()
