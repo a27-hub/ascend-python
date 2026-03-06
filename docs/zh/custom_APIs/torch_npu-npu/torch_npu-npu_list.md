@@ -12,8 +12,8 @@
 </tr>
 </thead>
 <tbody><tr id="row96642716156"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p8664172152"><a name="p8664172152"></a><a name="p8664172152"></a><a href="（beta）torch_npu-npu-get_npu_overflow_flag.md">（beta）torch_npu.npu.get_npu_overflow_flag</a></p>
-</td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测npu计算过程中是否有数值溢出。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检</td>
+测npu计算过程中是否有数值溢出。</p>
 </td>
 </tr>
 <tr id="row1066418791520"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p166411751513"><a name="p166411751513"></a><a name="p166411751513"></a><a href="（beta）torch_npu-npu-clear_npu_overflow_flag.md">（beta）torch_npu.npu.clear_npu_overflow_flag</a></p>
@@ -209,6 +209,11 @@
 <tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_impl_enabled.md">torch_npu.npu.are_compatible_impl_enabled</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况。</p>
+</td>
+</tr>
+<tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_impl_enabled.md">torch_npu.npu.NpuGraphOpHandler</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于配置Npu graph下算子动态更新机制。</p>
 </td>
 </tr>
 </tbody>
