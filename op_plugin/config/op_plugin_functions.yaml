@@ -3216,10 +3216,12 @@ official:
 
   - func: lstm.data(Tensor data, Tensor batch_sizes, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
     device_check: NoCheck
 
   - func: lstm.input(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: lstm_cell(Tensor input, Tensor[] hx, Tensor w_ih, Tensor w_hh, Tensor? b_ih=None, Tensor? b_hh=None) -> (Tensor, Tensor)
     acl_op: all_version
@@ -5449,6 +5451,9 @@ custom:
   - func: npu_gather_backward(Tensor grad, SymInt[] self_size, int dim, Tensor index, bool sparse_grad) -> Tensor
     op_api: all_version
 
+  - func: npu_matmul_compress_dequant(Tensor x1, Tensor x2, Tensor compress_index, Tensor bias, Tensor scale, *, Tensor? offsetW=None, int? offsetX=None) -> Tensor
+    op_api: all_version
+
   - func: _amp_foreach_non_finite_check(Tensor[] scaled_grads) -> bool
     acl_op: all_version
 
@@ -5988,9 +5993,10 @@ custom:
     op_api: [v2.6, newest]
     device_check: NoCheck
 
-  - func: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+  - func: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None, Tensor? dropout_mask=None, int seed=0, int offset=0) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
     op_api: [v2.1, newest]
     exposed: [v2.1, newest]
+    tags: nondeterministic_seeded
 
   - func: npu_fusion_attention_grad(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, float scale_value=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
@@ -5998,11 +6004,12 @@ custom:
   - func: npu_quant_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor d_scale_q, Tensor d_scale_k, Tensor d_scale_v, Tensor? p_scale=None, float scale=1., int? query_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
     op_api: [v2.1, newest]
 
-  - func: npu_quant_fusion_attention_grad(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, Tensor d_scale_q, Tensor d_scale_k, Tensor d_scale_v, Tensor d_scale_dy, *, Tensor? p_scale=None, Tensor? ds_scale=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? attention_in=None, float scale_value=1., int? query_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_quant_fusion_attention_backward(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, Tensor d_scale_q, Tensor d_scale_k, Tensor d_scale_v, Tensor d_scale_dy, *, Tensor? p_scale=None, Tensor? ds_scale=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? attention_in=None, float scale_value=1., int? query_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
 
-  - func: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+  - func: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None, Tensor? dropout_mask=None, int seed=0, int offset=0) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
     op_api: [v2.1, newest]
+    tags: nondeterministic_seeded
 
   - func: npu_fusion_attention_grad_v2(Tensor query, Tensor key, Tensor value, Tensor dy, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? softmax_max=None, Tensor? softmax_sum=None, Tensor? softmax_in=None, Tensor? attention_in=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale_value=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int seed=0, int offset=0, int numels=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.1, newest]
@@ -6193,7 +6200,7 @@ custom:
     op_api: all_version
     tags: nondeterministic_seeded
 
-  - func: _lstm_backward_npu(Tensor grad_y, Tensor grad_hy, Tensor grad_cy, Tensor input, Tensor[] hx, Tensor[] params, Tensor i, Tensor j, Tensor f, Tensor o, Tensor h, Tensor c, Tensor tanhc, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor[])
+  - func: _lstm_npu_backward(Tensor grad_y, Tensor grad_hy, Tensor grad_cy, Tensor input, Tensor[] hx, Tensor[] params, Tensor i, Tensor j, Tensor f, Tensor o, Tensor h, Tensor c, Tensor tanhc, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor[])
     op_api: all_version
 
   - func: npu_masked_fill_range(Tensor self, Tensor start, Tensor end, Tensor value, int axis=-1) -> Tensor
