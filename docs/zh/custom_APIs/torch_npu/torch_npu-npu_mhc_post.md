@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：mHC（multi-head context）架构中，对上一层输出$h_{t}^{out}$进行Post Mapping，对上一层的输入$x_l$进行ResMapping，然后对二者进行残差连接，得到下一层的输入$x_{l+1}$。
+- API功能：在mHC架构中，对上一层输出$h_{t}^{out}$进行Post Mapping，对上一层的输入$x_l$进行ResMapping，然后对二者进行残差连接，得到下一层的输入$x_{l+1}$。
 - 计算公式：
   
   $x_{l+1} = (H_{l}^{res})^{T} \times x_l + h_{l}^{out} \otimes H_{t}^{post}$
