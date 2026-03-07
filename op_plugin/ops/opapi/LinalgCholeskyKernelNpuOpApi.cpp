@@ -18,8 +18,17 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 const int DIM_2D = 2;
 
+static void check_linalg_cholesky_input(const at::Tensor& self)
+{
+    TORCH_CHECK(
+        self.dim() >= DIM_2D,
+        "linalg.cholesky: The input tensor A must have at least 2 dimensions.",
+        OPS_ERROR(ErrCode::PARAM));
+}
+
 at::Tensor& linalg_cholesky_out(const at::Tensor& self, bool upper, at::Tensor& out)
 {
+    check_linalg_cholesky_input(self);
     if (!check_aclnn_kernel_available("aclnnLinalgCholesky")) {
         auto info = at::empty({0}, self.options().dtype(at::kInt));
         at::linalg_cholesky_ex_out(out, info, self, upper, false);
@@ -35,6 +44,7 @@ at::Tensor& linalg_cholesky_out(const at::Tensor& self, bool upper, at::Tensor& 
 
 at::Tensor linalg_cholesky(const at::Tensor& self, bool upper)
 {
+    check_linalg_cholesky_input(self);
     if (!check_aclnn_kernel_available("aclnnLinalgCholesky")) {
         auto [out, info] = at::linalg_cholesky_ex(self, upper, false);
         at::_linalg_check_errors(info, "linalg.cholesky", self.dim() == DIM_2D);
