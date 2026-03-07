@@ -207,6 +207,19 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 -   learnable_sink的参数约束如下：
     - 仅支持TND、NTD\_TND；
     - 仅支持value的d小于等于128；
+-   MHA（Multi-Head Attention）场景（当query\_rope和key\_rope为空时），Q\_D（`query`的D维度）、K\_D（`key`的D维度）、V\_D（`value`的D维度）约束如下：
+
+    Q\_D、K\_D、V\_D都等于64，或Q\_D、K\_D、V\_D都等于128，或Q\_D和K\_D等于192时V\_D等于128。
+
+    -   数据类型：`float16`、`bfloat16`。
+    -   sparse\_mode模式：
+        -   sparse\_mode为0（不传atten\_mask矩阵）。
+        -   sparse\_mode为3/4（传优化后的atten\_mask矩阵）。
+    -   inner\_precise：表示高精度/高性能模式以及是否进行行无效修正。
+        -   `float16`：支持0和1。
+        -   `bfloat16`：仅支持0。
+    -   page attention：支持BnBsH格式（H≤65535，blocksize支持<=128且16对齐）。BnBsH表示KV Cache的排布格式为（blockNum, blocksize, H），其中blockNum为块数量、blocksize为每个块中的token个数、H为隐藏层大小。
+
 -   **当Q\_S大于1时：**
     -   query、key、value输入，功能使用限制如下：
         -   支持B轴小于等于65536，D轴32byte不对齐时仅支持到128。
