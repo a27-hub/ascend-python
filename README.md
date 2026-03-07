@@ -9,7 +9,9 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
 op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
 | op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
 | ------------- | :----------------------------------: |
-| master        |     主线版本，如v2.1.0等             |
+| master        |     主线版本，如v2.7.1等             |
+| 7.3.0        |     7.3.0版本，如v2.7.1-7.3.0等       |
+| 7.2.0        |     7.2.0版本，如v2.1.0-7.2.0等       |
 | 7.1.0        |     7.1.0版本，如v2.1.0-7.1.0等       |
 | 7.0.0        |     7.0.0版本，如v2.1.0-7.0.0等       |
 | 6.0.0        |     6.0.0版本，如v2.1.0-6.0.0等       |
@@ -42,14 +44,14 @@ op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，�
 
 2. 编译生成插件的二进制安装包。
 
-   下载对应OpPlugin版本分支代码，进入插件根目录，以v2.1为例。
+   下载对应OpPlugin版本分支代码，进入插件根目录，以v2.7为例。
    ```
    git clone --branch master https://gitcode.com/ascend/op-plugin.git
    cd op-plugin
    ```
-   执行编译构建，当前支持torch_npu 2.1/2.3/2.4/2.5/2.6/2.7/2.8/master版本。
+   执行编译构建，当前支持torch_npu 2.6/2.7/2.8/2.9/2.10/master版本。
    ```
-   bash ci/build.sh --python=3.8 --pytorch=v2.1.0
+   bash ci/build.sh --python=3.10 --pytorch=v2.7.1
    ```
    >**须知：**<br>
    >请注意，编译时gcc版本遵循如下约束：
@@ -59,18 +61,17 @@ op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，�
 
    | 参数      | 取值范围                                                           | 说明                  | 缺省值    | 备注                                |
    |---------|----------------------------------------------------------------|---------------------|--------|-----------------------------------|
-   | PyTorch | v2.1.0, v2.3.1, v2.4.0, v2.5.1, v2.6.0, v2.7.1, v2.8.0, master | 指定编译过程中使用的PyTorch版本 | master | master对应的PyTorch版本为2.9            |
-   | Python  | 3.8, 3.9, 3.10, 3.11                                           | 指定编译过程中使用的Python版本  | 3.8    | 编译基于PyTorch2.5及后续版本时，不支持Python3.8 |
+   | PyTorch | v2.6.0, v2.7.1, v2.8.0,v2.9.0,v2.10.0,master | 指定编译过程中使用的PyTorch版本 | master | master对应的PyTorch版本为2.11            |
+   | Python  | 3.9, 3.10, 3.11,3.12                                           | 指定编译过程中使用的Python版本  | 3.9    | 编译基于PyTorch2.5及后续版本时，不支持Python3.8 |
 
    | PyTorch      | Python               | GCC                |
    |--------------|----------------------|--------------------|
-   | v2.1.0       | 3.8, 3.9, 3.10, 3.11 | ARM: 10.2 x86: 9.3 |
-   | v2.6.0       | 3.9, 3.10, 3.11      | ARM: 11.2 x86: 9.3 |
-   | v2.7.1       | 3.9, 3.10, 3.11      | 11.2               |
-   | v2.8.0       | 3.9, 3.10, 3.11      | 13.3               |
-   | v2.9.0       | 3.10, 3.11           | 13.3               |
-   | v2.10.0      | 3.10, 3.11           | 13.3               |
-   | master(2.11) | 3.10, 3.11           | 13.3               |
+   | v2.6.0       | 3.9, 3.10, 3.11,3.12      | ARM: 11.2 x86: 9.3 |
+   | v2.7.1       | 3.9, 3.10, 3.11,3.12      | 11.2               |
+   | v2.8.0       | 3.9, 3.10, 3.11,3.12      | 13.3               |
+   | v2.9.0       | 3.10, 3.11,3.12           | 13.3               |
+   | v2.10.0      | 3.10, 3.11,3.12           | 13.3               |
+   | master(2.11) | 3.10, 3.11,3.12           | 13.3               |
 
    >编译过程中，会在插件根目录新建build文件夹，并下载torch_npu对应版本的源码，协同编译。 若build/pytorch目录存在，则编译op-plugin时，不再重复下载torch_npu源码。如需下载所依赖的最新torch_npu源码，删除build/pytorch目录即可。
 
@@ -79,8 +80,34 @@ op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，�
    ```
    pip3 install --upgrade dist/torch_npu-{torch_npu_version}-{Python_version}-{arch}.whl
    # 实际执行时需要根据生成的whl包名称进行替换，其中{torch_npu_version}表示编译的torch_npu版本，{Python_version} 为所使用的 Python 版本，{arch} 则代表目标架构。
-   # 典型的whl包名类似：torch_npu-2.1.0.post13-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+   # 典型的whl包名类似：torch_npu-2.7.1.post3-cp310-cp310-manylinux_2_28_aarch64.whl
    ```
+
+
+### 安装后验证
+
+#### 前提
+
+运行以下命令初始化**CANN**环境变量。
+
+```Shell
+# Default path, change it if needed.
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
+
+#### 快速验证
+
+ 可以通过以下样例快速验证是否成功安装，具体支持的API列表可参考[自定义API参考](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/menu_Pytorch_API.md)。
+
+```diff
+import torch
+import torch_npu
+
+x = torch.randn(2, 2).npu()
+y = torch.add(x, 1)
+
+print(y)
+```
 
 
 ## 硬件配套
