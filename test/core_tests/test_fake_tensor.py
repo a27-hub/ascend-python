@@ -2918,7 +2918,20 @@ class TestNpuLinear(TestCase):
 
             self.assertEqual(result.dtype, npu_input1.dtype)
             self.assertEqual(result.shape, torch.nn.functional.linear(npu_input1, npu_input2, npu_bias).shape)
-
+class TestMhcSinkhorn(TestCase):
+    def test_npu_mhc_sinkhorn(self):
+        with FakeTensorMode():
+            h_res = torch.randn([1, 128, 4, 4], dtype=torch.float32).npu()
+            out_flag = 0
+            eps = 1e-6
+            num_iters = 20
+            y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res=h_res, out_flag=out_flag, eps=eps, num_iters=num_iters)
+            self.assertTrue(y.shape == h_res.shape)
+            self.assertTrue(y.dtype == h_res.dtype)
+            self.assertTrue(norm_out.shape == h_res.shape)
+            self.assertTrue(norm_out.dtype == h_res.dtype)
+            self.assertTrue(sum_out.shape == h_res.shape)
+            self.assertTrue(sum_out.dtype == h_res.dtype)
 
 class TestMoeFinalizeRouting(TestCase):
     def test_npu_moe_finalize_routing_meta(self):

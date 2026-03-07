@@ -1032,6 +1032,28 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     expanded_expert_idx_dim_list = [n * k]
     return (x.new_empty(tuple(expanded_x_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)))
 
+@impl(m, "npu_mhc_sinkhorn")
+def npu_mhc_sinkhorn(h_res, out_flag=0, eps=1e-06, num_iters=20):
+    h_res_shape = list(x.shape)
+    torch._check(
+        h_res_shape[-1] in [4, 6, 8],
+        lambda: f"The h_res's dim should be 4 or 6 or 8, but got {h_res_shape[-1]}.",
+        )
+    torch._check(
+        h_res.dim() == 3 or h_res.dim() == 4,
+        lambda: f"The h_res's dim should be 3 or 4, but got {h_res.dim()}.",
+        )
+    torch._check(
+        num_iters > 0 or num_iters <= 100,
+        lambda: f"num_iters must be within (0, 100], but got {num_iters}.",
+        )
+    torch._check(
+        out_flag == 0,
+        lambda: f"out_flag should be 0, but got {out_flag}.",
+        )
+    return (torch.empty(h_res.size(), dtype=h_res.dtype, device='meta'),
+            torch.empty(h_res.size(), dtype=h_res.dtype, device='meta'),
+            torch.empty(h_res.size(), dtype=h_res.dtype, device='meta'))
 
 @impl(m, "npu_moe_init_routing_v2")
 def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0, x_dtype=None):
