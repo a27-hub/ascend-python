@@ -207,6 +207,29 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 -   learnable_sink的参数约束如下：
     - 仅支持TND、NTD\_TND；
     - 仅支持value的d小于等于128；
+-   GQA/MHA/MQA场景（当query\_rope和key\_rope为空时），Q\_D、K\_D、V\_D约束如下：
+
+    Q\_D、K\_D、V\_D都等于64，或Q\_D、K\_D、V\_D都等于128，或Q\_D和K\_D等于192时V\_D等于128，或TND，GQA/MQA，innerPrecise=0场景下，支持Q\_D=K\_D=V\_D且小于等于256。
+
+    -   **GQA/MQA场景**（numHeads是numKeyValueHeads的整数倍且不相等）：
+        -   数据类型：FLOAT16、BFLOAT16。
+        -   sparse模式：
+            -   sparse=0（不传mask）。
+            -   sparse=3（传优化后的attentionMask）。
+            -   sparse=4（传优化后的attentionMask，需满足：Q\_D=K\_D=V\_D≤256 或 Q\_D=K\_D=192且V\_D=128/192；同时preTokens≥-actualSeqLengths、nextTokens≥-actualSeqLengthsKv、preTokens+nextTokens≥0）。
+        -   innerPrecise：仅支持0（不带行无效的高精度模式）。
+        -   Page Attention：支持BnBsH格式（H≤65535，blockSize<=128 16对齐）。
+
+    -   **MHA场景**：
+        -   数据类型：FLOAT16、BFLOAT16。
+        -   sparse模式：
+            -   sparse=0（不传mask）。
+            -   sparse=3/4（传优化后的attentionMask）。
+        -   innerPrecise：
+            -   FLOAT16：支持0和1。
+            -   BFLOAT16：仅支持0。
+        -   Page Attention：支持BnBsH格式（H≤65535，blockSize支持<=128 16对齐）。
+
 -   **当Q\_S大于1时：**
     -   query、key、value输入，功能使用限制如下：
         -   支持B轴小于等于65536，D轴32byte不对齐时仅支持到128。
