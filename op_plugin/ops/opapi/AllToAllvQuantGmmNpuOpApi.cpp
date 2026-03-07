@@ -24,6 +24,7 @@ static const int N1_DIM = 2;
 static const int ONE_DIM = 1;
 static const int TWO_DIM = 2;
 static const int THREE_DIM = 3;
+static const int PERTENSOR_QUANT_MODE = 1;
 // world_size
 const std::set<int> SUPPORT_WORLD_SIZE_LIST{2, 4, 8, 16, 32, 64, 128, 256};
 // input valid dtype
@@ -128,6 +129,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
             OPS_ERROR(ErrCode::PARAM));
         // 校验input的dtype
         if (mm_x_dtype.has_value()) {
+            TORCH_CHECK(mm_y_dtype.has_value(),
+                "mm_y_dtype must be provided when mm_x and mm_weight are present",
+                OPS_ERROR(ErrCode::PARAM));
             TORCH_CHECK(SUPPORT_INPUT_DTYPE_LIST.find(mm_x_dtype.value()) != SUPPORT_INPUT_DTYPE_LIST.end(),
                 "The optional parameter mm_x_dtype only supports hifloat8, but now is ",
                 op_plugin::utils::DTypeToString(mm_x_dtype.value()),
@@ -161,7 +165,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     if (permute_out_flag) {
         int64_t h1 = gmm_x.size(1);
         // 推导输出permute_out的shape
-        aclDataType permute_out_acltype = c10_npu::GetAclDataType(gmm_x_dtype.value());
+        aclDataType permute_out_acltype;
+        if (gmm_x_dtype.has_value()) {
+            permute_out_acltype = c10_npu::GetAclDataType(gmm_x_dtype.value());
+        } else {
+            permute_out_acltype = at_npu::native::OpPreparation::convert_to_acl_data_type(gmm_x.scalar_type());
+        }
         at::ScalarType permute_out_scalar_dtype =
             at_npu::native::OpPreparation::convert_to_scalar_type(permute_out_acltype);
         permute_out =
@@ -190,10 +199,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     const at::Tensor &mm_x_offset_real = mm_x_offset.value_or(at::Tensor());
     const at::Tensor &mm_weight_offset_real = mm_weight_offset.value_or(at::Tensor());
 
-    int64_t gmm_x_quant_mode_real = gmm_x_quant_mode.value();
-    int64_t gmm_weight_quant_mode_real = gmm_weight_quant_mode.value();
-    int64_t mm_x_quant_mode_real = mm_x_quant_mode.value();
-    int64_t mm_weight_quant_mode_real = mm_weight_quant_mode.value();
+    int64_t gmm_x_quant_mode_real = gmm_x_quant_mode.value_or(PERTENSOR_QUANT_MODE);
+    int64_t gmm_weight_quant_mode_real = gmm_weight_quant_mode.value_or(PERTENSOR_QUANT_MODE);
+    int64_t mm_x_quant_mode_real = mm_x_quant_mode.value_or(PERTENSOR_QUANT_MODE);
+    int64_t mm_weight_quant_mode_real = mm_weight_quant_mode.value_or(PERTENSOR_QUANT_MODE);
     int64_t group_sizes = 0;
     bool transposeGmmWeight = false;
     bool transposeMmWeight = false;
