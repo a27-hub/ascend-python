@@ -1,10 +1,10 @@
-from dataclasses import dataclass
-from copy import deepcopy
+import itertools
 import numpy as np
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
+import itertools
 
 
 class TestMhcSinkhorn(TestCase):
@@ -29,7 +29,7 @@ class TestMhcSinkhorn(TestCase):
 
         expected_output = self.mhc_sinkhorn_impl(h_res)
         custom_output = self.custom_op_exec(h_res)
-        self.assertRtolEqual(expected_output, custom_output)
+        self.assertRtolEqual(expected_output.numpy(), custom_output.cpu().numpy())
 
 
 if __name__ == "__main__":
