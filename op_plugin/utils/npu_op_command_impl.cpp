@@ -175,15 +175,6 @@ struct ConvertedParam {
     std::vector<std::pair<void*, NpuParamType>> need_release_params;
 };
 
-struct CopiedDataStorage {
-    std::vector<TensorStructPtr> tensors;
-    std::vector<std::vector<int64_t>> int_arrays;
-    std::vector<std::vector<bool>> bool_arrays;
-    std::vector<std::vector<TensorStructPtr>> tensor_lists;
-    std::vector<std::vector<at::Scalar>> scalars;
-    std::vector<c10::optional<std::vector<int64_t>>> opt_int_arrays;
-};
-
 void* ConvertParamToAcl(const NpuParam& param) {
     switch (param.type) {
         case NpuParamType::kTensor:
@@ -242,7 +233,7 @@ ConvertedParam ConvertParamsV1(const NpuParam* params, int nparams) {
     return result;
 }
 
-ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams, CopiedDataStorage& storage) {
+ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams) {
     ConvertedParam result;
     result.acl_params.resize(nparams);
     
@@ -251,7 +242,6 @@ ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams, CopiedDataSt
         switch (params[i].type) {
             case NpuParamType::kTensor: {
                 auto tensor_ptr = CopyTypeV2(*static_cast<const at::Tensor*>(params[i].data));
-                storage.tensors.push_back(tensor_ptr);
                 acl_param = ConvertTypeV2(tensor_ptr);
                 break;
             }
@@ -260,8 +250,7 @@ ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams, CopiedDataSt
                 break;
             case NpuParamType::kIntArrayRef: {
                 auto arr = CopyTypeV2(*static_cast<const at::IntArrayRef*>(params[i].data));
-                storage.int_arrays.push_back(arr);
-                acl_param = ConvertTypeV2(storage.int_arrays.back());
+                acl_param = ConvertTypeV2(arr);
                 break;
             }
             case NpuParamType::kBool:
@@ -275,14 +264,12 @@ ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams, CopiedDataSt
                 break;
             case NpuParamType::kOptionalTensor: {
                 auto tensor_ptr = CopyTypeV2(*static_cast<const c10::optional<at::Tensor>*>(params[i].data));
-                storage.tensors.push_back(tensor_ptr);
                 acl_param = ConvertTypeV2(tensor_ptr);
                 break;
             }
             case NpuParamType::kOptionalIntArrayRef: {
                 auto arr = CopyTypeV2(*static_cast<const c10::optional<at::IntArrayRef>*>(params[i].data));
-                storage.opt_int_arrays.push_back(arr);
-                acl_param = ConvertTypeV2(storage.opt_int_arrays.back());
+                acl_param = ConvertTypeV2(arr);
                 break;
             }
             case NpuParamType::kOptionalScalar:
@@ -297,38 +284,32 @@ ConvertedParam ConvertParamsV2(const NpuParam* params, int nparams, CopiedDataSt
                 break;
             case NpuParamType::kTensorList: {
                 auto tensor_list = CopyTypeV2(*static_cast<const at::TensorList*>(params[i].data));
-                storage.tensor_lists.push_back(tensor_list);
-                acl_param = ConvertTypeV2(storage.tensor_lists.back());
+                acl_param = ConvertTypeV2(tensor_list);
                 break;
             }
             case NpuParamType::kScalarList: {
                 auto scalar_list = CopyTypeV2(*static_cast<const at::ArrayRef<at::Scalar>*>(params[i].data));
-                storage.scalars.push_back(scalar_list);
-                acl_param = ConvertTypeV2(storage.scalars.back());
+                acl_param = ConvertTypeV2(scalar_list);
                 break;
             }
             case NpuParamType::kBoolArray: {
                 auto bools = CopyTypeV2(*static_cast<const at::ArrayRef<bool>*>(params[i].data));
-                storage.bool_arrays.push_back(bools);
-                acl_param = ConvertTypeV2(storage.bool_arrays.back());
+                acl_param = ConvertTypeV2(bools);
                 break;
             }
             case NpuParamType::kSymIntArrayRef: {
                 auto arr = CopyTypeV2(*static_cast<const at::ArrayRef<c10::SymInt>*>(params[i].data));
-                storage.int_arrays.push_back(arr);
-                acl_param = ConvertTypeV2(storage.int_arrays.back());
+                acl_param = ConvertTypeV2(arr);
                 break;
             }
             case NpuParamType::kOptionalSymIntArrayRef: {
                 auto arr = CopyTypeV2(*static_cast<const c10::OptionalArrayRef<c10::SymInt>*>(params[i].data));
-                storage.opt_int_arrays.push_back(arr);
-                acl_param = ConvertTypeV2(storage.opt_int_arrays.back());
+                acl_param = ConvertTypeV2(arr);
                 break;
             }
             case NpuParamType::kOptionalIntArrayRefV2: {
                 auto arr = CopyTypeV2(*static_cast<const c10::OptionalIntArrayRef*>(params[i].data));
-                storage.opt_int_arrays.push_back(arr);
-                acl_param = ConvertTypeV2(storage.opt_int_arrays.back());
+                acl_param = ConvertTypeV2(arr);
                 break;
             }
             case NpuParamType::kCharArray:
@@ -563,8 +544,7 @@ void ExecNpuCmdExtImpl(const char* api_name, const op_plugin::NpuParam* params, 
     void* getWorkspaceSizeFuncAddr = funcCache.getWorkspaceSizeFuncAddr;
     
     if (task_queue_enable == 2) {
-        CopiedDataStorage storage;
-        ConvertedParam converted = ConvertParamsV2(params, nparams, storage);
+        ConvertedParam converted = ConvertParamsV2(params, nparams);
         
         auto acl_stream = GetAclStream();
         CacheParams cache_params = GetCacheParams();
