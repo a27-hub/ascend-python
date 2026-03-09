@@ -401,6 +401,7 @@ c10::SmallVector<int64_t, SIZE> conv2d_npu_output_size(const at::Tensor &input, 
     int64_t H = input.size(2);
     int64_t W = input.size(3);
     int64_t C_out = weight.size(0);
+    C_out = (input.size(1) != 0) ? C_out : 0;
 
     auto kernel_size = weight.sizes().slice(2);
 
@@ -466,6 +467,7 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
     if (!transposed) {
         TORCH_CHECK(stride[0] * stride[1] * stride[2] != 0, "Stride cannot contain 0" + OPS_ERROR(ErrCode::PARAM));
         Co = weight.size(0);
+        Co = (input.size(1) != 0) ? Co : 0;
         auto kernel_size = weight.sizes().slice(2);
         Do = (D + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1;
         Ho = (H + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1;
@@ -475,6 +477,7 @@ c10::SmallVector<int64_t, SIZE> conv3d_npu_output_size(const at::Tensor &input, 
         TORCH_CHECK(Wo > 0, "Wo has to be positive, but got ", Wo, OPS_ERROR(ErrCode::VALUE));
     } else {
         Co = weight.size(1) * groups;
+        Co = (input.size(1) != 0) ? Co : 0;
         auto kernel_size = weight.sizes().slice(2);
         Do = (D - 1) * stride[0] - 2 * padding[0] + dilation[0] * (kernel_size[0] - 1) + output_padding[0] + 1;
         Ho = (H - 1) * stride[1] - 2 * padding[1] + dilation[1] * (kernel_size[1] - 1) + output_padding[1] + 1;

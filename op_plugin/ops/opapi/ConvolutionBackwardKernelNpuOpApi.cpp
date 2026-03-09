@@ -46,6 +46,21 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
 {
     int64_t k = weight.ndimension();
     int64_t dim = k - 2;
+
+    if (input.size(0) == 0 || input.size(1) == 0) {
+        at::Tensor grad_input = output_mask[0] ? at::zeros_like(input) : at::Tensor();
+        at::Tensor grad_weight = output_mask[1] ? at::zeros_like(weight) : at::Tensor();
+        at::Tensor grad_bias;
+        if (output_mask[2] && bias_sizes_opt.has_value()) {
+            grad_bias = at::zeros(*bias_sizes_opt, weight.options());
+        } else if (output_mask[2]) {
+            grad_bias = at::zeros({grad_output.size(1)}, weight.options());
+        } else {
+            grad_bias = at::Tensor();
+        }
+        return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+    }
+
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
@@ -245,6 +260,21 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 {
     int64_t k = weight.ndimension();
     int64_t dim = k - 2;
+
+    if (input.size(0) == 0 || input.size(1) == 0) {
+        at::Tensor grad_input = output_mask[0] ? at::zeros_like(input) : at::Tensor();
+        at::Tensor grad_weight = output_mask[1] ? at::zeros_like(weight) : at::Tensor();
+        at::Tensor grad_bias;
+        if (output_mask[2] && bias_sizes_opt.has_value()) {
+            grad_bias = at::zeros(*bias_sizes_opt, weight.options());
+        } else if (output_mask[2]) {
+            grad_bias = at::zeros({grad_output.size(1)}, weight.options());
+        } else {
+            grad_bias = at::Tensor();
+        }
+        return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+    }
+
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
