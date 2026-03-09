@@ -21,6 +21,11 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list3 = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 
+// output_mask indices: [grad_input, grad_weight, grad_bias]
+constexpr size_t kConvBackwardGradInputMaskIdx = 0;
+constexpr size_t kConvBackwardGradWeightMaskIdx = 1;
+constexpr size_t kConvBackwardGradBiasMaskIdx = 2;
+
 static inline c10::SmallVector<int64_t, op_infer::N> expand_dim_if_needed(
     at::IntArrayRef list_param,
     const char *param_name,
@@ -46,6 +51,21 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
 {
     int64_t k = weight.ndimension();
     int64_t dim = k - 2;
+
+    if (input.size(0) == 0 || input.size(1) == 0) {
+        at::Tensor grad_input = output_mask[kConvBackwardGradInputMaskIdx] ? at::zeros_like(input) : at::Tensor();
+        at::Tensor grad_weight = output_mask[kConvBackwardGradWeightMaskIdx] ? at::zeros_like(weight) : at::Tensor();
+        at::Tensor grad_bias;
+        if (output_mask[kConvBackwardGradBiasMaskIdx] && bias_sizes_opt.has_value()) {
+            grad_bias = at::zeros(*bias_sizes_opt, weight.options());
+        } else if (output_mask[kConvBackwardGradBiasMaskIdx]) {
+            grad_bias = at::zeros({grad_output.size(1)}, weight.options());
+        } else {
+            grad_bias = at::Tensor();
+        }
+        return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+    }
+
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
@@ -81,7 +101,7 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
 
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
-    if (output_mask[2]) {
+    if (output_mask[kConvBackwardGradBiasMaskIdx]) {
         gradBias = npu_preparation::apply_tensor_without_format(*bias_sizes_opt, grad_output.options());
     } else {
         gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
@@ -245,6 +265,21 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
 {
     int64_t k = weight.ndimension();
     int64_t dim = k - 2;
+
+    if (input.size(0) == 0 || input.size(1) == 0) {
+        at::Tensor grad_input = output_mask[kConvBackwardGradInputMaskIdx] ? at::zeros_like(input) : at::Tensor();
+        at::Tensor grad_weight = output_mask[kConvBackwardGradWeightMaskIdx] ? at::zeros_like(weight) : at::Tensor();
+        at::Tensor grad_bias;
+        if (output_mask[kConvBackwardGradBiasMaskIdx] && bias_sizes_opt.has_value()) {
+            grad_bias = at::zeros(*bias_sizes_opt, weight.options());
+        } else if (output_mask[kConvBackwardGradBiasMaskIdx]) {
+            grad_bias = at::zeros({grad_output.size(1)}, weight.options());
+        } else {
+            grad_bias = at::Tensor();
+        }
+        return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+    }
+
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
 
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
