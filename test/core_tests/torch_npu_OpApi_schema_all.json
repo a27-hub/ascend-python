@@ -23,7 +23,6 @@
   "op_api: torch_npu.npu_moe_gating_top_k_softmax_v2(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
-  
   "op_api: torch_npu.npu_geglu(*args, **kwargs)": {
     "version": ["v2.1"]
   },

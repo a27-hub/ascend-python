@@ -2919,6 +2919,7 @@ class TestNpuLinear(TestCase):
             self.assertEqual(result.dtype, npu_input1.dtype)
             self.assertEqual(result.shape, torch.nn.functional.linear(npu_input1, npu_input2, npu_bias).shape)
 
+
 class TestMoeFinalizeRouting(TestCase):
     def test_npu_moe_finalize_routing_meta(self):
         with FakeTensorMode():
