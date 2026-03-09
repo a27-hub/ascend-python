@@ -23,7 +23,7 @@ class TestMhcSinkhorn(TestCase):
         y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, out_flag, eps, num_iters)
         return y
     
-    @SupportedDevices(['Ascend910B'])
+    @SupportedDevices(['Ascend950'])
     def test_mhc_sinkhorn(self, device="npu"):
         h_res = torch.randn(1, 128, 4, 4, dtype=torch.float32).npu()
 
