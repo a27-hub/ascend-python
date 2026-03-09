@@ -42,6 +42,7 @@
 #include "torch_npu/csrc/flopcount/FlopCounter.h"
 #include "torch_npu/csrc/custom_dtype/Init.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
+#include "op_plugin/utils/npu_op_command.h"
 
 typedef struct aclOpExecutor aclOpExecutor;
 typedef struct aclTensor aclTensor;
@@ -476,99 +477,6 @@ TORCH_NPU_API void RunAclCall(const string &op_name, const PROC_FUNC &func);
 
 TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
 
-#define EXEC_NPU_CMD_V1_EXT(aclnn_api, ...)                                                                            \
-    do {                                                                                                               \
-        /* 1.初始化函数指针 */                                                                                           \
-        static void* opApiFuncAddr = nullptr;                                                                          \
-        static void* getWorkspaceSizeFuncAddr = nullptr;                                                               \
-        GetApiFunc(#aclnn_api, #aclnn_api "GetWorkspaceSize",                                                          \
-                                      opApiFuncAddr, getWorkspaceSizeFuncAddr);                                        \
-        /* 2.初始化执行上下文：内存管理相关 */                                                                              \
-        InitExecCommonCtx();                                                                                          \
-        /* 3.获取NPU流 */                                                                                               \
-        auto acl_stream = GetAclStream();                                                                              \
-        /* 4.缓存查询 */                                                                                                \
-        if (hit_cache_ext(acl_stream, #aclnn_api, opApiFuncAddr, __VA_ARGS__)) {                                       \
-            break;                                                                                                     \
-        }                                                                                                              \
-        /* 5.设置执行配置：确定性算法 */                                                                                   \
-        SetExecConfig();                                                                                               \
-        /* 6.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                                  \
-        uint64_t workspace_size = 0;                                                                                   \
-        uint64_t *workspace_size_addr = &workspace_size;                                                               \
-        aclOpExecutor *executor = nullptr;                                                                             \
-        aclOpExecutor **executor_addr = &executor;                                                                     \
-        auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                         \
-        auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                    \
-        auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
-        /* 7.定义子线程执行函数 */                                                                                        \
-        auto acl_call = [converted_params, workspace_size, acl_stream, executor, opApiFuncAddr]()->int {               \
-            /* 7.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
-            /* 7.2.执行aclnn函数 */                                                                                     \
-            auto api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                        \
-            /* 7.3.清理参数、内存 */                                                                                     \
-            ReleaseConvertTypes(converted_params);                                                                     \
-            UnInitExecCommonCtx();                                                                                     \
-            return api_ret;                                                                                            \
-        };                                                                                                             \
-        RunAclCall(#aclnn_api, acl_call);                                                                              \
-    } while (false)
 
-#define EXEC_NPU_CMD_V2_EXT(aclnn_api, ...)                                                                            \
-    do {                                                                                                               \
-        /* 1.初始化函数指针 */                                                                                           \
-        static void* opApiFuncAddr = nullptr;                                                                          \
-        static void* getWorkspaceSizeFuncAddr = nullptr;                                                               \
-        GetApiFunc(#aclnn_api, #aclnn_api "GetWorkspaceSize",                                                          \
-                                      opApiFuncAddr, getWorkspaceSizeFuncAddr);                                        \
-        /* 2.获取NPU流 */                                                                                               \
-        auto acl_stream = GetAclStream();                                                                              \
-        /* 3.拷贝参数列表 */                                                                                             \
-        auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
-        /* 4.获取查询缓存所需参数（部分参数需要在主线程获取） */                                                                \
-        CacheParams cache_params = GetCacheParams();                                                                   \
-        /* 5.定义子线程执行函数 */                                                                                        \
-        auto acl_call = [copied_params, acl_stream, cache_params]()->int {                                             \
-            /* 5.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
-            int api_ret = 0;                                                                                           \
-            /* 5.2.缓存查询 */                                                                                          \
-            if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, cache_params))        \
-            {                                                                                                          \
-                return api_ret;                                                                                        \
-            }                                                                                                          \
-            /* 5.3.设置执行配置 */                                                                                       \
-            SetExecConfigV2(cache_params);                                                                             \
-            /* 5.4.初始化执行上下文：内存管理相关 */                                                                         \
-            InitExecCommonCtx();                                                                                       \
-            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                            \
-            uint64_t workspace_size = 0;                                                                               \
-            uint64_t *workspace_size_addr = &workspace_size;                                                           \
-            aclOpExecutor *executor = nullptr;                                                                         \
-            aclOpExecutor **executor_addr = &executor;                                                                 \
-            auto converted_params = ConvertTypesV2(copied_params, workspace_size_addr, executor_addr);                 \
-            auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
-            auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
-            /* 5.6.执行aclnn函数 */                                                                                     \
-            api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
-            /* 5.7.清理参数、内存 */                                                                                      \
-            ReleaseConvertTypes(converted_params);                                                                     \
-            UnInitExecCommonCtx();                                                                                     \
-            return api_ret;                                                                                            \
-        };                                                                                                             \
-        /* 6.调用子线程执行函数 */                                                                                        \
-        RunAclCall(#aclnn_api, acl_call);                                                                              \
-    } while (false)
-
-#define EXEC_NPU_CMD_EXT(aclnn_api, ...)                                                                               \
-    do {                                                                                                               \
-        static const auto task_queue_enable = OpApiGetTaskQueueEnable();                                               \
-        if (task_queue_enable == 2) {                                                                                  \
-            EXEC_NPU_CMD_V2_EXT(aclnn_api, __VA_ARGS__);                                                               \
-        } else {                                                                                                       \
-            EXEC_NPU_CMD_V1_EXT(aclnn_api, __VA_ARGS__);                                                               \
-        }                                                                                                              \
-    } while (false)
 
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_BASE_H_
