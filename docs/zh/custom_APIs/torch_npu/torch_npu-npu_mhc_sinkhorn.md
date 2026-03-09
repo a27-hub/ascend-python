@@ -14,14 +14,14 @@
 ## 函数原型
 
 ```
-torch_npu.npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, Symint num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
 
 - **x** (`Tensor`)：必选参数，输入张量，数据类型支持float32, 数据格式支持ND, shape是3维(T, n, n)或者4维(B, S, n, n), 其中n仅支持4, 6, 8. 待计算数据，表示mHC层的输入数据。
 - **eps** (`float`)：可选参数，数据类型支持float32, 表示归一化防除零参数，默认值为1e-6。
-- **num_iters** (`int`)：可选参数，数据类型支持int64, 表示迭代次数, 取值范围[1, 100], 默认值为20。
+- **num_iters** (`SymInt`)：可选参数，数据类型支持SymInt, 表示迭代次数, 取值范围[1, 100], 默认值为20。
 - **out_flag** (`int`)：可选参数. 数据类型支持int64, 表示是否输出中间结果标识, 默认值为0(仅输出最终变换结果)。
 
 ## 返回值说明

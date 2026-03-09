@@ -3723,7 +3723,7 @@ _add_torch_npu_docstr(
     "npu_mhc_sinkhorn",
     """
 接口原型:
-torch_npu.npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, Symint num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
 算子功能：通过将残差分支投影矩阵约束为双随机矩阵，在保持多路残差连接表达的能力的基础上，实现恒等映射兼容、范数保证、训练稳定的深度Transformer特征传递。
 参数说明:
 x: Tensor类型, 数据类型支持float32, 数据格式支持ND, shape是3维(T, n, n)或者4维(B, S, n, n), 其中n仅支持4, 6, 8. 待计算数据，表示mHC层的输入数据。 
