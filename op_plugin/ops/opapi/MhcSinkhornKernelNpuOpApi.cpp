@@ -19,7 +19,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, int64_t out_flag, float eps, c10::SymInt num_iters)
+at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, float eps, c10::SymInt num_iters, int64_t out_flag)
 {
     at::Tensor result = npu_preparation::apply_tensor_without_format(h_res);
     at::Tensor norm_out = npu_preparation::apply_tensor_without_format(h_res);

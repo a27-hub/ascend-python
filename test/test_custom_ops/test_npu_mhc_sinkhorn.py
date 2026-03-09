@@ -9,7 +9,7 @@ import itertools
 
 class TestMhcSinkhorn(TestCase):
    
-    def mhc_sinkhorn_impl(self, h_res, out_flag=0, eps=1e-6, num_iters=20):
+    def mhc_sinkhorn_impl(self, h_res, eps=1e-6, num_iters=20, out_flag=0):
         y = torch.softmax(h_res, dim=-1) + eps
         y = y / (y.sum(dim=-2, keepdim=True) + eps)
         for i in range(max(num_iters - 1, 0)):
@@ -19,8 +19,8 @@ class TestMhcSinkhorn(TestCase):
             y = y / (y.sum(dim=-2, keepdim=True) + eps)
         return y
    
-    def custom_op_exec(self, h_res, out_flag=0, eps=1e-6, num_iters=20):
-        y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, out_flag, eps, num_iters)
+    def custom_op_exec(self, h_res, eps=1e-6, num_iters=20, out_flag=0):
+        y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, eps, num_iters, out_flag)
         return y
     
     @SupportedDevices(['Ascend950'])
