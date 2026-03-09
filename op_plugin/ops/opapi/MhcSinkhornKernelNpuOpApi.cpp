@@ -19,7 +19,7 @@ at::Tensor npu_mhc_sinkhorn(const at::Tensor& h_res, int64_t out_flag, float eps
 {
     TORCH_CHECK(h_res.dim() == 3 || h_res.dim() == 4, "h_res's dim should be 3 or 4, but got ",
                 h_res.dim(), OPS_ERROR(ErrCode::VALUE));
-    TORCH_CHECK(num_iters > 0 && num_iters <= 100, "num_iters should be whitin (0, 100], but got ",
+    TORCH_CHECK(num_iters > 0 && num_iters <= 100, "num_iters should be within (0, 100], but got ",
                 num_iters, OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(out_flag == 0, "out_flag should be 0, but got ",
                 out_flag, OPS_ERROR(ErrCode::VALUE));
