@@ -196,6 +196,19 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
     int64_t dim = k - 2; // Subtract nonspatial dimensions: 2
     bool unBatch = false;
 
+    if (input.size(0) == 0 || input.size(1) == 0) {
+        c10::SmallVector<int64_t, op_infer::N> stride_expand = expand_dim(stride, "stride", dim);
+        c10::SmallVector<int64_t, op_infer::N> padding_expand = expand_dim(padding, "padding", dim);
+        c10::SmallVector<int64_t, op_infer::N> dilation_expand = expand_dim(dilation, "dilation", dim);
+        c10::SmallVector<int64_t, op_infer::N> output_padding_expend = expand_dim(output_padding, "output_padding", dim);
+        c10::SmallVector<int64_t, SIZE> out_size = op_infer::conv_npu_output_size(
+            input, weight, bias, padding_expand, output_padding_expend, stride_expand, dilation_expand, groups,
+            transposed);
+        auto output = npu_preparation::apply_tensor_without_format(out_size, input.options());
+        output.zero_();
+        return output;
+    }
+
     bool is_jit_enable = !at_npu::native::env::CheckJitDisable();
     bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
     // CheckForbidInternalFormat = False: turn on private format；CheckJitDisable = False: turn on JitCompile
