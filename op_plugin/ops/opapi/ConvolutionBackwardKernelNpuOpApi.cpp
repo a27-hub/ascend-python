@@ -278,16 +278,21 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     at::Tensor gradWeight;
     at::Tensor gradBias;
 
-    if (output_mask[0]) {
+    if (!op_plugin::utils::is_gte_cann_version_851()) {
         gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
-    }
-    if (output_mask[1]) {
         gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
-    }
-
-    if (output_mask[2]) {
-        // use 2nd dimension of outputSizes
         gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+    } else {
+        if (output_mask[0]) {
+            gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
+        }
+        if (output_mask[1]) {
+            gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
+        }
+        if (output_mask[2]) {
+            // use 2nd dimension of outputSizes
+            gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+        }
     }
 
     int64_t input_dim = input.ndimension();
