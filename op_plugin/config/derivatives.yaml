@@ -183,6 +183,11 @@ backward:
   input, weight, bias, h, c: npu_lstm_data_backward(grads[0], grads[1], grads[2], input, batch_sizes, weight, bias, h, c, result0, result1, result2, result3, result4, result5, result6, result7, direction)
   version: [v2.1, newest]
 
+- name: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, false, false, false, false, false, false, false]
+  input, hx, params: _lstm_npu_backward(grads[0], grads[1], grads[2], input, hx, params, result3, result4, result5, result6, result7, result8, result9, has_biases, num_layers, dropout, train, bidirectional, batch_first, batch_sizes)
+  version: all_version
+
 - name: npu_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
   self: npu_max_backward(grad, dim, indices, self.sym_sizes(), keepdim)
   version: [v2.1, newest]
@@ -256,10 +261,12 @@ backward:
 
 - name: _fft_r2c(Tensor self, int[] dim, int normalization, bool onesided) -> Tensor
   self: fft_r2c_backward(grad, dim, normalization, onesided, self.size(dim.back()))
+  result: auto_linear
   version: [v2.1, newest]
 
 - name: _fft_c2r(Tensor self, int[] dim, int normalization, SymInt last_dim_size) -> Tensor
   self: fft_c2r_backward(grad, dim, normalization)
+  result: auto_linear
   version: [v2.1, newest]
 
 - name: npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)

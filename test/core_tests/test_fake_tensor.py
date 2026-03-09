@@ -1273,6 +1273,34 @@ class TestNpuBmmV2(TestCase):
             self.assertEqual(result.shape, torch.matmul(npu_input1, npu_input2).shape)
 
 
+class TestNpuBlockSparseAttentionMeta(TestCase):
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_block_sparse_attention_meta(self):
+        with FakeTensorMode():
+            B, N, S, D = 1, 2, 4, 8
+            num_kv_heads = 2
+            scale_value = 1.0 / (D ** 0.5)
+            block_shape = [128, 128]  # blockY 须为 128 的倍数
+            ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+            ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+
+            attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+                query, key, value, block_sparse_mask, block_shape,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            )
+
+            self.assertEqual(attention_out.shape, (B, N, S, D))
+            self.assertEqual(attention_out.dtype, query.dtype)
+            self.assertEqual(softmax_lse.shape, (B, N, S, 1))
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+
 class TestNpuWeightQuantBatchMatmul2(TestCase):
     def test_npu_wqbmmV2(self):
         with FakeTensorMode():
@@ -1399,6 +1427,19 @@ class TestPromptFlashAttention(TestCase):
 
             self.assertTrue(q.shape == res.shape)
 
+class TestAttentionPioneer(TestCase):
+    @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testAttentionPioneer(self):
+        with FakeTensorMode():
+            q = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            k = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            v = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            atten_out, softmax_lse = torch.ops.npu._npu_attention_pioneer(q, k, v)
+
+            self.assertTrue(q.shape == atten_out.shape)
 
 class TestFusedInferAttentionScore(TestCase):
     @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
@@ -2804,7 +2845,8 @@ class TestMatmulCompressDequant(TestCase):
             compress_index = torch.zeros(8, dtype=torch.int8).npu()
             bias = torch.zeros((1, n), dtype=torch.int32).npu()
             scale = torch.ones((1, n), dtype=torch.float32).npu()
-            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale)
+            scale_uint64 = torch_npu.npu_trans_quant_param(scale).to(torch.uint64)
+            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale_uint64)
             self.assertEqual(res.shape, (m, n))
             self.assertEqual(res.dtype, torch.float16)
 
@@ -3126,6 +3168,18 @@ class TestTransposeBatchMatmul(TestCase):
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
+    @unittest.skip("skip test_npu_transpose_batchmatmul")
+    def test_npu_transpose_batchmatmul_meta_4(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+            x2_nz = torch_npu.npu_format_cast(x2.npu(), acl_format=29)
+            result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2_nz.npu(),
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randn((M, Batch, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
 
 class TestTransposeQuantBatchMatmul(TestCase):
     @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
