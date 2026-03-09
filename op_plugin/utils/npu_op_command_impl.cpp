@@ -539,64 +539,72 @@ void ExecNpuCmdExtImpl(const char* api_name, const op_plugin::NpuParam* params, 
     
     static const auto task_queue_enable = OpApiGetTaskQueueEnable();
     
+    /* 初始化函数指针 */ 
     auto& funcCache = GetOrInitApiFuncCache(api_name);
     void* opApiFuncAddr = funcCache.opApiFuncAddr;
     void* getWorkspaceSizeFuncAddr = funcCache.getWorkspaceSizeFuncAddr;
     
     if (task_queue_enable == 2) {
-        ConvertedParam converted = ConvertParamsV2(params, nparams);
-        
+        /* 获取NPU流 */
         auto acl_stream = GetAclStream();
+        /* 拷贝参数列表 */
+        ConvertedParam converted = ConvertParamsV2(params, nparams);
+        /* 获取查询缓存所需参数（部分参数需要在主线程获取） */
         CacheParams cache_params = GetCacheParams();
-        
-        auto acl_call = [=]() mutable -> int {
+        /* 定义子线程执行函数 */
+        auto acl_call = [converted, acl_stream, cache_params]()->int {
+            /* 初始化子进程上下文 */
             InitExecSubTheadCtx(acl_stream);
             int api_ret = 0;
-            
+            /* 缓存查询 */
             if (HitCacheV2ExtFromParams(acl_stream, api_name, opApiFuncAddr, params, nparams, &api_ret, cache_params)) {
                 return api_ret;
             }
-            
+            /* 设置执行配置 */
             SetExecConfigV2(cache_params);
+            /* 初始化执行上下文：内存管理相关 */
             InitExecCommonCtx();
-            
+            /* 参数转换、获取workspace_size和executor */
             auto we = CreateWorkspaceAndExecutor();
             CallGetWorkspaceSize(getWorkspaceSizeFuncAddr, converted.acl_params, we);
-            
+            /* 执行aclnn函数 */
             api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, we.size, we.executor);
-            
+            /* 清理参数、内存 */
             ReleaseAllAclParams(converted.need_release_params);
             UnInitExecCommonCtx();
             return api_ret;
         };
-        
+        /* 调用子线程执行函数 */
         RunAclCall(api_name, acl_call);
     } else {
-        ConvertedParam converted = ConvertParamsV1(params, nparams);
-        
-        InitExecCommonCtx();
+        /* 获取NPU流 */
         auto acl_stream = GetAclStream();
-        
+        /* 缓存查询 */
         if (HitCacheExtFromParams(acl_stream, api_name, opApiFuncAddr, params, nparams)) {
-            ReleaseAllAclParams(converted.need_release_params);
-            UnInitExecCommonCtx();
             return;
         }
-        
+        /* 初始化公共上下文 */
+        InitExecCommonCtx();
+        /* 设置执行配置 */
         SetExecConfig();
-        
+        /* 参数转换、获取workspace_size和executor */
         auto we = CreateWorkspaceAndExecutor();
+        ConvertedParam converted = ConvertParamsV1(params, nparams);
         CallGetWorkspaceSize(getWorkspaceSizeFuncAddr, converted.acl_params, we);
-        
-        auto acl_call = [=]() mutable -> int {
+        /* 定义子线程执行函数 */
+        auto acl_call = [converted, acl_stream, we]() mutable -> int {
+            /* 初始化子进程上下文 */
             InitExecSubTheadCtx(acl_stream);
+            /* 执行aclnn函数 */
             auto api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, we.size, we.executor);
+            /* 清理参数、内存 */
             ReleaseAllAclParams(converted.need_release_params);
-            UnInitExecCommonCtx();
             return api_ret;
         };
-        
+        /* 调用子线程执行函数 */
         RunAclCall(api_name, acl_call);
+        /* 清理公共上下文 */
+        UnInitExecCommonCtx();
     }
 }
 
