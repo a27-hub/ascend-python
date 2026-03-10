@@ -28,10 +28,8 @@
 
 ### 环境要求
 
--  硬件环境请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》
--  需要提前安装CANN开源版本
--  Python 3.10及以上版本
--  CMake 3.11及以上版本
+安装时需要安装系统依赖及官方PyTorch框架，建议使用torch_npu提供的docker镜像进行编译。
+依赖安装和镜像使用指导可参考[Ascend Extension for Pytorch](https://gitcode.com/Ascend/pytorch/tree/v2.7.1-7.3.0#%E4%BD%BF%E7%94%A8%E6%BA%90%E4%BB%A3%E7%A0%81%E8%BF%9B%E8%A1%8C%E5%AE%89%E8%A3%85)
 
 ### 开发与测试
 
