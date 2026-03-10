@@ -99,13 +99,15 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   **group\_ep** (`str`)：必选参数，EP通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>时，`group_ep`不能与`group_tp`相同。
 -   **ep\_world\_size**(`int`)：必选参数，EP通信域size。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`ep_world_size`的取值范围如下所示。
-         - `comm_alg`设置为"fullmesh"时，`ep_world_size`取值范围为16、32、64、128、256。
+         - `comm_alg`设置为"fullmesh"时，`ep_world_size`取值范围为2、3、4、5、6、7、8、16、32、64、128、256。
          - `comm_alg`设置为"hierarchy"时，`ep_world_size`取值范围为16、32、64。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值支持\[2, 768\]。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值支持\[2, 768\]。`comm_alg`设置为"hierarchy"时，取值范围为[16, 256]，且为16的整数倍。
+
 
 -   **ep\_rank\_id** (`int`)：必选参数，EP通信域本卡ID，取值范围\[0, ep\_world\_size\)，同一个EP通信域中各卡的`ep_rank_id`不重复。
--   **moe\_expert\_num** (`int`)：必选参数，MoE专家数量，取值范围\[1, 1024\]，并且满足以下条件：moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)\=0。
-    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：还需满足moe\_expert\_num\/\(ep\_world\_size - shared\_expert\_rank\_num\) <= 24。
+-   **moe\_expert\_num** (`int`)：必选参数，MoE专家数量，并且满足以下条件：moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)\=0。
+    -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：取值范围为\[1, 1024\]。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为\[1, 1024\]。`comm_alg`设置为"hierarchy"时，取值范围为[1, 512]。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 -   **scales** (`Tensor`)：可选参数，表示每个专家的权重，非量化场景不传，动态量化场景可传可不传。若传值要求为2维张量，如果有共享专家，shape为\(shared\_expert\_num+moe\_expert\_num, H\)，如果没有共享专家，shape为\(moe\_expert\_num, H\)，数据类型支持`float`，数据格式为$ND$，不支持非连续的Tensor。
 -   **x\_active\_mask** (`Tensor`)：可选参数，表示token是否参与通信。
@@ -116,7 +118,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 
 -   **expert\_scales** (`Tensor`)：可选参数，表示每个token的topK个专家权重。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：要求为2维张量，shape为\(BS, K\)，数据类型支持`float`，数据格式为$ND$，支持非连续的Tensor。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`comm_alg`设置为"hierarchy"时，要求为2维张量，shape为\(BS, K\)，数据类型支持`float`，数据格式为$ND$，支持非连续的Tensor。`comm_alg`设置为""，"fullmesh_v1"，"fullmesh_v2"时，暂不支持该参数，使用默认值即可。
 
 -   **elastic\_info** (`Tensor`)：预留参数，当前版本不支持，传默认值None即可。
 
@@ -156,10 +158,11 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         - "": 配置HCCL\_INTRA\_PCIE\_ENABLE=1和HCCL\_INTRA\_ROCE\_ENABLE=0时，调用"hierarchy"算法，否则调用"fullmesh"算法。不推荐使用该方式。
         - "fullmesh": token数据直接通过RDMA方式发往topk个目标专家所在的卡。
         - "hierarchy": token数据经过跨机、机内两次发送，仅不同server同号卡之间使用RDMA通信，server内使用HCCS通信。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本仅支持""、"fullmesh_v1"、"fullmesh_v2"三种输入方式。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本支持""，"fullmesh_v1"，"fullmesh_v2"，"hierarchy"四种输入方式。
         - ""：默认值，使能fullmesh_v1模板；
         - "fullmesh_v1"：使能fullmesh_v1模板；
         - "fullmesh_v2"：使能fullmesh_v2模板，其中fullmesh_v2模板仅在tp\_world\_size取值为1时生效。
+        - "hierarchy": token数据经过机内、跨机两次发送，先在server内将同一个token数据汇总求和，再跨机发送，以减少跨机数据量。模板仅支持`tp_world_size`为1、共享专家为0的场景，且不支持二维mask、特殊专家、动态缩容、性能打点场景。
 
 -   **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
@@ -201,7 +204,7 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
 -   该接口支持推理场景下使用。
 -   该接口支持静态图模式，`npu_moe_distribute_dispatch_v2`和`npu_moe_distribute_combine_v2`必须配套使用。
 -   在不同产品型号、不同通信算法或不同版本中，`npu_moe_distribute_dispatch_v2`的Tensor输出`assist_info_for_combine`、`ep_recv_counts`、`tp_recv_counts`、`expand_scales`中的元素值可能不同，使用时直接将上述Tensor传给`npu_moe_distribute_combine_v2`对应参数即可，模型其他业务逻辑不应对其存在依赖。
--   调用接口过程中使用的`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp`、`tp_world_size`、`expert_shard_type`、`shared_expert_num`、`shared_expert_rank_num`、`global_bs`参数取值所有卡需保持一致，`group_ep`、`ep_world_size`、`group_tp`、`tp_world_size`、`expert_shard_type`、`global_bs`网络中不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)对应参数也保持一致。
+-   调用接口过程中使用的`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp`、`tp_world_size`、`expert_shard_type`、`shared_expert_num`、`shared_expert_rank_num`、`global_bs`参数取值所有卡需保持一致，`group_ep`、`ep_world_size`、`group_tp`、`tp_world_size`、`expert_shard_type`、`global_bs`网络不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_combine\_v2](torch_npu-npu_moe_distribute_combine_v2.md)对应参数也保持一致。
 -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 -   moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num < MAX_INT32。
 -   参数里Shape使用的变量如下：
@@ -216,7 +219,9 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值为\[1024, 8192\]。
 
     -   BS：表示batch sequence size，即本卡最终输出的token数量。
-        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：取值范围为0<BS≤256。
+        -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`BS`的取值范围如下所示。
+            - `comm_alg`设置为"fullmesh"时，`BS`的取值范围为0<BS≤256。
+            - `comm_alg`设置为"hierarchy"且Ascend HDK版本不低于25.0.RC1.1时，`BS`的取值范围为0<BS≤512。
         -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512，当`comm_alg`为"fullmesh_v2"时，需满足0<Bs≤256。
 
     -   K：表示选取topK个专家，取值范围为0<K≤16，同时满足0 < K ≤ moe\_expert\_num + zero_expert_num + copy_expert_num + const_expert_num，当`comm_alg`为"fullmesh_v2"时，取值范围为0<K≤12。
@@ -234,14 +239,15 @@ torch_npu.npu_moe_distribute_dispatch_v2(x, expert_ids, group_ep, ep_world_size,
     调用本接口前需检查通信域缓存区大小取值是否合理，单位MB，不配置时默认为200MB。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
         该场景支持通过环境变量HCCL\_BUFFSIZE配置。
-        - comm\_alg配置为"": 依照HCCL\_INTRA\_PCIE\_ENABLE和HCCL\_INTRA\_ROCE\_ENABLE配置选择"fullmesh"或"hierarchy"公式。
-        - comm\_alg配置为"fullmesh": 设置大小要求\>=2\*\(BS\*ep\_world\_size\*min\(local\_expert\_num, K\)\*H\*sizeof\(uint16\)+2MB\)。
-        - comm\_alg配置为"hierarchy": 设置大小要求=moe\_expert\_num\*BS\*\(H\*sizeof\(dtype_x\)+4\*\(\(K+7\)/8\*8\)\*sizeof\(uint32\)\)+4MB+100MB，不要求moe\_expert\_num\/\(ep\_world\_size - shared\_expert\_rank\_num\) <= 24。
+        - `comm\_alg`配置为"": 依照HCCL\_INTRA\_PCIE\_ENABLE和HCCL\_INTRA\_ROCE\_ENABLE配置选择"fullmesh"或"hierarchy"公式。
+        - `comm\_alg`配置为"fullmesh": 设置大小要求\>=2\*\(BS\*ep\_world\_size\*min\(local\_expert\_num, K\)\*H\*sizeof\(uint16\)+2MB\)。
+        - `comm\_alg`配置为"hierarchy": 设置大小要求 \>= \(moe\_expert\_num + ep\_world\_size / 4\) \* max_bs \* \(H \* sizeof\(dtype_x\) + 4 \* \(\(K + 7\) / 8 \* 8\) \* sizeof\(uint32\)\) \* 1B + 6MB。
 
     -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
         该场景不仅支持通过环境变量HCCL\_BUFFSIZE配置，还支持通过hccl_buffer_size配置（参考《[PyTorch训练模型迁移调优](https://hiascend.com/document/redirect/canncommercial-ptmigr)》中“性能调优>性能调优方法>通信优化>优化方法>hccl_buffer_size”章节）。
         - ep通信域内，comm\_alg配置为"fullmesh_v1"或"": 设置大小要求 \>= 2 \* \(local\_expert\_num \* max\_bs \* ep\_world\_size \* Align512\(Align32\(2 \* H\) + 64\) + \(K + shared\_expert\_num\) \* max\_bs \* Align512\(2 \* H\)\)。
         - ep通信域内，comm\_alg配置为"fullmesh_v2": 设置大小要求 \>= 2 \* \(local\_expert\_num \* max\_bs \* ep\_world\_size \* 480Align512\(Align32\(2 \* H\) + 64\) + \(K + shared\_expert\_num\) \* max\_bs \* Align512\(2 \* H\)\)。
+        - `comm\_alg`配置为"hierarchy": 设置大小要求=moe\_expert\_num\*BS\*\(H\*sizeof\(dtype_x\)+4\*\(\(K+7\)/8\*8\)\*sizeof\(uint32\)\)+4MB+400MB。
         - tp通信域内：设置大小要求 \>= (A \* Align512(Align32(h \* 2) + 44) + A \* Align512(h \* 2)) \* 2。
         - 其中 480Align512(x) = ((x+480-1)/480)\*512,Align512(x) = ((x+512-1)/512)\*512,Align32(x) = ((x+32-1)/32)\*32。
 

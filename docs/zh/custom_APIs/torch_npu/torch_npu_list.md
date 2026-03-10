@@ -163,7 +163,7 @@
 </tr>
 <tr id="row557919470115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p157994710118"><a name="p157994710118"></a><a name="p157994710118"></a><a href="（beta）torch_npu-npu_indexing.md">（beta）torch_npu.npu_indexing</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p191786291"><a name="zh-cn_topic_0000001655404257_p191786291"></a><a name="zh-cn_topic_0000001655404257_p191786291"></a>使用“begin,end,strides”数组对index结果进行计数。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001655404257_p191786291"><a name="zh-cn_topic_0000001655404257_p191786291"></a><a name="zh-cn_topic_0000001655404257_p191786291"></a>以begin为起始索引，end为结束索引，strides为步长，对输入张量进行切片。</p>
 </td>
 </tr>
 <tr id="row11579164761115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p195798473119"><a name="p195798473119"></a><a name="p195798473119"></a><a href="（beta）torch_npu-npu_iou.md">（beta）torch_npu.npu_iou</a></p>
@@ -321,6 +321,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p15906141216278"><a name="p15906141216278"></a><a name="p15906141216278"></a>实现axpy_v2、softmax_v2、drop_out_domask_v3功能。</p>
 </td>
 </tr>
+<tr id="row3892520439"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p2991782322389"><a name="p2991782322389"></a><a name="p2991782322389"></a><a href="torch_npu-npu_rms_norm_quant.md">torch_npu.npu_rms_norm_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16917252327389"><a name="p16917252327389"></a><a name="p16917252327389"></a>融合RmsNorm算子和Quantize算子,减少搬入搬出的操作。</p>
+</td>
+</tr>
 <tr id="row17801219526"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p89062124277"><a name="p89062124277"></a><a name="p89062124277"></a><a href="torch_npu-npu_rotary_mul.md">torch_npu.npu_rotary_mul</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p69061812102715"><a name="p69061812102715"></a><a name="p69061812102715"></a>实现RotaryEmbedding旋转位置编码。</p>
@@ -351,6 +356,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p18198201124816"><a name="p18198201124816"></a><a name="p18198201124816"></a>将原生CrossEntropyLoss中的log_softmax和nll_loss融合，降低计算时使用的内存。接口允许计算zloss。</p>
 </td>
 </tr>
+<tr id="row142536475869"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p142536475870"><a name="p142536475870"></a><a name="p142536475870"></a><a href="torch_npu-npu_add_rms_norm_quant.md">torch_npu.npu_add_rms_norm_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p142536475871"><a name="p142536475871"></a><a name="p142536475871"></a>将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。</p>
+</td>
+</tr>
 <tr id="row724843692712"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p162481336102714"><a name="p162481336102714"></a><a name="p162481336102714"></a><a href="torch_npu-npu_advance_step_flashattn.md">torch_npu.npu_advance_step_flashattn</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p13248936102717"><a name="p13248936102717"></a><a name="p13248936102717"></a>在NPU上实现vLLM库中advance_step_flashattn的功能，在每个生成步骤中原地更新input_tokens，input_positions，seq_lens和slot_mapping。</p>
@@ -369,6 +379,11 @@
 <tr id="row952719519471"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18248651143510"><a name="p18248651143510"></a><a name="p18248651143510"></a><a href="torch_npu-npu_attention_to_ffn.md">torch_npu.npu_attention_to_ffn</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001850161621_p0996174814315"><a name="zh-cn_topic_0000001850161621_p0996174814315"></a><a name="zh-cn_topic_0000001850161621_p0996174814315"></a>将Attention节点上数据发往FFN节点。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_attention_update.md">torch_npu.npu_attention_update</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>将各SP域PA算子的输出的中间结果`lse`，`local_out`两个局部变量结果更新成全局结果。</p>
 </td>
 </tr>
 <tr id="row16527145114477"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1338142581"><a name="p1338142581"></a><a name="p1338142581"></a><a href="torch_npu-npu_convert_weight_to_int4pack.md">torch_npu.npu_convert_weight_to_int4pack</a></p>
@@ -764,6 +779,11 @@
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_add_rms_norm.md">torch_npu.npu_add_rms_norm</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>将Add计算与RMSNorm归一化融合，常用于大模型中将残差连接后的张量进行归一化处理。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_add_rms_norm_dynamic_quant.md">torch_npu.npu_add_rms_norm_dynamic_quant</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.save_npugraph_tensor</a></p>

@@ -1,3 +1,3 @@
-from ._load import _load_opextension_so
+__all__ = ["ops", "custom_add", "custom_trig"]
 
-_load_opextension_so()
+from .ops import custom_add, custom_trig

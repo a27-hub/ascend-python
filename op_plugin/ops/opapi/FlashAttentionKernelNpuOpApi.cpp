@@ -529,7 +529,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout)
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &dropout_mask_opt, int64_t seed, int64_t offset)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
@@ -606,8 +606,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {B, S0, head_num * D2};
     } else if (input_layout_str == "SBH") {
         B = query.size(1);
@@ -616,8 +616,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {S0, B, head_num * D2};
     } else if (input_layout_str == "BNSD") {
         B = query.size(0);
@@ -665,8 +665,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
         numels *= accum;
     }
-    at::Tensor format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
-        gen_mask_parallel, sync, seed, offset, numels);
+    const at::Tensor &dropout_mask = dropout_mask_opt.value_or(at::Tensor());
+    at::Tensor format_drop_mask;
+    if (dropout_mask.defined()) {
+        format_drop_mask = format_trans(dropout_mask);
+    } else {
+        format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
+            gen_mask_parallel, sync, seed, offset, numels);
+    }
 
     at::Tensor softmax_max;
     at::Tensor softmax_sum;
@@ -759,6 +765,11 @@ at::Tensor npu_prompt_flash_attention(
     int64_t sparse_mode)
 {
     // construct the output tensor of the NPU
+    TORCH_CHECK(
+        c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950,
+        "Interface npu_prompt_flash_attention is no longer supported on Ascend950.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT)
+    );
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
@@ -1105,7 +1116,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, const c10::optional<at::Tensor> &dropout_mask_opt,
+    int64_t seed, int64_t offset)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
@@ -1183,8 +1195,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {B, S0, head_num * D2};
     } else if (input_layout_str == "SBH") {
         B = query.size(1);
@@ -1193,8 +1205,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {S0, B, head_num * D2};
     } else if (input_layout_str == "BNSD") {
         B = query.size(0);
@@ -1232,8 +1244,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     at::Tensor format_atten_mask = format_trans(atten_mask_const);
     at::Tensor format_sink = format_trans(sink_const);
 
-    int64_t seed;
-    int64_t offset;
     int64_t numels;
     if (input_layout_str == "TND") {
         numels = N_local;
@@ -1243,8 +1253,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
         numels *= accum;
     }
-    at::Tensor format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
-        gen_mask_parallel, sync, seed, offset, numels);
+    const at::Tensor &dropout_mask = dropout_mask_opt.value_or(at::Tensor());
+    at::Tensor format_drop_mask;
+    if (dropout_mask.defined()) {
+        format_drop_mask = format_trans(dropout_mask);
+    } else {
+        format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
+            gen_mask_parallel, sync, seed, offset, numels);
+    }
 
     at::Tensor softmax_max;
     at::Tensor softmax_sum;
@@ -1374,6 +1390,11 @@ at::Tensor npu_prompt_flash_attention(
     int64_t sparse_mode)
 {
     // construct the output tensor of the NPU
+    TORCH_CHECK(
+        c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950,
+        "Interface npu_prompt_flash_attention is no longer supported on Ascend950.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT)
+    );
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
@@ -1431,6 +1452,11 @@ at::Tensor npu_incre_flash_attention_symint(
     int64_t block_size, int64_t inner_precise)
 {
     // construct the output tensor of the NPU
+    TORCH_CHECK(
+        c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950,
+        "Interface npu_incre_flash_attention is no longer supported on Ascend950.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT)
+    );
     at::Tensor output;
     if (quant_scale2.has_value()) {
         output = npu_preparation::apply_tensor_without_format(query.sizes(), c10::dtype(c10::ScalarType::Char));
@@ -1885,8 +1911,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {B, S0, head_num * D2};
     } else if (input_layout_str == "SBH") {
         B = query.size(1);
@@ -1895,8 +1921,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         H = query.size(THIRD_ELEMENT);
         D = H / head_num;
         auto keySize = key.size(THIRD_ELEMENT);
-        auto divisor = keySize / D;
-        D2 = (D == 0 || keySize == 0 || divisor == 0) ? 0 : value.size(THIRD_ELEMENT) / divisor;
+        auto divisor = (D == 0) ? 0 : keySize / D;
+        D2 = (D == 0 || keySize == 0 || divisor == 0) ? D : value.size(THIRD_ELEMENT) / divisor;
         atten_score_shape = {S0, B, head_num * D2};
     } else if (input_layout_str == "BNSD") {
         B = query.size(0);

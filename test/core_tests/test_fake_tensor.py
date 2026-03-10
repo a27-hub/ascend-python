@@ -2792,6 +2792,23 @@ class TestQuantMatmulGelu(TestCase):
             self.assertTrue(expect_ret_int32.dtype == res_int32_bias.dtype)
 
 
+class TestMatmulCompressDequant(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnMatmulCompressDequant; do not execute")
+    def test_npu_matmul_compress_dequant_meta(self):
+        with FakeTensorMode():
+            m, k, n = 16, 256, 128
+            x1 = torch.ones((m, k), dtype=torch.int8).npu()
+            # x2 为 1 维压缩权重，长度为小于 k*n 的 tensor
+            x2_len = k * n - 1
+            x2 = torch.zeros((x2_len,), dtype=torch.int8).npu()
+            compress_index = torch.zeros(8, dtype=torch.int8).npu()
+            bias = torch.zeros((1, n), dtype=torch.int32).npu()
+            scale = torch.ones((1, n), dtype=torch.float32).npu()
+            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale)
+            self.assertEqual(res.shape, (m, n))
+            self.assertEqual(res.dtype, torch.float16)
+
+
 class TestRecurrentGatedDeltaRule(TestCase):
     def test_recurrent_gated_delta_rule(self):
         with FakeTensorMode():
@@ -3109,6 +3126,18 @@ class TestTransposeBatchMatmul(TestCase):
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
+    @unittest.skip("skip test_npu_transpose_batchmatmul")
+    def test_npu_transpose_batchmatmul_meta_4(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randn((M, Batch, K), dtype=torch.float16)
+            x2 = torch.randn((Batch, K, N), dtype=torch.float16)
+            x2_nz = torch_npu.npu_format_cast(x2.npu(), acl_format=29)
+            result = torch_npu.npu_transpose_batchmatmul(x1.npu(), x2_nz.npu(),
+                                                        perm_x1=[1, 0, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randn((M, Batch, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
 
 class TestTransposeQuantBatchMatmul(TestCase):
     @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
@@ -3393,6 +3422,7 @@ class TestNpuMropeMeta(TestCase):
         with FakeTensorMode():
             dtype = torch.bfloat16
             rotary_mode = 'half'
+            cache_mode = 'default'
             num_tokens = 8
             num_q_heads = 8
             head_size = 128
@@ -3418,6 +3448,7 @@ class TestNpuMropeMeta(TestCase):
                 head_size,
                 mrope_section=mrope_section,
                 rotary_mode=rotary_mode,
+                cache_mode=cache_mode,
             )
 
             self.assertEqual(query_out.shape, query_npu.shape)

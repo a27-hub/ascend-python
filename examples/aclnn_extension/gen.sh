@@ -2,8 +2,7 @@
 
 # the first parameter is the yaml file
 YAML_FILE="$1"
-# the second parameter is the derivatives yaml file, optional
-DERIVATIVES_YAML_FILE="$2"
+DERIVATIVES_YAML_FILE="npu_custom_derivatives.yaml"
 
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 
@@ -11,7 +10,7 @@ cd $CDIR
 
 # check if the file exists
 if [ ! -f "$YAML_FILE" ]; then
-    echo "错误: yaml文件 $YAML_FILE 不存在"
+    echo "Error: yaml file $YAML_FILE does not exit"
     exit 1
 fi
 
@@ -79,9 +78,4 @@ python3 -m torchnpugen.gen_backend_stubs  \
   --source_yaml="./test_native_functions.yaml" \
   --impl_path="$CDIR/torch_npu/csrc/aten" \
   --op_plugin_impl_path="$CDIR/op_plugin/ops" \
-  --op_plugin_yaml_path="$CDIR/op_plugin/config/v2r7/op_plugin_functions.yaml"
-
-python3 -m torchnpugen.autograd.gen_autograd \
-  --out_dir="$CDIR/torch_npu/csrc/aten" \
-  --autograd_dir="$CDIR/autograd" \
-  --npu_native_function_dir="./test_native_functions.yaml"
+  --op_plugin_yaml_path="$CDIR/op_plugin/config/$PYTORCH_VERSION_DIR/op_plugin_functions.yaml"
