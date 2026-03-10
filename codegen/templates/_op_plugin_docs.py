@@ -3767,12 +3767,16 @@ config = CompilerConfig()
 config.mode="reduce-overhead"
 npu_backend = tng.get_npu_backend(compiler_config=config)
 
+device=torch.device(f'npu:0')
+
+torch_npu.npu.set_device(device)
+
 class MhcSinkhornModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x, eps, num_iters, out_flag):
-        y = torch_npu.npu_mhc_sinkhorn(x_npu, eps=eps, num_iters=num_iters, out_flag=out_flag)
+        y = torch_npu.npu_mhc_sinkhorn(x_npu, eps, num_iters, out_flag)
         return y
 
 x_shape = [1, 128, 4 , 4]

@@ -7,10 +7,10 @@ from torch_npu.testing.common_utils import SupportedDevices
 import itertools
 
 
-class TestMhcSinkhorn(TestCase):
+class TestNpuMhcSinkhorn(TestCase):
    
-    def mhc_sinkhorn_impl(self, h_res, eps=1e-6, num_iters=20, out_flag=0):
-        y = torch.softmax(h_res, dim=-1) + eps
+    def cpu_op_exec(self, x, eps, num_iters, out_flag):
+        y = torch.softmax(x, dim=-1) + eps
         y = y / (y.sum(dim=-2, keepdim=True) + eps)
         for i in range(max(num_iters - 1, 0)):
             # Row Norm
@@ -19,16 +19,20 @@ class TestMhcSinkhorn(TestCase):
             y = y / (y.sum(dim=-2, keepdim=True) + eps)
         return y
    
-    def custom_op_exec(self, h_res, eps=1e-6, num_iters=20, out_flag=0):
-        y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(h_res, eps, num_iters, out_flag)
+    def custom_op_exec(self, x, eps, num_iters, out_flag):
+        y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x, eps, num_iters, out_flag)
         return y
     
     @SupportedDevices(['Ascend950'])
-    def test_mhc_sinkhorn(self, device="npu"):
-        h_res = torch.randn(1, 128, 4, 4, dtype=torch.float32).npu()
+    def test_npu_mhc_sinkhorn(self, device="npu"):
+        x_shape = [1, 128, 4, 4]
+        x = torch.randn(x_shape, dtype=torch.float32)
+        eps = 1e-6
+        num_iters = 20
+        out_flag = 0
 
-        expected_output = self.mhc_sinkhorn_impl(h_res)
-        custom_output = self.custom_op_exec(h_res)
+        expected_output = self.cpu_op_exec(x, eps, num_iters, out_flag)
+        custom_output = self.custom_op_exec(x.npu(), eps, num_iters, out_flag)
         self.assertRtolEqual(expected_output.numpy(), custom_output.cpu().numpy())
 
 
