@@ -15,6 +15,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpInterface.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
