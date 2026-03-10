@@ -3909,16 +3909,10 @@ official:
   - func: pow_.Scalar(Tensor(a!) self, Scalar exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      self:
-        name: self, exponent
-      exec: aclnnInplacePowTensorTensor
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
     acl_op: all_version
