@@ -331,6 +331,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p69061812102715"><a name="p69061812102715"></a><a name="p69061812102715"></a>实现RotaryEmbedding旋转位置编码。</p>
 </td>
 </tr>
+<tr id="row11101219526"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p89062154013"><a name="p89062154013"></a><a name="p89062154013"></a><a href="torch_npu-npu_mhc_sinkhorn.md">torch_npu.npu_mhc_sinkhorn</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p68014212102715"><a name="p68014212102715"></a><a name="p68014212102715"></a>在mhc架构中，对上一层输出h_res，将其约束为一个双随机矩阵，即矩阵的每一行每一列相加都等于1。</p>
+</td>
+</tr>
 <tr id="row58015194219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1590618121275"><a name="p1590618121275"></a><a name="p1590618121275"></a><a href="torch_npu-npu_scaled_masked_softmax.md">torch_npu.npu_scaled_masked_softmax</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1290691218270"><a name="p1290691218270"></a><a name="p1290691218270"></a>计算输入张量x缩放并按照mask遮蔽后的Softmax结果。</p>
