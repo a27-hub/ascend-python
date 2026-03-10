@@ -18,14 +18,16 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 
-at::Tensor npu_mhc_sinkhorn(const at::Tensor& x, float eps, c10::SymInt num_iters, int64_t out_flag)
+tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, c10::SymInt num_iters, int64_t out_flag)
 {
     at::Tensor result = npu_preparation::apply_tensor_without_format(x);
     at::Tensor norm_out = npu_preparation::apply_tensor_without_format(x);
     at::Tensor sum_out = npu_preparation::apply_tensor_without_format(x);
 
     EXEC_NPU_CMD(aclnnMhcSinkhorn, x, out_flag, eps, num_iters, result, norm_out, sum_out);
-    return result, norm_out, sum_out;
+    return std::tie(result, norm_out, sum_out);
 }
+
 } // namespace op_api

@@ -6391,6 +6391,10 @@ custom:
   - func: npu_attention_worker_combine(Tensor schedule_context, Tensor expert_scales, Tensor layer_id, int hidden_size, *, int token_dtype=0, int need_schedule=0) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0 ) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
+    exposed: all_version
+
   - func: npu_multi_head_attention(Tensor query, Tensor key, Tensor value, Tensor query_weight, Tensor key_weight, Tensor value_weight, Tensor attn_mask, Tensor out_proj_weight, Tensor? query_bias, Tensor? key_bias, Tensor? value_bias, Tensor? out_proj_bias, Tensor? dropout_mask, int attn_head_num, int attn_dim_per_head, int src_len, int tgt_len, float dropout_prob, bool softmax_use_float) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     acl_op: all_version
     tags: nondeterministic_seeded
