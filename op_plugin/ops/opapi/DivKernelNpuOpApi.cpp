@@ -206,6 +206,14 @@ static at::Tensor& inplace_div_out_mode_npu_no_check(at::Tensor& self, const at:
 at::Tensor& div_(at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnInplaceDivs, acl_op::div_(self, other));
     DO_COMPATIBILITY(aclnnInplaceDiv, acl_op::div_(self, other));
+
+    auto high_type = op_plugin::utils::get_divide_result_type(self, other);
+    auto result_type = self.scalar_type();
+    TORCH_CHECK(canCast(high_type, result_type),
+        "result type ", high_type,
+        " can't be cast to the desired output type ", result_type,
+        OPS_ERROR(ErrCode::TYPE));
+
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     const std::initializer_list<at::Tensor> inputs = {self, other};
@@ -273,6 +281,15 @@ at::Tensor div(const at::Tensor& self, const at::Scalar& other, c10::optional<c1
 
 at::Tensor& div_(at::Tensor& self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnInplaceDivs, acl_op::div_(self, other));
+  at::ScalarType high_type = at::result_type(self, other);
+  if (at::isIntegralType(high_type, true)) {
+      high_type = at::kFloat;
+  }
+  auto result_type = self.scalar_type();
+  TORCH_CHECK(at::canCast(high_type, result_type),
+      "result type ", high_type,
+      " can't be cast to the desired output type ", result_type,
+      OPS_ERROR(ErrCode::TYPE));
   EXEC_NPU_CMD(aclnnInplaceDivs, self, other);
   return self;
 }
