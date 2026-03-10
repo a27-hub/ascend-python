@@ -338,6 +338,9 @@
   "op_api: torch_npu.npu_dequant_swiglu_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_swiglu_mx_quant(*args, **kwargs)": {
+    "version": ["all_version"]
+  },
   "op_api: torch_npu.npu_clipped_swiglu(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
