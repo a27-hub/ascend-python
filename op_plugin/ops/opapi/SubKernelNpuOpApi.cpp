@@ -36,6 +36,30 @@ inline void alpha_check_npu_scalar(const at::ScalarType self_dtype, at::Scalar o
                 OPS_ERROR(ErrCode::TYPE));
 }
 
+inline void sub_check_npu_tensor(const at::Tensor& self, const at::Tensor& other)
+{
+    TORCH_CHECK(self.scalar_type() != at::kBool || other.scalar_type() != at::kBool,
+                "Subtraction, the `-` operator, with two bool tensors is not supported. "
+                "Use the `^` or `logical_xor()` operator instead.",
+                OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(self.scalar_type() != at::kBool && other.scalar_type() != at::kBool,
+                "Subtraction, the `-` operator, with a bool tensor is not supported. "
+                "If you are trying to invert a mask, use the `~` or `logical_not()` operator instead.",
+                OPS_ERROR(ErrCode::TYPE));
+}
+
+inline void sub_check_npu_scalar(const at::Tensor& self, const at::Scalar& other)
+{
+    TORCH_CHECK(self.scalar_type() != at::kBool || !other.isBoolean(),
+                "Subtraction, the `-` operator, with two bool tensors is not supported. "
+                "Use the `^` or `logical_xor()` operator instead.",
+                OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(self.scalar_type() != at::kBool && !other.isBoolean(),
+                "Subtraction, the `-` operator, with a bool tensor is not supported. "
+                "If you are trying to invert a mask, use the `~` or `logical_not()` operator instead.",
+                OPS_ERROR(ErrCode::TYPE));
+}
+
 static at::Tensor &sub_out_npu_nocheck(const at::Tensor &self, const at::Tensor &other, const at::Scalar alpha,
                                        at::Tensor &result)
 {
@@ -79,6 +103,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
 {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub_out(self, other, alpha, result));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub_out(self, other, alpha, result));
+    sub_check_npu_tensor(self, other);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
@@ -93,6 +118,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
 {
     DO_COMPATIBILITY(aclnnSub, acl_op::sub(self, other, alpha));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
+    sub_check_npu_tensor(self, other);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     at::Tensor output_tensor = sub_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
@@ -106,6 +132,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
 at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
 {
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
+    sub_check_npu_scalar(self, other);
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     auto output_size = op_infer::input_same_output_size(self);
     at::ScalarType result_type = at::native::result_type(self, other);
@@ -118,6 +145,7 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
 {
     DO_COMPATIBILITY(aclnnInplaceSub, acl_op::sub_(self, other, alpha));
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
+    sub_check_npu_tensor(self, other);
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     npu_preparation::check_memory({self, other}, {self});
     inplace_sub_out_npu_no_check(self, other, alpha);
@@ -127,6 +155,7 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
 at::Tensor &sub_(at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
 {
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
+    sub_check_npu_scalar(self, other);
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     EXEC_NPU_CMD(aclnnInplaceSubs, self, other, alpha);
     return self;
