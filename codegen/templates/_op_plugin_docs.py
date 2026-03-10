@@ -3719,6 +3719,7 @@ tensor([[[[[2.]]],
 """
 )
 
+
 _add_torch_npu_docstr(
     "npu_transpose",
     """
