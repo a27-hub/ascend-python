@@ -212,7 +212,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     TensorWrapper mm_x_wrapper = make_wrapper(mm_x_real, mm_x_dtype);
     TensorWrapper mm_weight_wrapper = make_wrapper(mm_weight_real, mm_weight_dtype);
 
-    EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMul,
+    EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMulV2,
         gmm_x_wrapper,
         gmm_weight_wrapper,
         gmm_x_scale,
