@@ -58,7 +58,7 @@ op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的
 介绍如何向OpPlugin仓库贡献代码，具体请参见[贡献指南](https://gitcode.com/Ascend/pytorch/blob/master/docs/zh/CONTRIBUTING.zh.md)。
 
 ## 联系我们
-如果有任何疑问或建议，请提交[GitCode Issues](https://gitcode.com/Ascend/op-plugin/issues)，我们会尽快回复。感谢您的支持。
+如果有任何疑问或建议，请提交[GitCode Issues](https://gitcode.com/Ascend/pytorch/issues)，我们会尽快回复。感谢您的支持。
 
 ## 安全声明
 主要描述了OpPlugin的安全加固信息、公网地址信息及通信矩阵等内容。具体介绍，请参考[OpPlugin安全声明](docs/zh/SECURITYNOTE.md)。
