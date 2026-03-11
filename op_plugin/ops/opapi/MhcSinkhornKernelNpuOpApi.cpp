@@ -21,13 +21,16 @@ using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 using npu_utils = at_npu::native::NpuUtils;
 
-tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, c10::SymInt num_iters, int64_t out_flag)
+tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, int64_t num_iters, int64_t out_flag)
 {
-    int64_t num_iters_int = num_iters.val();
-
     at::Tensor result = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-    at::Tensor norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-    at::Tensor sum_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+    if (out_flag == 1) {
+        at::Tensor norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+        at::Tensor sum_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+    } else {
+        at::Tensor* norm_out = nullptr;
+        at::Tensor* sum_out = nullptr;
+    }
 
     EXEC_NPU_CMD(aclnnMhcSinkhorn, x, out_flag, eps, num_iters_int, result, norm_out, sum_out);
     return std::tie(result, norm_out, sum_out);
