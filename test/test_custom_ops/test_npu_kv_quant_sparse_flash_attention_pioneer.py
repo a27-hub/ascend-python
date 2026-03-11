@@ -49,7 +49,7 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
     def cpu_kv_quant_sparse_flash_attention_pioneer(self,
         query, key, value, sparse_indices, key_dequant_scale, value_dequant_scale,
         scale_value, sparse_block_size,
-        actual_seq_lengths_query, actual_seq_lengths_kv, key_sink, value_sink,
+        actual_seq_lengths_query, actual_seq_lengths_kv,
         layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=None,
         attention_mode=0, quant_scale_repo_mode=0, tile_size=0, key_quant_mode=0,
         value_quant_mode=0, rope_head_dim=0):
@@ -72,8 +72,7 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
         g = num_heads // num_kv_heads
 
         q_bnsd_tensor = torch.transpose(torch.cat((query, query_rope), axis=-1), 1, 2)
-        key_tensor = torch.cat((key, key_rope), axis=-1)
-        k_bnsd_tensor = torch.transpose(torch.cat((key_sink, key_tensor), axis=-1), 1, 2)
+        k_bnsd_tensor = torch.transpose(torch.cat((key, key_rope), axis=-1), 1, 2)
         v_bnsd_tensor = torch.transpose(value, 1, 2)
         sparse_indices_tensor = torch.transpose(sparse_indices, 1, 2)
         out_shape_bnsd = list(q_bnsd_tensor.shape)
@@ -101,85 +100,6 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
                     y[batch, n2_idx * g: (n2_idx + 1) * g, s1_idx, :] = mm2_res
         return torch.transpose(y, 1, 2)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
-    def test_sfa_eager(self, device="npu"):
-        query_type = torch.bfloat16
-        scale_value = 0.041666666666666664
-        sparse_block_size = 1
-        sparse_block_count = 2048
-        b = 4
-        s1 = 1
-        s2 = 8192
-        n1 = 128
-        n2 = 1
-        dn = 512
-        dr = 64
-        sink_num = 128
-        tile_size = 128
-        block_size = 256
-        layout_query = 'BSND'
-        s2_act = 4096
-
-        query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
-        key = torch.tensor(np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn))).to(torch.int8)
-        value = key.clone()
-        idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
-        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count). \
-            to(torch.int32)
-        query_rope = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dr))).to(query_type)
-        key_rope = torch.tensor(np.random.uniform(-10, 10, (b * (s2 // block_size), block_size, n2, dr))).to(query_type)
-        act_seq_q = torch.tensor([s1] * b).to(torch.int32)
-        act_seq_kv = torch.tensor([s2_act] * b).to(torch.int32)
-        act_key_sink = torch.tensor(np.random.uniform(-10, 10, (sink_num, n2, dn + dr))).to(torch.int32)
-        act_value_sink = torch.tensor(np.random.uniform(-10, 10, (sink_num, n2, dn))).to(torch.int32)
-
-        antiquant_scale = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2,
-            dn // tile_size))).to(torch.float32)
-        key = torch.cat((key, key_rope.view(torch.int8), antiquant_scale.view(torch.int8)), axis=3)
-        query = torch.cat((query, query_rope), axis=3)
-        block_table = torch.tensor([range(b * s2 // block_size)], dtype=torch.int32).reshape(b, -1)
-
-        # compare result
-        cpu_out = self.cpu_kv_quant_sparse_flash_attention_pioneer(
-            query, key, value, sparse_indices,
-            key_dequant_scale=antiquant_scale, value_dequant_scale=antiquant_scale,
-            scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=act_key_sink,
-            value_sink=act_value_sink, layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
-            attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
-
-        query = query.npu()
-        key = key.npu()
-        value = value.npu()
-        sparse_indices = sparse_indices.npu()
-        query_rope = query_rope.npu()
-        key_rope = key_rope.npu()
-        act_seq_q = act_seq_q.npu()
-        act_seq_kv = act_seq_kv.npu()
-        act_key_sink = act_key_sink.npu()
-        act_value_sink = act_value_sink.npu()
-        block_table = block_table.npu()
-        antiquant_scale = antiquant_scale.npu()
-
-        npu_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
-            query, key, value, sparse_indices, 
-            scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=act_key_sink,
-            value_sink=act_value_sink, layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
-            attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
-
-        npu_out = npu_out.cpu().to(torch.float32).numpy()
-        cpu_out = cpu_out.to(torch.float32).numpy()
-
-        res = np.isclose(npu_out, cpu_out, rtol=0.005, atol=0.0001, equal_nan=False)
-        true_ratio = np.mean(res)
-        if true_ratio < 0.99:
-            print("npu output:\n", npu_out, npu_out.shape)
-            print("cpu output:\n", cpu_out, cpu_out.shape)
-            print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
-        self.assertTrue(true_ratio > 0.99, "precision compare fail")
 
     @SupportedDevices(['Ascend950'])
     def test_npu_kv_quant_sparse_flash_attention_pioneer_tnd(self, device="npu"):
@@ -210,9 +130,6 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
         key_rope = torch.tensor(np.random.uniform(-10, 10, (b * (s2 // block_size), block_size, n2, dr))).to(query_type)
         act_seq_q = torch.tensor([s1] * b).to(torch.int32)
         act_seq_kv = torch.tensor([s2_act] * b).to(torch.int32)
-        act_key_sink = torch.tensor(np.random.uniform(-10, 10, (sink_num, n2, dn + dr))).to(torch.int32)
-        act_value_sink = torch.tensor(np.random.uniform(-10, 10, (sink_num, n2, dn))).to(torch.int32)
-
         antiquant_scale = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2,
             dn // tile_size))).to(torch.float32)
         key = torch.cat((key, key_rope.view(torch.uint8), antiquant_scale.view(torch.uint8)), axis=3)
@@ -224,8 +141,8 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
             query, key, value, sparse_indices,
             key_dequant_scale=antiquant_scale, value_dequant_scale=antiquant_scale,
             scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=act_key_sink,
-            value_sink=act_value_sink, layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
+            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
+            layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64)
 
@@ -237,16 +154,14 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
         key_rope = key_rope.npu()
         act_seq_q = act_seq_q.npu()
         act_seq_kv = act_seq_kv.npu()
-        act_key_sink = act_key_sink.npu()
-        act_value_sink = act_value_sink.npu()
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
 
         npu_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=act_key_sink,
-            value_sink=act_value_sink, layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
+            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
+            layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64)
 
