@@ -32,7 +32,7 @@ tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, int64_t num_iters, 
         at::Tensor* sum_out = nullptr;
     }
 
-    EXEC_NPU_CMD(aclnnMhcSinkhorn, x, out_flag, eps, num_iters_int, result, norm_out, sum_out);
+    EXEC_NPU_CMD(aclnnMhcSinkhorn, x, out_flag, eps, num_iters, result, norm_out, sum_out);
     return std::tie(result, norm_out, sum_out);
 }
 
