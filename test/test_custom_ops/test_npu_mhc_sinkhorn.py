@@ -27,8 +27,8 @@ class TestNpuMhcSinkhorn(TestCase):
     def test_npu_mhc_sinkhorn(self, device="npu"):
         x_shape = [1, 128, 4, 4]
         x = torch.randn(x_shape, dtype=torch.float32)
-        eps = float(1e-6)
-        num_iters = torch.SymInt(20)
+        eps = 1e-6
+        num_iters = 20
         out_flag = 0
 
         expected_output = self.cpu_op_exec(x, eps, num_iters, out_flag)
