@@ -17,8 +17,9 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
-using npu_utils = at_npu::native::NpuUtils;
 using npu_preparation = at_npu::native::OpPreparation;
+using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
+using npu_utils = at_npu::native::NpuUtils;
 
 tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, int64_t num_iters, int64_t out_flag)
 {
