@@ -23,7 +23,12 @@ using npu_utils = at_npu::native::NpuUtils;
 
 tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, c10::SymInt num_iters, int64_t out_flag)
 {
-    int64_t num_iters_int = num_iters.expect_int();
+    int64_t num_iters_int;
+    if (num_iters.is_symbolic()) {
+        num_iters_int = 20;
+    } else {
+        num_iters_int = num_iters.val();
+    }
 
     at::Tensor result = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
     at::Tensor norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
