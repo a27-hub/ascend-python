@@ -161,7 +161,25 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
     auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
-
+#if VERSION_BETWEEN(V2R1, V2R7)
+    bool mxfp4_valid = x1_dtype.has_value() && x2_dtype.has_value() &&
+                                   x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
+                                   x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+#endif
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+    bool mxfp4_valid = false;
+    if (x1_dtype.has_value()) {
+        mxfp4_valid = x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+    } else {
+        mxfp4_valid = x[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+    if (x2_dtype.has_value()) {
+        mxfp4_valid = mxfp4_valid && x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+    } else {
+        mxfp4_valid = mxfp4_valid &&
+                      weight[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+#endif
     c10::SmallVector<int64_t, SIZE> output_size;
     if (is_a8W4_int) {
         output_size = {x1.sizes()[0], x2.sizes()[1] * INT4_NUMS_IN_INT32};
@@ -171,6 +189,10 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         } else {
             output_size = {x1.sizes()[0], x2.sizes()[1] * INT4_NUMS_IN_INT32};
         }
+    } else if (mxfp4_valid) {
+        int64_t m_new = !trans_x1 ? x1.sizes()[0] : x1.sizes()[0] * FP4_IN_INT8;
+        int64_t n_new = trans_x2 ? x2.sizes()[1] : x2.sizes()[1] * FP4_IN_INT8;
+        output_size = {m_new, n_new};
     } else {
         std::vector<uint64_t> batch_record;
         uint64_t batch_val = infer_out_batch_shape(x1, x2, batch_record);
