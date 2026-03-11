@@ -3,10 +3,6 @@
 //
 // Licensed under the BSD 3-Clause License (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://opensource.org/licenses/BSD-3-Clause
-//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,11 +43,15 @@ at::Tensor construct_quant_sparse_infer_pioneer_output_tensor(
         TORCH_CHECK(query.dim() == DIM_4,
                     "When the layout of query is BSND, the query dimension must be 4, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(query.size(DIM_3) > rope_head_dim,
+                "The hidden_dim of query shoulld be greater than rope_head_dim" + OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2), query.size(DIM_3) - rope_head_dim};
     } else {
         TORCH_CHECK(query.dim() == DIM_3,
                     "When the layout of query is TND, the query dimension must be 3, but got ",
                     query.dim(), OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(query.size(DIM_3) > rope_head_dim,
+                "The hidden_dim of query shoulld be greater than rope_head_dim" + OPS_ERROR(ErrCode::PARAM));
         output_size = {query.size(DIM_0), query.size(DIM_1), query.size(DIM_2) - rope_head_dim};
     }
     at::Tensor output = npu_preparation::apply_tensor_without_format(output_size, query.options().dtype(query.dtype()));
