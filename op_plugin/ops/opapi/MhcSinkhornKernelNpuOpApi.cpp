@@ -21,19 +21,18 @@ using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 using npu_utils = at_npu::native::NpuUtils;
 
-tensor_list npu_mhc_sinkhorn(const at::Tensor& x, float eps, int64_t num_iters, int64_t out_flag)
+tensor_list npu_mhc_sinkhorn(const at::Tensor &x, float eps, int64_t num_iters, int64_t out_flag)
 {
     at::Tensor result = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+    at::Tensor norm_out;
+    at::Tensor sum_out;
     if (out_flag == 1) {
-        at::Tensor norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-        at::Tensor sum_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-    } else {
-        std::nullptr_t norm_out = nullptr;
-        std::nullptr_t sum_out = nullptr;
+        norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+        sum_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
     }
 
     EXEC_NPU_CMD(aclnnMhcSinkhorn, x, eps, num_iters, result, norm_out, sum_out);
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(result, norm_out, sum_out);
 }
 
-} // namespace op_api
+}  // namespace op_api
