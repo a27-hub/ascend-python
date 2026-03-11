@@ -77,9 +77,9 @@ inline void ExecNpuCmd(const char* api_name, const Args&... args) {
     ExecNpuCmdExtImpl(api_name, params, sizeof...(Args));
 }
 
-#define EXEC_NPU_CMD_EX(aclnn_api, ...)                                                                                  \
-    do {                                                                                                                 \
-        ::op_plugin::ExecNpuCmd(#aclnn_api, __VA_ARGS__);                                                                \
+#define EXEC_NPU_CMD_EXT(aclnn_api, ...)                                                                              \
+    do {                                                                                                              \
+        ::op_plugin::ExecNpuCmd(#aclnn_api, __VA_ARGS__);                                                             \
     } while (false)
 
 }

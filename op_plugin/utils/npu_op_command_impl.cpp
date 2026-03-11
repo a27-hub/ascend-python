@@ -399,7 +399,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
             converted_params.push_back(executor_addr);
             
             auto workspace_status = CallGetWorkspaceSize(getWorkspaceSizeFuncAddr, converted_params);
-            NPU_CHECK_ERROR(workspace_status, std::string("call ") + api_name + " failed");
+            NPU_CHECK_ERROR(workspace_status, (std::string("call ") + api_name + " failed").c_str());
             
             void* workspace_addr = nullptr;
             at::Tensor workspace_tensor;
@@ -410,7 +410,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
             
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);
             api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
-            NPU_CHECK_ERROR(api_ret, std::string("call ") + api_name + " failed");
+            NPU_CHECK_ERROR(api_ret, (std::string("call ") + api_name + " failed").c_str());
             
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);
             if (releaseMemFunc) {
@@ -455,7 +455,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
         converted_params.push_back(executor_addr);
         
         auto workspace_status = CallGetWorkspaceSize(getWorkspaceSizeFuncAddr, converted_params);
-        NPU_CHECK_ERROR(workspace_status, std::string("call ") + api_name + " failed");
+        NPU_CHECK_ERROR(workspace_status, (std::string("call ") + api_name + " failed").c_str());
         
         void* workspace_addr = nullptr;
         at::Tensor workspace_tensor;
@@ -471,7 +471,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
             }
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
-            NPU_CHECK_ERROR(api_ret, std::string("call ") + api_name + " failed");
+            NPU_CHECK_ERROR(api_ret, (std::string("call ") + api_name + " failed").c_str());
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);
             if (releaseMemFunc) {
                 releaseMemFunc(nullptr, false);
