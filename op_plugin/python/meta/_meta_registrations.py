@@ -2538,32 +2538,21 @@ def npu_moe_update_expert_meta(expert_ids, eplb_table, expert_scales=None, pruni
 
 
 @impl(m, "npu_ffn")
-def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, bias1=None,
+def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None,
                  bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None,
                  antiquant_scale2=None, antiquant_offset1=None, antiquant_offset2=None, inner_precise=0,
-                 output_dtype=-1, tokens_index_flag=False):
+                 output_dtype=None):
     dim_list = []
     for i in range(0, x.dim() - 1):
         dim_list.append(x.size(i))
     dim_list.append(weight2.size(weight2.dim() - 1))
-
-    # Handle output dtype based on quantization scenario
     if x.dtype == torch.int8:
-        # Quantization scenario
-        if output_dtype == 1:
+        if output_dtype is not None and output_dtype == torch.bfloat16:
             return x.new_empty(tuple(dim_list), dtype=torch.bfloat16)
         else:
-            # output_dtype == -1 or 0, default to float16
             return x.new_empty(tuple(dim_list), dtype=torch.float16)
     else:
-        # Non-quantization scenario
-        if output_dtype == 1:
-            return x.new_empty(tuple(dim_list), dtype=torch.bfloat16)
-        elif output_dtype == 0:
-            return x.new_empty(tuple(dim_list), dtype=torch.float16)
-        else:
-            # output_dtype == -1, use same dtype as input
-            return x.new_empty(tuple(dim_list))
+        return x.new_empty(tuple(dim_list))
 
 
 def gmm_get_dtype(output_dtype):

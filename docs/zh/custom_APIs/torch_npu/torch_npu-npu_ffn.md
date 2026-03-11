@@ -24,7 +24,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, bias1=None, bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None, antiquant_scale2=None, antiquant_offset1=None, antiquant_offset2=None, inner_precise=0, output_dtype=-1, tokens_index_flag=False) -> Tensor
+torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None, bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None, antiquant_scale2=None, antiquant_offset1=None, antiquant_offset2=None, inner_precise=None, output_dtype=None) -> Tensor
 ```
 
 ## 参数说明
@@ -40,34 +40,29 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, bias1=
 
 - **activation** (`str`)：必选参数，代表使用的激活函数。当前仅支持`fastgelu、gelu、relu、silu、geglu、swiglu、reglu`。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **expert_tokens** (`list`)：可选参数，代表各专家的token数，数据类型支持`int64`，数据格式支持$ND$，若不为空时可支持的最大长度为256个。默认值为`None`。
+- **expert_tokens** (`list`)：可选参数，代表各专家的token数，数据类型支持`int32`，数据格式支持$ND$，若不为空时可支持的最大长度为256个。
+- **expert_tokens_index** (`list`)：可选参数，代表各专家计算token的索引值，数据类型支持`int32`，数据格式支持$ND$，若不为空时可支持的最大长度为256个。
 
-- **bias1** (`Tensor`)：可选参数，权重数据修正值，对应公式中的$b1$，数据类型支持`float16`、`float32`、`int32`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N1]$/$[N1]$。默认值为`None`。
-- **bias2** (`Tensor`)：可选参数，权重数据修正值，对应公式中的$b2$，数据类型支持`float16`、`float32`、`int32`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N2]$/$[N2]$。默认值为`None`。
+- **bias1** (`Tensor`)：可选参数，权重数据修正值，对应公式中的$b1$，数据类型支持`float16`、`float32`、`int32`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N1]$/$[N1]$。
+- **bias2** (`Tensor`)：可选参数，权重数据修正值，对应公式中的$b2$，数据类型支持`float16`、`float32`、`int32`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N2]$/$[N2]$。
 
-- **scale** (`Tensor`)：可选参数，量化参数，量化缩放系数，数据类型支持`float32`，数据格式支持$ND$。pertensor下输入在有/无专家时均为一维向量，输入元素个数在有/无专家时分别为$[E]$/$[1]$；perchannel下输入在有/无专家时为二维向量/一维向量，输入元素个数在有/无专家时分别为$[E, N1]$/$[N1]$。默认值为`None`。
-- **offset** (`Tensor`)：可选参数，量化参数，量化偏移量，数据类型支持`float32`，数据格式支持$ND$，一维向量，输入元素个数在有/无专家时分别为$[E]$/$[1]$。默认值为`None`。
-- **deq_scale1** (`Tensor`)：可选参数，量化参数，第一组matmul的反量化缩放系数，数据类型支持`uint64`、`int64`、`float32`、`bfloat16`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N1]$/$[N1]$。默认值为`None`。
-- **deq_scale2** (`Tensor`)：可选参数，量化参数，第二组matmul的反量化缩放系数，数据类型支持`uint64`、`int64`、`float32`、`bfloat16`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N2]$/$[N2]$。默认值为`None`。
-- **antiquant_scale1** (`Tensor`)：可选参数，伪量化参数，第一组matmul的缩放系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N1]$/$[N1]$。默认值为`None`。
-- **antiquant_scale2** (`Tensor`)：可选参数，伪量化参数，第二组matmul的缩放系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N2]$/$[N2]$。默认值为`None`。
-- **antiquant_offset1** (`Tensor`)：可选参数，伪量化参数，第一组matmul的偏移量，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N1]$/$[N1]$。默认值为`None`。
-- **antiquant_offset2** (`Tensor`)：可选参数，伪量化参数，第二组matmul的偏移量，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N2]$/$[N2]$。默认值为`None`。
+- **scale** (`Tensor`)：可选参数，量化参数，量化缩放系数，数据类型支持`float32`，数据格式支持$ND$。pertensor下输入在有/无专家时均为一维向量，输入元素个数在有/无专家时分别为$[E]$/$[1]$；perchannel下输入在有/无专家时为二维向量/一维向量，输入元素个数在有/无专家时分别为$[E, N1]$/$[N1]$。
+- **offset** (`Tensor`)：可选参数，量化参数，量化偏移量，数据类型支持`float32`，数据格式支持$ND$，一维向量，输入元素个数在有/无专家时分别为$[E]$/$[1]$。
+- **deq_scale1** (`Tensor`)：可选参数，量化参数，第一组matmul的反量化缩放系数，数据类型支持`int64`、`float32`、`bfloat16`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N1]$/$[N1]$。
+- **deq_scale2** (`Tensor`)：可选参数，量化参数，第二组matmul的反量化缩放系数，数据类型支持`int64`、`float32`、`bfloat16`，数据格式支持$ND$，输入在有/无专家时分别为$[E, N2]$/$[N2]$。
+- **antiquant_scale1** (`Tensor`)：可选参数，伪量化参数，第一组matmul的缩放系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N1]$/$[N1]$。
+- **antiquant_scale2** (`Tensor`)：可选参数，伪量化参数，第二组matmul的缩放系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N2]$/$[N2]$。
+- **antiquant_offset1** (`Tensor`)：可选参数，伪量化参数，第一组matmul的偏移量，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N1]$/$[N1]$。
+- **antiquant_offset2** (`Tensor`)：可选参数，伪量化参数，第二组matmul的偏移量，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，perchannel下输入在有/无专家时分别为$[E, N2]$/$[N2]$。
 
-- **inner_precise** (`int`)：可选参数，表示高精度或者高性能选择。默认值为0。
+- **inner_precise** (`int`)：可选参数，表示高精度或者高性能选择。数据类型支持`int64`。该参数仅对`float16`生效，`bfloat16`和`int8`不区分高精度和高性能。
 
     - `inner_precise`为0时，代表开启高精度模式，算子内部采用`float32`数据类型计算。
     - `inner_precise`为1时，代表高性能模式。
 
   `inner_precise`参数在`bfloat16`非量化场景，只能配置为0；`float16`非量化场景，可以配置为0或者1；量化或者伪量化场景，0和1都可配置，但是配置后不生效。
 
-- **output_dtype** (`int`)：可选参数，该参数只在量化场景生效，其他场景不生效。表示输出Tensor的数据类型标志。默认值为-1。
-    - `output_dtype`为-1或0时，输出Tensor数据类型为`float16`。
-    - `output_dtype`为1时，输出Tensor数据类型为`bfloat16`。
-
-- **tokens_index_flag** (`bool`)：可选参数，表示`expert_tokens`中值的含义。默认值为`False`。
-    - `tokens_index_flag`为`False`时，`expert_tokens`中的值为各专家的token数量。
-    - `tokens_index_flag`为`True`时，`expert_tokens`中的值为累积索引。
+- **output_dtype** (`ScalarType`)：可选参数，该参数只在量化场景生效，其他场景不生效。表示输出Tensor的数据类型，支持输入`float16`、`bfloat16`。默认值为`None`，代表输出Tensor数据类型为`float16`。
 
 ## 返回值说明
 `Tensor`
