@@ -193,3 +193,12 @@ TAGS
 
 # bazel symlinks
 bazel-*
+
+# xyw
+.trae/
+aclnn_input/
+build.log
+rebuild.log
+CHECKLIST.md
+test_meta_registration.py
+test_npu_ffn.py

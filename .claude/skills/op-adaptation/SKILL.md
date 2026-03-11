@@ -14,9 +14,10 @@ Given operator documentation (.md) and definition file (_def.cpp):
 1. **Parse inputs** - Extract parameters, types, constraints from both files
 2. **Generate YAML** - Add entry to `op_plugin/config/op_plugin_functions.yaml`
 3. **Generate C++** - Create `op_plugin/ops/opapi/{Name}KernelNpuOpApi.cpp`
-4. **Build** - Run `bash ci/build.sh --python=3.10`
-5. **Test** - Create and run `test_{operator_name}.py`
-6. **Generate API docs** - Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
+4. **Add Meta Registration** - Add meta implementation to `op_plugin/python/meta/_meta_registrations.py`
+5. **Build** - Run `bash ci/build.sh --python=3.10`
+6. **Test** - Create and run `test_{operator_name}.py`
+7. **Generate API docs** - Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
 
 ## Step 1: Parse Inputs
 
@@ -172,7 +173,136 @@ TensorWrapper y_wrapper = {y, y_acltype};
 EXEC_NPU_CMD(aclnnOperator, input, y_wrapper, output);
 ```
 
-## Step 4: Build and Install
+## Step 4: Add Meta Registration
+
+Meta registration is required for PyTorch's torch.compile() and dynamic shape support. Add a meta function to `op_plugin/python/meta/_meta_registrations.py`:
+
+**Purpose:**
+- Define output shape and dtype without actual computation
+- Enable torch.compile() to work with custom operators
+- Support dynamic shapes and symbolic tracing
+
+**Meta function template:**
+
+```python
+@impl(m, "npu_operator_name")
+def npu_operator_name_meta(input, *, optional_param=None, int_param=0):
+    """
+    Meta implementation for npu_operator_name.
+
+    Args:
+        input: Input tensor
+        optional_param: Optional tensor parameter
+        int_param: Integer parameter
+
+    Returns:
+        Output tensor with computed shape and dtype
+    """
+    # Calculate output shape
+    output_shape = list(input.size())
+
+    # Modify shape if needed (e.g., for reduction, reshape, etc.)
+    # output_shape[-1] = new_dim
+
+    # Determine output dtype
+    if input.dtype == torch.int8:
+        # Handle quantization scenario
+        return input.new_empty(tuple(output_shape), dtype=torch.float16)
+    else:
+        # Default: same dtype as input
+        return input.new_empty(tuple(output_shape))
+```
+
+**Key points:**
+
+1. **Function signature must match YAML definition exactly**
+   - Same parameter names and order
+   - Same default values
+   - Use `*,` to separate required and optional parameters
+
+2. **Shape calculation**
+   - Use `input.size()` and `input.dim()` for shape operations
+   - Build output shape as a list, then convert to tuple
+   - For multi-dimensional outputs, iterate through dimensions
+
+3. **Dtype handling**
+   - Use `input.new_empty(shape, dtype=...)` to create output tensor
+   - Handle quantization scenarios (int8 input → float16/bfloat16 output)
+   - Default to same dtype as input for non-quantization scenarios
+
+4. **Common patterns:**
+
+   **Same shape as input:**
+   ```python
+   return input.new_empty(input.size())
+   ```
+
+   **Different last dimension:**
+   ```python
+   output_shape = list(input.size())
+   output_shape[-1] = weight.size(-1)  # or other calculation
+   return input.new_empty(tuple(output_shape))
+   ```
+
+   **Reduction operations:**
+   ```python
+   output_shape = list(input.size())
+   if keepdim:
+       output_shape[dim] = 1
+   else:
+       output_shape.pop(dim)
+   return input.new_empty(tuple(output_shape))
+   ```
+
+   **Multiple outputs:**
+   ```python
+   return (input.new_empty(shape1), input.new_empty(shape2))
+   ```
+
+5. **Special cases:**
+   - For operators with `output_dtype` parameter, handle different output types
+   - For operators with shape transformations, compute new shape based on parameters
+   - For operators with multiple tensor outputs, return a tuple
+
+**Example: FFN meta registration**
+
+```python
+@impl(m, "npu_ffn")
+def npu_ffn_meta(x, weight1, weight2, activation, *, expert_tokens=None, bias1=None,
+                 bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None,
+                 antiquant_scale1=None, antiquant_scale2=None, antiquant_offset1=None,
+                 antiquant_offset2=None, inner_precise=0, output_dtype=-1, tokens_index_flag=False):
+    # Calculate output shape: same as input except last dimension
+    dim_list = []
+    for i in range(0, x.dim() - 1):
+        dim_list.append(x.size(i))
+    dim_list.append(weight2.size(weight2.dim() - 1))
+
+    # Handle output dtype based on quantization scenario
+    if x.dtype == torch.int8:
+        # Quantization scenario
+        if output_dtype == 1:
+            return x.new_empty(tuple(dim_list), dtype=torch.bfloat16)
+        else:
+            return x.new_empty(tuple(dim_list), dtype=torch.float16)
+    else:
+        # Non-quantization scenario
+        if output_dtype == 1:
+            return x.new_empty(tuple(dim_list), dtype=torch.bfloat16)
+        elif output_dtype == 0:
+            return x.new_empty(tuple(dim_list), dtype=torch.float16)
+        else:
+            return x.new_empty(tuple(dim_list))
+```
+
+**Finding similar operators:**
+
+Search for similar operators in `_meta_registrations.py` as reference:
+- Same category: Search for operators with similar functionality
+- Similar output shape: Look for operators with same shape transformation pattern
+- Similar dtype handling: Find operators with same quantization/dequantization logic
+
+## Step 5: Build and Install
 
 ```bash
 # Note: --pytorch parameter is not supported, use only --python
@@ -185,7 +315,7 @@ pip install --force-reinstall build/pytorch/dist/torch_npu-*.whl
 - For signature mismatch errors, verify function signature matches generated interface
 - Clean build if needed: `rm -rf build && bash ci/build.sh --python=3.10`
 
-## Step 5: Create Tests
+## Step 6: Create Tests
 
 Create `test_{operator_name}.py`:
 
@@ -211,7 +341,7 @@ if __name__ == "__main__":
     print("\n✓ All tests passed!")
 ```
 
-## Step 6: Generate API Documentation
+## Step 7: Generate API Documentation
 
 Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
 
@@ -231,7 +361,7 @@ Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
 
 **YAML:**
 ```yaml
-- func: npu_ffn(Tensor x, Tensor weight1, Tensor weight2, str activation, *, int[]? expert_tokens=None, int[]? expert_tokens_index=None, Tensor? bias1=None, Tensor? bias2=None, int inner_precise=0) -> Tensor
+- func: npu_ffn(Tensor x, Tensor weight1, Tensor weight2, str activation, *, int[]? expert_tokens=None, Tensor? bias1=None, Tensor? bias2=None, Tensor? scale=None, Tensor? offset=None, Tensor? deq_scale1=None, Tensor? deq_scale2=None, Tensor? antiquant_scale1=None, Tensor? antiquant_scale2=None, Tensor? antiquant_offset1=None, Tensor? antiquant_offset2=None, int inner_precise=0, int output_dtype=-1, bool tokens_index_flag=False) -> Tensor
   op_api: all_version
   exposed: all_version
 ```
@@ -347,6 +477,11 @@ at::Tensor npu_ffn(
 - Follow _def.cpp naming (snake_case), not .md (camelCase)
 - Check `has_value() && defined()` for optional tensors
 - Use TensorWrapper for custom output dtypes
+- **Meta registration**: Always add meta implementation for torch.compile() support
+  - Function signature must match YAML exactly
+  - Calculate output shape correctly based on input shapes and parameters
+  - Handle all dtype scenarios (quantization, non-quantization, custom output dtype)
+  - Search for similar operators in `_meta_registrations.py` as reference
 - Test basic functionality, optional params, and edge cases
 - Clean build (`rm -rf build`) if you encounter persistent signature mismatch errors
 - **Generate API documentation**: Always create user-facing documentation in `docs/zh/custom_APIs/torch_npu/` following the standard format with product support, function description, parameters, constraints, and examples
