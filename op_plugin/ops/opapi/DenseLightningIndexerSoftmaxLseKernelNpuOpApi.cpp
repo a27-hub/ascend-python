@@ -25,7 +25,7 @@ using namespace at_npu::native;
 const int DIMENSION_3D = 3;
 const int DIMENSION_4D = 4;
 
-std::tuple<at::Tensor, at::Tensor> npu_dense_lightning_indexer_softmax_lse_symint(
+std::tuple<at::Tensor, at::Tensor> npu_mhc_sinkhorn_symint(
     const at::Tensor &query_index,
     const at::Tensor &key_index,
     const at::Tensor &weights,
