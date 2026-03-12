@@ -1937,6 +1937,14 @@ def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights
     softmax_sum_out = torch.empty(output_size, dtype=torch.float32, device='meta')
     return (softmax_max_out, softmax_sum_out)
 
+@impl(m, "npu_mhc_sinkhorn")
+def npu_mhc_sinkhorn_meta(x, eps, num_iters, out_flag):
+    y_size = x.size()
+    result = torch.empty(y_size, dtype=x.dtype, device='meta')
+    norm_out = torch.empty(y_size, dtype=x.dtype, device='meta')
+    sum_out = torch.empty(y_size, dtype=x.dtype, device='meta')
+    return (result, norm_out, sum_out)
+
 
 @impl(m, "npu_quant_fusion_attention_backward")
 def npu_quant_fusion_attention_backward(query, key, value, dy, head_num, input_layout, d_scale_q, d_scale_k, d_scale_v, d_scale_dy, *, p_scale=None, ds_scale=None, softmax_max=None, softmax_sum=None, attention_in=None, scale_value=1.0, query_dtype=None):
