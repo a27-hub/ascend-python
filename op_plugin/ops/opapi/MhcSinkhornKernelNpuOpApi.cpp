@@ -26,7 +26,7 @@ using npu_utils = at_npu::native::NpuUtils;
 tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, double eps, c10::SymInt num_iters, int64_t out_flag)
 {
     float eps_f = static_cast<float>(eps);
-    int64_t num_iters_64 = static_cast<int64_t>(num_iters);
+    int64_t num_iters_64 =  num_iters;
     at::Tensor result = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     at::Tensor norm_out;
     at::Tensor sum_out;
