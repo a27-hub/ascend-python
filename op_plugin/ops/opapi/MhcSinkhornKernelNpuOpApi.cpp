@@ -25,12 +25,12 @@ using npu_utils = at_npu::native::NpuUtils;
 
 tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, double eps, c10::SymInt num_iters, long out_flag)
 {
-    at::Tensor result = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+    at::Tensor result = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     at::Tensor norm_out;
     at::Tensor sum_out;
     if (out_flag == 1) {
-        norm_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
-        sum_out = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
+        norm_out = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
+        sum_out = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     }
 
     EXEC_NPU_CMD(aclnnMhcSinkhorn, x, eps, num_iters, result, norm_out, sum_out);
