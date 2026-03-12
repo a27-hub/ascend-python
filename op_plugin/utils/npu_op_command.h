@@ -41,6 +41,12 @@ enum NpuParamType : int32_t {
     kSymIntArrayRef = 14,
     kOptionalSymIntArrayRef = 15,
     kNullptr = 16,
+    kStringView = 17,
+    kScalarArrayRef = 18,
+    kBoolArrayRef = 19,
+    kFloat = 20,
+    kInt32 = 21,
+    kUInt8 = 22,
 };
 
 struct NpuParam {
@@ -48,24 +54,29 @@ struct NpuParam {
     NpuParamType type;
 };
 
-inline NpuParam MakeNpuParam(const at::Tensor& v) { return {&v, kTensor}; }
-inline NpuParam MakeNpuParam(const at::Scalar& v) { return {&v, kScalar}; }
-inline NpuParam MakeNpuParam(const at::IntArrayRef& v) { return {&v, kIntArrayRef}; }
-inline NpuParam MakeNpuParam(bool v) { return {&v, kBool}; }
-inline NpuParam MakeNpuParam(int64_t v) { return {&v, kInt64}; }
-inline NpuParam MakeNpuParam(double v) { return {&v, kDouble}; }
-inline NpuParam MakeNpuParam(const at::TensorList& v) { return {&v, kTensorList}; }
-inline NpuParam MakeNpuParam(const at::ArrayRef<at::Scalar>& v) { return {&v, kScalarList}; }
-inline NpuParam MakeNpuParam(const std::string& v) { return {&v, kString}; }
-inline NpuParam MakeNpuParam(const char* v) { return {&v, kString}; }
-inline NpuParam MakeNpuParam(at::ScalarType v) { return {&v, kScalarType}; }
-inline NpuParam MakeNpuParam(const c10::optional<at::Tensor>& v) { return {&v, kOptionalTensor}; }
-inline NpuParam MakeNpuParam(const c10::optional<at::IntArrayRef>& v) { return {&v, kOptionalIntArrayRef}; }
-inline NpuParam MakeNpuParam(const c10::optional<at::Scalar>& v) { return {&v, kOptionalScalar}; }
-inline NpuParam MakeNpuParam(const at::ArrayRef<bool>& v) { return {&v, kBoolArray}; }
-inline NpuParam MakeNpuParam(const at::ArrayRef<c10::SymInt>& v) { return {&v, kSymIntArrayRef}; }
-inline NpuParam MakeNpuParam(const c10::OptionalArrayRef<c10::SymInt>& v) { return {&v, kOptionalSymIntArrayRef}; }
-inline NpuParam MakeNpuParam(std::nullptr_t) { return {nullptr, kNullptr}; }
+inline NpuParam MakeNpuParam(const at::Tensor& v)                           { return {&v, kTensor}; }
+inline NpuParam MakeNpuParam(const at::Scalar& v)                           { return {&v, kScalar}; }
+inline NpuParam MakeNpuParam(const at::IntArrayRef& v)                      { return {&v, kIntArrayRef}; }
+inline NpuParam MakeNpuParam(const bool& v)                                 { return {&v, kBool}; }
+inline NpuParam MakeNpuParam(const int64_t& v)                              { return {&v, kInt64}; }
+inline NpuParam MakeNpuParam(const double& v)                               { return {&v, kDouble}; }
+inline NpuParam MakeNpuParam(const at::ArrayRef<at::Scalar>& v)             { return {&v, kScalarList}; }
+inline NpuParam MakeNpuParam(const std::string& v)                          { return {&v, kString}; }
+inline NpuParam MakeNpuParam(const at::ScalarType& v)                       { return {&v, kScalarType}; }
+inline NpuParam MakeNpuParam(const c10::optional<at::Tensor>& v)            { return {&v, kOptionalTensor}; }
+inline NpuParam MakeNpuParam(const c10::optional<at::IntArrayRef>& v)       { return {&v, kOptionalIntArrayRef}; }
+inline NpuParam MakeNpuParam(const c10::optional<at::Scalar>& v)            { return {&v, kOptionalScalar}; }
+inline NpuParam MakeNpuParam(const at::ArrayRef<bool>& v)                   { return {&v, kBoolArray}; }
+inline NpuParam MakeNpuParam(const at::ArrayRef<c10::SymInt>& v)            { return {&v, kSymIntArrayRef}; }
+inline NpuParam MakeNpuParam(const c10::OptionalArrayRef<c10::SymInt>& v)   { return {&v, kOptionalSymIntArrayRef}; }
+inline NpuParam MakeNpuParam(std::nullptr_t)                                { return {nullptr, kNullptr}; }
+inline NpuParam MakeNpuParam(const c10::string_view& v)                     { return {&v, kStringView}; }
+inline NpuParam MakeNpuParam(const at::ArrayRef<at::Scalar>& v)             { return {&v, kScalarArrayRef}; }
+inline NpuParam MakeNpuParam(const at::ArrayRef<bool>& v)                   { return {&v, kBoolArrayRef}; }
+inline NpuParam MakeNpuParam(const float& v)                                { return {&v, kFloat}; }
+inline NpuParam MakeNpuParam(const int32_t& v)                              { return {&v, kInt32}; }
+inline NpuParam MakeNpuParam(const uint8_t& v)                              { return {&v, kUInt8}; }
+
 
 extern "C" {
 TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* params, int nparams);
