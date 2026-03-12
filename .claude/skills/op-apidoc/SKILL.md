@@ -1,5 +1,5 @@
 ---
-name: npu-custom-op-apidoc
+name: op-apidoc
 description: Generate Chinese API reference documentation for torch_npu custom operators, following the standard structure used in docs/zh/custom_APIs/torch_npu/. Use when the user asks to write or generate API docs for a torch_npu operator. Covers product support tables, function signatures, parameter descriptions, return values, constraints, and call examples (single-op and graph mode).
 ---
 

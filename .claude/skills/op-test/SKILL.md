@@ -1,5 +1,5 @@
 ---
-name: torch-npu-op-test
+name: op-test
 description: Generate UT test cases for torch_npu custom operators, following the test patterns in test/test_custom_ops/. Use when the user asks to write, create, or generate unit tests for a torch_npu operator (e.g. "write tests for npu_xxx", "generate UT for this operator"). Produces a complete test_{operator_name}.py file placed in test/test_custom_ops/.
 ---
 

@@ -282,11 +282,11 @@ pip install --force-reinstall build/pytorch/dist/torch_npu-*.whl
 
 ## Step 6: Create Tests
 
-Use the `torch-npu-op-test` skill to create `test/test_custom_ops/test_{operator_name}.py`.
+Use the `op-test` skill to create `test/test_custom_ops/test_{operator_name}.py`.
 
 ## Step 7: Generate API Documentation
 
-Use the `npu-custom-op-apidoc` skill to create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`.
+Use the `op-apidoc` skill to create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`.
 
 
 ## Complete Example: FFN (with IntArray and string_view)
