@@ -66,8 +66,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             OPS_ERROR(ErrCode::PARAM));
     }
 
-    if (weight_quant_mode == MODE_5 && (token_x.dtype() == aclDataType::ACL_UINT8 || weight_dq.dtype() == aclDataType::ACL_UINT8 ||
-        weight_uq_qr.dtype() == aclDataType::ACL_UINT8 || weight_dkv_kr.dtype() == aclDataType::ACL_UINT8)) {
+    if (weight_quant_mode == MODE_5 && (token_x.dtype() == at::kByte || weight_dq.dtype() == at::kByte ||
+        weight_uq_qr.dtype() == at::kByte || weight_dkv_kr.dtype() == at::kByte)) {
         TORCH_CHECK(token_x_dtype.has_value() && weight_dq_dtype.has_value() && weight_uq_qr_dtype.has_value() && weight_dkv_kr_dtype.has_value(),
             "when weight_quant_mode is 5 and input dtype have hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(c10_npu::GetAclDataType(token_x_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dq_dtype.value()) == aclDataType::ACL_HIFLOAT8 &&
@@ -225,8 +225,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             OPS_ERROR(ErrCode::PARAM));
     }
 
-    if (weight_quant_mode == MODE_5 && (token_x.dtype() == aclDataType::ACL_UINT8 || weight_dq.dtype() == aclDataType::ACL_UINT8 ||
-        weight_uq_qr.dtype() == aclDataType::ACL_UINT8 || weight_dkv_kr.dtype() == aclDataType::ACL_UINT8)) {
+    if (weight_quant_mode == MODE_5 && (token_x.dtype() == at::kByte || weight_dq.dtype() == at::kByte ||
+        weight_uq_qr.dtype() == at::kByte || weight_dkv_kr.dtype() == at::kByte)) {
         TORCH_CHECK(token_x_dtype.has_value() && weight_dq_dtype.has_value() && weight_uq_qr_dtype.has_value() && weight_dkv_kr_dtype.has_value(),
             "when weight_quant_mode is 5 and input dtype have hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(c10_npu::GetAclDataType(token_x_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dq_dtype.value()) == aclDataType::ACL_HIFLOAT8 &&
