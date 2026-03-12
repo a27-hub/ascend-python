@@ -1927,8 +1927,8 @@ def npu_dense_lightning_indexer_grad_kl_loss_meta(query, key, query_index, key_i
     return (d_query_index, d_key_index, d_weights, loss)
 
 
-@impl(m, "npu_dense_lightning_indexer_softmax_lse")
-def npu_dense_lightning_indexer_softmax_lse_meta(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
+@impl(m, "npu_mhc_sinkhorn")
+def npu_mhc_sinkhorn_meta(query_index, key_index, weights, *, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807):
     if layout == "TND":
         output_size = [key_index.size(1), query_index.size(0)]
     else:
