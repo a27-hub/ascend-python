@@ -958,6 +958,42 @@ def npu_alltoallv_gmm_meta(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     return (gmm_y, mm_y, permute_out)
 
 
+@impl(m, "npu_alltoallv_quant_gmm")
+def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scale, hcom, ep_world_size, 
+                        send_counts, recv_counts, gmm_y_dtype, *, send_counts_tensor=None, 
+                        recv_counts_tensor=None, mm_x=None, mm_weight=None, mm_x_scale=None, 
+                        mm_weight_scale=None, gmm_x_offset=None, gmm_weight_offset=None, 
+                        mm_x_offset=None, mm_weight_offset=None, gmm_x_quant_mode=None, 
+                        gmm_weight_quant_mode=None, mm_x_quant_mode=None, 
+                        mm_weight_quant_mode=None, permute_out_flag=False, group_size=None, 
+                        gmm_x_dtype=None, gmm_weight_dtype=None, gmm_x_scale_dtype=None, 
+                        gmm_weight_scale_dtype=None, mm_x_dtype=None, mm_weight_dtype=None, 
+                        mm_x_scale_dtype=None, mm_weight_scale_dtype=None, mm_y_dtype=None):
+    if ep_world_size <= 0:
+        ep_world_size = 1
+    out_x = sum(recv_counts)
+    out_y = gmm_weight.size(2)
+    out_mm_x = 0
+    out_mm_y = 0
+    permute_out_x = 0
+    permute_out_y = 0
+    gmm_y = None
+    mm_y = None
+    permute_out = None
+    out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(gmm_y_dtype)
+    if mm_x is not None:
+        out_mm_x = mm_x.size(0)
+        out_mm_y = mm_weight.size(1)
+        mm_out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(mm_y_dtype)
+        mm_y = torch.empty([out_mm_x, out_mm_y], dtype=mm_out_scalar_type, device='meta')
+    if permute_out_flag:
+        permute_out_x = out_x
+        permute_out_y = gmm_x.size(1)
+        permute_out = gmm_x.new_empty(permute_out_x, permute_out_y)
+    gmm_y = torch.empty([out_x, out_y], dtype=out_scalar_type, device='meta')
+    return (gmm_y, mm_y, permute_out)
+
+
 @impl(m, "npu_all_gather_base_mm")
 def npu_all_gather_base_mm_meta(self, x2, hcom, world_size, bias=None,
                                 x1_scale=None, x2_scale=None,
