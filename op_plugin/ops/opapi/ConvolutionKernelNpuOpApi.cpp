@@ -19,6 +19,8 @@
 
 namespace op_api {
 namespace {
+constexpr int64_t kBatchSizeDim = 0;
+constexpr int64_t kChannelDim = 1;
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
 struct ConvParams {
@@ -71,6 +73,52 @@ inline std::vector<int64_t> expand_param_if_needed(at::IntArrayRef list_param, c
     } else {
         return list_param.vec();
     }
+}
+
+inline bool is_empty_batch_or_channel(const at::Tensor& input)
+{
+    return input.size(kBatchSizeDim) == 0 || input.size(kChannelDim) == 0;
+}
+
+at::Tensor make_empty_conv_output(
+    const at::Tensor& input,
+    const at::Tensor& weight,
+    const c10::optional<at::Tensor>& bias_opt,
+    at::IntArrayRef stride,
+    at::IntArrayRef padding,
+    at::IntArrayRef dilation,
+    bool transposed,
+    at::IntArrayRef output_padding,
+    int64_t groups)
+{
+    auto output_size =
+        op_infer::conv_npu_output_size(input, weight, bias_opt, padding, output_padding, stride, dilation, groups, transposed);
+
+    // Align with CUDA Empty backend: zero-channel input produces zero output channels.
+    if (input.size(kChannelDim) == 0) {
+        output_size[kChannelDim] = 0;
+    }
+
+    return at::empty(output_size, input.options());
+}
+
+at::Tensor& make_empty_conv_output_out(
+    at::Tensor& output,
+    const at::Tensor& input,
+    const at::Tensor& weight,
+    const c10::optional<at::Tensor>& bias_opt,
+    at::IntArrayRef stride,
+    at::IntArrayRef padding,
+    at::IntArrayRef dilation,
+    bool transposed,
+    at::IntArrayRef output_padding,
+    int64_t groups)
+{
+    auto empty_output = make_empty_conv_output(
+        input, weight, bias_opt, stride, padding, dilation, transposed, output_padding, groups);
+    output.resize_(empty_output.sizes());
+    output.copy_(empty_output);
+    return output;
 }
 
 } // namespace
@@ -191,6 +239,10 @@ static at::Tensor _calc_convolution(const at::Tensor &input, const at::Tensor &w
                                     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
                                     at::IntArrayRef output_padding, int64_t groups)
 {
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
+
     int64_t k = weight.ndimension();
     int64_t inputK = input.ndimension();
     int64_t dim = k - 2; // Subtract nonspatial dimensions: 2
@@ -262,6 +314,10 @@ at::Tensor _convolution(const at::Tensor &input, const at::Tensor &weight, const
     params.groups = groups;
     check_shape_forward(input, weight.sizes(), bias.has_value() ? bias.value() : at::Tensor(), params);
 
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
+
     DO_COMPATIBILITY(aclnnConvolution,
                      acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding,
                                           groups, benchmark, deterministic, cudnn_enabled, allow_tf32));
@@ -278,6 +334,9 @@ at::Tensor slow_conv_transpose2d(const at::Tensor &input, const at::Tensor &weig
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     bool transposed = true;
     int64_t groups = 1;
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
     DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
                                                             output_padding, groups, false, false, false, false));
 
@@ -289,12 +348,16 @@ at::Tensor &slow_conv_transpose2d_out(const at::Tensor &input, const at::Tensor 
                                       at::IntArrayRef padding, at::IntArrayRef output_padding, at::IntArrayRef dilation,
                                       at::Tensor &output)
 {
-    DO_COMPATIBILITY(aclnnConvolution, acl_op::slow_conv_transpose2d_out(input, weight, kernel_size, bias_opt, stride,
-                                                                         padding, output_padding, dilation, output));
-
     const at::Tensor &bias = c10::value_or_else(bias_opt, [] { return at::Tensor(); });
     bool transposed = true;
     int64_t groups = 1;
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output_out(output, input, weight, bias, stride, padding, dilation, transposed,
+                                          output_padding, groups);
+    }
+
+    DO_COMPATIBILITY(aclnnConvolution, acl_op::slow_conv_transpose2d_out(input, weight, kernel_size, bias_opt, stride,
+                                                                         padding, output_padding, dilation, output));
     int64_t k = weight.ndimension();
     int64_t dim = k - 2; // Subtract nonspatial dimensions: 2
 
@@ -363,6 +426,9 @@ at::Tensor slow_conv_dilated2d(const at::Tensor &input, const at::Tensor &weight
     bool transposed = false;
     at::IntArrayRef output_padding = {0, 0};
     int64_t groups = 1;
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
     DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
                                                             output_padding, groups, false, false, false, false));
 
@@ -387,6 +453,9 @@ at::Tensor _slow_conv2d_forward(const at::Tensor &input, const at::Tensor &weigh
     s2 = s2 / (kernel_size[0] * kernel_size[1]);
     c10::SmallVector<int64_t, SIZE> slow_weight_size = {s1, s2, kernel_size[0], kernel_size[1]};
     weight.resize_(slow_weight_size);
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
     DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
                                                             output_padding, groups, false, false, false, false));
     return _calc_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
@@ -410,6 +479,10 @@ at::Tensor &_slow_conv2d_forward_out(const at::Tensor &input, const at::Tensor &
     s2 = s2 / (kernel_size[0] * kernel_size[1]);
     c10::SmallVector<int64_t, SIZE> slow_weight_size = {s1, s2, kernel_size[0], kernel_size[1]};
     weight.resize_(slow_weight_size);
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output_out(output, input, weight, bias, stride, padding, dilation, transposed,
+                                          output_padding, groups);
+    }
 
     DO_COMPATIBILITY(aclnnConvolution,
                      acl_op::_slow_conv2d_forward_out(input, weight, kernel_size, bias, stride, padding, output));
@@ -446,6 +519,16 @@ at::Tensor slow_conv3d_forward(const at::Tensor &input, const at::Tensor &weight
                                const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
                                at::IntArrayRef padding)
 {
+    if (is_empty_batch_or_channel(input)) {
+        std::vector<int64_t> dilation_vec = {1, 1, 1};
+        at::IntArrayRef dilation(dilation_vec);
+        int64_t groups = 1;
+        bool transposed = false;
+        std::vector<int64_t> output_padding_vec = {0, 0, 0};
+        at::IntArrayRef output_padding(output_padding_vec);
+        return make_empty_conv_output(input, weight, bias_opt, stride, padding, dilation, transposed, output_padding, groups);
+    }
+
     if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return acl_op::slow_conv3d_forward(input, weight, kernel_size, bias_opt, stride, padding);
@@ -477,6 +560,9 @@ at::Tensor slow_conv3d_forward(const at::Tensor &input, const at::Tensor &weight
     s2 = s2 / (kernel_depth * kernel_height * kernel_width);
     c10::SmallVector<int64_t, SIZE> slow_weight_size = {s1, s2, kernel_depth, kernel_height, kernel_width};
     weight.resize_(slow_weight_size);
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
     DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
                                                             output_padding, groups, false, false, false, false));
     return _calc_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
@@ -486,6 +572,17 @@ at::Tensor &slow_conv3d_forward_out(const at::Tensor &input, const at::Tensor &w
                                     const c10::optional<at::Tensor> &bias_opt, at::IntArrayRef stride,
                                     at::IntArrayRef padding, at::Tensor &output)
 {
+    if (is_empty_batch_or_channel(input)) {
+        std::vector<int64_t> dilation_vec = {1, 1, 1};
+        at::IntArrayRef dilation(dilation_vec);
+        int64_t groups = 1;
+        bool transposed = false;
+        std::vector<int64_t> output_padding_vec = {0, 0, 0};
+        at::IntArrayRef output_padding(output_padding_vec);
+        return make_empty_conv_output_out(output, input, weight, bias_opt, stride, padding, dilation, transposed,
+                                          output_padding, groups);
+    }
+
     if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
         c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend910B1) {
         return acl_op::slow_conv3d_forward_out(input, weight, kernel_size, bias_opt, stride, padding, output);
@@ -517,6 +614,10 @@ at::Tensor &slow_conv3d_forward_out(const at::Tensor &input, const at::Tensor &w
     s2 = s2 / (kernel_depth * kernel_height * kernel_width);
     c10::SmallVector<int64_t, SIZE> slow_weight_size = {s1, s2, kernel_depth, kernel_height, kernel_width};
     weight.resize_(slow_weight_size);
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output_out(output, input, weight, bias, stride, padding, dilation, transposed,
+                                          output_padding, groups);
+    }
 
     DO_COMPATIBILITY(aclnnConvolution,
                      acl_op::slow_conv3d_forward_out(input, weight, kernel_size, bias, stride, padding, output));
@@ -543,6 +644,9 @@ at::Tensor convolution_overrideable(const at::Tensor &input, const at::Tensor &w
                                     c10::IntArrayRef padding, c10::IntArrayRef dilation, bool transposed,
                                     c10::IntArrayRef output_padding, int64_t groups)
 {
+    if (is_empty_batch_or_channel(input)) {
+        return make_empty_conv_output(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
+    }
     DO_COMPATIBILITY(aclnnConvolution, acl_op::_convolution(input, weight, bias, stride, padding, dilation, transposed,
                                                             output_padding, groups, false, false, false, false));
     return _calc_convolution(input, weight, bias, stride, padding, dilation, transposed, output_padding, groups);
