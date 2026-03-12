@@ -14,9 +14,10 @@ Given operator documentation (.md) and definition file (_def.cpp):
 1. **Parse inputs** - Extract parameters, types, constraints from both files
 2. **Generate YAML** - Add entry to `op_plugin/config/op_plugin_functions.yaml`
 3. **Generate C++** - Create `op_plugin/ops/opapi/{Name}KernelNpuOpApi.cpp`
-4. **Build** - Run `bash ci/build.sh --python=3.10`
-5. **Test** - Create and run `test_{operator_name}.py`
-6. **Generate API docs** - Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
+4. **Add Meta Registration** - Register Meta implementation in `op_plugin/python/meta/_meta_registrations.py`
+5. **Build** - Run `bash ci/build.sh --python=3.10`
+6. **Test** - Create and run `test_{operator_name}.py`
+7. **Generate API docs** - Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
 
 ## Step 1: Parse Inputs
 
@@ -172,7 +173,101 @@ TensorWrapper y_wrapper = {y, y_acltype};
 EXEC_NPU_CMD(aclnnOperator, input, y_wrapper, output);
 ```
 
-## Step 4: Build and Install
+## Step 4: Add Meta Registration
+
+Meta Registration enables operators to work with `torch.compile`, `torch.export`, and FakeTensor mode by providing shape/dtype inference without actual execution.
+
+**Find similar operators as reference:**
+
+Before implementing, search for similar Meta implementations in `op_plugin/python/meta/_meta_registrations.py`:
+- Same output shape as input: Search for `torch.empty_like`
+- Computed output shape: Search for `torch.empty` with shape calculations
+- Multiple outputs: Search for `return (` with multiple tensors
+- Quantization ops: Search for `int8`, `int32`, or dtype conversions
+
+Append to `op_plugin/python/meta/_meta_registrations.py`:
+
+```python
+import torch
+from torch.library import Library, impl
+
+m = Library("npu", "IMPL", "Meta")
+
+@impl(m, "npu_operator_name")
+def npu_operator_name_meta(
+    input,
+    *,
+    optional_param=None,
+    int_param=1,
+):
+    # 1. Parameter validation (optional but recommended)
+    torch._check(
+        input.dim() >= 2,
+        lambda: f"input must be at least 2D, but got {input.dim()}D" + ops_error(ErrCode.VALUE),
+    )
+
+    # 2. Infer output shape
+    output_shape = list(input.shape)
+    # Modify output_shape based on operator logic
+
+    # 3. Infer output dtype
+    output_dtype = input.dtype
+    # Modify output_dtype based on operator logic
+
+    # 4. Return Meta Tensor
+    return torch.empty(output_shape, dtype=output_dtype, device='meta')
+```
+
+### Common Patterns
+
+```python
+# Output same shape as input
+return torch.empty_like(input, device='meta')
+
+# Computed output shape
+output_shape = list(input.shape)
+output_shape[-1] = weight.size(1)
+return torch.empty(output_shape, dtype=input.dtype, device='meta')
+
+# Different output dtype
+return torch.empty(input.shape, dtype=torch.int8, device='meta')
+
+# Multiple outputs
+return (
+    torch.empty(shape1, dtype=input.dtype, device='meta'),
+    torch.empty(shape2, dtype=torch.int64, device='meta'),
+)
+
+# Quantization (INT4 packed to INT32)
+output_shape = list(input.shape)
+output_shape[-1] = output_shape[-1] // 8
+return torch.empty(output_shape, dtype=torch.int32, device='meta')
+```
+
+### Parameter Validation
+
+```python
+from torch_npu.utils._error_code import ErrCode, ops_error
+
+torch._check(
+    input.dim() >= 2 and input.dim() <= 8,
+    lambda: f"input must be 2-8 dimensional, but got {input.dim()}D" + ops_error(ErrCode.VALUE),
+)
+
+torch._check(
+    input.dtype in [torch.float16, torch.bfloat16],
+    lambda: f"input dtype must be float16 or bfloat16, but got {input.dtype}" + ops_error(ErrCode.TYPE),
+)
+```
+
+Rules:
+- Meta function signature must match YAML definition exactly
+- Use `device='meta'` when creating output tensors
+- Use Python default value syntax for optional parameters
+- Return type can be single Tensor or Tuple[Tensor, ...]
+- Use `torch._check` for parameter validation with clear error messages
+
+## Step 5: Build and Install
 
 ```bash
 # Note: --pytorch parameter is not supported, use only --python
@@ -185,46 +280,13 @@ pip install --force-reinstall build/pytorch/dist/torch_npu-*.whl
 - For signature mismatch errors, verify function signature matches generated interface
 - Clean build if needed: `rm -rf build && bash ci/build.sh --python=3.10`
 
-## Step 5: Create Tests
+## Step 6: Create Tests
 
-Create `test_{operator_name}.py`:
+Use the `torch-npu-op-test` skill to create `test/test_custom_ops/test_{operator_name}.py`.
 
-```python
-import torch
-import torch_npu
+## Step 7: Generate API Documentation
 
-def test_basic():
-    x = torch.randn(4, 32, dtype=torch.float16, device='npu')
-    output = torch_npu.npu_operator_name(x)
-    assert output.shape == expected_shape
-    print("✓ Basic test passed")
-
-def test_optional_params():
-    x = torch.randn(4, 32, dtype=torch.float16, device='npu')
-    param = torch.ones(32, dtype=torch.float16, device='npu')
-    output = torch_npu.npu_operator_name(x, optional_param=param)
-    print("✓ Optional parameter test passed")
-
-if __name__ == "__main__":
-    test_basic()
-    test_optional_params()
-    print("\n✓ All tests passed!")
-```
-
-## Step 6: Generate API Documentation
-
-Create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
-
-**Documentation guidelines:**
-- Use Chinese for all text content
-- Use LaTeX for mathematical formulas: `$$formula$$`
-- Use `<term>` tags for product names
-- Use `> [!NOTE]` for important notes
-- Include both single-operator and graph mode examples
-- Show actual tensor output examples with `>>>`
-- Document all constraints clearly
-- List supported data types and formats
-- Specify shape requirements and transformations
+Use the `npu-custom-op-apidoc` skill to create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`.
 
 
 ## Complete Example: FFN (with IntArray and string_view)
