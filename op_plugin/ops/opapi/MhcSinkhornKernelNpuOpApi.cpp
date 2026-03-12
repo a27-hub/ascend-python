@@ -26,6 +26,7 @@ using npu_utils = at_npu::native::NpuUtils;
 tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, double eps, c10::SymInt num_iters, int64_t out_flag)
 {
     float eps_f = static_cast<float>(eps);
+    int64_t num_iters_64 = static_cast<int64_t>(num_iters);
     at::Tensor result = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     at::Tensor norm_out;
     at::Tensor sum_out;
@@ -34,7 +35,7 @@ tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, double eps, c10::SymInt
         sum_out = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     }
 
-    EXEC_NPU_CMD(aclnnMhcSinkhorn, x, eps_f, num_iters, result, norm_out, sum_out);
+    EXEC_NPU_CMD(aclnnMhcSinkhorn, x, eps_f, num_iters_64, result, norm_out, sum_out);
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(result, norm_out, sum_out);
 }
 
