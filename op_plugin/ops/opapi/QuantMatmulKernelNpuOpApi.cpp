@@ -157,6 +157,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = check_and_get_groups(group_size_list, x1, x2, scale, pertoken_scale);
     bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
+    bool trans_x1 = is_transpose_last_two_dims(x1);
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
@@ -171,13 +172,13 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     if (x1_dtype.has_value()) {
         mxfp4_valid = x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
     } else {
-        mxfp4_valid = x[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+        mxfp4_valid = x1.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
     }
     if (x2_dtype.has_value()) {
         mxfp4_valid = mxfp4_valid && x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
     } else {
         mxfp4_valid = mxfp4_valid &&
-                      weight[0].scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+                      x2.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
     }
 #endif
     c10::SmallVector<int64_t, SIZE> output_size;
