@@ -16,11 +16,15 @@
   - AddRmsNorm计算过程：
 
   $$
-  x_i={x1}+{x2}
+  x={x1}+{x2}
   $$
 
   $$
-  y=\operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
+  rms\_norm\_out=\frac{x}{\operatorname{Rms}(x)}\cdot gamma, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
+  $$
+
+  $$
+  y=\operatorname{RmsNorm}(x)=rms\_norm\_out+beta=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta
   $$
 
   - 量化计算过程：
@@ -45,14 +49,14 @@
 
 ## 函数原型
 ```
-torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None, scales2=None, zero_points2=None, *, axis=-1, epsilon=1e-06, div_mode=True) -> (y1, y2, x)
+torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None, scales2=None, zero_points2=None, *, axis=-1, epsilon=1e-06, div_mode=True) -> (y1, y2, x, rms_norm_out)
 ```
 
 ## 参数说明
 
   - **x1**（`Tensor`）：必选参数，表示标准化过程中的源数据张量，公式中的$x1$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float16`、`bfloat16`。shape支持1-8维。
   - **x2**（`Tensor`）：必选参数，表示标准化过程中的源数据张量，公式中的$x2$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float16`、`bfloat16`。shape支持1-8维，shape和数据类型需要与`x1`保持一致。
-  - **gamma**（`Tensor`）：必选参数，表示标准化过程中的权重张量，公式中的$gamma$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float16`、`bfloat16`。shape支持1维，元素数量与`x1`最后一维大小一致，数据类型需要与`x1`保持一致。
+  - **gamma**（`Tensor`）：必选参数，表示标准化过程中的权重张量，公式中的$gamma$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float16`、`bfloat16`，数据类型需要与`x1`保持一致。shape支持1-8维，当`scales1`的shape为[1]时，`x1`需要norm的维度为最后一维，`gamma`的shape为[x1的最后一维]或[1, x1的最后一维]；其他情况下，`gamma`的shape与`x1`需要norm的维度保持一致。
   - **scales1**（`Tensor`）：必选参数，表示量化过程中得到`y1`的scale张量，公式中的$scales1$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float32`、`bfloat16`。shape需要与`gamma`保持一致。当参数`div_mode`的值为True时，该参数的值不能为0。
   - **zero_points1**（`Tensor`）：可选参数，表示量化过程中得到`y1`的offset张量，公式中的$zero\_points1$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`int32`、`bfloat16`。shape需要与`gamma`保持一致。
   - **beta**（`Tensor`）：可选参数，表示标准化过程中的偏置项，公式中的$beta$。数据格式支持$ND$，支持非连续的Tensor。数据类型支持`float16`、`bfloat16`，数据类型需要与`gamma`保持一致。shape需要与`gamma`保持一致。默认值为None。
@@ -66,10 +70,26 @@ torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None
 
   - **y1**（`Tensor`）：表示量化后的输出Tensor，公式中的$y1$。数据格式支持$ND$，支持非连续的Tensor。数据类型为`int8`，shape与输入`x1`一致。
   - **y2**（`Tensor`）：表示量化后的输出Tensor，公式中的$y2$。数据格式支持$ND$，支持非连续的Tensor。数据类型为`int8`，shape与输入`x1`一致。
-  - **x**（`Tensor`）：表示`x1`和`x2`的和，公式中的$x$。数据格式支持ND，支持非连续的Tensor。数据类型和shape与输入`x1`一致。
+  - **x**（`Tensor`）：表示`x1`和`x2`的和，公式中的$x$。数据格式支持$ND$，支持非连续的Tensor。数据类型和shape与输入`x1`一致。
+  - **rms_norm_out**（`Tensor`）：表示进行RmsNorm之后的结果，对应公式中的$rms\_norm\_out$。数据格式支持$ND$，支持非连续的Tensor。数据类型和shape与输入`x1`一致。
 
 ## 约束说明
 - Atlas 推理系列产品：`x1`、`x2`的最后一维数据个数不能小于32。`gamma`、`beta`、`scales1`、`zero_points1`、`scales2`、`zero_points2`的数据个数不能小于32。
+
+- 输入`gamma`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`beta`、`div_mode`与输出`y1`、`y2`、`x`、`rms_norm_out`支持的场景和组合如下所示：
+  - Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+
+    | gamma | scales1 | scales2 | zero_points1 | zero_points2 | beta | div_mode | y1 | y2 | x | rms_norm |
+    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
+    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | None | 必传，shape为[1] | None | 必传且shape与gamma保持一致 | True | 输出有效 | 输出无效 | 输出有效 | 输出无效 |
+    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | None | 必传，shape为[1] | None | None |True | 输出有效 | 输出无效 | 输出无效 | 输出有效 |
+    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 输出有效 | 当scales2未传入时，该输出无效；当scales2传入时，该输出有效 | 输出有效 | 输出无效 |
+
+  - Atlas 推理系列产品：
+
+    | gamma | scales1 | scales2 | zero_points1 | zero_points2 | beta | div_mode | y1 | y2 | x | rms_norm |
+    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
+    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 输出有效 | 当scales2未传入时，该输出无效；当scales2传入时，该输出有效 | 输出有效 | 输出无效 |
 
 - **边界值场景说明**
 
@@ -137,8 +157,8 @@ def test_npu_add_rms_norm_quant():
         scales1_npu = scales1.npu()
         zero_points1_npu = zero_points1.npu()
 
-        y1_v1, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
-        y1_v2, _, x_out = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu) 
+        y1_v1, _, x_out, _ = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu)
+        y1_v2, _, x_out, _ = torch_npu.npu_add_rms_norm_quant(x1_npu, x2_npu, gamma_npu, scales1_npu, zero_points1_npu, beta_npu) 
 
 if __name__ == "__main__":
     test_npu_add_rms_norm_quant()

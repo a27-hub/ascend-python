@@ -18,7 +18,7 @@
 
 namespace op_api {
     using npu_preparation = at_npu::native::OpPreparation;
-    using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
+    using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
     using namespace op_plugin::utils;
     using namespace op_infer;
 
@@ -39,8 +39,15 @@ namespace op_api {
         auto output_dtype_1 = x1.scalar_type();
         at::Tensor y1 = npu_preparation::apply_tensor_without_format(output_size_0, c10::dtype(scalar_dtype));
         at::Tensor y2 = npu_preparation::apply_tensor_without_format(output_size_0, c10::dtype(scalar_dtype));
-        at::Tensor x_out = npu_preparation::apply_tensor_without_format(output_size_0, x1.options().dtype(output_dtype_1));
+
+        at::Tensor x_out {nullptr};
         at::Tensor rmsnorm_out{nullptr};
+
+        if (scales1.sizes() == c10::IntArrayRef{1} && !beta.has_value()) {
+            rmsnorm_out = npu_preparation::apply_tensor_without_format(output_size_0, x1.options().dtype(output_dtype_1));
+        } else {
+            x_out = npu_preparation::apply_tensor_without_format(output_size_0, x1.options().dtype(output_dtype_1));
+        }
 
         TensorWrapper y1_wrapper = {y1, y_acltype};
         TensorWrapper y2_wrapper = {y2, y_acltype};
@@ -53,6 +60,6 @@ namespace op_api {
             TORCH_CHECK(div_mode == true, "In the current CANN version, for aclnnAddRmsNormQuant, the parameter div_mode only support True. It is recommended to upgrade the CANN package to version 8.3 or higher. Or please set the div_mode=True.", OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(aclnnAddRmsNormQuant, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, axis, epsilon, div_mode, y1_wrapper, y2_wrapper, x_out);
         }
-        return std::make_tuple(std::move(y1), std::move(y2), std::move(x_out));
+        return std::make_tuple(std::move(y1), std::move(y2), std::move(x_out), std::move(rmsnorm_out));
     }
 }
