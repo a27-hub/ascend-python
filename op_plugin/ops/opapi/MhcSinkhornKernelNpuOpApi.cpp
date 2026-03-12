@@ -23,7 +23,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
 using npu_utils = at_npu::native::NpuUtils;
 
-tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, float eps, int64_t num_iters, int64_t out_flag)
+tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, float eps, c10::SymInt num_iters, int64_t out_flag)
 {
     at::Tensor result = npu_preparation::apply_tensor_without_format(x.sizes(), x.options());
     at::Tensor norm_out;
