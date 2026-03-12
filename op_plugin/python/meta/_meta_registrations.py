@@ -1034,7 +1034,7 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 
 
 @impl(m, "npu_mhc_sinkhorn")
-def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+def npu_mhc_sinkhorn_meta(x, eps, num_iters, out_flag):
     x_shape = list(x.shape)
     torch._check(
         x_shape[-1] in [4, 6, 8],
