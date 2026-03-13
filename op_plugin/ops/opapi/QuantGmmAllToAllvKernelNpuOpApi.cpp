@@ -40,10 +40,6 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                                                            const c10::optional<at::Tensor> &mm_weight,
                                                            const c10::optional<at::Tensor> &mm_x_scale,
                                                            const c10::optional<at::Tensor> &mm_weight_scale,
-                                                           const c10::optional<at::Tensor> &gmm_x_offset,
-                                                           const c10::optional<at::Tensor> &gmm_weight_offset,
-                                                           const c10::optional<at::Tensor> &mm_x_offset,
-                                                           const c10::optional<at::Tensor> &mm_weight_offset,
                                                            const c10::optional<at::Tensor> &comm_quant_scale,
                                                            c10::optional<int64_t> gmm_x_quant_mode,
                                                            c10::optional<int64_t> gmm_weight_quant_mode,
@@ -63,21 +59,25 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                                                            c10::optional<int64_t> mm_y_dtype
                                                            )
     {
-        // quant mode
-        TORCH_CHECK(gmm_x_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR, "gmm_x_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
-            gmm_x_quant_mode, OPS_ERROR(ErrCode::PARAM));
-
-        TORCH_CHECK(gmm_weight_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR, "gmm_weight_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
-            gmm_weight_quant_mode, OPS_ERROR(ErrCode::PARAM));
-
-        TORCH_CHECK(comm_quant_mode.value_or(0) == 0, "comm_quant_mode only support 0, but got ",
-            comm_quant_mode, OPS_ERROR(ErrCode::PARAM));
-        // dim
+        // 校验空tensor
+        TORCH_CHECK(gmm_x.defined(), "The input tensor gmm_x can not be None.", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(gmm_weight.defined(), "The input tensor gmm_weight can not be None.", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(gmm_x_scale.defined(), "The input tensor gmm_x_scale can not be None.", OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(gmm_weight_scale.defined(), "The input tensor gmm_weight_scale can not be None.", OPS_ERROR(ErrCode::PARAM));
+        // 校验shape
         TORCH_CHECK(gmm_x.dim() == DIM_TWO, "The dimension of gmm_x should be 2D, but got ",
             gmm_x.dim(), OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(gmm_weight.dim() == DIM_THREE, "The dimension of gmm_weight should be 3D, but got ",
             gmm_weight.dim(), OPS_ERROR(ErrCode::PARAM));
-
+        TORCH_CHECK(gmm_x.size(1) == gmm_weight.size(1), "The K-axis in the two inputs of gmm must be equal, but in reality, the K-axis of gmm_x is ",
+        gmm_x.size(1), " and the K-axis of gmm_weight is ", gmm_weight.size(1), "." + OPS_ERROR(ErrCode::PARAM));
+        // 校验ep_world_size
+        TORCH_CHECK(SUPPORT_WORLD_SIZE_LIST.find(ep_world_size) != SUPPORT_WORLD_SIZE_LIST.end(),
+            "The world_size should be in [2, 4, 8, 16, 32, 64, 128, 256], but the actual value is ", ep_world_size, OPS_ERROR(ErrCode::VALUE));
+        // 处理group_sizes
+        at::IntArrayRef group_size_list = group_size.value_or(at::IntArrayRef{});
+        int64_t group_sizes = op_plugin::utils::check_and_get_group_size(group_size_list);
+        
         bool trans_gmm_weight = false;
         bool trans_mm_weight = false;
 
@@ -86,14 +86,10 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         for (auto &i : recv_counts) {
             bsk += i;
         }
-        int64_t n1 = gmm_weight.size(2);
+        std::cout<<"=======bsk========"<<bsk<<std::endl;
+
+        int64_t n1 = gmm_weight.size(DIM_TWO);
         if (mm_x.has_value() && mm_weight.has_value()) {
-            TORCH_CHECK(mm_x_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR,
-                "mm_x_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
-                mm_x_quant_mode.value_or(QUANT_MODE_PERTENSOR), OPS_ERROR(ErrCode::PARAM));
-            TORCH_CHECK(mm_weight_quant_mode.value_or(QUANT_MODE_PERTENSOR) == QUANT_MODE_PERTENSOR,
-                "mm_weight_quant_mode only support 1 (QUANT_MODE_PERTENSOR), but got ",
-                mm_weight_quant_mode.value_or(QUANT_MODE_PERTENSOR), OPS_ERROR(ErrCode::PARAM));
             TORCH_CHECK(mm_x_scale.has_value() && mm_weight_scale.has_value(),
                 "mm_x_scale and mm_weight_scale are required when mm_x and mm_weight are provided",
                 OPS_ERROR(ErrCode::PARAM));
@@ -132,38 +128,38 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
             : npu_preparation::convert_to_acl_data_type(gmm_weight_scale.scalar_type())};
         TensorWrapper mm_x_scale_wrapper = {mm_x_scale.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_x_scale_dtype.value_or(0))};
         TensorWrapper mm_weight_scale_wrapper = {mm_weight_scale.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_weight_scale_dtype.value_or(0))};
-        TensorWrapper gmm_x_offset_wrapper = {gmm_x_offset.value_or(at::Tensor()), c10_npu::GetAclDataType(gmm_x_dtype.value_or(0))};
-        TensorWrapper gmm_weight_offset_wrapper = {gmm_weight_offset.value_or(at::Tensor()), c10_npu::GetAclDataType(gmm_weight_dtype.value_or(0))};
-        TensorWrapper mm_x_offset_wrapper = {mm_x_offset.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_x_dtype.value_or(0))};
-        TensorWrapper mm_weight_offset_wrapper = {mm_weight_offset.value_or(at::Tensor()), c10_npu::GetAclDataType(mm_weight_dtype.value_or(0))};
         TensorWrapper comm_quant_scale_wrapper = {comm_quant_scale.value_or(at::Tensor()), c10_npu::GetAclDataType(comm_quant_dtype.value_or(0))};
-        TensorWrapper gmm_y_wrapper = {gmm_y, c10_npu::GetAclDataType(gmm_y_dtype)};
-        TensorWrapper mm_y_wrapper = {mm_y, c10_npu::GetAclDataType(mm_y_dtype.value_or(0))};
 
-        int64_t gmm_x_quant_mode_real = gmm_x_quant_mode.value_or(1);
-        int64_t gmm_weight_quant_mode_real = gmm_weight_quant_mode.value_or(1);
-        int64_t mm_x_quant_mode_real = mm_x_quant_mode.value_or(1);
-        int64_t mm_weight_quant_mode_real = mm_weight_quant_mode.value_or(1);
+        int64_t gmm_x_quant_mode_real = gmm_x_quant_mode.value();
+        int64_t gmm_weight_quant_mode_real = gmm_weight_quant_mode.value();
+        int64_t mm_x_quant_mode_real = mm_x_quant_mode.value();
+        int64_t mm_weight_quant_mode_real = mm_weight_quant_mode.value();
         int64_t comm_quant_mode_real = comm_quant_mode.value_or(0);
         int64_t comm_quant_dtype_real = comm_quant_dtype.value_or(0);
-        // 当前暂不支持pergroup量化，groupsize直接赋值为0；
-        int64_t group_size_real = 0;
+
+        std::cout<<"=======gmm_x_dtype========"<<gmm_x_dtype<<std::endl;
+        std::cout<<"=======gmm_weight_dtype========"<<gmm_weight_dtype<<std::endl;
+        std::cout<<"=======gmm_x_scale_dtype========"<<gmm_x_scale_dtype<<std::endl;
+        std::cout<<"=======gmm_weight_scale_dtype========"<<gmm_weight_scale_dtype<<std::endl;
+        
+        std::cout<<"=======gmm_x_quant_mode_real========"<<gmm_x_quant_mode_real<<std::endl;
+        std::cout<<"=======gmm_weight_quant_mode_real========"<<gmm_weight_quant_mode_real<<std::endl;
+        std::cout<<"=======mm_x_quant_mode_real========"<<mm_x_quant_mode_real<<std::endl;
+        std::cout<<"=======mm_weight_quant_mode_real========"<<mm_weight_quant_mode_real<<std::endl;
+
+        std::cout<<"[PTA]=======aclnnQuantGroupedMatMulAlltoAllv========"<<gmm_weight_scale_dtype<<std::endl;
 
         EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllv,
                      gmm_x_wrapper,
                      gmm_weight_wrapper,
                      gmm_x_scale_wrapper,
                      gmm_weight_scale_wrapper,
-                     gmm_x_offset_wrapper,
-                     gmm_weight_offset_wrapper,
                      send_count_tensor_real,
                      recv_count_tensor_real,
                      mm_x_wrapper,
                      mm_weight_wrapper,
                      mm_x_scale_wrapper,
                      mm_weight_scale_wrapper,
-                     mm_x_offset_wrapper,
-                     mm_weight_offset_wrapper,
                      comm_quant_scale_wrapper,
                      gmm_x_quant_mode_real,
                      gmm_weight_quant_mode_real,
@@ -171,15 +167,15 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                      mm_weight_quant_mode_real,
                      comm_quant_mode_real,
                      comm_quant_dtype_real,
-                     group_size_real,
+                     group_sizes,
                      hcom_ptr,
                      ep_world_size,
                      send_counts,
                      recv_counts,
                      trans_gmm_weight,
                      trans_mm_weight,
-                     gmm_y_wrapper,
-                     mm_y_wrapper);
+                     gmm_y,
+                     mm_y);
         return std::tie(gmm_y, mm_y);
     }
 } // namespace op_api
