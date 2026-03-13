@@ -160,10 +160,10 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
         npu_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
+            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=None, value_sink=None,
             layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
+            value_quant_mode=2, rope_head_dim=64, key_dtype=None, value_dtype=None)
 
         npu_out = npu_out.cpu().to(torch.float32).numpy()
         cpu_out = cpu_out.to(torch.float32).numpy()
