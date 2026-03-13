@@ -59,7 +59,7 @@ at::Tensor construct_quant_sparse_infer_pioneer_output_tensor(
     return output;
 }
 
-at::Tensor _npu_kv_quant_sparse_flash_attention_pioneer(
+at::Tensor npu_kv_quant_sparse_flash_attention_pioneer(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
     const at::Tensor &sparse_indices, double scale_value,
     int64_t key_quant_mode, int64_t value_quant_mode,

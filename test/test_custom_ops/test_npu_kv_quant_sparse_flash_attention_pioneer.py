@@ -157,7 +157,7 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
 
-        npu_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+        npu_out = torch_npu.npu_kv_quant_sparse_flash_attention_pioneer(
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=None, value_sink=None,
