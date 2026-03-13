@@ -56,16 +56,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
         auto dequant_scale_w_dq_dtype = dequant_scale_w_dq.value().dtype();
         auto dequant_scale_w_uq_qr_dtype = dequant_scale_w_uq_qr.value().dtype();
         auto dequant_scale_w_dkv_kr_dtype = dequant_scale_w_dkv_kr.value().dtype();
-        #if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
-            TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
-                "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be torch.float8_e8m0fnu",
-                OPS_ERROR(ErrCode::PARAM));
-        #endif
-        #if VERSION_BETWEEN(V2R1, V2R6)
-            TORCH_CHECK(weight_quant_mode != 3,
-                    "torch_npu supports the float8_e8m0 only in version later than v2.7.",
-                    OPS_ERROR(ErrCode::PARAM));
-        #endif
+#if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
+        TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
+            "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be torch.float8_e8m0fnu",
+            OPS_ERROR(ErrCode::PARAM));
+#endif
+#if VERSION_BETWEEN(V2R1, V2R6)
+        TORCH_CHECK(false, "torch_npu supports the float8_e8m0 only in version later than v2.7.", OPS_ERROR(ErrCode::PARAM));
+#endif
     }
 
     at::Tensor query;
@@ -177,16 +175,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         auto dequant_scale_w_dq_dtype = dequant_scale_w_dq.value().dtype();
         auto dequant_scale_w_uq_qr_dtype = dequant_scale_w_uq_qr.value().dtype();
         auto dequant_scale_w_dkv_kr_dtype = dequant_scale_w_dkv_kr.value().dtype();
-        #if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
-            TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
-                "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be torch.float8_e8m0fnu",
-                OPS_ERROR(ErrCode::PARAM));
-        #endif
-        #if VERSION_BETWEEN(V2R1, V2R6)
-            TORCH_CHECK(weight_quant_mode != 3,
-                    "torch_npu supports the float8_e8m0 only in version later than v2.7.",
-                    OPS_ERROR(ErrCode::PARAM));
-        #endif
+#if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
+        TORCH_CHECK(dequant_scale_x_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dq_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_uq_qr_dtype == at::kFloat8_e8m0fnu && dequant_scale_w_dkv_kr_dtype == at::kFloat8_e8m0fnu,
+            "dequant_scale_x, dequant_scale_w_dq, dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr Dtype in weight_quant_mode=3 must be torch.float8_e8m0fnu",
+            OPS_ERROR(ErrCode::PARAM));
+#endif
+#if VERSION_BETWEEN(V2R1, V2R6)
+        TORCH_CHECK(false, "torch_npu supports the float8_e8m0 only in version later than v2.7.", OPS_ERROR(ErrCode::PARAM));
+#endif
     }
 
     at::Tensor query;
