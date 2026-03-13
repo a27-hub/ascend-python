@@ -46,5 +46,5 @@ at::Tensor empty_with_swapped_memory(c10::IntArrayRef size, c10::optional<at::Sc
 `npu_hans_encode`<br>
 `npu_hans_decode`<br>
 
-- Atlas A3 训练系列产品，该接口申请的特殊Tensor支持直接打印。
-- Atlas A2 训练系列产品，该接口申请的特殊Tensor不支持直接打印，需要查看值时要先通过`mul_`转为普通Tensor再打印。
+- 当CANN版本为8.5.0及以上且驱动版本为25.5.2及以上时，该接口申请的特殊Tensor支持直接打印。
+- 当CANN版本小于8.5.0且驱动版本小于25.5.2时，该接口申请的特殊Tensor不支持直接打印，此时会打印warning日志，需要查看值时要先通过`mul_`转为普通Tensor再打印。
