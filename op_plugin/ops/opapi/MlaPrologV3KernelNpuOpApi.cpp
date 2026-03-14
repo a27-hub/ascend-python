@@ -43,7 +43,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
-    TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    if (weight_quant_mode == 3) {
+        TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    }
 
     auto token_x_dim = token_x.dim();
     TORCH_CHECK(token_x_dim == DIM_2 || token_x_dim == DIM_3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
@@ -178,7 +180,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
-    TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    if (weight_quant_mode == 3) {
+        TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    }
 
     auto token_x_dim = token_x.dim();
     TORCH_CHECK(token_x_dim == DIM_2 || token_x_dim == DIM_3, "token_x dim num should be 2 or 3, but the actual value is ", token_x_dim, OPS_ERROR(ErrCode::PARAM));
