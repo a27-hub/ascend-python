@@ -191,31 +191,22 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         } else {
             output_size = {x1.sizes()[0], x2.sizes()[1] * INT4_NUMS_IN_INT32};
         }
-    } else if (mxfp4_valid) {
-        int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
-        int64_t x1_size_last = x1.sizes()[x1_dim_num - 1];
-        int64_t x2_size_last_second = x2.sizes()[x2_dim_num - LAST_SECOND_DIM_INDEX];
-        int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
-        int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
-        int64_t n_new = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
-        fprintf(stderr,
-                "[QuantMatmul mxfp4] trans_x1=%d trans_x2=%d x1_dim_num=%ld x2_dim_num=%ld "
-                "LAST_SECOND_DIM_INDEX=%zu FP4_IN_INT8=%ld | "
-                "x1.sizes()[dim-2]=%ld x1.sizes()[dim-1]=%ld "
-                "x2.sizes()[dim-2]=%ld x2.sizes()[dim-1]=%ld | m_new=%ld n_new=%ld\n",
-                (int)trans_x1, (int)trans_x2, (long)x1_dim_num, (long)x2_dim_num,
-                (size_t)LAST_SECOND_DIM_INDEX, (long)FP4_IN_INT8,
-                (long)x1_size_last_second, (long)x1_size_last,
-                (long)x2_size_last_second, (long)x2_size_last,
-                (long)m_new, (long)n_new);
-        output_size = {m_new, n_new};
     } else {
         std::vector<uint64_t> batch_record;
         uint64_t batch_val = infer_out_batch_shape(x1, x2, batch_record);
         const at::Tensor long_tensor = x1_dim_num > x2_dim_num ? x1 : x2;
         output_size = op_infer::array_to_small_vector(long_tensor.sizes());
-        output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
-        output_size[long_tensor.dim() - 1] = x2_n_dim;
+        if (mxfp4_valid) {
+            int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
+            int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
+            int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
+            int64_t n_new = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = m_new
+            output_size[long_tensor.dim() - 1] = n_new;
+        } else {
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
+            output_size[long_tensor.dim() - 1] = x2_n_dim;
+        }
         for (int64_t i = 0; i < long_tensor.dim() - LAST_SECOND_DIM_INDEX; i++) {
             output_size[i] = static_cast<int64_t>(batch_record[i]);
         }
