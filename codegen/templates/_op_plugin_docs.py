@@ -11526,57 +11526,43 @@ if __name__ == "__main__":
 _add_torch_npu_docstr(
     "npu_alltoallv_quant_gmm",
     """
-功能说明
-    接口功能：实现路由专家AlltoAllv和GroupedMatMul的融合，先通信后计算。同时与共享专家MatMul计算并行融合。
-    计算公式：
-    假设通信域中的总卡数为epWorldSize，每张卡上通信后路由专家个数为e，每张卡分组矩阵乘只负责本卡专家的计算。
-    对于每张卡的计算公式如下：本卡共享专家分组矩阵乘计算、Alltoallv通信和permute、本卡路由专家按专家维度分组矩阵乘计算。
-    当前仅支持 per-tensor 对称量化，且offset均为空。
-
 函数原型
-    torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scale, hcom, ep_world_size, send_counts, recv_counts, gmm_y_dtype, *, send_counts_tensor=None, recv_counts_tensor=None, mm_x=None, mm_weight=None, mm_x_scale=None, mm_weight_scale=None, gmm_x_offset=None, gmm_weight_offset=None, mm_x_offset=None, mm_weight_offset=None, gmm_x_quant_mode=None, gmm_weight_quant_mode=None, mm_x_quant_mode=None, mm_weight_quant_mode=None, permute_out_flag=False, group_size=None, gmm_x_dtype=None, gmm_weight_dtype=None, gmm_x_scale_dtype=None, gmm_weight_scale_dtype=None, mm_x_dtype=None, mm_weight_dtype=None, mm_x_scale_dtype=None, mm_weight_scale_dtype=None, mm_y_dtype=None) -> (Tensor, Tensor, Tensor)
-
+    torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scale, hcom, ep_world_size, send_counts, recv_counts, gmm_y_dtype, *, send_counts_tensor=None, recv_counts_tensor=None, mm_x=None, mm_weight=None, mm_x_scale=None, mm_weight_scale=None, gmm_x_quant_mode=None, gmm_weight_quant_mode=None, mm_x_quant_mode=None, mm_weight_quant_mode=None, permute_out_flag=False, group_size=None, gmm_x_dtype=None, gmm_weight_dtype=None, gmm_x_scale_dtype=None, gmm_weight_scale_dtype=None, mm_x_dtype=None, mm_weight_dtype=None, mm_x_scale_dtype=None, mm_weight_scale_dtype=None, mm_y_dtype=None) -> (Tensor, Tensor, Tensor)
 参数说明
-    gmm_x (Tensor): 必选输入，表示本卡通信前路由专家原始左矩阵的输入。数据类型为hifloat8。维度为2维，shape为(BSK，H1)，format为ND，不支持非连续Tensor。
-    gmm_weight (Tensor): 必选输入，表示本卡路由专家分组矩阵乘的右矩阵输入。数据类型为hifloat8。维度为3维，shape为(e，H1，N1)，format为ND，不支持非连续Tensor。
-    gmm_x_scale (Tensor): 必选输入，表示路由专家左矩阵gmm_x的量化系数。数据类型为float32。pertensor量化场景下维度为1维，shape为(1，)。format为ND，不支持非连续Tensor。
-    gmm_weight_scale (Tensor): 必选输入，表示路由专家右矩阵gmm_weight的量化系数。数据类型为float32。pertensor量化场景下维度为1维，shape为(1，)。format为ND，不支持非连续Tensor。
-    hcom (str): 必选输入。Host侧标识列组的字符串，即通信域名称，通过get_hccl_comm_name接口获取。
-    ep_world_size (int): 必选输入。通信域内的rank总数。支持范围为2、4、8、16、32、64、128、256。
-    send_counts (List(int)): 必选输入。长度为e * ep_world_size的整数列表，表示本卡发送给每个目标卡的token数。假设目标卡号为i（0<=i<ep_world_size），发送专家号为j（0<=j<e），send_counts[i][j]表示本卡发送给第i张卡第j个专家的token数。约束：长度必须等于e * ep_world_size，且元素均为非负整数。
-    recv_counts (List(int)): 必选输入。长度为e * ep_world_size的整数列表，表示本卡从每个目标卡接收的token数。假设目标卡号为i（0<=i<ep_world_size），接收专家号为j（0<=j<e），recv_counts[i][j]表示本卡接收第i张卡第j个专家的token数。约束：长度必须等于e * ep_world_size，且元素均为非负整数。
-    gmm_y_dtype (int): 必选输入。表示路由专家分组矩阵乘计算输出张量gmm_y的数据类型（例如：torch.float16）。
-    send_counts_tensor (Tensor): 可选输入，当前仅支持输入None。
-    recv_counts_tensor (Tensor): 可选输入，当前仅支持输入None。
-    mm_x (Tensor): 可选输入，默认None。表示共享专家分组矩阵乘的左矩阵输入，仅在启用共享专家时输入。数据类型为hifloat8。维度为2维，shape为 (BS，H2)。format为ND，不支持非连续Tensor。
-    mm_weight (Tensor): 可选输入，默认None。表示共享专家分组矩阵乘的右矩阵输入，仅在启用共享专家时输入。数据类型为hifloat8。维度为2维，shape为(H2，N2)。format为ND，不支持非连续Tensor。
-    mm_x_scale (Tensor): 可选输入，默认None。表示共享专家左矩阵mm_x的量化系数。数据类型为float32。pertensor量化场景下维度为1维，shape为(1，)。format为ND，不支持非连续Tensor。
-    mm_weight_scale (Tensor): 可选输入，默认None。表示共享专家右矩阵mm_weight的量化系数。数据类型为float32。pertensor量化场景下维度为1维，shape为(1，)。format为ND，不支持非连续Tensor。
-    gmm_x_offset (Tensor): 可选输入，必须为None。表示路由专家左矩阵的量化偏置，预留参数。
-    gmm_weight_offset (Tensor): 可选输入，必须为None。表示路由专家右矩阵的量化偏置，预留参数。
-    mm_x_offset (Tensor): 可选输入，必须为None。表示共享专家左矩阵的量化偏置，预留参数。
-    mm_weight_offset (Tensor): 可选输入，必须为None。表示共享专家右矩阵的量化偏置，预留参数。
-    gmm_x_quant_mode (int): 可选输入，表示路由专家左矩阵的量化模式。当前仅支持1，表示pertensor量化。
-    gmm_weight_quant_mode (int): 可选输入，表示路由专家右矩阵的量化模式。当前仅支持1，表示pertensor量化。
-    mm_x_quant_mode (int): 可选输入，表示共享专家左矩阵的量化模式。当前仅支持1，表示pertensor量化。
-    mm_weight_quant_mode (int): 可选输入，表示共享专家右矩阵的量化模式。当前仅支持1，表示pertensor量化。
-    permute_out_flag (bool): 可选输入，默认False。是否返回通信后重排的路由专家矩阵（即permute_out）。若为True，则返回值中包含该张量。
-    group_size (List(int)): 可选输入，当前仅支持None，预留参数。
-    gmm_x_dtype (int): 可选输入，默认None。表示路由专家左矩阵gmm_x的实际数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    gmm_weight_dtype (int): 可选输入，默认None。表示路由专家右矩阵gmm_weight的实际数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    gmm_x_scale_dtype (int): 可选输入，默认None。表示路由专家左矩阵量化系数gmm_x_scale的实际数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    gmm_weight_scale_dtype (int): 可选输入，默认None。表示路由专家右矩阵量化系数gmm_weight_scale的实际数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    mm_x_dtype (int): 可选输入，表示共享专家左矩阵mm_x的数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    mm_weight_dtype (int): 可选输入，表示共享专家右矩阵mm_weight的数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    mm_x_scale_dtype (int): 可选输入，表示共享专家左矩阵量化系数mm_x_scale的数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    mm_weight_scale_dtype (int): 可选输入，表示共享专家右矩阵量化系数mm_weight_scale的数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-    mm_y_dtype (int): 可选输入，表示共享专家输出张量mm_y的数据类型。对于PyTorch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
-
+    gmm_x（Tensor）：必选输入，表示本卡通信前路由专家原始左矩阵的输入。数据类型支持hifloat8。支持2维，shape为(BSK，H1)，数据格式支持ND。
+    gmm_weight（Tensor）：必选输入，表示本卡路由专家GroupedMatmul的右矩阵输入。数据类型支持hifloat8。支持3维，shape为(e，H1，N1)，数据格式支持ND。
+    gmm_x_scale（Tensor）：必选输入，表示路由专家左矩阵gmm_x的量化系数。数据类型支持float32。pertensor量化场景下支持1维，shape为(1，)。数据格式支持ND。
+    gmm_weight_scale（Tensor）：必选输入，表示路由专家右矩阵gmm_weight的量化系数。数据类型支持float32。pertensor量化场景下支持1维，shape为(1，)。数据格式支持ND。
+    hcom（str）：必选输入。Host侧标识列组的字符串，即通信域名称，通过get_hccl_comm_name接口获取。
+    ep_world_size（int）：必选输入。通信域内的rank总数。支持范围为2、4、8、16、32、64、128、256。
+    send_counts（List(int)）：必选输入。长度为e*ep_world_size的整数列表，表示本卡发送给每个目标卡的token数。假设目标卡号为i（0<=i<ep_world_size），发送专家号为j（0<=j<e），send_counts[i][j]表示本卡发送给第i张卡第j个专家的token数。约束：长度必须等于e*ep_world_size，且元素均为非负整数。
+    recv_counts（List(int)）：必选输入。长度为e*ep_world_size的整数列表，表示本卡从每个目标卡接收的token数。假设目标卡号为i（0<=i<ep_world_size），接收专家号为j（0<=j<e），recv_counts[i][j]表示本卡接收第i张卡第j个专家的token数。约束：长度必须等于e*ep_world_size，且元素均为非负整数。
+    gmm_y_dtype（int）：必选输入。表示路由专家GroupedMatmul计算输出张量gmm_y的数据类型（例如：torch.float16）。数据类型支持float16、bfloat16。
+    send_counts_tensor（Tensor）：可选输入，当前仅支持输入None。
+    recv_counts_tensor（Tensor）：可选输入，当前仅支持输入None。
+    mm_x（Tensor）：可选输入，默认None。表示共享专家Matmul的左矩阵输入，仅在启用共享专家时输入。数据类型支持hifloat8。支持2维，shape为 (BS，H2)。数据格式支持ND。
+    mm_weight（Tensor）：可选输入，默认None。表示共享专家Matmul的右矩阵输入，仅在启用共享专家时输入。数据类型支持hifloat8。支持2维，shape为(H2，N2)。数据格式支持ND。
+    mm_x_scale（Tensor）：可选输入，默认None。表示共享专家左矩阵mm_x的量化系数。数据类型支持float32。pertensor量化场景下支持1维，shape为(1，)。数据格式支持ND。
+    mm_weight_scale（Tensor）： 可选输入，默认None。表示共享专家右矩阵mm_weight的量化系数。数据类型支持float32。pertensor量化场景下支持1维，shape为(1，)。数据格式支持ND。
+    gmm_x_quant_mode（int）：可选输入，表示路由专家左矩阵的量化模式。当前仅支持1，表示pertensor量化。
+    gmm_weight_quant_mode（int）：可选输入，表示路由专家右矩阵的量化模式。当前仅支持1，表示pertensor量化。
+    mm_x_quant_mode（int）：可选输入，表示共享专家左矩阵的量化模式。当前仅支持1，表示pertensor量化。
+    mm_weight_quant_mode（int）：可选输入，表示共享专家右矩阵的量化模式。当前仅支持1，表示pertensor量化。
+    permute_out_flag（bool）：可选输入，默认False。是否返回通信后重排的路由专家矩阵（即permute_out）。若为True，则返回值中包含该张量。
+    group_size（List(int)）：可选输入，当前仅支持None，预留参数
+    gmm_x_dtype（int）：可选输入，默认None。表示路由专家左矩阵gmm_x的实际数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    gmm_weight_dtype（int）：可选输入，默认None。表示路由专家右矩阵gmm_weight的实际数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    gmm_x_scale_dtype（int）：可选输入，默认None。表示路由专家左矩阵量化系数gmm_x_scale的实际数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    gmm_weight_scale_dtype（int）：可选输入，默认None。表示路由专家右矩阵量化系数gmm_weight_scale的实际数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    mm_x_dtype（int）：可选输入，表示共享专家左矩阵mm_x的数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    mm_weight_dtype（int）：可选输入，表示共享专家右矩阵mm_weight的数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    mm_x_scale_dtype（int）：可选输入，表示共享专家左矩阵量化系数mm_x_scale 的数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    mm_weight_scale_dtype（int）：可选输入，表示共享专家右矩阵量化系数mm_weight_scale的数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。
+    mm_y_dtype（int）：可选输入，表示共享专家输出张量mm_y的数据类型。对于PyTroch原生不支持的数据类型（如float8_e8m0）需要指定该参数取值。数据类型支持float16、bfloat16。
 返回值说明
-    gmm_y (Tensor): 表示最终的计算结果，数据类型为gmm_y_dtype指定的类型，维度为2维，shape为(A，N1)。format为ND。
-    mm_y (Tensor): 表示共享专家MatMul的输出，数据类型为mm_y_dtype指定的类型，维度为2维，shape为(BS，N2)。仅当传入mm_x与mm_weight才输出。format为ND。
-    permute_out (Tensor): 计算输出，Permute之后的输出，数据类型与gmm_x保持一致。format为ND。
-
+    gmm_y（Tensor）：表示路由专家GroupedMatmul计算的输出，数据类型为gmm_y_dtype指定的类型，支持float16、bfloat16。支持2维，shape为(A，N1)。数据格式支持ND。
+    mm_y（Tensor）：表示共享专家MatMul的输出，数据类型为mm_y_dtype指定的类型，支持float16、bfloat16。支持2维，shape为(BS，N2)。仅当传入mm_x与mm_weight才输出。数据格式支持ND。
+    permute_out（Tensor）：计算输出，Permute之后的输出，数据类型与gmm_x保持一致。支持2维，shape为(A，N1)。数据格式支持ND。
 约束说明
     该接口支持训练、推理场景下使用。
     该接口仅支持单算子模式调用。
@@ -11588,11 +11574,11 @@ _add_torch_npu_docstr(
         H2表示本卡共享专家的hidden size，取值范围(0，12288]。
         N1表示路由专家输出维度，取值范围(0，65536)。
         N2表示共享专家输出维度，取值范围(0，65536)。
-        e表示通信后每张卡上的专家数量，取值范围(0，32]。e * ep_world_size <= 256。
-        A表示路由专家计算输出的总token数。A = sum(recv_counts)。EP通信域内所有卡上的A累加和等于所有卡上的BSK累加和。
+        e表示通信后每张卡上的专家数量，取值范围(0，32]。e*ep_world_size<=256。
+        A表示路由专家计算输出的总token数。A=sum(recv_counts)。EP通信域内所有卡上的A累加和等于所有卡上的BSK累加和。
         第i张卡发送到第j张卡数据量为send_counts[j]与第j张卡接收数据量为recv_counts[i]必须相等。
     gmm_x_quant_mode、gmm_weight_quant_mode、mm_x_quant_mode、mm_weight_quant_mode值与量化模式关系如下：
-        0：不量化
+        0：非量化
         1：pertensor
         2：perchannel
         3：pertoken
@@ -11601,7 +11587,6 @@ _add_torch_npu_docstr(
         6：mx量化
         7：pertoken动态量化
         当前仅支持取1，表示pertensor量化场景。
-
 调用示例
     单算子模式调用：
     import torch
@@ -11680,10 +11665,6 @@ _add_torch_npu_docstr(
             mm_y_dtype=out_dtype,
             send_counts_tensor=None,
             recv_counts_tensor=None,
-            gmm_x_offset=None,
-            gmm_weight_offset=None,
-            mm_x_offset=None,
-            mm_weight_offset=None,
             group_size=None
         )
 
