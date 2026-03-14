@@ -191,8 +191,8 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
             output_size = {x1.sizes()[0], x2.sizes()[1] * INT4_NUMS_IN_INT32};
         }
     } else if (mxfp4_valid) {
-        int64_t m_new = !trans_x1 ? x1.sizes()[0] : x1.sizes()[0] * FP4_IN_INT8;
-        int64_t n_new = trans_x2 ? x2.sizes()[1] : x2.sizes()[1] * FP4_IN_INT8;
+        int64_t m_new = !trans_x1 ? x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX] : x1.sizes()[x1_dim_num - 1] * FP4_IN_INT8;
+        int64_t n_new = trans_x2 ? x2.sizes()[x2_n_dim - LAST_SECOND_DIM_INDEX] : x2.sizes()[x2_n_dim - 1] * FP4_IN_INT8;
         output_size = {m_new, n_new};
     } else {
         std::vector<uint64_t> batch_record;
