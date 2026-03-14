@@ -43,7 +43,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
-    if (weight_quant_mode == 3) {
+    if (weight_quant_mode == MODE_3) {
         TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
 
@@ -180,7 +180,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     int64_t query_quant_mode, int64_t ckvkr_repo_mode, int64_t quant_scale_repo_mode, int64_t tile_size, double qc_qr_scale, double kc_scale)
 {
     // construct the output tensor
-    if (weight_quant_mode == 3) {
+    if (weight_quant_mode == MODE_3) {
         TORCH_CHECK(c10_npu::IsAclnnOnly(), "When weight_quant_mode is 3, not support on this soc version.", OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
 
