@@ -278,7 +278,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
                          result_wrapper);
         }
     } else {
-        if (!is_a4w4 && is_nz_format(x2)) {
+        if (is_nz_format(x2)) {
             EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, y_scale,
                          x1_offset, offset_real, y_offset, bias_real, transpose1, transpose2, group_size,
                          result_wrapper);

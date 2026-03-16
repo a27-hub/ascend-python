@@ -30,6 +30,7 @@ typedef void(*AddTensorAddrToCachedList) (void *addr);
 
 static std::unordered_map<aclFormat, aclFormat> FORMAT_FAKE_TO_REAL {
     { ACL_FORMAT_FRACTAL_NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_32 },
+    { ACL_FORMAT_FRACTAL_NZ, ACL_FORMAT_FRACTAL_NZ }
 };
 
 bool checkOwner(string cusLibPath)
