@@ -50,11 +50,7 @@ std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(con
     }
     at::Tensor sparse_indices_out = npu_preparation::apply_tensor_without_format(output_size, at::kInt);
     at::Tensor sparse_values_out;
-    if (return_value) {
-        sparse_values_out = npu_preparation::apply_tensor_without_format(output_size, query.dtype());
-    } else {
-        sparse_values_out = npu_preparation::apply_tensor_without_format({0}, query.dtype());
-    }
+    sparse_values_out = npu_preparation::apply_tensor_without_format(output_size, query.dtype());
 
     return std::tuple<at::Tensor, at::Tensor>(sparse_indices_out, sparse_values_out);
 }
