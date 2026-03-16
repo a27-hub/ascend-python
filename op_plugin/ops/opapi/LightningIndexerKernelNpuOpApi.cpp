@@ -56,6 +56,7 @@ std::tuple<at::Tensor, at::Tensor> construct_lightning_indexer_output_tensor(con
         sparse_values_out = npu_preparation::apply_tensor_without_format({0}, query.dtype());
     }
 
+    printf("op-plugin return_value3: %d\n", return_value);
     return std::tuple<at::Tensor, at::Tensor>(sparse_indices_out, sparse_values_out);
 }
 
@@ -67,6 +68,7 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode,
     int64_t pre_tokens, int64_t next_tokens, bool return_value)
 {
+    printf("op-plugin return_value1: %d\n", return_value);
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
 
@@ -87,6 +89,7 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
         query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode, pre_tokens, next_tokens,
         return_value, sparse_indices_out, sparse_values_out);
 
+    printf("op-plugin return_value2: %d\n", return_value);
     return std::tuple<at::Tensor, at::Tensor>(sparse_indices_out, sparse_values_out);
 }
 
