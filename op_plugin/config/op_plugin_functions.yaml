@@ -961,7 +961,7 @@ official:
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-  
+
   - func: _addmm_activation.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, bool use_gelu=False, Tensor(a!) out) -> Tensor(a!)
     op_api: all_version
 
@@ -5444,6 +5444,10 @@ custom:
   - func: attention_worker_scheduler(Tensor self) -> Tensor
     op_api: [v2.1, newest]
 
+  - func: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
+
   - func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, *, Tensor? q=None, Tensor? min_ps=None, float? eps=1e-8, bool? is_need_logits=False, int? top_k_guess=32, int? ks_max=1024, bool? input_is_logits=True, str? post_sample='qSample', Generator? generator=None) -> (Tensor, Tensor)
     op_api: all_version
     tags: nondeterministic_seeded
@@ -7248,12 +7252,12 @@ custom:
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
     internal_format_opapi: [v2.6, newest]
-  
+
   - func: save_npugraph_tensor.tensorlist(Tensor[] input, *, str? save_name=None, str? save_dir=None, str? suffix=None) -> ()
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
     internal_format_opapi: [v2.6, newest]
-  
+
 
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
