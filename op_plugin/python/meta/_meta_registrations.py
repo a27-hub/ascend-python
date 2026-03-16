@@ -4092,7 +4092,8 @@ def npu_group_quant_meta(x, scale, group_index, *, offset=None, dst_dtype=None):
 
 
 @impl(m, "npu_dynamic_quant")
-def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1, quant_mode="pertoken"):
+def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None,
+                      dst_type=1, quant_mode="pertoken", dst_type_max=0.0):
     # default dst_type 1 is the enum of torch.int8
     dim_num = input_dummy.dim()
     scale_shape = []
@@ -4125,7 +4126,8 @@ def npu_dynamic_quant(input_dummy, *, smooth_scales=None, group_index=None, dst_
 
 
 @impl(m, "npu_dynamic_quant_asymmetric")
-def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index=None, dst_type=1, quant_mode="pertoken"):
+def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index=None,
+                                 dst_type=1, quant_mode="pertoken", dst_type_max=0.0):
     # default dst_type 1 is the enum of torch.int8
     dim_num = input_dummy.dim()
     scale_offset_shape = []
@@ -4159,7 +4161,8 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
 
 
 @impl(m, "npu_dynamic_mx_quant")
-def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32, scale_alg=0):
+def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32,
+                         scale_alg=0, dst_type_max=0.0):
     dim_num = input_dummy.dim()
     mxscale_shape = []
     if axis < -dim_num or axis >= dim_num:
