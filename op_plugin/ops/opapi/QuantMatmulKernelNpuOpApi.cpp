@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <vector>
+#include <cstdio>
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
@@ -152,6 +153,15 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
                     "aclnnQuantMatmulV5 support A8W4, please upgrade CANN.",
                     OPS_ERROR(ErrCode::TYPE));
     }
+    fprintf(stderr, "[QuantMatmul shape] ***input x1: dim=%ld sizes=[", (long)x1.dim());
+    for (int64_t i = 0; i < x1.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1.size(i));
+    fprintf(stderr, "]\n");
+    fprintf(stderr, "[QuantMatmul shape] ***input x2: dim=%ld sizes=[", (long)x2.dim());
+    for (int64_t i = 0; i < x2.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2.size(i));
+    fprintf(stderr, "]\n");
+
     bool is_a8W4_int = x1.dtype() == at::kChar && x2.dtype() == at::kInt;
     bool is_a8W4_float = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kFloat;
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
@@ -162,6 +172,9 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
     auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
+
+    fprintf(stderr, "[QuantMatmul shape] ***trans_x1=%d trans_x2=%d x2_n_dim=%ld (effective x2 last dim)\n",
+            (int)trans_x1, (int)trans_x2, (long)x2_n_dim);
 #if VERSION_BETWEEN(V2R1, V2R7)
     bool mxfp4_valid = x1_dtype.has_value() && x2_dtype.has_value() &&
                                    x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
@@ -210,6 +223,11 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
             output_size[i] = static_cast<int64_t>(batch_record[i]);
         }
     }
+    fprintf(stderr, "[QuantMatmul shape] ***output_size: dim=%zu sizes=[", (size_t)output_size.size());
+    for (size_t i = 0; i < output_size.size(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)output_size[i]);
+    fprintf(stderr, "]\n");
+
     c10::TensorOptions options;
     aclDataType output_acltype = ACL_INT8;
     if (!output_dtype.has_value()) {
