@@ -813,11 +813,17 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
     } else if (ndim > 1) {
         if (wrapperStride[ndim - 1] == 1 && wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
+            fprintf(stderr,
+                    "[CollectB4ShapeInfo] branch: ndim>1, last_stride==1 and penultimate_stride==1 (both)\n");
             if (wrapperShape[ndim - PENULTIMATE_DIM] == 1) {
+                fprintf(stderr,
+                        "[CollectB4ShapeInfo] sub-branch: shape[dim-2]==1 -> scale last stride and dim-2 shape\n");
                 wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
                 wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
             }
             else if (wrapperShape[ndim - 1] == 1) {
+                fprintf(stderr,
+                        "[CollectB4ShapeInfo] sub-branch: shape[dim-1]==1 -> scale penultimate stride and dim-1 shape\n");
                 wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
                 wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
             }
