@@ -4836,5 +4836,6 @@ class TestBatchNormReduce(TestCase):
             self.assertEqual(input_fake_tensor.dtype, output_fake_tensor2.dtype)
 
 
+
 if __name__ == "__main__":
     run_tests()
