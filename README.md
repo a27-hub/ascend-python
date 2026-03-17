@@ -45,7 +45,7 @@ op-plugin仓旨在为torch_npu提供运行所需要的算子适配文件，两�
 
 ## 快速入门
 
-提供了一个通过OpPlugin插件实现PyTorch调用Ascend C自定义算子的完整开发指南，涵盖了从环境配置、算子注册、适配实现到测试验证提供了全流程说明。具体操作，请参考[调用样例](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/framework_feature_guide_pytorch/menu_framework_feature.md#L31)。
+提供了一个通过OpPlugin插件实现PyTorch调用Ascend C自定义算子的完整开发指南，涵盖了从环境配置、算子注册、适配实现到测试验证提供了全流程说明。具体操作，请参考[调用样例](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/framework_feature_guide_pytorch/opplugin_operator_adaptation.md)。
 
 ## API参考
 基于PyTorch2.9.0/2.8.0/2.7.1/2.6.0版本，提供Ascend Extension for PyTorch自定义API的功能说明、函数原型、参数说明与调用示例等。具体信息，请参考[自定义API参考](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/menu_Pytorch_API.md)。
