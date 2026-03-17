@@ -6421,9 +6421,10 @@ custom:
     op_api: all_version
     gen_opapi:
       out_x:
-        size: 'npu_moe_distribute_combine_teardown_out_size(expand_x, expert_ids)'
+        size: 'out_sizes[0]'
         dtype: expand_x
       new_params:
+        out_sizes: 'npu_moe_distribute_combine_teardown_out_size(expand_x, expert_ids)'
         group_ep_ptr: 'const_cast<char *>(group_ep.data())'
         comm_alg_ptr: 'const_cast<char *>(comm_alg.data())'
       exec: aclnnMoeDistributeCombineTeardown, expand_x, quant_expand_x, expert_ids, expand_idx, expert_scales, comm_cmd_info, x_active_mask, shared_expert_x, group_ep_ptr, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs, comm_quant_mode, comm_type, comm_alg_ptr, out_x
