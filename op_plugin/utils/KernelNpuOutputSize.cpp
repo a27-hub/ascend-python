@@ -2279,7 +2279,7 @@ c10::SmallVector<int64_t, SIZE> lstm_backward_npu_hc_prev_output_size(const at::
 
 inline static int64_t CeilX(int64_t x, int64_t align_len)
 {
-    if (align_len <= 0) {
+    if (align_len == 0) {
         return -1;
     }
     return (x + align_len - 1) / align_len;
@@ -2287,7 +2287,7 @@ inline static int64_t CeilX(int64_t x, int64_t align_len)
 
 inline static int64_t AlignX(int64_t x, int64_t align_len)
 {
-    if (align_len <= 0) {
+    if (align_len == 0) {
         return -1;
     }
     return ((x + align_len - 1) / align_len) * align_len;
@@ -2311,6 +2311,7 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_o
     constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
     constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
     constexpr int64_t MX_QUANT = 4;
+    constexpr int64_t NUM_2 = 2;
     constexpr int64_t BYTE_2 = 2;
     constexpr int64_t BYTE_4 = 4;
     constexpr int64_t ALGIN_2 = 2;
@@ -2335,7 +2336,7 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_o
     TORCH_CHECK(ep_rank_id >= 0 && ep_rank_id < ep_world_size,
         "ep_rank_id should be in [0, ep_world_size), but got ep_rank_id: ",
         ep_rank_id, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / 2,
+    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / NUM_2,
         "shared_expert_rank_num should be in [0, ep_world_size / 2], but got shared_expert_rank_num: ",
         shared_expert_rank_num, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
     if (ep_rank_id < shared_expert_rank_num) {
@@ -2368,15 +2369,16 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardow
     int64_t h = x.size(1);
     int64_t k = expert_ids.size(1);
     int64_t global_bs_real = (global_bs == 0) ? (bs * ep_world_size) : global_bs;
+    constexpr int64_t NUM_2 = 2;
     TORCH_CHECK(ep_rank_id >= 0 && ep_rank_id < ep_world_size,
         "ep_rank_id should be in [0, ep_world_size), but got ep_rank_id: ",
         ep_rank_id, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / 2,
+    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / NUM_2,
         "shared_expert_rank_num should be in [0, ep_world_size / 2], but got shared_expert_rank_num: ",
         shared_expert_rank_num, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
     int64_t local_moe_expert_num = 0;
     int64_t a = 0;
-    if (ep_rank_id < shared_expert_rank_num) {
+    if (shared_expert_rank_num != 0 && ep_rank_id < shared_expert_rank_num) {
         local_moe_expert_num = 1;
         a = global_bs_real / shared_expert_rank_num;
     } else {
