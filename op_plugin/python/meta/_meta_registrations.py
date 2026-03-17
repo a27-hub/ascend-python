@@ -169,7 +169,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
 
 
 @impl(m, "npu_mhc_pre")
-def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6):
+def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1e-6, out_flag=0):
     if (x.dim() == 4):
         batch = x.size(0)
         sequence = x.size(1)
@@ -195,6 +195,11 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         out_inv_rms = torch.empty([t], dtype=torch.float32, device='meta')
         out_hmix = torch.empty([t, mat_k], dtype=torch.float32, device='meta')
         out_hpre = torch.empty([t, nums_residual], dtype=torch.float32, device='meta')
+
+    if out_flag == 0:
+        out_inv_rms = None
+        out_hmix = None
+        out_hpre = None
 
     return (out_hin, out_post, out_hres, out_inv_rms, out_hmix, out_hpre)
 

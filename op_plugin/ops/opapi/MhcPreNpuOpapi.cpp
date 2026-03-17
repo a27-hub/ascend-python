@@ -121,8 +121,8 @@ construct_mhc_pre_output_tensor(const at::Tensor &x, const at::Tensor &phi) {
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha,
-            const at::Tensor &bias, const c10::optional<at::Tensor> &gamma, float norm_eps,
-            float hc_eps) {
+            const at::Tensor &bias, const c10::optional<at::Tensor> &gamma, double norm_eps,
+            double hc_eps, int64_t out_flag) {
     TORCH_CHECK(x.numel() > 0, "Tensor x is empty.");
     TORCH_CHECK(phi.numel() > 0, "Tensor phi is empty.");
     TORCH_CHECK(alpha.numel() > 0, "Tensor alpha is empty.");
@@ -136,9 +136,15 @@ npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha,
     at::Tensor outInvRms = std::get<3>(mhc_pre_output);
     at::Tensor outHmix = std::get<4>(mhc_pre_output);
     at::Tensor outHpre = std::get<5>(mhc_pre_output);
+    at::Tensor null_Tensor;
 
-    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
-                 outHres, outInvRms, outHmix, outHpre);
+    if (out_flag) {
+        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
+                     outHres, outInvRms, outHmix, outHpre);
+    } else {
+        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
+                     outHres, null_Tensor, null_Tensor, null_Tensor);
+    }
 
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
