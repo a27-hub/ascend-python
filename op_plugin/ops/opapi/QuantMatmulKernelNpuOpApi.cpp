@@ -209,6 +209,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         const at::Tensor long_tensor = x1_dim_num > x2_dim_num ? x1 : x2;
         output_size = op_infer::array_to_small_vector(long_tensor.sizes());
         if (mxfp4_valid) {
+            TORCH_CHECK(x[0].size(1) != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
             int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
             int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
             int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;

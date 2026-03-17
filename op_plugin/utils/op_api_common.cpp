@@ -812,18 +812,23 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
         fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim==1, multiply shape[0] by FP4_IN_INT8\n");
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
     } else if (ndim > 1) {
-        if (wrapperStride[ndim - 1] == 1) {
+        if (wrapperStride[ndim - 1] == 1 && wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
+            if (wrapperShape[ndim - PENULTIMATE_DIM] == 1) {
+                wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
+                wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            }
+            eles if (wrapperShape[ndim - 1] == 1) {
+                wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+                wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
+            }
+        } else if (wrapperStride[ndim - 1] == 1) {
             fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim>1, last stride==1 (last dim contiguous)\n");
-            wrapperStride[ndim - PENULTIMATE_DIM] =
-                wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
-            wrapperShape[ndim - 1] =
-                wrapperShape[ndim - 1] * FP4_IN_INT8;
+            wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
         } else if (wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
             fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim>1, penultimate stride==1\n");
-            wrapperStride[ndim - 1] =
-                wrapperStride[ndim - 1] * FP4_IN_INT8;
-            wrapperShape[ndim - PENULTIMATE_DIM] =
-                wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
+            wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
         }
 
         for (auto i = 0; i < (decltype(ndim))(ndim - PENULTIMATE_DIM); i++) {
