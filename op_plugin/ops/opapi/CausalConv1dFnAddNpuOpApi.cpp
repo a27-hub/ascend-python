@@ -37,6 +37,8 @@ namespace op_api
         at::Tensor y = npu_preparation::apply_tensor_without_format(output_size, x.options());
         auto conv_states_clone = conv_states.clone(at::MemoryFormat::Contiguous);
         constexpr int64_t run_mode = 0; // prefill mode
+        int64_t pad_slot_id_value = pad_slot_id.value_or(-1);
+        int64_t residual_connection_value = residual_connection.value_or(0);
         at::Tensor num_accepted_tokens;
         c10::string_view activation_str = activation.value_or("None");
         std::string input_activation = std::string(activation_str);
@@ -51,7 +53,7 @@ namespace op_api
         }
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnCausalConv1dAdd, x, weight, conv_states_clone,
                                      query_start_loc, cache_indices, initial_state_mode, bias, num_accepted_tokens,
-                                     activation_value, pad_slot_id, run_mode, residual_connection, y);
+                                     activation_value, pad_slot_id_value, run_mode, residual_connection_value, y);
         return std::make_tuple(y, conv_states_clone);
     }
 
@@ -70,6 +72,8 @@ namespace op_api
         auto output_size = x.sizes();
         at::Tensor y = npu_preparation::apply_tensor_without_format(output_size, x.options());
         constexpr int64_t run_mode = 0; // prefill mode
+        int64_t pad_slot_id_value = pad_slot_id.value_or(-1);
+        int64_t residual_connection_value = residual_connection.value_or(0);
         at::Tensor num_accepted_tokens;
         c10::string_view activation_str = activation.value_or("None");
         std::string input_activation = std::string(activation_str);
@@ -84,7 +88,7 @@ namespace op_api
         }
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnCausalConv1dAdd, x, weight, conv_states,
                                      query_start_loc, cache_indices, initial_state_mode, bias, num_accepted_tokens,
-                                     activation_value, pad_slot_id, run_mode, residual_connection, y);
+                                     activation_value, pad_slot_id_value, run_mode, residual_connection_value, y);
         return y;
     }
 
