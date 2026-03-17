@@ -6421,7 +6421,7 @@ custom:
     op_api: all_version
     gen_opapi:
       out_x:
-        size: '{expert_ids.size(0), expand_x.size(1)}'
+        size: 'npu_moe_distribute_combine_teardown_out_size(expand_x, expert_ids)'
         dtype: expand_x
       new_params:
         group_ep_ptr: 'const_cast<char *>(group_ep.data())'
