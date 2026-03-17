@@ -2392,8 +2392,8 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardow
     } else if (quant_mode == 3) {
         dynamic_scales_shape = {a, CeilX(h, 128)};
     } else if (quant_mode == 4) {
-        // dynamic_scales_shape = {a, (CeilX(h, 32) + 1) / 2 * 2};
-        dynamic_scales_shape = {a, (static_cast<uint32_t>(std::ceil(h/32))+1) / 2 * 2};
+        dynamic_scales_shape = {a, (CeilX(h, 32) + 1) / 2 * 2};
+        // dynamic_scales_shape = {a, (static_cast<uint32_t>(std::ceil(h/32))+1) / 2 * 2};
     }
 
     c10::SmallVector<int64_t, SIZE> assist_info_for_combine_shape = {a * 128};

@@ -6370,7 +6370,7 @@ custom:
         size: 'out_sizes[2]'
         dtype: at::kInt
       new_params:
-        y_dtype_value: 'c10_npu::GetAclDataType(static_cast<int32_t>(y_dtype))'
+        y_dtype_value: 'c10_npu::GetAclDataType(static_cast<int32_t>(y_dtype.value()))'
         group_ep_ptr: 'const_cast<char *>(group_ep.data())'
         comm_alg_ptr: 'const_cast<char *>(comm_alg.data())'
         out_sizes: 'npu_moe_distribute_dispatch_setup_out_size(x, expert_ids, ep_world_size, ep_rank_id, moe_expert_num, expert_shard_type, shared_expert_num, shared_expert_rank_num, quant_mode, y_dtype)'
