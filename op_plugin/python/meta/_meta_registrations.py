@@ -2667,24 +2667,28 @@ def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_siz
                                            shared_expert_rank_num=0, quant_mode=0, global_bs=0, comm_type=0, 
                                            comm_alg="", y_dtype=None):
     def AlignX(x, align_len):
+        if (align_len <= 0):
+            return -1
         return ((x + align_len - 1) // align_len) * align_len
 
     def CeilX(x, align_len):
+        if (align_len <= 0):
+            return -1
         return (x + align_len - 1) // align_len
-
+    
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
-    if quant_mode == 0 :
+    if quant_mode == 0:
         hs = AlignX(h, 512)
     elif quant_mode == 1:
-        hs = AlignX(AlignX(h * 1, 32),512)
+        hs = AlignX(AlignX(h, 32), 512)
     elif quant_mode == 2:
-        hs = AlignX(AlignX(h * 1, 32) + 4,512)
+        hs = AlignX(AlignX(h, 32) + 4, 512)
     elif quant_mode == 3:
-        hs = AlignX((AlignX(h, 128) * 1 + CeilX(h, 128) * 4), 512)
+        hs = AlignX((AlignX(h, 128) + CeilX(h, 128) * 4), 512)
     elif quant_mode == 4:
-        hs = AlignX(AlignX(h, 256) * 1 + AlignX(CeilX(h, 32), 2) * 1, 512)
+        hs = AlignX(AlignX(h, 256) + AlignX(CeilX(h, 32), 2), 512)
 
     local_moe_expert_num = 0
     if expert_shard_type == 0:
@@ -2696,7 +2700,6 @@ def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_siz
 
     outDtype = x.dtype
     if scales is not None or quant_mode != 0:
-        # outDtype = torch.int8
         outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
 
     y = x.new_empty((bs * (k + shared_expert_num), hs), dtype=outDtype)
@@ -2748,6 +2751,8 @@ def npu_moe_distribute_combine_setup_meta(expand_x, expert_ids, assist_info_for_
                                           shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0, 
                                           comm_alg="", y_dtype=0):
     def AlignX(x, align_len):
+        if (align_len <= 0):
+            return -1
         return ((x + align_len - 1) // align_len) * align_len
 
     a = expand_x.size(0)
