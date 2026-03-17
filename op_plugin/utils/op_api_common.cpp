@@ -817,7 +817,7 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
                 wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
                 wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
             }
-            eles if (wrapperShape[ndim - 1] == 1) {
+            else if (wrapperShape[ndim - 1] == 1) {
                 wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
                 wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
             }
