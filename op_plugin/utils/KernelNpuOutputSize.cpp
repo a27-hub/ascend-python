@@ -2429,4 +2429,19 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_setup_ou
     return output_size;
 }
 
+std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown_out_size(
+    const at::Tensor expand_x, const at::Tensor expert_ids)
+{
+    TORCH_CHECK(expand_x.dim() == DIM_2, "The dims of input expand_x should be 2 dimensional, but got ",
+        expand_x.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(expert_ids.dim() == DIM_2, "The dims of input expert_ids should be 2 dimensional, but got ",
+        expert_ids.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+
+    std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
+    c10::SmallVector<int64_t, SIZE> x_out_shape = {expert_ids.size(0), expand_x.size(1)};
+    output_size.push_back(x_out_shape);
+
+    return output_size;
+}
+
 } // namespace op_infer
