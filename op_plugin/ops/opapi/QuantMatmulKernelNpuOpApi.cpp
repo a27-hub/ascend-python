@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <vector>
+#include <cstdio>
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
@@ -152,16 +153,47 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
                     "aclnnQuantMatmulV5 support A8W4, please upgrade CANN.",
                     OPS_ERROR(ErrCode::TYPE));
     }
+    fprintf(stderr, "[QuantMatmul shape] ***input x1: dim=%ld sizes=[", (long)x1.dim());
+    for (int64_t i = 0; i < x1.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1.size(i));
+    fprintf(stderr, "]\n");
+    fprintf(stderr, "[QuantMatmul shape] ***input x2: dim=%ld sizes=[", (long)x2.dim());
+    for (int64_t i = 0; i < x2.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2.size(i));
+    fprintf(stderr, "]\n");
+
     bool is_a8W4_int = x1.dtype() == at::kChar && x2.dtype() == at::kInt;
     bool is_a8W4_float = x1.dtype() == at::kFloat8_e4m3fn && x2.dtype() == at::kFloat;
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = check_and_get_groups(group_size_list, x1, x2, scale, pertoken_scale);
     bool is_a4w4 = x1.dtype() == at::kInt && x2.dtype() == at::kInt;
+    bool trans_x1 = is_transpose_last_two_dims(x1);
     bool trans_x2 = is_transpose_last_two_dims(x2);
     auto x1_dim_num = x1.dim();
     auto x2_dim_num = x2.dim();
     auto x2_n_dim = (is_a4w4 && !trans_x2) ? x2.size(x2_dim_num - 1) * INT4_NUMS_IN_INT32 : x2.size(x2_dim_num - 1);
 
+    fprintf(stderr, "[QuantMatmul shape] ***trans_x1=%d trans_x2=%d x2_n_dim=%ld (effective x2 last dim)\n",
+            (int)trans_x1, (int)trans_x2, (long)x2_n_dim);
+#if VERSION_BETWEEN(V2R1, V2R7)
+    bool mxfp4_valid = x1_dtype.has_value() && x2_dtype.has_value() &&
+                                   x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
+                                   x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+#endif
+#if VERSION_BETWEEN(V2R8, VERSION_NEWEST)
+    bool mxfp4_valid = false;
+    if (x1_dtype.has_value()) {
+        mxfp4_valid = x1_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+    } else {
+        mxfp4_valid = x1.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+    if (x2_dtype.has_value()) {
+        mxfp4_valid = mxfp4_valid && x2_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+    } else {
+        mxfp4_valid = mxfp4_valid &&
+                      x2.scalar_type() == at::ScalarType::Float4_e2m1fn_x2;
+    }
+#endif
     c10::SmallVector<int64_t, SIZE> output_size;
     if (is_a8W4_int) {
         output_size = {x1.sizes()[0], x2.sizes()[1] * INT4_NUMS_IN_INT32};
@@ -176,12 +208,28 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         uint64_t batch_val = infer_out_batch_shape(x1, x2, batch_record);
         const at::Tensor long_tensor = x1_dim_num > x2_dim_num ? x1 : x2;
         output_size = op_infer::array_to_small_vector(long_tensor.sizes());
-        output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
-        output_size[long_tensor.dim() - 1] = x2_n_dim;
+        if (mxfp4_valid) {
+            int64_t k = !trans_x1 ? x1.size(x1_dim_num - 1) : x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
+            TORCH_CHECK(k != 1, "In mxfp4, dim K should not be 2.", OPS_ERROR(ErrCode::VALUE));
+            int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
+            int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
+            int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
+            int64_t n_new = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = m_new;
+            output_size[long_tensor.dim() - 1] = n_new;
+        } else {
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
+            output_size[long_tensor.dim() - 1] = x2_n_dim;
+        }
         for (int64_t i = 0; i < long_tensor.dim() - LAST_SECOND_DIM_INDEX; i++) {
             output_size[i] = static_cast<int64_t>(batch_record[i]);
         }
     }
+    fprintf(stderr, "[QuantMatmul shape] ***output_size: dim=%zu sizes=[", (size_t)output_size.size());
+    for (size_t i = 0; i < output_size.size(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)output_size[i]);
+    fprintf(stderr, "]\n");
+
     c10::TensorOptions options;
     aclDataType output_acltype = ACL_INT8;
     if (!output_dtype.has_value()) {
@@ -198,8 +246,24 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     bool transpose1 = false;
     bool transpose2 = false;
 
+    fprintf(stderr, "[QuantMatmul wrapper] before make_wrapper: x1 dim=%ld sizes=[", (long)x1.dim());
+    for (int64_t i = 0; i < x1.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1.size(i));
+    fprintf(stderr, "] x2 dim=%ld sizes=[", (long)x2.dim());
+    for (int64_t i = 0; i < x2.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2.size(i));
+    fprintf(stderr, "]\n");
+
     TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
     TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+
+    fprintf(stderr, "[QuantMatmul wrapper] after make_wrapper: x1_wrapper.tensor_ dim=%ld sizes=[", (long)x1_wrapper.tensor_.dim());
+    for (int64_t i = 0; i < x1_wrapper.tensor_.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1_wrapper.tensor_.size(i));
+    fprintf(stderr, "] x2_wrapper.tensor_ dim=%ld sizes=[", (long)x2_wrapper.tensor_.dim());
+    for (int64_t i = 0; i < x2_wrapper.tensor_.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2_wrapper.tensor_.size(i));
+    fprintf(stderr, "]\n");
     TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
     TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
     TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
@@ -250,7 +314,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
                          result_wrapper);
         }
     } else {
-        if (!is_a4w4 && is_nz_format(x2)) {
+        if (is_nz_format(x2)) {
             EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, y_scale,
                          x1_offset, offset_real, y_offset, bias_real, transpose1, transpose2, group_size,
                          result_wrapper);

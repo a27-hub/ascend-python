@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdio>
 #include <pwd.h>
 #include <sys/stat.h>
 #include "op_api_common_base.h"
@@ -30,6 +31,7 @@ typedef void(*AddTensorAddrToCachedList) (void *addr);
 
 static std::unordered_map<aclFormat, aclFormat> FORMAT_FAKE_TO_REAL {
     { ACL_FORMAT_FRACTAL_NZ_C0_16, ACL_FORMAT_FRACTAL_NZ_C0_32 },
+    { ACL_FORMAT_FRACTAL_NZ, ACL_FORMAT_FRACTAL_NZ }
 };
 
 bool checkOwner(string cusLibPath)
@@ -794,27 +796,62 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
 {
-    if (at_tensor.sizes().size() == 1) {
+    size_t ndim = at_tensor.sizes().size();
+    fprintf(stderr, "[CollectB4ShapeInfo] entry: at_tensor dim=%zu sizes=[", ndim);
+    for (size_t i = 0; i < ndim; i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)at_tensor.size(i));
+    fprintf(stderr, "] wroapperShape(befre)=[");
+    for (size_t i = 0; i < ndim; i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)wrapperShape[i]);
+    fprintf(stderr, "] wrapperStride(before)=[");
+    for (size_t i = 0; i < ndim; i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)wrapperStride[i]);
+    fprintf(stderr, "]\n");
+
+    if (ndim == 1) {
+        fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim==1, multiply shape[0] by FP4_IN_INT8\n");
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
-    } else if (at_tensor.sizes().size() > 1) {
-        if (wrapperStride[at_tensor.sizes().size() - 1] == 1) {
-            wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] =
-                wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
-            wrapperShape[at_tensor.sizes().size() - 1] =
-                wrapperShape[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
-        } else if (wrapperStride[at_tensor.sizes().size() - PENULTIMATE_DIM] == 1) {
-            wrapperStride[at_tensor.sizes().size() - 1] =
-                wrapperStride[at_tensor.sizes().size() - 1] * FP4_IN_INT8;
-            wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] =
-                wrapperShape[at_tensor.sizes().size() - PENULTIMATE_DIM] * FP4_IN_INT8;
+    } else if (ndim > 1) {
+        if (wrapperStride[ndim - 1] == 1 && wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
+            fprintf(stderr,
+                    "[CollectB4ShapeInfo] branch: ndim>1, last_stride==1 and penultimate_stride==1 (both)\n");
+            if (wrapperShape[ndim - PENULTIMATE_DIM] == 1) {
+                fprintf(stderr,
+                        "[CollectB4ShapeInfo] sub-branch: shape[dim-2]==1 -> scale last stride and dim-2 shape\n");
+                wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
+                wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            }
+            else if (wrapperShape[ndim - 1] == 1) {
+                fprintf(stderr,
+                        "[CollectB4ShapeInfo] sub-branch: shape[dim-1]==1 -> scale penultimate stride and dim-1 shape\n");
+                wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+                wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
+            }
+        } else if (wrapperStride[ndim - 1] == 1) {
+            fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim>1, last stride==1 (last dim contiguous)\n");
+            wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
+        } else if (wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
+            fprintf(stderr, "[CollectB4ShapeInfo] branch: ndim>1, penultimate stride==1\n");
+            wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
+            wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
         }
 
-        for (auto i = 0; i < at_tensor.sizes().size() - PENULTIMATE_DIM; i++) {
+        for (auto i = 0; i < (decltype(ndim))(ndim - PENULTIMATE_DIM); i++) {
             wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
         }
     } else {
+        fprintf(stderr, "[CollectB4ShapeInfo] branch: else -> TORCH_CHECK fail\n");
         TORCH_CHECK(false, "unsupported tensor size() in 4-bit dtype.", OPS_ERROR(ErrCode::VALUE));
     }
+
+    fprintf(stderr, "[CollectB4ShapeInfo] exit: wrapperShape(after)=[");
+    for (size_t i = 0; i < ndim; i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)wrapperShape[i]);
+    fprintf(stderr, "] wrapperStride(after)=[");
+    for (size_t i = 0; i < ndim; i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)wrapperStride[i]);
+    fprintf(stderr, "]\n");
 }
 
 inline bool Is4BitDtype(const aclDataType acl_data_type)
@@ -920,6 +957,7 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
+                fprintf(stderr, "[CollectB4ShapeInfo] call site: ConvertType(at_tensor) !IsOpInputBaseFormat + Is4BitDtype\n");
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
                 auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
                 TORCH_CHECK(realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".",
@@ -947,6 +985,7 @@ aclTensor *ConvertType(const at::Tensor &at_tensor)
                         OPS_ERROR(ErrCode::VALUE));
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
+                fprintf(stderr, "[CollectB4ShapeInfo] call site: else(IsOpInputBaseFormat) + Is4BitDtype, at_tensor dim=%zd\n", at_tensor.sizes().size());
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
             } else {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
@@ -1157,6 +1196,7 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
             storageDims = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->npu_desc_.storage_sizes_;
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.back() *= FP4_IN_INT8;
+                fprintf(stderr, "[CollectB4ShapeInfo] call site: ConvertType(TensorWrapper) !IsOpInputBaseFormat + Is4BitDtype\n");
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
                 auto realFormat = FORMAT_FAKE_TO_REAL.find(format);
                 TORCH_CHECK(realFormat != FORMAT_FAKE_TO_REAL.end(), "not support convert ", format, ".",
@@ -1184,6 +1224,7 @@ aclTensor *ConvertType(const TensorWrapper &tensor_r)
                         OPS_ERROR(ErrCode::VALUE));
             if (Is4BitDtype(acl_data_type)) {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize() * FP4_IN_INT8);
+                fprintf(stderr, "[CollectB4ShapeInfo] call site: ConvertType(TensorWrapper) else(IsOpInputBaseFormat) + Is4BitDtype\n");
                 CollectB4ShapeInfo(at_tensor, wrapperStride, wrapperShape);
             } else {
                 storageDims.push_back(at_tensor.storage().nbytes() / at_tensor.itemsize());
