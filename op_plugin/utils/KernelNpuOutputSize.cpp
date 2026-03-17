@@ -2296,28 +2296,21 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_o
     int64_t k = expert_ids.size(1);
     int64_t hs = 0;
 
-    if (quant_mode == 0) {
-        // hs = Align512(Align32(H * sizeof(YoutType)))
-        // YoutType = bf16/fp16
+    constexpr int64_t UNQUANT = 0;
+    constexpr int64_t STATIC_QUANT = 1;
+    constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
+    constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
+    constexpr int64_t MX_QUANT = 4;
+
+    if (quant_mode == UNQUANT) {
         hs = AlignX(AlignX(h * 2, 32), 512) / 2;
-    } else if (quant_mode == 1) {
-        // hs = Align512(Align32(H * sizeof(YoutType)))
-        // YoutType = int8/hif8
+    } else if (quant_mode == STATIC_QUANT) {
         hs = AlignX(AlignX(h * 1, 32), 512);
-    } else if (quant_mode == 2) {
-        // hs = Align512(Align32(H * sizeof(YoutType)) + sizeof(ScalesType))
-        // YoutType = int8/fp8e5m2/fp8e4m3
-        // ScalesType = fp32
+    } else if (quant_mode == PERTOKEN_DYNAMIC_QUANT) {
         hs = AlignX(AlignX(h * 1, 32) + 4, 512);
-    } else if (quant_mode == 3) {
-        // hs = Align512(Align128(H) * sizeof(YoutType) + Ceil128(H) * sizeof(ScalesType))
-        // YoutType = fp8e5m2/fp8e4m3
-        // ScalesType = fp32
+    } else if (quant_mode == PERGROUP_DYNAMIC_QUANT) {
         hs = AlignX((AlignX(h, 128) * 1 + CeilX(h, 128) * 4), 512);
-    } else if (quant_mode == 4) {
-        // hs = Align512(Align256(H) * sizeof(YoutType) + Align2(Ceil32(H)) * sizeof(ScalesType))
-        // YoutType = fp8e5m2/fp8e4m3
-        // ScalesType = fp8e8m0
+    } else if (quant_mode == MX_QUANT) {
         hs = AlignX(AlignX(h, 256) * 1 + AlignX(CeilX(h, 32), 2) * 1, 512);
     }
 
@@ -2383,7 +2376,6 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardow
         dynamic_scales_shape = {a, CeilX(h, 128)};
     } else if (quant_mode == 4) {
         dynamic_scales_shape = {a, (CeilX(h, 32) + 1) / 2 * 2};
-        // dynamic_scales_shape = {a, (static_cast<uint32_t>(std::ceil(h/32))+1) / 2 * 2};
     }
 
     c10::SmallVector<int64_t, SIZE> assist_info_for_combine_shape = {a * 128};
