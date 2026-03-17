@@ -223,10 +223,6 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         sparse_indices.numel() > 0,
         lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_softmax_lse,
-        lambda: "when return_softmax_lse is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
 
     if layout_query == "TND":
         torch._check(
@@ -1892,7 +1888,7 @@ def npu_fused_floyd_attention_backward(grad_output, query_ik, key_ij, value_ij, 
 @impl(m, "npu_lightning_indexer")
 def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_query=None,
     actual_seq_lengths_key=None, block_table=None, layout_query="BSND", layout_key="BSND", sparse_count=2048, sparse_mode=3,
-    pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_value=False):
+    pre_tokens=9223372036854775807, next_tokens=9223372036854775807, return_values=False):
     require_param = {"query": query, "key": key, "weights": weights}
 
     for item_name, item in require_param.items():
@@ -1914,10 +1910,6 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
             ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_value,
-        lambda: "when return_value is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
 
     if layout_query == "BSND":
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
@@ -1927,7 +1919,7 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
         else:
             n_dim_idx = 2
         sparse_indices_out = torch.empty([query.size(0), key.size(n_dim_idx), sparse_count], dtype=torch.int32, device='meta')
-    if return_value:
+    if return_values:
         if layout_query == "BSND":
             sparse_values_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=query.dtype, device='meta')
         else:
