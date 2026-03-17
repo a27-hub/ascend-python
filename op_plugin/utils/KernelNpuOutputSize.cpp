@@ -2301,17 +2301,24 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_o
     constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
     constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
     constexpr int64_t MX_QUANT = 4;
+    constexpr int64_t BYTE_2 = 2;
+    constexpr int64_t BYTE_4 = 4;
+    constexpr int64_t ALGIN_2 = 2;
+    constexpr int64_t ALGIN_32 = 32;
+    constexpr int64_t ALGIN_128 = 128;
+    constexpr int64_t ALGIN_256 = 256;
+    constexpr int64_t ALGIN_512 = 512;
 
     if (quant_mode == UNQUANT) {
-        hs = AlignX(AlignX(h * 2, 32), 512) / 2;
+        hs = AlignX(AlignX(h * BYTE_2, ALGIN_32), ALGIN_512) / BYTE_2;
     } else if (quant_mode == STATIC_QUANT) {
-        hs = AlignX(AlignX(h * 1, 32), 512);
+        hs = AlignX(AlignX(h, ALGIN_32), ALGIN_512);
     } else if (quant_mode == PERTOKEN_DYNAMIC_QUANT) {
-        hs = AlignX(AlignX(h * 1, 32) + 4, 512);
+        hs = AlignX(AlignX(h, ALGIN_32) + BYTE_4, ALGIN_512);
     } else if (quant_mode == PERGROUP_DYNAMIC_QUANT) {
-        hs = AlignX((AlignX(h, 128) * 1 + CeilX(h, 128) * 4), 512);
+        hs = AlignX((AlignX(h, ALGIN_128) + CeilX(h, ALGIN_128) * BYTE_4), ALGIN_512);
     } else if (quant_mode == MX_QUANT) {
-        hs = AlignX(AlignX(h, 256) * 1 + AlignX(CeilX(h, 32), 2) * 1, 512);
+        hs = AlignX(AlignX(h, ALGIN_256) + AlignX(CeilX(h, ALGIN_32), ALGIN_2), ALGIN_512);
     }
 
     int64_t local_moe_expert_num = 0;
@@ -2369,13 +2376,18 @@ std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardow
     std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
     c10::SmallVector<int64_t, SIZE> expand_x_shape = {a, h};
     
+    constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
+    constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
+    constexpr int64_t MX_QUANT = 4;
+    constexpr int64_t ALGIN_32 = 32;
+    constexpr int64_t ALGIN_128 = 128;
     c10::SmallVector<int64_t, SIZE> dynamic_scales_shape = {a};
-    if (quant_mode == 2) {
+    if (quant_mode == PERTOKEN_DYNAMIC_QUANT) {
         dynamic_scales_shape = {a};
-    } else if (quant_mode == 3) {
-        dynamic_scales_shape = {a, CeilX(h, 128)};
-    } else if (quant_mode == 4) {
-        dynamic_scales_shape = {a, (CeilX(h, 32) + 1) / 2 * 2};
+    } else if (quant_mode == PERGROUP_DYNAMIC_QUANT) {
+        dynamic_scales_shape = {a, CeilX(h, ALGIN_128)};
+    } else if (quant_mode == MX_QUANT) {
+        dynamic_scales_shape = {a, (CeilX(h, ALGIN_32) + 1) / 2 * 2};
     }
 
     c10::SmallVector<int64_t, SIZE> assist_info_for_combine_shape = {a * 128};
