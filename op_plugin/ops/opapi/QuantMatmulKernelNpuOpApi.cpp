@@ -244,8 +244,24 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     bool transpose1 = false;
     bool transpose2 = false;
 
+    fprintf(stderr, "[QuantMatmul wrapper] before make_wrapper: x1 dim=%ld sizes=[", (long)x1.dim());
+    for (int64_t i = 0; i < x1.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1.size(i));
+    fprintf(stderr, "] x2 dim=%ld sizes=[", (long)x2.dim());
+    for (int64_t i = 0; i < x2.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2.size(i));
+    fprintf(stderr, "]\n");
+
     TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
     TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+
+    fprintf(stderr, "[QuantMatmul wrapper] after make_wrapper: x1_wrapper.tensor_ dim=%ld sizes=[", (long)x1_wrapper.tensor_.dim());
+    for (int64_t i = 0; i < x1_wrapper.tensor_.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x1_wrapper.tensor_.size(i));
+    fprintf(stderr, "] x2_wrapper.tensor_ dim=%ld sizes=[", (long)x2_wrapper.tensor_.dim());
+    for (int64_t i = 0; i < x2_wrapper.tensor_.dim(); i++)
+        fprintf(stderr, "%s%ld", (i > 0 ? "," : ""), (long)x2_wrapper.tensor_.size(i));
+    fprintf(stderr, "]\n");
     TensorWrapper x1_scale_wrapper = make_wrapper(pertoken_scale_real, pertoken_scale_dtype);
     TensorWrapper x2_scale_wrapper = make_wrapper(scale, scale_dtype);
     TensorWrapper result_wrapper = make_wrapper(result, output_dtype);
