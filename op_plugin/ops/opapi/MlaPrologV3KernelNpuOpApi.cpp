@@ -70,7 +70,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     if (weight_quant_mode == MODE_5 && (token_x.dtype() == at::kByte || weight_dq.dtype() == at::kByte ||
         weight_uq_qr.dtype() == at::kByte || weight_dkv_kr.dtype() == at::kByte)) {
         TORCH_CHECK(token_x_dtype.has_value() && weight_dq_dtype.has_value() && weight_uq_qr_dtype.has_value() && weight_dkv_kr_dtype.has_value(),
-            "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
+            "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype,weight_dq_dtype,weight_uq_qr_dtype,weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
 
         TORCH_CHECK(c10_npu::GetAclDataType(token_x_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dq_dtype.value()) == aclDataType::ACL_HIFLOAT8 &&
             c10_npu::GetAclDataType(weight_uq_qr_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dkv_kr_dtype.value()) == aclDataType::ACL_HIFLOAT8,
@@ -103,7 +103,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
-            // weight_quant_mode=2、4、5且kv_cache_quant_mode=1时为全量化kv量化场景(int8、fp8、hif8)
+            // weight_quant_mode=2,4,5且kv_cache_quant_mode=1时为全量化kv量化场景(int8,fp8,hif8)
             // weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
             if (is_hifloat8_dtype) {
                 query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kByte));
@@ -122,7 +122,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             }
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) { 
-                // weight_quant_mode=1 半量化场景, weight_quant_mode=2、4、5 全量化场景(int8、fp8、hif8)
+                // weight_quant_mode=1 半量化场景, weight_quant_mode=2,4,5 全量化场景(int8,fp8,hif8)
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x.value().options().dtype(dequant_scale_x_dtype));
@@ -248,7 +248,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     if (weight_quant_mode == MODE_5 && (token_x.dtype() == at::kByte || weight_dq.dtype() == at::kByte ||
         weight_uq_qr.dtype() == at::kByte || weight_dkv_kr.dtype() == at::kByte)) {
         TORCH_CHECK(token_x_dtype.has_value() && weight_dq_dtype.has_value() && weight_uq_qr_dtype.has_value() && weight_dkv_kr_dtype.has_value(),
-            "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
+            "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype,weight_dq_dtype,weight_uq_qr_dtype,weight_dkv_kr_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
 
         TORCH_CHECK(c10_npu::GetAclDataType(token_x_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dq_dtype.value()) == aclDataType::ACL_HIFLOAT8 &&
             c10_npu::GetAclDataType(weight_uq_qr_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dkv_kr_dtype.value()) == aclDataType::ACL_HIFLOAT8,
@@ -281,7 +281,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     if (token_x_dim == DIM_3) {
         TORCH_CHECK(rope_sin_dim == DIM_3, "when token_x dim num is 3, rope_sin dim num should be 3, but the actual value is ", rope_sin_dim, OPS_ERROR(ErrCode::PARAM));
         if ((weight_quant_mode == MODE_2 || weight_quant_mode == MODE_3 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) && kv_cache_quant_mode == MODE_1) {
-            // weight_quant_mode=2、4、5且kv_cache_quant_mode=1时为全量化kv量化场景(int8、fp8、hif8)
+            // weight_quant_mode=2,4,5且kv_cache_quant_mode=1时为全量化kv量化场景(int8,fp8,hif8)
             // weight_quant_mode=3且kv_cache_quant_mode=1时为mxfp8全量化kv量化场景
             if (is_hifloat8_dtype) {
                 query = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_uk.size(0), weight_uk.size(2)}, token_x.options().dtype(at::kByte));
@@ -300,7 +300,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                 query_norm = npu_preparation::apply_tensor_without_format({token_x.size(0), token_x.size(1), weight_dq.size(1)}, token_x.options().dtype(weight_uq_qr.dtype()));
             }
             if (weight_quant_mode == MODE_1 || weight_quant_mode == MODE_2 || weight_quant_mode == MODE_4 || weight_quant_mode == MODE_5) {
-                // weight_quant_mode=1 半量化场景,weight_quant_mode=2、4、5 全量化场景(int8、fp8、hif8)
+                // weight_quant_mode=1 半量化场景,weight_quant_mode=2,4,5 全量化场景(int8,fp8,hif8)
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), 1}, at::kFloat);
             } else if (weight_quant_mode == MODE_3) {
                 dequant_scale_q_norm = npu_preparation::apply_tensor_without_format({token_x.size(0) * token_x.size(1), weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE}, dequant_scale_x.value().options().dtype(dequant_scale_x_dtype));

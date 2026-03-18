@@ -443,7 +443,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
     if weight_quant_mode == 5 and (token_x.dtype == torch.uint8 or weight_dq.dtype == torch.uint8 or weight_uq_qr.dtype == torch.uint8 or weight_dkv_kr.dtype == torch.uint8): # hifloat8伪装为uint8
         torch._check(
             token_x_dtype is not None and weight_dq_dtype is not None and weight_uq_qr_dtype is not None and weight_dkv_kr_dtype is not None,
-            lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null."
+            lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype,weight_dq_dtype,weight_uq_qr_dtype,weight_dkv_kr_dtype cannot be null."
         )
         torch._check(
             token_x_dtype == torch_npu.hifloat8 and weight_dq_dtype == torch_npu.hifloat8 and
@@ -621,7 +621,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
     if weight_quant_mode == 5 and (token_x.dtype == torch.uint8 or weight_dq.dtype == torch.uint8 or weight_uq_qr.dtype == torch.uint8 or weight_dkv_kr.dtype == torch.uint8): # hifloat8伪装为uint8
         torch._check(
             token_x_dtype is not None and weight_dq_dtype is not None and weight_uq_qr_dtype is not None and weight_dkv_kr_dtype is not None,
-            lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype、weight_dq_dtype、weight_uq_qr_dtype、weight_dkv_kr_dtype cannot be null."
+            lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype,weight_dq_dtype,weight_uq_qr_dtype,weight_dkv_kr_dtype cannot be null."
         )
         torch._check(
             token_x_dtype == torch_npu.hifloat8 and weight_dq_dtype == torch_npu.hifloat8 and
@@ -1254,7 +1254,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                 scale_dim == 1,
                 lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
             )
-        # else: quant_mode为2、3、8时不使用scale也不需要校验
+        # else: quant_mode为2,3,8时不使用scale也不需要校验
 
     bs = x.size(0)
     h = x.size(1)
