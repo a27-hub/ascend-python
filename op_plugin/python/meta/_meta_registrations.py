@@ -3215,7 +3215,7 @@ def bias_shape_check(*args):
 
 
 def quant_matmul_shape_check(*args):
-    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, is_a4w4_mxfp = args
+    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, is_a4w4_mxfp4_valid = args
     X_MAX_DIM = 6
     X_MIN_DIM = 2
     INT4_IN_INT32 = 8
