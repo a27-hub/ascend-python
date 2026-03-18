@@ -47,11 +47,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     c10::optional<int64_t> mm_weight_scale_dtype, c10::optional<int64_t> mm_y_dtype)
 {
     // gmm_x_quant_mode
-    TORCH_CHECK(gmm_x_quant_mode.has_value(), "gmm_x_quant_mode must be provided, but got None.",
+    TORCH_CHECK(gmm_x_quant_mode.has_value(), "The input gmm_x_quant_mode must be provided, but got None.",
         OPS_ERROR(ErrCode::PARAM));
     int64_t gmm_x_quant_mode_real = gmm_x_quant_mode.value();
     // gmm_weight_quant_mode
-    TORCH_CHECK(gmm_weight_quant_mode.has_value(), "gmm_weight_quant_mode must be provided, but got None.",
+    TORCH_CHECK(gmm_weight_quant_mode.has_value(), "The input gmm_weight_quant_mode must be provided, but got None.",
         OPS_ERROR(ErrCode::PARAM));
     int64_t gmm_weight_quant_mode_real = gmm_weight_quant_mode.value();
     // 校验空tensor
@@ -137,10 +137,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     int64_t mm_x_quant_mode_real = PERTENSOR_QUANT_MODE;
     int64_t mm_weight_quant_mode_real = PERTENSOR_QUANT_MODE;
     if (mm_x.has_value() && mm_weight.has_value()) {
-        TORCH_CHECK(mm_x_quant_mode.has_value(), "mm_x_quant_mode must be provided when mm_x is present.",
+        TORCH_CHECK(mm_x_quant_mode.has_value(), "The input mm_x_quant_mode must be provided when mm_x is present.",
             OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(mm_weight_quant_mode.has_value(),
-            "mm_weight_quant_mode must be provided when mm_weight is present.", OPS_ERROR(ErrCode::PARAM));
+            "The input mm_weight_quant_mode must be provided when mm_weight is present.", OPS_ERROR(ErrCode::PARAM));
         mm_x_quant_mode_real = mm_x_quant_mode.value();
         mm_weight_quant_mode_real = mm_weight_quant_mode.value();
         int64_t mm_x_quant_mode_real = mm_x_quant_mode.value_or(PERTENSOR_QUANT_MODE);
