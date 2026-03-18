@@ -397,7 +397,7 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
 
     if (torch_npu::utils::is_npu(at_tensor)) {
         // fake tensor
-        if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) != typeid(torch_npu::NPUStorageImpl)) { 
+        if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) != typeid(torch_npu::NPUStorageImpl)) {
             return "FakeTensor does not have npu_desc\n";
         }
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
