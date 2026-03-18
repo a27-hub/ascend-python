@@ -134,8 +134,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     for (auto &i : recv_counts) {
         a += i;
     }
-    int64_t mm_x_quant_mode_real = NO_QUANT_MODE;
-    int64_t mm_weight_quant_mode_real = NO_QUANT_MODE;
+    int64_t mm_x_quant_mode_real = PERTENSOR_QUANT_MODE;
+    int64_t mm_weight_quant_mode_real = PERTENSOR_QUANT_MODE;
     if (mm_x.has_value() && mm_weight.has_value()) {
         TORCH_CHECK(mm_x_quant_mode.has_value(), "mm_x_quant_mode must be provided when mm_x is present.",
             OPS_ERROR(ErrCode::PARAM));
