@@ -781,8 +781,8 @@ c10::SmallVector<int64_t, SIZE> index_select_npu_output_size(const at::Tensor &s
     return outputSize;
 }
 
-c10::IntArrayRef isclose_output_size(const at::Tensor& self, const at::Tensor& other, float rtol,
-                                     float atol, bool equal_nan)
+c10::SmallVector<int64_t, SIZE> isclose_output_size(const at::Tensor& self, const at::Tensor& other, float rtol,
+                                                    float atol, bool equal_nan)
 {
     TORCH_CHECK(
         rtol >= 0, "rtol must be greater than or equal to zero, but got ", rtol);
