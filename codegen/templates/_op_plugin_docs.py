@@ -4936,25 +4936,27 @@ _add_torch_npu_docstr(
 该接口用于实现矩阵乘计算输入和输出的transpose操作。
 
 接口原型: 
-npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int? group_size=0, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1) -> Tensor
+npu_transpose_quant_batchmatmul(Tensor x1, Tensor x2, int dtype, *, Tensor? bias=None, Tensor? x1_scale=None, Tensor? x2_scale=None, int? group_sizes=0, int[]? perm_x1=None, int[]? perm_x2=None, int[]? perm_y=None, int? batch_split_factor=1, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor
 参数说明: 
 - x1(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的左矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
 - x2(Tensor, 计算输入): 必选参数, 一个3D的Device侧Tensor输入，矩阵计算的右矩阵。数据类型支持float8_e5m2、float8_e4m3fn，数据格式支持ND。
-- dtype(torch.dtype, 计算输入): 必选参数，声明output的数据类型，支持传值: torch.float16和torch.bfloat16。
+- dtype(Int, 计算输入): 必选参数，声明output的数据类型，支持传值: torch.float16和torch.bfloat16。
 - bias(Tensor, 计算输入): 可选参数, 一个1D的Device侧Tensor输入，矩阵计算的bias参数。数据类型支持float32、float16、bfloat16，数据格式支持ND。当前仅支持配置为空。
 - x1_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，左矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
 - x2_scale(Tensor, 计算输入): 1D的Device侧Tensor输入，右矩阵计算量化参数。数据类型为FLOAT32，数据格式支持ND。
-- group_size(ListInt, 计算输入): 可选参数, int类型列表, 表示量化分组大小，预留参数，当前仅支持配置为全0，其他取值不生效。
+- group_sizes(ListInt, 计算输入): 可选参数, int类型列表, 表示量化分组大小。默认值为None。仅在mx量化模式需要传入，仅支持三维列表，形如[group_m,group_m,group_k]。
 - perm_x1(ListInt, 计算输入): 可选参数, int类型列表，将input在矩阵乘之前排列成[B, M, K]。
 - perm_x2(ListInt, 计算输入): 可选参数, int类型列表，将weight在矩阵乘之前排列成[B, K, N]。
 - perm_y(ListInt, 计算输入): 可选参数, int类型列表，将y在矩阵乘后重新排列成[M, B, N]。
 - batch_split_factor(Int, 计算输入): 可选参数，默认为1, 表示output_batch的系数，当前为预留参数，仅支持配置为1。
+- x1_scale_dtype(Int, 计算输入): 可选参数，声明x1_scale的数据类型，传入值时表示忽略x1_scale本身的dtype,将x1_scale_dtype视为x1_scale的类型计算，不传入时则直接取x1_scale的dtype计算。支持传值: torch_npu.float8_e8m0fun。
+- x2_scale_dtype(Int, 计算输入): 可选参数，声明x2_scale的数据类型，传入值时表示忽略x2_scale本身的dtype,将x2_scale_dtype视为x2_scale的类型计算，不传入时则直接取x2_scale的dtype计算。支持传值: torch_npu.float8_e8m0fun。
 - y(Tensor, 计算输出): 一个3D的Tensor，输出数据类型支持float16、bfloat16，由dtype参数决定。
 
 约束说明:
--右矩阵K仅支持512, N仅支持128。
--当前暂不支持bias、group_size、batch_split_factor, 为预留字段。
--x1_scale和x2_scale当前仅支持1D输入。
+-K-C量化场景下，K仅支持512, N仅支持128。x1_scale和x2_scale当前支持1D输入。
+-mx量化场景下，x1_scale和x2_scale当前支持4D输入。group_size仅支持[0,0,32]、[0,1,32]、[1,0,32]、[1,1,32]。K仅支持64的倍数。
+-当前暂不支持bias、batch_split_factor。
 
 支持的芯片型号:
 -昇腾950 AI处理器
