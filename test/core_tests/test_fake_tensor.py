@@ -4836,5 +4836,31 @@ class TestBatchNormReduce(TestCase):
             self.assertEqual(input_fake_tensor.dtype, output_fake_tensor2.dtype)
 
 
+class TestGroupedDynamicBlockQuantFakeTensor(TestCase):
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_dynamic_block_quant_fake_tensor(self, device="npu"):
+        test_cases = [
+            # (shape, group_list_data)
+            ((64, 256), [32, 64]),
+            ((2, 64, 256), [32, 64]),
+        ]
+        for shape, gl_data in test_cases:
+            x = torch.randn(shape, dtype=torch.float16, device=device)
+            group_list = torch.tensor(gl_data, dtype=torch.int32, device=device)
+            real_y, real_scale = torch_npu.npu_grouped_dynamic_block_quant(
+                x, group_list, min_scale=0.0, round_mode="rint", dst_type=291,
+                row_block_size=1, col_block_size=128, group_list_type=0)
+            with FakeTensorMode():
+                fake_x = torch.randn(shape, dtype=torch.float16, device=device)
+                fake_group_list = torch.tensor(gl_data, dtype=torch.int32, device=device)
+                fake_y, fake_scale = torch_npu.npu_grouped_dynamic_block_quant(
+                    fake_x, fake_group_list, min_scale=0.0, round_mode="rint", dst_type=291,
+                    row_block_size=1, col_block_size=128, group_list_type=0)
+            self.assertEqual(real_y.shape, fake_y.shape)
+            self.assertEqual(real_y.dtype, fake_y.dtype)
+            self.assertEqual(real_scale.shape, fake_scale.shape)
+            self.assertEqual(real_scale.dtype, fake_scale.dtype)
+
+
 if __name__ == "__main__":
     run_tests()
