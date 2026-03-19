@@ -143,15 +143,15 @@ npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha,
     at::Tensor outHmix = std::get<4>(mhcPreOutput);
     at::Tensor outHpre = std::get<5>(mhcPreOutput);
 
+    at::Tensor nullTensor;
     if (out_flag == 1) {
         EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
                      outHres, outInvRms, outHmix, outHpre);
-        return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
+    } else {
+        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
+                     outHres, nullTensor, nullTensor, nullTensor);
     }
 
-    at::Tensor nullTensor;
-    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost, outHres,
-                 nullTensor, nullTensor, nullTensor);
-    return std::make_tuple(outHin, outHpost, outHres, nullTensor, nullTensor, nullTensor);
+    return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
 } // namespace op_api

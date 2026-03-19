@@ -222,9 +222,6 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         out_hmix = torch.empty([t, mat_k], dtype=torch.float32, device="meta")
         out_hpre = torch.empty([t, num_residual], dtype=torch.float32, device="meta")
 
-    if out_flag == 0:
-        return (out_hin, out_hpost, out_hres, None, None, None)
-
     return (out_hin, out_hpost, out_hres, out_inv_rms, out_hmix, out_hpre)
 
 
