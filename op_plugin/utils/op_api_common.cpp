@@ -795,7 +795,7 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
 {
-    size_t ndim = at_tensor.sizes().size();
+    int64_t ndim = at_tensor.sizes().size();
     if (ndim == 1) {
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
     } else if (ndim > 1) {
