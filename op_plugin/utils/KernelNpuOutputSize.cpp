@@ -2277,10 +2277,7 @@ inline static int64_t CeilX(int64_t x, int64_t align_len)
 
 inline static int64_t AlignX(int64_t x, int64_t align_len)
 {
-    if (align_len == 0) {
-        return -1;
-    }
-    return ((x + align_len - 1) / align_len) * align_len;
+    return CeilX(x, align_len) * align_len;
 }
 
 std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_out_size(const at::Tensor &x,
