@@ -51,7 +51,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_chunk_gated_delta_rule_fwd_h(
         auto cu_seqlens_sizes = chunk_indices_.sizes();
         NT = cu_seqlens_sizes[0];
     } else {
-        NT = (T / chunk_size_ - 1) / chunk_size_;
+        NT = (T + chunk_size_ - 1) / chunk_size_;
     }
 
     at::Tensor h_out = at::zeros({B, HV, NT, K, V}, k.options());
