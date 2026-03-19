@@ -199,10 +199,10 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         if (mxfp4_valid) {
             int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
             int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
-            int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
-            int64_t n_new = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
-            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = m_new;
-            output_size[long_tensor.dim() - 1] = n_new;
+            int64_t real_m = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
+            int64_t real_n = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = real_m;
+            output_size[long_tensor.dim() - 1] = real_n;
         } else {
             output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
             output_size[long_tensor.dim() - 1] = x2_n_dim;
