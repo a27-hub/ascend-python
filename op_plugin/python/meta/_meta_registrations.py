@@ -2720,18 +2720,27 @@ def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_siz
                                            scales=None, x_active_mask=None, expert_shard_type=0, shared_expert_num=1, 
                                            shared_expert_rank_num=0, quant_mode=0, global_bs=0, comm_type=0, 
                                            comm_alg="", y_dtype=None):
-    def AlignX(x, align_len):
+    def Align(x, align_len):
         if (align_len <= 0):
             return -1
-        return ((x + align_len - 1) // align_len) * align_len
-
-    def CeilX(x, align_len):
-        if (align_len <= 0):
-            return -1
-        return (x + align_len - 1) // align_len
+        return math.ceil(x / align_len) * align_len
     
+    DIM_2 = 2
+    UNQUANT = 0
+    STATIC_QUANT = 1
+    PERTOKEN_DYNAMIC_QUANT = 2
+    PERGROUP_DYNAMIC_QUANT = 3
+    MX_QUANT = 4
+    BYTE_2 = 2
+    BYTE_4 = 4
+    ALGIN_2 = 2
+    ALGIN_32 = 32
+    ALGIN_128 = 128
+    ALGIN_256 = 256
+    ALGIN_512 = 512
+
     torch._check(
-        (x.dim() == 2),
+        (x.dim() == DIM_2),
         lambda: (
             f"The dims of input x should be 2 dimensional, "
             f"but got {x.dim()}."
@@ -2739,7 +2748,7 @@ def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_siz
         ),
     )
     torch._check(
-        (expert_ids.dim() == 2),
+        (expert_ids.dim() == DIM_2),
         lambda: (
             f"The dims of input expert_ids should be 2 dimensional, "
             f"but got {expert_ids.dim()}."
@@ -2750,16 +2759,17 @@ def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_siz
     bs = x.size(0)
     h = x.size(1)
     k = expert_ids.size(1)
-    if quant_mode == 0:
-        hs = AlignX(AlignX(h * 2, 32), 512) // 2
-    elif quant_mode == 1:
-        hs = AlignX(AlignX(h, 32), 512)
-    elif quant_mode == 2:
-        hs = AlignX(AlignX(h, 32) + 4, 512)
-    elif quant_mode == 3:
-        hs = AlignX((AlignX(h, 128) + CeilX(h, 128) * 4), 512)
-    elif quant_mode == 4:
-        hs = AlignX(AlignX(h, 256) + AlignX(CeilX(h, 32), 2), 512)
+    # 根据量化类型计算hs大小
+    if quant_mode == UNQUANT:
+        hs = Align(Align(h * BYTE_2, ALGIN_32), ALGIN_512) // BYTE_2
+    elif quant_mode == STATIC_QUANT:
+        hs = Align(Align(h, ALGIN_32), ALGIN_512)
+    elif quant_mode == PERTOKEN_DYNAMIC_QUANT:
+        hs = Align(Align(h, ALGIN_32) + BYTE_4, ALGIN_512)
+    elif quant_mode == PERGROUP_DYNAMIC_QUANT:
+        hs = Align((Align(h, ALGIN_128) + math.ceil(h / ALGIN_128) * BYTE_4), ALGIN_512)
+    elif quant_mode == MX_QUANT:
+        hs = Align(Align(h, ALGIN_256) + Align(math.ceil(h / ALGIN_32), ALGIN_2), ALGIN_512)
 
     local_moe_expert_num = 0
     torch._check(
@@ -2800,8 +2810,10 @@ def npu_moe_distribute_dispatch_teardown_meta(x, y, expert_ids, comm_cmd_info, g
                                               moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
                                               shared_expert_rank_num=0, quant_mode=0, global_bs=0, 
                                               expert_token_nums_type=1, comm_type=0, comm_alg=""):
+    DIM_2 = 2
+    
     torch._check(
-        (x.dim() == 2),
+        (x.dim() == DIM_2),
         lambda: (
             f"The dims of input x should be 2 dimensional, "
             f"but got {x.dim()}."
@@ -2809,7 +2821,7 @@ def npu_moe_distribute_dispatch_teardown_meta(x, y, expert_ids, comm_cmd_info, g
         ),
     )
     torch._check(
-        (expert_ids.dim() == 2),
+        (expert_ids.dim() == DIM_2),
         lambda: (
             f"The dims of input expert_ids should be 2 dimensional, "
             f"but got {expert_ids.dim()}."
@@ -2853,13 +2865,15 @@ def npu_moe_distribute_combine_setup_meta(expand_x, expert_ids, assist_info_for_
                                           ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
                                           shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0, 
                                           comm_alg="", y_dtype=0):
-    def AlignX(x, align_len):
+    def Align(x, align_len):
         if (align_len <= 0):
             return -1
-        return ((x + align_len - 1) // align_len) * align_len
+        return math.ceil(x / align_len) * align_len
+
+    DIM_2 = 2
 
     torch._check(
-        (expand_x.dim() == 2),
+        (expand_x.dim() == DIM_2),
         lambda: (
             f"The dims of input expand_x should be 2 dimensional, "
             f"but got {expand_x.dim()}."
@@ -2869,7 +2883,7 @@ def npu_moe_distribute_combine_setup_meta(expand_x, expert_ids, assist_info_for_
 
     a = expand_x.size(0)
     h = expand_x.size(1)
-    hs = AlignX(AlignX(h, 32) + AlignX(h, 8) // 8 * 4, 512)
+    hs = Align(Align(h, 32) + Align(h, 8) // 8 * 4, 512)
     quant_expand_x = expand_x.new_empty(tuple([a, hs]), dtype=torch.int8)
     comm_cmd_info = expand_x.new_empty(tuple([(a + ep_world_size) * 16]), dtype=torch.int32)
     return (quant_expand_x, comm_cmd_info)
@@ -2880,8 +2894,10 @@ def npu_moe_distribute_combine_teardown_meta(expand_x, quant_expand_x, expert_id
                                              group_ep, ep_world_size, ep_rank_id, moe_expert_num, x_active_mask=None, 
                                              shared_expert_x=None, expert_shard_type=0, shared_expert_num=1, 
                                              shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0):
+    DIM_2 = 2
+    
     torch._check(
-        (expand_x.dim() == 2),
+        (expand_x.dim() == DIM_2),
         lambda: (
             f"The dims of input expand_x should be 2 dimensional, "
             f"but got {expand_x.dim()}."
@@ -2889,7 +2905,7 @@ def npu_moe_distribute_combine_teardown_meta(expand_x, quant_expand_x, expert_id
         ),
     )
     torch._check(
-        (expert_ids.dim() == 2),
+        (expert_ids.dim() == DIM_2),
         lambda: (
             f"The dims of input expert_ids should be 2 dimensional, "
             f"but got {expert_ids.dim()}."
