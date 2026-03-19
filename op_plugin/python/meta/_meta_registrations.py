@@ -2173,6 +2173,53 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
 
 
+@impl(m, "npu_add_rms_norm_dynamic_mx_quant")
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, epsilon=1e-06, scale_alg=0, round_mode="rint", dst_type=296):
+    dim_num = x1.dim()
+
+    # 1. 推导 y shape 和 dtype
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(x1, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(x1, dtype=torch.float8_e4m3fn)
+    else:
+        if x1.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, "
+                               "the last dim of x1 must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(x1.size(dim))
+        y_shape.append(x1.size(dim_num - 1) // 2)
+        y = x1.new_empty(y_shape, dtype=torch.uint8)
+
+    # 2. x_out: shape/dtype 同 x1
+    x_out = torch.empty_like(x1, dtype=x1.dtype)
+
+    # 3. mxscale_out shape: rank(x1)+1, 尾轴 ceil(last/32) 偶数对齐, 最后一维=2
+    mxscale_shape = []
+    for dim in range(dim_num):
+        mxscale_shape.append(x1.size(dim))
+    last_dim_size = int(math.ceil(mxscale_shape[-1] / 32))
+    last_dim_size = (last_dim_size + 2 - 1) // 2
+    mxscale_shape[-1] = last_dim_size
+    mxscale_shape.append(2)
+    mxscale_out = x1.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # 4. rstd_out shape
+    rstd_dim = x1.dim() - gamma.dim()
+    rstd_shape = []
+    for i in range(x1.dim()):
+        if i < rstd_dim:
+            rstd_shape.append(x1.size(i))
+        else:
+            rstd_shape.append(1)
+    rstd_out = torch.empty(rstd_shape, dtype=torch.float32, device=x1.device)
+
+    return (y, x_out, mxscale_out, rstd_out)
+
+
 @impl(m, "npu_rms_norm_backward")
 def npu_rms_norm_backward_meta(dy, self, gamma, rstd):
     return (torch.empty_like(self, dtype=self.dtype), torch.empty_like(gamma, dtype=torch.float32))
