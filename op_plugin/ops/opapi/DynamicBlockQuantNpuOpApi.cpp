@@ -18,6 +18,13 @@ const int DIMENSION_3D = 3;
 const int DIM_0 = 0;
 const int DIM_1 = 1;
 const int DIM_2 = 2;
+const int DST_TYPE_HIFLOAT8 = 34;
+constexpr float FLOAT_0 = 0.0;
+const float FLOAT_15 = 15.0;
+const float FLOAT_56 = 56.0;
+const float FLOAT_224 = 224.0;
+const float FLOAT_32768 = 32768.0;
+const std::set<float> DST_TYPE_MAX_SUPPORT_DTYPE = {FLOAT_0, FLOAT_15, FLOAT_56, FLOAT_224, FLOAT_32768};
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -28,7 +35,8 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
     c10::string_view round_mode,
     int64_t dst_type,
     int64_t row_block_size,
-    int64_t col_block_size)
+    int64_t col_block_size,
+    double dst_type_max)
 {
     at::Tensor y;
     at::Tensor scale;
@@ -44,6 +52,11 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
         TORCH_CHECK(false, "x must be 2 or 3 dimensional.", OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
 
+    TORCH_CHECK(DST_TYPE_MAX_SUPPORT_DTYPE.find(dst_type_max) != DST_TYPE_MAX_SUPPORT_DTYPE.end(),
+        "The dst_type_max is %f but should be 0 or 15 or 56 or 224 or 32768, please check.", dst_type_max, OPS_ERROR(ErrCode::NOT_SUPPORT));
+    
+    TORCH_CHECK(dst_type_max != 0 && dst_type != DST_TYPE_HIFLOAT8, "invalid dst_type_max: %f. dst_type_max only supported when dst_type is DT_HIFLOAT8", dst_type_max, OPS_ERROR(ErrCode::NOT_SUPPORT));
+
     ASCEND_LOGI("[npu_dynamic_block_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
     at::ScalarType dtype = npu_preparation::convert_to_scalar_type(y_acltype);
@@ -55,8 +68,13 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_block_quant(
     ASCEND_LOGI("[npu_dynamic_block_quant]: Setting aclTensor y dtype to: %s",
                 at_npu::native::AclDataTypeToString(y_acltype).c_str());
     TensorWrapper y_wrapper = {y, y_acltype};
-    EXEC_NPU_CMD(aclnnDynamicBlockQuant, x, min_scale, round_mode_ptr, y_acltype,
-                 row_block_size, col_block_size, y_wrapper, scale);
+    if (dst_type_max) {
+        EXEC_NPU_CMD(aclnnDynamicBlockQuantV2, x, min_scale, round_mode_ptr, y_acltype,
+                    row_block_size, col_block_size, dst_type_max, y_wrapper, scale);
+    } else {
+        EXEC_NPU_CMD(aclnnDynamicBlockQuant, x, min_scale, round_mode_ptr, y_acltype,
+                row_block_size, col_block_size, y_wrapper, scale);
+    }
 
     return std::tie(y, scale);
 }
