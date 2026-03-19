@@ -3357,6 +3357,44 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y2_npu.dtype, torch.int32)
 
 
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        test_cases = [
+            # (x1_shape, gamma_shape, dtype, dst_type, expected_y_dtype)
+            ([2, 64], [64], torch.float16, 296, torch.uint8),
+            ([4, 8, 128], [128], torch.bfloat16, 296, torch.uint8),
+        ]
+        for x1_shape, gamma_shape, dtype, dst_type, expected_y_dtype in test_cases:
+            with FakeTensorMode():
+                x1 = torch.randn(x1_shape, dtype=dtype, device='npu')
+                x2 = torch.randn(x1_shape, dtype=dtype, device='npu')
+                gamma = torch.ones(gamma_shape, dtype=dtype, device='npu')
+                beta = torch.zeros(gamma_shape, dtype=dtype, device='npu')
+                y, x_out, mxscale_out, rstd_out = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                    x1, x2, gamma, beta=beta, dst_type=dst_type
+                )
+                expected_y_shape = list(x1_shape)
+                expected_y_shape[-1] = expected_y_shape[-1] // 2
+                self.assertEqual(y.shape, tuple(expected_y_shape))
+                self.assertEqual(y.dtype, expected_y_dtype)
+                self.assertEqual(x_out.shape, x1.shape)
+                self.assertEqual(x_out.dtype, x1.dtype)
+                self.assertEqual(mxscale_out.dtype, torch.uint8)
+                self.assertEqual(mxscale_out.dim(), x1.dim() + 1)
+                self.assertEqual(mxscale_out.shape[-1], 2)
+                self.assertEqual(rstd_out.dtype, torch.float32)
+
+        with FakeTensorMode():
+            x1 = torch.randn([2, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([2, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64], dtype=torch.float16, device='npu')
+            y, x_out, mxscale_out, rstd_out = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y.shape, x1.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+
+
 class TestMoeUpdateExpert(TestCase):
     def test_moe_update_expert(self):
         with FakeTensorMode():
