@@ -3518,3 +3518,10 @@ def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
     result = torch.empty_like(x)
 
     return result
+
+
+@impl(m, "kl_div_backward")
+def kl_div_backward_meta(grad_out, x, target, reduction="mean", log_target=False):
+    result = torch.empty_like(x)
+
+    return result
