@@ -2,12 +2,14 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>     |     √    |
-|  <term>Atlas 推理系列产品</term>   |     √    |
+| 产品 | 是否支持 |
+| :---------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                                                |    √    |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                        |    √    |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
+| <term>Atlas 200I/500 A2 推理产品</term>                                         |    √    |
+| <term>Atlas 推理系列产品</term>                                                |    √    |
+| <term>Atlas 训练系列产品</term>                                                 |    ×    |
 
 ## 功能说明
 
@@ -60,24 +62,41 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06) -> Te
 
 ## 约束说明
 
-- Atlas 推理系列产品：`x`、`y`的尾轴长度，以及`gamma`的尾轴长度必大于等于32 Bytes。
+- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
+- <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
 - 各产品型号支持数据类型说明：
+  
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
-  **表 1** Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件、Atlas A3 训练系列产品/Atlas A3 推理系列产品
+    | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
+    | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
+    | BFLOAT16  | BFLOAT16      | BFLOAT16      | BFLOAT16      | INT8           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
+    | BFLOAT16  | BFLOAT16      | BFLOAT16      | BFLOAT16      | INT8           | DOUBLE      |INT4      |
 
-  | x | gamma | beta | scale | offset | epsilon | y |
-  | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-  | `float16` | `float16` | `float16` | `float16` | `int8` | `double` | `int8` |
-  | `bfloat16` | `bfloat16` | `bfloat16` | `bfloat16` | `int8` | `double` | `int8` |
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：
 
-  **表 2** Atlas 推理系列产品、Atlas 200I/500 A2 推理产品
+    | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型
+    | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT4      |
+  - <term>Ascend 950PR/Ascend 950DT</term>：
 
-  | x | gamma | beta | scale | offset | epsilon | y |
-  | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-  | `float16` | `float16` | `float16` | `float16` | `int8` | `double` | `int8` |
+    | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
+    | --------- | ------------- | ------------- | ------------- | -------------- | --------- |--------- |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | INT8           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT16       | FLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16       | BFLOAT16           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT32   | FLOAT32       | FLOAT32       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32      | INT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | FLOAT16   | FLOAT16       | FLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      |
+    | BFLOAT16   | BFLOAT16       | BFLOAT16       | FLOAT32       | FLOAT32           | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     |
 
 ## 调用示例
-
 ```python
 >>> import torch
 >>> import torch_npu
