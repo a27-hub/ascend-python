@@ -47,6 +47,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_chunk_gated_delta_rule_fwd_h(
     int HV = u_sizes[1];
     int V = k_sizes[3];
     int NT = 0;
+    int N = cu_seqlens.has_value() ? cu_seqlens_.sizes()[0] - 1 : B;
     if(cu_seqlens.has_value()) {
         auto cu_seqlens_sizes = chunk_indices_.sizes();
         NT = cu_seqlens_sizes[0];
@@ -58,9 +59,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_chunk_gated_delta_rule_fwd_h(
     at::Tensor v_new_out = npu_preparation::apply_tensor_without_format(u.sizes(), u.options().dtype());
     at::Tensor final_state_out;
     if(output_final_state_) {
-        auto initial_state_sizes = initial_state_.sizes();
-        int BT = initial_state_sizes[2];
-        final_state_out = npu_preparation::apply_tensor_without_format({B, HV, BT, K, V}, initial_state_.options().dtype());    
+        final_state_out = npu_preparation::apply_tensor_without_format({N, HV, K, V}, initial_state_.options().dtype());    
     }
 
     EXEC_NPU_CMD(aclnnChunkGatedDeltaRuleFwdH,
