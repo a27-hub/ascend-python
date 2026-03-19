@@ -179,8 +179,8 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         lambda: "Input phi should not be empty." + ops_error(ErrCode.VALUE),
     )
     torch._check(
-        alpha.numel() > 0,
-        lambda: "Input alpha should not be empty." + ops_error(ErrCode.VALUE),
+        alpha.numel() == 3,
+        lambda: "Input alpha must have 3 elements, but got " + str(alpha.numel()) + "." + ops_error(ErrCode.VALUE),
     )
     torch._check(
         bias.numel() > 0,
@@ -223,9 +223,7 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         out_hpre = torch.empty([t, num_residual], dtype=torch.float32, device="meta")
 
     if out_flag == 0:
-        out_inv_rms = None
-        out_hmix = None
-        out_hpre = None
+        return (out_hin, out_hpost, out_hres, None, None, None)
 
     return (out_hin, out_hpost, out_hres, out_inv_rms, out_hmix, out_hpre)
 

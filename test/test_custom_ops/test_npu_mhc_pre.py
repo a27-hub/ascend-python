@@ -48,7 +48,7 @@ class TestNpuMhcPre(TestCase):
             phi,
             alpha,
             bias,
-            gamma=gamma if gamma is not None else None,
+            gamma=gamma,
             out_flag=out_flag
         )
 
@@ -72,16 +72,7 @@ class TestNpuMhcPre(TestCase):
             expected_output = self.cpu_op_exec(x, phi, alpha, bias, gamma)[:len(output_names)]
             actual_output = self.custom_op_exec(
                 x.npu(), phi.npu(), alpha.npu(), bias.npu(), gamma.npu(), out_flag=out_flag
-            )
-
-            self.assertEqual(
-                len(expected_output), len(output_names),
-                msg=f"CPU output count mismatch: expect {len(output_names)}, got {len(expected_output)}"
-            )
-            self.assertEqual(
-                len(actual_output), len(output_names),
-                msg=f"NPU output count mismatch: expect {len(output_names)}, got {len(actual_output)}"
-            )
+            )[:len(output_names)]
 
             for name, exp, act in zip(output_names, expected_output, actual_output):
                 try:

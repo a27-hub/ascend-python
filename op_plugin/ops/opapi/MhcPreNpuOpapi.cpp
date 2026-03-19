@@ -5,6 +5,8 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
+// https://opensource.org/licenses/BSD-3-Clause
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +16,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
-namespace op_api {
+namespace {
 constexpr int64_t DIM_0 = 0;
 constexpr int64_t DIM_1 = 1;
 constexpr int64_t DIM_2 = 2;
@@ -118,20 +120,21 @@ construct_mhc_pre_outputs(const at::Tensor &x, const at::Tensor &phi) {
 
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
+} // namespace
 
+namespace op_api {
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha,
-            const at::Tensor &bias, const c10::optional<at::Tensor> &gamma, double norm_eps,
-            double hc_eps, int64_t out_flag) {
-    TORCH_CHECK(x.numel() > 0, "Tensor x is empty.");
-    TORCH_CHECK(phi.numel() > 0, "Tensor phi is empty.");
-    TORCH_CHECK(alpha.numel() > 0, "Tensor alpha is empty.");
-    TORCH_CHECK(bias.numel() > 0, "Tensor bias is empty.");
+npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
+            const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag) {
+    TORCH_CHECK(x.numel() > 0, "Input x should not be empty.");
+    TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.");
+    TORCH_CHECK(alpha.numel() == 3, "Input alpha must have 3 elements, but got ", alpha.numel(), ".");
+    TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.");
 
-    TORCH_CHECK(x.dim() == 3 || x.dim() == 4, "Tensor x must be 3D or 4D, but got ", x.dim(), "D.");
+    TORCH_CHECK(x.dim() == 3 || x.dim() == 4, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
     TORCH_CHECK(out_flag == 0 || out_flag == 1, "out_flag must be 0 or 1, but got ", out_flag, ".");
 
-    auto mhcPreOutput = op_api::construct_mhc_pre_outputs(x, phi);
+    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi);
 
     at::Tensor outHin = std::get<0>(mhcPreOutput);
     at::Tensor outHpost = std::get<1>(mhcPreOutput);
@@ -147,8 +150,8 @@ npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha,
     }
 
     at::Tensor nullTensor;
-    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
-                 outHres, nullTensor, nullTensor, nullTensor);
+    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost, outHres,
+                 nullTensor, nullTensor, nullTensor);
     return std::make_tuple(outHin, outHpost, outHres, nullTensor, nullTensor, nullTensor);
 }
 } // namespace op_api
