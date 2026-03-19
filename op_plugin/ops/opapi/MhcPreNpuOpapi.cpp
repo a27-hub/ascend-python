@@ -3,9 +3,6 @@
 //
 // Licensed under the BSD 3-Clause License  (the "License");
 // you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://opensource.org/licenses/BSD-3-Clause
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,9 +20,13 @@ constexpr int64_t DIM_2 = 2;
 constexpr int64_t DIM_3 = 3;
 constexpr int64_t BSND_DIMS = 4;
 constexpr int64_t TND_DIMS = 3;
+constexpr int64_t REMOVE_ONE_DIM = 1;
+constexpr int64_t REMOVE_TWO_DIMS = 2;
+constexpr int64_t ALPHA_NUMEL = 3;
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-construct_mhc_pre_outputs(const at::Tensor &x, const at::Tensor &phi) {
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
+    const at::Tensor &x, const at::Tensor &phi)
+{
     c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
     c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
     auto matK = phi.size(DIM_0);
@@ -37,18 +38,18 @@ construct_mhc_pre_outputs(const at::Tensor &x, const at::Tensor &phi) {
     at::Tensor outHmix;
     at::Tensor outHpre;
 
-    if (x.dim() == 4) {
+    if (x.dim() == BSND_DIMS) {
         auto batch = x.size(DIM_0);
         auto sequence = x.size(DIM_1);
         auto numResidual = x.size(DIM_2);
         auto dim = x.size(DIM_3);
 
-        c10::SmallVector<int64_t, BSND_DIMS - 1> outHinSize;
-        c10::SmallVector<int64_t, BSND_DIMS - 1> outHpostSize;
+        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHinSize;
+        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpostSize;
         c10::SmallVector<int64_t, BSND_DIMS> outHresSize;
-        c10::SmallVector<int64_t, BSND_DIMS - 2> outInvRmsSize;
-        c10::SmallVector<int64_t, BSND_DIMS - 1> outHmixSize;
-        c10::SmallVector<int64_t, BSND_DIMS - 1> outHpreSize;
+        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
+        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHmixSize;
+        c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpreSize;
 
         outHinSize.push_back(batch);
         outHinSize.push_back(sequence);
@@ -85,12 +86,12 @@ construct_mhc_pre_outputs(const at::Tensor &x, const at::Tensor &phi) {
         auto numResidual = x.size(DIM_1);
         auto dim = x.size(DIM_2);
 
-        c10::SmallVector<int64_t, TND_DIMS - 1> outHinSize;
-        c10::SmallVector<int64_t, TND_DIMS - 1> outHpostSize;
+        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHinSize;
+        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpostSize;
         c10::SmallVector<int64_t, TND_DIMS> outHresSize;
-        c10::SmallVector<int64_t, TND_DIMS - 2> outInvRmsSize;
-        c10::SmallVector<int64_t, TND_DIMS - 1> outHmixSize;
-        c10::SmallVector<int64_t, TND_DIMS - 1> outHpreSize;
+        c10::SmallVector<int64_t, TND_DIMS - REMOVE_TWO_DIMS> outInvRmsSize;
+        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHmixSize;
+        c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpreSize;
 
         outHinSize.push_back(t);
         outHinSize.push_back(dim);
@@ -123,15 +124,16 @@ construct_mhc_pre_outputs(const at::Tensor &x, const at::Tensor &phi) {
 } // namespace
 
 namespace op_api {
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-npu_mhc_pre(const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
-            const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag) {
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_pre(
+    const at::Tensor &x, const at::Tensor &phi, const at::Tensor &alpha, const at::Tensor &bias,
+    const c10::optional<at::Tensor> &gamma, double norm_eps, double hc_eps, int64_t out_flag)
+{
     TORCH_CHECK(x.numel() > 0, "Input x should not be empty.");
     TORCH_CHECK(phi.numel() > 0, "Input phi should not be empty.");
-    TORCH_CHECK(alpha.numel() == 3, "Input alpha must have 3 elements, but got ", alpha.numel(), ".");
+    TORCH_CHECK(alpha.numel() == ALPHA_NUMEL, "Input alpha must have 3 elements, but got ", alpha.numel(), ".");
     TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.");
 
-    TORCH_CHECK(x.dim() == 3 || x.dim() == 4, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
+    TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
     TORCH_CHECK(out_flag == 0 || out_flag == 1, "out_flag must be 0 or 1, but got ", out_flag, ".");
 
     auto mhcPreOutput = construct_mhc_pre_outputs(x, phi);

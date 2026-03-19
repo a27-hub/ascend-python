@@ -222,7 +222,8 @@ def npu_mhc_pre_meta(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=1
         out_hmix = torch.empty([t, mat_k], dtype=torch.float32, device="meta")
         out_hpre = torch.empty([t, num_residual], dtype=torch.float32, device="meta")
 
-    return (out_hin, out_hpost, out_hres, out_inv_rms, out_hmix, out_hpre)
+    output_tensors = (out_hin, out_hpost, out_hres, out_inv_rms, out_hmix, out_hpre)
+    return output_tensors
 
 
 @impl(m, "npu_incre_flash_attention")
