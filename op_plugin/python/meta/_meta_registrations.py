@@ -3171,6 +3171,23 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     return x.new_empty((dim_m, dim_n), dtype=x.dtype)
 
 
+def is_transpose_last_two_dims(tensor):
+    if tensor.dim() < 2 or tensor.dim() > 6:
+        return False
+    dim1 = tensor.dim() - 1
+    dim2 = tensor.dim() - 2
+    if tensor.stride(dim2) == 1 and tensor.stride(dim1) == tensor.size(dim2):
+        tmpNxD = tensor.size(dim1) * tensor.size(dim2)
+        for batchDim in range(tensor.dim() - 3, -1, -1):
+            if tensor.stride(batchDim) != tmpNxD:
+                return False
+            tmpNxD = tmpNxD * tensor.size(batchDim)
+        if tensor.size(dim1) == 1 and tensor.size(dim2) == 1:
+            return False
+        return True
+    return False
+
+
 def bias_shape_check(*args):
     x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2 = args
     bias_dim_num = bias.dim()
@@ -3594,6 +3611,7 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     shape_short = x2 if x1_dim_num > x2_dim_num else x1
     vaild_offset = out_dim_num - min(x1_dim_num, x2_dim_num)
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
+    is_a4w4_mxfp4_valid = x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
     is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32)
     dim_list = []
@@ -3611,17 +3629,26 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             cur_batch_val = max(short_dim, long_dim)
             batch_val = batch_val * cur_batch_val
             dim_list.append(cur_batch_val)
-        dimm = x1.size(x1.dim() - 2)
-        transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
-
-        dimn = x2.size(x2.dim() - 1)
-        if (is_a4w4 and not transpose_x2):
-            dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
-        elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
-            dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
-
-        dim_list.append(dimm)
-        dim_list.append(dimn)
+        if is_a4w4_mxfp4_valid:
+            FP4_IN_INT8 = 2
+            trans_x1 = is_transpose_last_two_dims(x1)
+            trans_x2 = is_transpose_last_two_dims(x2)
+            x1_size_last_second = x1.size(x1_dim_num - 2)
+            x2_size_last = x2.size(x2_dim_num - 1)
+            m_new = x1_size_last_second if not trans_x1 else x1_size_last_second * FP4_IN_INT8
+            n_new = x2_size_last if trans_x2 else x2_size_last * FP4_IN_INT8
+            dim_list.append(m_new)
+            dim_list.append(n_new)
+        else:
+            dimm = x1.size(x1.dim() - 2)
+            transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
+            dimn = x2.size(x2.dim() - 1)
+            if (is_a4w4 and not transpose_x2):
+                dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
+            elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
+                dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
+            dim_list.append(dimm)
+            dim_list.append(dimn)
         if bias is not None:
             if bias.dim() == 3:
                 torch._check(
