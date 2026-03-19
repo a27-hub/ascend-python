@@ -86,7 +86,7 @@ def _matmul_get_output_size(tensor1, tensor2):
     if dim_tensor1 == 1 and dim_tensor2 == 1:
         return []
     elif dim_tensor1 == 2 and dim_tensor2 == 1:
-        return [tensor2.size(0)]
+        return [tensor1.size(0)]
     elif dim_tensor1 == 1 and dim_tensor2 == 2:
         return [tensor2.size(1)]
     elif dim_tensor1 == 2 and dim_tensor2 == 2:
@@ -137,7 +137,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             grad_tensor = grad_tensor.unsqueeze(-2)
 
         if mat1.dim() == 2 and mat2.dim() > 2:
-            self_grad = torch.empty(list(mat1.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
+            self_grad = torch.empty(list(self.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
         else:
             mat2_transposed = mat2.transpose(-2, -1)
             self_grad_size = _matmul_get_output_size(grad_tensor, mat2_transposed)
@@ -165,6 +165,9 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             other_grad_size = _matmul_get_output_size(mat1_transposed, grad_tensor)
             other_grad = torch.empty(other_grad_size, dtype=mat1.dtype, device=mat1.device)
 
+        if other.dim() == 1 and other_grad.size(-1) == 1 and other_grad.dim() != 1:
+            other_grad = other_grad.squeeze(-1)
+             
         return (self_grad, other_grad)
 
 
@@ -427,6 +430,12 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
+    if weight_quant_mode == 3:
+        torch._check(
+            get_soc_version() >= 260,
+            lambda: "When weight_quant_mode is 3, not support on this soc version." + ops_error(ErrCode.NOT_SUPPORT),
+        )
+
     for item_name, item in require_param.items():
         torch._check(
             item is not None,
@@ -562,6 +571,12 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
 
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+
+    if weight_quant_mode == 3:
+        torch._check(
+            get_soc_version() >= 260,
+            lambda: "When weight_quant_mode is 3, not support on this soc version." + ops_error(ErrCode.NOT_SUPPORT),
+        )
 
     for item_name, item in require_param.items():
         torch._check(
@@ -1021,6 +1036,12 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
                 self.new_empty(0, dtype=torch.float32))
 
 
+@impl(m, "npu_mhc_post")
+def npu_mhc_post(x, h_res, h_out, h_post):
+    y_size = tuple(x.shape)
+    return torch.empty(y_size, dtype=x.dtype, device='meta')
+
+
 @impl(m, "npu_moe_init_routing")
 def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     n = x.size(0)
@@ -1031,6 +1052,28 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     expanded_row_idx_dim_list = [n * k]
     expanded_expert_idx_dim_list = [n * k]
     return (x.new_empty(tuple(expanded_x_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)))
+
+
+@impl(m, "npu_mhc_sinkhorn")
+def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+    x_shape = list(x.shape)
+    torch._check(
+        x_shape[-1] in [4, 6, 8],
+        lambda: f"The x's dim should be 4 or 6 or 8, but got {x_shape[-1]}.",
+        )
+    torch._check(
+        x.dim() == 3 or x.dim() == 4,
+        lambda: f"The x's dim should be 3 or 4, but got {x.dim()}.",
+        )
+    torch._check(
+        num_iters > 0 and num_iters <= 100,
+        lambda: f"num_iters must be within (0, 100], but got {num_iters}.",
+        )
+
+    y_size = tuple(x.shape)
+    return (torch.empty(y_size, dtype=x.dtype, device='meta'),
+            torch.empty(y_size, dtype=x.dtype, device='meta'),
+            torch.empty(y_size, dtype=x.dtype, device='meta'))
 
 
 @impl(m, "npu_moe_init_routing_v2")
@@ -1709,6 +1752,57 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 
+@impl(m, "_npu_kv_quant_sparse_flash_attention_pioneer")
+def _npu_kv_quant_sparse_flash_attention_pioneer_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, key_sink=None, value_sink=None, sparse_block_size=1, layout_query="BSND",
+                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
+    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(
+        query.numel() > 0,
+        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key.numel() > 0,
+        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value.numel() > 0,
+        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices.numel() > 0,
+        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
+    )
+
+    if layout_query == "BSND":
+        torch._check(
+            query.dim() == 4,
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
+    elif layout_query == "TND":
+        torch._check(
+            query.dim() == 3,
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
+    else:
+        torch._check(
+            False,
+            lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
+        )
+    return out
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
@@ -2119,6 +2213,34 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
     else:
         output = self.new_empty(input_shape, dtype=dtype)
     return output
+
+
+@impl(m, "npu_block_sparse_attention")
+def npu_block_sparse_attention_meta(query, key, value, block_sparse_mask, block_shape, *, q_input_layout='TND', kv_input_layout='TND',
+                                   num_key_value_heads=1, scale_value=0.0, inner_precise=1,
+                                   actual_seq_lengths=None, actual_seq_lengths_kv=None, softmax_lse_flag=0):
+    torch._check(
+        query.dim() == 3 or query.dim() == 4,
+        lambda: "query should be 3 or 4 dimensional, but got " + str(query.dim()) + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        len(block_shape) >= 2 and block_shape[1] % 128 == 0,
+        lambda: "block_shape[1] (blockShapeY) must be a multiple of 128, got " + str(block_shape[1])
+        + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        query.dtype != torch.bfloat16 or inner_precise == 0,
+        lambda: "when query/key/value are bfloat16, inner_precise must be 0, got " + str(inner_precise)
+        + ops_error(ErrCode.PARAM),
+    )
+    attention_out_shape = list(query.size())
+    attention_out_shape[-1] = value.size(-1)
+    attention_out = query.new_empty(attention_out_shape)
+    if query.dim() == 4:
+        softmax_lse = query.new_empty([query.size(0), query.size(1), query.size(2), 1], dtype=torch.float32)
+    else:
+        softmax_lse = query.new_empty([query.size(0), query.size(1), 1], dtype=torch.float32)
+    return (attention_out, softmax_lse)
 
 
 @impl(m, "npu_bmmV2")
@@ -3577,6 +3699,53 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     return shape_long.new_empty(tuple(dim_list), dtype=tensor_dtype)
 
 
+@impl(m, "npu_matmul_compress_dequant")
+def npu_matmul_compress_dequant_meta(x1, x2, compress_index, bias, scale, *, offsetW=None, offsetX=None):
+    torch._check(
+        x1.dim() == 2,
+        lambda: "the x1 dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x1.dtype == torch.int8,
+        lambda: "the x1 dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x2.dim() == 1,
+        lambda: "the x2 dim support only 1" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x2.dtype == torch.int8,
+        lambda: "the x2 dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        compress_index.dim() == 1,
+        lambda: "the compress_index dim support only 1" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        compress_index.dtype == torch.int8,
+        lambda: "the compress_index dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        bias.dim() == 2,
+        lambda: "the bias dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        bias.dtype == torch.int32,
+        lambda: "the bias dtype support only int32" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        scale.dim() == 2,
+        lambda: "the scale dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        scale.dtype == torch.uint64,
+        lambda: "the scale dtype support only uint64" + ops_error(ErrCode.VALUE),
+    )
+    dim_list = (x1.shape[0], bias.shape[1])
+
+    return torch.empty(dim_list, dtype=torch.float16, device='meta')
+
+
 @impl(m, "npu_quant_matmul_dequant")
 def npu_quant_matmul_dequant_meta(x, quantized_weight, weight_scale, *,
                                   bias=None, x_scale=None, x_offset=None, smooth_scale=None, quant_mode="pertoken"):
@@ -4235,7 +4404,7 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
 @impl(m, "npu_kv_rmsnorm_rope_cache_v2")
 def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
                                            c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, v=None, epsilon=1e-5,
-                                           cache_mode='Norm', is_output_kv=False):
+                                           cache_mode='Norm', is_output_kv=False, k_cache_dtype=None, ckv_cache_dtype=None):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
     if v is not None and v.dim() > 0:
@@ -4268,7 +4437,7 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
 def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *,
                                                       k_rope_scale=None, c_kv_scale=None, k_rope_offset=None,
                                                       c_kv_offset=None, v=None, epsilon=1e-5, cache_mode='Norm',
-                                                      is_output_kv=False):
+                                                      is_output_kv=False, k_cache_dtype=None, ckv_cache_dtype=None):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
     if v is not None and v.dim() > 0:
