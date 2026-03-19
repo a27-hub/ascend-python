@@ -13353,7 +13353,7 @@ _add_torch_npu_docstr(
     "npu_dynamic_block_quant",
     """
 接口原型: 
-torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128) -> (Tensor, Tensor)
+torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128, dst_type_max=0.0) -> (Tensor, Tensor)
 
 
 功能描述
@@ -13366,6 +13366,7 @@ round_mode (str)：可选参数，指定cast到输出的转换方式。当前仅
 dst_type (int)：可选参数，指定输出y的数据类型。当前仅支持取值1，表示代码输出y的数据类型为int8。
 row_block_size (int)：可选参数，指定一个block的行大小。当前仅支持取值1。
 col_block_size (int)：可选参数，指定一个block的列大小，当前仅支持取值128。
+dst_type_max (float)：可选参数，目标数据类型的最大值。当前仅支持取值0.0。
 
 输出说明: 
 y (Tensor)：量化结果。
