@@ -50,17 +50,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         "The input gmm_x_quant_mode must be provided, but got None.",
         OPS_ERROR(ErrCode::PARAM));
     int64_t gmm_x_quant_mode_value = gmm_x_quant_mode.value();
-    TORCH_CHECK(gmm_x_quant_mode_value == PERTENSOR_QUANT_MODE,
-        "The input gmm_x_quant_mode only supports 1 (pertensor mode).",
-        OPS_ERROR(ErrCode::VALUE));
     // gmm_weight_quant_mode
     TORCH_CHECK(gmm_weight_quant_mode.has_value(),
         "The input gmm_weight_quant_mode must be provided, but got None.",
         OPS_ERROR(ErrCode::PARAM));
     int64_t gmm_weight_quant_mode_value = gmm_weight_quant_mode.value();
-    TORCH_CHECK(gmm_weight_quant_mode_value == PERTENSOR_QUANT_MODE,
-        "The input gmm_weight_quant_mode only supports 1 (pertensor mode).",
-        OPS_ERROR(ErrCode::VALUE));
     // gmm_x
     TORCH_CHECK(gmm_x.defined(), "The input tensor gmm_x cannot be None.", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(
@@ -254,13 +248,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
             "The input mm_weight_quant_mode must be provided when mm_weight is present.",
             OPS_ERROR(ErrCode::PARAM));
         mm_x_quant_mode_value = mm_x_quant_mode.value();
-        TORCH_CHECK(mm_x_quant_mode_value == PERTENSOR_QUANT_MODE,
-            "The input mm_x_quant_mode only supports 1 (pertensor mode).",
-            OPS_ERROR(ErrCode::VALUE));
         mm_weight_quant_mode_value = mm_weight_quant_mode.value();
-        TORCH_CHECK(mm_weight_quant_mode_value == PERTENSOR_QUANT_MODE,
-            "The input mm_weight_quant_mode only supports 1 (pertensor mode).",
-            OPS_ERROR(ErrCode::VALUE));
         const at::Tensor &mm_x_value = mm_x.value();
         const at::Tensor &mm_weight_value = mm_weight.value();
         // mm_x
