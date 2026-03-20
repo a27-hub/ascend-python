@@ -1198,6 +1198,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
+    elif quant_mode == -1:
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]

@@ -224,6 +224,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
 
+    TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && p_scale.dtype() == at::kByte) ?
+        aclDataType::ACL_FLOAT8_E8M0:
+        npu_preparation::convert_to_acl_data_type(p_scale.scalar_type())};
     TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
@@ -236,7 +239,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,
         expert_idx,
-        p_scale,
+        scale_wrapper,
         p_offset,
         active_num,
         expert_capacity,
