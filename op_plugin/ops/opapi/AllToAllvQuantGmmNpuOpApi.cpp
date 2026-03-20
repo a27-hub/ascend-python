@@ -266,8 +266,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
                 }
                 TORCH_CHECK(mm_weight_scale_val.scalar_type() == at::ScalarType::Float,
                     "mm_weight_scale tensor dtype should be Float for pertensor quant mode, but got ",
-                    op_plugin::utils::DTypeToString(
-                    static_cast<int64_t>(c10::dtype(mm_weight_scale_val.scalar_type()))),
+                    op_plugin::utils::DTypeToString(static_cast<int64_t>(c10::dtype(mm_weight_scale_val.scalar_type()))),
                     ".", OPS_ERROR(ErrCode::TYPE));
             } else {
                 TORCH_CHECK(mm_weight_scale_dtype.has_value(),
