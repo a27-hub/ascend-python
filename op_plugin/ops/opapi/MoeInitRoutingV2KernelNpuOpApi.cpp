@@ -74,6 +74,9 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
             return true;
         }
     }
+    if (MoeInitRoutingV2Is310P()) {
+        return true;
+    }
     return false;
 }
 
