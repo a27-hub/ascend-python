@@ -197,6 +197,12 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         const at::Tensor long_tensor = x1_dim_num > x2_dim_num ? x1 : x2;
         output_size = op_infer::array_to_small_vector(long_tensor.sizes());
         if (mxfp4_valid) {
+            TORCH_CHECK(x1.dim() >= 2 && x1.dim() <= 6,
+                "x1 dim num should be 2 ~ 6, please check x1 dim num. Actual x1 dim = ", x1.dim(),
+                OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(x2.dim() >= 2 && x2.dim() <= 6,
+                "x2 dim num should be 2 ~ 6, please check x2 dim num. Actual x2 dim = ", x2.dim(),
+                OPS_ERROR(ErrCode::PARAM));
             int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
             int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
             int64_t real_m = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
