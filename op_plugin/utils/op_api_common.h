@@ -42,7 +42,7 @@ bool checkOwner(string cusLibPath);
 inline bool MoeInitRoutingV2Is310P()
 {
     bool isSoc310P = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
-                    c10_npu::GetSocVersion() <= c10_npu::SocVersion::Ascend310P7)
+                        c10_npu::GetSocVersion() <= c10_npu::SocVersion::Ascend310P7)
     return isSoc310P;
 }
 
