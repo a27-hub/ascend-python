@@ -1386,14 +1386,32 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            torch._check(
-                scale_dim == 1,
-                lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
-            )
-            torch._check(
-                x.size(0) == scale.size(0),
-                lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
-            )
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn:
+                torch._check(
+                    scale_dim == 3,
+                    lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2 or float8_e4m3fn" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(1) / 64 == scale.size(1),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    2 == scale.size(2),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
+            else:
+                torch._check(
+                    scale_dim == 1,
+                    lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
         elif quant_mode == 0:
             torch._check(
                 scale_dim == 1,
@@ -1451,6 +1469,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
