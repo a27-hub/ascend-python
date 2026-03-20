@@ -69,7 +69,7 @@ at::Tensor index_fill(const at::Tensor& self, int64_t dim, const at::Tensor& ind
                 "index_fill(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
     static const bool is_index_fill_available = check_aclnn_kernel_available("aclnnIndexFill");
-    if (!is_index_fill_available || c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+    if (!is_index_fill_available) {
         DO_COMPATIBILITY(aclnnIndexFillTensor, acl_op::index_fill(self, dim, index, value));
         TORCH_CHECK(index.dim() <= MAX_DIM, "Index has to be a vector/scalar.", OPS_ERROR(ErrCode::TYPE));
         at::Scalar value_scalar = value.item();
@@ -116,7 +116,7 @@ at::Tensor index_fill(const at::Tensor& self, int64_t dim, const at::Tensor& ind
                 "index_fill(): Converting complex Scalar to non-complex type is not supported",
                 PTA_ERROR(ErrCode::NOT_SUPPORT));
     static const bool is_index_fill_available = check_aclnn_kernel_available("aclnnIndexFill");
-    if (!is_index_fill_available || c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+    if (!is_index_fill_available) {
         DO_COMPATIBILITY(aclnnIndexFillTensor, acl_op::index_fill(self, dim, index, value));
         TORCH_CHECK(index.dim() <= MAX_DIM, "Index has to be a vector/scalar.", OPS_ERROR(ErrCode::TYPE));
         std::vector<int64_t> idx_vec = get_index_vector(index);
