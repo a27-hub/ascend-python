@@ -86,7 +86,7 @@ def _matmul_get_output_size(tensor1, tensor2):
     if dim_tensor1 == 1 and dim_tensor2 == 1:
         return []
     elif dim_tensor1 == 2 and dim_tensor2 == 1:
-        return [tensor2.size(0)]
+        return [tensor1.size(0)]
     elif dim_tensor1 == 1 and dim_tensor2 == 2:
         return [tensor2.size(1)]
     elif dim_tensor1 == 2 and dim_tensor2 == 2:
@@ -137,7 +137,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             grad_tensor = grad_tensor.unsqueeze(-2)
 
         if mat1.dim() == 2 and mat2.dim() > 2:
-            self_grad = torch.empty(list(mat1.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
+            self_grad = torch.empty(list(self.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
         else:
             mat2_transposed = mat2.transpose(-2, -1)
             self_grad_size = _matmul_get_output_size(grad_tensor, mat2_transposed)
@@ -165,6 +165,9 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             other_grad_size = _matmul_get_output_size(mat1_transposed, grad_tensor)
             other_grad = torch.empty(other_grad_size, dtype=mat1.dtype, device=mat1.device)
 
+        if other.dim() == 1 and other_grad.size(-1) == 1 and other_grad.dim() != 1:
+            other_grad = other_grad.squeeze(-1)
+             
         return (self_grad, other_grad)
 
 
@@ -1760,6 +1763,57 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
 def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
                                                 value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
                                                 actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
+                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
+    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(
+        query.numel() > 0,
+        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key.numel() > 0,
+        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value.numel() > 0,
+        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices.numel() > 0,
+        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
+    )
+
+    if layout_query == "BSND":
+        torch._check(
+            query.dim() == 4,
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
+    elif layout_query == "TND":
+        torch._check(
+            query.dim() == 3,
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
+    else:
+        torch._check(
+            False,
+            lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
+        )
+    return out
+
+
+@impl(m, "_npu_kv_quant_sparse_flash_attention_pioneer")
+def _npu_kv_quant_sparse_flash_attention_pioneer_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, key_sink=None, value_sink=None, sparse_block_size=1, layout_query="BSND",
                                                 layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
                                                 quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
     require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}

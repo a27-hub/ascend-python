@@ -140,7 +140,7 @@ official:
     gen_opapi:
       new_params:
         p_float: 'static_cast<float>(p)'
-        mode: 'compute_mode.value_or(0)'
+        mode: 'std::abs(p - 2.0) < 1e-6 ? 2 : compute_mode.value_or(0)'
       out:
         size: 'op_infer::cdist_npu_output_size(x1, x2)'
         dtype: 'x1.scalar_type()'
@@ -1526,7 +1526,7 @@ official:
     gen_opapi:
       new_params:
         p_float: 'static_cast<float>(p)'
-        mode: 'compute_mode.value_or(0)'
+        mode: 'std::abs(p - 2.0) < 1e-6 ? 2 : compute_mode.value_or(0)'
       out:
         size: 'op_infer::cdist_npu_output_size(x1, x2)'
         dtype: 'x1.scalar_type()'
@@ -2717,7 +2717,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: 'isclose_output_size(self, other, rtol, atol, equal_nan)'
+        size: 'at::isFloatingType(self.scalar_type()) && equal_nan ? self.sizes() : broadcast_ops_npu_output_size(self, other)'
         dtype: at::kBool
       exec: aclnnIsClose
 
@@ -5689,9 +5689,11 @@ custom:
 
   - func: npu_apply_adam(Scalar beta1_power, Scalar beta2_power, Scalar lr, Scalar beta1, Scalar beta2, Scalar epsilon, Tensor grad, bool? use_locking, bool? use_nesterov) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: npu_apply_adam.out(Scalar beta1_power, Scalar beta2_power, Scalar lr, Scalar beta1, Scalar beta2, Scalar epsilon, Tensor grad, bool? use_locking, bool? use_nesterov, *, Tensor(a!) var, Tensor(b!) m, Tensor(c!) v) -> (Tensor(a!), Tensor(b!), Tensor(c!))
     acl_op: all_version
+    op_api: all_version
 
   - func: npu_apply_adam_w(Scalar beta1_power, Scalar beta2_power, Scalar lr, Scalar weight_decay, Scalar beta1, Scalar beta2, Scalar epsilon, Tensor grad, Tensor? max_grad_norm, bool? amsgrad, bool? maximize) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
@@ -6156,6 +6158,9 @@ custom:
   - func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
     op_api: all_version
     exposed: all_version
+
+  - func: _npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
+    op_api: all_version
 
   - func: npu_layer_norm_eval(Tensor input, int[] normalized_shape, Tensor? weight=None, Tensor? bias=None, float eps=1e-05) -> Tensor
     acl_op: all_version
