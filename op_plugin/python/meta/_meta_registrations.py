@@ -4736,6 +4736,22 @@ def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0,
     output_size[dim] = math.floor(output_size[dim] / 2)
     return torch.empty(output_size, dtype=x.dtype, device=x.device)
 
+@impl(m, "npu_causal_conv1d_fn_add_functional")
+def npu_causal_conv1d_fn_add_functional_meta(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, initial_state_mode=None, activation="None", residual_connection=0, pad_slot_id=-1):
+    return torch.empty_like(x, dtype=x.dtype), torch.empty_like(conv_states, dtype=conv_states.dtype)
+
+@impl(m, "npu_causal_conv1d_fn_add")
+def npu_causal_conv1d_fn_add_meta(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, initial_state_mode=None, activation="None", residual_connection=0, pad_slot_id=-1):
+    return torch.empty_like(x, dtype=x.dtype)
+
+@impl(m, "npu_causal_conv1d_update_add_functional")
+def npu_causal_conv1d_update_add_functional_meta(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, num_accepted_tokens=None, activation="None", residual_connection=0, pad_slot_id=-1):
+    return torch.empty_like(x, dtype=x.dtype), torch.empty_like(conv_states, dtype=conv_states.dtype)
+
+@impl(m, "npu_causal_conv1d_update_add")
+def npu_causal_conv1d_update_add_meta(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, num_accepted_tokens=None, activation="None", residual_connection=0, pad_slot_id=-1):
+    return torch.empty_like(x, dtype=x.dtype)
+
 
 @impl(m, "npu_dequant_rope_quant_kvcache")
 def npu_dequant_rope_quant_kvcache_meta(x, cos, sin, k_cache, v_cache, indices, scale_k, scale_v, size_splits, *,

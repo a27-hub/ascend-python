@@ -565,6 +565,30 @@
   "op_api: torch_npu.save_npugraph_tensor(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_causal_conv1d_fn_add(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_causal_conv1d_update_add(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_causal_conv1d_fn_add(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_causal_conv1d_update_add(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "func: npu_causal_conv1d_fn_add_functional(Tensor x, Tensor weight, Tensor conv_states, *, Tensor? bias=None, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? initial_state_mode=None, str? activation=\"None\", int? residual_connection=0, int? pad_slot_id=-1) -> (Tensor, Tensor)": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: npu_causal_conv1d_update_add_functional(Tensor x, Tensor weight, Tensor conv_states, *, Tensor? bias=None, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? num_accepted_tokens=None, str? activation=\"None\", int? residual_connection=0, int? pad_slot_id=-1) -> (Tensor, Tensor)": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: npu_causal_conv1d_fn_add(Tensor x, Tensor weight, Tensor(a!) conv_states, *, Tensor? bias=None, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? initial_state_mode=None, str? activation=\"None\", int? residual_connection=0, int? pad_slot_id=-1) -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
+  "func: npu_causal_conv1d_update_add(Tensor x, Tensor weight, Tensor(a!) conv_states, *, Tensor? bias=None, Tensor? query_start_loc=None, Tensor? cache_indices=None, Tensor? num_accepted_tokens=None, str? activation=\"None\", int? residual_connection=0, int? pad_slot_id=-1) -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
   "func: npu_scatter_pa_cache.value(Tensor key, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, Tensor(a!) key_cache) -> Tensor(a!)": {
     "version": ["all_version"]
   },

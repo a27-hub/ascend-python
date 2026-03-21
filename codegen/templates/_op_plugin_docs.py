@@ -11080,6 +11080,144 @@ y = clipped_swiglu_model(x, group_index, -1, 1.702, 7.0, 1.0, True)
 )
 
 _add_torch_npu_docstr(
+    "npu_causal_conv1d_fn_add",
+    """
+接口原型:
+torch_npu.npu_causal_conv1d_fn_add(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, initial_state_mode=None, activation="None", residual_connection=0, pad_slot_id=-1) -> Tensor
+
+功能描述:
+对序列执行因果一维卷积（prefill场景）。沿序列维度，使用缓存数据（长度为卷积核宽减1）对各序列头部进行padding，确保输出依赖当前及历史输入；卷积完成后，将当前序列尾部的数据原地更新到`conv_states`中。
+
+参数说明:
+x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为2维[cu_seq_len, dim]，cu_seq_len为batch内所有变长序列拼接后的总长度，取值范围[1, 65536]；dim为特征维度，取值范围[64, 16384]。
+weight：Tensor类型，必选参数，因果1维卷积核。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为2维[K, dim]，K为卷积核宽度，固定为3；dim为特征维度，取值范围[64, 16384]。
+conv_states：Tensor类型，必选参数，缓存状态张量，存储各序列的历史token数据，各序列计算完成后原地更新。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为3维[..., K-1, dim]，第0维大小不固定。
+bias：Tensor类型，可选参数，卷积的偏置。数据类型与x相同，数据格式为ND。shape为1维[dim,]，默认值为None。
+query_start_loc：Tensor类型，可选参数，序列起始位置索引，记录各序列在拼接张量x中的起始位置，query_start_loc[i]表示第i个序列的起始偏移。数据类型支持int32，数据格式为ND。shape为1维[batch+1,]，batch取值范围[1, 256]。x的shape为2维时，不可省略。
+cache_indices：Tensor类型，可选参数，缓存索引，指定每个序列对应的缓存状态在conv_states中的索引。数据类型支持int32，数据格式为ND。shape为1维[batch,]。x的shape为2维时，不可省略。
+initial_state_mode：Tensor类型，可选参数，初始状态标志，表示各序列是否使用缓存数据。数据类型支持int32，数据格式为ND。shape为1维[batch,]，默认值为None。
+activation：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"。
+residual_connection：int类型，可选参数，用于判断是否输出结果是否要做残差连接。0：不做残差连接；1：输出为卷积结果与输入x之和（残差连接），默认值为0。
+pad_slot_id：int类型，可选参数，用于跳过不需要参与计算的batch，默认值为-1。
+
+输出说明:
+y：Tensor类型，x经过因果1维卷积计算后的结果，当residual_connection=1时，输出为卷积结果与输入x之和（残差连接）。数据类型与x相同，shape与x保持一致，为[cu_seq_len, dim]。
+conv_states将被原地更新为各序列最新的缓存状态。
+
+约束说明:
+该接口仅支持prefill场景使用。
+x的shape为2维时，query_start_loc和cache_indices不可省略。
+该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
+接口入参需在参数范围内。
+
+支持的型号:
+Atlas A3 训练系列产品
+Atlas A3 推理系列产品
+Atlas A2 训练系列产品
+Atlas A2 推理系列产品
+昇腾910_95 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+K, dim, dtype = 3, 64, torch.bfloat16
+weight = torch.randn(K, dim, dtype=dtype).npu()
+cu_seq_len = sum([5, 3, 7, 4])
+x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
+query_start_loc = torch.tensor([0, 5, 8, 15, 19], dtype=torch.int32).npu()
+conv_states = torch.randn(8, K - 1, dim, dtype=dtype).npu()
+cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
+initial_state_mode = torch.tensor([1, 1, 0, 0], dtype=torch.int32).npu()
+out = torch_npu.npu_causal_conv1d_fn_add(
+    x, weight, conv_states,
+    query_start_loc=query_start_loc,
+    cache_indices=cache_indices,
+    initial_state_mode=initial_state_mode,
+    activation="None",
+    residual_connection=0,
+    pad_slot_id=-1,
+)
+    """
+)
+
+_add_torch_npu_docstr(
+    "npu_causal_conv1d_update_add",
+    """
+接口原型:
+torch_npu.npu_causal_conv1d_update_add(x, weight, conv_states, *, bias=None, query_start_loc=None, cache_indices=None, num_accepted_tokens=None, activation="None", residual_connection=0, pad_slot_id=-1) -> Tensor
+
+功能描述:
+对序列执行因果一维卷积（decode场景）。沿序列维度，使用缓存数据（长度为卷积核宽减1）对各序列头部进行padding，确保输出依赖当前及历史输入；卷积完成后，将当前序列尾部的数据原地更新到`conv_states`中。
+
+参数说明:
+x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为2维[cu_seq_len, dim]或3维[batch, seqlen, dim]；cu_seq_len为batch内所有变长序列拼接后的总长度，取值范围[1, 65536]；dim为特征维度，取值范围[64, 16384]。
+weight：Tensor类型，必选参数，因果1维卷积核。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为2维[K, dim]，K为卷积核宽度，固定为3；dim为特征维度，取值范围[64, 16384]。
+conv_states：Tensor类型，必选参数，缓存状态张量，存储各序列的历史token数据，各序列计算完成后原地更新。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为3维[..., K-1, dim]，第0维大小不固定。
+bias：Tensor类型，可选参数，卷积的偏置。数据类型与x相同，数据格式为ND。shape为1维[dim,]，默认值为None。
+query_start_loc：Tensor类型，可选参数，序列起始位置索引，记录各序列在拼接张量x中的起始位置，query_start_loc[i]表示第i个序列的起始偏移。数据类型支持int32，数据格式为ND。shape为1维[batch+1,]，batch取值范围[1, 256]。x的shape为2维时，不可省略。
+cache_indices：Tensor类型，可选参数，缓存索引，指定每个序列对应的缓存状态在conv_states中的索引。数据类型支持int32，数据格式为ND。shape为1维[batch,]。x的shape为2维时，不可省略。
+num_accepted_tokens：Tensor类型，可选参数，投机解码场景下各batch实际接受的token个数。数据类型支持int32，数据格式为ND。shape为1维[batch,]，默认值为None。
+activation：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"。
+residual_connection：int类型，可选参数，用于判断是否输出结果是否要做残差连接。0：不做残差连接；1：输出为卷积结果与输入x之和（残差连接），默认值为0。
+pad_slot_id：int类型，可选参数，用于跳过不需要参与计算的batch，默认值为-1。
+
+输出说明:
+y：Tensor类型，x经过因果1维卷积计算后的结果，当residual_connection=1时，输出为卷积结果与输入x之和（残差连接）。数据类型与x相同，shape与x保持一致。
+conv_states将被原地更新为各序列最新的缓存状态。
+
+约束说明:
+该接口仅支持decode场景使用。
+x的shape为2维时，query_start_loc和cache_indices不可省略。
+该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
+接口入参需在参数范围内。
+
+支持的型号:
+Atlas A3 训练系列产品
+Atlas A3 推理系列产品
+Atlas A2 训练系列产品
+Atlas A2 推理系列产品
+昇腾910_95 AI处理器
+
+调用示例:
+# 2维输入（变长拼接格式）
+import torch
+import torch_npu
+K, dim, dtype = 3, 64, torch.bfloat16
+weight = torch.randn(K, dim, dtype=dtype).npu()
+x = torch.randn(4, dim, dtype=dtype).npu()
+query_start_loc = torch.tensor([0, 1, 2, 3, 4], dtype=torch.int32).npu()
+conv_states = torch.randn(8, K - 1, dim, dtype=dtype).npu()
+cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
+out = torch_npu.npu_causal_conv1d_update_add(
+    x, weight, conv_states,
+    query_start_loc=query_start_loc,
+    cache_indices=cache_indices,
+    activation="None",
+    residual_connection=0,
+    pad_slot_id=-1,
+)
+
+# 3维输入（投机解码格式）
+import torch
+import torch_npu
+K, dim, batch, seq_len, dtype = 3, 64, 4, 3, torch.bfloat16
+weight = torch.randn(K, dim, dtype=dtype).npu()
+x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
+conv_states = torch.randn(8, K - 1, dim, dtype=dtype).npu()
+cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
+num_accepted_tokens = torch.tensor([2, 1, 3, 2], dtype=torch.int32).npu()
+out = torch_npu.npu_causal_conv1d_update_add(
+    x, weight, conv_states,
+    cache_indices=cache_indices,
+    num_accepted_tokens=num_accepted_tokens,
+    activation="None",
+    residual_connection=0,
+    pad_slot_id=-1,
+)
+    """
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
