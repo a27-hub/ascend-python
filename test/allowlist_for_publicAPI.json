@@ -9,7 +9,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.7": [
       "npu_gelu_mul",
@@ -17,7 +19,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.8": [
       "npu_gelu_mul",
@@ -25,7 +29,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.9": [
       "npu_gelu_mul",
@@ -33,7 +39,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.10": [
       "npu_gelu_mul",
@@ -41,7 +49,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.11": [
       "npu_gelu_mul",
@@ -49,7 +59,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d_fn",
+      "npu_fused_causal_conv1d_update"
     ],
     "v2.12": [
       "npu_gelu_mul",
