@@ -18,41 +18,49 @@ const size_t INDEX_ONE = 1;
 const size_t INDEX_TWO = 2;
 const size_t DIM_TREE = 3;
 
-at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, const c10::optional<at::Tensor>& skip1,
-                                    const c10::optional<at::Tensor>& skip2,
+at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
+                                    const at::Tensor& expandedRowIdx,
+                                    const c10::optional<at::Tensor>& x1,
+                                    const c10::optional<at::Tensor>& x2,
                                     const c10::optional<at::Tensor>& bias,
                                     const c10::optional<at::Tensor>& scales,
-                                    const at::Tensor& expanded_src_to_dst_row,
-                                    const c10::optional<at::Tensor>& expert_for_source_row,
-                                    const c10::optional<int64_t> drop_pad_mode)
+                                    const c10::optional<at::Tensor>& expertIdx,
+                                    const c10::optional<at::Tensor>& x,
+                                    const c10::optional<at::Tensor>& a1,
+                                    const c10::optional<at::Tensor>& a2,
+                                    const c10::optional<at::Tensor>& v,
+
+                                    const c10::optional<int64_t> drop_pad_mode,
+                                    const c10::optional<at::IntArrayRef> zero_expert_range,
+                                    const c10::optional<at::IntArrayRef> copy_expert_range,
+                                    const c10::optional<at::IntArrayRef> constant_expert_range)
 {
     static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
     if (!is_moe_finalize_routing_V2_available) {
-        TORCH_CHECK(skip1.has_value(), "skip1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
+        TORCH_CHECK(x1.has_value(), "x1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
             OPS_ERROR(ErrCode::PARAM));
-        at::Tensor result = npu_preparation::apply_tensor_without_format(skip1.value());
-        EXEC_NPU_CMD(aclnnMoeFinalizeRouting, expanded_permuted_rows, skip1, skip2, bias, scales,
-            expanded_src_to_dst_row, expert_for_source_row, result);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(x1.value());
+        EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v
+            drop_pad_mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
         return result;
     }
 
     at::Tensor result;
-    int64_t dim0 = expanded_src_to_dst_row.size(0);
-    if (scales.has_value()) {
-        dim0 = scales.value().size(0);
-    }
     at::SmallVector<int64_t, op_infer::SIZE> output_size;
-    output_size.push_back(dim0);
-    size_t dim1Index = INDEX_ONE;
-    if (expanded_permuted_rows.dim() == DIM_TREE) {
-        dim1Index = INDEX_TWO;
+    // 如果 x1 存在，result 等于 x1 的形状
+    if (x1.has_value()) {
+        at::Tensor result = npu_preparation::apply_tensor_without_format(x1.value());
     }
-    output_size.push_back(expanded_permuted_rows.size(dim1Index));
-    result = npu_preparation::apply_tensor_without_format(output_size, expanded_permuted_rows.options());
+    // 如果 x1 不存在，output_size 的第一维是 bias 或 scales 的第一维，第二维是 bias 的第二维
+    else {
+        output_size.push_back(dscales.value().size(0)); // 假设 scales 必须存在
+        output_size.push_back(bias.value().size(1)); // 假设 bias 的第二维存在
+        result = npu_preparation::apply_tensor_without_format(output_size, expandedX.options());
+    }
+    result = npu_preparation::apply_tensor_without_format(output_size, expandedX.options());
     int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
-    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row,
-                 skip1, skip2, bias, scales, expert_for_source_row, mode, result);
+    EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v
+            mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
     return result;
 }
 } // namespace op_api
-// 111111111111111
