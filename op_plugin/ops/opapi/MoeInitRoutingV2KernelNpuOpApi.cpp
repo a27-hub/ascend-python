@@ -191,6 +191,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         drop_pad_mode = 0;
         int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
+        if (bs == 0) {
+            // return when using empty tensor 
+            return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+        }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
@@ -232,6 +236,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+    }
+    if (bs == 0) {
+        // return when using empty tensor 
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
     }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,
