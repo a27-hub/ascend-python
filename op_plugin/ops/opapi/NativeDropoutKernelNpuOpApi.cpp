@@ -49,8 +49,10 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
         unsigned int blocksPerSm = MAX_THREADS_PER_MULTI_PROCESSOR / BLOCK_SIZE;
         unsigned int gridX = (nelem + BLOCK_SIZE - 1) / BLOCK_SIZE;
         gridX = std::min((unsigned int)MAX_PROCESSOR_COUNT * blocksPerSm, gridX);
-        int64_t counterOffset = ((nelem - 1) / (BLOCK_SIZE * gridX * UNROLL) + 1) * UNROLL;
-
+        int64_t counterOffset = 0;
+        if (nelem > 0) {
+            counterOffset = ((nelem - 1) / (BLOCK_SIZE * gridX * UNROLL) + 1) * UNROLL;
+        }
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(counterOffset);
         const uint64_t seed = pair.first;
         const uint64_t offset = pair.second;
