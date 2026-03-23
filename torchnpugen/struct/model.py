@@ -16,6 +16,7 @@
 
 from typing import List, Dict, Sequence
 import copy
+import os
 from dataclasses import dataclass
 
 from torchnpugen.model import (BaseTy, SchemaKind, BaseType,
@@ -57,6 +58,8 @@ class ResInfo:
         input_tensors = filt_input_tensor(arguments)
         res_infos = []
 
+        env_aclnn_extension_switch = os.getenv('ACLNN_EXTENSION_SWITCH')
+
         if kind == SchemaKind.out:
             result_names = cpp.return_names(f)
         else:
@@ -91,9 +94,14 @@ class ResInfo:
             else:
                 dtype_formula = dtype
 
+            if env_aclnn_extension_switch:
+                option = size if size in input_tensors else (dtype if dtype in input_tensors else input_tensors[0])
+            else:
+                option = input_tensors[0]
+
             res_infos.append(
                 ResInfo(name=name, size=size_formula, dtype=dtype_formula,
-                        option=input_tensors[0], infer_name=infer_name)
+                        option=option, infer_name=infer_name)
             )
 
         return res_infos
