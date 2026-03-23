@@ -29,7 +29,6 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
                                     const c10::optional<at::Tensor>& a1,
                                     const c10::optional<at::Tensor>& a2,
                                     const c10::optional<at::Tensor>& v,
-
                                     const c10::optional<int64_t> drop_pad_mode,
                                     const c10::optional<at::IntArrayRef> zero_expert_range,
                                     const c10::optional<at::IntArrayRef> copy_expert_range,
