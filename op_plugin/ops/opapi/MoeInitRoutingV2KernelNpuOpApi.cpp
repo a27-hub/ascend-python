@@ -215,6 +215,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
+    } else if (quant_mode == -1 && (x.scalar_type() == kFloat8_e5m2 || x.scalar_type() == kFloat8_e4m3fn)) {
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len, h / 64, 2}, x.options().dtype(at::kFloat8_e8m0fnu));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
