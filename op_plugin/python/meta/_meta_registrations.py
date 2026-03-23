@@ -2108,6 +2108,41 @@ def npu_gelu_backward_meta(grad, self, *, approximate="none"):
     return torch.empty_like(self)
 
 
+@impl(m, "npu_silu")
+def npu_silu_meta(self):
+    return torch.empty_like(self)
+
+
+@impl(m, "npu_silu_backward")
+def npu_silu_backward_meta(grad_output, x0, x1):
+    return torch.empty_like(grad_output)
+
+
+@impl(m, "npu_layer_norm_eval")
+def npu_layer_norm_eval_meta(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    return torch.empty_like(input)
+
+
+@impl(m, "npu_add_layer_norm")
+def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output=False):
+    rstd_dim = x1.dim() - gamma.dim()
+    ret = []
+    for i in range(x1.dim()):
+        if i < rstd_dim:
+            ret.append(x1.size(i))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
+
+
+@impl(m, "batch_norm_reduce")
+def batch_norm_reduce_meta(self, eps):
+    c_dim = self.size(1)
+    return (torch.empty([c_dim], dtype=torch.float32, device='meta'),
+            torch.empty([c_dim], dtype=torch.float32, device='meta'))
+
+
 @impl(m, "npu_gelu_mul")
 def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
     output_shape = list(input_tensor.shape)
@@ -2268,6 +2303,19 @@ def npu_deep_norm_meta(self, gx, beta, gamma, alpha=0.3, epsilon=1e-6):
             ret.append(1)
     rstd = torch.empty(ret, dtype=torch.float32, device='meta')
     return (torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(self, dtype=self.dtype))
+
+
+@impl(m, "npu_deep_norm_backward")
+def npu_deep_norm_backward_meta(dy, x, gx, gamma, mean, rstd, alpha=0.3):
+    return (torch.empty_like(x), torch.empty_like(gx), torch.empty_like(gamma), torch.empty_like(gamma))
+
+
+@impl(m, "npu_group_norm_swish")
+def npu_group_norm_swish_meta(input, num_groups, weight, bias, eps=1e-5, swish_scale=1.0):
+    mean_rstd_shape = [input.size(0), num_groups]
+    return (torch.empty_like(input, dtype=input.dtype),
+            torch.empty(mean_rstd_shape, dtype=input.dtype, device=torch.device('meta')),
+            torch.empty(mean_rstd_shape, dtype=input.dtype, device=torch.device('meta')))
 
 
 @impl(m, "npu_rms_norm")
@@ -2484,6 +2532,16 @@ def npu_dropout_backward_meta(grad_output, mask, p):
 @impl(m, "npu_masked_softmax_with_rel_pos_bias")
 def npu_masked_softmax_with_rel_pos_bias_meta(x, atten_mask, relative_pos_bias, scale_value=1.0, inner_precision_mode=0):
     return torch.empty_like(x, dtype=x.dtype)
+
+
+@impl(m, "npu_scaled_masked_softmax")
+def npu_scaled_masked_softmax_meta(x, mask, scale=1, fixed_triu_mask=False):
+    return torch.empty_like(x, dtype=x.dtype)
+
+
+@impl(m, "npu_scaled_masked_softmax_backward")
+def npu_scaled_masked_softmax_backward_meta(y_grad, y, mask, scale, fixed_triu_mask):
+    return torch.empty_like(y_grad, dtype=y_grad.dtype)
 
 
 @impl(m, "npu_moe_distribute_dispatch")
