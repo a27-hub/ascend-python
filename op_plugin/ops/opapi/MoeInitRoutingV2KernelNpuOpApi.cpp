@@ -217,7 +217,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
     } else if (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) {
         expanded_scale = npu_preparation::apply_tensor_without_format(
-            {expanded_scale_len, h / 64, 2}, x.options().dtype(at::kFloat8_e8m0fnu));
+            {expanded_scale_len, h / 64, 2}, x.options().dtype(at::kByte));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
@@ -226,10 +226,14 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
-    auto scale_scalar_dtype = p_scale.defined() ? p_scale.scalar_type() : at:kFloat;
-    TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && p_scale.dtype() == at::kByte) ?
+    auto scale_scalar_dtype = p_scale.defined() ? p_scale.scalar_type() : at::kFloat;
+    TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
         aclDataType::ACL_FLOAT8_E8M0:
         npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
+    TensorWrapper expanded_scale_wrapper = {expand_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
+        aclDataType::ACL_FLOAT8_E8M0:
+        npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
+    }
     TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
@@ -256,7 +260,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
-        expanded_scale);
+        expanded_scale_wrapper);
     return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api
