@@ -72,7 +72,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 ## 约束说明
 
 -   该接口支持图模式。
--   参数query中的N支持64，key中的N支持1。
+-   参数query中的N支持小于等于64，key中的N支持1。
 -   参数query中的D和参数key中的D值相等为128。
 -   参数query、key的数据类型应保持一致。
 -   参数weights不为`float32`时，参数query、key、weights的数据类型应保持一致。
