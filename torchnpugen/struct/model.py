@@ -91,9 +91,11 @@ class ResInfo:
             else:
                 dtype_formula = dtype
 
+            option = size if size in input_tensors else (dtype if dtype in input_tensors else input_tensors[0])
+
             res_infos.append(
                 ResInfo(name=name, size=size_formula, dtype=dtype_formula,
-                        option=input_tensors[0], infer_name=infer_name)
+                        option=option, infer_name=infer_name)
             )
 
         return res_infos
