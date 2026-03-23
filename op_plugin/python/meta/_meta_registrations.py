@@ -2652,7 +2652,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
 
     if quant_mode == 0:
         outDtype = x.dtype
-    elif y_dtype is not None:
+    if y_dtype is not None:
         outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
 
     expand_idx = x.new_empty((max(bs * k, a * 128)), dtype=torch.int32)

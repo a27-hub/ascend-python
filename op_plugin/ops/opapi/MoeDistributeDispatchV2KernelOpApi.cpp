@@ -147,7 +147,7 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
         expand_x = npu_preparation::apply_tensor_without_format({std::max(a, a * tp_world_size), h / 2}, x.options().dtype(output_dtype));
     }
     at::Tensor dynamic_scales{nullptr};
-    aclDataType acl_dynamic_scale_dtype = op_plugin::utils::get_dynamic_scales_dtype(x, scales, quant_mode);
+    aclDataType acl_dynamic_scale_dtype = op_plugin::utils::get_dynamic_scales_dtype(x, scales, scales_dtype, quant_mode);
     auto scalar_dynamic_scale_dtype = npu_preparation::convert_to_scalar_type(acl_dynamic_scale_dtype);
     if (tp_world_size == 0) {
         dynamic_scales = npu_preparation::apply_tensor_without_format({a},
