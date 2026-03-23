@@ -50,6 +50,11 @@ inline bool IsQuantModeHIF8(int64_t quantMode)
     return quantMode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
 }
 
+inline bool IsInputMXFP4(c10::optional<int64_t> xDtype)
+{
+    return xDtype.has_value() && c10_npu::GetAclDataType(xDtype.value()) == aclDataType::ACL_FLOAT4_E2M1; // 296 -> ACL_FLOAT4_E2M1
+}
+
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
@@ -215,6 +220,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
+    } else if (IsInputMXFP4(x_dtype)) {
+        expanded_scale =
+            npu_preparation::apply_tensor_without_format({expanded_scale_len, h / 32 , 2}, x.options().dtype(at::kByte));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
@@ -223,20 +231,27 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
-
+    // x根据输入x_dtype去伪装
     TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
+    auto scale_scalar_dtype = p_scale.defined() ? p_scale.scalar_type() : at::kFloat;
+    TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && IsInputMXFP4(x_dtype)) ?
+        aclDataType::ACL_FLOAT8_E8M0: npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
+    TensorWrapper expanded_scale_wrapper = {expanded_scale, npu_preparation::convert_to_acl_data_type(expanded_scale.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
+        if (IsInputMXFP4(x_dtype)) {
+            expanded_scale_wrapper.dtype = aclDataType::ACL_FLOAT8_E8M0;
+        }
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,
         expert_idx,
-        p_scale,
+        scale_wrapper,
         p_offset,
         active_num,
         expert_capacity,
@@ -250,7 +265,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
-        expanded_scale);
+        expanded_scale_wrapper);
     return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api
