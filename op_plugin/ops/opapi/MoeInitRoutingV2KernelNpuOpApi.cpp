@@ -230,7 +230,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
         aclDataType::ACL_FLOAT8_E8M0:
         npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
-    TensorWrapper expanded_scale_wrapper = {expand_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
+    TensorWrapper expanded_scale_wrapper = {expanded_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
         aclDataType::ACL_FLOAT8_E8M0:
         npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
     }
