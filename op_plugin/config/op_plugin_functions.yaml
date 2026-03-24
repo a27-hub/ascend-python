@@ -226,6 +226,7 @@ official:
 
   - func: _foreach_add_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_add_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
@@ -241,9 +242,11 @@ official:
 
   - func: _foreach_addcdiv_.Scalar(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar value=1) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcdiv_.ScalarList(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcdiv_.Tensor(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Tensor scalars) -> ()
     op_api: [v2.1, newest]
@@ -259,6 +262,7 @@ official:
 
   - func: _foreach_addcmul_.Scalar(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar value=1) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcmul_.ScalarList(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> ()
     op_api: all_version
@@ -301,9 +305,11 @@ official:
 
   - func: _foreach_div_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_div_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_exp(Tensor[] tensors) -> Tensor[]
     op_api: all_version
@@ -373,6 +379,7 @@ official:
 
   - func: _foreach_mul_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_mul_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
@@ -424,9 +431,11 @@ official:
 
   - func: _foreach_sqrt(Tensor[] tensors) -> Tensor[]
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_sqrt_(Tensor(a!)[] self) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_sub.List(Tensor[] tensors1, Tensor[] tensors2, *, Scalar alpha=1) -> Tensor[]
     op_api: all_version
@@ -741,6 +750,7 @@ official:
   - func: abs(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: abs.out
 
@@ -881,6 +891,7 @@ official:
   - func: add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: add.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     sparse: [v2.1, newest]
@@ -894,6 +905,7 @@ official:
   - func: add_.Tensor(Tensor(a!) self, Tensor other, *, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: addbmm(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
@@ -1272,6 +1284,7 @@ official:
   - func: batch_norm_backward_elemt(Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor? weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: input
@@ -1285,6 +1298,7 @@ official:
   - func: batch_norm_elemt(Tensor input, Tensor? weight, Tensor? bias, Tensor mean, Tensor invstd, float eps) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: batch_norm_elemt.out(Tensor input, Tensor? weight, Tensor? bias, Tensor mean, Tensor invstd, float eps, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -1293,6 +1307,7 @@ official:
   - func: batch_norm_gather_stats_with_counts(Tensor input, Tensor mean, Tensor invstd, Tensor? running_mean, Tensor? running_var, float momentum, float eps, Tensor counts) -> (Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out0:
         size: '{input.size(1)}'
@@ -1305,6 +1320,7 @@ official:
   - func: batch_norm_stats(Tensor input, float eps) -> (Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out0:
         size: '{input.size(1)}'
@@ -1466,6 +1482,7 @@ official:
   - func: bmm(Tensor self, Tensor mat2) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: bmm.out(Tensor self, Tensor mat2, *, Tensor(a!) out) -> Tensor(a!)
@@ -1844,6 +1861,7 @@ official:
   - func: div.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div.Scalar_mode(Tensor self, Scalar other, *, str? rounding_mode) -> Tensor
     acl_op: all_version
@@ -1852,6 +1870,7 @@ official:
   - func: div.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div.Tensor_mode(Tensor self, Tensor other, *, str? rounding_mode) -> Tensor
     acl_op: all_version
@@ -1868,6 +1887,7 @@ official:
   - func: div_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div_.Scalar_mode(Tensor(a!) self, Scalar other, *, str? rounding_mode) -> Tensor(a!)
     acl_op: all_version
@@ -1876,6 +1896,7 @@ official:
   - func: div_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div_.Tensor_mode(Tensor(a!) self, Tensor other, *, str? rounding_mode) -> Tensor(a!)
     acl_op: all_version
@@ -1967,6 +1988,7 @@ official:
   - func: eq.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: eq.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -1975,6 +1997,7 @@ official:
   - func: eq.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: eq.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2070,6 +2093,7 @@ official:
   - func: exp(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -2114,6 +2138,7 @@ official:
   - func: exp_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplaceExp
 
@@ -2335,6 +2360,7 @@ official:
   - func: ge.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ge.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2343,6 +2369,7 @@ official:
   - func: ge.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ge.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2359,6 +2386,7 @@ official:
   - func: gelu(Tensor self, *, str approximate='none') -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -2368,6 +2396,7 @@ official:
   - func: gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
     gen_opapi:
       grad_input:
         size: 'broadcast_ops_npu_output_size(grad_output, self)'
@@ -2457,6 +2486,7 @@ official:
   - func: gt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: gt.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2465,6 +2495,7 @@ official:
   - func: gt.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: gt.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2819,6 +2850,7 @@ official:
   - func: le.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: le.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2827,6 +2859,7 @@ official:
   - func: le.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: le.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3238,6 +3271,7 @@ official:
   - func: lt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: lt.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3246,6 +3280,7 @@ official:
   - func: lt.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: lt.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3285,6 +3320,7 @@ official:
   - func: matmul(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: [v2.1, newest]
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: matmul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
@@ -3387,6 +3423,7 @@ official:
   - func: maximum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: maximum.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3470,6 +3507,7 @@ official:
   - func: minimum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: minimum.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3499,6 +3537,7 @@ official:
   - func: mm(Tensor self, Tensor mat2) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: mm.out(Tensor self, Tensor mat2, *, Tensor(a!) out) -> Tensor(a!)
@@ -3534,10 +3573,12 @@ official:
   - func: mul.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3546,10 +3587,12 @@ official:
   - func: mul_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: multilabel_margin_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
     acl_op: all_version
@@ -3688,6 +3731,7 @@ official:
   - func: ne.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ne.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3696,6 +3740,7 @@ official:
   - func: ne.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ne.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3712,6 +3757,7 @@ official:
   - func: neg(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: neg.out
 
@@ -4006,6 +4052,7 @@ official:
   - func: reciprocal(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4117,6 +4164,7 @@ official:
   - func: relu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4127,6 +4175,7 @@ official:
   - func: relu_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplaceRelu
 
@@ -4448,6 +4497,7 @@ official:
   - func: sigmoid(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4474,6 +4524,7 @@ official:
   - func: sigmoid_backward(Tensor grad_output, Tensor output) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       grad_input:
         size: 'broadcast_ops_npu_output_size(grad_output, output)'
@@ -4522,6 +4573,7 @@ official:
   - func: silu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: silu.out
 
@@ -4543,6 +4595,7 @@ official:
   - func: silu_backward(Tensor grad_output, Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: silu_backward.grad_input(Tensor grad_output, Tensor self, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: all_version
@@ -4792,6 +4845,7 @@ official:
   - func: sqrt(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4858,6 +4912,7 @@ official:
   - func: sub.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sub.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -4870,10 +4925,12 @@ official:
   - func: sub_.Tensor(Tensor(a!) self, Tensor other, *, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sum(Tensor self, *, ScalarType? dtype=None) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sum.DimnameList_out(Tensor self, Dimname[1] dim, bool keepdim=False, *, ScalarType? dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -4882,6 +4939,7 @@ official:
   - func: sum.IntList_out(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: sum.dim_DimnameList(Tensor self, Dimname[1] dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
     acl_op: all_version
@@ -4890,6 +4948,7 @@ official:
   - func: sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: take(Tensor self, Tensor index) -> Tensor
     acl_op: all_version
@@ -5887,6 +5946,7 @@ custom:
   - func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: npu_dtype_cast_(Tensor(a!) self, Tensor src) -> Tensor(a!)
     acl_op: all_version
