@@ -44,8 +44,8 @@ def npu_fusion_attention_forward_v3(query, key, value, head_num, input_layout, p
     else:
         softmax_shape = [B, head_num, S1, 8]
 
-    seed = torch.empty([1], dtype=torch.long, device=query.device)
-    offset = torch.empty([1], dtype=torch.long, device=query.device)
+    seed = torch.empty([1], dtype=torch.long, device="cpu")
+    offset = torch.empty([1], dtype=torch.long, device="cpu")
     attention_score = query.new_empty(aten_score_shape, dtype=query.dtype, device=query.device)
     softmax_max = torch.empty(softmax_shape, dtype=torch.float32, device=query.device)
     softmax_sum = torch.empty(softmax_shape, dtype=torch.float32, device=query.device)
@@ -62,6 +62,6 @@ def npu_fusion_attention_backward_v3(query, key, value, dy, head_num, input_layo
     dq = query.new_empty(query.shape, dtype=query.dtype, device=query.device)
     dk = key.new_empty(key.shape, dtype=query.dtype, device=query.device)
     dv = value.new_empty(value.shape, dtype=query.dtype, device=query.device)
-    dpse = torch.empty([0], dtype=query.dtype, device=query.device)
-    dsink = torch.empty([], device=query.device) if sink is None else torch.empty(sink.shape, dtype=sink.dtype, device=query.device)
+    dpse = None
+    dsink = torch.empty([0], device=query.device) if sink is None else torch.empty(sink.shape, dtype=sink.dtype, device=query.device)
     return (dq, dk, dv, dpse, dsink)
