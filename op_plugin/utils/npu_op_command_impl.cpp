@@ -168,6 +168,9 @@ std::string ConvertNpuParamToLogInfo(const NpuParam& param, const std::string& p
 std::vector<std::string> ParseParamNames(const char* param_names)
 {
     std::vector<std::string> result;
+    if (param_names == nullptr || param_names[0] == '\0') {
+        return result;
+    }
     std::string s(param_names);
     size_t pos = 0;
     size_t next;
@@ -176,7 +179,9 @@ std::vector<std::string> ParseParamNames(const char* param_names)
         result.push_back(s.substr(pos, next - pos));
         pos = next + 2;
     }
-    result.push_back(s.substr(pos));
+    if (pos < s.size()) {
+        result.push_back(s.substr(pos));
+    }
     return result;
 }
 
