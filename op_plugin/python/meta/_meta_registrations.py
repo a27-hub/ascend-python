@@ -2361,6 +2361,50 @@ def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06, dst_dt
         return torch.empty(output_shape, dtype=torch.int32, device=x.device)
     return torch.empty(x.size(), dtype=dst_torch_dtype, device=x.device)
 
+@impl(m, "npu_rms_norm_dynamic_mx_quant")
+def npu_rms_norm_dynamic_mx_quant_meta(x, gamma, *, beta=None, epsilon=1e-06, scale_alg=0, round_mode='rint', dst_type=296):
+    if scale_alg not in [0, 1]:
+        raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
+                            ops_error(ErrCode.PARAM))
+
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if dst_torch_dtype == torch.float8_e5m2 or dst_type == 291:
+        y = torch.empty_like(x, dtype=torch.float8_e5m2)
+    elif dst_torch_dtype == torch.float8_e4m3fn or dst_type == 292:
+        y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if x.size(x.dim() - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(x.dim() - 1):
+            y_shape.append(x.size(dim))
+        y_shape.append(x.size(x.dim() - 1) // 2)
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+
+    # mxscale
+    mxscale_shape = []
+    for dim in range(x.dim()):
+        mxscale_shape.append(x.size(dim))
+    mxscale_shape.append(2)
+    last_axis_change = x.dim() - 1
+    block_size = 32
+    last_dim_size = int(math.ceil(mxscale_shape[last_axis_change] / block_size))
+    last_dim_size = (last_dim_size + 1) // 2
+    mxscale_shape[last_axis_change] = last_dim_size
+    mxscale = x.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd
+    rstd_dim = x.dim() - gamma.dim()
+    ret = []
+    for dim in range(x.dim()):
+        if dim < rstd_dim:
+            ret.append(x.size(dim))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (y, mxscale, rstd)
 
 @impl(m, "npu_add_rms_norm_cast")
 def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
@@ -2393,6 +2437,57 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
+
+
+@impl(m, "npu_add_rms_norm_dynamic_mx_quant")
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, epsilon=1e-6, scale_alg=0, round_mode='rint', dst_type=296):
+    if scale_alg not in [0, 1]:
+        raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
+                            ops_error(ErrCode.PARAM))
+    
+    dim_num = x1.dim()
+    # y
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(x1, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(x1, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if x1.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(x1.size(dim))
+        y_shape.append(x1.size(dim_num - 1) // 2)
+        y = x1.new_empty(y_shape, dtype=torch.uint8)
+
+    # x_out
+    x_out = torch.empty_like(x1, dtype=x1.dtype)
+
+    # mxscale
+    mxscale_shape = []
+    for dim in range(dim_num):
+        mxscale_shape.append(x1.size(dim))
+    mxscale_shape.append(2)
+    last_axis_change = dim_num - 1
+    block_size = 32
+    last_dim_size = int(math.ceil(mxscale_shape[last_axis_change] / block_size))
+    last_dim_size = (last_dim_size + 1) // 2
+    mxscale_shape[last_axis_change] = last_dim_size
+    mxscale = x1.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd
+    rstd_dim = dim_num - gamma.dim()
+    ret = []
+    for i in range(dim_num):
+        if i < rstd_dim:
+            ret.append(x1.size(i))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (y, x_out, mxscale, rstd)
 
 
 @impl(m, "npu_rms_norm_backward")
@@ -5112,6 +5207,52 @@ def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, b
 
     return (torch.empty(y_size, dtype=dst_torch_dtype, device=x.device),
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
+@impl(m, "npu_swiglu_mx_quant")
+def npu_swiglu_mx_quant_meta(x, group_index=None, activate_dim=-1, activate_left=False,
+                              swiglu_mode=0, clamp_limit=7.0, glu_alpha=1.702, glu_bias=1.0,
+                              group_mode=0, axis=-1, dst_type=1, round_mode="rint",
+                              scale_alg=0, max_dtype_value=0):
+    activate_dim = activate_dim if activate_dim is not None else -1
+    select_dim = activate_dim if activate_dim >= 0 else activate_dim + x.dim()
+    quant_dim = axis if axis >= 0 else axis + x.dim()
+    y_size = []
+    scale_size = []
+    
+    # infer the size of y
+    for i in range(x.dim()):
+        if i == select_dim:
+            y_size.append(x.size(i) // 2)
+        else:
+            y_size.append(x.size(i))
+    # infer the size of scale
+    for i in range(x.dim()):
+        if i == select_dim:
+            scale_size.append(x.size(i) // 2)
+        else:
+            scale_size.append(x.size(i))
+    
+    # modify the size of scale
+    if group_index is None:
+        quant_size = int(math.ceil(scale_size[quant_dim] / 64))
+    else:
+        if quant_dim == x.dim() - 1:
+            quant_size = int(math.ceil(scale_size[quant_dim] / 64))
+        else:
+            quant_size = int(math.floor(scale_size[quant_dim] / 64) + group_index.shape[0])
+
+    scale_size[quant_dim] = quant_size
+    scale_size.append(2)
+
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch_npu.uint8)
+
+    # fp4
+    if dst_torch_dtype == torch.uint8 and dst_type != torch_npu.hifloat8:
+        y_size[-1] = y_size[-1] // 2
+    
+    return (torch.empty(y_size, dtype=dst_torch_dtype, device=x.device),
+            torch.empty(scale_size, dtype=torch.uint8, device=x.device))
 
 
 @impl(m, "npu_clipped_swiglu")
