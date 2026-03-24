@@ -30,16 +30,16 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
                                     const c10::optional<at::Tensor>& a2,
                                     const c10::optional<at::Tensor>& v,
                                     const c10::optional<int64_t> drop_pad_mode,
-                                    const c10::optional<at::IntArrayRef> zero_expert_range,
-                                    const c10::optional<at::IntArrayRef> copy_expert_range,
-                                    const c10::optional<at::IntArrayRef> constant_expert_range)
+                                    const at::OptionalIntArrayRef zero_expert_range,
+                                    const at::OptionalIntArrayRef copy_expert_range,
+                                    const at::OptionalIntArrayRef constant_expert_range)
 {
     static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
     if (!is_moe_finalize_routing_V2_available) {
         TORCH_CHECK(x1.has_value(), "x1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
             OPS_ERROR(ErrCode::PARAM));
         at::Tensor result = npu_preparation::apply_tensor_without_format(x1.value());
-        EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v
+        EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
             drop_pad_mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
         return result;
     }
@@ -52,14 +52,14 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
     }
     // 如果 x1 不存在，output_size 的第一维是 bias 或 scales 的第一维，第二维是 bias 的第二维
     else {
-        output_size.push_back(dscales.value().size(0)); // 假设 scales 必须存在
+        output_size.push_back(scales.value().size(0)); // 假设 scales 必须存在
         output_size.push_back(bias.value().size(1)); // 假设 bias 的第二维存在
         result = npu_preparation::apply_tensor_without_format(output_size, expandedX.options());
     }
     result = npu_preparation::apply_tensor_without_format(output_size, expandedX.options());
-    int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
-    EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v
-            mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
+    int64_t mode = drop_pad_mode.has_value() ? drop_pad_mode.value() : 0;
+    EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
+        mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
     return result;
 }
 } // namespace op_api
