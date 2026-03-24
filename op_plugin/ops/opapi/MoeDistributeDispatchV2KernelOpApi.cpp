@@ -138,12 +138,12 @@ tensor_list npu_moe_distribute_dispatch_v2(const at::Tensor &x, const at::Tensor
     std::string group_tp_str = std::string(group_tp);
     char *group_tp_ptr = const_cast<char *>(group_tp_str.c_str());
     at::Tensor expand_x = npu_preparation::apply_tensor_without_format({std::max(a, a * tp_world_size), h}, x.options().dtype(output_dtype));
-    bool special_output_type = (y_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+    bool special_y_type = y_dtype.has_value() and (y_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                                 y_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
-    if (special_output_type) {
+    if (special_y_type and (scales.has_value())) {
         TORCH_CHECK(h % 2 == 0,
                     "The last dim input shape must be divisible by 2 if "
-                    "output dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
+                    "y dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
         expand_x = npu_preparation::apply_tensor_without_format({std::max(a, a * tp_world_size), h / 2}, x.options().dtype(output_dtype));
     }
     at::Tensor dynamic_scales{nullptr};
