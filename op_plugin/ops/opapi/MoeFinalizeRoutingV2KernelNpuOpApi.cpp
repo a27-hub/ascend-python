@@ -39,7 +39,7 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
         TORCH_CHECK(x1.has_value(), "x1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
             OPS_ERROR(ErrCode::PARAM));
         at::Tensor result = npu_preparation::apply_tensor_without_format(x1.value());
-        EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
+        EXEC_NPU_CMD(aclnnMoeFinalizeRouting, expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
             drop_pad_mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
         return result;
     }
@@ -58,7 +58,7 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expandedX,
     }
     result = npu_preparation::apply_tensor_without_format(output_size, expandedX.options());
     int64_t mode = drop_pad_mode.has_value() ? drop_pad_mode.value() : 0;
-    EXEC_NPU_CMD(expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
+    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expandedX, expandedRowIdx, x1, x2, bias, scales, expertIdx, x, a1, a2, v,
         mode, zero_expert_range, copy_expert_range, constant_expert_range, result);
     return result;
 }
