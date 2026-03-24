@@ -75,19 +75,19 @@ inline NpuParam MakeNpuParam(const uint8_t& v)                              { re
 
 
 extern "C" {
-TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* params, int nparams);
+TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* params, int nparams, const char* param_names);
 }
 
 template<typename... Args>
-inline void ExecNpuCmd(const char* api_name, const Args&... args)
+inline void ExecNpuCmd(const char* api_name, const char* param_names, const Args&... args)
 {
     NpuParam params[] = {MakeNpuParam(args)...};
-    ExecNpuCmdExtImpl(api_name, params, sizeof...(Args));
+    ExecNpuCmdExtImpl(api_name, params, sizeof...(Args), param_names);
 }
 
 #define EXEC_NPU_CMD_EXT(aclnn_api, ...)                                                                              \
     do {                                                                                                              \
-        ::op_plugin::ExecNpuCmd(#aclnn_api, __VA_ARGS__);                                                             \
+        ::op_plugin::ExecNpuCmd(#aclnn_api, #__VA_ARGS__, __VA_ARGS__);                                               \
     } while (false)
 
 }

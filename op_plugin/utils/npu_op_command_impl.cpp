@@ -52,10 +52,10 @@ struct ConvertedParamsHolder {
     }
 };
 
-std::string ConvertNpuParamToLogInfo(const NpuParam& param, int index)
+std::string ConvertNpuParamToLogInfo(const NpuParam& param, const std::string& param_name)
 {
     std::stringstream ss;
-    ss << "param_" << index << ": ";
+    ss << param_name << ": ";
     
     switch (param.type) {
         case kTensor: {
@@ -165,11 +165,28 @@ std::string ConvertNpuParamToLogInfo(const NpuParam& param, int index)
     return ss.str();
 }
 
-std::string GenerateNpuParamsLogInfo(const NpuParam* params, int nparams)
+std::vector<std::string> ParseParamNames(const char* param_names)
 {
+    std::vector<std::string> result;
+    std::string s(param_names);
+    size_t pos = 0;
+    size_t next;
+    
+    while ((next = s.find(", ", pos)) != std::string::npos) {
+        result.push_back(s.substr(pos, next - pos));
+        pos = next + 2;
+    }
+    result.push_back(s.substr(pos));
+    return result;
+}
+
+std::string GenerateNpuParamsLogInfo(const NpuParam* params, int nparams, const char* param_names)
+{
+    auto names = ParseParamNames(param_names);
     std::string log_info = "\n";
     for (int i = 0; i < nparams; ++i) {
-        log_info += ConvertNpuParamToLogInfo(params[i], i);
+        std::string param_name = (i < static_cast<int>(names.size())) ? names[i] : ("param_" + std::to_string(i));
+        log_info += ConvertNpuParamToLogInfo(params[i], param_name);
     }
     return log_info;
 }
@@ -869,7 +886,7 @@ int CallGetWorkspaceSize(void* func_addr, const std::vector<void*>& params)
 }
 
 extern "C" {
-TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* params, int nparams)
+TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* params, int nparams, const char* param_names)
 {
     static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();
     
@@ -886,7 +903,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
         OPS_ERROR(ErrCode::PTR));
     
     if (task_queue_enable == 2) {
-        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams);
+        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams, param_names);
         OP_EXEC_LOG_EXT_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "2", params_log_info.c_str());
         
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
@@ -965,7 +982,7 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
         
         at_npu::native::OpCommand::RunOpApiV2(api_name, acl_call);
     } else {
-        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams);
+        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams, param_names);
         OP_EXEC_LOG_EXT_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "1", params_log_info.c_str());
         
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
