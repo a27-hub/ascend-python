@@ -81,7 +81,7 @@ torch_npu.npu_moe_distribute_combine_v2(expand_x, expert_ids, assist_info_for_co
 
 -   **expand\_scales** (`Tensor`)：可选参数，对应[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)的`expand_scales`输出。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：必选参数，要求为1维张量，shape为\(A, \)，数据类型支持`float`，数据格式为$ND$，支持非连续的Tensor。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：暂不支持该参数，使用默认值即可。
+    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`comm_alg`设置为"hierarchy"时，要求为1维张量，shape为\(A, \)，数据类型支持`float`，数据格式为$ND$，支持非连续的Tensor。`comm_alg`设置为""，"fullmesh_v1"，"fullmesh_v2"时，暂不支持该输出，返回None。
 
 -   **shared\_expert\_x** (`Tensor`)：可选参数，数据类型需与`expand_x`保持一致。仅在共享专家卡数量`shared_expert_rank_num`为0的场景下使用，表示共享专家token，在combine\_v2后需要做add的值。
     -   <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值即可。
