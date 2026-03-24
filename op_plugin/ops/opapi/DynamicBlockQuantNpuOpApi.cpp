@@ -18,7 +18,6 @@ const int DIMENSION_3D = 3;
 const int DIM_0 = 0;
 const int DIM_1 = 1;
 const int DIM_2 = 2;
-const int DST_TYPE_HIFLOAT8 = 34;
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
