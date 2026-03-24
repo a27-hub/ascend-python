@@ -31,7 +31,7 @@
 ## 函数原型
 
 ```
-torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128, dst_type_max=0.0) -> (Tensor, Tensor)
+torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -42,7 +42,6 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 - **dst_type** (`int`)：可选参数，指定输出`y`的数据类型。当前仅支持取值1，表示输出`y`的数据类型为`int8`。
 - **row_block_size** (`int`)：可选参数，指定单个量化的数据块的行大小。当前仅支持取值1。
 - **col_block_size** (`int`)：可选参数，指定单个量化的数据块的列大小，当前仅支持取值128。
-- **dst_type_max** (`int`)：可选参数，目标数据类型的最大值。当前仅支持取值0.0。
 
 ## 返回值说明
 
@@ -60,9 +59,8 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
   >>> dst_type = 1
   >>> row_block_size = 1
   >>> col_block_size = 128
-  >>> dst_type_max = 0
 
-  >>> y, scale = torch_npu.npu_dynamic_block_quant(x, min_scale=min_scale, dst_type=dst_type, row_block_size=row_block_size, col_block_size=col_block_size, dst_type_max=dst_type_max)
+  >>> y, scale = torch_npu.npu_dynamic_block_quant(x, min_scale=min_scale, dst_type=dst_type, row_block_size=row_block_size, col_block_size=col_block_size)
   >>> y
   tensor([[ 92,  65,  15, 127],
           [100, 127, 116,  64],

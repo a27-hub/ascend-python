@@ -19,12 +19,6 @@ const int DIM_0 = 0;
 const int DIM_1 = 1;
 const int DIM_2 = 2;
 const int DST_TYPE_HIFLOAT8 = 34;
-constexpr float FLOAT_0 = 0.0;
-const float FLOAT_15 = 15.0;
-const float FLOAT_56 = 56.0;
-const float FLOAT_224 = 224.0;
-const float FLOAT_32768 = 32768.0;
-const std::set<float> DST_TYPE_MAX_SUPPORT_DTYPE = {FLOAT_0, FLOAT_15, FLOAT_56, FLOAT_224, FLOAT_32768};
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;

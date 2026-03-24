@@ -13693,8 +13693,7 @@ _add_torch_npu_docstr(
     "npu_dynamic_block_quant",
     """
 接口原型: 
-torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128, dst_type_max=0.0) -> (Tensor, Tensor)
-
+torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_type=1, row_block_size=1, col_block_size=128) -> (Tensor, Tensor)
 
 功能描述
 对输入张量，通过给定的`row_block_size`和`col_block_size`将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数`scale`，并根据`scale`对输入进行量化。输出最终的量化结果，以及每个块的量化参数`scale`。
@@ -13706,7 +13705,6 @@ round_mode (str)：可选参数，指定cast到输出的转换方式。当前仅
 dst_type (int)：可选参数，指定输出y的数据类型。当前仅支持取值1，表示代码输出y的数据类型为int8。
 row_block_size (int)：可选参数，指定一个block的行大小。当前仅支持取值1。
 col_block_size (int)：可选参数，指定一个block的列大小，当前仅支持取值128。
-dst_type_max (float)：可选参数，目标数据类型的最大值。当前仅支持取值0.0。
 
 输出说明: 
 y (Tensor)：量化结果。
@@ -13729,8 +13727,9 @@ Atlas A3训练系列产品
 >>> dst_type = 1
 >>> row_block_size = 1
 >>> col_block_size = 128
+>>> dst_type_max = 0
 
->>> y, scale = torch_npu.npu_dynamic_block_quant(x, min_scale=min_scale, dst_type=dst_type, row_block_size=row_block_size, col_block_size=col_block_size)
+>>> y, scale = torch_npu.npu_dynamic_block_quant(x, min_scale=min_scale, dst_type=dst_type, row_block_size=row_block_size, col_block_size=col_block_size, dst_type_max=dst_type_max)
 >>> y
 tensor([[ 92,  65,  15, 127],
       [100, 127, 116,  64],
