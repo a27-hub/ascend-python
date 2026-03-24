@@ -68,6 +68,7 @@ def main() -> None:
         "op_api": "OpApiInterface.h",
         "acl_op": "AclOpsInterface.h",
         "sparse": "SparseOpsInterface.h",
+        "lazy_fusion": "DvmOpsInterface.h",
     }
     for op_type, file_name in header_files.items():
         fm.write_with_template(
@@ -90,6 +91,8 @@ def main() -> None:
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/SparseOpsInterface.h"
+#include "op_plugin/DvmOpsInterface.h"
+#include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
 // #include "op_plugin/utils/op_log.h"
 #include "op_plugin/OpInterface.h"
 '''
@@ -102,6 +105,8 @@ def main() -> None:
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/SparseOpsInterface.h"
+#include "op_plugin/DvmOpsInterface.h"
+#include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
 #include "op_plugin/utils/op_log.h"
 #include "op_plugin/OpInterface.h"
 '''
