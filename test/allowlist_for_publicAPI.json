@@ -51,6 +51,14 @@
       "npu_fused_floyd_attention_backward",
       "save_npugraph_tensor"
     ],
+    "v2.12": [
+      "npu_gelu_mul",
+      "npu_clipped_swiglu",
+      "npu_sim_exponential_",
+      "npu_fused_floyd_attention",
+      "npu_fused_floyd_attention_backward",
+      "save_npugraph_tensor"
+    ],
     "all_version": [
       "_npu_dropout",
       "copy_memory_",
@@ -62,6 +70,7 @@
       "npu_batch_gather_matmul",
       "npu_batch_gather_matmul_",
       "npu_block_sparse_attention",
+      "npu_block_sparse_attention_backward",
       "npu_bert_apply_adam",
       "npu_clear_float_status",
       "npu_cross_entropy_loss",
