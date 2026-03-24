@@ -52,6 +52,128 @@ struct ConvertedParamsHolder {
     }
 };
 
+std::string ConvertNpuParamToLogInfo(const NpuParam& param, int index)
+{
+    std::stringstream ss;
+    ss << "param_" << index << ": ";
+    
+    switch (param.type) {
+        case kTensor: {
+            auto* tensor = static_cast<const at::Tensor*>(param.data);
+            ss << op_plugin::logging::convert_info(*tensor);
+            break;
+        }
+        case kScalar: {
+            auto* scalar = static_cast<const at::Scalar*>(param.data);
+            ss << op_plugin::logging::convert_info(*scalar);
+            break;
+        }
+        case kIntArrayRef: {
+            auto* array = static_cast<const at::IntArrayRef*>(param.data);
+            ss << op_plugin::logging::convert_info(*array);
+            break;
+        }
+        case kBool: {
+            auto* val = static_cast<const bool*>(param.data);
+            ss << op_plugin::logging::convert_info(*val);
+            break;
+        }
+        case kInt64: {
+            auto* val = static_cast<const int64_t*>(param.data);
+            ss << op_plugin::logging::convert_info(*val);
+            break;
+        }
+        case kDouble: {
+            auto* val = static_cast<const double*>(param.data);
+            ss << op_plugin::logging::convert_info(*val);
+            break;
+        }
+        case kTensorList: {
+            auto* tensor_list = static_cast<const at::TensorList*>(param.data);
+            ss << op_plugin::logging::convert_info(*tensor_list);
+            break;
+        }
+        case kScalarList:
+        case kScalarArrayRef: {
+            auto* scalar_list = static_cast<const at::ArrayRef<at::Scalar>*>(param.data);
+            ss << op_plugin::logging::convert_info(*scalar_list);
+            break;
+        }
+        case kString: {
+            auto* str = static_cast<const std::string*>(param.data);
+            ss << "string: " << *str << "\n";
+            break;
+        }
+        case kScalarType: {
+            auto scalar_type = *static_cast<const at::ScalarType*>(param.data);
+            ss << op_plugin::logging::convert_info(scalar_type);
+            break;
+        }
+        case kOptionalTensor: {
+            auto* opt_tensor = static_cast<const c10::optional<at::Tensor>*>(param.data);
+            ss << op_plugin::logging::convert_info(*opt_tensor);
+            break;
+        }
+        case kOptionalIntArrayRef: {
+            auto* opt_array = static_cast<const c10::optional<at::IntArrayRef>*>(param.data);
+            ss << op_plugin::logging::convert_info(*opt_array);
+            break;
+        }
+        case kOptionalScalar: {
+            auto* opt_scalar = static_cast<const c10::optional<at::Scalar>*>(param.data);
+            ss << op_plugin::logging::convert_info(*opt_scalar);
+            break;
+        }
+        case kBoolArray:
+        case kBoolArrayRef: {
+            auto* array = static_cast<const at::ArrayRef<bool>*>(param.data);
+            ss << op_plugin::logging::convert_info(*array);
+            break;
+        }
+        case kSymIntArrayRef: {
+            auto* array = static_cast<const at::ArrayRef<c10::SymInt>*>(param.data);
+            ss << op_plugin::logging::convert_info(*array);
+            break;
+        }
+        case kOptionalSymIntArrayRef: {
+            auto* opt_array = static_cast<const c10::OptionalArrayRef<c10::SymInt>*>(param.data);
+            ss << op_plugin::logging::convert_info(*opt_array);
+            break;
+        }
+        case kNullptr:
+            ss << "nullptr\n";
+            break;
+        case kFloat: {
+            auto* val = static_cast<const float*>(param.data);
+            ss << "float: " << *val << "\n";
+            break;
+        }
+        case kInt32: {
+            auto* val = static_cast<const int32_t*>(param.data);
+            ss << "int32_t: " << *val << "\n";
+            break;
+        }
+        case kUInt8: {
+            auto* val = static_cast<const uint8_t*>(param.data);
+            ss << "uint8_t: " << static_cast<int>(*val) << "\n";
+            break;
+        }
+        default:
+            ss << "unknown type\n";
+            break;
+    }
+    return ss.str();
+}
+
+std::string GenerateNpuParamsLogInfo(const NpuParam* params, int nparams)
+{
+    std::string log_info = "\n";
+    for (int i = 0; i < nparams; ++i) {
+        log_info += ConvertNpuParamToLogInfo(params[i], i);
+    }
+    return log_info;
+}
+
 void AddNpuParamToHashBuf(const NpuParam& param)
 {
     switch (param.type) {
@@ -764,7 +886,8 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
         OPS_ERROR(ErrCode::PTR));
     
     if (task_queue_enable == 2) {
-        OP_EXEC_LOG_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "2", "params_count:", nparams);
+        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams);
+        OP_EXEC_LOG_EXT_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "2", params_log_info.c_str());
         
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
         if (c10_npu::check_enqueue_need_use(acl_stream)) {
@@ -842,7 +965,8 @@ TORCH_NPU_API void ExecNpuCmdExtImpl(const char* api_name, const NpuParam* param
         
         at_npu::native::OpCommand::RunOpApiV2(api_name, acl_call);
     } else {
-        OP_EXEC_LOG_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "1", "params_count:", nparams);
+        auto params_log_info = GenerateNpuParamsLogInfo(params, nparams);
+        OP_EXEC_LOG_EXT_WITH_TASK_QUEUE(api_name, "EXEC_NPU_CMD_EXT", "1", params_log_info.c_str());
         
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
         if (c10_npu::check_enqueue_need_use(acl_stream)) {
