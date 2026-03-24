@@ -2656,7 +2656,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
         outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
 
     expand_idx = x.new_empty((max(bs * k, a * 128)), dtype=torch.int32)
-    if y_dtype == 296 or y_dtype == 297 and (scales == None): # float4_e2m1 or float4_e1m2
+    if (y_dtype == 296 or y_dtype == 297) and (scales == None): # float4_e2m1 or float4_e1m2
         if h % 2:
             raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
                                "the last dim of input must be divisible by 2, " +
