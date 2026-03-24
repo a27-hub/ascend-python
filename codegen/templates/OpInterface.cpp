@@ -22,6 +22,8 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/SparseOpsInterface.h"
+#include "op_plugin/DvmOpsInterface.h"
+#include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
 #include "op_plugin/utils/op_log.h"
 #include "op_plugin/OpInterface.h"
 
