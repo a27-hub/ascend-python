@@ -303,6 +303,18 @@ Use {deprecated_replace} instead.");'
 
         aclnn_extension = os.getenv('ACLNN_EXTENSION_SWITCH') == 'TRUE'
 
+        dvm_call = ""
+        if "dvm" in f.impl_ns:
+            if len(f.func.returns) == 0:
+                dvm_call = f"""if (lazy_fusion::IsEnabled()) {{
+            lazy_fusion::{impl_name}({args_exprs_str});
+            return;
+        }}"""
+            else:
+                dvm_call = f"""if (lazy_fusion::IsEnabled()) {{
+            return lazy_fusion::{impl_name}({args_exprs_str});
+        }}"""
+
         if "op_api" in f.impl_ns and "acl_op" in f.impl_ns:
             if aclnn_extension:
                 ret.append(f"""{sig.defn(name=op_name)}{{
@@ -319,6 +331,7 @@ Use {deprecated_replace} instead.");'
     ASCEND_LOGI("{impl_name} exec with jit compile: %d{"".join(place_holder)}",
                 !is_jit_disable{"".join(format_display)});
     if (is_jit_disable{"".join(format_check)}) {{
+        {dvm_call}
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         if ({is_aclnn_only}) {{
@@ -337,6 +350,7 @@ Use {deprecated_replace} instead.");'
     OP_EXEC_LOG({impl_name}, "exec aten", {inputs_list});
     ASCEND_LOGI("{impl_name} exec with jit compile: %d", !is_jit_disable);
     if (is_jit_disable) {{
+        {dvm_call}
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         return acl_op::{impl_name}({args_exprs_str});
@@ -355,6 +369,7 @@ Use {deprecated_replace} instead.");'
                 ret.append(f"""{sig.defn(name=op_name)}{{
     {deprecated_warn}
     OP_EXEC_LOG({impl_name}, "exec aten", {inputs_list});
+    {dvm_call}
     return {ns}::{impl_name}({args_exprs_str});
 }}
 """)
@@ -368,6 +383,7 @@ Use {deprecated_replace} instead.");'
             "Current operator {impl_name} do not support internal format. ",
             PTA_ERROR(ErrCode::NOT_SUPPORT));
     }}
+    {dvm_call}
     return {ns}::{impl_name}({args_exprs_str});
 }}
 """)
