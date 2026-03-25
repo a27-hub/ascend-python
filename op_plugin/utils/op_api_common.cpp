@@ -795,30 +795,30 @@ inline void CollectB4ShapeInfo(const at::Tensor &at_tensor,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
                                c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
 {
-    int64_t ndim = at_tensor.sizes().size();
-    if (ndim == 1) {
+    int64_t nDim = at_tensor.sizes().size();
+    if (nDim == 1) {
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
-    } else if (ndim > 1) {
-        if (wrapperStride[ndim - 1] == 1 && wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
-            if (wrapperShape[ndim - PENULTIMATE_DIM] == 1) {
-                wrapperStride[ndim - 1] = wrapperStride[ndim - 1] * FP4_IN_INT8;
-                wrapperShape[ndim - PENULTIMATE_DIM] = wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
-            } else if (wrapperShape[ndim - 1] == 1) {
-                wrapperStride[ndim - PENULTIMATE_DIM] = wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
-                wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
+    } else if (nDim > 1) {
+        if (wrapperStride[nDim - 1] == 1 && wrapperStride[nDim - PENULTIMATE_DIM] == 1) {
+            if (wrapperShape[nDim - PENULTIMATE_DIM] == 1) {
+                wrapperStride[nDim - 1] = wrapperStride[nDim - 1] * FP4_IN_INT8;
+                wrapperShape[nDim - PENULTIMATE_DIM] = wrapperShape[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            } else if (wrapperShape[nDim - 1] == 1) {
+                wrapperStride[nDim - PENULTIMATE_DIM] = wrapperStride[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
+                wrapperShape[nDim - 1] = wrapperShape[nDim - 1] * FP4_IN_INT8;
             }
-        } else if (wrapperStride[ndim - 1] == 1) {
-            wrapperStride[ndim - PENULTIMATE_DIM] =
-                wrapperStride[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
-            wrapperShape[ndim - 1] = wrapperShape[ndim - 1] * FP4_IN_INT8;
-        } else if (wrapperStride[ndim - PENULTIMATE_DIM] == 1) {
-            wrapperStride[ndim - 1] =
-                wrapperStride[ndim - 1] * FP4_IN_INT8;
-            wrapperShape[ndim - PENULTIMATE_DIM] =
-                wrapperShape[ndim - PENULTIMATE_DIM] * FP4_IN_INT8;
+        } else if (wrapperStride[nDim - 1] == 1) {
+            wrapperStride[nDim - PENULTIMATE_DIM] =
+                wrapperStride[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
+            wrapperShape[nDim - 1] = wrapperShape[nDim - 1] * FP4_IN_INT8;
+        } else if (wrapperStride[nDim - PENULTIMATE_DIM] == 1) {
+            wrapperStride[nDim - 1] =
+                wrapperStride[nDim - 1] * FP4_IN_INT8;
+            wrapperShape[nDim - PENULTIMATE_DIM] =
+                wrapperShape[nDim - PENULTIMATE_DIM] * FP4_IN_INT8;
         }
 
-        for (auto i = 0; i < ndim - PENULTIMATE_DIM; i++) {
+        for (auto i = 0; i < nDim - PENULTIMATE_DIM; i++) {
             wrapperStride[i] = wrapperStride[i] * FP4_IN_INT8;
         }
     } else {
