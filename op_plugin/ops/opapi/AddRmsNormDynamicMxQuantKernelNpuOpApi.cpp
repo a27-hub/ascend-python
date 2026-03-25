@@ -23,6 +23,174 @@ namespace {
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t ALIGN_NUM = 2;
 constexpr int64_t FP4_IN_UINT8_NUM = 2;
+
+#ifdef MOCK_ACLNN
+// ============================================================================
+// 参数收集 Mock：验证 Python → PTA C++ → aclnn 的参数传递链
+//
+// 使用方法：
+//   1. 编译时添加 -DMOCK_ACLNN
+//   2. Python 调用算子
+//   3. 读取 /tmp/mock_aclnn_AddRmsNormDynamicMxQuant.json 验证参数
+// ============================================================================
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
+class JsonBuilder {
+public:
+    std::ostringstream oss;
+    bool first = true;
+
+    void begin() { oss << "{\n"; }
+    void end() { oss << "\n}"; }
+
+    void addComma() {
+        if (!first) oss << ",\n";
+        first = false;
+    }
+
+    void add(const char* key, const char* value) {
+        addComma();
+        oss << "  \"" << key << "\": \"" << escape(value) << "\"";
+    }
+
+    void add(const char* key, int64_t value) {
+        addComma();
+        oss << "  \"" << key << "\": " << value;
+    }
+
+    void add(const char* key, double value) {
+        addComma();
+        oss << "  \"" << key << "\": " << std::setprecision(17) << value;
+    }
+
+    void add(const char* key, bool value) {
+        addComma();
+        oss << "  \"" << key << "\": " << (value ? "true" : "false");
+    }
+
+    void addTensor(const char* key, const at::Tensor& tensor) {
+        addComma();
+        oss << "  \"" << key << "\": {\n";
+        oss << "    \"shape\": [";
+        for (int64_t i = 0; i < tensor.dim(); i++) {
+            if (i > 0) oss << ", ";
+            oss << tensor.size(i);
+        }
+        oss << "],\n";
+        oss << "    \"dtype\": \"" << c10::toString(tensor.scalar_type()) << "\",\n";
+        oss << "    \"numel\": " << tensor.numel() << ",\n";
+        oss << "    \"strides\": [";
+        for (int64_t i = 0; i < tensor.dim(); i++) {
+            if (i > 0) oss << ", ";
+            oss << tensor.stride(i);
+        }
+        oss << "]\n";
+        oss << "  }";
+    }
+
+    void addOptionalTensor(const char* key, const c10::optional<at::Tensor>& opt) {
+        addComma();
+        if (opt.has_value()) {
+            const auto& tensor = opt.value();
+            oss << "  \"" << key << "\": {\n";
+            oss << "    \"has_value\": true,\n";
+            oss << "    \"shape\": [";
+            for (int64_t i = 0; i < tensor.dim(); i++) {
+                if (i > 0) oss << ", ";
+                oss << tensor.size(i);
+            }
+            oss << "],\n";
+            oss << "    \"dtype\": \"" << c10::toString(tensor.scalar_type()) << "\"\n";
+            oss << "  }";
+        } else {
+            oss << "  \"" << key << "\": {\"has_value\": false}";
+        }
+    }
+
+    std::string str() const { return oss.str(); }
+
+private:
+    std::string escape(const char* s) {
+        std::string result;
+        while (*s) {
+            if (*s == '"') result += "\\\"";
+            else if (*s == '\\') result += "\\\\";
+            else if (*s == '\n') result += "\\n";
+            else result += *s;
+            s++;
+        }
+        return result;
+    }
+};
+
+// Mock 函数：参数签名与 EXEC_NPU_CMD 展开后传给 aclnn 的参数一一对应
+// 注意：第 8 个参数是 aclDataType y_acltype（= dst_type - 256），不是 dst_type 原值
+static void MockAclnnAddRmsNormDynamicMxQuant(
+    const at::Tensor& x1,
+    const at::Tensor& x2,
+    const at::Tensor& gamma,
+    const c10::optional<at::Tensor>& beta,
+    double epsilon,
+    int64_t scale_alg,
+    const char* round_mode,
+    aclDataType y_acltype,
+    bool output_rstd,
+    const TensorWrapper& y_wrapper,
+    at::Tensor& x_out,
+    const TensorWrapper& mxscale_wrapper,
+    at::Tensor& rstd_out)
+{
+    const at::Tensor& y = y_wrapper.tensor_;
+    const at::Tensor& mxscale = mxscale_wrapper.tensor_;
+
+    JsonBuilder json;
+    json.begin();
+
+    json.add("aclnn_function", "aclnnAddRmsNormDynamicMxQuant");
+
+    // === 输入 Tensor ===
+    json.addTensor("x1", x1);
+    json.addTensor("x2", x2);
+    json.addTensor("gamma", gamma);
+    json.addOptionalTensor("beta", beta);
+
+    // === 标量参数 ===
+    json.add("epsilon", epsilon);
+    json.add("scale_alg", scale_alg);
+    json.add("round_mode", round_mode ? round_mode : "");
+    // y_acltype = dst_type - 256，记录实际传给 aclnn 的值
+    json.add("y_acltype", static_cast<int64_t>(y_acltype));
+    json.add("output_rstd", output_rstd);
+
+    // === 输出 Tensor 元信息（已由主函数分配好） ===
+    json.addTensor("y_out", y);
+    json.add("y_wrapper_dtype", static_cast<int64_t>(y_wrapper.dtype));
+    json.addTensor("x_out", x_out);
+    json.addTensor("mxscale_out", mxscale);
+    json.add("mxscale_wrapper_dtype", static_cast<int64_t>(mxscale_wrapper.dtype));
+    json.addTensor("rstd_out", rstd_out);
+
+    json.end();
+
+    const char* filepath = "/tmp/mock_aclnn_AddRmsNormDynamicMxQuant.json";
+    std::ofstream ofs(filepath);
+    if (ofs.is_open()) {
+        ofs << json.str();
+        ofs.close();
+        std::cout << "[MOCK-ACLNN] Parameters captured to: " << filepath << std::endl;
+    } else {
+        std::cerr << "[MOCK-ACLNN] Failed to write " << filepath << std::endl;
+        std::cout << json.str() << std::endl;
+    }
+}
+
+#define EXEC_NPU_CMD_MOCK(cmd, ...) \
+    do { MockAclnnAddRmsNormDynamicMxQuant(__VA_ARGS__); } while(0)
+#endif // MOCK_ACLNN
+
 }; // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_rms_norm_dynamic_mx_quant(
@@ -98,9 +266,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_rms_norm_dyna
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper mxscale_wrapper = {mxscale_out, aclDataType::ACL_FLOAT8_E8M0};
 
-    // 8. 调用 aclnn 接口
+    // 8. 调用 aclnn 接口（支持 mock 模式）
+#ifdef MOCK_ACLNN
+    EXEC_NPU_CMD_MOCK(aclnnAddRmsNormDynamicMxQuant, x1, x2, gamma, beta, epsilon, scale_alg,
+                      round_mode_ptr, y_acltype, output_rstd, y_wrapper, x_out, mxscale_wrapper, rstd_out);
+#else
     EXEC_NPU_CMD(aclnnAddRmsNormDynamicMxQuant, x1, x2, gamma, beta, epsilon, scale_alg,
                  round_mode_ptr, y_acltype, output_rstd, y_wrapper, x_out, mxscale_wrapper, rstd_out);
+#endif
 
     return std::make_tuple(y, x_out, mxscale_out, rstd_out);
 }
