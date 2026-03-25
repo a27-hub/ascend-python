@@ -3673,6 +3673,70 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y2_npu.dtype, torch.int32)
 
 
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        # 2 dim, fp16, dst_type=296 (float4_e2m1fn_x2)
+        x1 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+        x2 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+        gamma = torch.ones([64, ], dtype=torch.float16).to("npu")
+        beta = torch.zeros([64, ], dtype=torch.float16).to("npu")
+        actual_y, actual_x_out, actual_mxscale, actual_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+            x1, x2, gamma, beta=beta, dst_type=296
+        )
+        with FakeTensorMode():
+            fake_x1 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+            fake_x2 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+            fake_gamma = torch.ones([64, ], dtype=torch.float16).to("npu")
+            fake_beta = torch.zeros([64, ], dtype=torch.float16).to("npu")
+            fake_y, fake_x_out, fake_mxscale, fake_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                fake_x1, fake_x2, fake_gamma, beta=fake_beta, dst_type=296
+            )
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_x_out.shape, fake_x_out.shape)
+        self.assertEqual(actual_mxscale.shape, fake_mxscale.shape)
+        self.assertEqual(actual_rstd.shape, fake_rstd.shape)
+
+        # 3 dim, bf16, dst_type=296 (float4_e2m1fn_x2)
+        x1 = torch.randn([4, 8, 128], dtype=torch.bfloat16).to("npu")
+        x2 = torch.randn([4, 8, 128], dtype=torch.bfloat16).to("npu")
+        gamma = torch.ones([128, ], dtype=torch.bfloat16).to("npu")
+        beta = torch.zeros([128, ], dtype=torch.bfloat16).to("npu")
+        actual_y, actual_x_out, actual_mxscale, actual_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+            x1, x2, gamma, beta=beta, dst_type=296
+        )
+        with FakeTensorMode():
+            fake_x1 = torch.randn([4, 8, 128], dtype=torch.bfloat16).to("npu")
+            fake_x2 = torch.randn([4, 8, 128], dtype=torch.bfloat16).to("npu")
+            fake_gamma = torch.ones([128, ], dtype=torch.bfloat16).to("npu")
+            fake_beta = torch.zeros([128, ], dtype=torch.bfloat16).to("npu")
+            fake_y, fake_x_out, fake_mxscale, fake_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                fake_x1, fake_x2, fake_gamma, beta=fake_beta, dst_type=296
+            )
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_x_out.shape, fake_x_out.shape)
+        self.assertEqual(actual_mxscale.shape, fake_mxscale.shape)
+        self.assertEqual(actual_rstd.shape, fake_rstd.shape)
+
+        # 2 dim, fp16, dst_type=float8_e5m2
+        x1 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+        x2 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+        gamma = torch.ones([64, ], dtype=torch.float16).to("npu")
+        actual_y, actual_x_out, actual_mxscale, actual_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+            x1, x2, gamma, dst_type=torch_npu.float8_e5m2
+        )
+        with FakeTensorMode():
+            fake_x1 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+            fake_x2 = torch.randn([2, 64], dtype=torch.float16).to("npu")
+            fake_gamma = torch.ones([64, ], dtype=torch.float16).to("npu")
+            fake_y, fake_x_out, fake_mxscale, fake_rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                fake_x1, fake_x2, fake_gamma, dst_type=torch_npu.float8_e5m2
+            )
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_x_out.shape, fake_x_out.shape)
+        self.assertEqual(actual_mxscale.shape, fake_mxscale.shape)
+        self.assertEqual(actual_rstd.shape, fake_rstd.shape)
+
+
 class TestMoeUpdateExpert(TestCase):
     def test_moe_update_expert(self):
         with FakeTensorMode():
