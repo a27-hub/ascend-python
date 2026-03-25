@@ -24,6 +24,7 @@ namespace op_api {
 static const int DIM_ONE = 1;
 static const int DIM_TWO = 2;
 static const int DIM_THREE = 3;
+static const int DIM_FOUR = 4;
 // quant mode
 static const int NO_QUANT_MODE = 0;
 static const int PERTENSOR_QUANT_MODE = 1;
@@ -160,7 +161,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     // gmm_weight_scale
     TORCH_CHECK(
         gmm_weight_scale.defined(), "The input tensor gmm_weight_scale cannot be None.", OPS_ERROR(ErrCode::PARAM));
-    int gmm_weight_scale_dim = (gmm_weight_quant_mode_value == MX_QUANT_MODE) ? DIM_THREE : DIM_ONE;
+    int gmm_weight_scale_dim = (gmm_weight_quant_mode_value == MX_QUANT_MODE) ? DIM_FOUR : DIM_ONE;
     TORCH_CHECK(gmm_weight_scale.dim() == gmm_weight_scale_dim,
         "The dim of gmm_weight_scale should be ",
         gmm_weight_scale_dim,
