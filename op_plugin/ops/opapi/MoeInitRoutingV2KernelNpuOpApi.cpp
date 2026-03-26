@@ -187,7 +187,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
 
-    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
+    if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || MoeInitRoutingV2Is310P()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
