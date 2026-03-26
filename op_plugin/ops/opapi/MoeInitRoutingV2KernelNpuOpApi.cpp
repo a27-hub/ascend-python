@@ -68,9 +68,6 @@ at::IntArrayRef init_new_active_expert_range(at::IntArrayRef &active_expert_rang
 static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range,
     int64_t expert_tokens_num_type, int64_t quant_mode)
 {
-    if (Is310PBoolCheck()) {
-        return true;
-    }
     if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 &&
         active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
         if (quant_mode == -1 && expert_tokens_num_type == 1) {
@@ -177,7 +174,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 
     at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
     at::Tensor expert_tokens_count_or_cumsum;
-    if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
+    if (Is310PBoolCheck) {
+        expert_tokens_count_or_cumsum =
+            npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
+    } else if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
         // expert_tokens_count_or_cumsum in [end-start, ]
         expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kLong));
@@ -187,12 +187,12 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
 
-    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
+    if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || Is310PBoolCheck()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
         drop_pad_mode = 0;
-        int64_t expert_tokens_count_or_cumsum_flag = 2;
+        int64_t expert_tokens_count_or_cumsum_flag = Is310PBoolCheck() ? 1 : 2;
         bool expert_tokens_before_capacity_flag = false;
         if (bs == 0) {
             // return when using empty tensor 
