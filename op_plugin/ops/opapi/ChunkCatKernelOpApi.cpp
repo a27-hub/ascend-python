@@ -87,6 +87,7 @@ namespace op_api {
 
     at::Tensor _chunk_cat( at::TensorList tensors, int64_t dim, int64_t num_chunks)
     {
+        DO_COMPATIBILITY(aclnnChunkCat, at::native::_chunk_cat(tensors, dim, num_chunks));
         auto view_sizes = get_chunk_cat_out_sizes(tensors, dim, num_chunks);
         at::Tensor result = npu_preparation::apply_tensor_without_format(view_sizes, tensors[0].scalar_type());
         if (all_contiguous(tensors) &&
@@ -101,6 +102,7 @@ namespace op_api {
 
     at::Tensor& _chunk_cat_out( at::TensorList tensors, int64_t dim, int64_t num_chunks, at::Tensor& out)
     {
+        DO_COMPATIBILITY(aclnnChunkCat, _chunk_cat_out(tensors, dim, num_chunks, out));
         TORCH_CHECK(
             tensors[0].device() == out.device(),
             "_chunk_cat_out: mismatch between input and out tensor devices");
