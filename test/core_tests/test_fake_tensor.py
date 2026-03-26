@@ -1526,6 +1526,19 @@ class TestPromptFlashAttention(TestCase):
 
             self.assertTrue(q.shape == res.shape)
 
+class TestAttentionPioneer(TestCase):
+    @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testAttentionPioneer(self):
+        with FakeTensorMode():
+            q = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            k = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            v = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            atten_out, softmax_lse = torch.ops.npu._npu_attention_pioneer(q, k, v)
+
+            self.assertTrue(q.shape == atten_out.shape)
 
 class TestFusedInferAttentionScore(TestCase):
     @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
@@ -2246,6 +2259,23 @@ class TestRmsNormQuant(TestCase):
             y = torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_dtype=291)
             self.assertTrue(y.shape == x.shape)
             self.assertTrue(y.dtype == torch.float8_e5m2)
+
+
+class TestRmsNormDynamicMxQuant(TestCase):
+    def test_npu_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, mxscale_npu, rstd_npu = torch_npu.npu_rms_norm_dynamic_mx_quant(
+                x, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
 
 
 class TestNpuRmsNorm(TestCase):
@@ -3671,6 +3701,26 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y1_npu.dtype, torch.int32)
             self.assertEqual(y2_npu.shape, tuple(expected_y_shape))
             self.assertEqual(y2_npu.dtype, torch.int32)
+
+
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x1 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, x_out_npu, mxscale_npu, rstd_npu = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x1.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(x_out_npu.shape, x1.shape)
+            self.assertEqual(x_out_npu.dtype, x1.dtype)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
 
 
 class TestMoeUpdateExpert(TestCase):
