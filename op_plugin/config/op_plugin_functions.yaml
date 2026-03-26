@@ -965,7 +965,7 @@ official:
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-
+  
   - func: _addmm_activation.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, bool use_gelu=False, Tensor(a!) out) -> Tensor(a!)
     op_api: all_version
 
@@ -7325,12 +7325,15 @@ custom:
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
     internal_format_opapi: [v2.6, newest]
-
+  
   - func: save_npugraph_tensor.tensorlist(Tensor[] input, *, str? save_name=None, str? save_dir=None, str? suffix=None) -> ()
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
     internal_format_opapi: [v2.6, newest]
+  
 
+  - func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode="rint", int dst_type=296, int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)
+    op_api: all_version
 
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor

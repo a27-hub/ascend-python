@@ -579,7 +579,7 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
             dequant_scale_q_norm_shape.append(int(weight_dq.size(1) / FP8_E4M3_BLOCK_SIZE))
         else:
             dequant_scale_q_norm_shape.append(1)
-
+        
 
     is_cann_version_gte_required = torch_npu.npu.utils._is_gte_cann_version("8.5.0.alpha003", "CANN") # whether cann version >= 8.5.0.alpha003
     # kvcache量化
@@ -4127,30 +4127,30 @@ def npu_quant_matmul_reduce_sum_meta(x1, x2, *, x1_scale=None, x2_scale=None):
 def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approximate="gelu_erf"):
     INT4_IN_INT32 = 8
     LAST_SECOND_DIM_INDEX = 2
-
+    
     # 校验approximate参数
     torch._check(
         approximate in ["gelu_tanh", "gelu_erf"],
         lambda: f"approximate must be 'gelu_tanh' or 'gelu_erf', but got {approximate} {ops_error(ErrCode.PARAM)}",
     )
-
+    
     # 校验量化场景（A4W4或A8W8）
     is_a4w4 = ((x1.dtype == torch.int32 or x1.dtype == torch.quint4x2) and
                (x2.dtype == torch.int32 or x2.dtype == torch.quint4x2))
     is_a8w8 = (x1.dtype == torch.int8 and x2.dtype == torch.int8)
-
+    
     torch._check(
         is_a4w4 or is_a8w8,
         lambda: f"Only A4W4 (int4/int32) or A8W8 (int8) quantization is supported, "
                 f"but got x1.dtype={x1.dtype}, x2.dtype={x2.dtype} {ops_error(ErrCode.TYPE)}",
     )
-
+    
     # 校验x1_scale和x2_scale
     torch._check(x1_scale is not None, lambda: f"x1_scale should not be None.")
     torch._check(x2_scale is not None, lambda: f"x2_scale should not be None.")
     torch._check(x1_scale.dim() == 1, lambda: f"x1_scale dim must be 1, but got {x1_scale.dim()}.")
     torch._check(x2_scale.dim() == 1, lambda: f"x2_scale dim must be 1, but got {x2_scale.dim()}.")
-
+    
     # 推导输出shape
     x1_dim_num = x1.dim()
     x2_dim_num = x2.dim()
@@ -4158,7 +4158,7 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
     shape_long = x1 if x1_dim_num > x2_dim_num else x2
     shape_short = x2 if x1_dim_num > x2_dim_num else x1
     valid_offset = out_dim_num - min(x1_dim_num, x2_dim_num)
-
+    
     # 计算batch维度
     batch_val = 1
     dim_list = []
@@ -4172,15 +4172,15 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
         cur_batch_val = max(short_dim, long_dim)
         batch_val = batch_val * cur_batch_val
         dim_list.append(cur_batch_val)
-
+    
     # 计算x1的m维度和k维度
     x1_m_dim = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX)
     x1_k_dim = x1.size(x1_dim_num - 1)
-
+    
     # 计算x2的k维度和n维度（考虑INT4打包）
     x2_k_dim = x2.size(x2_dim_num - LAST_SECOND_DIM_INDEX)
     x2_n_dim = x2.size(x2_dim_num - 1)
-
+    
     # 校验k维度匹配
     if is_a4w4:
         # A4W4场景：k维度匹配检查
@@ -4208,7 +4208,7 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
                 x1_k_dim == x2_k_dim * INT4_IN_INT32,
                 lambda: f"A4W4 (quint4x2/int32): k dim of x1 ({x1_k_dim}) must equal k dim of x2 ({x2_k_dim}) * 8 {ops_error(ErrCode.VALUE)}",
             )
-
+        
         # A4W4场景：当x2为int32类型时，恢复实际的n维度（INT4打包）
         if x2.dtype == torch.int32:
             x2_n_dim = x2_n_dim * INT4_IN_INT32
@@ -4218,10 +4218,10 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
             x1_k_dim == x2_k_dim,
             lambda: f"A8W8: k dim of x1 ({x1_k_dim}) must equal k dim of x2 ({x2_k_dim}) {ops_error(ErrCode.VALUE)}",
         )
-
+    
     dim_list.append(x1_m_dim)
     dim_list.append(x2_n_dim)
-
+    
     # 校验x1_scale和x2_scale的shape
     torch._check(
         x1_scale.size(0) == x1_m_dim,
@@ -4231,7 +4231,7 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
         x2_scale.size(0) == 1 or x2_scale.size(0) == x2_n_dim,
         lambda: f"x2_scale size(0) must be 1 or equal to x2's n dimension ({x2_n_dim}), but got {x2_scale.size(0)} {ops_error(ErrCode.VALUE)}",
     )
-
+    
     # 校验bias shape（如果提供）
     if bias is not None:
         if is_a4w4:
@@ -4264,14 +4264,14 @@ def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approxi
                     bias.size(0) == batch_val and bias.size(1) == 1 and bias.size(2) == x2_n_dim,
                     lambda: f"bias shape must be ({batch_val}, 1, {x2_n_dim}), but got {tuple(bias.shape)} {ops_error(ErrCode.VALUE)}",
                 )
-
+    
     # 确定输出数据类型（根据x2_scale的数据类型）
     output_dtype = torch.bfloat16 if x2_scale.dtype == torch.bfloat16 else torch.float16
-
+    
     # 在FakeTensor模式下，使用meta设备；否则使用x1的设备
     # 确保设备一致性，避免设备传播错误
     output_device = 'meta' if x1.device.type == 'meta' else x1.device
-
+    
     return torch.empty(tuple(dim_list), dtype=output_dtype, device=output_device)
 
 
@@ -4376,7 +4376,7 @@ def npu_transpose_batchmatmul_meta(input_, weight, *, bias=None, scale=None,
 
 
 @impl(m, "npu_transpose_quant_batchmatmul")
-def npu_transpose_quant_batchmatmul_meta(input_, weight, dtype, bias=None, x1_scale=None, x2_scale=None, group_size=None,
+def npu_transpose_quant_batchmatmul_meta(input_, weight, dtype, bias=None, x1_scale=None, x2_scale=None, group_size=None, 
                                    perm_x1=None, perm_x2=None, perm_y=None, batch_split_factor=1):
     M = input_.size(perm_x1.index(1))
     batch_m = input_.size(perm_x1.index(0))
@@ -5590,7 +5590,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
             out_dtype = torch.uint8
         output_shape = torch.empty([batch_size, n // mxfp_multi_base_size], dtype=out_dtype, device=x.device)
         output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
-
+    
     return output_shape, output_scale_shape
 
 
@@ -5976,7 +5976,7 @@ def npu_ps_roi_pooling_meta(x, rois, spatial_scale, group_size, output_dim):
 @impl(m, "npu_convolution")
 def npu_convolution_meta(input, weight, bias, stride, padding, dilation, groups):
     torch._check(input.dim() >= 4, lambda: f"Convolution input must be at least 4D.")
-
+    
     HW_START_DIM = 2
     N = input.size(0)
     out_channels = weight.size(0)
@@ -5991,7 +5991,7 @@ def npu_convolution_meta(input, weight, bias, stride, padding, dilation, groups)
         O_size = (spatial_num + 2 * padding_num - dilation_num * (kernel_num - 1) - 1) // stride_num + 1
         torch._check(O_size > 0, lambda: f"Invalid output size at dim {i}: {O_size}.")
         out_shape.append(O_size)
-
+    
     return input.new_empty((N, out_channels, *out_shape))
 
 
@@ -6013,7 +6013,7 @@ def npu_convolution_transpose_meta(input, weight, bias, padding, output_padding,
         O_size = ((spatial_num - 1) * stride_num - 2 * padding_num + dilation_num * (kernel_num - 1) + op_num + 1)
         torch._check(O_size > 0, lambda: f"Invalid output size at dim {i}: {O_size}.")
         out_shape.append(O_size)
-
+    
     return input.new_empty((N, out_channels, *out_shape))
 
 
@@ -6072,3 +6072,46 @@ def npu_l1_loss_backward_meta(grad_output,   input, target, reduction):
 @impl(m, "npu_linear_backward")
 def npu_npu_linear_backward_meta(grad_output, input1, input2):
     return torch.empty_like(input1), torch.empty_like(input2)
+
+
+@impl(m, "npu_dynamic_block_mx_quant")
+def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
+    dim_num = input_dummy.dim()
+    scale1_shape = []
+    scale2_shape = []
+    last_axis = -1
+    second_to_last_axis = -2
+    last_axis_change = last_axis + dim_num
+    second_to_last_axis_change = second_to_last_axis + dim_num
+    for dim in range(dim_num):
+        scale1_shape.append(input_dummy.size(dim))
+        scale2_shape.append(input_dummy.size(dim))
+    scale1_shape.append(2)
+    scale2_shape.append(2)
+
+    block_size = 32
+    last_dim_size = int(math.ceil(scale1_shape[last_axis_change] / block_size))
+    last_dim_size = (last_dim_size + 2 - 1) // 2
+    second_to_last_dim_size = int(math.ceil(scale2_shape[second_to_last_axis_change] / block_size))
+    second_to_last_dim_size = (second_to_last_dim_size + 2 - 1) // 2
+    scale1_shape[last_axis_change] = last_dim_size
+    scale2_shape[second_to_last_axis_change] = second_to_last_dim_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(input_dummy.size(dim))
+        y_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y = input_dummy.new_empty(y_shape, dtype=torch.uint8)
+    scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
+    scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
+    return (y, scale1, scale2)

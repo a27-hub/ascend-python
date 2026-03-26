@@ -26,6 +26,20 @@ constexpr int64_t REMOVE_ONE_DIM = 1;
 constexpr int64_t REMOVE_TWO_DIMS = 2;
 constexpr int64_t ALPHA_NUMEL = 3;
 
+/**
+ * @brief 构造 aclnnMhcPre 所需的输出张量。
+ *
+ * 该函数根据输入张量 x 的维度布局，并结合 phi 的第 0 维大小，
+ * 预先创建算子执行所需的各个输出张量。
+ * 当前支持两种 x 输入形式：
+ * (1) 4 维输入：x 的形状为 [B, S, N, D]
+ * (2) 3 维输入：x 的形状为 [T, N, D]
+ *
+ * @param x:   输入张量，要求为 3 维或 4 维。
+ * @param phi: 输入张量，其第 0 维大小用于确定 outHmix 的最后一维。
+ * @return 返回 6 个输出张量：
+ * (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
+ */
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
     const at::Tensor &x, const at::Tensor &phi)
 {
@@ -46,6 +60,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         auto numResidual = x.size(DIM_2);
         auto dim = x.size(DIM_3);
 
+        // 4 维输入场景：x 的 shape 为 [B, S, N, D]
+        // 各输出张量 shape 说明如下：
+        // - outHin    : [B, S, D]
+        // - outHpost  : [B, S, N]
+        // - outHres   : [B, S, N, N]
+        // - outInvRms : [B, S]
+        // - outHmix   : [B, S, K]，其中 K = phi.size(0)
+        // - outHpre   : [B, S, N]
         c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHinSize;
         c10::SmallVector<int64_t, BSND_DIMS - REMOVE_ONE_DIM> outHpostSize;
         c10::SmallVector<int64_t, BSND_DIMS> outHresSize;
@@ -88,6 +110,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         auto numResidual = x.size(DIM_1);
         auto dim = x.size(DIM_2);
 
+        // 3 维输入场景：x 的 shape 为 [T, N, D]
+        // 各输出张量 shape 说明如下：
+        // - outHin    : [T, D]
+        // - outHpost  : [T, N]
+        // - outHres   : [T, N, N]
+        // - outInvRms : [T]
+        // - outHmix   : [T, K]，其中 K = phi.size(0)
+        // - outHpre   : [T, N]
         c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHinSize;
         c10::SmallVector<int64_t, TND_DIMS - REMOVE_ONE_DIM> outHpostSize;
         c10::SmallVector<int64_t, TND_DIMS> outHresSize;
@@ -136,6 +166,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     TORCH_CHECK(bias.numel() > 0, "Input bias should not be empty.");
 
     TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
+
+    // out_flag 用于控制 aclnnMhcPre 是否实际写出全部输出：
+    // - out_flag == 1：写出全部 6 个结果
+    //   (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
+    // - out_flag == 0：仅需要 outHin / outHpost / outHres，
+    //   后 3 个输出在调用 aclnnMhcPre 时使用 nullTensor 占位，不参与实际写出
     TORCH_CHECK(out_flag == 0 || out_flag == 1, "out_flag must be 0 or 1, but got ", out_flag, ".");
 
     auto mhcPreOutput = construct_mhc_pre_outputs(x, phi);
