@@ -16,7 +16,7 @@
 
 import os
 from collections import defaultdict
-from typing import List, Dict, Sequence, Tuple
+from typing import List, Dict, Sequence, Tuple, Set
 import yaml
 
 from torchnpugen.code_template import CodeTemplate
@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${checks}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -53,6 +54,7 @@ ${return_type} ${func_name}(${args_str})
 ACLNN_FUNCTIONS_DELEGATE = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${checks}
     return op_api::${func_name_out}(${args_str_out});
 }
 
@@ -174,17 +176,33 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             delegate_name = cpp.name(delegate_function.func)
             delegate_name = delegate_name + '_symint' if is_symint else delegate_name
             delegate_args_exprs_str = f'{args_exprs_str}, {f.func.arguments.self_arg.argument.name}'
-            return [ACLNN_FUNCTIONS_DELEGATE.substitute(
+
+            checks_code = ""
+            if struct.checks:
+                check_lines = []
+                for check in struct.checks:
+                    check_lines.append(f"{check.generate_code()}")
+                checks_code = "\n".join(check_lines) + "\n"
+
+            return [remove_empty_lines(ACLNN_FUNCTIONS_DELEGATE.substitute(
                     return_type=return_type,
                     func_name=name,
                     args_str=args_str,
+                    checks=checks_code,
                     func_name_out=delegate_name,
-                    args_str_out=delegate_args_exprs_str,)]
+                    args_str_out=delegate_args_exprs_str,))]
 
         do_compatibility = DO_COMPATIBILITY.substitute(aclnnname=struct.aclnn_name,
                                                        func_name=name,
                                                        args_exprs_str=args_exprs_str) if struct.acl_op else ""
 
+        checks_code = ""
+        if struct.checks:
+            check_lines = []
+            for check in struct.checks:
+                check_lines.append(f"{check.generate_code()}")
+            checks_code = "\n".join(check_lines) + "\n"
+            
         tensor_arguments = ", ".join(filt_input_tensor(f.func.arguments.flat_non_out))
 
         new_params_def = "".join(
@@ -257,6 +275,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
+                checks=checks_code,
                 new_params_def=new_params_def,
                 define_size_or_dtype=define_size_or_dtype,
                 args_str=args_str,

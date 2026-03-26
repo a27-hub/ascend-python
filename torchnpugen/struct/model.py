@@ -14,15 +14,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Sequence
+from typing import List, Dict, Sequence, Union, Set
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from torchnpugen.model import (BaseTy, SchemaKind, BaseType,
                            Argument, NativeFunction, ListType)
 from torchnpugen.context import native_function_manager
 from torchnpugen.api.types import NativeSignature
 from torchnpugen.api import cpp
+
+
+@dataclass(frozen=True)
+class CheckConfig:
+    call: str
+
+    @staticmethod
+    def from_yaml(check_info: str) -> 'CheckConfig':
+        if not isinstance(check_info, str):
+            raise TypeError(f"Check must be a string, got {type(check_info)}")
+
+        call = check_info.strip()
+
+        return CheckConfig(call=call)
+
+    def generate_code(self) -> str:
+        code = self.call.strip()
+        if not code.endswith(';'):
+            code += ';'
+        return code
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
@@ -110,6 +130,7 @@ class StructInfo:
     acl_op: bool = None
     results: List[ResInfo] = None
     new_params: Dict[str, str] = None
+    checks: List['CheckConfig'] = None
 
     @staticmethod
     def from_yaml(
@@ -168,6 +189,15 @@ class StructInfo:
             gen_opapi_info = e.get('gen_opapi')
             structured_inherit = gen_opapi_info.pop('structured_inherit', None)
 
+            checks_list = []
+            checks_info = gen_opapi_info.pop('checks', None)
+            check_info = gen_opapi_info.pop('check', None)
+            if checks_info is not None:
+                for check_item in checks_info:
+                    checks_list.append(CheckConfig.from_yaml(check_item))
+            elif check_info is not None:
+                checks_list.append(CheckConfig.from_yaml(check_info))
+
             if structured_inherit is not None:
                 if func_kind == SchemaKind.inplace:
                     struct_info = StructInfo(
@@ -183,6 +213,8 @@ class StructInfo:
                     if gen_opapi_info is None:
                         raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
                     gen_opapi_info = gen_opapi_info.get('gen_opapi')
+                    gen_opapi_info.pop('checks', None)
+                    gen_opapi_info.pop('check', None)
 
             aclnn_arguments = gen_opapi_info.pop('exec', None)
 
@@ -243,6 +275,7 @@ class StructInfo:
                 return_args=return_args,
                 acl_op=acl_op,
                 new_params=new_params_dict,
+                checks=checks_list if checks_list else None,
             )
             struct_infos.append(struct_info)
 
