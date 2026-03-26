@@ -8,13 +8,13 @@ from torch_npu.testing.common_utils import create_common_tensor, SupportedDevice
 class TestHistc(TestCase):
     def test_histc(self):
         case_list = [
+            [np.float16, -1, [2]],
             [np.float32, -1, [2]],
-            [np.float32, -1, [2]],
+            [np.float16, -1, [2, 3]],
             [np.float32, -1, [2, 3]],
-            [np.float32, -1, [2, 3]],
+            [np.float16, -1, [2, 3, 4]],
             [np.float32, -1, [2, 3, 4]],
-            [np.float32, -1, [2, 3, 4]],
-            [np.float32, -1, [2, 3, 4, 5]],
+            [np.float16, -1, [2, 3, 4, 5]],
             [np.float32, -1, [2, 3, 4, 5]],
         ]
         for item in case_list:
@@ -26,13 +26,13 @@ class TestHistc(TestCase):
 
     def test_histc_out(self):
         case_list = [
+            [np.float16, -1, [2]],
             [np.float32, -1, [2]],
-            [np.float32, -1, [2]],
+            [np.float16, -1, [2, 3]],
             [np.float32, -1, [2, 3]],
-            [np.float32, -1, [2, 3]],
+            [np.float16, -1, [2, 3, 4]],
             [np.float32, -1, [2, 3, 4]],
-            [np.float32, -1, [2, 3, 4]],
-            [np.float32, -1, [2, 3, 4, 5]],
+            [np.float16, -1, [2, 3, 4, 5]],
             [np.float32, -1, [2, 3, 4, 5]],
         ]
         for item in case_list:
