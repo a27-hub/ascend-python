@@ -537,5 +537,17 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
+void check_output_tensor_dtype(const at::Tensor &self, const at::Tensor &other, const at::Tensor &out, bool convert_int)
+{
+    at::ScalarType result_type = out.scalar_type();
+    at::ScalarType high_type = at::native::result_type(self, other);
+    if (convert_int && isIntegralType(high_type, true)) {
+        high_type = at::kFloat;
+    }
+    TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
+        " can't be cast to the desired output type ", result_type,
+        OPS_ERROR(ErrCode::TYPE));
+}
+
 }  // namespace utils
 }  // namespace op_plugin
