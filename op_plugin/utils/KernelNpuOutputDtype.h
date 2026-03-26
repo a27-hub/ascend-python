@@ -22,6 +22,7 @@
 
 namespace op_infer {
 
+OP_PLUGIN_HIDDEN at::ScalarType npu_check_out_dtype(const at::ScalarType &result_type, const at::ScalarType &out_dtype, bool convert_int);
 OP_PLUGIN_HIDDEN at::ScalarType angle_out_dtype(const at::Tensor& self);
 OP_PLUGIN_HIDDEN at::ScalarType polar_out_dtype(const at::Tensor& abs, const at::Tensor& angle);
 OP_PLUGIN_HIDDEN at::ScalarType npu_group_norm_silu_dst_type(const at::Tensor& input, const c10::optional<at::Tensor>& weight, const c10::optional<at::Tensor>& bias);

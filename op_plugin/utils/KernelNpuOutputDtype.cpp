@@ -21,6 +21,15 @@
 #include "op_plugin/OpApiInterface.h"
 namespace op_infer {
 
+at::ScalarType npu_check_out_dtype(const at::ScalarType &result_type, const at::ScalarType &out_dtype, bool convert_int)
+{
+    auto infer_dtype = convert_int && isIntegralType(result_type, true) ? at::kFloat : result_type;
+    TORCH_CHECK(canCast(infer_dtype, out_dtype), "result type ", infer_dtype,
+        " can't be cast to the desired output type ", out_dtype,
+        OPS_ERROR(ErrCode::TYPE));
+    return out_dtype;
+}
+
 at::ScalarType angle_out_dtype(const at::Tensor& self)
 {
     auto out_dtype = self.scalar_type();
