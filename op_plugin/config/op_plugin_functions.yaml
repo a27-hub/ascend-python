@@ -3884,6 +3884,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check:
+        type: custom
+        name: 'TORCH_CHECK(!(isIntegralType(base.scalar_type(), true) && exp.isIntegral(true) && exp.toLong() < 0), "Integers to negative integer powers are not allowed.")'
       out:
         size: self
         dtype: at::result_type(self, exponent)
@@ -5297,6 +5300,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check:
+        type: custom
+        name: 'check_output_tensor_dtype(self, other, out, true)'
       out:
         size: self
         dtype: out
@@ -5306,6 +5312,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check:
+        type: custom
+        name: 'check_output_tensor_dtype(self, other, out, true)'
       out:
         size: other
         dtype: out
@@ -5315,6 +5324,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check:
+        type: custom
+        name: 'check_output_tensor_dtype(self, other, out, true)'
       out:
         size: 'broadcast_ops_npu_output_size(self, other)'
         dtype: out
@@ -5351,6 +5363,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check:
+        type: custom
+        name: 'check_output_tensor_dtype(self, other, self, true)'
       exec: aclnnInplaceXLogYScalarOther
 
   - func: xlogy_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
