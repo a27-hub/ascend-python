@@ -197,13 +197,18 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
         const at::Tensor long_tensor = x1_dim_num > x2_dim_num ? x1 : x2;
         output_size = op_infer::array_to_small_vector(long_tensor.sizes());
         if (mxfp4_valid) {
-            int64_t k = !trans_x1 ? x1.size(x1_dim_num - 1) : x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
+            TORCH_CHECK(x1.dim() >= 2 && x1.dim() <= 6,
+                "x1 dim num should be 2 ~ 6, please check x1 dim num. Actual x1 dim = ", x1.dim(),
+                OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(x2.dim() >= 2 && x2.dim() <= 6,
+                "x2 dim num should be 2 ~ 6, please check x2 dim num. Actual x2 dim = ", x2.dim(),
+                OPS_ERROR(ErrCode::PARAM));
             int64_t x1_size_last_second = x1.sizes()[x1_dim_num - LAST_SECOND_DIM_INDEX];
             int64_t x2_size_last = x2.sizes()[x2_dim_num - 1];
-            int64_t m_new = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
-            int64_t n_new = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
-            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = m_new;
-            output_size[long_tensor.dim() - 1] = n_new;
+            int64_t real_m = !trans_x1 ? x1_size_last_second : x1_size_last_second * FP4_IN_INT8;
+            int64_t real_n = trans_x2 ? x2_size_last : x2_size_last * FP4_IN_INT8;
+            output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = real_m;
+            output_size[long_tensor.dim() - 1] = real_n;
         } else {
             output_size[long_tensor.dim() - LAST_SECOND_DIM_INDEX] = x1.size(x1_dim_num - LAST_SECOND_DIM_INDEX);
             output_size[long_tensor.dim() - 1] = x2_n_dim;
@@ -280,7 +285,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
                          result_wrapper);
         }
     } else {
-        if (is_nz_format(x2)) {
+        if (!is_a4w4 && is_nz_format(x2)) {
             EXEC_NPU_CMD(aclnnQuantMatmulWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, y_scale,
                          x1_offset, offset_real, y_offset, bias_real, transpose1, transpose2, group_size,
                          result_wrapper);
