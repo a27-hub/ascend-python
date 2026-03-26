@@ -450,10 +450,10 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
                 weight_uq_qr_dtype == torch_npu.hifloat8 and weight_dkv_kr_dtype == torch_npu.hifloat8,
             lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype, weight_dq_dtype, weight_uq_qr_dtype, weight_dkv_kr_dtype value must be torch_npu.hifloat8",
         )
-        if kv_cache_quant_mode == 1:
+        if kv_cache_quant_mode == 1 or kv_cache_quant_mode == 3:
             torch._check(
                 kv_cache_dtype is not None,
-                lambda: "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 and input dtype is hifloat8, kv_cache_dtype cannot be null."
+                lambda: "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 or 3 and input dtype is hifloat8, kv_cache_dtype cannot be null."
             )
             torch._check(
                 kv_cache_dtype == torch_npu.hifloat8,
@@ -628,10 +628,10 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
                 weight_uq_qr_dtype == torch_npu.hifloat8 and weight_dkv_kr_dtype == torch_npu.hifloat8,
             lambda: "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype, weight_dq_dtype, weight_uq_qr_dtype, weight_dkv_kr_dtype value must be torch_npu.hifloat8",
         )
-        if kv_cache_quant_mode == 1:
+        if kv_cache_quant_mode == 1 or kv_cache_quant_mode == 3:
             torch._check(
                 kv_cache_dtype is not None,
-                lambda: "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 and input dtype is hifloat8, kv_cache_dtype cannot be null."
+                lambda: "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 or 3 and input dtype is hifloat8, kv_cache_dtype cannot be null."
             )
             torch._check(
                 kv_cache_dtype == torch_npu.hifloat8,
@@ -774,7 +774,7 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
             query_norm = torch.empty([1], dtype=weight_uq_qr.dtype, device='meta')
             dequant_scale_q_norm = torch.empty([1], dtype=torch.float32, device='meta')
 
-    if is_hifloat8_dtype:
+    if is_hifloat8_dtype and (kv_cache_quant_mode == 1 or kv_cache_quant_mode == 3):
         kv_cache_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[kv_cache_dtype]
         kv_cache_out = torch.empty_like(kv_cache, dtype=kv_cache_type, device='meta')
     else:

@@ -76,9 +76,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
             c10_npu::GetAclDataType(weight_uq_qr_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dkv_kr_dtype.value()) == aclDataType::ACL_HIFLOAT8,
             "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype, weight_dq_dtype, weight_uq_qr_dtype, weight_dkv_kr_dtype value must be torch_npu.hifloat8", OPS_ERROR(ErrCode::PARAM));
 
-        if (kv_cache_quant_mode == 1) {
+        if (kv_cache_quant_mode == 1 || kv_cache_quant_mode == 3) {
             TORCH_CHECK(kv_cache_dtype.has_value(),
-                "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 and input dtype is hifloat8, kv_cache_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
+                "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 or 3 and input dtype is hifloat8, kv_cache_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
 
             TORCH_CHECK(c10_npu::GetAclDataType(kv_cache_dtype.value()) == aclDataType::ACL_HIFLOAT8,
                 "when weight_quant_mode is 5 and input dtype is hifloat8, kv_cache_dtype value must be torch_npu.hifloat8", OPS_ERROR(ErrCode::PARAM));
@@ -167,22 +167,28 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mla_p
                 TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache, kv_cache_dtype);
                 TensorWrapper query_wrapper = make_wrapper(query, token_x_dtype);
                 TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
-
                 EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
                     rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_wrapper, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
                     dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
                     k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
                     ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query_wrapper, query_rope,
                     dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
-            } else {
-                TensorWrapper query_wrapper = make_wrapper(query, token_x_dtype);
+            } else if (kv_cache_quant_mode == MODE_3) {
+                TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache, kv_cache_dtype);
                 TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
-
+                EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
+                    rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_wrapper, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
+                    dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+                    k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+                    dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
+            } else {
+                TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
                 EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
                     rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index, dequant_scale_x, dequant_scale_w_dq,
                     dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
                     k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
-                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query_wrapper, query_rope,
+                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
                     dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
             }
         } else {
@@ -262,9 +268,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
             c10_npu::GetAclDataType(weight_uq_qr_dtype.value()) == aclDataType::ACL_HIFLOAT8 && c10_npu::GetAclDataType(weight_dkv_kr_dtype.value()) == aclDataType::ACL_HIFLOAT8,
             "when weight_quant_mode is 5 and input dtype is hifloat8, token_x_dtype, weight_dq_dtype, weight_uq_qr_dtype, weight_dkv_kr_dtype value must be torch_npu.hifloat8", OPS_ERROR(ErrCode::PARAM));
 
-        if (kv_cache_quant_mode == 1) {
+        if (kv_cache_quant_mode == 1 or kv_cache_quant_mode == 3) {
             TORCH_CHECK(kv_cache_dtype.has_value(),
-                "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 and input dtype is hifloat8, kv_cache_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
+                "when weight_quant_mode is 5 and kv_cache_quant_mode is 1 or 3 and input dtype is hifloat8, kv_cache_dtype cannot be null.", OPS_ERROR(ErrCode::PARAM));
 
             TORCH_CHECK(c10_npu::GetAclDataType(kv_cache_dtype.value()) == aclDataType::ACL_HIFLOAT8,
                 "when weight_quant_mode is 5 and input dtype is hifloat8, kv_cache_dtype value must be torch_npu.hifloat8", OPS_ERROR(ErrCode::PARAM));
@@ -355,22 +361,28 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
                 TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache_inplace, kv_cache_dtype);
                 TensorWrapper query_wrapper = make_wrapper(query, token_x_dtype);
                 TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
-
                 EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
                     rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_wrapper, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
                     dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
                     k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
                     ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query_wrapper, query_rope,
                     dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
-            } else {
-                TensorWrapper query_wrapper = make_wrapper(query, token_x_dtype);
+            } else if (kv_cache_quant_mode == MODE_3) {
+                TensorWrapper kv_cache_wrapper = make_wrapper(kv_cache_inplace, kv_cache_dtype);
                 TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
-
+                EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
+                    rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_wrapper, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
+                    dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
+                    k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
+                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
+                    dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
+            } else {
+                TensorWrapper query_norm_wrapper = make_wrapper(query_norm, token_x_dtype);
                 EXEC_NPU_CMD(aclnnMlaPrologV3WeightNz, token_x_wrapper, weight_dq_wrapper, weight_uq_qr_wrapper, weight_uk, weight_dkv_kr_wrapper, rmsnorm_gamma_cq,
                     rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache_inplace, kr_cache_inplace, cache_index, dequant_scale_x, dequant_scale_w_dq,
                     dequant_scale_w_uq_qr, dequant_scale_w_dkv_kr, quant_scale_ckv, quant_scale_ckr, smooth_scales_cq, actual_seq_len,
                     k_nope_clip_alpha, rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv, cache_mode_ptr, weight_quant_mode, kv_cache_quant_mode, query_quant_mode,
-                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query_wrapper, query_rope,
+                    ckvkr_repo_mode, quant_scale_repo_mode, tile_size, qc_qr_scale, kc_scale, query, query_rope,
                     dequant_scale_q_nope, query_norm_wrapper, dequant_scale_q_norm);
             }
         } else {
