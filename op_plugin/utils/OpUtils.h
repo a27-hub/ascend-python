@@ -96,6 +96,8 @@ OP_PLUGIN_HIDDEN aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const
                                                       c10::optional<int64_t> scales_dtype, int64_t quant_mode);
 OP_PLUGIN_HIDDEN std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, int64_t quant_mode, int64_t a, int64_t h);
 OP_PLUGIN_HIDDEN int64_t check_and_get_group_size(at::IntArrayRef group_size_list);
+OP_PLUGIN_HIDDEN void check_output_dtype(const at::ScalarType &result_dtype, const at::ScalarType &out_dtype, bool convert_int);
+OP_PLUGIN_HIDDEN void check_resize_output_size(const at::Tensor &out, at::IntArrayRef expect_size);
 
 }  // namespace utils
 }  // namespace op_plugin
