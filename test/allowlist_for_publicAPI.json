@@ -63,7 +63,8 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor"
+      "save_npugraph_tensor",
+      "npu_fused_causal_conv1d"
     ],
     "all_version": [
       "_npu_dropout",
