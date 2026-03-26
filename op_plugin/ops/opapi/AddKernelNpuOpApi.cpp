@@ -133,6 +133,7 @@ at::Tensor &add_out(const at::Tensor &self, const at::Tensor &other, const at::S
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
 
+    check_resize_output_size(result, output_size);
     npu_preparation::check_tensor({self}, result, result, output_size);
     npu_preparation::check_memory({self, other}, {result});
     add_out_npu_nocheck(self, other, alpha, result);
