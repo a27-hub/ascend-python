@@ -28,6 +28,11 @@ at::Tensor& atan2_out(const at::Tensor &self, const at::Tensor &other, at::Tenso
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     npu_preparation::check_tensor({self, other}, out, out.scalar_type(), output_size);
+    at::ScalarType infer_dtype = at::native::result_type(self, other);
+    auto out_dtype = isIntegralType(infer_dtype, true) ? at::kFloat : infer_dtype;
+    TORCH_CHECK(canCast(out_dtype, out.scalar_type()), "result type ", out_dtype,
+        " can't be cast to the desired output type ", out.scalar_type(),
+        OPS_ERROR(ErrCode::TYPE));
     EXEC_NPU_CMD(aclnnAtan2, self, other, out);
     at::namedinference::propagate_names_if_nonempty(out, maybe_names);
     return out;
