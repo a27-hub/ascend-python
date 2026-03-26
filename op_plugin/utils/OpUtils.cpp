@@ -537,5 +537,16 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
+void check_output_dtype(const at::ScalarType &result_dtype, const at::ScalarType &out_dtype, bool convert_int)
+{
+    at::ScalarType high_type = result_dtype;
+    if (convert_int && isIntegralType(result_dtype, true)) {
+        high_type = at::kFloat;
+    }
+    TORCH_CHECK(canCast(high_type, out_dtype), "result type ", high_type,
+        " can't be cast to the desired output type ", out_dtype,
+        OPS_ERROR(ErrCode::TYPE));
+}
+
 }  // namespace utils
 }  // namespace op_plugin
