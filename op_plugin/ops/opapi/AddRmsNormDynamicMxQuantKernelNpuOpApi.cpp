@@ -18,6 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
+#include <fstream>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -123,6 +124,20 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_rms_norm_dyna
 
     // 7. 调用 aclnn 接口
     // aclnnAddRmsNormDynamicMxQuant(x1, x2, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd, yOut, xOut, mxscaleOut, rstdOut)
+#ifdef MOCK_ACLNN
+    // Mock 模式：将参数写入 JSON 文件
+    {
+        std::ofstream mock_file("/tmp/mock_aclnn_AddRmsNormDynamicMxQuant.json");
+        mock_file << "{";
+        mock_file << "\"epsilon\":" << epsilon << ",";
+        mock_file << "\"scale_alg\":" << scale_alg << ",";
+        mock_file << "\"round_mode\":\"" << round_mode << "\",";
+        mock_file << "\"dst_type\":" << static_cast<int>(y_acltype) << ",";
+        mock_file << "\"output_rstd\":" << (output_rstd ? "true" : "false");
+        mock_file << "}";
+        mock_file.close();
+    }
+#else
     if (beta.has_value() && beta.value().defined()) {
         EXEC_NPU_CMD(aclnnAddRmsNormDynamicMxQuant, x1, x2, gamma, beta.value(), epsilon, scale_alg,
                      round_mode_ptr, y_acltype, output_rstd, y_wrapper, x_out, mxscale_wrapper, rstd_out);
@@ -132,6 +147,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_add_rms_norm_dyna
         EXEC_NPU_CMD(aclnnAddRmsNormDynamicMxQuant, x1, x2, gamma, beta_dummy, epsilon, scale_alg,
                      round_mode_ptr, y_acltype, output_rstd, y_wrapper, x_out, mxscale_wrapper, rstd_out);
     }
+#endif
 
     return std::make_tuple(y, x_out, mxscale_out, rstd_out);
 }
