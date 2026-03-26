@@ -1546,6 +1546,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'op_plugin::utils::check_resize_output_size(out, self.sizes())'
       out:
         size: self
         dtype: self
@@ -2110,6 +2111,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'op_plugin::utils::check_resize_output_size(out, self.sizes())'
       out:
         size: self
         name: self
@@ -3878,12 +3880,14 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'TORCH_CHECK(!(isIntegralType(self.scalar_type(), true) && exponent.isIntegral(true) && exponent.toLong() < 0), "Integers to negative integer powers are not allowed.")'
       structured_inherit: pow.Tensor_Scalar_out
 
   - func: pow.Tensor_Scalar_out(Tensor self, Scalar exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'TORCH_CHECK(!(isIntegralType(self.scalar_type(), true) && exponent.isIntegral(true) && exponent.toLong() < 0), "Integers to negative integer powers are not allowed.")'
       out:
         size: self
         dtype: at::result_type(self, exponent)
@@ -3902,6 +3906,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'TORCH_CHECK(!(isIntegralType(self.scalar_type(), true) && exponent.isIntegral(true) && exponent.toLong() < 0), "Integers to negative integer powers are not allowed.")'
       exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
@@ -5297,6 +5302,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'check_output_dtype(at::result_type(self, other), out.scalar_type(), true)'
       out:
         size: self
         dtype: out
@@ -5306,6 +5312,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'check_output_dtype(at::result_type(self, other), out.scalar_type(), true)'
       out:
         size: other
         dtype: out
@@ -5315,6 +5322,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'check_output_dtype(at::result_type(self, other), out.scalar_type(), true)'
       out:
         size: 'broadcast_ops_npu_output_size(self, other)'
         dtype: out
@@ -5351,12 +5359,14 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'check_output_dtype(at::result_type(self, other), self.scalar_type(), true)'
       exec: aclnnInplaceXLogYScalarOther
 
   - func: xlogy_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: 'check_output_dtype(at::result_type(self, other), self.scalar_type(), true)'
       structured_inherit: xlogy.OutTensor
 
   - func: zero_(Tensor(a!) self) -> Tensor(a!)

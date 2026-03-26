@@ -69,6 +69,9 @@ at::Tensor& floor_divide_out(const at::Tensor& self, const at::Tensor& other, at
     at::ScalarType result_type = at::native::result_type(self, other);
     at::Tensor self_cp = self_tensor_to_device(self, result_type, out.device());
     npu_preparation::check_tensor({self, other}, out, out.scalar_type(), output_size);
+    TORCH_CHECK(canCast(result_type, out.scalar_type()), "result type ", result_type,
+        " can't be cast to the desired output type ", out.scalar_type(),
+        OPS_ERROR(ErrCode::TYPE));
 
     // calculate the output result of the NPU
     floor_divide_out_npu_opapi(self_cp, other, out);
