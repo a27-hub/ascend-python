@@ -5334,6 +5334,54 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
     return (y1, mxscale1, y2, mxscale2)
 
 
+@impl(m, "npu_add_rms_norm_dynamic_mx_quant")
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1_dummy, x2_dummy, gamma_dummy, *, beta=None, epsilon=1e-06, scale_alg=0, round_mode="rint", dst_type=296):
+    dim_num = x1_dummy.dim()
+
+    # 参数校验
+    if scale_alg not in [0, 1]:
+        raise RuntimeError("Invalid scale_alg value: {0}. Expected 0 or 1.".format(scale_alg) +
+                            ops_error(ErrCode.PARAM))
+
+    # y shape: 与 x1 相同，但 FP4 时尾轴减半
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(x1_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(x1_dummy, dtype=torch.float8_e4m3fn)
+    else:  # float4_e2m1, float4_e1m2
+        if x1_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(x1_dummy.size(dim))
+        y_shape.append(x1_dummy.size(dim_num - 1) // 2)
+        y = x1_dummy.new_empty(y_shape, dtype=torch.uint8)
+
+    # x_out: 与 x1 相同 shape 和 dtype
+    x_out = torch.empty_like(x1_dummy)
+
+    # mxscale_out shape: 尾轴特殊计算，增加一维
+    # mxscale.shape[-2] = (ceil(x1.shape[-1] / 32) + 2 - 1) / 2, shape[-1] = 2
+    mxscale_shape = list(x1_dummy.shape)
+    block_size = 32
+    align_num = 2
+    last_dim = mxscale_shape[dim_num - 1]
+    mxscale_last_dim = (math.ceil(last_dim / block_size) + align_num - 1) // align_num
+    mxscale_shape[dim_num - 1] = mxscale_last_dim
+    mxscale_shape.append(align_num)
+    mxscale_out = x1_dummy.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd_out shape: 与 x1 的前几维相同，最后一维为 1
+    rstd_shape = list(x1_dummy.shape)
+    rstd_shape[dim_num - 1] = 1
+    rstd_out = x1_dummy.new_empty(rstd_shape, dtype=torch.float32)
+
+    return (y, x_out, mxscale_out, rstd_out)
+
+
 has_side_effect(torch.ops.npu.save_npugraph_tensor.default)
 
 

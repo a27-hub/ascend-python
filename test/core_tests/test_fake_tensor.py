@@ -3357,6 +3357,80 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y2_npu.dtype, torch.int32)
 
 
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        # FP16 输入, FP8_E5M2 输出
+        with FakeTensorMode():
+            x1 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64], dtype=torch.float16, device='npu')
+            y, x_out, mxscale, rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y.shape, x1.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            # mxscale shape: (2, 4, 1, 2) = ceil(64/32)=2, (2+2-1)//2=1, 最后一维是2
+            self.assertEqual(mxscale.shape, (2, 4, 1, 2))
+            self.assertEqual(mxscale.dtype, torch.uint8)
+            self.assertEqual(rstd.shape, (2, 4, 1))
+            self.assertEqual(rstd.dtype, torch.float32)
+
+        # BF16 输入, FP8_E4M3FN 输出
+        with FakeTensorMode():
+            x1 = torch.randn([2, 4, 64], dtype=torch.bfloat16, device='npu')
+            x2 = torch.randn([2, 4, 64], dtype=torch.bfloat16, device='npu')
+            gamma = torch.ones([64], dtype=torch.bfloat16, device='npu')
+            y, x_out, mxscale, rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, dst_type=torch_npu.float8_e4m3fn
+            )
+            self.assertEqual(y.shape, x1.shape)
+            self.assertEqual(y.dtype, torch.float8_e4m3fn)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            self.assertEqual(mxscale.shape, (2, 4, 1, 2))
+            self.assertEqual(mxscale.dtype, torch.uint8)
+            self.assertEqual(rstd.shape, (2, 4, 1))
+            self.assertEqual(rstd.dtype, torch.float32)
+
+        # FP16 输入, FP4_E2M1 输出 (尾轴减半)
+        with FakeTensorMode():
+            x1 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64], dtype=torch.float16, device='npu')
+            y, x_out, mxscale, rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, dst_type=torch_npu.float4_e2m1fn_x2
+            )
+            # FP4 输出 shape 尾轴减半: 64 -> 32
+            self.assertEqual(y.shape, (2, 4, 32))
+            self.assertEqual(y.dtype, torch.uint8)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            self.assertEqual(mxscale.shape, (2, 4, 1, 2))
+            self.assertEqual(mxscale.dtype, torch.uint8)
+            self.assertEqual(rstd.shape, (2, 4, 1))
+            self.assertEqual(rstd.dtype, torch.float32)
+
+        # 带 beta 参数
+        with FakeTensorMode():
+            x1 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([2, 4, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64], dtype=torch.float16, device='npu')
+            y, x_out, mxscale, rstd = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, beta=beta, dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y.shape, x1.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertEqual(x_out.shape, x1.shape)
+            self.assertEqual(x_out.dtype, x1.dtype)
+            self.assertEqual(mxscale.shape, (2, 4, 1, 2))
+            self.assertEqual(mxscale.dtype, torch.uint8)
+            self.assertEqual(rstd.shape, (2, 4, 1))
+            self.assertEqual(rstd.dtype, torch.float32)
+
+
 class TestMoeUpdateExpert(TestCase):
     def test_moe_update_expert(self):
         with FakeTensorMode():
