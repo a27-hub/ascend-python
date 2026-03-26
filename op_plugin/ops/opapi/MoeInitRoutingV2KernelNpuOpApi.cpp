@@ -177,7 +177,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 
     at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
     at::Tensor expert_tokens_count_or_cumsum;
-    if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
+    if (Is310PBoolCheck) {
+        expert_tokens_count_or_cumsum =
+            npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
+    } else if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
         // expert_tokens_count_or_cumsum in [end-start, ]
         expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kLong));
@@ -187,7 +190,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
 
-    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
+    if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || Is310PBoolCheck()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
