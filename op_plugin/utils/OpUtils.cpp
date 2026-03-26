@@ -537,5 +537,32 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
+void check_output_dtype(const at::ScalarType &result_dtype, const at::ScalarType &out_dtype, bool convert_int)
+{
+    at::ScalarType high_type = result_dtype;
+    if (convert_int && isIntegralType(result_dtype, true)) {
+        high_type = at::kFloat;
+    }
+    TORCH_CHECK(canCast(high_type, out_dtype), "result type ", high_type,
+        " can't be cast to the desired output type ", out_dtype,
+        OPS_ERROR(ErrCode::TYPE));
+}
+
+void check_resize_output_size(const at::Tensor &out, at::IntArrayRef expect_size)
+{
+    if (out.sizes().equals(expect_size)) {
+        return
+    }
+
+    TORCH_WARN(
+        "An output with one or more elements was resized since it had ",
+        "shape ", out.sizes(), ", which does not match the required ",
+        "output shape ", expect_size, ". ",
+        "This behavior is deprecated, and in a future PyTorch release outputs ",
+        "will not be resized unless they have zero elements. You can explicitly ",
+        "reuse an out tensor t by resizing it, inplace, to zero elements with ",
+        "t.resize_(0).");
+}
+
 }  // namespace utils
 }  // namespace op_plugin
