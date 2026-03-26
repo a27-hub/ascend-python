@@ -192,7 +192,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
         drop_pad_mode = 0;
-        int64_t expert_tokens_count_or_cumsum_flag = 2;
+        int64_t expert_tokens_count_or_cumsum_flag = Is310PBoolCheck() ? 1 : 2;
         bool expert_tokens_before_capacity_flag = false;
         if (bs == 0) {
             // return when using empty tensor 
