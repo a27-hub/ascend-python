@@ -207,7 +207,7 @@ at::Tensor npu_quant_matmul(const at::Tensor &x1, const at::Tensor &x2, const at
     at::Tensor x1_offset = at::empty({0}, options);
     at::Tensor x2_offset = at::Tensor();
     at::Tensor y_offset = at::empty({0}, options);
-    if (is_a8W4_float || is_a8W4_int) {
+    if (is_a8W4_int) {  // Only A8W4 int needs y_offset
         y_offset = offset_real;
     } else {
         x2_offset = offset_real;
