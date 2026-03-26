@@ -122,7 +122,6 @@ class TestNPUMrope(TestCase):
         )  # [num_tokens, num_kv_heads * head_size]
         return query, key
 
-    @unittest.skip("skip case until cann supported")
     @SupportedDevices(["Ascend910B"])
     def test_npu_mrope_rope(self):
         num_tokens_list = [8, 16]
@@ -195,7 +194,6 @@ class TestNPUMrope(TestCase):
             self.assertRtolEqual(expected_query_out.to(dtype), query_out)
             self.assertRtolEqual(expected_key_out.to(dtype), key_out)
 
-    @unittest.skip("skip case until cann supported")
     @SupportedDevices(["Ascend910B"])
     def test_npu_mrope_mrope(self):
         mrope_section = [16, 24, 24]
@@ -267,7 +265,6 @@ class TestNPUMrope(TestCase):
             self.assertRtolEqual(expected_query_out.to(dtype), query_out)
             self.assertRtolEqual(expected_key_out.to(dtype), key_out)
 
-    @unittest.skip("skip case until cann supported")
     @SupportedDevices(["Ascend910B"])
     def test_npu_mrope_error_cache_mode(self):
         num_tokens = 8
