@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "op_plugin/utils/OpUtils.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
@@ -25,6 +26,18 @@ constexpr int64_t TND_DIMS = 3;
 constexpr int64_t REMOVE_ONE_DIM = 1;
 constexpr int64_t REMOVE_TWO_DIMS = 2;
 constexpr int64_t ALPHA_NUMEL = 3;
+
+// aclnnMhcPre 依赖 CANN 9.0.0 及以上版本，此次校验避免旧版本环境出现找不到算子的兼容性问题。
+inline void check_mhc_pre_supported()
+{
+    static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
+    static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnMhcPre");
+    TORCH_CHECK(
+        is_cann_ready && is_aclnn_kernel_available,
+        "torch_npu.npu_mhc_pre requires CANN >= 9.0.0 and aclnnMhcPre support. "
+        "Please upgrade CANN.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT));
+}
 
 /**
  * @brief 构造 aclnnMhcPre 所需的输出张量。
@@ -173,6 +186,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     // - out_flag == 0：仅需要 outHin / outHpost / outHres，
     //   后 3 个输出在调用 aclnnMhcPre 时使用 nullTensor 占位，不参与实际写出
     TORCH_CHECK(out_flag == 0 || out_flag == 1, "out_flag must be 0 or 1, but got ", out_flag, ".");
+
+    check_mhc_pre_supported();
 
     auto mhcPreOutput = construct_mhc_pre_outputs(x, phi);
 
