@@ -51,6 +51,14 @@
       "npu_fused_floyd_attention_backward",
       "save_npugraph_tensor"
     ],
+    "v2.12": [
+      "npu_gelu_mul",
+      "npu_clipped_swiglu",
+      "npu_sim_exponential_",
+      "npu_fused_floyd_attention",
+      "npu_fused_floyd_attention_backward",
+      "save_npugraph_tensor"
+    ],
     "all_version": [
       "_npu_dropout",
       "copy_memory_",
@@ -61,6 +69,8 @@
       "npu_advance_step_flashattn",
       "npu_batch_gather_matmul",
       "npu_batch_gather_matmul_",
+      "npu_block_sparse_attention",
+      "npu_block_sparse_attention_backward",
       "npu_bert_apply_adam",
       "npu_clear_float_status",
       "npu_cross_entropy_loss",
@@ -73,6 +83,7 @@
       "npu_rms_norm",
       "npu_add_rms_norm_cast",
       "npu_moe_compute_expert_tokens",
+      "npu_attention_pioneer",
       "npu_fused_infer_attention_score",
       "npu_mla_prolog",
       "npu_mla_prolog_v2",
@@ -91,6 +102,7 @@
       "npu_geglu",
       "npu_grouped_matmul",
       "npu_moe_finalize_routing",
+      "npu_mhc_sinkhorn",
       "npu_quant_matmul",
       "npu_quant_matmul_reduce_sum",
       "npu_quant_scatter",
@@ -147,7 +159,8 @@
       "npu_dense_lightning_indexer_grad_kl_loss",
       "npu_dense_lightning_indexer_softmax_lse",
       "npu_one_hot",
-      "npu_quant_matmul_gelu"
+      "npu_quant_matmul_gelu",
+      "npu_mhc_post"
     ]
   }
   

@@ -386,6 +386,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>将各SP域PA算子的输出的中间结果`lse`，`local_out`两个局部变量结果更新成全局结果。</p>
 </td>
 </tr>
+<tr id="row_block_sparse_attention"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p10326218132921"><a name="p10326218132921"></a><a name="p10326218132921"></a><a href="torch_npu-npu_block_sparse_attention.md">torch_npu.npu_block_sparse_attention</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p10326218132922"><a name="p10326218132922"></a><a name="p10326218132922"></a>BlockSparseAttention 稀疏注意力正向计算，支持块级稀疏模式，通过 block_sparse_mask 指定每个 Q 块选择的 KV 块，实现高效稀疏注意力。</p>
+</td>
+</tr>
 <tr id="row16527145114477"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1338142581"><a name="p1338142581"></a><a name="p1338142581"></a><a href="torch_npu-npu_convert_weight_to_int4pack.md">torch_npu.npu_convert_weight_to_int4pack</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16338242582"><a name="p16338242582"></a><a name="p16338242582"></a>将数据类型为int32的输入tensor打包为int4存放，每8个int4数据通过一个int32数据承载，并进行交叠排放。</p>
@@ -463,7 +468,7 @@
 </tr>
 <tr id="row1231245645712"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p548217963045654"><a name="p548217963045654"></a><a name="p548217963045654"></a><a href="torch_npu-npu_grouped_matmul_swiglu_quant_v2.md">torch_npu.npu_grouped_matmul_swiglu_quant_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5420573896217596"><a name="p5420573896217596"></a><a name="p5420573896217596"></a><span>npu_grouped_matmul_swiglu_quant_v2是一种融合分组矩阵乘法（GroupedMatmul）、SwiGLu混合激活函数、量化（quant）的计算方法，用于模型性能优化。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p5420573896217596"><a name="p5420573896217596"></a><a name="p5420573896217596"></a><span>npu_grouped_matmul_swiglu_quant_v2是一种融合分组矩阵乘法（GroupedMatmul）、反量化（dequant）、SwiGLu混合激活函数、量化（quant）的计算方法，用于模型性能优化。</span></p>
 </td>
 </tr>
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_incre_flash_attention.md">torch_npu.npu_incre_flash_attention</a></p>
@@ -528,7 +533,7 @@
 </tr>
 <tr id="row1531023733"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7819527225"><a name="p7819527225"></a><a name="p7819527225"></a><a href="torch_npu-npu_prefetch.md">torch_npu.npu_prefetch</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p11819162142215"><a name="p11819162142215"></a><a name="p11819162142215"></a>提供网络weight预取功能，将需要预取的权重搬到L2 Cache中（当前仅支持权重的预取，暂不支持KV cache的预取）。尤其在做较大Tensor的MatMul计算且需要搬移到L2 Cache的操作时，可通过该接口提前预取权重，适当提高模型性能，具体效果取决与用户采用的并行方式和配置。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p11819162142215"><a name="p11819162142215"></a><a name="p11819162142215"></a>提供网络weight预取功能，用于在计算执行前将指定的权重数据预先加载到L2 Cache中，减少算子访问这些权重时的访存等待时间。例如，在MatMul等算子之前进行预取，算子执行时可直接从低时延的L2 Cache中读取权重，进而提升算子数据访问与计算效率。实际性能收益取决于用户采用的并行方式和配置。</p>
 </td>
 </tr>
 <tr id="row13116234313"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p35366207112"><a name="p35366207112"></a><a name="p35366207112"></a><a href="torch_npu-npu_prompt_flash_attention.md">torch_npu.npu_prompt_flash_attention</a></p>
@@ -794,6 +799,11 @@
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.npu_fused_floyd_attention</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>训练场景下，npu_fused_floyd_attention相较于传统FA(npu_fusion_attention)主要是计算QK/PV注意力时，会额外将维度(seq)作为batch轴处理，从而将注意力计算转换为批量矩阵乘法(batchMatmul)</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_clipped_swiglu.md">torch_npu.npu_clipped_swiglu</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。</p>
 </td>
 </tr>
 </tbody>

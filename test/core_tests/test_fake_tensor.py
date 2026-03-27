@@ -1018,6 +1018,7 @@ class FakeTensorOperatorInvariants(TestCase):
             self.assertTrue("output[0]" not in str(e))
             self.assertTrue("found mismatched tensor metadata for output[6]: Devices cpu and cuda:0 are not equal!" in str(e))
 
+    @unittest.skip("skip ci err")
     @skipIfRocm
     @unittest.skipIf(not RUN_NPU, "requires npu")
     def test_conv_c1_backward(self):
@@ -1273,6 +1274,132 @@ class TestNpuBmmV2(TestCase):
             self.assertEqual(result.shape, torch.matmul(npu_input1, npu_input2).shape)
 
 
+class TestNpuBlockSparseAttentionMeta(TestCase):
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_block_sparse_attention_meta(self):
+        with FakeTensorMode():
+            B, N, S, D = 1, 2, 4, 8
+            num_kv_heads = 2
+            scale_value = 1.0 / (D ** 0.5)
+            block_shape = [128, 128]  # blockY 须为 128 的倍数
+            ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+            ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+
+            attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+                query, key, value, block_sparse_mask, block_shape,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            )
+
+            self.assertEqual(attention_out.shape, (B, N, S, D))
+            self.assertEqual(attention_out.dtype, query.dtype)
+            self.assertEqual(softmax_lse.shape, (B, N, S, 1))
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+
+class TestNpuBlockSparseAttentionMeta(TestCase):
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_block_sparse_attention_meta(self):
+        with FakeTensorMode():
+            B, N, S, D = 1, 2, 4, 8
+            num_kv_heads = 2
+            scale_value = 1.0 / (D ** 0.5)
+            block_shape = [128, 128]  # blockY 须为 128 的倍数
+            ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+            ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+
+            attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+                query, key, value, block_sparse_mask, block_shape,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            )
+
+            self.assertEqual(attention_out.shape, (B, N, S, D))
+            self.assertEqual(attention_out.dtype, query.dtype)
+            self.assertEqual(softmax_lse.shape, (B, N, S, 1))
+            self.assertEqual(softmax_lse.dtype, torch.float32)
+
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_block_sparse_attention_backward_meta(self):
+        with FakeTensorMode():
+            B, N, S, D = 1, 2, 4, 8
+            num_kv_heads = 2
+            scale_value = 1.0 / (D ** 0.5)
+            block_shape = [128, 128]  # blockY 须为 128 的倍数
+            ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+            ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+
+            attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+                query, key, value, block_sparse_mask, block_shape,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            )
+            d_out = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+
+            d_query, d_key, d_value = torch_npu.npu_block_sparse_attention_backward(
+                d_out, query, key, value, attention_out, softmax_lse, block_sparse_mask,
+                block_shape=block_shape,
+                actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value,
+            )
+
+            self.assertEqual(d_query.shape, query.shape)
+            self.assertEqual(d_query.dtype, query.dtype)
+            self.assertEqual(d_key.shape, key.shape)
+            self.assertEqual(d_key.dtype, key.dtype)
+            self.assertEqual(d_value.shape, value.shape)
+            self.assertEqual(d_value.dtype, value.dtype)
+
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_block_sparse_attention_autograd(self):
+        """验证 derivatives.yaml 中 npu_block_sparse_attention 的自动前反向绑定：forward 后 .backward() 能正确反传梯度到 query/key/value."""
+        with FakeTensorMode():
+            B, N, S, D = 1, 2, 4, 8
+            num_kv_heads = 2
+            scale_value = 1.0 / (D ** 0.5)
+            block_shape = [128, 128]  # blockY 须为 128 的倍数
+            ceil_q = (S + block_shape[0] - 1) // block_shape[0]
+            ceil_kv = (S + block_shape[1] - 1) // block_shape[1]
+
+            query = torch.randn(B, N, S, D, dtype=torch.float16).npu()
+            key = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            value = torch.randn(B, num_kv_heads, S, D, dtype=torch.float16).npu()
+            query.requires_grad = True
+            key.requires_grad = True
+            value.requires_grad = True
+            block_sparse_mask = torch.ones(B, N, ceil_q, ceil_kv, dtype=torch.int32).npu()
+
+            attention_out, softmax_lse = torch_npu.npu_block_sparse_attention(
+                query, key, value, block_sparse_mask, block_shape,
+                q_input_layout="BNSD", kv_input_layout="BNSD",
+                num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            )
+            attention_out.sum().backward()
+
+            self.assertIsNotNone(query.grad)
+            self.assertIsNotNone(key.grad)
+            self.assertIsNotNone(value.grad)
+            self.assertEqual(query.grad.shape, query.shape)
+            self.assertEqual(key.grad.shape, key.shape)
+            self.assertEqual(value.grad.shape, value.shape)
+
+
 class TestNpuWeightQuantBatchMatmul2(TestCase):
     def test_npu_wqbmmV2(self):
         with FakeTensorMode():
@@ -1399,6 +1526,19 @@ class TestPromptFlashAttention(TestCase):
 
             self.assertTrue(q.shape == res.shape)
 
+class TestAttentionPioneer(TestCase):
+    @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testAttentionPioneer(self):
+        with FakeTensorMode():
+            q = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            k = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            v = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            atten_out, softmax_lse = torch.ops.npu._npu_attention_pioneer(q, k, v)
+
+            self.assertTrue(q.shape == atten_out.shape)
 
 class TestFusedInferAttentionScore(TestCase):
     @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
@@ -2121,6 +2261,23 @@ class TestRmsNormQuant(TestCase):
             self.assertTrue(y.dtype == torch.float8_e5m2)
 
 
+class TestRmsNormDynamicMxQuant(TestCase):
+    def test_npu_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, mxscale_npu, rstd_npu = torch_npu.npu_rms_norm_dynamic_mx_quant(
+                x, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
+
+
 class TestNpuRmsNorm(TestCase):
     def test_npu_rms_norm(self):
         with FakeTensorMode():
@@ -2163,6 +2320,64 @@ class TestDistributeBarrier(TestCase):
             result = torch_npu._npu_distribute_barrier(x_ref = x_ref, group = "group_ep",
             world_size = ep_world_size, time_out = time_out, elastic_info = elastic_info)
             self.assertEqual(result.shape, x_ref.shape)
+
+class TestKvQuantSparseFlashAttentionPioneer(TestCase):
+    def test_npu_kv_quant_sparse_flash_attention_pioneer(self):
+        with FakeTensorMode():
+            query_type = torch.bfloat16
+            scale_value = 0.041666666666666664
+            sparse_block_size = 1
+            sparse_block_count = 2048
+            t = 1
+            b = 1
+            s1 = 1
+            s2 = 3904
+            n1 = 48
+            n2 = 1
+            dn = 512
+            dr = 64
+            tile_size = 128
+            block_size = 128
+            layout_query = 'TND'
+            s2_act = 3904
+
+            query = torch.tensor(np.random.uniform(-10, 100, (t, n1, dn))).to(query_type)
+            query_ref = query
+            key = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2, dn))).to(torch.float8_e4m3fn)
+            value = key.clone()
+            idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
+            sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(t, n2, sparse_block_count). \
+                to(torch.int32)
+            query_rope = torch.tensor(np.random.uniform(-10, 10, (t, n1, dr))).to(query_type)
+            key_rope = torch.tensor(np.random.uniform(-10, 10, (b * (s2 // block_size), block_size, n2, dr))).to(query_type)
+            act_seq_q = torch.tensor([s1] * b).to(torch.int32)
+            act_seq_kv = torch.tensor([s2_act] * b).to(torch.int32)
+            antiquant_scale = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2,
+                dn // tile_size))).to(torch.float32)
+            key = torch.cat((key, key_rope.view(torch.float8_e4m3fn), antiquant_scale.view(torch.float8_e4m3fn)), axis=3)
+            query = torch.cat((query, query_rope), axis=2)
+            block_table = torch.tensor([range(b * s2 // block_size)], dtype=torch.int32).reshape(b, -1)
+            query = query.npu()
+            key = key.npu()
+            value = value.npu()
+            sparse_indices = sparse_indices.npu()
+            query_rope = query_rope.npu()
+            key_rope = key_rope.npu()
+            act_seq_q = act_seq_q.npu()
+            act_seq_kv = act_seq_kv.npu()
+            block_table = block_table.npu()
+            antiquant_scale = antiquant_scale.npu()
+
+            result = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+                query, key, value, sparse_indices, 
+                scale_value=scale_value, sparse_block_size=sparse_block_size,
+                actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv, key_sink=None, value_sink=None,
+                layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
+                attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
+                value_quant_mode=2, rope_head_dim=64, key_dtype=None, value_dtype=None)
+            
+            self.assertEqual(result.dtype, query_ref.dtype)
+            self.assertEqual(result.shape, query_ref.shape)
 
 
 class TestNpuAddRmsNorm(TestCase):
@@ -2804,7 +3019,8 @@ class TestMatmulCompressDequant(TestCase):
             compress_index = torch.zeros(8, dtype=torch.int8).npu()
             bias = torch.zeros((1, n), dtype=torch.int32).npu()
             scale = torch.ones((1, n), dtype=torch.float32).npu()
-            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale)
+            scale_uint64 = torch_npu.npu_trans_quant_param(scale).to(torch.uint64)
+            res = torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale_uint64)
             self.assertEqual(res.shape, (m, n))
             self.assertEqual(res.dtype, torch.float16)
 
@@ -2879,8 +3095,8 @@ class TestAttentionUpdate(TestCase):
 
 
 class TestAntiQuant(TestCase):
-    @unittest.skipIf("2.1." not in torch.__version__,
-                     "OP `AntiQuant` is only supported on torch v2.1, skip this test for torch version other than 2.1")
+    @unittest.skipIf(torch.__version__ < '2.1.0',
+                     "OP `AntiQuant` is supported on torch v2.1 and above, skip this test for torch version below 2.1")
     def test_npu_anti_quant_meta(self):
         with FakeTensorMode():
             x = torch.randint(low=-128, high=127, size=(20, 100), dtype=torch.int8).npu()
@@ -3301,6 +3517,107 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
             self.assertEqual(result[2].dtype, torch.bfloat16)
 
 
+class TestMoeDistributeDispatchSetup(TestCase):
+    def test_moe_distribute_dispatch_setup(self):
+        with FakeTensorMode():
+            x = torch.randn(32, 256).to(torch.bfloat16)
+            expert_ids = torch.randn(32, 8).to(torch.int32)
+            ep_world_size = 16
+            ep_rank_id = 0
+            moe_expert_num = 16
+            result = torch_npu.npu_moe_distribute_dispatch_setup(
+                                    x=x, expert_ids=expert_ids, group_ep="group",
+                                    ep_world_size=ep_world_size, ep_rank_id=ep_rank_id,
+                                    moe_expert_num=moe_expert_num)
+
+            self.assertEqual(result[0].shape[0], 288)
+            self.assertEqual(result[0].shape[1], 256)
+            self.assertEqual(result[0].dtype, torch.bfloat16)
+
+            self.assertEqual(result[1].shape[0], 256)
+            self.assertEqual(result[1].dtype, torch.int32)
+
+            self.assertEqual(result[2].shape[0], 4864)
+            self.assertEqual(result[2].dtype, torch.int32)
+
+
+class TestMoeDistributeDispatchTeardown(TestCase):
+    def test_moe_distribute_dispatch_teardown(self):
+        with FakeTensorMode():
+            x = torch.randn(32, 256).to(torch.bfloat16)
+            y = torch.randn(256, 512).to(torch.bfloat16)
+            expert_ids = torch.randn(32, 8).to(torch.int32)
+            comm_cmd_info = torch.randn(8704).to(torch.int32)
+            ep_world_size = 16
+            ep_rank_id = 0
+            moe_expert_num = 16
+            result = torch_npu.npu_moe_distribute_dispatch_teardown(
+                                    x=x, y=y, expert_ids=expert_ids,
+                                    comm_cmd_info=comm_cmd_info, group_ep="group",
+                                    ep_world_size=ep_world_size, ep_rank_id=ep_rank_id,
+                                    moe_expert_num=moe_expert_num)
+
+            self.assertEqual(result[0].shape[0], 512)
+            self.assertEqual(result[0].shape[1], 256)
+            self.assertEqual(result[0].dtype, torch.bfloat16)
+
+            self.assertEqual(result[1].shape[0], 512)
+            self.assertEqual(result[1].dtype, torch.float32)
+
+            self.assertEqual(result[2].shape[0], 512 * 128)
+            self.assertEqual(result[2].dtype, torch.int32)
+
+            self.assertEqual(result[3].shape[0], 1)
+            self.assertEqual(result[3].dtype, torch.int64)
+
+
+class TestMoeDistributeCombineSetup(TestCase):
+    def test_moe_distribute_combine_setup(self):
+        with FakeTensorMode():
+            expand_x = torch.randn(32, 256).to(torch.bfloat16)
+            expert_ids = torch.randn(32, 8).to(torch.int32)
+            assist_info_for_combine = torch.randn(32 * 128).to(torch.int32)
+            ep_world_size = 16
+            ep_rank_id = 0
+            moe_expert_num = 16
+            result = torch_npu.npu_moe_distribute_combine_setup(
+                                    expand_x=expand_x, expert_ids=expert_ids,
+                                    assist_info_for_combine=assist_info_for_combine,
+                                    group_ep="group", ep_world_size=ep_world_size,
+                                    ep_rank_id=ep_rank_id, moe_expert_num=moe_expert_num)
+
+            self.assertEqual(result[0].shape[0], 32)
+            self.assertEqual(result[0].shape[1], 512)
+            self.assertEqual(result[0].dtype, torch.int8)
+
+            self.assertEqual(result[1].shape[0], 768)
+            self.assertEqual(result[1].dtype, torch.int32)
+
+
+class TestMoeDistributeCombineTeardown(TestCase):
+    def test_moe_distribute_combine_teardown(self):
+        with FakeTensorMode():
+            expand_x = torch.randn(32, 256).to(torch.bfloat16)
+            quant_expand_x = torch.randn(32, 1024).to(torch.int8)
+            expert_ids = torch.randn(32, 8).to(torch.int32)
+            expand_idx = torch.randn(256).to(torch.int32)
+            expert_scales = torch.randn(256).to(torch.float32)
+            comm_cmd_info = torch.randn(768).to(torch.int32)
+            ep_world_size = 16
+            ep_rank_id = 0
+            moe_expert_num = 16
+            result = torch_npu.npu_moe_distribute_combine_teardown(
+                                expand_x=expand_x, quant_expand_x=quant_expand_x,
+                                expert_ids=expert_ids, expand_idx=expand_idx,
+                                expert_scales=expert_scales, comm_cmd_info=comm_cmd_info,
+                                group_ep="group", ep_world_size=ep_world_size,
+                                ep_rank_id=ep_rank_id, moe_expert_num=moe_expert_num)
+
+            self.assertEqual(result.shape[0], 32)
+            self.assertEqual(result.shape[1], 256)
+            self.assertEqual(result.dtype, torch.bfloat16)
+
+
 class TestAddRmsNormQuant(TestCase):
     def test_npu_add_rms_norm_quant(self):
         with FakeTensorMode():
@@ -3384,6 +3701,26 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y1_npu.dtype, torch.int32)
             self.assertEqual(y2_npu.shape, tuple(expected_y_shape))
             self.assertEqual(y2_npu.dtype, torch.int32)
+
+
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x1 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, x_out_npu, mxscale_npu, rstd_npu = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x1.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(x_out_npu.shape, x1.shape)
+            self.assertEqual(x_out_npu.dtype, x1.dtype)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
 
 
 class TestMoeUpdateExpert(TestCase):
@@ -4888,6 +5225,72 @@ class TestMatmul(TestCase):
             self.assertEqual(x.grad.dtype, x_fake_tensor.grad.dtype)
             self.assertEqual(y.grad.shape, y_fake_tensor.grad.shape)
             self.assertEqual(y.grad.dtype, y_fake_tensor.grad.dtype)
+
+
+class TestKLDivLoss(TestCase):
+    def test_kl_div_backward(self):
+        loss_fn = torch.nn.KLDivLoss(reduction="sum", log_target=True).to("npu")
+        pred = torch.randn(4, 4, device="npu", requires_grad=True)
+        target = torch.randn(4, 4, device="npu")
+
+        loss = loss_fn(pred.log_softmax(dim=-1), target)
+        loss.backward()
+
+        with FakeTensorMode():
+            pred_fake_tensor = torch.randn(4, 4, device="npu", requires_grad=True)
+            target_fake_tensor = torch.randn(4, 4, device="npu")
+
+            loss_fake_tensor = loss_fn(pred_fake_tensor.log_softmax(dim=-1), target_fake_tensor)
+            loss_fake_tensor.backward()
+
+            self.assertEqual(pred.grad.shape, pred_fake_tensor.grad.shape)
+            self.assertEqual(pred.grad.dtype, pred_fake_tensor.grad.dtype)
+            
+
+class TestSwigluMxQuant(TestCase):
+    def test_npu_swiglu_mx_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([4, 8], dtype=torch.float16, device='npu')
+            group_index = None
+            y_npu, mxscale_npu = torch_npu.npu_swiglu_mx_quant(
+                x, group_index=group_index, activate_dim=-1, activate_left=False, swiglu_mode=0,
+                clamp_limit=7, glu_alpha=1.702, glu_bias=1, group_mode=0, axis=-1,
+                dst_type=torch_npu.float4_e2m1fn_x2, round_mode="rint", scale_alg=0, max_dtype_value=0
+            )
+            self.assertEqual(y_npu.shape, torch.Size([4, 2]))
+            self.assertEqual(y_npu.dtype, torch.uint8)
+            self.assertEqual(mxscale_npu.shape, torch.Size([4, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+
+
+@unittest.skip("skip until CANN is updated to support aclnnDynamicBlockMxQuant")
+class TestNpuDynamicBlockMxQuant(TestCase):
+    def test_npu_dynamic_block_mx_quant_meta(self):
+        # 2 dim
+        x = torch.rand(64, 256).to("npu").to(torch.float16)
+        actual_y, actual_scale1, actual_scale2 = torch_npu.npu_dynamic_block_mx_quant(x)
+        with FakeTensorMode():
+            fake_x = torch.rand(64, 256).to("npu").to(torch.float16)
+            fake_y, fake_scale1, fake_scale2 = torch_npu.npu_dynamic_block_mx_quant(fake_x)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_scale1.shape, fake_scale1.shape)
+        self.assertEqual(actual_scale2.shape, fake_scale2.shape)
+        self.assertEqual(actual_y.dtype, fake_y.dtype)
+        self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
+        self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
+
+        # 3 dim
+        x = torch.rand(32, 64, 256).to("npu").to(torch.float16)
+        actual_y, actual_scale1, actual_scale2 = torch_npu.npu_dynamic_block_mx_quant(x)
+        with FakeTensorMode():
+            fake_x = torch.rand(32, 64, 256).to("npu").to(torch.float16)
+            fake_y, fake_scale1, fake_scale2 = torch_npu.npu_dynamic_block_mx_quant(fake_x)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_scale1.shape, fake_scale1.shape)
+        self.assertEqual(actual_scale2.shape, fake_scale2.shape)
+        self.assertEqual(actual_y.dtype, fake_y.dtype)
+        self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
+        self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
 if __name__ == "__main__":

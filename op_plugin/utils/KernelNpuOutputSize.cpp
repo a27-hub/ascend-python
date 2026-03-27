@@ -781,6 +781,18 @@ c10::SmallVector<int64_t, SIZE> index_select_npu_output_size(const at::Tensor &s
     return outputSize;
 }
 
+c10::SmallVector<int64_t, SIZE> isclose_output_size(const at::Tensor& self, const at::Tensor& other, double rtol,
+                                                    double atol, bool equal_nan)
+{
+    TORCH_CHECK(
+        rtol >= 0, "rtol must be greater than or equal to zero, but got ", rtol);
+    TORCH_CHECK(
+        atol >= 0, "atol must be greater than or equal to zero, but got ", atol);
+    return at::isFloatingType(self.scalar_type()) && equal_nan
+        ? c10::SmallVector<int64_t, SIZE>(self.sizes())
+        : broadcast_ops_npu_output_size(self, other);
+}
+
 c10::SmallVector<int64_t, SIZE> nnpack_spatial_convolution_npu_output_size(const at::Tensor &input,
                                                                            const at::Tensor &weight,
                                                                            c10::IntArrayRef padding,
@@ -2229,13 +2241,14 @@ c10::SmallVector<int64_t, SIZE> lstm_backward_npu_output_size(const at::Tensor &
 {
     c10::SmallVector<int64_t, SIZE> output_shape;
     if (batch_sizes.has_value()) {
-        output_shape = {input.size(0), input.size(1)};
-    } else {
-        if (batch_first) {
-            output_shape = {input.size(1), input.size(0), input.size(2)};
+        const at::Tensor& bs_tensor = batch_sizes.value();
+        if (bs_tensor.numel() > 0) {
+            output_shape = {input.size(0), input.size(1)};
         } else {
             output_shape = {input.size(0), input.size(1), input.size(2)};
         }
+    } else {
+        output_shape = {input.size(0), input.size(1), input.size(2)};
     }
     return output_shape;
 }
@@ -2249,17 +2262,185 @@ c10::SmallVector<int64_t, SIZE> lstm_backward_npu_hc_prev_output_size(const at::
     int64_t time_step;
     if (batch_sizes.has_value()) {
         const at::Tensor& bs_tensor = batch_sizes.value();
-        time_step = bs_tensor.size(0);
-        TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
-                    "The input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
-                    "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
-        batch_size = input.size(0) / time_step;
+        if (bs_tensor.numel() > 0) {
+            time_step = bs_tensor.size(0);
+            TORCH_CHECK(time_step > 0 && input.size(0) % time_step == 0,
+                        "The _lstm_npu_backward input batch_sizes is invalid, time_step must > 0 and input.size(0) must be divisible by time_step, but got ",
+                        "time_step=", time_step, ", input_size0=", input.size(0), ", batch_sizes_shape=", bs_tensor.sizes(), OPS_ERROR(ErrCode::PARAM));
+            batch_size = input.size(0) / time_step;
+        } else {
+            batch_size = batch_first ? input.size(0) : input.size(1);
+        }
     } else {
         batch_size = batch_first ? input.size(0) : input.size(1);
     }
     c10::SmallVector<int64_t, SIZE> output_shape;
     output_shape = {D * num_layers, batch_size, hidden_size};
     return output_shape;
+}
+
+inline static int64_t CeilX(int64_t x, int64_t align_len)
+{
+    if (align_len == 0) {
+        return -1;
+    }
+    return (x + align_len - 1) / align_len;
+}
+
+inline static int64_t AlignX(int64_t x, int64_t align_len)
+{
+    return CeilX(x, align_len) * align_len;
+}
+
+std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_out_size(const at::Tensor &x,
+    const at::Tensor &expert_ids, int64_t ep_world_size, int64_t ep_rank_id, int64_t moe_expert_num,
+    int64_t expert_shard_type, int64_t shared_expert_num, int64_t shared_expert_rank_num, int64_t quant_mode, c10::optional<int64_t> y_dtype)
+{
+    TORCH_CHECK(x.dim() == DIM_2, "The dims of input x should be 2 dimensional, but got ", x.dim(),
+        "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(expert_ids.dim() == DIM_2, "The dims of input expert_ids should be 2 dimensional, but got ",
+        expert_ids.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    int64_t bs = x.size(0);
+    int64_t h = x.size(1);
+    int64_t k = expert_ids.size(1);
+    int64_t hs = 0;
+
+    constexpr int64_t UNQUANT = 0;
+    constexpr int64_t STATIC_QUANT = 1;
+    constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
+    constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
+    constexpr int64_t MX_QUANT = 4;
+    constexpr int64_t NUM_2 = 2;
+    constexpr int64_t BYTE_2 = 2;
+    constexpr int64_t BYTE_4 = 4;
+    constexpr int64_t ALGIN_2 = 2;
+    constexpr int64_t ALGIN_32 = 32;
+    constexpr int64_t ALGIN_128 = 128;
+    constexpr int64_t ALGIN_256 = 256;
+    constexpr int64_t ALGIN_512 = 512;
+
+    if (quant_mode == UNQUANT) {
+        hs = AlignX(AlignX(h * BYTE_2, ALGIN_32), ALGIN_512) / BYTE_2;
+    } else if (quant_mode == STATIC_QUANT) {
+        hs = AlignX(AlignX(h, ALGIN_32), ALGIN_512);
+    } else if (quant_mode == PERTOKEN_DYNAMIC_QUANT) {
+        hs = AlignX(AlignX(h, ALGIN_32) + BYTE_4, ALGIN_512);
+    } else if (quant_mode == PERGROUP_DYNAMIC_QUANT) {
+        hs = AlignX((AlignX(h, ALGIN_128) + CeilX(h, ALGIN_128) * BYTE_4), ALGIN_512);
+    } else if (quant_mode == MX_QUANT) {
+        hs = AlignX(AlignX(h, ALGIN_256) + AlignX(CeilX(h, ALGIN_32), ALGIN_2), ALGIN_512);
+    }
+
+    int64_t local_moe_expert_num = 0;
+    TORCH_CHECK(ep_rank_id >= 0 && ep_rank_id < ep_world_size,
+        "ep_rank_id should be in [0, ep_world_size), but got ep_rank_id: ",
+        ep_rank_id, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / NUM_2,
+        "shared_expert_rank_num should be in [0, ep_world_size / 2], but got shared_expert_rank_num: ",
+        shared_expert_rank_num, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
+    if (ep_rank_id < shared_expert_rank_num) {
+        local_moe_expert_num = 1;
+    } else {
+        local_moe_expert_num = moe_expert_num / (ep_world_size - shared_expert_rank_num);
+    }
+
+    std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
+    c10::SmallVector<int64_t, SIZE> y_shape = {bs * (k + shared_expert_num), hs};
+    c10::SmallVector<int64_t, SIZE> expand_idx_shape = {bs * k};
+    c10::SmallVector<int64_t, SIZE> comm_cmd_info_shape = {
+        (bs * (k + shared_expert_num) + ep_world_size * local_moe_expert_num) * 16};
+    output_size.push_back(y_shape);
+    output_size.push_back(expand_idx_shape);
+    output_size.push_back(comm_cmd_info_shape);
+    return output_size;
+}
+
+
+std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardown_out_size(
+    const at::Tensor &x, const at::Tensor expert_ids, int64_t ep_world_size, int64_t ep_rank_id,
+    int64_t moe_expert_num, int64_t expert_shard_type, int64_t shared_expert_rank_num, int64_t global_bs, int64_t quant_mode)
+{
+    TORCH_CHECK(x.dim() == DIM_2, "The dims of input x should be 2 dimensional, but got ", x.dim(),
+        "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(expert_ids.dim() == DIM_2, "The dims of input expert_ids should be 2 dimensional, but got ",
+        expert_ids.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    int64_t bs = x.size(0);
+    int64_t h = x.size(1);
+    int64_t k = expert_ids.size(1);
+    int64_t global_bs_real = (global_bs == 0) ? (bs * ep_world_size) : global_bs;
+    constexpr int64_t NUM_2 = 2;
+    TORCH_CHECK(ep_rank_id >= 0 && ep_rank_id < ep_world_size,
+        "ep_rank_id should be in [0, ep_world_size), but got ep_rank_id: ",
+        ep_rank_id, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(shared_expert_rank_num >= 0 && shared_expert_rank_num <= ep_world_size / NUM_2,
+        "shared_expert_rank_num should be in [0, ep_world_size / 2], but got shared_expert_rank_num: ",
+        shared_expert_rank_num, " ep_world_size: ", ep_world_size, OPS_ERROR(ErrCode::PARAM));
+    int64_t local_moe_expert_num = 0;
+    int64_t a = 0;
+    if (shared_expert_rank_num != 0 && ep_rank_id < shared_expert_rank_num) {
+        local_moe_expert_num = 1;
+        a = global_bs_real / shared_expert_rank_num;
+    } else {
+        local_moe_expert_num = moe_expert_num / (ep_world_size - shared_expert_rank_num);
+        a = global_bs_real * std::min(local_moe_expert_num, k);
+    }
+    std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
+    c10::SmallVector<int64_t, SIZE> expand_x_shape = {a, h};
+    
+    constexpr int64_t PERTOKEN_DYNAMIC_QUANT = 2;
+    constexpr int64_t PERGROUP_DYNAMIC_QUANT = 3;
+    constexpr int64_t MX_QUANT = 4;
+    constexpr int64_t ALGIN_32 = 32;
+    constexpr int64_t ALGIN_128 = 128;
+    c10::SmallVector<int64_t, SIZE> dynamic_scales_shape = {a};
+    if (quant_mode == PERTOKEN_DYNAMIC_QUANT) {
+        dynamic_scales_shape = {a};
+    } else if (quant_mode == PERGROUP_DYNAMIC_QUANT) {
+        dynamic_scales_shape = {a, CeilX(h, ALGIN_128)};
+    } else if (quant_mode == MX_QUANT) {
+        dynamic_scales_shape = {a, (CeilX(h, ALGIN_32) + 1) / 2 * 2};
+    }
+
+    c10::SmallVector<int64_t, SIZE> assist_info_for_combine_shape = {a * 128};
+    c10::SmallVector<int64_t, SIZE> expert_token_nums_shape = {local_moe_expert_num};
+    output_size.push_back(expand_x_shape);
+    output_size.push_back(dynamic_scales_shape);
+    output_size.push_back(assist_info_for_combine_shape);
+    output_size.push_back(expert_token_nums_shape);
+    return output_size;
+}
+
+std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_setup_out_size(
+    const at::Tensor expand_x, int64_t ep_world_size)
+{
+    TORCH_CHECK(expand_x.dim() == DIM_2, "The dims of input expand_x should be 2 dimensional, but got ",
+        expand_x.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    int64_t a = expand_x.size(0);
+    int64_t h = expand_x.size(1);
+    int64_t hs = AlignX(AlignX(h, 32) + AlignX(h, 8) / 8 * sizeof(float), 512);
+
+    std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
+    c10::SmallVector<int64_t, SIZE> quant_expand_x_shape = {a, hs};
+    c10::SmallVector<int64_t, SIZE> comm_cmd_info_shape = {(a + ep_world_size) * 16};
+    output_size.push_back(quant_expand_x_shape);
+    output_size.push_back(comm_cmd_info_shape);
+
+    return output_size;
+}
+
+std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown_out_size(
+    const at::Tensor expand_x, const at::Tensor expert_ids)
+{
+    TORCH_CHECK(expand_x.dim() == DIM_2, "The dims of input expand_x should be 2 dimensional, but got ",
+        expand_x.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(expert_ids.dim() == DIM_2, "The dims of input expert_ids should be 2 dimensional, but got ",
+        expert_ids.dim(), "-dimensional.", OPS_ERROR(ErrCode::PARAM));
+
+    std::vector<c10::SmallVector<int64_t, SIZE>> output_size;
+    c10::SmallVector<int64_t, SIZE> x_out_shape = {expert_ids.size(0), expand_x.size(1)};
+    output_size.push_back(x_out_shape);
+
+    return output_size;
 }
 
 } // namespace op_infer

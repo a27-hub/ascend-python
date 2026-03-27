@@ -35,6 +35,11 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_mx_quant(
     TORCH_CHECK(std::isfinite(glu_alpha), "glu_alpha should be finite", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(std::isfinite(glu_bias), "glu_bias should be finite", OPS_ERROR(ErrCode::PARAM));
 
+    static const bool is_available = check_aclnn_kernel_available("aclnnSwigluMxQuant");
+    TORCH_CHECK(is_available,
+                "Current CANN version do not support this api. Please try to update the version of CANN."
+                + OPS_ERROR(ErrCode::PARAM));
+
     const at::Tensor& group_index_opt = c10::value_or_else(group_index, [] { return at::Tensor(); });
 
     int64_t activate_dim_value = activate_dim;
@@ -60,20 +65,13 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_mx_quant(
     at::SmallVector<int64_t, op_infer::SIZE> y_size;
     at::SmallVector<int64_t, op_infer::SIZE> scale_size;
 
-    // Infer size of y (divide by 2 at select_dim)
+    // Infer size of y, scale (divide by 2 at select_dim)
     for (int i = 0; i < x.dim(); i++) {
         if (i == select_dim) {
             y_size.push_back(x.size(i) / NUM_TWO);
-        } else {
-            y_size.push_back(x.size(i));
-        }
-    }
-
-    // Infer size of scale (divide by 2 at select_dim, same as y initially)
-    for (int i = 0; i < x.dim(); i++) {
-        if (i == select_dim) {
             scale_size.push_back(x.size(i) / NUM_TWO);
         } else {
+            y_size.push_back(x.size(i));
             scale_size.push_back(x.size(i));
         }
     }
@@ -81,12 +79,12 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_mx_quant(
     // Calculate quant_size based on group_index and quant_dim (matching meta function logic)
     int64_t quant_size = 0;
     if (!group_index_opt.defined()) {
-        // group_index is None: quant_size = (ceil(scale_size[quant_dim] / 64) + 1) / 2
+        // group_index is None: quant_size = ceil(scale_size[quant_dim] / 64)
         quant_size = static_cast<int64_t>(std::ceil(static_cast<double>(scale_size[quant_dim_value]) / DEFAULT_BLOCKSIZE));
     } else {
         // group_index exists
         if (quant_dim_value == (x.dim() - 1)) {
-            // quant_dim is last dimension: quant_size = ceil(scale_size[quant_dim] / 64) / 2
+            // quant_dim is last dimension: quant_size = ceil(scale_size[quant_dim] / 64)
             quant_size = static_cast<int64_t>(std::ceil(static_cast<double>(scale_size[quant_dim_value]) / DEFAULT_BLOCKSIZE));
         } else {
             // quant_dim is not last dimension: quant_size = ceil(scale_size[quant_dim] / 64) + group_index.shape[0]
@@ -105,8 +103,8 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_mx_quant(
     if (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
         dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)) {
         int64_t last_dim_val = y_size[x.dim() - 1];
-        y_size[x.dim() - 1] = last_dim_val / NUM_TWO;
         TORCH_CHECK(last_dim_val % NUM_TWO == 0, "Y last dim should be even when type of y is float4_e1m2 or float4_e2m1", OPS_ERROR(ErrCode::PARAM));
+        y_size[x.dim() - 1] = last_dim_val / NUM_TWO;
     }
 
     if (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||

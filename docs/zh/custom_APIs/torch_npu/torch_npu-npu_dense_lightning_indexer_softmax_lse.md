@@ -24,7 +24,7 @@ $$
 sumIndex=\text{ReduceSum}\left(\text{exp}\left(res-maxIndex\right)\right)
 $$
 
-$maxIndex$，$sumIndex$作为输出传递给接口npu_dense_lightning_indexer_grad_kl_loss作为输入计算Softmax使用。
+$maxIndex$，$sumIndex$作为输出传递给接口npu_dense_lightning_indexer_grad_kl_loss，作为输入用于计算Softmax。
 
 ## 函数原型
 
@@ -37,7 +37,7 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 
 **key_index**(`Tensor`)：必选参数，表示Lightning Indexer正向的输入key，对应公式中的$\tilde{K}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2index, D)$、$(T2, N2index, D)$。
 
-**weights**(`Tensor`)：必选参数，表示Lightning Indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
+**weights**(`Tensor`)：必选参数，表示Lightning Indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
 **actual_seq_qlen**(`list[int]`)：可选参数，TND场景时需传入此参数。表示query每个S的累加和长度，数据类型支持`int64`，数据格式支持$ND$，默认值为`None`。
 
@@ -55,17 +55,20 @@ npu_dense_lightning_indexer_softmax_lse(query_index, key_index, weights, *, actu
 
 
 ## 返回值说明
--   **softmax_max_index**(`Tensor`)：表示softmax计算使用的max值，对应公式中的$maxIndex$，数据格式支持$ND$，数据类型支持`float`。
+-   **softmax_max_index**(`Tensor`)：表示softmax计算使用的max值，对应公式中的$maxIndex$，数据格式支持$ND$，数据类型支持`float32`。
 -   **softmax_sum_index**(`Tensor`)：表示softmax计算使用的sum值，对应公式中的$sumIndex
-$，数据格式支持$ND$，数据类型支持`float`。
+$，数据格式支持$ND$，数据类型支持`float32`。
 
 ## 约束说明
-shape数值约束：
+-   参数query_index、key_index的数据类型应保持一致。
+-   参数weights不为`float32`时，参数query_index、key_index、weights的数据类型应保持一致。
+-   shape数值约束：
+
 | 规格项    | 规格       | 规格说明         |
 |-----------|------------|-----------------|
 | B         | 1~256      | -               |
-| S1、S2    | 1~128K     | S1、S2支持不等长 |
-| N1index   | 16、32、64 | -               |
+| S1、S2    | 1~128K     | S1、S2支持不等长，当`layout`为BSND时，S1<=S2；`layout`为TND时，`actual_seq_qlen`小于等于`actual_seq_klen`相同索引位置的值，且相同索引位置S1<=S2 |
+| N1index   | 8、16、32、64 | -               |
 | N2index   | 1          | -               |
 | D         | 128        | -               |
 
@@ -92,7 +95,7 @@ shape数值约束：
         if isTnd:
             query_index = query_index.reshape(B*S1, N1, D)
             key_index = key_index.reshape(B*S2, N2, D)
-            weights = weigths.reshape(B*S1, N1)
+            weights = weights.reshape(B*S1, N1)
             layout = 'TND'
             actual_seq_qlen = [S1*(i+1) for i in range(B)]
             actual_seq_klen = [S2*(i+1) for i in range(B)]
@@ -114,7 +117,7 @@ shape数值约束：
         weights, 
         actual_seq_qlen=actual_seq_qlen, 
         actual_seq_klen=actual_seq_klen, 
-        layout=input_layout, 
+        layout=layout, 
         sparse_mode=sparse_mode,
         pre_tokens=pre_tokens,
         next_tokens=next_tokens)

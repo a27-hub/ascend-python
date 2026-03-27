@@ -529,7 +529,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout, const c10::optional<at::Tensor> &dropout_mask_opt, int64_t seed, int64_t offset)
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &dropout_mask, int64_t seed, int64_t offset)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
@@ -665,10 +665,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
         numels *= accum;
     }
-    const at::Tensor &dropout_mask = dropout_mask_opt.value_or(at::Tensor());
+    const at::Tensor &dropout_mask_const = dropout_mask.value_or(at::Tensor());
     at::Tensor format_drop_mask;
-    if (dropout_mask.defined()) {
-        format_drop_mask = format_trans(dropout_mask);
+    if (dropout_mask_const.defined()) {
+        format_drop_mask = format_trans(dropout_mask_const);
     } else {
         format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
             gen_mask_parallel, sync, seed, offset, numels);
@@ -995,17 +995,22 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
     } else { // Ascend950
         c10::optional<at::Tensor> empty_optional_tensor;
         at::Tensor empty_out_tensor;
+
+        std::string softmax_layout_str = std::string(softmax_layout);
+        softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
         char softmax_layout_char[LAYOUT_MAX_LENGTH];
+        strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
         softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+        
         EXEC_NPU_CMD(
             aclnnFlashAttentionScoreGradV4, format_query, format_key, format_value, format_dy,
             format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
-            format_softmax_sum, format_softmax, format_attention, empty_optional_tensor, empty_optional_tensor, empty_optional_tensor,
+            format_softmax_sum, format_softmax, format_attention, format_sink, empty_optional_tensor, empty_optional_tensor,
             empty_optional_tensor, empty_optional_tensor, empty_optional_tensor, empty_optional_tensor, empty_optional_tensor,
             prefixN, ac_seq_qlen, ac_seq_kvlen,
             DEFAULT_START_IDX, DEFAULT_START_IDX, scale_value, keep_prob, pre_tockens, next_tockens, head_num,
             input_layout_char, softmax_layout_char, inner_precise, sparse_mode, DEFAULT_PSE_TYPE, seed, offset, DEFAULT_OUT_DTYPE,
-            dq, dk, dv, empty_out_tensor, empty_out_tensor, dpse, empty_out_tensor);
+            dq, dk, dv, empty_out_tensor, empty_out_tensor, dpse, dsink);
     }
     FLOP_COUNT(FlopCounter::flash_attention_backward_flop, query, key, value,
         dy, head_num, input_layout, actual_seq_qlen, actual_seq_kvlen);
@@ -1116,7 +1121,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
     c10::OptionalIntArrayRef prefix, c10::OptionalIntArrayRef actual_seq_qlen,
     c10::OptionalIntArrayRef actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
-    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, const c10::optional<at::Tensor> &dropout_mask_opt,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, const c10::optional<at::Tensor> &dropout_mask,
     int64_t seed, int64_t offset)
 {
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
@@ -1253,10 +1258,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
         }
         numels *= accum;
     }
-    const at::Tensor &dropout_mask = dropout_mask_opt.value_or(at::Tensor());
+    const at::Tensor &dropout_mask_const = dropout_mask.value_or(at::Tensor());
     at::Tensor format_drop_mask;
-    if (dropout_mask.defined()) {
-        format_drop_mask = format_trans(dropout_mask);
+    if (dropout_mask_const.defined()) {
+        format_drop_mask = format_trans(dropout_mask_const);
     } else {
         format_drop_mask = dropout_gen_mask(format_query, format_key, keep_prob, head_num, input_layout_str,
             gen_mask_parallel, sync, seed, offset, numels);

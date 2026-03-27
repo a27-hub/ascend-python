@@ -68,6 +68,9 @@ at::IntArrayRef init_new_active_expert_range(at::IntArrayRef &active_expert_rang
 static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range,
     int64_t expert_tokens_num_type, int64_t quant_mode)
 {
+    if (Is310PBoolCheck()) {
+        return true;
+    }
     if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 &&
         active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
         if (quant_mode == -1 && expert_tokens_num_type == 1) {
@@ -191,6 +194,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         drop_pad_mode = 0;
         int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
+        if (bs == 0) {
+            // return when using empty tensor 
+            expert_tokens_count_or_cumsum.zero_();
+            return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+        }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
@@ -232,6 +240,11 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+    }
+    if (bs == 0) {
+        // return when using empty tensor
+        expert_tokens_count_or_cumsum.zero_();
+        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
     }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,

@@ -86,7 +86,7 @@ def _matmul_get_output_size(tensor1, tensor2):
     if dim_tensor1 == 1 and dim_tensor2 == 1:
         return []
     elif dim_tensor1 == 2 and dim_tensor2 == 1:
-        return [tensor2.size(0)]
+        return [tensor1.size(0)]
     elif dim_tensor1 == 1 and dim_tensor2 == 2:
         return [tensor2.size(1)]
     elif dim_tensor1 == 2 and dim_tensor2 == 2:
@@ -137,7 +137,7 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             grad_tensor = grad_tensor.unsqueeze(-2)
 
         if mat1.dim() == 2 and mat2.dim() > 2:
-            self_grad = torch.empty(list(mat1.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
+            self_grad = torch.empty(list(self.size()), dtype=grad_tensor.dtype, device=grad_tensor.device)
         else:
             mat2_transposed = mat2.transpose(-2, -1)
             self_grad_size = _matmul_get_output_size(grad_tensor, mat2_transposed)
@@ -165,6 +165,9 @@ if os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
             other_grad_size = _matmul_get_output_size(mat1_transposed, grad_tensor)
             other_grad = torch.empty(other_grad_size, dtype=mat1.dtype, device=mat1.device)
 
+        if other.dim() == 1 and other_grad.size(-1) == 1 and other_grad.dim() != 1:
+            other_grad = other_grad.squeeze(-1)
+             
         return (self_grad, other_grad)
 
 
@@ -427,6 +430,12 @@ def npu_mla_prolog_v3_forward(token_x, weight_dq, weight_uq_qr, weight_uk, weigh
 
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
 
+    if weight_quant_mode == 3:
+        torch._check(
+            get_soc_version() >= 260,
+            lambda: "When weight_quant_mode is 3, not support on this soc version." + ops_error(ErrCode.NOT_SUPPORT),
+        )
+
     for item_name, item in require_param.items():
         torch._check(
             item is not None,
@@ -562,6 +571,12 @@ def npu_mla_prolog_v3_functional_forward(token_x, weight_dq, weight_uq_qr, weigh
 
 
     require_param = {"token_x": token_x, "weight_dq": weight_dq, "weight_uq_qr": weight_uq_qr, "weight_uk": weight_uk, "weight_dkv_kr": weight_dkv_kr, "rmsnorm_gamma_cq": rmsnorm_gamma_cq, "rmsnorm_gamma_ckv": rmsnorm_gamma_ckv, "rope_sin": rope_sin, "rope_cos": rope_cos, "kv_cache": kv_cache, "kr_cache": kr_cache}
+
+    if weight_quant_mode == 3:
+        torch._check(
+            get_soc_version() >= 260,
+            lambda: "When weight_quant_mode is 3, not support on this soc version." + ops_error(ErrCode.NOT_SUPPORT),
+        )
 
     for item_name, item in require_param.items():
         torch._check(
@@ -1021,6 +1036,12 @@ def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale
                 self.new_empty(0, dtype=torch.float32))
 
 
+@impl(m, "npu_mhc_post")
+def npu_mhc_post(x, h_res, h_out, h_post):
+    y_size = tuple(x.shape)
+    return torch.empty(y_size, dtype=x.dtype, device='meta')
+
+
 @impl(m, "npu_moe_init_routing")
 def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     n = x.size(0)
@@ -1031,6 +1052,28 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
     expanded_row_idx_dim_list = [n * k]
     expanded_expert_idx_dim_list = [n * k]
     return (x.new_empty(tuple(expanded_x_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)), row_idx.new_empty(tuple(expanded_row_idx_dim_list)))
+
+
+@impl(m, "npu_mhc_sinkhorn")
+def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+    x_shape = list(x.shape)
+    torch._check(
+        x_shape[-1] in [4, 6, 8],
+        lambda: f"The x's dim should be 4 or 6 or 8, but got {x_shape[-1]}.",
+        )
+    torch._check(
+        x.dim() == 3 or x.dim() == 4,
+        lambda: f"The x's dim should be 3 or 4, but got {x.dim()}.",
+        )
+    torch._check(
+        num_iters > 0 and num_iters <= 100,
+        lambda: f"num_iters must be within (0, 100], but got {num_iters}.",
+        )
+
+    y_size = tuple(x.shape)
+    return (torch.empty(y_size, dtype=x.dtype, device='meta'),
+            torch.empty(y_size, dtype=x.dtype, device='meta'),
+            torch.empty(y_size, dtype=x.dtype, device='meta'))
 
 
 @impl(m, "npu_moe_init_routing_v2")
@@ -1505,6 +1548,47 @@ def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
         lse_out = torch.empty([b, n1, s1, 1], dtype=torch.float32, device='meta')
     return lse_out
 
+@impl(m, "_npu_attention_pioneer")
+def npu_attention_pioneer_forward(query, key, value, *, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
+                                    block_table=None, query_rope=None, key_rope=None, key_sink=None, key_rope_sink=None, value_sink=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
+                                    input_layout="BSH", num_key_value_heads=0, sparse_mode=0, block_size=0, softmax_lse_flag=False):
+    torch._check(
+        num_heads > 0,
+        lambda: "numHeads should be greater than 0, but got " + str(num_heads) +
+            ops_error(ErrCode.VALUE),
+    )
+    num_key_value_heads = num_heads if num_key_value_heads == 0 else num_key_value_heads
+
+    # get query_layout, attention_out_layout
+    query_layout, attention_out_layout = get_query_and_attention_out_layout(query, input_layout)
+
+    # get value_d
+    value_d = get_value_d(block_table, value, query, query_layout, num_key_value_heads)
+    # 获取change_d_scale
+    change_d_scale = get_change_d_scale(value)
+    value_d = value_d * change_d_scale
+
+    # infer attention out shape
+    tmp_out = infer_attention_out_shape(attention_out_layout, query, query_layout, num_heads, value_d)
+
+    # handle quant
+    if query.dtype == torch.int8:
+        if query_rope is not None:
+            attention_out = torch.empty_like(tmp_out, dtype=query_rope.dtype)
+        else:
+            attention_out = torch.empty_like(tmp_out, dtype=torch.half)
+    else:
+        attention_out = torch.empty_like(tmp_out, dtype=query.dtype)
+
+    # infer lse out shape
+    tmp_lse_out = infer_lse_out_shape(query, input_layout, query_layout, num_heads)
+
+    if softmax_lse_flag:
+        lse_out = torch.empty_like(tmp_lse_out, dtype=torch.float32)
+    else:
+        lse_out = torch.empty([0], dtype=torch.float32, device='meta')
+
+    return attention_out, lse_out
 
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
@@ -1559,7 +1643,7 @@ def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None
 @impl(m, "npu_fused_infer_attention_score_v2")
 def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None,
                                          block_table=None, dequant_scale_query=None, dequant_scale_key=None, dequant_offset_key=None, dequant_scale_value=None,
-                                         dequant_offset_value=None, dequant_scale_key_rope=None, quant_scale_out=None, quant_offset_out=None, learnable_sink=None,
+                                         dequant_offset_value=None, dequant_scale_key_rope=None, quant_scale_out=None, quant_offset_out=None, quant_scale_p=None, learnable_sink=None,
                                          num_query_heads=1, num_key_value_heads=0, softmax_scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                          input_layout="BSH", sparse_mode=0, block_size=0, query_quant_mode=0, key_quant_mode=0, value_quant_mode=0, inner_precise=0,
                                          return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None,
@@ -1709,36 +1793,92 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 
+@impl(m, "_npu_kv_quant_sparse_flash_attention_pioneer")
+def _npu_kv_quant_sparse_flash_attention_pioneer_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
+                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, key_sink=None, value_sink=None, sparse_block_size=1, layout_query="BSND",
+                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
+                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
+    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(
+        query.numel() > 0,
+        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key.numel() > 0,
+        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value.numel() > 0,
+        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices.numel() > 0,
+        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
+    )
+
+    if layout_query == "BSND":
+        torch._check(
+            query.dim() == 4,
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
+    elif layout_query == "TND":
+        torch._check(
+            query.dim() == 3,
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
+    else:
+        torch._check(
+            False,
+            lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
+        )
+    return out
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
-                                atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
-                                inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
+                                 atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
+                                 inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None, dropout_mask=None, seed=0, offset=0):
     B = query.size(0)
     N = head_num
     S1 = query.size(2)
-    S2 = key.size(2)
 
     if input_layout == "BSH":
         B = query.size(0)
         S1 = query.size(1)
-        S2 = key.size(1)
 
     if input_layout == "SBH":
         B = query.size(1)
         S1 = query.size(0)
-        S2 = key.size(0)
 
     if input_layout == "BSND":
         S1 = query.size(1)
-        S2 = key.size(1)
 
     seed = 0
     offset = 0
     numels = 0
-    attention_score = query.new_empty(query.shape, dtype=query.dtype, device='meta')
-    softmax_max = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
-    softmax_sum = torch.empty([B, head_num, S1, 8], dtype=torch.float32, device='meta')
+    attention_score = query.new_empty(
+        query.shape, dtype=query.dtype, device='meta')
+    if input_layout == "TND":
+        softmax_max = torch.empty(
+            [B, head_num, 8], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty(
+            [B, head_num, 8], dtype=torch.float32, device='meta')
+    else:
+        softmax_max = torch.empty(
+            [B, head_num, S1, 8], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty(
+            [B, head_num, S1, 8], dtype=torch.float32, device='meta')
     softmax_out = torch.empty([0], dtype=query.dtype, device='meta')
     return (attention_score, softmax_max, softmax_sum, softmax_out, seed, offset, numels)
 
@@ -1752,8 +1892,9 @@ def npu_fusion_attention_backward(query, key, value, dy, head_num, input_layout,
     dq = query.new_empty(query.shape, dtype=query.dtype, device='meta')
     dk = key.new_empty(key.shape, dtype=query.dtype, device='meta')
     dv = value.new_empty(value.shape, dtype=query.dtype, device='meta')
-    dpse = torch.empty([0], dtype=query.dtype, device='meta')
-    dsink = torch.empty([], device='meta') if sink is None else torch.empty(sink.shape, dtype=sink.dtype, device='meta')
+    dpse = None
+    dsink = torch.empty([0], device='meta') if sink is None else torch.empty(
+        sink.shape, dtype=sink.dtype, device='meta')
     return (dq, dk, dv, dpse, dsink)
 
 
@@ -2014,6 +2155,34 @@ def npu_gelu_backward_meta(grad, self, *, approximate="none"):
     return torch.empty_like(self)
 
 
+@impl(m, "npu_silu")
+def npu_silu_meta(self):
+    return torch.empty_like(self)
+
+
+@impl(m, "npu_silu_backward")
+def npu_silu_backward_meta(grad_output, x0, x1):
+    return torch.empty_like(grad_output)
+
+
+@impl(m, "npu_layer_norm_eval")
+def npu_layer_norm_eval_meta(input, normalized_shape, weight=None, bias=None, eps=1e-5):
+    return torch.empty_like(input)
+
+
+@impl(m, "npu_add_layer_norm")
+def npu_add_layer_norm_meta(x1, x2, gamma, beta, epsilon=1e-5, additional_output=False):
+    rstd_dim = x1.dim() - gamma.dim()
+    ret = []
+    for i in range(x1.dim()):
+        if i < rstd_dim:
+            ret.append(x1.size(i))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
+
+
 @impl(m, "npu_gelu_mul")
 def npu_gelu_mul_meta(input_tensor, *, approximate="none"):
     output_shape = list(input_tensor.shape)
@@ -2121,6 +2290,44 @@ def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None)
     return output
 
 
+@impl(m, "npu_block_sparse_attention")
+def npu_block_sparse_attention_meta(query, key, value, block_sparse_mask, block_shape, *, q_input_layout='TND', kv_input_layout='TND',
+                                   num_key_value_heads=1, scale_value=0.0, inner_precise=1,
+                                   actual_seq_lengths=None, actual_seq_lengths_kv=None, softmax_lse_flag=0):
+    torch._check(
+        query.dim() == 3 or query.dim() == 4,
+        lambda: "query should be 3 or 4 dimensional, but got " + str(query.dim()) + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        len(block_shape) >= 2 and block_shape[1] % 128 == 0,
+        lambda: "block_shape[1] (blockShapeY) must be a multiple of 128, got " + str(block_shape[1])
+        + ops_error(ErrCode.PARAM),
+    )
+    torch._check(
+        query.dtype != torch.bfloat16 or inner_precise == 0,
+        lambda: "when query/key/value are bfloat16, inner_precise must be 0, got " + str(inner_precise)
+        + ops_error(ErrCode.PARAM),
+    )
+    attention_out_shape = list(query.size())
+    attention_out_shape[-1] = value.size(-1)
+    attention_out = query.new_empty(attention_out_shape)
+    if query.dim() == 4:
+        softmax_lse = query.new_empty([query.size(0), query.size(1), query.size(2), 1], dtype=torch.float32)
+    else:
+        softmax_lse = query.new_empty([query.size(0), query.size(1), 1], dtype=torch.float32)
+    return (attention_out, softmax_lse)
+
+
+@impl(m, "npu_block_sparse_attention_backward")
+def npu_block_sparse_attention_backward_meta(d_out, query, key, value, attention_out, softmax_lse, block_sparse_mask,
+                                            block_shape, actual_seq_lengths, actual_seq_lengths_kv,
+                                            q_input_layout, kv_input_layout, num_key_value_heads, scale_value):
+    d_query = query.new_empty(query.size())
+    d_key = key.new_empty(key.size())
+    d_value = value.new_empty(value.size())
+    return (d_query, d_key, d_value)
+
+
 @impl(m, "npu_bmmV2")
 def npu_bmmV2_meta(self, mat2, output_sizes):
     dim1 = self.size(0)
@@ -2146,6 +2353,19 @@ def npu_deep_norm_meta(self, gx, beta, gamma, alpha=0.3, epsilon=1e-6):
             ret.append(1)
     rstd = torch.empty(ret, dtype=torch.float32, device='meta')
     return (torch.empty_like(rstd), torch.empty_like(rstd), torch.empty_like(self, dtype=self.dtype))
+
+
+@impl(m, "npu_deep_norm_backward")
+def npu_deep_norm_backward_meta(dy, x, gx, gamma, mean, rstd, alpha=0.3):
+    return (torch.empty_like(x), torch.empty_like(gx), torch.empty_like(gamma), torch.empty_like(gamma))
+
+
+@impl(m, "npu_group_norm_swish")
+def npu_group_norm_swish_meta(input, num_groups, weight, bias, eps=1e-5, swish_scale=1.0):
+    mean_rstd_shape = [input.size(0), num_groups]
+    return (torch.empty_like(input, dtype=input.dtype),
+            torch.empty(mean_rstd_shape, dtype=input.dtype, device=torch.device('meta')),
+            torch.empty(mean_rstd_shape, dtype=input.dtype, device=torch.device('meta')))
 
 
 @impl(m, "npu_rms_norm")
@@ -2230,6 +2450,54 @@ def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06, dst_dt
     return torch.empty(x.size(), dtype=dst_torch_dtype, device=x.device)
 
 
+@impl(m, "npu_rms_norm_dynamic_mx_quant")
+def npu_rms_norm_dynamic_mx_quant_meta(x, gamma, *, beta=None, epsilon=1e-06, scale_alg=0, round_mode='rint', dst_type=296):
+    if scale_alg not in [0, 1]:
+        raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
+                            ops_error(ErrCode.PARAM))
+
+    # 以下变量为本函数局部使用
+    align_num = 2
+    mxscale_block_size = 32
+
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if dst_torch_dtype == torch.float8_e5m2 or dst_type == 291:
+        y = torch.empty_like(x, dtype=torch.float8_e5m2)
+    elif dst_torch_dtype == torch.float8_e4m3fn or dst_type == 292:
+        y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if x.size(x.dim() - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(x.dim() - 1):
+            y_shape.append(x.size(dim))
+        y_shape.append(x.size(x.dim() - 1) // align_num)
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+
+    # mxscale
+    mxscale_shape = []
+    for dim in range(x.dim()):
+        mxscale_shape.append(x.size(dim))
+    mxscale_shape.append(2)
+    last_axis_change = x.dim() - 1
+    last_dim_size = int(math.ceil(mxscale_shape[last_axis_change] / (mxscale_block_size * align_num)))
+    mxscale_shape[last_axis_change] = last_dim_size
+    mxscale = x.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd
+    rstd_dim = x.dim() - gamma.dim()
+    ret = []
+    for dim in range(x.dim()):
+        if dim < rstd_dim:
+            ret.append(x.size(dim))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (y, mxscale, rstd)
+
+
 @impl(m, "npu_add_rms_norm_cast")
 def npu_add_rms_norm_cast_meta(x1, x2, gamma, epsilon=1e-6):
     rstd_dim = x1.dim() - gamma.dim()
@@ -2261,6 +2529,60 @@ def npu_add_rms_norm_dynamic_quant_meta(x1, x2, gamma, *, smooth_scale1=None, sm
             torch.empty(x1.size(), dtype=x1.dtype, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device),
             torch.empty(x1.size()[:-1], dtype=torch.float32, device=x1.device))
+
+
+@impl(m, "npu_add_rms_norm_dynamic_mx_quant")
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1, x2, gamma, *, beta=None, epsilon=1e-6, scale_alg=0, round_mode='rint', dst_type=296):
+    if scale_alg not in [0, 1]:
+        raise RuntimeError(f"Invalid scale_alg value: {scale_alg}. Expected 0 or 1." +
+                            ops_error(ErrCode.PARAM))
+    
+    dim_num = x1.dim()
+
+    # 以下变量为本函数局部使用
+    align_num = 2
+    mxscale_block_size = 32
+    
+    # y
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(x1, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(x1, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if x1.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(x1.size(dim))
+        y_shape.append(x1.size(dim_num - 1) // align_num)
+        y = x1.new_empty(y_shape, dtype=torch.uint8)
+
+    # x_out
+    x_out = torch.empty_like(x1, dtype=x1.dtype)
+
+    # mxscale
+    mxscale_shape = []
+    for dim in range(dim_num):
+        mxscale_shape.append(x1.size(dim))
+    mxscale_shape.append(2)
+    last_axis_change = dim_num - 1
+    last_dim_size = int(math.ceil(mxscale_shape[last_axis_change] / (mxscale_block_size * align_num)))
+    mxscale_shape[last_axis_change] = last_dim_size
+    mxscale = x1.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd
+    rstd_dim = dim_num - gamma.dim()
+    ret = []
+    for i in range(dim_num):
+        if i < rstd_dim:
+            ret.append(x1.size(i))
+        else:
+            ret.append(1)
+    rstd = torch.empty(ret, dtype=torch.float32, device='meta')
+    return (y, x_out, mxscale, rstd)
 
 
 @impl(m, "npu_rms_norm_backward")
@@ -2362,6 +2684,16 @@ def npu_dropout_backward_meta(grad_output, mask, p):
 @impl(m, "npu_masked_softmax_with_rel_pos_bias")
 def npu_masked_softmax_with_rel_pos_bias_meta(x, atten_mask, relative_pos_bias, scale_value=1.0, inner_precision_mode=0):
     return torch.empty_like(x, dtype=x.dtype)
+
+
+@impl(m, "npu_scaled_masked_softmax")
+def npu_scaled_masked_softmax_meta(x, mask, scale=1, fixed_triu_mask=False):
+    return torch.empty_like(x, dtype=x.dtype)
+
+
+@impl(m, "npu_scaled_masked_softmax_backward")
+def npu_scaled_masked_softmax_backward_meta(y_grad, y, mask, scale, fixed_triu_mask):
+    return torch.empty_like(y_grad, dtype=y_grad.dtype)
 
 
 @impl(m, "npu_moe_distribute_dispatch")
@@ -2591,6 +2923,206 @@ def npu_moe_distribute_combine_add_rms_norm_meta(expand_x, expert_ids, expand_id
     dim_list2.append(1)
 
     return (expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype), expand_x.new_empty(tuple(dim_list2), dtype=torch.float32), expand_x.new_empty(tuple(dim_list), dtype=expand_x.dtype))
+
+
+@impl(m, "npu_moe_distribute_dispatch_setup")
+def npu_moe_distribute_dispatch_setup_meta(x, expert_ids, group_ep, ep_world_size, ep_rank_id, moe_expert_num, 
+                                           scales=None, x_active_mask=None, expert_shard_type=0, shared_expert_num=1, 
+                                           shared_expert_rank_num=0, quant_mode=0, global_bs=0, comm_type=0, 
+                                           comm_alg="", y_dtype=None):
+    def Align(x, align_len):
+        if (align_len <= 0):
+            return -1
+        return math.ceil(x / align_len) * align_len
+    
+    DIM_2 = 2
+    UNQUANT = 0
+    STATIC_QUANT = 1
+    PERTOKEN_DYNAMIC_QUANT = 2
+    PERGROUP_DYNAMIC_QUANT = 3
+    MX_QUANT = 4
+    BYTE_2 = 2
+    BYTE_4 = 4
+    ALGIN_2 = 2
+    ALGIN_32 = 32
+    ALGIN_128 = 128
+    ALGIN_256 = 256
+    ALGIN_512 = 512
+
+    torch._check(
+        (x.dim() == DIM_2),
+        lambda: (
+            f"The dims of input x should be 2 dimensional, "
+            f"but got {x.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    torch._check(
+        (expert_ids.dim() == DIM_2),
+        lambda: (
+            f"The dims of input expert_ids should be 2 dimensional, "
+            f"but got {expert_ids.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+
+    bs = x.size(0)
+    h = x.size(1)
+    k = expert_ids.size(1)
+    # 根据量化类型计算hs大小
+    if quant_mode == UNQUANT:
+        hs = Align(Align(h * BYTE_2, ALGIN_32), ALGIN_512) // BYTE_2
+    elif quant_mode == STATIC_QUANT:
+        hs = Align(Align(h, ALGIN_32), ALGIN_512)
+    elif quant_mode == PERTOKEN_DYNAMIC_QUANT:
+        hs = Align(Align(h, ALGIN_32) + BYTE_4, ALGIN_512)
+    elif quant_mode == PERGROUP_DYNAMIC_QUANT:
+        hs = Align((Align(h, ALGIN_128) + math.ceil(h / ALGIN_128) * BYTE_4), ALGIN_512)
+    elif quant_mode == MX_QUANT:
+        hs = Align(Align(h, ALGIN_256) + Align(math.ceil(h / ALGIN_32), ALGIN_2), ALGIN_512)
+
+    local_moe_expert_num = 0
+    torch._check(
+        (ep_rank_id >= 0 and ep_rank_id < ep_world_size),
+        lambda: (
+            f"ep_rank_id should be in [0, ep_world_size), "
+            f"but got ep_rank_id: {ep_rank_id}, ep_world_size: {ep_world_size}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    torch._check(
+        (shared_expert_rank_num >= 0 and shared_expert_rank_num <= ep_world_size // 2),
+        lambda: (
+            f"shared_expert_rank_num should be in [0, ep_world_size / 2], "
+            f"but got shared_expert_rank_num: {shared_expert_rank_num}, ep_world_size: {ep_world_size}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    if expert_shard_type == 0:
+        if ep_rank_id < shared_expert_rank_num:
+            local_moe_expert_num = 1
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+    local_moe_expert_num = int(local_moe_expert_num)
+
+    outDtype = x.dtype
+    if scales is not None or quant_mode != 0:
+        outDtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP[y_dtype]
+
+    y = x.new_empty((bs * (k + shared_expert_num), hs), dtype=outDtype)
+    expand_idx = x.new_empty((bs * k), dtype=torch.int32)
+    comm_cmd_info = x.new_empty(((bs * (k + shared_expert_num) + ep_world_size * local_moe_expert_num) * 16), dtype=torch.int32)
+    return (y, expand_idx, comm_cmd_info)
+
+
+@impl(m, "npu_moe_distribute_dispatch_teardown")
+def npu_moe_distribute_dispatch_teardown_meta(x, y, expert_ids, comm_cmd_info, group_ep, ep_world_size, ep_rank_id, 
+                                              moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
+                                              shared_expert_rank_num=0, quant_mode=0, global_bs=0, 
+                                              expert_token_nums_type=1, comm_type=0, comm_alg=""):
+    DIM_2 = 2
+    
+    torch._check(
+        (x.dim() == DIM_2),
+        lambda: (
+            f"The dims of input x should be 2 dimensional, "
+            f"but got {x.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    torch._check(
+        (expert_ids.dim() == DIM_2),
+        lambda: (
+            f"The dims of input expert_ids should be 2 dimensional, "
+            f"but got {expert_ids.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    bs = x.size(0)
+    h = x.size(1)
+    k = expert_ids.size(1)
+
+    local_moe_expert_num = 0
+    global_bs_real = (bs * ep_world_size) if global_bs == 0 else global_bs
+    a = 0
+    if expert_shard_type == 0:
+        if ep_rank_id < shared_expert_rank_num:
+            local_moe_expert_num = 1
+            a = global_bs_real // shared_expert_rank_num
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+            a = global_bs_real * min(local_moe_expert_num, k)
+    else:
+        if ep_rank_id >= ep_world_size - shared_expert_rank_num:
+            local_moe_expert_num = 1
+            a = global_bs_real // shared_expert_rank_num
+        else:
+            local_moe_expert_num = moe_expert_num // (ep_world_size - shared_expert_rank_num)
+            a = global_bs_real * min(local_moe_expert_num, k)
+
+    local_moe_expert_num = int(local_moe_expert_num)
+
+    outDtype = torch.int8 if (quant_mode != 0) else x.dtype
+    expand_x = x.new_empty(tuple([a, h]), dtype=outDtype)
+    dynamic_scales = x.new_empty(tuple([a]), dtype=torch.float32)
+    assist_info_for_combine = x.new_empty(tuple([a * 128]), dtype=torch.int32)
+    expert_token_nums = x.new_empty(tuple([local_moe_expert_num]), dtype=torch.int64)
+    return (expand_x, dynamic_scales, assist_info_for_combine, expert_token_nums)
+
+
+@impl(m, "npu_moe_distribute_combine_setup")
+def npu_moe_distribute_combine_setup_meta(expand_x, expert_ids, assist_info_for_combine, group_ep, ep_world_size, 
+                                          ep_rank_id, moe_expert_num, expert_shard_type=0, shared_expert_num=1, 
+                                          shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0, 
+                                          comm_alg="", y_dtype=0):
+    def Align(x, align_len):
+        if (align_len <= 0):
+            return -1
+        return math.ceil(x / align_len) * align_len
+
+    DIM_2 = 2
+
+    torch._check(
+        (expand_x.dim() == DIM_2),
+        lambda: (
+            f"The dims of input expand_x should be 2 dimensional, "
+            f"but got {expand_x.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+
+    a = expand_x.size(0)
+    h = expand_x.size(1)
+    hs = Align(Align(h, 32) + Align(h, 8) // 8 * 4, 512)
+    quant_expand_x = expand_x.new_empty(tuple([a, hs]), dtype=torch.int8)
+    comm_cmd_info = expand_x.new_empty(tuple([(a + ep_world_size) * 16]), dtype=torch.int32)
+    return (quant_expand_x, comm_cmd_info)
+
+
+@impl(m, "npu_moe_distribute_combine_teardown")
+def npu_moe_distribute_combine_teardown_meta(expand_x, quant_expand_x, expert_ids, expand_idx, expert_scales, 
+                                             group_ep, ep_world_size, ep_rank_id, moe_expert_num, x_active_mask=None, 
+                                             shared_expert_x=None, expert_shard_type=0, shared_expert_num=1, 
+                                             shared_expert_rank_num=0, global_bs=0, comm_quant_mode=0, comm_type=0):
+    DIM_2 = 2
+    
+    torch._check(
+        (expand_x.dim() == DIM_2),
+        lambda: (
+            f"The dims of input expand_x should be 2 dimensional, "
+            f"but got {expand_x.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    torch._check(
+        (expert_ids.dim() == DIM_2),
+        lambda: (
+            f"The dims of input expert_ids should be 2 dimensional, "
+            f"but got {expert_ids.dim()}."
+            f"{ops_error(ErrCode.VALUE)}."
+        ),
+    )
+    return (expand_x.new_empty(tuple([expert_ids.size(0), expand_x.size(1)]), dtype=expand_x.dtype))
 
 
 @impl(m, "_npu_distribute_barrier")
@@ -3103,8 +3635,25 @@ def npu_weight_quant_batchmatmul_meta(x, weight, antiquant_scale, antiquant_offs
     return x.new_empty((dim_m, dim_n), dtype=x.dtype)
 
 
+def is_transpose_last_two_dims(tensor):
+    if tensor.dim() < 2 or tensor.dim() > 6:
+        return False
+    dim1 = tensor.dim() - 1
+    dim2 = tensor.dim() - 2
+    if tensor.stride(dim2) == 1 and tensor.stride(dim1) == tensor.size(dim2):
+        tmpNxD = tensor.size(dim1) * tensor.size(dim2)
+        for batchDim in range(tensor.dim() - 3, -1, -1):
+            if tensor.stride(batchDim) != tmpNxD:
+                return False
+            tmpNxD = tmpNxD * tensor.size(batchDim)
+        if tensor.size(dim1) == 1 and tensor.size(dim2) == 1:
+            return False
+        return True
+    return False
+
+
 def bias_shape_check(*args):
-    x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2 = args
+    x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2, is_mxfp4_valid = args
     bias_dim_num = bias.dim()
     if is_a4w4:
         torch._check(
@@ -3123,6 +3672,8 @@ def bias_shape_check(*args):
         )
     x2_dim_num = x2.dim()
     x2_n_dim = x2.size(x2_dim_num - 1) * 8 if (is_a4w4 and not transpose_x2) else x2.size(x2_dim_num - 1)
+    if is_mxfp4_valid:
+        x2_n_dim = x2.size(x2_dim_num - 1) if transpose_x2 else x2.size(x2_dim_num - 1) * 2
     bias_first_dim = bias.size(0)
     if bias_dim_num == 1:
         torch._check(
@@ -3147,7 +3698,7 @@ def bias_shape_check(*args):
 
 
 def quant_matmul_shape_check(*args):
-    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes = args
+    x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x1, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, is_mxfp4_valid = args
     X_MAX_DIM = 6
     X_MIN_DIM = 2
     INT4_IN_INT32 = 8
@@ -3158,7 +3709,12 @@ def quant_matmul_shape_check(*args):
     x1_m_dim = x1.size(x1_dim_num - 2)
     x1_k_dim = x1.size(x1_dim_num - 1)
     x2_k_dim = x2.size(x2_dim_num - 2)
-    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if ((is_a4w4 and not transpose_x2) or is_a8w4_int) else x2.size(x2_dim_num - 1)
+    x2_n_dim = x2.size(x2_dim_num - 1) * INT4_IN_INT32 if ((is_a4w4 and not transpose_x2) or is_a8w4_int) else x2.size(x2_dim_num - 1) 
+    if is_mxfp4_valid:
+        x1_m_dim = x1.size(x1_dim_num - 2) if not transpose_x1 else x1.size(x1_dim_num - 2) * FP4_IN_INT8
+        x1_k_dim = x1.size(x1_dim_num - 1) * FP4_IN_INT8 if not transpose_x1 else x1.size(x1_dim_num - 1)
+        x2_k_dim = x2.size(x2_dim_num - 2) if not transpose_x2 else x2.size(x2_dim_num - 2) * FP4_IN_INT8
+        x2_n_dim = x2.size(x2_dim_num - 1) * FP4_IN_INT8 if not transpose_x2 else x2.size(x2_dim_num - 1)
     torch._check(
         x1_dim_num >= X_MIN_DIM and x1_dim_num <= X_MAX_DIM,
         lambda: f"x1 dim num should be 2 ~ 6, please check x1 dim num {ops_error(ErrCode.VALUE)}",
@@ -3526,9 +4082,12 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
     shape_short = x2 if x1_dim_num > x2_dim_num else x1
     vaild_offset = out_dim_num - min(x1_dim_num, x2_dim_num)
     is_a4w4 = x1.dtype == torch.int32 and x2.dtype == torch.int32
+    is_mxfp4_valid = x1_dtype == torch_npu.float4_e2m1fn_x2 and x2_dtype == torch_npu.float4_e2m1fn_x2
     is_a8w4_int = x1.dtype == torch.int8 and x2.dtype == torch.int32
     is_a8w4_float = x1.dtype == torch.float8_e4m3fn and (x2_dtype == torch_npu.float4_e2m1fn_x2 or x2.dtype == torch.float32)
     dim_list = []
+    transpose_x1 = False
+    transpose_x2 = False
     if is_a8w4_int:
         dim_list = [x1.shape[0], x2.shape[1] * INT4_IN_INT32]
         transpose_x2 = False
@@ -3543,31 +4102,40 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
             cur_batch_val = max(short_dim, long_dim)
             batch_val = batch_val * cur_batch_val
             dim_list.append(cur_batch_val)
-        dimm = x1.size(x1.dim() - 2)
-        transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
-
-        dimn = x2.size(x2.dim() - 1)
-        if (is_a4w4 and not transpose_x2):
-            dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
-        elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
-            dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
-
-        dim_list.append(dimm)
-        dim_list.append(dimn)
+        if is_mxfp4_valid:
+            FP4_IN_INT8 = 2
+            transpose_x1 = is_transpose_last_two_dims(x1)
+            transpose_x2 = is_transpose_last_two_dims(x2)
+            x1_size_last_second = x1.size(x1_dim_num - 2)
+            x2_size_last = x2.size(x2_dim_num - 1)
+            real_m = x1_size_last_second if not transpose_x1 else x1_size_last_second * FP4_IN_INT8
+            real_n = x2_size_last if transpose_x2 else x2_size_last * FP4_IN_INT8
+            dim_list.append(real_m)
+            dim_list.append(real_n)
+        else:
+            dimm = x1.size(x1.dim() - 2)
+            transpose_x2 = x1.size(x1.dim() - 1) == x2.size(x2.dim() - 2)
+            dimn = x2.size(x2.dim() - 1)
+            if (is_a4w4 and not transpose_x2):
+                dimn = x2.size(x2.dim() - 1) * INT4_IN_INT32
+            elif (is_a8w4_float and x2.dtype == torch.float32 and pertoken_scale is None):
+                dimn = x2.size(x2.dim() - 1) * FP4_IN_FP32
+            dim_list.append(dimm)
+            dim_list.append(dimn)
         if bias is not None:
             if bias.dim() == 3:
                 torch._check(
                     len(dim_list) == 3,
                     lambda: "when bias dim is 3, out dim need to be 3" + ops_error(ErrCode.TYPE),
                 )
-            bias_shape_check(x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2)
+            bias_shape_check(x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2, is_mxfp4_valid)
         quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dtype, is_a4w4)
         quant_matmul_extra_dtype_check(x1, x2, scale, pertoken_scale,
                                    x1_dtype, x2_dtype, scale_dtype, is_a8w4_float, pertoken_scale_dtype)
         quant_matmul_group_sizes_check(x1, x2, scale, pertoken_scale, group_sizes,
                                     x1_dtype, x2_dtype, scale_dtype, pertoken_scale_dtype, is_a8w4_float)
     quant_matmul_dtype_check(x1, x2, scale, offset, pertoken_scale, bias, output_dtype, is_a4w4, is_a8w4_int, is_a8w4_float, y_scale)
-    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes)
+    quant_matmul_shape_check(x1, x2, scale, offset, pertoken_scale, is_a4w4, transpose_x1, transpose_x2, is_a8w4_int, is_a8w4_float, group_sizes, is_mxfp4_valid)
 
     tensor_dtype = torch.int8
     if output_dtype is not None:
@@ -3575,6 +4143,53 @@ def npu_quant_matmul_meta(x1, x2, scale, *, offset=None, pertoken_scale=None, bi
         if tensor_dtype is None or (tensor_dtype not in TORCH_DTYPE_MAP.keys() and tensor_dtype != torch.uint8):
             raise RuntimeError("Not supported output dtype is " + npu_dtype_to_str(output_dtype))
     return shape_long.new_empty(tuple(dim_list), dtype=tensor_dtype)
+
+
+@impl(m, "npu_matmul_compress_dequant")
+def npu_matmul_compress_dequant_meta(x1, x2, compress_index, bias, scale, *, offsetW=None, offsetX=None):
+    torch._check(
+        x1.dim() == 2,
+        lambda: "the x1 dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x1.dtype == torch.int8,
+        lambda: "the x1 dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x2.dim() == 1,
+        lambda: "the x2 dim support only 1" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        x2.dtype == torch.int8,
+        lambda: "the x2 dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        compress_index.dim() == 1,
+        lambda: "the compress_index dim support only 1" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        compress_index.dtype == torch.int8,
+        lambda: "the compress_index dtype support only int8" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        bias.dim() == 2,
+        lambda: "the bias dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        bias.dtype == torch.int32,
+        lambda: "the bias dtype support only int32" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        scale.dim() == 2,
+        lambda: "the scale dim support only 2" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        scale.dtype == torch.uint64,
+        lambda: "the scale dtype support only uint64" + ops_error(ErrCode.VALUE),
+    )
+    dim_list = (x1.shape[0], bias.shape[1])
+
+    return torch.empty(dim_list, dtype=torch.float16, device='meta')
 
 
 @impl(m, "npu_quant_matmul_dequant")
@@ -4155,17 +4770,24 @@ def npu_moe_compute_expert_tokens_meta(sorted_experts, num_experts=1):
 @impl(m, "npu_anti_quant")
 def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None):
     if dst_dtype is None:
-        dst_dtype = torch.float16
+        y_dtype = torch.float16
+    else:
+        y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype)
 
+    if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x.dtype == torch.uint8:
+        if scale.dtype != torch.float32 or (offset is not None and offset.dtype != torch.float32):
+            raise RuntimeError("When x datatype is hifloat8, float8_e5m2 or float8_e4m3fn, scale_dtype and offset_dtype is only support float32" +
+                                ops_error(ErrCode.NOT_SUPPORT))
+            
     if x.dtype == torch.int32:
         x_shape = x.size()
         if len(x_shape) == 0:
             raise RuntimeError("Not supported for x is scalar when x dtype is int32" + ops_error(ErrCode.NOT_SUPPORT))
         y_shape = (*(x_shape[:-1]), x_shape[-1] * 8)
-        y = x.new_empty(y_shape, dtype=dst_dtype)
+        y = x.new_empty(y_shape, dtype=y_dtype)
         return torch.empty_like(y)
     else:
-        return torch.empty_like(x, dtype=dst_dtype)
+        return torch.empty_like(x, dtype=y_dtype)
 
 
 @impl(m, "npu_kronecker_quant")
@@ -4235,7 +4857,7 @@ def npu_kv_rmsnorm_rope_cache_meta(kv, gamma, cos, sin, index, k_cache, ckv_cach
 @impl(m, "npu_kv_rmsnorm_rope_cache_v2")
 def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *, k_rope_scale=None,
                                            c_kv_scale=None, k_rope_offset=None, c_kv_offset=None, v=None, epsilon=1e-5,
-                                           cache_mode='Norm', is_output_kv=False):
+                                           cache_mode='Norm', is_output_kv=False, k_cache_dtype=None, ckv_cache_dtype=None):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
     if v is not None and v.dim() > 0:
@@ -4268,7 +4890,7 @@ def npu_kv_rmsnorm_rope_cache_v2_meta(kv, gamma, cos, sin, index, k_cache, ckv_c
 def npu_kv_rmsnorm_rope_cache_v2_functional_meta(kv, gamma, cos, sin, index, k_cache, ckv_cache, *,
                                                       k_rope_scale=None, c_kv_scale=None, k_rope_offset=None,
                                                       c_kv_offset=None, v=None, epsilon=1e-5, cache_mode='Norm',
-                                                      is_output_kv=False):
+                                                      is_output_kv=False, k_cache_dtype=None, ckv_cache_dtype=None):
     if kv.dim() != 4:
         raise RuntimeError("4D tensor expected for input kv" + ops_error(ErrCode.PARAM))
     if v is not None and v.dim() > 0:
@@ -4731,44 +5353,46 @@ def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, b
 @impl(m, "npu_swiglu_mx_quant")
 def npu_swiglu_mx_quant_meta(x, group_index=None, activate_dim=-1, activate_left=False,
                               swiglu_mode=0, clamp_limit=7.0, glu_alpha=1.702, glu_bias=1.0,
-                              group_mode=0, axis=-1, dst_type=1, round_mode="rint",
+                              group_mode=0, axis=-1, dst_type=296, round_mode="rint",
                               scale_alg=0, max_dtype_value=0):
     activate_dim = activate_dim if activate_dim is not None else -1
     select_dim = activate_dim if activate_dim >= 0 else activate_dim + x.dim()
     quant_dim = axis if axis >= 0 else axis + x.dim()
     y_size = []
     scale_size = []
+    swish_num = 2
+    block_size = 64
     
     # infer the size of y
     for i in range(x.dim()):
         if i == select_dim:
-            y_size.append(x.size(i) // 2)
+            y_size.append(x.size(i) // swish_num)
         else:
             y_size.append(x.size(i))
     # infer the size of scale
     for i in range(x.dim()):
         if i == select_dim:
-            scale_size.append(x.size(i) // 2)
+            scale_size.append(x.size(i) // swish_num)
         else:
             scale_size.append(x.size(i))
     
     # modify the size of scale
     if group_index is None:
-        quant_size = int(math.ceil(scale_size[quant_dim] / 64))
+        quant_size = int(math.ceil(scale_size[quant_dim] / block_size))
     else:
         if quant_dim == x.dim() - 1:
-            quant_size = int(math.ceil(scale_size[quant_dim] / 64))
+            quant_size = int(math.ceil(scale_size[quant_dim] / block_size))
         else:
-            quant_size = int(math.floor(scale_size[quant_dim] / 64) + group_index.shape[0])
+            quant_size = int(math.floor(scale_size[quant_dim] / block_size) + group_index.shape[0])
 
     scale_size[quant_dim] = quant_size
-    scale_size.append(2)
+    scale_size.append(swish_num)
 
     dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch_npu.uint8)
 
     # fp4
     if dst_torch_dtype == torch.uint8 and dst_type != torch_npu.hifloat8:
-        y_size[-1] = y_size[-1] // 2
+        y_size[-1] = y_size[-1] // swish_num
     
     return (torch.empty(y_size, dtype=dst_torch_dtype, device=x.device),
             torch.empty(scale_size, dtype=torch.uint8, device=x.device))
@@ -4905,20 +5529,8 @@ def npu_attention_worker_combine(schedule_context, expert_scales, layer_id, hidd
 @impl(m, "npu_add_rms_norm_quant")
 def npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1=None, beta=None, scales2=None, zero_points2=None, axis=-1, epsilon=1e-06, div_mode=True, dst_type=None):
     torch._check(
-        scales2 is None,
-        lambda: f"scales2 should be None, but got {scales2}.",
-        )
-    torch._check(
-        zero_points2 is None,
-        lambda: f"zero_points2 should be None, but got {zero_points2}.",
-        )
-    torch._check(
         axis == -1,
         lambda: f"axis should be -1, but got {axis}.",
-        )
-    torch._check(
-        div_mode is True,
-        lambda: f"div_mode should be True, but got {div_mode}.",
         )
     dst_type = dst_type if dst_type is not None else 1
     dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
@@ -5605,3 +6217,70 @@ def batch_norm_reduce_meta(self, eps):
     out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     return (out_sum, out_square_sum)
+
+
+@impl(m, "kl_div_backward")
+def kl_div_backward_meta(grad_out, x, target, reduction="mean", log_target=False):
+    result = torch.empty_like(x)
+    return result
+
+
+@impl(m, "npu_dropout_with_add_softmax")
+def npu_dropout_with_add_softmax_meta(x1, x2, alpha, prod, axis):
+    add = x1 + x2
+    softmax = add.softmax(axis=axis)
+    dropout = torch.empty_like(softmax)
+    return (add.flatten().to(torch.uint8), softmax, dropout)
+
+
+@impl(m, "l1_loss_backward")
+def npu_l1_loss_backward_meta(grad_output,   input, target, reduction):
+    return torch.empty_like(input)
+
+
+@impl(m, "npu_linear_backward")
+def npu_npu_linear_backward_meta(grad_output, input1, input2):
+    return torch.empty_like(input1), torch.empty_like(input2)
+
+
+@impl(m, "npu_dynamic_block_mx_quant")
+def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
+    dim_num = input_dummy.dim()
+    scale1_shape = []
+    scale2_shape = []
+    last_axis = -1
+    second_to_last_axis = -2
+    last_axis_change = last_axis + dim_num
+    second_to_last_axis_change = second_to_last_axis + dim_num
+    for dim in range(dim_num):
+        scale1_shape.append(input_dummy.size(dim))
+        scale2_shape.append(input_dummy.size(dim))
+    scale1_shape.append(2)
+    scale2_shape.append(2)
+
+    block_size = 32
+    last_dim_size = int(math.ceil(scale1_shape[last_axis_change] / block_size))
+    last_dim_size = (last_dim_size + 2 - 1) // 2
+    second_to_last_dim_size = int(math.ceil(scale2_shape[second_to_last_axis_change] / block_size))
+    second_to_last_dim_size = (second_to_last_dim_size + 2 - 1) // 2
+    scale1_shape[last_axis_change] = last_dim_size
+    scale2_shape[second_to_last_axis_change] = second_to_last_dim_size
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+        y = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
+    else: # float4_e2m1, float4_e1m2
+        if input_dummy.size(dim_num - 1) % 2:
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
+                                "the last dim of input must be divisible by 2, " +
+                               ops_error(ErrCode.PARAM))
+        y_shape = []
+        for dim in range(dim_num - 1):
+            y_shape.append(input_dummy.size(dim))
+        y_shape.append(input_dummy.size(dim_num - 1) // 2)
+        y = input_dummy.new_empty(y_shape, dtype=torch.uint8)
+    scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
+    scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
+    return (y, scale1, scale2)

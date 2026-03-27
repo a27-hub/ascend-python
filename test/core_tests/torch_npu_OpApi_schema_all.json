@@ -86,6 +86,12 @@
   "op_api: torch_npu.npu_bert_apply_adam(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_block_sparse_attention(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_block_sparse_attention_backward(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_nsa_select_attention(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -204,6 +210,9 @@
     "version": ["v2.8", "newest"]
   },
   "func: npu_add_rms_norm_dynamic_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? smooth_scale1=None, Tensor? smooth_scale2=None, Tensor? beta=None, float epsilon=1e-6, bool[2] output_mask=[], ScalarType? y_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_add_rms_norm_dynamic_mx_quant(Tensor x1, Tensor x2, Tensor gamma, *, Tensor? beta=None, float epsilon=1e-06, int scale_alg=0, str round_mode=\"rint\", int dst_type=296) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "op_api: torch_npu.attention_worker_scheduler_(*args, **kwargs)": {
@@ -359,6 +368,12 @@
   "op_api: torch_npu.npu_apply_adam(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_mhc_sinkhorn(*args, **kwargs)": {
+    "version": ["v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_mhc_sinkhorn(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "op_api: torch_npu.npu_apply_adam(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
@@ -369,6 +384,12 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_bert_apply_adam(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_block_sparse_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_block_sparse_attention_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_clear_float_status(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -484,6 +505,12 @@
   "op_api: torch_npu.npu_moe_update_expert(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_mhc_post(*args, **kwargs)": {
+    "version": ["v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_mhc_post(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "op_api: torch_npu.npu_mrope(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
@@ -592,7 +619,7 @@
   "func: npu_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_quant_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Tensor gmm_weight_scale, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, int gmm_y_dtype, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, Tensor? mm_x_scale=None, Tensor? mm_weight_scale=None, Tensor? gmm_x_offset=None, Tensor? gmm_weight_offset=None, Tensor? mm_x_offset=None, Tensor? mm_weight_offset=None, Tensor? comm_quant_scale=None, int? gmm_x_quant_mode=None, int? gmm_weight_quant_mode=None, int? mm_x_quant_mode=None, int? mm_weight_quant_mode=None, int? comm_quant_mode=None, int[]? group_size=None, int? gmm_x_dtype=None, int? gmm_weight_dtype=None, int? gmm_x_scale_dtype=None, int? gmm_weight_scale_dtype=None, int? mm_x_dtype=None, int? mm_weight_dtype=None, int? mm_x_scale_dtype=None, int? mm_weight_scale_dtype=None, int? comm_quant_dtype=None, int? mm_y_dtype=None) -> (Tensor, Tensor)": {
+  "func: npu_quant_gmm_alltoallv(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Tensor gmm_weight_scale, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, int gmm_y_dtype, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, Tensor? mm_x_scale=None, Tensor? mm_weight_scale=None, Tensor? comm_quant_scale=None, int? gmm_x_quant_mode=None, int? gmm_weight_quant_mode=None, int? mm_x_quant_mode=None, int? mm_weight_quant_mode=None, int? comm_quant_mode=None, int[]? group_size=None, int? gmm_x_dtype=None, int? gmm_weight_dtype=None, int? gmm_x_scale_dtype=None, int? gmm_weight_scale_dtype=None, int? mm_x_dtype=None, int? mm_weight_dtype=None, int? mm_x_scale_dtype=None, int? mm_weight_scale_dtype=None, int? comm_quant_dtype=None, int? mm_y_dtype=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_dequant_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, int[3] size_splits, *, Tensor? offset_k=None, Tensor? offset_v=None, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? bias=None, int quant_mode=0, str input_layout=\"BSND\", bool kv_output=False, str cache_mode=\"contiguous\") -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
@@ -616,7 +643,7 @@
   "func: npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_alltoallv_quant_gmm(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Tensor gmm_weight_scale, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, int gmm_y_dtype, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, Tensor? mm_x_scale=None, Tensor? mm_weight_scale=None, Tensor? gmm_x_offset=None, Tensor? gmm_weight_offset=None, Tensor? mm_x_offset=None, Tensor? mm_weight_offset=None, int? gmm_x_quant_mode=None, int? gmm_weight_quant_mode=None, int? mm_x_quant_mode=None, int? mm_weight_quant_mode=None, bool permute_out_flag=False, int[]? group_size=None, int? gmm_x_dtype=None, int? gmm_weight_dtype=None, int? gmm_x_scale_dtype=None, int? gmm_weight_scale_dtype=None, int? mm_x_dtype=None, int? mm_weight_dtype=None, int? mm_x_scale_dtype=None, int? mm_weight_scale_dtype=None, int? mm_y_dtype=None) -> (Tensor, Tensor, Tensor)": {
+  "func: npu_alltoallv_quant_gmm(Tensor gmm_x, Tensor gmm_weight, Tensor gmm_x_scale, Tensor gmm_weight_scale, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, int gmm_y_dtype, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, Tensor? mm_x_scale=None, Tensor? mm_weight_scale=None, int? gmm_x_quant_mode=None, int? gmm_weight_quant_mode=None, int? mm_x_quant_mode=None, int? mm_weight_quant_mode=None, bool permute_out_flag=False, int[]? group_size=None, int? gmm_x_dtype=None, int? gmm_weight_dtype=None, int? gmm_x_scale_dtype=None, int? gmm_weight_scale_dtype=None, int? mm_x_dtype=None, int? mm_weight_dtype=None, int? mm_x_scale_dtype=None, int? mm_weight_scale_dtype=None, int? mm_y_dtype=None) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_moe_distribute_dispatch(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, Tensor? expert_scales=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
@@ -664,6 +691,18 @@
   "func: npu_moe_distribute_combine_add_rms_norm(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, Tensor residual_x, Tensor gamma, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0, str comm_alg=\"\", float norm_eps=1e-06) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_moe_distribute_dispatch_setup(Tensor x, Tensor expert_ids, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? scales=None, Tensor? x_active_mask=None, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int comm_type=0, str comm_alg=\"\") -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_moe_distribute_dispatch_teardown(Tensor x, Tensor y, Tensor expert_ids, Tensor comm_cmd_info, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int quant_mode=0, int global_bs=0, int expert_token_nums_type=1, int comm_type=0, str comm_alg=\"\") -> (Tensor, Tensor, Tensor, Tensor) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_moe_distribute_combine_setup(Tensor expand_x, Tensor expert_ids, Tensor assist_info_for_combine, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, int comm_type=0, str comm_alg=\"\") -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_moe_distribute_combine_teardown(Tensor expand_x, Tensor quant_expand_x, Tensor expert_ids, Tensor expand_idx, Tensor expert_scales, Tensor comm_cmd_info, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? x_active_mask=None, Tensor? shared_expert_x=None, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int comm_quant_mode=0, int comm_type=0, str comm_alg=\"\") -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: _transform_bias_rescale_qkv(Tensor qkv, Tensor qkv_bias, int num_heads) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -695,6 +734,9 @@
     "version": ["all_version"]
   },
   "func: npu_hans_decode.out(Tensor mantissa, Tensor fixed, Tensor var, Tensor pdf, bool reshuff=False, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor": {
@@ -739,6 +781,9 @@
   "func: npu_dequant_swiglu_quant(Tensor x, *, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? bias=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? group_index=None, bool activate_left=False, int quant_mode=0, int swiglu_mode=0, float clamp_limit=7.0, float glu_alpha=1.702, float glu_bias=1.0) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_swiglu_mx_quant(Tensor x, *, Tensor? group_index=None, int activate_dim=-1, bool activate_left=False, int swiglu_mode=0, float clamp_limit=7.0, float glu_alpha=1.702, float glu_bias=1.0, int group_mode=0, int axis=-1, int dst_type=296, str round_mode=\"rint\", int scale_alg=0, float max_dtype_value=0) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: adaptive_max_pool3d_backward.grad_input(Tensor grad_output, Tensor self, Tensor indices, *, Tensor(a!) grad_input) -> Tensor(a!)": {
     "version": ["all_version"]
   },
@@ -764,6 +809,9 @@
     "version": ["all_version"]
   },
   "func: npu_grouped_matmul_add_(Tensor(a!) self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },
+  "func: npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_moe_init_routing_quant(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=1024, int expert_capacity=0, int expert_num=256, int drop_pad_mode=0, int expert_tokens_num_mode=0, bool expert_tokens_before_capacity_flag=False, int quant_mode=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor)": {
@@ -836,6 +884,12 @@
     "version": ["all_version"]
   },
   "func: npu_bert_apply_adam.out(Scalar lr, Scalar beta1, Scalar beta2, Scalar epsilon, Tensor grad, Scalar max_grad_norm, Scalar global_grad_norm, Scalar weight_decay, Scalar? step_size=None, int adam_mode=0, *, Tensor(a!) var, Tensor(b!) m, Tensor(c!) v) -> (Tensor(a!), Tensor(b!), Tensor(c!))": {
+    "version": ["all_version"]
+  },
+  "func: npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_block_sparse_attention_backward(Tensor d_out, Tensor query, Tensor key, Tensor value, Tensor attention_out, Tensor softmax_lse, Tensor block_sparse_mask, int[]? block_shape, int[]? actual_seq_lengths, int[]? actual_seq_lengths_kv, str q_input_layout, str kv_input_layout, int num_key_value_heads, float scale_value) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_conv_transpose2d_backward(Tensor input, Tensor grad_output, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)": {
@@ -1081,6 +1135,9 @@
   "func: npu_rms_norm_backward(Tensor dy, Tensor self, Tensor gamma, Tensor rstd) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_rms_norm_dynamic_mx_quant(Tensor x, Tensor gamma, *, Tensor? beta=None, float epsilon=1e-06, int scale_alg=0, str round_mode=\"rint\", int dst_type=296) -> (Tensor, Tensor, Tensor)": {
+ 	  "version": ["all_version"]
+ 	},
   "func: npu_swiglu(Tensor self, int dim=-1) -> Tensor": {
     "version": ["all_version"]
   },
@@ -1297,6 +1354,18 @@
   "func: npu_prompt_flash_attention(Tensor query, Tensor key, Tensor value, *, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? pse_shift=None, int[]? actual_seq_lengths=None, Tensor? deq_scale1=None, Tensor? quant_scale1=None, Tensor? deq_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, int num_heads=1, float scale_value=1.0, int pre_tokens=2147483647, int next_tokens=0, str input_layout=\"BSH\", int num_key_value_heads=0, int[]? actual_seq_lengths_kv=None, int sparse_mode=0) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: _npu_attention_pioneer(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: _npu_attention_pioneer.out(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))": {
+    "version": ["all_version"]
+  },
+  "func: _npu_attention_pioneer_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: _npu_attention_pioneer_infer_output(Tensor query, Tensor value, *, str input_layout=\"BSH\", Tensor? block_table=None, int num_heads=1, int num_key_value_heads=0, bool softmax_lse_flag=False, Tensor? query_rope=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, SymInt[]? actual_shared_prefix_len=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout=\"BSH\", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, int key_antiquant_mode=0, int value_antiquant_mode=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -1363,6 +1432,9 @@
   "func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: _npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: npu_convolution_transpose_backward(Tensor input, Tensor grad, Tensor weight, int[] padding, int[] output_padding, int[] stride, int[] dilation, int groups, bool[3] grad_input_mask) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
@@ -1403,6 +1475,9 @@
     "version": ["all_version"]
   },
   "func: kl_div_backward(Tensor grad_output, Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: kl_div_target_backward(Tensor grad_output, Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_mm_reduce_scatter_base(Tensor self, Tensor x2, str hcom, int world_size, *, str reduce_op='sum', Tensor? bias=None, int comm_turn=0) -> Tensor": {
@@ -1522,7 +1597,7 @@
   "func: npu_quantize(Tensor self, Tensor scales, Tensor? zero_points, int dtype, int axis=1, bool div_mode=True) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_anti_quant(Tensor x, Tensor scale, *, Tensor? offset=None, ScalarType? dst_dtype=None, ScalarType? src_dtype=None) -> Tensor": {
+  "func: npu_anti_quant(Tensor x, Tensor scale, *, Tensor? offset=None, int? dst_dtype=None, int? src_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor": {
@@ -1647,6 +1722,9 @@
   },
   "func: _unsafe_index.Tensor(Tensor self, Tensor?[] indices) -> Tensor": {
     "version": ["v2.1"]
+  },
+  "func: _linalg_svd(Tensor A, bool full_matrices=False, bool compute_uv=True, *, str? driver=None) -> (Tensor U, Tensor S, Tensor Vh)": {
+    "version": ["all_version"]
   },
   "func: _linalg_svd.U(Tensor A, bool full_matrices=False, bool compute_uv=True, *, str? driver=None, Tensor(a!) U, Tensor(b!) S, Tensor(c!) Vh) -> (Tensor(a!) U, Tensor(b!) S, Tensor(c!) Vh)": {
     "version": ["all_version"]
@@ -2134,6 +2212,13 @@
   "func: channel_shuffle(Tensor self, int groups) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: _chunk_cat(Tensor[] tensors, int dim, int num_chunks) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: _chunk_cat.out(Tensor[] tensors, int dim, int num_chunks, *, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["all_version"]
+  },  
+
   "func: clamp(Tensor self, Scalar? min=None, Scalar? max=None) -> Tensor": {
     "version": ["all_version"]
   },
@@ -4780,7 +4865,7 @@
   "func: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: _lstm_npu_backward(Tensor grad_y, Tensor grad_hy, Tensor grad_cy, Tensor input, Tensor[] hx, Tensor[] params, Tensor i, Tensor j, Tensor f, Tensor o, Tensor h, Tensor c, Tensor tanhc, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor[])": {
+  "func: _lstm_npu_backward(Tensor grad_y, Tensor grad_hy, Tensor grad_cy, Tensor input, Tensor[] hx, Tensor[] params, Tensor i, Tensor j, Tensor f, Tensor o, Tensor h, Tensor c, Tensor tanhc, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor[], Tensor[])": {
     "version": ["all_version"]
   },
   "func: save_npugraph_tensor(Tensor input, *, str? save_path=None) -> ()": {
@@ -4788,5 +4873,8 @@
   },
   "func: save_npugraph_tensor.tensorlist(Tensor[] input, *, str? save_name=None, str? save_dir=None, str? suffix=None) -> ()": {
     "version": ["v2.6", "newest"]
+  },
+  "func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode=\"rint\", int dst_type=296, int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
   }
 }
