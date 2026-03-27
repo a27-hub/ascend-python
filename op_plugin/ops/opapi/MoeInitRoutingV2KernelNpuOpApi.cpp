@@ -199,6 +199,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             expert_tokens_count_or_cumsum.zero_();
             return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
         }
+
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
