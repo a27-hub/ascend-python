@@ -217,7 +217,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
     } else if (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) {
         expanded_scale = npu_preparation::apply_tensor_without_format(
-            {expanded_scale_len, h / 64, 2}, x.options().dtype(at::kByte));
+            {expanded_scale_len, op_infer::CeilDiv(h, 64), 2}, x.options().dtype(at::kByte));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
