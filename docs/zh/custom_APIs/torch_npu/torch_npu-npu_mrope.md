@@ -4,12 +4,8 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ×     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
 
 > 说明：本接口在 PyTorch 侧通过 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/tree/master/posembedding/rope_with_sin_cos_cache) 等底层算子实现；产品支持范围与上述 CANN 算子一致。若运行环境不支持 `aclnnRopeWithSinCosCacheV2`，使用 `cache_mode='interleave'` 时会报错，需升级 CANN 或改用 `cache_mode='default'`（将回退至 `aclnnRopeWithSinCosCache`）。
 
