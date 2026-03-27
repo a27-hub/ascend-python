@@ -115,11 +115,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
                 gmm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2) ||
                 gmm_weight_dtype.value() == static_cast<int64_t>(at::ScalarType::Float8_e4m3fn) ||
                 gmm_weight_dtype.value() == static_cast<int64_t>(at::ScalarType::Float8_e5m2));
-        TORCH_CHECK(is_supported,
-            "The input gmm_weight_dtype must be float8_e4m3_fn or float8_e5m2 for mx quant mode, but got ",
-            op_plugin::utils::DTypeToString(gmm_weight_dtype.value()),
-            ".",
-            OPS_ERROR(ErrCode::VALUE));
+            TORCH_CHECK(is_supported,
+                "The input gmm_weight_dtype must be float8_e4m3_fn or float8_e5m2 for mx quant mode, but got ",
+                op_plugin::utils::DTypeToString(gmm_weight_dtype.value()),
+                ".",
+                OPS_ERROR(ErrCode::VALUE));
         }
     }
     // gmm_x_scale
