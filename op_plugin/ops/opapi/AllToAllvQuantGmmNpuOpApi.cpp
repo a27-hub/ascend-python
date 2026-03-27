@@ -211,7 +211,6 @@ bool is_supported = (gmm_weight_dtype.value() == static_cast<int64_t>(c10_npu::D
     const at::Tensor &mm_x_scale_real = mm_x_scale.value_or(at::Tensor());
     // mm_weight_scale
     const at::Tensor &mm_weight_scale_real = mm_weight_scale.value_or(at::Tensor());
-    int64_t group_sizes = 0;
     // gmm_y
     int64_t n1 = gmm_weight.size(DIM_TWO);
     int64_t a = 0;
@@ -418,6 +417,9 @@ bool is_supported = (gmm_weight_dtype.value() == static_cast<int64_t>(c10_npu::D
         permute_out =
             at_npu::native::OpPreparation::apply_tensor_without_format({a, h1}, c10::dtype(permute_out_scalar_dtype));
     }
+    // group_size
+    at::IntArrayRef group_size_list = group_size.value_or(at::IntArrayRef{});
+    int64_t group_sizes = op_plugin::utils::check_and_get_group_size(group_size_list);
 
     // aclnn 
     TensorWrapper gmm_x_wrapper = make_wrapper(gmm_x, gmm_x_dtype);
