@@ -71,6 +71,7 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
     if (Is310PBoolCheck()) {
         return true;
     }
+
     if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 &&
         active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
         if (quant_mode == -1 && expert_tokens_num_type == 1) {
