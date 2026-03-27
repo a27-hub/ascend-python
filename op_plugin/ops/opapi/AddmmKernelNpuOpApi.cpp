@@ -18,6 +18,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace {
+using npu_preparation = at_npu::native::OpPreparation;
 bool is_three_tensor_base_format(const at::Tensor &input0, const at::Tensor &input1, const at::Tensor &input2)
 {
     return at_npu::native::FormatHelper::IsOpInputBaseFormat(input0) &&
