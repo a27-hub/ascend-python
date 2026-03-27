@@ -5484,3 +5484,43 @@ def batch_norm_reduce_meta(self, eps):
     out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
     return (out_sum, out_square_sum)
+
+
+@impl(m, "npu_add_rms_norm_dynamic_mx_quant")
+def npu_add_rms_norm_dynamic_mx_quant_meta(x1_dummy, x2_dummy, gamma_dummy, *, beta=None, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=296):
+    dim_num = x1_dummy.dim()
+    x1_shape = list(x1_dummy.shape)
+    last_dim = x1_shape[-1]
+
+    # y shape 推导
+    y_shape = x1_shape.copy()
+    if dst_type == 296 or dst_type == 297:  # FP4: uint8 承载，尾轴减半
+        if last_dim % 2 != 0:
+            raise RuntimeError("last dim must be divisible by 2 for FP4" + ops_error(ErrCode.PARAM))
+        y_shape[-1] = last_dim // 2
+        y = x1_dummy.new_empty(y_shape, dtype=torch.uint8)
+    else:
+        # FP8
+        torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, None)
+        if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
+            y = torch.empty_like(x1_dummy, dtype=torch.float8_e5m2)
+        elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
+            y = torch.empty_like(x1_dummy, dtype=torch.float8_e4m3fn)
+        else:
+            y = torch.empty_like(x1_dummy)
+
+    # x_out shape: 与 x1 相同
+    x_out = torch.empty_like(x1_dummy)
+
+    # mxscale_out shape
+    ALIGN_NUM = 32
+    scale_count = (last_dim + ALIGN_NUM - 1) // ALIGN_NUM
+    padded_scale_count = (scale_count + 1) // 2 * 2
+    mxscale_shape = x1_shape[:-1] + [padded_scale_count // 2, 2]
+    mxscale_out = x1_dummy.new_empty(mxscale_shape, dtype=torch.uint8)
+
+    # rstd_out shape
+    rstd_shape = x1_shape[:-1] + [1]
+    rstd_out = x1_dummy.new_empty(rstd_shape, dtype=x1_dummy.dtype)
+
+    return y, x_out, mxscale_out, rstd_out
