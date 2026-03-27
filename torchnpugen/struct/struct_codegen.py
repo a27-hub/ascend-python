@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${checks}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -185,6 +186,13 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                                                        func_name=name,
                                                        args_exprs_str=args_exprs_str) if struct.acl_op else ""
 
+        checks_code = ""
+        if struct.checks:
+            check_lines = []
+            for check in struct.checks:
+                check_lines.append(f"    {check.generate_code()}")
+            checks_code = "\n".join(check_lines) + "\n"
+
         tensor_arguments = ", ".join(filt_input_tensor(f.func.arguments.flat_non_out))
 
         new_params_def = "".join(
@@ -257,6 +265,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
+                checks=checks_code,
                 new_params_def=new_params_def,
                 define_size_or_dtype=define_size_or_dtype,
                 args_str=args_str,
@@ -274,15 +283,27 @@ def gen_op_api(
     struct_functions: Sequence[StructInfo],
     env_aclnn_extension_switch: bool
 ) -> None:
-    # 根据环境变量生成不同的include语句
+    needs_binary_ops = any(
+        any(
+            check.name in ['sub_check', 'add_check']
+            or (check.type == 'custom' and (
+                'at::native::sub_check' in check.name
+                or 'at::native::add_check' in check.name
+            ))
+            for check in struct.checks
+        )
+        for struct in struct_functions if struct.checks
+    )
+    
     if env_aclnn_extension_switch:
         includes = """#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
 #include <torch/extension.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
-        includes = """#include <ATen/native/TypeProperties.h>
-#include "op_plugin/AclOpsInterface.h"
+        binary_ops_include = "#include <ATen/native/BinaryOps.h>\n" if needs_binary_ops else ""
+        includes = f"""#include <ATen/native/TypeProperties.h>
+{binary_ops_include}#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h" """
 
