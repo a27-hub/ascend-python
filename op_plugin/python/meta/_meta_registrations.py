@@ -6475,3 +6475,27 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
+
+
+@impl(m, "npu_multi_head_attention")
+def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, value_weight, attn_mask,
+                                  out_proj_weight, query_bias=None, key_bias=None, value_bias=None,
+                                  out_proj_bias=None, dropout_mask=None, attn_head_num=1, attn_dim_per_head=64,
+                                  src_len=1, tgt_len=1, dropout_prob=0.0, softmax_use_float=False):
+    query_shape = query.size()
+    batch = query_shape[0] // tgt_len
+    weight_col = attn_head_num * attn_dim_per_head
+
+    y = torch.empty([query_shape[0], weight_col], dtype=query.dtype, device='meta')
+    dropout_mask_out = torch.empty([batch * attn_head_num * tgt_len * src_len // 8], dtype=torch.uint8, device='meta')
+    query_res = torch.empty([batch, attn_head_num, tgt_len, attn_dim_per_head], dtype=query.dtype, device='meta')
+    key_res = torch.empty([batch, attn_head_num, src_len, attn_dim_per_head], dtype=query.dtype, device='meta')
+    value_res = torch.empty([batch, attn_head_num, src_len, attn_dim_per_head], dtype=query.dtype, device='meta')
+    if softmax_use_float:
+        attn_scores = torch.empty([batch, attn_head_num, tgt_len, src_len], dtype=torch.float32, device='meta')
+    else:
+        attn_scores = torch.empty([batch, attn_head_num, tgt_len, src_len], dtype=query.dtype, device='meta')
+    attn_res = torch.empty([batch, attn_head_num, tgt_len, src_len], dtype=query.dtype, device='meta')
+    context = torch.empty([query_shape[0], weight_col], dtype=query.dtype, device='meta')
+
+    return (y, dropout_mask_out, query_res, key_res, value_res, attn_scores, attn_res, context)
