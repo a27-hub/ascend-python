@@ -184,11 +184,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
+
     if (Is310P3BoolCheck()) {
  	  	expert_tokens_count_or_cumsum_310p =
  	  	    npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
- 	} else 
-    if (Is310P3BoolCheck()) {
         at::Tensor expert_tokens_before_capacity =
  	        npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
  	    expert_capacity = 0;
@@ -197,8 +196,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
  	    bool expert_tokens_before_capacity_flag = false;
  	    if (bs == 0) {
  	        // return when using empty tensor 
- 	        expert_tokens_count_or_cumsum.zero_();
- 	        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+ 	        expert_tokens_count_or_cumsum_310p.zero_();
+ 	        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum_310p, expert_tokens_before_capacity);
  	    }
  	    EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
  	        x,
@@ -213,7 +212,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
  	        expanded_row_idx,
  	        expert_tokens_count_or_cumsum_310p,
  	        expert_tokens_before_capacity);
- 	    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
+ 	    return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum_310p, expert_tokens_before_capacity);
     }
     if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
         at::Tensor expert_tokens_before_capacity =
