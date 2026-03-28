@@ -6499,3 +6499,30 @@ def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, v
     context = torch.empty([query_shape[0], weight_col], dtype=query.dtype, device='meta')
 
     return (y, dropout_mask_out, query_res, key_res, value_res, attn_scores, attn_res, context)
+
+
+@impl(m, "npu_multi_head_attention_backward")
+def npu_multi_head_attention_backward_meta(query, key, value, query_weight, key_weight, value_weight, out_proj_weight,
+                                          query_bias=None, key_bias=None, value_bias=None, out_proj_bias=None,
+                                          query_res=None, key_res=None, value_res=None, attn_scores=None,
+                                          attn_res=None, context=None, y_grad=None, dropout_mask=None,
+                                          attn_head_num=1, attn_dim_per_head=64, src_len=1, tgt_len=1,
+                                          dropout_prob=0.0, softmax_use_float=False):
+    query_shape = query.size()
+    batch = query_shape[0] // tgt_len
+    weight_col = attn_head_num * attn_dim_per_head
+
+    query_weight_grad = torch.empty([weight_col, weight_col], dtype=query_weight.dtype, device='meta')
+    key_weight_grad = torch.empty([weight_col, weight_col], dtype=key_weight.dtype, device='meta')
+    value_weight_grad = torch.empty([weight_col, weight_col], dtype=value_weight.dtype, device='meta')
+    out_proj_weight_grad = torch.empty([weight_col, weight_col], dtype=out_proj_weight.dtype, device='meta')
+    query_grad = torch.empty([query_shape[0], weight_col], dtype=query.dtype, device='meta')
+    key_grad = torch.empty([batch * src_len, weight_col], dtype=key.dtype, device='meta')
+    value_grad = torch.empty([batch * src_len, weight_col], dtype=value.dtype, device='meta')
+    query_bias_grad = torch.empty([1, weight_col], dtype=query.dtype, device='meta')
+    key_bias_grad = torch.empty([1, weight_col], dtype=key.dtype, device='meta')
+    value_bias_grad = torch.empty([1, weight_col], dtype=value.dtype, device='meta')
+    out_proj_bias_grad = torch.empty([1, weight_col], dtype=query.dtype, device='meta')
+
+    return (query_weight_grad, key_weight_grad, value_weight_grad, out_proj_weight_grad, query_grad,
+            key_grad, value_grad, query_bias_grad, key_bias_grad, value_bias_grad, out_proj_bias_grad)
