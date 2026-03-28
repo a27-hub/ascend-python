@@ -39,10 +39,9 @@ constexpr int64_t PENULTIMATE_DIM = 2;
 std::string real_path(const std::string &path);
 bool checkOwner(string cusLibPath);
 
-inline bool Is310PBoolCheck()
+inline bool Is310P3BoolCheck()
 {
-    bool isSoc310P = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend310P1 &&
-                        c10_npu::GetSocVersion() <= c10_npu::SocVersion::Ascend310P7);
+    bool isSoc310P = c10_npu::GetSocVersion() == c10_npu::SocVersion::Ascend310P3;
     return isSoc310P;
 }
 
