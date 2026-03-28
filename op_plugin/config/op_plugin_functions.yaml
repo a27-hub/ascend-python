@@ -6891,8 +6891,12 @@ custom:
   - func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
     op_api: all_version
     exposed: all_version
-  
+
   -func: npu_mhc_sinkhorn_grad(Tensor x, Tensor norm_out, Tensor sum_out) -> Tensor
+    op_api: all_version
+    exposed: all_version
+
+  -func: npu_mhc_sinkhorn_backward(Tensor x, Tensor norm_out, Tensor sum_out) -> Tensor
     op_api: all_version
     exposed: all_version
 
