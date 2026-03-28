@@ -1249,6 +1249,10 @@ def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
             torch.empty(y_size, dtype=x.dtype, device='meta'),
             torch.empty(y_size, dtype=x.dtype, device='meta'))
 
+@impl(m, "npu_mhc_sinkhorn_grad")
+def npu_mhc_sinkhorn_grad(x, norm_out, sum_out):
+    res_size = tuple(x.shape)
+    return torch.empty(res_size, dtype=x.dtype, device='meta')
 
 @impl(m, "npu_moe_init_routing_v2")
 def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0, x_dtype=None):
