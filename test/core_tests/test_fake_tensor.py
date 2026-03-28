@@ -4174,6 +4174,57 @@ class TestNpuDynamicBlockQuant(TestCase):
         self.assertEqual(actual_scale.shape, fake_scale.shape)
 
 
+@unittest.skip("skip until CANN is updated to support aclnnDynamicMxQuantWithDualAxis")
+class TestNpuDynamicMxQuantWithDualAxis(TestCase):
+    def test_npu_dynamic_mx_quant_with_dual_axis_meta(self):
+        # 2 dim
+        x = torch.rand(3, 4).to("npu").to(torch.float16)
+        actual_y1, actual_scale1, actual_y2, actual_scale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(x, dst_type=291)
+        with FakeTensorMode():
+            fake_x = torch.rand(3, 4).to("npu").to(torch.float16)
+            fake_y1, fake_scale1, fake_y2, fake_scale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(fake_x, dst_type=291)
+        self.assertEqual(actual_y1.shape, fake_y1.shape)
+        self.assertEqual(actual_scale1.shape, fake_scale1.shape)
+        self.assertEqual(actual_y2.shape, fake_y2.shape)
+        self.assertEqual(actual_scale2.shape, fake_scale2.shape)
+
+        # 3 dim
+        x = torch.rand(3, 4, 5).to("npu").to(torch.float16)
+        actual_y1, actual_scale1, actual_y2, actual_scale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(x, dst_type=291)
+        with FakeTensorMode():
+            fake_x = torch.rand(3, 4, 5).to("npu").to(torch.float16)
+            fake_y1, fake_scale1, fake_y2, fake_scale2 = torch_npu.npu_dynamic_mx_quant_with_dual_axis(fake_x, dst_type=291)
+        self.assertEqual(actual_y1.shape, fake_y1.shape)
+        self.assertEqual(actual_scale1.shape, fake_scale1.shape)
+        self.assertEqual(actual_y2.shape, fake_y2.shape)
+        self.assertEqual(actual_scale2.shape, fake_scale2.shape)
+
+
+@unittest.skip("skip until CANN is updated to support aclnnGroupedDynamicBlockQuant")
+class TestNpuGroupedDynamicBlockQuant(TestCase):
+    def test_npu_grouped_dynamic_block_quant_meta(self):
+        # 2 dim
+        x = torch.rand(3, 4).to("npu").to(torch.float16)
+        group_list = torch.rand(1).to("npu").to(torch.int32)
+        actual_y, actual_scale = torch_npu.npu_grouped_dynamic_block_quant(x, group_list, dst_type=291)
+        with FakeTensorMode():
+            fake_x = torch.rand(3, 4).to("npu").to(torch.float16)
+            fake_group_list = torch.rand(1).to("npu").to(torch.int32)
+            fake_y, fake_scale = torch_npu.npu_grouped_dynamic_block_quant(fake_x, fake_group_list, dst_type=291)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_scale.shape, fake_scale.shape)
+
+        # 3 dim
+        x = torch.rand(3, 4, 5).to("npu").to(torch.float16)
+        actual_y, actual_scale = torch_npu.npu_grouped_dynamic_block_quant(x, group_list, dst_type=291)
+        with FakeTensorMode():
+            fake_x = torch.rand(3, 4, 5).to("npu").to(torch.float16)
+            fake_group_list = torch.rand(1).to("npu").to(torch.int32)
+            fake_y, fake_scale = torch_npu.npu_grouped_dynamic_block_quant(fake_x, fake_group_list, dst_type=291)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_scale.shape, fake_scale.shape)
+
+
 class TestQuantGroupedMatmulInplaceAdd(TestCase):
     def test_npu_quant_grouped_matmul_inplace_add_meta_0(self):
         with FakeTensorMode():
