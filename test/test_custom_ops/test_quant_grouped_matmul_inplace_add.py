@@ -104,3 +104,45 @@ class TestGroupedMatmul(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 96, in test_npu_grouped_matmul_quant_float8_e4m3fn
+    custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-02:02:25 (PID:848478, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 848478] 2047-12-19-02:02:25.956.292 AclNN_Parameter_Error(EZ1001): The kDimNum of x1/x2 should be equal, but the actual is 16/256.
+
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_float8_e5m2 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 68, in test_npu_grouped_matmul_quant_float8_e5m2
+    custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-02:02:25 (PID:848478, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 848478] 2047-12-19-02:02:25.958.372 AclNN_Parameter_Error(EZ1001): The kDimNum of x1/x2 should be equal, but the actual is 16/256.
+
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_hifloat8 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 42, in test_npu_grouped_matmul_quant_hifloat8
+    custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-02:02:25 (PID:848478, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 848478] 2047-12-19-02:02:25.960.018 AclNN_Parameter_Error(EZ1001): The kDimNum of x1/x2 should be equal, but the actual is 16/256.
