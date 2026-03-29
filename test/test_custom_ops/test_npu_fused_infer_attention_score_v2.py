@@ -417,9 +417,10 @@ class TestFusedInferAttentionV2(TestCase):
 
     @SupportedDevices(['Ascend950P'])
     def test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_antiquant(self, device="npu"):
-        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
+        query = torch.ones(2, 1, 128, 128, dtype=torch.uint8).npu()
         key = torch.ones((2, 1, 256, 128), dtype=torch.uint8).npu()
         value = torch.full((2, 1, 256, 128), 128, dtype=torch.uint8).npu()
+        query_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
         key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
         value_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
         antiquant_mode = 0
@@ -428,9 +429,10 @@ class TestFusedInferAttentionV2(TestCase):
         softmax_scale = 1 / 0.0078125
         custom_output = torch_npu.npu_fused_infer_attention_score_v2(
             query, key, value, num_query_heads=1, input_layout="BNSD",
+            dequant_scale_query=query_antiquant_scale,
             dequant_scale_key=key_antiquant_scale, dequant_scale_value=value_antiquant_scale,
-            key_quant_mode=antiquant_mode, value_quant_mode=antiquant_mode,
-            key_dtype=torch_npu.float8_e5m2, value_dtype=torch_npu.float8_e5m2,
+            query_quant_mode=antiquant_mode, key_quant_mode=antiquant_mode, value_quant_mode=antiquant_mode,
+            query_dtype=torch_npu.float8_e5m2, key_dtype=torch_npu.float8_e5m2, value_dtype=torch_npu.float8_e5m2,
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
@@ -505,3 +507,4 @@ class TestFusedInferAttentionV2(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
