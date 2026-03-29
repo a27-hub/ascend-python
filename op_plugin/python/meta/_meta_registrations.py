@@ -6501,6 +6501,63 @@ def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, v
     return (y, dropout_mask_out, query_res, key_res, value_res, attn_scores, attn_res, context)
 
 
+@impl(m, "npu_lstm_cell")
+def npu_lstm_cell_meta(input, w_ih, w_hh, h, c, b_ih=None, b_hh=None):
+    batch_size = input.size(0)
+    hidden_size = w_hh.size(1) // 4
+    num_step = 1
+
+    y_output = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    h_out = torch.empty([batch_size, hidden_size], dtype=input.dtype, device='meta')
+    c_out = torch.empty([batch_size, hidden_size], dtype=input.dtype, device='meta')
+    i_output = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    j_output = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    f_output = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    o_output = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    tanhc = torch.empty([num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+
+    return (y_output, h_out, c_out, i_output, j_output, f_output, o_output, tanhc)
+
+
+@impl(m, "npu_lstm_cell_backward")
+def npu_lstm_cell_backward_meta(grad_y=None, grad_h=None, grad_c=None, input=None, w_ih=None, w_hh=None, h=None, c=None,
+                                  y_output=None, h_output=None, c_output=None, i=None, j=None, f=None, o=None, tanhc=None):
+    hidden_size = y_output.size(2)
+
+    grad_input = torch.empty_like(input, dtype=input.dtype, device='meta')
+    grad_wih = torch.empty_like(w_ih, dtype=w_ih.dtype, device='meta')
+    grad_whh = torch.empty_like(w_hh, dtype=w_hh.dtype, device='meta')
+    grad_bias = torch.empty([4 * hidden_size], dtype=input.dtype, device='meta')
+    grad_ht = torch.empty_like(h, dtype=h.dtype, device='meta')
+    grad_ct = torch.empty_like(c, dtype=c.dtype, device='meta')
+
+    return (grad_input, grad_wih, grad_whh, grad_bias, grad_bias, grad_ht, grad_ct)
+
+
+@impl(m, "npu_fused_attention_score_fwd")
+def npu_fused_attention_score_fwd_meta(query_layer, key_layer, value_layer, attention_mask, scale, keep_prob=1.0,
+                                        query_transpose=False, key_transpose=False, bmm_score_transpose_a=False,
+                                        bmm_score_transpose_b=False, value_transpose=False, dx_transpose=False):
+    attention_score = torch.empty([query_layer.size(0) * query_layer.size(2), query_layer.size(1) * query_layer.size(3)],
+                                   dtype=query_layer.dtype, device='meta')
+    softmax_output = torch.empty([query_layer.size(0), query_layer.size(1), query_layer.size(2), query_layer.size(2)],
+                                   dtype=query_layer.dtype, device='meta')
+    drop_mask = torch.empty([softmax_output.numel()], dtype=torch.uint8, device='meta')
+
+    return (attention_score, softmax_output, drop_mask)
+
+
+@impl(m, "npu_fused_attention_score_backward")
+def npu_fused_attention_score_backward_meta(grad_output, softmax_output, query_layer, key_layer, value_layer, drop_mask,
+                                              scale, keep_prob=1.0, query_transpose=False, key_transpose=False,
+                                              value_transpose=False, dx_transpose=False):
+    query_dx = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+    key_dw = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+    value_dw = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+
+    return (query_dx, key_dw, value_dw)
+
+
 @impl(m, "npu_multi_head_attention_backward")
 def npu_multi_head_attention_backward_meta(query, key, value, query_weight, key_weight, value_weight, out_proj_weight,
                                           query_bias=None, key_bias=None, value_bias=None, out_proj_bias=None,
