@@ -170,3 +170,46 @@ def main():
 
 if __name__ == '__main__': 
     main()
+
+
+
+
+
+ERROR: test_npu_fused_infer_attention_score_v2_A5_float8_e4m3fn_bsh_layout (__main__.TestFusedInferAttentionV2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_npu_fused_infer_attention_score_v2.py", line 530, in test_npu_fused_infer_attention_score_v2_A5_float8_e4m3fn_bsh_layout
+    custom_output = torch_npu.npu_fused_infer_attention_score_v2(
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_fused_infer_attention_score_v2_symint:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:464 NPU function error: call aclnnFusedInferAttentionScoreV5 failed, error code is 561002
+[ERROR] 2047-12-19-03:01:45 (PID:2588035, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+EZ9999: Inner Error!
+EZ9999[PID: 2588035] 2047-12-19-03:01:45.016.400 (EZ9999):  The shape of antiquant parameter[128] is not expected. Expect[1] when per-tensor mode.[FUNC:CheckKVAntiQuantParaShapeLegal][FILE:incre_flash_attention_tiling_v2.cpp][LINE:2391]
+        TraceBack (most recent call last):
+       Illegal shape of antiquant scale.[FUNC:CheckAntiQuantParam][FILE:incre_flash_attention_tiling_v2.cpp][LINE:2547]
+       failed in IFA RunBigKernelTiling[FUNC:DoSubOpTiling][FILE:incre_flash_attention_tiling_v2.cpp][LINE:4452]
+       failed in FIA DoSubOpTiling[FUNC:DoOpTiling][FILE:fused_infer_attention_score_tiling_v2.cpp][LINE:1021]
+       FusedInferAttentionScore do tiling failed, ret is -1.
+       Check NnopbaseExecutorDoTiling(executor) failed
+       Check NnopbaseExecutorTilingAndUpdateBinInfo(executor) failed
+       Check NnopbaseExecutorMatchCache(executor) failed
+       Check NnopbaseRunForWorkspace(*executor, workspaceSize) failed
+
+
+======================================================================
+ERROR: test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_antiquant (__main__.TestFusedInferAttentionV2)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_npu_fused_infer_attention_score_v2.py", line 463, in test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_antiquant
+    custom_output = torch_npu.npu_fused_infer_attention_score_v2(
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_fused_infer_attention_score_v2_symint:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:464 NPU function error: call aclnnFusedInferAttentionScoreV5 failed, error code is 161002
+[ERROR] 2047-12-19-03:01:45 (PID:2588035, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 2588035] 2047-12-19-03:01:45.021.618 AclNN_Parameter_Error(EZ1001): Io input dtype or format is not supported, get io input info is query(DT_FLOAT16, ND) key(DT_FLOAT8_E5M2, ND) value(DT_FLOAT8_E5M2, ND) pseShiftOptional(NULL, NULL) attenMaskOptional(NULL, NULL) actualSeqLengthsOptional(NULL, NULL) actualSeqLengthsKvOptional(NULL, NULL) dequantScale1Optional(NULL, NULL) quantScale1Optional(NULL, NULL) dequantScale2Optional(NULL, NULL) quantScale2Optional(NULL, NULL) quantOffset2Optional(NULL, NULL) antiquantScaleOptional(NULL, NULL) antiquantOffsetOptional(NULL, NULL) blockTableOptional(NULL, NULL) queryPaddingSizeOptional(NULL, NULL) kvPaddingSizeOptional(NULL, NULL) keyAntiquantScaleOptional(DT_FLOAT16, ND) keyAntiquantOffsetOptional(NULL, NULL) valueAntiquantScaleOptional(DT_FLOAT16, ND) valueAntiquantOffsetOptional(NULL, NULL) keySharedPrefixOptional(NULL, NULL) valueSharedPrefixOptional(NULL, NULL) actualSharedPrefixLenOptional(NULL, NULL) queryRopeOptional(NULL, NULL) keyRopeOptional(NULL, NULL) keyRopeAntiquantScaleOptional(NULL, NULL) dequantScaleQueryOptional(NULL, 
+        TraceBack (most recent call last):
