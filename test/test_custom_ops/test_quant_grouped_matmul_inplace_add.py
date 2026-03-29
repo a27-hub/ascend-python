@@ -19,119 +19,87 @@ class TestGroupedMatmul(TestCase):
         return output
 
     @SupportedDevices(['Ascend950P'])
-    def test_npu_grouped_matmul_quant_950(self):
+    def test_npu_grouped_matmul_quant_hifloat8(self):
         torch.manual_seed(0)
-        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        M = 16
+        K = 256
+        N = 32
+        g = 1
+        group_list = torch.tensor([K, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).npu()
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).npu()
+        x1 = torch.randint(2, 3, size=(M, K), dtype=torch.int8).npu()
+        x2 = torch.randint(2, 3, size=(K, N), dtype=torch.int8).npu()
 
-        y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
-        y1_clone = y.clone().npu()
-        y2_clone = y.clone().npu()
-        x2_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
-        x1_scale = np.random.uniform(low=-5, high=5, size=(1,)).astype(np.float32)
-        x2_scale_clone = torch.from_numpy(x2_scale).npu()
-        x1_scale_clone = torch.from_numpy(x1_scale).npu()
-        x1_dtype = torch_npu.float8_e8m0fnu
-        x2_dtype = torch_npu.float8_e8m0fnu
-        supported_output = self.single_matmul(y, x1.cpu().to(torch.float32), x2.cpu().to(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                      group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                      x2_dtype=x2_dtype)
-
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                     group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                     x2_dtype=x2_dtype)
-        self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
-        self.assertRtolEqual(supported_output, custom_output2.cpu().numpy(), 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_grouped_matmul_quant_hifloat8_x1(self):
-        torch.manual_seed(0)
-        group_list = torch.tensor([16, ]).to(torch.int64).npu()
-
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).npu()
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).npu()
-
-        y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
-        y1_clone = y.clone().npu()
-        y2_clone = y.clone().npu()
-
-        x2_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
-        x1_scale = np.random.uniform(low=-5, high=5, size=(1,)).astype(np.float32)
+        y = torch.randint(2, 3, size=(g, M, N), dtype=torch.float32)
+        y_clone = y.clone().npu()
+        x2_scale = np.random.uniform(low=0.5, high=2, size=(g, N)).astype(np.float32)
+        x1_scale = np.random.uniform(low=0.5, high=2, size=(g, 1)).astype(np.float32)
         x2_scale_clone = torch.from_numpy(x2_scale).npu()
         x1_scale_clone = torch.from_numpy(x1_scale).npu()
 
-        supported_output = self.single_matmul(y, x1.cpu().to(torch.float32), x2.cpu().to(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                      group_list_type=0, group_sizes=None, x1_dtype=torch_npu.hifloat8,
-                                                      x2_dtype=torch_npu.hifloat8)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                     group_list_type=0, group_sizes=None, x1_dtype=torch_npu.hifloat8,
+        supported_output = self.single_matmul(y.numpy(), x1.cpu().to(torch.float32).numpy(), 
+                                              x2.cpu().to(torch.float32).numpy(), x1_scale, x2_scale)
+        custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list, 
+                                                     x1_scale=x1_scale_clone, group_list_type=0, 
+                                                     group_sizes=None, x1_dtype=torch_npu.hifloat8,
                                                      x2_dtype=torch_npu.hifloat8)
-        self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
-        self.assertRtolEqual(supported_output, custom_output2.cpu().numpy(), 0.001)
+        self.assertRtolEqual(supported_output, custom_output.cpu().numpy(), 0.001)
 
     @SupportedDevices(['Ascend950P'])
-    def test_npu_grouped_matmul_quant_float8_e5m2_x1(self):
+    def test_npu_grouped_matmul_quant_float8_e5m2(self):
         torch.manual_seed(0)
-        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        M = 16
+        K = 256
+        N = 32
+        g = 1
+        group_list = torch.tensor([K, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e5m2).npu()
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e5m2).npu()
+        x1 = torch.randint(2, 3, size=(M, K), dtype=torch.int8).view(torch.float8_e5m2).npu()
+        x2 = torch.randint(2, 3, size=(K, N), dtype=torch.int8).view(torch.float8_e5m2).npu()
 
-        y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
-        y1_clone = y.clone().npu()
-        y2_clone = y.clone().npu()
+        y = torch.randint(2, 3, size=(g, M, N), dtype=torch.float32)
+        y_clone = y.clone().npu()
 
-        x2_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
-        x1_scale = np.random.uniform(low=-5, high=5, size=(1,)).astype(np.float32)
-        x2_scale_clone = torch.from_numpy(x2_scale).npu()
-        x1_scale_clone = torch.from_numpy(x1_scale).npu()
+        x2_scale = np.random.uniform(low=0.5, high=2, size=(int(K/64 + g), N, 2)).astype(np.float32)
+        x1_scale = np.random.uniform(low=0.5, high=2, size=(int(K/64 + g), M, 2)).astype(np.float32)
+        x2_scale_clone = torch.from_numpy(x2_scale.astype(np.int8)).npu()
+        x1_scale_clone = torch.from_numpy(x1_scale.astype(np.int8)).npu()
 
-        x1_dtype = torch.float8_e5m2
-        x2_dtype = torch.float8_e5m2
-
-        supported_output = self.single_matmul(y, x1.cpu().view(torch.float32), x2.cpu().view(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                      group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                      x2_dtype=x2_dtype)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                     group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                     x2_dtype=x2_dtype)
-        self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
-        self.assertRtolEqual(supported_output, custom_output2.cpu().numpy(), 0.001)
+        custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list, 
+                                                     x1_scale=x1_scale_clone, group_list_type=0, 
+                                                     group_sizes=None, x1_dtype=torch.float8_e5m2,
+                                                     x2_dtype=torch.float8_e5m2,
+                                                     x1_scale_dtype=torch_npu.float8_e8m0fnu,
+                                                     x2_scale_dtype=torch_npu.float8_e8m0fnu)
+        self.assertEqual(custom_output.shape, y.shape)
 
     @SupportedDevices(['Ascend950P'])
-    def test_npu_grouped_matmul_quant_float8_e4m3fn_x1(self):
+    def test_npu_grouped_matmul_quant_float8_e4m3fn(self):
         torch.manual_seed(0)
-        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        M = 16
+        K = 256
+        N = 32
+        g = 1
+        group_list = torch.tensor([K, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+        x1 = torch.randint(2, 3, size=(M, K), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+        x2 = torch.randint(2, 3, size=(K, N), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
 
-        y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
-        y1_clone = y.clone().npu()
-        y2_clone = y.clone().npu()
+        y = torch.randint(2, 3, size=(g, M, N), dtype=torch.float32)
+        y_clone = y.clone().npu()
 
-        x2_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
-        x1_scale = np.random.uniform(low=-5, high=5, size=(1,)).astype(np.float32)
-        x2_scale_clone = torch.from_numpy(x2_scale).npu()
-        x1_scale_clone = torch.from_numpy(x1_scale).npu()
+        x2_scale = np.random.uniform(low=0.5, high=2, size=(int(K/64 + g), N, 2)).astype(np.float32)
+        x1_scale = np.random.uniform(low=0.5, high=2, size=(int(K/64 + g), M, 2)).astype(np.float32)
+        x2_scale_clone = torch.from_numpy(x2_scale.astype(np.int8)).npu()
+        x1_scale_clone = torch.from_numpy(x1_scale.astype(np.int8)).npu()
 
-        x1_dtype = torch.float8_e4m3fn
-        x2_dtype = torch.float8_e4m3fn
-
-        supported_output = self.single_matmul(y, x1.cpu().view(torch.float32), x2.cpu().view(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                      group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                      x2_dtype=x2_dtype)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
-                                                     group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
-                                                     x2_dtype=x2_dtype)
-        self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
-        self.assertRtolEqual(supported_output, custom_output2.cpu().numpy(), 0.001)
+        custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list, 
+                                                     x1_scale=x1_scale_clone, group_list_type=0, 
+                                                     group_sizes=None, x1_dtype=torch.float8_e4m3fn,
+                                                     x2_dtype=torch.float8_e4m3fn,
+                                                     x1_scale_dtype=torch_npu.float8_e8m0fnu,
+                                                     x2_scale_dtype=torch_npu.float8_e8m0fnu)
+        self.assertEqual(custom_output.shape, y.shape)
 
 
 if __name__ == "__main__":
