@@ -321,6 +321,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         }
         int64_t bs = mm_x_value.size(0);
         int64_t n2 = mm_weight_value.size(1);
+        TORCH_CHECK(mm_x_scale.has_value(),  "The input mm_x_scale must be provided for mx quant mode.",
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(mm_weight_scale.has_value(), "The input mm_weight_scale must be provided for mx quant mode.",
+            OPS_ERROR(ErrCode::PARAM));
         // mm_x_scale
         if (mm_x_scale.has_value()) {
             const at::Tensor &mm_x_scale_val = mm_x_scale.value();
