@@ -104,3 +104,59 @@ class TestGroupedMatmul(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_float8_e4m3fn (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 96, in test_npu_grouped_matmul_quant_float8_e4m3fn
+    custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-02:18:13 (PID:1301146, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 1301146] 2047-12-19-02:18:13.702.290 AclNN_Parameter_Error(EZ1001): The transposition of scale1Optional/x1 should be equal, but actual transpositions are false/true in mx case.
+        TraceBack (most recent call last):
+        CheckGroupedMatmulMxScaleTranspose failed
+
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_float8_e5m2 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 68, in test_npu_grouped_matmul_quant_float8_e5m2
+    custom_output = torch_npu.npu_add_quant_gmm_(y_clone, x1, x2, x2_scale_clone, group_list,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-02:18:13 (PID:1301146, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 1301146] 2047-12-19-02:18:13.704.686 AclNN_Parameter_Error(EZ1001): The transposition of scale1Optional/x1 should be equal, but actual transpositions are false/true in mx case.
+        TraceBack (most recent call last):
+        CheckGroupedMatmulMxScaleTranspose failed
+
+
+======================================================================
+FAIL: test_npu_grouped_matmul_quant_hifloat8 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 46, in test_npu_grouped_matmul_quant_hifloat8
+    self.assertRtolEqual(supported_output, custom_output.cpu().numpy(), 0.001)
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/testcase.py", line 227, in assertRtolEqual
+    _assertRtolEqual(x, y, prec, prec16, message)
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/testcase.py", line 223, in _assertRtolEqual
+    compare_res(prec, minimum)
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/testcase.py", line 175, in compare_res
+    self.fail("result error")
+AssertionError: result error
+
+----------------------------------------------------------------------
+Ran 3 tests in 16.451s
+
+FAILED (failures=1, errors=2)
