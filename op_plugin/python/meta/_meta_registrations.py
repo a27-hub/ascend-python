@@ -1303,7 +1303,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
         lambda: "row_idx_type is None or invalid. must be in [0, 1]"
     )
-
+    ALIGN_BASE = 64
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
@@ -1317,12 +1317,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
-                    x.size(1) / 64 == scale.size(1),
-                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                    ((x.size(1) + ALIGN_BASE - 1) // ALIGN_BASE) == scale.size(1),
+                    lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
                     2 == scale.size(2),
-                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                    lambda: "the third dim of scale should be the 2" + ops_error(ErrCode.VALUE),
                 )
             else:
                 torch._check(
@@ -1405,6 +1405,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+            scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode in [0, 6, 7]:
