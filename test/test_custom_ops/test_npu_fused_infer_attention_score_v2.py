@@ -394,9 +394,9 @@ class TestFusedInferAttentionV2(TestCase):
         res = custom_output[0].equal(golden_output)
         self.assertRtolEqual(res, True)
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_fused_infer_attention_score_v2_hifloat8_antiquant(self, device="npu"):
-        query = torch.ones(2, 1, 1, 128, dtype=torch.float16).npu()
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_hifloat8_antiquant(self, device="npu"):
+        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
         key = torch.ones((2, 1, 256, 128), dtype=torch.uint8).npu()
         value = torch.full((2, 1, 256, 128), 128, dtype=torch.uint8).npu()
         key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
@@ -413,11 +413,11 @@ class TestFusedInferAttentionV2(TestCase):
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 1, 128]))
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_fused_infer_attention_score_v2_float8_e5m2_antiquant(self, device="npu"):
-        query = torch.ones(2, 1, 1, 128, dtype=torch.float16).npu()
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_antiquant(self, device="npu"):
+        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
         key = torch.ones((2, 1, 256, 128), dtype=torch.uint8).npu()
         value = torch.full((2, 1, 256, 128), 128, dtype=torch.uint8).npu()
         key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
@@ -434,11 +434,11 @@ class TestFusedInferAttentionV2(TestCase):
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 1, 128]))
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_fused_infer_attention_score_v2_float8_e4m3fn_antiquant(self, device="npu"):
-        query = torch.ones(2, 1, 1, 128, dtype=torch.float16).npu()
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_float8_e4m3fn_antiquant(self, device="npu"):
+        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
         key = torch.ones((2, 1, 256, 128), dtype=torch.uint8).npu()
         value = torch.full((2, 1, 256, 128), 128, dtype=torch.uint8).npu()
         key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
@@ -455,17 +455,17 @@ class TestFusedInferAttentionV2(TestCase):
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 1, 128]))
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_fused_infer_attention_score_v2_hifloat8_page_attention(self, device="npu"):
-        query = torch.ones(2, 1, 1, 128, dtype=torch.float16).npu()
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_hifloat8_page_attention(self, device="npu"):
+        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
         key = torch.ones((32, 1, 128, 128), dtype=torch.uint8).npu()
         value = torch.full((32, 1, 128, 128), 128, dtype=torch.uint8).npu()
         block_table = torch.ones((2, 16), dtype=torch.int32).npu()
         key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
         value_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
-        actseqlen = [1]
+        actseqlen = [128]
         actseqlenkv = [2048]
         antiquant_mode = 0
 
@@ -480,15 +480,15 @@ class TestFusedInferAttentionV2(TestCase):
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 1, 128]))
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
-    @SupportedDevices(['Ascend950'])
-    def test_npu_fused_infer_attention_score_v2_float8_e4m3fn_bsh_layout(self, device="npu"):
-        query = torch.ones(2, 1, 128, dtype=torch.float16).npu()
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_float8_e4m3fn_bsh_layout(self, device="npu"):
+        query = torch.ones(2, 128, 128, dtype=torch.float16).npu()
         key = torch.ones((2, 256, 128), dtype=torch.uint8).npu()
         value = torch.full((2, 256, 128), 128, dtype=torch.uint8).npu()
-        key_antiquant_scale = torch.ones((128,), dtype=torch.float16).npu()
-        value_antiquant_scale = torch.ones((128,), dtype=torch.float16).npu()
+        key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
+        value_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
         antiquant_mode = 0
 
         return_softmax_lse = False
@@ -501,7 +501,7 @@ class TestFusedInferAttentionV2(TestCase):
             softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
             return_softmax_lse=return_softmax_lse)
 
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128]))
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 128, 128]))
 
 if __name__ == "__main__":
     run_tests()
