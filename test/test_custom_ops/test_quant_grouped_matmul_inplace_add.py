@@ -136,3 +136,56 @@ class TestGroupedMatmul(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+
+ERROR: test_npu_grouped_matmul_quant_950 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 39, in test_npu_grouped_matmul_quant_950
+    custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1.t(), x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-01:18:31 (PID:3700729, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 3700729] 2047-12-19-01:18:31.564.897 AclNN_Parameter_Error(EZ1001): Format of x2 should be ND, current format is invalid.
+
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_float8_e4m3fn_x1 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 126, in test_npu_grouped_matmul_quant_float8_e4m3fn_x1
+    supported_output = self.single_matmul(y, x1.t().cpu().view(torch.float32), x2.cpu().view(torch.float32), x1_scale, x2_scale)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 16, in single_matmul
+    output = np.matmul(x1, x2)
+ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, with gufunc signature (n?,k),(k,m?)->(n?,m?) (size 256 is different from 64)
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_float8_e5m2_x1 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 96, in test_npu_grouped_matmul_quant_float8_e5m2_x1
+    supported_output = self.single_matmul(y, x1.t().cpu().view(torch.float32), x2.cpu().view(torch.float32), x1_scale, x2_scale)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 16, in single_matmul
+    output = np.matmul(x1, x2)
+ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, with gufunc signature (n?,k),(k,m?)->(n?,m?) (size 256 is different from 64)
+
+======================================================================
+ERROR: test_npu_grouped_matmul_quant_hifloat8_x1 (__main__.TestGroupedMatmul)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/test/test_custom_ops/test_quant_grouped_matmul_inplace_add.py", line 67, in test_npu_grouped_matmul_quant_hifloat8_x1
+    custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1.t(), x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+  File "/root/miniconda3/envs/testing/lib/python3.10/site-packages/torch/_ops.py", line 1158, in __call__
+    return self._op(*args, **(kwargs or {}))
+RuntimeError: npu_add_quant_gmm_:build/CMakeFiles/torch_npu.dir/compiler_depend.ts:61 NPU function error: call aclnnQuantGroupedMatmulInplaceAdd failed, error code is 161002
+[ERROR] 2047-12-19-01:18:31 (PID:3700729, Device:0, RankID:-1) ERR00100 PTA call acl api failed.
+[PID: 3700729] 2047-12-19-01:18:31.570.665 AclNN_Parameter_Error(EZ1001): Format of x2 should be ND, current format is invalid.
