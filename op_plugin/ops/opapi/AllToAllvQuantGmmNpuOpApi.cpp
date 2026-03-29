@@ -249,6 +249,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         TORCH_CHECK(mm_weight_quant_mode.has_value(),
             "The input mm_weight_quant_mode must be provided when mm_weight is present.",
             OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(mm_x_scale.has_value(),  "The input mm_x_scale must be provided  when mm_x is present.",
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(mm_weight_scale.has_value(), "The input mm_weight_scale must be provided when mm_weight is present.",
+            OPS_ERROR(ErrCode::PARAM));
         mm_x_quant_mode_value = mm_x_quant_mode.value();
         mm_weight_quant_mode_value = mm_weight_quant_mode.value();
         const at::Tensor &mm_x_value = mm_x.value();
@@ -321,10 +325,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         }
         int64_t bs = mm_x_value.size(0);
         int64_t n2 = mm_weight_value.size(1);
-        TORCH_CHECK(mm_x_scale.has_value(),  "The input mm_x_scale must be provided for mx quant mode.",
-            OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(mm_weight_scale.has_value(), "The input mm_weight_scale must be provided for mx quant mode.",
-            OPS_ERROR(ErrCode::PARAM));
         // mm_x_scale
         if (mm_x_scale.has_value()) {
             const at::Tensor &mm_x_scale_val = mm_x_scale.value();
