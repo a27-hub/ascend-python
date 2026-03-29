@@ -54,11 +54,8 @@ class TestGroupedMatmul(TestCase):
         torch.manual_seed(0)
         group_list = torch.tensor([16, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.float32).to(torch.uint8)
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.float32).to(torch.uint8)
-
-        x1_clone = x1.clone().npu()
-        x2_clone = x2.clone().npu()
+        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).npu()
+        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).npu()
 
         y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
         y1_clone = y.clone().npu()
@@ -70,10 +67,10 @@ class TestGroupedMatmul(TestCase):
         x1_scale_clone = torch.from_numpy(x1_scale).npu()
 
         supported_output = self.single_matmul(y, x1.to(torch.float32), x2.to(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                       group_list_type=0, group_sizes=None, x1_dtype=torch_npu.hifloat8,
                                                       x2_dtype=torch_npu.hifloat8)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                      group_list_type=0, group_sizes=None, x1_dtype=torch_npu.hifloat8,
                                                      x2_dtype=torch_npu.hifloat8)
         self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
@@ -84,11 +81,8 @@ class TestGroupedMatmul(TestCase):
         torch.manual_seed(0)
         group_list = torch.tensor([16, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.float32).to(torch.float8_e5m2)
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.float32).to(torch.float8_e5m2)
-
-        x1_clone = x1.clone().npu()
-        x2_clone = x2.clone().npu()
+        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e5m2).npu()
+        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e5m2).npu()
 
         y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
         y1_clone = y.clone().npu()
@@ -102,11 +96,11 @@ class TestGroupedMatmul(TestCase):
         x1_dtype = torch.float8_e5m2
         x2_dtype = torch.float8_e5m2
 
-        supported_output = self.single_matmul(y, x1.to(torch.float32), x2.to(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        supported_output = self.single_matmul(y, x1.view(torch.float32), x2.view(torch.float32), x1_scale, x2_scale)
+        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                       group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
                                                       x2_dtype=x2_dtype)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                      group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
                                                      x2_dtype=x2_dtype)
         self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
@@ -117,11 +111,8 @@ class TestGroupedMatmul(TestCase):
         torch.manual_seed(0)
         group_list = torch.tensor([16, ]).to(torch.int64).npu()
 
-        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.float32).to(torch.float8_e4m3fn)
-        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.float32).to(torch.float8_e4m3fn)
-
-        x1_clone = x1.clone().npu()
-        x2_clone = x2.clone().npu()
+        x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
+        x2 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e4m3fn).npu()
 
         y = torch.randint(2, 3, size=(1, 16, 32), dtype=torch.float32)
         y1_clone = y.clone().npu()
@@ -135,11 +126,11 @@ class TestGroupedMatmul(TestCase):
         x1_dtype = torch.float8_e4m3fn
         x2_dtype = torch.float8_e4m3fn
 
-        supported_output = self.single_matmul(y, x1.to(torch.float32), x2.to(torch.float32), x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        supported_output = self.single_matmul(y, x1.view(torch.float32), x2.view(torch.float32), x1_scale, x2_scale)
+        custom_output1 = torch_npu.npu_add_quant_gmm_(y1_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                       group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
                                                       x2_dtype=x2_dtype)
-        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1_clone, x2_clone, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
+        custom_output2 = torch_npu.npu_add_quant_gmm(y2_clone, x1, x2, x2_scale_clone, group_list, x1_scale=x1_scale_clone,
                                                      group_list_type=0, group_sizes=None, x1_dtype=x1_dtype,
                                                      x2_dtype=x2_dtype)
         self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
