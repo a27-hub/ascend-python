@@ -415,23 +415,6 @@ class TestFusedInferAttentionV2(TestCase):
 
         self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_outdtype(self, device="npu"):
-        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
-        key = torch.ones((2, 1, 256, 128), dtype=torch.float16).npu()
-        value = torch.full((2, 1, 256, 128), 128, dtype=torch.float16).npu()
-        quant_scale_out = torch.ones((1), dtype=torch.float32).npu()
-        out_dtype = torch.float8_e5m2
-
-        return_softmax_lse = False
-        softmax_scale = 1 / 0.0078125
-        custom_output = torch_npu.npu_fused_infer_attention_score_v2(
-            query, key, value, num_query_heads=1, input_layout="BNSD",
-            quant_scale_out=quant_scale_out, out_dtype=out_dtype,
-            softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
-            return_softmax_lse=return_softmax_lse)
-
-        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
     @SupportedDevices(['Ascend950P'])
     def test_npu_fused_infer_attention_score_v2_A5_float8_e4m3fn_antiquant(self, device="npu"):
@@ -499,6 +482,27 @@ class TestFusedInferAttentionV2(TestCase):
             return_softmax_lse=return_softmax_lse)
 
         self.assertEqual(custom_output[0].shape, torch.Size([2, 128, 128]))
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_fused_infer_attention_score_v2_A5_float8_e5m2_antiquant(self, device="npu"):
+        query = torch.ones(2, 1, 128, 128, dtype=torch.float16).npu()
+        key = torch.ones((2, 1, 256, 128), dtype=torch.uint8).npu()
+        value = torch.full((2, 1, 256, 128), 128, dtype=torch.uint8).npu()
+        key_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
+        value_antiquant_scale = torch.ones((1, 128), dtype=torch.float16).npu()
+        antiquant_mode = 0
+
+        return_softmax_lse = False
+        softmax_scale = 1 / 0.0078125
+        custom_output = torch_npu.npu_fused_infer_attention_score_v2(
+            query, key, value, num_query_heads=1, input_layout="BNSD",
+            dequant_scale_key=key_antiquant_scale, dequant_scale_value=value_antiquant_scale,
+            key_quant_mode=antiquant_mode, value_quant_mode=antiquant_mode,
+            key_dtype=torch_npu.float8_e5m2, value_dtype=torch_npu.float8_e5m2,
+            softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535,
+            return_softmax_lse=return_softmax_lse)
+
+        self.assertEqual(custom_output[0].shape, torch.Size([2, 1, 128, 128]))
 
 if __name__ == "__main__":
     run_tests()
