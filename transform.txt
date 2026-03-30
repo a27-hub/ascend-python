@@ -1,71 +1,181 @@
-	x : Tensor类型，即矩阵乘中的x。数据格式支持ND，支持带transpose的非连续的Tensor，支持输入维度为两维(M, K) 。
-−	Atlas 推理系列加速卡产品：数据类型支持float16。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float16、bfloat16。
-−	Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持float16、bfloat16。
-−	PR/Ascend 950DT：数据类型支持float16、bfloat16。
-	weight：Tensor类型，即矩阵乘中的weight。支持带transpose的非连续的Tensor，支持输入维度为两维(K, N)，维度需与x保持一致。当数据格式为ND时，perchannel场景下为提高性能推荐使用transpose后的weight输入。
-−	Atlas 推理系列加速卡产品：数据类型支持int8。数据格式支持ND、FRACTAL_NZ，其中FRACTAL_NZ格式只在“图模式”有效，需依赖接口torch_npu.npu_format_cast完成ND到FRACTAL_NZ的转换，可参考调用示例。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持int8、int32（通过int32承载int4的输入，可参考5.4 torch_npu.npu_convert_weight_to_int4pack（910D，dtype特殊）调用示例）。数据格式支持ND、FRACTAL_NZ。
-−	Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持int8、int32（通过int32承载int4的输入，可参考5.4 torch_npu.npu_convert_weight_to_int4pack（910D，dtype特殊）调用示例）。数据格式支持ND、FRACTAL_NZ。
-−	PR/Ascend 950DT：数据类型支持int8、int32（通过int32承载int4的输入，可参考5.4 torch_npu.npu_convert_weight_to_int4pack（910D，dtype特殊）调用示例）、float32（通过float32承载float4_e2m1的输入，可参考5.4 torch_npu.npu_convert_weight_to_int4pack（910D，dtype特殊）调用示例）、float8_e4m3fn、hifloat8。其中float8_e4m3fn、hifloat8数据类型只支持perchannel场景。数据类型为int8、float8_e4m3、hifloat8、float32、float4_e2m1时，K、N不要求32字节对齐。数据格式支持ND、FRACTAL_NZ。FRACTAL_NZ场景支持int32和float32两种数据类型。
-	对于不同的伪量化算法模式，weight的数据格式为FRACTAL_NZ仅在如下场景下支持：
-□	perchannel模式：weight的数据类型为int4/int32，weight非转置，x非转置。
-□	pergroup模式：weight的数据类型为int4/int32/float4_e2m1/float，weight非转置，x非转置，。
-□	mx模式：weight的数据类型为float4_e2m1/float，weight非转置，x非转置，。
-	antiquant_scale：Tensor类型，反量化的scale，用于weight矩阵反量化，数据格式支持ND。支持带transpose的非连续的Tensor。antiquant_scale支持的shape与量化方式相关：
-−	pertensor模式：输入shape为(1,)或(1, 1)。
-−	perchannel模式：输入shape为(1, N)或(N,)。
-−	pergroup模式：输入shape为(⌈K/antiquant_group_size⌉, N)，其中antiquant_group_size表示k被分组的每组大小。
-−	mx模式：输入shape为(⌈K/antiquant_group_size⌉, N)，其中antiquant_group_size表示k被分组的每组大小，仅支持32。
-antiquant_scale支持的dtype如下：
-−	Atlas 推理系列加速卡产品：数据类型支持float16，其数据类型需与x保持一致。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float16、bfloat16、int64。
-	若输入为float16、bfloat16，其数据类型需与x保持一致。
-	若输入为int64，x数据类型必须为float16且不带transpose输入，同时weight数据类型必须为int8、数据格式为ND、带transpose输入，可参考调用示例。此时只支持perchannel场景，M范围为[1, 96]，且K和N要求64对齐。
-−	Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持float16、bfloat16、int64。
-	若输入为float16、bfloat16，其数据类型需与x保持一致。
-	若输入为int64，x数据类型必须为float16且不带transpose输入，同时weight数据类型必须为int8、数据格式为ND、带transpose输入，可参考调用示例。此时只支持perchannel场景，M范围为[1, 96]，且K和N要求64对齐。
-−	PR/Ascend 950DT：数据类型支持float16、bfloat16，其数据类型需与x保持一致。特别地，在mx场景，要求antiquant_scale类型为uint8，用以承载float8_e8m0fnu数据，此时x类型为float16或bfloat16。
-	antiquant_offset：Tensor类型，反量化的offset，用于weight矩阵反量化。可选参数，默认值为None，数据格式支持ND，支持带transpose的非连续的Tensor。
-−	Atlas 推理系列加速卡产品：数据类型支持float16，其数据类型需与antiquant_scale保持一致。pergroup场景shape要求为(⌈K/antiquant_group_size⌉, N)。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float16、bfloat16、int32。pergroup场景shape要求为(⌈K/antiquant_group_size⌉, N)。
-	若输入为float16、bfloat16，其数据类型需与antiquant_scale保持一致。
-	若输入为int32，antiquant_scale的数据类型必须为int64。
-−	Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持float16、bfloat16、int32。pergroup场景shape要求为(ceil_div(K, antiquant_group_size), N)。
-	若输入为float16、bfloat16，其数据类型需与antiquant_scale保持一致。
-	若输入为int32，antiquant_scale的数据类型必须为int64。
-−	PR/Ascend 950DT：数据类型支持float16、bfloat16，其数据类型需与x保持一致。特别地，在mx场景要求antiquant_offset为None。
-	quant_scale：Tensor类型，量化的scale，用于输出矩阵的量化，可选参数，默认值为None，仅在weight格式为ND时支持。数据类型支持float32、int64，数据格式支持ND，支持输入维度为两维(1, N)或一维(N, )、(1, )。当antiquant_scale的数据类型为int64时，此参数必须为空。
-−	Atlas 推理系列加速卡产品：暂不支持此参数。
-−	PR/Ascend 950DT：暂不支持此参数。
-	quant_offset: Tensor类型，量化的offset，用于输出矩阵的量化，可选参数，默认值为None，仅在weight格式为ND时支持。数据类型支持float32，数据格式支持ND，支持输入维度为两维(1, N)或一维(N, )、(1, )。当antiquant_scale的数据类型为int64时，此参数必须为空。
-−	Atlas 推理系列加速卡产品：暂不支持此参数。
-−	PR/Ascend 950DT：暂不支持此参数。
-	bias：Tensor类型，即矩阵乘中的bias，可选参数，默认值为None，数据格式支持ND，不支持非连续的Tensor，支持输入维度为两维(1, N)或一维(N, )。
-−	Atlas 推理系列加速卡产品：数据类型支持float16。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float16、float32。当x数据类型为bfloat16时，bias需为float32；当x数据类型为float16，bias需为float16。
-−	Atlas A3 训练系列产品/Atlas A3 推理系列产品：数据类型支持float16、float32。当x数据类型为bfloat16时，bias需为float32；当x数据类型为float16时，bias需为float16。
-−	PR/Ascend 950DT：数据类型支持float16、float32、bfloat16。当x的数据类型为bfloat16时，bias可为float32、bfloat16；当x数据类型为float16时，bias需为float16。当x的数据类型为bfloat16时，同时weight的数据类型为float8_e4m3、hifloat8、float4_e2m1、float8_e5m2时，bias需为bfloat16
-	antiquant_group_size：int类型，用于控制pergroup场景下group大小，其他量化场景不生效。可选参数。默认值为0，pergroup场景下要求传入值的范围为[32, K-1]且必须是32的倍数。特别地，在mx场景，要求antiquant_group_size取值为32。
-	inner_precise:  int类型，计算模式选择，可选参数，默认为0。0表示高精度模式，1表示高性能模式，可能会影响精度。当weight以int32类型且以FRACTAL_NZ格式输入，M≤16的pergroup场景下可以设置为1，提升性能。其他场景不建议使用高性能模式。
-−	PR/Ascend 950DT：不生效。
-	weight_dtype: int类型，可选参数，默认值为None，表示torch_npu对weight的扩展数据类型，仅支持torch_npu.hifloat8。
-输出说明
-y：输出为Tensor类型，代表计算结果。当输入存在quant_scale时输出数据类型为int8，当输入不存在quant_scale时输出数据类型和输入x一致。
-约束说明
-	该接口支持推理场景下使用。
-	该接口支持TorchAir图模式。
-	当输入weight为FRACTAL_NZ格式时暂不支持单算子调用，只支持图模式调用。
-	x和weight后两维必须为(M, K)和(K, N)格式，K、N的范围为[1, 2^31-1]；在x为非转置时，M的范围为[1, 2^31-1]，在x为转置时，M的范围为[1, 2^31-1]。
-	不支持空Tensor输入。
-	如果antiquant_offset存在，antiquant_scale和antiquant_offset的输入shape要保持一致。
-	quant_scale和quant_offset的输入shape要保持一致，且quant_offset不能独立于quant_scale存在。
-	如需传入int64数据类型的quant_scale，需要提前调用torch_npu.npu_trans_quant_param接口将数据类型为float32的quant_scale和quant_offset转换为数据类型为int64的quant_scale输入，可参考调用示例。
-	当输入weight为FRACTAL_NZ格式且类型为int32时，perchannel场景需满足weight为转置输入；pergroup场景需满足x为转置输入，weight为非转置输入，antiquant_group_size为64或128，K为antiquant_group_size对齐，N为64对齐。
-	当输入weight为FRACTAL_NZ格式且类型为int32时，pergroup场景需满足x和weight为非转置输入，antiquant_group_size要求传入值的范围为[32, K-1]且必须是32的倍数。
-	当输入weight类型为int8、float8_e4m3、hifloat8、float4_e2m1、float32时，K、N不要求32字节对齐。
-	不支持输入weight shape为(1, 8)且类型为int4，同时weight带有transpose的场景，否则会报错x矩阵和weight矩阵K轴不匹配，该场景建议走非量化算子获取更高精度和性能。
-	当antiquant_scale为float16、bfloat16，单算子模式要求x和antiquant_scale数据类型一致，图模式允许不一致，如果出现不一致，接口内部会自行判断是否转换成一致的数据类型。用户可dump图信息查看实际参与计算的数据类型。
-	PR/Ascend 950DT：当x是float16、bfloat16，同时weight是float32、float4_e2m1、float8_e4m3fn、hifloat8时，不支持antiquant_offset参数。
-	PR/Ascend 950DT：当x是float16、bfloat16，同时weight是float32时，此时为mx场景，要求antiquant_scale类型为uint8，antiquant_offset必须为None，antiquant_group_size为32。可参考5.4 torch_npu.npu_convert_weight_to_int4pack（910D，dtype特殊）调用示例。
-	PR/Ascend 950DT：当weight数据类型为hifloat8，使用8bits数据类型进行承载，weight_dtype传入hifloat8。
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_hifloat8_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.float16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
+        bias = torch.randn((1, 256), dtype=torch.float16).npu()
+        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_hif8_clone = weight_hif8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_hif8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.hifloat8)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.float16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
+        bias = torch.randn((1, 256), dtype=torch.float16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.float8_e4m3fn)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e5m2_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.float16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
+        bias = torch.randn((1, 256), dtype=torch.float16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch.float8_e5m2)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_hifloat8_bfloat16_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_hif8_clone = weight_hif8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_hif8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.hifloat8)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_bfloat16_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.float8_e4m3fn)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e5m2_bfloat16_with_bias(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+        bias_clone = bias.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
+        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch.float8_e5m2)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e5m2_antiquant_scale(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.float16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
+        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch.float8_e5m2)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_hifloat8_bfloat16_x(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_hif8_clone = weight_hif8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
+        custom_output = self.custom_op_exec(x_clone, weight_hif8_clone, antiquant_scale_clone, None, torch_npu.hifloat8)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_bfloat16_x(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
+        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch_npu.float8_e4m3fn)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_weight_quant_batchmatmul_float8_e5m2_bfloat16_x(self, device="npu"):
+        torch.manual_seed(0)
+        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
+        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
+        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
+        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
+
+        x_clone = x.clone()
+        weight_clone = weight.clone()
+        weight_f8_clone = weight_f8.clone()
+        antiquant_scale_clone = antiquant_scale.clone()
+
+        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
+        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch.float8_e5m2)
+        self.assertRtolEqual(supported_output, custom_output, 0.001)
