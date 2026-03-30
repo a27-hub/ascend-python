@@ -21,6 +21,11 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+inline void alpha_check_npu_res(const at::ScalarType self_dtype, at::Scalar other, at::Scalar alpha) {
+    TORCH_CHECK(!alpha.isBoolean() || dtype == at::ScalarType::Bool,
+                "Boolean alpha only supported for Boolean results." + OPS_ERROR(ErrCode::TYPE));
+}
+
 inline void alpha_check_npu_tensor(const at::ScalarType self_dtype, const at::ScalarType other_dtype, at::Scalar alpha)
 {
     TORCH_CHECK(isFloatingType(self_dtype) || isComplexType(self_dtype) ||
@@ -84,6 +89,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
+    alpha_check_npu_res(result_type, alpha);
     at::Tensor self_converted = self_tensor_to_device(self, result_type, result.device());
     npu_preparation::check_tensor({self}, result, result, output_size);
     npu_preparation::check_memory({self, other}, {result});
@@ -100,6 +106,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
     at::Tensor output_tensor = sub_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
+    alpha_check_npu_res(result_type, alpha);
     at::Tensor self_converted = self_tensor_to_device(self, result_type, output_tensor.device());
     auto result = npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(result_type));
     sub_out_npu_nocheck(self_converted, other, alpha, result);
@@ -113,6 +120,7 @@ at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     auto output_size = op_infer::input_same_output_size(self);
     at::ScalarType result_type = at::native::result_type(self, other);
+    alpha_check_npu_res(result_type, alpha);
     auto result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(result_type));
     EXEC_NPU_CMD(aclnnSubs, self, other, alpha, result);
     return result;

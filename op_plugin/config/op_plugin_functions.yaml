@@ -4351,9 +4351,7 @@ official:
     op_api: all_version
     gen_opapi:
       checks:
-        - type: predefined
-          name: sub_check
-          args: [self, other]
+        - at::native::sub_check(self, other)
       out:
         size: self
         dtype: at::native::result_type(self, other)
@@ -4364,9 +4362,7 @@ official:
     op_api: all_version
     gen_opapi:
       checks:
-        - type: predefined
-          name: sub_check
-          args: [self, other]
+        - at::native::sub_check(self, other)
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::native::result_type(self, other)
