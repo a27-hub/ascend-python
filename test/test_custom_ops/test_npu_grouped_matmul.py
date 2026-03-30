@@ -1083,7 +1083,7 @@ class TestGroupedMatmul(TestCase):
 
         x = torch.ones(size=(m, k)).to(torch.float8_e4m3fn)
         weight_nd = torch.ones(size=(e, n, k), dtype=torch.float32)
-        weight_nz = torch_npu.npu_format_cast(weight_nd.npu(), 29, torch.float8_e4m3fn)
+        weight_nz = torch_npu.npu_format_cast(weight_nd.npu(), 29, customize_dtype=torch.float8_e4m3fn)
         weight_nz = torch_npu.npu_convert_weight_to_int4pack(weight_nz)
         antiquantscale = torch.randint(low=124, high=130, size=(e, n, k//group_size), dtype=torch.uint8)
         cpu_antiquantscale = (2 ** (antiquantscale.to(torch.float64) - 127))
