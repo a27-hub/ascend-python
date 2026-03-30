@@ -14,15 +14,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Sequence
+from typing import List, Dict, Sequence, Union
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from torchnpugen.model import (BaseTy, SchemaKind, BaseType,
                            Argument, NativeFunction, ListType)
 from torchnpugen.context import native_function_manager
 from torchnpugen.api.types import NativeSignature
 from torchnpugen.api import cpp
+
+PREDEFINED_CHECKS = {
+    'sub_check': 'at::native::sub_check',
+    'alpha_check': 'at::native::alpha_check',
+    'npu_memory_overlap_check': 'at_npu::native::assert_no_internal_overlap',
+}
+
+
+@dataclass(frozen=True)
+class CheckConfig:
+    type: str
+    name: str
+    args: tuple = field(default_factory=tuple)
+
+    @staticmethod
+    def from_yaml(check_info: Union[str, Dict]) -> 'CheckConfig':
+        if isinstance(check_info, str):
+            return CheckConfig(type='custom', name=check_info, args=())
+        
+        check_type = check_info.get('type', 'predefined')
+        name = check_info.get('name')
+        args = tuple(check_info.get('args', []) or [])
+        
+        return CheckConfig(type=check_type, name=name, args=args)
+
+    def generate_code(self) -> str:
+        if self.type == 'predefined':
+            func_name = PREDEFINED_CHECKS.get(self.name)
+            if func_name is None:
+                available_checks = ', '.join(PREDEFINED_CHECKS.keys())
+                raise ValueError(
+                    f"Unknown predefined check: {self.name}. "
+                    f"Available checks: {available_checks}"
+                )
+            args_str = ', '.join(self.args) if self.args else ''
+            return f"{func_name}({args_str});"
+        else:
+            code = self.name.strip()
+            if not code.endswith(';'):
+                code += ';'
+            return code
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
@@ -110,6 +151,7 @@ class StructInfo:
     acl_op: bool = None
     results: List[ResInfo] = None
     new_params: Dict[str, str] = None
+    checks: List['CheckConfig'] = None
 
     @staticmethod
     def from_yaml(
@@ -191,6 +233,16 @@ class StructInfo:
             aclnn_name = aclnn_arguments_list[0]
             new_params_dict = gen_opapi_info.pop('new_params', dict())
 
+            checks_info = gen_opapi_info.pop('checks', None)
+            check_info = gen_opapi_info.pop('check', None)
+
+            checks_list = []
+            if checks_info is not None:
+                for check_item in checks_info:
+                    checks_list.append(CheckConfig.from_yaml(check_item))
+            elif check_info is not None:
+                checks_list.append(CheckConfig.from_yaml(check_info))
+
             cmd_args_expand = False
             if len(aclnn_arguments_list) == 1:
                 cmd_args_expand = True
@@ -243,6 +295,7 @@ class StructInfo:
                 return_args=return_args,
                 acl_op=acl_op,
                 new_params=new_params_dict,
+                checks=checks_list if checks_list else None,
             )
             struct_infos.append(struct_info)
 

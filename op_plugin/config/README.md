@@ -390,6 +390,46 @@ Aten IR定义：
       structured_inherit: abs.out
 ```
 
+- `checks`：用于在算子执行前添加参数检查逻辑，checks字段详细配置如下:
+  - `type`: string, 必选项，检查类型：`predefined`（预定义）或 `custom`（自定义）
+  - `name`: string, 必选项，预定义检查名称 或 自定义检查函数调用
+  - `args`: list, 可选项，预定义检查的参数列表
+
+checks预定义检查类型:
+`sub_check`：sub 操作的 bool 类型检查
+`alpha_check`：alpha 参数类型检查
+`npu_memory_overlap_check`：NPU 内存重叠检查（inplace 操作必需）
+
+配置示例：
+
+方式一（通用方式），配置方式如下所示，可以支持单个/多个检查项组合：
+```yaml
+- func: complex_op(Tensor self, Tensor other) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    checks:
+      - type: predefined
+        name: npu_memory_overlap_check
+        args: [self]
+      - type: custom
+        name: TORCH_CHECK(self.dim() <= 4, "Only support 4D or lower")
+    out:
+      size: self
+      dtype: self
+    exec: aclnnComplexOp
+```
+方式二（简写方式）：配置方式如下所示，可以支持单个检查项:
+```yaml
+- func: rsub.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    check: at::native::sub_check(self, other)
+    out:
+      size: self
+      dtype: at::native::result_type(self, other)
+    exec: aclnnRsubs
+```
+
 ## NPU自定义接口添加废弃告警
 
 ### Yaml配置说明
