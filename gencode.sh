@@ -1,67 +1,17 @@
-#!/bin/bash
 
-# Copyright (c) 2023 Huawei Technologies Co., Ltd
-# Copyright (c) 2019, Facebook CORPORATION.
-# All rights reserved.
-#
-# Licensed under the BSD 3-Clause License  (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# https://opensource.org/licenses/BSD-3-Clause
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
-
-cd $CDIR/
-
-# Following updates only add incompatible ops files in corresponding branch folder.
-newest_minor_version=8
-for minor_version in $(seq 1 ${newest_minor_version}); do
-    # Merge base info and version related info (unsupported ops)
-    sed -i "1r test/unsupported_ops_info_base.yaml" test/test_v2r${minor_version}_ops/unsupported_ops_info.yaml
-done
-
-PYTORCH_VERSION="$1"
-IFS='.' read -ra version_parts <<< "$PYTORCH_VERSION"
-PYTORCH_VERSION_DIR="v${version_parts[0]}r${version_parts[1]}"
-python_execute="$2"
-
-export PYTORCH_VERSION="$PYTORCH_VERSION"
-
-OUTPUT_DIR="$CDIR/op_plugin/config/$PYTORCH_VERSION_DIR"
-if [ ! -d "$OUTPUT_DIR" ]; then
-    mkdir "$OUTPUT_DIR"
-fi
-
-if [ "$PYTORCH_VERSION_DIR" == "v1r11" ]; then
-    cp $CDIR/op_plugin/config/aclnn_derivatives.yaml $OUTPUT_DIR
-fi
-
-${python_execute} -m codegen.gen_op_plugin_functions  \
-  --version="$PYTORCH_VERSION" \
-  --output_dir="$OUTPUT_DIR/" \
-  --source_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
-
-${python_execute} -m codegen.gen_derivatives  \
-  --version="$PYTORCH_VERSION" \
-  --output_dir="$OUTPUT_DIR/" \
-  --source_yaml="$CDIR/op_plugin/config/derivatives.yaml"
-
-${python_execute} -m codegen.gen_backend_stubs  \
-  --version="$PYTORCH_VERSION" \
-  --output_dir="$CDIR/op_plugin/" \
-  --source_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
-  --impl_path="$CDIR/torch_npu/csrc/aten"  # Used to double-check the yaml file definitions.
-
-${python_execute} -m codegen.struct.gen_struct_opapi  \
-  --output_dir="$CDIR/op_plugin/ops/opapi/" \
-  --native_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
-  --struct_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
-
-sh $CDIR/op_plugin/third_party/atb/libs/build_stub.sh
+	x：Tensor类型，需要量化的数据。只支持2维输入。数据类型支持bfloat16、float16。
+	min_scale：float类型的属性，scale的最小值，取值需要不小于0。默认值为0.0。
+	round_mode：string类型的属性，指定量化后结果cast到输出y数据类型的模式。默认值"rint"。
+−	dst_type为float8_e5m2、float8_e4m3fn、float8_e4m3fn时，本参数仅支持取"rint"。
+−	dst_type为hifloat8时，本参数仅支持取"round"。
+	dst_type：int类型的属性，指定输出y的数据类型，支持取值float8_e5m2、float8_e4m3fn、hifloat8。默认类型为float8_e5m2。
+	row_block_size：int类型的属性，指定一个block的行大小。支持取值1、128、256、512。默认值1。
+	col_block_size：int类型的属性，指定一个block的列大小。支持取值64、128、192、256。默认值128。
+输出说明
+	y：Tensor类型，量化后的输出数据。数据类型由参数dst_type决定。shape和输入x一致。
+−	单算子模式/静态图模式：当dst_type为hifloat8时，y输出的tensor数据类型为uint8（实际承载的是hifloat8类型）。
+−	动态图模式：当dst_type为hifloat8时，y输出的tensor数据类型为torch.bits8（实际承载的是hifloat8类型）。
+	scale：Tensor类型，量化时使用的scale。数据类型为float32。如果输入x的shape为[M, N]，scale的shape为[ceil(M/row_block_size), ceil(N/col_block_size)]。
+约束说明
+	该接口支持推理、训练场景下使用。
+	该接口支持TorchAir图模式。
