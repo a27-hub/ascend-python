@@ -1,46 +1,158 @@
-	input：Tensor类型，需要进行量化的源数据张量，数据格式支持ND，支持非连续的Tensor。div_mode为False且dtype为quint4x2时，最后一维需要能被8整除。
-−	Atlas 推理系列产品：数据类型支持float、float16。
-−	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float、float16、bfloat16。
-−	PR/Ascend 950DT：数据类型支持float、float16、bfloat16。
-	scales：Tensor类型，对input进行scales的张量，必选输入：
-−	div_mode为True时，数据格式支持ND，支持非连续的Tensor。支持1维，size需要为1或和输入x中axis轴的size相等。
-	Atlas 推理系列产品：数据类型支持float。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float、bfloat16。当数据类型为bfloat16时，x、zero_points数据类型均需要为bfloat16。
-	PR/Ascend 950DT：数据类型支持float、bfloat16。当数据类型为bfloat16时，x、zero_points数据类型均需要为bfloat16。
-−	div_mode为False时，数据格式支持ND，支持非连续的Tensor。支持1维或多维（1维时，维度的大小需要与input中第axis维相等或等于1；多维时，scales的shape需要与input的shape维数相等，除axis指定的维度，其他维度为1，axis指定的维度必须和input对应的维度相等或等于1）。
-	Atlas 推理系列产品：数据类型支持float、float16。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float、float16、bfloat16。
-	PR/Ascend 950DT：数据类型支持float、float16、bfloat16。
-□	单算子模式：如果input的数据类型不是float，scales的数据类型需要和input保持一致。
-	zero_points：Tensor类型，对input进行offset的张量。当不需要使用zero_points参与计算时，需要传入None，传None时zero_points不校验。
-−	div_mode为True时，数据格式支持ND，支持非连续的Tensor。支持1维，size需要为1或和输入x中axis轴的size相等。zero_points的shape需要和scales一致。
-	Atlas 推理系列产品：数据类型支持int8、uint8、int32。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持int8、uint8、int32、bfloat16。当数据类型为bfloat16时，x、scales数据类型均需要为bfloat16。
-	PR/Ascend 950DT：数据类型支持int8、uint8、int32、float32、bfloat16。当数据类型为bfloat16时，x、scales数据类型均需要为bfloat16。
-−	div_mode为False时，数据格式支持ND，支持非连续的Tensor。zero_points的shape需要和scales一致。
-	Atlas 推理系列产品：数据类型支持float、float16。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：数据类型支持float、float16、bfloat16。
-	PR/Ascend 950DT：数据类型支持float、float16、bfloat16。
-□	单算子模式：zero_points的dtype需要和scales一致。
-	dtype：ScalarType类型int类型，指定输出参数的类型。
-−	div_mode为True时，
-	Atlas 推理系列产品：类型支持qint8、quint8、qint32。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：类型支持qint8、quint8、qint32。
-	PR/Ascend 950DT：类型支持qint8、quint8、qint32、float8_e4m3fn、float8_e5m2、hifloat8。
-−	div_mode为False时，
-	Atlas 推理系列产品：类型支持qint8、int8。
-	Atlas A2 训练系列产品/Atlas A2 推理系列产品：类型支持qint8、int8、quint4x2。如果dtype为quint4x2时，输出tensor类型为int32，由8个int4拼接。
-	PR/Ascend 950DT：类型支持qint8、int8、quint4x2、float8_e4m3fn、float8_e5m2、hifloat8。如果dtype为quint4x2时，输出tensor类型为int32，由8个int4拼接。
-	axis：int类型，量化的element-wise轴，其他的轴做broadcast，默认值为1。
-−	div_mode为True时，支持范围为小于输入x的维度数且大于等于x维度数的负值。当输入的scales和zeroPoints的size均为1时，该参数实际不使用。
-−	div_mode为False时，axis取值范围是[-2, +∞）。如果axis=-2，代表量化的element-wise轴是输入input的倒数第二根轴；如果axis大于-2，量化的element-wise轴是输入的最后一根轴（即axis>-2时，都指定-1轴）。
-	div_mode：布尔类型，表示计算scales模式。当div_mode为True时，表示用除法计算scales；div_mode为False时，表示用乘法计算scales，默认值为True。
-输出说明
-y：Tensor类型，公式中的输出，输出大小与input一致。数据类型由参数dtype指定，如果参数dtype为quint4x2，输出的dtype是int32，shape的最后一维是输入shape最后一维的1/8，shape其他维度和输入一致。
-	PR/Ascend 950DT：
-−	单算子模式：当dtype为hifloat8时，y数据类型为uint8（实际承载hifloat8类型）。
-−	图模式：当dtype为hifloat8时，y数据类型为torch.bits8（实际承载hifloat8类型）。
-约束说明
-	该接口支持推理场景下使用。
-	该接口支持TorchAir图模式。
-	div_mode为False时：当dtype为quint4x2、float8_e4m3fn、float8_e5m2、hifloat8或者axis为-2时，Atlas 推理系列产品不支持。
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_float8_e5m2_float16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1_cpu = input_x1.float()
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e5m2).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_float8_e4m3fn_float16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1_cpu = input_x1.float()
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e4m3fn).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_hifloat8_float16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1_cpu = input_x1.float()
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch_npu.hifloat8).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_float8_e5m2_bfloat16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e5m2).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_float8_e4m3fn_bfloat16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e4m3fn).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_3_3_0_hifloat8_bfloat16_input(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
+        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch_npu.hifloat8).astype(np.float)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e5m2_perchannel(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.float8_e5m2)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perchannel(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.float8_e4m3fn)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_hifloat8_perchannel(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch_npu.hifloat8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e5m2_perhead(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.float8_e5m2)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e5m2)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perhead(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.float8_e4m3fn)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e4m3fn)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_hifloat8_perhead(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch_npu.hifloat8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch_npu.hifloat8)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e5m2_pertensor(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.float8_e5m2)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e5m2)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_pertensor(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.float8_e4m3fn)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e4m3fn)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_hifloat8_pertensor(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch_npu.hifloat8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch_npu.hifloat8)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e5m2_bfloat16(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        scales = scales.to(torch.bfloat16)
+        zero_points = zero_points.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch.float8_e5m2)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
+        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_bfloat16(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        scales = scales.to(torch.bfloat16)
+        zero_points = zero_points.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch.float8_e4m3fn)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quantize_ascend_quant_v2_hifloat8_bfloat16(self, device="npu"):
+        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
+        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
+        input_x1 = input_x1.to(torch.bfloat16)
+        scales = scales.to(torch.bfloat16)
+        zero_points = zero_points.to(torch.bfloat16)
+        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch_npu.hifloat8)
+        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
+        self.assertRtolEqual(cpu_output1, npu_output1, 1)
