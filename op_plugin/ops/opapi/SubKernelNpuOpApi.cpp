@@ -16,6 +16,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include <ATen/native/BinaryOps.h>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -77,6 +78,7 @@ static at::Tensor sub_dest_output(const at::Tensor& self, const at::Tensor& othe
 
 at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor &result)
 {
+    at::native::sub_check(self, other);
     DO_COMPATIBILITY(aclnnSub, acl_op::sub_out(self, other, alpha, result));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub_out(self, other, alpha, result));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -91,6 +93,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
 
 at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
 {
+    at::native::sub_check(self, other);
     DO_COMPATIBILITY(aclnnSub, acl_op::sub(self, other, alpha));
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -105,6 +108,7 @@ at::Tensor sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar
 
 at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
 {
+    at::native::sub_check(self, other);
     DO_COMPATIBILITY(aclnnSubs, acl_op::sub(self, other, alpha));
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     auto output_size = op_infer::input_same_output_size(self);
@@ -116,6 +120,7 @@ at::Tensor sub(const at::Tensor &self, const at::Scalar &other, const at::Scalar
 
 at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha)
 {
+    at::native::sub_check(self, other);
     DO_COMPATIBILITY(aclnnInplaceSub, acl_op::sub_(self, other, alpha));
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
     alpha_check_npu_tensor(self.scalar_type(), other.scalar_type(), alpha);
@@ -126,6 +131,7 @@ at::Tensor &sub_(at::Tensor &self, const at::Tensor &other, const at::Scalar &al
 
 at::Tensor &sub_(at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha)
 {
+    at::native::sub_check(self, other);
     DO_COMPATIBILITY(aclnnInplaceSubs, acl_op::sub_(self, other, alpha));
     alpha_check_npu_scalar(self.scalar_type(), other, alpha);
     EXEC_NPU_CMD(aclnnInplaceSubs, self, other, alpha);
