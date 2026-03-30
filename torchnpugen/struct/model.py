@@ -14,15 +14,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Sequence
+from typing import List, Dict, Sequence, Union, Set
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from torchnpugen.model import (BaseTy, SchemaKind, BaseType,
                            Argument, NativeFunction, ListType)
 from torchnpugen.context import native_function_manager
 from torchnpugen.api.types import NativeSignature
 from torchnpugen.api import cpp
+
+FUNCTION_HEADER_MAPPING = {
+    'at::native::sub_check': '<ATen/native/BinaryOps.h>',
+    'at::native::alpha_check': '<ATen/native/BinaryOps.h>',
+    'at_npu::native::assert_no_internal_overlap': '"torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h"',
+}
+
+
+@dataclass(frozen=True)
+class CheckConfig:
+    call: str
+    headers: Set[str] = field(default_factory=set)
+
+    @staticmethod
+    def from_yaml(check_info: str) -> 'CheckConfig':
+        if not isinstance(check_info, str):
+            raise TypeError(f"Check must be a string, got {type(check_info)}")
+
+        call = check_info.strip()
+        headers = CheckConfig._infer_headers(call)
+
+        return CheckConfig(call=call, headers=headers)
+
+    @staticmethod
+    def _infer_headers(call: str) -> Set[str]:
+        headers = set()
+        for func_name, header in FUNCTION_HEADER_MAPPING.items():
+            if func_name in call:
+                headers.add(header)
+        return headers
+
+    def generate_code(self) -> str:
+        code = self.call.strip()
+        if not code.endswith(';'):
+            code += ';'
+        return code
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
@@ -110,6 +146,7 @@ class StructInfo:
     acl_op: bool = None
     results: List[ResInfo] = None
     new_params: Dict[str, str] = None
+    checks: List['CheckConfig'] = None
 
     @staticmethod
     def from_yaml(
@@ -166,23 +203,45 @@ class StructInfo:
             acl_op = 'acl_op' in schema_function.impl_ns
 
             gen_opapi_info = e.get('gen_opapi')
-            structured_inherit = gen_opapi_info.pop('structured_inherit', None)
 
+            checks_list = []
+            checks_info = gen_opapi_info.pop('checks', None)
+            check_info = gen_opapi_info.pop('check', None)
+            if checks_info is not None:
+                for check_item in checks_info:
+                    checks_list.append(CheckConfig.from_yaml(check_item))
+            elif check_info is not None:
+                checks_list.append(CheckConfig.from_yaml(check_info))
+
+            structured_inherit = gen_opapi_info.pop('structured_inherit', None)
             if structured_inherit is not None:
+                inherit_checks = gen_opapi_info.pop('inherit_checks', False)
+                if inherit_checks:
+                    inherited_gen_opapi = struct_map.get(structured_inherit)
+                    if inherited_gen_opapi is not None:
+                        inherited_gen_opapi_info = inherited_gen_opapi.get('gen_opapi', {})
+                        checks_info = inherited_gen_opapi_info.get('checks', None)
+                        check_info = inherited_gen_opapi_info.get('check', None)
+                        if checks_info is not None:
+                            for check_item in checks_info:
+                                checks_list.append(CheckConfig.from_yaml(check_item))
+                        elif check_info is not None:
+                            checks_list.append(CheckConfig.from_yaml(check_info))
                 if func_kind == SchemaKind.inplace:
                     struct_info = StructInfo(
                         name=defn_name,
                         func=schema_function,
                         structured_inherit=funcname_map.get(structured_inherit),
                         acl_op=acl_op,
+                        checks=checks_list,
                     )
                     struct_infos.append(struct_info)
                     continue
                 else:
-                    gen_opapi_info = struct_map.get(structured_inherit)
-                    if gen_opapi_info is None:
-                        raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
-                    gen_opapi_info = gen_opapi_info.get('gen_opapi')
+                     gen_opapi_info = struct_map.get(structured_inherit)	 
+                     if gen_opapi_info is None:	 
+                         raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')	 
+                     gen_opapi_info = gen_opapi_info.get('gen_opapi')
 
             aclnn_arguments = gen_opapi_info.pop('exec', None)
 
@@ -243,6 +302,7 @@ class StructInfo:
                 return_args=return_args,
                 acl_op=acl_op,
                 new_params=new_params_dict,
+                checks=checks_list if checks_list else None,
             )
             struct_infos.append(struct_info)
 

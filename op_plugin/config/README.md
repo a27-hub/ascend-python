@@ -390,6 +390,59 @@ Aten IR定义：
       structured_inherit: abs.out
 ```
 
+- `checks`：用于在算子执行前添加参数检查逻辑，配置方式如下：
+  - 每个检查项是一个字符串，表示完整的函数调用表达式
+  - 支持多个检查项组合
+
+常用检查函数：
+- `at::native::sub_check(self, other)`：sub 操作的 bool 类型检查
+- `at::native::alpha_check(...)`：alpha 参数类型检查
+- `at_npu::native::assert_no_internal_overlap(tensor)`：NPU 内存重叠检查（inplace 操作必需）
+
+配置示例：
+
+多个检查项：
+```yaml
+- func: complex_op(Tensor self, Tensor other) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    checks:
+      - at::native::sub_check(self, other)
+      - at_npu::native::assert_no_internal_overlap(self)
+      - TORCH_CHECK(self.dim() <= 4, "Only support 4D or lower")
+    out:
+      size: self
+      dtype: self
+    exec: aclnnComplexOp
+```
+
+单个检查项（简写）：
+```yaml
+- func: rsub.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    check: at::native::sub_check(self, other)
+    out:
+      size: self
+      dtype: at::native::result_type(self, other)
+    exec: aclnnRsubs
+```
+
+- `inherit_checks`：用于在使用 `structured_inherit` 时控制是否继承检查逻辑，默认为 `false`。
+
+当使用 `structured_inherit` 继承其他算子的实现时，默认不会继承其 `check/checks` 配置。如果需要同时继承检查逻辑，可以设置 `inherit_checks: true`。
+
+配置示例：
+```yaml
+- func: sub_.Tensor(Tensor(a!) self, Tensor other, Scalar alpha=1) -> Tensor(a!)
+  op_api: all_version
+  gen_opapi:
+    structured_inherit: sub.out
+    inherit_checks: true
+```
+
+上述配置中，`sub_.Tensor` 会继承 `sub.out` 的实现，同时也会执行 `sub.out` 中定义的检查逻辑。
+
 ## NPU自定义接口添加废弃告警
 
 ### Yaml配置说明

@@ -3902,6 +3902,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      check: at_npu::native::assert_no_internal_overlap(self)
       exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
@@ -4350,6 +4351,8 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      checks:
+        - at::native::sub_check(self, other)
       out:
         size: self
         dtype: at::native::result_type(self, other)
@@ -4359,6 +4362,8 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      checks:
+        - at::native::sub_check(self, other)
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::native::result_type(self, other)
