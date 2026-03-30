@@ -89,3 +89,157 @@ result：Tensor类型，代表量化matmul的计算结果。
 	int4类型计算的额外约束：
 −	当x1、x2的数据类型均为int32，每个int32类型的数据存放8个int4数据。输入的int32 shape需要将数据原本int4类型时shape的最后一维缩小8倍。int4数据的shape最后一维应为8的倍数，例如：进行(m, k)乘(k, n)的int4类型矩阵乘计算时，需要输入int32类型、shape为(m, k//8)、(k, n//8)的数据，其中k与n都应是8的倍数。x1只能接受shape为(m, k//8)且数据排布连续的数据，x2可以接受(k, n[g1] //8)且数据排布连续的数据或shape为(k//8, n)且是由数据连续排布的(n, k//8)转置而来的数据。
 −	如果在PyTorch图模式中使用本接口，且环境变量ENABLE_ACLNN=false，则在调用接口前需要对shape为(n, k//8)的x2数据进行转置，转置过程应写在图中。
+
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e4m3fn_pertensor(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e4m3fn)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e4m3fn)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(1, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), output_dtype=torch.float16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e4m3fn_perchannel(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e4m3fn)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e4m3fn)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(2560, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), output_dtype=torch.bfloat16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e4m3fn_pertoken_bf16(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e4m3fn)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e4m3fn)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(2560, dtype=torch.float32)
+        pertoken_scale = torch.randn(8192, dtype=torch.float32)
+        scale_clone = scale.clone()
+        pertoken_scale_clone = pertoken_scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale * pertoken_scale.unsqueeze(-1)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.bfloat16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e4m3fn_pertile(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e4m3fn)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e4m3fn)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(20, dtype=torch.float32)
+        pertoken_scale = torch.randn(8192, dtype=torch.float32)
+        scale_clone = scale.clone()
+        pertoken_scale_clone = pertoken_scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale.mean() * pertoken_scale.unsqueeze(-1)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float32)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e5m2_pertensor(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e5m2)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e5m2)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(1, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), output_dtype=torch.float16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e5m2_perchannel(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e5m2)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e5m2)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(2560, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), output_dtype=torch.bfloat16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e5m2_pertoken(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e5m2)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e5m2)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(2560, dtype=torch.float32)
+        pertoken_scale = torch.randn(8192, dtype=torch.float32)
+        scale_clone = scale.clone()
+        pertoken_scale_clone = pertoken_scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale * pertoken_scale.unsqueeze(-1)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_float8_e5m2_pertile(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(-5, 5, (8192, 320)).to(torch.float8_e5m2)
+        x2 = torch.randint(-5, 5, (320, 2560)).to(torch.float8_e5m2)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(20, dtype=torch.float32)
+        pertoken_scale = torch.randn(8192, dtype=torch.float32)
+        scale_clone = scale.clone()
+        pertoken_scale_clone = pertoken_scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale.mean() * pertoken_scale.unsqueeze(-1)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), output_dtype=torch.float32)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_hif8_pertensor(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(0, 5, (8192, 320), dtype=torch.uint8)
+        x2 = torch.randint(0, 5, (320, 2560), dtype=torch.uint8)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(1, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.float16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_hif8_perchannel(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(0, 5, (8192, 320), dtype=torch.uint8)
+        x2 = torch.randint(0, 5, (320, 2560), dtype=torch.uint8)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(2560, dtype=torch.float32)
+        scale_clone = scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.bfloat16)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950P'])
+    def test_npu_quant_matmul_hif8_pertile(self):
+        torch.manual_seed(0)
+        x1 = torch.randint(0, 5, (8192, 320), dtype=torch.uint8)
+        x2 = torch.randint(0, 5, (320, 2560), dtype=torch.uint8)
+        x1_clone = x1.clone()
+        x2_clone = x2.clone()
+        scale = torch.randn(20, dtype=torch.float32)
+        pertoken_scale = torch.randn(8192, dtype=torch.float32)
+        scale_clone = scale.clone()
+        pertoken_scale_clone = pertoken_scale.clone()
+        supported_output = torch.matmul(x1.to(torch.float32), x2.to(torch.float32)) * scale.mean() * pertoken_scale.unsqueeze(-1)
+        custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8, output_dtype=torch.float32)
+        self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
