@@ -90,7 +90,7 @@ class TestNPUDualLevelQuantMatmul(TestCase):
 
         x1_npu = torch.from_numpy(self.pack_b4_to_b8(x1)).npu()
         x2_npu = torch.from_numpy(self.pack_b4_to_b8(x2)).npu()
-        x2_npu = torch_npu.npu_format_cast(x2_npu, 29, torch.int8)
+        x2_npu = torch_npu.npu_format_cast(x2_npu, 29, customize_dtype=torch.int8)
 
         x1_level0_scale_npu = torch.from_numpy(x1_level0_scale).npu()
         x2_level0_scale_npu = torch.from_numpy(x2_level0_scale).npu()
