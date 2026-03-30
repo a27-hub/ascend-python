@@ -428,6 +428,21 @@ Aten IR定义：
     exec: aclnnRsubs
 ```
 
+- `inherit_checks`：用于在使用 `structured_inherit` 时控制是否继承检查逻辑，默认为 `false`。
+
+当使用 `structured_inherit` 继承其他算子的实现时，默认不会继承其 `check/checks` 配置。如果需要同时继承检查逻辑，可以设置 `inherit_checks: true`。
+
+配置示例：
+```yaml
+- func: sub_.Tensor(Tensor(a!) self, Tensor other, Scalar alpha=1) -> Tensor(a!)
+  op_api: all_version
+  gen_opapi:
+    structured_inherit: sub.out
+    inherit_checks: true
+```
+
+上述配置中，`sub_.Tensor` 会继承 `sub.out` 的实现，同时也会执行 `sub.out` 中定义的检查逻辑。
+
 ## NPU自定义接口添加废弃告警
 
 ### Yaml配置说明

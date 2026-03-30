@@ -207,11 +207,27 @@ class StructInfo:
 
             if structured_inherit is not None:
                 if func_kind == SchemaKind.inplace:
+                    inherit_checks = gen_opapi_info.pop('inherit_checks', False)
+                    checks_list = None
+                    if inherit_checks:
+                        inherited_gen_opapi = struct_map.get(structured_inherit)
+                        if inherited_gen_opapi is not None:
+                            inherited_gen_opapi_info = inherited_gen_opapi.get('gen_opapi', {})
+                            checks_info = inherited_gen_opapi_info.get('checks', None)
+                            check_info = inherited_gen_opapi_info.get('check', None)
+                            checks_list = []
+                            if checks_info is not None:
+                                for check_item in checks_info:
+                                    checks_list.append(CheckConfig.from_yaml(check_item))
+                            elif check_info is not None:
+                                checks_list.append(CheckConfig.from_yaml(check_info))
+                            checks_list = checks_list if checks_list else None
                     struct_info = StructInfo(
                         name=defn_name,
                         func=schema_function,
                         structured_inherit=funcname_map.get(structured_inherit),
                         acl_op=acl_op,
+                        checks=checks_list,
                     )
                     struct_infos.append(struct_info)
                     continue
@@ -219,7 +235,11 @@ class StructInfo:
                     gen_opapi_info = struct_map.get(structured_inherit)
                     if gen_opapi_info is None:
                         raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
-                    gen_opapi_info = gen_opapi_info.get('gen_opapi')
+                    gen_opapi_info = copy.deepcopy(gen_opapi_info.get('gen_opapi'))
+                    inherit_checks = gen_opapi_info.pop('inherit_checks', False)
+                    if not inherit_checks:
+                        gen_opapi_info.pop('checks', None)
+                        gen_opapi_info.pop('check', None)
 
             aclnn_arguments = gen_opapi_info.pop('exec', None)
 
