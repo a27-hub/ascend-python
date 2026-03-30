@@ -7,7 +7,8 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 
-> 说明：本接口在 PyTorch 侧通过 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md) 等底层算子实现；产品支持范围与上述 CANN 算子一致。若运行环境不支持 `aclnnRopeWithSinCosCacheV2`，使用 `cache_mode='interleave'` 时会报错，需升级 CANN 或改用 `cache_mode='default'`（将回退至 `aclnnRopeWithSinCosCache`）。
+> [!NOTE]
+> 本接口在 PyTorch 侧通过 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md) 等底层算子实现；产品支持范围与上述 CANN 算子一致。若运行环境不支持 `aclnnRopeWithSinCosCacheV2`，使用 `cache_mode='interleave'` 时会报错，需升级 CANN (参考)或改用 `cache_mode='default'`（将回退至 `aclnnRopeWithSinCosCache`）。
 
 ## 功能说明
 
@@ -15,51 +16,48 @@
 
 - 计算公式（与 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md) 一致；记 `rotaryDim` 为 `cos_sin_cache` 最后一维大小）：
 
-    **（1）从 cache 取 cos、sin**
+    **1、从 cache 取 cos、sin**
 
     - RoPE：`positions` 形状为 `(numTokens)`。
-      $$
-      cosSin[i] = cosSinCache[positions[i]],\quad cos, sin = cosSin.chunk(2, dim=-1)
-      $$
+      $$cosSin[i] = cosSinCache[positions[i]]$$
+      $$cos, sin = cosSin.chunk(2, dim=-1)$$
 
-    - MRoPE：`positions` 形状为 $(m, numTokens)$，$m$ 为 `mropeSection` 元素个数（3 或 4）。先按行从 `cosSinCache` 取行并 `chunk` 得到各行的 `cos`、`sin`，再按 `cacheMode` 与 `mropeSection` 合并为与 token 对齐的 `cos`、`sin`（分段拼接或交错规则见 CANN 文档；当 $m=3$ 且 `cacheMode=0` 时，对 `cos` 有  
+    - MRoPE：`positions` 形状为 $(m, numTokens)$，$m$ 为 `mropeSection` 元素个数（3 或 4）。先按行从 `cosSinCache` 取行并 `chunk` 得到各行的 `cos`、`sin`，再按 `cacheMode` 与 `mropeSection` 合并为与 token 对齐的 `cos`、`sin`（分段或交错拼接规则见 [CANN 文档](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md)；当 $m=3$ 且 `cacheMode=0` 时，对 `cos` 有 
       $cos = cat(cos_{0,:,0:s_0},\, cos_{1,:,s_0:s_0+s_1},\, cos_{2,:,s_0+s_1:s_0+s_1+s_2})$，其中 $s=mropeSection$，$sin$ 同理）。
 
-    **（2）拆分旋转维与直通维**
+    **2、拆分旋转维与直通维**
 
-    $$
-    queryRot = query[..., :rotaryDim],\quad queryPass = query[..., rotaryDim:]
-    $$
+    $$queryRot = query[..., :rotaryDim]$$
+    $$queryPass = query[..., rotaryDim:]$$
+    $$keyRot = key[..., :rotaryDim]$$
+    $$keyPass = key[..., rotaryDim:]$$
 
-    （`key` 同理；实现上先将最后一维按 `head_size` 视为多头再对旋转段计算。）
-
-    **（3）旋转（`query` 与 `key` 使用同一套 cos、sin 广播规则）**
+    **3、旋转（`query` 与 `key` 共用同一套 `cos`、`sin` 广播）**
 
     - rotate_half（GPT-NeoX，`rotary_mode='half'`）：
       $$
-      x_1, x_2 = chunk(queryRot,\, 2,\, dim=-1)
+      x_1^q, x_2^q = chunk(queryRot,\, 2,\, dim=-1),\quad x_1^k, x_2^k = chunk(keyRot,\, 2,\, dim=-1)
       $$
       $$
-      o_1 = x_1 \odot cos - x_2 \odot sin,\quad o_2 = x_2 \odot cos + x_1 \odot sin
+      o_1^q = x_1^q \odot cos - x_2^q \odot sin,\quad o_2^q = x_2^q \odot cos + x_1^q \odot sin
       $$
       $$
-      queryRot \leftarrow cat(o_1, o_2,\, dim=-1)
+      o_1^k = x_1^k \odot cos - x_2^k \odot sin,\quad o_2^k = x_2^k \odot cos + x_1^k \odot sin
+      $$
+      $$
+      queryRot \leftarrow cat(o_1^q, o_2^q,\, dim=-1),\quad keyRot \leftarrow cat(o_1^k, o_2^k,\, dim=-1)
       $$
 
     - rotate_interleaved（GPT-J，`rotary_mode='interleave'`）：
-      $$
-      x_1 = queryRot[..., ::2],\quad x_2 = queryRot[..., 1::2]
+      $$x_1^q = queryRot[..., ::2],\; x_2^q = queryRot[..., 1::2],\quad x_1^k = keyRot[..., ::2],\; x_2^k = keyRot[..., 1::2]
       $$
       $o_1$、$o_2$ 与上式相同，再  
-      $queryRot \leftarrow stack(o_1, o_2,\, dim=-1).flatten(-2)$。
+      $$queryRot \leftarrow stack(o_1, o_2,\, dim=-1).flatten(-2)$$
 
-    **（4）输出**
+    **4、输出**
 
-    $$
-    query = cat(queryRot, queryPass,\, dim=-1)
-    $$
-
-    （`key` 同结构。）
+    $$query = cat(queryRot, queryPass,\, dim=-1)$$
+    $$key = cat(keyRot, keyPass,\, dim=-1)$$
 
 - 等价计算逻辑（CPU 侧参考实现，与算子数学含义一致；MRoPE 仅给出三段、`cache_mode='default'` 的合并分支，四段及 `interleave` 见 CANN 文档）：
 
@@ -140,18 +138,8 @@
 
 ## 函数原型
 
-```
-torch_npu.npu_mrope(
-    positions,
-    query,
-    key,
-    cos_sin_cache,
-    head_size,
-    *,
-    mrope_section=None,
-    rotary_mode='half',
-    cache_mode='default',
-) -> (Tensor, Tensor)
+```python
+torch_npu.npu_mrope(positions, query, key, cos_sin_cache, head_size, *, mrope_section=None, rotary_mode='half', cache_mode='default') -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -177,11 +165,11 @@ torch_npu.npu_mrope(
 ## 约束说明
 
 - **维度**：`query`、`key`、`cos_sin_cache` 均为 2 维；`rotary_dim` 为 `cos_sin_cache` 最后一维大小，且满足 `rotary_dim <= head_size`。
-- **对齐与倍数**（与 CANN 一致）：
+- **对齐与倍数**：
   - `head_size`：`FLOAT16`/`BFLOAT16` 时为 **32** 的倍数；`FLOAT32` 时为 **16** 的倍数。
   - `rotary_dim`：`FLOAT16`/`BFLOAT16` 时为 **32** 的倍数；`FLOAT32` 时为 **16** 的倍数。
 - **MRoPE**：`mrope_section` 各元素之和应等于 **`rotary_dim / 2`**（与 half 维度的 cos/sin 分段一致）。
-- **MRoPE 支持的 `mrope_section` 取值**（与 CANN 一致）：当前支持 `[16, 24, 24]`、`[24, 20, 20]`、`[8, 12, 12]`、`[16, 16, 16, 16]`。
+- **MRoPE 支持的 `mrope_section` 取值**：当前支持 `[16, 24, 24]`、`[24, 20, 20]`、`[8, 12, 12]`、`[16, 16, 16, 16]`。
 - **cache_mode**：MRoPE 下仅支持 `default` 与 `interleave`。当 `mrope_section` 为 **`[16, 16, 16, 16]`** 时，**仅支持 `cache_mode='default'`**（即不支持交错拼接）。
 - **环境**：若需 `cache_mode='interleave'`，运行环境必须提供 **`aclnnRopeWithSinCosCacheV2`**；否则会报错并提示升级 CANN 或使用 `cache_mode='default'`。
 - **确定性**：底层 `aclnnRopeWithSinCosCacheV2` 默认为确定性实现。
@@ -285,7 +273,3 @@ query_out, key_out = torch_npu.npu_mrope(
     cache_mode="default",
 )
 ```
-
-## 参考
-
-- CANN 算子说明：[aclnnRopeWithSinCosCacheV2.md](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md)（公式以 ops-transformer 仓库文档为准）。
