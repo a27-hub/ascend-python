@@ -12,9 +12,9 @@
 
 ## 功能说明
 
-- API功能：推理场景下将 sin、cos 以预计算 cache 形式传入，对 `query`、`key` 做旋转位置编码（RoPE）。支持普通 **RoPE**（一维 `positions`）与多模态 **MRoPE**（二维 `positions`，按 `mrope_section` 整合多段位置编码）。相较 **aclnnRopeWithSinCosCache**（V1），底层 **aclnnRopeWithSinCosCacheV2** 增加 **cacheMode**，仅在 **MRoPE** 下影响多段 `cos`/`sin` 的拼接方式：`cacheMode=0` 为分段式拼接，`cacheMode=1` 为交错式拼接；`torch_npu.npu_mrope` 中 `cache_mode='default'` 对应 `cacheMode=0`，`cache_mode='interleave'` 对应 `cacheMode=1`。
+- API功能：训练/推理场景下将 sin、cos 以预计算 cache 形式传入，对 `query`、`key` 做旋转位置编码（RoPE）。支持普通 **RoPE**（一维 `positions`）与多模态 **MRoPE**（二维 `positions`，按 `mrope_section` 整合多段位置编码），`cache_mode='default` 为分段式拼接，`cache_mode='interleave` 为交错式拼接。
 
-- 计算公式（与 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md) 一致；记 `rotaryDim` 为 `cos_sin_cache` 最后一维大小）：
+- 计算公式（与 [aclnnRopeWithSinCosCacheV2](https://gitcode.com/cann/ops-transformer/blob/master/posembedding/rope_with_sin_cos_cache/docs/aclnnRopeWithSinCosCacheV2.md) 一致；`rotaryDim` 为 `cos_sin_cache` 最后一维大小）：
 
     **1、从 cache 取 cos、sin**
 
@@ -171,8 +171,6 @@ torch_npu.npu_mrope(positions, query, key, cos_sin_cache, head_size, *, mrope_se
 - **MRoPE**：`mrope_section` 各元素之和应等于 **`rotary_dim / 2`**（与 half 维度的 cos/sin 分段一致）。
 - **MRoPE 支持的 `mrope_section` 取值**：当前支持 `[16, 24, 24]`、`[24, 20, 20]`、`[8, 12, 12]`、`[16, 16, 16, 16]`。
 - **cache_mode**：MRoPE 下仅支持 `default` 与 `interleave`。当 `mrope_section` 为 **`[16, 16, 16, 16]`** 时，**仅支持 `cache_mode='default'`**（即不支持交错拼接）。
-- **环境**：若需 `cache_mode='interleave'`，运行环境必须提供 **`aclnnRopeWithSinCosCacheV2`**；否则会报错并提示升级 CANN 或使用 `cache_mode='default'`。
-- **确定性**：底层 `aclnnRopeWithSinCosCacheV2` 默认为确定性实现。
 
 ## 调用示例
 
@@ -242,7 +240,7 @@ query_out, key_out = torch_npu.npu_mrope(
 )
 ```
 
-### RoPE（非 MRoPE）示例
+### RoPE示例
 
 使用一维 `positions`，shape 为 `(num_tokens,)`；`mrope_section` 置为 `[0, 0, 0]` 表示不使能 MRoPE（与当前 `torch_npu` 默认行为一致）。
 
