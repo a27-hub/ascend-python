@@ -98,6 +98,7 @@ at::Tensor &pow_out(const at::Tensor &self, const at::Tensor &exponent, at::Tens
 
 at::Tensor &pow_(at::Tensor &self, const at::Tensor &exponent)
 {
+    at_npu::native::assert_no_internal_overlap(self);
     DO_COMPATIBILITY(aclnnInplacePowTensorTensor, acl_op::pow_(self, exponent));
     std::vector<at::Tensor> tensor_list = {self, exponent};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
