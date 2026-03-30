@@ -16,7 +16,7 @@
 
 import os
 from collections import defaultdict
-from typing import List, Dict, Sequence, Tuple
+from typing import List, Dict, Sequence, Tuple, Set
 import yaml
 
 from torchnpugen.code_template import CodeTemplate
@@ -287,28 +287,13 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 result=struct.return_args,
                 infer_name=infer_name))]
 
-def needs_binary_ops(struct_functions: Sequence[StructInfo]) -> bool:
-    return any(
-                any(
-                    check.name in ['sub_check', 'alpha_check']
-                    or (check.type == 'custom' and (
-                        'at::native::sub_check' in check.name
-                        or 'at::native::alpha_check' in check.name
-                    ))
-                    for check in struct.checks
-                )
-                for struct in struct_functions if struct.checks
-            )
-
-def needs_npu_memory_overlap(struct_functions: Sequence[StructInfo]) -> bool:
-    return any(
-                any(
-                    check.name == 'npu_memory_overlap_check'
-                    or (check.type == 'custom' and 'at_npu::native::assert_no_internal_overlap' in check.name)
-                    for check in struct.checks
-                )
-                for struct in struct_functions if struct.checks
-            )
+def collect_required_headers(struct_functions: Sequence[StructInfo]) -> Set[str]:
+    headers = set()
+    for struct in struct_functions:
+        if struct.checks:
+            for check in struct.checks:
+                headers.update(check.headers)
+    return headers
 
 def gen_op_api(
     fm: FileManager,
@@ -322,14 +307,18 @@ def gen_op_api(
 #include <torch/extension.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
-        binary_ops_include = "#include <ATen/native/BinaryOps.h>" if needs_binary_ops(struct_functions) else ""
-        npu_memory_overlap_include = "#include \"torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h\"" if needs_npu_memory_overlap(struct_functions) else ""
-        includes = f"""#include <ATen/native/TypeProperties.h>
-{binary_ops_include}
-{npu_memory_overlap_include}
-#include "op_plugin/AclOpsInterface.h"
-#include "op_plugin/OpApiInterface.h"
-#include "op_plugin/utils/op_api_common.h" """
+        check_headers = collect_required_headers(struct_functions)
+        headers_list = sorted(check_headers)
+
+        includes_lines = ["#include <ATen/native/TypeProperties.h>"]
+        includes_lines.extend(f"#include {h}" for h in headers_list)
+        includes_lines.extend([
+            '#include "op_plugin/AclOpsInterface.h"',
+            '#include "op_plugin/OpApiInterface.h"',
+            '#include "op_plugin/utils/op_api_common.h"'
+        ])
+
+        includes = '\n'.join(includes_lines)
 
     fm.write_with_template(
         f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {

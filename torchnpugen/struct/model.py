@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Sequence, Union
+from typing import List, Dict, Sequence, Union, Set
 import copy
 from dataclasses import dataclass, field
 
@@ -24,46 +24,41 @@ from torchnpugen.context import native_function_manager
 from torchnpugen.api.types import NativeSignature
 from torchnpugen.api import cpp
 
-PREDEFINED_CHECKS = {
-    'sub_check': 'at::native::sub_check',
-    'alpha_check': 'at::native::alpha_check',
-    'npu_memory_overlap_check': 'at_npu::native::assert_no_internal_overlap',
+FUNCTION_HEADER_MAPPING = {
+    'at::native::sub_check': '<ATen/native/BinaryOps.h>',
+    'at::native::alpha_check': '<ATen/native/BinaryOps.h>',
+    'at_npu::native::assert_no_internal_overlap': '"torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h"',
 }
 
 
 @dataclass(frozen=True)
 class CheckConfig:
-    type: str
-    name: str
-    args: tuple = field(default_factory=tuple)
+    call: str
+    headers: Set[str] = field(default_factory=set)
 
     @staticmethod
-    def from_yaml(check_info: Union[str, Dict]) -> 'CheckConfig':
-        if isinstance(check_info, str):
-            return CheckConfig(type='custom', name=check_info, args=())
-        
-        check_type = check_info.get('type', 'predefined')
-        name = check_info.get('name')
-        args = tuple(check_info.get('args', []) or [])
-        
-        return CheckConfig(type=check_type, name=name, args=args)
+    def from_yaml(check_info: str) -> 'CheckConfig':
+        if not isinstance(check_info, str):
+            raise TypeError(f"Check must be a string, got {type(check_info)}")
+
+        call = check_info.strip()
+        headers = CheckConfig._infer_headers(call)
+
+        return CheckConfig(call=call, headers=headers)
+
+    @staticmethod
+    def _infer_headers(call: str) -> Set[str]:
+        headers = set()
+        for func_name, header in FUNCTION_HEADER_MAPPING.items():
+            if func_name in call:
+                headers.add(header)
+        return headers
 
     def generate_code(self) -> str:
-        if self.type == 'predefined':
-            func_name = PREDEFINED_CHECKS.get(self.name)
-            if func_name is None:
-                available_checks = ', '.join(PREDEFINED_CHECKS.keys())
-                raise ValueError(
-                    f"Unknown predefined check: {self.name}. "
-                    f"Available checks: {available_checks}"
-                )
-            args_str = ', '.join(self.args) if self.args else ''
-            return f"{func_name}({args_str});"
-        else:
-            code = self.name.strip()
-            if not code.endswith(';'):
-                code += ';'
-            return code
+        code = self.call.strip()
+        if not code.endswith(';'):
+            code += ';'
+        return code
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
