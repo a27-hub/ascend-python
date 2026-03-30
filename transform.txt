@@ -1,158 +1,147 @@
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_float8_e5m2_float16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1_cpu = input_x1.float()
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e5m2).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e4m3fn_bfloat16 (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 379, in test_npu_quantize_ascend_quant_v2_float8_e4m3fn_bfloat16
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e4m3fn
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_float8_e4m3fn_float16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1_cpu = input_x1.float()
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e4m3fn).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perchannel (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 292, in test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perchannel
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e4m3fn
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_hifloat8_float16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float16, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1_cpu = input_x1.float()
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1_cpu, scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch_npu.hifloat8).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perhead (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 319, in test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perhead
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e4m3fn)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e4m3fn
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_float8_e5m2_bfloat16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e5m2).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e4m3fn_pertensor (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 346, in test_npu_quantize_ascend_quant_v2_float8_e4m3fn_pertensor
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e4m3fn)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e4m3fn
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_float8_e4m3fn_bfloat16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch.float8_e4m3fn).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e5m2_bfloat16 (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 367, in test_npu_quantize_ascend_quant_v2_float8_e5m2_bfloat16
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e5m2
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_3_3_0_hifloat8_bfloat16_input(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (3, 3), (3,), (3,), np.float32, np.float32, np.int32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_per_channel(input_x1.float(), scales, zero_points, 0, torch.quint8).astype(np.float)
-        npu_output1 = self.npu_op_exec_per_channel(input_x1, scales, zero_points, 0, torch_npu.hifloat8).astype(np.float)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e5m2_perchannel (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 283, in test_npu_quantize_ascend_quant_v2_float8_e5m2_perchannel
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e5m2
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e5m2_perchannel(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.float8_e5m2)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e5m2_perhead (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 310, in test_npu_quantize_ascend_quant_v2_float8_e5m2_perhead
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e5m2)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e5m2
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perchannel(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch.float8_e4m3fn)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_float8_e5m2_pertensor (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 337, in test_npu_quantize_ascend_quant_v2_float8_e5m2_pertensor
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e5m2)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 62, in npu_op_exec_ascend_quant_v2
+    output = output.numpy()
+TypeError: Got unsupported ScalarType Float8_e5m2
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_hifloat8_perchannel(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), 1, torch_npu.hifloat8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_hifloat8_bfloat16 (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 391, in test_npu_quantize_ascend_quant_v2_hifloat8_bfloat16
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 65, in npu_op_exec_ascend_quant_v2
+    output = output.float().numpy()
+AttributeError: 'numpy.ndarray' object has no attribute 'float'
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e5m2_perhead(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.float8_e5m2)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e5m2)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_hifloat8_perchannel (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 301, in test_npu_quantize_ascend_quant_v2_hifloat8_perchannel
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 65, in npu_op_exec_ascend_quant_v2
+    output = output.float().numpy()
+AttributeError: 'numpy.ndarray' object has no attribute 'float'
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_perhead(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch.float8_e4m3fn)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch.float8_e4m3fn)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_hifloat8_perhead (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 328, in test_npu_quantize_ascend_quant_v2_hifloat8_perhead
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch_npu.hifloat8)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 65, in npu_op_exec_ascend_quant_v2
+    output = output.float().numpy()
+AttributeError: 'numpy.ndarray' object has no attribute 'float'
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_hifloat8_perhead(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (16, 1), (16, 1), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -2, torch_npu.hifloat8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -2, torch_npu.hifloat8)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+======================================================================
+ERROR: test_npu_quantize_ascend_quant_v2_hifloat8_pertensor (__main__.TestNPUQuantize)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/site-packages/torch_npu/testing/common_utils.py", line 206, in dep_fn
+    return fn(slf, *args, **kwargs)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 355, in test_npu_quantize_ascend_quant_v2_hifloat8_pertensor
+    npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch_npu.hifloat8)
+  File "/home/c00879293/op-plugin/A5\udcd3\udcc3\udcc0\udcfd/test_npu_quantize.py", line 65, in npu_op_exec_ascend_quant_v2
+    output = output.float().numpy()
+AttributeError: 'numpy.ndarray' object has no attribute 'float'
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e5m2_pertensor(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.float8_e5m2)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e5m2)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
+----------------------------------------------------------------------
+Ran 29 tests in 12.830s
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_pertensor(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch.float8_e4m3fn)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch.float8_e4m3fn)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_hifloat8_pertensor(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (1,), (1,), np.float16, np.float16, np.float16)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.numpy(), scales.numpy(), zero_points.numpy(), -1, torch_npu.hifloat8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, -1, torch_npu.hifloat8)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e5m2_bfloat16(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        scales = scales.to(torch.bfloat16)
-        zero_points = zero_points.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch.float8_e5m2)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e5m2)
-        self.assertRtolEqual(cpu_output1, npu_output1, 0.5)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_float8_e4m3fn_bfloat16(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        scales = scales.to(torch.bfloat16)
-        zero_points = zero_points.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch.float8_e4m3fn)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch.float8_e4m3fn)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_quantize_ascend_quant_v2_hifloat8_bfloat16(self, device="npu"):
-        datainfo = DataInfo(-1, 1, (16, 128), (128,), (128,), np.float32, np.float32, np.float32)
-        input_x1, scales, zero_points = self.generate_data_npu_quantize(datainfo)
-        input_x1 = input_x1.to(torch.bfloat16)
-        scales = scales.to(torch.bfloat16)
-        zero_points = zero_points.to(torch.bfloat16)
-        cpu_output1 = self.cpu_op_exec_ascend_quant_v2(input_x1.float().numpy(), scales.float().numpy(), zero_points.float().numpy(), 1, torch_npu.hifloat8)
-        npu_output1 = self.npu_op_exec_ascend_quant_v2(input_x1, scales, zero_points, 1, torch_npu.hifloat8)
-        self.assertRtolEqual(cpu_output1, npu_output1, 1)
+FAILED (errors=12, skipped=4)
