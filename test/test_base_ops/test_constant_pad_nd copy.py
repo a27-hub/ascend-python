@@ -1,126 +1,90 @@
 import torch
-import numpy as np
 import torch_npu
+import numpy as np
+import unittest
 
-from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor
+class TestComparisonFormatPreservation(unittest.TestCase):
+    def setUp(self):
+        # 保存当前配置
+        self.original_allow_internal_format = getattr(torch_npu.npu.config, 'allow_internal_format', None)
+        # 启用内部格式
+        torch_npu.npu.config.allow_internal_format = True
 
+    def tearDown(self):
+        # 恢复原始配置
+        if self.original_allow_internal_format is not None:
+            torch_npu.npu.config.allow_internal_format = self.original_allow_internal_format
 
-class TestConstantPadNd(TestCase):
-    def op_exec_cpu(self, input1, pad_shape, value=0):
-        output = torch.constant_pad_nd(input1, pad_shape, value=value)
-        output = output.numpy()
-        return output
+    def create_test_tensor(self, shape, dtype, input_format):
+        """创建具有指定格式的测试张量"""
+        np_tensor = np.random.rand(*shape).astype(dtype)
+        tensor = torch.from_numpy(np_tensor).npu()
+        # 转换为指定格式
+        if input_format != "ND":
+            tensor = torch_npu.npu_format_cast(tensor, input_format)
+        return tensor
 
-    def op_exec_npu(self, input1, pad_shape, value=0):
-        input1 = input1.to("npu")
-        output = torch.constant_pad_nd(input1, pad_shape, value=value)
-        output = output.to("cpu")
-        output = output.numpy()
-        return output
+    def get_tensor_format(self, tensor):
+        """获取张量的存储格式"""
+        return torch_npu.npu_get_storage_format(tensor)
 
-    def constant_pad_nd_shape_format(self, shape_format):
-        for item in shape_format:
-            value = item[-1] if len(item) > 2 else 0
-            input_cpu, input_npu = create_common_tensor(item[0], 1, 1)
-            pad_shape = item[1]
-            if input_cpu.dtype == torch.float16:
-                input_cpu = input_cpu.to(torch.float32)
-            cpu_output = self.op_exec_cpu(input_cpu, pad_shape, value=value)
-            npu_output = self.op_exec_npu(input_npu, pad_shape, value=value)
-            cpu_output = cpu_output.astype(npu_output.dtype)
-            self.assertRtolEqual(cpu_output, npu_output)
-
-    def test_constant_pad_nd_shape_with_value(self):
-        # Note: only fp16 suppport fill any float value currently!
-        dtype_list = [np.float16]
-        format_list = [0]
-        pad_list = [(1, 2, 2, 2), (1, 2)]
-        shape_list = [(16, 128), (1, 2, 16, 128)]
-        value_list = [0.5, 1.47]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[dtype, format, shape], pad, value] for dtype in dtype_list
-            for format in format_list
-            for shape in shape_list
-            for pad in pad_list
-            for value in value_list
-        ]
-        self.constant_pad_nd_shape_format(shape_format)
-
-    def test_constant_pad_nd_shape_with_3_value(self):
-        # Note: only fp16 suppport fill any float value currently!
-        dtype_list = [np.float16]
-        format_list = [3]
-        pad_list = [(1, 2, 2, 2), (1, 2)]
-        shape_list = [(1, 2, 16, 128)]
-        value_list = [0.5, 1.47]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[dtype, format, shape], pad, value] for dtype in dtype_list
-            for format in format_list
-            for shape in shape_list
-            for pad in pad_list
-            for value in value_list
-        ]
-        self.constant_pad_nd_shape_format(shape_format)
-
-    def test_constant_pad_nd_shape_1d(self):
-        dtype_list = [np.float16, np.float32]
-        format_list = [0]
-        pad_list = [(1, 2)]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[i, j, [18]], k] for i in dtype_list for j in format_list for k in pad_list
+    def test_comparison_operators_format_preservation(self):
+        """测试所有比较操作符是否保留输入张量格式"""
+        # 测试不同的张量形状和数据类型
+        test_cases = [
+            ((2, 3, 4, 5), np.float32, torch_npu.Format.NCHW),      # Non-private format
+            ((2, 3, 4, 5), np.float32, torch_npu.Format.ND),         # Non-private format
+            ((2, 3, 4, 5), np.float32, torch_npu.Format.FRACTAL_Z),  # Private format
+            ((2, 3, 4, 5), np.float32, torch_npu.Format.FRACTAL_NZ), # Private format
+            ((2, 3, 4, 5), np.float32, torch_npu.Format.NC1HWC0),    # Private format
         ]
 
-        self.constant_pad_nd_shape_format(shape_format)
-
-    def test_constant_pad_nd_shape_nd(self):
-        dtype_list = [np.float16, np.float32]
-        format_list = [0]
-        pad_list = [(1, 2, 2, 2), (1, 2)]
-        shape_list = [(16, 128), (2, 16, 128), (1, 2, 16, 128)]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[dtype, format, shape], pad] for dtype in dtype_list
-            for format in format_list
-            for shape in shape_list
-            for pad in pad_list
+        # 所有比较操作符
+        comparison_ops = [
+            (torch.gt, "gt"),
+            (torch.ge, "ge"),
+            (torch.lt, "lt"),
+            (torch.le, "le"),
+            (torch.eq, "eq"),
+            (torch.ne, "ne"),
         ]
 
-        self.constant_pad_nd_shape_format(shape_format)
+        for shape, dtype, input_format in test_cases:
+            with self.subTest(shape=shape, dtype=dtype, input_format=input_format):
+                # 创建两个输入张量
+                tensor1 = self.create_test_tensor(shape, dtype, input_format)
+                tensor2 = self.create_test_tensor(shape, dtype, input_format)
+                
+                # 保存原始格式
+                original_format1 = self.get_tensor_format(tensor1)
+                original_format2 = self.get_tensor_format(tensor2)
+                
+                # 确保张量具有预期的格式
+                self.assertEqual(original_format1, input_format, f"Tensor1 should be in {input_format} format, got {original_format1}")
+                self.assertEqual(original_format2, input_format, f"Tensor2 should be in {input_format} format, got {original_format2}")
+                
+                for op_func, op_name in comparison_ops:
+                    with self.subTest(op_name=op_name):
+                        # 测试 tensor-tensor 比较
+                        result = op_func(tensor1, tensor2)
+                        
+                        # 验证输入张量格式未改变
+                        current_format1 = self.get_tensor_format(tensor1)
+                        current_format2 = self.get_tensor_format(tensor2)
+                        
+                        self.assertEqual(current_format1, original_format1, 
+                                        f"{op_name}: Tensor1 format changed from {original_format1} to {current_format1}")
+                        self.assertEqual(current_format2, original_format2, 
+                                        f"{op_name}: Tensor2 format changed from {original_format2} to {current_format2}")
 
-    def test_constant_pad_nd_shape_1_nd(self):
-        dtype_list = [np.float16, np.float32]
-        format_list = [3]
-        pad_list = [(1, 2, 2, 2), (1, 2)]
-        shape_list = [(1, 2, 16, 128)]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[dtype, format, shape], pad] for dtype in dtype_list
-            for format in format_list
-            for shape in shape_list
-            for pad in pad_list
-        ]
+                        # 测试 tensor-scalar 比较
+                        result = op_func(tensor1, 0.5)
+                        
+                        # 验证输入张量格式未改变
+                        current_format1 = self.get_tensor_format(tensor1)
+                        
+                        self.assertEqual(current_format1, original_format1, 
+                                        f"{op_name}(scalar): Tensor1 format changed from {original_format1} to {current_format1}")
 
-        self.constant_pad_nd_shape_format(shape_format)
-
-    def test_constant_pad_nd_shape_nd_int32(self):
-        dtype_list = [np.int32]
-        format_list = [0]
-        pad_list = [(1, 2, 2, 2), (1, 2)]
-        shape_list = [(16, 128), (2, 16, 128), (1, 2, 16, 128)]
-        # pylint:disable=complicate-comprehension
-        shape_format = [
-            [[dtype, format, shape], pad] for dtype in dtype_list
-            for format in format_list
-            for shape in shape_list
-            for pad in pad_list
-        ]
-
-        self.constant_pad_nd_shape_format(shape_format)
-
-
-if __name__ == "__main__":
-    run_tests()
+if __name__ == '__main__':
+    unittest.main()
