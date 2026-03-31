@@ -16,7 +16,7 @@
 
 import os
 from collections import defaultdict
-from typing import List, Dict, Sequence, Tuple
+from typing import List, Dict, Sequence, Tuple, Set
 import yaml
 
 from torchnpugen.code_template import CodeTemplate
@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${checks}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -53,6 +54,7 @@ ${return_type} ${func_name}(${args_str})
 ACLNN_FUNCTIONS_DELEGATE = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${checks}
     return op_api::${func_name_out}(${args_str_out});
 }
 
@@ -174,16 +176,32 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             delegate_name = cpp.name(delegate_function.func)
             delegate_name = delegate_name + '_symint' if is_symint else delegate_name
             delegate_args_exprs_str = f'{args_exprs_str}, {f.func.arguments.self_arg.argument.name}'
-            return [ACLNN_FUNCTIONS_DELEGATE.substitute(
+            
+            checks_code = ""
+            if struct.checks:
+                check_lines = []
+                for check in struct.checks:
+                    check_lines.append(f"{check.generate_code()}")
+                checks_code = "\n".join(check_lines) + "\n"
+            
+            return [remove_empty_lines(ACLNN_FUNCTIONS_DELEGATE.substitute(
                     return_type=return_type,
                     func_name=name,
                     args_str=args_str,
+                    checks=checks_code,
                     func_name_out=delegate_name,
-                    args_str_out=delegate_args_exprs_str,)]
+                    args_str_out=delegate_args_exprs_str,))]
 
         do_compatibility = DO_COMPATIBILITY.substitute(aclnnname=struct.aclnn_name,
                                                        func_name=name,
                                                        args_exprs_str=args_exprs_str) if struct.acl_op else ""
+
+        checks_code = ""
+        if struct.checks:
+            check_lines = []
+            for check in struct.checks:
+                check_lines.append(f"{check.generate_code()}")
+            checks_code = "\n".join(check_lines) + "\n"
 
         tensor_arguments = ", ".join(filt_input_tensor(f.func.arguments.flat_non_out))
 
@@ -257,6 +275,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
+                checks=checks_code,
                 new_params_def=new_params_def,
                 define_size_or_dtype=define_size_or_dtype,
                 args_str=args_str,
@@ -268,6 +287,13 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 result=struct.return_args,
                 infer_name=infer_name))]
 
+def collect_required_headers(struct_functions: Sequence[StructInfo]) -> Set[str]:
+    headers = set()
+    for struct in struct_functions:
+        if struct.checks:
+            for check in struct.checks:
+                headers.update(check.headers)
+    return headers
 
 def gen_op_api(
     fm: FileManager,
@@ -281,10 +307,18 @@ def gen_op_api(
 #include <torch/extension.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
-        includes = """#include <ATen/native/TypeProperties.h>
-#include "op_plugin/AclOpsInterface.h"
-#include "op_plugin/OpApiInterface.h"
-#include "op_plugin/utils/op_api_common.h" """
+        check_headers = collect_required_headers(struct_functions)
+        headers_list = sorted(check_headers)
+
+        includes_lines = ["#include <ATen/native/TypeProperties.h>"]
+        includes_lines.extend(f"#include {h}" for h in headers_list)
+        includes_lines.extend([
+            '#include "op_plugin/AclOpsInterface.h"',
+            '#include "op_plugin/OpApiInterface.h"',
+            '#include "op_plugin/utils/op_api_common.h"'
+        ])
+
+        includes = '\n'.join(includes_lines)
 
     fm.write_with_template(
         f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
