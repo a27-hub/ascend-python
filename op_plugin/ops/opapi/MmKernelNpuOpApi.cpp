@@ -37,10 +37,15 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
     auto output_size = {self.size(0), mat2.size(1)};
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
+        if (op_plugin::utils::is_gte_cann_version_900()) {
+            if (cube_math_type_passthrough >= 0) {
+                cube_math_type = cube_math_type_passthrough;
+            }
+        }        
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, result, cube_math_type);
     } else {
-        int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
         if (cube_math_type_passthrough >= 0) {
             cube_math_type = cube_math_type_passthrough;
         }
@@ -66,10 +71,15 @@ at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &o
     auto output_size = {self.size(0), mat2.size(1)};
     npu_preparation::check_tensor({self, mat2}, out, self.scalar_type(), output_size);
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
+        if (op_plugin::utils::is_gte_cann_version_900()) {
+            if (cube_math_type_passthrough >= 0) {
+                cube_math_type = cube_math_type_passthrough;
+            }
+        }  
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
     } else {
-        int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
         if (cube_math_type_passthrough >= 0) {
             cube_math_type = cube_math_type_passthrough;
         }

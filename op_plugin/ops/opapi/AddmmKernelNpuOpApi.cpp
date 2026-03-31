@@ -18,7 +18,6 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace {
-using npu_preparation = at_npu::native::OpPreparation;
 bool is_three_tensor_base_format(const at::Tensor &input0, const at::Tensor &input1, const at::Tensor &input2)
 {
     return at_npu::native::FormatHelper::IsOpInputBaseFormat(input0) &&
@@ -95,6 +94,9 @@ at::Tensor &addmm_out(
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     npu_preparation::check_tensor({self, mat1, mat2}, out, out.scalar_type(), output_size);
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
+        if (op_plugin::utils::is_gte_cann_version_900()) {
+            cube_math_type = get_effective_cube_math_type();
+        }
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
     } else {
         cube_math_type = get_effective_cube_math_type();
@@ -119,6 +121,9 @@ at::Tensor addmm(
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
+        if (op_plugin::utils::is_gte_cann_version_900()) {
+            cube_math_type = get_effective_cube_math_type();
+        }
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
     } else {
         cube_math_type = get_effective_cube_math_type();
