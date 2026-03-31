@@ -33,3 +33,4 @@ setup(
     packages=find_packages(),
     cmdclass={"build_ext": BuildExtension.with_options(use_ninja=USE_NINJA)},
 )
+# ci test
