@@ -24,3 +24,4 @@ if [ $? -ne 0 ]; then
     echo "[ERROR]: Run add_custom_graph test failed!"
 fi
 echo "[INFO]: Run add_custom_graph test success!"
+# ci test
