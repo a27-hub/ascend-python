@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <variant>
+
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
@@ -29,6 +31,15 @@ const int DIM_0 = 0;
 const int DIM_1 = 1;
 const int DIM_2 = 2;
 const int DIM_3 = 3;
+
+// hifloat8 dtype value: 290 (ACL_HIFLOAT8 + 256)
+constexpr int64_t HIFLOAT8_DTYPE_VALUE = 290;
+
+// Check if dtype is hifloat8
+bool IsHifloat8Dtype(c10::optional<int64_t> dtype)
+{
+    return dtype.has_value() && dtype.value() == HIFLOAT8_DTYPE_VALUE;
+}
 
 // 工具函数，推导输出shape
 at::Tensor construct_quant_lightning_indexer_output_tensor(const at::Tensor& query, const at::Tensor& key,
@@ -65,13 +76,32 @@ at::Tensor npu_quant_lightning_indexer(
     const c10::optional<at::Tensor> &block_table,
     c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens,
-    c10::optional<int64_t> query_dtype, c10::optional<int64_t> key_dtype)
+    c10::optional<int64_t> query_dtype,
+    c10::optional<int64_t> key_dtype)
 {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
 
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
+
+    // 根据设计文档要求：
+    // - 如果是 hifloat8 类型，使用 TensorWrapper 将 dtype 显式写入 tensor
+    // - 如果不是 hifloat8 类型，保持原本逻辑（直接使用原始 tensor）
+    std::variant<at::Tensor, TensorWrapper> query_processed;
+    std::variant<at::Tensor, TensorWrapper> key_processed;
+
+    if (IsHifloat8Dtype(query_dtype)) {
+        query_processed = make_wrapper(query, query_dtype);
+    } else {
+        query_processed = query;
+    }
+
+    if (IsHifloat8Dtype(key_dtype)) {
+        key_processed = make_wrapper(key, key_dtype);
+    } else {
+        key_processed = key;
+    }
 
     // construct the output tensor
     at::Tensor quant_lightning_indexer_output = construct_quant_lightning_indexer_output_tensor(
@@ -80,20 +110,14 @@ at::Tensor npu_quant_lightning_indexer(
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
 
-    bool is_hifloat8_qk = query_dtype.has_value() && c10_npu::GetAclDataType(query_dtype.value()) == aclDataType::ACL_HIFLOAT8;
-    if (is_hifloat8_qk) {
-        TensorWrapper query_wrapper = make_wrapper(query, query_dtype);
-        TensorWrapper key_wrapper = make_wrapper(key, key_dtype);
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query_wrapper, key_wrapper,
+    // 使用 std::visit 处理 variant 类型，根据实际类型调用 aclnn 接口
+    std::visit([&](const auto& query_arg, const auto& key_arg) {
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query_arg, key_arg,
             weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
             block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
             pre_tokens, next_tokens, quant_lightning_indexer_output);
-    } else {
-        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query, key,
-            weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
-            block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
-            pre_tokens, next_tokens, quant_lightning_indexer_output);
-    }
+    }, query_processed, key_processed);
+
     return quant_lightning_indexer_output;
 }
 
