@@ -13371,3 +13371,11 @@ model = torch.compile(model, backend=npu_backend)
 model(x)
 """
 )
+
+_add_torch_npu_docstr(
+    "npu_chunk_gated_delta_rule",
+    """
+    功能描述:
+    完成变步长的Chunk Gated Delta Rule计算。
+"""
+)
