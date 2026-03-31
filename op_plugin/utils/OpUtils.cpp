@@ -520,24 +520,29 @@ std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, 
     return shape;
 }
 
-int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
+int8_t get_cube_math_type_with_passthrough()
 {
-    int64_t groups = 0;
-    if (group_size_list.empty()) {
-        return groups;
+    int8_t cube_math_type = at_npu::native::OpPreparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+
+    // std::cout << "cube_math_type 值: " << static_cast<int>(cube_math_type) << std::endl;
+    std::cerr << "cube_math_type 值: " << static_cast<int>(cube_math_type) << std::endl;
+    // 只有 CANN >= 9.0 才使用 passthrough 逻辑
+    if (is_gte_cann_version_900()) {
+        int8_t cube_math_type_passthrough = at_npu::native::OpPreparation::get_cube_math_type();
+        // std::cout << " cube_math_type_passthrough=" << static_cast<int>(cube_math_type_passthrough)
+        //         << "is_gte_cann_900=" << is_gte_cann_version_900() << std::endl;
+        std::cerr << " cube_math_type_passthrough=" << static_cast<int>(cube_math_type_passthrough)
+                  << " is_gte_cann_900=" << is_gte_cann_version_900() << std::endl;
+        if (cube_math_type_passthrough >= 0) {
+            cube_math_type = cube_math_type_passthrough;
+        }
     }
-    size_t group_dim = group_size_list.size();
-    TORCH_CHECK(group_dim == GROUP_DIM, "group_sizes only support input with three elements, but got ", group_dim,
-                OPS_ERROR(ErrCode::PARAM));
-    int64_t group_m = static_cast<int64_t>(group_size_list[0]);
-    int64_t group_n = static_cast<int64_t>(group_size_list[1]);
-    int64_t group_k = static_cast<int64_t>(group_size_list[2]);
-    bool invalid_group_param = ((group_m <= GROUP_MAX && group_m >= 0) && (group_n <= GROUP_MAX && group_n >= 0) &&
-                                (group_k <= GROUP_MAX && group_k >= 0));
-    TORCH_CHECK(invalid_group_param, "group param value must conform to range [0, 65535]", OPS_ERROR(ErrCode::VALUE));
-    groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << OFFSET_32_BITS) +
-                                  (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
-    return groups;
+
+    // 添加调试打印
+    // std::cout << "get_cube_math_type_with_passthrough: cube_math_type=" << static_cast<int>(cube_math_type) << std::endl;
+    std::cerr << "get_cube_math_type_with_passthrough: cube_math_type=" << static_cast<int>(cube_math_type) << std::endl;
+
+    return cube_math_type;
 }
 
 }  // namespace utils
