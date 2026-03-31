@@ -41,7 +41,10 @@ at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &
     // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
     // use and functions such as hfloat32 can be enabled through this switch
     int cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
-
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     if (is_nd_nz_format_3d(self, mat2)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {
@@ -69,6 +72,10 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
     // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
     // use and functions such as hfloat32 can be enabled through this switch
     int cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     if (is_nd_nz_format_3d(self, mat2)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {

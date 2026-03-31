@@ -81,6 +81,10 @@ at::Tensor &addmm_out(
     DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
                            acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     npu_preparation::check_tensor({self, mat1, mat2}, out, out.scalar_type(), output_size);
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
@@ -106,6 +110,10 @@ at::Tensor addmm(
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
     } else {
@@ -129,6 +137,10 @@ at::Tensor &addmm_(
     npu_preparation::check_tensor({self, mat1, mat2}, self, self.scalar_type(), output_size);
 
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnInplaceAddmm, self, mat1, mat2, beta, alpha, cube_math_type);
 
     auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);

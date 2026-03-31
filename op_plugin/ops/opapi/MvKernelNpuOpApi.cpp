@@ -27,6 +27,10 @@ at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &ou
     auto names = at::namedinference::propagate_names_for_addmv(self, vec, out);
     npu_preparation::check_tensor({self, vec}, out, out.scalar_type(), {self.size(0)});
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnMv, self, vec, out, cube_math_type);
     at::namedinference::propagate_names_if_nonempty(out, names);
     return out;
@@ -43,6 +47,10 @@ at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
     }
     auto names = at::namedinference::propagate_names_for_addmv(self, vec, result);
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnMv, self, vec, result, cube_math_type);
     at::namedinference::propagate_names_if_nonempty(result, names);
     return result;

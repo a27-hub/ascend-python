@@ -56,6 +56,10 @@ at::Tensor affine_grid_generator_backward(
     auto reassist = assist.view({size[0], size[2] * size[3], 3}).transpose(1, 2);
     auto grad_view = grad.view({size[0], size[2] * size[3], 2});
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowConvHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnBatchMatMul, reassist, grad_view, result, cube_math_type);
     auto fresult = result.transpose(1, 2);
     return fresult;

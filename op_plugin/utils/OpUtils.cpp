@@ -409,5 +409,16 @@ bool is_gte_cann_version_830rc1()
     return result;
 }
 
+int8_t get_cube_math_type_with_passthrough()
+{
+    using npu_preparation = at_npu::native::OpPreparation;
+    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
+    return cube_math_type;
+}
+
 }  // namespace utils
 }  // namespace op_plugin

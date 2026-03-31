@@ -6625,7 +6625,7 @@ custom:
         perm_x2_real: 'perm_x2.value_or(at::IntArrayRef(default_perm_x))'
         perm_y_real: 'perm_y.value_or(at::IntArrayRef(default_perm_y))'
         batch_split_factor_value: 'static_cast<int32_t>(batch_split_factor.value_or(1))'
-        cubeMathType: 'npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32())'
+        cubeMathType: 'op_plugin::utils::get_cube_math_type_with_passthrough()'
       exec: aclnnTransposeBatchMatMul, input, weight, bias, scale_real, perm_x1_real, perm_x2_real, perm_y_real, cubeMathType, batch_split_factor_value, out
 
   - func: npu_yolo_boxes_encode(Tensor self, Tensor gt_bboxes, Tensor stride, bool performance_mode=False) -> Tensor

@@ -31,6 +31,10 @@ at::Tensor &addbmm_out(const at::Tensor &self, const at::Tensor &batch1, const a
     auto output_size = op_infer::addbmm_npu_output_size(self, batch1, batch2);
     npu_preparation::check_tensor({self, batch1, batch2}, out, self.scalar_type(), output_size);
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnAddbmm, self, batch1, batch2, beta, alpha, out, cube_math_type);
 
     return out;
@@ -47,6 +51,10 @@ at::Tensor addbmm(const at::Tensor &self, const at::Tensor &batch1, const at::Te
     auto output_size = op_infer::addbmm_npu_output_size(self, batch1, batch2);
     at::Tensor result = npu_preparation::apply_tensor_with_sizes(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
     EXEC_NPU_CMD(aclnnAddbmm, self, batch1, batch2, beta, alpha, result, cube_math_type);
 
     return result;
