@@ -35,7 +35,7 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 ## 约束说明
 
-目前仅支持`torch.nn.functional.gelu`。
+目前支持`torch.nn.functional.gelu`、`torch.nn.LayerNorm.forward`。
 
 ## 调用示例
 
