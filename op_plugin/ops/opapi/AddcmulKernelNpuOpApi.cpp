@@ -25,7 +25,6 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& addcmul_out(const at::Tensor& self, const at::Tensor& tensor1, const at::Tensor& tensor2,
                         const at::Scalar& value, at::Tensor& result)
 {
-    // Handle CPU scalar for tensor2
     if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
         auto tensor2_scalar = tensor2.item();
         auto tensor2_npu = at::full({}, tensor2_scalar, self.options());
@@ -53,7 +52,6 @@ at::Tensor& addcmul_out(const at::Tensor& self, const at::Tensor& tensor1, const
 at::Tensor addcmul(const at::Tensor& self, const at::Tensor& tensor1, const at::Tensor& tensor2,
                    const at::Scalar& value)
 {
-    // Handle CPU scalar for tensor2
     if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
         auto tensor2_scalar = tensor2.item();
         auto tensor2_npu = at::full({}, tensor2_scalar, self.options());
@@ -78,7 +76,6 @@ at::Tensor addcmul(const at::Tensor& self, const at::Tensor& tensor1, const at::
 
 at::Tensor& addcmul_(at::Tensor& self, const at::Tensor& tensor1, const at::Tensor& tensor2, const at::Scalar& value)
 {
-    // Handle CPU scalar for tensor2
     if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
         auto tensor2_scalar = tensor2.item();
         auto tensor2_npu = at::full({}, tensor2_scalar, self.options());
