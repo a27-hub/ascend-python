@@ -176,7 +176,7 @@ class TestKvQuantSparseFlashAttentionPioneer(TestCase):
             print("correct ratio of cpu vs npu is:", true_ratio * 100, "%")
         self.assertTrue(true_ratio > 0.99, "precision compare fail")
 
- @SupportedDevices(['Ascend950'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_kv_quant_sparse_flash_attention_pioneer_BSND(self, device="npu"):
         query_type = torch.bfloat16
         scale_value = 0.041666666666666664
