@@ -1380,13 +1380,15 @@ custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key
 
 参数说明
 
-key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持int8，layout_key为PA_BSND时shape为[block_count, block_size, N2, D]，其中block_count为PageAttention时block总数，block_size为一个block的token数。
+query（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持int8，Ascend 950PR/Ascend 950DT数据类型支持float8_e4m3fn, hifloat8。layout_query为BSND时shape为[B,S1,N1,D]，当layout_query为TND时shape为[T1,N1,D]。
 
-weights（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float16，支持输入shape[B,S1,N1]、[T,N1]。
+key（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持int8，Ascend 950PR/Ascend 950DT数据类型支持float8_e4m3fn，hifloat8。layout_key为PA_BSND时shape为[block_count, block_size, N2, D]，其中block_count为PageAttention时block总数，block_size为一个block的token数。
 
-query_dequant_scale（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float16，支持输入shape[B,S1,N1]、[T,N1]。
+weights（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持float16，Ascend 950PR/Ascend 950DT数据类型支持float16，bfloat16。支持输入shape[B,S1,N1]、[T,N1]。
 
-key_dequant_scale（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float16，layout_key为PA_BSND时shape为[block_count, block_size, N2]，其中block_count为PageAttention时block总数，block_size为一个block的token数。
+query_dequant_scale（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持float16，Ascend 950PR/Ascend 950DT数据类型支持float16，float32，支持输入shape[B,S1,N1]、[T,N1]。
+
+key_dequant_scale（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持float16，Ascend 950PR/Ascend 950DT数据类型支持float16，float32，layout_key为PA_BSND时shape为[block_count, block_size, N2]，其中block_count为PageAttention时block总数，block_size为一个block的token数。
 
 *：代表其之前的参数是位置相关的，必须按照顺序输入，属于必选参数；其之后的参数是键值对赋值，与位置无关，属于可选参数（不传入会使用默认值）。
 
@@ -1419,7 +1421,6 @@ out（Tensor）：公式中的输出，数据类型支持int32。数据格式支
 说明：
 query、key、weights、query_dequant_scale、key_dequant_scale参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
 S1表示query shape中的S，S2表示key shape中的S，N1表示query shape中的N，N2表示key shape中的N。
-query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持int8。
 """
 )
 
@@ -15078,5 +15079,73 @@ if __name__ == "__main__":
         batch_sizes=None
     )
 
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_chunk_gated_delta_rule",
+    """
+功能描述:
+Chunked Gated Delta Rule(CGDR)是GDR的chunk版实现，它通过将输入序列切块，实现了一定的并行效果，在长上下文场景其计算效率相对Recurrent Gated Delta Rule更高，适用于prefill阶段。
+
+接口原型:
+npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? beta=None, Tensor? initial_state=None, Tensor? actual_seq_lengths=None, float? scale=None, Tensor? g=None) -> (Tensor, Tensor)
+
+参数说明:
+令 $B$ 表示batch size，$L_i$ 表示第i个序列的长度，$T=\sum_i^B L_i$ 表示累积序列长度。$N_k$ 表示key的头数，$N_v$ 表示value的头数，$D_k$ 表示key向量的维度，$D_v$ 表示value向量的维度。
+- query (Tensor)：必选输入，对应公式中的q，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- key (Tensor)：必选输入，对应公式中的k，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- value (Tensor)：必选输入，对应公式中的v，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv, Dv）。
+- beta (Tensor)：可选输入，对应公式中的β，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv）。
+- initial_state (Tensor)：可选输入&输出，对应公式中的状态矩阵S，数据类型支持bfloat16，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
+- actual_seq_lengths (Tensor)：可选输入，各batch的输入序列长度。数据类型支持int32，数据格式支持ND，shape为（B,）。
+- g (Tensor)：可选输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持float32，数据格式支持ND，shape为（T, Nv）。
+- scale_value (Scalar)：可选输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持float32。
+
+输出说明:
+注意力计算结果。输出的数据类型为bfloat16，数据格式为ND，形状为(T, Nv, Dv)。
+
+约束说明:
+- 该接口支持推理场景下使用。
+- 该接口支持静态图模式。
+- 输入shape大小需满足约束：$L_i \le 8$，$N_k \le 64$，$N_v \le 64$，$D_k = 128$，$D_v = 128$，$N_v$是$N_k$整数倍。
+
+支持的PyTorch版本:
+PyTorch 2.1 及更高版本
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 构造输入
+B, seqlen, nk, nv, dk, dv = (2, 100, 4, 8, 128, 128)
+actual_seq_lengths = (torch.ones(B) * seqlen).to("npu").to(torch.int32)
+T = int(torch.sum(actual_seq_lengths))
+
+state = torch.rand((B, nv, dv, dk), dtype=torch.bfloat16).npu()
+query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+g = torch.rand((T, nv), dtype=torch.float32).npu() * (-1.0)
+beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
+
+query = torch.nn.functional.normalize(query, p=2, dim=-1)
+key = torch.nn.functional.normalize(key, p=2, dim=-1)
+scale = dk ** -0.5
+
+# 调用算子
+o, final_state = torch_npu.npu_chunk_gated_delta_rule(
+    query, key, value,
+    beta=beta,
+    initial_state=state,
+    actual_seq_lengths=actual_seq_lengths,
+    scale=scale,
+    g=g)
+print(o.shape, final_state.shape)
 """
 )

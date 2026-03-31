@@ -260,6 +260,9 @@
   "op_api: torch_npu.npu_recurrent_gated_delta_rule_functional(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_chunk_gated_delta_rule(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_batch_gather_matmul(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -453,6 +456,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_recurrent_gated_delta_rule_functional(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_chunk_gated_delta_rule(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_kronecker_quant(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -703,7 +709,7 @@
   "func: attention_worker_scheduler(Tensor self) -> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, *, Tensor? q=None, Tensor? min_ps=None, float? eps=1e-8, bool? is_need_logits=False, int? top_k_guess=32, int? ks_max=1024, bool? input_is_logits=True, str? post_sample='qSample', Generator? generator=None) -> (Tensor, Tensor)": {
+  "func: npu_top_k_top_p_sample(Tensor logits, Tensor top_k, Tensor top_p, Tensor? q=None, float? eps=1e-8, bool? is_need_logits=False, int? top_k_guess=32, Tensor? min_ps=None, int? ks_max=1024, bool? input_is_logits=True, str? post_sample='qSample', Generator? generator=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: npu_moe_distribute_combine_add_rms_norm(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, Tensor residual_x, Tensor gamma, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0, str comm_alg=\"\", float norm_eps=1e-06) -> (Tensor, Tensor, Tensor)": {
@@ -4833,6 +4839,9 @@
     "version": ["all_version"]
   },
   "func: npu_recurrent_gated_delta_rule_functional(Tensor query, Tensor key, Tensor value, Tensor state, *, Tensor? beta=None, float? scale=None, Tensor? actual_seq_lengths=None, Tensor? ssm_state_indices=None, Tensor? num_accepted_tokens=None, Tensor? g=None, Tensor? gk=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? beta=None, Tensor? initial_state=None, Tensor? actual_seq_lengths=None, float? scale=None, Tensor? g=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "func: _thnn_fused_gru_cell(Tensor input_gates, Tensor hidden_gates, Tensor hx, Tensor? input_bias=None, Tensor? hidden_bias=None) -> (Tensor, Tensor)": {

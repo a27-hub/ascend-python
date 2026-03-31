@@ -1,4 +1,5 @@
 # 自定义API参考
+
 -   [概述](./overview.md)
 -   [Python接口](./Python_interface.md)
     -   [torch_npu](./torch_npu/torch_npu.md)
@@ -71,6 +72,7 @@
         -   [（beta）torch_npu.npu_swiglu](./torch_npu/（beta）torch_npu-npu_swiglu.md)
         -   [（beta）torch_npu.one_](./torch_npu/（beta）torch_npu-one_.md)
         -   [torch_npu.npu_group_norm_swish](./torch_npu/torch_npu-npu_group_norm_swish.md)
+        -   [torch_npu.npu_chunk_gated_delta_rule](./torch_npu/torch_npu-npu_chunk_gated_delta_rule.md)
         -   [torch_npu.npu_cross_entropy_loss](./torch_npu/torch_npu-npu_cross_entropy_loss.md)
         -   [torch_npu.npu_add_rms_norm_quant](./torch_npu/torch_npu-npu_add_rms_norm_quant.md)
         -   [torch_npu.npu_advance_step_flashattn](./torch_npu/torch_npu-npu_advance_step_flashattn.md)
@@ -142,6 +144,7 @@
         -   [torch_npu.npu_dequant_swiglu_quant](./torch_npu/torch_npu-npu_dequant_swiglu_quant.md)
         -   [torch_npu.npu_kv_rmsnorm_rope_cache](./torch_npu/torch_npu-npu_kv_rmsnorm_rope_cache.md)
         -   [torch_npu.npu_interleave_rope](./torch_npu/torch_npu-npu_interleave_rope.md)
+        -   [torch_npu.npu_mrope](./torch_npu/torch_npu-npu_mrope.md)
         -   [torch_npu.npu_moe_re_routing](./torch_npu/torch_npu-npu_moe_re_routing.md)
         -   [torch_npu.matmul_checksum](./torch_npu/torch_npu-matmul_checksum.md)
         -   [torch_npu.npu_alltoallv_gmm](./torch_npu/torch_npu-npu_alltoallv_gmm.md)
@@ -390,4 +393,3 @@
 -   [废弃API列表](./scrap_API.md)
 -   [附录](./appendix.md)
     -   [添加二进制黑名单示例](./blacklist.md)
-
