@@ -13521,7 +13521,7 @@ _add_torch_npu_docstr(
     "npu_top_k_top_p_sample",
     """
 接口原型: 
-torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, min_ps=None, eps=1e-8, is_need_logits=False, top_k_guess=32, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
+torch_npu.npu_top_k_top_p_sample(logits, top_k, top_p, q=None, eps=1e-8, is_need_logits=False, top_k_guess=32, min_ps=None, ks_max=1024, input_is_logits=True, post_sample='qSample', generator=None) -> (Tensor, Tensor)
 
 功能描述: 
   根据输入词频logits、top_k/top_p/min_ps采样参数、随机采样权重分布q，进行topK-topP-minP-Sample采样计算，输出每个batch的最大词频logits_select_idx，以及topK-topP采样后的词频分布logits_top_kp_select。
