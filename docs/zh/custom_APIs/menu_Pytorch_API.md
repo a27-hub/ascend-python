@@ -71,6 +71,7 @@
         -   [（beta）torch_npu.npu_swiglu](./torch_npu/（beta）torch_npu-npu_swiglu.md)
         -   [（beta）torch_npu.one_](./torch_npu/（beta）torch_npu-one_.md)
         -   [torch_npu.npu_group_norm_swish](./torch_npu/torch_npu-npu_group_norm_swish.md)
+        -   [torch_npu.npu_chunk_gated_delta_rule](./torch_npu/torch_npu-npu_chunk_gated_delta_rule.md)
         -   [torch_npu.npu_cross_entropy_loss](./torch_npu/torch_npu-npu_cross_entropy_loss.md)
         -   [torch_npu.npu_add_rms_norm_quant](./torch_npu/torch_npu-npu_add_rms_norm_quant.md)
         -   [torch_npu.npu_advance_step_flashattn](./torch_npu/torch_npu-npu_advance_step_flashattn.md)
