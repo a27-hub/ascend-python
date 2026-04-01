@@ -30,9 +30,6 @@ at::Tensor &bmm_out(
     TORCH_CHECK(self.dim() == 3, "self must be a 3D tensor");
     TORCH_CHECK(mat2.dim() == 3, "mat2 must be a 3D tensor");
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "bmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
 
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm_out(self, mat2, result));
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
@@ -58,9 +55,6 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at:
     TORCH_CHECK(self.dim() == 3, "self must be a 3D tensor");
     TORCH_CHECK(mat2.dim() == 3, "mat2 must be a 3D tensor");
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "bmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
 
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
 

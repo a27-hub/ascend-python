@@ -31,9 +31,6 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at::
       self.sizes()[0], "x",  self.sizes()[1], " and ",  mat2.sizes()[0], "x", mat2.sizes()[1], ")"
     );
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "mm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
 
     auto names = at::namedinference::compute_matmul_outnames(self, mat2);
     DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm(self, mat2));
@@ -68,9 +65,6 @@ at::Tensor &mm_out(
       self.sizes()[0], "x",  self.sizes()[1], " and ",  mat2.sizes()[0], "x", mat2.sizes()[1], ")"
     );
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "mm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
 
     auto names = at::namedinference::compute_matmul_outnames(self, mat2);
     DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm_out(self, mat2, out));

@@ -91,9 +91,6 @@ at::Tensor &addmm_out(
     at::Tensor &out)
 {
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "addmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
     DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
                            acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
@@ -120,9 +117,6 @@ at::Tensor addmm(
     c10::optional<at::ScalarType> output_dtype)
 {
     auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "addmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
     DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
                            acl_op::addmm(self, mat1, mat2, beta, alpha));
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
