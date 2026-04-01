@@ -77,6 +77,7 @@ OP_PLUGIN_HIDDEN bool is_gte_cann_version_810rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_820rc1();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_830rc1();
 OP_PLUGIN_HIDDEN int64_t get_rotary_mode(c10::string_view mode);
+OP_PLUGIN_HIDDEN int8_t get_cube_math_type_with_passthrough();
 
 }  // namespace utils
 }  // namespace op_plugin
