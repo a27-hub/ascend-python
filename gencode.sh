@@ -1,32 +1,262 @@
-elf （Tensor）：必选参数，表示matmul计算中的左矩阵，对应公式中的x1，不支持非连续的tensor，数据格式支持ND，数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8，输入shape支持2维，形如(m, k)、(k, n)，轴满足matmul算子入参要求，k轴相等，且k轴取值范围为[256, 65535)。
-	x2 （Tensor）：必选参数，表示matmul计算中的右矩阵，数据格式支持ND，数据类型支持float16、bfloat16、float8_e4m3fn、float8_e5m2、hifloat8，输入shape维度需要和self保持一致，数据格式支持ND。
-	hcom （String）：必选参数，表示通信域handle名，通过get_hccl_comm_name接口获取。
-	world_size（int）：int类型，表示通信域内的rank总数， 支持 2、4、8、16、32、64卡。
-	*：代表其之前的变量是位置相关，按照顺序输入，必选；之后的变量是键值对赋值的，位置无关，可选（不输入会使用默认值）。
-	bias （Tensor）：Tensor类型，可选参数，数据类型支持float16、bfloat16、float32，数据格式支持ND格式。数据类型需要和input保持一致。bias仅支持一维，且维度大小与output的第1维大小相同。情形1不支持bias输入为非0的场景，bias数据类型和输入类型一致，情形2 bias数据类型为float32, 情形3 bias输入只能为None。
-	x1_scale（Tensor）：可选参数，数据格式支持ND，数据类型支持float32、float8_e8m0。
-	x2_scale（Tensor）：可选参数，数据格式支持ND，数据类型支持float32、float8_e8m0。
-	quant_scale（Tensor）：可选参数，数据格式支持ND，数据类型支持float32。
-	block_size （int）： 可选参数，表示mm输出矩阵在M轴方向上和N轴方向上可以用于对应方向上的多少个数的量化，block_size由blockSizeM、blockSizeN、blockSizeK三个值拼接而成，每个值占16位，计算公式为block_size= blockSizeK | blockSizeN << 16 | blockSizeM << 32，mm输出矩阵不涉及K轴，blockSizeK固定为0。当前版本只支持block_size输入为0。
-	comm_turn（int）：可选参数，表示rank间通信切分粒度，默认值0，表示框架内置的切分方式。当前版本仅支持输入0。
-	group_sizes（List[Int]）：可选参数，表示反量化中x1_scale/x2_scale输入的一个数在其所在的对应维度方向上可以用于该方向x1/x2输入的多少个数的反量化，group_sizes为[groupSizeM，groupSizeN，groupSizeK]。groupSizeM、groupSizeN、groupSizeK分别表示一个反量化系数在各个维度对应的数的个数。当x1Scale/x2Scale输入都是2维，且数据类型都为FLOAT32时，[groupSizeM，groupSizeN，groupSizeK]取值组合仅支持[128, 128, 128]；当x1Scale/x2Scale输入都是3维，且数据类型都为FLOAT8_E8M0时，[groupSizeM, groupSizeN, groupSizeK]取值组合仅支持[1, 1, 32]；其他场景输入，当前版本仅支持输入[0, 0, 0]。
-	amax_output（bool）：可选参数，代表是否输出MM计算的最大值结果，默认值为False，当前版本只支持False。
-	y_dtype（int）：可选参数，代表输出数据类型 (5表示float16，6表示float32, 15表示bfloat16）。
-	x1_dtype（int）：可选参数，代表输入的左矩阵的数据类型，PyTorch原生不支持的数据类型需通过该参数指定。
-	x2_dtype（int）：可选参数，代表输入的右矩阵的数据类型，PyTorch原生不支持的数据类型需通过该参数指定。
-	x1_scale_dtype（int）：可选参数，代表输入的左矩阵的量化系数数据类型，PyTorch原生不支持的数据类型需通过该参数指定。
-	x2_scale_dtype（int）：可选参数，代表输入的右矩阵的量化系数数据类型，PyTorch原生不支持的数据类型需通过该参数指定。
-返回值说明
-	y（Tensor）：allgather和matmul计算后输出的结果，如果self数据类型为float16或bfloat16，输出数据类型和self保持一致；如果self类型为float8_e4m3fn、float8_e5m2、hifloat8，输出数据类型由y_dtype指定，shape为[M/world_size, N]，数据格式支持ND。
-	amaxout（Tensor）：当前只支持输出为None，数据格式支持ND。
-约束说明
-	该接口支持推理场景下使用。
-	该接口支持TorchAir图模式。
-	world_size 取值只能为2、4、8、16、32、64。
-	输出output为2维，其维度为(m / world_size, n)，world_size为卡数。
-	当x1、x2的数据类型为float16、bfloat16时，output计算输出数据类型和x1、x2保持一致，bias暂不支持输入为非0的场景，且不支持amaxOut的输出。
-	当x1、x2的数据类型为float8_e4m3fn、float8_e5m2、hifloat8时，output输出数据类型支持float16、float32、bfloat16。支持bias输入为float32。
-	当x1、x2的数据类型为float16、bfloat16、hifloat8时，x1和x2数据类型需要保持一致。
-	当x1、x2数据类型为float8_e4m3fn、float8_e5m2时，x1和x2数据类型可以为其中一种。
-	当x1、x2数据类型为float16、bfloat16、hifloat8、float8_e4m3fn 、float8_e5m2时，x2矩阵支持转置/不转置场景，x1矩阵只支持不转置场景。
-	情形一和情形二时，group_sizes取值为[0, 0, 0]; 情形三时，group_sizes取值为[128, 128, 128]，bias必须为空tensor。
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_float8_e5m2(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0,
+                                                    y_dtype=5,
+                                                    x1_dtype=torch.float8_e5m2,
+                                                    x2_dtype=torch.float8_e5m2)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_float8_e5m2(self):
+        world_size = 8
+        dtype = np.float16
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.float8_e5m2))
+            x2_list.append(x2.to(torch.float8_e5m2))
+        expt_out_list = self._construct_excepted_result_float8(x1_list, x2_list, world_size, torch.float16)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_float8_e5m2,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_float8_e4m3fn(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0,
+                                                    y_dtype=5,
+                                                    x1_dtype=torch.float8_e4m3fn,
+                                                    x2_dtype=torch.float8_e4m3fn)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_float8_e4m3fn(self):
+        world_size = 8
+        dtype = np.float16
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.float8_e4m3fn))
+            x2_list.append(x2.to(torch.float8_e4m3fn))
+        expt_out_list = self._construct_excepted_result_float8(x1_list, x2_list, world_size, torch.float16)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_float8_e4m3fn,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_hifloat8(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0,
+                                                    y_dtype=5,
+                                                    x1_dtype=torch_npu.hifloat8,
+                                                    x2_dtype=torch_npu.hifloat8)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_hifloat8(self):
+        world_size = 8
+        dtype = np.float16
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.int8))
+            x2_list.append(x2.to(torch.int8))
+        expt_out_list = self._construct_excepted_result_float8(x1_list, x2_list, world_size, torch.float16)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_hifloat8,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_bfloat16(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_bfloat16(self):
+        world_size = 8
+        dtype = np.float32
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.bfloat16))
+            x2_list.append(x2.to(torch.bfloat16))
+        expt_out_list = self._construct_excepted_result(x1_list, x2_list, world_size)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_bfloat16,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_float8_mixed_e5m2_e4m3fn(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0,
+                                                    y_dtype=15,
+                                                    x1_dtype=torch.float8_e5m2,
+                                                    x2_dtype=torch.float8_e4m3fn)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_float8_mixed_e5m2_e4m3fn(self):
+        world_size = 8
+        dtype = np.float16
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.float8_e5m2))
+            x2_list.append(x2.to(torch.float8_e4m3fn))
+        expt_out_list = self._construct_excepted_result_float8(x1_list, x2_list, world_size, torch.bfloat16)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_float8_mixed_e5m2_e4m3fn,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    @classmethod
+    def _test_npu_quant_mm_reduce_scatter_float8_mixed_e4m3fn_e5m2(cls, rank, input_list):
+        x1, x2, world_size, init_pg, c2p = input_list
+        pg = init_pg(rank, world_size)
+        group = pg.distributed_c10d._get_default_group()
+        hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
+
+        x1 = x1.npu()
+        x2 = x2.npu()
+        out = torch_npu.npu_quant_mm_reduce_scatter(x1,
+                                                    x2,
+                                                    hcom_name,
+                                                    world_size,
+                                                    reduce_op='sum',
+                                                    bias=None,
+                                                    comm_turn=0,
+                                                    y_dtype=6,
+                                                    x1_dtype=torch.float8_e4m3fn,
+                                                    x2_dtype=torch.float8_e5m2)
+
+        c2p.put((rank, out.cpu()))
+        pg.barrier()
+
+    @skipIfUnsupportMultiNPU(8)
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_mm_reduce_scatter_float8_mixed_e4m3fn_e5m2(self):
+        world_size = 8
+        dtype = np.float16
+        data_format = -1
+        x1_shape = [dtype, data_format, [128, 256]]
+        x2_shape = [dtype, data_format, [256, 256]]
+        x1_list = []
+        x2_list = []
+        for _ in range(world_size):
+            x1, _ = create_common_tensor(x1_shape, -1, 1)
+            x2, _ = create_common_tensor(x2_shape, -1, 1)
+            x1_list.append(x1.to(torch.float8_e4m3fn))
+            x2_list.append(x2.to(torch.float8_e5m2))
+        expt_out_list = self._construct_excepted_result_float8(x1_list, x2_list, world_size, torch.float32)
+        self._test_multiprocess(TestQuantMmReduceScatter._test_npu_quant_mm_reduce_scatter_float8_mixed_e4m3fn_e5m2,
+                                TestQuantMmReduceScatter._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
+
+    def _construct_excepted_result_float8(self, x1_list, x2_list, world_size, out_dtype):
+        out = None
+        for i in range(world_size):
+            x1 = x1_list[i].float()
+            x2 = x2_list[i].float()
+            out_single = torch.matmul(x1, x2)
+            if out is None:
+                out = out_single
+            else:
+                out = torch.add(out, out_single)
+        out = out.to(out_dtype)
+        index = x1_list[0].shape[0] // world_size
+        return [out[index * i:index * (i + 1), :] for i in range(world_size)]
