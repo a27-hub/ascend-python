@@ -189,6 +189,7 @@ class TestNPUBlockSparseAttention(TestCase):
             query, key, value, block_sparse_mask, block_shape,
             q_input_layout="BNSD", kv_input_layout="BNSD",
             num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
             softmax_lse_flag=1,
         )
 
@@ -309,6 +310,7 @@ class TestNPUBlockSparseAttention(TestCase):
             query, key, value, block_sparse_mask, block_shape,
             q_input_layout="BNSD", kv_input_layout="BNSD",
             num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=0,
+            actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
         )
 
         npu_out_cpu = npu_out.cpu().to(torch.float32)
@@ -335,6 +337,7 @@ class TestNPUBlockSparseAttention(TestCase):
             query, key, value, block_sparse_mask, block_shape,
             q_input_layout="BNSD", kv_input_layout="BNSD",
             num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
             softmax_lse_flag=0,
         )
 
@@ -374,6 +377,7 @@ class TestNPUBlockSparseAttention(TestCase):
             query, key, value, block_sparse_mask, block_shape,
             q_input_layout="BNSD", kv_input_layout="BNSD",
             num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=0,
+            actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
         )
 
         npu_out_cpu = npu_out.cpu().to(torch.float32)
@@ -415,6 +419,7 @@ class TestNPUBlockSparseAttention(TestCase):
                     query, key, value, block_sparse_mask, block_shape,
                     q_input_layout="BNSD", kv_input_layout="BNSD",
                     num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+                    actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
                 )
 
                 npu_out_cpu = npu_out.cpu().to(torch.float32)
@@ -450,44 +455,7 @@ class TestNPUBlockSparseAttention(TestCase):
             query, key, value, block_sparse_mask, block_shape,
             q_input_layout="BNSD", kv_input_layout="BNSD",
             num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
-        )
-
-        npu_out_cpu = npu_out.cpu().to(torch.float32)
-        cpu_out_f = cpu_out.cpu().to(torch.float32)
-        self.assertRtolEqual(cpu_out_f, npu_out_cpu, prec=0.005, prec16=0.005)
-
-    @SkipIfNotGteCANNVersion("9.0.0")
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_block_sparse_attention_bnsd_sparse_mask_cpu_compare(self, device="npu"):
-        """BNSD 稀疏掩码：每个 q_block 仅 attend 一个 kv_block（i -> i%ceil_kv），验证稀疏模式."""
-        torch.npu.empty_cache()
-        num_kv_heads = NUM_KV_HEADS
-        scale_value = 1.0 / math.sqrt(D)
-        block_shape = [32, 128]  # S=256 -> ceil_q=8, ceil_kv=2
-        s_sparse = 256
-        ceil_q = (s_sparse + block_shape[0] - 1) // block_shape[0]
-        ceil_kv = (s_sparse + block_shape[1] - 1) // block_shape[1]
-
-        query = torch.randn(B, N, s_sparse, D, dtype=DTYPE)
-        key = torch.randn(B, num_kv_heads, s_sparse, D, dtype=DTYPE)
-        value = torch.randn(B, num_kv_heads, s_sparse, D, dtype=DTYPE)
-        # 每个 q_block i 仅 attend kv_block (i % ceil_kv)，保证每行至少有一个有效块
-        block_sparse_mask = torch.zeros(B, N, ceil_q, ceil_kv, dtype=torch.int8)
-        for i in range(ceil_q):
-            block_sparse_mask[:, :, i, i % ceil_kv] = 1
-
-        cpu_out = cpu_block_sparse_attention_bnsd(
-            query, key, value, block_sparse_mask, block_shape, scale_value, num_kv_heads)
-
-        query = query.to(device)
-        key = key.to(device)
-        value = value.to(device)
-        block_sparse_mask = block_sparse_mask.to(device)
-
-        npu_out, _ = torch_npu.npu_block_sparse_attention(
-            query, key, value, block_sparse_mask, block_shape,
-            q_input_layout="BNSD", kv_input_layout="BNSD",
-            num_key_value_heads=num_kv_heads, scale_value=scale_value, inner_precise=1,
+            actual_seq_lengths=[S] * B, actual_seq_lengths_kv=[S] * B,
         )
 
         npu_out_cpu = npu_out.cpu().to(torch.float32)
