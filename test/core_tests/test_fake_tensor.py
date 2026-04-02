@@ -5252,5 +5252,54 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
+class TestKvQuantSparseFlashAttentionPioneer(TestCase):
+    def call_npu_kv_quant_sparse_flash_attention_pioneer(self, params):
+        return torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(**params)
+
+    def test_kv_quant_sparse_flash_attention_pioneer_meta(self):
+        # BSND layout, 4D query: D=128, rope_head_dim=64, output D = 128 - 64 = 64
+        rope_head_dim = 64
+        query_d = 128
+        query = torch.randn(2, 8, 4, query_d).to("npu").to(torch.float16)
+        key = torch.randint(-128, 127, (2, 16, 1, 64)).to("npu").to(torch.int8)
+        value = torch.randint(-128, 127, (2, 16, 1, 64)).to("npu").to(torch.int8)
+        sparse_indices = torch.randint(0, 8, (2, 4, 1, 2)).to("npu").to(torch.int32)
+
+        params = {
+            "query": query,
+            "key": key,
+            "value": value,
+            "sparse_indices": sparse_indices,
+            "scale_value": 0.125,
+            "key_quant_mode": 2,
+            "value_quant_mode": 2,
+            "sparse_block_size": 1,
+            "layout_query": "BSND",
+            "layout_kv": "BSND",
+            "sparse_mode": 3,
+            "rope_head_dim": rope_head_dim,
+        }
+
+        actual_out = self.call_npu_kv_quant_sparse_flash_attention_pioneer(params)
+        with FakeTensorMode():
+            fake_query = torch.randn(2, 8, 4, query_d).to("npu").to(torch.float16)
+            fake_key = torch.randint(-128, 127, (2, 16, 1, 64)).to("npu").to(torch.int8)
+            fake_value = torch.randint(-128, 127, (2, 16, 1, 64)).to("npu").to(torch.int8)
+            fake_sparse_indices = torch.randint(0, 8, (2, 4, 1, 2)).to("npu").to(torch.int32)
+
+            fake_params = params.copy()
+            fake_params["query"] = fake_query
+            fake_params["key"] = fake_key
+            fake_params["value"] = fake_value
+            fake_params["sparse_indices"] = fake_sparse_indices
+
+            fake_out = self.call_npu_kv_quant_sparse_flash_attention_pioneer(fake_params)
+
+        self.assertEqual(actual_out.shape, fake_out.shape)
+        self.assertEqual(actual_out.dtype, fake_out.dtype)
+        # Verify output D dimension excludes rope part
+        self.assertEqual(actual_out.shape[3], query_d - rope_head_dim)
+
+
 if __name__ == "__main__":
     run_tests()
