@@ -540,5 +540,23 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     return groups;
 }
 
+c10::SmallVector<int64_t, N> check_resize_output_size(const at::Tensor &out, at::IntArrayRef expect_size)
+{
+    if (out.sizes().equals(expect_size)) {
+        return convert_array_to_vector(expect_size);
+    }
+    if (out.numel() != 0){
+        TORCH_WARN(
+            "An output with one or more elements was resized since it had ",
+            "shape ", out.sizes(), ", which does not match the required ",
+            "output shape ", expect_size, ". ",
+            "This behavior is deprecated, and in a future PyTorch release outputs ",
+            "will not be resized unless they have zero elements. You can explicitly ",
+            "reuse an out tensor t by resizing it, inplace, to zero elements with ",
+            "t.resize_(0).");
+        }
+    return convert_array_to_vector(expect_size);
+}
+
 }  // namespace utils
 }  // namespace op_plugin
