@@ -60,8 +60,10 @@ at::Tensor nonzero(const at::Tensor& self)
 {
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero(self));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
-    at::Tensor out =
-        at_npu::native::OpPreparation::apply_tensor_without_format(out_size, self.options().dtype(at::kLong));
+    auto target_shape = c10::SmallVector<int64_t, op_infer::SIZE>{out_size[0], out_size[1]};
+    auto target_stride = c10::SmallVector<int64_t, op_infer::SIZE>{1, out_size[0]};
+    at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(
+        target_shape, target_stride, self.options().dtype(at::kLong));
     return exec_aclnn_non_zero(self, out);
 }
 
