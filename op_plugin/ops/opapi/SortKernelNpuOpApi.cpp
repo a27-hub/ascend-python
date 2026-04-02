@@ -23,7 +23,34 @@ using npu_preparation = at_npu::native::OpPreparation;
 std::tuple<at::Tensor &, at::Tensor &> sort_output(const at::Tensor &self, bool stable, int64_t dim, bool descending,
     at::Tensor &values, at::Tensor &indices)
 {
+    // 1. 计算目标 stride (匹配 CPU/GPU 行为)
+    c10::IntArrayRef target_strides;  // 统一用 IntArrayRef，方便比较
+    c10::SmallVector<int64_t, op_infer::SIZE> dense_strides;
+    
+    if (self.is_non_overlapping_and_dense()) {
+        target_strides = self.strides();        // 保持原始 stride
+    } else {
+        // 计算 dense row-major stride
+        int64_t stride = 1;
+        for (int64_t i = self.dim() - 1; i >= 0; i--) {
+            dense_strides.insert(dense_strides.begin(), stride);
+            stride *= self.sizes()[i];
+        }
+        target_strides = dense_strides;
+    }
+
     EXEC_NPU_CMD(aclnnSort, self, stable, dim, descending, values, indices);
+
+    // Only copy if ACL output stride differs from target stride (minimize overhead)
+    if (values.strides() != target_strides) {
+        c10::SmallVector<int64_t, op_infer::SIZE> target_sizes(self.sizes().begin(), self.sizes().end());
+        at::Tensor values_reshaped = at::empty_strided(target_sizes, target_strides, values.options());
+        at::Tensor indices_reshaped = at::empty_strided(target_sizes, target_strides, indices.options());
+        values_reshaped.copy_(values);
+        indices_reshaped.copy_(indices);
+        values = values_reshaped;
+        indices = indices_reshaped;
+    }
     return std::tie(values, indices);
 }
 
