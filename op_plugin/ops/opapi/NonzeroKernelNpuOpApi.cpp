@@ -19,6 +19,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out)
 {
@@ -49,9 +50,10 @@ at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result)
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
     at_npu::native::OpPreparation::check_tensor({self}, result, at::ScalarType::Long, out_size);
     auto out = result.is_contiguous() ? result : result.contiguous();
-    auto output = exec_aclnn_non_zero(self, out);
+    out = exec_aclnn_non_zero(self, out);
+    out = out.transpose(0, 1).contiguous().reshape(out_size);
     if (!result.is_contiguous()) {
-        result.copy_(output);
+        result.copy_(out);
     }
     return result;
 }
@@ -60,9 +62,8 @@ at::Tensor nonzero(const at::Tensor& self)
 {
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero(self));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
-    at::Tensor out =
-        at_npu::native::OpPreparation::apply_tensor_without_format(out_size, self.options().dtype(at::kLong));
-    return exec_aclnn_non_zero(self, out);
+    at::Tensor out = npu_preparation::apply_tensor_without_format(out_size, self.options().dtype(at::kLong));
+    out = exec_aclnn_non_zero(self, out);
+    return out.transpose(0, 1).contiguous().reshape(out_size);
 }
-
 }
