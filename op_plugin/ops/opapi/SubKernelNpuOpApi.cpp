@@ -36,6 +36,24 @@ inline void alpha_check_npu_scalar(const at::ScalarType self_dtype, at::Scalar o
                 OPS_ERROR(ErrCode::TYPE));
 }
 
+inline void resize_output_check(const at::Tensor &out, at::IntArrayRef expect_size)
+{
+    if (out.sizes().equals(expect_size)) {
+        return;
+    }
+    if (out.numel() != 0){
+        TORCH_WARN(
+            "An output with one or more elements was resized since it had ",
+            "shape ", out.sizes(), ", which does not match the required ",
+            "output shape ", expect_size, ". ",
+            "This behavior is deprecated, and in a future PyTorch release outputs ",
+            "will not be resized unless they have zero elements. You can explicitly ",
+            "reuse an out tensor t by resizing it, inplace, to zero elements with ",
+            "t.resize_(0).");
+        }
+    return;
+}
+
 static at::Tensor &sub_out_npu_nocheck(const at::Tensor &self, const at::Tensor &other, const at::Scalar alpha,
                                        at::Tensor &result)
 {
@@ -83,6 +101,7 @@ at::Tensor &sub_out(const at::Tensor &self, const at::Tensor &other, const at::S
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
     at::Tensor self_converted = self_tensor_to_device(self, result_type, result.device());
+    resize_output_check(result, output_size);
     npu_preparation::check_tensor({self}, result, result, output_size);
     npu_preparation::check_memory({self, other}, {result});
     sub_out_npu_nocheck(self_converted, other, alpha, result);
