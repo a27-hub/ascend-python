@@ -124,6 +124,10 @@ class TestCustomQuantLightningIndexer(TestCase):
         npu_out = npu_out.cpu()
 
         return npu_out
+A5调用示例：
+
+
+
 
     def quant_lightning_indexer_result(self, layout_query, b, t, s1, s2, act_seq_q, act_seq_k, sparse_mode,
                                        sparse_count = 2048):
