@@ -1215,29 +1215,110 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
         torch._check(
             gmm_x.dim() == 2,
             lambda: f"The gmm_x's dim should be 2, but got {gmm_x.dim()}.",
+        )
+        for axis in [0, 1]:
+            dimnum = gmm_x.size(axis)
+            torch._check(
+                dimnum != 0,
+                lambda a=axis: f"The {a} dim of gmm_x should not be 0.",
             )
     if gmm_weight is not None:
         torch._check(
             gmm_weight.dim() == 3,
             lambda: f"The gmm_weight's dim should be 3, but got {gmm_weight.dim()}.",
+        )
+        for axis in [0, 1, 2]:
+            dimnum = gmm_weight.size(axis)
+            torch._check(
+                dimnum != 0,
+                lambda a=axis: f"The {a} dim of gmm_weight should not be 0.",
             )
     if mm_x is not None:
         torch._check(
             mm_x.dim() == 2,
             lambda: f"The mm_x's dim should be 2, but got {mm_x.dim()}.",
+        )
+        for axis in [0, 1]:
+            dimnum = mm_x.size(axis)
+            torch._check(
+                dimnum != 0,
+                lambda a=axis: f"The {a} dim of mm_x should not be 0.",
             )
     if mm_weight is not None:
         torch._check(
             mm_weight.dim() == 2,
             lambda: f"The mm_weight's dim should be 2, but got {mm_weight.dim()}.",
-            )
-    scale_list = [gmm_x_scale, gmm_weight_scale, mm_x_scale, mm_weight_scale]
-    for scale in scale_list:
-        if scale is not None:
+        )
+        for axis in [0, 1]:
+            dimnum = mm_weight.size(axis)
             torch._check(
-                scale.dim() == 1 and scale.size(0) == 1,
-                lambda: f"Scale's shape should be (1,), but got {list(scale.shape)}.",
+                dimnum != 0,
+                lambda a=axis: f"The {a} dim of mm_weight should not be 0.",
             )
+    counts_list = [send_counts, recv_counts]
+    counts_list_names = ["send_counts", "recv_counts"]
+    for counts, counts_name in zip(counts_list, counts_list_names):
+        if counts is not None:
+            if(len(counts) > 256):
+                raise RuntimeError(
+                    f"the number of elements in {counts_name} should not exceed 256, actual send_counts is {len(counts)}")
+            torch._check(
+                all(count >= 0 for count in counts),
+                lambda: f"The {counts_name} contains negative values.",
+            )
+
+    # if send_counts is not None:
+    #     if(len(send_counts) > 256):
+    #         raise RuntimeError(
+    #             f"the number of elements in send_counts should not exceed 256, actual send_counts is {len(send_counts)}")
+    #     torch._check(
+    #         all(count >= 0 for count in send_counts),
+    #         lambda: f"The send_counts contains negative values, found invalid value:{count} at index {send_counts.index(count).",
+    #     )
+    # if recv_counts is not None:
+    #     if(len(recv_counts) > 256):
+    #         raise RuntimeError(
+    #             f"the number of elements in recv_counts should not exceed 256, actual recv_counts is {len(recv_counts)}")
+    #     torch._check(
+    #         all(count >= 0 for count in recv_counts),
+    #         lambda: f"The recv_counts contains negative values, found invalid value:{count} at index {recv_counts.index(count).",
+    #     )
+
+    if gmm_x_quant_mode == 1 and gmm_weight_quant_mode == 1:
+        scale_list = [gmm_x_scale, gmm_weight_scale, mm_x_scale, mm_weight_scale]
+        for scale in scale_list:
+            if scale is not None:
+                torch._check(
+                    scale.dim() == 1 and scale.size(0) == 1,
+                    lambda: f"Scale's shape should be (1,), but got {list(scale.shape)}.",
+                )
+    elif gmm_x_quant_mode == 6 and gmm_weight_quant_mode == 6:
+        scale_list = [gmm_x_scale, mm_x_scale, mm_weight_scale]
+        scale_name = ["gmm_x_scale", "mm_x_scale", "mm_weight_scale"]
+        for scale, name in zip(scale_list, scale_name):
+            if scale is not None:
+                torch._check(
+                    scale.dim() == 3,
+                    lambda: f"The {name}'s dim should be 3, but got {scale.dim()}.",
+                )
+                for axis in [0, 1, 2]:
+                    dimnum = scale.size(axis)
+                    torch._check(
+                        dimnum != 0,
+                        lambda a=axis: f"The {a} dim of {name} should not be 0.",
+                    )
+        if gmm_weight_scale is not None:
+            torch._check(
+                gmm_weight_scale.dim() == 4,
+                lambda: f"The gmm_weight_scale's dim should be 4, but got {gmm_weight_scale.dim()}.",
+            )
+            for axis in [0, 1, 2, 3]:
+                dimnum = gmm_weight_scale.size(axis)
+                torch._check(
+                    dimnum != 0,
+                    lambda a=axis: f"The {a} dim of gmm_weight_scale should not be 0.",
+                )
+
     out_x = sum(recv_counts)
     out_y = gmm_weight.size(2)
     out_mm_x = 0
