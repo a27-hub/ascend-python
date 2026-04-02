@@ -37,6 +37,12 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out)
     TORCH_CHECK(ret == 0, "aclGetViewShape failed.", OPS_ERROR(ErrCode::ACL));
     c10::SmallVector<int64_t, op_infer::SIZE> output_size(view_dims, view_dims + view_dim_num);
     out = out.resize_(output_size);
+
+    // Transpose shape and stride: [ndim, nnz] -> [nnz, ndim], stride -> [1, nnz]
+    c10::SmallVector<int64_t, op_infer::SIZE> target_shape = {output_size[0], output_size[1]};
+    c10::SmallVector<int64_t, op_infer::SIZE> target_stride = {1, output_size[0]};
+    out.as_strided_(target_shape, target_stride, 0);
+
     // Need to use delete[] to release memory to avoid memory leakage!
     delete[] view_dims;
     view_dims = nullptr;
