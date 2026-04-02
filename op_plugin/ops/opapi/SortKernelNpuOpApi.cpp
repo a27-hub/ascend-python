@@ -23,7 +23,29 @@ using npu_preparation = at_npu::native::OpPreparation;
 std::tuple<at::Tensor &, at::Tensor &> sort_output(const at::Tensor &self, bool stable, int64_t dim, bool descending,
     at::Tensor &values, at::Tensor &indices)
 {
+    // 计算目标 stride 
+    c10::IntArrayRef target_strides;
+    c10::SmallVector<int64_t, op_infer::SIZE> dense_strides;
+    
+    if (self.is_non_overlapping_and_dense()) {
+        target_strides = self.strides();
+    } else {
+        int64_t stride = 1;
+        for (int64_t i = self.dim() - 1; i >= 0; i--) {
+            dense_strides.insert(dense_strides.begin(), stride);
+            stride *= self.sizes()[i];
+        }
+        target_strides = dense_strides;
+    }
+
     EXEC_NPU_CMD(aclnnSort, self, stable, dim, descending, values, indices);
+
+    // Use as_strided_ to change stride without copy if ACL output stride differs
+    if (values.strides() != target_strides) {
+        c10::SmallVector<int64_t, op_infer::SIZE> target_sizes(self.sizes().begin(), self.sizes().end());
+        values.as_strided_(target_sizes, target_strides, 0);
+        indices.as_strided_(target_sizes, target_strides, 0);
+    }
     return std::tie(values, indices);
 }
 
