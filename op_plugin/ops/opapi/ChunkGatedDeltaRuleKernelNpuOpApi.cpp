@@ -23,12 +23,12 @@ constexpr int INITIAL_STATE_DIM_NUM = 4;
 
 using npu_preparation = at_npu::native::OpPreparation;
 
-at::Tensor npu_chunk_gated_delta_rule(
+std::tuple<at::Tensor, at::Tensor> npu_chunk_gated_delta_rule(
     const at::Tensor &query,
     const at::Tensor &key,
     const at::Tensor &value,
     const c10::optional<at::Tensor> &beta,
-    at::Tensor &initial_state,
+    const c10::optional<at::Tensor> &initial_state,
     const c10::optional<at::Tensor> &actual_seq_lengths,
     const c10::optional<double> scale,
     const c10::optional<at::Tensor> &g)
@@ -51,7 +51,7 @@ at::Tensor npu_chunk_gated_delta_rule(
 
     float scale_real = static_cast<float>(scale.value());
 
-    EXEC_NPU_CMD(aclnnChunkGatedDeltaRule, query, key, value, beta, state, actual_seq_lengths, scale_real, g, outResult, finalStateResult);
+    EXEC_NPU_CMD(aclnnChunkGatedDeltaRule, query, key, value, beta, initial_state, actual_seq_lengths, scale_real, g, outResult, finalStateResult);
 
     return std::tuple<at::Tensor, at::Tensor>(outResult, finalStateResult);
 }
