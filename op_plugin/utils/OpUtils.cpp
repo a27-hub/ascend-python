@@ -539,6 +539,7 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
                                   (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
     return groups;
 }
+// for test
 
 }  // namespace utils
 }  // namespace op_plugin

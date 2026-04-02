@@ -9,7 +9,7 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
-
+# for test
 class TestGroupedMatmul(TestCase):
     def deq_scale_generate(self, deq_scale_shape):
         fp32_deq_scale = np.random.uniform(low=0.01, high=0.03, size=deq_scale_shape).astype(np.float32)
