@@ -30,8 +30,11 @@ std::tuple<at::Tensor &, at::Tensor &> sort_output(const at::Tensor &self, bool 
 std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self, int64_t dim, bool descending)
 {
     DO_COMPATIBILITY(aclnnSort, acl_op::sort(self, dim, descending));
-    at::Tensor values = npu_preparation::apply_tensor_without_format(self);
-    at::Tensor indices = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong));
+    auto sizes = self.sizes().vec();
+    auto values_stride = at::detail::computeStride(sizes);
+    auto indices_stride = values_stride;
+    at::Tensor values = at::empty_strided(sizes, values_stride, self.options());
+    at::Tensor indices = at::empty_strided(sizes, indices_stride, self.options().dtype(at::kLong));
     bool stable = false;
 
     return sort_output(self, stable, dim, descending, values, indices);
@@ -40,8 +43,11 @@ std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self, int64_t dim, boo
 std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self, at::Dimname dim, bool descending)
 {
     DO_COMPATIBILITY(aclnnSort, acl_op::sort(self, dim, descending));
-    at::Tensor values = npu_preparation::apply_tensor_without_format(self);
-    at::Tensor indices = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong));
+    auto sizes = self.sizes().vec();
+    auto values_stride = at::detail::computeStride(sizes);
+    auto indices_stride = values_stride;
+    at::Tensor values = at::empty_strided(sizes, values_stride, self.options());
+    at::Tensor indices = at::empty_strided(sizes, indices_stride, self.options().dtype(at::kLong));
     bool stable = false;
     int64_t argDim = dimname_to_position(self, dim);
 
@@ -78,8 +84,11 @@ std::tuple<at::Tensor, at::Tensor> sort(const at::Tensor &self,
     auto dtype = self.scalar_type();
     TORCH_CHECK(!(dtype == at::kDouble),
                 "Input data type should not be float64 " + OPS_ERROR(ErrCode::TYPE));
-    at::Tensor values = npu_preparation::apply_tensor_without_format(self);
-    at::Tensor indices = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kLong));
+    auto sizes = self.sizes().vec();
+    auto values_stride = at::detail::computeStride(sizes);
+    auto indices_stride = values_stride;
+    at::Tensor values = at::empty_strided(sizes, values_stride, self.options());
+    at::Tensor indices = at::empty_strided(sizes, indices_stride, self.options().dtype(at::kLong));
     bool argStable = c10::value_or_else(stable, [] { return false; });
     EXEC_NPU_CMD(aclnnSort, self, argStable, dim, descending, values, indices);
     return std::tie(values, indices);
