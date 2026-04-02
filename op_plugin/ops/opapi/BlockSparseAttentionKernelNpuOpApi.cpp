@@ -27,20 +27,12 @@ using npu_preparation = at_npu::native::OpPreparation;
 // 入参检查
 static void check_params(const at::Tensor &query,
                          const at::Tensor &key,
-                         const at::Tensor &value,
-                         int64_t inner_precise)
+                         const at::Tensor &value)
 {
     // Q/K/V 数据类型必须一致
     TORCH_CHECK(query.scalar_type() == key.scalar_type() && key.scalar_type() == value.scalar_type(),
         "query, key, value must have the same dtype, got query=", query.scalar_type(),
         ", key=", key.scalar_type(), ", value=", value.scalar_type(), OPS_ERROR(ErrCode::PARAM));
-
-    // 当Q为bf16时，inner_precise必须为0
-    if (query.scalar_type() == at::kBFloat16) {
-        TORCH_CHECK(inner_precise == 0,
-            "when query/key/value are bfloat16, inner_precise must be 0, got ", inner_precise,
-            OPS_ERROR(ErrCode::PARAM));
-    }
 }
 
 // PTA 接口实现
