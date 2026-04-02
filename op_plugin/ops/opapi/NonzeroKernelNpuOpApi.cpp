@@ -36,7 +36,7 @@ at::Tensor exec_aclnn_non_zero(const at::Tensor& self, at::Tensor& out)
     auto ret = aclGetViewShape(npuAclParams.Get<1>(), &view_dims, &view_dim_num);
     TORCH_CHECK(ret == 0, "aclGetViewShape failed.", OPS_ERROR(ErrCode::ACL));
     c10::SmallVector<int64_t, op_infer::SIZE> output_size(view_dims, view_dims + view_dim_num);
-    out = out.resize_(output_size);
+    out.as_strided_(output_size, {output_size[1], 1});
     // Need to use delete[] to release memory to avoid memory leakage!
     delete[] view_dims;
     view_dims = nullptr;
@@ -48,9 +48,8 @@ at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result)
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero_out(self, result));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
     at_npu::native::OpPreparation::check_tensor({self}, result, at::ScalarType::Long, out_size);
-    auto out = result.is_contiguous() ? result : result.contiguous();
-    auto output = exec_aclnn_non_zero(self, out);
-    if (!result.is_contiguous()) {
+    auto output = exec_aclnn_non_zero(self, result);
+    if (!output.is_same(result)) {
         result.copy_(output);
     }
     return result;
