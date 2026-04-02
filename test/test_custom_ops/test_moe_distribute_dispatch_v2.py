@@ -250,7 +250,7 @@ class TestMoeDistributeDispatch(TestCase):
 
     @skipIfUnsupportMultiNPU(8)
     @SupportedDevices(['Ascend950'])
-    def test_npu_moe_distribute_dispatch_A5(self):
+    def test_npu_moe_distribute_dispatch_arch35(self):
         ep_world_size = 8
         tp_world_size = 1
         world_size = ep_world_size * tp_world_size
