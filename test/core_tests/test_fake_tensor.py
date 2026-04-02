@@ -5252,5 +5252,70 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
+class TestKvQuantSparseFlashAttentionPioneer(TestCase):
+    def test_npu_kv_quant_sparse_flash_attention_pioneer_meta(self):
+        # BSND layout, bfloat16
+        query = torch.rand(4, 1, 128, 576).to("npu").to(torch.bfloat16)
+        key = torch.rand(32, 256, 1, 640).to("npu").to(torch.int8)
+        value = torch.rand(32, 256, 1, 512).to("npu").to(torch.int8)
+        sparse_indices = torch.randint(0, 32, (4, 1, 1, 2048)).to("npu").to(torch.int32)
+        actual_y = torch_npu.npu_kv_quant_sparse_flash_attention_pioneer(
+            query, key, value, sparse_indices,
+            scale_value=0.041666666666666664, sparse_block_size=1,
+            actual_seq_lengths_query=torch.tensor([1, 1, 1, 1]).to("npu"),
+            actual_seq_lengths_kv=torch.tensor([4096, 4096, 4096, 4096]).to("npu"),
+            layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3,
+            block_table=torch.randint(0, 32, (4, 16)).to("npu"),
+            attention_mode=2, quant_scale_repo_mode=1, tile_size=128,
+            key_quant_mode=2, value_quant_mode=2, rope_head_dim=64)
+        with FakeTensorMode():
+            fake_query = torch.rand(4, 1, 128, 576).to("npu").to(torch.bfloat16)
+            fake_key = torch.rand(32, 256, 1, 640).to("npu").to(torch.int8)
+            fake_value = torch.rand(32, 256, 1, 512).to("npu").to(torch.int8)
+            fake_sparse_indices = torch.randint(0, 32, (4, 1, 1, 2048)).to("npu").to(torch.int32)
+            fake_y = torch_npu.npu_kv_quant_sparse_flash_attention_pioneer(
+                fake_query, fake_key, fake_value, fake_sparse_indices,
+                scale_value=0.041666666666666664, sparse_block_size=1,
+                actual_seq_lengths_query=torch.tensor([1, 1, 1, 1]).to("npu"),
+                actual_seq_lengths_kv=torch.tensor([4096, 4096, 4096, 4096]).to("npu"),
+                layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3,
+                block_table=torch.randint(0, 32, (4, 16)).to("npu"),
+                attention_mode=2, quant_scale_repo_mode=1, tile_size=128,
+                key_quant_mode=2, value_quant_mode=2, rope_head_dim=64)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_y.dtype, fake_y.dtype)
+
+        # TND layout, float16
+        query_tnd = torch.rand(1, 48, 576).to("npu").to(torch.float16)
+        key_tnd = torch.rand(31, 128, 1, 640).to("npu").to(torch.int8)
+        value_tnd = torch.rand(31, 128, 1, 512).to("npu").to(torch.int8)
+        sparse_indices_tnd = torch.randint(0, 31, (1, 1, 2048)).to("npu").to(torch.int32)
+        actual_y_tnd = torch_npu.npu_kv_quant_sparse_flash_attention_pioneer(
+            query_tnd, key_tnd, value_tnd, sparse_indices_tnd,
+            scale_value=0.041666666666666664, sparse_block_size=1,
+            actual_seq_lengths_query=torch.tensor([1]).to("npu"),
+            actual_seq_lengths_kv=torch.tensor([3904]).to("npu"),
+            layout_query='TND', layout_kv='PA_BSND', sparse_mode=3,
+            block_table=torch.randint(0, 31, (1, 31)).to("npu"),
+            attention_mode=2, quant_scale_repo_mode=1, tile_size=128,
+            key_quant_mode=2, value_quant_mode=2, rope_head_dim=64)
+        with FakeTensorMode():
+            fake_query_tnd = torch.rand(1, 48, 576).to("npu").to(torch.float16)
+            fake_key_tnd = torch.rand(31, 128, 1, 640).to("npu").to(torch.int8)
+            fake_value_tnd = torch.rand(31, 128, 1, 512).to("npu").to(torch.int8)
+            fake_sparse_indices_tnd = torch.randint(0, 31, (1, 1, 2048)).to("npu").to(torch.int32)
+            fake_y_tnd = torch_npu.npu_kv_quant_sparse_flash_attention_pioneer(
+                fake_query_tnd, fake_key_tnd, fake_value_tnd, fake_sparse_indices_tnd,
+                scale_value=0.041666666666666664, sparse_block_size=1,
+                actual_seq_lengths_query=torch.tensor([1]).to("npu"),
+                actual_seq_lengths_kv=torch.tensor([3904]).to("npu"),
+                layout_query='TND', layout_kv='PA_BSND', sparse_mode=3,
+                block_table=torch.randint(0, 31, (1, 31)).to("npu"),
+                attention_mode=2, quant_scale_repo_mode=1, tile_size=128,
+                key_quant_mode=2, value_quant_mode=2, rope_head_dim=64)
+        self.assertEqual(actual_y_tnd.shape, fake_y_tnd.shape)
+        self.assertEqual(actual_y_tnd.dtype, fake_y_tnd.dtype)
+
+
 if __name__ == "__main__":
     run_tests()
