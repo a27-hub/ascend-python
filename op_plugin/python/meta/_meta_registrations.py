@@ -1995,57 +1995,6 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
     return out
 
 
-@impl(m, "npu_kv_quant_sparse_flash_attention")
-def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
-                                                value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None,
-                                                actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND",
-                                                layout_kv="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0,
-                                                quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64, key_dtype=None, value_dtype=None):
-    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
-
-    for item_name, item in require_param.items():
-        torch._check(
-            item is not None,
-            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
-        )
-
-    torch._check(
-        query.numel() > 0,
-        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
-    )
-    torch._check(
-        key.numel() > 0,
-        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
-    )
-    torch._check(
-        value.numel() > 0,
-        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
-    )
-    torch._check(
-        sparse_indices.numel() > 0,
-        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
-    )
-
-    if layout_query == "BSND":
-        torch._check(
-            query.dim() == 4,
-            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
-        )
-        out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3) - rope_head_dim], dtype=query.dtype, device='meta')
-    elif layout_query == "TND":
-        torch._check(
-            query.dim() == 3,
-            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
-        )
-        out = torch.empty([query.size(0), query.size(1), query.size(2) - rope_head_dim], dtype=query.dtype, device='meta')
-    else:
-        torch._check(
-            False,
-            lambda: "Not support layout of query:" + layout_query + ops_error(ErrCode.VALUE),
-        )
-    return out
-
-
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                  atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
@@ -6510,3 +6459,80 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
+
+
+@impl(m, "_npu_kv_quant_sparse_flash_attention_pioneer")
+def _npu_kv_quant_sparse_flash_attention_pioneer_meta(
+    query, key, value, sparse_indices, scale_value, key_quant_mode, value_quant_mode, *,
+    key_dequant_scale=None, value_dequant_scale=None, block_table=None,
+    actual_seq_lengths_query=None, actual_seq_lengths_kv=None,
+    key_sink=None, value_sink=None, sparse_block_size=1,
+    layout_query="BSND", layout_kv="BSND", sparse_mode=3,
+    pre_tokens=9223372036854775807, next_tokens=9223372036854775807,
+    attention_mode=0, quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64,
+    key_dtype=None, value_dtype=None):
+
+    torch._check(
+        query is not None,
+        lambda: "Input query should not be None." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key is not None,
+        lambda: "Input key should not be None." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value is not None,
+        lambda: "Input value should not be None." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices is not None,
+        lambda: "Input sparse_indices should not be None." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        query.numel() > 0,
+        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key.numel() > 0,
+        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value.numel() > 0,
+        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices.numel() > 0,
+        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
+    )
+
+    # Output D dimension only contains nope part, excluding rope part
+    output_d = query.size(3) - rope_head_dim
+    torch._check(
+        output_d > 0,
+        lambda: "Output D dimension (query.D - rope_head_dim) must be greater than 0, "
+                "but got query.D=" + str(query.size(3)) + ", rope_head_dim=" + str(rope_head_dim)
+                + ops_error(ErrCode.VALUE),
+    )
+
+    # Output shape follows query layout
+    if layout_query == "TND":
+        torch._check(
+            query.dim() == 3,
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        attention_out = torch.empty([query.size(0), query.size(1), output_d],
+                                     dtype=torch.bfloat16, device='meta')
+    elif layout_query == "BSND":
+        torch._check(
+            query.dim() == 4,
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), output_d],
+                                     dtype=torch.bfloat16, device='meta')
+    else:
+        torch._check(
+            False,
+            lambda: "Not support layout of query: " + layout_query + ops_error(ErrCode.VALUE),
+        )
+
+    return attention_out
