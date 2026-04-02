@@ -15123,7 +15123,7 @@ import torch_npu
 
 # 构造输入
 B, seqlen, nk, nv, dk, dv = (2, 100, 4, 8, 128, 128)
-actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
+actual_seq_lengths = (torch.ones(B) * seqlen).to("npu").to(torch.int32)
 T = int(torch.sum(actual_seq_lengths))
 
 state = torch.rand((B, nv, dv, dk), dtype=torch.bfloat16).npu()
