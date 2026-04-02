@@ -47,6 +47,13 @@ class TestNonzero(TestCase):
             npu_output = self.npu_op_exec(npu_input)
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_nonzero_stride(self):
+        cpu_input = torch.tensor([[1, 0, 2], [0, 3, 0]], dtype=torch.float32)
+        npu_input = cpu_input.npu()
+        cpu_output = torch.nonzero(cpu_input)
+        npu_output = torch.nonzero(npu_input)
+        self.assertEqual(cpu_output.stride(), npu_output.stride())
+        self.assertEqual(cpu_output.shape, npu_output.shape)
 
 if __name__ == "__main__":
     run_tests()
