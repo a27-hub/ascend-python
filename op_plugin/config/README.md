@@ -357,6 +357,38 @@ Aten IR定义：
       arg0: func(arg1)
 ```
 
+- `checks`：用于在算子执行前添加参数检查逻辑，配置方式如下：
+  - 每个检查项是一个字符串，表示完整的函数调用表达式
+  - 支持多个检查项组合
+配置示例：
+
+多个检查项：
+```yaml
+- func: complex_op(Tensor self, Tensor other) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    checks:
+      - at::native::sub_check(self, other)
+      - at_npu::native::assert_no_internal_overlap(self)
+      - TORCH_CHECK(self.dim() <= 4, "Only support 4D or lower")
+    out:
+      size: self
+      dtype: self
+    exec: aclnnComplexOp
+```
+
+单个检查项（简写）：
+```yaml
+- func: rsub.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
+  op_api: all_version
+  gen_opapi:
+    check: at::native::sub_check(self, other)
+    out:
+      size: self
+      dtype: at::native::result_type(self, other)
+    exec: aclnnRsubs
+```
+
 - `exec`: 配置`EXEC_NPU_CMD`对应的参数。如果除aclnnname（原函数可排除out参数），其它参数顺序和Aten IR的顺序相同，可只配置aclnnname。以`abs`为例，`exec`字段可以配置成下面两种方式
 ```yaml
     - func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)

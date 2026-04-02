@@ -72,6 +72,7 @@ at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
     at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
+    op_plugin::utils::check_resize_output_size(result, output_size);
     npu_preparation::check_tensor({self}, result, result.scalar_type(), output_size);
     // calculate the output result of the NPU
     mul_out_npu_no_check(self_cp, other, result);
