@@ -48,11 +48,11 @@ at::Tensor& nonzero_out(const at::Tensor& self, at::Tensor& result)
     DO_COMPATIBILITY(aclnnNonzero, acl_op::nonzero_out(self, result));
     auto out_size = op_infer::nonzero_npu_max_output_size(self);
     at_npu::native::OpPreparation::check_tensor({self}, result, at::ScalarType::Long, out_size);
-    auto out = result.is_contiguous() ? result : result.contiguous();
+    auto out = result.is_contiguous(); //? result : result.contiguous();
     auto output = exec_aclnn_non_zero(self, out);
-    if (!result.is_contiguous()) {
-        result.copy_(output);
-    }
+    //if (!result.is_contiguous()) {
+        //result.copy_(output);
+    //}
     return result;
 }
 
