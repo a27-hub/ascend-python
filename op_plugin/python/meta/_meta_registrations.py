@@ -4793,9 +4793,6 @@ def npu_transpose_quant_batchmatmul_meta(input_, weight, dtype, bias=None, x1_sc
     batch_m = input_.size(perm_x1.index(0))
     N = weight.size(perm_x2.index(2))
     dim_list = (M, batch_m, N)
-
-    if scale is not None:
-        dim_list = (M, 1, batch_m * N)
     if batch_split_factor > 1:
         dim_list = (batch_split_factor, M, batch_m * N // batch_split_factor)
     return input_.new_empty(dim_list, dtype=dtype)
