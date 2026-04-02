@@ -187,9 +187,11 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
   struct Store {
     Store() = default;
     Store(dvm::NDObject *p, void *ptr, bool is_inplace, const at::Tensor &t)
-        : op(p), data_ptr(ptr), inplace(is_inplace), storage(t.storage().getWeakStorageImpl()) {}
+        : op(p), data_ptr(ptr), nbytes(t.nbytes()), inplace(is_inplace),
+          storage(t.storage().getWeakStorageImpl()) {}
     dvm::NDObject *op;
     void *data_ptr{nullptr};
+    size_t nbytes{0};
     bool inplace{false};
     bool skip{false};
     c10::weak_intrusive_ptr<c10::StorageImpl> storage;
