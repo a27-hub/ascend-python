@@ -45,3 +45,4 @@ bool npu_add_rms_norm_quant_param_check(
 }
 
 } // namespace op_infer
+// ci test
