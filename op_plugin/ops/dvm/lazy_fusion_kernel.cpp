@@ -236,9 +236,10 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(tensor);
   auto data_ptr = tensor.data_ptr();
   if (inplace && storage->dvm_op_ != nullptr) {
+    auto nbytes = tensor.nbytes();
     for (int64_t i = static_cast<int64_t>(outputs_.size()) - 1; i >= 0; --i) {
       auto idx = static_cast<size_t>(i);
-      if (outputs_[idx].data_ptr == data_ptr) {
+      if (outputs_[idx].data_ptr == data_ptr && nbytes >= outputs_[idx].nbytes) {
         outputs_[idx].skip = true;
         break;
       }
