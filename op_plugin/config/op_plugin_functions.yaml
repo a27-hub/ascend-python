@@ -1540,7 +1540,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: self
+        size: 'check_resize_output_size(out, self.sizes())'
         dtype: self
         name: self
       exec: aclnnCeil
@@ -2104,7 +2104,7 @@ official:
     op_api: all_version
     gen_opapi:
       out:
-        size: self
+        size: 'check_resize_output_size(out, self.sizes())'
         name: self
       exec: aclnnExp
 
