@@ -5251,6 +5251,5 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
-
 if __name__ == "__main__":
     run_tests()
