@@ -15095,9 +15095,9 @@ npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? be
 - query (Tensor)：必选输入，对应公式中的q，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
 - key (Tensor)：必选输入，对应公式中的k，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
 - value (Tensor)：必选输入，对应公式中的v，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv, Dv）。
-- beta (Tensor)：必选输入，对应公式中的β，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv）。
-- initial_state (Tensor)：必选输入&输出，对应公式中的状态矩阵S，数据类型支持bfloat16，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
-- actual_seq_lengths (Tensor)：必选输入，各batch的输入序列长度。数据类型支持int32，数据格式支持ND，shape为（B,）。
+- beta (Tensor)：可选输入，对应公式中的β，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv）。
+- initial_state (Tensor)：可选输入&输出，对应公式中的状态矩阵S，数据类型支持bfloat16，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
+- actual_seq_lengths (Tensor)：可选输入，各batch的输入序列长度。数据类型支持int32，数据格式支持ND，shape为（B,）。
 - g (Tensor)：可选输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持float32，数据格式支持ND，shape为（T, Nv）。
 - scale_value (Scalar)：可选输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持float32。
 
@@ -15123,7 +15123,7 @@ import torch_npu
 
 # 构造输入
 B, seqlen, nk, nv, dk, dv = (2, 100, 4, 8, 128, 128)
-actual_seq_lengths= （torch.ones(B)* 社区了呢）。女仆（）。头（torch.int32)
+actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
 T = int(torch.sum(actual_seq_lengths))
 
 state = torch.rand((B, nv, dv, dk), dtype=torch.bfloat16).npu()
