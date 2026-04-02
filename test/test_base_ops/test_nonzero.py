@@ -47,6 +47,6 @@ class TestNonzero(TestCase):
             npu_output = self.npu_op_exec(npu_input)
             self.assertRtolEqual(cpu_output, npu_output)
 
-
+    
 if __name__ == "__main__":
     run_tests()
