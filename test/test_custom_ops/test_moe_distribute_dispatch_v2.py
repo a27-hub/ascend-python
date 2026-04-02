@@ -88,8 +88,8 @@ class TestMoeDistributeDispatch(TestCase):
         p2c.get()
 
     def _test_multiprocess(self, f, init_pg, input_list):
-        expt_out_list, expt_token_list, x1_list, x2_list, topk1_list, topk2_list, ep_world_size, tp_world_size, globalBS,\
-            sharedExpertRankNum, moeExpertNum, h = input_list
+        expt_out_list, expt_token_list, x1_list, x2_list, topk1_list, topk2_list, elastic_info, ep_world_size,\
+            tp_world_size, globalBS, sharedExpertRankNum, moeExpertNum, h = input_list
         ctx = mp.get_context('spawn')
         tp_world_size_2 = 2 
         c2p = ctx.Queue(ep_world_size * tp_world_size_2)
@@ -99,8 +99,8 @@ class TestMoeDistributeDispatch(TestCase):
         for i in range(ep_world_size * tp_world_size_2):
             p = ctx.Process(
                 target=f,
-                args=(i, [expt_token_list, x1_list, x2_list, topk1_list, topk2_list, ep_world_size, tp_world_size,
-                          globalBS, sharedExpertRankNum, moeExpertNum, h, init_pg, c2p, p2c]))
+                args=(i, [expt_token_list, x1_list, x2_list, topk1_list, topk2_list, elastic_info, ep_world_size,
+                            tp_world_size, globalBS, sharedExpertRankNum, moeExpertNum, h, init_pg, c2p, p2c]))
             p.start()
             ps.append(p)
 
@@ -237,16 +237,16 @@ class TestMoeDistributeDispatch(TestCase):
 
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_1, expt_token_list_1, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_2, expt_token_list_2, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_3, expt_token_list_3, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_4, expt_token_list_4, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
 
     @skipIfUnsupportMultiNPU(8)
     @SupportedDevices(['Ascend950'])
@@ -286,10 +286,10 @@ class TestMoeDistributeDispatch(TestCase):
 
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_1, expt_token_list_1, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_1, moe_expert_num_7, h])
         self._test_multiprocess(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_2, expt_token_list_2, x1_list, x2_list, topk1_list,
-                topk2_list, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
+                topk2_list, elastic_info, ep_world_size, tp_world_size, global_bs, shared_expert_rank_num_0, moe_expert_num_8, h])
 
 if __name__ == '__main__':
     run_tests()
