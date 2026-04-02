@@ -130,3 +130,60 @@
         self._test_multiprocess_float8(TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8,
                 TestMoeDistributeDispatch._init_dist_hccl, [expt_out_list_4, expt_token_list_4, x1_list, x2_list, topk1_list,
                 topk2_list, ep_world_size, tp_world_size_1, global_bs, shared_expert_rank_num_0, moe_expert_num_4, h])
+
+
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-33:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-35:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-37:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-38:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-36:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-40:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_moe_distribute_dispatch_v2_fp8() missing 1 required positional argument: 'input_list'
+Process SpawnProcess-39:
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/root/miniconda3/envs/cstest/lib/python3.10/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+TypeError: TestMoeDistributeDispatch._test_npu_m
