@@ -5252,5 +5252,52 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
+class TestNpuKvQuantSparseFlashAttentionPioneer(TestCase):
+    def test_kv_quant_sparse_flash_attention_pioneer_meta_bsnd(self):
+        # BSND layout, attention_mode=0
+        B, S1, Q_N, D = 1, 1, 8, 128
+        S2, KV_N = 64, 1
+        sparse_size = 2
+        query = torch.randn(B, S1, Q_N, D, dtype=torch.bfloat16).to("npu")
+        key = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+        value = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+        sparse_indices = torch.zeros(B, S1, KV_N, sparse_size, dtype=torch.int32).to("npu")
+        actual_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+            query, key, value, sparse_indices, 0.08, 2, 2)
+        with FakeTensorMode():
+            fake_query = torch.randn(B, S1, Q_N, D, dtype=torch.bfloat16).to("npu")
+            fake_key = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+            fake_value = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+            fake_sparse_indices = torch.zeros(B, S1, KV_N, sparse_size, dtype=torch.int32).to("npu")
+            fake_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+                fake_query, fake_key, fake_value, fake_sparse_indices, 0.08, 2, 2)
+        self.assertEqual(actual_out.shape, fake_out.shape)
+        self.assertEqual(actual_out.dtype, fake_out.dtype)
+
+    def test_kv_quant_sparse_flash_attention_pioneer_meta_bsnd_mla(self):
+        # BSND layout, attention_mode=2 (MLA-absorb), rope_head_dim=64
+        B, S1, Q_N, D = 1, 1, 8, 192
+        S2, KV_N = 64, 1
+        sparse_size = 2
+        rope_head_dim = 64
+        query = torch.randn(B, S1, Q_N, D, dtype=torch.bfloat16).to("npu")
+        key = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+        value = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+        sparse_indices = torch.zeros(B, S1, KV_N, sparse_size, dtype=torch.int32).to("npu")
+        actual_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+            query, key, value, sparse_indices, 0.08, 2, 2,
+            attention_mode=2, rope_head_dim=rope_head_dim)
+        with FakeTensorMode():
+            fake_query = torch.randn(B, S1, Q_N, D, dtype=torch.bfloat16).to("npu")
+            fake_key = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+            fake_value = torch.randint(-128, 127, (B, S2, KV_N, D), dtype=torch.int8).to("npu")
+            fake_sparse_indices = torch.zeros(B, S1, KV_N, sparse_size, dtype=torch.int32).to("npu")
+            fake_out = torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(
+                fake_query, fake_key, fake_value, fake_sparse_indices, 0.08, 2, 2,
+                attention_mode=2, rope_head_dim=rope_head_dim)
+        self.assertEqual(actual_out.shape, fake_out.shape)
+        self.assertEqual(actual_out.dtype, fake_out.dtype)
+
+
 if __name__ == "__main__":
     run_tests()
