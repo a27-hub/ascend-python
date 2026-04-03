@@ -167,4 +167,22 @@ Ran * test in **s.
 OK
 ```
 
+### 注意事项
+
+自定义算子的内核启动方式如果采用[add_custom.asc](./csrc/add_custom.asc) 中的**方式4**（stream(false)直接启动，不清queue不入queue），可能导致乱序执行。
+
+例如以下Model：
+```python
+class Model(torch.nn.Module):
+    def forward(self, x, y):
+        x *= 2 # mul_1
+        x = torch.ops.ascendc_ops.ascendc_add(x, y) # add_custom
+        x *= 2 # mul_2
+        return x
+```
+通过profiler工具采集部分结果如下图：
+![乱序问题示意](../figures/disorder.png)
+可见图中add_custom和第一个mul运算发生乱序。
+
+**建议**：具体其他实现方式请参考 [add_custom.asc](./csrc/add_custom.asc) 中的注释说明。
 
