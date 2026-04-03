@@ -336,3 +336,7 @@ backward:
   x1: _cdist_backward(grad, x1, x2, p, result)
   x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
   version: all_version
+
+- name: npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+  x, h_res, h_out, h_post: npu_mhc_post_backward(grad, x, h_res, h_out, h_post)
+  version: all_version
