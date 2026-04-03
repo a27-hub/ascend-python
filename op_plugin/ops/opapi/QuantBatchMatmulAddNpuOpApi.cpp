@@ -41,12 +41,12 @@ but got ", group_dim, OPS_ERROR(ErrCode::PARAM));
 
 at::Tensor npu_add_quant_matmul(const at::Tensor &self, const at::Tensor &x1, const at::Tensor &x2,
                                 const at::Tensor &x2_scale, const c10::optional<at::Tensor> &x1_scale,
-                                c10::OptionalIntArrayRef group_sizes, c10::optional<int64_t> x1_dtype,
-                                c10::optional<int64_t> x2_dtype, c10::optional<int64_t> x1_scale_dtype,
-                                c10::optional<int64_t> x2_scale_dtype)
+                                bool transpose_x1, bool transpose_x2, c10::OptionalIntArrayRef group_sizes,
+                                c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
+                                c10::optional<int64_t> x1_scale_dtype, c10::optional<int64_t> x2_scale_dtype)
     // func: npu_add_quant_matmul(Tensor self, Tensor x1, Tensor x2, Tensor x2_scale, *,
-    // Tensor? x1_scale=None, int[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None,
-    // int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor
+    // Tensor? x1_scale=None, bool transpose_x1=False, bool transpose_x2=False, int[]? group_sizes=None,
+    // int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor
     // op_api: all_version对应的非原地npu实现
 {
     static const bool is_quant_batch_matmul_inplace_add_available =
@@ -55,9 +55,6 @@ at::Tensor npu_add_quant_matmul(const at::Tensor &self, const at::Tensor &x1, co
                 "Get aclnnQuantBatchMatmulInplaceAdd or aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize failed, "
                 "please upgrade CANN to version 9.0.0 or higher",
                 OPS_ERROR(ErrCode::PARAM));
-    bool transpose1 = false;
-    bool transpose2 = false;
-    
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = check_and_get_groups(group_size_list);
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
@@ -78,7 +75,7 @@ at::Tensor npu_add_quant_matmul(const at::Tensor &self, const at::Tensor &x1, co
 
     auto self_copy = self.clone();
     EXEC_NPU_CMD(aclnnQuantBatchMatmulInplaceAdd, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper,
-                 self_copy, transpose1, transpose2, group_size);
+                 self_copy, transpose_x1, transpose_x2, group_size);
 
     return self_copy;
 }
