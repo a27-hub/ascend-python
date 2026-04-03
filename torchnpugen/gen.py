@@ -69,8 +69,6 @@ class FileManager:
 
     @staticmethod
     def _remove_path_safety(filepath: str) -> None:
-        if os.path.islink(filepath):
-            raise RuntimeError(f"Invalid path is a soft chain: {filepath}")
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -78,13 +76,15 @@ class FileManager:
     def _write_if_changed(filename: str, contents: str) -> None:
         old_contents: Optional[str]
         filepath = os.path.realpath(filename)
+        FileManager._remove_path_safety(filepath)
+        if os.path.islink(filepath):
+            raise RuntimeError(f"Invalid path is a soft chain: {filepath}")
         try:
             with open(filepath, 'r') as f:
                 old_contents = f.read()
         except IOError:
             old_contents = None
         if contents != old_contents:
-            FileManager._remove_path_safety(filepath)
             with os.fdopen(os.open(filepath, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR), "w") as f:
                 f.write(contents)
             os.chmod(filepath, stat.S_IRUSR | stat.S_IEXEC | stat.S_IRGRP | stat.S_IXGRP)
@@ -271,7 +271,7 @@ def gen_return(
         impl_name = f.impl_name
         if not f.impl_name:
             impl_name = op_name
-        
+
         deprecated_warn = ""
         if op_name_with_overload in deprecated_dict.keys():
             deprecated_func = f'torch_npu.{str(f.func.name.name)}'
@@ -402,7 +402,7 @@ def parse_native_yaml(
 
     with open(path, "r") as f:
         es = yaml.safe_load(f)
-    
+
     with open(deprecate_path, "r") as f:
         dp = yaml.safe_load(f)
 
