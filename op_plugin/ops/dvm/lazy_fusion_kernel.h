@@ -98,7 +98,7 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
   }
 
  private:
-  void ClearGraph() {
+  void ClearGraphRefs() {
     for (size_t i = 0; i < input_used_; i++) {
       auto p = inputs_[i]->tensor.storage().getWeakStorageImpl().lock();
       if (p) {
@@ -108,19 +108,19 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
       inputs_[i]->tensor = at::Tensor();
     }
     outputs_.clear();
-    workspace_.clear();
     dump_ops_.clear();
     input_used_ = 0;
     ops_map_used_ = 0;
     cache_shape_used_ = 0;
     dump_idx_ = 0;
-    flushed_ = false;
   }
-  void ClearKernel();
+  void ClearRuntimeState();
   void Clear() {
-    ClearGraph();
-    ClearKernel();
+    ClearGraphRefs();
+    ClearRuntimeState();
   }
+
+  int CodeGenAndLaunch();
 
   template <typename T>
   std::string ToString(T t) { return std::to_string(t); }
