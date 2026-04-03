@@ -15,29 +15,59 @@
 #include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
-static const size_t GROUP_SIZE_DIM = 3;
-static const size_t INDEX_GROUP_M = 0;
-static const size_t INDEX_GROUP_N = 1;
-static const size_t INDEX_GROUP_K = 2;
+namespace {
+constexpr size_t GROUP_SIZE_DIM = 3;
+constexpr size_t LAST_SECOND_DIM_INDEX = 2;
+constexpr int64_t GROUP_MAX = 65535;
+
 using npu_preparation = at_npu::native::OpPreparation;
 
-inline int64_t check_and_get_groups(at::IntArrayRef group_size_list)
+bool is_transpose_last_two_dims(const at::Tensor& tensor)
 {
-    int64_t groups = 0;
-    if (group_size_list.empty()) {
-        return groups;
+    if (tensor.dim() < 2 || tensor.dim() > 6) {
+        return false;
     }
-    size_t group_dim = group_size_list.size();
-    TORCH_CHECK(group_dim == GROUP_SIZE_DIM, "When group_sizes is not empty, it only supports input with 3 elements, \
-but got ", group_dim, OPS_ERROR(ErrCode::PARAM));
-    int64_t group_m = static_cast<int64_t>(group_size_list[INDEX_GROUP_M]);
-    int64_t group_n = static_cast<int64_t>(group_size_list[INDEX_GROUP_N]);
-    int64_t group_k = static_cast<int64_t>(group_size_list[INDEX_GROUP_K]);
-    // 16-31 bits indicate group_size_n, 32-47 bits indicate group_size_m
-    groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << 32) + (static_cast<uint64_t>(group_n) << 16) +
-                                  (static_cast<uint64_t>(group_k)));
-    return groups;
+
+    const int64_t dim1 = tensor.dim() - 1;
+    const int64_t dim2 = tensor.dim() - LAST_SECOND_DIM_INDEX;
+    if (tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2)) {
+        int64_t tmp_nxd = tensor.size(dim1) * tensor.size(dim2);
+        for (int64_t batch_dim = tensor.dim() - 3; batch_dim >= 0; --batch_dim) {
+            if (tensor.stride(batch_dim) != tmp_nxd) {
+                return false;
+            }
+            tmp_nxd *= tensor.size(batch_dim);
+        }
+        if (tensor.size(dim1) == 1 && tensor.size(dim2) == 1) {
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
+
+int64_t check_and_get_groups(at::IntArrayRef group_size_list)
+{
+    if (group_size_list.empty()) {
+        return 0;
+    }
+
+    TORCH_CHECK(group_size_list.size() == GROUP_SIZE_DIM,
+                "When group_sizes is not empty, it only supports input with 3 elements, but got ",
+                group_size_list.size(), OPS_ERROR(ErrCode::PARAM));
+
+    const int64_t group_m = static_cast<int64_t>(group_size_list[0]);
+    const int64_t group_n = static_cast<int64_t>(group_size_list[1]);
+    const int64_t group_k = static_cast<int64_t>(group_size_list[2]);
+    TORCH_CHECK(group_m >= 0 && group_m <= GROUP_MAX && group_n >= 0 && group_n <= GROUP_MAX &&
+                    group_k >= 0 && group_k <= GROUP_MAX,
+                "group param value must conform to range [0, 65535]", OPS_ERROR(ErrCode::VALUE));
+
+    return static_cast<int64_t>((static_cast<uint64_t>(group_m) << 32) +
+                                (static_cast<uint64_t>(group_n) << 16) +
+                                static_cast<uint64_t>(group_k));
+}
+}  // namespace
 
 at::Tensor &npu_add_quant_matmul_(at::Tensor &self, const at::Tensor &x1, const at::Tensor &x2,
                                   const at::Tensor &x2_scale, const c10::optional<at::Tensor> &x1_scale,
@@ -56,11 +86,11 @@ at::Tensor &npu_add_quant_matmul_(at::Tensor &self, const at::Tensor &x1, const 
                 "Get aclnnQuantBatchMatmulInplaceAdd or aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize failed, "
                 "please upgrade CANN to version 9.0.0 or higher.",
                 OPS_ERROR(ErrCode::PARAM));
-    bool transpose1 = false;
-    bool transpose2 = false;
-    
+
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
-    int64_t group_size = check_and_get_groups(group_size_list);
+    const int64_t group_size = check_and_get_groups(group_size_list);
+    const bool transpose1 = is_transpose_last_two_dims(x1);
+    const bool transpose2 = is_transpose_last_two_dims(x2);
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
 
     TensorWrapper x1_wrapper = {x1, x1_dtype.has_value() ? c10_npu::GetAclDataType(x1_dtype.value())

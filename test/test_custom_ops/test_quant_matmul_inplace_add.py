@@ -1,53 +1,39 @@
-import math
-import numpy as np
 import torch
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
 
-class TestQuantBatchdMatmulInplaceAdd(TestCase):
+class TestQuantBatchMatmulInplaceAdd(TestCase):
+    def _run_tt_case(self, transpose_x1, transpose_x2):
+        m, n, k = 16, 32, 64
+        y = torch.ones((m, n), dtype=torch.float32, device="npu")
+        x1 = torch.zeros((m, k), dtype=torch.uint8, device="npu")
+        x2 = torch.zeros((k, n), dtype=torch.uint8, device="npu")
+        x1 = x1.transpose(-2, -1) if transpose_x1 else x1
+        x2 = x2.transpose(-2, -1) if transpose_x2 else x2
+        x1_scale = torch.ones((1,), dtype=torch.float32, device="npu")
+        x2_scale = torch.ones((1,), dtype=torch.float32, device="npu")
 
-    def single_matmul(self, y, x1, x2, x1_scale, x2_scale):
-        x1_scale = np.repeat(x1_scale, 32, axis=1)
-        x2_scale = np.repeat(x2_scale, 32, axis=1)
-        x1 = x1 * x1_scale
-        x2 = x2 * x2_scale
-        output = np.matmul(x1, x2)
-        output = output + y
-        return output
+        inplace_out = torch_npu.npu_add_quant_matmul_(
+            y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=[0, 0, 0],
+            x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8,
+            x1_scale_dtype=torch.float32, x2_scale_dtype=torch.float32)
+        self.assertRtolEqual(inplace_out.cpu().numpy(), torch.ones((m, n), dtype=torch.float32).numpy())
+
+        functional_y = torch.ones((m, n), dtype=torch.float32, device="npu")
+        functional_out = torch_npu.npu_add_quant_matmul(
+            functional_y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=[0, 0, 0],
+            x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8,
+            x1_scale_dtype=torch.float32, x2_scale_dtype=torch.float32)
+        self.assertRtolEqual(functional_out.cpu().numpy(), torch.ones((m, n), dtype=torch.float32).numpy())
+        self.assertRtolEqual(functional_y.cpu().numpy(), torch.ones((m, n), dtype=torch.float32).numpy())
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_quant_matmul_inplace_add(self):
-        torch.manual_seed(0)
-        M = 16
-        K = 256
-        N = 32
-        x1 = torch.randint(2, 3, size=(M, K), dtype=torch.float8_e4m3fn)
-        x2 = torch.randint(2, 3, size=(K, N), dtype=torch.float8_e4m3fn)
-
-        x1_clone = x1.clone().npu()
-        x2_clone = x2.clone().npu()
-
-        y = torch.randint(2, 3, size=(M, N), dtype=torch.float32)
-        y1_clone = y.clone().npu()
-        y2_clone = y.clone().npu()
-        x2_scale = np.random.uniform(low=-5, high=5, size=(M, math.ceil(k/64), 2)).astype(np.int8)
-        x1_scale = np.random.uniform(low=-5, high=5, size=(math.ceil(k/64), N, 2)).astype(np.int8)
-        x2_scale_clone = x2_scale.clone.npu()
-        x1_scale_clone = x1_scale.clone.npu()
-        x1_dtype = torch_npu.float8_e8m0
-        x2_dtype = torch_npu.float8_e8m0
-        supported_output = self.single_matmul(y, x1, x2, x1_scale, x2_scale)
-        custom_output1 = torch_npu.npu_add_quant_matmul_(y1, x1, x2, x2_scale, x1_scale=x1_scale,
-                                                      group_sizes=None, x1_dtype=x1_dtype,
-                                                      x2_dtype=x2_dtype)
-
-        custom_output2 = torch_npu.npu_add_quant_matmul(y2, x1, x2, x2_scale, x1_scale=x1_scale,
-                                                     group_sizes=None, x1_dtype=x1_dtype,
-                                                     x2_dtype=x2_dtype)
-        self.assertRtolEqual(supported_output, custom_output1.cpu().numpy(), 0.001)
-        self.assertRtolEqual(supported_output, custom_output2.cpu().numpy(), 0.001)
+    def test_npu_add_quant_matmul_hif8_tt(self):
+        for transpose_x1 in (False, True):
+            for transpose_x2 in (False, True):
+                self._run_tt_case(transpose_x1, transpose_x2)
 
 if __name__ == "__main__":
     run_tests()

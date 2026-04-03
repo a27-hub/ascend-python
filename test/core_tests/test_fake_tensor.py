@@ -2932,6 +2932,31 @@ class TestQuantMatmul(TestCase):
             self.assertTrue(expect_ret.shape == res.shape)
 
 
+class TestAddQuantMatmul(TestCase):
+    def test_npu_add_quant_matmul_meta(self):
+        with FakeTensorMode():
+            m, n, k = (16, 32, 64)
+            y = torch.ones((m, n), dtype=torch.float32).npu()
+            x1 = torch.zeros((m, k), dtype=torch.uint8).npu().transpose(-2, -1)
+            x2 = torch.zeros((k, n), dtype=torch.uint8).npu().transpose(-2, -1)
+            x1_scale = torch.ones((1,), dtype=torch.float32).npu()
+            x2_scale = torch.ones((1,), dtype=torch.float32).npu()
+
+            res_inplace = torch_npu.npu_add_quant_matmul_(
+                y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=[0, 0, 0],
+                x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8,
+                x1_scale_dtype=torch.float32, x2_scale_dtype=torch.float32)
+            self.assertTrue(y.shape == res_inplace.shape)
+            self.assertTrue(y.dtype == res_inplace.dtype)
+
+            res = torch_npu.npu_add_quant_matmul(
+                y, x1, x2, x2_scale, x1_scale=x1_scale, group_sizes=[0, 0, 0],
+                x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8,
+                x1_scale_dtype=torch.float32, x2_scale_dtype=torch.float32)
+            self.assertTrue(y.shape == res.shape)
+            self.assertTrue(y.dtype == res.dtype)
+
+
 class TestQuantMatmulReduceSum(TestCase):
     def test_quant_matmul_reduce_sum(self):
         with FakeTensorMode():
