@@ -85,11 +85,16 @@ static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self,
 {
     // allow dicrease precision
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
     // matmul & matmul_out have processed the aclop scenario
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
+        if (op_plugin::utils::is_gte_cann_version_900()) {
+            if (cube_math_type_passthrough >= 0) {
+                cube_math_type = cube_math_type_passthrough;
+            }
+        }
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
     } else {
-        int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
         if (cube_math_type_passthrough >= 0) {
             cube_math_type = cube_math_type_passthrough;
         }
