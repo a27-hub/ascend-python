@@ -16,8 +16,11 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <ATen/record_function.h>
+#include "torch_npu/csrc/core/npu/NPUFunctions.h"
+#include "torch_npu/csrc/core/npu/NPUStream.h"
 #include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 #include "torch_npu/csrc/core/npu/npu_log.h"
+#include "torch_npu/csrc/core/npu/NPUWorkspaceAllocator.h"
 
 namespace lazy_fusion {
 namespace {
@@ -28,12 +31,23 @@ class LazyFusionDump {
     return instance;
   }
 
-  void DumpToFile(std::stringstream &buf) {
+  void DumpGraphInfo(std::stringstream &buf) {
+    std::string file_name = "lazy_fusion_" + std::to_string(getpid()) + "_graph.txt";
+    std::string file_path = dump_dir_ + "/" + file_name;
+    DumpToFile(file_path, buf);
+  }
+
+  void DumpKernelInfo(std::stringstream &buf) {
+    std::string file_name = "lazy_fusion_" + std::to_string(getpid()) + "_kernel.txt";
+    std::string file_path = dump_dir_ + "/" + file_name;
+    DumpToFile(file_path, buf);
+  }
+
+ private:
+  void DumpToFile(const std::string &file_path, std::stringstream &buf) {
     if (!enable_dump_) {
       return;
     }
-    std::string file_name = "lazy_fusion_" + std::to_string(getpid()) + ".txt";
-    std::string file_path = dump_dir_ + "/" + file_name;
     ChangeFileMode(file_path, S_IWUSR);
     std::ofstream of(file_path, std::ios::app);
     if (!of.is_open()) {
@@ -46,8 +60,6 @@ class LazyFusionDump {
     ChangeFileMode(file_path, S_IRUSR);
     buf.str("");
   }
-
- private:
   LazyFusionDump() { CreateDumpDir(); }
   ~LazyFusionDump() = default;
 
@@ -167,7 +179,7 @@ LazyFusionKernel *Manager::NewKernel() {
 }
 
 LazyFusionKernel::LazyFusionKernel() {
-  dvm::Kernel::Reset(dvm::KernelType::kEager, 0);
+  dvm::Kernel::Reset(dvm::KernelType::kEager, dvm::KernelFlag::kUnifyWS);
   inputs_.reserve(32);
   outputs_.reserve(16);
 }
@@ -253,8 +265,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
 }
 
 void *LazyFusionKernel::Alloc(size_t size) {
-  at::TensorOptions options = at::TensorOptions(c10::DeviceType::PrivateUse1).dtype(at::ScalarType::Byte);
-  auto ws_tensor = at_npu::native::OpPreparation::apply_tensor_without_format({static_cast<int64_t>(size)}, options);
+  auto ws_tensor = at_npu::native::allocate_workspace(size, stream_);
   void *addr = const_cast<void *>(ws_tensor.storage().data());
   workspace_.emplace_back(std::move(ws_tensor));
   if (g_lazy_fusion_manager.flags_.dump_as_text) {
@@ -290,12 +301,29 @@ void LazyFusionKernel::Flush() {
       dvm::Kernel::SetStoreInplace(store);
     }
   }
-  // CodeGen
   if (g_lazy_fusion_manager.flags_.dump_as_text) {
     DumpGraph();
+  }
+  ClearGraphRefs();
+  at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int { return CodeGenAndLaunch(); });
+}
+
+void LazyFusionKernel::ClearRuntimeState() {
+  workspace_.clear();
+  dvm::Kernel::Clear();
+  flushed_ = false;
+  g_lazy_fusion_manager.FreeKernel(this);
+}
+
+int LazyFusionKernel::CodeGenAndLaunch() {
+  if (c10_npu::check_dequeue_need_use(stream_)) {
+    NPU_CHECK_ERROR(c10_npu::UseStreamResInCurrentThread(stream_));
+  }
+  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+    LazyFusionDump::Instance().DumpGraphInfo(dump_buf_);
     dump_buf_ << "[lazy_fusion before split]\n";
     dump_buf_ << Dump() << "\n";
-    LazyFusionDump::Instance().DumpToFile(dump_buf_);
+    LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
   {
     RECORD_FUNCTION("CodeGen", {});
@@ -305,26 +333,17 @@ void LazyFusionKernel::Flush() {
     dump_buf_ << "[lazy_fusion after split]\n";
     dump_buf_ << Dump() << "\n";
     dump_buf_ << Das() << "\n";
-    LazyFusionDump::Instance().DumpToFile(dump_buf_);
+    LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
-  // async task
-  at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int {
-    auto ret = dvm::Kernel::Launch(stream_);
-    if (g_lazy_fusion_manager.flags_.synchronize) {
-      auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
-      if (err != ACL_ERROR_NONE) {
-        ASCEND_LOGE("SyncStream failed for dvm kernel, id = %zu, error = %d", id_, err);
-      }
+  auto ret = dvm::Kernel::Launch(stream_);
+  if (g_lazy_fusion_manager.flags_.synchronize) {
+    auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
+    if (err != ACL_ERROR_NONE) {
+      ASCEND_LOGE("SyncStream failed for dvm kernel, id = %zu, error = %d", id_, err);
     }
-    ClearKernel();
-    return ret;
-  });
-  ClearGraph();
-}
-
-void LazyFusionKernel::ClearKernel() {
-  dvm::Kernel::Clear();
-  g_lazy_fusion_manager.FreeKernel(this);
+  }
+  ClearRuntimeState();
+  return ret;
 }
 
 std::string LazyFusionKernel::ToString(const at::OptionalIntArrayRef &t) {
