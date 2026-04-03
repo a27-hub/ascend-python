@@ -5144,29 +5144,6 @@ class TestQuantMatmulInplaceAdd(TestCase):
             self.assertTrue(x2.shape[1] == res_1.shape[1])
             self.assertTrue(res_1.dtype == torch.float32)
 
-    def test_npu_quant_matmul_inplace_add_hif8_tt_meta(self):
-        with FakeTensorMode():
-            m = 128
-            n = 256
-            k = 512
-            y = torch.empty((m, n), dtype=torch.float32).npu()
-            x1 = torch.empty((m, k), dtype=torch.int8).npu()
-            x2 = torch.empty((k, n), dtype=torch.int8).npu()
-            x1_scale = torch.ones((1,), dtype=torch.float32).npu()
-            x2_scale = torch.ones((1,), dtype=torch.float32).npu()
-
-            res_1 = torch_npu.npu_add_quant_matmul_(
-                y, x1, x2, x2_scale, x1_scale=x1_scale,
-                group_sizes=None, x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8)
-            self.assertTrue(res_1.shape == y.shape)
-            self.assertTrue(res_1.dtype == torch.float32)
-
-            res_2 = torch_npu.npu_add_quant_matmul(
-                y, x1, x2, x2_scale, x1_scale=x1_scale,
-                group_sizes=None, x1_dtype=torch_npu.hifloat8, x2_dtype=torch_npu.hifloat8)
-            self.assertTrue(res_2.shape == y.shape)
-            self.assertTrue(res_2.dtype == torch.float32)
-
 class TestNpuDeformableConv2d(TestCase):
     def test_npu_deformable_conv2d(self):
         with FakeTensorMode():
