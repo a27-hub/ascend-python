@@ -11,30 +11,30 @@
 
 ## 功能说明
 
--   API功能：实现Rotary Position Embedding (RoPE) 旋转位置编码，通过对输入特征进行二维平面旋转注入位置信息。
--   计算公式：
+- API功能：实现Rotary Position Embedding (RoPE) 旋转位置编码，通过对输入特征进行二维平面旋转注入位置信息。
+- 计算公式：
      $$
     output = x * cos + rotate(x) * sin
      $$
      其中$x$是输入`input`，$cos$和$sin$分别是旋转系数输入`r1`和`r2`，输入rotate支持两种计算模式：
 
-     - 当rotary_mode='half'时，将输入向量沿最后一个维度分为两半，然后应用旋转：
+     - 当`rotary_mode`为`half`时，将输入向量沿最后一个维度分为两半，然后应用旋转：
          $$
          x_1, x_2 = chunk(x,2,dim=-1)\\
          rotate(x) = concat(-x_2,x_1)
          $$
 
-     - 当rotary_mode='interleave'时，将输入向量按交错顺序处理，然后应用旋转：
+     - 当`rotary_mode`为`interleave`时，将输入向量按交错顺序处理，然后应用旋转：
          $$
          x_1 = x[..., ::2], x_2 = x[..., 1::2]\\
          rotate(x) = rearrange(torch.stack((-x_2, x_1), dim=-1), "... d two -> ...(d two)", two=2)\\
          $$
-     - 当输入rotate时，旋转矩阵的生成方式为：
+     - 当输入`rotate`参数时，旋转矩阵的生成方式为：
          $$
          rotate(x) = x \cdot rotate\\
          $$
 
--   等价计算逻辑：
+- 等价计算逻辑：
     
      可使用`fused_rotary_position_embedding`等价替换`torch_npu.npu_rotary_mul`，两者计算逻辑一致。
      
@@ -62,22 +62,23 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tensor
 ```
 
 > [!NOTE]  
-> 在模型训练场景中，正向算子的输入`input`将被保留以供反向计算时使用。在`r1`、`r2`不需要计算反向梯度场景下（`requires_grad=False`），使用该接口相较融合前小算子使用的设备内存占用会有所增加。输入`rotate`不支持反向传播。
+> 在模型训练场景中，正向算子的输入`input`将被保留以供反向计算时使用。在`r1`、`r2`不需要计算反向梯度场景下（`requires_grad=False`），使用该接口相较融合前小算子使用的设备内存占用会有所增加。输入`rotate`参数时不支持反向传播。
 
 ## 参数说明
 
 - **input** (`Tensor`)：必选参数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r1** (`Tensor`)：必选参数，表示$cos$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
 - **r2** (`Tensor`)：必选参数，表示$sin$旋转系数，输入维度支持3维、4维，数据类型支持`float16`，`bfloat16`，`float32`。
-- **rotary_mode** (`str`)：可选参数，数据类型支持`str`，用于选择计算模式，支持`half`、`interleave`两种模式。默认值为`half`。
-- **rotate** (`Tensor`)：可选参数，表示实现input位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，构造方式参考调用示例，默认为空。
+- **rotary_mode** (`str`)：可选参数，用于选择计算模式，支持`half`、`interleave`两种模式。默认值为`half`。
+- **rotate** (`Tensor`)：可选参数，表示实现`input`位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，构造方式参考调用示例，默认值为None。
 
 ## 返回值说明
+
 `Tensor`
 
 输出计算结果，shape和dtype需与`input`一致。
@@ -125,9 +126,11 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
      那么可以构造一个rotate矩阵，实现调用一次完成x的旋转位置编码计算功能，rotate矩阵构造如下：
      $$rotate = diag(rotate1, rotate2, rotate3) = \begin{pmatrix}rotate1&0&0\\0&rotate2&0\\0&0&rotate3\\\end{pmatrix}$$
      其中rotate1、rotate2、rotate3分别为x1、x2、x3的旋转编码矩阵，单个旋转矩阵构建参考调用示例。
+
 ## 调用示例
 
 - 四维输入示例：
+
     ```python
     >>> import torch
     >>> import torch_npu
@@ -165,7 +168,9 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
             [-0.2269, -0.1447, -0.0395,  ...,  0.1374,  0.2142,  0.3628]]]],
         device='npu:0')
     ```
+
 - 三维输入示例：
+
     ```python
     >>> import torch
     >>> import torch_npu
@@ -190,6 +195,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
     ```
 
 - rotate生成示例：
+
     ```python
     import torch
     import torch_npu

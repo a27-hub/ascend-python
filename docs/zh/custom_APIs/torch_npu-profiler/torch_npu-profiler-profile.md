@@ -8,14 +8,13 @@
 | <term>Atlas A2 训练系列产品</term> |    √     |
 | <term>Atlas 训练系列产品</term>    |    √     |
 
-
 ## 功能说明
 
 提供PyTorch训练过程中的性能数据采集功能。
 
 ## 函数原型
 
-```
+```python
 torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, record_shapes=False, profile_memory=False, with_stack=False, with_modules, with_flops=False, experimental_config=None)
 ```
 
@@ -43,8 +42,8 @@ torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, 
 
   默认值为False。
 
-  > **说明：**
-  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://gitee.com/link?target=https%3A%2F%2Fsourceware.org%2Fbugzilla%2Fshow_bug.cgi%3Fid%3D19329)，通过升级环境的glibc版本可解决此问题。
+  > [!NOTE]  
+  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://sourceware.org/bugzilla/show_bug.cgi?id=19329)，通过升级环境的glibc版本可解决此问题。
 
 - **with_stack** (`bool`)：可选参数，算子调用栈。包括框架层及CPU算子层的调用信息。取值为：
 

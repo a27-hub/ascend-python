@@ -1526,6 +1526,19 @@ class TestPromptFlashAttention(TestCase):
 
             self.assertTrue(q.shape == res.shape)
 
+class TestAttentionPioneer(TestCase):
+    @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
+    def testAttentionPioneer(self):
+        with FakeTensorMode():
+            q = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            k = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            v = torch.randn(1, 1024, 1024, dtype=torch.float16).npu()
+            q.requires_grad = True
+            k.requires_grad = True
+            v.requires_grad = True
+            atten_out, softmax_lse = torch.ops.npu._npu_attention_pioneer(q, k, v)
+
+            self.assertTrue(q.shape == atten_out.shape)
 
 class TestFusedInferAttentionScore(TestCase):
     @unittest.skipIf("2.1." not in torch.__version__, "skip this test for torch version other than 2.1")
@@ -2246,6 +2259,23 @@ class TestRmsNormQuant(TestCase):
             y = torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_dtype=291)
             self.assertTrue(y.shape == x.shape)
             self.assertTrue(y.dtype == torch.float8_e5m2)
+
+
+class TestRmsNormDynamicMxQuant(TestCase):
+    def test_npu_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, mxscale_npu, rstd_npu = torch_npu.npu_rms_norm_dynamic_mx_quant(
+                x, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
 
 
 class TestNpuRmsNorm(TestCase):
@@ -3386,6 +3416,23 @@ class TestTransposeQuantBatchMatmul(TestCase):
             self.assertTrue(result.shape == expect_ret.shape)
             self.assertTrue(result.dtype == expect_ret.dtype)
 
+    @unittest.skip("skip test_npu_transpose_quant_batchmatmul")
+    def test_npu_transpose_quant_batchmatmul_meta_5(self):
+        with FakeTensorMode():
+            M, K, N, Batch = 32, 512, 128, 16
+            x1 = torch.randint(-5, 5, (M, Batch, K), dtype=torch.int8).to(torch.float8_e4m3fn)
+            x2 = torch.randint(-5, 5, (Batch, K, N), dtype=torch.int8).to(torch.float8_e4m3fn)
+            x1_scale = torch.randint(0, 3, (M, Batch, int(K/64), 2), dtype=torch.uint8)
+            x2_scale = torch.randint(0, 3, (Batch, int(K/64), N, 2), dtype=torch.uint8)
+            x1_scale =x1_scale.view(torch.float8_e8m0fnu)
+            x2_scale =x2_scale.view(torch.float8_e8m0fnu)
+            result = torch_npu.npu_transpose_quant_batchmatmul(x1.npu(), x2.npu(), dtype=torch.float16,
+                                                        x1_scale=x1_scale.npu(), x2_scale=x2_scale.npu(),
+                                                        group_sizes=[0,0,32],perm_x1=[1, 0, 2],perm_x2=[0, 1, 2], perm_y=[1, 0, 2])
+            expect_ret = torch.randint(-2, 2, (M, Batch, N), dtype=torch.float16)
+            self.assertTrue(result.shape == expect_ret.shape)
+            self.assertTrue(result.dtype == expect_ret.dtype)
+
 
 class TestNpuPrefetch(TestCase):
     def test_npu_prefetch(self):
@@ -3671,6 +3718,26 @@ class TestAddRmsNormDynamicQuant(TestCase):
             self.assertEqual(y1_npu.dtype, torch.int32)
             self.assertEqual(y2_npu.shape, tuple(expected_y_shape))
             self.assertEqual(y2_npu.dtype, torch.int32)
+
+
+class TestAddRmsNormDynamicMxQuant(TestCase):
+    def test_npu_add_rms_norm_dynamic_mx_quant_meta(self):
+        with FakeTensorMode():
+            x1 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            x2 = torch.randn([8, 64], dtype=torch.float16, device='npu')
+            gamma = torch.ones([64, ], dtype=torch.float16, device='npu')
+            beta = torch.zeros([64, ], dtype=torch.float16, device='npu')
+            y_npu, x_out_npu, mxscale_npu, rstd_npu = torch_npu.npu_add_rms_norm_dynamic_mx_quant(
+                x1, x2, gamma, beta=beta, epsilon=1e-6, scale_alg=0, round_mode="rint", dst_type=torch_npu.float8_e5m2
+            )
+            self.assertEqual(y_npu.shape, x1.shape)
+            self.assertEqual(y_npu.dtype, torch.float8_e5m2)
+            self.assertEqual(x_out_npu.shape, x1.shape)
+            self.assertEqual(x_out_npu.dtype, x1.dtype)
+            self.assertEqual(mxscale_npu.shape, torch.Size([8, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
+            self.assertEqual(rstd_npu.shape, torch.Size([8, 1]))
+            self.assertEqual(rstd_npu.dtype, torch.float32)
 
 
 class TestMoeUpdateExpert(TestCase):
@@ -5195,6 +5262,120 @@ class TestKLDivLoss(TestCase):
 
             self.assertEqual(pred.grad.shape, pred_fake_tensor.grad.shape)
             self.assertEqual(pred.grad.dtype, pred_fake_tensor.grad.dtype)
+            
+class TestNpuDropoutGenMaskMeta(TestCase):
+    def test_npu_dropout_gen_mask(self):
+        size = (2, 1024, 768)
+        x = torch.randn(size, device="npu")
+        out = torch_npu._npu_dropout_gen_mask(x, size, 0.5, 1, 0)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(size, device='meta')
+            out_fake_tensor = torch_npu._npu_dropout_gen_mask(x_fake_tensor, size, 0.5, 1, 0)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+
+
+class TestNpuSoftmaxCrossEntropyWithLogitsMeta(TestCase):
+    def test_npu_softmax_cross_entropy_with_logits(self):
+        logits = torch.randn(32, 1000, device="npu")
+        labels = torch.randint(0, 1000, (32,), dtype=torch.long, device="npu")
+        loss = torch_npu.npu_softmax_cross_entropy_with_logits(logits, labels)
+
+        with FakeTensorMode():
+            logits_fake_tensor = torch.empty(32, 1000, device='meta')
+            labels_fake_tensor = torch.empty(32, dtype=torch.long, device='meta')
+            loss_fake_tensor = torch_npu.npu_softmax_cross_entropy_with_logits(logits_fake_tensor, labels_fake_tensor)
+
+            self.assertEqual(loss_fake_tensor.shape, loss.shape)
+            self.assertEqual(loss_fake_tensor.dtype, loss.dtype)
+
+
+class TestNpuSoftmaxCrossEntropyWithLogitsBackwardMeta(TestCase):
+    def test_npu_softmax_cross_entropy_with_logits_backward(self):
+        logits = torch.randn(32, 1000, device="npu")
+        labels = torch.randint(0, 1000, (32,), dtype=torch.long, device="npu")
+        loss = torch_npu.npu_softmax_cross_entropy_with_logits(logits, labels)
+        grad = torch.ones_like(loss)
+        grad_out = torch_npu.npu_softmax_cross_entropy_with_logits_backward(grad, logits, labels)
+
+        with FakeTensorMode():
+            logits_fake_tensor = torch.empty(32, 1000, device='meta')
+            labels_fake_tensor = torch.empty(32, dtype=torch.long, device='meta')
+            grad_fake_tensor = torch.empty(32, device='meta')
+            grad_out_fake_tensor = torch_npu.npu_softmax_cross_entropy_with_logits_backward(
+                grad_fake_tensor, logits_fake_tensor, labels_fake_tensor
+            )
+
+            self.assertEqual(grad_out_fake_tensor.shape, grad_out.shape)
+            self.assertEqual(grad_out_fake_tensor.dtype, grad_out.dtype)
+
+
+class TestNpuIndexAddMeta(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnIndexAddV2; do not execute")
+    def test_npu_index_add(self):
+        x = torch.randn(10, 5, device="npu")
+        index = torch.randint(0, 10, (2,), dtype=torch.int64, device="npu")  
+        source = torch.randn(2, 5, device="npu")
+        out = torch_npu._npu_index_add(x, index, source, alpha=1)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(10, 5, device='meta')
+            index_fake_tensor = torch.empty(2, dtype=torch.int64, device='meta')
+            source_fake_tensor = torch.empty(2, 5, device='meta')
+            out_fake_tensor = torch_npu._npu_index_add(x_fake_tensor, index_fake_tensor, source_fake_tensor, alpha=1)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+
+
+class TestNpuIndexAddInplaceMeta(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnIndexAddV2; do not execute")
+    def test_npu_index_add_(self):
+        x = torch.randn(10, 5, device="npu")
+        index = torch.randint(0, 10, (2,), dtype=torch.int64, device="npu")  
+        source = torch.randn(2, 5, device="npu")
+        out = torch_npu._npu_index_add_(x, index, source, alpha=1)  
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(10, 5, device='meta')
+            index_fake_tensor = torch.empty(2, dtype=torch.int64, device='meta')
+            source_fake_tensor = torch.empty(2, 5, device='meta')
+            out_fake_tensor = torch_npu._npu_index_add_(x_fake_tensor, index_fake_tensor, source_fake_tensor, alpha=1)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+            self.assertIs(out_fake_tensor, x_fake_tensor)
+
+
+class TestNpuReshapeMeta(TestCase):
+    def test_npu_reshape(self):
+        x = torch.randn(2, 3, 4, device="npu")
+        shape = (6, 4)
+        out = torch_npu.npu_reshape(x, shape, can_refresh=False)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(2, 3, 4, device='meta')
+            out_fake_tensor = torch_npu.npu_reshape(x_fake_tensor, shape, can_refresh=False)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+
+class TestSwigluMxQuant(TestCase):
+    def test_npu_swiglu_mx_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([4, 8], dtype=torch.float16, device='npu')
+            group_index = None
+            y_npu, mxscale_npu = torch_npu.npu_swiglu_mx_quant(
+                x, group_index=group_index, activate_dim=-1, activate_left=False, swiglu_mode=0,
+                clamp_limit=7, glu_alpha=1.702, glu_bias=1, group_mode=0, axis=-1,
+                dst_type=torch_npu.float4_e2m1fn_x2, round_mode="rint", scale_alg=0, max_dtype_value=0
+            )
+            self.assertEqual(y_npu.shape, torch.Size([4, 2]))
+            self.assertEqual(y_npu.dtype, torch.uint8)
+            self.assertEqual(mxscale_npu.shape, torch.Size([4, 1, 2]))
+            self.assertEqual(mxscale_npu.dtype, torch.uint8)
 
 
 @unittest.skip("skip until CANN is updated to support aclnnDynamicBlockMxQuant")

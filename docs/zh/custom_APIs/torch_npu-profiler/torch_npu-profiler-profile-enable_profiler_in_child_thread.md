@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                           |    √     |
 | <term>Atlas 训练系列产品</term>                           |    √     |
 
-
 ## 功能说明
 
 注册Profiler采集回调函数，采集用户子线程下发的torch算子等框架侧数据。该参数中可另外配置[torch_npu.profiler.profile](./torch_npu-profiler-profile.md)的参数（包括record_shapes、profile_memory、with_stack、with_flops、with_modules），作为Profiler子线程的采集配置。
@@ -43,7 +42,7 @@ torch_npu.profiler.profile.enable_profiler_in_child_thread(record_shapes=False, 
   默认值为False。
 
   > [!NOTE]  
-  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://gitee.com/link?target=https%3A%2F%2Fsourceware.org%2Fbugzilla%2Fshow_bug.cgi%3Fid%3D19329)，通过升级环境的glibc版本可解决此问题。
+  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://sourceware.org/bugzilla/show_bug.cgi?id=19329)，通过升级环境的glibc版本可解决此问题。
 
 - **with_stack**(`bool`)：可选参数，算子调用栈。包括框架层及CPU算子层的调用信息。取值为：
 

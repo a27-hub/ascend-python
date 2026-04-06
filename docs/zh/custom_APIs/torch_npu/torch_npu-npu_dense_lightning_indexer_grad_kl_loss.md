@@ -1,6 +1,7 @@
 # torch_npu.npu_dense_lightning_indexer_grad_kl_loss
 
 ## 产品支持情况
+
 | 产品                           | 是否支持 |
 |------------------------------| :------: |
 | <term>Atlas A3 训练系列产品</term> | √  |
@@ -54,7 +55,6 @@
      dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
      $$
   
-
      $$
      d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
      $$
@@ -68,10 +68,11 @@
 ## 函数原型
 
 ```
-npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value=1, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
+npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
+
 **query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$Q$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
 
 **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
@@ -82,15 +83,15 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
 
 **weights**(`Tensor`)：必选参数，表示Lightning Indexer的权重系数，对应公式中的$W$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
-**softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`float`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。$G$等于$N1/N2$。
+**softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。$G$等于$N1/N2$。
 
-**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。$G$等于$N1/N2$。
+**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。$G$等于$N1/N2$。
 
-**softmax_max_index**(`Tensor`)：必选参数，表示Index attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`float`。shape支持$(B, N2index, S1)$、$(N2index, T1)$。
+**softmax_max_index**(`Tensor`)：必选参数，表示Index attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2index, S1)$、$(N2index, T1)$。
 
-**softmax_sum_index**(`Tensor`)：必选参数，表示Index attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float`。shape支持$(B, N2index, S1)$、$(N2index, T1)$。
+**softmax_sum_index**(`Tensor`)：必选参数，表示Index attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2index, S1)$、$(N2index, T1)$。
 
-**scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。默认值为`1`。
+**scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float32`。
 
 **query_rope**(`Tensor`)：可选参数，表示MLA结构中的query的rope信息。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, Dr)$、$(T1, N1, Dr)$。
 
@@ -108,33 +109,32 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
 
 **next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
 
-
-
-
 ## 返回值说明
--   **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{Q}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_weights**(`Tensor`)：对应公式中的$dW$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
--   **loss**(`Tensor`)：对应公式中的$Loss$，表示网络正向输出和golden值的差异，数据类型支持`float`。
+
+- **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{Q}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_weights**(`Tensor`)：对应公式中的$dW$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
+- **loss**(`Tensor`)：对应公式中的$Loss$，表示网络正向输出和golden值的差异，数据类型支持`float32`。
 
 ## 约束说明
--   参数query、key、query_index、key_index的数据类型应保持一致。
--   参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
--   shape数值约束：
+
+- 参数query、key、query_index、key_index的数据类型应保持一致。
+- 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- shape数值约束：
 
 | 规格项    | 规格       | 规格说明         |
 |-----------|------------|-----------------|
 | B         | 1~256      | -               |
 | S1、S2    | 1~128K     | S1、S2支持不等长 |
 | N1        | 32、64、128| -               |
-| N1index   | 16、32、64 | -               |
+| N1index   | 8、16、32、64 | -               |
 | N2        | 32、64、128| N2=N1           |
 | N2index   | 1          | -               |
 | D         | 128        | -               |
 | Dr        | 64         | -               |
 
-
 ## 调用示例
+
 - 单算子模式调用
 
     ```python
