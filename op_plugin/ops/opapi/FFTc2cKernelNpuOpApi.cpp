@@ -392,6 +392,8 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
         out_strides[dim_permute[i]] = now_strides_[i - signal_ndim];
     }
     out_.as_strided_(out_sizes, out_strides, out.storage_offset());
+    at::Tensor contiguous_out = out_.contiguous();
+    out_.copy_(contiguous_out);
     return out_;
 }
 
@@ -506,6 +508,8 @@ static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, a
         out_strides[dim_permute[i]] = now_strides_[i];
     }
     out_.as_strided_(out_sizes, out_strides, out.storage_offset());
+    at::Tensor contiguous_out = out_.contiguous();
+    out_.copy_(contiguous_out);
     return out_;
 }
 
