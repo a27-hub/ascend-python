@@ -11533,6 +11533,18 @@ out = torch_npu.npu_fused_causal_conv1d(
 )
 
 _add_torch_npu_docstr(
+    "npu_masked_causal_conv1d",
+    """
+    """
+)
+
+_add_torch_npu_docstr(
+    "npu_masked_causal_conv1d_backward",
+    """
+    """
+)
+
+_add_torch_npu_docstr(
     "npu_cross_entropy_loss",
     """
 接口原型:
