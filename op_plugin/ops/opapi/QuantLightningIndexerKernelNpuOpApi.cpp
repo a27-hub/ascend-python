@@ -78,6 +78,17 @@ at::Tensor npu_quant_lightning_indexer(
     bool check_kdtype = key_dtype.has_value() && c10_npu::GetAclDataType(key_dtype.value()) != aclDataType::ACL_HIFLOAT8;
     TORCH_CHECK(!check_kdtype, "The key_dtype is only used to support hifloat8, and should be default when the dtype of key tensor is not hifloat8.")
 
+    int64_t key_block_stride = -1;
+    auto key_stride = key.strides();
+    if (!key_stride.empty()) {
+        key_block_stride = key_stride[0];
+    }
+    int64_t key_dequant_scale_block_stride = -1;
+    auto key_dequant_scale_stride = key_dequant_scale.strides();
+    if (!key_dequant_scale_stride.empty()) {
+        key_dequant_scale_block_stride = key_dequant_scale_stride[0];
+    }
+
     // construct the output tensor
     at::Tensor quant_lightning_indexer_output = construct_quant_lightning_indexer_output_tensor(
         query, key, sparse_count, query_layout_str, key_layout_str);
@@ -92,12 +103,12 @@ at::Tensor npu_quant_lightning_indexer(
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query_wrapper, key_wrapper,
             weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
             block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
-            pre_tokens, next_tokens, quant_lightning_indexer_output);
+            pre_tokens, next_tokens, key_block_stride, key_dequant_scale_block_stride, quant_lightning_indexer_output);
     } else {
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query, key,
             weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
             block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
-            pre_tokens, next_tokens, quant_lightning_indexer_output);
+            pre_tokens, next_tokens, key_block_stride, key_dequant_scale_block_stride, quant_lightning_indexer_output);
     }
     return quant_lightning_indexer_output;
 }
