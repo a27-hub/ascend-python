@@ -134,13 +134,35 @@ class TestCustomQuantLightningIndexer(TestCase):
 
         return output
 
+    def npu_op_metadata_exec_eager(self, actual_seq_lengths_query, actual_seq_lengths_key, batch_size,
+                                   max_seqlen_q, num_heads_q, max_seqlen_k, num_heads_k, head_dim, query_quant_mode,
+                                   key_quant_mode, layout_query, layout_key, sparse_mode, sparse_count, pre_tokens, next_tokens):
+        npu_out0 = torch_npu.npu_quant_lightning_indexer_metadata(actual_seq_lengths_query=actual_seq_lengths_query,
+                                                                  actual_seq_lengths_key=actual_seq_lengths_key,
+                                                                  batch_size=batch_size,
+                                                                  max_seqlen_q=max_seqlen_q,
+                                                                  num_heads_q=num_heads_q,
+                                                                  max_seqlen_k=max_seqlen_k,
+                                                                  num_heads_k=num_heads_k,
+                                                                  head_dim=head_dim,
+                                                                  query_quant_mode=query_quant_mode,
+                                                                  key_quant_mode=key_quant_mode,
+                                                                  layout_query=layout_query,
+                                                                  layout_key=layout_key,
+                                                                  sparse_mode=sparse_mode,
+                                                                  sparse_count=sparse_count,
+                                                                  pre_tokens=pre_tokens,
+                                                                  next_tokens=next_tokens)
+        npu_out0 = npu_out0.cpu()
+        return npu_out0
+
     def npu_op_exec_eager(self, query, key, weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query,
-                          actual_seq_lengths_key, block_table, query_quant_mode, key_quant_mode, layout_query,
+                          actual_seq_lengths_key, block_table, metadata, query_quant_mode, key_quant_mode, layout_query,
                           layout_key, sparse_count, sparse_mode):
         npu_out = torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale,
                                                         actual_seq_lengths_query=actual_seq_lengths_query,
                                                         actual_seq_lengths_key=actual_seq_lengths_key,
-                                                        block_table=block_table,
+                                                        block_table=block_table, metadata = metadata,
                                                         query_quant_mode=query_quant_mode,
                                                         key_quant_mode=key_quant_mode,
                                                         layout_query=layout_query,
@@ -159,6 +181,8 @@ class TestCustomQuantLightningIndexer(TestCase):
         layout_key = 'PA_BSND'
         query_quant_mode = 0
         key_quant_mode = 0
+        pre_tokens=(1<<63)-1
+        next_tokens=(1<<63)-1
         np.random.seed(0)
         properties = torch.npu.get_device_properties()
         # -------------
@@ -185,6 +209,23 @@ class TestCustomQuantLightningIndexer(TestCase):
                 actual_seq_lengths_key = torch.tensor(act_seq_k).to(torch.int32)
                 print(f"------- test LIQuant TND case b:{b} t:{t} s2:{s2} act_seq_q:{act_seq_q} act_seq_k:{act_seq_k} ",
                     f"sparse_mode:{sparse_mode} -------")
+            metadata = self.npu_op_metadata_exec_eager(actual_seq_lengths_query=actual_seq_lengths_query,
+                                                       actual_seq_lengths_key=actual_seq_lengths_key,
+                                                       batch_size=b,
+                                                       max_seqlen_q=s1,
+                                                       num_heads_q=n1,
+                                                       max_seqlen_k=s2,
+                                                       num_heads_k=n2,
+                                                       head_dim=d,
+                                                       query_quant_mode=query_quant_mode,
+                                                       key_quant_mode=key_quant_mode,
+                                                       layout_query=layout_query,
+                                                       layout_key=layout_key,
+                                                       sparse_mode=sparse_mode,
+                                                       sparse_count=sparse_count,
+                                                       pre_tokens=pre_tokens,
+                                                       next_tokens=next_tokens)
+            metadata = metadata.npu()
         else:
             key = torch.tensor(np.random.uniform(-128, 127, (b * max_block_table_num, block_size, n2, d))).to(torch.int8)
             key_dequant_scale = torch.tensor(np.random.uniform(0, 10, (b * max_block_table_num, block_size, n2)))
@@ -206,12 +247,13 @@ class TestCustomQuantLightningIndexer(TestCase):
                 actual_seq_lengths_key = torch.tensor(act_seq_k).to(torch.int32)
                 print(f"------- test LIQuant TND case b:{b} t:{t} s2:{s2} act_seq_q:{act_seq_q} act_seq_k:{act_seq_k} ",
                     f"sparse_mode:{sparse_mode} -------")
+            metadata = None
         cpu_out = self.cpu_op_exec(query.cpu(), key.cpu(), weights.cpu(), query_dequant_scale.cpu(), key_dequant_scale.cpu(),
                                    actual_seq_lengths_query.cpu(), actual_seq_lengths_key.cpu(), block_table.cpu(),
                                    layout_query, sparse_count, sparse_mode)
 
         npu_eager_out = self.npu_op_exec_eager(query.npu(), key.npu(), weights.npu(), query_dequant_scale.npu(), key_dequant_scale.npu(),
-                                               actual_seq_lengths_query.npu(), actual_seq_lengths_key.npu(), block_table.npu(),
+                                               actual_seq_lengths_query.npu(), actual_seq_lengths_key.npu(), block_table.npu(), metadata,
                                                query_quant_mode, key_quant_mode,
                                                layout_query, layout_key, sparse_count, sparse_mode)
         assert(_compare_res(cpu_out, npu_eager_out))
