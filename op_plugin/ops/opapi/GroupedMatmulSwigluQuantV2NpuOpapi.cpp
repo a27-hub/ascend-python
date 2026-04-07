@@ -115,6 +115,16 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        if (dequant_dtype.has_value()) {
+            TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
+                        "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
+                        c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
+    }
 
 
     int64_t dequant_mode_real = dequant_mode.value_or(0);
@@ -155,12 +165,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
     } else {
         if (dequant_dtype.has_value()) {
-            TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
-                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char)
-                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half)
-                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
-                        "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
-                        c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
             dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
         }
 
