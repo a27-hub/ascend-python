@@ -2413,15 +2413,12 @@ class TestQuantLightningIndexer(TestCase):
                                         if act_seq_q is None else torch.tensor(act_seq_q).to(torch.int32)
                 actual_seq_lengths_key = torch.tensor(np.random.uniform(s2, s2, (b))).to(torch.int32) \
                                         if act_seq_k is None else torch.tensor(act_seq_k).to(torch.int32)
-                print(f"------- test LIQuant BSND case b:{b} s1:{s1} s2:{s2} sparse_mode:{sparse_mode} ----------")
             else:
                 query = torch.tensor(np.random.uniform(-128, 127, (t, n1, d))).to(torch.int8)
                 query_dequant_scale = torch.tensor(np.random.uniform(0, 10, (t, n1))).to(torch.float16)
                 weights = torch.tensor(np.random.uniform(0, 0.01, (t, n1))).to(torch.float16)
                 actual_seq_lengths_query = torch.tensor(act_seq_q).to(torch.int32)
                 actual_seq_lengths_key = torch.tensor(act_seq_k).to(torch.int32)
-                print(f"------- test LIQuant TND case b:{b} t:{t} s2:{s2} act_seq_q:{act_seq_q} act_seq_k:{act_seq_k} ",
-                    f"sparse_mode:{sparse_mode} -------")
 
             cpu_out = self.cpu_op_exec(query.cpu(), key.cpu(), weights.cpu(), query_dequant_scale.cpu(), key_dequant_scale.cpu(),
                                     actual_seq_lengths_query.cpu(), actual_seq_lengths_key.cpu(), block_table.cpu(),
