@@ -1,181 +1,74 @@
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_hifloat8_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.float16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
-        bias = torch.randn((1, 256), dtype=torch.float16).npu()
-        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
+import torch
+import torch_npu
 
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_hif8_clone = weight_hif8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
+# 使用你的实际参数
+batch_size = 4
+hidden_size = 4096  # 或者你的实际值
+local_num_experts = 16
+top_k = 8
+device = "npu:0"
 
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_hif8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.hifloat8)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
+print("=" * 60)
+print("模拟原始代码上下文")
+print("=" * 60)
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.float16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
-        bias = torch.randn((1, 256), dtype=torch.float16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
+# 创建原始代码中的 tensor
+x = torch.randint(-127, 128, (batch_size, hidden_size), dtype=torch.int8, device=device)
+x_scale = torch.rand((batch_size, hidden_size // 128), dtype=torch.float32, device=device)
 
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
+print(f"x shape: {x.shape}, dtype: {x.dtype}")
+print(f"x_scale shape: {x_scale.shape}, dtype: {x_scale.dtype}")
 
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.float8_e4m3fn)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
+# 创建 topk_ids
+topk_ids = torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")
+for _ in range(batch_size - 1):
+    topk_ids = torch.cat(
+        (
+            topk_ids,
+            torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")
+        ),
+        dim=-1,
+    )
+topk_ids = topk_ids.reshape(batch_size, -1)[:, :top_k].to(device=device)
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e5m2_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.float16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
-        bias = torch.randn((1, 256), dtype=torch.float16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
+print(f"topk_ids shape: {topk_ids.shape}, dtype: {topk_ids.dtype}")
 
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
+# 执行 histc
+tokens_per_expert = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+print(f"\ntokens_per_expert (after histc): {tokens_per_expert}")
 
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch.float8_e5m2)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
+# 同步
+torch.npu.synchronize()
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_hifloat8_bfloat16_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
+ps = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert.device)
+print(f"\nps: {ps}")
 
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_hif8_clone = weight_hif8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
+print("\n" + "=" * 60)
+print("测试 1: 直接 print")
+print("=" * 60)
+print(f"tokens_per_expert + ps: {tokens_per_expert + ps}")
 
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_hif8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.hifloat8)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
+print("\n" + "=" * 60)
+print("测试 2: 赋值给变量")
+print("=" * 60)
+tmp = tokens_per_expert + ps
+print(f"tmp: {tmp}")
 
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_bfloat16_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
+print("\n" + "=" * 60)
+print("测试 3: 后续计算")
+print("=" * 60)
+result1 = (tokens_per_expert + ps - 1) // ps
+print(f"(tokens_per_expert + ps - 1) // ps: {result1}")
 
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
+result2 = (tokens_per_expert + ps - 1) // ps * ps
+print(f"(tokens_per_expert + ps - 1) // ps * ps: {result2}")
 
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch_npu.float8_e4m3fn)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e5m2_bfloat16_with_bias(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        bias = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
-
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-        bias_clone = bias.clone()
-
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale) + bias
-        custom_output = torch_npu.npu_weight_quant_batchmatmul(x_clone, weight_f8_clone, antiquant_scale_clone, None, bias=bias_clone, weight_dtype=torch.float8_e5m2)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e5m2_antiquant_scale(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.float16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.float16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
-
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
-        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch.float8_e5m2)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_hifloat8_bfloat16_x(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_hif8 = torch_npu.npu_dtype_cast(weight, torch_npu.hifloat8)
-
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_hif8_clone = weight_hif8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
-        custom_output = self.custom_op_exec(x_clone, weight_hif8_clone, antiquant_scale_clone, None, torch_npu.hifloat8)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e4m3fn_bfloat16_x(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e4m3fn)
-
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
-        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch_npu.float8_e4m3fn)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
-
-    @SupportedDevices(['Ascend950P'])
-    def test_npu_weight_quant_batchmatmul_float8_e5m2_bfloat16_x(self, device="npu"):
-        torch.manual_seed(0)
-        x = torch.randn((96, 320), dtype=torch.bfloat16).npu()
-        weight = torch.randn((320, 256), dtype=torch.float32, device="npu")
-        antiquant_scale = torch.randn((1, 256), dtype=torch.bfloat16).npu()
-        weight_f8 = torch_npu.npu_dtype_cast(weight, torch.float8_e5m2)
-
-        x_clone = x.clone()
-        weight_clone = weight.clone()
-        weight_f8_clone = weight_f8.clone()
-        antiquant_scale_clone = antiquant_scale.clone()
-
-        supported_output = self.supported_op_exec(x, weight, antiquant_scale)
-        custom_output = self.custom_op_exec(x_clone, weight_f8_clone, antiquant_scale_clone, None, torch.float8_e5m2)
-        self.assertRtolEqual(supported_output, custom_output, 0.001)
+print("\n" + "=" * 60)
+print("测试 4: 使用 .sum() 强制同步")
+print("=" * 60)
+tokens_per_expert2 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+_ = tokens_per_expert2.sum()  # 强制同步
+ps2 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert2.device)
+tmp2 = tokens_per_expert2 + ps2
+print(f"tmp (with sum): {tmp2}")
+print(f"(tokens_per_expert + ps - 1) // ps (with sum): {(tokens_per_expert2 + ps2 - 1) // ps2}")
