@@ -63,6 +63,7 @@ at::Tensor npu_quant_lightning_indexer(
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_key,
     const c10::optional<at::Tensor> &block_table,
+    const c10::optional<at::Tensor> &metadata,
     c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens,
     c10::optional<int64_t> query_dtype, c10::optional<int64_t> key_dtype)
@@ -91,12 +92,12 @@ at::Tensor npu_quant_lightning_indexer(
         TensorWrapper key_wrapper = make_wrapper(key, key_dtype);
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query_wrapper, key_wrapper,
             weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
-            block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
+            block_table, metadata, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
             pre_tokens, next_tokens, quant_lightning_indexer_output);
     } else {
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnQuantLightningIndexer, query, key,
             weights, query_dequant_scale, key_dequant_scale, actual_seq_lengths_query, actual_seq_lengths_key,
-            block_table, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
+            block_table, metadata, query_quant_mode, key_quant_mode, query_layout_ptr, key_layout_ptr, sparse_count, sparse_mode,
             pre_tokens, next_tokens, quant_lightning_indexer_output);
     }
     return quant_lightning_indexer_output;

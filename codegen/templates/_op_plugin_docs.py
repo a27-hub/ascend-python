@@ -1376,7 +1376,7 @@ _add_torch_npu_docstr(
 QuantLightningIndexer在LightningIndexer的基础上支持了Per-Token-Head量化输入。
 
 接口原型
-custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> Tensor
+custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, metadata=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> Tensor
 
 参数说明
 
@@ -1401,6 +1401,8 @@ block_table（Tensor）：可选参数，表示PageAttention中KV存储使用的
 
 PageAttention场景下，block_table必须为二维，第一维长度需要等于B，第二维长度不能小于maxBlockNumPerSeq(maxBlockNumPerSeq为每个batch中最大actual_seq_lengths_key对应的block数量)
 query_quant_mode（int）：可选参数，用于标识输入query的量化模式，当前支持Per-Token-Head量化模式，默认值0。
+
+metadata（Tensor）：可选参数，QuantLightningIndexerMetadata算子传入的分核信息，包含使用核数、分块大小以及每个核处理数据的起始点等内容，数据格式支持ND，数据类型支持int32，shape大小为[1024]。
 
 key_quant_mode（int）：可选参数，用于标识输入key的量化模式，当前支持Per-Token-Head量化模式，默认值0。
 
