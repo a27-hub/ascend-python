@@ -33,7 +33,7 @@ constexpr int64_t WEIGHT_NZ_A4W4_LAST_DIM = 64LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
 constexpr int64_t HIFLOAT8 = 34LL;
-constexpr int64_t NUM_ONE = 1LL;
+
 
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
