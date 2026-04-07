@@ -506,6 +506,7 @@ static at::Tensor& _exec_fft_asdsip(at::Tensor& out_, const at::Tensor& self_, a
         out_strides[dim_permute[i]] = now_strides_[i];
     }
     out_.as_strided_(out_sizes, out_strides, out.storage_offset());
+    out_ = out_.contiguous();
     return out_;
 }
 
