@@ -34,7 +34,6 @@ constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
 constexpr int64_t HIFLOAT8 = 34LL;
 
-
 void create_new_tensor(at::Tensor &y, size_t dim_m, size_t dim_n, c10::TensorOptions options)
 {
     auto output_size = op_infer::array_to_small_vector({dim_m, dim_n});
@@ -126,7 +125,6 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         }
     }
 
-
     int64_t dequant_mode_real = dequant_mode.value_or(0);
     int64_t dequant_dtype_real = dequant_dtype.value_or(0);
     // 从torch的枚举值转化为Ge的枚举值
@@ -165,9 +163,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
     } else {
         if (dequant_dtype.has_value()) {
-            dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
+                dequant_dtype_real = static_cast<int64_t>(c10_npu::GetAclDataType(dequant_dtype.value()));
         }
-
         TORCH_CHECK(!weight[DIM_0].sizes().empty(), "weight[0] is empty.", OPS_ERROR(ErrCode::PARAM));
         if (!is_weight_nz) {
             TORCH_CHECK(weight[DIM_0].dim() == DIM_3, "weight[0] dim should be equal to 3, but the actual value is ",
