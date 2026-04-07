@@ -37,11 +37,11 @@ at::Tensor npu_linear(
     if (bias_opt.defined()) {
         const at::Scalar beta = 1;
         const at::Scalar alpha = 1;
-        DO_COMPATIBILITY(aclnnAddmm, acl_op::addmm(bias_opt, input, weight_t, beta, alpha));
+        DO_COMPATIBILITY(aclnnAddmm, acl_op::addmm(bias_opt, input, weight_t, beta, alpha, c10::nullopt));
         EXEC_NPU_CMD(aclnnAddmm, bias_opt, input, weight_t, beta, alpha, result, cube_math_type);
         return result;
     }
-    DO_COMPATIBILITY(aclnnMm, acl_op::mm(input, weight_t));
+    DO_COMPATIBILITY(aclnnMm, acl_op::mm(input, weight_t, c10::nullopt));
     EXEC_NPU_CMD(aclnnMm, input, weight_t, result, cube_math_type);
     return result;
 }

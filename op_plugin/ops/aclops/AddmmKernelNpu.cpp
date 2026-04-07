@@ -138,8 +138,15 @@ at::Tensor &addmm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, co
 }
 
 at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta,
-                      const at::Scalar &alpha, at::Tensor &result)
+                      const at::Scalar &alpha, c10::optional<at::ScalarType> output_dtype, at::Tensor &result)
 {
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "addmm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
+    auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
+    npu_preparation::CheckOut(
+        {self, mat1, mat2}, result, npu_preparation::get_tensor_npu_format(result), output_type, output_size);
     static const bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
     bool check_bias_shape = (self.dim() == 1 || (self.dim() == 2 && self.size(0) == 1));
     if (check_bias_shape && is_support_nd_out) {
@@ -152,7 +159,7 @@ at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::
         }
     } else {
         at::Tensor mul_result = at::mul(mat1, alpha);
-        at::Tensor mm_result = at::mm(mul_result, mat2);
+        at::Tensor mm_result = acl_op::mm(mul_result, mat2, output_dtype);
         // matmul*alpha+self*beta
         at::add_out(result, mm_result, self, beta);
     }
@@ -160,12 +167,16 @@ at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::
 }
 
 at::Tensor addmm(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, const at::Scalar &beta,
-                 const at::Scalar &alpha)
+                 const at::Scalar &alpha, c10::optional<at::ScalarType> output_dtype)
 {
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "addmm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
-    at::Tensor result = npu_preparation::apply_tensor(output_size, self.options(), self);
+    at::Tensor result = npu_preparation::apply_tensor(output_size, self.options().dtype(output_type), self);
 
-    acl_op::addmm_out(self, mat1, mat2, beta, alpha, result);
+    acl_op::addmm_out(self, mat1, mat2, beta, alpha, output_dtype, result);
     return result;
 }
 
@@ -175,10 +186,10 @@ at::Tensor &addmm_(at::Tensor &self, const at::Tensor &mat1, const at::Tensor &m
     npu_preparation::CheckMemory({self, mat1, mat2}, {self});
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
-        acl_op::addmm_out(contiguous_self, mat1, mat2, beta, alpha, contiguous_self);
+        acl_op::addmm_out(contiguous_self, mat1, mat2, beta, alpha, c10::nullopt, contiguous_self);
         npu_utils::format_fresh_view(self, contiguous_self);
     } else {
-        acl_op::addmm_out(self, mat1, mat2, beta, alpha, self);
+        acl_op::addmm_out(self, mat1, mat2, beta, alpha, c10::nullopt, self);
     }
     return self;
 }

@@ -58,8 +58,10 @@ at::Tensor& baddbmm_out(
     const at::Tensor& batch2,
     const at::Scalar& beta,
     const at::Scalar& alpha,
+    c10::optional<at::ScalarType> output_dtype,
     at::Tensor& out)
 {
+    (void)output_dtype;
     npu_preparation::CheckOut(
         {self, batch1, batch2},
         out,
@@ -79,8 +81,10 @@ at::Tensor baddbmm(
     const at::Tensor& batch1,
     const at::Tensor& batch2,
     const at::Scalar& beta,
-    const at::Scalar& alpha)
+    const at::Scalar& alpha,
+    c10::optional<at::ScalarType> output_dtype)
 {
+    (void)output_dtype;
     at::Tensor result = npu_preparation::apply_tensor(self);
     baddbmm_nocheck(result, self, batch1, batch2, beta, alpha);
     return result;
@@ -93,6 +97,6 @@ at::Tensor& baddbmm_(
     const at::Scalar& beta,
     const at::Scalar& alpha)
 {
-    return acl_op::baddbmm_out(self, batch1, batch2, beta, alpha, self);
+    return acl_op::baddbmm_out(self, batch1, batch2, beta, alpha, c10::nullopt, self);
 }
 } // namespace acl_op

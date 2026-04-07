@@ -25,7 +25,7 @@ at::Tensor& _addmm_activation_out(
     bool use_gelu,
     at::Tensor& result)
     {
-    op_api::addmm_out(self, mat1, mat2, beta, alpha, result);
+    op_api::addmm_out(self, mat1, mat2, beta, alpha, c10::nullopt, result);
     if (use_gelu) {
         at::gelu_(result);
     } else {

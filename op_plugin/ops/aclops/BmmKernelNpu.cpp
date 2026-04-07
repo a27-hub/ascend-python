@@ -45,7 +45,11 @@ namespace {
     }
 } // namespace
 
-at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &result)
+at::Tensor &bmm_out(
+    const at::Tensor &self,
+    const at::Tensor &mat2,
+    c10::optional<at::ScalarType> output_dtype,
+    at::Tensor &result)
 {
     TORCH_CHECK(self.device() == mat2.device(),
         "Expected all tensors to be on the same device, but found at least two devices, ",
@@ -55,12 +59,13 @@ at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &
         OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
         "bmm_out is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "bmm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
-    npu_preparation::CheckOut(
-        {self, mat2},
-        result,
-        self,
-        output_size);
+    npu_preparation::CheckOut({self, mat2}, result, npu_preparation::get_tensor_npu_format(result), output_type,
+                              output_size);
 
     if (!result.is_contiguous()) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
@@ -72,7 +77,7 @@ at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &
     return result;
 }
 
-at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
+at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at::ScalarType> output_dtype)
 {
     TORCH_CHECK(self.device() == mat2.device(),
                 "Expected all tensors to be on the same device, but found at least two devices, ",
@@ -87,6 +92,10 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
     // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
                 "bmm is not support int8 dtype" + OPS_ERROR(ErrCode::TYPE))
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "bmm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
 
     at::Tensor result;
@@ -106,14 +115,14 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
         if (npu_format_helper::IsBaseFormatType(self) && npu_format_helper::IsBaseFormatType(mat2) &&
             mm_bmm_nd && ((is_support_nd_out && op_plugin::utils::is_nd_to_nz_on_fly(self, mat2)) ||
             (!is_support_nd_out && is_aligin()))) {
-            result = npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_ND);
+            result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(output_type), ACL_FORMAT_ND);
         } else {
-            result = npu_preparation::apply_tensor_with_format(output_size, self.options(),
-                                                               ACL_FORMAT_FRACTAL_NZ, true);
+            result = npu_preparation::apply_tensor_with_format(
+                output_size, self.options().dtype(output_type), ACL_FORMAT_FRACTAL_NZ, true);
             need_nd_out = mm_bmm_nd;
         }
     } else {
-        result = npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_ND);
+        result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(output_type), ACL_FORMAT_ND);
     }
 
     bmm_out_nocheck(result, self, mat2);
