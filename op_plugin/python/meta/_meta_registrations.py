@@ -3498,7 +3498,8 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     output_dtype = gmm_get_dtype(output_dtype)
     INT4_IN_INT32 = 8
     FP4_IN_INT8 = 2
-    is_a4w4_mxfp = x_dtype == torch_npu.float4_e2m1fn_x2 and weight_dtype == torch_npu.float4_e2m1fn_x2
+    is_a4w4_mxfp = (x_dtype == torch_npu.float4_e2m1fn_x2 or x_dtype == torch_npu.float4_e1m2fn_x2) and \
+        (weight_dtype == torch_npu.float4_e2m1fn_x2 or weight_dtype == torch_npu.float4_e1m2fn_x2)
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if split_item == 0:
