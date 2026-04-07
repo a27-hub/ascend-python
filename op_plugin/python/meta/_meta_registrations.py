@@ -2932,7 +2932,7 @@ def npu_scatter_pa_kv_cache_functional_meta(key, value, key_cache, value_cache, 
 
 @impl(m, "npu_scatter_pa_kv_cache")
 def npu_scatter_pa_kv_cache_meta(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None,
-    compress_seq_offsets=None, seq_lens=None):
+    compress_seq_offsets=None, seq_lens=None, str? cache_mode='PA_NZ'):
     return
 
 
