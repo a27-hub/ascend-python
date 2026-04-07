@@ -15080,3 +15080,49 @@ if __name__ == "__main__":
 
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_rotate_quant",
+    """
+ 接口原型:
+ torch_npu.npu_rotate_quant(Tensor x, Tensor rotation, *, float? alpha=0.0, int? dst_dtype=None) -> (Tensor, Tensor)
+ 功能描述
+ `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
+
+ 参数说明:
+ x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor。
+ rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor，k支持64、256、1024等4的幂次方。
+ alpha（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
+ dst_dtype（`int`）：可选输入，指定输出y的数据类型，数据类型为`int`，支持DT_INT4（29），DT_INT8（2），默认值为None。
+
+ 输出说明:
+ y（`Tensor`）：输出的量化结果，shape支持2维[m,n]，与x保持一致，数据类型支持`int4`/`int8`。数据格式支持ND，支持非连续的Tensor。
+ scale（`Tensor`）：输出的量化因子，shape支持1维[m]，数据类型支持`float32`。数据格式支持ND，支持非连续的Tensor。
+
+ 支持的型号: 
+ Atlas A3 训练系列产品/Atlas A3 推理系列产品
+ Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+ 调用示例:
+ import torch
+ import torch_npu
+ import numpy as np
+
+ def test_rotate_quant(M=512, N=1024, K=1024, dst_dtype=2):
+     x = torch.randn(M, N, dtype=torch.bfloat16).npu()
+     rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
+     alpha = 0.0
+     output, output_scale = torch_npu.npu_rotate_quant(
+         x, rotation, alpha=alpha, dst_dtype=dst_dtype
+     )
+     return output, output_scale
+
+ def main():
+     output, output_scale = test_rotate_quant()
+
+ if __name__ == "__main__":
+     main()
+
+ """
+ )
