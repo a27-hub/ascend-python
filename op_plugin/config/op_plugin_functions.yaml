@@ -6708,14 +6708,21 @@ custom:
         cache_mode: '"Norm"'
       exec: aclnnScatterPaCache, key, key_cache, slot_mapping, compress_lens, compress_seq_offsets, seq_lens, cache_mode
 
-  - func: npu_scatter_pa_kv_cache_functional(Tensor key, Tensor value, Tensor key_cache, Tensor value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> (Tensor, Tensor)
+  - func: npu_scatter_pa_kv_cache_functional(Tensor key, Tensor value, Tensor key_cache, Tensor value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str? cache_mode='PA_NZ') -> (Tensor, Tensor)
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()
+  - func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str? cache_mode='PA_NZ') -> ()
     op_api: all_version
     internal_format_opapi: all_version
     exposed: all_version
+    gen_opapi:
+      new_params:
+        cache_mode_attr: 'cache_mode.has_value() ? const_cast<char *>(cache_mode.value().data()) : nullptr'
+        cache_mode: '"None"'
+        strides: 'at::IntArrayRef({1, 1})'
+        offsets: 'at::IntArrayRef({0, 0})'
+      exec: aclnnScatterPaKvCache, key, key_cache, slot_mapping, value, value_cache, compress_lens, compress_seq_offsets, seq_lens, cache_mode, scatter_mode, strides, offsets
 
   - func: npu_gather_pa_kv_cache(Tensor key_cache, Tensor value_cache, Tensor block_tables, Tensor seq_lens, Tensor(a!) key, Tensor(b!) value, *, Tensor? seq_offset=None, bool is_seq_lens_cumsum=False) -> ()
     op_api: all_version
