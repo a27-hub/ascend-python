@@ -19,8 +19,8 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 
 ## 参数说明
 
-- **x**（`Tensor`）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor。
-- **rotation**（`Tensor`）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor，k支持64、256、1024等4的幂次方。
+- **x**（`Tensor`）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+- **rotation**（`Tensor`）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
 - **alpha**（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
 - **dst_dtype**（`int`）：可选输入，指定输出y的数据类型，数据类型为`int`，支持DT_INT4（29），DT_INT8（2），默认值为None。
 
@@ -38,6 +38,8 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
     |--------|--------|--------|--------|--------|
     |`bfloat16`|`bfloat16`|torch.qint8|`int8`|`float32`|
     |`bfloat16`|`bfloat16`|torch.quint4X2|`int4`|`float32`|
+    |`float16`|`float16`|torch.qint8|`int8`|`float32`|
+    |`float16`|`float16`|torch.quint4X2|`int4`|`float32`|
 
 ## 调用示例
 

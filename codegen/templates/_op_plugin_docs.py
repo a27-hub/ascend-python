@@ -15091,8 +15091,8 @@ _add_torch_npu_docstr(
  `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
 
  参数说明:
- x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor。
- rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`，数据格式支持ND，支持非连续的Tensor，k支持64、256、1024等4的幂次方。
+ x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  alpha（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
  dst_dtype（`int`）：可选输入，指定输出y的数据类型，数据类型为`int`，支持DT_INT4（29），DT_INT8（2），默认值为None。
 
