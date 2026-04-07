@@ -36,7 +36,7 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at::
                 OPS_ERROR(ErrCode::TYPE));
 
     auto names = at::namedinference::compute_matmul_outnames(self, mat2);
-    DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm(self, mat2));
+    DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm(self, mat2, output_dtype));
     // aclnn
     auto output_size = {self.size(0), mat2.size(1)};
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_type));
@@ -73,7 +73,7 @@ at::Tensor &mm_out(
                 OPS_ERROR(ErrCode::TYPE));
 
     auto names = at::namedinference::compute_matmul_outnames(self, mat2);
-    DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm_out(self, mat2, out));
+    DO_MATMUL_COMPATIBILITY(aclnnMatmulWeightNz, aclnnMm, self, mat2, acl_op::mm_out(self, mat2, output_dtype, out));
     // aclnn
     auto output_size = {self.size(0), mat2.size(1)};
     npu_preparation::check_tensor({self, mat2}, out, output_type, output_size);
