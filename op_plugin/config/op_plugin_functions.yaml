@@ -1274,11 +1274,11 @@ official:
     acl_op: all_version
     op_api: all_version
 
-  - func: baddbmm(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
+  - func: baddbmm(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1, ScalarType? output_dtype=None) -> Tensor
     acl_op: all_version
     op_api: all_version
 
-  - func: baddbmm.out(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
+  - func: baddbmm.out(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1, ScalarType? output_dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
 
