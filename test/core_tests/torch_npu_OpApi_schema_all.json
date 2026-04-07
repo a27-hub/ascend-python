@@ -74,6 +74,9 @@
   "op_api: torch_npu.npu_kv_quant_sparse_flash_attention(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_kv_quant_sparse_flash_attention_metadata(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
   "op_api: torch_npu.npu_kronecker_quant(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
@@ -494,6 +497,9 @@
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_kv_quant_sparse_flash_attention(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "op_api: torch_npu.npu_kv_quant_sparse_flash_attention_metadata(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_mm_reduce_scatter_base(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
@@ -1451,6 +1457,9 @@
     "version": ["all_version"]
   },
   "func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "func: npu_kv_quant_sparse_flash_attention_metadata(int num_heads_q, int num_heads_kv, int head_dim, int kv_quant_mode, *, Tensor? cu_seqlens_q=None, Tensor? cu_seqlens_kv=None, Tensor? seqused_q=None, Tensor? seqused_kv=None, Tensor? topk_length=None, int? batch_size=None, int? max_seqlen_q=None, int? max_seqlen_kv=None, int? topk=None, int? tile_size=None, int? rope_head_dim=None, int? mask_mode=None, int? win_left=None, int? win_right=None, str? layout_q=None, str? layout_kv=None) -> Tensor": {
     "version": ["all_version"]
   },
   "func: _npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query=\"BSND\", str layout_kv=\"BSND\", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor": {

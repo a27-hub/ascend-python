@@ -104,6 +104,7 @@
       "npu_sparse_flash_attention_grad",
       "npu_sparse_lightning_indexer_grad_kl_loss",
       "npu_kv_quant_sparse_flash_attention",
+      "npu_kv_quant_sparse_flash_attention_metadata",
       "npu_convert_weight_to_int4pack",
       "npu_ffn",
       "npu_geglu",
