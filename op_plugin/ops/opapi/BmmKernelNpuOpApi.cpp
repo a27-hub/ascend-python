@@ -34,7 +34,8 @@ at::Tensor &bmm_out(
                 "bmm only supports torch.float32 when output_dtype is specified",
                 OPS_ERROR(ErrCode::TYPE));
 
-    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm_out(self, mat2, result));
+    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2,
+                            acl_op::bmm_out(self, mat2, output_dtype, result));
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
     npu_preparation::check_tensor({self, mat2}, result, output_type, output_size);
 
@@ -62,7 +63,7 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at:
                 "bmm only supports torch.float32 when output_dtype is specified",
                 OPS_ERROR(ErrCode::TYPE));
 
-    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
+    DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2, output_dtype));
 
     // calculate the output size
     auto output_size = {self.size(0), self.size(1), mat2.size(2)};
