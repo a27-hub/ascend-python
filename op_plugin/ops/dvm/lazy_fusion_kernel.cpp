@@ -23,6 +23,10 @@
 #include "torch_npu/csrc/core/npu/NPUWorkspaceAllocator.h"
 
 namespace lazy_fusion {
+static inline bool DumpEnabled() {
+  static const bool v = g_lazy_fusion_manager.flags_.dump_as_text;
+  return v;
+}
 namespace {
 class LazyFusionDump {
  public:
@@ -233,7 +237,7 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   load->data_ptr = x.data_ptr();
   load->tensor = x;
   auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), input_type);
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
   CacheDvmOp(storage, load_op, x.storage_offset());
@@ -258,7 +262,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
     }
   }
   auto &store = outputs_.emplace_back(obj, data_ptr, inplace, tensor);
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     dump_buf_ << "%" << (outputs_.size() - 1) << ": " << ToString(tensor) << "\n";
   }
   CacheDvmOp(storage, obj, tensor.storage_offset());
@@ -268,7 +272,7 @@ void *LazyFusionKernel::Alloc(size_t size) {
   auto ws_tensor = at_npu::native::allocate_workspace(size, stream_);
   void *addr = const_cast<void *>(ws_tensor.storage().data());
   workspace_.emplace_back(std::move(ws_tensor));
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     dump_buf_ << "workspace: " << addr << " " << size << "\n";
   }
   return addr;
@@ -301,7 +305,7 @@ void LazyFusionKernel::Flush() {
       dvm::Kernel::SetStoreInplace(store);
     }
   }
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     DumpGraph();
   }
   ClearGraphRefs();
@@ -319,7 +323,7 @@ int LazyFusionKernel::CodeGenAndLaunch() {
   if (c10_npu::check_dequeue_need_use(stream_)) {
     NPU_CHECK_ERROR(c10_npu::UseStreamResInCurrentThread(stream_));
   }
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     LazyFusionDump::Instance().DumpGraphInfo(dump_buf_);
     dump_buf_ << "[lazy_fusion before split]\n";
     dump_buf_ << Dump() << "\n";
@@ -329,7 +333,7 @@ int LazyFusionKernel::CodeGenAndLaunch() {
     RECORD_FUNCTION("CodeGen", {});
     dvm::Kernel::CodeGen(nullptr, 0, this);
   }
-  if (g_lazy_fusion_manager.flags_.dump_as_text) {
+  if (DumpEnabled()) {
     dump_buf_ << "[lazy_fusion after split]\n";
     dump_buf_ << Dump() << "\n";
     dump_buf_ << Das() << "\n";

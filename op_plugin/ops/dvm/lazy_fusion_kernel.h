@@ -17,6 +17,8 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+#include <atomic>
+#include <thread>
 #include <ATen/Tensor.h>
 #include <ATen/ATen.h>
 #include "op_plugin/utils/OpAdapter.h"
@@ -309,12 +311,31 @@ class Manager {
 extern Manager g_lazy_fusion_manager;
 
 inline bool IsEnabled() {
-  static auto enable_task_queue = c10_npu::option::OptionsManager::GetTaskQueueEnable();
-  if (g_lazy_fusion_manager.flags_.opt_level > OptLevel_0 && enable_task_queue) {
-    auto stream = c10_npu::getCurrentNPUStream();
-    return !stream.isSyncLaunchStream();
+  // opt_level and task_queue are fixed at process startup, cache once.
+  static const bool global_enabled =
+      g_lazy_fusion_manager.flags_.opt_level > OptLevel_0 &&
+      c10_npu::option::OptionsManager::GetTaskQueueEnable();
+  if (!global_enabled) {
+    return false;
   }
-  return false;
+  if (c10_npu::getCurrentNPUStream().isSyncLaunchStream()) {
+    return false;
+  }
+  // DVM is not thread-safe; only the first thread that uses it is allowed,
+  // others fall back to op_api. Cache per-thread answer to avoid atomic on hot path.
+  thread_local int8_t thread_allowed = -1;  // -1 uninit, 0 denied, 1 allowed
+  if (thread_allowed >= 0) {
+    return thread_allowed == 1;
+  }
+  static std::atomic<std::thread::id> dvm_owner_tid{};
+  auto self = std::this_thread::get_id();
+  std::thread::id expected{};
+  if (dvm_owner_tid.compare_exchange_strong(expected, self, std::memory_order_relaxed)) {
+    thread_allowed = 1;
+  } else {
+    thread_allowed = (dvm_owner_tid.load(std::memory_order_relaxed) == self) ? 1 : 0;
+  }
+  return thread_allowed == 1;
 }
 
 bool IsEnabled(const std::string &op, unsigned int op_level);
