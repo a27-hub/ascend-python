@@ -24,11 +24,18 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
                                     const c10::optional<at::Tensor>& scales,
                                     const at::Tensor& expanded_src_to_dst_row,
                                     const c10::optional<at::Tensor>& expert_for_source_row,
-                                    const c10::optional<int64_t> drop_pad_mode)
+                                    const c10::optional<at::Tensor>& x,
+                                    const c10::optional<at::Tensor>& a1,
+                                    const c10::optional<at::Tensor>& a2,
+                                    const c10::optional<at::Tensor>& v,
+                                    const c10::optional<int64_t> drop_pad_mode,
+                                    const at::OptionalIntArrayRef zero_expert_range,
+                                    const at::OptionalIntArrayRef copy_expert_range,
+                                    const at::OptionalIntArrayRef constant_expert_range)
 {
-    static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
+    static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV3");
     if (!is_moe_finalize_routing_V2_available) {
-        TORCH_CHECK(skip1.has_value(), "skip1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
+        TORCH_CHECK(skip1.has_value(), "skip1 parameter must have value when there is no aclnnMoeFinalizeRoutingV3",
             OPS_ERROR(ErrCode::PARAM));
         at::Tensor result = npu_preparation::apply_tensor_without_format(skip1.value());
         EXEC_NPU_CMD(aclnnMoeFinalizeRouting, expanded_permuted_rows, skip1, skip2, bias, scales,
@@ -50,8 +57,9 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
     output_size.push_back(expanded_permuted_rows.size(dim1Index));
     result = npu_preparation::apply_tensor_without_format(output_size, expanded_permuted_rows.options());
     int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
-    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row,
-                 skip1, skip2, bias, scales, expert_for_source_row, mode, result);
+    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV3, expanded_permuted_rows, expanded_src_to_dst_row,
+                 skip1, skip2, bias, scales, expert_for_source_row, x, a1, a2, v, mode,
+                 zero_expert_range, copy_expert_range, constant_expert_range, result);
     return result;
 }
 } // namespace op_api
