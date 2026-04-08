@@ -15,7 +15,6 @@
 
 #include <torch/extension.h>
 #include <torch/library.h>
-//#include "aclnn_common.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
@@ -36,8 +35,8 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
     int64_t num_heads_q, int64_t num_heads_kv, int64_t head_dim, int64_t kv_quant_mode, 
     const c10::optional<at::Tensor> &cu_seqlens_q, const c10::optional<at::Tensor> &cu_seqlens_kv,
     const c10::optional<at::Tensor> &seqused_q, const c10::optional<at::Tensor> &seqused_kv,
-    const c10::optional<at::Tensor> &topk_length, c10::optional<int64_t> batch_size, c10::optional<int64_t> max_seqlen_q, c10::optional<int64_t> max_seqlen_kv,
-    c10::optional<int64_t> topk, c10::optional<int64_t> tile_size, c10::optional<int64_t> rope_head_dim, c10::optional<int64_t> mask_mode, c10::optional<int64_t> win_left, c10::optional<int64_t> win_right,
+    const c10::optional<at::Tensor> &topk_length, int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_kv, 
+    int64_t topk, int64_t tile_size, int64_t rope_head_dim, int64_t mask_mode, int64_t win_left, int64_t win_right, 
     c10::string_view layout_q, c10::string_view layout_kv)
 {
     const c10::string_view device = "npu:0";
