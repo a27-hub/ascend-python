@@ -13,7 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//#include <torch/extension.h>
+#include <torch/extension.h>
+#include <torch/library.h>
 //#include "aclnn_common.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/aten/CustomFunctions.h"
@@ -23,6 +24,8 @@
 
 namespace op_api {
 using npu_utils = at_npu::native::NpuUtils;
+using npu_preparation = at_npu::native::OpPreparation;
+using namespace at_npu::native;
 constexpr int64_t OUTPUT_SIZE = 1024;
 
 const c10::optional<at::Tensor> get_valid_tensor(const c10::optional<at::Tensor> &tensor_opt, at::Device device) {
@@ -33,11 +36,12 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
     int64_t num_heads_q, int64_t num_heads_kv, int64_t head_dim, int64_t kv_quant_mode, 
     const c10::optional<at::Tensor> &cu_seqlens_q, const c10::optional<at::Tensor> &cu_seqlens_kv,
     const c10::optional<at::Tensor> &seqused_q, const c10::optional<at::Tensor> &seqused_kv,
-    const c10::optional<at::Tensor> &topk_length, int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_kv,
-    int64_t topk, int64_t tile_size, int64_t rope_head_dim, int64_t mask_mode, int64_t win_left, int64_t win_right,
+    const c10::optional<at::Tensor> &topk_length, c10::optional<int64_t> batch_size, c10::optional<int64_t> max_seqlen_q, c10::optional<int64_t> max_seqlen_kv,
+    c10::optional<int64_t> topk, c10::optional<int64_t> tile_size, c10::optional<int64_t> rope_head_dim, c10::optional<int64_t> mask_mode, c10::optional<int64_t> win_left, c10::optional<int64_t> win_right,
     c10::string_view layout_q, c10::string_view layout_kv)
 {
-    at::Device output_device = c10::DeviceType::PrivateUse1;
+    const c10::string_view device = "npu:0";
+    at::Device output_device = at::Device(std::string(device));
     if (cu_seqlens_q.has_value()) {
         output_device = cu_seqlens_q.value().device();
     } else if (cu_seqlens_kv.has_value()) {
@@ -49,8 +53,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
     } else if (topk_length.has_value()) {
         output_device = topk_length.value().device();
     }
-    at::Tensor output = at::empty({OUTPUT_SIZE}, torch::dtype(torch::kInt32).device(output_device).
-                                  memory_format(c10::MemoryFormat::Contiguous));
+    at::Tensor output = at::empty({OUTPUT_SIZE}, torch::dtype(torch::kInt32).device(output_device).memory_format(c10::MemoryFormat::Contiguous));
 
     auto cu_seqlens_q_val = get_valid_tensor(cu_seqlens_q, output_device);
     auto cu_seqlens_kv_val = get_valid_tensor(cu_seqlens_kv, output_device);
@@ -69,9 +72,4 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
               layout_q_ptr, layout_kv_ptr, output);
     return output;
 }
-
-//PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
-//{
-//    m.def("npu_kv_quant_sparse_flash_attention_metadata", &npu_kv_quant_sparse_flash_attention_metadata, "npu_kv_quant_sparse_flash_attention_metadata");
-//}
 } // namespace op_api
