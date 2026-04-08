@@ -241,8 +241,14 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         at::IntArrayRef group_size_list = group_size.value_or(at::IntArrayRef{});
         int64_t group_sizes = op_plugin::utils::check_and_get_group_size(group_size_list);
 
-        bool mxfp4_valid = gmm_x_dtype.has_value() &&
-            gmm_x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+        bool gmm_mxfp4_valid = false;
+        if (gmm_x_dtype.has_value()) {
+            gmm_mxfp4_valid = gmm_x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+        }
+        if (gmm_weight_dtype.has_value()) {
+            gmm_mxfp4_valid = gmm_mxfp4_valid &&
+                gmm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+        }
 
         bool trans_gmm_weight = false;
         bool trans_mm_weight = false;
@@ -343,9 +349,17 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                         OPS_ERROR(ErrCode::VALUE));
                 }
             }
+            bool mm_mxfp4_valid = false;
+            if (mm_x_dtype.has_value()) {
+                mm_mxfp4_valid = mm_x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+            }
+            if (mm_weight_dtype.has_value()) {
+                mm_mxfp4_valid = mm_mxfp4_valid &&
+                    mm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+            }
             int64_t bs = mm_x_value.size(0);   // shape (BS， H)
             int64_t n2 = mm_weight_value.size(1);
-            if (mxfp4_valid && !trans_mm_weight) {
+            if (mm_mxfp4_valid && !trans_mm_weight) {
                 n2 *= FP4_IN_INT8;
             }
             // mm_x_scale
@@ -427,11 +441,6 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
             // 推导输出mm_y的shape
             aclDataType mm_y_acltype = c10_npu::GetAclDataType(mm_y_dtype.value());
             at::ScalarType mm_y_scalar_dtype = at_npu::native::OpPreparation::convert_to_scalar_type(mm_y_acltype);
-            if (mxfp4_valid) {
-                TORCH_CHECK(mm_y_scalar_dtype != at::ScalarType::Float,
-                    "The output mm_y_dtype does not support float32 for float4_e2m1 input.",
-                    OPS_ERROR(ErrCode::VALUE));
-            }
             mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bs, n2}, c10::dtype(mm_y_scalar_dtype));
         } else {
             TORCH_CHECK(!mm_x_quant_mode.has_value(),
@@ -455,17 +464,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         }
 
         int64_t n1 = gmm_weight.size(2);
-        if (mxfp4_valid && !trans_gmm_weight) {
+        if (gmm_mxfp4_valid && !trans_gmm_weight) {
             n1 *= FP4_IN_INT8;
         }
         // 推导输出gmm_y的shape
         aclDataType gmm_y_acl_type = c10_npu::GetAclDataType(gmm_y_dtype);
         at::ScalarType gmm_y_scalar_type = npu_preparation::convert_to_scalar_type(gmm_y_acl_type);
-        if (mxfp4_valid) {
-            TORCH_CHECK(gmm_y_scalar_type != at::ScalarType::Float,
-                "The output gmm_y_dtype does not support float32 for float4_e2m1 input.",
-                OPS_ERROR(ErrCode::VALUE));
-        }
         auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bsk, n1}, c10::dtype(gmm_y_scalar_type));
         
         int64_t comm_quant_mode_real = comm_quant_mode.has_value() ? comm_quant_mode.value() : NO_QUANT_MODE;
