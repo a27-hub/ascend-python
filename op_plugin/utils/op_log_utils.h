@@ -36,6 +36,16 @@ typedef struct {
 
 namespace op_plugin {
 namespace logging {
+
+extern thread_local int log_depth;
+
+// RAII guard to temporarily increase log_depth and prevent recursive logging
+class LogDepthGuard {
+public:
+    LogDepthGuard() { log_depth += 1; }
+    ~LogDepthGuard() { log_depth -= 1; }
+};
+
 const static size_t SHOW_LIMIT = 20;
 const static size_t REPLACE_WORKSPACE = 2;
 
@@ -79,6 +89,7 @@ inline std::string convert_info(const at::Tensor &at_tensor)
     }
 
     if (at_tensor.dim() == 0) {
+        LogDepthGuard guard;  // Prevent recursive logging from is_npu and tensor operations
         if (torch_npu::utils::is_npu(at_tensor)) {
             ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
             std::string res = ss.str();
@@ -92,21 +103,24 @@ inline std::string convert_info(const at::Tensor &at_tensor)
         }
     }
 
-    ss << "Tensor size: "
-       << at_tensor.sizes()
-       << ", stride: "
-       << at_tensor.strides()
-       << ", offset: "
-       << at_tensor.storage_offset()
-       << ", dtype: "
-       << at_tensor.dtype()
-       << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: ";
-    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
-        ss << at_tensor.data_ptr();
-    } else {
-        ss << "FakeTensor does not have data_ptr";
+    {
+        LogDepthGuard guard;  // Prevent recursive logging from tensor operations
+        ss << "Tensor size: "
+           << at_tensor.sizes()
+           << ", stride: "
+           << at_tensor.strides()
+           << ", offset: "
+           << at_tensor.storage_offset()
+           << ", dtype: "
+           << at_tensor.dtype()
+           << ", device ID: "
+           << static_cast<int>(at_tensor.device().index())
+           << ", data_ptr: ";
+        if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+            ss << at_tensor.data_ptr();
+        } else {
+            ss << "FakeTensor does not have data_ptr";
+        }
     }
     ss << "\n";
 
@@ -332,6 +346,7 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
     }
 
     if (at_tensor.dim() == 0) {
+        LogDepthGuard guard;  // Prevent recursive logging from is_npu and tensor operations
         if (torch_npu::utils::is_npu(at_tensor)) {
             ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
             std::string res = ss.str();
@@ -345,21 +360,24 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
         }
     }
 
-    ss << "Tensor size: "
-       << at_tensor.sizes()
-       << ", stride: "
-       << at_tensor.strides()
-       << ", offset: "
-       << at_tensor.storage_offset()
-       << ", dtype: "
-       << at_tensor.dtype()
-       << ", device ID: "
-       << static_cast<int>(at_tensor.device().index())
-       << ", data_ptr: ";
-    if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
-        ss << at_tensor.data_ptr();
-    } else {
-        ss << "FakeTensor does not have data_ptr";
+    {
+        LogDepthGuard guard;  // Prevent recursive logging from tensor operations
+        ss << "Tensor size: "
+           << at_tensor.sizes()
+           << ", stride: "
+           << at_tensor.strides()
+           << ", offset: "
+           << at_tensor.storage_offset()
+           << ", dtype: "
+           << at_tensor.dtype()
+           << ", device ID: "
+           << static_cast<int>(at_tensor.device().index())
+           << ", data_ptr: ";
+        if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) { // not faketensor
+            ss << at_tensor.data_ptr();
+        } else {
+            ss << "FakeTensor does not have data_ptr";
+        }
     }
     ss << "\n";
 
@@ -395,6 +413,7 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
         return ss.str();
     }
 
+    LogDepthGuard guard;  // Prevent recursive logging from is_npu and GetNpuStorageImpl
     if (torch_npu::utils::is_npu(at_tensor)) {
         // fake tensor
         if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) != typeid(torch_npu::NPUStorageImpl)) {
@@ -476,6 +495,7 @@ inline std::string convert_debug_info(const TensorWrapper &tensor_r)
         return ss.str();
     }
 
+    LogDepthGuard guard;  // Prevent recursive logging from is_npu and GetNpuStorageImpl
     if (torch_npu::utils::is_npu(at_tensor)) {
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
         if (at_tensor.dim() == 0) {
