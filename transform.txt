@@ -1,90 +1,54 @@
-import torch
-import torch_npu
+精确测试：控制所有变量
+============================================================
 
-batch_size = 4
-hidden_size = 4096
-local_num_experts = 16
-top_k = 8
-device = "npu:0"
+============================================================
+测试 1: 完全不使用 print
+============================================================
+tmp_1: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
+result_1: tensor([130, 128, 131, 131, 133, 132, 131, 132, 132, 130, 132, 131, 128, 132,
+        131, 130], device='npu:0', dtype=torch.int32)
 
-print("=" * 60)
-print("精确测试：控制所有变量")
-print("=" * 60)
+============================================================
+测试 2: 只 print tokens_per_expert（不 print 表达式）
+============================================================
+tokens_per_expert_2: tensor([1, 0, 2, 2, 4, 3, 2, 3, 3, 1, 3, 2, 0, 3, 2, 1], device='npu:0',
+       dtype=torch.int32)
+tmp_2: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
+result_2: tensor([130, 128, 131, 131, 133, 132, 131, 132, 132, 130, 132, 131, 128, 132,
+        131, 130], device='npu:0', dtype=torch.int32)
 
-# 创建上下文 tensor
-x = torch.randint(-127, 128, (batch_size, hidden_size), dtype=torch.int8, device=device)
-x_scale = torch.rand((batch_size, hidden_size // 128), dtype=torch.float32, device=device)
+============================================================
+测试 3: 先赋值，再 print 变量
+============================================================
+tmp_3: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
+result_3: tensor([130, 128, 131, 131, 133, 132, 131, 132, 132, 130, 132, 131, 128, 132,
+        131, 130], device='npu:0', dtype=torch.int32)
 
-# 创建 topk_ids
-topk_ids = torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")
-for _ in range(batch_size - 1):
-    topk_ids = torch.cat((topk_ids, torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")), dim=-1)
-topk_ids = topk_ids.reshape(batch_size, -1)[:, :top_k].to(device=device)
+============================================================
+测试 4: 使用 .sum() 强制同步
+============================================================
+tmp_4: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
+result_4: tensor([1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1], device='npu:0',
+       dtype=torch.int32)
 
-print("\n" + "=" * 60)
-print("测试 1: 完全不使用 print")
-print("=" * 60)
-tokens_per_expert_1 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-torch.npu.synchronize()
-ps_1 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_1.device)
-tmp_1 = tokens_per_expert_1 + ps_1
-result_1 = (tokens_per_expert_1 + ps_1 - 1) // ps_1
-print(f"tmp_1: {tmp_1}")
-print(f"result_1: {result_1}")
+============================================================
+测试 5: 使用 .cpu() 强制同步
+============================================================
+tmp_5: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
+result_5: tensor([130, 128, 131, 131, 133, 132, 131, 132, 132, 130, 132, 131, 128, 132,
+        131, 130], device='npu:0', dtype=torch.int32)
 
-print("\n" + "=" * 60)
-print("测试 2: 只 print tokens_per_expert（不 print 表达式）")
-print("=" * 60)
-tokens_per_expert_2 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-torch.npu.synchronize()
-print(f"tokens_per_expert_2: {tokens_per_expert_2}")  # 只 print 变量，不是表达式
-ps_2 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_2.device)
-tmp_2 = tokens_per_expert_2 + ps_2
-result_2 = (tokens_per_expert_2 + ps_2 - 1) // ps_2
-print(f"tmp_2: {tmp_2}")
-print(f"result_2: {result_2}")
-
-print("\n" + "=" * 60)
-print("测试 3: 先赋值，再 print 变量")
-print("=" * 60)
-tokens_per_expert_3 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-torch.npu.synchronize()
-ps_3 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_3.device)
-tmp_3 = tokens_per_expert_3 + ps_3  # 先赋值
-print(f"tmp_3: {tmp_3}")  # 再 print
-result_3 = (tokens_per_expert_3 + ps_3 - 1) // ps_3
-print(f"result_3: {result_3}")
-
-print("\n" + "=" * 60)
-print("测试 4: 使用 .sum() 强制同步")
-print("=" * 60)
-tokens_per_expert_4 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-_ = tokens_per_expert_4.sum()  # 强制同步
-ps_4 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_4.device)
-tmp_4 = tokens_per_expert_4 + ps_4
-print(f"tmp_4: {tmp_4}")
-result_4 = (tokens_per_expert_4 + ps_4 - 1) // ps_4
-print(f"result_4: {result_4}")
-
-print("\n" + "=" * 60)
-print("测试 5: 使用 .cpu() 强制同步")
-print("=" * 60)
-tokens_per_expert_5 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-_ = tokens_per_expert_5.cpu()  # 强制同步
-tokens_per_expert_5 = tokens_per_expert_5.to(device)
-ps_5 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_5.device)
-tmp_5 = tokens_per_expert_5 + ps_5
-print(f"tmp_5: {tmp_5}")
-result_5 = (tokens_per_expert_5 + ps_5 - 1) // ps_5
-print(f"result_5: {result_5}")
-
-print("\n" + "=" * 60)
-print("测试 6: 检查 tokens_per_expert 是否被修改")
-print("=" * 60)
-tokens_per_expert_6 = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
-torch.npu.synchronize()
-print(f"tokens_per_expert_6 before: {tokens_per_expert_6}")
-ps_6 = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_6.device)
-tmp_6 = tokens_per_expert_6 + ps_6
-print(f"tokens_per_expert_6 after: {tokens_per_expert_6}")
-print(f"tmp_6: {tmp_6}")
+============================================================
+测试 6: 检查 tokens_per_expert 是否被修改
+============================================================
+tokens_per_expert_6 before: tensor([1, 0, 2, 2, 4, 3, 2, 3, 3, 1, 3, 2, 0, 3, 2, 1], device='npu:0',
+       dtype=torch.int32)
+tokens_per_expert_6 after: tensor([1, 0, 2, 2, 4, 3, 2, 3, 3, 1, 3, 2, 0, 3, 2, 1], device='npu:0',
+       dtype=torch.int32)
+tmp_6: tensor([129, 128, 130, 130, 132, 131, 130, 131, 131, 129, 131, 130, 128, 131,
+        130, 129], device='npu:0', dtype=torch.int32)
