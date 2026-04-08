@@ -55,11 +55,11 @@ op_api: v2.7               # Use for operators only in a specific version
 # Required params before *, optional after
 func: npu_op(Tensor input, int dim, *, Tensor? mask=None, int? mode=None, str layout="BSH") -> Tensor
 
-# SymInt needs both custom: and symint: sections
-# custom:
-#   - func: npu_op(Tensor input, SymInt[] sizes) -> Tensor
-#     op_api: [v2.1, newest]
-# symint:
-#   - func: npu_op(Tensor input, SymInt[] sizes) -> Tensor
-#     op_api: [v2.1, newest]
+# SymInt needs both "custom:" and "symint:" sections
+custom:
+  - func: npu_op(Tensor input, SymInt[] sizes) -> Tensor
+    op_api: [v2.1, newest]
+symint:
+  - func: npu_op(Tensor input, SymInt[] sizes) -> Tensor
+    op_api: [v2.1, newest]
 ```
