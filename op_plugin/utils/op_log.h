@@ -33,7 +33,6 @@ namespace op_plugin {
 namespace logging {
 
 extern std::shared_ptr<npu_logging::Logger> LOGGER;
-extern thread_local int log_depth;
 
 // Logging function for op execute with task queue.
 #define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, ...)                                                                     \
