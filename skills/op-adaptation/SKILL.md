@@ -130,7 +130,7 @@ Use `op-test` skill to generate and execute tests. **Collect the test report** f
 
 ## Step 8: Generate API Documentation
 
-Use `op-apidoc` skill to create `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
+Use `op-apidoc` skill to create `docs/zh/custom_APIs/torch_npu/torch_npu-npu_{operator_name}.md`
 
 ## Step 9: Generate Integration Summary
 

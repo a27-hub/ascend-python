@@ -11,7 +11,7 @@ Generate Chinese API reference documentation for torch_npu custom operators.
 
 1. Read `references/template.md` for the complete document structure template
 2. Fill in each section based on operator information
-3. Output to `docs/zh/custom_APIs/torch_npu/torch_npu-{operator_name}.md`
+3. Output to `docs/zh/custom_APIs/torch_npu/torch_npu-npu_{operator_name}.md`
 
 ## Writing Standards
 
