@@ -1,40 +1,81 @@
-============================================================
-模拟原始代码上下文
-============================================================
-x shape: torch.Size([4, 4096]), dtype: torch.int8
-x_scale shape: torch.Size([4, 32]), dtype: torch.float32
-topk_ids shape: torch.Size([4, 8]), dtype: torch.int32
+import torch
+import torch_npu
 
-tokens_per_expert (after histc): tensor([2, 3, 2, 4, 2, 3, 2, 2, 2, 1, 0, 1, 1, 2, 2, 3], device='npu:0',
-       dtype=torch.int32)
+batch_size = 4
+hidden_size = 4096
+local_num_experts = 16
+top_k = 8
+device = "npu:0"
 
-ps: 128
+print("=" * 60)
+print("验证内存复用假设")
+print("=" * 60)
 
-============================================================
-测试 1: 直接 print
-============================================================
-tokens_per_expert + ps: tensor([130, 131, 130, 132, 130, 131, 130, 130, 130, 129, 128, 129, 129, 130,
-        130, 131], device='npu:0', dtype=torch.int32)
+x = torch.randint(-127, 128, (batch_size, hidden_size), dtype=torch.int8, device=device)
+x_scale = torch.rand((batch_size, hidden_size // 128), dtype=torch.float32, device=device)
 
-============================================================
-测试 2: 赋值给变量
-============================================================
-tmp: tensor([260, 262, 260, 264, 260, 262, 260, 260, 260, 258, 256, 258, 258, 260,
-        260, 262], device='npu:0', dtype=torch.int32)
+topk_ids = torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")
+for _ in range(batch_size - 1):
+    topk_ids = torch.cat((topk_ids, torch.randperm(local_num_experts, dtype=torch.int32, device="cpu")), dim=-1)
+topk_ids = topk_ids.reshape(batch_size, -1)[:, :top_k].to(device=device)
 
-============================================================
-测试 3: 后续计算
-============================================================
-(tokens_per_expert + ps - 1) // ps: tensor([131, 132, 131, 133, 131, 132, 131, 131, 131, 130, 128, 130, 130, 131,
-        131, 132], device='npu:0', dtype=torch.int32)
-(tokens_per_expert + ps - 1) // ps * ps: tensor([33666, 33924, 33666, 34182, 33666, 33924, 33666, 33666, 33666, 33408,
-        33022, 33408, 33408, 33666, 33666, 33924], device='npu:0',
-       dtype=torch.int32)
+tokens_per_expert = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+print(f"tokens_per_expert: {tokens_per_expert}")
 
-============================================================
-测试 4: 使用 .sum() 强制同步
-============================================================
-tmp (with sum): tensor([130, 131, 130, 132, 130, 131, 130, 130, 130, 129, 128, 129, 129, 130,
-        130, 131], device='npu:0', dtype=torch.int32)
-(tokens_per_expert + ps - 1) // ps (with sum): tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1], device='npu:0',
-       dtype=torch.int32)
+torch.npu.synchronize()
+
+ps = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert.device)
+
+print("\n" + "=" * 60)
+print("测试 A: 不执行第一个 print，直接赋值")
+print("=" * 60)
+tokens_per_expert_a = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+torch.npu.synchronize()
+ps_a = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_a.device)
+tmp_a = tokens_per_expert_a + ps_a
+print(f"tmp_a: {tmp_a}")
+
+print("\n" + "=" * 60)
+print("测试 B: 使用 clone() 强制创建新内存")
+print("=" * 60)
+tokens_per_expert_b = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+torch.npu.synchronize()
+ps_b = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_b.device)
+tmp_b = (tokens_per_expert_b + ps_b).clone()
+print(f"tmp_b: {tmp_b}")
+
+print("\n" + "=" * 60)
+print("测试 C: 使用 contiguous() 强制创建新内存")
+print("=" * 60)
+tokens_per_expert_c = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+torch.npu.synchronize()
+ps_c = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_c.device)
+tmp_c = (tokens_per_expert_c + ps_c).contiguous()
+print(f"tmp_c: {tmp_c}")
+
+print("\n" + "=" * 60)
+print("测试 D: 先 print，再使用 clone()")
+print("=" * 60)
+tokens_per_expert_d = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+torch.npu.synchronize()
+ps_d = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_d.device)
+print(f"tokens_per_expert_d + ps_d (direct print): {tokens_per_expert_d + ps_d}")
+tmp_d = (tokens_per_expert_d + ps_d).clone()
+print(f"tmp_d: {tmp_d}")
+
+print("\n" + "=" * 60)
+print("测试 E: 检查内存地址")
+print("=" * 60)
+tokens_per_expert_e = torch.histc(topk_ids, local_num_experts, 0, local_num_experts - 1)
+torch.npu.synchronize()
+ps_e = torch.tensor(128, dtype=torch.int32, device=tokens_per_expert_e.device)
+
+temp1 = tokens_per_expert_e + ps_e
+print(f"temp1: {temp1}")
+print(f"temp1 storage ptr: {temp1.storage().data_ptr()}")
+
+temp2 = tokens_per_expert_e + ps_e
+print(f"temp2: {temp2}")
+print(f"temp2 storage ptr: {temp2.storage().data_ptr()}")
+
+print(f"\ntemp1 and temp2 share storage: {temp1.storage().data_ptr() == temp2.storage().data_ptr()}")
