@@ -35,6 +35,13 @@ namespace logging {
 extern std::shared_ptr<npu_logging::Logger> LOGGER;
 extern thread_local int log_depth;
 
+// RAII guard to temporarily increase log_depth and prevent recursive logging
+class LogDepthGuard {
+public:
+    LogDepthGuard() { log_depth += 1; }
+    ~LogDepthGuard() { log_depth -= 1; }
+};
+
 // Logging function for op execute with task queue.
 #define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, ...)                                                                     \
     do {                                                                                                                                    \
@@ -51,24 +58,6 @@ extern thread_local int log_depth;
                 op_name, exec_cmd, task_queue, op_plugin::logging::generate_log_infos(#__VA_ARGS__, __VA_ARGS__).c_str());                  \
             op_plugin::logging::LOGGER->long_debug("%s %s",                                                                                 \
                 op_name, op_plugin::logging::generate_debug_log_infos(#__VA_ARGS__, __VA_ARGS__).c_str());                                  \
-            op_plugin::logging::log_depth -= 1;                                                                                             \
-        }                                                                                                                                   \
-    } while (0);
-
-// Logging function for op execute with task queue (for array-based params).
-#define OP_EXEC_LOG_EXT_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, params_log_info)                                                     \
-    do {                                                                                                                                    \
-        if (op_plugin::logging::LOGGER->getAllowLevel() == npu_logging::LoggingLevel::INFO && op_plugin::logging::log_depth == 0) {         \
-            op_plugin::logging::log_depth += 1;                                                                                             \
-            op_plugin::logging::LOGGER->long_info("%s %s with task_queue = %s%s",                                                           \
-                         op_name, exec_cmd, task_queue, params_log_info);                                                                   \
-            op_plugin::logging::log_depth -= 1;                                                                                             \
-        }                                                                                                                                   \
-        if (op_plugin::logging::LOGGER->getAllowLevel() == npu_logging::LoggingLevel::DEBUG && op_plugin::logging::log_depth == 0) {        \
-            op_plugin::logging::log_depth += 1;                                                                                             \
-            at_npu::native::OpCommand cmd;                                                                                                  \
-            op_plugin::logging::LOGGER->long_info("%s %s with task_queue = %s%s",                                                           \
-                op_name, exec_cmd, task_queue, params_log_info);                                                                            \
             op_plugin::logging::log_depth -= 1;                                                                                             \
         }                                                                                                                                   \
     } while (0);
