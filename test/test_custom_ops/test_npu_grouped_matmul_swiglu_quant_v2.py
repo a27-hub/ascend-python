@@ -381,9 +381,9 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self.assertRtolEqual(output1_valid, output1_npu_valid.cpu())
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid(self, device="npu"):
+    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid_mx(self, device="npu"):
         """Ascend950 上 dequant_dtype 合法值 (float32) 校验"""
-        E, M, K, N = 2, 128, 128, 64
+        E, M, K, N = 2, 2, 16, 128
         dequant_dtype = torch.float32
         with self.subTest(dequant_dtype=dequant_dtype):
             x, weight, weightScale, xScale, groupList = self.gen_input_data_950(E, M, K, N, False)
@@ -396,7 +396,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             self.assertEqual(output_npu.dim(), 2)
     
     @SupportedDevices(['Ascend950'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid(self, device="npu"):
+    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid_pertoken(self, device="npu"):
         """Ascend950 上 dequant_dtype 合法值 (float16/bfloat16) 校验"""
         E, M, K, N = 2, 128, 128, 64
         x = torch.randint(0, 256, (M, K), dtype=torch.uint8).to(torch.float8_e4m3fn)
