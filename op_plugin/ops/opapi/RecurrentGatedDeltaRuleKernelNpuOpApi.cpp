@@ -36,7 +36,8 @@ at::Tensor npu_recurrent_gated_delta_rule(
     const c10::optional<at::Tensor> &g,
     const c10::optional<at::Tensor> &gk)
 {
-    TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim should be ", VALUE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim must be 3, but got ", value.dim(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(state.dim() == INITIAL_STATE_DIM_NUM, "state dim must be 4, but got ", state.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scale.has_value(), "scale cannot be empty", OPS_ERROR(ErrCode::PARAM));
 
     auto t_dim = value.size(0);
@@ -72,8 +73,8 @@ std::tuple<at::Tensor, at::Tensor> npu_recurrent_gated_delta_rule_functional(
     const c10::optional<at::Tensor> &g,
     const c10::optional<at::Tensor> &gk)
 {
-    TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim should be ", VALUE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(state.dim() == INITIAL_STATE_DIM_NUM, "initial_state dim should be ", INITIAL_STATE_DIM_NUM, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == VALUE_DIM_NUM, "value dim must be 3, but got ", value.dim(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(state.dim() == INITIAL_STATE_DIM_NUM, "state dim must be 4, but got ", state.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(scale.has_value(), "scale cannot be empty", OPS_ERROR(ErrCode::PARAM));
 
     auto t_dim = value.size(0);

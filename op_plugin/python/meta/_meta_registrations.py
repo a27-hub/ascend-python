@@ -6069,7 +6069,8 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
 
 @impl(m, "npu_recurrent_gated_delta_rule")
 def npu_recurrent_gated_delta_rule_meta(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None):
-    torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    torch._check(state.dim() == 4, lambda: f"state dim must be 4, but got {state.dim()}.")
+    torch._check(value.dim() == 3, lambda: f"value dim must be 3, but got {value.dim()}.")
     out_shape = (value.size(0), value.size(1), value.size(2))
 
     out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
@@ -6079,7 +6080,7 @@ def npu_recurrent_gated_delta_rule_meta(query, key, value, state, *, beta=None, 
 @impl(m, "npu_recurrent_gated_delta_rule_functional")
 def npu_recurrent_gated_delta_rule_functional_meta(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None):
     torch._check(state.dim() == 4, lambda: f"state dim must be 4, but got {state.dim()}.")
-    torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    torch._check(value.dim() == 3, lambda: f"value dim must be 3, but got {value.dim()}.")
 
     state_shape = (state.size(0), state.size(1), state.size(2), state.size(3))
     out_shape = (value.size(0), value.size(1), value.size(2))
