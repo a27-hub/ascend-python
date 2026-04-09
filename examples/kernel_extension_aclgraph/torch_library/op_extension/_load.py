@@ -8,7 +8,7 @@ def _load_opextension_so():
     so_files = list(so_dir.glob('custom_ops_lib*.so'))
 
     if not so_files:
-        raise FileNotFoundError(f"not find custom_ops_lib*.so in {so_dir}")
+        raise FileNotFoundError(f"not found custom_ops_lib*.so in {so_dir}")
 
     atb_so_path = str(so_files[0])
     torch.ops.load_library(atb_so_path)

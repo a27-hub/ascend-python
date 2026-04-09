@@ -24,17 +24,17 @@ def get_dependency_paths():
     torch_npu_include = os.path.join(torch_npu_path, "include")
     torch_npu_lib = os.path.join(torch_npu_path, "lib")
 
-    all_include_paths = list([
+    all_include_paths = [
         *torch_include_paths,
         python_include,
         torch_npu_include,
-    ])
+    ]
 
-    all_libs = list([
+    all_libs = [
         python_lib,
         torch_lib,
         torch_npu_lib,
-    ])
+    ]
 
     return {
         "all_includes": all_include_paths,
@@ -43,8 +43,6 @@ def get_dependency_paths():
 
 
 class AscendBuildExtension(build_ext):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def _check_bisheng_compiler(self):
         bisheng_compiler = find_executable('bisheng')
