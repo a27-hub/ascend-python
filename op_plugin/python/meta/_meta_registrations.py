@@ -6592,7 +6592,9 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
 @impl(m, "npu_chunk_gated_delta_rule")
 def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None):
     torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
     out_shape = (value.size(0), value.size(1), value.size(2))
 
+    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
     out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
-    return out
+    return out, finalState

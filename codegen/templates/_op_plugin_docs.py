@@ -15108,7 +15108,7 @@ npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? be
 约束说明:
 - 该接口支持推理场景下使用。
 - 该接口支持静态图模式。
-- 输入shape大小需满足约束：$L_i \le 8$，$N_k \le 256$，$N_v \le 256$，$D_k \le 256$，$D_v \le 256$。
+- 输入shape大小需满足约束：$L_i \le 8$，$N_k \le 64$，$N_v \le 64$，$D_k = 128$，$D_v = 128$，$N_v$是$N_k$整数倍。
 
 支持的PyTorch版本:
 PyTorch 2.1 及更高版本
