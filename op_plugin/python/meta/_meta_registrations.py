@@ -1832,8 +1832,8 @@ def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
     return lse_out
 
 @impl(m, "_npu_attention_pioneer")
-def npu_attention_pioneer_forward(query, key, value, *, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
-                                    block_table=None, query_rope=None, key_rope=None, key_sink=None, key_rope_sink=None, value_sink=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
+def npu_attention_pioneer_forward(query, key, value, metaData, *, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
+                                    block_table=None, query_rope=None, key_rope=None, key_sink=None, key_rope_sink=None, value_sink=None, num_heads=1, softmax_scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, block_size=0, softmax_lse_flag=False):
     torch._check(
         num_heads > 0,
@@ -1872,6 +1872,55 @@ def npu_attention_pioneer_forward(query, key, value, *, atten_mask=None, actual_
         lse_out = torch.empty([0], dtype=torch.float32, device='meta')
 
     return attention_out, lse_out
+
+@impl(m, "_npu_attention_pioneer_metadata")
+def npu_attention_pioneer_metadata_forward(num_heads_q, num_heads_kv, head_dim_qk, head_dim_v, *,
+                                           actual_seq_lengths=None, actual_seq_lengths_kv=None,
+                                           batch_size=0, sparse_mode=0, pre_tokens=2147483647, next_tokens=2147483647,
+                                           input_layout="TND", sink_number=0, rope_head_dim=0, block_size=0):
+    torch._check(
+        num_heads_q > 0,
+        lambda: "num_heads_q should be greater than 0, but got " + str(num_heads_q) +
+            ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        num_heads_kv > 0,
+        lambda: "num_heads_kv should be greater than 0, but got " + str(num_heads_kv) +
+            ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        num_heads_q % num_heads_kv == 0,
+        lambda: "num_heads_q should be divisible by num_heads_kv, but got num_heads_q=" +
+            str(num_heads_q) + ", num_heads_kv=" + str(num_heads_kv) +
+            ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        head_dim_qk > 0,
+        lambda: "head_dim_qk should be greater than 0, but got " + str(head_dim_qk) +
+            ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        head_dim_v > 0,
+        lambda: "head_dim_v should be greater than 0, but got " + str(head_dim_v) +
+            ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        0 <= sparse_mode <= 4,
+        lambda: "sparse_mode should be in [0, 4], but got " + str(sparse_mode) +
+            ops_error(ErrCode.VALUE),
+    )
+    if block_size > 0:
+        torch._check(
+            block_size % 16 == 0,
+            lambda: "block_size should be 16-aligned, but got " + str(block_size) +
+                ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            block_size <= 1024,
+            lambda: "block_size should not exceed 1024, but got " + str(block_size) +
+                ops_error(ErrCode.VALUE),
+        )
+    return torch.empty([1024], dtype=torch.int32, device='meta')
 
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
