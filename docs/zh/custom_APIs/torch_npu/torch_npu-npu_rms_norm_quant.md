@@ -19,13 +19,13 @@
   $$
 
   $$
-  y = round((quant\_in * scales) + offset)
+  y = round((quant\_in * scale) + offset)
   $$
   上面公式中的`round`操作支持CAST_RINT模式。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06) -> Tensor
 ```
 
@@ -52,6 +52,7 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06) -> Te
 - **epsilon** (`float`)：可选参数，对应公式中的$eps$，用于防止除零错误，默认值为 `1e-6`。建议传入较小的正数。
 
 - **dst_dtype** (`int`): 可选参数，指定量化输出的类型，传`None`时当做int8处理，支持取值`int8`、`quint4x2`。
+
 ## 返回值说明
   
   `Tensor`
@@ -61,7 +62,7 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06) -> Te
 ## 约束说明
 
 - <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当`dst_dtype`取`quint4x2`时，`x`、`gamma`以及`beta`的最后一维必须为偶数，并且`x`最后一维必须能整除8。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当`dst_dtype`取`quint4x2`时，`x`、`gamma`以及`beta`的最后一维必须为偶数，并且`x`最后一维必须能够被8整除。
 - 各产品型号支持数据类型说明：
   
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -81,6 +82,7 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06) -> Te
     | float16   | float16       | float16       | float16       | int8           | double      |int32      |
 
 ## 调用示例
+
 ```python
 >>> import torch
 >>> import torch_npu

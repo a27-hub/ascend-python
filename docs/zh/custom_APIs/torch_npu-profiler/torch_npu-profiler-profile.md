@@ -8,14 +8,13 @@
 | <term>Atlas A2 训练系列产品</term> |    √     |
 | <term>Atlas 训练系列产品</term>    |    √     |
 
-
 ## 功能说明
 
 提供PyTorch训练过程中的性能数据采集功能。
 
 ## 函数原型
 
-```
+```python
 torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, record_shapes=False, profile_memory=False, with_stack=False, with_modules, with_flops=False, experimental_config=None)
 ```
 
@@ -97,33 +96,33 @@ import torch_npu
 ...
 
 experimental_config = torch_npu.profiler._ExperimentalConfig(
-	export_type=[
-		torch_npu.profiler.ExportType.Text
-		],
-	profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
-	msprof_tx=False,
-	aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
-	l2_cache=False,
-	op_attr=False,
-	data_simplification=False,
-	record_op_args=False,
-	gc_detect_threshold=None
+    export_type=[
+        torch_npu.profiler.ExportType.Text
+        ],
+    profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
+    msprof_tx=False,
+    aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
+    l2_cache=False,
+    op_attr=False,
+    data_simplification=False,
+    record_op_args=False,
+    gc_detect_threshold=None
 )
 
 with torch_npu.profiler.profile(
-	activities=[
-		torch_npu.profiler.ProfilerActivity.CPU,
-		torch_npu.profiler.ProfilerActivity.NPU
-		],
-	schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=1),
-	on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
-	record_shapes=False,
-	profile_memory=False,
-	with_stack=False,
-	with_modules=False,
-	with_flops=False,
-	experimental_config=experimental_config) as prof:
-	for step in range(steps): # 训练函数
-		train_one_step() # 训练函数
-		prof.step()
+    activities=[
+        torch_npu.profiler.ProfilerActivity.CPU,
+        torch_npu.profiler.ProfilerActivity.NPU
+        ],
+    schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=1),
+    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
+    record_shapes=False,
+    profile_memory=False,
+    with_stack=False,
+    with_modules=False,
+    with_flops=False,
+    experimental_config=experimental_config) as prof:
+    for step in range(steps): # 训练函数
+        train_one_step() # 训练函数
+        prof.step()
 ```

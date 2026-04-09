@@ -3,6 +3,7 @@
 import contextlib
 import copy
 import itertools
+import os
 import unittest
 import weakref
 from unittest.mock import patch
@@ -5222,6 +5223,38 @@ class TestBatchNormReduce(TestCase):
 
 
 class TestMatmul(TestCase):
+    @staticmethod
+    def _randn(shape, dtype, requires_grad=False):
+        if len(shape) == 0:
+            return torch.randn((), dtype=dtype, device="npu", requires_grad=requires_grad)
+        return torch.randn(shape, dtype=dtype, device="npu", requires_grad=requires_grad)
+
+    def _run_fake_matmul_backward(self, grad_shape, mat1_shape, mat2_shape, grad_dtype, mat1_dtype, mat2_dtype):
+        with FakeTensorMode():
+            grad = self._randn(grad_shape, grad_dtype)
+            mat1 = self._randn(mat1_shape, mat1_dtype, requires_grad=True)
+            mat2 = self._randn(mat2_shape, mat2_dtype, requires_grad=True)
+            return torch.ops.aten.matmul_backward.default(grad, mat1, mat2, [True, True])
+
+    def _assert_fake_backward_matches_real(self, mat1_shape, mat2_shape, dtype):
+        mat1 = self._randn(mat1_shape, dtype, requires_grad=True)
+        mat2 = self._randn(mat2_shape, dtype, requires_grad=True)
+        output = torch.matmul(mat1, mat2)
+        grad = torch.randn(output.size(), dtype=output.dtype, device="npu")
+        output.backward(grad)
+
+        with FakeTensorMode():
+            fake_mat1 = self._randn(mat1_shape, dtype, requires_grad=True)
+            fake_mat2 = self._randn(mat2_shape, dtype, requires_grad=True)
+            fake_output = torch.matmul(fake_mat1, fake_mat2)
+            fake_grad = torch.randn(fake_output.size(), dtype=fake_output.dtype, device="npu")
+            fake_output.backward(fake_grad)
+
+        self.assertEqual(mat1.grad.shape, fake_mat1.grad.shape)
+        self.assertEqual(mat1.grad.dtype, fake_mat1.grad.dtype)
+        self.assertEqual(mat2.grad.shape, fake_mat2.grad.shape)
+        self.assertEqual(mat2.grad.dtype, fake_mat2.grad.dtype)
+
     def test_matmul_backward(self):
         x = torch.randn(8, 4, 8, device="npu", requires_grad=True)
         y = torch.randn(8, 8, 8, 4, device="npu", requires_grad=True)
@@ -5243,6 +5276,135 @@ class TestMatmul(TestCase):
             self.assertEqual(y.grad.shape, y_fake_tensor.grad.shape)
             self.assertEqual(y.grad.dtype, y_fake_tensor.grad.dtype)
 
+    @unittest.skipIf(
+        os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") == "1",
+        "matmul_backward meta registration is disabled in compatible impl",
+    )
+    def test_matmul_backward_meta_shapes_and_dtypes(self):
+        test_cases = [
+            {
+                "name": "vector_vector",
+                "grad_shape": (),
+                "mat1_shape": (8,),
+                "mat2_shape": (8,),
+                "grad_dtype": torch.float32,
+                "mat1_dtype": torch.float16,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (1, 8),
+                "expected_other_shape": (8,),
+                "expected_self_dtype": torch.float32,
+                "expected_other_dtype": torch.float16,
+            },
+            {
+                "name": "vector_matrix",
+                "grad_shape": (6,),
+                "mat1_shape": (5,),
+                "mat2_shape": (5, 6),
+                "grad_dtype": torch.float32,
+                "mat1_dtype": torch.float16,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (1, 5),
+                "expected_other_shape": (5, 6),
+                "expected_self_dtype": torch.float32,
+                "expected_other_dtype": torch.float16,
+            },
+            {
+                "name": "matrix_vector_squeeze_other_grad",
+                "grad_shape": (3,),
+                "mat1_shape": (3, 5),
+                "mat2_shape": (5,),
+                "grad_dtype": torch.float32,
+                "mat1_dtype": torch.float32,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (3, 5),
+                "expected_other_shape": (5,),
+                "expected_self_dtype": torch.float32,
+                "expected_other_dtype": torch.float32,
+            },
+            {
+                "name": "matrix_batched_matrix_special_self_grad",
+                "grad_shape": (2, 3, 4),
+                "mat1_shape": (3, 5),
+                "mat2_shape": (2, 5, 4),
+                "grad_dtype": torch.float16,
+                "mat1_dtype": torch.float16,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (3, 5),
+                "expected_other_shape": (2, 5, 4),
+                "expected_self_dtype": torch.float16,
+                "expected_other_dtype": torch.float16,
+            },
+            {
+                "name": "batched_matrix_matrix_special_other_grad",
+                "grad_shape": (2, 3, 6),
+                "mat1_shape": (2, 3, 5),
+                "mat2_shape": (5, 6),
+                "grad_dtype": torch.float16,
+                "mat1_dtype": torch.float16,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (2, 3, 5),
+                "expected_other_shape": (5, 6),
+                "expected_self_dtype": torch.float16,
+                "expected_other_dtype": torch.float16,
+            },
+            {
+                "name": "leading_singleton_self_batch",
+                "grad_shape": (1, 4, 3, 6),
+                "mat1_shape": (1, 4, 3, 5),
+                "mat2_shape": (5, 6),
+                "grad_dtype": torch.float32,
+                "mat1_dtype": torch.float16,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (1, 4, 3, 5),
+                "expected_other_shape": (5, 6),
+                "expected_self_dtype": torch.float32,
+                "expected_other_dtype": torch.float16,
+            },
+            {
+                "name": "leading_singleton_other_batch",
+                "grad_shape": (1, 4, 3, 6),
+                "mat1_shape": (3, 5),
+                "mat2_shape": (1, 4, 5, 6),
+                "grad_dtype": torch.float32,
+                "mat1_dtype": torch.float32,
+                "mat2_dtype": torch.float16,
+                "expected_self_shape": (3, 5),
+                "expected_other_shape": (1, 4, 5, 6),
+                "expected_self_dtype": torch.float32,
+                "expected_other_dtype": torch.float32,
+            },
+        ]
+
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                self_grad, other_grad = self._run_fake_matmul_backward(
+                    case["grad_shape"],
+                    case["mat1_shape"],
+                    case["mat2_shape"],
+                    case["grad_dtype"],
+                    case["mat1_dtype"],
+                    case["mat2_dtype"],
+                )
+                self.assertEqual(self_grad.shape, torch.Size(case["expected_self_shape"]))
+                self.assertEqual(other_grad.shape, torch.Size(case["expected_other_shape"]))
+                self.assertEqual(self_grad.dtype, case["expected_self_dtype"])
+                self.assertEqual(other_grad.dtype, case["expected_other_dtype"])
+
+    @unittest.skipIf(
+        os.getenv("TORCH_NPU_USE_COMPATIBLE_IMPL") == "1",
+        "matmul_backward meta registration is disabled in compatible impl",
+    )
+    def test_matmul_backward_fake_autograd_matches_real_grad_meta(self):
+        test_cases = [
+            ((8,), (8, 4), torch.float16),
+            ((4, 8), (2, 8, 6), torch.float16),
+            ((1, 4, 3, 5), (5, 6), torch.float32),
+        ]
+
+        for mat1_shape, mat2_shape, dtype in test_cases:
+            with self.subTest(mat1_shape=mat1_shape, mat2_shape=mat2_shape, dtype=dtype):
+                self._assert_fake_backward_matches_real(mat1_shape, mat2_shape, dtype)
+
 
 class TestKLDivLoss(TestCase):
     def test_kl_div_backward(self):
@@ -5263,6 +5425,104 @@ class TestKLDivLoss(TestCase):
             self.assertEqual(pred.grad.shape, pred_fake_tensor.grad.shape)
             self.assertEqual(pred.grad.dtype, pred_fake_tensor.grad.dtype)
             
+class TestNpuDropoutGenMaskMeta(TestCase):
+    def test_npu_dropout_gen_mask(self):
+        size = (2, 1024, 768)
+        x = torch.randn(size, device="npu")
+        out = torch_npu._npu_dropout_gen_mask(x, size, 0.5, 1, 0)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(size, device='meta')
+            out_fake_tensor = torch_npu._npu_dropout_gen_mask(x_fake_tensor, size, 0.5, 1, 0)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+
+
+class TestNpuSoftmaxCrossEntropyWithLogitsMeta(TestCase):
+    def test_npu_softmax_cross_entropy_with_logits(self):
+        logits = torch.randn(32, 1000, device="npu")
+        labels = torch.randint(0, 1000, (32,), dtype=torch.long, device="npu")
+        loss = torch_npu.npu_softmax_cross_entropy_with_logits(logits, labels)
+
+        with FakeTensorMode():
+            logits_fake_tensor = torch.empty(32, 1000, device='meta')
+            labels_fake_tensor = torch.empty(32, dtype=torch.long, device='meta')
+            loss_fake_tensor = torch_npu.npu_softmax_cross_entropy_with_logits(logits_fake_tensor, labels_fake_tensor)
+
+            self.assertEqual(loss_fake_tensor.shape, loss.shape)
+            self.assertEqual(loss_fake_tensor.dtype, loss.dtype)
+
+
+class TestNpuSoftmaxCrossEntropyWithLogitsBackwardMeta(TestCase):
+    def test_npu_softmax_cross_entropy_with_logits_backward(self):
+        logits = torch.randn(32, 1000, device="npu")
+        labels = torch.randint(0, 1000, (32,), dtype=torch.long, device="npu")
+        loss = torch_npu.npu_softmax_cross_entropy_with_logits(logits, labels)
+        grad = torch.ones_like(loss)
+        grad_out = torch_npu.npu_softmax_cross_entropy_with_logits_backward(grad, logits, labels)
+
+        with FakeTensorMode():
+            logits_fake_tensor = torch.empty(32, 1000, device='meta')
+            labels_fake_tensor = torch.empty(32, dtype=torch.long, device='meta')
+            grad_fake_tensor = torch.empty(32, device='meta')
+            grad_out_fake_tensor = torch_npu.npu_softmax_cross_entropy_with_logits_backward(
+                grad_fake_tensor, logits_fake_tensor, labels_fake_tensor
+            )
+
+            self.assertEqual(grad_out_fake_tensor.shape, grad_out.shape)
+            self.assertEqual(grad_out_fake_tensor.dtype, grad_out.dtype)
+
+
+class TestNpuIndexAddMeta(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnIndexAddV2; do not execute")
+    def test_npu_index_add(self):
+        x = torch.randn(10, 5, device="npu")
+        index = torch.randint(0, 10, (2,), dtype=torch.int64, device="npu")  
+        source = torch.randn(2, 5, device="npu")
+        out = torch_npu._npu_index_add(x, index, source, alpha=1)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(10, 5, device='meta')
+            index_fake_tensor = torch.empty(2, dtype=torch.int64, device='meta')
+            source_fake_tensor = torch.empty(2, 5, device='meta')
+            out_fake_tensor = torch_npu._npu_index_add(x_fake_tensor, index_fake_tensor, source_fake_tensor, alpha=1)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+
+
+class TestNpuIndexAddInplaceMeta(TestCase):
+    @unittest.skip("Skip until CANN supports aclnnIndexAddV2; do not execute")
+    def test_npu_index_add_(self):
+        x = torch.randn(10, 5, device="npu")
+        index = torch.randint(0, 10, (2,), dtype=torch.int64, device="npu")  
+        source = torch.randn(2, 5, device="npu")
+        out = torch_npu._npu_index_add_(x, index, source, alpha=1)  
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(10, 5, device='meta')
+            index_fake_tensor = torch.empty(2, dtype=torch.int64, device='meta')
+            source_fake_tensor = torch.empty(2, 5, device='meta')
+            out_fake_tensor = torch_npu._npu_index_add_(x_fake_tensor, index_fake_tensor, source_fake_tensor, alpha=1)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
+            self.assertIs(out_fake_tensor, x_fake_tensor)
+
+
+class TestNpuReshapeMeta(TestCase):
+    def test_npu_reshape(self):
+        x = torch.randn(2, 3, 4, device="npu")
+        shape = (6, 4)
+        out = torch_npu.npu_reshape(x, shape, can_refresh=False)
+
+        with FakeTensorMode():
+            x_fake_tensor = torch.empty(2, 3, 4, device='meta')
+            out_fake_tensor = torch_npu.npu_reshape(x_fake_tensor, shape, can_refresh=False)
+
+            self.assertEqual(out_fake_tensor.shape, out.shape)
+            self.assertEqual(out_fake_tensor.dtype, out.dtype)
 
 class TestSwigluMxQuant(TestCase):
     def test_npu_swiglu_mx_quant_meta(self):

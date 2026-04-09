@@ -1,4 +1,5 @@
 # 自定义API参考
+
 -   [概述](./overview.md)
 -   [Python接口](./Python_interface.md)
     -   [torch_npu](./torch_npu/torch_npu.md)
@@ -143,6 +144,7 @@
         -   [torch_npu.npu_dequant_swiglu_quant](./torch_npu/torch_npu-npu_dequant_swiglu_quant.md)
         -   [torch_npu.npu_kv_rmsnorm_rope_cache](./torch_npu/torch_npu-npu_kv_rmsnorm_rope_cache.md)
         -   [torch_npu.npu_interleave_rope](./torch_npu/torch_npu-npu_interleave_rope.md)
+        -   [torch_npu.npu_mrope](./torch_npu/torch_npu-npu_mrope.md)
         -   [torch_npu.npu_moe_re_routing](./torch_npu/torch_npu-npu_moe_re_routing.md)
         -   [torch_npu.matmul_checksum](./torch_npu/torch_npu-matmul_checksum.md)
         -   [torch_npu.npu_alltoallv_gmm](./torch_npu/torch_npu-npu_alltoallv_gmm.md)
@@ -391,4 +393,3 @@
 -   [废弃API列表](./scrap_API.md)
 -   [附录](./appendix.md)
     -   [添加二进制黑名单示例](./blacklist.md)
-
