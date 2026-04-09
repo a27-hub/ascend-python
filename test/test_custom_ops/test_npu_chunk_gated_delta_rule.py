@@ -8,7 +8,7 @@ from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
      
 
-def genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens):
+def generate_golden(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens):
     k = key.to(torch.float32)
     q = query.to(torch.float32)
     v = value.to(torch.float32)
@@ -70,7 +70,7 @@ class TestChunkGatedDeltaRule(TestCase):
         scale = 0.5
         num_accepted_tokens = torch.randint(1, mtp + 1, (b,)).npu().to(torch.int32)
 
-        out_golden, state_golden = genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens)
+        out_golden, state_golden = generate_golden(query, key, value, state, beta, scale, actual_seq_lengths, ssm_state_indices, g, num_accepted_tokens)
         out_golden = out_golden.to(torch.float32).cpu()
         state_golden = state_golden.to(torch.float32).cpu()
 

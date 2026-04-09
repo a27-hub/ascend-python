@@ -46,13 +46,13 @@ $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
 
 - **value** (`Tensor`)：必选输入，对应公式中的$v$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$, $D_v$）。
 
-- **beta** (`Tensor`)：必选输入。对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
+- **beta** (`Tensor`)：可选输入。对应公式中的$β$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_v$）。
 
-- **initial_state** (`Tensor`)：必选输入，对应公式中的状态矩阵$S_0$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
+- **initial_state** (`Tensor`)：可选输入，对应公式中的状态矩阵$S_0$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$B$, $N_v$, $D_v$, $D_k$）。
 
-- **actual_seq_lengths** (`Tensor`)：必选输入。表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$,）。
+- **actual_seq_lengths** (`Tensor`)：可选输入。表示各batch的输入序列长度。数据类型支持`int32`，数据格式支持ND，shape为（$B$,）。
 
-- **scale** (`float`)：必选输入。表示query的缩放因子，对应公式中的 $scale$。数据类型支持`float32`。默认值None表示为1.0。实际场景一般设为 $1/\sqrt{D_k}$
+- **scale** (`float`)：可选输入。表示query的缩放因子，对应公式中的 $scale$。数据类型支持`float32`。默认值None表示为1.0。实际场景一般设为 $1/\sqrt{D_k}$
 
 - **g** (`Tensor`)：可选输入，衰减系数，对应公式中的$α=e^g$。默认为None，表示全0。数据类型支持`float32`，数据格式支持ND，shape为（$T$, $N_v$）。
 
