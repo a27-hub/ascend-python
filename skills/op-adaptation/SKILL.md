@@ -123,6 +123,7 @@ pip install --force-reinstall build/pytorch/dist/torch_npu-*.whl
 
 **If build fails:**
 1. Read `build.log` to identify root cause
+2. If the build fails, deal with it immediately. Do not skip this step directly
 
 ## Step 7: Test
 

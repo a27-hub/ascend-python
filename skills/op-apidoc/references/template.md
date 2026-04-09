@@ -3,7 +3,7 @@
 ## 完整模板
 
 ```markdown
-# torch_npu.{operator_name}
+# torch_npu.npu_{operator_name}
 
 ## 产品支持情况
 
@@ -27,7 +27,7 @@
 ## 函数原型
 
 ​```
-torch_npu.{operator_name}(required_param1, required_param2, *, optional_param1=None, optional_param2=0) -> Tensor
+torch_npu.npu_{operator_name}(required_param1, required_param2, *, optional_param1=None, optional_param2=0) -> Tensor
 ​```
 
 ## 参数说明
@@ -59,7 +59,7 @@ torch_npu.{operator_name}(required_param1, required_param2, *, optional_param1=N
     >>> import torch_npu
     >>>
     >>> x = torch.randn((2, 4), dtype=torch.float16, device='npu')
-    >>> result = torch_npu.{operator_name}(x)
+    >>> result = torch_npu.npu_{operator_name}(x)
     >>> result
     tensor([[...]], device='npu:0', dtype=torch.float16)
     >>> result.shape
@@ -79,7 +79,7 @@ torch_npu.{operator_name}(required_param1, required_param2, *, optional_param1=N
 
     class Model(torch.nn.Module):
         def forward(self, x):
-            return torch_npu.{operator_name}(x)
+            return torch_npu.npu_{operator_name}(x)
 
     model = Model().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
