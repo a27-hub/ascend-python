@@ -75,7 +75,7 @@ class TestChunkGatedDeltaRule(TestCase):
         state_golden = state_golden.to(torch.float32).cpu()
 
         state_copy = state.clone()
-        out, state_out = torch_npu.npu_chunk_gated_delta_rule(query, key, value, beta=beta, state_copy, actual_seq_lengths=actual_seq_lengths, scale=scale, g=g)
+        out, state_out = torch_npu.npu_chunk_gated_delta_rule(query, key, value, beta=beta, initial_state=state_copy, actual_seq_lengths=actual_seq_lengths, scale=scale, g=g)
         out = out.to(torch.float32).cpu()
         state_out = state_out.to(torch.float32).cpu()
 
