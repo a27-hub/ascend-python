@@ -22,29 +22,6 @@ namespace op_api {
 
 using npu_preparation = at_npu::native::OpPreparation;
 
-static bool is_transpose_last_two_dims(const at::Tensor &tensor)
-{
-    if (tensor.dim() < 2 || tensor.dim() > 6) {
-        return false;
-    }
-    int64_t dim1 = tensor.dim() - 1;
-    int64_t dim2 = tensor.dim() - 2;
-    if (tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2)) {
-        int64_t tmpNxD = tensor.size(dim1) * tensor.size(dim2);
-        for (int64_t batchDim = tensor.dim() - 3; batchDim >= 0; batchDim--) {
-            if (tensor.stride(batchDim) != tmpNxD) {
-                return false;
-            }
-            tmpNxD *= tensor.size(batchDim);
-        }
-        if (tensor.size(dim1) == 1 && tensor.size(dim2) == 1) {
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-
 // dim
 static const int DIM_ONE = 1;
 static const int DIM_TWO = 2;
@@ -282,7 +259,6 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
             mm_mxfp4_valid = mm_mxfp4_valid &&
                 mm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
         }
-        bool mm_weight_trans = mm_weight_real.defined() && is_transpose_last_two_dims(mm_weight_real);
 
         // mm_x and mm_weight consistency check
         bool mm_x_has_value = mm_x.has_value();
@@ -382,7 +358,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
             }
             int64_t bs = mm_x_value.size(0);   // shape (BS， H)
             int64_t n2 = mm_weight_value.size(1);
-            if (mm_mxfp4_valid && !mm_weight_trans) {
+            if (mm_mxfp4_valid) {
                 n2 *= FP4_IN_INT8;
             }
             // mm_x_scale
@@ -487,7 +463,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         }
 
         int64_t n1 = gmm_weight.size(2);
-        if (gmm_mxfp4_valid && !is_transpose_last_two_dims(gmm_weight)) {
+        if (gmm_mxfp4_valid) {
             n1 *= FP4_IN_INT8;
         }
         // 推导输出gmm_y的shape
