@@ -50,10 +50,10 @@ def genrate_input(query, key, value, state, beta, scale, actual_seq_lengths, ssm
 
     return o.to(torch.bfloat16), initial_state.to(torch.bfloat16)
 
-class TestRecurrentGatedDeltaRule(TestCase):
+class TestChunkGatedDeltaRule(TestCase):
     @unittest.skip('Skip test temporarily: CANN version-related operators not supported yet')
-    @SupportedDevices(["Ascend910B"])
-    def test_recurrent_gated_delta_rule_1(self, device="npu"):
+    @SupportedDevices(["Ascend950"])
+    def test_chunk_gated_delta_rule_1(self, device="npu"):
         (b, mtp, nk, nv, dk, dv) = (64, 2, 4, 8, 128, 128)
 
         actual_seq_lengths = (torch.ones(b) * mtp).npu().to(torch.int32)
