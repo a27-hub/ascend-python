@@ -1832,8 +1832,8 @@ def infer_lse_out_shape(query, input_layout, query_layout, num_heads):
     return lse_out
 
 @impl(m, "_npu_attention_pioneer")
-def npu_attention_pioneer_forward(query, key, value, *, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
-                                    block_table=None, query_rope=None, key_rope=None, key_sink=None, key_rope_sink=None, value_sink=None, num_heads=1, scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
+def npu_attention_pioneer_forward(query, key, value, metaData, *, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
+                                    block_table=None, query_rope=None, key_rope=None, key_sink=None, key_rope_sink=None, value_sink=None, num_heads=1, softmax_scale=1.0, pre_tokens=2147483647, next_tokens=2147483647,
                                     input_layout="BSH", num_key_value_heads=0, sparse_mode=0, block_size=0, softmax_lse_flag=False):
     torch._check(
         num_heads > 0,
@@ -1872,6 +1872,13 @@ def npu_attention_pioneer_forward(query, key, value, *, atten_mask=None, actual_
         lse_out = torch.empty([0], dtype=torch.float32, device='meta')
 
     return attention_out, lse_out
+
+@impl(m, "_npu_attention_pioneer_metadata")
+def npu_attention_pioneer_metadata_forward(num_heads_q, num_heads_kv, head_dim_qk, head_dim_v, *,
+                                           actual_seq_lengths=None, actual_seq_lengths_kv=None,
+                                           batch_size=0, sparse_mode=0, pre_tokens=2147483647, next_tokens=2147483647,
+                                           input_layout="TND", sink_number=0, rope_head_dim=0, block_size=0):
+    return torch.empty([1024], dtype=torch.int32, device='meta')
 
 @impl(m, "npu_fused_infer_attention_score")
 def npu_fused_infer_attention_score_forward(query, key, value, *, pse_shift=None, atten_mask=None, actual_seq_lengths=None, actual_seq_lengths_kv=None,
