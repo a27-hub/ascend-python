@@ -49,6 +49,30 @@ enum class DropOutStatus {
     DROPOUT_ALL
 };
 
+// 优化：对于CPU Tensor，尽可能避免内存拷贝
+static at::IntArrayRef ToIntArrayRefOptimized(const c10::optional<at::Tensor>& tensor_opt,
+                                               std::vector<int64_t>& buffer) {
+    if (!tensor_opt.has_value()) {
+        return at::IntArrayRef{};
+    }
+    auto& tensor = tensor_opt.value();
+    if (!tensor.defined() || tensor.numel() == 0) {
+        return at::IntArrayRef{};
+    }
+
+    // 对于CPU上的连续Tensor，直接访问数据指针，避免拷贝
+    if (tensor.device().is_cpu() && tensor.is_contiguous()) {
+        return at::IntArrayRef(tensor.data_ptr<int64_t>(), tensor.size(0));
+    }
+
+    // 非连续或非CPU Tensor，需要拷贝到buffer
+    buffer.resize(tensor.numel());
+    at::Tensor contiguous_tensor = tensor.to(at::kLong).contiguous();
+    std::memcpy(buffer.data(), contiguous_tensor.data_ptr<int64_t>(),
+                tensor.numel() * sizeof(int64_t));
+    return at::IntArrayRef(buffer);
+}
+
 enum class SparseMode {
     NO_MASK = 0,
     ALL_MASK,
@@ -1778,10 +1802,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         input_layout, OPS_ERROR(ErrCode::PARAM));
 
     auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
-    std::vector<int64_t> actual_seq_qlen_buffer;  // 仅在非连续时使用
-    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
-    std::vector<int64_t> actual_seq_kvlen_buffer;  // 仅在非连续时使用
-    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
     int64_t N_local = 0; // N for npu_fusion_attention
 
     if (input_layout_str == "BNSD") {
@@ -1852,11 +1876,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
     const at::Tensor &sink_const = sink.value_or(at::Tensor());
+
     auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
-    std::vector<int64_t> actual_seq_qlen_buffer;  // 仅在非连续时使用
-    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
-    std::vector<int64_t> actual_seq_kvlen_buffer;  // 仅在非连续时使用
-    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
 
     TORCH_CHECK(head_num > 0, "head_num must > 0, but got ", head_num, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
