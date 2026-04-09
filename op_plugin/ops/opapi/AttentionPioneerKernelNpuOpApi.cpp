@@ -358,16 +358,17 @@ std::tuple<at::Tensor, at::Tensor> construct_fia_output_tensor_experimental(
 
 std::tuple<at::Tensor, at::Tensor> _npu_attention_pioneer(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &metaData,
     const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths_kv,
+    const c10::optional<at::Tensor> &actual_seq_lengths,
+    const c10::optional<at::Tensor> &actual_seq_lengths_kv,
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope,
     const c10::optional<at::Tensor> &key_sink,
     const c10::optional<at::Tensor> &key_rope_sink,
     const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
+    int64_t num_heads, double softmax_scale,
     int64_t pre_tokens, int64_t next_tokens,
     c10::string_view input_layout, int64_t num_key_value_heads,
     int64_t sparse_mode, int64_t block_size,
@@ -423,26 +424,27 @@ std::tuple<at::Tensor, at::Tensor> _npu_attention_pioneer(
             + OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnAttentionPioneer, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv,
-            deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size, 
-            key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix, 
-            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, 
-            num_heads, scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, 
+            deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size,
+            key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix,
+            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, metaData,
+            num_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
             value_antiquant_mode, query_quant_mode, pse_type, output, softmax_lse);
     return std::tuple<at::Tensor, at::Tensor>(output, softmax_lse);
 }
 
 std::tuple<at::Tensor &, at::Tensor &> _npu_attention_pioneer_out(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &metaData,
     const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths_kv,
+    const c10::optional<at::Tensor> &actual_seq_lengths,
+    const c10::optional<at::Tensor> &actual_seq_lengths_kv,
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope,
     const c10::optional<at::Tensor> &key_sink,
     const c10::optional<at::Tensor> &key_rope_sink,
     const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
+    int64_t num_heads, double softmax_scale,
     int64_t pre_tokens, int64_t next_tokens,
     c10::string_view input_layout, int64_t num_key_value_heads,
     int64_t sparse_mode, int64_t block_size,
@@ -499,15 +501,15 @@ std::tuple<at::Tensor &, at::Tensor &> _npu_attention_pioneer_out(
         EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(aclnnAttentionPioneer, workspace_addr, workspace_size, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv,
             deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size,
             key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix,
-            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink,
-            num_heads, scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
+            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, metaData,
+            num_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
             value_antiquant_mode, query_quant_mode, pse_type, attention_out, softmax_lse);
     } else {
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnAttentionPioneer, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv,
             deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size,
             key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix,
-            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink,
-            num_heads, scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
+            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, metaData,
+            num_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
             value_antiquant_mode, query_quant_mode, pse_type, attention_out, softmax_lse);
     }
     return std::tuple<at::Tensor&, at::Tensor&>(attention_out, softmax_lse);
@@ -515,16 +517,17 @@ std::tuple<at::Tensor &, at::Tensor &> _npu_attention_pioneer_out(
 
 at::Tensor _npu_attention_pioneer_get_max_workspace(
     const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &metaData,
     const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> &actual_seq_lengths_kv,
+    const c10::optional<at::Tensor> &actual_seq_lengths,
+    const c10::optional<at::Tensor> &actual_seq_lengths_kv,
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &query_rope,
     const c10::optional<at::Tensor> &key_rope,
     const c10::optional<at::Tensor> &key_sink,
     const c10::optional<at::Tensor> &key_rope_sink,
     const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
+    int64_t num_heads, double softmax_scale,
     int64_t pre_tokens, int64_t next_tokens,
     c10::string_view input_layout, int64_t num_key_value_heads,
     int64_t sparse_mode, int64_t block_size,
@@ -581,10 +584,10 @@ at::Tensor _npu_attention_pioneer_get_max_workspace(
             + OPS_ERROR(ErrCode::NOT_SUPPORT));
     }
     uint64_t workspace_size = EXEC_GET_MAX_WORKSPACE_CMD(aclnnAttentionPioneer, query, keyTensors, valueTensors, pse_shift, atten_mask, actual_seq_lengths, actual_seq_lengths_kv,
-            deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size, 
-            key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix, 
-            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, 
-            num_heads, scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode, 
+            deq_scale1, quant_scale1, deq_scale2, quant_scale2, quant_offset2, antiquant_scale, antiquant_offset, block_table, q_padding_size, kv_padding_size,
+            key_antiquant_scale, key_antiquant_offset, value_antiquant_scale, value_antiquant_offset, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix,
+            query_rope, key_rope, key_rope_antiquant_scale, dequant_scale_query, learnablesink, default_q_start_idx, default_kv_start_idx, key_sink, key_rope_sink, value_sink, metaData,
+            num_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr, num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, softmax_lse_flag, key_antiquant_mode,
             value_antiquant_mode, query_quant_mode, pse_type, output, softmax_lse);
     at::Tensor workspace_tensor = npu_preparation::apply_tensor_without_format({workspace_size}, query.options().dtype(query.dtype()));
     return workspace_tensor;
@@ -606,79 +609,6 @@ std::tuple<at::Tensor, at::Tensor> _npu_attention_pioneer_infer_output(
                                                                                         block_table, num_heads, num_key_value_heads,
                                                                                         softmax_lse_flag, query_rope);
     return fia_output;
-}
-
-std::tuple<at::Tensor, at::Tensor> _npu_attention_pioneer_symint(
-    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-    const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths_kv,
-    const c10::optional<at::Tensor> &block_table,
-    const c10::optional<at::Tensor> &query_rope,
-    const c10::optional<at::Tensor> &key_rope,
-    const c10::optional<at::Tensor> &key_sink,
-    const c10::optional<at::Tensor> &key_rope_sink,
-    const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
-    int64_t pre_tokens, int64_t next_tokens,
-    c10::string_view input_layout, int64_t num_key_value_heads,
-    int64_t sparse_mode, int64_t block_size,
-    bool softmax_lse_flag)
-{
-    return op_api::_npu_attention_pioneer(query, key, value, atten_mask,
-        actual_seq_lengths, actual_seq_lengths_kv, block_table, query_rope, key_rope,
-        key_sink, key_rope_sink, value_sink, num_heads, scale, pre_tokens, next_tokens,
-        input_layout, num_key_value_heads, sparse_mode, block_size, softmax_lse_flag);
-}
-
-std::tuple<at::Tensor &, at::Tensor &> _npu_attention_pioneer_out_symint(
-    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-    const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths_kv,
-    const c10::optional<at::Tensor> &block_table,
-    const c10::optional<at::Tensor> &query_rope,
-    const c10::optional<at::Tensor> &key_rope,
-    const c10::optional<at::Tensor> &key_sink,
-    const c10::optional<at::Tensor> &key_rope_sink,
-    const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
-    int64_t pre_tokens, int64_t next_tokens,
-    c10::string_view input_layout, int64_t num_key_value_heads,
-    int64_t sparse_mode, int64_t block_size,
-    bool softmax_lse_flag,
-    const c10::optional<at::Tensor> &workspace,
-    at::Tensor &attention_out,
-    at::Tensor &softmax_lse)
-{
-    return op_api::_npu_attention_pioneer_out(query, key, value, atten_mask,
-        actual_seq_lengths, actual_seq_lengths_kv, block_table, query_rope, key_rope,
-        key_sink, key_rope_sink, value_sink, num_heads, scale, pre_tokens, next_tokens,
-        input_layout, num_key_value_heads, sparse_mode, block_size, softmax_lse_flag,
-        workspace, attention_out, softmax_lse);
-}
-
-at::Tensor _npu_attention_pioneer_get_max_workspace_symint(
-    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-    const c10::optional<at::Tensor> &atten_mask,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths,
-    c10::OptionalArrayRef<c10::SymInt> actual_seq_lengths_kv,
-    const c10::optional<at::Tensor> &block_table,
-    const c10::optional<at::Tensor> &query_rope,
-    const c10::optional<at::Tensor> &key_rope,
-    const c10::optional<at::Tensor> &key_sink,
-    const c10::optional<at::Tensor> &key_rope_sink,
-    const c10::optional<at::Tensor> &value_sink,
-    int64_t num_heads, double scale,
-    int64_t pre_tokens, int64_t next_tokens,
-    c10::string_view input_layout, int64_t num_key_value_heads,
-    int64_t sparse_mode, int64_t block_size,
-    bool softmax_lse_flag)
-{
-    return op_api::_npu_attention_pioneer_get_max_workspace(query, key, value, atten_mask,
-        actual_seq_lengths, actual_seq_lengths_kv, block_table, query_rope, key_rope,
-        key_sink, key_rope_sink, value_sink, num_heads, scale, pre_tokens, next_tokens,
-        input_layout, num_key_value_heads, sparse_mode, block_size, softmax_lse_flag);
 }
 
 #endif
