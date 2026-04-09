@@ -154,11 +154,11 @@ class TestKvQuantSparseFlashAttention(TestCase):
         act_seq_kv = act_seq_kv.npu()
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
-
+        metadata = None
         npu_out = torch_npu.npu_kv_quant_sparse_flash_attention(
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
+            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,metadata=metadata,
             layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64)
@@ -229,11 +229,11 @@ class TestKvQuantSparseFlashAttention(TestCase):
         act_seq_kv = act_seq_kv.npu()
         block_table = block_table.npu()
         antiquant_scale = antiquant_scale.npu()
-
+        metadata = None
         npu_out = torch_npu.npu_kv_quant_sparse_flash_attention(
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
-            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
+            actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,metadata=metadata,
             layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64)
