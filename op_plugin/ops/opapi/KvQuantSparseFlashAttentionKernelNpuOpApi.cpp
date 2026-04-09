@@ -68,6 +68,7 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_kv,
+    const c10::optional<at::Tensor> &metadata,
     int64_t sparse_block_size, c10::string_view layout_query, c10::string_view layout_kv,
     int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode,
     int64_t tile_size, int64_t rope_head_dim,
@@ -98,13 +99,13 @@ at::Tensor npu_kv_quant_sparse_flash_attention(
         TensorWrapper value_wrapper = make_wrapper(value, value_dtype);
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query, key_wrapper,
             value_wrapper, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
-            actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
+            actual_seq_lengths_kv, metadata, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
             layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
             rope_head_dim, output);
     } else {
         EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnKvQuantSparseFlashAttention, query,
             key, value, sparse_indices, key_dequant_scale, value_dequant_scale, block_table, actual_seq_lengths_query,
-            actual_seq_lengths_kv, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
+            actual_seq_lengths_kv, metadata, scale_value, key_quant_mode, value_quant_mode, sparse_block_size, layout_query_ptr,
             layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size,
             rope_head_dim, output);
     }

@@ -1520,6 +1520,8 @@ actual_seq_lengths_kv（Tensor）：可选参数，表示不同Batch中key和val
 
 该入参中每个Batch的有效token数不超过key/value中的维度S大小且不小于0。支持长度为B的一维tensor。
 
+metadata（Tensor）：可选参数,aicpu算子（npu_kv_quant_sparse_attn_sharedkv_metadata）的分核结果，shape固定为[1024]。
+
 layout_query（str）：可选参数，用于标识输入query的数据排布格式，用户不特意指定时可传入默认值"BSND"，支持传入BSND和TND。
 
 说明： 1、query数据排布格式支持从多种维度解读，其中B（Batch）表示输入样本批量大小、S（Seq-Length）表示输入样本序列长度、H（Head-Size）表示hidden层的大小、N（Head-Num）表示多头数、D（Head-Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
