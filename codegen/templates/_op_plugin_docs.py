@@ -4343,7 +4343,7 @@ _add_torch_npu_docstr(
     "npu_dynamic_quant",
     """
 功能描述:
-算子功能: 对输入的张量进行per-token对称动态量化. 
+算子功能: 对输入的张量进行per-token, per-tensor或per-channel对称动态量化. 
 如果是MoE(Mixture of Experts, 混合专家模型)场景, 会引入group_index, smooth_scales中包含多组smooth向量, 按group_index中的数值作用到x的不同行上. 具体的, 假如x包含m个token, smooth_scales有n行, smooth_scales[0]会作用到x[0:group_index[0]]上, smooth_scales[i]会作用到x[group_index[i-1]: group_index[i]]上, i=1, 2, ..., n-1. 
 计算公式: 
 如果smooth_scales不存在: 
@@ -4355,7 +4355,7 @@ y=round(x×smooth_scales/scale)
 owMax表示求一行的最大值, DTYPE_MAX表示常量, 是y输出对应的数据类型的最大值. 
 
 接口原型:
-torch_npu.npu_dynamic_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? group_index=None, int? dst_type=None) ->(Tensor, Tensor)
+torch_npu.npu_dynamic_quant(Tensor x, *, Tensor? smooth_scales=None, Tensor? group_index=None, int? dst_type=None, str quant_mode="pertoken", float dst_type_max=0.0) -> (Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 需要进行量化的源数据张量, 必选输入, 数据类型支持torch.float16、torch.bfloat16, 数据格式支持ND, 支持非连续的Tensor. 输入x的维度必须大于1. 进行int4量化时, 要求x形状的最后一维是8的整数倍. 
@@ -4365,6 +4365,9 @@ group_index: Tensor类型, 对smooth_scales进行分组的下标, 可选输入, 
 dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8、torch.quint4x2. 
 Atlas A3 训练系列产品: 支持取值torch.int8、torch.quint4x2. 
+Ascend 950PR/950DT: 支持取值torch.int8、torch.quint4x2、torch_npu.float8_e5m2、torch_npu.float8_e4m3fn、torch_npu.hifloat8.
+quant_mode: str类型, 指定量化的模式, 支持"pertoken"、"pertensor"、"perchannel"。默认值为"pertoken".如果group_index不为None，只支持"pertoken".
+dst_type_max: float类型，指定量化数据的最大值。支持0，15，56，224，32768。默认值为0。仅在dst_type为torch_npu.hifloat8时生效.
 
 输出说明：
 y: 量化后的输出Tensor, 数据类型由dst_type指定. 当dst_type是torch.quint4x2时, y的数据类型为int32, 形状最后一维为x最后一维除以8, 其余维度与x一致, 每个int32元素包含8个int4结果. 其他场景下y形状与输入x一致, 数据类型由dst_type指定. 
@@ -4381,14 +4384,12 @@ Atlas A3 训练系列产品
 若使用group_index, smooth_scales必须是二维Tensor, 第二维元素数量与x的最后一维大小一致, group_index必须是一维数组, 元素数量与smooth_scales第一维一致. group_index中的元素必须是单调递增的, 其最后一个元素的值, 应等于x的元素数量除以x的最后一个维度. 
 
 支持的PyTorch版本
-PyTorch 2.5
-PyTorch 2.4
-PyTorch 2.3
-PyTorch 2.1
+PyTorch2.1及以上
 
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
 Atlas A3 训练系列产品
+Ascend 950PR/950DT
 
 调用示例:
 单算子模式调用
@@ -4444,7 +4445,7 @@ _add_torch_npu_docstr(
     "npu_dynamic_quant_asymmetric",
     """
 功能描述:
-算子功能: 对输入的张量进行per-token非对称动态量化. 其中输入的最后一个维度对应一个token, 每个token作为一组进行量化. 
+算子功能: 对输入的张量进行per-token, per-tensor或per-channel非对称动态量化. 
 计算公式: 假设待量化张量为x, 
 scale=(rowMax(x)-rowMin(x))/(DST_MAX-DST_MIN)
 offset=DST_MAX-rowMax(x)/scale
@@ -4455,13 +4456,18 @@ DST_MAX、DST_MIN分别对应量化后的最大值和最小值, 在进行int8量
 若使用smooth quant, MoE(Mixture of Experts, 混合专家模型)场景下会引入smooth_scales和group_index, 此时smooth_scales中包含多组smooth向量, 按group_index中的数值作用到x的不同行上. 具体的, 假如x包含m个token, smooth_scales有n行, smooth_scales[0]会作用到x[0:group_index[0]]上, smooth_scales[i]会作用到x[group_index[i-1]: group_index[i]]上, i=[1, 2, ..., n-1]. 
 
 接口原型:
-torch_npu.npu_dynamic_quant_asymmetric(Tensor x, *, Tensor? smooth_scales=None, Tensor? group_index=None, ScalarType? dst_type=None) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_dynamic_quant_asymmetric(Tensor input, *, Tensor? smooth_scales=None, Tensor? group_index=None, int? dst_type=None, str quant_mode="pertoken", float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 需要进行量化的源数据张量, 必选输入, 数据类型支持float16、bfloat16, 数据格式支持ND, 支持非连续的Tensor. 输入x的维度必须大于1. 进行int4量化时, 要求x形状的最后一维是8的整数倍. 
 smooth_scales: Tensor类型, 对x进行平滑缩放的张量, 可选输入, 数据类型需要与x保持一致, 数据格式支持ND, 支持非连续的Tensor. 
 group_index: Tensor类型, 在MoE场景下, 对smooth_scales进行分组的下标, 可选输入, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
 dst_type: ScalarType类型, 用于选择进行int8/int4量化, 可选输入, 输入值只能是torch.int8和torch.quint4x2, 默认为int8量化. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8、torch.quint4x2.
+Atlas A3 训练系列产品: 支持取值torch.int8、torch.quint4x2.
+Ascend 950PR/950DT: 支持取值torch.int8、torch.quint4x2、torch_npu.float8_e5m2、torch_npu.float8_e4m3fn、torch_npu.hifloat8.
+quant_mode: str类型, 指定量化的模式, 支持"pertoken"、"pertensor"、"perchannel"。默认值为"pertoken".如果group_index不为None，只支持"pertoken".
+dst_type_max: float类型，指定量化数据的最大值。支持0，15，56，224，32768。默认值为0。仅在dst_type为torch_npu.hifloat8时生效.
 
 输出说明：
 y: 量化后的输出Tensor, 在进行int8量化时, y的数据类型为int8, 形状与x一致; 在进行int4量化时, y的数据类型为int32, 形状最后一维为x最后一维除以8, 其余维度与x一致, 每个int32元素包含8个int4结果. 
@@ -4477,14 +4483,12 @@ offset: Tensor类型, 非对称动态量化过程中计算出的偏移系数, �
 若使用group_index, smooth_scales必须是二维Tensor, 第二维元素数量与x的最后一维大小一致, group_index必须是一维数组, 元素数量与smooth_scales第一维一致. group_index中的元素必须是单调递增的, 其最后一个元素的值, 应等于x的元素数量除以x的最后一个维度. 
 
 支持的PyTorch版本
-PyTorch2.5
-PyTorch2.4
-PyTorch2.3
-PyTorch2.1
+PyTorch2.1及以上
 
 支持的型号:
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品
 Atlas A3 训练系列产品
+Ascend 950PR/950DT
 
 调用示例:
 单算子模式调用
@@ -4544,6 +4548,60 @@ out, scale, offset = dynamic_quant_model(x, smooth_scales=smooth_scales)
 print(out)
 print(scale)
 print(offset)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_dynamic_mx_quant",
+    """
+功能描述:
+算子功能: 对输入的张量进行动态量化. 在给定的轴上，根据block_size个数，计算对应的量化尺度，再对输入进行量化。根据scale_alg取值来指定计算的不同算法。
+计算公式: 假设待量化张量为x, 
+scale=(rowMax(x)-rowMin(x))/(DST_MAX-DST_MIN)
+offset=DST_MAX-rowMax(x)/scale
+y=round(x/scale+offset)
+owMax、rowMin代表按行取最大值、按行取最小值, 此处的“行”对应x最后一个维度的数据, 即一个token. 
+DST_MAX、DST_MIN分别对应量化后的最大值和最小值, 在进行int8量化时, 二者分别对应+127、-128, 进行int4量化时, 分别对应+7、-8
+若使用smooth quant, 会引入smooth_scales输入, 其形状与x最后一个维度大小一致, 在进行量化前, 会先令x乘以smooth_scales, 再按上述公式进行量化
+若使用smooth quant, MoE(Mixture of Experts, 混合专家模型)场景下会引入smooth_scales和group_index, 此时smooth_scales中包含多组smooth向量, 按group_index中的数值作用到x的不同行上. 具体的, 假如x包含m个token, smooth_scales有n行, smooth_scales[0]会作用到x[0:group_index[0]]上, smooth_scales[i]会作用到x[group_index[i-1]: group_index[i]]上, i=[1, 2, ..., n-1]. 
+
+接口原型:
+torch_npu.npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode="rint", int dst_type=296, int block_size=32, int? scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
+
+参数说明:
+x: Tensor类型, 需要进行量化的源数据张量, 必选输入, 数据类型支持float16、bfloat16, 数据格式支持ND, 支持非连续的Tensor. 输入x的维度必须大于1. 进行int4量化时, 要求x形状的最后一维是8的整数倍. 
+smooth_scales: Tensor类型, 对x进行平滑缩放的张量, 可选输入, 数据类型需要与x保持一致, 数据格式支持ND, 支持非连续的Tensor. 
+group_index: Tensor类型, 在MoE场景下, 对smooth_scales进行分组的下标, 可选输入, 数据类型支持int32, 数据格式支持ND, 支持非连续的Tensor. 
+dst_type: ScalarType类型, 用于选择进行int8/int4量化, 可选输入, 输入值只能是torch.int8和torch.quint4x2, 默认为int8量化. 
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持取值torch.int8、torch.quint4x2.
+Atlas A3 训练系列产品: 支持取值torch.int8、torch.quint4x2.
+Ascend 950PR/950DT: 支持取值torch.int8、torch.quint4x2、torch_npu.float8_e5m2、torch_npu.float8_e4m3fn、torch_npu.hifloat8.
+quant_mode: str类型, 指定量化的模式, 支持"pertoken"、"pertensor"、"perchannel"。默认值为"pertoken".如果group_index不为None，只支持"pertoken".
+dst_type_max: float类型，指定量化数据的最大值。支持0，15，56，224，32768。默认值为0。仅在dst_type为torch_npu.hifloat8时生效.
+
+输出说明：
+y: 量化后的输出Tensor, 在进行int8量化时, y的数据类型为int8, 形状与x一致; 在进行int4量化时, y的数据类型为int32, 形状最后一维为x最后一维除以8, 其余维度与x一致, 每个int32元素包含8个int4结果. 
+scale: Tensor类型, 非对称动态量化过程中计算出的缩放系数, 数据类型为float32, 形状为x的形状剔除最后一维. 
+offset: Tensor类型, 非对称动态量化过程中计算出的偏移系数, 数据类型为float32, 形状为x的形状剔除最后一维. 
+
+约束说明:
+该接口支持推理场景下使用. 
+该接口支持图模式. 
+使用可选输入smooth_scales、group_index、dst_type时, 必须使用关键字传参. 
+使用smooth_scales时: 
+若不使用group_index, smooth_scales必须是一维Tensor, 元素数量与x的最后一维大小一致. 
+若使用group_index, smooth_scales必须是二维Tensor, 第二维元素数量与x的最后一维大小一致, group_index必须是一维数组, 元素数量与smooth_scales第一维一致. group_index中的元素必须是单调递增的, 其最后一个元素的值, 应等于x的元素数量除以x的最后一个维度. 
+
+支持的PyTorch版本
+PyTorch2.1及以上
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品
+Atlas A3 训练系列产品
+Ascend 950PR/950DT
+
+调用示例:
+
 """
 )
 
