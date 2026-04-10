@@ -260,13 +260,21 @@ at::Tensor &mm_out_npu_nocheck(at::Tensor &result, const at::Tensor &self, const
 }
 } // namespace
 
-at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out)
+at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at::ScalarType> output_dtype,
+                   at::Tensor &out)
 {
     TORCH_CHECK(self.dim() == DIMENSION_2D && mat2.dim() == DIMENSION_2D,
                 "both arguments to matmul need to be 2D, but they are ",
                 self.dim(), "D and ", mat2.dim(), "D", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
                 "mm_out is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "mm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
+    TORCH_CHECK(!output_dtype.has_value() || out.scalar_type() == output_type,
+                "mm.out expected out tensor dtype to match output_dtype",
+                OPS_ERROR(ErrCode::TYPE));
     if (!out.is_contiguous()) {
         at::Tensor contiguous_out = npu_utils::format_contiguous(out);
         mm_out_npu_nocheck(contiguous_out, self, mat2);
@@ -277,7 +285,7 @@ at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &o
     return out;
 }
 
-at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
+at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, c10::optional<at::ScalarType> output_dtype)
 {
     TORCH_CHECK(self.dim() == DIMENSION_2D && mat2.dim() == DIMENSION_2D,
                 "both arguments to matmul need to be 2D, but they are ",
@@ -288,9 +296,13 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
     // 3.torch need int8(input)->int8(out), cann can not support.
     TORCH_CHECK(self.scalar_type() != at::ScalarType::Char && mat2.scalar_type() != at::ScalarType::Char,
                 "mm is not support int8 dtype", OPS_ERROR(ErrCode::PARAM))
+    auto output_type = output_dtype.value_or(self.scalar_type());
+    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
+                "mm only supports torch.float32 when output_dtype is specified",
+                OPS_ERROR(ErrCode::TYPE));
     auto output_size = {self.size(0), mat2.size(1)};
 
-    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_ND);
+    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(output_type), ACL_FORMAT_ND);
     bool need_nd_out = false;
     static bool is_support_nd_out = c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1;
     // check format_out of mm is NCHW. Delate after definite NLP model.
@@ -307,11 +319,11 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
         static auto mm_bmm_nd = !at_npu::native::env::CheckMmBmmNDDisable();
         if (format_helper::IsBaseFormatType(self) && format_helper::IsBaseFormatType(mat2) && mm_bmm_nd &&
             ((is_support_nd_out && mm_check_nd_to_nz_on_the_fly(self, mat2)) || (!is_support_nd_out && is_align()))) {
-            result = npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_ND);
+                result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(output_type), ACL_FORMAT_ND);
         } else {
             need_nd_out = mm_bmm_nd;
-            result =
-                npu_preparation::apply_tensor_with_format(output_size, self.options(), ACL_FORMAT_FRACTAL_NZ, true);
+            result = npu_preparation::apply_tensor_with_format(
+                output_size, self.options().dtype(output_type), ACL_FORMAT_FRACTAL_NZ, true);
         }
     }
 
