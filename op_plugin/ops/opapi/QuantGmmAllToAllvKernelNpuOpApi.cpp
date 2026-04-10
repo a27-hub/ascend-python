@@ -558,6 +558,9 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         TensorWrapper mm_x_wrapper = make_wrapper(mm_x_real, mm_x_dtype);
         TensorWrapper mm_weight_wrapper = make_wrapper(mm_weight_real, mm_weight_dtype);
 
+        bool trans_gmm_weight = false;
+        bool trans_mm_weight = false;
+
         EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllv,
                      gmm_x_wrapper,
                      gmm_weight_wrapper,
@@ -581,8 +584,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                      ep_world_size,
                      send_counts,
                      recv_counts,
-                     false,
-                     false,
+                     trans_gmm_weight,
+                     trans_mm_weight,
                      gmm_y,
                      mm_y);
         return std::tie(gmm_y, mm_y);
