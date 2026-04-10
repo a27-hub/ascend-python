@@ -517,6 +517,12 @@
  	"op_api: torch_npu.npu_mhc_pre(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
  	},
+  "op_api: torch_npu.npu_mhc_pre_backward(*args, **kwargs)": {
+    "version": ["v2.5", "v2.6", "v2.7"]
+ 	},
+ 	"op_api: torch_npu.npu_mhc_pre_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+ 	},
   "op_api: torch_npu.npu_mrope(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
