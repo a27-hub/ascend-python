@@ -32,6 +32,30 @@ static const int MX_QUANT_MODE = 6;
 // support list
 const std::set<int> SUPPORT_WORLD_SIZE_LIST{ 2, 4, 8, 16, 32, 64, 128, 256 };
 static const int64_t ACL_UNDEFINED = -1;
+static const int64_t FP4_IN_INT8 = 2;
+
+static bool is_transpose_last_two_dims(const at::Tensor &tensor)
+{
+    if (tensor.dim() < 2 || tensor.dim() > 6) {
+        return false;
+    }
+    int64_t dim1 = tensor.dim() - 1;
+    int64_t dim2 = tensor.dim() - 2;
+    if (tensor.stride(dim2) == 1 && tensor.stride(dim1) == tensor.size(dim2)) {
+        int64_t tmpNxD = tensor.size(dim1) * tensor.size(dim2);
+        for (int64_t batchDim = tensor.dim() - 3; batchDim >= 0; batchDim--) {
+            if (tensor.stride(batchDim) != tmpNxD) {
+                return false;
+            }
+            tmpNxD *= tensor.size(batchDim);
+        }
+        if (tensor.size(dim1) == 1 && tensor.size(dim2) == 1) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at::Tensor &gmm_x,
     const at::Tensor &gmm_weight, const at::Tensor &gmm_x_scale, const at::Tensor &gmm_weight_scale,
@@ -70,8 +94,22 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     TORCH_CHECK(SUPPORT_WORLD_SIZE_LIST.find(ep_world_size) != SUPPORT_WORLD_SIZE_LIST.end(),
         "The input ep_world_size should be in [2, 4, 8, 16, 32, 64, 128, 256], but got ", ep_world_size, ".",
         OPS_ERROR(ErrCode::VALUE));
+
+    bool is_gmm_mxfp4 = false;
+    if ((gmm_x_quant_mode_value == MX_QUANT_MODE) && (gmm_weight_quant_mode == MX_QUANT_MODE)) {
+        if ((gmm_x_dtype.has_value() && gmm_weight_dtype.has_value()) &&
+            (gmm_x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
+            gmm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1))) {
+            is_gmm_mxfp4 = true;
+        }
+    }
+    bool gmm_weight_trans = is_transpose_last_two_dims(gmm_weight);
     // gmm_y
     int64_t n1 = gmm_weight.size(DIM_TWO);
+    // mxfp4场景，gmm_weight的内轴被压缩，这里恢复原始shape
+    if (is_gmm_mxfp4 && !gmm_weight_trans) {
+        n1 *= FP4_IN_INT8;
+    }
     int64_t a = 0;
     for (auto &i : recv_counts) {
         a += i;
@@ -94,6 +132,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     if (mm_x.has_value() && mm_weight.has_value()) {
         mm_x_quant_mode_value = mm_x_quant_mode.value();
         mm_weight_quant_mode_value = mm_weight_quant_mode.value();
+
         TORCH_CHECK(mm_y_dtype.has_value(),
             "The input mm_y_dtype must be provided when mm_x and mm_weight are present.", OPS_ERROR(ErrCode::PARAM));
         const at::Tensor &mm_x_value = mm_x.value();
@@ -104,8 +143,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         // mm_weight
         TORCH_CHECK(mm_weight_value.dim() == DIM_TWO, "The dim of mm_weight should be 2, but got ",
             mm_weight_value.dim(), ".", OPS_ERROR(ErrCode::PARAM));
+
+        bool is_mm_mxfp4 = false;
+        if ((mm_x_quant_mode_value == MX_QUANT_MODE) && (mm_weight_quant_mode_value == MX_QUANT_MODE)) {
+            if ((mm_x_dtype.has_value() && mm_weight_dtype.has_value()) &&
+                (mm_x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
+                mm_weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1))) {
+                is_mm_mxfp4 = true;
+            }
+        }
+        bool mm_weight_trans = is_transpose_last_two_dims(mm_weight);
+
         int64_t bs = mm_x_value.size(0);
         int64_t n2 = mm_weight_value.size(1);
+        // mxfp4 mm_weight非转置场景，mm_weight的内轴被压缩，这里恢复原始shape
+        if (is_mm_mxfp4 && !mm_weight_trans) {
+            n2 *= FP4_IN_INT8;
+        }
         aclDataType mm_y_acltype = c10_npu::GetAclDataType(mm_y_dtype.value());
         at::ScalarType mm_y_scalar_dtype = at_npu::native::OpPreparation::convert_to_scalar_type(mm_y_acltype);
         mm_y = at_npu::native::OpPreparation::apply_tensor_without_format({ bs, n2 }, c10::dtype(mm_y_scalar_dtype));
@@ -130,9 +184,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     // group_size
     at::IntArrayRef group_size_list = group_size.value_or(at::IntArrayRef{});
     int64_t group_sizes = op_plugin::utils::check_and_get_group_size(group_size_list);
-
-    // 生成aclnn接口需要的默认值
-
 
     // send_counts_tensor
     const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
