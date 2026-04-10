@@ -1,33 +1,25 @@
-        B, Q_N, Q_S, D, block_size = 2, 8, 128, 128, 64
-        num_blocks = 32
-        query = torch.randn(B, Q_N, Q_S, D, dtype=torch.float16).npu()
-        key = torch.randint(-128, 127, (num_blocks, Q_N, block_size, D), dtype=torch.int8).npu()
-        value = torch.randint(-128, 127, (num_blocks, Q_N, block_size, D), dtype=torch.int8).npu()
-        block_table = torch.randint(0, num_blocks, (B, 8), dtype=torch.int32).npu()
-        actual_seq_qlen = [Q_S, Q_S]
-        actual_seq_kvlen = [block_size * 8, block_size * 8]
-        dequant_scale_key = torch.ones((D,), dtype=torch.float16).npu()
-        dequant_offset_key = torch.zeros((D,), dtype=torch.float16).npu()
-        dequant_scale_value = torch.ones((D,), dtype=torch.float16).npu()
-        dequant_offset_value = torch.zeros((D,), dtype=torch.float16).npu()
+	x（Tensor）：必选参数，代表需要进行通信的数据，数据类型支持float8_e4m3fn、float8_e5m2、int8和hifloat8，数据格式支持ND，输入shape支持2维，形如(bs, h)，或为3维 (b, s, h)，h的范围在[1024, 8192]内，且h满足128对齐。该参数不支持空tensor。
+	scales（Tensor）：必选参数，代表通信数据的量化系数，数据类型支持float32、float8_e8m0fnu，数据格式支持ND，当数据类型为float32，量化模式为pertoken-pergroup量化，若x为2维(bs, h)，则scales为2维 (bs, h/128)，若x为3维(b, s, h)，则scales为3维(b, s, h/128)。当数据类型为float8_e8m0fnu，且x数据类型为float8_e4m3fn、float8_e5m2时，量化模式为MX量化，若x为2维，scales的shape则为3维 (bs, h/64, 2)，若x为3维，scales的shape则为4维(bs, h/64, 2)。h的范围在[1024, 8192]内，且h满足128对齐。该参数不支持空tensor。
+	hcom（String）：必选参数，表示通信域handle名。通过get_hccl_comm_name接口获取。
+	world_size（int）：可选参数，表示通信域内的rank总数，支持2卡、4卡、8卡。默认值：2。
+	*：代表其之前的变量是位置相关，按照顺序输入，必选；之后的变量是键值对赋值的，位置无关，可选（不输入会使用默认值）。
+	reduce_op（String）：reduce操作类型，当前版本仅支持'sum'，默认值：'sum'。
+	output_dtype（int）：可选参数，代表指定输出参数output的数据类型。当前取值为：bfloat16，float16，float32。默认值：bfloat16。
+	x_dtype（int）：可选参数，代表指定输入参数x的数据类型。当前取值为：float8_e4m3fn、float8_e5m2、int8，hifloat8。默认值为空。
+	scales_dtype（int）：可选参数，代表通信数据的量化系数类型。当前取值为：float32，float8_e8m0。默认值为空。
+返回值说明
+	y（Tensor）：表示最终通信结果，数据类型支持：float16、bfloat16、float32，数据格式支持ND。shape与x的shape保持对齐，支持(bs, h)和(b, s, h)。
+约束说明
+	该接口支持训练场景下使用。
+	数据类型约束：
+场景	x	scales	y
+pertoken-pergroup量化	hifloat8/int8/
+float8_e4m3fn/float8_e5m2	float32	float16、bfloat16、float32
+MX量化	float8_e4m3fn/float8_e5m2	float8_e8m0	float16、bfloat16、float32
 
-        return_softmax_lse = False
-        softmax_scale = 1.0 / math.sqrt(D)
-        custom_output = torch_npu.npu_fused_infer_attention_score_v2(
-            query, key, value,
-            block_table=block_table,
-            actual_seq_qlen=actual_seq_qlen,
-            actual_seq_kvlen=actual_seq_kvlen,
-            block_size=block_size,
-            num_query_heads=Q_N,
-            input_layout="BNSD",
-            dequant_scale_key=dequant_scale_key,
-            dequant_offset_key=dequant_offset_key,
-            dequant_scale_value=dequant_scale_value,
-            dequant_offset_value=dequant_offset_value,
-            key_quant_mode=0,
-            value_quant_mode=0,
-            softmax_scale=softmax_scale,
-            pre_tokens=65535,
-            next_tokens=65535,
-            return_softmax_lse=return_softmax_lse)
+	shape约束
+场景	x	scales
+pertoken-pergroup量化	2维tensor，shape为(bs, h)	2维tensor，shape为(bs, h/128)
+pertoken-pergroup量化	3维tensor，shape为(b, s, h)	3维tensor，shape为(b, s, h/128)
+MX量化	2维tensor，shape为(bs, h)	3维tensor，shape为(bs, h/64, 2)
+MX量化	3维tensor，shape为(b, s, h)	4维tensor，shape为(b, s, h/64, 2)
