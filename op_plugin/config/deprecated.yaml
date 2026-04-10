@@ -83,5 +83,4 @@ deprecated:
     replace: 'npu_fusion_attention'
   - name: npu_multi_head_attention
   - name: npu_dropout_with_add_softmax
-  - name: npu_mla_prolog
   - name: dropout_with_byte_mask
