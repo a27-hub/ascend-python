@@ -956,13 +956,11 @@ official:
     internal_format_opapi: all_version
 
   - func: addmm.dtype(Tensor self, Tensor mat1, Tensor mat2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1) -> Tensor
-    acl_op: all_version
-    op_api: all_version
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
 
   - func: addmm.dtype_out(Tensor self, Tensor mat1, Tensor mat2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
 
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
@@ -1490,14 +1488,12 @@ official:
     acl_op: all_version
     op_api: all_version
 
-  - func: bmm(Tensor self, Tensor mat2) -> Tensor
-    acl_op: all_version
-    op_api: all_version
+  - func: bmm(Tensor self, Tensor mat2, ScalarType? output_dtype=None) -> Tensor
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
 
-  - func: bmm.out(Tensor self, Tensor mat2, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
+  - func: bmm.out(Tensor self, Tensor mat2, ScalarType? output_dtype=None, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
   
   - func: bmm.dtype(Tensor self, Tensor mat2, ScalarType output_dtype) -> Tensor
@@ -3520,13 +3516,11 @@ official:
     internal_format_opapi: all_version
 
   - func: mm.dtype(Tensor self, Tensor mat2, ScalarType output_dtype) -> Tensor
-    acl_op: all_version
-    op_api: all_version
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
 
   - func: mm.dtype_out(Tensor self, Tensor mat2, ScalarType output_dtype, *, Tensor(a!) out) -> Tensor(a!)
-    acl_op: all_version
-    op_api: all_version
+    op_api: [v2.8, newest]
     internal_format_opapi: all_version
 
   - func: mse_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor

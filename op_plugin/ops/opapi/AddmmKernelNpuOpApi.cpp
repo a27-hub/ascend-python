@@ -85,20 +85,41 @@ at::Tensor &addmm_out(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
-    c10::optional<at::ScalarType> output_dtype,
+    const at::ScalarType output_dtype,
     const at::Scalar &beta,
     const at::Scalar &alpha,
     at::Tensor &out)
 {
-    auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "addmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
     DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
                            acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
-    npu_preparation::check_tensor({self, mat1, mat2}, out, output_type, output_size);
+    npu_preparation::check_tensor({self, mat1, mat2}, out, output_dtype, output_size);
+    if (is_nd_nd_nz_format(self, mat1, mat2)) {
+        EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
+    } else {
+        cube_math_type = get_effective_cube_math_type();
+        EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, out, cube_math_type);
+    }
+    auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
+    at::namedinference::propagate_names_if_nonempty(out, names);
+
+    return out;
+}
+
+at::Tensor &addmm_out(
+    const at::Tensor &self,
+    const at::Tensor &mat1,
+    const at::Tensor &mat2,
+    const at::Scalar &beta,
+    const at::Scalar &alpha,
+    at::Tensor &out)
+{
+    DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
+                           acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
+    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
+    npu_preparation::check_tensor({self, mat1, mat2}, out, self.scalar_type(), output_size);
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
     } else {
@@ -115,18 +136,38 @@ at::Tensor addmm(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
-    c10::optional<at::ScalarType> output_dtype,
+    const at::ScalarType output_dtype,
     const at::Scalar &beta,
     const at::Scalar &alpha)
 {
-    auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "addmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
     DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
                            acl_op::addmm(self, mat1, mat2, beta, alpha));
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
-    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_type));
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
+    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    if (is_nd_nd_nz_format(self, mat1, mat2)) {
+        EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
+    } else {
+        cube_math_type = get_effective_cube_math_type();
+        EXEC_NPU_CMD(aclnnAddmm, self, mat1, mat2, beta, alpha, result, cube_math_type);
+    }
+    auto names = at::namedinference::propagate_names_for_addmm(mat1, mat2, self);
+    at::namedinference::propagate_names_if_nonempty(result, names);
+    FLOP_COUNT(FlopCounter::addmm_flop, mat1, mat2);
+    return result;
+}
+
+at::Tensor addmm(
+    const at::Tensor &self,
+    const at::Tensor &mat1,
+    const at::Tensor &mat2,
+    const at::Scalar &beta,
+    const at::Scalar &alpha)
+{
+    DO_ADDMM_COMPATIBILITY(aclnnAddmmWeightNz, aclnnAddmm, self, mat1, mat2,
+                           acl_op::addmm(self, mat1, mat2, beta, alpha));
+    auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
+    at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
     int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, result, cube_math_type);
