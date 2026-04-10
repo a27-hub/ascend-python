@@ -29,7 +29,7 @@ namespace lazy_fusion {
 constexpr unsigned int OpLevel_0 = 0;
 constexpr unsigned int OpLevel_1 = 1;
 
-class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
+class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
  public:
   LazyFusionKernel();
   ~LazyFusionKernel();
@@ -43,6 +43,8 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
 
   dvm::NDObject *Input(const at::Tensor &x, bool enable_cast = true, dvm::ShapeRef *shape = nullptr);
   void Output(const at::Tensor &tensor, dvm::NDObject *obj, bool inplace = false);
+  bool NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *shape = nullptr) const;
+  bool NeedFlushForWritableOutput(const at::Tensor &tensor) const;
   at::Tensor Output(dvm::NDObject *obj, c10::IntArrayRef shape, const c10::TensorOptions &options) {
     at::Tensor tensor = at_npu::native::OpPreparation::apply_tensor_without_format(shape, options);
     Output(tensor, obj);
@@ -109,10 +111,17 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
       }
       inputs_[i]->tensor = at::Tensor();
     }
+    for (auto &output : outputs_) {
+      auto p = output.storage.lock();
+      if (p) {
+        auto storage = static_cast<torch_npu::NPUStorageImpl *>(p.get());
+        storage->dvm_op_ = nullptr;
+      }
+    }
     outputs_.clear();
     dump_ops_.clear();
     input_used_ = 0;
-    ops_map_used_ = 0;
+    dvm_ops_used_ = 0;
     cache_shape_used_ = 0;
     dump_idx_ = 0;
   }
@@ -180,6 +189,17 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
 
   void DumpGraph();
 
+  // Cache the tensor identity and metadata needed by the exact-match fast path.
+  struct TensorMeta {
+    c10::TensorImpl *tensor_impl{nullptr};
+    void *data_ptr{nullptr};
+    int64_t storage_offset{0};
+    at::ScalarType dtype{at::ScalarType::Undefined};
+    int64_t dim{0};
+    std::vector<int64_t> sizes;
+    std::vector<int64_t> strides;
+  };
+
   struct Load {
     dvm::ShapeRef shape;
     void *data_ptr{nullptr};
@@ -187,13 +207,12 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
   };
 
   struct Store {
-    Store() = default;
-    Store(dvm::NDObject *p, void *ptr, bool is_inplace, const at::Tensor &t)
-        : op(p), data_ptr(ptr), nbytes(t.nbytes()), inplace(is_inplace),
+    Store() = delete;
+    Store(dvm::NDObject *p, bool is_inplace, const at::Tensor &t)
+        : op(p), inplace(is_inplace),
           storage(t.storage().getWeakStorageImpl()) {}
     dvm::NDObject *op;
-    void *data_ptr{nullptr};
-    size_t nbytes{0};
+    TensorMeta tensor_meta;
     bool inplace{false};
     bool skip{false};
     c10::weak_intrusive_ptr<c10::StorageImpl> storage;
@@ -217,21 +236,32 @@ class LazyFusionKernel : public dvm::Kernel, public dvm::WsAllocator {
     int64_t shape_data[op_infer::SIZE];
   };
 
+  // Track whether the cached NDObject may be rebuilt from GM on an exact-match miss.
   struct DvmOp {
     dvm::NDObject *op{nullptr};
-    int64_t storage_offset{0};
+    TensorMeta tensor_meta;
+    std::vector<int64_t> dvm_shape;
+    bool reloadable_from_gm{false};
   };
 
-  void CacheDvmOp(torch_npu::NPUStorageImpl *storage, dvm::NDObject *obj, int64_t storage_offset);
+  static void CacheTensorMeta(TensorMeta *meta, const at::Tensor &tensor);
+  static bool MatchTensorMeta(const TensorMeta &meta, const at::Tensor &tensor);
+  static void CacheDvmShape(DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape);
+  static bool MatchDvmShape(const DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape);
+  // Exact reuse requires both tensor metadata and logical DVM shape to match.
+  static bool MatchDvmOp(const DvmOp *dvm_op, const at::Tensor &tensor, dvm::ShapeRef *shape);
+
+  void CacheDvmOp(torch_npu::NPUStorageImpl *storage, const at::Tensor &tensor, const TensorMeta *tensor_meta,
+                  dvm::NDObject *obj, dvm::ShapeRef *shape, bool reloadable_from_gm);
 
   std::vector<Load *> inputs_;
   std::vector<Store> outputs_;
   std::vector<at::Tensor> workspace_;
-  std::vector<DvmOp *> ops_map_;
+  std::vector<DvmOp *> dvm_ops_;
   std::vector<ShapeWithRef *> cached_shape_;
   std::vector<Op> dump_ops_;
   size_t input_used_{0};
-  size_t ops_map_used_{0};
+  size_t dvm_ops_used_{0};
   size_t cache_shape_used_{0};
   size_t dump_idx_{0};
   size_t id_{0};
@@ -290,6 +320,14 @@ class Manager {
   }
 
   bool Empty() { return current_ == nullptr; }
+  bool NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *shape = nullptr) {
+    auto k = current_;
+    return k != nullptr && k->NeedFlushForInput(x, shape);
+  }
+  bool NeedFlushForWritableOutput(const at::Tensor &tensor) {
+    auto k = current_;
+    return k != nullptr && k->NeedFlushForWritableOutput(tensor);
+  }
 
   void FreeKernel(LazyFusionKernel *k) {
     std::lock_guard<std::mutex> guard(mutex_);
