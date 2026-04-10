@@ -228,6 +228,41 @@ at::Tensor dropout_gen_mask_tensor_impl(const at::Tensor &query, double keep_pro
     return mask;
 }
 
+/**
+ * Wait for NPUEvent to be dequeued (completed)
+ * Uses polling + fallback strategy to avoid blocking too long
+ *
+ * @param event The NPUEvent to wait for
+ * @param timeout_ms Timeout in milliseconds, default 100ms
+ * @return true if successfully waited, false if timeout and fallback to synchronize
+ */
+static bool WaitEventDequeued(const c10_npu::NPUEvent& event, int timeout_ms = 100) {
+    // Fast path: check if event is already completed
+    if (event.query()) {
+        return true;
+    }
+
+    // Poll waiting
+    auto start = std::chrono::steady_clock::now();
+    const auto sleep_interval = std::chrono::microseconds(50);  // 50us poll interval
+
+    while (!event.query()) {
+        std::this_thread::sleep_for(sleep_interval);
+
+        auto elapsed = std::chrono::steady_clock::now() - start;
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
+        if (elapsed_ms > timeout_ms) {
+            // Timeout: fallback to synchronous wait
+            ASCEND_LOGW("WaitEventDequeued timeout after %d ms, fallback to synchronize", timeout_ms);
+            event.synchronize();
+            return false;
+        }
+    }
+
+    return true;
+}
+
 at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep_prob, const at::Tensor &seed,
     const at::Tensor &offset, const int64_t numels, const bool gen_mask_parallel, const bool sync,
     c10_npu::CaptureStatus is_capture, const uint64_t offset_intragraph = 0)
@@ -254,6 +289,10 @@ at::Tensor dropout_gen_mask_tensor_dispatch(const at::Tensor &query, double keep
                 c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
                 capture_event_begin.record(original_stream);
                 capture_event_begin.block(secondary_stream);
+
+                // Wait for event to be dequeued to ensure allocator sees correct capture state
+                bool wait_success = WaitEventDequeued(capture_event_begin, 100);
+                ASCEND_LOGI("FA v3 stream sync: waited for event dequeue, success=%d", wait_success);
                 ASCEND_LOGI("Event: record and block in fa dropout op capture begin is successfully executed, event=%p", capture_event_begin.event());
             }
             // During the life cycle of this raii instance, the calcu stream is set as the
@@ -2092,5 +2131,767 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset);
 }
-#endif
+
+// ============================================================================
+// FA v3 Split Interfaces for Graph Capture Support (fa.md Chapter 5)
+// ============================================================================
+
+// Internal helper: Calculate numels for FA v3
+int64_t calculate_numels(
+    const at::Tensor &query, const at::Tensor &key,
+    int64_t head_num, const std::string &input_layout,
+    at::IntArrayRef ac_seq_qlen, at::IntArrayRef ac_seq_kvlen)
+{
+    int64_t numels = 0;
+    int64_t N_local = 0;
+
+    if (input_layout == "BNSD") {
+        N_local = query.size(1);
+    } else if (input_layout == "BSND") {
+        N_local = query.size(2);
+    } else if (input_layout == "TND") {
+        N_local = query.size(1);
+    }
+
+    if (input_layout == "TND" && !ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+        numels = N_local;
+        int64_t accum = ac_seq_qlen[0] * ac_seq_kvlen[0];
+        for (size_t i = 1; i < ac_seq_qlen.size(); i++) {
+            accum += ((ac_seq_qlen[i] - ac_seq_qlen[i - 1]) * (ac_seq_kvlen[i] - ac_seq_kvlen[i - 1]));
+        }
+        numels *= accum;
+    } else if (input_layout == "BSH") {
+        numels = query.size(0) * head_num * query.size(1) * key.size(1);
+    } else if (input_layout == "SBH") {
+        numels = query.size(1) * head_num * query.size(0) * key.size(0);
+    } else if (input_layout == "BNSD") {
+        numels = query.size(0) * query.size(1) * query.size(2) * key.size(2);
+    } else if (input_layout == "BSND") {
+        numels = query.size(0) * query.size(2) * query.size(1) * key.size(1);
+    }
+    return numels;
 }
+
+// Internal helper: Get max workspace size for FA v3 (5.b)
+// Calculate workspace size for FA v3 based on input parameters
+// Formula: workspace = (Q+K+V buffers + attention score + softmax) * overhead_factor
+static int64_t CalculateWorkspaceSize(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, const std::string &input_layout,
+    at::IntArrayRef ac_seq_qlen, at::IntArrayRef ac_seq_kvlen)
+{
+    // Extract dimensions based on input layout
+    int64_t B = 0, S_q = 0, S_kv = 0, N = head_num;
+    int64_t D = 64;  // default head_dim
+
+    if (input_layout == "BSH") {
+        B = query.size(0);
+        S_q = query.size(1);
+        S_kv = S_q;
+        int64_t H = query.size(2);
+        D = H / head_num;
+    } else if (input_layout == "SBH") {
+        B = query.size(1);
+        S_q = query.size(0);
+        S_kv = S_q;
+        int64_t H = query.size(2);
+        D = H / head_num;
+    } else if (input_layout == "BNSD") {
+        B = query.size(0);
+        N = query.size(1);
+        S_q = query.size(2);
+        S_kv = S_q;
+        D = query.size(3);
+    } else if (input_layout == "BSND") {
+        B = query.size(0);
+        S_q = query.size(1);
+        N = query.size(2);
+        S_kv = S_q;
+        D = query.size(3);
+    } else if (input_layout == "TND") {
+        N = query.size(1);
+        D = query.size(2);
+        if (!ac_seq_qlen.empty()) {
+            S_q = ac_seq_qlen.back();  // max length
+        } else {
+            S_q = query.size(0);
+        }
+        if (!ac_seq_kvlen.empty()) {
+            S_kv = ac_seq_kvlen.back();
+        } else {
+            S_kv = S_q;
+        }
+    }
+
+    // Calculate element counts
+    int64_t q_elements = B * N * S_q;
+    int64_t kv_elements = B * N * S_kv;
+    int64_t attn_elements = B * N * S_q * S_kv;
+
+    // Calculate workspace components:
+    // 1. Q/K/V intermediate results: (Q + K + V) * D * sizeof(half)
+    // 2. Attention score: B * N * S_q * S_kv * sizeof(float)
+    // 3. Softmax sum/max: B * N * S_q * 8 * sizeof(float)
+    int64_t workspace_size = 0;
+
+    // Q/K/V gemm workspace
+    workspace_size += (q_elements + 2 * kv_elements) * D * sizeof(at::Half);
+
+    // Attention score workspace
+    workspace_size += attn_elements * sizeof(float);
+
+    // Softmax workspace
+    workspace_size += B * N * S_q * 8 * sizeof(float);
+
+    // Overhead factor 1.2
+    workspace_size = static_cast<int64_t>(workspace_size * 1.2);
+
+    // Limits: 256KB ~ 64MB
+    const int64_t MIN_WORKSPACE = 256 * 1024;
+    const int64_t MAX_WORKSPACE = 64 * 1024 * 1024;
+
+    workspace_size = std::max(MIN_WORKSPACE, workspace_size);
+    workspace_size = std::min(MAX_WORKSPACE, workspace_size);
+
+    // Align to 128 bytes (NPU alignment requirement)
+    workspace_size = (workspace_size + 127) / 128 * 128;
+
+    return workspace_size;
+}
+
+at::Tensor _npu_fusion_attention_v3_get_max_workspace(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    // Use dynamic workspace size calculation instead of fixed 1MB
+    int64_t workspace_size = CalculateWorkspaceSize(
+        query, key, value, head_num, input_layout_str, ac_seq_qlen, ac_seq_kvlen);
+
+    ASCEND_LOGI("FA v3 workspace calculated: size=%ld bytes, layout=%s, B=%ld, N=%ld, S_q=%ld",
+                workspace_size, input_layout_str.c_str(),
+                query.size(0), head_num, ac_seq_qlen.empty() ? query.size(1) : ac_seq_qlen.back());
+
+    at::Tensor workspace = OpPreparation::apply_tensor_without_format(
+        at::IntArrayRef{workspace_size}, query.options().dtype(at::kByte));
+
+    return workspace;
+
+// Internal helper: Infer output shapes and pre-allocate (5.c)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+_npu_fusion_attention_v3_infer_output(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    int64_t B = 0, S0 = 0, N_local = 0, T = 0;
+    c10::SmallVector<int64_t> atten_score_shape;
+    c10::SmallVector<int64_t> softmax_shape;
+
+    if (input_layout_str == "BSH") {
+        B = query.size(0);
+        S0 = query.size(1);
+        int64_t H = query.size(2);
+        int64_t D = H / head_num;
+        int64_t D2 = (key.size(2) > 0 && D > 0) ? value.size(2) / (key.size(2) / D) : D;
+        atten_score_shape = {B, S0, head_num * D2};
+        softmax_shape = {B, head_num, S0, SOFTMAXMAX_LAST_DIMSHAPE};
+    } else if (input_layout_str == "SBH") {
+        B = query.size(1);
+        S0 = query.size(0);
+        int64_t H = query.size(2);
+        int64_t D = H / head_num;
+        int64_t D2 = (key.size(2) > 0 && D > 0) ? value.size(2) / (key.size(2) / D) : D;
+        atten_score_shape = {S0, B, head_num * D2};
+        softmax_shape = {B, head_num, S0, SOFTMAXMAX_LAST_DIMSHAPE};
+    } else if (input_layout_str == "BNSD") {
+        B = query.size(0);
+        N_local = query.size(1);
+        S0 = query.size(2);
+        int64_t D2 = value.size(3);
+        atten_score_shape = {B, N_local, S0, D2};
+        softmax_shape = {B, N_local, S0, SOFTMAXMAX_LAST_DIMSHAPE};
+    } else if (input_layout_str == "BSND") {
+        B = query.size(0);
+        N_local = query.size(2);
+        S0 = query.size(1);
+        int64_t D2 = value.size(3);
+        atten_score_shape = {B, S0, N_local, D2};
+        softmax_shape = {B, N_local, S0, SOFTMAXMAX_LAST_DIMSHAPE};
+    } else if (input_layout_str == "TND") {
+        T = query.size(0);
+        N_local = query.size(1);
+        int64_t D2 = value.size(2);
+        atten_score_shape = {T, N_local, D2};
+        softmax_shape = {T, N_local, SOFTMAXMAX_LAST_DIMSHAPE};
+    }
+
+    at::Tensor attention_score = OpPreparation::apply_tensor_without_format(
+        atten_score_shape, query.options());
+    at::Tensor softmax_max = OpPreparation::apply_tensor_without_format(
+        softmax_shape, query.options().dtype(at::kFloat));
+    at::Tensor softmax_sum = OpPreparation::apply_tensor_without_format(
+        softmax_shape, query.options().dtype(at::kFloat));
+    at::Tensor softmax_out = at::empty({0}, query.options());
+    at::Tensor seed = at::empty({1}, query.options().dtype(at::kLong));
+    at::Tensor offset = at::empty({1}, query.options().dtype(at::kLong));
+
+    return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset);
+}
+
+// FA v3 Out Interface for Graph Capture (unified out interface)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_fusion_attention_v3_out(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens,
+    int64_t inner_precise, c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink,
+    at::Tensor &workspace,
+    at::Tensor &attention_score, at::Tensor &softmax_max,
+    at::Tensor &softmax_sum, at::Tensor &softmax_out,
+    at::Tensor &seed, at::Tensor &offset)
+{
+    TORCH_CHECK(attention_score.defined(), "attention_score must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(softmax_max.defined(), "softmax_max must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(softmax_sum.defined(), "softmax_sum must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(seed.defined(), "seed must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(offset.defined(), "offset must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    std::string softmax_layout_str = std::string(softmax_layout);
+    for (auto &c : softmax_layout_str) {
+        c = toupper(c);
+    }
+
+    auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
+
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    at::Tensor format_query = npu_preparation::CastToFormat(query, ACL_FORMAT_ND);
+    at::Tensor format_key = npu_preparation::CastToFormat(key, ACL_FORMAT_ND);
+    at::Tensor format_value = npu_preparation::CastToFormat(value, ACL_FORMAT_ND);
+    at::Tensor format_pse = pse.has_value() ? npu_preparation::CastToFormat(pse.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_padding_mask = padding_mask.has_value() ? npu_preparation::CastToFormat(padding_mask.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_atten_mask = atten_mask.has_value() ? npu_preparation::CastToFormat(atten_mask.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_sink = sink.has_value() ? npu_preparation::CastToFormat(sink.value(), ACL_FORMAT_ND) : at::Tensor();
+
+    at::Tensor format_drop_mask;
+    c10_npu::CaptureStatus is_capture = c10_npu::NpuRunMode::isCaptureMode();
+    uint64_t offset_intragraph = 0;
+    auto original_stream = c10_npu::getCurrentNPUStream();
+    auto secondary_stream = c10_npu::getCurrentSecondaryStream();
+
+    if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+        int64_t numels = calculate_numels(format_query, format_key, head_num, input_layout_str, ac_seq_qlen, ac_seq_kvlen);
+
+        if (is_capture == c10_npu::CaptureStatus::None) {
+            const auto gen = at_npu::detail::getDefaultNPUGenerator();
+            auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
+            int64_t seed_val = static_cast<int64_t>(pair.first);
+            int64_t offset_val = static_cast<int64_t>(pair.second);
+
+            seed.fill_(seed_val);
+            offset.fill_(offset_val);
+
+            if (gen_mask_parallel) {
+                c10_npu::SecondaryStreamGuard guard(secondary_stream);
+                format_drop_mask = dropout_gen_mask_tensor_impl(format_query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
+                if (sync) {
+                    OPS_CHECK_ERROR(c10_npu::acl::AclrtSynchronizeStreamWithTimeout(original_stream));
+                }
+            } else {
+                format_drop_mask = dropout_gen_mask_tensor_impl(format_query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
+            }
+        } else {
+            if (gen_mask_parallel) {
+                const auto gen = at_npu::detail::getDefaultNPUGenerator();
+                auto gen_state_ = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_npu_state(0);
+                if (!gen_state_.secondary_stream_capture_state_) {
+                    c10_npu::NPUEvent capture_event_begin = c10_npu::NPUEvent();
+                    capture_event_begin.record(original_stream);
+                    capture_event_begin.block(secondary_stream);
+
+                        // Wait for event to be dequeued to ensure allocator sees correct capture state
+                        bool wait_success = WaitEventDequeued(capture_event_begin, 100);
+                        ASCEND_LOGI("FA v3 out stream sync: waited for event dequeue, success=%d", wait_success);
+                    ASCEND_LOGI("Event: record and block in fa v3 out capture begin");
+                }
+
+                {
+                    c10_npu::SecondaryStreamGuard guard(secondary_stream);
+                    format_drop_mask = dropout_gen_mask_tensor_impl(
+                        format_query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
+                }
+
+                if (!gen_state_.secondary_stream_capture_state_) {
+                    ASCEND_LOGI("Event: record and block in fa v3 out capture end");
+                    at::check_generator<at_npu::NPUGeneratorImpl>(gen)->set_secondary_stream_capture_state(true);
+                }
+                if (sync) {
+                    OPS_CHECK_ERROR(c10_npu::acl::AclrtSynchronizeStreamWithTimeout(original_stream));
+                }
+            } else {
+                format_drop_mask = dropout_gen_mask_tensor_impl(
+                    format_query, keep_prob, seed, offset, numels, is_capture, offset_intragraph);
+            }
+        }
+    } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
+        int64_t numels = calculate_numels(format_query, format_key, head_num, input_layout_str, ac_seq_qlen, ac_seq_kvlen);
+        int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
+        format_drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
+    }
+
+    char input_layout_char[LAYOUT_MAX_LENGTH];
+    strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+
+    double prob;
+    at::Scalar probScalar = at::Scalar(float(1.0) - float(keep_prob));
+    prob = probScalar.toDouble();
+
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            TORCH_CHECK(softmax_layout_str == "" || softmax_layout_str == "TND",
+                "softmax_layout must be empty or TND for TND input", OPS_ERROR(ErrCode::PARAM));
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                input_layout_char, inner_precise, sparse_mode, softmax_max, softmax_sum,
+                softmax_out, attention_score);
+        } else {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScore, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                scale, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
+                inner_precise, sparse_mode, softmax_max, softmax_sum, softmax_out, attention_score);
+        }
+    } else {
+        TORCH_CHECK(false, "npu_fusion_attention_v3_out not supported on Ascend950", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    }
+
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        c10_npu::NPUEvent npu_event;
+        npu_event.record(c10_npu::getCurrentNPUStream());
+        npu_event.block(c10_npu::getCurrentSecondaryStream());
+    }
+
+    return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset);
+}
+
+// ============================================================================
+// FA v3 Split Interfaces for Advanced Adapter (fa.md Chapter 5)
+// ============================================================================
+
+// 5.a - Split interface 1: Generate dropout mask separately
+at::Tensor npu_fa_v3_gen_mask(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    double keep_prob,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const at::Tensor &seed,
+    const at::Tensor &offset,
+    bool gen_mask_parallel,
+    bool sync)
+{
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    int64_t numels = calculate_numels(
+        query, key, head_num, input_layout_str,
+        at::IntArrayRef{}, at::IntArrayRef{});
+
+    c10_npu::CaptureStatus is_capture = c10_npu::NpuRunMode::isCaptureMode();
+    uint64_t offset_intragraph = 0;
+
+    at::Tensor mask = dropout_gen_mask_tensor_dispatch(
+        query, keep_prob, seed, offset, numels,
+        gen_mask_parallel, sync, is_capture, offset_intragraph);
+
+    return mask;
+}
+
+// 5.c - Split interface 2: Pure computation (non-out version)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_v3(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &drop_mask,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens,
+    int64_t inner_precise, c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
+{
+    at::Tensor attention_score, softmax_max, softmax_sum, softmax_out, seed, offset;
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    std::tie(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset) =
+        _npu_fusion_attention_v3_infer_output(
+            query, key, value, head_num, input_layout,
+            actual_seq_qlen, actual_seq_kvlen);
+
+    at::Tensor workspace = _npu_fusion_attention_v3_get_max_workspace(
+        query, key, value, head_num, input_layout,
+        prefix, actual_seq_qlen, actual_seq_kvlen);
+
+    return npu_flash_attention_score_v3_out(
+        query, key, value, head_num, input_layout,
+        pse, drop_mask, padding_mask, atten_mask,
+        scale, keep_prob, pre_tockens, next_tockens, inner_precise,
+        prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode,
+        gen_mask_parallel, sync, softmax_layout, sink,
+        workspace, attention_score, softmax_max, softmax_sum,
+        softmax_out, seed, offset);
+}
+
+// 5.c - Split interface 3: Out version for update mechanism
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_v3_out(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &drop_mask,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens,
+    int64_t inner_precise, c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink,
+    at::Tensor &workspace,
+    at::Tensor &attention_score, at::Tensor &softmax_max,
+    at::Tensor &softmax_sum, at::Tensor &softmax_out,
+    at::Tensor &seed, at::Tensor &offset)
+{
+    TORCH_CHECK(attention_score.defined(), "attention_score must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(softmax_max.defined(), "softmax_max must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(softmax_sum.defined(), "softmax_sum must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(seed.defined(), "seed must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(offset.defined(), "offset must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(drop_mask.has_value() && drop_mask->defined(),
+        "drop_mask must be provided for npu_flash_attention_score_v3_out", OPS_ERROR(ErrCode::PARAM));
+
+    at::Tensor format_query = npu_preparation::CastToFormat(query, ACL_FORMAT_ND);
+    at::Tensor format_key = npu_preparation::CastToFormat(key, ACL_FORMAT_ND);
+    at::Tensor format_value = npu_preparation::CastToFormat(value, ACL_FORMAT_ND);
+    at::Tensor format_pse = pse.has_value() ? npu_preparation::CastToFormat(pse.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_drop_mask = npu_preparation::CastToFormat(drop_mask.value(), ACL_FORMAT_ND);
+    at::Tensor format_padding_mask = padding_mask.has_value() ? npu_preparation::CastToFormat(padding_mask.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_atten_mask = atten_mask.has_value() ? npu_preparation::CastToFormat(atten_mask.value(), ACL_FORMAT_ND) : at::Tensor();
+    at::Tensor format_sink = sink.has_value() ? npu_preparation::CastToFormat(sink.value(), ACL_FORMAT_ND) : at::Tensor();
+
+    auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    char input_layout_char[LAYOUT_MAX_LENGTH];
+    strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionVarLenScore,
+                format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask,
+                prefixN, ac_seq_qlen, ac_seq_kvlen, scale, keep_prob,
+                pre_tockens, next_tockens, head_num, input_layout_char,
+                inner_precise, sparse_mode, softmax_max, softmax_sum,
+                softmax_out, attention_score);
+        } else {
+            EXEC_NPU_CMD(
+                aclnnFlashAttentionScore,
+                format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask,
+                prefixN, scale, keep_prob, pre_tockens, next_tockens,
+                head_num, input_layout_char, inner_precise, sparse_mode,
+                softmax_max, softmax_sum, softmax_out, attention_score);
+        }
+    } else {
+        TORCH_CHECK(false, "npu_flash_attention_score_v3_out not supported on Ascend950", OPS_ERROR(ErrCode::NOT_SUPPORT));
+    }
+
+    c10_npu::CaptureStatus is_capture = c10_npu::NpuRunMode::isCaptureMode();
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        c10_npu::NPUEvent npu_event;
+        npu_event.record(c10_npu::getCurrentNPUStream());
+        npu_event.block(c10_npu::getCurrentSecondaryStream());
+    }
+
+    return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset);
+}
+
+// 5.b - Get max workspace for split compute interface
+at::Tensor npu_flash_attention_score_v3_get_max_workspace(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    c10::OptionalArrayRef<c10::SymInt> prefix_array;
+    if (prefix.has_value()) {
+        prefix_array = c10::make_optional(c10::asIntArrayRefUnchecked(prefix.value()));
+    }
+    return _npu_fusion_attention_v3_get_max_workspace(
+        query, key, value, head_num, input_layout,
+        prefix_array, actual_seq_qlen, actual_seq_kvlen);
+}
+
+// 5.c - Infer output for split compute interface
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_v3_infer_output(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    return _npu_fusion_attention_v3_infer_output(
+        query, key, value, head_num, input_layout,
+        actual_seq_qlen, actual_seq_kvlen);
+}
+
+
+// ============================================================================
+// FA v3 Backward Split Interfaces for Graph Capture Support (fa.md Chapter 5)
+// ============================================================================
+
+// 5.a - Backward split interface 1: Generate dropout mask separately for grad
+at::Tensor npu_flash_attention_score_grad_v3_gen_mask(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    double keep_prob,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const at::Tensor &seed,
+    const at::Tensor &offset,
+    bool gen_mask_parallel,
+    bool sync)
+{
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    int64_t numels = calculate_numels(
+        query, key, head_num, input_layout_str,
+        at::IntArrayRef{}, at::IntArrayRef{});
+
+    c10_npu::CaptureStatus is_capture = c10_npu::NpuRunMode::isCaptureMode();
+    uint64_t offset_intragraph = 0;
+
+    at::Tensor mask = dropout_gen_mask_tensor_dispatch(
+        query, keep_prob, seed, offset, numels,
+        gen_mask_parallel, sync, is_capture, offset_intragraph);
+
+    return mask;
+}
+
+// 5.b - Backward get_max_workspace
+at::Tensor npu_flash_attention_score_grad_v3_get_max_workspace(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    c10::OptionalArrayRef<c10::SymInt> prefix_array;
+    if (prefix.has_value()) {
+        prefix_array = c10::make_optional(c10::asIntArrayRefUnchecked(prefix.value()));
+    }
+
+    auto prefixN = prefix_array.has_value() ? c10::asIntArrayRefUnchecked(prefix_array.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    // Use dynamic workspace size calculation for backward (typically 1.5x forward)
+    int64_t workspace_size = CalculateWorkspaceSize(
+        query, key, value, head_num, input_layout_str, ac_seq_qlen, ac_seq_kvlen);
+    workspace_size = static_cast<int64_t>(workspace_size * 1.5);  // Backward needs more
+
+    // Limit max workspace
+    const int64_t MAX_WORKSPACE = 64 * 1024 * 1024;
+    workspace_size = std::min(workspace_size, MAX_WORKSPACE);
+    workspace_size = (workspace_size + 127) / 128 * 128;
+
+    ASCEND_LOGI("FA v3 grad workspace calculated: size=%ld bytes", workspace_size);
+
+    at::Tensor workspace = OpPreparation::apply_tensor_without_format(
+        at::IntArrayRef{workspace_size}, query.options().dtype(at::kByte));
+
+    return workspace;
+
+// 5.c - Backward infer output shapes
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_grad_v3_infer_output(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen)
+{
+    at::Tensor dq = torch::empty_like(query);
+    at::Tensor dk = torch::empty_like(key);
+    at::Tensor dv = torch::empty_like(value);
+
+    at::Tensor dpse = at::empty({0}, query.options());
+    at::Tensor dsink = at::empty({0}, query.options().dtype(at::kFloat));
+
+    return std::make_tuple(dq, dk, dv, dpse, dsink);
+}
+
+// 5.c - Backward pure computation (non-out version)
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_grad_v3(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &dy, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &drop_mask,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value, double keep_prob, int64_t pre_tockens, int64_t next_tockens,
+    int64_t inner_precise, c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &seed,
+    const c10::optional<at::Tensor> &offset,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
+{
+    at::Tensor dq, dk, dv, dpse, dsink;
+    std::tie(dq, dk, dv, dpse, dsink) = npu_flash_attention_score_grad_v3_infer_output(
+        query, key, value, head_num, input_layout, actual_seq_qlen, actual_seq_kvlen);
+
+    at::Tensor workspace = npu_flash_attention_score_grad_v3_get_max_workspace(
+        query, key, value, head_num, input_layout, prefix, actual_seq_qlen, actual_seq_kvlen);
+
+    return npu_flash_attention_score_grad_v3_out(
+        query, key, value, dy, head_num, input_layout,
+        pse, drop_mask, padding_mask, atten_mask,
+        softmax_max, softmax_sum, softmax_in, attention_in,
+        scale_value, keep_prob, pre_tockens, next_tockens, inner_precise,
+        prefix, seed, offset, actual_seq_qlen, actual_seq_kvlen, sparse_mode,
+        gen_mask_parallel, sync, softmax_layout, sink,
+        workspace, dq, dk, dv, dpse, dsink);
+}
+
+// 5.c - Backward out version for update mechanism
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+npu_flash_attention_score_grad_v3_out(
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+    const at::Tensor &dy, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &drop_mask,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value, double keep_prob, int64_t pre_tockens, int64_t next_tockens,
+    int64_t inner_precise, c10::OptionalArrayRef<c10::SymInt> prefix,
+    const c10::optional<at::Tensor> &seed,
+    const c10::optional<at::Tensor> &offset,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink,
+    at::Tensor &workspace,
+    at::Tensor &dq, at::Tensor &dk, at::Tensor &dv,
+    at::Tensor &dpse, at::Tensor &dsink)
+{
+    TORCH_CHECK(dq.defined(), "dq must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dk.defined(), "dk must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dv.defined(), "dv must be pre-allocated", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(drop_mask.has_value() && drop_mask->defined(),
+        "drop_mask must be provided for npu_flash_attention_score_grad_v3_out", OPS_ERROR(ErrCode::PARAM));
+
+    auto prefixN = prefix.has_value() ? c10::asIntArrayRefUnchecked(prefix.value()) : at::IntArrayRef{};
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRefOptimized(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRefOptimized(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+
+    return npu_fusion_attention_backward_v3(
+        query, key, value, dy, head_num, input_layout_str,
+        pse, drop_mask, padding_mask, atten_mask,
+        softmax_max, softmax_sum, softmax_in, attention_in,
+        scale_value, keep_prob, pre_tockens, next_tockens, inner_precise,
+        seed, offset, prefixN, ac_seq_qlen, ac_seq_kvlen, sparse_mode,
+        softmax_layout, sink);
+}
+#endif
