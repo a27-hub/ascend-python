@@ -6167,7 +6167,7 @@ custom:
     op_api: all_version
     exposed: all_version
 
-  - func: npu_kv_quant_sparse_flash_attention_metadata(int num_heads_q, int num_heads_kv, int head_dim, int kv_quant_mode, *, Tensor? cu_seqlens_q=None, Tensor? cu_seqlens_kv=None, Tensor? seqused_q=None, Tensor? seqused_kv=None, Tensor? topk_length=None, int batch_size=0, int max_seqlen_q=0, int max_seqlen_kv=0, int topk=0, int tile_size=0, int rope_head_dim=0, int mask_mode=0, int win_left=0, int win_right=0, str layout_q="BSND", str layout_kv="PA_BNBD") -> Tensor
+  - func: npu_kv_quant_sparse_flash_attention_metadata(int num_heads_q, int num_heads_kv, int head_dim, int key_quant_mode, int value_quant_mode, *, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int batch_size=0, int max_seqlen_q=0, int max_seqlen_kv=0, int topk=0, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64) -> Tensor
     op_api: all_version
     exposed: all_version
 

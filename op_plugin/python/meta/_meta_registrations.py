@@ -2076,15 +2076,13 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 @impl(m, "npu_kv_quant_sparse_flash_attention_metadata")
-def npu_kv_quant_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, kv_quant_mode, *, 
-                                                         cu_seqlens_q = None, cu_seqlens_kv = None, seqused_q = None, 
-                                                         seqused_kv = None, topk_length = None, batch_size = None, 
-                                                         max_seqlen_q = None, max_seqlen_kv = None, topk = None, 
-                                                         tile_size = None, rope_head_dim = None, mask_mode = None, 
-                                                         win_left = None, win_right = None, layout_q = None, 
-                                                         layout_kv = None):
+def npu_kv_quant_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, key_quant_mode, value_quant_mode, *, 
+                                                         actual_seq_lengths_query = None, actual_seq_lengths_kv = None, batch_size = None, 
+                                                         max_seqlen_q = None, max_seqlen_kv = None, topk = None, sparse_block_size = None, 
+                                                         layout_query = None, layout_kv = None, sparse_mode = None, 
+                                                         pre_tokens = None, next_tokens = None, attention_mode = None, quant_scale_repo_mode = None, tile_size = None, rope_head_dim = None):
     
-    require_param = {"num_heads_q": num_heads_q, "num_heads_kv": num_heads_kv, "head_dim": head_dim, "kv_quant_mode": kv_quant_mode}
+    require_param = {"num_heads_q": num_heads_q, "num_heads_kv": num_heads_kv, "head_dim": head_dim, "key_quant_mode": key_quant_mode, "value_quant_mode": value_quant_mode}
 
     for item_name, item in require_param.items():
         torch._check(
