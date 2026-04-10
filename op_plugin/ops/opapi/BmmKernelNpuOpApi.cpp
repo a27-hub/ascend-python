@@ -108,10 +108,6 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
 {
     TORCH_CHECK(self.dim() == 3, "self must be a 3D tensor");
     TORCH_CHECK(mat2.dim() == 3, "mat2 must be a 3D tensor");
-    auto output_type = output_dtype.value_or(self.scalar_type());
-    TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
-                "bmm only supports torch.float32 when output_dtype is specified",
-                OPS_ERROR(ErrCode::TYPE));
 
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
 
