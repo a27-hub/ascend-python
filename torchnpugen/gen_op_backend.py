@@ -5,6 +5,54 @@ from torchnpugen.gen import parse_native_yaml, FileManager
 from torchnpugen.op_codegen_utils import concatMap, PathManager
 
 
+OUTPUT_DTYPE_COMPAT_DECLARATIONS = [
+    "TORCH_NPU_API at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2);",
+    "TORCH_NPU_API at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out);",
+    "TORCH_NPU_API at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2);",
+    "TORCH_NPU_API at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out);",
+    "TORCH_NPU_API at::Tensor addmm(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, "
+    "const at::Scalar &beta, const at::Scalar &alpha);",
+    "TORCH_NPU_API at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2, "
+    "const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &out);",
+]
+
+
+OUTPUT_DTYPE_COMPAT_DEFINITIONS = [
+    """at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
+{
+    return bmm(self, mat2, c10::nullopt);
+}
+""",
+    """at::Tensor &bmm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out)
+{
+    return bmm_out(self, mat2, c10::nullopt, out);
+}
+""",
+    """at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
+{
+    return mm(self, mat2, c10::nullopt);
+}
+""",
+    """at::Tensor &mm_out(const at::Tensor &self, const at::Tensor &mat2, at::Tensor &out)
+{
+    return mm_out(self, mat2, c10::nullopt, out);
+}
+""",
+    """at::Tensor addmm(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2,
+                 const at::Scalar &beta, const at::Scalar &alpha)
+{
+    return addmm(self, mat1, mat2, c10::nullopt, beta, alpha);
+}
+""",
+    """at::Tensor &addmm_out(const at::Tensor &self, const at::Tensor &mat1, const at::Tensor &mat2,
+                       const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &out)
+{
+    return addmm_out(self, mat1, mat2, c10::nullopt, beta, alpha, out);
+}
+""",
+]
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(description='Generate backend stub files')
@@ -53,6 +101,7 @@ def main() -> None:
 
     all_functions = sorted(set(concatMap(lambda f: [f],
                                          set(v for sublist in backend_declarations.values() for v in sublist))))
+    all_functions.extend(OUTPUT_DTYPE_COMPAT_DECLARATIONS)
 
     fm.write_with_template(
         "OpInterface.h",
@@ -111,7 +160,7 @@ def main() -> None:
         "OpInterface.cpp",
         lambda: {
             "namespace": "op_plugin",
-            "declarations": dispatch_registrations_body,
+            "declarations": dispatch_registrations_body + OUTPUT_DTYPE_COMPAT_DEFINITIONS,
             "includes_block": includes_block,
         },
     )
