@@ -9,7 +9,7 @@ class TestPadPackedSequence(TestCase):
         data = torch.tensor([4, 1, 3, 5, 2, 6, 2, 3, 2], dtype=torch.float32)
         batch_sizes = torch.tensor([3, 3, 3], dtype=torch.int64)
         cpu_out, cpu_lengths = torch._pad_packed_sequence(data, batch_sizes, False, 0, 3)
-        npu_out, npu_lengths = torch._pad_packed_sequence(data.npu(), batch_sizes, False, 0, 6)
+        npu_out, npu_lengths = torch._pad_packed_sequence(data.npu(), batch_sizes, False, 0, 3)
         self.assertRtolEqual(cpu_out, npu_out.cpu())
         self.assertRtolEqual(cpu_lengths, npu_lengths.cpu())
 
@@ -17,7 +17,7 @@ class TestPadPackedSequence(TestCase):
         data = torch.tensor([4, 1, 3, 5, 2, 6, 2, 3, 2], dtype=torch.float16)
         batch_sizes = torch.tensor([3, 3, 3], dtype=torch.int64)
         cpu_out, cpu_lengths = torch._pad_packed_sequence(data, batch_sizes, False, 0, 3)
-        npu_out, npu_lengths = torch._pad_packed_sequence(data.npu(), batch_sizes, False, 0, 6)
+        npu_out, npu_lengths = torch._pad_packed_sequence(data.npu(), batch_sizes, False, 0, 3)
         self.assertRtolEqual(cpu_out, npu_out.cpu())
         self.assertRtolEqual(cpu_lengths, npu_lengths.cpu())
 
