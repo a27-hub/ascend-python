@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/record_function.h>
 #include "op_plugin/DvmOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
@@ -370,6 +371,7 @@ at::Tensor MatMul(const at::Tensor &x_tensor, const at::Tensor &y_tensor, bool t
 
 template <typename... Args>
 void DumpOp(const std::string &op_name, const Args &...inputs) {
+  RECORD_FUNCTION(std::string("Dvm::") + op_name, {});
   if (g_lazy_fusion_manager.flags_.dump_as_text) {
     auto k = g_lazy_fusion_manager.Get();
     k->DumpOp(op_name, inputs...);
