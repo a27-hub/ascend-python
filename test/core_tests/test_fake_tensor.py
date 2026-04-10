@@ -4942,6 +4942,106 @@ class TestNpuDSA(TestCase):
             self.assertEqual(loss.dtype, expect_loss.dtype)
             self.assertEqual(loss.shape, expect_loss.shape)
 
+class TestSparseFlashAttentionPioneer(TestCase):
+    def setup_sparse_flash_attention_pioneer_test_params(self, requires_grad=False, return_softmax_lse=False):
+        scale_value = 0.041666666666666664
+        sparse_block_size = 1
+        query_type = torch.float16
+        sparse_block_count = 2048
+        t = 10
+        b = 4
+        s1 = 1
+        s2 = 8192
+        n1 = 128
+        n2 = 1
+        dn = 512
+        dr = 64
+        tile_size = 128
+        block_size = 256
+        s2_act = 4096
+        attention_mode = 2
+
+        layout = 'BSND'
+        sparse_mode = 3
+
+        query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
+        key = torch.tensor(np.random.uniform(-5, 10, (b, s2, n2, dn))).to(query_type)
+        value = key.clone()
+        idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
+        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count).to(torch.int32)
+        query_rope = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dr))).to(query_type)
+        key_rope = torch.tensor(np.random.uniform(-10, 10, (b, s2, n2, dr))).to(query_type)
+        act_seq_q = [s1] * b
+        act_seq_kv = [s2_act] * b
+        act_seq_q = torch.tensor(act_seq_q).to(torch.int32)
+        act_seq_kv = torch.tensor(act_seq_kv).to(torch.int32)
+
+        query_npu = query.npu()
+        key_npu = key.npu()
+        value_npu = value.npu()
+        sparse_indices_npu = sparse_indices.npu()
+        query_rope_npu = query_rope.npu()
+        key_rope_npu = key_rope.npu()
+        act_seq_q_npu = act_seq_q.npu()
+        act_seq_kv_npu = act_seq_kv.npu()
+
+        if requires_grad:
+            query_npu.requires_grad = True
+            key_npu.requires_grad = True
+            value_npu.requires_grad = True
+            query_rope_npu.requires_grad = True
+            key_rope_npu.requires_grad = True
+
+        params = {
+            'query': query_npu,
+            'key': key_npu,
+            'value': value_npu,
+            'sparse_indices': sparse_indices_npu,
+            'query_rope': query_rope_npu,
+            'key_rope': key_rope_npu,
+            'act_seq_q': act_seq_q_npu,
+            'act_seq_kv': act_seq_kv_npu,
+            'scale_value': scale_value,
+            'sparse_block_size': sparse_block_size,
+            'layout': layout,
+            'sparse_mode': sparse_mode,
+            'attention_mode': attention_mode,
+            'return_softmax_lse': return_softmax_lse
+        }
+        return params
+
+    def call_npu_sparse_flash_attention_pioneer(self, params):
+        return torch_npu._npu_sparse_flash_attention_pioneer(
+            params['query'], params['key'], params['value'], params['sparse_indices'], params['scale_value'],
+            block_table=None, actual_seq_lengths_query=params['act_seq_q'], actual_seq_lengths_kv=params['act_seq_kv'],
+            query_rope=params['query_rope'], key_rope=params['key_rope'], sparse_block_size=params['sparse_block_size'],
+            layout_query=params['layout'], layout_kv=params['layout'], sparse_mode=params['sparse_mode'],
+            pre_tokens=(1<<63)-1, next_tokens=(1<<63)-1, attention_mode = params['attention_mode'],
+            return_softmax_lse = params['return_softmax_lse'])
+
+    def test_dsa_npu_sparse_flash_attention_pioneer(self):
+        with FakeTensorMode():
+            params = self.setup_sparse_flash_attention_pioneer_test_params()
+            npu_out, npu_softmax_max, npu_softmax_sum = self.call_npu_sparse_flash_attention_pioneer(params)
+
+            query = params['query']
+            key = params['key']
+
+            expect_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype)
+            expect_softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
+                                             dtype=torch.float32)
+            expect_softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)],
+                                             dtype=torch.float32)
+
+            self.assertEqual(npu_out.dtype, expect_out.dtype)
+            self.assertEqual(npu_out.shape, expect_out.shape)
+
+            if params['return_softmax_lse']:
+                self.assertEqual(npu_softmax_max.dtype, expect_softmax_max.dtype)
+                self.assertEqual(npu_softmax_max.shape, expect_softmax_max.shape)
+                self.assertEqual(npu_softmax_sum.dtype, expect_softmax_sum.dtype)
+                self.assertEqual(npu_softmax_sum.shape, expect_softmax_sum.shape)
+
 class TestNpuConv2d(TestCase):
     def test_npu_conv2d_meta_0(self):
         with FakeTensorMode():
