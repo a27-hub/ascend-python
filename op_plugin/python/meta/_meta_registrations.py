@@ -320,6 +320,72 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
     return (attention_out, softmax_max, softmax_sum)
 
 
+@impl(m, "_npu_sparse_flash_attention_pioneer")
+def _npu_sparse_flash_attention_pioneer_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
+                                         actual_seq_lengths_query=None, actual_seq_lengths_kv=None, key_sink=None,
+                                         value_sink=None, query_rope=None, key_rope=None, sparse_block_size=1,
+                                         layout_query="BSND", layout_kv="BSND", sparse_mode=3, pre_tokens=(1 << 63) - 1,
+                                         next_tokens=(1 << 63) - 1, attention_mode=0, return_softmax_lse=False):
+    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+
+    torch._check(
+        query.numel() > 0,
+        lambda: "Input query should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        key.numel() > 0,
+        lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        value.numel() > 0,
+        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        sparse_indices.numel() > 0,
+        lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        not return_softmax_lse,
+        lambda: "when return_softmax_lse is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
+    )
+
+    if layout_query == "TND":
+        torch._check(
+            query.dim() == 3,
+            lambda: "When the layout of query is TND, the query dimension must be 3, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2)], dtype=query.dtype, device='meta')
+    elif layout_query == "BSND":
+        torch._check(
+            query.dim() == 4,
+            lambda: "When the layout of query is BSND, the query dimension must be 4, but got " + str(query.dim()) + ops_error(ErrCode.VALUE),
+        )
+        attention_out = torch.empty([query.size(0), query.size(1), query.size(2), query.size(3)], dtype=query.dtype, device='meta')
+    else:
+        torch._check(
+            False,
+            lambda: "Not support layout of query: " + layout_query + ops_error(ErrCode.VALUE),
+        )
+
+    if return_softmax_lse:
+        if layout_query == "TND":
+            softmax_max = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([key.size(1), query.size(0), query.size(1) // key.size(1)], dtype=torch.float32, device='meta')
+        if layout_query == "BSND":
+            softmax_max = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+            softmax_sum = torch.empty([query.size(0), key.size(2), query.size(1), query.size(2) // key.size(2)], dtype=torch.float32, device='meta')
+    else:
+        softmax_max = torch.empty([0], dtype=torch.float32, device='meta')
+        softmax_sum = torch.empty([0], dtype=torch.float32, device='meta') 
+    return (attention_out, softmax_max, softmax_sum)
+
+
 @impl(m, "npu_sparse_flash_attention_grad")
 def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_out, out, softmax_max, softmax_sum, scale_value, sparse_block_size, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None, layout="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0):
     d_query = query.new_empty(query.shape, dtype=query.dtype, device='meta')
