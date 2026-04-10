@@ -12,6 +12,7 @@
 // limitations under the License.
 
 #include "op_plugin/ops/dvm/lazy_fusion_kernel.h"
+#include <algorithm>
 #include <linux/limits.h>
 #include <sys/stat.h>
 #include <fstream>
@@ -147,17 +148,6 @@ class LazyFusionDump {
   std::string dump_dir_;
 };
 
-bool EqualShape(dvm::ShapeRef *shape1, c10::IntArrayRef shape2) {
-  if (shape1->size != shape2.size()) {
-    return false;
-  }
-  for (size_t i = 0; i < shape1->size; ++i) {
-    if (shape1->data[i] != shape2[i]) {
-      return false;
-    }
-  }
-  return true;
-}
 }  // namespace
 
 Manager g_lazy_fusion_manager;
@@ -195,19 +185,117 @@ LazyFusionKernel::~LazyFusionKernel() {
   for (auto s : cached_shape_) {
     delete s;
   }
-  for (auto op : ops_map_) {
+  for (auto op : dvm_ops_) {
     delete op;
   }
 }
 
-void LazyFusionKernel::CacheDvmOp(torch_npu::NPUStorageImpl *storage, dvm::NDObject *obj, int64_t storage_offset) {
-  if (ops_map_used_ == ops_map_.size()) {
-    ops_map_.push_back(new DvmOp());
+void LazyFusionKernel::CacheTensorMeta(TensorMeta *meta, const at::Tensor &tensor) {
+  meta->tensor_impl = tensor.unsafeGetTensorImpl();
+  meta->data_ptr = tensor.data_ptr();
+  meta->storage_offset = tensor.storage_offset();
+  meta->dtype = tensor.scalar_type();
+  meta->dim = tensor.dim();
+  meta->sizes.resize(meta->dim);
+  meta->strides.resize(meta->dim);
+  for (size_t i = 0; i < meta->sizes.size(); ++i) {
+    meta->sizes[i] = tensor.size(i);
+    meta->strides[i] = tensor.stride(i);
   }
-  auto p = ops_map_[ops_map_used_++];
+}
+
+// Exact-match reuse intentionally includes shape/stride metadata so sibling views
+// that share one storage do not reuse the wrong NDObject.
+bool LazyFusionKernel::MatchTensorMeta(const TensorMeta &meta, const at::Tensor &tensor) {
+  auto dim = tensor.dim();
+  if (meta.tensor_impl != tensor.unsafeGetTensorImpl() || meta.data_ptr != tensor.data_ptr() ||
+      meta.storage_offset != tensor.storage_offset() || meta.dtype != tensor.scalar_type() || meta.dim != dim) {
+    return false;
+  }
+  for (size_t i = 0; i < meta.sizes.size(); ++i) {
+    if (meta.sizes[i] != tensor.size(i) || meta.strides[i] != tensor.stride(i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// `shape` may override the tensor's physical sizes for broadcast-like DVM inputs.
+// The issue is not inside one op call itself, but across later reuse in the same
+// pending fusion. For example:
+//   y0 = batch_norm_elemt(x, weight, bias, mean, invstd, eps)
+//   y1 = add(mean, other)
+//
+// batch_norm_elemt feeds `mean` to DVM as [1, C, 1, 1] through new_shape_ref,
+// while `mean.sizes()` is still [C]. Because batch_norm_elemt does not flush at
+// the end, a later fused add(mean, other) may try to reuse the cached NDObject
+// for `mean`. If reuse only compares at::Tensor::sizes(), the [1, C, 1, 1]
+// version could be wrongly reused when add expects [C], and the later DVM
+// shape/broadcast inference would be wrong.
+void LazyFusionKernel::CacheDvmShape(DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape) {
+  auto req_shape = shape != nullptr ? c10::IntArrayRef(shape->data, shape->size) : default_shape;
+  dvm_op->dvm_shape.resize(req_shape.size());
+  for (size_t i = 0; i < req_shape.size(); ++i) {
+    dvm_op->dvm_shape[i] = req_shape[i];
+  }
+}
+
+bool LazyFusionKernel::MatchDvmShape(const DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape) {
+  auto req_shape = shape != nullptr ? c10::IntArrayRef(shape->data, shape->size) : default_shape;
+  if (dvm_op->dvm_shape.size() != req_shape.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < req_shape.size(); ++i) {
+    if (dvm_op->dvm_shape[i] != req_shape[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool LazyFusionKernel::MatchDvmOp(const DvmOp *dvm_op, const at::Tensor &tensor, dvm::ShapeRef *shape) {
+  return MatchTensorMeta(dvm_op->tensor_meta, tensor) && MatchDvmShape(dvm_op, shape, tensor.sizes());
+}
+
+void LazyFusionKernel::CacheDvmOp(torch_npu::NPUStorageImpl *storage, const at::Tensor &tensor, const TensorMeta *tensor_meta,
+                                  dvm::NDObject *obj, dvm::ShapeRef *shape, bool reloadable_from_gm) {
+  if (dvm_ops_used_ == dvm_ops_.size()) {
+    dvm_ops_.push_back(new DvmOp());
+  }
+  auto p = dvm_ops_[dvm_ops_used_++];
   p->op = obj;
-  p->storage_offset = storage_offset;
+  if (tensor_meta != nullptr) {
+    p->tensor_meta = *tensor_meta;
+  } else {
+    CacheTensorMeta(&(p->tensor_meta), tensor);
+  }
+  CacheDvmShape(p, shape, tensor.sizes());
+  p->reloadable_from_gm = reloadable_from_gm;
   storage->dvm_op_ = p;
+}
+
+// Input-side flush is decided before graph mutation; by the time Input() runs,
+// a non-reloadable alias miss should already have forced a flush.
+bool LazyFusionKernel::NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *shape) const {
+  auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(x);
+  if (storage->dvm_op_ == nullptr) {
+    return false;
+  }
+  auto dvm_op = static_cast<DvmOp *>(storage->dvm_op_);
+  if (dvm_op->reloadable_from_gm) {
+    return false;
+  }
+  return !MatchDvmOp(dvm_op, x, shape);
+}
+
+// Writable tensors are even stricter: anything other than the exact same tensor
+// is conservatively flushed to avoid aliasing/overlap write hazards.
+bool LazyFusionKernel::NeedFlushForWritableOutput(const at::Tensor &tensor) const {
+  auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(tensor);
+  if (storage->dvm_op_ == nullptr) {
+    return false;
+  }
+  return !MatchDvmOp(static_cast<DvmOp *>(storage->dvm_op_), tensor, nullptr);
 }
 
 dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dvm::ShapeRef *shape) {
@@ -216,13 +304,14 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(x);
   if (storage->dvm_op_ != nullptr) {
     auto dvm_op = static_cast<DvmOp *>(storage->dvm_op_);
-    auto op = dvm_op->op;
-    if (dvm_op->storage_offset == x.storage_offset() && EqualShape(dvm::Kernel::GetShape(op), x.sizes())) {
+    if (MatchDvmOp(dvm_op, x, shape)) {
+      auto op = dvm_op->op;
       if (cast_to_fp32) {
         op = Cast(op, dvm::DType::kFloat32);
       }
       return op;
     }
+    TORCH_INTERNAL_ASSERT(dvm_op->reloadable_from_gm, "non-reloadable dvm input alias must flush before Input");
   }
   if (input_used_ == inputs_.size()) {
     inputs_.push_back(new Load());
@@ -240,7 +329,7 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   if (DumpEnabled()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
-  CacheDvmOp(storage, load_op, x.storage_offset());
+  CacheDvmOp(storage, x, nullptr, load_op, &(load->shape), true);
   return cast_to_fp32 ? Cast(load_op, dvm::DType::kFloat32) : load_op;
 }
 
@@ -250,22 +339,25 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
     obj = Cast(obj, tensor_type);
   }
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(tensor);
-  auto data_ptr = tensor.data_ptr();
   if (inplace && storage->dvm_op_ != nullptr) {
-    auto nbytes = tensor.nbytes();
+    // %0 = Mul(p0, p1)
+    // %1 = InplaceAddExt(%0, p2, 1)
+    // here Inplace op's first input come from another op, should not emit Store for %0,
+    // 2 Store with overlapped GM address will cause precision issue in DVM.
     for (int64_t i = static_cast<int64_t>(outputs_.size()) - 1; i >= 0; --i) {
       auto idx = static_cast<size_t>(i);
-      if (outputs_[idx].data_ptr == data_ptr && nbytes >= outputs_[idx].nbytes) {
+      if (MatchTensorMeta(outputs_[idx].tensor_meta, tensor)) {
         outputs_[idx].skip = true;
         break;
       }
     }
   }
-  auto &store = outputs_.emplace_back(obj, data_ptr, inplace, tensor);
+  auto &store = outputs_.emplace_back(obj, inplace, tensor);
+  CacheTensorMeta(&(store.tensor_meta), tensor);
   if (DumpEnabled()) {
     dump_buf_ << "%" << (outputs_.size() - 1) << ": " << ToString(tensor) << "\n";
   }
-  CacheDvmOp(storage, obj, tensor.storage_offset());
+  CacheDvmOp(storage, tensor, &(store.tensor_meta), obj, nullptr, false);
 }
 
 void *LazyFusionKernel::Alloc(size_t size) {
@@ -293,15 +385,11 @@ void LazyFusionKernel::Flush() {
     if (out.skip) {
       continue;
     }
-    auto p = out.storage.lock();
-    if (p) {
-      auto storage = static_cast<torch_npu::NPUStorageImpl *>(p.get());
-      storage->dvm_op_ = nullptr;
-    } else {
+    if (!out.storage.lock()) {
       out.skip = true;
       continue;
     }
-    auto store = dvm::Kernel::Store(out.data_ptr, out.op);
+    auto store = dvm::Kernel::Store(out.tensor_meta.data_ptr, out.op);
     if (out.inplace) {
       dvm::Kernel::SetStoreInplace(store);
     }
@@ -377,6 +465,7 @@ std::string LazyFusionKernel::ToString(const at::Tensor &t) {
     ss << "value=" << ToString(t.item()) << " ";
   }
   ss << "strides=" << t.strides() << " is_contiguous=" << t.is_contiguous();
+  ss << " tensor_impl=" << t.unsafeGetTensorImpl();
   auto impl = t.storage().unsafeGetStorageImpl();
   if (impl != nullptr) {
     auto ptr = static_cast<torch_npu::NPUStorageImpl *>(impl);
@@ -398,7 +487,7 @@ std::string LazyFusionKernel::ToString(const at::Tensor &t, bool verbose) {
     }
   }
   for (size_t i = 0; i < outputs_.size(); ++i) {
-    if (outputs_[i].data_ptr == data_addr) {
+    if (outputs_[i].tensor_meta.data_ptr == data_addr) {
       return "%" + std::to_string(i);
     }
   }

@@ -49,6 +49,90 @@ bool GetScalarValue(const at::Scalar &scalar, float *v) {
   return true;
 }
 
+// Call this for every tensor that the current fused op reads through k->Input(...),
+// unless the op entry already does an unconditional LazyFusionFlush() before any
+// graph mutation. The helper checks whether the cached dvm_op_ still represents
+// the exact same tensor metadata + logical DVM shape, or whether the old value
+// was only a fusion value that can no longer be rebuilt safely from GM.
+//
+// Typical cases that should call PrepareFusionInput:
+//   - normal read-only inputs of unary/binary/reduce ops
+//   - tensors reused across fused ops with a different logical DVM shape
+//   - tensors that may hide an unseen view/as_strided/set_ between two captured ops
+//
+// Typical cases that do not need it:
+//   - entries like MatMul / batch_norm_* that unconditionally flush first and
+//     then start a brand new fusion graph
+//
+// Example:
+//   x0 = torch.linspace(-400, 399, steps=800, dtype=torch.float16).reshape(4, 200).npu()
+//   y0 = abs(x0)
+//   y1 = y0[0, :]
+//   y2 = add(y0, y1)  // need flush before this op
+//
+// PTA only sees abs/add here. When add asks for y1, the cached dvm_op_ points
+// to y0's fusion value, but the slice view between them is invisible in this repo
+// and cannot be rebuilt from GM. The flush must happen before add starts building,
+// otherwise Input(y1) would hit a non-reloadable alias miss after the current op
+// has already mutated the DVM graph.
+void PrepareFusionInput(const at::Tensor &tensor) {
+  if (tensor.defined() && torch_npu::utils::is_npu(tensor) && g_lazy_fusion_manager.NeedFlushForInput(tensor)) {
+    LazyFusionFlush();
+  }
+}
+
+void PrepareFusionInput(const c10::optional<at::Tensor> &tensor) {
+  if (tensor.has_value()) {
+    PrepareFusionInput(tensor.value());
+  }
+}
+
+void PrepareFusionInput(at::TensorList tensors) {
+  for (const auto &tensor : tensors) {
+    PrepareFusionInput(tensor);
+  }
+}
+
+template <typename... Args>
+void PrepareFusionInputs(const Args &... inputs) {
+  (PrepareFusionInput(inputs), ...);
+}
+
+// Call this for every tensor that the current op may overwrite in place through
+// k->Output(tensor, ..., true) or an out= style writable output. Writable tensors
+// are stricter than read-only inputs: anything other than the exact same tensor
+// metadata is conservatively flushed before the current op is added to the graph.
+//
+// Typical cases that should call PrepareWritableOutput:
+//   - inplace ops such as add_, mul_, exp_, _foreach_sqrt_
+//   - out= variants that write into a user-provided tensor
+//
+// Typical cases that do not need it:
+//   - ops that return a freshly allocated tensor through k->Output(obj, shape, options)
+//   - entries that already flush unconditionally before they start building a graph
+//
+// Example:
+//   y0 = mul(x0, x1)
+//   y1 = y0[100:200]
+//   y2 = inplace_add(y0, x2)  // need flush before this op
+//
+// The write target y0 shares storage with another in-flight fusion value through
+// a non-exact alias chain. If inplace_add is built without flushing, the old store
+// and the new inplace store may overlap in GM and trigger the precision issue seen
+// in DVM. The flush must happen before the inplace op is emitted, not later in
+// Output(), because by then the current op has already been appended to the graph.
+void PrepareWritableOutput(const at::Tensor &tensor) {
+  if (tensor.defined() && torch_npu::utils::is_npu(tensor) && g_lazy_fusion_manager.NeedFlushForWritableOutput(tensor)) {
+    LazyFusionFlush();
+  }
+}
+
+void PrepareWritableOutput(at::TensorList tensors) {
+  for (const auto &tensor : tensors) {
+    PrepareWritableOutput(tensor);
+  }
+}
+
 bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor *out = nullptr) {
   if (!InputCheck(self, IsFloatIntType) || !InputCheck(other, IsFloatIntType)) {
     return false;
@@ -69,10 +153,12 @@ bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
   } else {
     return false;
   }
-  auto k = g_lazy_fusion_manager.Get();
   if (out == nullptr) {
+    PrepareWritableOutput(self);
     at_npu::native::OpPreparation::check_memory({self, other}, {self});
   }
+  PrepareFusionInputs(self, other);
+  auto k = g_lazy_fusion_manager.Get();
   auto result_type = at::native::result_type(self, other);
   auto compute_type = result_type == at::ScalarType::BFloat16 ? dvm::DType::kFloat32 : k->TransType(result_type);
   auto self_obj = k->Input(self);
@@ -109,10 +195,12 @@ bool Sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
   } else {
     return false;
   }
-  auto k = g_lazy_fusion_manager.Get();
   if (out == nullptr) {
+    PrepareWritableOutput(self);
     at_npu::native::OpPreparation::check_memory({self, other}, {self});
   }
+  PrepareFusionInputs(self, other);
+  auto k = g_lazy_fusion_manager.Get();
   auto result_type = at::native::result_type(self, other);
   auto compute_type = (result_type == at::ScalarType::BFloat16 || cast_fp32) ? dvm::DType::kFloat32 : k->TransType(result_type);
   auto self_obj = k->Input(self);
@@ -151,6 +239,10 @@ bool BinaryScalar(const at::Tensor &self, const at::Scalar &other, dvm::BinaryOp
   } else {
     return false;
   }
+  if (out == nullptr) {
+    PrepareWritableOutput(self);
+  }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto result_type = at::native::result_type(self, other);
   auto compute_type = result_type == at::ScalarType::BFloat16 ? dvm::DType::kFloat32 : k->TransType(result_type);
@@ -176,6 +268,10 @@ bool BinaryTensor(const at::Tensor &self, const at::Tensor &other, dvm::BinaryOp
   } else if (!InputCheck(self, type_check) || !InputCheck(other, type_check)) {
     return false;
   }
+  if (out == nullptr) {
+    PrepareWritableOutput(self);
+  }
+  PrepareFusionInputs(self, other);
   auto k = g_lazy_fusion_manager.Get();
   auto self_obj = k->Input(self);
   auto other_obj = k->Input(other);
@@ -208,6 +304,7 @@ bool ForeachBinaryScalar(at::TensorList self, const at::Scalar& scalar, dvm::Bin
   if (!GetScalarValue(scalar, &scalar_value)) {
     return false;
   }
+  PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < self.size(); ++i) {
     auto out_obj = k->Binary(op_type, k->Input(self[i]), scalar_value);
@@ -226,6 +323,7 @@ bool ForeachBinaryScalar(at::TensorList self, at::ArrayRef<at::Scalar> scalars, 
       return false;
     }
   }
+  PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < self.size(); ++i) {
     auto out_obj = k->Binary(op_type, k->Input(self[i]), scalar_values[i]);
@@ -246,6 +344,8 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
       return false;
     }
   }
+  PrepareWritableOutput(input);
+  PrepareFusionInputs(tensors1, tensors2);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < input.size(); ++i) {
     auto t1 = k->Input(input[i]);
@@ -274,6 +374,8 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
       return false;
     }
   }
+  PrepareWritableOutput(input);
+  PrepareFusionInputs(tensors1, tensors2);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < input.size(); ++i) {
     auto t1 = k->Input(input[i]);
@@ -385,6 +487,7 @@ at::Tensor _npu_dtype_cast(const at::Tensor & self, at::ScalarType dtype) {
   if (!enable || !InputCheck(self, IsSupportType) || !IsSupportType(dtype)) {
     return op_api::_npu_dtype_cast(self, dtype);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto self_obj = k->Input(self, false);
   auto dst_type = k->TransType(dtype);
@@ -400,6 +503,7 @@ at::Tensor abs(const at::Tensor & self) {
   if (!enable || !InputCheck(self, IsFloatIntType)) {
     return op_api::abs(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Unary<dvm::UnaryType::kAbs>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -412,6 +516,7 @@ at::Tensor neg(const at::Tensor & self) {
   if (!enable || !InputCheck(self, IsFloatIntType)) {
     return op_api::neg(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Binary<dvm::BinaryType::kMul>(k->Input(self), -1.0f);
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -424,6 +529,7 @@ at::Tensor sqrt(const at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::sqrt(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Unary<dvm::UnaryType::kSqrt>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -436,6 +542,7 @@ at::Tensor exp(const at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::exp(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Unary<dvm::UnaryType::kExp>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -448,6 +555,7 @@ at::Tensor & exp_(at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::exp_(self);
   }
+  PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Unary<dvm::UnaryType::kExp>(k->Input(self));
   k->Output(self, out_obj, true);
@@ -461,6 +569,7 @@ at::Tensor reciprocal(const at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::reciprocal(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -736,6 +845,7 @@ at::Tensor sigmoid(const at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::sigmoid(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto input_obj = k->Input(self);
   input_obj = k->Cast(input_obj, dvm::DType::kFloat32);
@@ -753,6 +863,7 @@ at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & o
   if (!enable || !InputCheck(grad_output) || !InputCheck(output) || grad_output.scalar_type() != output.scalar_type()) {
     return op_api::sigmoid_backward(grad_output, output);
   }
+  PrepareFusionInputs(grad_output, output);
   auto k = g_lazy_fusion_manager.Get();
   auto y_obj = k->Input(output);
   auto dy_obj = k->Input(grad_output);
@@ -771,6 +882,8 @@ at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at:
   if (!enable || !InputCheck(self)) {
     return op_api::gelu_out(self, approximate, out);
   }
+  PrepareWritableOutput(out);
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   constexpr float csv_value = 0.044715f;
   constexpr float csv_value_sqrt_eight_div_pi = -1.5957691216057308f;
@@ -794,6 +907,7 @@ at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self
   if (!enable || !InputCheck(grad_output) || !InputCheck(self) || grad_output.scalar_type() != self.scalar_type()) {
     return op_api::gelu_backward(grad_output, self, approximate);
   }
+  PrepareFusionInputs(grad_output, self);
   auto k = g_lazy_fusion_manager.Get();
   constexpr float cs_value = 0.044715f;
   constexpr float cs_sqrt_two_div_pi = 0.7978845608028564f;
@@ -837,6 +951,7 @@ at::Tensor relu(const at::Tensor & self) {
   if (!enable || !InputCheck(self, IsFloatIntType)) {
     return op_api::relu(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto obj = k->Binary<dvm::BinaryType::kMaximum>(k->Input(self), 0.0f);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
@@ -849,6 +964,7 @@ at::Tensor & relu_(at::Tensor & self) {
   if (!enable || !InputCheck(self, IsFloatIntType)) {
     return op_api::relu_(self);
   }
+  PrepareWritableOutput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto out_obj = k->Binary<dvm::BinaryType::kMaximum>(k->Input(self), 0.0f);
   k->Output(self, out_obj, true);
@@ -862,6 +978,7 @@ at::Tensor silu(const at::Tensor & self) {
   if (!enable || !InputCheck(self)) {
     return op_api::silu(self);
   }
+  PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
   auto input_obj = k->Input(self);
   input_obj = k->Cast(input_obj, dvm::DType::kFloat32);
@@ -879,6 +996,7 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
   if (!enable || !InputCheck(grad_output) || !InputCheck(self) || grad_output.scalar_type() != self.scalar_type()) {
     return op_api::silu_backward(grad_output, self);
   }
+  PrepareFusionInputs(grad_output, self);
   auto k = g_lazy_fusion_manager.Get();
   auto dout_obj = k->Input(grad_output);
   auto x_obj = k->Input(self);
@@ -904,6 +1022,7 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
   if (!enable || input.scalar_type() != at::ScalarType::Float) {
     return op_api::batch_norm_stats(input, eps);
   }
+  PrepareFusionInput(input);
   auto ndim = input.dim();
   auto input_shape = input.sizes();
   ShapeVector axis;
@@ -1101,6 +1220,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
   if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
     return op_api::sum(self, dtype);
   }
+  PrepareFusionInput(self);
   ShapeVector axis(self.dim());
   for (int64_t i = 0; i < self.dim(); ++i) {
     axis[i] = i;
@@ -1120,6 +1240,7 @@ at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdi
   if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
     return op_api::sum(self, dim, keepdim, dtype);
   }
+  PrepareFusionInput(self);
   auto dim_value = dim.value_or(at::IntArrayRef{});
   auto ndim = self.dim();
   ShapeVector axis;
@@ -1148,6 +1269,8 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
   if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
     return op_api::sum_out(self, dim, keepdim, dtype, out);
   }
+  PrepareWritableOutput(out);
+  PrepareFusionInput(self);
   auto dim_value = dim.value_or(at::IntArrayRef{});
   auto ndim = self.dim();
   ShapeVector axis;
@@ -1220,6 +1343,7 @@ std::vector<at::Tensor> _foreach_sqrt(at::TensorList tensors) {
       return op_api::_foreach_sqrt(tensors);
     }
   }
+  PrepareFusionInput(tensors);
   auto k = g_lazy_fusion_manager.Get();
   std::vector<at::Tensor> result(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -1242,6 +1366,7 @@ void _foreach_sqrt_(at::TensorList tensors) {
       return;
     }
   }
+  PrepareWritableOutput(tensors);
   auto k = g_lazy_fusion_manager.Get();
   for (size_t i = 0; i < tensors.size(); ++i) {
     auto out_obj = k->Unary<dvm::UnaryType::kSqrt>(k->Input(tensors[i]));
