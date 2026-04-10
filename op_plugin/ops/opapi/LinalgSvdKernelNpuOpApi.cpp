@@ -32,64 +32,20 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
     int64_t n = A.size(-1);
 
     // Handle empty tensor case
-    if (m == 0 || n == 0) {
-        int64_t k = std::min(m, n);
-        auto sizes_s = A.sizes().vec();
-        sizes_s.pop_back();
-        int64_t K_DIM = 2;
-        sizes_s[A.dim() - K_DIM] = k;
-        auto S = at::empty(sizes_s, A.options());
-
-        at::Tensor U, Vh;
-        if (compute_uv) {
-            auto sizes_u = A.sizes().vec();
-            sizes_u[A.dim() - 1] = (!full_matrices) ? k : m;
-            if (full_matrices && m > 0) {
-                U = at::eye(m, A.options()).expand(sizes_u);
-            } else {
-                U = at::empty(sizes_u, A.options());
+    if (A.numel() == 0) {
+        if (compute_uv && full_matrices) {
+            if (U.numel() != 0) {
+                U.zero_();
+                U.diagonal(0, -2, -1).fill_(1.);
             }
-            auto sizes_vh = A.sizes().vec();
-            int64_t N_DIM = 2;
-            sizes_vh[A.dim() - N_DIM] = (!full_matrices) ? k : n;
-            sizes_vh[A.dim() - 1] = (!full_matrices) ? k : n;
-            if (full_matrices && n > 0) {
-                Vh = at::eye(n, A.options()).expand(sizes_vh);
-            } else {
-                Vh = at::empty(sizes_vh, A.options());
+            if (Vh.numel() != 0) {
+                Vh.zero_();
+                Vh.diagonal(0, -2, -1).fill_(1.);
             }
-        } else {
-            U = at::empty({0}, A.options());
-            Vh = at::empty({0}, A.options());
         }
         return std::make_tuple(U, S, Vh);
     }
 
-    int64_t k = std::min(m, n);
-
-    auto sizes_s = A.sizes().vec();
-    sizes_s.pop_back();
-    int64_t K_DIM = 2;
-    sizes_s[A.dim() - K_DIM] = k;
-    auto S = npu_preparation::apply_tensor(A, sizes_s);
-    at::Tensor U;
-    at::Tensor Vh;
-
-    if (compute_uv) {
-        auto sizes_u = A.sizes().vec();
-        sizes_u[A.dim() - 1] = (!full_matrices) ? k : m;
-        U = npu_preparation::apply_tensor(A, sizes_u);
-        auto sizes_vh = A.sizes().vec();
-        int64_t N_DIM = 2;
-        sizes_vh[A.dim() - N_DIM] = n;
-        sizes_vh[A.dim() - 1] = (!full_matrices) ? k : n;
-        Vh = npu_preparation::apply_tensor(A, sizes_vh);
-        int64_t TRANS_DIM = -2;
-        Vh = Vh.transpose(-1, TRANS_DIM);
-    } else {
-        U = at::empty({0}, A.options());
-        Vh = at::empty({0}, A.options());
-    }
     return op_api::_linalg_svd_out(A, full_matrices, compute_uv, driver, U, S, Vh);
 }
 }
