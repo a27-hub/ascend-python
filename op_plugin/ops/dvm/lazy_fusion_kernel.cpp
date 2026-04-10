@@ -286,6 +286,7 @@ void LazyFusionKernel::Flush() {
     Clear();
     return;
   }
+  RECORD_FUNCTION("DvmFlush", {});
   flushed_ = true;
   // Emit Store
   for (auto &out : outputs_) {
@@ -315,6 +316,7 @@ void LazyFusionKernel::Flush() {
 void LazyFusionKernel::ClearRuntimeState() {
   workspace_.clear();
   dvm::Kernel::Clear();
+  dump_buf_.str("");
   flushed_ = false;
   g_lazy_fusion_manager.FreeKernel(this);
 }
@@ -329,10 +331,7 @@ int LazyFusionKernel::CodeGenAndLaunch() {
     dump_buf_ << Dump() << "\n";
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
-  {
-    RECORD_FUNCTION("CodeGen", {});
-    dvm::Kernel::CodeGen(nullptr, 0, this);
-  }
+  dvm::Kernel::CodeGen(nullptr, 0, this);
   if (DumpEnabled()) {
     dump_buf_ << "[lazy_fusion after split]\n";
     dump_buf_ << Dump() << "\n";
