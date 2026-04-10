@@ -26,6 +26,9 @@ constexpr int64_t TND_DIMS = 3;
 constexpr int64_t REMOVE_ONE_DIM = 1;
 constexpr int64_t REMOVE_TWO_DIMS = 2;
 constexpr int64_t ALPHA_NUMEL = 3;
+constexpr int64_t NUM_THREE = 3;
+constexpr int64_t NUM_TWO = 2;
+constexpr int64_t NUM_ONE = 1;
 
 // aclnnMhcPre 依赖 CANN 9.0.0 及以上版本，此次校验避免旧版本环境出现找不到算子的兼容性问题。
 inline void check_mhc_pre_supported()
@@ -35,6 +38,17 @@ inline void check_mhc_pre_supported()
     TORCH_CHECK(
         is_cann_ready && is_aclnn_kernel_available,
         "torch_npu.npu_mhc_pre requires CANN >= 9.0.0 and aclnnMhcPre support. "
+        "Please upgrade CANN.",
+        OPS_ERROR(ErrCode::NOT_SUPPORT));
+}
+
+inline void check_mhc_pre_backward_supported()
+{
+    static const bool is_cann_ready = op_plugin::utils::is_gte_cann_version_900();
+    static const bool is_aclnn_kernel_available = check_aclnn_kernel_available("aclnnMhcPre") && check_aclnn_kernel_available("aclnnMhcPreBackward");
+    TORCH_CHECK(
+        is_cann_ready && is_aclnn_kernel_available,
+        "torch_npu.npu_mhc_pre_backward requires CANN >= 9.0.0, aclnnMhcPre and aclnnMhcPreBackward support. "
         "Please upgrade CANN.",
         OPS_ERROR(ErrCode::NOT_SUPPORT));
 }
@@ -219,15 +233,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
     TORCH_CHECK(x.numel() > 0, "Tensor x is empty.");
     TORCH_CHECK(phi.numel() > 0, "Tensor phi is empty.");
     TORCH_CHECK(alpha.numel() > 0, "Tensor alpha is empty.");
-    TORCH_CHECK(grad_h_in.numel()  > 0, "Tensor grad_h_in dims is empty");
+    TORCH_CHECK(grad_h_in.numel()  > 0, "Tensor grad_h_in is empty");
     TORCH_CHECK(grad_h_post.numel() > 0, "Tensor grad_h_post is empty.");
     TORCH_CHECK(grad_h_res.numel() > 0, "Tensor grad_h_res is empty.");
     TORCH_CHECK(inv_rms.numel() > 0, "Tensor inv_rms is empty.");
     TORCH_CHECK(h_mix.numel() > 0, "Tensor h_mix is empty.");
     TORCH_CHECK(h_pre.numel() > 0, "Tensor h_pre is empty.");
     TORCH_CHECK(h_post.numel() > 0, "Tensor h_post is empty.");
+    TORCH_CHECK(x.dim() == TND_DIMS || x.dim() == BSND_DIMS, "Input x must be 3D or 4D, but got ", x.dim(), "D.");
+    check_mhc_pre_backward_supported();
 
-    c10::TensorOptions xGradOptions = grad_h_in.options().dtype(grad_h_in.dtype());
+    c10::TensorOptions xGradOptions = x.options().dtype(x.dtype());
     c10::TensorOptions fp32Options = grad_h_in.options().dtype(at::kFloat);
 
     at::Tensor xGrad;
@@ -236,18 +252,25 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
     at::Tensor biasPostGrad;
     at::Tensor gammaGrad;
 
-    if (grad_h_in.dim() == 3) {
+    // 根据grad_h_in的维度判断shape是BSND格式或TND格式
+    if (grad_h_in.dim() == NUM_THREE) {
         // BSND格式: grad_h_in [B,S,D], grad_h_post [B,S,N], grad_h_res [B,S,N,N]
         auto batch = grad_h_in.size(DIM_0);
         auto sequence = grad_h_in.size(DIM_1);
         auto dimen = grad_h_in.size(DIM_2);
         auto numsResidual = grad_h_post.size(DIM_2);
 
+        // 4维输入场景（BSND格式）
+        // xGrad: [B, S, n, D]
+        // phiGrad: [n^2 + 2n, nD]
+        // biasPostGrad: [n^2 + 2n]
+        // xGrad: [B, S, n, D]
+        // gammaGrad: [n, D]
         c10::SmallVector<int64_t, BSND_DIMS> xGradSize = {batch, sequence, numsResidual, dimen};
-        c10::SmallVector<int64_t, 2> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
-        c10::SmallVector<int64_t, 1> alphaGradSize = {3};
-        c10::SmallVector<int64_t, 1> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
-        c10::SmallVector<int64_t, 1> gammaGradSize = {numsResidual, dimen};
+        c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
+        c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {3};
+        c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
+        c10::SmallVector<int64_t, NUM_ONE> gammaGradSize = {numsResidual, dimen};
 
         xGrad = at::empty(xGradSize, xGradOptions);
         phiGrad = at::empty(phiGradSize, fp32Options);
@@ -261,11 +284,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
         auto dimen = grad_h_in.size(DIM_1);
         auto numsResidual = grad_h_post.size(DIM_1);
 
+        // 3维输入场景（TND格式）
+        // xGrad: [T, n, D]
+        // phiGrad: [n^2 + 2n, nD]
+        // biasPostGrad: [n^2 + 2n]
+        // xGrad: [B, S, n, D]
+        // gammaGrad: [n, D]
         c10::SmallVector<int64_t, TND_DIMS> xGradSize = {t, numsResidual, dimen};
-        c10::SmallVector<int64_t, 2> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
-        c10::SmallVector<int64_t, 1> alphaGradSize = {3};
-        c10::SmallVector<int64_t, 1> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
-        c10::SmallVector<int64_t, 1> gammaGradSize = {numsResidual, dimen};
+        c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
+        c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {3};
+        c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
+        c10::SmallVector<int64_t, NUM_ONE> gammaGradSize = {numsResidual, dimen};
 
         xGrad = at::empty(xGradSize, xGradOptions);
         phiGrad = at::empty(phiGradSize, fp32Options);
@@ -275,7 +304,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
     }
 
     EXEC_NPU_CMD(aclnnMhcPreBackward, x, phi, alpha, grad_h_in, grad_h_post,
-            grad_h_res, inv_rms, h_mix, h_pre, h_post, gamma, grad_x_post, hc_eps,  xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
+            grad_h_res, inv_rms, h_mix, h_pre, h_post, gamma, grad_x_post, hc_eps, xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
 
     return std::make_tuple(xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
 }

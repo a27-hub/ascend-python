@@ -4070,6 +4070,88 @@ y = mhc_sinkhorn_model(x, eps=eps, num_iters=num_iters, out_flag=out_flag)
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_mhc_pre_backward",
+    """
+接口原型：
+npu_mhc_pre_backward(Tensor x, Tensor phi, Tensor alpha, Tensor grad_h_in, Tensor grad_h_post, Tensor grad_h_res, Tensor inv_rms, Tensor h_mix, Tensor h_pre, Tensor h_post, Tensor? gamma=None, float hc_eps=1e-6, Tensor? grad_x_post=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+
+功能描述：
+MhcPreBackward算子是MhcPre的反向算子，可选融合post反向grad_x的add操作，首先说明一下正向算子的功能。
+正向算子功能：通过一系列计算，可得到 MHC (流形约束超连接)架构中 hidden 层对应的投影矩阵 Hres 和 Hpost，以及作为 Atten 或 MLP 层输入的矩阵 Hin。
+
+输入说明：
+x: Tensor类型，必选输入，待计算数据，代表网络中 mHC 层的输入数据。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+phi: Tensor类型，必选输入，mHC 的参数矩阵。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+alpha: Tensor类型，必选输入，mHC 的缩放参数。支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_h_in: Tensor类型，必选输入，h_in作为Atten/MLP层的输入，正向输出h_in对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 2 维 [T, D] 和 3 维 [B, S, D]。
+grad_h_post: Tensor类型，必选输入，正向输出h_post的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+grad_h_res: Tensor类型，必选输入，正向输出h_res的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 3 维 [T, n, n] 和 4 维 [B, S, n, n]。
+inv_rms: Tensor类型，必选输入，正向计算流x@phi的结果。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 1 维 [T] 和 2 维 [B, S]。
+h_pre: Tensor类型，必选输入，做完 sigmoid 计算之后的 h_pre 矩阵。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+h_post: Tensor类型，必选输入，正向的h_post输出。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+gamma: Tensor类型，可选输入，RmsNorm的缩放系数。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
+grad_x_post: Tensor类型，可选输入，post反向输出的grad_x，数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。。
+n：shape 中的 n 常取 4、6、8。
+
+输出说明:
+grad_x: Tensor类型，必选输出，x对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+grad_phi: Tensor类型，必选输出，phi对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+grad_alpha: Tensor类型，必选输出，alpha对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_bias: Tensor类型，必选输出，bias对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [n^2 + 2n]。
+grad_gamma: Tensor类型，必选输出，gamma对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+
+
+约束说明:
+该接口支持pytorch调用(torch_npu)。
+该接口支持单算子模式。
+
+支持的PyTorch版本:
+大于等于 PyTorch 2.6.0
+
+支持的型号:
+- 昇腾950 AI处理器
+
+调用示例:
+单算子模式调用:
+import torch
+import torch_npu
+import numpy as np
+
+B=1
+S=1024
+n=4
+D=2560
+x = torch.randn(B, S, n, D).bfloat16()
+phi = torch.randn(n*n + 2*n, n*D)
+alpha = torch.tensor([1.1, 0.9, 1.05])
+bias = torch.randn(n*n + 2*n) * 0.1
+gamma = torch.randn(n, D)
+grad_x_post = torch.randn(B, S, n, D).bfloat16()
+
+x_ = x.detach().clone().requires_grad_(True)
+phi_ = phi.detach().clone().requires_grad_(True)
+alpha_ = alpha.detach().clone().requires_grad_(True)
+bias_ = bias.detach().clone().requires_grad_(True)
+
+dh_in = torch.randn(B, S, D).bfloat16()
+dh_post = torch.randn(B, S, n)
+dh_res = torch.randn(B, S, n, n)
+
+# 正向传播
+h_in, h_post, h_res, inv_rms, h_mix, h_pre = torch_npu.npu_mhc_pre(
+    x_.npu(), phi_.npu(), alpha_.npu(), bias_.npu(), gamma=gamma.npu(), out_flag=1
+)
+
+# 调用npu接口
+dx1, dphi1, da1, db1, dgamma1 = torch_npu.npu_mhc_pre_backward(
+    x.npu(), phi.npu(), alpha.npu(),
+    dh_in.npu(), dh_post.npu(), dh_res.npu(),
+    inv_rms.npu(), h_mix.npu(), h_pre.npu(), h_post.npu(), gamma=gamma.npu(), grad_x_post=grad_x_post.npu()
+)
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_transpose",
