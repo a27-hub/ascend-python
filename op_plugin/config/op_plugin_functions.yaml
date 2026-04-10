@@ -945,12 +945,12 @@ official:
     acl_op: all_version
     op_api: all_version
 
-  - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, ScalarType? output_dtype=None) -> Tensor
+  - func: addmm(Tensor self, Tensor mat1, Tensor mat2, ScalarType? output_dtype=None, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, ScalarType? output_dtype=None, Tensor(a!) out) -> Tensor(a!)
+  - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, ScalarType? output_dtype=None, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
@@ -1480,12 +1480,12 @@ official:
     acl_op: all_version
     op_api: all_version
 
-  - func: bmm(Tensor self, Tensor mat2, *, ScalarType? output_dtype=None) -> Tensor
+  - func: bmm(Tensor self, Tensor mat2, ScalarType? output_dtype=None) -> Tensor
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: bmm.out(Tensor self, Tensor mat2, *, ScalarType? output_dtype=None, Tensor(a!) out) -> Tensor(a!)
+  - func: bmm.out(Tensor self, Tensor mat2, ScalarType? output_dtype=None, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
@@ -3489,12 +3489,12 @@ official:
         dtype: at::native::result_type(grad_output, self)
       exec: aclnnMishBackward
 
-  - func: mm(Tensor self, Tensor mat2, *, ScalarType? output_dtype=None) -> Tensor
+  - func: mm(Tensor self, Tensor mat2, ScalarType? output_dtype=None) -> Tensor
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: mm.out(Tensor self, Tensor mat2, *, ScalarType? output_dtype=None, Tensor(a!) out) -> Tensor(a!)
+  - func: mm.out(Tensor self, Tensor mat2, ScalarType? output_dtype=None, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version

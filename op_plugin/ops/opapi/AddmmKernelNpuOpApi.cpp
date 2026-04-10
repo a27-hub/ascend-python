@@ -85,9 +85,9 @@ at::Tensor &addmm_out(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
+    c10::optional<at::ScalarType> output_dtype,
     const at::Scalar &beta,
     const at::Scalar &alpha,
-    c10::optional<at::ScalarType> output_dtype,
     at::Tensor &out)
 {
     auto output_type = output_dtype.value_or(self.scalar_type());
@@ -115,9 +115,9 @@ at::Tensor addmm(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
+    c10::optional<at::ScalarType> output_dtype,
     const at::Scalar &beta,
-    const at::Scalar &alpha,
-    c10::optional<at::ScalarType> output_dtype)
+    const at::Scalar &alpha)
 {
     auto output_type = output_dtype.value_or(self.scalar_type());
     TORCH_CHECK(!output_dtype.has_value() || output_type == at::kFloat,
