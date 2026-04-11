@@ -30,8 +30,33 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
 
     int64_t m = A.size(-2);
     int64_t n = A.size(-1);
+    int64_t k = std::min(m, n);
 
-    // Handle empty tensor case
+    auto sizes_s = A.sizes().vec();
+    sizes_s.pop_back();
+    int64_t K_DIM = 2;
+    sizes_s[A.dim() - K_DIM] = k;
+    auto S = npu_preparation::apply_tensor(A, sizes_s);
+    at::Tensor U;
+    at::Tensor Vh;
+
+    if (compute_uv) {
+        auto sizes_u = A.sizes().vec();
+        sizes_u[A.dim() - 1] = (!full_matrices) ? k : m;
+        U = npu_preparation::apply_tensor(A, sizes_u);
+        auto sizes_vh = A.sizes().vec();
+        int64_t N_DIM = 2;
+        sizes_vh[A.dim() - N_DIM] = n;
+        sizes_vh[A.dim() - 1] = (!full_matrices) ? k : n;
+        Vh = npu_preparation::apply_tensor(A, sizes_vh);
+        int64_t TRANS_DIM = -2;
+        Vh = Vh.transpose(-1, TRANS_DIM);
+    } else {
+        U = at::empty({0}, A.options());
+        Vh = at::empty({0}, A.options());
+    }
+
+    // Handle empty tensor case (same logic as linalg_svd_out_common in aclops)
     if (A.numel() == 0) {
         if (compute_uv && full_matrices) {
             if (U.numel() != 0) {
