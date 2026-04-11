@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
+from libs.generate_hifloat8_data import trans_np_float_tensor_to_hifuint8, trans_np_hifuint8_tensor_to_float32
 
 
 class TestKvQuantSparseFlashAttention(TestCase):
@@ -59,7 +60,12 @@ class TestKvQuantSparseFlashAttention(TestCase):
         key = self.pa_to_bsnd(key, block_table, actual_seq_lengths_kv)
         key_rope = key[..., 512: 512 + 64 * 2].view(query_type)
         key_quant_scale = key[..., 512 + 64 * 2:].view(torch.float32)
-        key = key[..., :512].to(torch.float32)
+
+        key_slice = key[..., :512]
+        if key.dtype == torch.uint8:
+            key = torch.tensor(trans_np_hifuint8_tensor_to_float32(key_slice.numpy()))
+        else:
+            key = key_slice.to(torch.float32)
 
         key_quant_scale = np.repeat(key_quant_scale, repeats=tile_size, axis=-1)
         key = (key * key_quant_scale).to(query_type)
@@ -175,31 +181,31 @@ class TestKvQuantSparseFlashAttention(TestCase):
         self.assertTrue(true_ratio > 0.99, "precision compare fail")
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_kv_quant_sparse_flash_attention_tnd(self, device="npu"):
+    def test_npu_kv_quant_sparse_flash_attention_hif8(self, device="npu"):
         query_type = torch.bfloat16
         scale_value = 0.041666666666666664
         sparse_block_size = 1
         sparse_block_count = 2048
-        t = 1
-        b = 1
+        b = 4
         s1 = 1
-        s2 = 3904
+        s2 = 8192
         n1 = 48
         n2 = 1
         dn = 512
         dr = 64
         tile_size = 128
-        block_size = 128
-        layout_query = 'TND'
-        s2_act = 3904
+        block_size = 256
+        layout_query = 'BSND'
+        s2_act = 4096
 
-        query = torch.tensor(np.random.uniform(-10, 100, (t, n1, dn))).to(query_type)
-        key = torch.tensor(np.random.uniform(-100, 100, (b * (s2 // block_size), block_size, n2, dn))).to(torch.uint8)
+        query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
+        key_float = np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn)).astype(np.float32)
+        key = torch.tensor(trans_np_float_tensor_to_hifuint8(key_float, round_mode="hybrid", over_mode=True))
         value = key.clone()
         idxs = random.sample(range(s2_act - s1 + 1), sparse_block_count)
-        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(t, n2, sparse_block_count). \
+        sparse_indices = torch.tensor([idxs for _ in range(b * s1 * n2)]).reshape(b, s1, n2, sparse_block_count). \
             to(torch.int32)
-        query_rope = torch.tensor(np.random.uniform(-10, 10, (t, n1, dr))).to(query_type)
+        query_rope = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dr))).to(query_type)
         key_rope = torch.tensor(np.random.uniform(-10, 10, (b * (s2 // block_size), block_size, n2, dr))).to(query_type)
         act_seq_q = torch.tensor([s1] * b).to(torch.int32)
         act_seq_kv = torch.tensor([s2_act] * b).to(torch.int32)
@@ -215,7 +221,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
             key_dequant_scale=antiquant_scale, value_dequant_scale=antiquant_scale,
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
-            layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
+            layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
             value_quant_mode=2, rope_head_dim=64)
 
@@ -234,9 +240,10 @@ class TestKvQuantSparseFlashAttention(TestCase):
             query, key, value, sparse_indices, 
             scale_value=scale_value, sparse_block_size=sparse_block_size,
             actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
-            layout_query='TND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
+            layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
             attention_mode=2, quant_scale_repo_mode=1, tile_size=tile_size, key_quant_mode=2,
-            value_quant_mode=2, rope_head_dim=64)
+            value_quant_mode=2, rope_head_dim=64,
+            key_dtype=torch_npu.hifloat8, value_dtype=torch_npu.hifloat8)
 
         npu_out = npu_out.cpu().to(torch.float32).numpy()
         cpu_out = cpu_out.to(torch.float32).numpy()
