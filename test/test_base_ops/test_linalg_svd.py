@@ -60,6 +60,47 @@ class TestLinalgSvd(TestCase):
         dtype_list = [np.float64]
         self.exec_linalg_svd(dtype_list)
 
+    def test_linalg_svd_empty_and_zero_dim(self):
+        """Test SVD with empty tensors and zero dimensions (aligned with PyTorch community test)"""
+        # Reference: pytorch/test/test_linalg.py::test_svd
+        # ns = (12, 4, 2, 0), batches = ((), (0,), (1,), (2,), (2, 1), (0, 2))
+        dtype = torch.float32
+
+        # Test various combinations of dimensions including 0
+        ns = (4, 2, 0)
+        batches = ((), (0,), (2,), (2, 1))
+
+        for batch in batches:
+            for m in ns:
+                for n in ns:
+                    shape = batch + (m, n)
+                    k = min(m, n)
+
+                    cpu_input = torch.randn(shape, dtype=dtype)
+                    npu_input = cpu_input.npu()
+
+                    for full_matrices in [True, False]:
+                        cpu_U, cpu_S, cpu_Vh = LA.svd(cpu_input, full_matrices=full_matrices)
+                        npu_U, npu_S, npu_Vh = LA.svd(npu_input, full_matrices=full_matrices)
+
+                        # Check shapes match
+                        self.assertEqual(cpu_U.shape, npu_U.shape)
+                        self.assertEqual(cpu_S.shape, npu_S.shape)
+                        self.assertEqual(cpu_Vh.shape, npu_Vh.shape)
+
+                        # For non-empty tensors, verify reconstruction
+                        if cpu_input.numel() > 0:
+                            cpu_reconstructed = (cpu_U[..., :k] @ cpu_S.diag_embed()) @ cpu_Vh[..., :k, :]
+                            npu_reconstructed = (npu_U[..., :k] @ npu_S.diag_embed()) @ npu_Vh[..., :k, :]
+                            self.assertRtolEqual(cpu_reconstructed.numpy(), npu_reconstructed.cpu().numpy())
+
+                        # For empty tensors with full_matrices=True, verify identity matrix property
+                        if cpu_input.numel() == 0 and full_matrices:
+                            if cpu_U.numel() > 0:
+                                self.assertRtolEqual(cpu_U.numpy(), npu_U.cpu().numpy())
+                            if cpu_Vh.numel() > 0:
+                                self.assertRtolEqual(cpu_Vh.numpy(), npu_Vh.cpu().numpy())
+
 
 
 if __name__ == "__main__":
