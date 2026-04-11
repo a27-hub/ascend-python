@@ -7,8 +7,232 @@ import torch.nn as nn
 import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
-from libs.generate_hifloat8_data import trans_np_float_tensor_to_hifuint8, trans_np_hifuint8_tensor_to_float32
 
+def _fp32_ta_round_to_hif8(fraction32_int, hif8_bits_num, exponent):
+    if exponent == -23:
+        return True, 0
+    hif8_value_tmp = fraction32_int >> (23 - (hif8_bits_num + 1))
+    if hif8_value_tmp == pow(2, hif8_bits_num + 1) - 1:
+        return True, 0
+    elif hif8_value_tmp == 0:
+        return False, 0
+    elif hif8_value_tmp % 2 == 1:
+        hif8_value_tmp += 1
+        return False, hif8_value_tmp >> 1
+    else:
+        return False, hif8_value_tmp >> 1
+
+def _fp32_ssr_round_to_hif8(fraction32_int, hif8_bits_num, exponent):
+    t14_mask = 16383
+    if exponent == -23:
+        f14_values = (fraction32_int >> 10) + 8192
+        t14_values = fraction32_int & t14_mask
+        hif8_value = 0
+    else:
+        hif8_value = fraction32_int >> (23 - hif8_bits_num)
+        f14_t14 = fraction32_int - (hif8_value << (23 - hif8_bits_num))
+        f14_values = f14_t14 >> (23 - hif8_bits_num - 14)
+        t14_values = f14_t14 & t14_mask
+    if f14_values >= t14_values:
+        if hif8_value == pow(2, hif8_bits_num) - 1:
+            return True, 0
+        else:
+            hif8_value += 1
+            return False, hif8_value
+    else:
+        return False, hif8_value
+
+def _get_hif8_fraction_bits_number(exponent):
+    if exponent < -22:
+        return -1, 3, 0
+    if -22 <= exponent < -15:
+        return 0, 3, 0
+    if exponent == 0:
+        return 1, 0, 3
+    if abs(exponent) == 1:
+        return 2, 1, 3
+    if 2 <= abs(exponent) <= 3:
+        return 4, 2, 3
+    if 4 <= abs(exponent) <= 7:
+        return 8, 3, 2
+    if 8 <= abs(exponent) <= 15:
+        return 12, 4, 1
+    if exponent > 15:
+        return 12, 4, -1
+
+def cvt_float32_to_hifuint8(x, round_mode="round", over_mode=True):
+    sign = False
+    sign_int_value = 0
+    x_abs = math.fabs(x)
+    Ec = 0
+    over_value = 1.25 * pow(2.0, 15 + Ec)
+    if x < 0.0:
+        sign = True
+        sign_int_value = 128
+    if np.isinf(x) or x_abs >= over_value:
+        if sign:
+            if over_mode:
+                return 239
+            else:
+                return 238
+        else:
+            if over_mode:
+                return 111
+            else:
+                return 110
+    if np.isnan(x):
+        if over_mode:
+            return 128
+        else:
+            return 0
+    if x_abs == 0.0:
+        return 0
+    exponent = math.floor(math.log2(x_abs))
+    if round_mode == "hybrid":
+        if abs(exponent) < 4:
+            cut_bit_type = "TA"
+        else:
+            cut_bit_type = "SSR"
+    elif round_mode == "round":
+        cut_bit_type = "TA"
+    elif round_mode == "storound":
+        cut_bit_type = "SSR"
+    else:
+        cut_bit_type = "TA"
+    fraction_int = int(x_abs * pow(2, 23) * pow(2, -exponent) - pow(2, 23))
+    dot_hif8_value, exponent_hif8_bits, fraction_hif8_bits = _get_hif8_fraction_bits_number(exponent)
+    if cut_bit_type == "TA":
+        carry_exp_status, hif8_frac_value = _fp32_ta_round_to_hif8(fraction_int, fraction_hif8_bits, exponent)
+    elif cut_bit_type == "SSR":
+        carry_exp_status, hif8_frac_value = _fp32_ssr_round_to_hif8(fraction_int, fraction_hif8_bits, exponent)
+    else:
+        print(f"unknow round type")
+        return 0
+    if carry_exp_status:
+        exponent += 1
+        dot_hif8_value, exponent_hif8_bits, fraction_hif8_bits_new = _get_hif8_fraction_bits_number(exponent)
+        fraction_hif8_bits = fraction_hif8_bits_new
+    if exponent < -23:
+        return 0
+    if exponent < 0:
+        sig_exp = 1
+    else:
+        sig_exp = 0
+    if dot_hif8_value <= 0:
+        if exponent <= -23:
+            return 0
+        else:
+            return sign_int_value + exponent + 23
+    elif dot_hif8_value == 1:
+        dot_int_value = dot_hif8_value << 3
+        hif8_int_value = sign_int_value + dot_int_value + hif8_frac_value
+    else:
+        abs_exponent = abs(exponent)
+        abs_exponent = abs_exponent - pow(2, exponent_hif8_bits - 1)
+        exponent_int_value = abs_exponent << fraction_hif8_bits
+        sig_exp = sig_exp << (exponent_hif8_bits - 1 + fraction_hif8_bits)
+        dot_int_value = dot_hif8_value << 3
+        hif8_int_value = sign_int_value + dot_int_value + sig_exp + exponent_int_value + hif8_frac_value
+    return hif8_int_value
+
+def cvt_hifuint8_to_float(x, over_mode=True):
+    x = int(x)
+    if x == 0:
+        return float(0)
+    elif x == 128:
+        if over_mode:
+            return np.nan
+        else:
+            return float(0)
+    elif x == 239:
+        if over_mode:
+            return -np.inf
+        else:
+            return -32768
+    elif x == 111:
+        if over_mode:
+            return np.inf
+        else:
+            return 32768
+    else:
+        if x >= 128:
+            sign = -1.0
+        else:
+            sign = 1.0
+        dot_4_bits = x & 120
+        dot_4_value = dot_4_bits >> 3
+        if dot_4_value >= 12:
+            exponent = x & 30
+            exponent_int = exponent >> 1
+            if exponent_int >= 8:
+                exponent_value = -exponent_int
+            else:
+                exponent_value = exponent_int + 8
+
+            fra_int = x & 1
+            m_value = 1.0 + fra_int * 0.5
+        elif dot_4_value >= 8:
+            exponent = x & 28
+            exponent_int = exponent >> 2
+            if exponent_int >= 4:
+                exponent_value = -exponent_int
+            else:
+                exponent_value = exponent_int + 4
+            fra_int = x & 3
+            m_value = 1.0 + fra_int * 0.25
+        elif dot_4_value >= 4:
+            exponent = x & 24
+            exponent_int = exponent >> 3
+            if exponent_int >= 2:
+                exponent_value = -exponent_int
+            else:
+                exponent_value = exponent_int + 2
+            fra_int = x & 7
+            m_value = 1.0 + fra_int * 0.125
+        elif dot_4_value >= 2:
+            exponent = x & 8
+            exponent_sign = exponent >> 3
+            if exponent_sign >= 1:
+                exponent_value = -1
+            else:
+                exponent_value = 1
+            fra_int = x & 7
+            m_value = 1.0 + fra_int * 0.125
+        elif dot_4_value == 1:
+            exponent_value = 0
+            fra_int = x & 7
+            m_value = 1.0 + fra_int * 0.125
+        elif dot_4_value == 0:
+            m_value = 1
+            exponent_value = (x & 7) - 23
+        else:
+            print("error, dot error")
+            m_value = 0.0
+            exponent_value = 0
+        return sign * pow(2.0, exponent_value) * m_value
+
+def trans_np_float_tensor_to_hifuint8(in_tensor, round_mode="round", over_mode=True):
+    shape_tensor = in_tensor.shape
+    multi_shape = np.prod(shape_tensor)
+    if multi_shape == 1.0:
+        multi_shape = int(multi_shape)
+    out_tensor = np.zeros(multi_shape)
+    in_tensor = in_tensor.reshape(multi_shape)
+    for i in range(multi_shape):
+        out_tensor[i] = cvt_float32_to_hifuint8(in_tensor[i], round_mode, over_mode)
+    out_tensor = out_tensor.astype(np.uint8)
+    out_tensor = out_tensor.reshape(shape_tensor)
+    return out_tensor
+
+def trans_np_hifuint8_tensor_to_float32(in_tensor):
+    shape_tensor = in_tensor.shape
+    multi_shape = np.prod(shape_tensor)
+    out_tensor = np.zeros(multi_shape).astype(np.float32)
+    in_tensor = in_tensor.reshape(multi_shape)
+    for i in range(multi_shape):
+        out_tensor[i] = cvt_hifuint8_to_float(in_tensor[i])
+    out_tensor = out_tensor.reshape(shape_tensor).astype(np.float32)
+    return out_tensor
 
 class TestKvQuantSparseFlashAttention(TestCase):
     def pa_to_bsnd(self, pa_in, block_table, actual_seq_lengths):
