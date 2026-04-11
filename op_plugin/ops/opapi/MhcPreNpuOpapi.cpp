@@ -129,9 +129,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
         outHres = at::empty(outHresSize, hOptions);
-        outInvRms = at::empty(outInvRmsSize, hOptions);
-        outHmix = at::empty(outHmixSize, hOptions);
-        outHpre = at::empty(outHpreSize, hOptions);
+        if (out_flag == 1) {
+            outInvRms = at::empty(outInvRmsSize, hOptions);
+            outHmix = at::empty(outHmixSize, hOptions);
+            outHpre = at::empty(outHpreSize, hOptions);
+        } else {
+            // 空tensor
+            outInvRms = at::empty({0}, hOptions);
+            outHmix = at::empty({0}, hOptions);
+            outHpre = at::empty({0}, hOptions);
+        }
     } else {
         auto t = x.size(DIM_0);
         auto numResidual = x.size(DIM_1);
@@ -173,9 +180,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
         outHres = at::empty(outHresSize, hOptions);
-        outInvRms = at::empty(outInvRmsSize, hOptions);
-        outHmix = at::empty(outHmixSize, hOptions);
-        outHpre = at::empty(outHpreSize, hOptions);
+        if (out_flag == 1) {
+            outInvRms = at::empty(outInvRmsSize, hOptions);
+            outHmix = at::empty(outHmixSize, hOptions);
+            outHpre = at::empty(outHpreSize, hOptions);
+        } else {
+            // 空tensor
+            outInvRms = at::empty({0}, hOptions);
+            outHmix = at::empty({0}, hOptions);
+            outHpre = at::empty({0}, hOptions);
+        }
     }
 
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
