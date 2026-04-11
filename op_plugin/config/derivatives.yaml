@@ -336,3 +336,7 @@ backward:
   x1: _cdist_backward(grad, x1, x2, p, result)
   x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
   version: all_version
+
+- name: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+  x: npu_mhc_sinkhorn_backward(grad, norm, sum)
+  version: all_version
