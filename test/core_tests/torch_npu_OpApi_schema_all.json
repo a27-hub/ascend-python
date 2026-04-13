@@ -598,6 +598,24 @@
   "op_api: torch_npu.save_npugraph_tensor(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_masked_causal_conv1d(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_masked_causal_conv1d(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "func: npu_masked_causal_conv1d(Tensor input, Tensor weight, *, Tensor? mask=None) -> Tensor": {
+    "version": ["v2.6", "newest"]
+  },
+  "op_api: torch_npu.npu_masked_causal_conv1d_backward(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_masked_causal_conv1d_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
+  "func: npu_masked_causal_conv1d_backward(Tensor grad_output, Tensor input, Tensor weight, *, Tensor? mask=None) -> (Tensor, Tensor)": {
+    "version": ["v2.6", "newest"]
+  },
   "op_api: torch_npu.npu_fused_causal_conv1d(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
