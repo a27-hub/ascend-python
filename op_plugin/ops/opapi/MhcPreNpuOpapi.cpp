@@ -263,9 +263,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
         c10::SmallVector<int64_t, TND_DIMS> xGradSize = {t, numsResidual, dimen};
         xGrad = at::empty(xGradSize, xGradOptions); // [T, n, D]
     }
-    c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
-    c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {3};
-    c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
+    c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(NUM_TWO * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
+    c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {NUM_THREE};
+    c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(NUM_TWO * numsResidual) + (numsResidual * numsResidual)};
     c10::SmallVector<int64_t, NUM_TWO> gammaGradSize = {numsResidual, dimen};
     phiGrad = at::empty(phiGradSize, fp32Options); // [n^2 + 2n, nD]
     alphaGrad = at::empty(alphaGradSize, fp32Options); // [3]
