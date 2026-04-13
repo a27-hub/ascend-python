@@ -5760,9 +5760,11 @@ custom:
 
   - func: npu_broadcast(Tensor self, int[] size) -> Tensor
     acl_op: all_version
+    op_api: all_version
 
   - func: npu_broadcast.out(Tensor self, int[] size, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
+    op_api: all_version
     device_check: NoCheck
 
   - func: npu_ciou(Tensor self, Tensor gtboxes, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> Tensor
