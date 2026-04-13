@@ -16,12 +16,39 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/core/npu/register/OptionsManager.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+static std::tuple<at::Tensor, at::Tensor> prepare_binary_tensors(
+    const at::Tensor &self, const at::Tensor &other)
+{
+    at::Tensor self_device = self;
+    at::Tensor other_device = other;
+    if (torch_npu::utils::is_npu(self)) {
+        if (!torch_npu::utils::is_npu(other)) {
+            other_device = other.to(self.device());
+        }
+    } else {
+        TORCH_CHECK(torch_npu::utils::is_npu(other),
+            "when self is a CPU tensor, other must be an NPU tensor", OPS_ERROR(ErrCode::PARAM));
+        self_device = self.to(other.device());
+    }
+    return std::make_tuple(self_device, other_device);
+}
+
 at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        TORCH_CHECK(torch_npu::utils::is_npu(result),
+            "result tensor must be on NPU device", OPS_ERROR(ErrCode::PARAM));
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        npu_preparation::check_tensor({self_device, other_device}, result, at::IntArrayRef(output_size));
+        EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -40,6 +67,14 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(
+            output_size, self_device.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -70,6 +105,13 @@ at::Tensor& eq_out_npu_scalar(at::Tensor& result, const at::Tensor& self, at::Sc
 
 at::Tensor eq(const at::Tensor& self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnEqScalar, acl_op::eq(self, other));
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+      auto output_size = op_infer::input_same_output_size(self);
+      at::Tensor result = npu_preparation::apply_tensor_without_format(
+          output_size, self.options().dtype(at::kBool));
+      EXEC_NPU_CMD(aclnnEqScalar, self, other, result);
+      return result;
+  }
 
   // calculate the output size
   auto output_size = op_infer::input_same_output_size(self);
@@ -94,6 +136,17 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
 
 at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
   DO_COMPATIBILITY(aclnnInplaceEqTensor, acl_op::eq_(self, other));
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+      TORCH_CHECK(torch_npu::utils::is_npu(self),
+          "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
+      at::Tensor other_device = other;
+      if (!torch_npu::utils::is_npu(other)) {
+          other_device = other.to(self.device());
+      }
+      npu_preparation::CheckMemory({self, other_device}, {self});
+      EXEC_NPU_CMD(aclnnInplaceEqTensor, self, other_device);
+      return self;
+  }
 
   const std::initializer_list<at::Tensor> inputs = {self, other};
   const std::initializer_list<at::Tensor> outputs = {self};
@@ -105,6 +158,12 @@ at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
 
 at::Tensor& eq_(at::Tensor &self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnInplaceEqScalar, acl_op::eq_(self, other));
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+      TORCH_CHECK(torch_npu::utils::is_npu(self),
+          "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
+      EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
+      return self;
+  }
 
   EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
   return self;
