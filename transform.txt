@@ -1,224 +1,32 @@
-# Copyright (c) 2025, Huawei Technologies.All rights reserved.
-#
-# Licensed under the BSD 3-Clause License  (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-import os
-import unittest
+    def test_npu_fused_infer_attention_score_v2_quant_out_bfloat16_perchannel_quant(self, device="npu"):
+        B, Q_N, Q_S, KV_S, D = 1, 8, 128, 256, 128
+        query = torch.randn(B, Q_N, Q_S, D, dtype=torch.bfloat16).npu()
+        key = torch.randint(-128, 127, (B, Q_N, KV_S, D), dtype=torch.int8).npu()
+        value = torch.randint(-128, 127, (B, Q_N, KV_S, D), dtype=torch.int8).npu()
+        dequant_scale_key = torch.ones((D,), dtype=torch.bfloat16).npu()
+        dequant_offset_key = torch.zeros((D,), dtype=torch.bfloat16).npu()
+        dequant_scale_value = torch.ones((D,), dtype=torch.bfloat16).npu()
+        dequant_offset_value = torch.zeros((D,), dtype=torch.bfloat16).npu()
+        quant_scale_out = torch.ones((Q_N, D), dtype=torch.bfloat16).npu()
+        quant_offset_out = torch.zeros((Q_N, D), dtype=torch.bfloat16).npu()
 
-import numpy as np
-import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
-import torch_npu
+        return_softmax_lse = False
+        softmax_scale = 1.0 / math.sqrt(D)
+        custom_output = torch_npu.npu_fused_infer_attention_score_v2(
+            query, key, value,
+            num_query_heads=Q_N,
+            input_layout="BNSD",
+            dequant_scale_key=dequant_scale_key,
+            dequant_offset_key=dequant_offset_key,
+            dequant_scale_value=dequant_scale_value,
+            dequant_offset_value=dequant_offset_value,
+            quant_scale_out=quant_scale_out,
+            quant_offset_out=quant_offset_out,
+            key_quant_mode=0,
+            value_quant_mode=0,
+            softmax_scale=softmax_scale,
+            pre_tokens=65535,
+            next_tokens=65535,
+            return_softmax_lse=return_softmax_lse)
 
-from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
-from torch_npu.testing.common_distributed import skipIfUnsupportMultiNPU
-
-
-class TestQuantReduceScatter(TestCase):
-    @classmethod
-    def _init_dist_hccl(cls, rank, world_size):
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = '50000'
-        os.environ['HCCL_WHITELIST_DISABLE'] = '1'
-        torch_npu.npu.set_device(rank)
-        dist.init_process_group(backend='hccl', world_size=world_size, rank=rank)
-        return dist
-
-    @classmethod
-    def _test_npu_quant_reduce_scatter(cls, rank, input_list):
-        x, scales, world_size, init_pg, c2p, x_dtype, scales_dtype = input_list
-        pg = init_pg(rank, world_size)
-        group = pg.distributed_c10d._get_default_group()
-        if torch.__version__ > '2.0.1':
-            hcom_name = group._get_backend(torch.device('npu')).get_hccl_comm_name(rank)
-        else:
-            hcom_name = group.get_hccl_comm_name(rank)
-
-        x = x.npu()
-        scales = scales.npu()
-        out_put = torch_npu.npu_quant_reduce_scatter(x, scales, hcom_name, world_size, reduce_op='sum',
-                                                     output_dtype=0, x_dtype=x_dtype, scales_dtype=scales_dtype)
-
-        c2p.put((rank, out_put.cpu()))
-        pg.barrier()
-
-    def _test_multiprocess(self, f, init_pg, input_list):
-        expt_out_list, x_list, scales_list, world_size = input_list[:4]
-        x_dtype = input_list[4] if len(input_list) > 4 else None
-        scales_dtype = input_list[5] if len(input_list) > 5 else None
-        ctx = mp.get_context('spawn')
-        c2p = ctx.Queue(world_size)
-        ps = []
-
-        for i in range(world_size):
-            p = ctx.Process(
-                target=f,
-                args=(i, [x_list[i], scales_list[i], world_size, init_pg, c2p, x_dtype, scales_dtype]))
-            p.start()
-            ps.append(p)
-
-        for _ in range(world_size):
-            rank, out_put = c2p.get()
-            self.assertEqual(out_put, expt_out_list[rank],
-                             ("rank {} Expect receive tensor {} but got {}.").format(rank, expt_out_list, out_put))
-
-        for p in ps:
-            p.join()
-
-    def _construct_excepted_result(self, x_list, scales_list, world_size, x_dtype_val=None):
-        out = None
-        for i in range(world_size):
-            x = x_list[i]
-            scales = scales_list[i]
-            if x_dtype_val in [torch.float8_e4m3fn, torch.float8_e5m2]:
-                x_float = x.float()
-            elif x_dtype_val == torch_npu.hifloat8:
-                x_float = x.float()
-            else:
-                x_float = x.to(torch.float32)
-            out_single = torch.mul(x_float, scales.float())
-            if out is None:
-                out = out_single
-            else:
-                out = torch.add(out, out_single)
-        out = out.to(torch.float32)
-        index = x_list[0].shape[0] * x_list[0].shape[1] // world_size
-        return [out[index * i:index * (i + 1), :] for i in range(world_size)]
-
-    def _construct_excepted_result_mx(self, x_list, scales_list, world_size, x_dtype_val=None):
-        out = None
-        for i in range(world_size):
-            x = x_list[i]
-            scales = scales_list[i]
-            if x_dtype_val in [torch.float8_e4m3fn, torch.float8_e5m2]:
-                x_float = x.float()
-            else:
-                x_float = x.to(torch.float32)
-            bs, h = x_float.shape
-            scales_expanded = scales[:, :, 0].expand(-1, h // 64).reshape(bs, h)
-            out_single = torch.mul(x_float, scales_expanded.float())
-            if out is None:
-                out = out_single
-            else:
-                out = torch.add(out, out_single)
-        out = out.to(torch.float32)
-        index = x_list[0].shape[0] * x_list[0].shape[1] // world_size
-        return [out[index * i:index * (i + 1), :] for i in range(world_size)]
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter(self):
-        world_size = 2
-        x_dtype = np.int8
-        scales_dtype = np.float32
-        data_format = -1
-        x_shape = [x_dtype, data_format, [8, 32, 5120]]
-        scales_shape = [scales_dtype, data_format, [8, 32, 40]]
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x, _ = create_common_tensor(x_shape, -1, 1)
-            x_list.append(x)
-            scales, _ = create_common_tensor(scales_shape, 1, 100)
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result(x_list, scales_list, world_size)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size])
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter_float8_e4m3fn_tg_quant(self):
-        world_size = 2
-        bs, h = 8, 2048
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x = torch.randint(-10, 10, (bs, h), dtype=torch.float8_e4m3fn)
-            x_list.append(x)
-            scales = torch.rand((bs, h // 128), dtype=torch.float32) * 0.1 + 0.01
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result(x_list, scales_list, world_size, torch.float8_e4m3fn)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size, torch.float8_e4m3fn, torch.float32])
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter_float8_e5m2_tg_quant(self):
-        world_size = 2
-        bs, h = 8, 2048
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x = torch.randint(-10, 10, (bs, h), dtype=torch.float8_e5m2)
-            x_list.append(x)
-            scales = torch.rand((bs, h // 128), dtype=torch.float32) * 0.1 + 0.01
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result(x_list, scales_list, world_size, torch.float8_e5m2)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size, torch.float8_e5m2, torch.float32])
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter_hifloat8_tg_quant(self):
-        world_size = 2
-        bs, h = 8, 2048
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x = torch_npu.npu_dtype_cast(torch.randint(-10, 10, (bs, h), dtype=torch.int8), torch_npu.hifloat8)
-            x_list.append(x)
-            scales = torch.rand((bs, h // 128), dtype=torch.float32) * 0.1 + 0.01
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result(x_list, scales_list, world_size, torch_npu.hifloat8)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size, torch_npu.hifloat8, torch.float32])
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter_float8_e4m3fn_mx_quant(self):
-        world_size = 2
-        bs, h = 8, 2048
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x = torch.randint(-10, 10, (bs, h), dtype=torch.float8_e4m3fn)
-            x_list.append(x)
-            scales = torch.randint(100, 200, (bs, h // 64, 2), dtype=torch.uint8)
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result_mx(x_list, scales_list, world_size, torch.float8_e4m3fn)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size, torch.float8_e4m3fn, torch_npu.float8_e8m0fnu])
-
-    @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950'])
-    def test_npu_quant_reduce_scatter_float8_e5m2_mx_quant(self):
-        world_size = 2
-        bs, h = 8, 2048
-        x_list = []
-        scales_list = []
-        for _ in range(world_size):
-            x = torch.randint(-10, 10, (bs, h), dtype=torch.float8_e5m2)
-            x_list.append(x)
-            scales = torch.randint(100, 200, (bs, h // 64, 2), dtype=torch.uint8)
-            scales_list.append(scales)
-        expt_out_list = self._construct_excepted_result_mx(x_list, scales_list, world_size, torch.float8_e5m2)
-        self._test_multiprocess(TestQuantReduceScatter._test_npu_quant_reduce_scatter,
-                                TestQuantReduceScatter._init_dist_hccl,
-                                [expt_out_list, x_list, scales_list, world_size, torch.float8_e5m2, torch_npu.float8_e8m0fnu])
-
-if __name__ == '__main__':
-    run_tests()
+        self.assertEqual(custom_output[0].shape, torch.Size([B, Q_N, Q_S, D]))
