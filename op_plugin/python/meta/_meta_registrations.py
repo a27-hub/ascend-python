@@ -5082,6 +5082,24 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
     else:
         return torch.empty_like(x, dtype=y_dtype)
 
+@impl(m, "npu_quant_max")
+def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
+    supported_round_modes = ["rint", "round", "hybrid"]
+    if round_mode not in supported_round_modes:
+        raise RuntimeError("round_mode only supports 'rint', 'round' and 'hybrid', got '" +
+                            round_mode + "'" + ops_error(ErrCode.PARAM))
+
+    supported_dst_dtypes = [290, 291, 292]
+    if dst_dtype not in supported_dst_dtypes:
+        raise RuntimeError("dst_dtype only supports 290(hifloat8), 291(float8_e5m2) and 292(float8_e4m3fn), got " +
+                            str(dst_dtype) + ops_error(ErrCode.PARAM))
+
+    y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype)
+
+    y = torch.empty_like(x, dtype=y_dtype)
+    amax = x.new_empty([], dtype=x.dtype)
+    return (y, amax)
+
 
 @impl(m, "npu_kronecker_quant")
 def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=None):
