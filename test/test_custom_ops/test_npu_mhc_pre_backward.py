@@ -159,13 +159,6 @@ class TestNpuMhcPre(TestCase):
             x, phi, alpha, bias, gamma, outflag=True
         )
 
-        # # 手动微分
-        # dx0, dphi0, da0, db0, dgamma0 = mhc_pre_backward_manual(
-        #     x_, phi_, alpha_, bias_,
-        #     inv_rms, h_mix, h_pre, h_post,
-        #     dh_in, dh_post, dh_res, gamma
-        # )
-
         grad_x_post = None
         if with_grad_x_post:
             grad_x_post = torch.randn(B, S, n, D, dtype=torch.bfloat16)

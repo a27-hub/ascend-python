@@ -68,7 +68,7 @@ inline void check_mhc_pre_backward_supported()
  * (outHin, outHpost, outHres, outInvRms, outHmix, outHpre)
  */
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> construct_mhc_pre_outputs(
-    const at::Tensor &x, const at::Tensor &phi)
+    const at::Tensor &x, const at::Tensor &phi, int64_t out_flag)
 {
     c10::TensorOptions hInOptions = x.options().dtype(x.dtype());
     c10::TensorOptions hOptions = x.options().dtype(at::kFloat);
@@ -129,9 +129,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
         outHres = at::empty(outHresSize, hOptions);
-        outInvRms = at::empty(outInvRmsSize, hOptions);
-        outHmix = at::empty(outHmixSize, hOptions);
-        outHpre = at::empty(outHpreSize, hOptions);
+        if (out_flag == 1) {
+            outInvRms = at::empty(outInvRmsSize, hOptions);
+            outHmix = at::empty(outHmixSize, hOptions);
+            outHpre = at::empty(outHpreSize, hOptions);
+        }
     } else {
         auto t = x.size(DIM_0);
         auto numResidual = x.size(DIM_1);
@@ -173,9 +175,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         outHin = at::empty(outHinSize, hInOptions);
         outHpost = at::empty(outHpostSize, hOptions);
         outHres = at::empty(outHresSize, hOptions);
-        outInvRms = at::empty(outInvRmsSize, hOptions);
-        outHmix = at::empty(outHmixSize, hOptions);
-        outHpre = at::empty(outHpreSize, hOptions);
+        if (out_flag == 1) {
+            outInvRms = at::empty(outInvRmsSize, hOptions);
+            outHmix = at::empty(outHmixSize, hOptions);
+            outHpre = at::empty(outHpreSize, hOptions);
+        }
     }
 
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
@@ -203,7 +207,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
     check_mhc_pre_supported();
 
-    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi);
+    auto mhcPreOutput = construct_mhc_pre_outputs(x, phi, out_flag);
 
     at::Tensor outHin = std::get<0>(mhcPreOutput);
     at::Tensor outHpost = std::get<1>(mhcPreOutput);
@@ -212,15 +216,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     at::Tensor outHmix = std::get<4>(mhcPreOutput);
     at::Tensor outHpre = std::get<5>(mhcPreOutput);
 
-    at::Tensor nullTensor;
-    if (out_flag == 1) {
-        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
+    EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
                      outHres, outInvRms, outHmix, outHpre);
-    } else {
-        EXEC_NPU_CMD(aclnnMhcPre, x, phi, alpha, bias, gamma, norm_eps, hc_eps, outHin, outHpost,
-                     outHres, nullTensor, nullTensor, nullTensor);
-    }
-
     return std::make_tuple(outHin, outHpost, outHres, outInvRms, outHmix, outHpre);
 }
 
@@ -252,56 +249,28 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
     at::Tensor biasPostGrad;
     at::Tensor gammaGrad;
 
+    auto dimen = grad_h_in.size(DIM_2);
+    auto numsResidual = grad_h_post.size(DIM_2);
+
     // 根据grad_h_in的维度判断shape是BSND格式或TND格式
     if (grad_h_in.dim() == NUM_THREE) {
-        // BSND格式: grad_h_in [B,S,D], grad_h_post [B,S,N], grad_h_res [B,S,N,N]
         auto batch = grad_h_in.size(DIM_0);
         auto sequence = grad_h_in.size(DIM_1);
-        auto dimen = grad_h_in.size(DIM_2);
-        auto numsResidual = grad_h_post.size(DIM_2);
-
-        // 4维输入场景（BSND格式）
-        // xGrad: [B, S, n, D]
-        // phiGrad: [n^2 + 2n, nD]
-        // biasPostGrad: [n^2 + 2n]
-        // xGrad: [B, S, n, D]
-        // gammaGrad: [n, D]
         c10::SmallVector<int64_t, BSND_DIMS> xGradSize = {batch, sequence, numsResidual, dimen};
-        c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
-        c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {3};
-        c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
-        c10::SmallVector<int64_t, NUM_ONE> gammaGradSize = {numsResidual, dimen};
-
-        xGrad = at::empty(xGradSize, xGradOptions);
-        phiGrad = at::empty(phiGradSize, fp32Options);
-        alphaGrad = at::empty(alphaGradSize, fp32Options);
-        biasPostGrad = at::empty(biasPostGradSize, fp32Options);
-        gammaGrad = at::empty(gammaGradSize, fp32Options);
-
+        xGrad = at::empty(xGradSize, xGradOptions); // [B, S, n, D]
     } else {
-        // TND格式: grad_h_in [T,D], grad_h_post [T,N], grad_h_res [T,N,N]
         auto t = grad_h_in.size(DIM_0);
-        auto dimen = grad_h_in.size(DIM_1);
-        auto numsResidual = grad_h_post.size(DIM_1);
-
-        // 3维输入场景（TND格式）
-        // xGrad: [T, n, D]
-        // phiGrad: [n^2 + 2n, nD]
-        // biasPostGrad: [n^2 + 2n]
-        // xGrad: [B, S, n, D]
-        // gammaGrad: [n, D]
         c10::SmallVector<int64_t, TND_DIMS> xGradSize = {t, numsResidual, dimen};
-        c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(2 * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
-        c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {3};
-        c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(2 * numsResidual) + (numsResidual * numsResidual)};
-        c10::SmallVector<int64_t, NUM_ONE> gammaGradSize = {numsResidual, dimen};
-
-        xGrad = at::empty(xGradSize, xGradOptions);
-        phiGrad = at::empty(phiGradSize, fp32Options);
-        alphaGrad = at::empty(alphaGradSize, fp32Options);
-        biasPostGrad = at::empty(biasPostGradSize, fp32Options);
-        gammaGrad = at::empty(gammaGradSize, fp32Options);
+        xGrad = at::empty(xGradSize, xGradOptions); // [T, n, D]
     }
+    c10::SmallVector<int64_t, NUM_TWO> phiGradSize = {(NUM_TWO * numsResidual) + (numsResidual * numsResidual), numsResidual * dimen};
+    c10::SmallVector<int64_t, NUM_ONE> alphaGradSize = {NUM_THREE};
+    c10::SmallVector<int64_t, NUM_ONE> biasPostGradSize = {(NUM_TWO * numsResidual) + (numsResidual * numsResidual)};
+    c10::SmallVector<int64_t, NUM_TWO> gammaGradSize = {numsResidual, dimen};
+    phiGrad = at::empty(phiGradSize, fp32Options); // [n^2 + 2n, nD]
+    alphaGrad = at::empty(alphaGradSize, fp32Options); // [3]
+    biasPostGrad = at::empty(biasPostGradSize, fp32Options); // [n^2 + 2n]
+    gammaGrad = at::empty(gammaGradSize, fp32Options); // [n, D]
 
     EXEC_NPU_CMD(aclnnMhcPreBackward, x, phi, alpha, grad_h_in, grad_h_post,
             grad_h_res, inv_rms, h_mix, h_pre, h_post, gamma, grad_x_post, hc_eps, xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
