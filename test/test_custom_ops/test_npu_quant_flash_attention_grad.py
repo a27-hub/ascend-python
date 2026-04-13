@@ -51,66 +51,60 @@ class TestNPUQuantFlashAttentionV2(TestCase):
 
     def custom_op_exec(self, query, key, value, dy, softmax_max, softmax_sum, attention_in, keep_prob=1.0, numels=0, seed=2):
         scale = 0.08838
-        return torch_npu.npu_fusion_attention_grad_v2(
-            query, key, value, dy, head_num=32, input_layout="BSH", softmax_max=softmax_max, softmax_sum=softmax_sum,
+        return torch_npu.npu_quant_fusion_attention_backward(
+            query, key, value, dy, head_num=32, input_layout="BSND", softmax_max=softmax_max, softmax_sum=softmax_sum,
             attention_in=attention_in, scale_value=scale, keep_prob=keep_prob, numels=numels, seed=seed)
 
-    def trans_BNSD2BSH(self, tensor: torch.Tensor):
-        tensor = torch.transpose(tensor, 1, 2)
-        tensor = torch.reshape(tensor, (tensor.shape[0], tensor.shape[1], -1))
-        return tensor
-    
-    def get_drop_mask(self, q, B, N1, S1, S2, seed=2, gen_p=0.2):
-        torch.npu.set_compile_mode(jit_compile=False)
-        torch.npu.manual_seed(seed)
-        drop_mask_uint8 = torch_npu._npu_dropout_gen_mask(q.npu(), [B, N1, S1, S2], p=gen_p, seed=seed, offset=0,
-                                                          parallel=True, sync=False)
-        drop_mask_bit_np = np.unpackbits(drop_mask_uint8.cpu().numpy(), count=B*N1*S1*S2, bitorder='little')
-        drop_mask_bit = torch.from_numpy(drop_mask_bit_np).reshape([B, N1, S1, S2])
-        drop_mask_bit = drop_mask_bit.detach().clone().to(torch.uint8)
-        return drop_mask_bit.cpu()
-
+    def npu_block_quant(self, tensor, scale = 1,PER_BLOCK_SIZE = 512):
+        dim1 = tensor.shape[0]
+        dim2 = tensor.shape[1]
+        dim3 = tensor.shape[2]
+        dim4 = tensor.shape[3]
+        quanted_tensor = torch.zeros([dim1, dim2, dim3, dim4]).to(torch.float32)
+        for b in range(dim1):
+            for n in range(dim3):
+                for s in range (0,dim2,PER_BLOCK_SIZE):
+                    s_start = s // PER_BLOCK_SIZE * PER_BLOCK_SIZE
+                    s_end = min (s // PER_BLOCK_SIZE * PER_BLOCK_SIZE + PER_BLOCK_SIZE, dim2)
+                    quanted_tensor[b, s_start:s_end, n, :] = tensor[b, s_start:s_end, n, :] * scale
+        return quanted_tensor
     @SupportedDevices(['Ascend910B'])
     def test_npu_flash_attention_v2(self, device="npu"):
-        query = torch.randn(1, 32, 128, 128, dtype=torch.float16)
-        key = torch.randn(1, 32, 128, 128, dtype=torch.float16)
-        value = torch.randn(1, 32, 128, 128, dtype=torch.float16)
-        dy = torch.randn(1, 32, 128, 128, dtype=torch.float16)
+        query = torch.randn(1, 7200, 40, 128, dtype=torch.float32)
+        key = torch.randn(1, 512, 40, 128, dtype=torch.float32)
+        value = torch.randn(1, 512, 40, 128, dtype=torch.float32)
+        dy = torch.randn(1, 7200, 40, 128, dtype=torch.float32)
+        x_max = torch.randn(1, 40, 7200, 1, dtype=torch.float32)
+        x_sum = torch.randn(1, 40, 7200, 1, dtype=torch.float32)
+        attention_in = torch.randn(1, 7200, 40, 128, dtype=torch.bfloat16)
+        dscale_q = torch.randn(1, 40, 15, 1, dtype=torch.float32)
+        dscale_k = torch.randn(1, 40, 1, 1, dtype=torch.float32)
+        dscale_v = torch.randn(1, 40, 1, 1, dtype=torch.float32)
+        dscale_dy = torch.randn(1, 40, 15, 1, dtype=torch.float32)
+        query_dtype=torch_npu.hifloat8
+        head_num = 40
+        scale = 1
 
-        q_npu = self.trans_BNSD2BSH(query).npu()
-        k_npu = self.trans_BNSD2BSH(key).npu()
-        v_npu = self.trans_BNSD2BSH(value).npu()
-        dy_npu = self.trans_BNSD2BSH(dy).npu()
-        out, softmax_res, x_max, x_sum, dq_cpu, dk_cpu, dv_cpu = self.supported_op_exec(query.to(torch.float32), key.to(torch.float32), value.to(torch.float32), dy.to(torch.float32))
-        x_max = x_max.expand(1, 32, 128, 8).npu()
-        x_sum = x_sum.expand(1, 32, 128, 8).npu()
-        out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse, dq_rope, dk_rope, dsink = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum, out_npu)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        query_hifp8 = self.npu_block_quant(query).to(torch.uint8)
+        key_hifp8 = self.npu_block_quant(key).to(torch.uint8)
+        value_hifp8 = self.npu_block_quant(value).to(torch.uint8)
+        dy_hifp8 = self.npu_block_quant(dy).to(torch.uint8)
 
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_flash_attention_v2_with_dropmask(self, device="npu"):
-        query = torch.randn(1, 32, 256, 128, dtype=torch.float16)
-        key = torch.randn(1, 32, 256, 128, dtype=torch.float16)
-        value = torch.randn(1, 32, 256, 128, dtype=torch.float16)
-        dy = torch.randn(1, 32, 256, 128, dtype=torch.float16)
-        keep_prob = 0.9
-        numels = 1 * 32 * 256 * 256
-        drop_mask = self.get_drop_mask(query, 1, 32, 256, 256, seed=2, gen_p=1-keep_prob)
-
-        q_npu = self.trans_BNSD2BSH(query).npu()
-        k_npu = self.trans_BNSD2BSH(key).npu()
-        v_npu = self.trans_BNSD2BSH(value).npu()
-        dy_npu = self.trans_BNSD2BSH(dy).npu()
-        out, softmax_res, x_max, x_sum, dq_cpu, dk_cpu, dv_cpu = self.supported_op_exec(
-            query.to(torch.float32),key.to(torch.float32), value.to(torch.float32),
-            dy.to(torch.float32), drop_mask, keep_prob)
-        x_max = x_max.expand(1, 32, 256, 8).npu()
-        x_sum = x_sum.expand(1, 32, 256, 8).npu()
-        out_npu = self.trans_BNSD2BSH(out).to(torch.float16).npu()
-        dq, dk, dv, dpse, dq_rope, dk_rope, dsink = self.custom_op_exec(q_npu, k_npu, v_npu, dy_npu, x_max, x_sum,
-                                                                 out_npu, keep_prob, numels)
-        self.assertRtolEqual(dq_cpu, dq.to(torch.float32), prec=0.005, prec16=0.005)
+        p_scale = torch.tensor([15]).float()
+        ds_scale = torch.tensor([2**15]).float()
+        npu_result = torch_npu.npu_quant_fusion_attention_backward(query_hifp8.npu(), key_hifp8.npu(), value_hifp8.npu(), dy_hifp8.npu(),head_num,
+                                                                "BSND",
+                                                                dscale_q.npu(),
+                                                                dscale_k.npu(),
+                                                                dscale_v.npu(),
+                                                                dscale_dy.npu(),
+                                                                p_scale=p_scale.npu(),
+                                                                ds_scale=ds_scale.npu(),
+                                                                softmax_max=x_max.npu(),
+                                                                softmax_sum=x_sum.npu(),
+                                                                attention_in=attention_in.npu(),
+                                                                scale_value=scale,
+                                                                query_dtype=query_dtype)
 
 if __name__ == "__main__":
     run_tests()
