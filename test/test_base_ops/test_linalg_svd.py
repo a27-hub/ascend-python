@@ -90,9 +90,8 @@ class TestLinalgSvd(TestCase):
 
                         # For non-empty tensors, verify reconstruction
                         if cpu_input.numel() > 0:
-                            cpu_reconstructed = (cpu_U[..., :k] @ cpu_S.diag_embed()) @ cpu_Vh[..., :k, :]
                             npu_reconstructed = (npu_U[..., :k] @ npu_S.diag_embed()) @ npu_Vh[..., :k, :]
-                            self.assertRtolEqual(cpu_reconstructed.numpy(), npu_reconstructed.cpu().numpy())
+                            self.assertRtolEqual(npu_reconstructed.cpu().numpy(), npu_input.cpu().numpy())
 
                         # For empty tensors with full_matrices=True, verify identity matrix property
                         if cpu_input.numel() == 0 and full_matrices:
