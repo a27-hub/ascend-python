@@ -113,6 +113,14 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
         pertoken_scale = torch.randint(low=0, high=256, size=(M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
         groupList = torch.tensor([M//2, M//2], dtype=torch.int64).npu()
         return x, weight, Scale, pertoken_scale, groupList
+
+    def gen_input_data_950_weight_quant_mx_fp8_fp4(self, E, M, K, N):
+        x = torch.randint(-128, 127, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+        weight = torch.randint(1, 2, (E, N, K / 2), dtype=torch.int8).npu()
+        scale = torch.randint(low=0, high=256, size=(E, N, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        pertoken_scale = torch.randint(low=0, high=256, size=(M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        groupList = torch.tensor([M//E, M//E], dtype=torch.int64).npu()
+        return x, weight, scale, pertoken_scale, groupList
     
     @SupportedDevices(["Ascend950"])
     def test_npu_grouped_matmul_finalize_routing_mxfp4(self, device="npu"):
@@ -368,6 +376,36 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
         )
         self.assertRtolEqual(supported_output, custom_output, 0.001)
 
+    @SupportedDevices(["Ascend950"])
+    def test_npu_grouped_matmul_finalize_routing_mxfp8_mxfp4(self, device="npu"):
+        m, k, n, batch, topK, e = 72, 512, 256, 72, 1, 2
+        x_clone, weight_clone, scale_clone, pertoken_scale_clone, group_list_clone = self.gen_input_data_950_weight_quant_mx_fp8_fp4(e, m, k, n)
+        shared_input = np.random.normal(0, 0.1, (batch // 4, n)).astype(np.float32)
+        shared_input_clone = torch.from_numpy(shared_input).to(torch.bfloat16).npu()
+        # logit
+        logit_ori = np.random.normal(0, 0.1, (batch, e)).astype(np.float32)
+        routing = np.argsort(logit_ori, axis=1)[:, -topK:].astype(np.int32)
+        logit = softmax(logit_ori[np.arange(batch).reshape(-1, 1).repeat(topK, axis=1), routing], axis=1).astype(np.float32)
+        logit = logit.reshape(m)
+        logit_clone = torch.from_numpy(logit).npu()
+        # row_indx
+        row_index = (np.argsort(routing.reshape(-1)) // topK).astype(np.int64)
+        row_index_clone = torch.from_numpy(row_index).npu()
+        shared_input_offset = batch // 2
+        group_list_type = 1
+        output_bs = batch
+        x_dtype = None
+        w_dtype = torch_npu.float4_e2m1fn_x2
+        scale_dtype = torch_npu.float8_e8m0fnu
+        pertoken_scale_dtype = torch_npu.float8_e8m0fnu
+        weight_clone = weight_clone.transpose(1,2)
+        scale_clone = scale_clone.transpose(1,2)
+
+        bias = torch.randint(-1, 1, (e, n*2), dtype=torch.bfloat16).npu()
+        torch_npu.npu_grouped_matmul_finalize_routing(x_clone, weight_clone, group_list_clone,bias=bias,
+            scale=scale_clone, pertoken_scale=pertoken_scale_clone, shared_input=shared_input_clone,
+            logit=logit_clone, row_index=row_index_clone, shared_input_offset=shared_input_offset, output_bs=output_bs, 
+            group_list_type=group_list_type,x_dtype=x_dtype, w_dtype=w_dtype, scale_dtype=scale_dtype, pertoken_scale_dtype=pertoken_scale_dtype)
 
 if __name__ == "__main__":
     run_tests()
