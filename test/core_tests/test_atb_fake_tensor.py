@@ -167,6 +167,27 @@ class TestAtbFakeTensor(TestCase):
             self.assertEqual(output[0].dtype, torch.float32)
             self.assertEqual(output[1].dtype, torch.int32)
 
+    def test_npu_quant_max(self):
+        with FakeTensorMode():
+            x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+            scale = torch.randn((128,), dtype=torch.float32).npu()
+
+            y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291)
+            self.assertTrue(y.shape == x.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertTrue(amax.shape == torch.Size([]))
+            self.assertEqual(amax.dtype, x.dtype)
+
+            y2, amax2 = torch_npu.npu_quant_max(x, scale, round_mode="round", dst_dtype=292)
+            self.assertTrue(y2.shape == x.shape)
+            self.assertEqual(y2.dtype, torch.float8_e4m3fn)
+            self.assertEqual(amax2.dtype, x.dtype)
+
+            y3, amax3 = torch_npu.npu_quant_max(x, scale, round_mode="hybrid", dst_dtype=290)
+            self.assertTrue(y3.shape == x.shape)
+            self.assertEqual(y3.dtype, torch.uint8)
+            self.assertEqual(amax3.dtype, x.dtype)
+
 
 if __name__ == "__main__":
     run_tests()
