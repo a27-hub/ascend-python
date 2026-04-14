@@ -21,7 +21,7 @@
 
 namespace op_plugin {
 
-namespace {
+namespace {    
 std::vector<at::Tensor> npu_expand_outplace(at::TensorList to_expand)
 {
     // expands a list of Tensors; ignores undefined (null) tensors
