@@ -98,6 +98,7 @@
       "npu_mla_prolog_v3_functional",
       "npu_matmul_compress_dequant",
       "npu_quant_lightning_indexer",
+      "npu_quant_lightning_indexer_metadata",
       "npu_lightning_indexer",
       "npu_sparse_flash_attention",
       "npu_lightning_indexer_grad",
