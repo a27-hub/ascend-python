@@ -5413,6 +5413,9 @@ autograd:
     op_api: [v2.5, newest]
 
 custom:
+  - func: top_k_top_p_softmax(Tensor logits, Tensor? p=None, Tensor? k=None) -> Tensor
+    op_api: all_version
+
   - func: ffn_worker_scheduler_(Tensor(a!) self, *, int sync_group_size=1, int execute_mode=0) -> Tensor(a!)
     op_api: [v2.1, newest]
     gen_opapi:
