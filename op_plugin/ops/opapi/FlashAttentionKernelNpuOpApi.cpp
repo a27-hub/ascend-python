@@ -19,6 +19,7 @@
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
 namespace op_api {
 const int DIM_0 = 0;
@@ -2092,5 +2093,462 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset);
 }
+
+// ========================= FA v3 .out interface for ACLgraph =========================
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &>
+npu_fusion_attention_v3_out(
+    const at::Tensor &query, const at::Tensor &key,
+    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
+    c10::OptionalArrayRef<int64_t> prefix, const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink,
+    const c10::optional<at::Tensor> &workspace,
+    at::Tensor &attention_score, at::Tensor &softmax_max, at::Tensor &softmax_sum,
+    at::Tensor &softmax_out, at::Tensor &seed, at::Tensor &offset)
+{
+    // This is the .out interface for FA v3 ACLgraph support.
+    // It writes results directly to pre-allocated output tensors.
+    
+    TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950, "Ascend950 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
+
+    std::string input_layout_str1(input_layout);
+    std::string softmax_layout_str1(softmax_layout);
+    const at::Tensor &pse_const = pse.value_or(at::Tensor());
+    const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
+    const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
+    const at::Tensor &sink_const = sink.value_or(at::Tensor());
+    auto prefixN = prefix.value_or(at::IntArrayRef{});
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    // Validate parameters (same as v3_symint)
+    TORCH_CHECK(head_num > 0, "head_num must > 0, but got ", head_num, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
+        "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D,
+        "The shapes of the input key should be 3 or 4 dimensional, but got ", key.dim(),
+        "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
+        "The shapes of the input value should be 3 or 4 dimensional, but got ", value.dim(),
+        "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
+        "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
+
+    std::string input_layout_str = std::string(input_layout);
+    std::string softmax_layout_str = std::string(softmax_layout);
+
+    // Validate softmax_layout
+    TORCH_CHECK(
+        (softmax_layout_str == "TND" || softmax_layout_str == ""),
+        "only supported softmax_layout=TND",
+        OPS_ERROR(ErrCode::PARAM)
+    );
+    TORCH_CHECK(
+        !(softmax_layout_str == "TND" && input_layout_str != "TND"),
+        "softmax_layout=TND only supported when input_layout_str=TND",
+        OPS_ERROR(ErrCode::PARAM)
+    );
+
+    // Validate sparse_mode and actual_seq_qlen/kvlen
+    if (input_layout_str == "TND") {
+        TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
+                    sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
+                    (sparse_mode > static_cast<int64_t>(SparseMode::PREFIX) &&
+                    sparse_mode <= static_cast<int64_t>(SparseMode::BAND_LEFT_UP_CAUSAL)),
+                    "The sparse_mode value must be in range of [0,5) or (5,8], but got ",
+                    sparse_mode, OPS_ERROR(ErrCode::PARAM));
+
+        TORCH_CHECK(ac_seq_qlen.size() != 0 && ac_seq_kvlen.size() != 0 && ac_seq_qlen.size() == ac_seq_kvlen.size(),
+                    "the size of actual_seq_qlen and actual_seq_kvlen must be the same and cannot be empty." +
+                    OPS_ERROR(ErrCode::PARAM));
+    } else {
+        TORCH_CHECK(sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
+                    sparse_mode <= static_cast<int64_t>(SparseMode::PREFIX_COMPRESS),
+                    "The sparse_mode value must be in range of [0,6], but got ",
+                    sparse_mode, OPS_ERROR(ErrCode::PARAM));
+    }
+
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+    TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" ||
+        input_layout_str == "BNSD" || input_layout_str == "BSND" || input_layout_str == "TND",
+        "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
+        input_layout, OPS_ERROR(ErrCode::PARAM));
+
+    // Generate dropout mask
+    at::Tensor seed_local;
+    at::Tensor offset_local;
+    int64_t numels = 0;
+    
+    if (input_layout_str == "TND") {
+        numels = query.size(1);
+        int64_t accum = ac_seq_qlen[0] * ac_seq_kvlen[0];
+        for (size_t i = 1; i < ac_seq_qlen.size(); i++) {
+            accum += ((ac_seq_qlen[i] - ac_seq_qlen[i - 1]) * (ac_seq_kvlen[i] - ac_seq_kvlen[i - 1]));
+        }
+        numels *= accum;
+    }
+    
+    c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+    at::Tensor format_drop_mask = dropout_gen_mask_tensor(query, key, keep_prob, head_num, input_layout_str,
+        gen_mask_parallel, sync, seed_local, offset_local, numels, is_capture);
+
+    // Format input tensors
+    at::Tensor format_query = format_trans(query);
+    at::Tensor format_key = format_trans(key);
+    at::Tensor format_value = format_trans(value);
+    at::Tensor format_pse = format_trans(pse_const);
+    at::Tensor format_padding_mask = format_trans(padding_mask_const);
+    at::Tensor format_atten_mask = format_trans(atten_mask_const);
+    at::Tensor format_sink = format_trans(sink_const);
+
+    // Execute ACLNN command with pre-allocated outputs
+    char input_layout_char[LAYOUT_MAX_LENGTH];
+    strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+    
+    static const bool is_fa_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionVarLenScoreV4");
+    
+    if (format_sink.defined()) {
+        auto format_query_rope = at::Tensor();
+        auto format_key_rope = at::Tensor();
+        auto q_start_idx_val = at::IntArrayRef{};
+        auto kv_start_idx_val = at::IntArrayRef{};
+        int64_t pse_type = 1;
+
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            std::string softmax_layout_str = (softmax_layout_str1 == "TND") ? "same_as_input" : std::string(softmax_layout_str1);
+            char softmax_layout_char[LAYOUT_MAX_LENGTH];
+            strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+            softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+            
+            // Use workspace for update scenario if provided
+            if (workspace.has_value()) {
+                void* workspace_addr = const_cast<void *>(workspace.value().storage().data());
+                uint64_t workspace_size = static_cast<uint64_t>(workspace.value().numel() * workspace.value().element_size());
+                EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(
+                    aclnnFlashAttentionVarLenScoreV5, workspace_addr, workspace_size,
+                    format_query, format_query_rope, format_key, format_key_rope, format_value,
+                    format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN,
+                    ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                    input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char, softmax_max, softmax_sum,
+                    softmax_out, attention_score);
+            } else {
+                EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                    aclnnFlashAttentionVarLenScoreV5, format_query, format_query_rope, format_key, format_key_rope, format_value,
+                    format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN,
+                    ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                    input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char, softmax_max, softmax_sum,
+                    softmax_out, attention_score);
+            }
+        } else {
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                aclnnFlashAttentionScoreV3, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_sink, prefixN, q_start_idx_val, kv_start_idx_val,
+                scale, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char, inner_precise,
+                sparse_mode, pse_type, softmax_max, softmax_sum, softmax_out, attention_score);
+        }
+    } else {
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            if (softmax_layout_str1 == "TND" && is_fa_V4_available) {
+                std::string softmax_layout_str = "same_as_input";
+                char softmax_layout_char[LAYOUT_MAX_LENGTH];
+                strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+                softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+                
+                if (workspace.has_value()) {
+                    void* workspace_addr = const_cast<void *>(workspace.value().storage().data());
+                    uint64_t workspace_size = static_cast<uint64_t>(workspace.value().numel() * workspace.value().element_size());
+                    EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(
+                        aclnnFlashAttentionVarLenScoreV4, workspace_addr, workspace_size,
+                        format_query, format_key, format_value,
+                        format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                        ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                        input_layout_char, inner_precise, sparse_mode, softmax_layout_char, softmax_max, softmax_sum,
+                        softmax_out, attention_score);
+                } else {
+                    EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                        aclnnFlashAttentionVarLenScoreV4, format_query, format_key, format_value,
+                        format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                        ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                        input_layout_char, inner_precise, sparse_mode, softmax_layout_char, softmax_max, softmax_sum,
+                        softmax_out, attention_score);
+                }
+            } else {
+                if (workspace.has_value()) {
+                    void* workspace_addr = const_cast<void *>(workspace.value().storage().data());
+                    uint64_t workspace_size = static_cast<uint64_t>(workspace.value().numel() * workspace.value().element_size());
+                    EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD(
+                        aclnnFlashAttentionVarLenScore, workspace_addr, workspace_size,
+                        format_query, format_key, format_value,
+                        format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                        ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                        input_layout_char, inner_precise, sparse_mode, softmax_max, softmax_sum,
+                        softmax_out, attention_score);
+                } else {
+                    EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                        aclnnFlashAttentionVarLenScore, format_query, format_key, format_value,
+                        format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                        ac_seq_qlen, ac_seq_kvlen, scale, keep_prob, pre_tockens, next_tockens, head_num,
+                        input_layout_char, inner_precise, sparse_mode, softmax_max, softmax_sum,
+                        softmax_out, attention_score);
+                }
+            }
+        } else {
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                aclnnFlashAttentionScore, format_query, format_key, format_value,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, prefixN,
+                scale, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
+                inner_precise, sparse_mode, softmax_max, softmax_sum, softmax_out, attention_score);
+        }
+    }
+
+    // Copy seed and offset to pre-allocated output tensors
+    seed.copy_(seed_local);
+    offset.copy_(offset_local);
+
+    // Event synchronization for secondary stream
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        c10_npu::NPUEvent npu_event;
+        npu_event.record(c10_npu::getCurrentNPUStream());
+        npu_event.block(c10_npu::getCurrentSecondaryStream());
+    }
+
+    return std::tie(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset);
+}
+
+// ========================= FA v3 backward .out interface for ACLgraph =========================
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &>
+npu_fusion_attention_grad_v3_out(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const at::Tensor &dy,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value,
+    double keep_prob,
+    int64_t pre_tockens,
+    int64_t next_tockens,
+    int64_t inner_precise,
+    const c10::optional<at::Tensor> &seed,
+    const c10::optional<at::Tensor> &offset,
+    c10::OptionalArrayRef<int64_t> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode,
+    bool gen_mask_parallel,
+    bool sync,
+    c10::string_view softmax_layout,
+    const c10::optional<at::Tensor> &sink,
+    const c10::optional<at::Tensor> &workspace,
+    at::Tensor &dq,
+    at::Tensor &dk,
+    at::Tensor &dv,
+    at::Tensor &dpse,
+    at::Tensor &dsink)
+{
+    // This is the .out interface for FA v3 backward ACLgraph support.
+    // It writes results directly to pre-allocated output tensors.
+    
+    TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950, "Ascend950 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
+
+    // Validate inputs
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
+        "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D,
+        "The shapes of the input key should be 3 or 4 dimensional, but got ",
+        key.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
+        "The shapes of the input value should be 3 or 4 dimensional, but got ",
+        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dy.dim() == DIMENSION_3D || dy.dim() == DIMENSION_4D,
+        "The shapes of the input dy should be 3 or 4 dimensional, but got ", dy.dim(), "-dimensional",
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
+        "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
+        OPS_ERROR(ErrCode::PARAM));
+    
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+    TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" || input_layout_str == "BNSD" ||
+        input_layout_str == "BSND" || input_layout_str == "TND",
+        "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
+        input_layout, OPS_ERROR(ErrCode::PARAM));
+
+    // Convert actual_seq_qlen/kvlen to IntArrayRef
+    auto prefixN = prefix.value_or(at::IntArrayRef{});
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    // Calculate numels for dropout mask
+    int64_t N_local = 0;
+    if (input_layout_str == "BNSD") {
+        N_local = query.size(1);
+    } else if (input_layout_str == "BSND") {
+        N_local = query.size(THIRD_ELEMENT);
+    } else if (input_layout_str == "TND") {
+        N_local = query.size(1);
+    }
+    
+    int64_t numels = 0;
+    if (input_layout_str == "TND") {
+        numels = N_local;
+        int64_t accum = ac_seq_qlen[0] * ac_seq_kvlen[0];
+        for (size_t i = 1; i < ac_seq_qlen.size(); i++) {
+            accum += ((ac_seq_qlen[i] - ac_seq_qlen[i - 1]) * (ac_seq_kvlen[i] - ac_seq_kvlen[i - 1]));
+        }
+        numels *= accum;
+    } else if (input_layout_str == "BSH") {
+        numels = query.size(0) * head_num * query.size(1) * key.size(1);
+    } else if (input_layout_str == "SBH") {
+        numels = query.size(1) * head_num * query.size(0) * key.size(0);
+    } else if (input_layout_str == "BNSD") {
+        numels = query.size(0) * query.size(1) * query.size(THIRD_ELEMENT) * key.size(THIRD_ELEMENT);
+    } else if (input_layout_str == "BSND") {
+        numels = query.size(0) * query.size(THIRD_ELEMENT) * query.size(1) * key.size(1);
+    }
+
+    // Generate dropout mask
+    int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
+    length += LENGTH_BIAS;
+    at::Tensor drop_mask;
+    c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 && get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+        const at::Tensor &seed_const = seed.value_or(at::Tensor());
+        const at::Tensor &offset_const = offset.value_or(at::Tensor());
+        drop_mask = dropout_gen_mask_tensor_dispatch(query, keep_prob, seed_const, offset_const, numels, gen_mask_parallel, sync, is_capture);
+    } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
+        drop_mask = at::zeros(at::IntArrayRef{length}, query.options().dtype(at::kByte));
+    }
+
+    // Format input tensors
+    const at::Tensor &pse_const = pse.value_or(at::Tensor());
+    const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
+    const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
+    const at::Tensor &softmax_max_const = softmax_max.value_or(at::Tensor());
+    const at::Tensor &softmax_sum_const = softmax_sum.value_or(at::Tensor());
+    const at::Tensor &softmax_in_const = softmax_in.value_or(at::Tensor());
+    const at::Tensor &attention_in_const = attention_in.value_or(at::Tensor());
+    const at::Tensor &sink_const = sink.value_or(at::Tensor());
+
+    at::Tensor format_query = format_trans(query);
+    at::Tensor format_key = format_trans(key);
+    at::Tensor format_value = format_trans(value);
+    at::Tensor format_dy = format_trans(dy);
+    at::Tensor format_pse = format_trans(pse_const);
+    at::Tensor format_drop_mask = format_trans(drop_mask);
+    at::Tensor format_padding_mask = format_trans(padding_mask_const);
+    at::Tensor format_atten_mask = format_trans(atten_mask_const);
+    at::Tensor format_softmax_max = format_trans(softmax_max_const);
+    at::Tensor format_softmax_sum = format_trans(softmax_sum_const);
+    at::Tensor format_softmax_in = format_trans(softmax_in_const);
+    at::Tensor format_attention_in = format_trans(attention_in_const);
+    at::Tensor format_sink = format_trans(sink_const);
+
+    // Execute ACLNN command with pre-allocated outputs
+    // Using the same kernel selection logic as npu_fusion_attention_backward_v3
+    char input_layout_char[LAYOUT_MAX_LENGTH];
+    strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+    input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+
+    // Prepare empty rope tensors (same as npu_fusion_attention_backward_v3)
+    auto format_query_rope = at::Tensor();
+    auto format_key_rope = at::Tensor();
+    auto q_start_idx_val = at::IntArrayRef{};
+    auto kv_start_idx_val = at::IntArrayRef{};
+    int64_t pse_type = 1;
+
+    if (format_sink.defined()) {
+        // sink is defined - use V5/V3 kernels
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            // TND with sink - use V5 kernel
+            std::string softmax_layout_str = std::string(softmax_layout);
+            softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
+            char softmax_layout_char[LAYOUT_MAX_LENGTH];
+            strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+            softmax_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';
+
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                aclnnFlashAttentionUnpaddingScoreGradV5, format_query, format_query_rope, format_key, format_key_rope, format_value, format_dy,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                format_softmax_sum, format_softmax_in, format_attention_in, format_sink, prefixN, ac_seq_qlen, ac_seq_kvlen, q_start_idx_val, kv_start_idx_val,
+                scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char, inner_precise, sparse_mode, pse_type, softmax_layout_char,
+                dq, dk, dv, dpse, dsink);
+        } else {
+            // Non-TND with sink - use V3 kernel
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                aclnnFlashAttentionScoreGradV3, format_query, format_key, format_value, format_dy,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                format_softmax_sum, format_softmax_in, format_attention_in, format_sink, prefixN, q_start_idx_val, kv_start_idx_val, scale_value, keep_prob,
+                pre_tockens, next_tockens, head_num, input_layout_char, inner_precise, sparse_mode, pse_type, dq, dk, dv, dpse, dsink);
+        }
+    } else {
+        // sink is undefined
+        if (!ac_seq_qlen.empty() && !ac_seq_kvlen.empty()) {
+            // TND without sink
+            std::string softmax_layout_str = std::string(softmax_layout);
+            static const bool is_fa_grad_V4_available = check_aclnn_kernel_available("aclnnFlashAttentionUnpaddingScoreGradV4");
+
+            if (softmax_layout_str == "TND" && is_fa_grad_V4_available) {
+                softmax_layout_str = "same_as_input";
+                char softmax_layout_char[LAYOUT_MAX_LENGTH];
+                strncpy(softmax_layout_char, softmax_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
+                EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                    aclnnFlashAttentionUnpaddingScoreGradV4, format_query, format_key, format_value, format_dy,
+                    format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                    format_softmax_sum, format_softmax_in, format_attention_in, prefixN, ac_seq_qlen, ac_seq_kvlen,
+                    scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
+                    inner_precise, sparse_mode, dq, dk, dv, dpse, softmax_layout_char);
+            } else {
+                EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                    aclnnFlashAttentionUnpaddingScoreGrad, format_query, format_key, format_value, format_dy,
+                    format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                    format_softmax_sum, format_softmax_in, format_attention_in, prefixN, ac_seq_qlen, ac_seq_kvlen,
+                    scale_value, keep_prob, pre_tockens, next_tockens, head_num, input_layout_char,
+                    inner_precise, sparse_mode, dq, dk, dv, dpse);
+            }
+        } else {
+            // Non-TND without sink - use basic kernel
+            EXEC_NPU_NO_FORMAT_CHECK_CMD(
+                aclnnFlashAttentionScoreGrad, format_query, format_key, format_value, format_dy,
+                format_pse, format_drop_mask, format_padding_mask, format_atten_mask, format_softmax_max,
+                format_softmax_sum, format_softmax_in, format_attention_in, prefixN, scale_value, keep_prob,
+                pre_tockens, next_tockens, head_num, input_layout_char,
+                inner_precise, sparse_mode, dq, dk, dv, dpse);
+        }
+    }
+
+    // Event synchronization for secondary stream
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        c10_npu::NPUEvent npu_event;
+        npu_event.record(c10_npu::getCurrentNPUStream());
+        npu_event.block(c10_npu::getCurrentSecondaryStream());
+    }
+
+    return std::tie(dq, dk, dv, dpse, dsink);
+}
+
 #endif
 }
