@@ -403,7 +403,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         sparse_block_count = 2048
         b = 4
         s1 = 1
-        s2 = 3904
+        s2 = 8192
         n1 = 128
         n2 = 1
         dn = 512
@@ -411,7 +411,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         tile_size = 128
         block_size = 256
         layout_query = 'BSND'
-        s2_act = 3904
+        s2_act = 4096
 
         query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
         key = torch.tensor(np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn))).to(torch.int8)
@@ -477,7 +477,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         sparse_block_count = 2048
         b = 4
         s1 = 1
-        s2 = 8192
+        s2 = 3904
         n1 = 48
         n2 = 1
         dn = 512
@@ -485,7 +485,7 @@ class TestKvQuantSparseFlashAttention(TestCase):
         tile_size = 128
         block_size = 256
         layout_query = 'BSND'
-        s2_act = 4096
+        s2_act = 3904
 
         query = torch.tensor(np.random.uniform(-10, 10, (b, s1, n1, dn))).to(query_type)
         key_float = np.random.uniform(-5, 10, (b * (s2 // block_size), block_size, n2, dn)).astype(np.float32)
