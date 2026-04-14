@@ -20,6 +20,7 @@
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
 at::Tensor& gt_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& result)
 {
     DO_COMPATIBILITY(aclnnGtScalar, acl_op::gt_out(self, other, result));
@@ -32,13 +33,8 @@ at::Tensor& gt_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
 at::Tensor gt(const at::Tensor& self, const at::Scalar& other)
 {
     DO_COMPATIBILITY(aclnnGtScalar, acl_op::gt(self, other));
-    // calculate the output size
     auto output_size = op_infer::input_same_output_size(self);
-
-    // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
-
-    // calculate the output result of the NPU
     EXEC_NPU_CMD(aclnnGtScalar, self, other, result);
     return result;
 }
@@ -46,6 +42,8 @@ at::Tensor gt(const at::Tensor& self, const at::Scalar& other)
 at::Tensor& gt_(at::Tensor& self, const at::Scalar& other)
 {
     DO_COMPATIBILITY(aclnnInplaceGtScalar, acl_op::gt_(self, other));
+    TORCH_CHECK(torch_npu::utils::is_npu(self),
+        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     EXEC_NPU_CMD(aclnnInplaceGtScalar, self, other);
     return self;
 }
@@ -53,10 +51,15 @@ at::Tensor& gt_(at::Tensor& self, const at::Scalar& other)
 at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        npu_preparation::check_tensor({self_device, other_device}, result, output_size);
+        EXEC_NPU_CMD(aclnnGtTensor, self_device, other_device, result);
+        return result;
+    }
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-
     npu_preparation::check_tensor({self, other}, result, output_size);
-
     EXEC_NPU_CMD(aclnnGtTensor, self, other, result);
     return result;
 }
@@ -64,13 +67,16 @@ at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt(self, other));
-    // calculate the output size
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(
+            output_size, self_device.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnGtTensor, self_device, other_device, result);
+        return result;
+    }
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-
-    // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kBool));
-
-    // calculate the output result of the NPU
     if (npu_preparation::IsCPUScalar(other)) {
         const at::Scalar other_scalar = other.item();
         EXEC_NPU_CMD(aclnnGtScalar, self, other_scalar, result);
@@ -83,14 +89,24 @@ at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 at::Tensor& gt_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceGtTensor, acl_op::gt_(self, other));
-    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-        return op_api::gt_(self, other.item());
-    } else {
-        TORCH_CHECK(self.device() == other.device(),
-            "Expected all tensors to be on the same device, but found at least two devices", OPS_ERROR(ErrCode::INTERNAL));
-        npu_preparation::CheckMemory({self, other}, {self});
-        EXEC_NPU_CMD(aclnnInplaceGtTensor, self, other);
+    TORCH_CHECK(torch_npu::utils::is_npu(self),
+        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        at::Tensor other_device = other;
+        if (!torch_npu::utils::is_npu(other)) {
+            other_device = other.to(self.device());
+        }
+        npu_preparation::CheckMemory({self, other_device}, {self});
+        EXEC_NPU_CMD(aclnnInplaceGtTensor, self, other_device);
         return self;
     }
+    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        return op_api::gt_(self, other.item());
+    }
+    TORCH_CHECK(self.device() == other.device(),
+        "Expected all tensors to be on the same device, but found at least two devices", OPS_ERROR(ErrCode::INTERNAL));
+    npu_preparation::CheckMemory({self, other}, {self});
+    EXEC_NPU_CMD(aclnnInplaceGtTensor, self, other);
+    return self;
 }
 }
