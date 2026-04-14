@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -29,9 +29,6 @@
 #include "op_plugin/ops/dvm/lazy_fusion_flags.h"
 
 namespace lazy_fusion {
-constexpr unsigned int OpLevel_0 = 0;
-constexpr unsigned int OpLevel_1 = 1;
-
 class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
  public:
   LazyFusionKernel();
@@ -408,6 +405,6 @@ inline bool IsEnabled() {
   return true;
 }
 
-bool IsEnabled(const std::string &op, unsigned int op_level);
+bool IsEnabled(const std::string &op, unsigned int required_level);
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_KERNEL_H

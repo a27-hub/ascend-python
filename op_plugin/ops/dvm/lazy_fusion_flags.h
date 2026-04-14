@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -14,13 +14,16 @@
 #ifndef DVM_LAZY_FUSION_FLAGS_H
 #define DVM_LAZY_FUSION_FLAGS_H
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
 namespace lazy_fusion {
-constexpr unsigned int OptLevel_0 = 0;  // Disabled
-constexpr unsigned int OptLevel_1 = 1;  // Basic functions
-constexpr unsigned int OptLevel_2 = 2;  // Default functions
+constexpr unsigned int OptLevel_0 = 0;  // Disable dvm
+constexpr unsigned int OptLevel_1 = 1;  // Enable OpLevel_1 ops by default
+constexpr unsigned int OptLevel_2 = 2;  // Enable OpLevel_2 ops by default
+constexpr unsigned int OpLevel_1 = OptLevel_1;
+constexpr unsigned int OpLevel_2 = OptLevel_2;
 
 class LazyFusionFlags {
  public:
