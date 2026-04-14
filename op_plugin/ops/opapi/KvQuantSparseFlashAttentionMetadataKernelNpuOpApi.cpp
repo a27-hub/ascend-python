@@ -22,21 +22,19 @@
 #include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
 namespace op_api {
-using npu_utils = at_npu::native::NpuUtils;
-using npu_preparation = at_npu::native::OpPreparation;
 using namespace at_npu::native;
 constexpr int64_t OUTPUT_SIZE = 1024;
 
-const c10::optional<at::Tensor> get_valid_tensor(const c10::optional<at::Tensor> &tensor_opt, at::Device device) {
+const c10::optional<at::Tensor> qsfa_get_valid_tensor(const c10::optional<at::Tensor> &tensor_opt, at::Device device) {
     return tensor_opt.has_value() ? tensor_opt : torch::empty({0}, torch::dtype(torch::kInt32).device(device));
 };
 
 at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
-    int64_t num_heads_q, int64_t num_heads_kv, int64_t head_dim, int key_quant_mode, int value_quant_mode,
+    int64_t num_heads_q, int64_t num_heads_kv, int64_t head_dim, int64_t key_quant_mode, int64_t value_quant_mode,
     const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_kv,
-    int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_kv, 
-    int64_t topk, int sparse_block_size, c10::string_view layout_queryuery, c10::string_view layout_kv, int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
-    int attention_mode, int quant_scale_repo_mode, int64_t tile_size, int64_t rope_head_dim)
+    int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_kv, int64_t topk, int64_t sparse_block_size, 
+    c10::string_view layout_query, c10::string_view layout_kv, int64_t sparse_mode, int64_t pre_tokens, 
+    int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode, int64_t tile_size, int64_t rope_head_dim)
 {
     const c10::string_view device = "npu:0";
     at::Device output_device = at::Device(std::string(device));
@@ -47,8 +45,8 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
     }
     at::Tensor output = at::empty({OUTPUT_SIZE}, torch::dtype(torch::kInt32).device(output_device).memory_format(c10::MemoryFormat::Contiguous));
 
-    auto actual_seq_lengths_query_val = get_valid_tensor(actual_seq_lengths_query, output_device);
-    auto actual_seq_lengths_kv_val = get_valid_tensor(actual_seq_lengths_kv, output_device);
+    auto actual_seq_lengths_query_val = qsfa_get_valid_tensor(actual_seq_lengths_query, output_device);
+    auto actual_seq_lengths_kv_val = qsfa_get_valid_tensor(actual_seq_lengths_kv, output_device);
 
     std::string layout_query_str = std::string(layout_query);
     std::string layout_kv_str = std::string(layout_kv);

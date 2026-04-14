@@ -2024,6 +2024,23 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
 
     return out
 
+@impl(m, "npu_quant_lightning_indexer_metadata")
+def npu_quant_lightning_indexer_metadata_forward(num_heads_q, num_heads_k, head_dim,
+                                                 query_quant_mode, key_quant_mode, *,
+                                                 actual_seq_lengths_query = None, actual_seq_lengths_key = None,
+                                                 batch_size = None, max_seqlen_q = None, max_seqlen_k = None,
+                                                 layout_query = None, layout_key = None, sparse_count = None,
+                                                 sparse_mode = None, pre_tokens = None, next_tokens = None, 
+                                                 cmp_ratio = None):
+    
+    require_param = {"num_heads_q": num_heads_q, "num_heads_k": num_heads_k, "head_dim": head_dim}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+    return torch.empty([1024], dtype=torch.int32, device='meta')
 
 @impl(m, "npu_kv_quant_sparse_flash_attention")
 def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, key_quant_mode,
@@ -2076,13 +2093,17 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 @impl(m, "npu_kv_quant_sparse_flash_attention_metadata")
-def npu_kv_quant_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, key_quant_mode, value_quant_mode, *, 
-                                                         actual_seq_lengths_query = None, actual_seq_lengths_kv = None, batch_size = None, 
-                                                         max_seqlen_q = None, max_seqlen_kv = None, topk = None, sparse_block_size = None, 
-                                                         layout_query = None, layout_kv = None, sparse_mode = None, 
-                                                         pre_tokens = None, next_tokens = None, attention_mode = None, quant_scale_repo_mode = None, tile_size = None, rope_head_dim = None):
+def npu_kv_quant_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, key_quant_mode, 
+                                                         value_quant_mode, *, actual_seq_lengths_query = None, 
+                                                         actual_seq_lengths_kv = None, batch_size = None, 
+                                                         max_seqlen_q = None, max_seqlen_kv = None, topk = None, 
+                                                         sparse_block_size = None, layout_query = None, layout_kv = None, 
+                                                         sparse_mode = None, pre_tokens = None, next_tokens = None, 
+                                                         attention_mode = None, quant_scale_repo_mode = None, 
+                                                         tile_size = None, rope_head_dim = None):
     
-    require_param = {"num_heads_q": num_heads_q, "num_heads_kv": num_heads_kv, "head_dim": head_dim, "key_quant_mode": key_quant_mode, "value_quant_mode": value_quant_mode}
+    require_param = {"num_heads_q": num_heads_q, "num_heads_kv": num_heads_kv, "head_dim": head_dim, 
+                     "key_quant_mode": key_quant_mode, "value_quant_mode": value_quant_mode}
 
     for item_name, item in require_param.items():
         torch._check(
