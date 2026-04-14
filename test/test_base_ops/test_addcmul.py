@@ -280,6 +280,99 @@ class TestAddCMul(TestCase):
         )
         self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_addcmul_cpu_scalar_basic(self):
+        """Test basic CPU scalar functionality"""
+        a = torch.rand((2, 2), dtype=torch.float32)
+        b = torch.rand((2, 2), dtype=torch.float32)
+        c = torch.tensor(2.0, dtype=torch.float32, device="cpu")
+
+        # CPU reference
+        cpu_result = torch.addcmul(a, b, c, value=0.5)
+
+        # NPU with CPU scalar
+        a_npu = a.npu()
+        b_npu = b.npu()
+        npu_result = torch.addcmul(a_npu, b_npu, c, value=0.5)
+
+        self.assertRtolEqual(cpu_result.numpy(), npu_result.cpu().numpy())
+
+    def test_addcmul_cpu_scalar_dtype_preservation(self):
+        """Test that NPU addcmul with CPU scalar matches CPU behavior"""
+        # Case 1: self/tensor1 low precision, tensor2 high precision CPU scalar
+        a = torch.rand((2, 2), dtype=torch.float16)
+        b = torch.rand((2, 2), dtype=torch.float16)
+        c = torch.tensor(2.0, dtype=torch.float32, device="cpu")
+
+        # CPU reference
+        cpu_result = torch.addcmul(a, b, c, value=0.5)
+
+        # NPU with CPU scalar
+        a_npu = a.npu()
+        b_npu = b.npu()
+        npu_result = torch.addcmul(a_npu, b_npu, c, value=0.5)
+
+        # NPU result dtype must match CPU result dtype
+        self.assertEqual(npu_result.dtype, cpu_result.dtype)
+        self.assertRtolEqual(cpu_result.float().numpy(), npu_result.cpu().float().numpy())
+
+        # Case 2: self high precision, tensor2 low precision
+        a = torch.rand((2, 2), dtype=torch.float32)
+        b = torch.rand((2, 2), dtype=torch.float32)
+        c = torch.tensor(2.0, dtype=torch.float16, device="cpu")
+
+        # CPU reference
+        cpu_result = torch.addcmul(a, b, c, value=0.5)
+
+        # NPU with CPU scalar
+        a_npu = a.npu()
+        b_npu = b.npu()
+        npu_result = torch.addcmul(a_npu, b_npu, c, value=0.5)
+
+        # NPU result dtype must match CPU result dtype
+        self.assertEqual(npu_result.dtype, cpu_result.dtype)
+        self.assertRtolEqual(cpu_result.numpy(), npu_result.cpu().numpy())
+
+    def test_addcmul_variants_consistency_cpu_scalar(self):
+        """Test consistency of addcmul/addcmul_out/addcmul_ with CPU scalar"""
+        a = torch.rand((2, 2), dtype=torch.float32)
+        b = torch.rand((2, 2), dtype=torch.float32)
+        c = torch.tensor(2.0, dtype=torch.float32, device="cpu")
+        alpha = 0.5
+
+        # NPU tensors
+        a_npu = a.npu()
+        b_npu = b.npu()
+
+        # addcmul
+        result1 = torch.addcmul(a_npu, b_npu, c, value=alpha)
+
+        # addcmul_out
+        result2 = torch.empty_like(a_npu)
+        torch.addcmul(a_npu, b_npu, c, value=alpha, out=result2)
+
+        # addcmul_
+        a_copy = a_npu.clone()
+        result3 = a_copy.addcmul_(b_npu, c, value=alpha)
+
+        self.assertRtolEqual(result1.cpu().numpy(), result2.cpu().numpy())
+        self.assertRtolEqual(result1.cpu().numpy(), result3.cpu().numpy())
+
+    def test_addcmul_cpu_scalar_zero_dim(self):
+        """Test edge case with 0-dim CPU tensor"""
+        a = torch.rand((2, 2), dtype=torch.float32)
+        b = torch.rand((2, 2), dtype=torch.float32)
+        c = torch.tensor(2.0, device="cpu")  # 0-dim tensor
+
+        # CPU reference
+        cpu_result = torch.addcmul(a, b, c, value=0.5)
+
+        # NPU with CPU scalar
+        a_npu = a.npu()
+        b_npu = b.npu()
+        npu_result = torch.addcmul(a_npu, b_npu, c, value=0.5)
+
+        self.assertRtolEqual(cpu_result.numpy(), npu_result.cpu().numpy())
+
 
 if __name__ == "__main__":
     run_tests()
