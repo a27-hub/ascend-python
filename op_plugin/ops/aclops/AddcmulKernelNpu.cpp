@@ -47,21 +47,28 @@ at::Tensor& addcmul_out(
     const at::Scalar& value,
     at::Tensor& result)
 {
+    // Handle CPU scalar for tensor2 - preserve original dtype
+    at::Tensor tensor2_actual = tensor2;
+    if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
+        // Convert CPU scalar to NPU while preserving dtype
+        tensor2_actual = at::scalar_tensor(tensor2.item(), tensor2.options().device(self.device()));
+    }
+
     auto input_size = op_infer::broadcast_ops_npu_output_size(self, tensor1);
-    auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2.sizes());
+    auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2_actual.sizes());
 
     npu_preparation::CheckOut(
-        {self, tensor1, tensor2},
+        {self, tensor1, tensor2_actual},
         result,
         self,
         output_size);
 
     if (!npu_utils::check_match(&result)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(result);
-        addcmul_out_npu_nocheck(contiguous_result, self, tensor1, tensor2, value);
+        addcmul_out_npu_nocheck(contiguous_result, self, tensor1, tensor2_actual, value);
         npu_utils::format_fresh_view(result, contiguous_result);
     } else {
-        addcmul_out_npu_nocheck(result, self, tensor1, tensor2, value);
+        addcmul_out_npu_nocheck(result, self, tensor1, tensor2_actual, value);
     }
     return result;
 }
@@ -72,10 +79,17 @@ at::Tensor addcmul(
     const at::Tensor& tensor2,
     const at::Scalar& value)
 {
+    // Handle CPU scalar for tensor2 - preserve original dtype
+    at::Tensor tensor2_actual = tensor2;
+    if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
+        // Convert CPU scalar to NPU while preserving dtype
+        tensor2_actual = at::scalar_tensor(tensor2.item(), tensor2.options().device(self.device()));
+    }
+
     auto input_size = op_infer::broadcast_ops_npu_output_size(self, tensor1);
-    auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2.sizes());
+    auto output_size = op_infer::broadcast_ops_npu_output_size(input_size, tensor2_actual.sizes());
     at::Tensor result = npu_preparation::apply_tensor(self, output_size);
-    addcmul_out_npu_nocheck(result, self, tensor1, tensor2, value);
+    addcmul_out_npu_nocheck(result, self, tensor1, tensor2_actual, value);
     return result;
 }
 
@@ -85,6 +99,13 @@ at::Tensor& addcmul_(
     const at::Tensor& tensor2,
     const at::Scalar& value)
 {
-    return acl_op::addcmul_out(self, tensor1, tensor2, value, self);
+    // Handle CPU scalar for tensor2 - preserve original dtype
+    at::Tensor tensor2_actual = tensor2;
+    if (tensor2.device().is_cpu() && tensor2.dim() == 0) {
+        // Convert CPU scalar to NPU while preserving dtype
+        tensor2_actual = at::scalar_tensor(tensor2.item(), tensor2.options().device(self.device()));
+    }
+
+    return acl_op::addcmul_out(self, tensor1, tensor2_actual, value, self);
 }
 }  // namespace acl_op
