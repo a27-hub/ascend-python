@@ -4084,12 +4084,13 @@ alpha: Tensor类型，必选输入，mHC 的缩放参数。支持的数据类型
 grad_h_in: Tensor类型，必选输入，h_in作为Atten/MLP层的输入，正向输出h_in对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 2 维 [T, D] 和 3 维 [B, S, D]。
 grad_h_post: Tensor类型，必选输入，正向输出h_post的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
 grad_h_res: Tensor类型，必选输入，正向输出h_res的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 3 维 [T, n, n] 和 4 维 [B, S, n, n]。
-inv_rms: Tensor类型，必选输入，正向计算流x@phi的结果。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 1 维 [T] 和 2 维 [B, S]。
+inv_rms: Tensor类型，必选输入，正向RmsNorm计算的invRms。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 1 维 [T] 和 2 维 [B, S]。
+h_mix: Tensor类型，必选输入，正向计算x与phi矩阵乘的结果。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n^2 + 2n] 和 3 维 [B, S, n^2 + 2n]。
 h_pre: Tensor类型，必选输入，做完 sigmoid 计算之后的 h_pre 矩阵。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
 h_post: Tensor类型，必选输入，正向的h_post输出。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
 gamma: Tensor类型，可选输入，RmsNorm的缩放系数。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
 hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
-grad_x_post: Tensor类型，可选输入，post反向输出的grad_x，数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。。
+grad_x_post: Tensor类型，可选输入，post反向输出的grad_x，数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
 n：shape 中的 n 常取 4、6、8。
 
 输出说明:
@@ -4097,7 +4098,7 @@ grad_x: Tensor类型，必选输出，x对应的梯度。数据格式为 ND，�
 grad_phi: Tensor类型，必选输出，phi对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
 grad_alpha: Tensor类型，必选输出，alpha对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
 grad_bias: Tensor类型，必选输出，bias对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [n^2 + 2n]。
-grad_gamma: Tensor类型，必选输出，gamma对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+grad_gamma: Tensor类型，可选输出，gamma对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
 
 
 约束说明:
