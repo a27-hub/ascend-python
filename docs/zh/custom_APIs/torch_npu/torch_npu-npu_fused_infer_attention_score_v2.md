@@ -26,6 +26,33 @@
 torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=None, key_rope=None, pse_shift=None, atten_mask=None, actual_seq_qlen=None, actual_seq_kvlen=None, block_table=None, dequant_scale_query=None, dequant_scale_key=None, dequant_offset_key=None, dequant_scale_value=None, dequant_offset_value=None, dequant_scale_key_rope=None, quant_scale_out=None, quant_offset_out=None, learnable_sink=None, num_query_heads=1, num_key_value_heads=0, softmax_scale=1.0, pre_tokens=2147483647, next_tokens=2147483647, input_layout="BSH", sparse_mode=0, block_size=0, query_quant_mode=0, key_quant_mode=0, value_quant_mode=0, inner_precise=0, return_softmax_lse=False, query_dtype=None, key_dtype=None, value_dtype=None, query_rope_dtype=None, key_rope_dtype=None, key_shared_prefix_dtype=None, value_shared_prefix_dtype=None, dequant_scale_query_dtype=None, dequant_scale_key_dtype=None, dequant_scale_value_dtype=None, dequant_scale_key_rope_dtype=None) -> (Tensor, Tensor)
 ```
 
+## 参数快速参考
+
+> [!NOTE]
+> - `query`、`key`、`value`为必选参数，其余参数均为可选参数。
+> - 未单独说明默认值的可选 `Tensor` / `List[Int]` / 预留 `dtype` 参数默认值均为 `None`。
+> - 建议先阅读本节快速定位参数，再查看下文详细说明与约束。
+
+| 参数类别 | 参数 | 必选 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| 输入Tensor | `query`、`key`、`value` | 是 | - | 注意力核心输入 |
+| MLA / mask | `query_rope`、`key_rope`、`pse_shift`、`atten_mask` | 否 | `None` | rope、位置编码、掩码 |
+| 序列长度 | `actual_seq_qlen`、`actual_seq_kvlen` | 否 | `None` | TND等场景通常必传 |
+| Page Attention | `block_table` | 否 | `None` | block映射表 |
+| 量化参数 | `dequant_scale_query`、`dequant_scale_key`、`dequant_offset_key`、`dequant_scale_value`、`dequant_offset_value`、`dequant_scale_key_rope`、`quant_scale_out`、`quant_offset_out` | 否 | `None` | 量化/反量化相关 |
+| 其他Tensor | `learnable_sink` | 否 | `None` | Sink Token参数 |
+| 整型参数 | `num_query_heads` | 否 | `1` | query head数 |
+| 整型参数 | `num_key_value_heads` | 否 | `0` | 默认按接口规则处理 |
+| 浮点参数 | `softmax_scale` | 否 | `1.0` | 建议显式传入 `1/√D` |
+| 稀疏窗口 | `pre_tokens`、`next_tokens` | 否 | `2147483647` | Q_S=1时无效 |
+| 布局参数 | `input_layout` | 否 | `"BSH"` | 输入/输出排布 |
+| 稀疏模式 | `sparse_mode` | 否 | `0` | 当前支持 `0/1/2/3/4/9` |
+| Page Attention | `block_size` | 否 | `0` | Page Attention下生效 |
+| 伪量化模式 | `query_quant_mode`、`key_quant_mode`、`value_quant_mode` | 否 | `0` | 具体支持范围见下文 |
+| 精度控制 | `inner_precise` | 否 | `0` | 精度/性能模式 |
+| 返回控制 | `return_softmax_lse` | 否 | `False` | 是否额外返回 `softmax_lse` |
+| 预留参数 | `query_dtype`、`key_dtype`、`value_dtype`、`query_rope_dtype`、`key_rope_dtype`、`key_shared_prefix_dtype`、`value_shared_prefix_dtype`、`dequant_scale_query_dtype`、`dequant_scale_key_dtype`、`dequant_scale_value_dtype`、`dequant_scale_key_rope_dtype` | 否 | `None` | 暂未使用 |
+
 ## 参数说明<a name="zh-cn_topic_0000001832267082_section112637109429"></a>
 
 > [!NOTE]   
@@ -75,7 +102,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 - **num\_query\_heads**（`int`）：可选参数，代表query的head个数，数据类型支持`int64`，在BNSD场景下，需要与shape中的`query`的N轴shape值相同，否则执行异常。
 - **num\_key\_value\_heads**（`int`）：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，数据类型支持`int64`。默认值为0，表示`key`/`value`/`query`的head个数相等，需要满足`num_query_heads`整除`num_key_value_heads`，`num_query_heads`与`num_key_value_heads`的比值不能大于64。在BSND、BNSD、BNSD\_BSND（仅支持Q\_S大于1）场景下，还需要与shape中的`key`/`value`的N轴shape值相同，否则执行异常。
-- **softmax\_scale**（`float`）：可选参数，公式中d开根号的倒数，代表缩放系数，作为计算流中Muls的scalar值，数据类型支持`float32`。数据类型与`query`数据类型需满足数据类型推导规则。默认值为1.0。
+- **softmax\_scale**（`float`）：可选参数，公式中d开根号的倒数，代表缩放系数，作为计算流中Muls的scalar值，数据类型支持`float32`。数据类型与`query`数据类型需满足数据类型推导规则。默认值为1.0，表示接口**不会**自动根据head dim计算缩放因子。在典型注意力场景中，建议显式传入`1/√D`（其中`D`为head dim，例如`D=128`时可传`1/math.sqrt(128.0)`）。
 - **pre\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和前几个Token计算关联。数据类型支持`int64`。默认值为2147483647，Q\_S为1时该参数无效。
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为2147483647，Q\_S为1时该参数无效。
 - **input\_layout**（`str`）：可选参数，用于标识输入`query`、`key`、`value`的数据排布格式，默认值为"BSH"。
@@ -85,15 +112,42 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
     支持BSH、BSND、BNSD、BNSD\_BSND（输入为BNSD时，输出格式为BSND，仅支持Q\_S大于1）、BSH\_NBSD、BSND\_NBSD、BNSD\_NBSD（输出格式为NBSD时，仅支持Q\_S大于1且小于等于16）、TND、TND\_NTD、NTD\_TND（TND相关场景综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)）。其中BNSD\_BSND含义指当输入为BNSD，输出格式为BSND，仅支持Q\_S大于1。
 
+    常见layout含义和shape示例如下：
+
+    | layout | query示例shape | key/value示例shape | 说明 |
+    | --- | --- | --- | --- |
+    | `BSH` | `(B, Q_S, H)` | `(B, KV_S, H)` | Batch、Seq、Hidden |
+    | `BSND` | `(B, Q_S, N, D)` | `(B, KV_S, KV_N, D)` | Batch、Seq、Head Num、Head Dim |
+    | `BNSD` | `(B, N, Q_S, D)` | `(B, KV_N, KV_S, D)` | Batch、Head Num、Seq、Head Dim |
+    | `BNSD_BSND` | 输入同`BNSD` | 输出转为`BSND` | 输入BNSD，输出BSND |
+    | `BSH_NBSD` | `(B, Q_S, H)` | `(B, KV_S, H)` | 输入BSH，输出NBSD |
+    | `BSND_NBSD` | `(B, Q_S, N, D)` | `(B, KV_S, KV_N, D)` | 输入BSND，输出NBSD |
+    | `BNSD_NBSD` | `(B, N, Q_S, D)` | `(B, KV_N, KV_S, D)` | 输入BNSD，输出NBSD |
+    | `TND` | `(T, N, D)` | `(T_KV, KV_N, D)` | 将各batch有效token按时间维拼接 |
+    | `TND_NTD` | 输入同`TND` | 输出转为`NTD` | 输入TND，输出NTD |
+    | `NTD_TND` | `(N, T, D)` | `(KV_N, T_KV, D)` | 输入NTD，输出TND |
+
+    其中：`B`表示Batch Size，`Q_S`表示query序列长度，`KV_S`表示key/value序列长度，`H`表示隐藏层大小，`N`/`KV_N`表示head数，`D`表示head dim，`T`/`T_KV`表示所有batch有效序列长度的累加和。
+
 - **sparse\_mode**（`int`）：可选参数，表示sparse的模式。数据类型支持`int64`。Q\_S为1且不带rope输入时该参数无效。input\_layout为TND、TND\_NTD、NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
     
-    - `sparse_mode`为0时，代表defaultMask模式，如果atten\_mask未传入则不做mask操作，忽略pre\_tokens和next\_tokens（内部赋值为INT\_MAX）；如果传入，则需要传入完整的atten\_mask矩阵（S1\*S2），表示pre\_tokens和next\_tokens之间的部分需要计算。
-    - `sparse_mode`为1时，代表allMask，必须传入完整的atten\_mask矩阵（S1\*S2）。
-    - `sparse_mode`为2时，代表leftUpCausal模式的mask，需要传入优化后的atten\_mask矩阵（2048\*2048）。
-    - `sparse_mode`为3时，代表rightDownCausal模式的mask，对应以右顶点为划分的下三角场景，需要传入优化后的atten\_mask矩阵（2048\*2048）。
-    - `sparse_mode`为4时，代表band模式的mask，需要传入优化后的atten\_mask矩阵（2048\*2048）。
-    - `sparse_mode`为5、6、7、8时，分别代表prefix、global、dilated、block\_local，均暂不支持。
-    - `sparse_mode`为9时，代表treeMask模式，用于推测解码场景的树形注意力掩码。需传入自定义tree mask，仅MLA场景（query\_rope和key\_rope不为空）支持。不支持左padding、pse\_shift、sharedPrefix，输出dtype不支持int8，每个batch需满足Q\_S ≤ KV\_S。默认值为0。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
+    | 取值 | 模式 | 支持状态 | 说明 |
+    | --- | --- | --- | --- |
+    | `0` | defaultMask | 支持 | `atten_mask=None`时忽略`pre_tokens`和`next_tokens`（内部按`INT_MAX`处理）；传入mask时需传完整矩阵 |
+    | `1` | allMask | 支持 | 必须传入完整`atten_mask`矩阵 |
+    | `2` | leftUpCausal | 支持 | 需传入优化后的`2048*2048` mask |
+    | `3` | rightDownCausal | 支持 | 需传入优化后的`2048*2048` mask |
+    | `4` | band | 支持 | 需传入优化后的`2048*2048` mask |
+    | `5` | prefix | 暂未支持 | 当前版本请勿使用 |
+    | `6` | global | 暂未支持 | 当前版本请勿使用 |
+    | `7` | dilated | 暂未支持 | 当前版本请勿使用 |
+    | `8` | block_local | 暂未支持 | 当前版本请勿使用 |
+    | `9` | treeMask | 支持 | 仅MLA场景支持，需传入自定义tree mask |
+
+    补充说明：
+
+    - 当前版本支持的`sparse_mode`取值为`0、1、2、3、4、9`；`5、6、7、8`虽有预留定义，但暂未实现。
+    - `sparse_mode=9`代表treeMask模式，用于推测解码场景的树形注意力掩码。需传入自定义tree mask，仅MLA场景（query\_rope和key\_rope不为空）支持。不支持左padding、pse\_shift、sharedPrefix，输出dtype不支持int8，每个batch需满足Q\_S ≤ KV\_S。默认值为0。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
     
 - **block\_size**（`int`）：可选参数，表示PageAttention中KV存储每个block中最大的token个数，默认为0，数据类型支持`int64`。
 - **query\_quant\_mode**（`int`）：可选参数， 表示query的伪量化方式。仅支持传入3，代表模式3：pertoken叠加perhead模式。
@@ -141,6 +195,19 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 - **softmax\_lse**（`Tensor`）：ring attention算法对query乘key的结果先取max得到softmax\_max，query乘key的结果减去softmax\_max，再取exp，最后取sum，得到softmax\_sum，最后对softmax\_sum取log，再加上softmax\_max得到的结果。数据类型支持`float32`，当`return_softmax_lse`为True时，一般情况下输出shape为\(B, Q\_N, Q\_S, 1\)，若input\_layout为TND/NTD\_TND时，输出shape为\(T,Q\_N,1\)；当`return_softmax_lse`为False时，输出shape为\[1\]的值为0的Tensor。
 
 ## 约束说明<a name="zh-cn_topic_0000001832267082_section12345537164214"></a>
+
+### 约束导航
+
+为降低阅读成本，建议按场景阅读下列约束：
+
+1. **通用基础约束**：接口适用范围、空Tensor处理、基础shape/dtype要求。
+2. **MLA / rope场景**：`query_rope`、`key_rope`非空时的限制。
+3. **TND / NTD相关布局场景**：`TND`、`TND_NTD`、`NTD_TND`相关输入输出及序列长度约束。
+4. **量化 / 伪量化场景**：int8/int4、反量化参数、输出量化参数的组合限制。
+5. **Page Attention场景**：`block_table`、`block_size`、KV Cache排布要求。
+6. **Q_S > 1 场景**：长序列、稀疏模式、mask shape等约束。
+
+下文保留完整约束细节，便于逐项核对。
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
@@ -475,7 +542,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     # 调用FIA算子
     out, _ = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, 
     actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
-    num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale, pre_tokens=65535, next_tokens=65535)
+    num_query_heads = 8, input_layout = "BNSD", softmax_scale = softmax_scale)
 
     # 执行上述代码的输出out类似如下
     tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -515,18 +582,24 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
     k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     softmax_scale = 1/math.sqrt(128.0)
+    actseqlen = [164]
+    actseqlenkv = [1024]
 
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
         def forward(self):
-            return torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+            return torch_npu.npu_fused_infer_attention_score_v2(q, k, v,
+                actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
+                num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale)
     def MetaInfershape():
         with torch.no_grad():
             model = Model()
             model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
             graph_output = model()
-        single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v, num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale, pre_tokens=65535, next_tokens=65535)
+        single_op = torch_npu.npu_fused_infer_attention_score_v2(q, k, v,
+            actual_seq_qlen = actseqlen, actual_seq_kvlen = actseqlenkv,
+            num_query_heads = 8, input_layout = "BNSD", softmax_scale=softmax_scale)
         print("single op output with mask:", single_op[0], single_op[0].shape)
         print("graph output with mask:", graph_output[0], graph_output[0].shape)
     if __name__ == "__main__":
