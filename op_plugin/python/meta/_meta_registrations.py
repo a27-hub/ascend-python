@@ -1267,30 +1267,13 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
                 lambda: f"The {counts_name} contains negative values.",
             )
 
-    # if send_counts is not None:
-    #     if(len(send_counts) > 256):
-    #         raise RuntimeError(
-    #             f"the number of elements in send_counts should not exceed 256, actual send_counts is {len(send_counts)}")
-    #     torch._check(
-    #         all(count >= 0 for count in send_counts),
-    #         lambda: f"The send_counts contains negative values, found invalid value:{count} at index {send_counts.index(count).",
-    #     )
-    # if recv_counts is not None:
-    #     if(len(recv_counts) > 256):
-    #         raise RuntimeError(
-    #             f"the number of elements in recv_counts should not exceed 256, actual recv_counts is {len(recv_counts)}")
-    #     torch._check(
-    #         all(count >= 0 for count in recv_counts),
-    #         lambda: f"The recv_counts contains negative values, found invalid value:{count} at index {recv_counts.index(count).",
-    #     )
-
     if gmm_x_quant_mode == 1 and gmm_weight_quant_mode == 1:
         scale_list = [gmm_x_scale, gmm_weight_scale, mm_x_scale, mm_weight_scale]
         for scale in scale_list:
             if scale is not None:
                 torch._check(
                     scale.dim() == 1 and scale.size(0) == 1,
-                    lambda: f"Scale's shape should be (1,), but got {list(scale.shape)}.",
+                    lambda: f"In TT quant mode, scale's shape should be (1,), but got {list(scale.shape)}.",
                 )
     elif gmm_x_quant_mode == 6 and gmm_weight_quant_mode == 6:
         scale_list = [gmm_x_scale, mm_x_scale, mm_weight_scale]
@@ -1299,24 +1282,24 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
             if scale is not None:
                 torch._check(
                     scale.dim() == 3,
-                    lambda: f"The {name}'s dim should be 3, but got {scale.dim()}.",
+                    lambda: f"In MX quant mode, the {name}'s dim should be 3, but got {scale.dim()}.",
                 )
                 for axis in [0, 1, 2]:
                     dimnum = scale.size(axis)
                     torch._check(
                         dimnum != 0,
-                        lambda a=axis: f"The {a} dim of {name} should not be 0.",
+                        lambda a=axis: f"In MX quant mode, the {a} dim of {name} should not be 0.",
                     )
         if gmm_weight_scale is not None:
             torch._check(
                 gmm_weight_scale.dim() == 4,
-                lambda: f"The gmm_weight_scale's dim should be 4, but got {gmm_weight_scale.dim()}.",
+                lambda: f"In MX quant mode, the gmm_weight_scale's dim should be 4, but got {gmm_weight_scale.dim()}.",
             )
             for axis in [0, 1, 2, 3]:
                 dimnum = gmm_weight_scale.size(axis)
                 torch._check(
                     dimnum != 0,
-                    lambda a=axis: f"The {a} dim of gmm_weight_scale should not be 0.",
+                    lambda a=axis: f"In MX quant mode, the {a} dim of gmm_weight_scale should not be 0.",
                 )
 
     out_x = sum(recv_counts)
