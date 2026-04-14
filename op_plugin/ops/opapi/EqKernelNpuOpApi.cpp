@@ -22,6 +22,13 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        npu_preparation::check_tensor({self_device, other_device}, result, at::IntArrayRef(output_size));
+        EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -40,6 +47,14 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(
+            output_size, self_device.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnEqTensor, self_device, other_device, result);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -94,6 +109,15 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
 
 at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
   DO_COMPATIBILITY(aclnnInplaceEqTensor, acl_op::eq_(self, other));
+  if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+    at::Tensor other_device = other;
+    if (!torch_npu::utils::is_npu(other)) {
+      other_device = other.to(self.device());
+    }
+    npu_preparation::CheckMemory({self, other_device}, {self});
+    EXEC_NPU_CMD(aclnnInplaceEqTensor, self, other_device);
+    return self;
+  }
 
   const std::initializer_list<at::Tensor> inputs = {self, other};
   const std::initializer_list<at::Tensor> outputs = {self};
@@ -105,7 +129,6 @@ at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
 
 at::Tensor& eq_(at::Tensor &self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnInplaceEqScalar, acl_op::eq_(self, other));
-
   EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
   return self;
 }
