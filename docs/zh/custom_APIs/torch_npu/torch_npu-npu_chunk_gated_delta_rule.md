@@ -31,7 +31,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None) -> tuple(Tensor, Tensor)
 ```
 
@@ -40,6 +40,7 @@ torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_st
 $T=\sum_i^B L_i$ 表示累积序列长度，$B$ 表示batch size。$L_i$ 表示第i个序列的长度。
 $N_k$ 表示key的头数，$N_v$ 表示value的头数。
 $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
+
 - **query** (`Tensor`)：必选输入，对应公式中的$q$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_k$, $D_k$）。
 
 - **key** (`Tensor`)：必选输入，对应公式中的$k$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_k$, $D_k$）。
@@ -72,6 +73,7 @@ $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
 ## 调用示例
 
 - 单算子调用
+
     ```python
     import torch
     import torch_npu
