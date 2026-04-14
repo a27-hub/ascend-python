@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -533,19 +533,21 @@ void LazyFusionKernel::DumpGraph() {
   dump_buf_ << ")\n}\n";
 }
 
-bool IsEnabled(const std::string &op, unsigned int op_level) {
-  const auto &disable_ops = g_lazy_fusion_manager.flags_.disable_ops;
-  const auto &enable_ops = g_lazy_fusion_manager.flags_.enable_ops;
-  const auto &enable_ops_only = g_lazy_fusion_manager.flags_.enable_ops_only;
+bool IsEnabled(const std::string &op, unsigned int required_level) {
+  const auto &flags = g_lazy_fusion_manager.flags_;
+  const auto &disable_ops = flags.disable_ops;
+  const auto &enable_ops = flags.enable_ops;
+  const auto &enable_ops_only = flags.enable_ops_only;
   bool enable = false;
   if (!enable_ops_only.empty()) {
     enable = std::find(enable_ops_only.begin(), enable_ops_only.end(), op) != enable_ops_only.end();
-  } else if (op_level > OpLevel_0) {
-    enable = std::find(enable_ops.begin(), enable_ops.end(), op) != enable_ops.end();
-  } else {
+  } else if (required_level <= flags.op_level) {
     enable = std::find(disable_ops.begin(), disable_ops.end(), op) == disable_ops.end();
+  } else {
+    enable = std::find(enable_ops.begin(), enable_ops.end(), op) != enable_ops.end();
   }
-  ASCEND_LOGI("op [%s], op_level is %d, enable = %d", op.c_str(), op_level, enable);
+  ASCEND_LOGI("op [%s], required_level is %d, configured_level is %lu, enable = %d",
+              op.c_str(), required_level, static_cast<unsigned long>(flags.op_level), enable);
   return enable;
 }
 }  // namespace lazy_fusion

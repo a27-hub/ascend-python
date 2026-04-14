@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -155,6 +155,7 @@ void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags
   reg.AddFlag("dump_dir", &flags->dump_dir);
   reg.AddFlag("synchronize", &flags->synchronize);
   reg.AddFlag("opt_level", &flags->opt_level);
+  reg.AddFlag("op_level", &flags->op_level);
   reg.AddFlag("online_tuning", &flags->online_tuning);
   reg.AddFlag("disable_ops", &flags->disable_ops);
   reg.AddFlag("enable_ops", &flags->enable_ops);
