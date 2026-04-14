@@ -19,6 +19,7 @@
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
 
 namespace op_api {
 const int DIM_0 = 0;
@@ -2091,6 +2092,338 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
 
     return std::make_tuple(attention_score, softmax_max, softmax_sum, softmax_out,
         seed, offset);
+}
+
+// ========================= FA v3 .out interface for ACLgraph =========================
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &>
+npu_fusion_attention_v3_out(
+    const at::Tensor &query, const at::Tensor &key,
+    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
+    c10::OptionalArrayRef<int64_t> prefix, const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen, int64_t sparse_mode, bool gen_mask_parallel, bool sync,
+    c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink,
+    const c10::optional<at::Tensor> &workspace,
+    at::Tensor &attention_score, at::Tensor &softmax_max, at::Tensor &softmax_sum,
+    at::Tensor &softmax_out, at::Tensor &seed, at::Tensor &offset)
+{
+    // ============================================================================
+    // FA v3 Forward .out Interface for ACLgraph Support
+    // ============================================================================
+    // Purpose:
+    //   Writes results directly to pre-allocated output tensors for ACLgraph replay.
+    //   This avoids tensor reallocation during graph replay, improving performance.
+    //
+    // Design Decision:
+    //   Reuses npu_fusion_attention_v3_symint for core computation to ensure:
+    //   - Code consistency: .out and .default use identical logic
+    //   - Maintainability: Single source of truth for FA v3 forward
+    //   - Correctness: Leverages well-tested symint implementation
+    //
+    // Trade-off:
+    //   Adds 6 copy_ operations (attention_score, softmax_max/sum/out, seed, offset).
+    //   For GPU tensors, device-to-device copy overhead is acceptable compared to
+    //   the complexity of maintaining duplicate kernel selection logic.
+    //
+    // Parameters:
+    //   workspace: Reserved for future EXEC_UPDATE optimization (currently unused)
+    //   attention_score, softmax_max/sum/out, seed, offset: Pre-allocated outputs
+    // ============================================================================
+
+    TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950,
+                "Ascend950 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
+
+    // ==================== Step 1: Validate Input Parameters ====================
+    TORCH_CHECK(head_num > 0, "head_num must > 0, but got ", head_num,
+                OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
+        "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D,
+        "The shapes of the input key should be 3 or 4 dimensional, but got ",
+        key.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
+        "The shapes of the input value should be 3 or 4 dimensional, but got ",
+        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
+        "The keep_prob value must be in range of (0, 1], but got ",
+        keep_prob, OPS_ERROR(ErrCode::PARAM));
+
+    std::string input_layout_str = std::string(input_layout);
+    std::string softmax_layout_str = std::string(softmax_layout);
+
+    // Validate softmax_layout constraints
+    TORCH_CHECK((softmax_layout_str == "TND" || softmax_layout_str == ""),
+                "only supported softmax_layout=TND", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!(softmax_layout_str == "TND" && input_layout_str != "TND"),
+                "softmax_layout=TND only supported when input_layout_str=TND",
+                OPS_ERROR(ErrCode::PARAM));
+
+    // Validate sparse_mode based on layout type
+    if (input_layout_str == "TND") {
+        TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
+                    sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
+                    (sparse_mode > static_cast<int64_t>(SparseMode::PREFIX) &&
+                    sparse_mode <= static_cast<int64_t>(SparseMode::BAND_LEFT_UP_CAUSAL)),
+                    "The sparse_mode value must be in range of [0,5) or (5,8], but got ",
+                    sparse_mode, OPS_ERROR(ErrCode::PARAM));
+    } else {
+        TORCH_CHECK(sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
+                    sparse_mode <= static_cast<int64_t>(SparseMode::PREFIX_COMPRESS),
+                    "The sparse_mode value must be in range of [0,6], but got ",
+                    sparse_mode, OPS_ERROR(ErrCode::PARAM));
+    }
+
+    // Normalize layout string to uppercase
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+    TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" ||
+                input_layout_str == "BNSD" || input_layout_str == "BSND" ||
+                input_layout_str == "TND",
+                "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
+                input_layout, OPS_ERROR(ErrCode::PARAM));
+
+    // ==================== Step 2: Convert Parameters to Match v3_symint Signature ====================
+    const at::Tensor &pse_const = pse.value_or(at::Tensor());
+    const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
+    const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
+    const at::Tensor &sink_const = sink.value_or(at::Tensor());
+
+    // Convert OptionalArrayRef<int64_t> to OptionalArrayRef<SymInt>
+    // This is required because v3_symint uses SymInt for dynamic shape support
+    c10::OptionalArrayRef<c10::SymInt> prefix_sym;
+    if (prefix.has_value()) {
+        auto prefix_ref = prefix.value();
+        // Use local vector to avoid thread-safety issues with static thread_local
+        std::vector<c10::SymInt> prefix_sym_vec;
+        prefix_sym_vec.reserve(prefix_ref.size());
+        for (auto val : prefix_ref) {
+            prefix_sym_vec.emplace_back(c10::SymInt(val));
+        }
+        prefix_sym = c10::OptionalArrayRef<c10::SymInt>(prefix_sym_vec);
+    }
+
+    // Convert optional tensors to IntArrayRef using existing ToIntArrayRef helper
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    // TND layout requires non-empty actual_seq_qlen/kvlen
+    if (input_layout_str == "TND") {
+        TORCH_CHECK(ac_seq_qlen.size() != 0 && ac_seq_kvlen.size() != 0 &&
+                    ac_seq_qlen.size() == ac_seq_kvlen.size(),
+                    "the size of actual_seq_qlen and actual_seq_kvlen must be the same "
+                    "and cannot be empty.", OPS_ERROR(ErrCode::PARAM));
+    }
+
+    // ==================== Step 3: Call v3_symint for Core Computation ====================
+    // Reuse the well-tested symint implementation to avoid code duplication.
+    // This ensures .out and .default interfaces produce identical results.
+    auto result = npu_fusion_attention_v3_symint(
+        query, key, value, head_num, input_layout_str,
+        pse_const, padding_mask_const, atten_mask_const,
+        scale, keep_prob, pre_tockens, next_tockens, inner_precise,
+        prefix_sym, actual_seq_qlen, actual_seq_kvlen,
+        sparse_mode, gen_mask_parallel, sync,
+        softmax_layout_str, sink_const);
+
+    // ==================== Step 4: Copy Results to Pre-allocated Output Tensors ====================
+    // Copy computed results to the pre-allocated output tensors provided by caller.
+    // This is the key difference from v3_symint: instead of returning new tensors,
+    // we write into existing memory buffers for efficient graph replay.
+    attention_score.copy_(std::get<0>(result));  // attention_score
+    softmax_max.copy_(std::get<1>(result));      // softmax_max
+    softmax_sum.copy_(std::get<2>(result));      // softmax_sum
+    softmax_out.copy_(std::get<3>(result));      // softmax_out
+    seed.copy_(std::get<4>(result));             // seed
+    offset.copy_(std::get<5>(result));           // offset
+
+    return std::tie(attention_score, softmax_max, softmax_sum, softmax_out, seed, offset);
+}
+
+std::tuple<at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &>
+npu_fusion_attention_grad_v3_out(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const at::Tensor &dy,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value,
+    double keep_prob,
+    int64_t pre_tockens,
+    int64_t next_tockens,
+    int64_t inner_precise,
+    const c10::optional<at::Tensor> &seed,
+    const c10::optional<at::Tensor> &offset,
+    c10::OptionalArrayRef<int64_t> prefix,
+    const c10::optional<at::Tensor> &actual_seq_qlen,
+    const c10::optional<at::Tensor> &actual_seq_kvlen,
+    int64_t sparse_mode,
+    bool gen_mask_parallel,
+    bool sync,
+    c10::string_view softmax_layout,
+    const c10::optional<at::Tensor> &sink,
+    const c10::optional<at::Tensor> &workspace,
+    at::Tensor &dq,
+    at::Tensor &dk,
+    at::Tensor &dv,
+    at::Tensor &dpse,
+    at::Tensor &dsink)
+{
+    // ============================================================================
+    // FA v3 Backward .out Interface for ACLgraph Support
+    // ============================================================================
+    // Purpose:
+    //   Writes gradient results directly to pre-allocated output tensors for
+    //   ACLgraph replay. This avoids tensor reallocation during graph replay.
+    //
+    // Design Decision:
+    //   Reuses npu_fusion_attention_backward_v3 for core computation to ensure:
+    //   - Code consistency: .out and .default use identical gradient logic
+    //   - Maintainability: Single source of truth for FA v3 backward
+    //   - Correctness: Leverages well-tested backward_v3 implementation
+    //
+    // Trade-off:
+    //   Adds 5 copy_ operations (dq, dk, dv, dpse, dsink).
+    //   For GPU tensors, device-to-device copy overhead is acceptable compared to
+    //   the complexity of maintaining duplicate kernel selection logic.
+    //
+    // Parameters:
+    //   workspace: Reserved for future EXEC_UPDATE optimization (currently unused)
+    //   dq, dk, dv, dpse, dsink: Pre-allocated gradient output tensors
+    // ============================================================================
+
+    TORCH_CHECK(c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950,
+                "Ascend950 not support", OPS_ERROR(ErrCode::NOT_SUPPORT));
+
+    // ==================== Step 1: Validate Input Parameters ====================
+    TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
+        "The shapes of the input query should be 3 or 4 dimensional, but got ",
+        query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(key.dim() == DIMENSION_3D || key.dim() == DIMENSION_4D,
+        "The shapes of the input key should be 3 or 4 dimensional, but got ",
+        key.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
+        "The shapes of the input value should be 3 or 4 dimensional, but got ",
+        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(dy.dim() == DIMENSION_3D || dy.dim() == DIMENSION_4D,
+        "The shapes of the input dy should be 3 or 4 dimensional, but got ",
+        dy.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
+        "The keep_prob value must be in range of (0, 1], but got ",
+        keep_prob, OPS_ERROR(ErrCode::PARAM));
+
+    std::string input_layout_str = std::string(input_layout);
+    for (auto &c : input_layout_str) {
+        c = toupper(c);
+    }
+    TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" ||
+                input_layout_str == "BNSD" || input_layout_str == "BSND" ||
+                input_layout_str == "TND",
+                "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
+                input_layout, OPS_ERROR(ErrCode::PARAM));
+
+    // ==================== Step 2: Convert Parameters to Match backward_v3 Signature ====================
+    auto prefixN = prefix.value_or(at::IntArrayRef{});
+    std::vector<int64_t> actual_seq_qlen_buffer;
+    at::IntArrayRef ac_seq_qlen = ToIntArrayRef(actual_seq_qlen, actual_seq_qlen_buffer);
+    std::vector<int64_t> actual_seq_kvlen_buffer;
+    at::IntArrayRef ac_seq_kvlen = ToIntArrayRef(actual_seq_kvlen, actual_seq_kvlen_buffer);
+
+    // Calculate numels for dropout mask generation
+    int64_t N_local = 0;
+    if (input_layout_str == "BNSD") {
+        N_local = query.size(1);
+    } else if (input_layout_str == "BSND") {
+        N_local = query.size(THIRD_ELEMENT);
+    } else if (input_layout_str == "TND") {
+        N_local = query.size(1);
+    }
+
+    int64_t numels = 0;
+    if (input_layout_str == "TND") {
+        numels = N_local;
+        int64_t accum = ac_seq_qlen[0] * ac_seq_kvlen[0];
+        for (size_t i = 1; i < ac_seq_qlen.size(); i++) {
+            accum += ((ac_seq_qlen[i] - ac_seq_qlen[i - 1]) *
+                      (ac_seq_kvlen[i] - ac_seq_kvlen[i - 1]));
+        }
+        numels *= accum;
+    } else if (input_layout_str == "BSH") {
+        numels = query.size(0) * head_num * query.size(1) * key.size(1);
+    } else if (input_layout_str == "SBH") {
+        numels = query.size(1) * head_num * query.size(0) * key.size(0);
+    } else if (input_layout_str == "BNSD") {
+        numels = query.size(0) * query.size(1) *
+                 query.size(THIRD_ELEMENT) * key.size(THIRD_ELEMENT);
+    } else if (input_layout_str == "BSND") {
+        numels = query.size(0) * query.size(THIRD_ELEMENT) *
+                 query.size(1) * key.size(1);
+    }
+
+    // ==================== Step 3: Generate Dropout Mask ====================
+    // backward_v3 requires a pre-computed drop_mask, so we generate it here.
+    // This matches the logic in npu_fusion_attention_grad_v3_symint.
+    int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
+    length += LENGTH_BIAS;
+    at::Tensor drop_mask;
+    c10_npu::CaptureStatus is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
+
+    if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950 &&
+        get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
+        const at::Tensor &seed_const = seed.value_or(at::Tensor());
+        const at::Tensor &offset_const = offset.value_or(at::Tensor());
+        drop_mask = dropout_gen_mask_tensor_dispatch(
+            query, keep_prob, seed_const, offset_const, numels,
+            gen_mask_parallel, sync, is_capture);
+    } else if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_ALL) {
+        drop_mask = at::zeros(at::IntArrayRef{length},
+                              query.options().dtype(at::kByte));
+    }
+
+    // ==================== Step 4: Call backward_v3 for Core Gradient Computation ====================
+    // Reuse the well-tested backward_v3 implementation to avoid code duplication.
+    // This ensures .out and .default interfaces produce identical gradients.
+    auto result = npu_fusion_attention_backward_v3(
+        query, key, value, dy, head_num, input_layout_str, pse, drop_mask,
+        padding_mask, atten_mask, softmax_max, softmax_sum, softmax_in,
+        attention_in, scale_value, keep_prob, pre_tockens, next_tockens,
+        inner_precise, seed, offset, prefixN, ac_seq_qlen, ac_seq_kvlen,
+        sparse_mode, softmax_layout, sink);
+
+    // ==================== Step 5: Copy Gradients to Pre-allocated Output Tensors ====================
+    // Copy computed gradients to the pre-allocated output tensors provided by caller.
+    // This is the key difference from backward_v3: instead of returning new tensors,
+    // we write into existing memory buffers for efficient graph replay.
+    dq.copy_(std::get<0>(result));   // dq (gradient w.r.t. query)
+    dk.copy_(std::get<1>(result));   // dk (gradient w.r.t. key)
+    dv.copy_(std::get<2>(result));   // dv (gradient w.r.t. value)
+    dpse.copy_(std::get<3>(result)); // dpse (gradient w.r.t. positional encoding)
+    dsink.copy_(std::get<4>(result)); // dsink (gradient w.r.t. sink token)
+
+    // ==================== Step 6: Event Synchronization ====================
+    // Ensure proper synchronization between primary and secondary streams
+    // when not in capture mode and sync is disabled
+    if (!sync && is_capture == c10_npu::CaptureStatus::None) {
+        c10_npu::NPUEvent npu_event;
+        npu_event.record(c10_npu::getCurrentNPUStream());
+        npu_event.block(c10_npu::getCurrentSecondaryStream());
+    }
+
+    return std::tie(dq, dk, dv, dpse, dsink);
 }
 #endif
 }
