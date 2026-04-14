@@ -359,21 +359,33 @@ inline bool IsEnabled() {
   if (c10_npu::getCurrentNPUStream().isSyncLaunchStream()) {
     return false;
   }
-  // DVM is not thread-safe; only the first thread that uses it is allowed,
-  // others fall back to op_api. Cache per-thread answer to avoid atomic on hot path.
-  thread_local int8_t thread_allowed = -1;  // -1 uninit, 0 denied, 1 allowed
-  if (thread_allowed >= 0) {
-    return thread_allowed == 1;
+  // DVM's Manager (Get/Flush) is not thread-safe for concurrent access.
+  // However, PyTorch's autograd engine guarantees that forward and backward
+  // do not execute concurrently on the same device — backward only starts
+  // after forward completes, and tasks within a device are serialized by the
+  // ReadyQueue. So it is safe to allow both the main thread and the autograd
+  // device thread to use DVM, as long as we flush pending work when the
+  // active DVM thread changes.
+  //
+  // A generation counter tracks ownership changes. Each thread caches the
+  // generation at which it last took ownership; if the global generation
+  // matches the cached value, the current thread is still the owner (fast
+  // path: one atomic load). When a new thread takes ownership, it increments
+  // the generation and flushes the previous owner's pending graph.
+  static std::atomic<uint32_t> dvm_gen{1};
+  thread_local uint32_t cached_gen = 0;
+
+  auto cur_gen = dvm_gen.load(std::memory_order_acquire);
+  if (cached_gen == cur_gen) {
+    return true;
   }
-  static std::atomic<std::thread::id> dvm_owner_tid{};
-  auto self = std::this_thread::get_id();
-  std::thread::id expected{};
-  if (dvm_owner_tid.compare_exchange_strong(expected, self, std::memory_order_relaxed)) {
-    thread_allowed = 1;
-  } else {
-    thread_allowed = (dvm_owner_tid.load(std::memory_order_relaxed) == self) ? 1 : 0;
-  }
-  return thread_allowed == 1;
+
+  // Slow path: ownership has changed (or this is the first call).
+  // Flush the previous owner's pending graph, then claim ownership.
+  LazyFusionFlush();
+  dvm_gen.fetch_add(1, std::memory_order_release);
+  cached_gen = dvm_gen.load(std::memory_order_acquire);
+  return true;
 }
 
 bool IsEnabled(const std::string &op, unsigned int op_level);
