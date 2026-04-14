@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// Copyright (c) 2026 Huawei Technologies Co., Ltd
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -14,8 +14,6 @@
 #ifndef DVM_LAZY_FUSION_KERNEL_H
 #define DVM_LAZY_FUSION_KERNEL_H
 
-#include <sys/syscall.h>
-#include <unistd.h>
 #include <vector>
 #include <queue>
 #include <mutex>
@@ -23,15 +21,11 @@
 #include <thread>
 #include <ATen/Tensor.h>
 #include <ATen/ATen.h>
-#include <torch/csrc/autograd/graph_task.h>
 #include "op_plugin/utils/OpAdapter.h"
 #include "dvm.h"
 #include "op_plugin/ops/dvm/lazy_fusion_flags.h"
 
 namespace lazy_fusion {
-constexpr unsigned int OpLevel_0 = 0;
-constexpr unsigned int OpLevel_1 = 1;
-
 class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
  public:
   LazyFusionKernel();
@@ -364,50 +358,35 @@ inline bool IsEnabled() {
   if (c10_npu::getCurrentNPUStream().isSyncLaunchStream()) {
     return false;
   }
-  // DVM's underlying registries are not thread-safe, so we only allow two
-  // well-defined execution contexts:
-  //   1. The process main thread (identified by TID == PID on Linux, which
-  //      is POSIX-guaranteed for the initial thread of a process).
-  //   2. Any thread that is currently executing inside the autograd engine
-  //      (identified via torch::autograd::get_current_graph_task_id() >= 0).
-  // These two contexts never run concurrently: the main thread blocks inside
-  // .backward() while the engine worker is active. Every other thread —
-  // DataLoader workers, pin_memory, profiler, user-created std::thread, etc. —
-  // is rejected and falls back to op_api.
-  thread_local int8_t is_main_thread = -1;  // -1 uninit
-  if (is_main_thread < 0) {
-    is_main_thread = (static_cast<pid_t>(syscall(SYS_gettid)) == getpid()) ? 1 : 0;
-  }
-  bool in_backward = (torch::autograd::get_current_graph_task_id() >= 0);
-  if (is_main_thread != 1 && !in_backward) {
-    return false;
-  }
-
-  // The two allowed contexts share Manager::current_. When control switches
-  // from one to the other, flush the previous owner's pending graph so each
-  // builds its own fusion. An epoch counter detects switches in O(1) via a
-  // single atomic load on the hot path; the switch itself is driven by a
-  // per-context role tag cached in thread_local.
+  // DVM's Manager (Get/Flush) is not thread-safe for concurrent access.
+  // However, PyTorch's autograd engine guarantees that forward and backward
+  // do not execute concurrently on the same device — backward only starts
+  // after forward completes, and tasks within a device are serialized by the
+  // ReadyQueue. So it is safe to allow both the main thread and the autograd
+  // device thread to use DVM, as long as we flush pending work when the
+  // active DVM thread changes.
   //
-  // Role encoding: 0 = main fwd, 1 = autograd engine worker.
-  // cached_role tells us which role this thread last ran as; if in_backward
-  // flips (e.g. main thread enters its own no-op phase outside backward vs.
-  // engine worker enters backward), we bump the epoch and flush.
-  thread_local int8_t cached_role = -1;
-  thread_local uint32_t cached_epoch = 0;
-  int8_t cur_role = in_backward ? 1 : 0;
+  // A generation counter tracks ownership changes. Each thread caches the
+  // generation at which it last took ownership; if the global generation
+  // matches the cached value, the current thread is still the owner (fast
+  // path: one atomic load). When a new thread takes ownership, it increments
+  // the generation and flushes the previous owner's pending graph.
+  static std::atomic<uint32_t> dvm_gen{1};
+  thread_local uint32_t cached_gen = 0;
 
-  static std::atomic<uint32_t> dvm_epoch{1};
-  auto cur_epoch = dvm_epoch.load(std::memory_order_acquire);
-  if (cached_role == cur_role && cached_epoch == cur_epoch) {
+  auto cur_gen = dvm_gen.load(std::memory_order_acquire);
+  if (cached_gen == cur_gen) {
     return true;
   }
+
+  // Slow path: ownership has changed (or this is the first call).
+  // Flush the previous owner's pending graph, then claim ownership.
   LazyFusionFlush();
-  cached_epoch = dvm_epoch.fetch_add(1, std::memory_order_acq_rel) + 1;
-  cached_role = cur_role;
+  dvm_gen.fetch_add(1, std::memory_order_release);
+  cached_gen = dvm_gen.load(std::memory_order_acquire);
   return true;
 }
 
-bool IsEnabled(const std::string &op, unsigned int op_level);
+bool IsEnabled(const std::string &op, unsigned int required_level);
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_KERNEL_H
