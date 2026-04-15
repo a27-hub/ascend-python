@@ -3461,30 +3461,30 @@ rotate推荐使用场景
      $$rotate = diag(rotate1, rotate2, rotate3) = \begin{pmatrix}rotate1&0&0\\0&rotate2&0\\0&0&rotate3\\\end{pmatrix}$$
      其中rotate1、rotate2、rotate3分别为x1、x2、x3的旋转编码矩阵，单个旋转矩阵构建参考调用示例。
 示例1
-    >>> x = torch.rand(2, 2, 5, 128).npu()
-    >>> r1 = torch.rand(1, 2, 1, 128).npu()
-    >>> r2 = torch.rand(1, 2, 1, 128).npu()
-    >>> out = torch_npu.npu_rotary_mul(x, r1, r2)
+>>> x = torch.rand(2, 2, 5, 128).npu()
+>>> r1 = torch.rand(1, 2, 1, 128).npu()
+>>> r2 = torch.rand(1, 2, 1, 128).npu()
+>>> out = torch_npu.npu_rotary_mul(x, r1, r2)
 示例2
-    >>> n = 128
-    >>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # interleave
-    >>> for i in range(0, n, 2):
-    ...    rotate[i + 0, i + 1] = 1
-    ...    rotate[i + 1, i + 0] = 1
-    >>> x = torch.rand(2, 2, 5, n).npu()
-    >>> r1 = torch.rand(1, 1, 5, n).npu()
-    >>> r2 = torch.rand(1, 1, 5, n).npu()
-    >>> out = torch_npu.npu_rotary_mul(x, r1, r2, "interleave", rotate)
+>>> n = 128
+>>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # interleave
+>>> for i in range(0, n, 2):
+...    rotate[i + 0, i + 1] = 1
+...    rotate[i + 1, i + 0] = 1
+>>> x = torch.rand(2, 2, 5, n).npu()
+>>> r1 = torch.rand(1, 1, 5, n).npu()
+>>> r2 = torch.rand(1, 1, 5, n).npu()
+>>> out = torch_npu.npu_rotary_mul(x, r1, r2, "interleave", rotate)
 示例3
-    >>> n = 128
-    >>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # half
-    >>> half = n // 2
-    >>> rotate[:half, half:] = torch.eye(half)
-    >>> rotate[half:, :half] = -torch.eye(half)
-    >>> x = torch.rand(2, 2, 5, n).npu()
-    >>> r1 = torch.rand(1, 1, 5, n).npu()
-    >>> r2 = torch.rand(1, 1, 5, n).npu()
-    >>> out = torch_npu.npu_rotary_mul(x, r1, r2, "half", rotate)
+>>> n = 128
+>>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # half
+>>> half = n // 2
+>>> rotate[:half, half:] = torch.eye(half)
+>>> rotate[half:, :half] = -torch.eye(half)
+>>> x = torch.rand(2, 2, 5, n).npu()
+>>> r1 = torch.rand(1, 1, 5, n).npu()
+>>> r2 = torch.rand(1, 1, 5, n).npu()
+>>> out = torch_npu.npu_rotary_mul(x, r1, r2, "half", rotate)
 """
 )
 
