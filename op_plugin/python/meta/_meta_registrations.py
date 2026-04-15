@@ -319,6 +319,22 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         softmax_sum = torch.empty([0], dtype=torch.float32, device='meta')
     return (attention_out, softmax_max, softmax_sum)
 
+@impl(m, "npu_sparse_flash_attention_metadata")
+def npu_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, *, actual_seq_lengths_query = None, 
+                                                actual_seq_lengths_kv = None, batch_size = None, max_seqlen_q = None, 
+                                                max_seqlen_kv = None, rope_head_dim = None, topk = None, 
+                                                sparse_block_size = None, layout_query = None, layout_kv = None, 
+                                                sparse_mode = None, pre_tokens = None, next_tokens = None, 
+                                                attention_mode = None):
+    
+    require_param = {"num_heads_q": num_heads_q, "num_heads_kv": num_heads_kv, "head_dim": head_dim}
+
+    for item_name, item in require_param.items():
+        torch._check(
+            item is not None,
+            lambda: item_name + " should not be None, but the actual value is None" + ops_error(ErrCode.VALUE),
+        )
+    return torch.empty([1024], dtype=torch.int32, device='meta')
 
 @impl(m, "npu_sparse_flash_attention_grad")
 def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_out, out, softmax_max, softmax_sum, scale_value, sparse_block_size, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None, layout="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0):

@@ -101,6 +101,7 @@
       "npu_quant_lightning_indexer_metadata",
       "npu_lightning_indexer",
       "npu_sparse_flash_attention",
+      "npu_sparse_flash_attention_metadata",
       "npu_lightning_indexer_grad",
       "npu_sparse_flash_attention_grad",
       "npu_sparse_lightning_indexer_grad_kl_loss",
