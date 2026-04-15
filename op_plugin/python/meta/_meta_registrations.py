@@ -5691,6 +5691,45 @@ def npu_swiglu_mx_quant_meta(x, group_index=None, activate_dim=-1, activate_left
             torch.empty(scale_size, dtype=torch.uint8, device=x.device))
 
 
+@impl(m, "npu_swiglu_mx_quant_with_dual_axis")
+def npu_swiglu_mx_quant_with_dual_axis_meta(x, group_index=None, activate_left=True,
+                                             round_mode="rint", scale_alg=1,
+                                             dst_type=24, max_dtype_value=0):
+    swish_num = 2
+    block_size = 64
+    
+    # infer the size of y (divide last dim by 2)
+    y_size = []
+    for i in range(x.dim()):
+        if i == x.dim() - 1:
+            y_size.append(x.size(i) // swish_num)
+        else:
+            y_size.append(x.size(i))
+    
+    # infer the size of mxscale1: ceil(last_dim / 64) + append 2
+    mxscale1_size = y_size.copy()
+    mxscale1_size[-1] = int(math.ceil(mxscale1_size[-1] / block_size))
+    mxscale1_size.append(swish_num)
+    
+    # infer the size of mxscale2: floor(second_to_last_dim / 64) + group_num + append 2
+    mxscale2_size = y_size.copy()
+    mxscale2_size[-2] = int(math.floor(mxscale2_size[-2] / block_size))
+    if group_index is not None:
+        mxscale2_size[-2] = mxscale2_size[-2] + group_index.shape[0]
+    mxscale2_size.append(swish_num)
+    
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e4m3fn)
+    
+    # fp4
+    if dst_torch_dtype == torch.uint8 and dst_type != torch_npu.hifloat8:
+        y_size[-1] = y_size[-1] // swish_num
+    
+    return (torch.empty(y_size, dtype=dst_torch_dtype, device=x.device),
+            torch.empty(mxscale1_size, dtype=torch.uint8, device=x.device),
+            torch.empty(y_size, dtype=dst_torch_dtype, device=x.device),
+            torch.empty(mxscale2_size, dtype=torch.uint8, device=x.device))
+
+
 @impl(m, "npu_clipped_swiglu")
 def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
     output_size = []
