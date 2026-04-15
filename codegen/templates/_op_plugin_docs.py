@@ -15094,7 +15094,7 @@ _add_torch_npu_docstr(
  x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  alpha（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
- dst_dtype（`int`）：可选输入，指定输出y的数据类型，数据类型为`int`，支持DT_INT4（29），DT_INT8（2），默认值为None。
+ dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。
 
  输出说明:
  y（`Tensor`）：输出的量化结果，shape支持2维[m,n]，与x保持一致，数据类型支持`int4`/`int8`。数据格式支持ND，支持非连续的Tensor。
@@ -15104,12 +15104,16 @@ _add_torch_npu_docstr(
  Atlas A3 训练系列产品/Atlas A3 推理系列产品
  Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
+ 约束说明
+ 关于数据shape的约束，其中：
+ n：取值范围为128~16000，8字节对齐, n可以整除k。
+
  调用示例:
  import torch
  import torch_npu
  import numpy as np
 
- def test_rotate_quant(M=512, N=1024, K=1024, dst_dtype=2):
+ def test_rotate_quant(M=512, N=1024, K=1024, dst_dtype=torch.int8):
      x = torch.randn(M, N, dtype=torch.bfloat16).npu()
      rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
      alpha = 0.0

@@ -27,7 +27,7 @@ TensorWrapper get_output_tensor_wrapper(
     auto x_size = input.sizes();
     if (dst_type == DTYPE_NUM_FOR_QUINT4X2) { // INT4
         TORCH_CHECK(input.size(1) % INT4_IN_INT32_NUM == 0,
-                    "Input shape last dim must be divded by 8 when int4 quantization" + OPS_ERROR(ErrCode::PARAM));
+                    "Input shape last dim must be divided by 8 when int4 quantization" + OPS_ERROR(ErrCode::PARAM));
         at::SmallVector<int64_t, op_infer::SIZE> input_shape_copy(input.sizes());
         input_shape_copy[1] /= INT4_IN_INT32_NUM;
         output = npu_preparation::apply_tensor_without_format(input_shape_copy, c10::dtype(c10::ScalarType::Int));

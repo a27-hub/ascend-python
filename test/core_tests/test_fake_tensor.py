@@ -5310,7 +5310,6 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
 
-@unittest.skip("skip until CANN is updated to support aclnnRotateQuant")
 class TestRotateQuant(TestCase):
     def test_npu_rotate_quant(self):
         with FakeTensorMode():
