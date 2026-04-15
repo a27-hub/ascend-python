@@ -87,12 +87,12 @@ at::Tensor npu_quant_lightning_indexer(
 
     int64_t key_stride0 = -1;
     auto key_stride = key.strides();
-    if (!key_stride.empty()) {
+    if (block_table.has_value() && !key_stride.empty()) {
         key_stride0 = key_stride[0];
     }
     int64_t key_dequant_scale_stride0 = -1;
     auto key_dequant_scale_stride = key_dequant_scale.strides();
-    if (!key_dequant_scale_stride.empty()) {
+    if (block_table.has_value() && !key_dequant_scale_stride.empty()) {
         key_dequant_scale_stride0 = key_dequant_scale_stride[0];
     }
 
