@@ -31,9 +31,10 @@ const c10::optional<at::Tensor> qli_get_valid_tensor(const c10::optional<at::Ten
 
 at::Tensor npu_quant_lightning_indexer_metadata(
     int64_t num_heads_q, int64_t num_heads_k, int64_t head_dim, int64_t query_quant_mode, int64_t key_quant_mode, 
-    const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_key, int64_t batch_size, 
-    int64_t max_seqlen_q, int64_t max_seqlen_k, const c10::string_view layout_query, c10::string_view layout_key, int64_t sparse_count, 
-    int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, int64_t cmp_ratio)
+    const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_key, 
+    int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_k, const c10::string_view layout_query, 
+    c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
+    int64_t cmp_ratio)
 {
     const c10::string_view device = "npu:0";
     at::Device output_device = at::Device(std::string(device));
@@ -60,3 +61,23 @@ at::Tensor npu_quant_lightning_indexer_metadata(
     return output;
 }
 } // namespace op_api
+
+namespace npu {
+at::Tensor npu_quant_lightning_indexer_metadata_fallback_None(
+    int64_t num_heads_q, int64_t num_heads_k, int64_t head_dim, int64_t query_quant_mode, int64_t key_quant_mode, 
+    const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_key, 
+    int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_k, const c10::string_view layout_query, 
+    c10::string_view layout_key, int64_t sparse_count, int64_t sparse_mode, int64_t pre_tokens, int64_t next_tokens, 
+    int64_t cmp_ratio)
+{
+    at::Tensor output = op_api::npu_quant_lightning_indexer_metadata(
+        num_heads_q, num_heads_k, head_dim, query_quant_mode, key_quant_mode, actual_seq_lengths_query, 
+        actual_seq_lengths_key, batch_size, max_seqlen_q, max_seqlen_k, layout_query, layout_key, sparse_count, 
+        sparse_mode, pre_tokens, next_tokens, cmp_ratio);
+    return output;
+}
+}
+
+TORCH_LIBRARY_IMPL(npu, BackendSelect, m) {
+    m.impl("npu_quant_lightning_indexer_metadata", &npu::npu_quant_lightning_indexer_metadata_fallback_None);
+}

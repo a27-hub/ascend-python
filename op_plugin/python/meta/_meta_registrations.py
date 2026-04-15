@@ -319,7 +319,8 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         softmax_sum = torch.empty([0], dtype=torch.float32, device='meta')
     return (attention_out, softmax_max, softmax_sum)
 
-@impl(m, "npu_sparse_flash_attention_metadata")
+#@impl(m, "npu_sparse_flash_attention_metadata")
+@torch.library.register_fake("npu::" + "npu_sparse_flash_attention_metadata")
 def npu_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, *, actual_seq_lengths_query = None, 
                                                 actual_seq_lengths_kv = None, batch_size = None, max_seqlen_q = None, 
                                                 max_seqlen_kv = None, rope_head_dim = None, topk = None, 
@@ -2040,7 +2041,8 @@ def npu_quant_lightning_indexer_forward(query, key, weights, query_dequant_scale
 
     return out
 
-@impl(m, "npu_quant_lightning_indexer_metadata")
+#@impl(m, "npu_quant_lightning_indexer_metadata")
+@torch.library.register_fake("npu::" + "npu_quant_lightning_indexer_metadata")
 def npu_quant_lightning_indexer_metadata_forward(num_heads_q, num_heads_k, head_dim,
                                                  query_quant_mode, key_quant_mode, *,
                                                  actual_seq_lengths_query = None, actual_seq_lengths_key = None,
@@ -2108,7 +2110,8 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
         )
     return out
 
-@impl(m, "npu_kv_quant_sparse_flash_attention_metadata")
+#@impl(m, "npu_kv_quant_sparse_flash_attention_metadata")
+@torch.library.register_fake("npu::" + "npu_kv_quant_sparse_flash_attention_metadata")
 def npu_kv_quant_sparse_flash_attention_metadata_forward(num_heads_q, num_heads_kv, head_dim, key_quant_mode, 
                                                          value_quant_mode, *, actual_seq_lengths_query = None, 
                                                          actual_seq_lengths_kv = None, batch_size = None, 

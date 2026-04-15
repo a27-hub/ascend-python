@@ -60,3 +60,23 @@ at::Tensor npu_kv_quant_sparse_flash_attention_metadata(
     return output;
 }
 } // namespace op_api
+
+namespace npu {
+at::Tensor npu_kv_quant_sparse_flash_attention_metadata_fallback_None(
+    int64_t num_heads_q, int64_t num_heads_kv, int64_t head_dim, int64_t key_quant_mode, int64_t value_quant_mode,
+    const c10::optional<at::Tensor> &actual_seq_lengths_query, const c10::optional<at::Tensor> &actual_seq_lengths_kv,
+    int64_t batch_size, int64_t max_seqlen_q, int64_t max_seqlen_kv, int64_t topk, int64_t sparse_block_size, 
+    c10::string_view layout_query, c10::string_view layout_kv, int64_t sparse_mode, int64_t pre_tokens, 
+    int64_t next_tokens, int64_t attention_mode, int64_t quant_scale_repo_mode, int64_t tile_size, int64_t rope_head_dim)
+{
+    at::Tensor output = op_api::npu_kv_quant_sparse_flash_attention_metadata(
+        num_heads_q, num_heads_kv, head_dim, key_quant_mode, value_quant_mode, actual_seq_lengths_query, 
+        actual_seq_lengths_kv, batch_size, max_seqlen_q, max_seqlen_kv, topk, sparse_block_size, layout_query, layout_kv, 
+        sparse_mode, pre_tokens, next_tokens, attention_mode, quant_scale_repo_mode, tile_size, rope_head_dim);
+    return output;
+}
+}
+
+TORCH_LIBRARY_IMPL(npu, BackendSelect, m) {
+    m.impl("npu_kv_quant_sparse_flash_attention_metadata", &npu::npu_kv_quant_sparse_flash_attention_metadata_fallback_None);
+}
