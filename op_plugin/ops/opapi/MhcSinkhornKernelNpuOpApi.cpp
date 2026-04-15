@@ -31,6 +31,15 @@ tensor_list npu_mhc_sinkhorn_symint(const at::Tensor &x, double eps, c10::SymInt
     at::Tensor norm_out;
     at::Tensor sum_out;
     if (out_flag == 1) {
+        // int64_t T = x.size(0);
+        // if (x.dim() == 4) {
+        //     T = T * x.size(1);
+        // }
+        // int64_t n = x.size(-1);
+        // c10::SmallVector<int64_t, SIZE> norm_out_size = {2 * num_iters_int * T * n * 8};
+        // c10::SmallVector<int64_t, SIZE> sum_out_size = {2 * num_iters_int * T * 8};
+        // norm_out = npu_preparation::apply_tensor_with_format(norm_out_size, x.options(), ACL_FORMAT_ND);
+        // sum_out = npu_preparation::apply_tensor_with_format(sum_out_size, x.options(), ACL_FORMAT_ND);
         norm_out = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
         sum_out = npu_preparation::apply_tensor_with_format(x.sizes(), x.options(), ACL_FORMAT_ND);
     }
