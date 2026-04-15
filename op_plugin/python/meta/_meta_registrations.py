@@ -1308,7 +1308,7 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 
 
 @impl(m, "npu_mhc_sinkhorn")
-def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+def npu_mhc_sinkhorn(x, *, eps=1e-6, num_iters=20, out_flag=0):
     x_shape = list(x.shape)
     torch._check(
         x_shape[-1] in [4, 6, 8],
@@ -1322,8 +1322,14 @@ def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
         num_iters > 0 and num_iters <= 100,
         lambda: f"num_iters must be within (0, 100], but got {num_iters}.",
         )
-
-    y_size = tuple(x.shape)
+    # T = x_shape[0]
+    # n = x_shape[-1]
+    # n_align = 8
+    # if x.dim() == 4:
+    #     T = T * x_shape[1]
+    # y_size = tuple(x.shape)
+    # morm_size = tuple([2 * num_iters * T * n * n_align])
+    # sum_size = tuple([2 * num_iters * T * n_align])
     return (torch.empty(y_size, dtype=x.dtype, device='meta'),
             torch.empty(y_size, dtype=x.dtype, device='meta'),
             torch.empty(y_size, dtype=x.dtype, device='meta'))
