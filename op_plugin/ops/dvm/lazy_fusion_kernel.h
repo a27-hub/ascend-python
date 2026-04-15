@@ -313,6 +313,19 @@ class Manager {
   }
 
   void Flush() {
+    // Only the main thread or autograd engine worker may touch current_.
+    // Other threads (DataLoader, pin_memory, user-spawned workers, etc.)
+    // can reach Flush() via tensor resize / set / change-data-ptr hooks
+    // even when their op_api ops are correctly gated out of DVM dispatch.
+    // Allowing them to mutate current_ races with the owner's graph build
+    // and corrupts the fused kernel.
+    thread_local int8_t flush_is_main = -1;
+    if (flush_is_main < 0) {
+      flush_is_main = (static_cast<pid_t>(syscall(SYS_gettid)) == getpid()) ? 1 : 0;
+    }
+    if (flush_is_main != 1 && torch::autograd::get_current_graph_task_id() < 0) {
+      return;
+    }
     if (auto k = current_; k != nullptr) {
       current_ = nullptr;
       k->Flush();
