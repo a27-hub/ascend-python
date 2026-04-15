@@ -533,6 +533,7 @@ template <typename T> std::string convert_debug_info(T value)
 inline std::vector<std::string> split_and_processing_args(const char* args)
 {
     std::vector<std::string> result;
+    if (args == nullptr || args[0] == '\0') return result;
     std::string s(args);
     size_t pos = 0;
     size_t next;

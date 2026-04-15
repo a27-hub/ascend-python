@@ -36,21 +36,27 @@ extern std::shared_ptr<npu_logging::Logger> LOGGER;
 extern thread_local int log_depth;
 
 // Logging function for op execute with task queue.
-#define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, ...)                                                                     \
+#define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, acl_stream, task_queue, ...)                                                         \
     do {                                                                                                                                    \
         if (op_plugin::logging::LOGGER->getAllowLevel() == npu_logging::LoggingLevel::INFO && op_plugin::logging::log_depth == 0) {         \
             op_plugin::logging::log_depth += 1;                                                                                             \
-            op_plugin::logging::LOGGER->long_info("%s %s with task_queue = %s%s",                                                           \
-                         op_name, exec_cmd, task_queue, op_plugin::logging::generate_log_infos(#__VA_ARGS__, __VA_ARGS__).c_str());         \
+            const uint32_t aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                                \
+            const uint32_t aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                              \
+            op_plugin::logging::LOGGER->long_info("%s %s stream=%p, aic=%u, aiv=%u with task_queue = %s%s",                                 \
+                op_name, exec_cmd, (void*)(acl_stream), aic_num, aiv_num, task_queue,                                                       \
+                op_plugin::logging::generate_log_infos(#__VA_ARGS__, ##__VA_ARGS__).c_str());                                               \
             op_plugin::logging::log_depth -= 1;                                                                                             \
         }                                                                                                                                   \
         if (op_plugin::logging::LOGGER->getAllowLevel() == npu_logging::LoggingLevel::DEBUG && op_plugin::logging::log_depth == 0) {        \
             op_plugin::logging::log_depth += 1;                                                                                             \
             at_npu::native::OpCommand cmd;                                                                                                  \
-            op_plugin::logging::LOGGER->long_info("%s %s with task_queue = %s%s",                                                           \
-                op_name, exec_cmd, task_queue, op_plugin::logging::generate_log_infos(#__VA_ARGS__, __VA_ARGS__).c_str());                  \
+            const uint32_t aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                                \
+            const uint32_t aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                              \
+            op_plugin::logging::LOGGER->long_info("%s %s stream=%p, aic=%u, aiv=%u with task_queue = %s%s",                                 \
+                op_name, exec_cmd, (void*)(acl_stream), aic_num, aiv_num, task_queue,                                                       \
+                op_plugin::logging::generate_log_infos(#__VA_ARGS__, ##__VA_ARGS__).c_str());                                               \
             op_plugin::logging::LOGGER->long_debug("%s %s",                                                                                 \
-                op_name, op_plugin::logging::generate_debug_log_infos(#__VA_ARGS__, __VA_ARGS__).c_str());                                  \
+                op_name, op_plugin::logging::generate_debug_log_infos(#__VA_ARGS__, ##__VA_ARGS__).c_str());                                \
             op_plugin::logging::log_depth -= 1;                                                                                             \
         }                                                                                                                                   \
     } while (0);
