@@ -141,7 +141,7 @@
 </tr>
 <tr id="row13467173915415"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p24671739124114"><a name="p24671739124114"></a><a name="p24671739124114"></a><a href="./torch_npu-contrib/（beta）torch_npu-contrib-function-npu_ciou.md">torch_npu.contrib.function.npu_ciou</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p1561015645519"><a name="p1561015645519"></a><a name="p1561015645519"></a>该接口计划废弃，可以使用torch_npu.npu_ciou接口进行替换。</p>
+<td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.2 "><p id="p1561015645519"><a name="p1561015645519"></a><a name="p1561015645519"></a>该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。</p>
 </td>
 </tr>
 <tr id="row046716399413"><td class="cellrowborder" valign="top" width="50%" headers="mcps1.2.3.1.1 "><p id="p164671839164116"><a name="p164671839164116"></a><a name="p164671839164116"></a><a href="./torch_npu-contrib/（beta）torch_npu-contrib-module-Mish.md">torch_npu.contrib.module.Mish</a></p>
