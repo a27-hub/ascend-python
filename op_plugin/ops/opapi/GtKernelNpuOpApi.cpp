@@ -46,8 +46,6 @@ at::Tensor gt(const at::Tensor& self, const at::Scalar& other)
 at::Tensor& gt_(at::Tensor& self, const at::Scalar& other)
 {
     DO_COMPATIBILITY(aclnnInplaceGtScalar, acl_op::gt_(self, other));
-    TORCH_CHECK(torch_npu::utils::is_npu(self),
-        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     EXEC_NPU_CMD(aclnnInplaceGtScalar, self, other);
     return self;
 }
@@ -100,8 +98,6 @@ at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 at::Tensor& gt_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceGtTensor, acl_op::gt_(self, other));
-    TORCH_CHECK(torch_npu::utils::is_npu(self),
-        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         at::Tensor other_device = other;
         if (!torch_npu::utils::is_npu(other)) {

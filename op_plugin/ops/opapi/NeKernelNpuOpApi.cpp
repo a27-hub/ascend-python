@@ -82,8 +82,6 @@ at::Tensor ne(const at::Tensor& self, const at::Scalar& other)
 at::Tensor& ne_(at::Tensor& self, const at::Tensor& other)
 {
     DO_COMPATIBILITY(aclnnInplaceNeTensor, acl_op::ne_(self, other));
-    TORCH_CHECK(torch_npu::utils::is_npu(self),
-        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         at::Tensor other_device = other;
         if (!torch_npu::utils::is_npu(other)) {
@@ -105,8 +103,6 @@ at::Tensor& ne_(at::Tensor& self, const at::Tensor& other)
 at::Tensor& ne_(at::Tensor& self, const at::Scalar& other)
 {
     DO_COMPATIBILITY(aclnnInplaceNeScalar, acl_op::ne_(self, other));
-    TORCH_CHECK(torch_npu::utils::is_npu(self),
-        "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
     EXEC_NPU_CMD(aclnnInplaceNeScalar, self, other);
     return self;
 }
