@@ -8,8 +8,6 @@ import torch.nn.functional as f
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import SupportedDevices
 
-torch.npu.set_device(2)
-
 torch.set_printoptions(precision=16)
 # torch.set_printoptions(threshold=float('inf'))  # 显示所有元素
 
