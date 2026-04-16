@@ -297,6 +297,11 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> native_batch_norm_out(
     batch_norm_impl(result, save_mean, save_invstd, self_reshape, weight_tensor, bias_tensor, running_mean_tensor,
         running_var_tensor, train, momentum, eps);
 
+    if (train) {
+        // CANN returns variance in batch_variance, but ATen contract expects invstd (1/sqrt(var+eps))
+        save_invstd = at::reciprocal(at::sqrt(save_invstd + eps));
+    }
+
     // Inverse reshape procedure using for recovering original shape of self.
     if (!train && self.dim() == 5) {
         // NCHW -> NDCHW -> NCDHW
