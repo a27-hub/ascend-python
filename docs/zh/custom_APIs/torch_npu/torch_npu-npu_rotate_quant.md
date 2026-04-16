@@ -31,10 +31,11 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 
 ## 约束说明
 
--   该接口支持推理和训练场景下使用。
--   该接口支持图模式。
--   n支持128-16000，8字节对齐，需要能整除k。
--   输入和输出Tensor支持的数据类型组合如下：
+- 该接口支持推理和训练场景下使用。
+- 该接口支持图模式。
+- n支持128-16000，8字节对齐，需要能整除k。
+- 输入和输出Tensor支持的数据类型组合如下：
+
     |x|rotation|dst_dtype|y|scale|
     |--------|--------|--------|--------|--------|
     |`bfloat16`|`bfloat16`|torch.qint8|`int8`|`float32`|
@@ -44,7 +45,7 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 
 ## 调用示例
 
--   单算子模式调用
+- 单算子模式调用
 
     ```python
     import numpy as np
@@ -63,7 +64,7 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
     output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), alpha=0.0, dst_dtype=torch.int8)
     ```
 
--   图模式调用：
+- 图模式调用：
 
     ```python
     import numpy as np
