@@ -301,6 +301,7 @@ class Manager {
     auto stream = c10_npu::getCurrentNPUStream().stream(false);
     if (current_ != nullptr) {
       if (current_stream_ != stream) {
+        ASCEND_LOGI("dvm Manager: stream changed, flush current graph (id=%zu)", current_->id());
         Flush();
       } else {
         return current_;
@@ -308,7 +309,9 @@ class Manager {
     }
     current_ = NewKernel();
     current_stream_ = stream;
-    current_->Reset(stream, id_.fetch_add(1, std::memory_order_relaxed));
+    auto kid = id_.fetch_add(1, std::memory_order_relaxed);
+    current_->Reset(stream, kid);
+    ASCEND_LOGD("dvm Manager: new kernel id=%zu, stream=%p", kid, stream);
     return current_;
   }
 
