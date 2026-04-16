@@ -216,7 +216,7 @@ class TestMoeDistributeDispatch(TestCase):
         x1_list = []
         x2_list = []
         elastic_info_shape = [np.int32, data_format, [4 + ep_world_size]]
-        elastic_info = []
+        elastic_info, _ = create_common_tensor(elastic_info_shape, -1, 1)
         for _ in range(ep_world_size):
             x1, _ = create_common_tensor(x1_shape, -1, 1)
             x2, _ = create_common_tensor(x2_shape, -1, 1)
@@ -224,8 +224,6 @@ class TestMoeDistributeDispatch(TestCase):
             x2_list.append(x2)
             topk1_list.append(topk)
             topk2_list.append(topk)
-            temp_elastic_info, _ = create_common_tensor(elastic_info_shape, -1, 1)
-            elastic_info.append(temp_elastic_info)
         expt_out_list_1, expt_token_list_1 = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
                                                             global_bs, shared_expert_rank_num_1, moe_expert_num_7, ep_world_size, tp_world_size)
         expt_out_list_2, expt_token_list_2 = self._construct_excepted_result(x1_list, x2_list, topk1_list, topk2_list, bs, h, k,
