@@ -305,12 +305,16 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   if (storage->dvm_op_ != nullptr) {
     auto dvm_op = static_cast<DvmOp *>(storage->dvm_op_);
     if (MatchDvmOp(dvm_op, x, shape)) {
+      ASCEND_LOGD("dvm Input: cache hit, reuse NDObject for tensor %p, shape=%s",
+                  x.unsafeGetTensorImpl(), ToString(x.sizes()).c_str());
       auto op = dvm_op->op;
       if (cast_to_fp32) {
         op = Cast(op, dvm::DType::kFloat32);
       }
       return op;
     }
+    ASCEND_LOGD("dvm Input: cache miss (reloadable=%d) for tensor %p, shape=%s",
+                dvm_op->reloadable_from_gm, x.unsafeGetTensorImpl(), ToString(x.sizes()).c_str());
     TORCH_INTERNAL_ASSERT(dvm_op->reloadable_from_gm, "non-reloadable dvm input alias must flush before Input");
   }
   if (input_used_ == inputs_.size()) {
@@ -326,6 +330,9 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   load->data_ptr = x.data_ptr();
   load->tensor = x;
   auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), input_type);
+  ASCEND_LOGD("dvm Input: new Load p%zu, tensor %p, addr=%p, shape=%s, dtype=%s",
+              input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
+              ToString(x.sizes()).c_str(), c10::toString(x.scalar_type()));
   if (DumpEnabled()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
@@ -348,12 +355,16 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
       auto idx = static_cast<size_t>(i);
       if (MatchTensorMeta(outputs_[idx].tensor_meta, tensor)) {
         outputs_[idx].skip = true;
+        ASCEND_LOGD("dvm Output: inplace skip %%%zu, addr=%p", idx, tensor.data_ptr());
         break;
       }
     }
   }
   auto &store = outputs_.emplace_back(obj, inplace, tensor);
   CacheTensorMeta(&(store.tensor_meta), tensor);
+  ASCEND_LOGD("dvm Output: %%%zu, tensor %p, addr=%p, shape=%s, dtype=%s, inplace=%d",
+              outputs_.size() - 1, tensor.unsafeGetTensorImpl(), tensor.data_ptr(),
+              ToString(tensor.sizes()).c_str(), c10::toString(tensor.scalar_type()), inplace);
   if (DumpEnabled()) {
     dump_buf_ << "%" << (outputs_.size() - 1) << ": " << ToString(tensor) << "\n";
   }
@@ -375,9 +386,12 @@ void LazyFusionKernel::Flush() {
     return;
   }
   if (outputs_.empty()) {
+    ASCEND_LOGD("dvm Flush: empty graph, skip (id=%zu)", id_);
     Clear();
     return;
   }
+  ASCEND_LOGI("dvm Flush: id=%zu, inputs=%zu, outputs=%zu, ops=%zu",
+              id_, input_used_, outputs_.size(), dump_ops_.size());
   RECORD_FUNCTION("DvmFlush", {});
   flushed_ = true;
   // Emit Store
@@ -427,6 +441,7 @@ int LazyFusionKernel::CodeGenAndLaunch() {
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
   auto ret = dvm::Kernel::Launch(stream_);
+  ASCEND_LOGI("dvm CodeGen+Launch: id=%zu, ret=%d", id_, ret);
   if (g_lazy_fusion_manager.flags_.synchronize) {
     auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
     if (err != ACL_ERROR_NONE) {
