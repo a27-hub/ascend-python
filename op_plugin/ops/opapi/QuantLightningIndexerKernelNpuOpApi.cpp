@@ -85,14 +85,19 @@ at::Tensor npu_quant_lightning_indexer(
     char *query_layout_ptr = const_cast<char *>(query_layout_str.c_str());
     char *key_layout_ptr = const_cast<char *>(key_layout_str.c_str());
 
+    bool check_key_contiguous = !block_table.has_value() && !key.is_contiguous();
+    TORCH_CHECK(!check_key_contiguous, "In non-PA scenarios, key tensor do not support non-contiguous.");
+    bool check_key_dequant_scale_contiguous = !block_table.has_value() && !key_dequant_scale.is_contiguous();
+    TORCH_CHECK(!check_key_dequant_scale_contiguous, "In non-PA scenarios, key_dequant_scale tensor do not support non-contiguous.");
+
     int64_t key_stride0 = -1;
     auto key_stride = key.strides();
-    if (block_table.has_value() && !key_stride.empty()) {
+    if (!key.is_contiguous() && !key_stride.empty()) {
         key_stride0 = key_stride[0];
     }
     int64_t key_dequant_scale_stride0 = -1;
     auto key_dequant_scale_stride = key_dequant_scale.strides();
-    if (block_table.has_value() && !key_dequant_scale_stride.empty()) {
+    if (!key_dequant_scale.is_contiguous() && !key_dequant_scale_stride.empty()) {
         key_dequant_scale_stride0 = key_dequant_scale_stride[0];
     }
 
