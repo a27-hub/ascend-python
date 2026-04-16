@@ -91,8 +91,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_mhc_p
     biasPostGrad = at::empty(biasPostGradSize, fp32Options); // [n^2 + 2n]
     gammaGrad = at::empty(gammaGradSize, fp32Options); // [n, D]
 
+    float eps_f = static_cast<float>(hc_eps);
     EXEC_NPU_CMD(aclnnMhcPreBackward, x, phi, alpha, grad_h_in, grad_h_post,
-            grad_h_res, inv_rms, h_mix, h_pre, h_post, gamma, grad_x_post, hc_eps, xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
+            grad_h_res, inv_rms, h_mix, h_pre, h_post, gamma, grad_x_post, eps_f, xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
 
     return std::make_tuple(xGrad, phiGrad, alphaGrad, biasPostGrad, gammaGrad);
 }
