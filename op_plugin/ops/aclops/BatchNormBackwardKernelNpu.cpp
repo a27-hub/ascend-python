@@ -138,7 +138,8 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> batch_norm_backward_impl(
 {
     // note: when not train, save_mean/save_invstd replaced by running_mean/running_var
     at::Tensor mean = train ? save_mean : running_mean;
-    at::Tensor invstd = train ? save_invstd : running_var;
+    // CANN backward ops expect variance, but ATen contract passes invstd (1/sqrt(var+eps)) in save_invstd
+    at::Tensor invstd = train ? (at::reciprocal(at::square(save_invstd)) - eps) : running_var;
 
     batch_norm_backward_training_update_nocheck(grad_weight, grad_bias, grad_out, self, weight, running_mean, running_var,
         mean, invstd, train, eps);
