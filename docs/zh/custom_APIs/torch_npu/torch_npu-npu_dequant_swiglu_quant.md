@@ -111,7 +111,6 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 - x 的最后一维长度必须为偶数。
 - 当激活维度不是 x 的最后一维时，group_index 必须为 None。
 - 当 group_index 非 None 时，仅支持动态量化（quant_mode=1），且 bias、quant_offset 必须为 None。
-- y 的类型仅支持 int8。
 - clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
 
 ## 调用示例
@@ -138,7 +137,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
             quant_scale = torch.randn((1, hidden_size // 2), dtype=torch.float32)
             group_index = torch.tensor([tokens_num], dtype=torch.int64)
             bias = None
-            y, scale = torch_npu.npu_dequant_swiglu_quant(
+            out, scale = torch_npu.npu_dequant_swiglu_quant(
                 x.npu(),
                 weight_scale=weight_scale.npu(),
                 activation_scale=activation_scale.npu(),
@@ -218,7 +217,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
             else:
                 model = torch.compile(model, backend=npu_backend, dynamic=True)
 
-            y, scale = model(
+            out, scale = model(
                 x.npu(),
                 weight_scale.npu(),
                 activation_scale.npu(),
