@@ -351,7 +351,6 @@ extern Manager g_lazy_fusion_manager;
 inline void LazyFusionFlush() { g_lazy_fusion_manager.Flush(); }
 
 inline bool IsEnabled() {
-  // opt_level and task_queue are fixed at process startup, cache once.
   static const bool global_enabled =
       g_lazy_fusion_manager.flags_.opt_level > OptLevel_0 &&
       c10_npu::option::OptionsManager::GetTaskQueueEnable();
@@ -361,48 +360,14 @@ inline bool IsEnabled() {
   if (c10_npu::getCurrentNPUStream().isSyncLaunchStream()) {
     return false;
   }
-  // DVM's underlying registries are not thread-safe, so we only allow two
-  // well-defined execution contexts:
-  //   1. The process main thread (identified by TID == PID on Linux, which
-  //      is POSIX-guaranteed for the initial thread of a process).
-  //   2. Any thread that is currently executing inside the autograd engine
-  //      (identified via torch::autograd::get_current_graph_task_id() >= 0).
-  // These two contexts never run concurrently: the main thread blocks inside
-  // .backward() while the engine worker is active. Every other thread —
-  // DataLoader workers, pin_memory, profiler, user-created std::thread, etc. —
-  // is rejected and falls back to op_api.
-  thread_local int8_t is_main_thread = -1;  // -1 uninit
+  thread_local int8_t is_main_thread = -1;
   if (is_main_thread < 0) {
     is_main_thread = (static_cast<pid_t>(syscall(SYS_gettid)) == getpid()) ? 1 : 0;
   }
-  bool in_backward = (torch::autograd::get_current_graph_task_id() >= 0);
-  if (is_main_thread != 1 && !in_backward) {
-    return false;
-  }
-
-  // The two allowed contexts share Manager::current_. When control switches
-  // from one to the other, flush the previous owner's pending graph so each
-  // builds its own fusion. An epoch counter detects switches in O(1) via a
-  // single atomic load on the hot path; the switch itself is driven by a
-  // per-context role tag cached in thread_local.
-  //
-  // Role encoding: 0 = main fwd, 1 = autograd engine worker.
-  // cached_role tells us which role this thread last ran as; if in_backward
-  // flips (e.g. main thread enters its own no-op phase outside backward vs.
-  // engine worker enters backward), we bump the epoch and flush.
-  thread_local int8_t cached_role = -1;
-  thread_local uint32_t cached_epoch = 0;
-  int8_t cur_role = in_backward ? 1 : 0;
-
-  static std::atomic<uint32_t> dvm_epoch{1};
-  auto cur_epoch = dvm_epoch.load(std::memory_order_acquire);
-  if (cached_role == cur_role && cached_epoch == cur_epoch) {
+  if (is_main_thread == 1) {
     return true;
   }
-  LazyFusionFlush();
-  cached_epoch = dvm_epoch.fetch_add(1, std::memory_order_acq_rel) + 1;
-  cached_role = cur_role;
-  return true;
+  return torch::autograd::get_current_graph_task_id() >= 0;
 }
 
 bool IsEnabled(const std::string &op, unsigned int required_level);
