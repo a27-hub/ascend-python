@@ -38,15 +38,15 @@
             swish(z)=z*sigmoid(z)
             $$
 
-        - 当swiglu_mode=1（变种Swiglu），以左激活为例：
+        -   当swiglu_mode=1（变种Swiglu），对输入`x`按奇偶交错拆分：
             $$
-            x1=clamp(x[:,0:H],-clamp\_limit,clamp\_limit)\\
-            x2=clamp(x[:,H:2H],-clamp\_limit,clamp\_limit)\\
-            swiglu(x)=swish(x1,\alpha,bias)*x2
+            x\_{glu}=clamp(x\_{even},\ max=clamp\_limit)\\
+            x\_{linear}=clamp(x\_{odd},-clamp\_limit,clamp\_limit)\\
+            swiglu(x)=swish(x\_{glu},\alpha)*(x\_{linear}+bias)
             $$
             其中：
             $$
-            swish(z,\alpha,bias)=(z+bias)*sigmoid(\alpha*(z+bias))
+            swish(z,\alpha)=z*sigmoid(\alpha*z)
             $$
 
     - quant量化：
