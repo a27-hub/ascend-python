@@ -486,8 +486,8 @@ std::string LazyFusionKernel::ToString(const at::Tensor &t, bool verbose) {
       return "p" + std::to_string(i);
     }
   }
-  for (size_t i = 0; i < outputs_.size(); ++i) {
-    if (outputs_[i].tensor_meta.data_ptr == data_addr) {
+  for (int64_t i = static_cast<int64_t>(outputs_.size()) - 1; i >= 0; --i) {
+    if (outputs_[static_cast<size_t>(i)].tensor_meta.data_ptr == data_addr) {
       return "%" + std::to_string(i);
     }
   }
