@@ -38,7 +38,7 @@
             swish(z)=z*sigmoid(z)
             $$
 
-        -   当swiglu_mode=1（变种Swiglu），对输入`x`按奇偶交错拆分：
+        - 当swiglu_mode=1（变种Swiglu），对输入`x`按奇偶交错拆分：
             $$
             x\_{glu}=clamp(x\_{even},\ max=clamp\_limit)\\
             x\_{linear}=clamp(x\_{odd},-clamp\_limit,clamp\_limit)\\
