@@ -479,15 +479,14 @@ std::string LazyFusionKernel::ToString(const at::Tensor &t, bool verbose) {
   if (verbose || (t.dim() == 0 && !torch_npu::utils::is_npu(t))) {
     return ToString(t);
   }
-  auto data_addr = t.data_ptr();
+  auto impl = t.unsafeGetTensorImpl();
   for (int64_t i = static_cast<int64_t>(input_used_) - 1; i >= 0; --i) {
-    auto idx = static_cast<size_t>(i);
-    if (inputs_[idx]->data_ptr == data_addr) {
+    if (inputs_[static_cast<size_t>(i)]->tensor.unsafeGetTensorImpl() == impl) {
       return "p" + std::to_string(i);
     }
   }
   for (int64_t i = static_cast<int64_t>(outputs_.size()) - 1; i >= 0; --i) {
-    if (outputs_[static_cast<size_t>(i)].tensor_meta.data_ptr == data_addr) {
+    if (outputs_[static_cast<size_t>(i)].tensor_meta.tensor_impl == impl) {
       return "%" + std::to_string(i);
     }
   }
