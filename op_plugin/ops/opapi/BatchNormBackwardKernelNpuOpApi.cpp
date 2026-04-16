@@ -42,9 +42,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm_backward(
     grad_bias = npu_preparation::apply_tensor_without_format({self.size(1)}, self.options().dtype(at::kFloat));
   }
 
+  // CANN backward expects variance, but ATen contract passes invstd (1/sqrt(var+eps)) in save_invstd
+  c10::optional<at::Tensor> save_var_opt;
+  if (train && save_invstd_opt.has_value() && save_invstd_opt.value().defined()) {
+    save_var_opt = at::reciprocal(at::square(save_invstd_opt.value())) - eps;
+  } else {
+    save_var_opt = save_invstd_opt;
+  }
+
   // calculate the output result of the NPU
   EXEC_NPU_CMD(aclnnBatchNormBackward, grad_out, self, weight_opt, running_mean_opt, running_var_opt, save_mean_opt,
-               save_invstd_opt, train, eps, grad_input_mask, grad_input, grad_weight, grad_bias);
+               save_var_opt, train, eps, grad_input_mask, grad_input, grad_weight, grad_bias);
   return std::make_tuple(grad_input, grad_weight, grad_bias);
 }
 }
