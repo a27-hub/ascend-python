@@ -3919,7 +3919,7 @@ hPre: Tensor类型，可选输出，做完 sigmoid 计算之后的 h_pre 矩阵�
 该接口支持图模式。
 
 支持的PyTorch版本:
-PyTorch 2.7及更高版本
+PyTorch 2.7.1及更高版本
 
 支持的型号:
 - 昇腾950 AI处理器
@@ -4109,7 +4109,7 @@ grad_gamma: Tensor类型，可选输出，gamma对应的梯度。数据格式为
 该接口支持单算子模式。
 
 支持的PyTorch版本:
-PyTorch 2.7及更高版本
+PyTorch 2.7.1及更高版本
 
 支持的型号:
 - 昇腾950 AI处理器
