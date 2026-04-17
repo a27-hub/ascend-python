@@ -3916,7 +3916,7 @@ hPre: Tensor类型，可选输出，做完 sigmoid 计算之后的 h_pre 矩阵�
 该接口支持图模式。
 
 支持的PyTorch版本:
-PyTorch 2.7.1
+PyTorch 2.7.1及以上
 
 支持的型号:
 - 昇腾950 AI处理器
@@ -4015,7 +4015,7 @@ out_flag: Scalar类型, 可选参数. 数据类型支持int64, 表示是否输�
 该接口支持图模式. 
 
 支持的PyTorch版本
-PyTorch 2.7.1
+PyTorch 2.7.1及以上
 
 支持的型号:
 Atlas A5 训练系列产品
