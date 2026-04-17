@@ -36,7 +36,7 @@
 
   topK采样
   1. 按分段长度v采用分段topK归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
-  2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
+  2. top_k[batch]对应当前batch采样的k值，有效范围为1≤top_k[batch]≤min(voc_size[batch], 1024)，如果top_k[batch]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会跳过当前batch的排序，将输入logits[batch]直接传入下一模块。<br>
   * 具体计算流程如下所示：
   * 根据输入`top_k[b]`与`ks_max`的关系，判断是否进行topK采样：
 
@@ -185,7 +185,7 @@
     $$
 
   后继处理
-  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
+  * 此阶段输入为前序topK-topP-minP采样的联合结果logitsSortMasked。
   * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入logits的实际情况，配置入参约束属性Attr.optional.Bool.input_is_logits，即：
     $$
     \text{inputIsLogits} = 
@@ -217,7 +217,7 @@
     \text{logitsSelectIdx}[b] = \text{LogitsIdx}[b][\text{ArgMax}(\text{probsOpt}[b][:])]
     $$
   * multiNomial
-  * 使用多项式随机采样，根据logitsSortMasked中的概率值，执行无放回的多项式采样，对每个batch取1个样本，将采样结果作为当期batch的输出：
+  * 使用多项式随机采样，根据logitsSortMasked中的概率值，执行无放回的多项式采样，对每个batch取1个样本，将采样结果作为当前batch的输出：
     $$
     \text{sampleIdx}[b] = \text{multiNomial}(\text{logitsSortMasked}[b,:], \text{numSamples}=1, \text{seed}[b], \text{offset}[b])
     $$
