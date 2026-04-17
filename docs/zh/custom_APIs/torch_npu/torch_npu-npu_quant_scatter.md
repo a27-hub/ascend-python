@@ -64,7 +64,7 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
 
 - 单算子模式调用
 
-    ```python
+   ```python
    >>> import torch
    >>> import torch_npu
    >>> import numpy as np
@@ -143,7 +143,7 @@ torch_npu.npu_quant_scatter(input, indices, updates, quant_scales, quant_zero_po
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0]]], device='npu:0', dtype=torch.int8)
-    ```
+   ```
 
 - 图模式调用
 

@@ -56,7 +56,7 @@ torch_npu.npu_trans_quant_param(scale, offset=None, round_mode=0) -> Tensor
 
 `Tensor`
 
-代表`trans_quant_param`的计算结果，对应公式中的`out`。数据类型支持`int64`，数据格式支持$ND$。
+代表`trans_quant_param`的计算结果，对应公式中的$out$。数据类型支持`int64`（图模式下为`uint64`），数据格式支持$ND$。
 
 ## 约束说明
 
