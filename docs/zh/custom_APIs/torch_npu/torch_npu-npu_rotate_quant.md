@@ -13,7 +13,7 @@ API功能：`npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor, Tensor)
 ```
 
