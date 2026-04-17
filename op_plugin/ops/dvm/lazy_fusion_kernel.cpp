@@ -424,6 +424,7 @@ void LazyFusionKernel::ClearRuntimeState() {
 }
 
 int LazyFusionKernel::CodeGenAndLaunch() {
+  ASCEND_LOGI("start dvm CodeGen+Launch: id=%zu", id_);
   if (c10_npu::check_dequeue_need_use(stream_)) {
     NPU_CHECK_ERROR(c10_npu::UseStreamResInCurrentThread(stream_));
   }
@@ -441,7 +442,6 @@ int LazyFusionKernel::CodeGenAndLaunch() {
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
   auto ret = dvm::Kernel::Launch(stream_);
-  ASCEND_LOGI("dvm CodeGen+Launch: id=%zu, ret=%d", id_, ret);
   if (g_lazy_fusion_manager.flags_.synchronize) {
     auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
     if (err != ACL_ERROR_NONE) {
@@ -449,6 +449,7 @@ int LazyFusionKernel::CodeGenAndLaunch() {
     }
   }
   ClearRuntimeState();
+  ASCEND_LOGI("end dvm CodeGen+Launch: id=%zu, ret=%d", id_, ret);
   return ret;
 }
 
