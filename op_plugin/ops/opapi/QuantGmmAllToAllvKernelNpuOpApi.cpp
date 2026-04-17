@@ -55,6 +55,7 @@ static const int MX_QUANT_MODE = 6;
 static const int NO_QUANT_MODE = 0;
 static const int PERTENSOR_QUANT_MODE = 1;
 static const int64_t ACL_UNDEFINED = -1;
+
 // world_size
 const std::set<int> SUPPORT_WORLD_SIZE_LIST{2, 4, 8, 16, 32, 64, 128, 256};
 
