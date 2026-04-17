@@ -37,6 +37,25 @@ bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarTy
   return x.is_contiguous() && torch_npu::utils::is_npu(x) && type_check(x.scalar_type());
 }
 
+// Every tensor input of every DVM op must go through an NPU device guard before
+// entering the lazy-fusion path. Use NpuCheck for pure device checks, or use
+// InputCheck when the op also needs the contiguous/type constraints that it
+// enforces. This includes optional tensor inputs when they are present. Do not
+// open-code partial device checks at call sites, otherwise a non-NPU tensor can
+// slip into k->Input/k->Output and cause an invalid execution path.
+bool NpuCheck(const at::Tensor &x) {
+  return x.defined() && torch_npu::utils::is_npu(x);
+}
+
+bool NpuCheck(const c10::optional<at::Tensor> &x) {
+  return !x.has_value() || NpuCheck(x.value());
+}
+
+template <typename T, typename... Args>
+bool NpuCheck(const T &x, const Args &...xs) {
+  return NpuCheck(x) && NpuCheck(xs...);
+}
+
 bool GetScalarValue(const at::Scalar &scalar, float *v) {
   auto scalar_type = scalar.type();
   if (scalar_type == at::ScalarType::Long) {
@@ -406,6 +425,9 @@ struct MatMulAdapter {
   }
 
   bool Check() {
+    if (!NpuCheck(x_tensor, y_tensor)) {
+      return false;
+    }
     if (!at_npu::native::FormatHelper::IsOpInputBaseFormat(x_tensor) || !at_npu::native::FormatHelper::IsOpInputBaseFormat(y_tensor)) {
       return false;
     }
@@ -879,7 +901,7 @@ at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & o
 
 at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor & out) {
   static auto enable = IsEnabled("gelu", OpLevel_1);
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self) || !NpuCheck(out)) {
     return op_api::gelu_out(self, approximate, out);
   }
   PrepareWritableOutput(out);
@@ -1019,7 +1041,7 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
 // ===================== BatchNorm =====================
 ::std::tuple<at::Tensor,at::Tensor> batch_norm_stats(const at::Tensor & input, double eps) {
   static auto enable = IsEnabled("batch_norm_stats", OpLevel_1);
-  if (!enable || input.scalar_type() != at::ScalarType::Float) {
+  if (!enable || input.scalar_type() != at::ScalarType::Float || !NpuCheck(input)) {
     return op_api::batch_norm_stats(input, eps);
   }
   PrepareFusionInput(input);
@@ -1060,7 +1082,7 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
   const at::Tensor & mean, const at::Tensor & invstd, const c10::optional<at::Tensor> & running_mean,
   const c10::optional<at::Tensor> & running_var, double momentum, double eps, const at::Tensor & counts) {
   static auto enable = IsEnabled("batch_norm_gather_stats_with_counts", OpLevel_1);
-  if (!enable || input.scalar_type() != at::ScalarType::Float) {
+  if (!enable || input.scalar_type() != at::ScalarType::Float || !NpuCheck(input, mean, invstd, counts)) {
     return op_api::batch_norm_gather_stats_with_counts(input, mean, invstd, running_mean, running_var, momentum, eps, counts);
   }
   if ((running_mean.has_value() && !InputCheck(running_mean.value())) ||
@@ -1132,7 +1154,7 @@ at::Tensor batch_norm_elemt(const at::Tensor & input, const c10::optional<at::Te
                             const c10::optional<at::Tensor> & bias, const at::Tensor & mean, const at::Tensor & invstd,
                             double eps) {
   static auto enable = IsEnabled("batch_norm_elemt", OpLevel_1);
-  if (!enable || input.scalar_type() != at::ScalarType::Float) {
+  if (!enable || input.scalar_type() != at::ScalarType::Float || !NpuCheck(input, mean, invstd, weight, bias)) {
     return op_api::batch_norm_elemt(input, weight, bias, mean, invstd, eps);
   }
   auto x = input.contiguous();
@@ -1168,14 +1190,15 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
   const at::Tensor & invstd, const c10::optional<at::Tensor> & weight, const at::Tensor & sum_dy,
   const at::Tensor & sum_dy_xmu, const at::Tensor & count) {
   static auto enable = IsEnabled("batch_norm_backward_elemt", OpLevel_1);
-  if (!enable || input.scalar_type() != at::ScalarType::Float) {
+  if (!enable || input.scalar_type() != at::ScalarType::Float ||
+      !weight.has_value() || !NpuCheck(grad_out, input, mean, invstd, weight.value(), sum_dy, sum_dy_xmu, count)) {
     return op_api::batch_norm_backward_elemt(grad_out, input, mean, invstd, weight, sum_dy, sum_dy_xmu, count);
   }
   auto dout_tensor_c = grad_out.contiguous();
   auto input_tensor_c = input.contiguous();
   auto mean_tensor_c = mean.contiguous();
   auto invstd_tensor_c = invstd.contiguous();
-  auto weight_tensor_c = weight.has_value() ? weight.value().contiguous() : at::Tensor();
+  auto weight_tensor_c = weight.value().contiguous();
   auto sumd_dy_tensor_c = sum_dy.contiguous();
   auto sum_dy_xmu_tensor_c = sum_dy_xmu.contiguous();
   auto count_tensor_c = count.contiguous();
@@ -1268,7 +1291,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
                      c10::optional<at::ScalarType> dtype, at::Tensor & out) {
   static auto enable = IsEnabled("sum", OpLevel_2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
+  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self) || !NpuCheck(out)) {
     return op_api::sum_out(self, dim, keepdim, dtype, out);
   }
   PrepareWritableOutput(out);
