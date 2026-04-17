@@ -35,6 +35,9 @@ at::Tensor& linalg_cholesky_out(const at::Tensor& self, bool upper, at::Tensor& 
 
 at::Tensor linalg_cholesky(const at::Tensor& self, bool upper)
 {
+    if (self.numel() == 0) {
+        return self.clone();
+    }
     if (!check_aclnn_kernel_available("aclnnLinalgCholesky")) {
         auto [out, info] = at::linalg_cholesky_ex(self, upper, false);
         at::_linalg_check_errors(info, "linalg.cholesky", self.dim() == DIM_2D);
