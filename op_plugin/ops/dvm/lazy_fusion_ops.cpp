@@ -1231,6 +1231,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), false);
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(out_type));
   DumpOp("sum", self, dtype);
+  LazyFusionFlush();
   return out;
 }
 
@@ -1259,6 +1260,7 @@ at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdi
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), keepdim);
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(out_type));
   DumpOp("sum", self, dim, keepdim, dtype);
+  LazyFusionFlush();
   return out;
 }
 
@@ -1289,6 +1291,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), keepdim);
   k->Output(out, out_obj, false);
   DumpOp("sum_out", self, dim, keepdim, dtype);
+  LazyFusionFlush();
   return out;
 }
 
