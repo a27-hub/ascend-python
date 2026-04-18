@@ -276,6 +276,104 @@ if __name__ == "__main__":
     run_tests()
 ```
 
+使用`pse`位置编码的示例：
+
+```python
+import math
+import torch
+import torch_npu
+
+
+def example_with_pse():
+    # 固定随机种子，便于复现示例结果。
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # pse 按 BNSS 格式构造，并直接加到 attention score 上。
+    pse = torch.randn(B, N, S, S, dtype=torch.float16, device="npu") * 0.01  # BNSS
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        pse=pse,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # 参考实现：softmax(scale * QK^T + pse) * V。
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    ref_out = torch.matmul(torch.softmax(ref_scores + pse.float().cpu(), dim=-1), value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+    assert max_diff < 2e-2
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_pse()
+```
+
+使用`sink`注意力头偏置的示例：
+
+```python
+import math
+import torch
+import torch_npu
+
+
+def example_with_sink():
+    # 固定随机种子，便于复现示例结果。
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # sink 为每个 attention head 提供一个额外偏置，shape 为 [head_num]。
+    sink = torch.linspace(-0.2, 0.2, steps=N, dtype=torch.float32, device="npu")  # [head_num]
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        sink=sink,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # 参考实现：在最后一维追加一列 sink logits，softmax 后去掉该列再与 V 相乘。
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    sink_scores = sink.cpu().view(1, N, 1, 1).expand(B, N, S, 1)
+    ref_probs = torch.softmax(torch.cat([ref_scores, sink_scores], dim=-1), dim=-1)[..., :-1]
+    ref_out = torch.matmul(ref_probs, value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+    assert max_diff < 2e-3
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_sink()
+```
+
 使用外部dropout\_mask的示例：
 
 ```python
