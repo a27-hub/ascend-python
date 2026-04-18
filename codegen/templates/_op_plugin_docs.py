@@ -1830,6 +1830,74 @@ class TestNPUFlashAttention(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+使用pse位置编码的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_pse():
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    pse = torch.randn(B, N, S, S, dtype=torch.float16, device="npu") * 0.01
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query, key, value, head_num=N, input_layout="BNSD", pse=pse, scale=scale, keep_prob=1.0)[0]
+
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    ref_out = torch.matmul(torch.softmax(ref_scores + pse.float().cpu(), dim=-1), value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+    assert max_diff < 2e-2
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_pse()
+
+使用sink注意力头偏置的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_sink():
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    sink = torch.linspace(-0.2, 0.2, steps=N, dtype=torch.float32, device="npu")
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query, key, value, head_num=N, input_layout="BNSD", sink=sink, scale=scale, keep_prob=1.0)[0]
+
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    sink_scores = sink.cpu().view(1, N, 1, 1).expand(B, N, S, 1)
+    ref_probs = torch.softmax(torch.cat([ref_scores, sink_scores], dim=-1), dim=-1)[..., :-1]
+    ref_out = torch.matmul(ref_probs, value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+    assert max_diff < 2e-3
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_sink()
 """
 )
 
