@@ -61,7 +61,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 - **rmsnorm\_gamma\_ckv**（`Tensor`）：必选参数，表示计算c<sup>KV</sup>的RmsNorm公式中的_γ_参数。shape支持1维，格式为\(Hckv,\)，dtype支持`bfloat16`，数据格式支持ND。
 - **rope\_sin**（`Tensor`）：必选参数，表示用于计算旋转位置编码的正弦参数矩阵。shape支持2维和3维，格式为\(T, Dr\)和\(B, S, Dr\)，dtype支持`bfloat16`，数据格式支持ND。
 - **rope\_cos**（`Tensor`）：必选参数，表示用于计算旋转位置编码的余弦参数矩阵。shape支持2维和3维，格式为\(T, Dr\)和\(B, S, Dr\)，dtype支持`bfloat16`，数据格式支持ND。
-- **cache\_index**（`Tensor`）：必选参数，表示用于存储`kv_cache`和`kr_cache`的索引。shape支持1维和2维，格式为\(T\)和\(B, S\)，dtype支持`int64`，数据格式支持ND。cache_index的取值范围为[0, BlockNum*BlockSize)，当前不会对`cache_index`传入值的合法性进行校验，需用户自行保证。
+- **cache\_index**（`Tensor`）：必选参数，表示用于存储`kv_cache`和`kr_cache`的索引。shape支持1维和2维，格式为\(T\)和\(B, S\)，dtype支持`int64`，数据格式支持ND。每个元素为页式 KV 的**线性槽位下标**，取值须在区间 **[0, L)**（左闭右开），其中 **L = kv_cache 第 0 维长度 × kv_cache 第 1 维长度**（须与`kr_cache`前两维乘积一致）。若将`kv_cache`前两维记为符号 **BlockNum**、**BlockSize**，则 **L = BlockNum×BlockSize**，二者均指**本次调用实际传入**的`kv_cache`/`kr_cache`张量维长，而非单独由 B、Skv 反算得到的抽象量。约束说明中 **⌈B×Skv / BlockSize⌉** 用于在 PagedAttention 场景下估算**第 0 维应分配的最小块数**（Skv 为 kv 序列长度）；实际 **BlockNum** 可大于该值以预留 cache，此时 **L** 随之增大。当前不会对`cache_index`传入值的合法性进行校验，需用户自行保证。
 - **kv\_cache**（`Tensor`）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Hckv\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
 - **kr\_cache**（`Tensor`）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Dr\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
@@ -100,7 +100,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     - D：qk不含位置编码维度，取值为128。
     - Dr：qk位置编码维度，取值为64。
     - Nkv：kv的head数，取值为1。
-    - BlockNum：PagedAttention场景下的块数，取值为计算B\*Skv/BlockSize的值后再向上取整，其中Skv表示kv的序列长度，该值允许取0。
+    - BlockNum：PagedAttention场景下的块数，即本算子传入的`kv_cache`、`kr_cache`张量的**第 0 维长度**。在已知Batch为B、kv序列长度为Skv、块大小为BlockSize时，为覆盖全部槽位，通常应满足**BlockNum ≥ ⌈B×Skv / BlockSize⌉**（Skv表示kv的序列长度，Skv允许取0）；亦可分配更大的BlockNum以预留更多块。**cache_index**的合法上界为**BlockNum×BlockSize**（见上文`cache_index`参数说明），其中的BlockNum、BlockSize均为本次实际传入张量的维长。
     - BlockSize：PagedAttention场景下的块大小，取值范围为16、128。
     - T：BS合轴后的大小，取值范围：0\~1048576。
 
@@ -786,9 +786,10 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
     rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
     rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
-    cache_index = torch.rand(B, S).to(torch.int64).npu()
     kv_cache = torch.rand(BlockNum, BlockSize, Nkv, Hckv, dtype=torch.bfloat16).npu()
     kr_cache = torch.rand(BlockNum, BlockSize, Nkv, Dr, dtype=torch.bfloat16).npu()
+    cache_num_slots = kv_cache.size(0) * kv_cache.size(1)
+    cache_index = torch.randint(0, cache_num_slots, (B, S), dtype=torch.int64).npu()
     rmsnorm_epsilon_cq = 1.0e-5
     rmsnorm_epsilon_ckv = 1.0e-5
     cache_mode = "PA_BSND"
@@ -856,9 +857,10 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     rmsnorm_gamma_ckv = torch.rand(Hckv, dtype=torch.bfloat16).npu()
     rope_sin = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
     rope_cos = torch.rand(B, S, Dr, dtype=torch.bfloat16).npu()
-    cache_index = torch.rand(B, S).to(torch.int64).npu()
     kv_cache = torch.rand(BlockNum, BlockSize, Nkv, Hckv, dtype=torch.bfloat16).npu()
     kr_cache = torch.rand(BlockNum, BlockSize, Nkv, Dr, dtype=torch.bfloat16).npu()
+    cache_num_slots = kv_cache.size(0) * kv_cache.size(1)
+    cache_index = torch.randint(0, cache_num_slots, (B, S), dtype=torch.int64).npu()
     rmsnorm_epsilon_cq = 1.0e-5
     rmsnorm_epsilon_ckv = 1.0e-5
     cache_mode = "PA_BSND"
