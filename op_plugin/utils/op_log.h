@@ -35,6 +35,28 @@ namespace logging {
 extern std::shared_ptr<npu_logging::Logger> LOGGER;
 extern thread_local int log_depth;
 
+// Logging function for op set core limit
+#define OP_ASCEND_LOG_WITH_CORE_LIMIT(op_name, exec_cmd, task_queue, acl_stream)                 \
+    do {                                                                                                                                    \
+        if (c10_npu::option::OptionsManager::isACLGlobalLogOn(ACL_INFO)) {                                                                  \
+            int64_t stream_id = 0; \
+            if (c10_npu::acl::IsExistRtGetStreamId()) { \
+                int32_t stream_ptr = 0; \
+                if (c10_npu::acl::AclrtStreamGetId(acl_stream, &stream_ptr) != ACL_ERROR_NONE) { \
+                    stream_id = -1; \
+                } else { \
+                    stream_id = stream_ptr; \
+                } \
+            } else { \
+                stream_id = reinterpret_cast<int64_t>(acl_stream); \
+            } \
+            const uint32_t aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);  \
+            const uint32_t aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE); \
+            ASCEND_LOGI("%s %s stream_id=%ld, aic_num=%u aiv_num=%u with task_queue = %s",       \
+                #op_name, exec_cmd, stream_id, aic_num, aiv_num, task_queue);                   \
+        }                                                                                                                                   \
+    } while (0);
+
 // Logging function for op execute with task queue.
 #define OP_EXEC_LOG_WITH_TASK_QUEUE(op_name, exec_cmd, task_queue, ...)                                                                     \
     do {                                                                                                                                    \
