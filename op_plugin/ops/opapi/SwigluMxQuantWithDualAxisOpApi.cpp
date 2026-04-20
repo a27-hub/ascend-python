@@ -32,7 +32,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_mx_quant_w
     c10::string_view round_mode,
     int64_t scale_alg,
     int64_t dst_type,
-    double max_dtype_value)
+    double dst_type_max)
 {
     at::Tensor y1;
     at::Tensor mxscale1;
@@ -58,13 +58,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_mx_quant_w
     // Infer mxscale1 shape: ceil(last_dim / 64) + append 2
     auto mxscale1_shape = op_infer::array_to_small_vector(y_shape);
     int64_t last_dim = mxscale1_shape[mxscale1_shape.size() - 1];
-    mxscale1_shape[mxscale1_shape.size() - 1] = op_infer::CeilDiv(last_dim, BLOCK_SIZE);
+    mxscale1_shape[mxscale1_shape.size() - 1] = static_cast<int64_t>(std::ceil(static_cast<double>(last_dim) / BLOCK_SIZE));
     mxscale1_shape.emplace_back(NUM_TWO);
 
     // Infer mxscale2 shape: floor(second_to_last_dim / 64) + group_num + append 2
     auto mxscale2_shape = op_infer::array_to_small_vector(y_shape);
     int64_t second_to_last_dim = mxscale2_shape[mxscale2_shape.size() - 2];
-    int64_t quant_size = op_infer::FloorDiv(second_to_last_dim, BLOCK_SIZE);
+    int64_t quant_size = static_cast<int64_t>(std::floor(static_cast<double>(second_to_last_dim) / BLOCK_SIZE));
     if (group_index_opt.defined()) {
         quant_size = quant_size + group_index_opt.size(0);
     }
@@ -102,7 +102,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_mx_quant_w
     TensorWrapper mxscale2_wrapper = {mxscale2, aclDataType::ACL_FLOAT8_E8M0};
 
     EXEC_NPU_CMD(aclnnSwigluMxQuantWithDualAxis, x, group_index_opt, activate_left,
-                 round_mode_ptr, scale_alg, y_acltype, max_dtype_value,
+                 round_mode_ptr, scale_alg, y_acltype, dst_type_max,
                  y1_wrapper, mxscale1_wrapper, y2_wrapper, mxscale2_wrapper);
 
     return std::make_tuple(y1, mxscale1, y2, mxscale2);

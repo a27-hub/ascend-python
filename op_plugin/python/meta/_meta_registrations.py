@@ -5694,7 +5694,7 @@ def npu_swiglu_mx_quant_meta(x, group_index=None, activate_dim=-1, activate_left
 @impl(m, "npu_swiglu_mx_quant_with_dual_axis")
 def npu_swiglu_mx_quant_with_dual_axis_meta(x, group_index=None, activate_left=True,
                                              round_mode="rint", scale_alg=1,
-                                             dst_type=24, max_dtype_value=0):
+                                             dst_type=24, dst_type_max=0):
     swish_num = 2
     block_size = 64
     
