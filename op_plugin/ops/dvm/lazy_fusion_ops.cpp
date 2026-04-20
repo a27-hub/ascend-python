@@ -413,13 +413,14 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
 struct MatMulAdapter {
   at::Tensor x_tensor;
   at::Tensor y_tensor;
+  at::Tensor bias_tensor;
   bool trans_a;
   bool trans_b;
   ShapeVector x_shape;
   ShapeVector y_shape;
 
-  MatMulAdapter(const at::Tensor &x, const at::Tensor &y, bool ta, bool tb)
-      : x_tensor(x), y_tensor(y), trans_a(ta), trans_b(tb) {
+  MatMulAdapter(const at::Tensor &x, const at::Tensor &y, bool ta, bool tb, const at::Tensor &bias = at::Tensor())
+      : x_tensor(x), y_tensor(y), bias_tensor(bias), trans_a(ta), trans_b(tb) {
     x_shape.assign(x.sizes().begin(), x.sizes().end());
     y_shape.assign(y.sizes().begin(), y.sizes().end());
   }
@@ -434,6 +435,13 @@ struct MatMulAdapter {
     auto data_type = x_tensor.scalar_type();
     if (y_tensor.scalar_type() != data_type ||
         (data_type != at::ScalarType::Half && data_type != at::ScalarType::BFloat16)) {
+      return false;
+    }
+    if (bias_tensor.defined() &&
+        (!at_npu::native::FormatHelper::IsOpInputBaseFormat(bias_tensor) ||
+         !InputCheck(bias_tensor, [&](const at::ScalarType &type) {
+           return type == data_type || type == at::ScalarType::Float;
+         }))) {
       return false;
     }
     if (x_shape.size() < 2 || x_shape.size() > 4 || y_shape.size() < 2 || y_shape.size() > 4) {
@@ -1355,6 +1363,50 @@ at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
     return op_api::bmm(self, mat2);
   }
   DumpOp("bmm", self, mat2);
+  return out;
+}
+
+at::Tensor addmm(const at::Tensor & self, const at::Tensor & mat1, const at::Tensor & mat2,
+                 const at::Scalar & beta, const at::Scalar & alpha) {
+  static auto enable = IsEnabled("addmm", OpLevel_2);
+  float beta_value = 1.0f;
+  float alpha_value = 1.0f;
+  if (!enable || !GetScalarValue(beta, &beta_value) || !GetScalarValue(alpha, &alpha_value)) {
+    return op_api::addmm(self, mat1, mat2, beta, alpha);
+  }
+  MatMulAdapter info(mat1, mat2, false, false, self);
+  if (!info.Check()) {
+    return op_api::addmm(self, mat1, mat2, beta, alpha);
+  }
+  LazyFusionFlush();
+  auto k = g_lazy_fusion_manager.Get();
+  auto input_obj = k->Input(info.x_tensor, false, k->GetShapeRef(info.x_shape));
+  auto weight_obj = k->Input(info.y_tensor, false, k->GetShapeRef(info.y_shape));
+  bool use_bias_fast_path = self.dim() == 1 && beta_value == 1.0f && alpha_value == 1.0f;
+  auto bias_obj = use_bias_fast_path ? k->Input(info.bias_tensor, false) : nullptr;
+  auto out_obj = k->MatMul(input_obj, weight_obj, info.trans_a, info.trans_b, bias_obj);
+  if (!use_bias_fast_path) {
+    auto compute_type = dvm::Kernel::GetDType(out_obj);
+    if (compute_type == dvm::DType::kBFloat16) {
+      compute_type = dvm::DType::kFloat32;
+      out_obj = k->Cast(out_obj, compute_type);
+    }
+    if (alpha_value != 1.0f) {
+      out_obj = k->Binary<dvm::BinaryType::kMul>(out_obj, alpha_value);
+    }
+    if (beta_value != 0.0f) {
+      auto self_obj = k->Input(self);
+      if (dvm::Kernel::GetDType(self_obj) != compute_type) {
+        self_obj = k->Cast(self_obj, compute_type);
+      }
+      if (beta_value != 1.0f) {
+        self_obj = k->Binary<dvm::BinaryType::kMul>(self_obj, beta_value);
+      }
+      out_obj = k->Binary<dvm::BinaryType::kAdd>(out_obj, self_obj);
+    }
+  }
+  auto out = k->Output(out_obj, k->GetShape(out_obj), self.options());
+  DumpOp("addmm", self, mat1, mat2, beta, alpha);
   return out;
 }
 
