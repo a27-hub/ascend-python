@@ -5879,6 +5879,9 @@ class TestNpuFusedAttentionScoreBackward(TestCase):
             self.assertEqual(query_dx.shape, grad_output.shape)
             self.assertEqual(key_dw.shape, grad_output.shape)
             self.assertEqual(value_dw.shape, grad_output.shape)
+
+
+@unittest.skip("skip until CANN is updated to support aclnnRotateQuant.")
 class TestRotateQuant(TestCase):
     def test_npu_rotate_quant(self):
         with FakeTensorMode():

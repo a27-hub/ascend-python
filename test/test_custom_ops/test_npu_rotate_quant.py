@@ -76,6 +76,7 @@ class TestNpuRotateQuant(TestCase):
         rotation = rotation / (torch.norm(rotation, dim=1, keepdim=True) + 1e-6)
         return x, rotation
 
+    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend910B'])
     def test_npu_rotate_quant_int8(self, device="npu"):
         # 生成数据
@@ -89,6 +90,7 @@ class TestNpuRotateQuant(TestCase):
         self.assertEqual(output0, output0_npu.cpu(), 1)
         self.assertRtolEqual(output1, output1_npu.cpu())
 
+    @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend910B'])
     def test_npu_rotate_quant_int4(self, device="npu"):
         # 生成数据
