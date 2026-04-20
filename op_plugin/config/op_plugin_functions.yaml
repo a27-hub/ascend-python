@@ -960,6 +960,7 @@ official:
   - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
