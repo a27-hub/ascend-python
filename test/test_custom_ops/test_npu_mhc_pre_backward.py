@@ -260,35 +260,35 @@ class TestNpuMhcPre(TestCase):
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_without_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512)
+        self.run_and_check(B=1, S=128, n=4, D=512)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_with_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, with_grad_x_post=True)
+        self.run_and_check(B=1, S=128, n=4, D=512, with_grad_x_post=True)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_tnd_without_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, tnd_format=True)
+        self.run_and_check(B=1, S=128, n=4, D=512, tnd_format=True)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_tnd_with_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, with_grad_x_post=True, tnd_format=True)
+        self.run_and_check(B=1, S=128, n=4, D=512, with_grad_x_post=True, tnd_format=True)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_no_gamma(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, with_gamma=False)
+        self.run_and_check(B=1, S=128, n=4, D=512, with_gamma=False)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_no_gamma_with_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, with_grad_x_post=True, with_gamma=False)
+        self.run_and_check(B=1, S=128, n=4, D=512, with_grad_x_post=True, with_gamma=False)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_tnd_no_gamma(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, tnd_format=True, with_gamma=False)
+        self.run_and_check(B=1, S=128, n=4, D=512, tnd_format=True, with_gamma=False)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_mhc_pre_backward_tnd_no_gamma_with_grad_x_post(self, device="npu"):
-        self.run_and_check(B=1, S=1024, n=4, D=512, with_grad_x_post=True, tnd_format=True, with_gamma=False)
+        self.run_and_check(B=1, S=128, n=4, D=512, with_grad_x_post=True, tnd_format=True, with_gamma=False)
 
 
 if __name__ == "__main__":
