@@ -26,6 +26,7 @@ at::Tensor& addcdiv_out(const at::Tensor& self, const at::Tensor& tensor1, const
                         const at::Scalar& value, at::Tensor& result)
 {
     at::TensorList tensors = {self, tensor1, tensor2};
+
     auto high_type = at::native::result_type(tensors);
     at::ScalarType result_type = result.scalar_type();
     TORCH_CHECK(canCast(high_type, result_type), "result type ", high_type,
