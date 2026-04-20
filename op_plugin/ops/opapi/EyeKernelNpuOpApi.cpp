@@ -75,6 +75,7 @@ at::Tensor eye(
     TORCH_CHECK(n >= 0, "n must be greater or equal to 0, got ", n, OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(m >= 0, "m must be greater or equal to 0, got ", m, OPS_ERROR(ErrCode::PARAM));
     auto device_value = device_or_default(device);
+
     at::TensorOptions option = option.dtype(dtype)
                                      .layout(layout)
                                      .device(device_value)
