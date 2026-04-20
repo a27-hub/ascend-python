@@ -3493,6 +3493,13 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     num_x = len(x)
     singleWeight = len(weight) == 1 and len(weight[0].shape) == 3
     n = weight[0].shape[2] if singleWeight else weight[0].shape[1]
+    k = 0
+    m = 0
+    for i in range(num_x):
+        k += x[i].shape[1]
+        m += x[i].shape[0]
+    if m > 0 and n > 0:
+        torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     output_dtype = gmm_get_dtype(output_dtype)
     INT4_IN_INT32 = 8
     FP4_IN_INT8 = 2
@@ -3778,6 +3785,9 @@ def add_quant_gmm_check(*args):
 def npu_add_quant_gmm__meta(y, x1, x2, x2_scale, group_list, *, x1_scale=None, group_list_type=0, group_sizes=None,
                             x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None):
     add_quant_gmm_check(group_sizes, x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype)
+    m, n, k = x1.shape[0], x2.shape[1], x2.shape[0]
+    if m > 0 and n > 0:
+        torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     return y
 
 
@@ -3785,6 +3795,9 @@ def npu_add_quant_gmm__meta(y, x1, x2, x2_scale, group_list, *, x1_scale=None, g
 def npu_add_quant_gmm_meta(y, x1, x2, x2_scale, group_list, *, x1_scale=None, group_list_type=0, group_sizes=None,
                             x1_dtype=None, x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None):
     add_quant_gmm_check(group_sizes, x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype)
+    m, n, k = x1.shape[0], x2.shape[1], x2.shape[0]
+    if m > 0 and n > 0:
+        torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     return torch.empty_like(y)
 
 
