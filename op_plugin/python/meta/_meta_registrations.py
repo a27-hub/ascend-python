@@ -4991,10 +4991,14 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
 
 
 @impl(m, "npu_dynamic_dual_level_mx_quant")
-def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mode="rint"):
+def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
     dim_num = input_dummy.dim()
     level0_scale_shape = []
     level1_scale_shape = []
+
+    if scale_alg not in [0, 2]:
+        raise RuntimeError("Invalid scale_alg value: {scale_alg}. Expected 0 or 2." +
+                            ops_error(ErrCode.PARAM))
 
     for dim in range(dim_num):
         level0_scale_shape.append(input_dummy.size(dim))
@@ -5010,15 +5014,15 @@ def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mod
     level1_scale_shape[dim_num - 1] = dim1_size
 
     if input_dummy.size(dim_num - 1) % 2:
-        raise RuntimeError("If output dtype is float4_e2m1, " \
+        raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
                             "the last dim of input must be divisible by 2, " +
                             ops_error(ErrCode.PARAM))
     output_shape = []
     for dim in range(dim_num - 1):
         output_shape.append(input_dummy.size(dim))
     output_shape.append(input_dummy.size(dim_num - 1) // 2)
-
     output = input_dummy.new_empty(output_shape, dtype=torch.uint8)
+
     level0_scale = input_dummy.new_empty(level0_scale_shape, dtype=torch.float32)
     level1_scale = input_dummy.new_empty(level1_scale_shape, dtype=torch.uint8)
 
