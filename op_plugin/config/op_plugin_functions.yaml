@@ -901,6 +901,7 @@ official:
   - func: add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
