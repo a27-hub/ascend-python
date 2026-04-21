@@ -52,7 +52,7 @@ namespace op_api
         auto gradOffset = npu_preparation::apply_tensor_without_format(offset.sizes(), offset.options());
 
         EXEC_NPU_CMD(aclnnDeformableConv2dBackward, input, grad_output, offset_out, weight, offset,
-                     groups, deformable_groups, modulated, kernel_size, stride, padding, dilation,
+                      kernel_size, stride, padding, dilation, groups, deformable_groups, modulated,
                      gradInput, gradWeight, gradOffset, gradBias);
         return std::make_tuple(gradInput, gradWeight, gradOffset, gradBias);
     }
