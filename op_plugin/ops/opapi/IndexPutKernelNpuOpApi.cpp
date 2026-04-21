@@ -54,7 +54,7 @@ at::Tensor& _index_put_impl_(
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
     at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
+    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(indices, zeroSize);
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
