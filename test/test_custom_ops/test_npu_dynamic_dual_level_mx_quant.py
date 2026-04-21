@@ -12,8 +12,8 @@ from torch.testing import assert_close
 
 
 class TestDynamicDualLevelMxQuant(TestCase):
-    def custom_op_exec(self, input_tensor, smooth_scale=None, round_mode="rint"):
-        return torch_npu.npu_dynamic_dual_level_mx_quant(input_tensor, smooth_scale=smooth_scale, round_mode=round_mode)
+    def custom_op_exec(self, input_tensor, smooth_scale=None, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
+        return torch_npu.npu_dynamic_dual_level_mx_quant(input_tensor, smooth_scale=smooth_scale, round_mode=round_mode, dst_type=dst_type, scale_alg=scale_alg, dst_type_max=dst_type_max)
 
     def supported_op_exec(self, input_tensor):
         if torch.all(torch.eq(input_tensor, 8.0)) and input_tensor.shape == torch.Size([1, 512]):
