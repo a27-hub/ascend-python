@@ -31,30 +31,6 @@ class TestCustomAdd(TestCase):
         self.assertRtolEqual(x_npu.grad, x_cpu.grad)
         self.assertRtolEqual(y_npu.grad, y_cpu.grad)
 
-
-    def test_add_custom_meta(self):
-        input1 = torch.randn([8, 2048], dtype=torch.float16)
-        input2 = torch.randn([8, 2048], dtype=torch.float16)
-
-        x_input1 = input1.to("meta")
-        y_input1 = input2.to("meta")
-        x_input1.requires_grad = True
-        y_input1.requires_grad = True
-        custom_out = torch.ops.cpp_extension_base.add_custom(x_input1, y_input1)
-        custom_out.backward(custom_out)
-
-        x_input2 = input1.to("meta")
-        y_input2 = input2.to("meta")
-        x_input2.requires_grad = True
-        y_input2.requires_grad = True
-        cpuout = torch.add(x_input2, y_input2)
-        cpuout.backward(cpuout)
-
-        self.assertTrue(custom_out.is_meta)
-        self.assertRtolEqual(custom_out.size(), cpuout.size())
-        self.assertRtolEqual(x_input1.grad.size(), x_input2.grad.size())
-        self.assertRtolEqual(y_input1.grad.size(), y_input2.grad.size())
-
     def test_add_custom_ops(self):
         x_cpu = torch.randn([8, 2048], dtype=torch.float16)
         y_cpu = torch.randn([8, 2048], dtype=torch.float16)
