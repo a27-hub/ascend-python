@@ -317,6 +317,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_CMD", "1", acl_stream);                                \
         }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
@@ -344,6 +345,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]()->int {              \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_CMD", "1", acl_stream);                            \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
@@ -376,6 +378,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream);                                \
         }                                                                                                              \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
@@ -388,6 +391,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_call = [copied_params, acl_stream, deterministic_status, aic_num, aiv_num]()->int {                     \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream);                            \
             }                                                                                                          \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
@@ -458,6 +462,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream);                \
         }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
@@ -489,6 +494,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]()->int {              \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream);            \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
@@ -523,11 +529,13 @@ auto DecodeDevice(Ts&... args) -> at::Device
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream);                \
         }                                                                                                              \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto acl_call = [copied_params, acl_stream]()->int {                                                           \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream);            \
             }                                                                                                          \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
@@ -690,6 +698,7 @@ private:
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_NPU_CMD_SYNC", "1", acl_stream);                           \
         }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
