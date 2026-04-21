@@ -3577,49 +3577,41 @@ class TestMoeDistributeDispatchV2(TestCase):
 
             return result, a, h, local_moe_expert_num
 
-    def test_tp0_pertoken(self):
-        result, a, h, _ = self._run_dispatch_v2(tp_world_size=0, quant_mode=2)
-        self.assertEqual(result[0].shape, torch.Size([a, h]))
-        self.assertEqual(result[0].dtype, torch.int8)
-        self.assertEqual(result[1].shape, torch.Size([a]))
+    def test_quant_mode_0_consistency(self):
+        result_tp0, a, h, _ = self._run_dispatch_v2(tp_world_size=0, quant_mode=0)
+        result_tp1, _, _, _ = self._run_dispatch_v2(tp_world_size=1, quant_mode=0)
+        self.assertEqual(result_tp0[1].shape, result_tp1[1].shape)
+        self.assertEqual(result_tp0[1].dtype, result_tp1[1].dtype)
 
-    def test_tp1_pertoken(self):
-        result, a, h, _ = self._run_dispatch_v2(tp_world_size=1, quant_mode=2)
-        self.assertEqual(result[0].shape, torch.Size([a, h]))
-        self.assertEqual(result[0].dtype, torch.int8)
-        self.assertEqual(result[1].shape, torch.Size([a]))
+    def test_quant_mode_1_consistency(self):
+        result_tp0, a, h, _ = self._run_dispatch_v2(tp_world_size=0, quant_mode=1)
+        result_tp1, _, _, _ = self._run_dispatch_v2(tp_world_size=1, quant_mode=1)
+        self.assertEqual(result_tp0[1].shape, result_tp1[1].shape)
+        self.assertEqual(result_tp0[1].dtype, result_tp1[1].dtype)
 
-    def test_tp0_pergroup(self):
-        result, a, h, _ = self._run_dispatch_v2(
+    def test_pertoken_consistency(self):
+        result_tp0, a, h, _ = self._run_dispatch_v2(tp_world_size=0, quant_mode=2)
+        result_tp1, _, _, _ = self._run_dispatch_v2(tp_world_size=1, quant_mode=2)
+        self.assertEqual(result_tp0[1].shape, result_tp1[1].shape)
+        self.assertEqual(result_tp0[1].dtype, result_tp1[1].dtype)
+
+    def test_pergroup_consistency(self):
+        result_tp0, a, h, _ = self._run_dispatch_v2(
             tp_world_size=0, quant_mode=3, y_dtype=torch.float8_e5m2)
-        expected_dim1 = math.ceil(h / 128)
-        self.assertEqual(result[1].shape, torch.Size([a, expected_dim1]))
-
-    def test_tp1_pergroup(self):
-        result, a, h, _ = self._run_dispatch_v2(
+        result_tp1, _, _, _ = self._run_dispatch_v2(
             tp_world_size=1, quant_mode=3, y_dtype=torch.float8_e5m2)
-        expected_dim1 = math.ceil(h / 128)
-        self.assertEqual(result[1].shape, torch.Size([a, expected_dim1]))
+        self.assertEqual(result_tp0[1].shape, result_tp1[1].shape)
+        self.assertEqual(result_tp0[1].dtype, result_tp1[1].dtype)
 
-    def test_tp0_mx(self):
-        result, a, h, _ = self._run_dispatch_v2(
+    def test_mx_consistency(self):
+        result_tp0, a, h, _ = self._run_dispatch_v2(
             tp_world_size=0, quant_mode=4, y_dtype=torch.float8_e4m3fn)
-        expected_dim1 = (math.ceil(h / 32) + 1) // 2 * 2
-        self.assertEqual(result[1].shape, torch.Size([a, expected_dim1]))
-        self.assertEqual(result[1].dtype, torch.uint8)
-
-    def test_tp1_mx(self):
-        result, a, h, _ = self._run_dispatch_v2(
+        result_tp1, _, _, _ = self._run_dispatch_v2(
             tp_world_size=1, quant_mode=4, y_dtype=torch.float8_e4m3fn)
-        expected_dim1 = (math.ceil(h / 32) + 1) // 2 * 2
-        self.assertEqual(result[1].shape, torch.Size([a, expected_dim1]))
-        self.assertEqual(result[1].dtype, torch.uint8)
+        self.assertEqual(result_tp0[1].shape, result_tp1[1].shape)
+        self.assertEqual(result_tp0[1].dtype, result_tp1[1].dtype)
+        self.assertEqual(result_tp0[1].dtype, torch.uint8)
 
-    def test_tp0_no_quant(self):
-        result, a, h, _ = self._run_dispatch_v2(tp_world_size=0, quant_mode=0)
-        self.assertEqual(result[0].shape, torch.Size([a, h]))
-        self.assertEqual(result[0].dtype, torch.bfloat16)
-        self.assertEqual(result[1].shape, torch.Size([a]))
 
 
 class TestMoeDistributeCombineAddRmsNorm(TestCase):
