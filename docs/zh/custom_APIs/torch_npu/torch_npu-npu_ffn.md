@@ -7,6 +7,34 @@
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
 
+## 术语说明
+
+### 概念
+
+**GroupedMatMul** 是一种针对 **批量稀疏矩阵乘法** 的优化计算模式。在 MoE（Mixture of Experts，混合专家模型）结构中，每个 token 被分配给某个专家，不同专家处理的 token 数量不同。GroupedMatMul 将 **同一专家负责的所有 token 聚合为一个组**，然后一次性执行该专家的矩阵乘法，从而避免为每个 token 单独调用矩阵乘法带来的调度开销，提升计算效率。
+
+### 计算逻辑
+
+输入：
+
+- 输入张量 `x`：形状 `[M, K]`，其中 `M` 为 token 总数。
+- 专家权重 `weight1`：形状 `[E, K, N1]`（E 个专家）。
+- 专家分配信息：`expert_tokens`（每个专家处理的 token 数），`expert_tokens_index`（每个 token 对应的专家索引，可选）。
+
+计算步骤：
+
+- **按专家分组**：根据 `expert_tokens` 将 `x` 的行划分为 E 个连续段（例如，专家 0 处理前 `t0` 个 token，专家 1 处理接下来 `t1` 个 token，依此类推）。
+- **并行矩阵乘法**：对于每个专家 `e`，取对应的 token 段 `x_e`（形状 `[t_e, K]`）与该专家的权重 `weight1[e]`（形状 `[K, N1]`）执行矩阵乘法 `x_e @ weight1[e]`，得到中间结果 `y_e`（形状 `[t_e, N1]`）。
+- **拼接输出**：将所有专家的输出 `y_e` 按原 token 顺序拼接，得到最终输出形状 `[M, N1]`。
+
+若涉及激活函数（如 `gelu`）和第二次线性变换（`weight2`），则同样采用分组方式连续计算。
+
+### 应用场景
+
+- **MoE 模型的 FFN 层**：多个专家网络，每个 token 仅激活一个专家。
+- **动态批处理**：当不同输入需要走不同子网络时，通过分组计算减少冗余。
+- **高性能推理**：利用 GroupedMatMul 避免零填充和分支发散，提升 NPU 吞吐量
+
 ## 功能说明
 
 - API功能：FFN算子提供MoeFFN和FFN的计算功能。在没有专家分组（`expert_tokens`为空）时是FFN，有专家分组（`expert_tokens`不为空）时是MoeFFN。
