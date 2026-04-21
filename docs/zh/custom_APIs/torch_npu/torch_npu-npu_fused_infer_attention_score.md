@@ -7,14 +7,96 @@
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    | √  |
 
+## 术语说明
+
+### BMM1（Batch Matrix Multiply 1）
+
+**概念**：指第一次矩阵乘法，用于计算`attention score`。
+
+**计算公式**：
+$$
+attention\_score = query \cdot key^{\top}
+$$
+
+### BMM2（Batch Matrix Multiply 2）
+
+**概念**：指第二次矩阵乘法，用于将`attention`权重应用到`value`上得到最终输出。
+
+**计算公式**：
+$$
+attention\_out = atten\_prob \cdot value
+$$
+其中 `atten_prob` 为归一化后的注意力权重：
+$$
+atten\_prob = softmax(\cdot)
+$$
+
+### Ring Attention
+
+**概念**：一种分布式注意力算法，将长序列按块（block）切分到多个设备上，通过环形通信逐块计算注意力，从而降低单卡显存占用并支持超长序列。在单卡场景下，Ring Attention退化为标准注意力。
+
+**计算逻辑**：当 `softmax_lse_flag=True` 时，算子会额外输出 softmax 的 log-sum-exp（LSE）值，用于在分布式环境中合并多个设备的注意力结果。假设两个设备分别计算了部分序列的注意力输出 \(O_1, O_2\) 和对应的LSE值 \(lse_1, lse_2\)，则全局输出为：
+$$
+O_{global} = \frac{e^{lse_1 - lse_{max}} O_1 + e^{lse_2 - lse_{max}} O_2}{e^{lse_1 - lse_{max}} + e^{lse_2 - lse_{max}}}
+$$
+其中 \(lse_{max} = \max(lse_1, lse_2)\)。
+
+**应用场景**：该技术常用于超大序列推理或训练。
+
 ## 功能说明<a name="zh-cn_topic_0000001832267082_section14441124184110"></a>
 
 - API功能：适配增量&全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。当`query`矩阵的S为1，进入IncreFlashAttention分支，其余场景进入PromptFlashAttention分支。
+- 模式说明
+  - PromptFlashAttention
+    - 适用场景：prefill/prompt阶段。
+    - 数据特点：通常`query/key/value`都是整段序列的张量，通常配合`atten_mask`和可选`pse_shift`。
+    - 性能侧重点：更关注吞吐，长序列时需要关注超时风险与切分策略。
+  - IncreFlashAttention
+    - 适用场景：decode阶段。
+    - 数据特点：`query`的S维为1，`key/value`往往来自KV Cache。
+    - 性能侧重点：关注单步延迟与KV Cache访问效率，启用page attention可以改善吞吐/访存，但会引入额外约束。
 - 计算公式：
 
+  - 基本公式：
     $$
     attention\_out = softmax \left(scale * (query * key^\top) + atten\_mask \right) * value
     $$
+
+  - 位置编码：
+	$$
+	attention\_out = softmax\left( scale \cdot (query \cdot key^\top) + pse\_shift + atten\_mask \right) \cdot value
+	$$
+  - 全量化公式：
+	$$
+	query_{fp} = query \cdot dequant\_scale1 \\
+	key_{fp} = key \cdot dequant\_scale1 \\
+	value_{fp} = value \cdot dequant\_scale1 \\
+	score_{fp} = scale \cdot (query_{fp} \cdot key_{fp}^\top) + mask \\
+	score_{int8} = quantize(score_{fp}, quant\_scale1) \\
+	atten\_prob_{int8} = softmax(score_{int8}) \\
+	out_{fp} = atten\_prob_{int8} \cdot value_{fp} \\
+	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
+	$$
+  - 后量化公式：
+	$$
+	out_{fp} = softmax(scale \cdot (query \cdot key^\top) + mask) \cdot value \\
+	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
+	$$
+​		其中，`quantize`为量化函数。
+
+  - 伪量化公式：
+	$$
+	key_{fp} = key \cdot antiquant\_scale + antiquant\_offset \\
+	value_{fp} = value \cdot antiquant\_scale + antiquant\_offset \\
+	attention\_out = softmax(scale \cdot (query \cdot key_{fp}^\top) + mask) \cdot value_{fp}
+	$$
+  - MLA场景：
+	$$
+	query_{rot} = RoPE(query, query\_rope) \\
+	key_{rot} = RoPE(key, key\_rope) \\
+	attention\_out = softmax(scale \cdot (query_{rot} \cdot key_{rot}^\top) + mask) \cdot value
+	$$
+​		其中，`RoPE`为旋转位置编码函数。
 
 ## 函数原型<a name="zh-cn_topic_0000001832267082_section45077510411"></a>
 
