@@ -36,7 +36,7 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, const at::ScalarTy
     // aclnn
     auto output_size = {self.size(0), mat2.size(1)};
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
-    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, result, cube_math_type);
     } else {
@@ -94,7 +94,7 @@ at::Tensor &mm_out(
     // aclnn
     auto output_size = {self.size(0), mat2.size(1)};
     npu_preparation::check_tensor({self, mat2}, out, output_dtype, output_size);
-    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
     } else {
