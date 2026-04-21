@@ -22,6 +22,8 @@
 #include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 #include "torch_npu/csrc/core/npu/npu_log.h"
 #include "torch_npu/csrc/core/npu/NPUWorkspaceAllocator.h"
+#include "torch_npu/csrc/core/npu/register/OptionsManager.h"
+#include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace lazy_fusion {
 static inline bool DumpEnabled() {
@@ -372,7 +374,11 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
 }
 
 void *LazyFusionKernel::Alloc(size_t size) {
-  auto ws_tensor = at_npu::native::allocate_workspace(size, stream_);
+  static const bool use_workspace_allocator =
+      c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
+  at::Tensor ws_tensor = use_workspace_allocator
+      ? at_npu::native::allocate_workspace(size, stream_)
+      : at_npu::native::OpPreparation::unsafe_empty_workspace(size);
   void *addr = const_cast<void *>(ws_tensor.storage().data());
   workspace_.emplace_back(std::move(ws_tensor));
   if (DumpEnabled()) {
@@ -412,7 +418,29 @@ void LazyFusionKernel::Flush() {
     DumpGraph();
   }
   ClearGraphRefs();
-  at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int { return CodeGenAndLaunch(); });
+
+  static const bool codegen_in_task_queue =
+      c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
+  if (codegen_in_task_queue) {
+    at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int { return CodeGenAndLaunch(); });
+    return;
+  }
+
+  // CodeGen on the caller thread so TaskQueue isn't blocked by host-side codegen.
+  if (DumpEnabled()) {
+    LazyFusionDump::Instance().DumpGraphInfo(dump_buf_);
+    dump_buf_ << "[lazy_fusion before split](" << id() << ", " << this << ") {\n";
+    dump_buf_ << Dump() << "}\n";
+    LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
+  }
+  dvm::Kernel::CodeGen(nullptr, 0, this);
+  if (DumpEnabled()) {
+    dump_buf_ << "[lazy_fusion after split](" << id() << ", " << this << ") {\n";
+    dump_buf_ << Dump() << "}\n";
+    dump_buf_ << Das() << "\n";
+    LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
+  }
+  at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int { return LaunchOnly(); });
 }
 
 void LazyFusionKernel::ClearRuntimeState() {
@@ -450,6 +478,23 @@ int LazyFusionKernel::CodeGenAndLaunch() {
   }
   ClearRuntimeState();
   ASCEND_LOGI("end dvm CodeGen+Launch: id=%zu, ret=%d", id_, ret);
+  return ret;
+}
+
+int LazyFusionKernel::LaunchOnly() {
+  ASCEND_LOGI("start dvm Launch: id=%zu", id_);
+  if (c10_npu::check_dequeue_need_use(stream_)) {
+    NPU_CHECK_ERROR(c10_npu::UseStreamResInCurrentThread(stream_));
+  }
+  auto ret = dvm::Kernel::Launch(stream_);
+  if (g_lazy_fusion_manager.flags_.synchronize) {
+    auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
+    if (err != ACL_ERROR_NONE) {
+      ASCEND_LOGE("SyncStream failed for dvm kernel, id = %zu, error = %d", id_, err);
+    }
+  }
+  ClearRuntimeState();
+  ASCEND_LOGI("end dvm Launch: id=%zu, ret=%d", id_, ret);
   return ret;
 }
 

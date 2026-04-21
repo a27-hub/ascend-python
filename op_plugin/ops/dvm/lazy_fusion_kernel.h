@@ -132,6 +132,7 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
   }
 
   int CodeGenAndLaunch();
+  int LaunchOnly();
 
   template <typename T>
   std::string ToString(T t) { return std::to_string(t); }
