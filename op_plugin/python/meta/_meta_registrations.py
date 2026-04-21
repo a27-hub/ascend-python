@@ -4180,8 +4180,9 @@ def quant_matmul_extra_dtype_check(*args):
     if x1_dtype is not None:
         torch._check(
             x1_dtype == torch_npu.float4_e2m1fn_x2 or x1_dtype == torch_npu.hifloat8,
-            lambda: "The x1_dtype supported for torch_npu.float4_e2m1fn_x2, torch_npu.hifloat8, but x1_dtype is " +
-                    npu_dtype_to_str(x2_dtype) + ops_error(ErrCode.TYPE),
+            lambda: "Pass x1_dtype only when x1 is not a native PyTorch dtype (e.g. torch_npu.float4_e2m1fn_x2, "
+                    "torch_npu.hifloat8); otherwise omit it. Invalid x1_dtype: " +
+                    npu_dtype_to_str(x1_dtype) + ops_error(ErrCode.TYPE),
         )
         torch._check(
             x1.element_size() == 1,
@@ -4191,7 +4192,8 @@ def quant_matmul_extra_dtype_check(*args):
     if x2_dtype is not None and not is_a8w4_float:
         torch._check(
             x2_dtype == torch_npu.float4_e2m1fn_x2 or x2_dtype == torch_npu.hifloat8,
-            lambda: "The x1_dtype supported for torch_npu.float4_e2m1fn_x2, torch_npu.hifloat8, but x1_dtype is " +
+            lambda: "Pass x2_dtype only when x2 is not a native PyTorch dtype (e.g. torch_npu.float4_e2m1fn_x2, "
+                    "torch_npu.hifloat8); otherwise omit it. Invalid x2_dtype: " +
                     npu_dtype_to_str(x2_dtype) + ops_error(ErrCode.TYPE),
         )
         torch._check(
