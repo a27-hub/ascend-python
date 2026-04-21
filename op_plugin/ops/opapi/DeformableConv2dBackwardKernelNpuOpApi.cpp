@@ -62,7 +62,6 @@ namespace op_api
         const at::Tensor &weight, const at::Tensor &offset, at::IntArrayRef kernel_size, at::IntArrayRef stride,
         at::IntArrayRef padding, at::IntArrayRef dilation, int64_t groups, int64_t deformable_groups, bool modulated)
     {
-
         // If aclnn interface is not implemented, call aclop
         DO_COMPATIBILITY(aclnnDeformableConv2dBackward,
                          acl_op::npu_deformable_conv2dbk(input, grad_output, offset_out, weight, offset,
