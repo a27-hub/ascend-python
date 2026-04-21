@@ -125,13 +125,16 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     cache_shape_used_ = 0;
     dump_idx_ = 0;
   }
+  void ClearWorkspace();
   void ClearRuntimeState();
   void Clear() {
     ClearGraphRefs();
+    ClearWorkspace();
     ClearRuntimeState();
   }
 
-  int CodeGenAndLaunch();
+  void CodeGenAndDump();
+  int Launch();
 
   template <typename T>
   std::string ToString(T t) { return std::to_string(t); }
