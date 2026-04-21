@@ -37,6 +37,10 @@ bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarTy
   return x.is_contiguous() && torch_npu::utils::is_npu(x) && type_check(x.scalar_type());
 }
 
+bool IsCPUScalar(const at::Tensor &x) {
+  return x.defined() && x.dim() == 0 && x.device().type() == c10::DeviceType::CPU;
+}
+
 // Every tensor input of every DVM op must go through an NPU device guard before
 // entering the lazy-fusion path. Use NpuCheck for pure device checks, or use
 // InputCheck when the op also needs the contiguous/type constraints that it
@@ -152,7 +156,12 @@ void PrepareWritableOutput(at::TensorList tensors) {
   }
 }
 
+bool AddScalar(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha, at::Tensor *out);
+
 bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor *out = nullptr) {
+  if (IsCPUScalar(other)) {
+    return AddScalar(self, other.item(), alpha, out);
+  }
   if (!InputCheck(self, IsFloatIntType) || !InputCheck(other, IsFloatIntType)) {
     return false;
   }
@@ -279,10 +288,27 @@ bool BinaryScalar(const at::Tensor &self, const at::Scalar &other, dvm::BinaryOp
   return true;
 }
 
+bool AddScalar(const at::Tensor &self, const at::Scalar &other, const at::Scalar &alpha, at::Tensor *out) {
+  auto other_type = other.type();
+  auto alpha_type = alpha.type();
+  if (other_type == at::ScalarType::Long && alpha_type == at::ScalarType::Long) {
+    return BinaryScalar(self, at::Scalar(other.toLong() * alpha.toLong()), dvm::BinaryOpType::kAdd, IsFloatIntType,
+                        dvm::DType::kDataTypeEnd, out);
+  }
+  if ((other_type == at::ScalarType::Long || other_type == at::ScalarType::Double) &&
+      (alpha_type == at::ScalarType::Long || alpha_type == at::ScalarType::Double)) {
+    double scaled_other = (other_type == at::ScalarType::Long ? static_cast<double>(other.toLong()) : other.toDouble()) *
+                          (alpha_type == at::ScalarType::Long ? static_cast<double>(alpha.toLong()) : alpha.toDouble());
+    return BinaryScalar(self, at::Scalar(scaled_other), dvm::BinaryOpType::kAdd, IsFloatIntType,
+                        dvm::DType::kDataTypeEnd, out);
+  }
+  return false;
+}
+
 bool BinaryTensor(const at::Tensor &self, const at::Tensor &other, dvm::BinaryOpType op_type,
             const std::function<bool(const at::ScalarType &type)> &type_check,
             dvm::DType dst_type = dvm::DType::kDataTypeEnd, at::Tensor *out = nullptr) {
-  if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+  if (IsCPUScalar(other)) {
     return BinaryScalar(self, other.item(), op_type, type_check, dst_type, out);
   } else if (!InputCheck(self, type_check) || !InputCheck(other, type_check)) {
     return false;
@@ -608,6 +634,16 @@ at::Tensor reciprocal(const at::Tensor & self) {
 }
 
 // ===================== Binary: add/sub/mul/div =====================
+at::Tensor add(const at::Tensor & self, const at::Scalar & other, const at::Scalar & alpha) {
+  static auto enable = IsEnabled("add", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !AddScalar(self, other, alpha, &out)) {
+    return op_api::add(self, other, alpha);
+  }
+  DumpOp("add", self, other, alpha);
+  return out;
+}
+
 at::Tensor add(const at::Tensor & self, const at::Tensor & other, const at::Scalar & alpha) {
   static auto enable = IsEnabled("add", OpLevel_1);
   at::Tensor out;
