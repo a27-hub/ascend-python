@@ -430,14 +430,14 @@ int LazyFusionKernel::CodeGenAndLaunch() {
   }
   if (DumpEnabled()) {
     LazyFusionDump::Instance().DumpGraphInfo(dump_buf_);
-    dump_buf_ << "[lazy_fusion before split]\n";
-    dump_buf_ << Dump() << "\n";
+    dump_buf_ << "[lazy_fusion before split](" << id() << ", " << this << ") {\n";
+    dump_buf_ << Dump() << "}\n";
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
   dvm::Kernel::CodeGen(nullptr, 0, this);
   if (DumpEnabled()) {
-    dump_buf_ << "[lazy_fusion after split]\n";
-    dump_buf_ << Dump() << "\n";
+    dump_buf_ << "[lazy_fusion after split](" << id() << ", " << this << ") {\n";
+    dump_buf_ << Dump() << "}\n";
     dump_buf_ << Das() << "\n";
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
   }
