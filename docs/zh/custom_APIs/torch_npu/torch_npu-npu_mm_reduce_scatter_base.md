@@ -26,6 +26,17 @@
 > [!NOTE]   
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
 
+- scale参数使用说明
+  - 仅提供`x2_scale`时：
+    $$
+    output = reducescatter(x2\_scale * (x1 \mathbin{@} x2 + bias))
+    $$
+  - 同时提供`x1_scale`和`x2_scale`时：
+    $$
+    output = reducescatter((x1\_scale * x2\_scale) * (x1 \mathbin{@} x2 + bias))
+    $$
+  - 其中，`x1_scale`按\(m, 1\)广播，`x2_scale`按\(1, n\)广播。
+
 ## 函数原型
 
 ```python
@@ -50,17 +61,40 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 - **output_dtype** (`ScalarType`)：可选参数。表示输出数据类型。仅支持在量化场景且`x1_scale`和`x2_scale`均为`float32`时，可指定输出数据类型为`bfloat16`或`float16`，默认值为`bfloat16`。
 - **comm\_mode** (`str`)：可选参数。表示通信模式，支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。默认值为`ai_cpu`。
 
+### comm_mode支持矩阵表
+|   场景   | comm_mode |     input.dtype      |  是否支持 |
+| -------- | --------- | -------------------- | -------- |
+| 基础场景 | `ai_cpu` | `float16` / `bfloat16` | 支持 |
+| 量化场景 | `ai_cpu` |       `int8`           | 不支持 |
+| 基础场景 |  `aiv`  |  `float16` / `bfloat16` | 支持 |
+| 量化场景 |  `aiv`  |         `int8`          | 支持 |
+
+### scale参数组合约束表
+|  场景   |  x1_scale  | x2_scale  |   支持的dtype组合   |  输出数据类型 |
+| ------- | ---------- | --------- | ------------------ |  ----------- |
+| 基础场景 |    不传    |  不传     |        -           |    与`input`一致 |
+| 量化场景 |  不传      | `float32` | `x2_scale=float32` |    由`output_dtype`指定，默认`bfloat16` |
+| 量化场景 | `float32` | `float32` | `x1_scale=float32`, `x2_scale=float32` | 由`output_dtype`指定，默认`bfloat16` |
+| 量化场景 | `float32` |  `int64`  | `x1_scale=float32`, `x2_scale=int64` |     由`output_dtype`指定，默认`bfloat16` |
+| 量化场景 |  不传     |  `int64`  | ``x2_scale=int64` |     由`output_dtype`指定，默认`bfloat16` |
+
+
 ## 返回值说明
 
 `Tensor`
 
-shape维度和`input`保持一致。
+设`input`的shape为\(m, k\), `x2`的shape为\(k, n\)，则先进行matmul计算，得到shape为\(m, n\)的中间结果；再对该结果执行reduce_scatter，按`world_size`进行切分后，每个rank获得的输出shape为\(m // world_size, n\)。
 基础场景时数据类型和`input`保持一致。
 量化场景下，`x2_scale`为`int64`数据类型时，输出数据类型为`float16`。`x1_scale`和`x2_scale`均为`float32`时, 输出数据类型由`output_dtype`指定，默认为`bfloat16`。
+
+- 计算示例：
+  - 当`input.shape=(128, 512)`, `x2.shape=(512, 64)`, `world_size=8`时：
+    - matmul结果shape为\(16, 64\)
 
 ## 约束说明
 
 - `input`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`input`的最后一维相同，满足matmul的计算条件。
+- `world_size`必须等于实际通信域中的rank总数，且`input`的m轴必须能够被`world_size`整除。
 - `comm_mode`为`ai_cpu`时：
      - 该接口仅在训练场景下使用。
      - 该接口支持图模式。
