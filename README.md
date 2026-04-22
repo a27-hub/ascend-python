@@ -17,7 +17,7 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
 │  ├─ops                           # 算子实现目录
 │  ├─python                        # python绑定目录
 ├─codegen                          # 代码生成目录
-├─examples                         # 示例目录                        
+├─examples                         # 示例目录
 └─test                             # 测试目录
 ```
 
@@ -52,6 +52,62 @@ op-plugin仓旨在为torch_npu提供运行所需要的算子适配文件，两�
 
 ## 生命周期
 op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的[PyTorch版本维护策略](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md#pytorch%E7%89%88%E6%9C%AC%E7%BB%B4%E6%8A%A4%E7%AD%96%E7%95%A5)。
+
+## 代码静态检查（pre-commit）
+
+本项目使用 [pre-commit](https://pre-commit.com/) 在提交代码前自动执行静态检查与风格修复，确保代码质量一致性。
+
+### 安装
+
+```bash
+# 安装 pre-commit 工具
+pip install pre-commit
+
+# 在仓库根目录注册 Git hooks
+pre-commit install
+```
+
+### 使用
+
+```bash
+# 对所有已暂存文件执行检查（提交时自动触发）
+git commit -m "your message"
+
+# 只检查当前在工作区中的修改的文件
+pre-commit run
+
+# 手动对所有文件执行一次完整检查
+pre-commit run --all-files
+
+# 手动指定检查工具运行，以下命令hook-id在.pre-commit-config.yaml中查看。
+pre-commit run <hook-id>
+
+# 自动修复代码风格（仅运行具备 auto-fix 能力的 hook）
+pre-commit run ruff-check
+pre-commit run ruff-format
+pre-commit run clang-format
+```
+
+> 部分 hook（如 `ruff-format`、`clang-format`）会直接修改文件，修复后需重新 `git add` 再提交。
+
+### 集成的静态检查工具
+
+| 工具 | 版本 | 适用范围 | 功能说明 |
+|------|------|----------|----------|
+| [trailing-whitespace](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | 所有文件 | 删除行尾多余空白字符 |
+| [end-of-file-fixer](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | 所有文件 | 确保文件以换行符结尾 |
+| [check-yaml](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | YAML 文件 | 校验 YAML 语法合法性 |
+| [check-added-large-files](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | 所有文件 | 阻止提交超大文件 |
+| [check-merge-conflict](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | 所有文件 | 检测未解决的合并冲突标记 |
+| [detect-private-key](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | 所有文件 | 检测私钥等敏感信息泄露 |
+| [check-json](https://gitcode.com/pre-commit/pre-commit-hooks) | v4.6.0 | JSON 文件 | 校验 JSON 语法合法性 |
+| [ruff-check](https://gitcode.com/gh_mirrors/ru/ruff-pre-commit) | v0.14.14 | Python 文件 | Python lint 检查，并自动修复可修复问题 |
+| [ruff-format](https://gitcode.com/gh_mirrors/ru/ruff-pre-commit) | v0.14.14 | Python 文件 | Python 代码格式化（替代 black） |
+| [codespell](https://gitcode.com/gh_mirrors/co/codespell) | v2.4.1 | 非代码文件 | 拼写错误检查（跳过 .py/.cpp/.h 等源码文件） |
+| [pylint](https://gitcode.com/gh_mirrors/pyl/pylint) | v4.0.5 | Python 文件 | Python 代码质量深度检查 |
+| [bandit](https://gitcode.com/gh_mirrors/ba/bandit) | v1.9.4 | Python 文件 | Python 安全漏洞静态扫描 |
+| [typos](https://gitcode.com/gh_mirrors/ty/typos) | v1.32.0 | 所有文件 | 快速拼写错误检测（基于 Rust 实现） |
+| [clang-format](https://gitcode.com/pre-commit-clang/mirrors-clang-format) | v18.1.8 | C/C++ 文件 | C/C++ 代码格式化，读取 `.clang-format` 配置 |
 
 ## 贡献指导
 
