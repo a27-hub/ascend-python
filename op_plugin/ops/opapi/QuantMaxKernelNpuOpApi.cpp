@@ -43,7 +43,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
 
     const char *round_mode_ptr = round_mode.data();
     TensorWrapper y_wrapper = {y, y_acltype};
-    EXEC_NPU_CMD(aclnnQuantMax, x, scale, round_mode_ptr, y_acltype, y_wrapper, amax);
+    EXEC_NPU_CMD(aclnnQuantMax, x, scale, y_acltype, round_mode_ptr, y_wrapper, amax);
 
     return std::make_tuple(y, amax);
 }
