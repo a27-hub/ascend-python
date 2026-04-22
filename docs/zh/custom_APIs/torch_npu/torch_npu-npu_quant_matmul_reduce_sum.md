@@ -28,7 +28,7 @@ torch_npu.npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -
 - **x1** (`Tensor`)：必选参数，数据类型支持`int8`，数据格式支持$ND$，shape支持3维，形状为（batch, m, k）。
 
 - **x2** (`Tensor`)：必选参数，数据类型支持`int8`，数据格式支持$NZ$，shape支持3维，形状为（batch, k, n）。
-  - 可通过`x2 = torch_npu.npu_format_cast(x2.contiguous(), 29)`将ND格式的`x2`转换为NZ格式。
+  - 可通过`x2 = torch_npu.npu_format_cast(x2.contiguous(), 29)`将ND格式的`x2`转换为NZ格式（其中29为NZ格式的枚举值）。
 
 - **x1_scale** (`Tensor`)：必选关键字参数，对应公式中的$x1Scale$。数据类型支持`float32`，数据格式支持$ND$，shape支持2维，形状为（batch, m）。
   - 在实际计算时，`x1_scale`会被广播到(batch，m，n)。
@@ -64,7 +64,7 @@ torch_npu.npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -
     b,m,k,n = (2,3,4,5)
     x1 = torch.ones((b, m, k), dtype=torch.int8).npu()
     x2_nd = torch.ones((b, k, n), dtype=torch.int8).npu()
-    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)
+    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)  # 29为NZ格式的枚举值
     x1_scale = torch.ones((b, m), dtype=torch.float32).npu()
     x2_scale = torch.ones((n,), dtype=torch.bfloat16).npu()
     y = torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=x1_scale, x2_scale=x2_scale)
@@ -104,7 +104,7 @@ torch_npu.npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -
     b,m,k,n = (2,3,4,5)
     x1 = torch.ones((b, m, k), dtype=torch.int8).npu()
     x2_nd = torch.ones((b, k, n), dtype=torch.int8).npu()
-    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)
+    x2 = torch_npu.npu_format_cast(x2_nd.contiguous(), 29)  # 29为NZ格式的枚举值
     pertoken_scale = torch.ones((b, m), dtype=torch.float32).npu()
     scale = torch.ones((n,), dtype=torch.bfloat16).npu()
     npu_out = model(x1, x2, scale, pertoken_scale)
