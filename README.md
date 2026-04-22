@@ -1,6 +1,6 @@
 # OpPlugin
- 	 
- 	 
+
+
 ## 简介
 
 本项目开发了Ascend Extension for Pytorch（torch_npu）算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
@@ -17,10 +17,10 @@ OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch�
 │  ├─ops                           # 算子实现目录
 │  ├─python                        # python绑定目录
 ├─codegen                          # 代码生成目录
-├─examples                         # 示例目录                        
+├─examples                         # 示例目录
 └─test                             # 测试目录
 ```
- 	 
+
 ## 版本配套表
 op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
 | op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
@@ -49,6 +49,8 @@ op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，�
 
 ## 生命周期
 op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的[PyTorch版本维护策略](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md#pytorch%E7%89%88%E6%9C%AC%E7%BB%B4%E6%8A%A4%E7%AD%96%E7%95%A5)。
+
+
 
 ## 贡献指导
 
