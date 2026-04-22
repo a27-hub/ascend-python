@@ -23,15 +23,15 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
 
 ## 参数说明
 
-- **query** (`Tensor`)：必选参数。attention结构的Query输入，数据格式支持$ND$。
+- **query** (`Tensor`)：必选参数。attention结构的Query输入，数据格式支持$ND$。其中，文档中的 `$ND$` 表示 N-Dimensional Tensor（任意维张量），不是 attention 语义中的 head 维 `$N$`。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`。
 
-- **key** (`Tensor`)：必选参数。attention结构的Key输入，数据格式支持$ND$。
+- **key** (`Tensor`)：必选参数。attention结构的Key输入，数据格式支持$ND$。`$ND$` 的含义同 `query` 参数说明。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
 
-- **value** (`Tensor`)：必选参数。attention结构的Value输入，数据格式支持$ND$。
+- **value** (`Tensor`)：必选参数。attention结构的Value输入，数据格式支持$ND$。`$ND$` 的含义同 `query` 参数说明。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
 
@@ -63,13 +63,93 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
 - **num_heads** (`int`)：可选参数。代表`query`的头数，即`query`的$N$，默认值为`1`；数据类型为`int64`。
 - **scale_value** (`float`)：可选参数。代表缩放系数，用来约束梯度，默认值为`1.0`，典型值为$\frac{1}{\sqrt{D}}$；数据类型为`float32`。
 - **input_layout** (`str`)：可选参数。代表`query`、`key`、`value`的布局，根据输入的`query`、`key`、`value`的`shape`确定，三维`Tensor`是$BSH$，四维`Tensor`是$BNSD$或$BSND$，默认值为$BSH$，不支持其他值；数据类型为`str`。
-
-    > [!NOTE]  
-    > `query`、`key`、`value`数据排布格式支持从多种维度解读，其中$B$（Batch）表示输入样本批量大小、$S$（Seq-Length）表示输入样本序列长度、$H$（Head-Size）表示隐藏层的大小、$N$（Head-Num）表示多头数、$D$（Head-Dim）表示隐藏层最小的单元尺寸，且满足$D=H/N$。
+    > [!NOTE]
+    > `query`、`key`、`value` 支持多种排布格式，文档中：
+    > - `B` 表示输入样本批量大小（Batch Size）；
+    > - `S` 表示输入样本序列长度（Seq-Length）；
+    > - `N` 表示多头数（Head-Num）；
+    > - `D` 表示每个 Head 的隐藏维度（Head-Dim）；
+    > - `H` 表示隐藏层总维度（Hidden Size），满足 `H = N * D`。
+    >
+    > 使用时需保证 `input_layout` 与输入 Tensor 的维数和 shape 语义一致：
+    > - 3 维 Tensor 仅支持 `BSH`；
+    > - 4 维 Tensor 仅支持 `BNSD` 或 `BSND`。
 
 - **num_key_value_heads** (`int`)：可选参数。代表`key`、`value`的头数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，默认值为`0`，表示与`query`的头数相同，否则表示`key`、`value`的头数，且`num_heads`需要能被`num_key_value_heads`整除；`num_heads`与`num_key_value_heads`的比值不能大于64。数据类型为`int64`。
 - **block_size** (`int`)：可选参数。page attention中KV存储每个block中最大的token个数，默认值为`0`，通常为128、256等值，数据类型支持`int64`。
 - **inner_precise** (`int`)：可选参数。代表高精度/高性能选择，`0`代表高精度，`1`代表高性能，默认值为`1`（高性能），数据类型支持`int64`。
+
+## GQA 场景说明
+
+GQA（Grouped-Query Attention，分组查询注意力）表示多个 `query head` 共享较少数量的 `key/value head`。  
+在该场景下：
+
+- `num_heads` 表示 `query` 的头数；
+- `num_key_value_heads` 表示 `key`、`value` 的头数；
+- 当 `num_key_value_heads=0` 时，表示 `key`、`value` 的头数与 `query` 相同，即非 GQA 场景；
+- 当 `num_key_value_heads>0` 时，表示使能 GQA。
+
+GQA 场景下，`num_heads` 需要能被 `num_key_value_heads` 整除，且二者比值不能大于64。
+
+不同 `input_layout` 下，`query`、`key`、`value` 的 shape 关系如下：
+
+- 当 `input_layout="BSH"` 时：
+    - `query.shape = (B, Sq, num_heads * D)`
+    - `key.shape = (B, Skv, num_key_value_heads * D)`
+    - `value.shape = (B, Skv, num_key_value_heads * D)`
+
+- 当 `input_layout="BNSD"` 时：
+    - `query.shape = (B, num_heads, Sq, D)`
+    - `key.shape = (B, num_key_value_heads, Skv, D)`
+    - `value.shape = (B, num_key_value_heads, Skv, D)`
+
+- 当 `input_layout="BSND"` 时：
+    - `query.shape = (B, Sq, num_heads, D)`
+    - `key.shape = (B, Skv, num_key_value_heads, D)`
+    - `value.shape = (B, Skv, num_key_value_heads, D)`
+
+其中：
+- `B` 表示 Batch Size；
+- `Sq` 表示 `query` 的序列长度；
+- `Skv` 表示 `key`、`value` 的序列长度；
+- `D` 表示每个 Head 的隐藏维度。
+
+## 量化参数使用说明
+
+量化相关参数较多，建议按场景理解其组合关系，而非逐个独立理解。
+
+### 非量化场景
+
+不传入量化相关参数，输出数据类型与`query`的数据类型保持一致。
+
+### 输出量化场景
+
+当`query`、`key`、`value`输入为`float16`，且期望输出为`int8`时：
+
+- `quant_scale2`为必填参数；
+- `quant_offset2`为可选参数；
+- 不能传入`dequant_scale1`、`quant_scale1`、`dequant_scale2`参数。
+
+该场景下，算子输出数据类型为`int8`。
+
+### KV反量化场景
+
+当`key`、`value`输入为`int8`时，可通过`antiquant_scale`和`antiquant_offset`对输入进行反量化：
+
+- `antiquant_scale`用于表示反量化的量化因子；
+- `antiquant_offset`用于表示反量化的量化偏移，可选。
+
+若未使能输出量化，则该场景下输出数据类型与`query`的数据类型保持一致。
+
+### 参数组合总表
+
+| 场景 | `query` dtype | `key/value` dtype | 输出 dtype | 必填参数 | 可选参数 | 不应传入 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 非量化 | `float16` / `bfloat16` | `float16` / `bfloat16` | 与`query`一致 | 无 | 无 | 全部量化参数 |
+| 输出量化 | `float16` | `float16` | `int8` | `quant_scale2` | `quant_offset2` | `dequant_scale1`、`quant_scale1`、`dequant_scale2` |
+| KV反量化 | `float16` / `bfloat16` | `int8` | 与`query`一致 | `antiquant_scale` | `antiquant_offset` | 与当前场景无关的量化参数 |
+
+使用量化功能时，建议先明确输入和输出数据类型，再根据场景选择对应的参数组合。
 
 ## 返回值说明
 
@@ -79,6 +159,7 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
 
 - 非量化场景下，输出数据类型与`query`的数据类型保持一致。
 - 量化场景下，若传入`quant_scale2`，则输出数据类型为`int8`。
+- `key`、`value`输入为`int8`的KV反量化场景下，若未使能输出量化，则输出数据类型与`query`的数据类型保持一致。
 
 ## 约束说明<a name="zh-cn_topic_0000001711274864_section12345537164214"></a>
 
@@ -94,20 +175,23 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
     - `query`、`key`、`value`输入均为`int8`的场景暂不支持。
 
 - `int8`量化相关入参数量与输入、输出数据格式的综合限制：
-
-    `query`、`key`、`value`输入为`float16`，输出为`int8`的场景：入参`quant_scale2`必填，`quant_offset2`可选，不能传入`dequant_scale1`、`quant_scale1`、`dequant_scale2`（即为`None`）参数。
+    - 非量化场景下，不传入量化相关参数，输出数据类型与`query`保持一致。
+    - `query`、`key`、`value`输入为`float16`，输出为`int8`的场景：入参`quant_scale2`必填，`quant_offset2`可选，不能传入`dequant_scale1`、`quant_scale1`、`dequant_scale2`（即为`None`）参数。
+    - `key`、`value`输入为`int8`的场景，可传入`antiquant_scale`，`antiquant_offset`可选，用于对`key`、`value`进行反量化；若未使能输出量化，则输出数据类型与`query`保持一致。
 
 - `pse_shift`功能使用限制如下：
     - `pse_shift`数据类型需与`query`数据类型保持一致。
     - 仅支持$D$轴对齐，即$D$轴可以被16整除。
 
 - page attention使用限制：
-    - page attention使能必要条件是`block_table`存在且有效，且传入每个batch对应的`actual_seq_lengths`。page attention使能场景下，`key`、`value`是按照`block_table`中的索引在一片连续内存中排布，支持`key`、`value`数据类型为`float16`、`bfloat16`、`int8`。
-    - page attention使能场景下，输入kv cache排布格式为$（blocknum, numKvHeads, blocksize, headDims）$或$（blocknum, blocksize, H）$，$blocknum$不应小于每个batch所需block个数的总和。通常情况下，kv cache排布格式为$（blocknum, numKvHeads, blocksize, headDims）$时，性能比kv cache排布格式为$（blocknum, blocksize, H）$时更好。
+    - page attention使能必要条件是`block_table`存在且有效，且传入每个batch对应的`actual_seq_lengths`。page attention使能场景下，`key`、`value`按照`block_table`中的索引映射到一片连续内存中的kv cache，支持`key`、`value`数据类型为`float16`、`bfloat16`、`int8`。
+    - page attention使能场景下，输入kv cache排布格式为$（blocknum, numKvHeads, blocksize, headDims）$或$（blocknum, blocksize, H）$，其中$blocknum$表示kv cache中物理block总数，不应小于每个batch所需block个数的总和。通常情况下，kv cache排布格式为$（blocknum, numKvHeads, blocksize, headDims）$时，性能比kv cache排布格式为$（blocknum, blocksize, H）$时更好。
     - page attention使能场景下，支持kv cache排布格式为$（blocknum, numKvHeads, blocksize, headDims）$，但此时`query layout`仅支持$BNSD$。
     - page attention使能场景下，当输入kv cache排布格式为$（blocknum, blocksize, H）$，且$H（H=numKvHeads * headDims）$超过64k时，受硬件指令约束，会被拦截报错。
-    - page attention场景下，必须传入输入`actual_seq_lengths`，每个batch的`actualSeqLength`表示每个batch对`sequence`真实长度，该值除以属性输入`blocksize`即表示每个batch所需block数量。
-    - page attention场景下，`block_table`必须为二维`Tensor`，第一维长度需等于batch数，第二维长度不能小于`maxBlockNumPerSeq`（`maxBlockNumPerSeq`为每个batch中最大`actual_seq_lengths`对应的block数量）。例如，batch数为2，属性`blocksize=128`，当每个batch的`actualSeqLength`为512时，表明每个batch至少需要4个block，因此`block_table`的排布可以为(2, 4)。
+    - page attention场景下，必须传入输入`actual_seq_lengths`，每个batch的`actual_seq_length`表示该batch对应`sequence`的真实长度，该值除以属性输入`block_size`并向上取整后，即表示该batch所需block数量。
+    - page attention场景下，`block_table`必须为二维`Tensor`，shape为`(B, maxBlockNumPerSeq)`，其中`B`表示batch数，`maxBlockNumPerSeq`表示各batch中所需block数量的最大值。`block_table[i][j]`表示第`i`个batch的第`j`个逻辑block映射到kv cache中的物理block索引。
+    - page attention场景下，`block_table`第一维长度需等于batch数，第二维长度不能小于`maxBlockNumPerSeq`（`maxBlockNumPerSeq`为每个batch中最大`actual_seq_lengths`对应的block数量）。例如，batch数为2，属性`block_size=128`，当每个batch的`actual_seq_length`为512时，表明每个batch至少需要4个block，因此`block_table`的排布可以为`(2, 4)`。
+    - page attention场景下，`block_table`中的有效值表示物理block编号，取值范围应在`[0, blocknum - 1]`内。
     - page attention使能场景下，`block_size`是用户自定义的参数，该参数的取值会影响page attention的性能，通常为128或256。`key`、`value`输入类型为`float16`、`bfloat16`时，`block_size`需要16对齐；`key`、`value`输入类型为`int8`时，`block_size`需要32对齐。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
 
 - `quant_scale2`、`quant_offset2`为一组参数，其中`quant_offset2`可选，传入该组参数后算子输出数据类型会推导为`int8`，若不期望`int8`输出，请勿传入该组参数。
