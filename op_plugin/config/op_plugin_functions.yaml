@@ -2912,7 +2912,6 @@ official:
   - func: leaky_relu_backward(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result) -> Tensor
     acl_op: all_version
     op_api: all_version
-    dvm: all_version
     gen_opapi:
       out:
         size: self

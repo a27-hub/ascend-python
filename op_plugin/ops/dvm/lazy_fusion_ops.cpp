@@ -1148,36 +1148,6 @@ at::Tensor & leaky_relu_(at::Tensor & self, const at::Scalar & negative_slope) {
   return self;
 }
 
-at::Tensor leaky_relu_backward(const at::Tensor & grad_output, const at::Tensor & self,
-                               const at::Scalar & negative_slope, bool self_is_result) {
-  static auto enable = IsEnabled("leaky_relu_backward", OpLevel_1);
-  float slope = 0.0f;
-  // When self_is_result == true, branch selection is recovered from the forward
-  // output sign, which is only valid for non-negative negative_slope.
-  if (!enable || !InputCheck(grad_output) || !InputCheck(self) || grad_output.scalar_type() != self.scalar_type() ||
-      !GetScalarValue(negative_slope, &slope) || (self_is_result && slope < 0.0f)) {
-    return op_api::leaky_relu_backward(grad_output, self, negative_slope, self_is_result);
-  }
-  PrepareFusionInputs(grad_output, self);
-  auto k = g_lazy_fusion_manager.Get();
-  auto compute_type = self.scalar_type() == at::ScalarType::BFloat16 ? dvm::DType::kFloat32 : k->TransType(self.scalar_type());
-  auto dy_obj = k->Cast(k->Input(grad_output), compute_type);
-  auto self_obj = k->Cast(k->Input(self), compute_type);
-  // LeakyReLU backward:
-  //   grad_input = grad_output * (1,               if self_or_result > 0
-  //                               negative_slope,  otherwise)
-  // where self_or_result is the forward input when self_is_result == false,
-  // and the forward output when self_is_result == true.
-  auto positive_mask = k->Cast(k->Binary(dvm::BinaryOpType::kGreater, self_obj, 0.0f), compute_type);
-  auto scale_obj = slope == 0.0f ? positive_mask :
-    k->Binary<dvm::BinaryType::kAdd>(
-      k->Binary<dvm::BinaryType::kMul>(positive_mask, 1.0f - slope), slope);
-  auto out_obj = k->Binary<dvm::BinaryType::kMul>(dy_obj, scale_obj);
-  auto out = k->Output(out_obj, self.sizes(), grad_output.options().dtype(self.scalar_type()));
-  DumpOp("leaky_relu_backward", grad_output, self, negative_slope, self_is_result);
-  return out;
-}
-
 at::Tensor silu(const at::Tensor & self) {
   static auto enable = IsEnabled("silu", OpLevel_1);
   if (!enable || !InputCheck(self)) {
