@@ -34,6 +34,7 @@
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream);         \
         }                                                                                                              \
         aclOpExecutor *executor = nullptr;                                                                             \
         aclOpExecutor **executor_addr = &executor;                                                                     \
@@ -60,6 +61,7 @@
         auto acl_call = [converted_params, workspace_addr, workspace_size, acl_stream, executor]()->int {              \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream);     \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
@@ -94,11 +96,13 @@
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream);         \
         }                                                                                                              \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto acl_call = [workspace_addr, workspace_size, copied_params, acl_stream]()->int {                           \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+                OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_UPDATE_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream);     \
             }                                                                                                          \
             uint64_t fake_workspace_size = 0;                                                                          \
             uint64_t *workspace_size_addr = &fake_workspace_size;                                                      \
@@ -151,6 +155,7 @@
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
+            OP_ASCEND_LOG_WITH_CORE_LIMIT(#aclnn_api, "EXEC_GET_MAX_WORKSPACE_CMD", "1", acl_stream);                  \
         }                                                                                                              \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
