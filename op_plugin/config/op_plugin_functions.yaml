@@ -5007,6 +5007,7 @@ official:
   - func: tanh(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: tanh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -5015,10 +5016,12 @@ official:
   - func: tanh_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: tanh_backward(Tensor grad_output, Tensor output) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: tanh_backward.grad_input
 
