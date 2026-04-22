@@ -2696,24 +2696,10 @@ at::Tensor _npu_fusion_attention_v3_get_max_workspace(
     auto kv_start_idx_val = at::IntArrayRef{};
     int64_t pse_type = pse_const.defined() ? 1 : 0;
 
-    // Create output tensors with metadata for EXEC_GET_MAX_WORKSPACE_CMD
+    // Create output tensors with correct shapes for EXEC_GET_MAX_WORKSPACE_CMD
     auto [attention_score, softmax_max, softmax_sum] =
         infer_fa_v3_output_tensors(query, key, value, head_num, input_layout_str);
-    at::Tensor softmax_out = at::empty({0}, query.options());
-    // Ensure all output tensors are valid (not nullptr) for kernel call
-    // These are required outputs for aclnnFlashAttentionVarLenScoreV5
-    if (!attention_score.defined() || attention_score.numel() == 0) {
-        attention_score = at::empty({0}, query.options());
-    }
-    if (!softmax_max.defined() || softmax_max.numel() == 0) {
-        softmax_max = at::empty({0}, query.options().dtype(at::kFloat));
-    }
-    if (!softmax_sum.defined() || softmax_sum.numel() == 0) {
-        softmax_sum = at::empty({0}, query.options().dtype(at::kFloat));
-    }
-    if (!softmax_out.defined()) {
-        softmax_out = at::empty({0}, query.options());
-    }
+    at::Tensor softmax_out = at::empty_like(softmax_max);
     // For ACLgraph mode, do not support sink parameter, only use VarLenScoreV5 without sink
     if (format_sink.defined()) {
         TORCH_CHECK(false,
