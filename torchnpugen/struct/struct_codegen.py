@@ -44,6 +44,7 @@ ${return_type} ${func_name}(${args_str})
     ${define_size_or_dtype}
     ${check_or_apply_tensor}
     ${exec_cmd}(${aclnnargs});
+    ${post_exec}
     ${infer_name}
     return${result};
 }
@@ -253,7 +254,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
         # 根据环境变量选择使用 EXEC_NPU_CMD 还是 EXEC_NPU_CMD_EXT
         exec_cmd = "EXEC_NPU_CMD_EXT" if env_aclnn_extension_switch else "EXEC_NPU_CMD"
 
-    return [remove_empty_lines(
+    func_body = remove_empty_lines(
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
@@ -266,7 +267,10 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 exec_cmd=exec_cmd,
                 aclnnargs=struct.cmd_args,
                 result=struct.return_args,
-                infer_name=infer_name))]
+                infer_name=infer_name,
+                post_exec=struct.post_exec or ""))
+
+    return [func_body]
 
 
 def gen_op_api(
