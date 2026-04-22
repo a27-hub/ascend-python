@@ -943,6 +943,67 @@ at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & o
   return out;
 }
 
+at::Tensor tanh(const at::Tensor & self) {
+  static auto enable = IsEnabled("tanh", OpLevel_1);
+  if (!enable || !InputCheck(self)) {
+    return op_api::tanh(self);
+  }
+  PrepareFusionInput(self);
+  auto k = g_lazy_fusion_manager.Get();
+  auto x = k->Input(self);
+  x = k->Cast(x, dvm::DType::kFloat32);
+  // tanh(x) = 1 - 2 / (exp(2x) + 1)
+  auto two_x = k->Binary<dvm::BinaryType::kMul>(x, 2.0f);
+  auto exp_two_x = k->Unary<dvm::UnaryType::kExp>(two_x);
+  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
+  auto two_div_denom = k->Binary<dvm::BinaryType::kDiv>(2.0f, denom);
+  auto obj = k->Binary<dvm::BinaryType::kSub>(1.0f, two_div_denom);
+  auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
+  DumpOp("tanh", self);
+  return out;
+}
+
+at::Tensor & tanh_(at::Tensor & self) {
+  static auto enable = IsEnabled("tanh_", OpLevel_1);
+  if (!enable || !InputCheck(self)) {
+    return op_api::tanh_(self);
+  }
+  PrepareWritableOutput(self);
+  auto k = g_lazy_fusion_manager.Get();
+  auto x = k->Input(self);
+  x = k->Cast(x, dvm::DType::kFloat32);
+  auto two_x = k->Binary<dvm::BinaryType::kMul>(x, 2.0f);
+  auto exp_two_x = k->Unary<dvm::UnaryType::kExp>(two_x);
+  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
+  auto two_div_denom = k->Binary<dvm::BinaryType::kDiv>(2.0f, denom);
+  auto out_obj = k->Binary<dvm::BinaryType::kSub>(1.0f, two_div_denom);
+  k->Output(self, out_obj, true);
+  DumpOp("tanh_", self);
+  LazyFusionFlush();
+  return self;
+}
+
+at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & output) {
+  static auto enable = IsEnabled("tanh_backward", OpLevel_1);
+  if (!enable || !InputCheck(grad_output) || !InputCheck(output) ||
+      grad_output.scalar_type() != output.scalar_type()) {
+    return op_api::tanh_backward(grad_output, output);
+  }
+  PrepareFusionInputs(grad_output, output);
+  auto k = g_lazy_fusion_manager.Get();
+  auto dy = k->Input(grad_output);
+  auto y = k->Input(output);
+  y = k->Cast(y, dvm::DType::kFloat32);
+  dy = k->Cast(dy, dvm::DType::kFloat32);
+  // grad = dy * (1 - y * y)
+  auto y_sq = k->Binary<dvm::BinaryType::kMul>(y, y);
+  auto one_sub_ysq = k->Binary<dvm::BinaryType::kSub>(1.0f, y_sq);
+  auto obj = k->Binary<dvm::BinaryType::kMul>(dy, one_sub_ysq);
+  auto out = k->Output(obj, k->GetShape(obj), grad_output.options().dtype(grad_output.scalar_type()));
+  DumpOp("tanh_backward", grad_output, output);
+  return out;
+}
+
 at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor & out) {
   static auto enable = IsEnabled("gelu", OpLevel_1);
   if (!enable || !InputCheck(self) || !NpuCheck(out)) {
@@ -1284,7 +1345,7 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
 at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
   static auto enable = IsEnabled("sum", OpLevel_2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
+  if (!enable || !IsFloatType(out_type) || !InputCheck(self)) {
     return op_api::sum(self, dtype);
   }
   PrepareFusionInput(self);
@@ -1305,7 +1366,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
 at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<at::ScalarType> dtype) {
   static auto enable = IsEnabled("sum", OpLevel_2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
+  if (!enable || !IsFloatType(out_type) || !InputCheck(self)) {
     return op_api::sum(self, dim, keepdim, dtype);
   }
   PrepareFusionInput(self);
@@ -1335,7 +1396,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
                      c10::optional<at::ScalarType> dtype, at::Tensor & out) {
   static auto enable = IsEnabled("sum", OpLevel_2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self) || !NpuCheck(out)) {
+  if (!enable || !IsFloatType(out_type) || !InputCheck(self) || !NpuCheck(out)) {
     return op_api::sum_out(self, dim, keepdim, dtype, out);
   }
   PrepareWritableOutput(out);
