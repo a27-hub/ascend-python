@@ -10,14 +10,16 @@
 
 ## 功能说明
 
-- API功能：对张量`x`进行反量化操作，即将整数恢复为浮点数。
+- API功能：对张量`x`进行反量化操作，即将量化后的整数恢复为浮点数。反量化是量化的逆过程，用于将低精度整数（如int8）转换回高精度浮点数。
 - 计算公式：
+  - 其中*out*是输出张量，*x*是量化后的输入，*scale*是缩放因子，*offset*是偏移量。
+  - 当*offset*存在时：$out = (x + offset) * scale$
+  - 当*offset*不存在时：$out = x * scale$
 
-  其中*out*是输出，*quant*是指定的输出类型`dst_dtype`。
-
-  $$
-  out = \text{quant}((x + \text{offset}) * \text{scale}) 
-  $$
+  > **反量化原理说明：**
+  > - 量化（quantization）：将高精度浮点数（如float32）转换为低精度整数（如int8），公式为：$x_{quant} = round(x / scale - offset)$
+  > - 反量化（dequantization）：将低精度整数还原为浮点数，公式为：$x_{float} = (x_{quant} + offset) * scale$
+  > - 其中*scale*控制数值的缩放比例，*offset*用于零点对齐（零点偏移）。
 
 ## 函数原型
 
