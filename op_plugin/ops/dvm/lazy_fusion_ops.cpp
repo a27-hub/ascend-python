@@ -1100,6 +1100,54 @@ at::Tensor & relu_(at::Tensor & self) {
   return self;
 }
 
+bool LeakyRelu(const at::Tensor &self, const at::Scalar &negative_slope, at::Tensor *out = nullptr) {
+  float slope = 0.0f;
+  if (!InputCheck(self) || !GetScalarValue(negative_slope, &slope)) {
+    return false;
+  }
+  if (out == nullptr) {
+    PrepareWritableOutput(self);
+  }
+  PrepareFusionInput(self);
+  auto k = g_lazy_fusion_manager.Get();
+  auto input_obj = k->Input(self);
+  // LeakyReLU:
+  //   y = x,                  if x > 0
+  //   y = negative_slope * x, otherwise
+  // This is lowered as:
+  //   max(x, 0) + negative_slope * min(x, 0)
+  auto pos_obj = k->Binary<dvm::BinaryType::kMaximum>(input_obj, 0.0f);
+  auto neg_obj = k->Binary<dvm::BinaryType::kMinimum>(input_obj, 0.0f);
+  auto out_obj = slope == 0.0f ? pos_obj :
+    k->Binary<dvm::BinaryType::kAdd>(pos_obj, k->Binary<dvm::BinaryType::kMul>(neg_obj, slope));
+  if (out == nullptr) {
+    k->Output(self, out_obj, true);
+  } else {
+    *out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
+  }
+  return true;
+}
+
+at::Tensor leaky_relu(const at::Tensor & self, const at::Scalar & negative_slope) {
+  static auto enable = IsEnabled("leaky_relu", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !LeakyRelu(self, negative_slope, &out)) {
+    return op_api::leaky_relu(self, negative_slope);
+  }
+  DumpOp("leaky_relu", self, negative_slope);
+  return out;
+}
+
+at::Tensor & leaky_relu_(at::Tensor & self, const at::Scalar & negative_slope) {
+  static auto enable = IsEnabled("leaky_relu_", OpLevel_1);
+  if (!enable || !LeakyRelu(self, negative_slope)) {
+    return op_api::leaky_relu_(self, negative_slope);
+  }
+  DumpOp("leaky_relu_", self, negative_slope);
+  LazyFusionFlush();
+  return self;
+}
+
 at::Tensor silu(const at::Tensor & self) {
   static auto enable = IsEnabled("silu", OpLevel_1);
   if (!enable || !InputCheck(self)) {
@@ -1144,6 +1192,70 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
 }
 
 // ===================== BatchNorm =====================
+bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t channels) {
+  if (!tensor.has_value()) {
+    return true;
+  }
+  const auto &value = tensor.value();
+  return value.dim() == 1 && value.numel() == channels && value.scalar_type() == at::ScalarType::Float;
+}
+
+::std::tuple<at::Tensor,at::Tensor,at::Tensor> native_batch_norm(
+  const at::Tensor & input, const c10::optional<at::Tensor> & weight, const c10::optional<at::Tensor> & bias,
+  const c10::optional<at::Tensor> & running_mean, const c10::optional<at::Tensor> & running_var,
+  bool training, double momentum, double eps) {
+  static auto enable = IsEnabled("native_batch_norm", OpLevel_1);
+  if (!enable || training || input.scalar_type() != at::ScalarType::Float || input.dim() < 2 || input.dim() > 4 ||
+      !NpuCheck(input, weight, bias, running_mean, running_var)) {
+    return op_api::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
+  }
+  auto channels = input.size(1);
+  if (!BatchNormVectorCheck(weight, channels) || !BatchNormVectorCheck(bias, channels) ||
+      !BatchNormVectorCheck(running_mean, channels) || !BatchNormVectorCheck(running_var, channels)) {
+    return op_api::native_batch_norm(input, weight, bias, running_mean, running_var, training, momentum, eps);
+  }
+
+  auto x = input.contiguous();
+  auto weight_tensor = weight.has_value() ? weight.value().contiguous() : at::Tensor();
+  auto bias_tensor = bias.has_value() ? bias.value().contiguous() : at::Tensor();
+  auto running_mean_tensor = running_mean.has_value() ?
+    running_mean.value().contiguous() : at::zeros({channels}, input.options().dtype(at::kFloat));
+  auto running_var_tensor = running_var.has_value() ?
+    running_var.value().contiguous() : at::ones({channels}, input.options().dtype(at::kFloat));
+  auto save_mean = at::empty({0}, input.options());
+  auto save_invstd = at::empty({0}, input.options());
+
+  // Inference BatchNorm:
+  //   y = ((x - running_mean) / sqrt(running_var + eps)) * weight + bias
+  // Here invstd is materialized in-graph as:
+  //   invstd = rsqrt(running_var + eps)
+  LazyFusionFlush();
+  auto k = g_lazy_fusion_manager.Get();
+  auto out_obj = k->Input(x);
+  auto input_dtype = dvm::Kernel::GetDType(out_obj);
+  ShapeVector new_shape(x.dim(), 1);
+  new_shape[1] = channels;
+  auto new_shape_ref = k->GetShapeRef(new_shape);
+  auto mean_obj = k->Cast(k->Input(running_mean_tensor, true, new_shape_ref), input_dtype);
+  auto var_obj = k->Cast(k->Input(running_var_tensor, true, new_shape_ref), input_dtype);
+  auto invstd_obj =
+    k->Unary<dvm::UnaryType::kReciprocal>(
+      k->Unary<dvm::UnaryType::kSqrt>(k->Binary<dvm::BinaryType::kAdd>(var_obj, static_cast<float>(eps))));
+  out_obj = k->Binary<dvm::BinaryType::kSub>(out_obj, mean_obj);
+  out_obj = k->Binary<dvm::BinaryType::kMul>(out_obj, invstd_obj);
+  if (weight.has_value()) {
+    out_obj = k->Binary<dvm::BinaryType::kMul>(
+      out_obj, k->Cast(k->Input(weight_tensor, true, new_shape_ref), input_dtype));
+  }
+  if (bias.has_value()) {
+    out_obj = k->Binary<dvm::BinaryType::kAdd>(
+      out_obj, k->Cast(k->Input(bias_tensor, true, new_shape_ref), input_dtype));
+  }
+  auto out = k->Output(out_obj, k->GetShape(out_obj), input.options().dtype(input.scalar_type()));
+  DumpOp("native_batch_norm", input, weight, bias, running_mean, running_var, training, momentum, eps);
+  return std::make_tuple(std::move(out), std::move(save_mean), std::move(save_invstd));
+}
+
 ::std::tuple<at::Tensor,at::Tensor> batch_norm_stats(const at::Tensor & input, double eps) {
   static auto enable = IsEnabled("batch_norm_stats", OpLevel_1);
   if (!enable || input.scalar_type() != at::ScalarType::Float || !NpuCheck(input)) {
