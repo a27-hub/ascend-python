@@ -3498,12 +3498,16 @@ def npu_grouped_matmul_meta(x, weight, *, bias=None, scale=None, offset=None, an
     for i in range(num_x):
         k += x[i].shape[1]
         m += x[i].shape[0]
-    if m > 0 and n > 0:
-        torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     output_dtype = gmm_get_dtype(output_dtype)
     INT4_IN_INT32 = 8
     FP4_IN_INT8 = 2
     is_a4w4_mxfp = x_dtype == torch_npu.float4_e2m1fn_x2 and weight_dtype == torch_npu.float4_e2m1fn_x2
+    is_a8w8 = x[0].dtype == torch.int8 and weight[0].dtype == torch.int8
+    is_hifloat8 = x_dtype == torch_npu.hifloat8 and weight_dtype == torch_npu.hifloat8
+    is_fp8 = (x[0].dtype == torch.float8_e4m3fn or x[0].dtype == torch.float8_e5m2) and (weight[0].dtype == torch.float8_e4m3fn or weight[0].dtype == torch.float8_e5m2)
+    if is_a8w8 or is_a4w4_mxfp or is_fp8 or is_hifloat8:
+        if m > 0 and n > 0:
+            torch._check(k > 0, lambda: "k must be a positive integer when m and n are positive, but it is " + str(k) + "." + ops_error(ErrCode.VALUE),)
     if num_x > 0 and output_dtype is None:
         output_dtype = x[0].dtype
     if split_item == 0:
