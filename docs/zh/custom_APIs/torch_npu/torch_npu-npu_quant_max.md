@@ -137,3 +137,4 @@ torch_npu.npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291) -> (Tenso
         dtype=torch.float8_e5m2)
     tensor(0.9844, device='npu:0', dtype=torch.float16)
     ```
+    
