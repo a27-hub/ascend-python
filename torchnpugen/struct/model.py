@@ -110,6 +110,7 @@ class StructInfo:
     acl_op: bool = None
     results: List[ResInfo] = None
     new_params: Dict[str, str] = None
+    post_exec: str = None
 
     @staticmethod
     def from_yaml(
@@ -190,6 +191,7 @@ class StructInfo:
                                for argument in aclnn_arguments.split(',')]
             aclnn_name = aclnn_arguments_list[0]
             new_params_dict = gen_opapi_info.pop('new_params', dict())
+            post_exec_str = gen_opapi_info.pop('post_exec', None)
 
             cmd_args_expand = False
             if len(aclnn_arguments_list) == 1:
@@ -243,6 +245,7 @@ class StructInfo:
                 return_args=return_args,
                 acl_op=acl_op,
                 new_params=new_params_dict,
+                post_exec=post_exec_str,
             )
             struct_infos.append(struct_info)
 

@@ -44,6 +44,7 @@ ${return_type} ${func_name}(${args_str})
     ${define_size_or_dtype}
     ${check_or_apply_tensor}
     ${exec_cmd}(${aclnnargs});
+    ${post_exec}
     ${infer_name}
     return${result};
 }
@@ -266,23 +267,8 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 exec_cmd=exec_cmd,
                 aclnnargs=struct.cmd_args,
                 result=struct.return_args,
-                infer_name=infer_name))
-
-    # Fix: CANN returns variance in batch_variance, but ATen contract expects invstd (1/sqrt(var+eps))
-    if name == 'native_batch_norm':
-        func_body = func_body.replace(
-            'return std::make_tuple(std::move(out0), std::move(out1), std::move(out2));',
-            '''if (training) {
-        out2 = at::reciprocal(at::sqrt(out2 + eps));
-    }
-    return std::make_tuple(std::move(out0), std::move(out1), std::move(out2));''')
-    elif name == 'native_batch_norm_out':
-        func_body = func_body.replace(
-            'return std::forward_as_tuple(out, save_mean, save_invstd);',
-            '''if (training) {
-        save_invstd = at::reciprocal(at::sqrt(save_invstd + eps));
-    }
-    return std::forward_as_tuple(out, save_mean, save_invstd);''')
+                infer_name=infer_name,
+                post_exec=struct.post_exec or ""))
 
     return [func_body]
 

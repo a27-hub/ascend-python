@@ -3629,12 +3629,20 @@ official:
         size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
         dtype: 'training ? at::kFloat : input.scalar_type()'
       exec: aclnnBatchNorm
+      post_exec: |
+        if (training) {
+            out2 = at::reciprocal(at::sqrt(out2 + eps));
+        }
 
   - func: native_batch_norm.out(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps, *, Tensor(a!) out, Tensor(b!) save_mean, Tensor(c!) save_invstd) -> (Tensor(a!), Tensor(b!), Tensor(c!))
     acl_op: all_version
     op_api: all_version
     gen_opapi:
       exec: aclnnBatchNorm
+      post_exec: |
+        if (training) {
+            save_invstd = at::reciprocal(at::sqrt(save_invstd + eps));
+        }
 
   - func: native_batch_norm_backward(Tensor grad_out, Tensor input, Tensor? weight, Tensor? running_mean, Tensor? running_var, Tensor? save_mean, Tensor? save_invstd, bool train, float eps, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
