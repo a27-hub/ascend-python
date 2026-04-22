@@ -12,7 +12,8 @@ class TestGather(TestCase):
         output = torch.gather(input1, dim, index, sparse_grad=sparse_grad)
         output.backward(torch.ones_like(output))
         output = output.detach().numpy()
-        return output, input1.grad
+        grad = input1.grad.to_dense() if sparse_grad else input1.grad
+        return output, grad
 
     def npu_op_exec(self, input1, dim, index, sparse_grad=False):
         input1.requires_grad = True
@@ -20,7 +21,8 @@ class TestGather(TestCase):
         output.backward(torch.ones_like(output))
         output = output.to("cpu")
         output = output.detach().numpy()
-        return output, input1.grad
+        grad = input1.grad.to_dense() if sparse_grad else input1.grad
+        return output, grad
 
     def test_gather_backward_shape_format(self):
         shape_format = [
@@ -41,12 +43,11 @@ class TestGather(TestCase):
                                                                [[1, 2, 2, 2, 2], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2]]])]
         ]
         for item in shape_format:
-            _, npu_input1 = create_common_tensor(item[0], -100, 100)
+            cpu_input1, npu_input1 = create_common_tensor(item[0], -100, 100)
+            cpu_output = self.cpu_op_exec(cpu_input1, item[1], item[2], True)
             npu_idx = item[2].to("npu")
-            with self.assertRaises(RuntimeError) as cm:
-                self.npu_op_exec(npu_input1, item[1], npu_idx, True)
-            exception = cm.exception
-            self.assertTrue("npu_gather_backward not support sparse" in str(exception))
+            npu_output = self.npu_op_exec(npu_input1, item[1], npu_idx, True)
+            self.assertRtolEqual(cpu_output, npu_output)
 
 
 if __name__ == "__main__":
