@@ -15,6 +15,7 @@
 
 #include <ATen/NamedTensorUtils.h>
 #include <ATen/native/TypeProperties.h>
+#include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -22,6 +23,7 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
+const int64_t FP4_IN_UINT8_NUM = 2;
 
 static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_opapi(
     const at::MaterializedITensorListRef& tensors)
@@ -162,4 +164,71 @@ at::Tensor cat(at::TensorList tensors, at::Dimname dim)
     return at::cat(tensors, dimname_to_position(tensors[0], dim));
 }
 
+static bool is_fp4_dtype(int64_t dtype)
+{
+    return dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+           dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2);
 }
+
+static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_from_tensorlist(
+    at::TensorList tensors)
+{
+    c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;
+    for (const at::Tensor& tensor : tensors) {
+        if (tensor.dim() == 1 && tensor.sizes()[0] == 0) {
+            continue;
+        }
+        dst_tensor_list.emplace_back(tensor);
+    }
+    return dst_tensor_list;
+}
+
+at::Tensor npu_cat(at::TensorList tensors, int64_t dim, c10::optional<int64_t> input_dtype)
+{
+    // If input_dtype is not specified or not a FP4 type, fall back to standard cat
+    if (!input_dtype.has_value() || !is_fp4_dtype(input_dtype.value())) {
+        return at::cat(tensors, dim);
+    }
+
+    // FP4 path: input tensors are stored as uint8, but logically they are FP4
+    int64_t dtype_val = input_dtype.value();
+
+    // Filter out empty tensors
+    c10::SmallVector<at::Tensor, op_infer::N> inputTensors = cat_dest_tensor_list_from_tensorlist(tensors);
+    TORCH_CHECK(inputTensors.size() > 0,
+        "npu_cat: all input tensors are empty" + OPS_ERROR(ErrCode::PARAM));
+
+    // Verify all input tensors are stored as uint8 (Byte)
+    for (size_t i = 0; i < inputTensors.size(); i++) {
+        TORCH_CHECK(inputTensors[i].scalar_type() == c10::ScalarType::Byte,
+            "npu_cat: when input_dtype is FP4, all input tensors must be of dtype uint8 (Byte), "
+            "but tensor at position ", i, " has dtype ", inputTensors[i].dtype(),
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(inputTensors[i].dim() > 0,
+            "zero-dimensional tensor (at position ", i, ") cannot be concatenated",
+            OPS_ERROR(ErrCode::PARAM));
+    }
+
+    int64_t dim_post_expr = inputTensors[0].dim();
+    dim = op_plugin::utils::make_warp_dim(dim, dim_post_expr);
+
+    // Calculate output size based on storage shapes (uint8)
+    // For FP4 packed in uint8, directly concatenating on storage shapes is correct:
+    //   - Non-last-dim cat: last dim unchanged, other dims add up normally
+    //   - Last-dim cat: packed sizes add up correctly (sum of packed = packed of sum)
+    auto outputSize = cat_npu_output_size_opapi(inputTensors, dim);
+
+    // Allocate output as uint8 (Byte) tensor
+    at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, c10::ScalarType::Byte);
+
+    // Wrap input/output with the logical FP4 ACL data type
+    at::TensorList tensor_list(inputTensors.begin(), inputTensors.end());
+    aclDataType acl_dtype = c10_npu::GetAclDataType(dtype_val);
+    TensorListWrapper input_wrapper = {tensor_list, acl_dtype};
+    TensorWrapper output_wrapper = {result, acl_dtype};
+
+    EXEC_NPU_CMD(aclnnCat, input_wrapper, dim, output_wrapper);
+    return result;
+}
+
+} // namespace op_api
