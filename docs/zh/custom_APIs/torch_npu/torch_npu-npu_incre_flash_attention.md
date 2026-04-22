@@ -17,21 +17,21 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse_shift=None, atten_mask=None, actual_seq_lengths=None, dequant_scale1=None, quant_scale1=None, dequant_scale2=None, quant_scale2=None, quant_offset2=None, antiquant_scale=None, antiquant_offset=None, block_table=None, kv_padding_size=None, num_heads=1, scale_value=1.0, input_layout="BSH", num_key_value_heads=0, block_size=0, inner_precise=1) -> Tensor
 ```
 
 ## 参数说明
 
-- **query** (`Tensor`)：必选参数。attention结构的Query输入，数据格式支持$ND$。
+- **query** (`Tensor`)：必选参数。attention结构的Query输入，数据格式支持$ND$，支持的`shape`与`input_layout`相关：为$BSH$时，`shape`为$(B, S, H)$；为$BNSD$时，`shape`为$(B, N, S, D)$；为$BSND$时，`shape`为$(B, S, N, D)$。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`。
 
-- **key** (`Tensor`)：必选参数。attention结构的Key输入，数据格式支持$ND$。
+- **key** (`Tensor`)：必选参数。attention结构的Key输入，数据格式支持$ND$，支持的`shape`与`input_layout`相关：为$BSH$时，`shape`为$(B, S, H)$；为$BNSD$时，`shape`为$(B, N, S, D)$；为$BSND$时，`shape`为$(B, S, N, D)$。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
 
-- **value** (`Tensor`)：必选参数。attention结构的Value输入，数据格式支持$ND$。
+- **value** (`Tensor`)：必选参数。attention结构的Value输入，数据格式支持$ND$，支持的`shape`与`input_layout`相关：为$BSH$时，`shape`为$(B, S, H)$；为$BNSD$时，`shape`为$(B, N, S, D)$；为$BSND$时，`shape`为$(B, S, N, D)$。
     - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float16`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float16`、`bfloat16`、`int8`。
 
@@ -66,17 +66,16 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
 
     > [!NOTE]  
     > `query`、`key`、`value`数据排布格式支持从多种维度解读，其中$B$（Batch）表示输入样本批量大小、$S$（Seq-Length）表示输入样本序列长度、$H$（Head-Size）表示隐藏层的大小、$N$（Head-Num）表示多头数、$D$（Head-Dim）表示隐藏层最小的单元尺寸，且满足$D=H/N$。
+    > 当`input_layout`为$BSH$时，对应的`shape`为$(B, S, H)$；当为$BNSD$时，`shape`为$(B, N, S, D)$；当为$BSND$时，`shape`为$(B, S, N, D)$。
 
 - **num_key_value_heads** (`int`)：可选参数。代表`key`、`value`的头数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，默认值为`0`，表示与`query`的头数相同，否则表示`key`、`value`的头数，且`num_heads`需要能被`num_key_value_heads`整除；`num_heads`与`num_key_value_heads`的比值不能大于64。数据类型为`int64`。
 - **block_size** (`int`)：可选参数。page attention中KV存储每个block中最大的token个数，默认值为`0`，通常为128、256等值，数据类型支持`int64`。
 - **inner_precise** (`int`)：可选参数。代表高精度/高性能选择，`0`代表高精度，`1`代表高性能，默认值为`1`（高性能），数据类型支持`int64`。
 
 ## 返回值说明
-
 `Tensor`
 
 计算的最终结果，对应公式中的$atten\_out$，`shape`与`query`保持一致。
-
 - 非量化场景下，输出数据类型与`query`的数据类型保持一致。
 - 量化场景下，若传入`quant_scale2`，则输出数据类型为`int8`。
 
@@ -199,3 +198,4 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
             [[-0.9595, -0.9609, -0.6602,  ...,  0.7959,  1.7920,  0.0783]]],
            device='npu:0', dtype=torch.float16) torch.Size([2, 1, 5120])
     ```
+
