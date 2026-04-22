@@ -3161,9 +3161,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     else:
         expand_x = x.new_empty(tuple([max(a, a * tp_world_size), h]), dtype=outDtype)
     dynamic_scales_dtype = get_dispatch_dynamic_scales_dtype(x, scales, quant_mode)
-    if tp_world_size == 0:
-        dynamic_scales = x.new_empty((a), dtype=dynamic_scales_dtype)
-    elif tp_world_size == 1:
+    if tp_world_size <= 1:
         dynamic_scales_shape = get_dispatch_dynamic_shape(scales, quant_mode, a, h)
         dynamic_scales = x.new_empty(dynamic_scales_shape, dtype=dynamic_scales_dtype)
     else:
@@ -5716,6 +5714,18 @@ def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0,
         output_size.append(x.size(i))
     output_size[dim] = math.floor(output_size[dim] / 2)
     return torch.empty(output_size, dtype=x.dtype, device=x.device)
+
+
+@impl(m, "npu_masked_causal_conv1d")
+def npu_masked_causal_conv1d_meta(input, weight, *, mask=None):
+    return torch.empty_like(input, dtype=input.dtype)
+
+
+@impl(m, "npu_masked_causal_conv1d_backward")
+def npu_masked_causal_conv1d_backward_meta(grad_output, input, weight, *, mask=None):
+    grad_input = torch.empty_like(grad_output, dtype=grad_output.dtype)
+    grad_weight = torch.empty_like(weight, dtype=grad_output.dtype)
+    return grad_input, grad_weight
 
 
 @impl(m, "npu_fused_causal_conv1d_functional")

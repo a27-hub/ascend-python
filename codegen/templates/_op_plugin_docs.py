@@ -3919,7 +3919,7 @@ hPre: Tensor类型，可选输出，做完 sigmoid 计算之后的 h_pre 矩阵�
 该接口支持图模式。
 
 支持的PyTorch版本:
-PyTorch 2.6.0
+PyTorch 2.7.1及更高版本
 
 支持的型号:
 - 昇腾950 AI处理器
@@ -4070,6 +4070,89 @@ y = mhc_sinkhorn_model(x, eps=eps, num_iters=num_iters, out_flag=out_flag)
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_mhc_pre_backward",
+    """
+接口原型：
+npu_mhc_pre_backward(Tensor x, Tensor phi, Tensor alpha, Tensor grad_h_in, Tensor grad_h_post, Tensor grad_h_res, Tensor inv_rms, Tensor h_mix, Tensor h_pre, Tensor h_post, Tensor? gamma=None, float hc_eps=1e-6, Tensor? grad_x_post=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+
+功能描述：
+MhcPreBackward算子是MhcPre的反向算子，可选融合post反向grad_x的add操作，首先说明一下正向算子的功能。
+正向算子功能：通过一系列计算，可得到 MHC (流形约束超连接)架构中 hidden 层对应的投影矩阵 Hres 和 Hpost，以及作为 Atten 或 MLP 层输入的矩阵 Hin。
+
+输入说明：
+x: Tensor类型，必选输入，待计算数据，代表网络中 mHC 层的输入数据。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+phi: Tensor类型，必选输入，mHC 的参数矩阵。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+alpha: Tensor类型，必选输入，mHC 的缩放参数。支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_h_in: Tensor类型，必选输入，h_in作为Atten/MLP层的输入，正向输出h_in对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 2 维 [T, D] 和 3 维 [B, S, D]。
+grad_h_post: Tensor类型，必选输入，正向输出h_post的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+grad_h_res: Tensor类型，必选输入，正向输出h_res的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 3 维 [T, n, n] 和 4 维 [B, S, n, n]。
+inv_rms: Tensor类型，必选输入，正向RmsNorm计算的invRms。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 1 维 [T] 和 2 维 [B, S]。
+h_mix: Tensor类型，必选输入，正向计算x与phi矩阵乘的结果。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n^2 + 2n] 和 3 维 [B, S, n^2 + 2n]。
+h_pre: Tensor类型，必选输入，做完 sigmoid 计算之后的 h_pre 矩阵。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+h_post: Tensor类型，必选输入，正向的h_post输出。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+gamma: Tensor类型，可选输入，RmsNorm的缩放系数。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
+grad_x_post: Tensor类型，可选输入，post反向输出的grad_x，数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+n：shape 中的 n 常取 4、6、8。
+
+输出说明:
+grad_x: Tensor类型，必选输出，x对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+grad_phi: Tensor类型，必选输出，phi对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+grad_alpha: Tensor类型，必选输出，alpha对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_bias: Tensor类型，必选输出，bias对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [n^2 + 2n]。
+grad_gamma: Tensor类型，可选输出，gamma对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+
+
+约束说明:
+该接口支持pytorch调用(torch_npu)。
+该接口支持单算子模式。
+
+支持的PyTorch版本:
+PyTorch 2.7.1及更高版本
+
+支持的型号:
+- 昇腾950 AI处理器
+
+调用示例:
+单算子模式调用:
+import torch
+import torch_npu
+import numpy as np
+
+B=1
+S=1024
+n=4
+D=2560
+x = torch.randn(B, S, n, D).bfloat16()
+phi = torch.randn(n*n + 2*n, n*D)
+alpha = torch.tensor([1.1, 0.9, 1.05])
+bias = torch.randn(n*n + 2*n) * 0.1
+gamma = torch.randn(n, D)
+grad_x_post = torch.randn(B, S, n, D).bfloat16()
+
+x_ = x.detach().clone().requires_grad_(True)
+phi_ = phi.detach().clone().requires_grad_(True)
+alpha_ = alpha.detach().clone().requires_grad_(True)
+bias_ = bias.detach().clone().requires_grad_(True)
+
+dh_in = torch.randn(B, S, D).bfloat16()
+dh_post = torch.randn(B, S, n)
+dh_res = torch.randn(B, S, n, n)
+
+# 正向传播
+h_in, h_post, h_res, inv_rms, h_mix, h_pre = torch_npu.npu_mhc_pre(
+    x_.npu(), phi_.npu(), alpha_.npu(), bias_.npu(), gamma=gamma.npu(), out_flag=1
+)
+
+# 调用npu接口
+dx1, dphi1, da1, db1, dgamma1 = torch_npu.npu_mhc_pre_backward(
+    x.npu(), phi.npu(), alpha.npu(),
+    dh_in.npu(), dh_post.npu(), dh_res.npu(),
+    inv_rms.npu(), h_mix.npu(), h_pre.npu(), h_post.npu(), gamma=gamma.npu(), grad_x_post=grad_x_post.npu()
+)
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_transpose",
@@ -11589,7 +11672,7 @@ conv_states将被原地更新为各序列最新的缓存状态。
 约束说明:
 
 支持的型号:
-昇腾910_95 AI处理器
+昇腾950 AI处理器
 
 调用示例:
 import torch
@@ -11610,6 +11693,90 @@ out = torch_npu.npu_fused_causal_conv1d(
     activation_mode="None",
     residual_connection=0,
     pad_slot_id=-1,
+)
+    """
+)
+
+
+_add_torch_npu_docstr(
+"npu_masked_causal_conv1d",
+"""
+接口原型:
+torch_npu.npu_masked_causal_conv1d(input, weight, *, mask=None) -> Tensor
+
+功能描述:
+带掩码的因果一维深度可分离卷积（Masked Causal Depthwise Conv1d）。对输入张量`input`沿序列维度执行窗口大小为3的因果卷积（仅使用当前及历史时刻的输入），并可选地通过`mask`对输出进行掩码置零。
+
+参数说明:
+input：Tensor类型，必选参数，表示卷积输入张量。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为3维[S, B, H]，S为序列长度，B为批量大小，H为特征维度，H须为64的倍数。
+weight：Tensor类型，必选参数，表示卷积权重张量。数据类型与input相同，不支持空Tensor，数据格式为ND。shape为2维[W, H]，W为卷积核宽度，固定为3；H为特征维度，须与input的H一致。
+mask：Tensor类型，可选参数，表示卷积输出的掩码。数据类型支持bool，数据格式为ND。shape为2维[B, S]，True表示有效位置，False表示需要置零的位置。默认值为None，表示不进行掩码操作。
+
+输出说明:
+output：Tensor类型，因果卷积的输出结果，shape和数据类型与input一致，数据格式为ND。
+
+约束说明:
+该接口支持推理和训练场景下使用。
+该接口支持单算子模式和图模式。
+input和weight的数据类型必须一致。
+weight的W维度目前只支持3。
+H须为64的倍数。
+不支持非连续的input、weight、mask张量。
+
+支持的型号:
+昇腾950 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+S, B, H, W = 2048, 4, 768, 3
+input  = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+weight = torch.randn(W, H, dtype=torch.bfloat16).npu()
+mask   = torch.rand(B, S).npu() > 0.3
+output = torch_npu.npu_masked_causal_conv1d(input, weight, mask=mask)
+    """
+)
+
+_add_torch_npu_docstr(
+    "npu_masked_causal_conv1d_backward",
+    """
+接口原型:
+torch_npu.npu_masked_causal_conv1d_backward(grad_output, input, weight, *, mask=None) -> (Tensor, Tensor)
+
+功能描述:
+torch_npu.npu_masked_causal_conv1d的反向算子。计算带掩码的因果一维深度可分离卷积对输入`input`和权重`weight`的梯度。该接口通常由PyTorch自动微分机制自动调用，也可手动调用用于自定义梯度计算。
+
+参数说明:
+grad_output：Tensor类型，必选参数，表示前向输出的梯度张量。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为3维[S, B, H]。
+input：Tensor类型，必选参数，表示前向的卷积输入张量。数据类型与grad_output相同，不支持空Tensor，数据格式为ND。shape须与grad_output一致。
+weight：Tensor类型，必选参数，表示前向的卷积权重张量。数据类型与grad_output相同，不支持空Tensor，数据格式为ND。shape为2维[W, H]，W固定为3。
+mask：Tensor类型，可选参数，表示前向卷积输出的掩码，与前向调用时传入的mask一致。数据类型支持bool，数据格式为ND。shape为2维[B, S]。默认值为None。
+
+输出说明:
+grad_input：Tensor类型，对前向输入input的梯度，shape和数据类型与grad_output一致，数据格式为ND。
+grad_weight：Tensor类型，对前向权重weight的梯度，shape为[W, H]，W=3，数据类型与grad_output一致，数据格式为ND。
+
+约束说明:
+该接口支持训练场景下使用。
+该接口支持单算子模式和图模式。
+grad_output、input、weight的数据类型必须一致。
+weight的W维度目前只支持3。
+不支持非连续的grad_output、input、weight、mask张量。
+该接口已通过derivatives.yaml与npu_masked_causal_conv1d绑定，PyTorch自动微分时会自动调用，通常无需手动调用。
+
+支持的型号:
+昇腾950 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+S, B, H, W = 2048, 4, 768, 3
+grad_output = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+input       = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+weight      = torch.randn(W, H, dtype=torch.bfloat16).npu()
+mask        = torch.rand(B, S).npu() > 0.3
+grad_input, grad_weight = torch_npu.npu_masked_causal_conv1d_backward(
+    grad_output, input, weight, mask=mask
 )
     """
 )
