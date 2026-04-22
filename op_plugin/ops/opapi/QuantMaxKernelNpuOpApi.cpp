@@ -39,9 +39,13 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 
     at::Tensor y = npu_preparation::apply_tensor_without_format(x.sizes(), x.options().dtype(y_scalar_type));
-    at::Tensor amax = npu_preparation::apply_tensor_without_format({}, x.options().dtype(x.scalar_type()));
+    at::Tensor amax = npu_preparation::apply_tensor_without_format({1}, x.options().dtype(x.scalar_type()));
 
-    const char *round_mode_ptr = round_mode.data();
+    std::string round_mode_cap(round_mode);
+    if (!round_mode_cap.empty()) {
+        round_mode_cap[0] = std::toupper(round_mode_cap[0]);
+    }
+    const char *round_mode_ptr = round_mode_cap.c_str();
     TensorWrapper y_wrapper = {y, y_acltype};
     EXEC_NPU_CMD(aclnnQuantMax, x, scale, y_acltype, round_mode_ptr, y_wrapper, amax);
 
