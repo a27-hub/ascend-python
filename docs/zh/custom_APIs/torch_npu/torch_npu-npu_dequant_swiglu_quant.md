@@ -87,7 +87,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
     - 取True时，out=swish\(split\[x, -1, 2\]\[0\]\)\*split\[x, -1, 2\]\[1\]
     - 取False时，out=swish\(split\[x, -1, 2\]\[1\]\)\*split\[x, -1, 2\]\[0\]
 
-- **quant\_mode** (`int`)：可选参数，表示量化类型，默认值为0。0表示静态量化，1表示动态量化。`group_index`场景下（非None），只支持动态量化即`quant_mode`为1。
+- **quant\_mode** (`int`)：可选参数，表示量化类型，默认值为0。0表示静态量化，1表示动态量化。
 - **swiglu\_mode**（`int`）：可选参数，swiglu 计算模式，0 表示传统 swiglu，1 表示变种 swiglu（支持 clamp、alpha、bias）。
 - **clamp\_limit**（`float`）：可选参数，swiglu 输入门限，默认 7.0。
 - **glu\_alpha**（`float`）：可选参数，glu 激活函数系数，默认 1.702。
@@ -110,7 +110,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 - 当 x 为 float16 或 bfloat16 时，weight_scale、activation_scale、bias 必须为 None。
 - x 的最后一维长度必须为偶数。
 - 当激活维度不是 x 的最后一维时，group_index 必须为 None。
-- quant_offset 仅支持静态量化（quant_mode=0），动态量化时必须为 None。
+- 当 group_index 非 None，且为动态量化（quant_mode=1）时，bias、quant_offset 不生效。
 - clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
 
 ## 调用示例
