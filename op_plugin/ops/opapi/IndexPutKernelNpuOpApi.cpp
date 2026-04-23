@@ -61,7 +61,7 @@ at::Tensor& _index_put_impl_(
         }
     }
     at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self.options().dtype(index_dtype), zeroSize);
+    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(zeroSize, self.options().dtype(index_dtype));
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
