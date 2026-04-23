@@ -1304,12 +1304,14 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "row_idx_type is None or invalid. must be in [0, 1]"
     )
     ALIGN_BASE = 64
+    THREE_DIM_NUM = 3
+    MXFP8_SCALE_THIRD_DIM_SIZE = 2
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
             if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn:
                 torch._check(
-                    scale_dim == 3,
+                    scale_dim == THREE_DIM_NUM,
                     lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2 or float8_e4m3fn" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
@@ -1321,7 +1323,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
-                    2 == scale.size(2),
+                    MXFP8_SCALE_THIRD_DIM_SIZE == scale.size(2),
                     lambda: "the third dim of scale should be the 2" + ops_error(ErrCode.VALUE),
                 )
             else:
