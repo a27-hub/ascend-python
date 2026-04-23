@@ -175,10 +175,10 @@ class TestAtbFakeTensor(TestCase):
             y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291)
             self.assertTrue(y.shape == x.shape)
             self.assertEqual(y.dtype, torch.float8_e5m2)
-            self.assertTrue(amax.shape == torch.Size([]))
+            self.assertTrue(amax.shape == torch.Size([1]))
             self.assertEqual(amax.dtype, x.dtype)
 
-            y2, amax2 = torch_npu.npu_quant_max(x, scale, round_mode="round", dst_dtype=292)
+            y2, amax2 = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=292)
             self.assertTrue(y2.shape == x.shape)
             self.assertEqual(y2.dtype, torch.float8_e4m3fn)
             self.assertEqual(amax2.dtype, x.dtype)

@@ -7063,7 +7063,7 @@ torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int? d
 
 参数说明:
 x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
-Atlas A3 训练系列产品: 数据类型支持float16、float32、bfloat16。
+Atlas A3 训练系列产品: 数据类型支持float16、bfloat16。
 scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(1,)。数据格式支持ND, 支持非连续的Tensor。
 数据类型支持float32。
 round_mode: String类型, 可选参数, 舍入模式, 默认值为"rint"。支持的取值:
@@ -7078,7 +7078,7 @@ dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举�
 输出说明:
 返回两个Tensor:
 - y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
-- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, shape为空(标量)。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[1]。
 
 约束说明:
 该接口支持推理、训练场景下使用。

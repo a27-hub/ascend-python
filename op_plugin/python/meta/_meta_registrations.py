@@ -5103,8 +5103,16 @@ def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
                             str(scale.dtype) + ops_error(ErrCode.PARAM))
     if scale.numel() == 0:
         raise RuntimeError("scale does not support empty tensor" + ops_error(ErrCode.PARAM))
-        
-    dst_dtype = dst_dtype if dst_dtype is not None else 1
+
+    dst_dtype = dst_dtype if dst_dtype is not None else 291
+    # 校验 round_mode 与 dst_dtype 的匹配关系
+    if dst_dtype in (291, 292) and round_mode != "rint":
+        raise RuntimeError("When dst_dtype is float8_e5m2(291) or float8_e4m3fn(292), "
+                            "round_mode must be 'rint', but got '" + round_mode + "'" +
+                            ops_error(ErrCode.PARAM))
+    if dst_dtype == 290 and round_mode not in ("round", "hybrid"):
+        raise RuntimeError("When dst_dtype is hifloat8(290), round_mode must be 'round' or "
+                            "'hybrid', but got '" + round_mode + "'" + ops_error(ErrCode.PARAM))
     # 使用整数值获取对应的 torch.dtype
     y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.float8_e5m2)
 

@@ -51,6 +51,14 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
         "dst_dtype only supports 290(hifloat8), 291(float8_e5m2) and 292(float8_e4m3fn), but got ",
         dst_dtype_value, OPS_ERROR(ErrCode::PARAM));
 
+    // 校验 round_mode 与 dst_dtype 的匹配关系
+    TORCH_CHECK(!((dst_dtype_value == 291 || dst_dtype_value == 292) && round_mode_str != "rint"),
+        "When dst_dtype is float8_e5m2(291) or float8_e4m3fn(292), round_mode must be 'rint', but got '",
+        round_mode_str, "'" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!(dst_dtype_value == 290 && round_mode_str != "round" && round_mode_str != "hybrid"),
+        "When dst_dtype is hifloat8(290), round_mode must be 'round' or 'hybrid', but got '",
+        round_mode_str, "'" + OPS_ERROR(ErrCode::PARAM));
+
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype_value);
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 

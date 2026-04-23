@@ -42,10 +42,12 @@ class TestNpuQuantMax(TestCase):
         shape_format = [
             # (x_dtype, shape, round_mode, dst_dtype_int)
             (torch.float16, (16, 128), "rint", 291),    # float8_e5m2
-            (torch.float16, (16, 128), "round", 292),   # float8_e4m3fn
+            (torch.float16, (16, 128), "rint", 292),    # float8_e4m3fn
+            (torch.float16, (16, 128), "round", 290),   # hifloat8
             (torch.float16, (16, 128), "hybrid", 290),  # hifloat8
             (torch.bfloat16, (8, 32, 64), "rint", 291),
-            (torch.bfloat16, (8, 32, 64), "round", 292),
+            (torch.bfloat16, (8, 32, 64), "rint", 292),
+            (torch.bfloat16, (8, 32, 64), "round", 290),
             (torch.bfloat16, (8, 32, 64), "hybrid", 290),
         ]
 
@@ -69,9 +71,9 @@ class TestNpuQuantMax(TestCase):
         shape_format = [
             # (x_dtype, shape, round_mode, dst_dtype_torch)
             (torch.float16, (16, 128), "rint", torch.float8_e5m2),
-            (torch.float16, (16, 128), "round", torch.float8_e4m3fn),
+            (torch.float16, (16, 128), "rint", torch.float8_e4m3fn),
             (torch.bfloat16, (8, 32, 64), "rint", torch.float8_e5m2),
-            (torch.bfloat16, (8, 32, 64), "round", torch.float8_e4m3fn),
+            (torch.bfloat16, (8, 32, 64), "rint", torch.float8_e4m3fn),
         ]
 
         for x_dtype, shape, round_mode, dst_dtype in shape_format:
