@@ -4,12 +4,8 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |    ×     |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -31,7 +27,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None) -> tuple(Tensor, Tensor)
 ```
 
@@ -40,6 +36,7 @@ torch_npu.npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_st
 $T=\sum_i^B L_i$ 表示累积序列长度，$B$ 表示batch size。$L_i$ 表示第i个序列的长度。
 $N_k$ 表示key的头数，$N_v$ 表示value的头数。
 $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
+
 - **query** (`Tensor`)：必选输入，对应公式中的$q$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_k$, $D_k$）。
 
 - **key** (`Tensor`)：必选输入，对应公式中的$k$，数据类型支持`bfloat16`，数据格式支持ND，shape为（$T$, $N_k$, $D_k$）。
@@ -72,6 +69,7 @@ $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
 ## 调用示例
 
 - 单算子调用
+
     ```python
     import torch
     import torch_npu
@@ -96,4 +94,108 @@ $D_k$ 表示key的hidden size，$D_v$ 表示value的hidden size。
     o, final_state = torch_npu.npu_chunk_gated_delta_rule(
         query, key, value, beta=beta, initial_state=state, actual_seq_lengths=actual_seq_lengths, scale=scale, g=g)
     print(o.shape, final_state.shape)
+    ```
+
+- 图模式调用
+
+    ```python
+    import torch
+    import torch_npu
+    import torchair
+    import logging
+    import os
+    import warnings
+    import torch.nn.functional as F
+
+    from torchair.core.utils import logger
+
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    logger.setLevel(logging.DEBUG)
+
+    os.environ["ENABLE_ACLNN"] = "false"
+
+    # 配置图模式config
+    config = torchair.CompilerConfig()
+
+    # 配置图执行模式，aclgraph模式为reduce-overhead, GE模式为max-autotune
+    config.mode = "max-autotune"
+    npu_backend = torchair.get_npu_backend(compiler_config=config)
+
+    class MyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self,
+        query,
+        key,
+        value,
+        initial_state,
+        beta,
+        actual_seq_lengths,
+        scale,
+        gamma):
+            chunk_gated_delta_rule = torch_npu.npu_chunk_gated_delta_rule(
+                query, key, value,
+                beta = beta,
+                initial_state = initial_state,
+                actual_seq_lengths = actual_seq_lengths,
+                scale = scale,
+                g = gamma)
+
+            return chunk_gated_delta_rule
+
+    if __name__ == "__main__":
+        """
+        bs: 一个批量中的语句个数;
+        seqlen: 语句的Token数量, 即长度;
+        nk, nv: QK和V对应的attention头数;
+        dk, dv: QK和V对应的词和位置空间嵌入维度。
+        """
+        bs, seqlen = 2, 100
+        nk, nv = 4, 4
+        dk, dv = 128, 128
+        actual_seq_lengths = (torch.ones(bs) * seqlen).npu().to(torch.int32)
+        T = int(torch.sum(actual_seq_lengths))
+
+        print(f"Input Info:\n{bs=}, {seqlen=}, {nk=}, {nv=}, {dk=}, {dv=}, {actual_seq_lengths=}, {T=}")
+
+        # 初始化输入张量
+        query = torch.rand((T, nk, dk), dtype=torch.bfloat16, device='npu')
+        key = torch.rand((T, nk, dk), dtype=torch.bfloat16, device='npu')
+        value = torch.rand((T, nv, dv), dtype=torch.bfloat16, device='npu')
+        initial_state = torch.rand((bs, nv, dk, dv), dtype=torch.bfloat16, device='npu')
+        beta = torch.rand((T, nv), dtype=torch.bfloat16, device='npu')
+        gamma = torch.rand((T, nv), dtype=torch.float32, device='npu')
+        cu_seqlens = F.pad(actual_seq_lengths, (1, 0)).cumsum(dim=0).npu().to(torch.int32)
+        cu_seqlens = cu_seqlens[1:]
+
+        # query = torch.nn.functional.normalize(query, p=2, dim=-1)
+        # key = torch.nn.functional.normalize(key, p=2, dim=-1)
+        scale = dk ** -0.5
+
+        print(f"\nInput Shape:\nQ:{query.shape}, K:{key.shape}, V:{value.shape},"
+            f"\nstate:{initial_state.shape}, beta:{beta.shape}, gamma:{gamma.shape},"
+            f"\ninitial_state:{initial_state.shape}, beta:{beta.shape}, gamma:{gamma.shape},"
+            f"\ncu_seqlens:{cu_seqlens.shape}, scale:{scale}")
+
+        print("\nTest Torch Adapter Graph...")
+
+        print("\nCreate model...")
+        model = MyModel()
+        model = model.npu()
+
+        print("\nModel compile...")
+        model = torch.compile(model, backend=npu_backend, dynamic=False)
+
+        print("\nInference...\n")
+        o_chunk, state_chunk = model(
+            query=query,
+            key=key,
+            value=value,
+            initial_state=initial_state,
+            beta=beta,
+            actual_seq_lengths=cu_seqlens,
+            scale=scale,
+            gamma=gamma
+        )
     ```
