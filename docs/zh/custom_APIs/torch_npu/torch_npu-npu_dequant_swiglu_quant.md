@@ -110,7 +110,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 - 当 x 为 float16 或 bfloat16 时，weight_scale、activation_scale、bias 必须为 None。
 - x 的最后一维长度必须为偶数。
 - 当激活维度不是 x 的最后一维时，group_index 必须为 None。
-- 当 group_index 非 None 时，仅支持动态量化（quant_mode=1），且 bias、quant_offset 必须为 None。
+- quant_offset 仅支持静态量化（quant_mode=0），动态量化时必须为 None。
 - clamp_limit、glu_alpha、glu_bias 仅在 swiglu_mode=1 时生效。
 
 ## 调用示例
