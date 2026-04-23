@@ -11,7 +11,7 @@
 
 - API功能：TP切分场景下，实现matmul和reduce\_scatter的融合，融合算子内部实现计算和通信流水并行。支持如下两种量化方式：
 - - Per-Channel 量化：针对权重（Weight）张量，沿输出特征维度（Output Channel）为每个通道维护独立的缩放因子与零点。
-- -  Per-Token 量化：针对激活（Activation）张量，沿序列长度维度（Sequence Length / Token）为每个 Token 维护独立的量化参数。
+- - Per-Token 量化：针对激活（Activation）张量，沿序列长度维度（Sequence Length / Token）为每个 Token 维护独立的量化参数。
 
 - 计算公式：
     $x_1$代表输入`input`。
