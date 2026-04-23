@@ -6330,7 +6330,7 @@ custom:
         dtype: sorted_expert_for_source_row
       exec: aclnnMoeComputeExpertTokens
 
-  - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor
+  - func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, Tensor? x, Tensor? a1, Tensor? a2, Tensor? v, int? drop_pad_mode=0, int[]? zero_expert_range, int[]? copy_expert_range, int[]? constant_expert_range) -> Tensor
     op_api: all_version
     exposed: all_version
 
