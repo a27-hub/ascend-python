@@ -30,8 +30,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
         "round_mode only supports 'rint', 'round' and 'hybrid', but got '",
         std::string(round_mode), "'" + OPS_ERROR(ErrCode::PARAM));
 
-    int64_t dst_type = dst_dtype.value_or(291);
-    TORCH_CHECK(dst_type == 290 || dst_type == 291 || dst_type == 292,
+    int64_t dst_type = torch.float8_e5m2;
+    TORCH_CHECK(dst_dtype == torch.float8_e5m2 || dst_type == torch.float8_e4m3fn || dst_type == torch.uint8,
         "dst_dtype only supports 290(hifloat8), 291(float8_e5m2) and 292(float8_e4m3fn), but got ",
         dst_type, OPS_ERROR(ErrCode::PARAM));
 
