@@ -5105,6 +5105,10 @@ def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
         raise RuntimeError("scale does not support empty tensor" + ops_error(ErrCode.PARAM))
 
     dst_dtype = dst_dtype if dst_dtype is not None else 291
+    # 将 PyTorch 标准 dtype 枚举值映射到 torch_npu 扩展枚举值
+    # torch.float8_e5m2 = 23 -> 291, torch.float8_e4m3fn = 24 -> 292
+    _TORCH_TO_NPU_DTYPE = {23: 291, 24: 292}
+    dst_dtype = _TORCH_TO_NPU_DTYPE.get(dst_dtype, dst_dtype)
     # 校验 round_mode 与 dst_dtype 的匹配关系
     if dst_dtype in (291, 292) and round_mode != "rint":
         raise RuntimeError("When dst_dtype is float8_e5m2(291) or float8_e4m3fn(292), "
