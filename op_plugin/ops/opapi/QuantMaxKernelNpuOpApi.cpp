@@ -60,8 +60,6 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     TORCH_CHECK(scale.scalar_type() == at::ScalarType::Float,
         "scale dtype must be torch.float32, but got: ", scale.scalar_type(),
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(scale.numel() > 0,
-        "scale does not support empty tensor", OPS_ERROR(ErrCode::PARAM));
 
     // 处理 dst_dtype：如果为空则使用默认值，否则校验值的有效性
     int64_t dst_dtype_value = NormalizeDstDtype(dst_dtype.value_or(291));
@@ -80,7 +78,10 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype_value);
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 
-    at::Tensor y = npu_preparation::apply_tensor_without_format(x.sizes(), x.options().dtype(y_scalar_type));
+    // 使用 apply_tensor(src, opts) 让 y 继承 x 的 NPU 存储描述符（storage_sizes_），
+    // 避免 allocator 按新 dtype（float8）独立对齐导致 y 的 storageShape 与 x 不一致，
+    // 从而绕过 tiling CheckShape 基于 GetStorageShape() 的逐维比较。
+    at::Tensor y = npu_preparation::apply_tensor(x, x.options().dtype(y_scalar_type));
     at::SmallVector<int64_t, op_infer::SIZE> amax_size = {1};
     at::Tensor amax = npu_preparation::apply_tensor_without_format(amax_size, x.options().dtype(x.scalar_type()));
 
