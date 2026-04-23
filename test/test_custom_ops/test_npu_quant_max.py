@@ -52,7 +52,7 @@ class TestNpuQuantMax(TestCase):
             # shape / dtype checks
             self.assertEqual(npu_y.shape, cpu_x.shape)
             self.assertEqual(npu_y.dtype, self.DST_DTYPE_MAP[dst_dtype])
-            self.assertEqual(list(npu_amax.shape), [])
+            self.assertEqual(list(npu_amax.shape), [1])
             self.assertEqual(npu_amax.dtype, x_dtype)
 
             # numeric check on amax (absolute-max of x)
@@ -70,7 +70,7 @@ class TestNpuQuantMax(TestCase):
         y, amax = torch_npu.npu_quant_max(npu_x, npu_scale)
         self.assertEqual(y.shape, cpu_x.shape)
         self.assertEqual(y.dtype, torch.float8_e5m2)
-        self.assertEqual(list(amax.shape), [])
+        self.assertEqual(list(amax.shape), [1])
         self.assertEqual(amax.dtype, torch.float16)
 
     @SupportedDevices(['Ascend950'])

@@ -5095,7 +5095,7 @@ def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
     y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype)
 
     y = torch.empty_like(x, dtype=y_dtype)
-    amax = x.new_empty([], dtype=x.dtype)
+    amax = x.new_empty([1], dtype=x.dtype)
     return (y, amax)
 
 
