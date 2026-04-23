@@ -55,13 +55,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 
     at::Tensor y = npu_preparation::apply_tensor_without_format(x.sizes(), x.options().dtype(y_scalar_type));
-    at::Tensor amax = npu_preparation::apply_tensor_without_format({1}, x.options().dtype(x.scalar_type()));
+    at::SmallVector<int64_t, op_infer::SIZE> amax_size = {1};
+    at::Tensor amax = npu_preparation::apply_tensor_without_format(amax_size, x.options().dtype(x.scalar_type()));
 
     const char *round_mode_ptr = round_mode_str.data();
-    aclDataType amax_acltype = npu_preparation::convert_to_acl_data_type(x.scalar_type());
     TensorWrapper y_wrapper = {y, y_acltype};
-    TensorWrapper amax_wrapper = {amax, amax_acltype};
-    EXEC_NPU_CMD(aclnnQuantMax, x, scale, y_acltype, round_mode_ptr, y_wrapper, amax_wrapper);
+    EXEC_NPU_CMD(aclnnQuantMax, x, scale, y_acltype, round_mode_ptr, y_wrapper, amax);
 
     return std::make_tuple(y, amax);
 }

@@ -5103,51 +5103,10 @@ def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
                             str(scale.dtype) + ops_error(ErrCode.PARAM))
     if scale.numel() == 0:
         raise RuntimeError("scale does not support empty tensor" + ops_error(ErrCode.PARAM))
-
-    # dst_dtype 支持以下形式：
-    # 1. torch.dtype 对象：torch.float8_e5m2, torch.float8_e4m3fn
-    # 2. torch_npu 自定义 dtype：torch_npu.hifloat8
-    # 3. 整数值：290(hifloat8), 291(float8_e5m2), 292(float8_e4m3fn)
-    # 内部统一转换为整数值处理
-
-    # torch.dtype 对象 -> 整数值映射表
-    dtype_to_int_map = {
-        torch.float8_e5m2: 291,
-        torch.float8_e4m3fn: 292,
-    }
-
-    # 支持的整数值
-    supported_int_values = [290, 291, 292]
-
-    # 处理 dst_dtype 参数
-    dst_dtype_int = dst_dtype
-    if isinstance(dst_dtype, torch.dtype):
-        # 用户传入的是 torch.dtype 对象
-        if dst_dtype in dtype_to_int_map:
-            dst_dtype_int = dtype_to_int_map[dst_dtype]
-        else:
-            # 尝试匹配 torch_npu.hifloat8
-            try:
-                import torch_npu
-                if dst_dtype == torch_npu.hifloat8:
-                    dst_dtype_int = 290
-                else:
-                    raise RuntimeError("dst_dtype only supports torch_npu.hifloat8, torch.float8_e5m2 "
-                                       "and torch.float8_e4m3fn, got " + str(dst_dtype) +
-                                       ops_error(ErrCode.PARAM))
-            except (AttributeError, ImportError):
-                raise RuntimeError("dst_dtype only supports torch_npu.hifloat8, torch.float8_e5m2 "
-                                   "and torch.float8_e4m3fn, got " + str(dst_dtype) +
-                                   ops_error(ErrCode.PARAM))
-
-    # 校验整数值的有效性
-    if dst_dtype_int not in supported_int_values:
-        raise RuntimeError("dst_dtype only supports 290(hifloat8), 291(float8_e5m2) and "
-                           "292(float8_e4m3fn), got " + str(dst_dtype_int) +
-                           ops_error(ErrCode.PARAM))
-
+        
+    dst_dtype = dst_dtype if dst_dtype is not None else 1
     # 使用整数值获取对应的 torch.dtype
-    y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype_int, torch.float8_e5m2)
+    y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.float8_e5m2)
 
     y = torch.empty_like(x, dtype=y_dtype)
     amax = x.new_empty([1], dtype=x.dtype)
