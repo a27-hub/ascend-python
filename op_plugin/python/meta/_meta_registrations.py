@@ -4346,7 +4346,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
             )
 
 
-@impl(m, "obfuscation_calculate")
+@impl(m, "obfuscation_calculate") 
 def obfuscation_calculate_meta(fd, x, param, cmd):
     return torch.empty_like(x)
 
