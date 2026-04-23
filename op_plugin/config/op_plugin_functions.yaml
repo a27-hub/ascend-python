@@ -3951,6 +3951,7 @@ official:
   - func: pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: pow.Tensor_Scalar_out
 
@@ -3967,6 +3968,7 @@ official:
   - func: pow.Tensor_Tensor(Tensor self, Tensor exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: pow.Tensor_Tensor_out(Tensor self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3975,12 +3977,14 @@ official:
   - func: pow_.Scalar(Tensor(a!) self, Scalar exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
     acl_op: all_version
@@ -5382,10 +5386,12 @@ official:
   - func: where.self(Tensor condition, Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: where.self_out(Tensor condition, Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: [v2.1, newest]
 
   - func: xlogy.OutScalar_Other(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
