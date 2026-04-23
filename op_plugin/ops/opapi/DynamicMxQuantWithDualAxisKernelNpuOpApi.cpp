@@ -31,7 +31,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_dynamic_mx_quant_
     const at::Tensor &input,
     c10::string_view round_mode,
     int64_t dst_type,
-    int64_t scale_alg)
+    int64_t scale_alg,
+    double dst_type_max)
 {
     at::Tensor y1;
     at::Tensor mxscale1;
@@ -90,7 +91,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_dynamic_mx_quant_
     TensorWrapper y2_wrapper = {y2, y_acltype};
     TensorWrapper mxscale1_wrapper = {mxscale1, aclDataType::ACL_FLOAT8_E8M0};
     TensorWrapper mxscale2_wrapper = {mxscale2, aclDataType::ACL_FLOAT8_E8M0};
-    EXEC_NPU_CMD(aclnnDynamicMxQuantWithDualAxis, input, round_mode_ptr, y_acltype, scale_alg, y1_wrapper, mxscale1_wrapper, y2_wrapper, mxscale2_wrapper);
+    static bool npu_support_v2 = check_aclnn_kernel_available("aclnnDynamicMxQuantWithDualAxisV2");
+
+    if (npu_support_v2) {
+        EXEC_NPU_CMD(aclnnDynamicMxQuantWithDualAxisV2, input, round_mode_ptr, y_acltype, scale_alg, dst_type_max, y1_wrapper, mxscale1_wrapper, y2_wrapper, mxscale2_wrapper);
+    } else {
+        EXEC_NPU_CMD(aclnnDynamicMxQuantWithDualAxis, input, round_mode_ptr, y_acltype, scale_alg, y1_wrapper, mxscale1_wrapper, y2_wrapper, mxscale2_wrapper);
+    }
     
     return std::make_tuple(y1, mxscale1, y2, mxscale2);
 }

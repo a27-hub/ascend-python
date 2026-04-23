@@ -5075,7 +5075,7 @@ def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mod
 
 
 @impl(m, "npu_grouped_dynamic_mx_quant")
-def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32):
+def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=23, blocksize=32, scale_alg=0):
     if x is None or group_index is None:
         raise RuntimeError("Input x and group_index should must not be None" + ops_error(ErrCode.VALUE))
     if x.dim() != 2:
@@ -5088,6 +5088,11 @@ def npu_grouped_dynamic_mx_quant(x, group_index, *, round_mode="rint", dst_type=
     if blocksize != 32:
         raise RuntimeError("Parameter blocksize only supports 32,  got " +
                             str(blocksize) + ops_error(ErrCode.PARAM))
+    
+    if scale_alg != 0 and scale_alg != 1:
+        raise RuntimeError("Parameter scale_alg only supports 0 or 1, got " + 
+                            str(scale_alg) + ops_error(ErrCode.PARAM))
+
     mxscale_shape = [x.shape[0] // 2 // blocksize + group_index.shape[0], x.shape[-1], 2]
 
     if TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type) == torch.float8_e5m2:
@@ -6374,12 +6379,12 @@ def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
 
 
 @impl(m, "npu_dynamic_mx_quant_with_dual_axis")
-def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0):
+def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
     dim_num = input_dummy.dim()
     mxscale1_shape = []
     mxscale2_shape = []
-    if scale_alg != 0:
-        raise RuntimeError("Invalid scale_alg value: {0}. Expected 0.".format(scale_alg) +
+    if scale_alg not in [0, 1, 2]:
+        raise RuntimeError("Invalid scale_alg value: {scale_alg}. Expected 0 、1 or 2." +
                             ops_error(ErrCode.PARAM))
     last_axis = -1
     second_to_last_axis = -2
