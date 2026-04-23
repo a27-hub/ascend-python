@@ -6604,6 +6604,15 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
 
+@impl(m, "npu_chunk_gated_delta_rule")
+def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None):
+    torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
+    out_shape = (value.size(0), value.size(1), value.size(2))
+
+    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
+    out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
+    return out, finalState
 
 @impl(m, "npu_multi_head_attention")
 def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, value_weight, attn_mask,
@@ -6740,24 +6749,24 @@ def npu_multi_head_attention_backward_meta(query, key, value, query_weight, key_
             key_grad, value_grad, query_bias_grad, key_bias_grad, value_bias_grad, out_proj_bias_grad)
 
 
-@impl(m, "npu_rotate_quant")
-def npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None):
-    scale_shape = []
-    scale_shape.append(x.size(0))
-    scale = x.new_empty(scale_shape, dtype=torch.float32)
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
-    if torch_dtype == torch.int8:
-        output = torch.empty_like(x, dtype=torch.int8)
-    elif torch_dtype == torch.quint4x2:
-        dim_num = x.dim()
-        if x.size(dim_num - 1) % 8:
-            raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divided by 8" +
-                               ops_error(ErrCode.NOT_SUPPORT))
-        output_shape = []
-        for dim in range(dim_num - 1):
-            output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 8)
-        output = x.new_empty(output_shape, dtype=torch.int32)
-    else:
-        output = torch.empty_like(x, dtype=torch.int8)
+@impl(m, "npu_rotate_quant") 
+def npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None): 
+    scale_shape = [] 
+    scale_shape.append(x.size(0)) 
+    scale = x.new_empty(scale_shape, dtype=torch.float32) 
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8) 
+    if torch_dtype == torch.int8: 
+        output = torch.empty_like(x, dtype=torch.int8) 
+    elif torch_dtype == torch.quint4x2: 
+        dim_num = x.dim() 
+        if x.size(dim_num - 1) % 8: 
+            raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divided by 8" + 
+                            ops_error(ErrCode.NOT_SUPPORT)) 
+        output_shape = [] 
+        for dim in range(dim_num - 1): 
+            output_shape.append(x.size(dim)) 
+        output_shape.append(x.size(dim_num - 1) // 8) 
+        output = x.new_empty(output_shape, dtype=torch.int32) 
+    else: 
+        output = torch.empty_like(x, dtype=torch.int8) 
     return output, scale
