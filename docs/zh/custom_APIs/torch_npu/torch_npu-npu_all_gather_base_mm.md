@@ -29,7 +29,7 @@
     gather\_out = allgather(x1)
     $$
 
-    量化场景公式中，`allgather(x1_scale)`表示对每个rank上的`x1_scale`执行allgather操作。`x1_scale`的输入shape为(m, 1)（即各rank本地的pertoken量化参数），经过allgather后输出shape为(m * world\_size, 1)。`x2_scale`无需执行allgather操作，直接作为全局共享的perchannel量化参数使用。
+    量化场景公式中，`allgather(x1_scale)`由底层算子内部完成，用户无需手动对`x1_scale`执行allgather操作。用户只需将当前rank本地的`x1_scale`（shape为(m, 1)）直接传入接口即可，底层算子会自动聚合所有rank的`x1_scale`后参与计算。`x2_scale`为全局共享的perchannel量化参数，各rank相同，无需执行allgather操作。
 
 > [!NOTE]    
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
