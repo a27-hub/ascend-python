@@ -53,8 +53,15 @@ at::Tensor& _index_put_impl_(
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
+    at::ScalarType index_dtype = at::kLong;
+    for (const auto& idx : indices_after) {
+        if (idx.defined()) {
+            index_dtype = idx.scalar_type();
+            break;
+        }
+    }
     at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
+    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(zeroSize, self.options().dtype(index_dtype));
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
