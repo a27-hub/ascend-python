@@ -26,22 +26,38 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     c10::string_view round_mode,
     c10::optional<int64_t> dst_dtype)
 {
-    TORCH_CHECK(round_mode == "rint" || round_mode == "round" || round_mode == "hybrid",
-        "round_mode only supports 'rint', 'round' and 'hybrid', but got '",
-        std::string(round_mode), "'" + OPS_ERROR(ErrCode::PARAM));
+    // 处理 round_mode：如果为空则使用默认值 "rint"
+    std::string round_mode_str = round_mode.empty() ? "rint" : std::string(round_mode);
+    TORCH_CHECK(round_mode_str == "rint" || round_mode_str == "round" || round_mode_str == "hybrid",
+        "round_mode only supports 'rint', 'round' and 'hybrid', but got '", round_mode_str,
+        "'" + OPS_ERROR(ErrCode::PARAM));
 
-    int64_t dst_type = torch.float8_e5m2;
-    TORCH_CHECK(dst_dtype == torch.float8_e5m2 || dst_type == torch.float8_e4m3fn || dst_type == torch.uint8,
+    // 校验 scale 必须为一维 tensor，shape 为 [1]
+    TORCH_CHECK(scale.dim() == 1,
+        "scale must be a 1D tensor with shape [1], but got dim: ", scale.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(scale.size(0) == 1,
+        "scale shape must be [1], but got shape: [", scale.size(0), "]",
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(scale.scalar_type() == at::ScalarType::Float,
+        "scale dtype must be torch.float32, but got: ", scale.scalar_type(),
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(scale.numel() > 0,
+        "scale does not support empty tensor", OPS_ERROR(ErrCode::PARAM));
+
+    // 处理 dst_dtype：如果为空则使用默认值，否则校验值的有效性
+    int64_t dst_dtype_value = dst_dtype.value_or(291);
+    TORCH_CHECK(dst_dtype_value == 290 || dst_dtype_value == 291 || dst_dtype_value == 292,
         "dst_dtype only supports 290(hifloat8), 291(float8_e5m2) and 292(float8_e4m3fn), but got ",
-        dst_type, OPS_ERROR(ErrCode::PARAM));
+        dst_dtype_value, OPS_ERROR(ErrCode::PARAM));
 
-    aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
+    aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype_value);
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 
     at::Tensor y = npu_preparation::apply_tensor_without_format(x.sizes(), x.options().dtype(y_scalar_type));
     at::Tensor amax = npu_preparation::apply_tensor_without_format({1}, x.options().dtype(x.scalar_type()));
 
-    const char *round_mode_ptr = round_mode.data();
+    const char *round_mode_ptr = round_mode_str.data();
     aclDataType amax_acltype = npu_preparation::convert_to_acl_data_type(x.scalar_type());
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper amax_wrapper = {amax, amax_acltype};

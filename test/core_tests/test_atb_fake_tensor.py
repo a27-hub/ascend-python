@@ -170,7 +170,7 @@ class TestAtbFakeTensor(TestCase):
     def test_npu_quant_max(self):
         with FakeTensorMode():
             x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
-            scale = torch.randn((128,), dtype=torch.float32).npu()
+            scale = torch.randn((1,), dtype=torch.float32).npu()
 
             y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291)
             self.assertTrue(y.shape == x.shape)
