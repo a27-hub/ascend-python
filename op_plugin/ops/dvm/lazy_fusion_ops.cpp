@@ -764,6 +764,47 @@ at::Tensor & div_(at::Tensor & self, const at::Tensor & other) {
   return self;
 }
 
+// ===================== Pow =====================
+at::Tensor pow(const at::Tensor & self, const at::Scalar & exponent) {
+  static auto enable = IsEnabled("pow", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !BinaryScalar(self, exponent, dvm::BinaryOpType::kPow, IsFloatType, dvm::DType::kDataTypeEnd, &out)) {
+    return op_api::pow(self, exponent);
+  }
+  DumpOp("pow", self, exponent);
+  return out;
+}
+
+at::Tensor pow(const at::Tensor & self, const at::Tensor & exponent) {
+  static auto enable = IsEnabled("pow", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !BinaryTensor(self, exponent, dvm::BinaryOpType::kPow, IsFloatType, dvm::DType::kDataTypeEnd, &out)) {
+    return op_api::pow(self, exponent);
+  }
+  DumpOp("pow", self, exponent);
+  return out;
+}
+
+at::Tensor & pow_(at::Tensor & self, const at::Scalar & exponent) {
+  static auto enable = IsEnabled("pow_", OpLevel_1);
+  if (!enable || !BinaryScalar(self, exponent, dvm::BinaryOpType::kPow, IsFloatType)) {
+    return op_api::pow_(self, exponent);
+  }
+  DumpOp("pow_", self, exponent);
+  LazyFusionFlush();
+  return self;
+}
+
+at::Tensor & pow_(at::Tensor & self, const at::Tensor & exponent) {
+  static auto enable = IsEnabled("pow_", OpLevel_1);
+  if (!enable || !BinaryTensor(self, exponent, dvm::BinaryOpType::kPow, IsFloatType)) {
+    return op_api::pow_(self, exponent);
+  }
+  DumpOp("pow_", self, exponent);
+  LazyFusionFlush();
+  return self;
+}
+
 // ===================== Comparison =====================
 at::Tensor eq(const at::Tensor & self, const at::Scalar & other) {
   static auto enable = IsEnabled("eq", OpLevel_1);
@@ -902,6 +943,59 @@ at::Tensor minimum(const at::Tensor & self, const at::Tensor & other) {
     return op_api::minimum(self, other);
   }
   DumpOp("minimum", self, other);
+  return out;
+}
+
+// ===================== Select =====================
+at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at::Tensor & other) {
+  static auto enable = IsEnabled("where", OpLevel_1);
+  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
+                 condition.scalar_type() == at::ScalarType::Bool;
+  if (!enable || !cond_ok || !InputCheck(self) || !InputCheck(other)) {
+    return op_api::where(condition, self, other);
+  }
+  PrepareFusionInputs(condition, self, other);
+  auto k = g_lazy_fusion_manager.Get();
+  auto cond_obj = k->Input(condition);
+  auto self_obj = k->Input(self);
+  auto other_obj = k->Input(other);
+  auto result_type = self.scalar_type();
+  if (other.scalar_type() != result_type) {
+    result_type = at::native::result_type(self, other);
+    auto compute_type = result_type == at::ScalarType::BFloat16 ? dvm::DType::kFloat32 : k->TransType(result_type);
+    self_obj = k->Cast(self_obj, compute_type);
+    other_obj = k->Cast(other_obj, compute_type);
+  }
+  auto out_obj = k->Select(cond_obj, self_obj, other_obj);
+  auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(result_type));
+  DumpOp("where", condition, self, other);
+  return out;
+}
+
+at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
+                       const at::Tensor & other, at::Tensor & out) {
+  static auto enable = IsEnabled("where", OpLevel_1);
+  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
+                 condition.scalar_type() == at::ScalarType::Bool;
+  if (!enable || !cond_ok || !InputCheck(self) || !InputCheck(other) || !NpuCheck(out)) {
+    return op_api::where_out(condition, self, other, out);
+  }
+  PrepareWritableOutput(out);
+  PrepareFusionInputs(condition, self, other);
+  auto k = g_lazy_fusion_manager.Get();
+  auto cond_obj = k->Input(condition);
+  auto self_obj = k->Input(self);
+  auto other_obj = k->Input(other);
+  if (self.scalar_type() != other.scalar_type()) {
+    auto result_type = at::native::result_type(self, other);
+    auto compute_type = result_type == at::ScalarType::BFloat16 ? dvm::DType::kFloat32 : k->TransType(result_type);
+    self_obj = k->Cast(self_obj, compute_type);
+    other_obj = k->Cast(other_obj, compute_type);
+  }
+  auto out_obj = k->Select(cond_obj, self_obj, other_obj);
+  k->Output(out, out_obj, false);
+  DumpOp("where_out", condition, self, other);
+  LazyFusionFlush();
   return out;
 }
 
