@@ -9,11 +9,11 @@
 
 ## 功能说明<a name="zh-cn_topic_0000001694916914_section14441124184110"></a>
 
-- API功能：TP切分场景下，融合`allgather`和`matmul`，实现通信和计算流水并行。
+- API功能：TP切分（Tensor Parallelism，张量并行）场景下，融合`allgather`和`matmul`，实现通信和计算流水并行。TP切分是一种分布式训练中常用的模型并行策略，将模型的权重张量沿某个维度切分到多个设备上，每个设备持有部分权重，计算时通过allgather通信聚合各设备的局部张量后再执行矩阵乘法。
 
 - 计算公式：
     $x1$代表输入`x1`
-    
+
     基础场景：
     $$
     output = allgather(x1) \mathbin{@} x2 + bias
@@ -28,6 +28,8 @@
     $$
     gather\_out = allgather(x1)
     $$
+
+    量化场景公式中，`allgather(x1_scale)`表示对每个rank上的`x1_scale`执行allgather操作。`x1_scale`的输入shape为(m, 1)（即各rank本地的pertoken量化参数），经过allgather后输出shape为(m * world\_size, 1)。`x2_scale`无需执行allgather操作，直接作为全局共享的perchannel量化参数使用。
 
 > [!NOTE]    
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
