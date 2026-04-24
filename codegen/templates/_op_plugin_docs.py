@@ -15304,7 +15304,7 @@ _add_torch_npu_docstr(
 
  _add_torch_npu_docstr(
     "npu_apply_rotary_pos_emb",
-    """
+    r"""
 接口原型: 
 torch_npu.npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, *, str layout="BSND", str rotary_mode="half") -> (Tensor, Tensor)
 
