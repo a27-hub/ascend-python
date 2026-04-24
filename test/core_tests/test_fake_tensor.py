@@ -5970,5 +5970,19 @@ class TestRotateQuant(TestCase):
             self.assertTrue(output1_npu.dtype == output1.dtype)
 
 
+class TestQuantMax(TestCase):
+    def test_npu_quant_max_meta(self):
+        # 2D, float16, default dst_dtype (float8_e5m2)
+        x = torch.randn(8, 256, dtype=torch.float16).to("npu")
+        scale = torch.tensor([1.0], dtype=torch.float32).to("npu")
+        actual_y, actual_amax = torch_npu.npu_quant_max(x, scale)
+        with FakeTensorMode():
+            fake_x = torch.randn(8, 256, dtype=torch.float16).to("npu")
+            fake_scale = torch.tensor([1.0], dtype=torch.float32).to("npu")
+            fake_y, fake_amax = torch_npu.npu_quant_max(fake_x, fake_scale)
+        self.assertEqual(actual_y.shape, fake_y.shape)
+        self.assertEqual(actual_amax.shape, fake_amax.shape)
+
+
 if __name__ == "__main__":
     run_tests()
