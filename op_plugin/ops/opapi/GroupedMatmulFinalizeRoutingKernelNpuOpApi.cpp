@@ -150,7 +150,7 @@ at::Tensor npu_grouped_matmul_finalize_routing(
 
     if (shared_input.has_value()) {
         TORCH_CHECK(dst_type == at::ScalarType::Float,
-                    "When shared_input and logit is not None, the dtype must be float32",
+                    "When shared_input and logit is not None, the dtype must be float32        ",
                     OPS_ERROR(ErrCode::PARAM));
     }
     c10::TensorOptions options = x.options().dtype(dst_type);
