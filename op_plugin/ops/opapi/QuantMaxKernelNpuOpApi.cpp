@@ -78,10 +78,13 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_max(
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype_value);
     at::ScalarType y_scalar_type = npu_preparation::convert_to_scalar_type(y_acltype);
 
-    // 使用 apply_tensor(src, opts) 让 y 继承 x 的 NPU 存储描述符（storage_sizes_），
-    // 避免 allocator 按新 dtype（float8）独立对齐导致 y 的 storageShape 与 x 不一致，
-    // 从而绕过 tiling CheckShape 基于 GetStorageShape() 的逐维比较。
-    at::Tensor y = npu_preparation::apply_tensor(x, x.options().dtype(y_scalar_type));
+    at::Tensor y = npu_preparation::apply_tensor_without_format(x.sizes(), x.options().dtype(y_scalar_type));
+    
+    auto& d = torch_npu::NPUBridge::GetNpuStorageImpl(y)->npu_desc_;                                                                                                                                                                                   
+    std::cout << "y.sizes=" << y.sizes() << " storage_sizes_=";     
+    for (auto v : d.storage_sizes_) std::cout << v << ",";                                                                                                                                                                                               
+    std::cout << " npu_format=" << d.npu_format_ << std::endl;
+
     at::SmallVector<int64_t, op_infer::SIZE> amax_size = {1};
     at::Tensor amax = npu_preparation::apply_tensor_without_format(amax_size, x.options().dtype(x.scalar_type()));
 
