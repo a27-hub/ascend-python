@@ -1312,14 +1312,26 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
     mm_y = None
     permute_out = None
     out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(gmm_y_dtype)
+    INT4_IN_INT8 = 2
+    is_W4 = (gmm_weight.dtype == torch.uint8 and gmm_x_scale.dtype == torch.uint8)
+    if is_W4:
+        is_trans_gmm_weight = gmm_x.size(1) == gmm_weight.size(1)
+        if is_trans_gmm_weight is not True:
+            out_y = gmm_weight.size(2) * INT4_IN_INT8
     if mm_x is not None:
         out_mm_x = mm_x.size(0)
         out_mm_y = mm_weight.size(1)
+        if is_W4:
+            is_trans_mm_weight = mm_x.size(1) == mm_weight.size(0)
+            if is_trans_mm_weight is not True:
+                out_mm_y = mm_weight.size(1) * INT4_IN_INT8
         mm_out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(mm_y_dtype)
         mm_y = torch.empty([out_mm_x, out_mm_y], dtype=mm_out_scalar_type, device='meta')
     if permute_out_flag:
         permute_out_x = out_x
         permute_out_y = gmm_x.size(1)
+        if is_W4:
+            permute_out_y = gmm_x.size(1) * INT4_IN_INT8
         permute_out = gmm_x.new_empty(permute_out_x, permute_out_y)
     gmm_y = torch.empty([out_x, out_y], dtype=out_scalar_type, device='meta')
     return (gmm_y, mm_y, permute_out)
