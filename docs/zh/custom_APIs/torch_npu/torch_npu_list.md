@@ -806,6 +806,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p><a name="p1281815913362"></a><a name="p1281815913362"></a>训练场景下，npu_fused_floyd_attention相较于传统FA(npu_fusion_attention)主要是计算QK/PV注意力时，会额外将维度(seq)作为batch轴处理，从而将注意力计算转换为批量矩阵乘法(batchMatmul)</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_masked_causal_conv1d.md">torch_npu.npu_masked_causal_conv1d</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>带掩码的因果一维深度可分离卷积。对输入张量沿序列维度执行窗口大小为3的因果卷积（仅使用当前及历史时刻的输入），并可选地对输出进行掩码置零。</p>
+</td>
+</tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_clipped_swiglu.md">torch_npu.npu_clipped_swiglu</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>带截断的Swish门控线性单元激活函数，实现x的变体SwiGlu计算。</p>
