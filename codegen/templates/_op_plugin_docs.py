@@ -15302,10 +15302,11 @@ _add_torch_npu_docstr(
  """
  )
 
- _add_torch_npu_docstr(
+
+_add_torch_npu_docstr(
     "npu_apply_rotary_pos_emb",
     r"""
-接口原型: 
+接口原型:
 torch_npu.npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, *, str layout="BSND", str rotary_mode="half") -> (Tensor, Tensor)
 
 功能描述：
@@ -15323,14 +15324,14 @@ rotary_mode(str)：可选参数，旋转编码模式，支持"half"、"quarter"�
 query_out(Tensor)：表示原地更新后的query张量。
 key_out(Tensor)：表示原地更新后的key张量。
 
-支持版本: 
+支持版本:
 PyTorch 2.7.1+
 
-支持的型号: 
+支持的型号:
 Atlas A2训练系列产品
 Atlas A3训练系列产品
 
-调用示例: 
+调用示例:
 import torch
 import torch_npu
 
@@ -15358,7 +15359,6 @@ torch_npu.npu_apply_rotary_pos_emb(
     layout="BSND",
     rotary_mode="half"
 )
-
 """
 )
  
