@@ -1654,6 +1654,15 @@
   "func: npu_anti_quant(Tensor x, Tensor scale, *, Tensor? offset=None, int? dst_dtype=None, int? src_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode=\"rint\", int? dst_dtype=291) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "op_api: torch_npu.npu_quant_max(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_quant_max(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "func: _npu_silent_check(Tensor(a!) input_grad, Tensor val, Tensor(b!) pre_val, Tensor(c!) min_val, Tensor(d!) max_val, Tensor val_counter, int c_min_steps, float c_thresh_l1, float c_coeff_l1, float c_thresh_l2, float c_coeff_l2) -> Tensor": {
     "version": ["all_version"]
   },

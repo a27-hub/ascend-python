@@ -5105,6 +5105,48 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
     else:
         return torch.empty_like(x, dtype=y_dtype)
 
+@impl(m, "npu_quant_max")
+def npu_quant_max_meta(x, scale, *, round_mode="rint", dst_dtype=291):
+    # 处理 round_mode：如果为空则使用默认值
+    if round_mode is None:
+        round_mode = "rint"
+
+    supported_round_modes = ["rint", "round", "hybrid"]
+    if round_mode not in supported_round_modes:
+        raise RuntimeError("round_mode only supports 'rint', 'round' and 'hybrid', got '" +
+                            round_mode + "'" + ops_error(ErrCode.PARAM))
+
+    # 校验 scale 必须为一维 tensor，shape 为 [1]
+    if scale.dim() != 1:
+        raise RuntimeError("scale must be a 1D tensor with shape [1], but got dim: " +
+                            str(scale.dim()) + ops_error(ErrCode.PARAM))
+    if scale.size(0) != 1:
+        raise RuntimeError("scale shape must be [1], but got shape: [" +
+                            str(scale.size(0)) + "]" + ops_error(ErrCode.PARAM))
+    if scale.dtype != torch.float32:
+        raise RuntimeError("scale dtype must be torch.float32, but got: " +
+                            str(scale.dtype) + ops_error(ErrCode.PARAM))
+
+    dst_dtype = dst_dtype if dst_dtype is not None else 291
+    # 将 PyTorch 标准 dtype 枚举值映射到 torch_npu 扩展枚举值
+    # torch.float8_e5m2 = 23 -> 291, torch.float8_e4m3fn = 24 -> 292
+    _TORCH_TO_NPU_DTYPE = {23: 291, 24: 292}
+    dst_dtype = _TORCH_TO_NPU_DTYPE.get(dst_dtype, dst_dtype)
+    # 校验 round_mode 与 dst_dtype 的匹配关系
+    if dst_dtype in (291, 292) and round_mode != "rint":
+        raise RuntimeError("When dst_dtype is float8_e5m2(291) or float8_e4m3fn(292), "
+                            "round_mode must be 'rint', but got '" + round_mode + "'" +
+                            ops_error(ErrCode.PARAM))
+    if dst_dtype == 290 and round_mode not in ("round", "hybrid"):
+        raise RuntimeError("When dst_dtype is hifloat8(290), round_mode must be 'round' or "
+                            "'hybrid', but got '" + round_mode + "'" + ops_error(ErrCode.PARAM))
+    # 使用整数值获取对应的 torch.dtype
+    y_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.float8_e5m2)
+
+    y = torch.empty_like(x, dtype=y_dtype)
+    amax = x.new_empty([1], dtype=x.dtype)
+    return (y, amax)
+
 
 @impl(m, "npu_kronecker_quant")
 def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=None):
