@@ -81,6 +81,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 - **activation\_scale** (`Tensor`)：可选参数，表示pertoken权重量化对应的反量化系数。shape为\[TokensNum, 1\]，最后一维为1， 其余与x保持一致。数据类型支持`float32`，数据格式为$ND$。当`x`为`int32`时，要求该参数非None，表示需要做反量化。
 - **bias** (`Tensor`)：可选参数，表示`x`的偏置变量。数据类型支持`int32`，数据格式为$ND$。group_index为2维的场景下bias必须为None。
 - **quant\_scale** (`Tensor`)：可选参数，表示smooth量化系数。要求为2维张量，shape为\[groupNum, H\]，数据类型支持`float32`、`float16`和`bfloat16`，数据格式为$ND$。
+  > **注意**：静态量化下，quant\_scale 仅支持 float32 类型。
 - **quant\_offset** (`Tensor`)：可选参数，表示量化中的偏移项。数据类型支持`float32`、`float16`和`bfloat16`，数据格式为$ND$。`group_index`场景下（非None），该参数不生效为None。
 - **group\_index** (`Tensor`)：可选参数，当前只支持count模式，表示该模式下指定分组的Tokens数（要求非负整数）。要求为1维张量，数据类型支持`int64`，数据格式$ND$。
 - **activate\_left** (`bool`)：可选参数，Swiglu流程中是否进行左激活，默认False。
@@ -106,8 +107,8 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
     - `group_index`只支持count模式，需要网络保证`group_index`输入的求和不超过`x`的TokensNum维度，否则会出现越界访问。
     - H轴有维度大小限制：H≤10496同时64对齐场景；规格不满足场景会进行校验。
     - 输出`out`和`scale`超过`group_index`总和的部分未进行清理处理，该部分内存为垃圾数据，可能会存在inf/nan异常值，网络使用的时候需要注意影响。
-- 当 x 为 int32 时，必须提供 weight_scale。
-- 当 x 为 float16 或 bfloat16 时，weight_scale、activation_scale、bias 必须为 None。
+- 当 x 为 int32 时，建议提供 weight_scale 以进行反量化。
+- 当 x 为 float16 或 bfloat16 时，weight_scale 通常为 None。
 - x 的最后一维长度必须为偶数。
 - 当激活维度不是 x 的最后一维时，group_index 必须为 None。
 - 当 group_index 非 None 时，仅支持动态量化（quant_mode=1），且 bias、quant_offset 必须为 None。
