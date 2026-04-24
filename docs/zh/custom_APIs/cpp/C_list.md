@@ -214,5 +214,50 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>发送或接收一批tensor，异步处理P2P操作序列中的每一个操作，并返回对应的请求。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_multi_head_latent_attention.md">（beta）at_npu::native::atb::npu_multi_head_latent_attention</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>MLA 场景下的分页 KV Cache attention 接口，覆盖基础输出、LSE 输出和 workspace 相关变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_self_attention_prefix_encoder.md">（beta）at_npu::native::atb::npu_self_attention_prefix_encoder</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Prefix encoder 场景下的分页 KV Cache attention 接口，覆盖基础输出和 out 变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_mla_preprocess.md">（beta）at_npu::native::atb::npu_mla_preprocess</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>MLA 场景输入预处理融合接口，覆盖基础输出和 out 变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-_npu_paged_attention_v2.md">（beta）at_npu::native::atb::_npu_paged_attention_v2</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Paged attention v2 接口，覆盖执行接口和 workspace 查询变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-_npu_flash_attention_v2.md">（beta）at_npu::native::atb::_npu_flash_attention_v2</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Flash attention v2 接口，支持基础 mask、alibi 和压缩 mask 场景。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-_npu_flash_attention_prefix_v2.md">（beta）at_npu::native::atb::_npu_flash_attention_prefix_v2</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Prefix 场景下的 flash attention 接口，支持压缩 mask 与 prefix cache 输入。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_fused_add_topk_div.md">（beta）at_npu::native::atb::npu_fused_add_topk_div</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>MoE 路由场景融合接口，覆盖基础输出和 out 变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_ring_mla.md">（beta）at_npu::native::atb::npu_ring_mla</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>长序列 ring MLA 接口，覆盖基础输出和 out 变体。</p>
+</td>
+</tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="（beta）at_npu-native-atb-npu_paged_cache_load.md">（beta）at_npu::native::atb::npu_paged_cache_load</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>分页 KV Cache 读取接口，覆盖基础输出和 out 变体。</p>
+</td>
+</tr>
 </tbody>
 </table>
