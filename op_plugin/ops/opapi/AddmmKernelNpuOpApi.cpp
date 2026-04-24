@@ -77,7 +77,6 @@ at::Tensor &addmm_out(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
-    const at::ScalarType output_dtype,
     const at::Scalar &beta,
     const at::Scalar &alpha,
     at::Tensor &out)
@@ -86,7 +85,7 @@ at::Tensor &addmm_out(
                            acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
-    npu_preparation::check_tensor({self, mat1, mat2}, out, output_dtype, output_size);
+    npu_preparation::check_tensor({self, mat1, mat2}, out, out.scalar_type(), output_size);
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
     } else {
@@ -102,6 +101,7 @@ at::Tensor &addmm_out(
     const at::Tensor &self,
     const at::Tensor &mat1,
     const at::Tensor &mat2,
+    const at::ScalarType output_dtype,
     const at::Scalar &beta,
     const at::Scalar &alpha,
     at::Tensor &out)
@@ -110,7 +110,7 @@ at::Tensor &addmm_out(
                            acl_op::addmm_out(self, mat1, mat2, beta, alpha, out));
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     auto output_size = op_infer::addmm_npu_output_size(self, mat1, mat2);
-    npu_preparation::check_tensor({self, mat1, mat2}, out, self.scalar_type(), output_size);
+    npu_preparation::check_tensor({self, mat1, mat2}, out, output_dtype, output_size);
     if (is_nd_nd_nz_format(self, mat1, mat2)) {
         EXEC_NPU_CMD(aclnnAddmmWeightNz, self, mat1, mat2, beta, alpha, out, cube_math_type);
     } else {
