@@ -1,0 +1,92 @@
+# This file describes the mapping from ATB public C++ interfaces to the
+# existing ::atb implementation functions.
+#
+# It is consumed by torchnpugen/gen_atb_ops.py to generate:
+#   - op_plugin/include/AtbOpsInterface.h
+#   - op_plugin/ops/atb/AtbOpsInterface.cpp
+#
+# Field meanings:
+#   - cpp_name:
+#       The public C++ function name generated under namespace
+#       at_npu::native::atb.
+#   - impl_name:
+#       The existing ::atb implementation function that the generated wrapper
+#       forwards to.
+#
+# Maintenance rules:
+#   - This file is an interface-to-implementation mapping file, not a schema
+#     source of truth file.
+#   - ATB dispatcher schemas are discovered from op_plugin/ops/atb/*.cpp
+#     TORCH_LIBRARY_FRAGMENT(atb, m) / m.def(...) definitions.
+#   - Public C++ wrapper signatures are derived from the corresponding
+#     ::atb implementation function definitions.
+
+functions:
+  - cpp_name: "_npu_paged_attention_quant"
+    impl_name: "atb::_npu_paged_attention_quant"
+  - cpp_name: "npu_fused_add_topk_div"
+    impl_name: "atb::npu_fused_add_topk_div"
+  - cpp_name: "npu_fused_add_topk_div_out"
+    impl_name: "atb::npu_fused_add_topk_div_out"
+  - cpp_name: "_npu_group_topk"
+    impl_name: "atb::_npu_group_topk"
+  - cpp_name: "_npu_matmul_add_fp32"
+    impl_name: "atb::_npu_matmul_add_fp32"
+  - cpp_name: "npu_mla_preprocess"
+    impl_name: "atb::npu_mla_preprocess"
+  - cpp_name: "npu_mla_preprocess_out"
+    impl_name: "atb::npu_mla_preprocess_out"
+  - cpp_name: "npu_multi_head_latent_attention"
+    impl_name: "atb::npu_multi_head_latent_attention"
+  - cpp_name: "npu_multi_head_latent_attention_out"
+    impl_name: "atb::npu_multi_head_latent_attention_out"
+  - cpp_name: "npu_multi_head_latent_attention_lse"
+    impl_name: "atb::npu_multi_head_latent_attention_lse"
+  - cpp_name: "_npu_multi_head_latent_attention_lse_get_workspace"
+    impl_name: "atb::_npu_multi_head_latent_attention_lse_get_workspace"
+  - cpp_name: "npu_multi_head_latent_attention_lse_out"
+    impl_name: "atb::npu_multi_head_latent_attention_lse_out"
+  - cpp_name: "_npu_paged_attention"
+    impl_name: "atb::_npu_paged_attention"
+  - cpp_name: "_npu_paged_attention_get_workspace"
+    impl_name: "atb::_npu_paged_attention_get_workspace"
+  - cpp_name: "_npu_paged_attention_v2"
+    impl_name: "atb::_npu_paged_attention_v2"
+  - cpp_name: "_npu_paged_attention_v2_get_workspace"
+    impl_name: "atb::_npu_paged_attention_v2_get_workspace"
+  - cpp_name: "_npu_paged_attention_mla"
+    impl_name: "atb::_npu_paged_attention_mla"
+  - cpp_name: "_npu_paged_attention_splitfuse"
+    impl_name: "atb::_npu_paged_attention_splitfuse"
+  - cpp_name: "npu_paged_cache_load_out"
+    impl_name: "atb::npu_paged_cache_load_out"
+  - cpp_name: "npu_paged_cache_load"
+    impl_name: "atb::npu_paged_cache_load"
+  - cpp_name: "_npu_quantize_per_tensor"
+    impl_name: "atb::_npu_quantize_per_tensor"
+  - cpp_name: "_npu_quant_rms_norm"
+    impl_name: "atb::_npu_quant_rms_norm"
+  - cpp_name: "_npu_reshape_and_cache"
+    impl_name: "atb::_npu_reshape_and_cache"
+  - cpp_name: "_npu_reshape_and_cache_siso"
+    impl_name: "atb::_npu_reshape_and_cache_siso"
+  - cpp_name: "npu_ring_mla"
+    impl_name: "atb::npu_ring_mla"
+  - cpp_name: "npu_ring_mla_out"
+    impl_name: "atb::npu_ring_mla_out"
+  - cpp_name: "_npu_rotary_embedding"
+    impl_name: "atb::_npu_rotary_embedding"
+  - cpp_name: "_npu_flash_attention"
+    impl_name: "atb::_npu_flash_attention"
+  - cpp_name: "_npu_flash_attention_v2"
+    impl_name: "atb::_npu_flash_attention_v2"
+  - cpp_name: "_npu_flash_attention_prefix_v2"
+    impl_name: "atb::_npu_flash_attention_prefix_v2"
+  - cpp_name: "npu_self_attention_prefix_encoder"
+    impl_name: "atb::npu_self_attention_prefix_encoder"
+  - cpp_name: "npu_self_attention_prefix_encoder_out"
+    impl_name: "atb::npu_self_attention_prefix_encoder_out"
+  - cpp_name: "_npu_flash_attention_qlens"
+    impl_name: "atb::_npu_flash_attention_qlens"
+  - cpp_name: "_npu_flash_attention_unpad"
+    impl_name: "atb::_npu_flash_attention_unpad"
