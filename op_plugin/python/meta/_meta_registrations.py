@@ -6377,6 +6377,18 @@ def npu_repeat_interleave_backward_int_meta(grad, x, repeats, dim=None):
 
     return result
 
+@impl(m, "npu_quant_max")
+def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_dtype == 291:
+        y = torch.empty_like(x, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_dtype == 292:
+        y = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+    else:
+        # hifloat8 等 PyTorch 无原生 dtype 对应，存储用 uint8 承载
+        y = torch.empty_like(x, dtype=torch.uint8)
+    amax = x.new_empty([1], dtype=x.dtype)
+    return (y, amax)
 
 @impl(m, "npu_dynamic_mx_quant_with_dual_axis")
 def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_type=296, scale_alg=0, dst_type_max=0.0):
