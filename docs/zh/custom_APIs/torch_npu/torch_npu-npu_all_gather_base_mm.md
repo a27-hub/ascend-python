@@ -9,7 +9,7 @@
 
 ## 功能说明<a name="zh-cn_topic_0000001694916914_section14441124184110"></a>
 
-- API功能：TP切分（Tensor Parallelism，张量并行）场景下，融合`allgather`和`matmul`，实现通信和计算流水并行。TP切分是一种分布式训练中常用的模型并行策略，将模型的权重张量沿某个维度切分到多个设备上，每个设备持有部分权重，计算时通过allgather通信聚合各设备的局部张量后再执行矩阵乘法。
+- API功能：TP切分（Tensor Parallelism，张量并行）场景下，融合`allgather`和`matmul`，实现通信和计算流水并行。
 
 - 计算公式：
     $x1$代表输入`x1`
