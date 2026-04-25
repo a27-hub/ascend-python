@@ -1283,9 +1283,7 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
     if permute_out_flag:
         permute_out_x = out_x
         permute_out_y = gmm_x.size(1)
-        if is_W4:
-            permute_out_y = gmm_x.size(1) * INT4_IN_INT8
-        permute_out = gmm_x.new_empty(permute_out_x, permute_out_y)
+        permute_out = torch.empty([permute_out_x, permute_out_y], dtype=gmm_x.dtype, device='meta')
     gmm_y = torch.empty([out_x, out_y], dtype=out_scalar_type, device='meta')
     return (gmm_y, mm_y, permute_out)
 
