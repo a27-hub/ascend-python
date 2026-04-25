@@ -38,6 +38,23 @@
 
             $$Moe(ori\_x)=const\_expert\_alpha\_1*ori\_x+const\_expert\_alpha\_2*const\_expert\_v$$
 
+## 并行模式说明
+
+本接口服务于 MoE 网络的分布式推理，涉及两种并行模式：
+
+- EP（Expert Parallelism，专家并行）：MoE有的并行方式，将不同的专家分布到不同卡上，每张卡只持有完整专家集合的一个子集。每个token通过路由决定需要由哪些专家处理，然后通过AlltoAll通信被发送到对应专家所在的卡上完成计算。EP是本接口的必选并行模式，所有调用都必须配置EP相关参数。
+    - <term>EP通信域 = 所有持有MoE专家的卡组成的通信组</term>
+    - <term>ep_world_size = 该域内卡数</term>
+    - <term>moe_expert_num / (ep_world_size - shared_expert_rank_num) = 每张卡上的MoE专家数（local_expert_num）</term>
+
+- TP（Tensor Parallelism，张量并行）：通用的模型并行方式，将单个算子的权重/激活张量在某一维度上切分到多张卡上，多卡协作完成一次计算，计算后通过AllReduce/ AllGather等集合通信聚合结果。在本接口中，TP用于进一步对单个专家的计算做切分——当单卡承载不下一个专家的权重，或希望用多卡并行加速单专家计算时启用。TP是可选的，只有当模型中存在专家级张量切分时才启用。
+    - <term>TP 通信域 = 协同计算同一个专家的卡组成的通信组</term>
+    - <term>tp_world_size = 该域内卡数,当前仅支持0/1(无 TP)或2(TP=2)</term>
+
+- EP与TP的叠加：启用TP时，总卡数 = ep_world_size × tp_world_size，形成二维网格：
+    - <term>沿EP维度：专家在卡间分布</term>
+    - <term>沿TP维度：单个专家在卡间切分</term>
+
 ## 函数原型<a name="zh-cn_topic_0000002322738573_section470115437220"></a>
 
 ```python

@@ -19,6 +19,13 @@
     - cur\_rank是`expert_token_num_per_rank`的纵轴索引，表示该token原本在的卡。
     - cur\_expert是`expert_token_num_per_rank`的横轴索引，表示该token由卡上专家cur\_expert计算。
 
+## 术语说明
+
+- MoE 网络：混合专家（Mixture of Experts）网络，一种稀疏激活的神经网络结构。每层包含多个并行"专家"子网络，由路由（Routing）模块决定每个token由哪个或哪些专家处理，从而在增大模型容量的同时保持计算量可控。
+- token：模型处理的最小数据单元，通常为词或子词经过嵌入（embedding） 后得到的特征向量。
+- 专家（Expert）：MoE网络中的子网络。在多卡部署时，专家被切分到不同卡上，每张卡承载若干个专家。
+- AlltoAll操作：集合通信原语。每张卡将本地数据按目的卡切分后发送给所有其他卡，同时接收来自所有其他卡的数据。在MoE中用于将token按路由结果分发到目标专家所在的卡。
+
 ## 函数原型
 
 ```python
