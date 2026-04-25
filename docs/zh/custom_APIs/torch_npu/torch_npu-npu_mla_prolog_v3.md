@@ -261,7 +261,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       </td>
     </tr>
     <tr>
-      <td rowspan="3"><em>mxfp8全量化<em></td>
+      <td rowspan="3"><em>mxfp8全量化</em></td>
       <td> kvCache非量化</td>
       <td>
         - weight_quant_mode=3，kv_cache_quant_mode=0，query_quant_mode=0<br>
@@ -295,9 +295,9 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <th><em>非量化</em></th>
       <th colspan="3"><em>部分量化</em></th>
       <th colspan="3"><em>int8全量化</em></th>
-      <th colspan="3"><em>mxfp8全量化<em></th>
-      <th colspan="3"><em>fp8全量化<em></th>
-      <th colspan="3"><em>hif8全量化<em></th>
+      <th colspan="3"><em>mxfp8全量化</em></th>
+      <th colspan="3"><em>fp8全量化</em></th>
+      <th colspan="3"><em>hif8全量化</em></th>
     </tr>
     <tr>
       <th>dtype</th>
