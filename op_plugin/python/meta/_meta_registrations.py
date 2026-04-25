@@ -284,10 +284,7 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         sparse_indices.numel() > 0,
         lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_softmax_lse,
-        lambda: "when return_softmax_lse is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
+
 
     if layout_query == "TND":
         torch._check(
@@ -2268,11 +2265,12 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
             ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_value,
-        lambda: "when return_value is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
-
+    properties = torch.npu.get_device_properties()
+    if "Ascend950" not in properties.name:
+        torch._check(
+            not return_value,
+            lambda: "when return_value is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
+        )
     if layout_query == "BSND":
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
     else:
