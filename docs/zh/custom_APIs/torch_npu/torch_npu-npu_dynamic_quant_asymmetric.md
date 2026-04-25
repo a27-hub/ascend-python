@@ -11,7 +11,7 @@
 
 - API功能：
 
-    对输入的张量进行动态非对称量化。支持pertoken、pertensor和MoE（Mixture of Experts，混合专家模型）场景。
+    对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式和MoE（Mixture of Experts，混合专家模型）场景，pertensor模式暂不支持。
 
 - 计算公式：
     
@@ -28,7 +28,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_dynamic_quant_asymmetric(x, *, smooth_scales=None, group_index=None, dst_type=None, quant_mode="pertoken") -> (Tensor, Tensor, Tensor)
+torch_npu.npu_dynamic_quant_asymmetric(x, *, smooth_scales=None, group_index=None, dst_type=None) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -43,12 +43,11 @@ torch_npu.npu_dynamic_quant_asymmetric(x, *, smooth_scales=None, group_index=Non
 - **dst_type** (`ScalarType`)：可选参数，指定量化输出的类型，传None时当作`int8`处理。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`、`quint4x2`。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`int8`、`quint4x2`。
-- **quant_mode** (`str`)：可选参数，量化模式，支持"pertoken"、"pertensor"。默认值为"pertoken"。若`group_index`不为None，只支持"pertoken"。
 
 ## 返回值说明
 
 - **y** (`Tensor`)：量化后的输出，数据类型由`dst_type`指定。当`dst_type`是`quint4x2`时，`y`的数据类型为`int32`，形状最后一维为`x`最后一维除以8，其余维度与`x`一致，每个`int32`元素包含8个`int4`结果。其他场景下`y`形状与输入`x`一致，数据类型由`dst_type`指定。
-- **scale** (`Tensor`)：非对称动态量化过程中计算出的缩放系数，数据类型为`float32`。如果`quant_mode`是"pertoken"，shape为`x`的形状剔除最后一维。如果`quant_mode`是"pertensor"，shape为(1,)。
+- **scale** (`Tensor`)：非对称动态量化过程中计算出的缩放系数，数据类型为`float32`。pertoken模式下，shape为`x`的形状剔除最后一维。
 - **offset** (`Tensor`)：非对称动态量化过程中计算出的偏移系数，数据类型为`float32`，shape和`scale`一致。
 
 ## 约束说明
