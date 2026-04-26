@@ -44,7 +44,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm_v2(const 
     c10::optional<int64_t> gmm_x_dtype, c10::optional<int64_t> gmm_weight_dtype,
     c10::optional<int64_t> gmm_x_scale_dtype, c10::optional<int64_t> gmm_weight_scale_dtype,
     c10::optional<int64_t> mm_x_dtype, c10::optional<int64_t> mm_weight_dtype, c10::optional<int64_t> mm_x_scale_dtype,
-    c10::optional<int64_t> mm_weight_scale_dtype, c10::optional<int64_t> mm_y_dtype)
+    c10::optional<int64_t> mm_weight_scale_dtype, c10::optional<int64_t> mm_y_dtype,
+    c10::optional<c10::string_view> comm_mode)
 {
     // 校验空tensor
     TORCH_CHECK(gmm_x.defined(), "The input tensor gmm_x can not be None.", OPS_ERROR(ErrCode::PARAM));
@@ -214,6 +215,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm_v2(const 
     int64_t group_sizes = 0;
     bool transposeGmmWeight = false;
     bool transposeMmWeight = false;
+    const char* comm_mode_ptr = comm_mode.has_value() ? comm_mode.value().data() : "ccu";
 
     TensorWrapper gmm_x_wrapper = make_wrapper(gmm_x, gmm_x_dtype);
     TensorWrapper gmm_weight_wrapper = make_wrapper(gmm_weight, gmm_weight_dtype);
@@ -243,6 +245,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm_v2(const 
         transposeMmWeight,
         group_sizes,
         permute_out_flag,
+        comm_mode_ptr,
         gmm_y,
         mm_y,
         permute_out_wrapper);
