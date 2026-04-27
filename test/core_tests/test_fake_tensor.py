@@ -5970,6 +5970,5 @@ class TestRotateQuant(TestCase):
             self.assertTrue(output1_npu.dtype == output1.dtype)
 
 
-
 if __name__ == "__main__":
     run_tests()
