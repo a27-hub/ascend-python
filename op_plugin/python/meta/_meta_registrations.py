@@ -1398,7 +1398,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x.dtype == torch.float4_e2m1:
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296:
                 torch._check(
                     scale_dim == THREE_DIM_NUM,
                     lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2, float8_e4m3fn or float4_e2m1" + ops_error(ErrCode.VALUE),
@@ -1481,7 +1481,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
-    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x.dtype == torch.float4_e2m1):
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode == 9:
         expanded_x_dtype = torch.float4_e2m1
@@ -1499,7 +1499,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
-        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x.dtype == torch.float4_e2m1):
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
             scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
