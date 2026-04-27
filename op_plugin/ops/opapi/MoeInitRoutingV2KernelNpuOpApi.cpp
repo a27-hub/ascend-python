@@ -163,10 +163,15 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                     {expanded_scale_len, h}, x.options().dtype(at::kFloat8_e4m3fn));
                 break;
             case QUANT_MODE_MXFP4_E2M1:
+<<<<<<< HEAD
                 // expanded_x = npu_preparation::apply_tensor_without_format(
                 //     {expanded_scale_len, h}, x.options().dtype(at::kFloat4_e2m1));
                 expanded_x = npu_preparation::apply_tensor_without_format(
                     {expanded_scale_len, h}, x.options().dtype(at::kByte));
+=======
+                expanded_x = npu_preparation::apply_tensor_without_format(
+                    {expanded_scale_len, h}, x.options().dtype(at::kFloat4_e2m1));
+>>>>>>> 52fcbddacfb8f66011293c7676ce814b82a4fd6c
                 break;
 #endif
             case QUANT_MODE_STATIC:
