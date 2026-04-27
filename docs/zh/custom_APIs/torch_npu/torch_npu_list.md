@@ -821,5 +821,10 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_rotate_quant_desc"><a name="p_rotate_quant_desc"></a><a name="p_rotate_quant_desc"></a><span>npu_rotate_quant是一种融合旋转（Rotate）和量化（Quant）的计算方法，用于模型性能优化。</span></p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_quant_max.md">torch_npu.npu_quant_max</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>对输入张量x进行量化操作，同时计算并输出绝对值最大值amax。</p>
+</td>
+</tr>
 </tbody>
 </table>
