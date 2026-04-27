@@ -1308,7 +1308,7 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 
 
 @impl(m, "npu_mhc_sinkhorn")
-def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+def npu_mhc_sinkhorn(x, *, eps=1e-6, num_iters=20, out_flag=0):
     x_shape = list(x.shape)
     torch._check(
         x_shape[-1] in [4, 6, 8],
@@ -1324,9 +1324,19 @@ def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
         )
 
     y_size = tuple(x.shape)
-    return (torch.empty(y_size, dtype=x.dtype, device='meta'),
-            torch.empty(y_size, dtype=x.dtype, device='meta'),
-            torch.empty(y_size, dtype=x.dtype, device='meta'))
+    if out_flag:
+        T = x_shape[0]
+        n = x_shape[-1]
+        n_align = 8
+        if x.dim() == 4:
+            T = T * x_shape[1]
+        morm_size = tuple([2 * num_iters * T * n * n_align])
+        sum_size = tuple([2 * num_iters * T * n_align])
+        return (torch.empty(y_size, dtype=x.dtype, device='meta'),
+                torch.empty(morm_size, dtype=x.dtype, device='meta'),
+                torch.empty(sum_size, dtype=x.dtype, device='meta'))
+    else:
+        return (torch.empty(y_size, dtype=x.dtype, device='meta'), None, None)
 
 
 @impl(m, "npu_moe_init_routing_v2")
@@ -1382,18 +1392,38 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
         lambda: "row_idx_type is None or invalid. must be in [0, 1]"
     )
-
+    ALIGN_BASE = 64
+    THREE_DIM_NUM = 3
+    MXFP8_SCALE_THIRD_DIM_SIZE = 2
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            torch._check(
-                scale_dim == 1,
-                lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
-            )
-            torch._check(
-                x.size(0) == scale.size(0),
-                lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
-            )
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn:
+                torch._check(
+                    scale_dim == THREE_DIM_NUM,
+                    lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2 or float8_e4m3fn" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    ((x.size(1) + ALIGN_BASE - 1) // ALIGN_BASE) == scale.size(1),
+                    lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    MXFP8_SCALE_THIRD_DIM_SIZE == scale.size(2),
+                    lambda: "the third dim of scale should be the 2" + ops_error(ErrCode.VALUE),
+                )
+            else:
+                torch._check(
+                    scale_dim == 1,
+                    lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
         elif quant_mode == 0:
             torch._check(
                 scale_dim == 1,
@@ -1451,6 +1481,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
@@ -1464,6 +1496,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+            scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode in [0, 6, 7]:
@@ -2298,10 +2333,12 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
             ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_value,
-        lambda: "when return_value is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
+
+    if get_soc_version() < 260:
+        torch._check(
+            not return_value,
+            lambda: "when return_value is true, not support on this soc version." + ops_error(ErrCode.VALUE),
+        )
 
     if layout_query == "BSND":
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
@@ -6604,6 +6641,15 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
 
+@impl(m, "npu_chunk_gated_delta_rule")
+def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None):
+    torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
+    out_shape = (value.size(0), value.size(1), value.size(2))
+
+    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
+    out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
+    return out, finalState
 
 @impl(m, "npu_multi_head_attention")
 def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, value_weight, attn_mask,
