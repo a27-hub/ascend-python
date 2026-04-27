@@ -22,8 +22,10 @@ namespace op_api {
                                                                      c10::string_view hcom, int64_t ep_world_size, at::IntArrayRef send_counts, at::IntArrayRef recv_counts,
                                                                      const c10::optional<at::Tensor> &send_counts_tensor, const c10::optional<at::Tensor> &recv_counts_tensor,
                                                                      const c10::optional<at::Tensor> &mm_x, const c10::optional<at::Tensor> &mm_weight,
-                                                                     bool trans_gmm_weight, bool trans_mm_weight, bool permute_out_flag)
+                                                                     bool trans_gmm_weight, bool trans_mm_weight, bool permute_out_flag,
+                                                                     c10::optional<c10::string_view> comm_mode)
     {
+        const char* comm_mode_real = comm_mode.has_value() ? comm_mode.value().data() : "ccu";
         at::Tensor mm_y{nullptr};
         at::Tensor permute_out{nullptr};
         int64_t a = 0;
@@ -62,6 +64,7 @@ namespace op_api {
                      trans_gmm_weight,
                      trans_mm_weight,
                      permute_out_flag,
+                     comm_mode_real,
                      gmm_y,
                      mm_y,
                      permute_out);

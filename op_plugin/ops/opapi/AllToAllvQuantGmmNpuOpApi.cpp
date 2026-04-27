@@ -44,8 +44,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     c10::optional<int64_t> gmm_x_dtype, c10::optional<int64_t> gmm_weight_dtype,
     c10::optional<int64_t> gmm_x_scale_dtype, c10::optional<int64_t> gmm_weight_scale_dtype,
     c10::optional<int64_t> mm_x_dtype, c10::optional<int64_t> mm_weight_dtype, c10::optional<int64_t> mm_x_scale_dtype,
-    c10::optional<int64_t> mm_weight_scale_dtype, c10::optional<int64_t> mm_y_dtype)
+    c10::optional<int64_t> mm_weight_scale_dtype, c10::optional<int64_t> mm_y_dtype,
+    c10::optional<c10::string_view> comm_mode)
 {
+    const char* comm_mode_real = comm_mode.has_value() ? comm_mode.value().data() : "ccu";
     // 校验空tensor
     TORCH_CHECK(gmm_x.defined(), "The input tensor gmm_x can not be None.", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(gmm_weight.defined(), "The input tensor gmm_weight can not be None.", OPS_ERROR(ErrCode::PARAM));
@@ -243,6 +245,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
         transposeMmWeight,
         group_sizes,
         permute_out_flag,
+        comm_mode_real,
         gmm_y,
         mm_y,
         permute_out_wrapper);
