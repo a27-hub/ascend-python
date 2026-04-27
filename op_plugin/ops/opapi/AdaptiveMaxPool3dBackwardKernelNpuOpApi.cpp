@@ -47,6 +47,7 @@ at::Tensor& adaptive_max_pool3d_backward_out(
     npu_preparation::check_tensor({grad_output, self, indices}, grad_input, grad_output.scalar_type(), self.sizes());
 
     EXEC_NPU_CMD(aclnnAdaptiveMaxPool3dBackward, grad_output, self, indices, grad_input);
+
     return grad_input;
 }
 
