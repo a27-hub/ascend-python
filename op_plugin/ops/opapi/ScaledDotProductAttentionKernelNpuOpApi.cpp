@@ -108,6 +108,56 @@ inline c10::SymFloat calculate_scale(
         : (c10::SymFloat(1.0) / (c10::SymFloat(query.sym_size(-1)).sqrt()));
     return c10::SymFloat(softmax_scale);
 }
+
+static c10::optional<at::Tensor> preprocess_attn_mask_for_npu(
+    const c10::optional<at::Tensor> &attn_mask,
+    int64_t batch_size,
+    int64_t num_heads,
+    int64_t seq_q,
+    int64_t seq_kv)
+{
+    if (!attn_mask.has_value()) {
+        return c10::nullopt;
+    }
+
+    auto mask = attn_mask.value();
+    int64_t mask_dim = mask.dim();
+
+    if (mask_dim == ATTN_MASK_DIM_TWO) {
+        TORCH_CHECK(mask.size(0) == seq_q && mask.size(1) == seq_kv,
+            "2D attn_mask shape {", mask.size(0), ", ", mask.size(1),
+            "} doesn't match expected {", seq_q, ", ", seq_kv, "}",
+            OPS_ERROR(ErrCode::PARAM));
+        return mask;
+    }
+
+    if (mask_dim == ATTN_MASK_DIM_FOUR) {
+        auto m0 = mask.size(0), m1 = mask.size(1);
+        auto m2 = mask.size(2), m3 = mask.size(3);
+        bool b_match = (m0 == batch_size || m0 == 1);
+        bool n_match = (m1 == num_heads || m1 == 1);
+        bool sq_match = (m2 == seq_q);
+        bool skv_match = (m3 == seq_kv);
+        if (b_match && n_match && sq_match && skv_match) {
+            return mask;
+        }
+        std::vector<int64_t> target_shape = {batch_size, num_heads, seq_q, seq_kv};
+        return mask.expand(target_shape);
+    }
+
+    if (mask_dim == 3) {
+        auto m0 = mask.size(0), m1 = mask.size(1), m2 = mask.size(2);
+        TORCH_CHECK((m0 == batch_size || m0 == 1) && m1 == seq_q && m2 == seq_kv,
+            "3D attn_mask shape {", m0, ", ", m1, ", ", m2,
+            "} doesn't match expected {", batch_size, ", ", seq_q, ", ", seq_kv, "}",
+            OPS_ERROR(ErrCode::PARAM));
+        return mask.unsqueeze(1);
+    }
+
+    TORCH_CHECK(false, "attn_mask must be 2D, 3D or 4D, got ", mask_dim, "D",
+        OPS_ERROR(ErrCode::PARAM));
+    return c10::nullopt;
+}
 #endif
 
 #if VERSION_BETWEEN(V2R1, V2R4)
@@ -127,13 +177,9 @@ at::Tensor scaled_dot_product_attention(
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
         query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) > 0 &&
         c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
-        // attn_mask supports dim is 2 or 4
-        if (attn_mask.has_value() && attn_mask.value().dim() != ATTN_MASK_DIM_TWO && attn_mask.value().dim() != ATTN_MASK_DIM_FOUR) {
-            c10::optional<at::Tensor> atten_mask_math = convert_boolean_attn_mask_math(attn_mask, query.dtype());
-            auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal,
-                                                                 c10::nullopt, scale);
-            return std::get<0>(output);
-        }
+        auto processed_mask = preprocess_attn_mask_for_npu(
+            attn_mask, query.size(0), query.size(1), query.size(2), key.size(2));
+
         /* The implementation of the NPU FlashAttention fusion operator without grad constraints:
         1. The FA operator must be registered. GetSocVersion api is provisional, IsExistOp aclnn api will apply.
         2. The attn_mask supports only the bool data type.
@@ -141,7 +187,7 @@ at::Tensor scaled_dot_product_attention(
             D <= D_LIMIT and dim == BNSD_DIM.
         4. For GQA, the key shape is [B, N2, S2, D], where N2 <= N_LIMIT, and N1 is a positive integer
             multiple of N2. */
-        c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
+        c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, processed_mask, is_causal);
         int64_t head_num = query.size(1);
         c10::string_view input_layout = "BNSD";
         auto input_scale = calculate_scale(query, scale);
@@ -183,7 +229,9 @@ at::Tensor scaled_dot_product_attention(
                         inner_precise = 2;
                     }
                 }
-                c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
+                auto processed_mask_fia = preprocess_attn_mask_for_npu(
+                    attn_mask, query.size(0), query.size(1), query.size(2), key.size(2));
+                c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, processed_mask_fia, is_causal);
                 int64_t head_num = query.size(1);
                 int64_t head_num_kv = key.size(1);
                 c10::string_view input_layout = "BNSD";
@@ -226,12 +274,8 @@ at::Tensor scaled_dot_product_attention(
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
         query.size(1) % key.size(1) == 0 && query.size(1) / key.size(1) > 0 &&
         c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1) {
-        // attn_mask supports dim is 2 or 4
-        if (attn_mask.has_value() && attn_mask.value().dim() != ATTN_MASK_DIM_TWO && attn_mask.value().dim() != ATTN_MASK_DIM_FOUR) {
-            c10::optional<at::Tensor> atten_mask_math = convert_boolean_attn_mask_math(attn_mask, query.dtype());
-            auto output = at::_scaled_dot_product_attention_math(query, key, value, atten_mask_math, dropout_p, is_causal, c10::nullopt, scale, enable_gqa);
-            return std::get<0>(output);
-        }
+        auto processed_mask = preprocess_attn_mask_for_npu(
+            attn_mask, query.size(0), query.size(1), query.size(2), key.size(2));
 
         /* The implementation of the NPU FlashAttention fusion operator without grad constraints:
         1. The FA operator must be registered. GetSocVersion api is provisional, IsExistOp aclnn api will apply.
@@ -240,7 +284,7 @@ at::Tensor scaled_dot_product_attention(
             D <= D_LIMIT and dim == BNSD_DIM.
         4. For GQA, the key shape is [B, N2, S2, D], where N2 <= N_LIMIT, and N1 is a positive integer
             multiple of N2. */
-        c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
+        c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, processed_mask, is_causal);
         int64_t head_num = query.size(1);
         c10::string_view input_layout = "BNSD";
         auto input_scale = calculate_scale(query, scale);
@@ -291,7 +335,9 @@ at::Tensor scaled_dot_product_attention(
                         inner_precise = 2;
                     }
                 }
-                c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, attn_mask, is_causal);
+                auto processed_mask_fia = preprocess_attn_mask_for_npu(
+                    attn_mask, query.size(0), query.size(1), query.size(2), key.size(2));
+                c10::optional<at::Tensor> atten_mask = convert_boolean_attn_mask(query, processed_mask_fia, is_causal);
                 int64_t head_num = query.size(1);
                 int64_t head_num_kv = key.size(1);
                 c10::string_view input_layout = "BNSD";
