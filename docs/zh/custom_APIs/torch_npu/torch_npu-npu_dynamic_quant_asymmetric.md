@@ -11,7 +11,7 @@
 
 - API功能：
 
-    对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式和MoE（Mixture of Experts，混合专家模型）场景，pertensor模式暂不支持。
+    对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式，pertensor模式暂不支持。
 
 - 计算公式：
     
