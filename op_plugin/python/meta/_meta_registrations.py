@@ -1266,16 +1266,22 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
     permute_out = None
     out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(gmm_y_dtype)
     INT4_IN_INT8 = 2
-    is_W4 = (gmm_weight.dtype == torch.uint8 and gmm_x_scale.dtype == torch.uint8)
-    if is_W4:
-        is_trans_gmm_weight = gmm_x.size(1) == gmm_weight.size(1)
+    is_w4 = (gmm_weight_dtype == torch_npu.float4_e2m1fn_x2 and gmm_x_scale_dtype == torch_npu.float8_e8m0fnu)
+    if is_w4:
+        is_trans_gmm_weight = False
+        if (gmm_weight.stride(1) == 1 and gmm_weight.stride(2) == gmm_weight.size(1)):
+            if not (gmm_weight.size(1) == 1 and gmm_weight.size(2) == 1):
+                is_trans_gmm_weight = True
         if is_trans_gmm_weight is not True:
             out_y = gmm_weight.size(2) * INT4_IN_INT8
     if mm_x is not None:
         out_mm_x = mm_x.size(0)
         out_mm_y = mm_weight.size(1)
-        if is_W4:
-            is_trans_mm_weight = mm_x.size(1) == mm_weight.size(0)
+        if is_w4:
+            is_trans_mm_weight = False
+            if (mm_weight.stride(0) == 1 and mm_weight.stride(1) == mm_weight.size(0)):
+                if not (mm_weight.size(0) == 1 and gmm_weight.size(1) == 1):
+                    is_trans_mm_weight = True
             if is_trans_mm_weight is not True:
                 out_mm_y = mm_weight.size(1) * INT4_IN_INT8
         mm_out_scalar_type = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(mm_y_dtype)
