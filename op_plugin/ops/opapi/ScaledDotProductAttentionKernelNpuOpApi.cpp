@@ -18,6 +18,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "torch_npu/csrc/framework/interface/EnvVariables.h"
 
 namespace op_api {
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
@@ -171,7 +172,21 @@ at::Tensor scaled_dot_product_attention(
     c10::optional<double> scale)
 {
     validate_sdpa_input(query, key, value, attn_mask);
-    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
+
+    static auto compatible_impl = at_npu::native::env::CheckCompatibleImpl();
+    bool force_math = false;
+    if (compatible_impl) {
+        auto& ctx = at::globalContext();
+        if (!ctx.userEnabledFlashSDP()) {
+            force_math = true;
+        }
+        if (ctx.userEnabledMathSDP() && !ctx.userEnabledFlashSDP()) {
+            force_math = true;
+        }
+    }
+
+    if (!force_math &&
+        (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
         ((attn_mask.has_value() && attn_mask->dtype() == at::kBool) || !attn_mask.has_value()) &&
         query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
@@ -202,7 +217,8 @@ at::Tensor scaled_dot_product_attention(
                                                              keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
                                                              nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
-    } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
+    } else if (!force_math &&
+               (!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
                 (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
                 (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 == 0 &&
@@ -268,7 +284,21 @@ at::Tensor scaled_dot_product_attention(
     bool enable_gqa)
 {
     validate_sdpa_input(query, key, value, attn_mask);
-    if ((query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
+
+    static auto compatible_impl = at_npu::native::env::CheckCompatibleImpl();
+    bool force_math = false;
+    if (compatible_impl) {
+        auto& ctx = at::globalContext();
+        if (!ctx.userEnabledFlashSDP()) {
+            force_math = true;
+        }
+        if (ctx.userEnabledMathSDP() && !ctx.userEnabledFlashSDP()) {
+            force_math = true;
+        }
+    }
+
+    if (!force_math &&
+        (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16 || query.scalar_type() == at::kFloat) &&
         ((attn_mask.has_value() && attn_mask->dtype() == at::kBool) || !attn_mask.has_value()) &&
         query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM &&
         query.size(1) <= N_LIMIT && query.size(3) <= D_LIMIT && key.size(1) <= N_LIMIT &&
@@ -308,7 +338,8 @@ at::Tensor scaled_dot_product_attention(
                                                              keep_prob, TOKEN_MAX, next_tockens, 0, nulllen,
                                                              nulllen, nulllen, sparse_mode, true, false);
         return std::get<0>(output);
-    } else if ((!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
+    } else if (!force_math &&
+               (!query.requires_grad() && !key.requires_grad() && !value.requires_grad()) &&
                 (query.dim() == BNSD_DIM && key.dim() == BNSD_DIM && value.dim() == BNSD_DIM) &&
                 (query.size(0) != 0 && query.size(1) != 0 && query.size(2) != 0 && query.size(3) != 0) &&
                 (query.scalar_type() == at::kHalf || query.scalar_type() == at::kBFloat16) && query.size(3) % 16 ==0 &&
