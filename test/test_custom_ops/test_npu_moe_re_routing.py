@@ -19,6 +19,18 @@ def numpy_hifloat8():
                         "Command is `pip3 install --upgrade en-dtypes`")
 
 
+def numpy_float4_e2m1fn():
+    try:
+        from ml_dtypes import float4_e2m1fn
+        return float4_e2m1fn
+    except ModuleNotFoundError:
+        raise RuntimeError("ml_dtypes is needed to support float4_e2m1fn dtype!!! "
+                        "Please install with `pip3 install ml-dtypes`")
+    except ImportError:
+        raise RuntimeError("Please upgrade ml_dtypes to support float4_e2m1fn dtype!!! "
+                        "Command is `pip3 install --upgrade ml-dtypes`")
+
+
 def numpy_to_torch(np_arr):
     FP8_DTYPE_MAP_NUMPY_TO_TORCH = {
         "bfloat16": torch.bfloat16,
@@ -95,14 +107,19 @@ def assert_tensors_close(x: torch.Tensor, y: torch.Tensor, rtol=1e-3, atol=1e-5,
 class TestMoeReRouting(TestCase):
 
     def generate_inputs(self, bs, hidden_dim, dtype, expert_num=16, rank_num=2):
-        tokens = np.random.randn(bs, hidden_dim).astype(np.float16)
         expert_token_num_per_rank = np.zeros((rank_num, expert_num), dtype=np.int64)
         for i in range(rank_num):
             for j in range(expert_num):
                 expert_token_num_per_rank[i, j] = (bs // expert_num) + np.random.randint(0, 5)
         
-        if dtype == torch_npu.hifloat8:
+        if dtype == torch_npu.float4_e2m1fn_x2:
+            fp4_dtype = numpy_float4_e2m1fn()
+            tokens = np.random.randn(bs, hidden_dim // 2).astype(fp4_dtype)
+        elif dtype == torch_npu.hifloat8:
+            tokens = np.random.randn(bs, hidden_dim).astype(np.float16)
             tokens = tokens.astype(numpy_hifloat8())
+        else:
+            tokens = np.random.randn(bs, hidden_dim).astype(np.float16)
         
         return tokens, expert_token_num_per_rank
 
@@ -240,6 +257,64 @@ class TestMoeReRouting(TestCase):
             
             self.assertEqual(permute_tokens.shape[0], bs)
             self.assertEqual(permute_tokens.shape[1], hidden_dim)
+
+    @unittest.skipIf(
+        importlib.util.find_spec("ml_dtypes") is None,
+        "Unittest for fp4 need package ml_dtypes"
+    )
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    def test_npu_moe_re_routing_fp4_e2m1(self, device="npu"):
+        bs_list = [32, 128]
+        hidden_dim_list = [4096, 7168]
+        expert_token_num_type = 1
+        idx_type = 0
+        
+        for bs, hidden_dim in zip(bs_list, hidden_dim_list):
+            tokens, expert_token_num_per_rank = self.generate_inputs(bs, hidden_dim, torch_npu.float4_e2m1fn_x2)
+            
+            tokens_uint8 = tokens.view(np.uint8)
+            tokens_npu = torch.from_numpy(tokens_uint8).npu()
+            expert_token_num_per_rank_npu = torch.from_numpy(expert_token_num_per_rank).npu()
+            
+            permute_tokens, permute_scales, permute_idx, expert_token_num = \
+                self.custom_op_exec(tokens_npu, expert_token_num_per_rank_npu, None,
+                                    expert_token_num_type, idx_type, tokens_dtype=296)
+            
+            self.assertEqual(permute_tokens.dtype, torch.uint8)
+            self.assertEqual(permute_tokens.shape[0], bs)
+            self.assertEqual(permute_tokens.shape[1], hidden_dim // 2)
+
+    @unittest.skipIf(
+        importlib.util.find_spec("ml_dtypes") is None,
+        "Unittest for fp4 need package ml_dtypes"
+    )
+    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    def test_npu_moe_re_routing_fp4_e2m1_with_scales(self, device="npu"):
+        bs_list = [32]
+        hidden_dim_list = [4096]
+        expert_token_num_type = 1
+        idx_type = 0
+        
+        for bs, hidden_dim in zip(bs_list, hidden_dim_list):
+            tokens, expert_token_num_per_rank = self.generate_inputs(bs, hidden_dim, torch_npu.float4_e2m1fn_x2)
+            
+            per_token_scales = np.random.randn(bs).astype(np.float32)
+            
+            tokens_uint8 = tokens.view(np.uint8)
+            tokens_npu = torch.from_numpy(tokens_uint8).npu()
+            expert_token_num_per_rank_npu = torch.from_numpy(expert_token_num_per_rank).npu()
+            per_token_scales_npu = torch.from_numpy(per_token_scales).npu()
+            
+            permute_tokens, permute_scales, permute_idx, expert_token_num = \
+                self.custom_op_exec(tokens_npu, expert_token_num_per_rank_npu, per_token_scales_npu,
+                                    expert_token_num_type, idx_type, tokens_dtype=296)
+            
+            self.assertEqual(permute_tokens.dtype, torch.uint8)
+            self.assertEqual(permute_scales.dtype, torch.float32)
+            self.assertEqual(permute_idx.dtype, torch.int32)
+            
+            self.assertEqual(permute_tokens.shape[0], bs)
+            self.assertEqual(permute_tokens.shape[1], hidden_dim // 2)
 
 
 if __name__ == "__main__":

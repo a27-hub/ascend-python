@@ -31,6 +31,15 @@ namespace op_api {
         TORCH_CHECK(tokens.dim() > 1, "tokens dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(expert_token_num_per_rank.dim() > 1, "expert_token_num_per_rank dim should larger than 1", OPS_ERROR(ErrCode::PARAM));
 
+        if (tokens_dtype.has_value()) {
+            TORCH_CHECK(tokens_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8) ||
+                        tokens_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+                        tokens_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2),
+                "The optional parameter tokens_dtype only supports hifloat8, float4_e2m1fn_x2, float4_e1m2fn_x2 or None, but now is ",
+                c10_npu::CustomDataTypeToString(tokens_dtype.value()),
+                "." + OPS_ERROR(ErrCode::VALUE));
+        }
+
         at::SmallVector <int64_t, op_infer::SIZE> permute_tokens_size;
         at::SmallVector <int64_t, op_infer::SIZE> permute_per_token_scales_size;
         at::SmallVector <int64_t, op_infer::SIZE> permute_token_idx_size;
@@ -52,7 +61,12 @@ namespace op_api {
 
         at::TensorOptions permute_tokens_options = tokens.options();
         if (tokens_dtype.has_value()) {
-            permute_tokens_options = permute_tokens_options.dtype(c10_npu::GetATenDType(tokens_dtype.value()));
+            aclDataType acl_dtype = c10_npu::GetAclDataType(tokens_dtype.value());
+            if (acl_dtype == aclDataType::ACL_FLOAT4_E2M1 || acl_dtype == aclDataType::ACL_FLOAT4_E1M2) {
+                permute_tokens_options = permute_tokens_options.dtype(at::kByte);
+            } else {
+                permute_tokens_options = permute_tokens_options.dtype(c10_npu::GetATenDType(tokens_dtype.value()));
+            }
         }
         at::Tensor permute_tokens = npu_preparation::apply_tensor_without_format(permute_tokens_size, permute_tokens_options);
         at::Tensor permute_per_token_scales =
