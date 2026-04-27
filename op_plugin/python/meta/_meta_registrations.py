@@ -1308,7 +1308,7 @@ def npu_moe_init_routing_meta(x, row_idx, expert_idx, active_num=99):
 
 
 @impl(m, "npu_mhc_sinkhorn")
-def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
+def npu_mhc_sinkhorn(x, *, eps=1e-6, num_iters=20, out_flag=0):
     x_shape = list(x.shape)
     torch._check(
         x_shape[-1] in [4, 6, 8],
@@ -1324,9 +1324,19 @@ def npu_mhc_sinkhorn(x, eps, num_iters, out_flag):
         )
 
     y_size = tuple(x.shape)
-    return (torch.empty(y_size, dtype=x.dtype, device='meta'),
-            torch.empty(y_size, dtype=x.dtype, device='meta'),
-            torch.empty(y_size, dtype=x.dtype, device='meta'))
+    if out_flag:
+        T = x_shape[0]
+        n = x_shape[-1]
+        n_align = 8
+        if x.dim() == 4:
+            T = T * x_shape[1]
+        morm_size = tuple([2 * num_iters * T * n * n_align])
+        sum_size = tuple([2 * num_iters * T * n_align])
+        return (torch.empty(y_size, dtype=x.dtype, device='meta'),
+                torch.empty(morm_size, dtype=x.dtype, device='meta'),
+                torch.empty(sum_size, dtype=x.dtype, device='meta'))
+    else:
+        return (torch.empty(y_size, dtype=x.dtype, device='meta'), None, None)
 
 
 @impl(m, "npu_moe_init_routing_v2")
@@ -1382,18 +1392,38 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
         lambda: "row_idx_type is None or invalid. must be in [0, 1]"
     )
-
+    ALIGN_BASE = 64
+    THREE_DIM_NUM = 3
+    MXFP8_SCALE_THIRD_DIM_SIZE = 2
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            torch._check(
-                scale_dim == 1,
-                lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
-            )
-            torch._check(
-                x.size(0) == scale.size(0),
-                lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
-            )
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn:
+                torch._check(
+                    scale_dim == THREE_DIM_NUM,
+                    lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2 or float8_e4m3fn" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    ((x.size(1) + ALIGN_BASE - 1) // ALIGN_BASE) == scale.size(1),
+                    lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    MXFP8_SCALE_THIRD_DIM_SIZE == scale.size(2),
+                    lambda: "the third dim of scale should be the 2" + ops_error(ErrCode.VALUE),
+                )
+            else:
+                torch._check(
+                    scale_dim == 1,
+                    lambda: "the scale shape support only 1D (bs,) in no quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(0) == scale.size(0),
+                    lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
+                )
         elif quant_mode == 0:
             torch._check(
                 scale_dim == 1,
@@ -1451,6 +1481,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
@@ -1464,6 +1496,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+            scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
     if quant_mode in [0, 6, 7]:
@@ -2298,10 +2333,12 @@ def npu_lightning_indexer_forward(query, key, weights, *, actual_seq_lengths_que
         lambda: "sparse_count should be greater than 0, but got " + str(sparse_count) +
             ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        not return_value,
-        lambda: "when return_value is true, not support pytorch compile." + ops_error(ErrCode.VALUE),
-    )
+
+    if get_soc_version() < 260:
+        torch._check(
+            not return_value,
+            lambda: "when return_value is true, not support on this soc version." + ops_error(ErrCode.VALUE),
+        )
 
     if layout_query == "BSND":
         sparse_indices_out = torch.empty([query.size(0), query.size(1), key.size(2), sparse_count], dtype=torch.int32, device='meta')
@@ -2926,13 +2963,13 @@ def scatter_nd_update__meta(self, indices, updates):
 
 @impl(m, "npu_scatter_pa_kv_cache_functional")
 def npu_scatter_pa_kv_cache_functional_meta(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None,
-    compress_seq_offsets=None, seq_lens=None):
+    compress_seq_offsets=None, seq_lens=None, cache_mode='PA_NZ'):
     return (torch.empty_like(key_cache, dtype=key_cache.dtype), torch.empty_like(value_cache, dtype=value_cache.dtype))
 
 
 @impl(m, "npu_scatter_pa_kv_cache")
 def npu_scatter_pa_kv_cache_meta(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None,
-    compress_seq_offsets=None, seq_lens=None):
+    compress_seq_offsets=None, seq_lens=None, cache_mode='PA_NZ'):
     return
 
 
@@ -3161,9 +3198,7 @@ def npu_moe_distribute_dispatch_v2_meta(x, expert_ids, group_ep, ep_world_size, 
     else:
         expand_x = x.new_empty(tuple([max(a, a * tp_world_size), h]), dtype=outDtype)
     dynamic_scales_dtype = get_dispatch_dynamic_scales_dtype(x, scales, quant_mode)
-    if tp_world_size == 0:
-        dynamic_scales = x.new_empty((a), dtype=dynamic_scales_dtype)
-    elif tp_world_size == 1:
+    if tp_world_size <= 1:
         dynamic_scales_shape = get_dispatch_dynamic_shape(scales, quant_mode, a, h)
         dynamic_scales = x.new_empty(dynamic_scales_shape, dtype=dynamic_scales_dtype)
     else:
@@ -5700,6 +5735,18 @@ def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0,
     return torch.empty(output_size, dtype=x.dtype, device=x.device)
 
 
+@impl(m, "npu_masked_causal_conv1d")
+def npu_masked_causal_conv1d_meta(input, weight, *, mask=None):
+    return torch.empty_like(input, dtype=input.dtype)
+
+
+@impl(m, "npu_masked_causal_conv1d_backward")
+def npu_masked_causal_conv1d_backward_meta(grad_output, input, weight, *, mask=None):
+    grad_input = torch.empty_like(grad_output, dtype=grad_output.dtype)
+    grad_weight = torch.empty_like(weight, dtype=grad_output.dtype)
+    return grad_input, grad_weight
+
+
 @impl(m, "npu_fused_causal_conv1d_functional")
 def npu_fused_causal_conv1d_functional_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None, 
                                             initial_state_mode=None, bias=None, num_accepted_tokens=None, 
@@ -6541,7 +6588,7 @@ def npu_dropout_with_add_softmax_meta(x1, x2, alpha, prod, axis):
 
 
 @impl(m, "l1_loss_backward")
-def npu_l1_loss_backward_meta(grad_output,   input, target, reduction):
+def npu_l1_loss_backward_meta(grad_output, input, target, reduction):
     return torch.empty_like(input)
 
 
@@ -6568,20 +6615,22 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     block_size = 32
     last_dim_size = int(math.ceil(scale1_shape[last_axis_change] / block_size))
     last_dim_size = (last_dim_size + 2 - 1) // 2
-    second_to_last_dim_size = int(math.ceil(scale2_shape[second_to_last_axis_change] / block_size))
+    second_to_last_dim_size = int(
+        math.ceil(scale2_shape[second_to_last_axis_change] / block_size))
     second_to_last_dim_size = (second_to_last_dim_size + 2 - 1) // 2
     scale1_shape[last_axis_change] = last_dim_size
     scale2_shape[second_to_last_axis_change] = second_to_last_dim_size
 
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(
+        dst_type, torch.int8)
     if torch_dtype == torch.float8_e5m2 or dst_type == torch_npu.float8_e5m2:
         y = torch.empty_like(input_dummy, dtype=torch.float8_e5m2)
     elif torch_dtype == torch.float8_e4m3fn or dst_type == torch_npu.float8_e4m3fn:
         y = torch.empty_like(input_dummy, dtype=torch.float8_e4m3fn)
-    else: # float4_e2m1, float4_e1m2
+    else:  # float4_e2m1, float4_e1m2
         if input_dummy.size(dim_num - 1) % 2:
-            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, " \
-                                "the last dim of input must be divisible by 2, " +
+            raise RuntimeError("If output dtype is float4_e2m1 or float4_e1m2, "
+                               "the last dim of input must be divisible by 2, " +
                                ops_error(ErrCode.PARAM))
         y_shape = []
         for dim in range(dim_num - 1):
@@ -6591,3 +6640,170 @@ def npu_dynamic_block_mx_quant(input_dummy, *, round_mode="rint", dst_type=296, 
     scale1 = input_dummy.new_empty(scale1_shape, dtype=torch.uint8)
     scale2 = input_dummy.new_empty(scale2_shape, dtype=torch.uint8)
     return (y, scale1, scale2)
+
+@impl(m, "npu_chunk_gated_delta_rule")
+def npu_chunk_gated_delta_rule(query, key, value, *, beta=None, initial_state=None, actual_seq_lengths=None, scale=None, g=None):
+    torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
+    state_shape = (initial_state.size(0), initial_state.size(1), initial_state.size(2), initial_state.size(3))
+    out_shape = (value.size(0), value.size(1), value.size(2))
+
+    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
+    out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
+    return out, finalState
+
+@impl(m, "npu_multi_head_attention")
+def npu_multi_head_attention_meta(query, key, value, query_weight, key_weight, value_weight, attn_mask,
+                                  out_proj_weight, query_bias=None, key_bias=None, value_bias=None,
+                                  out_proj_bias=None, dropout_mask=None, attn_head_num=1, attn_dim_per_head=64,
+                                  src_len=1, tgt_len=1, dropout_prob=0.0, softmax_use_float=False):
+    query_shape = query.size()
+    batch = query_shape[0] // tgt_len
+    weight_col = attn_head_num * attn_dim_per_head
+
+    y = torch.empty([query_shape[0], weight_col],
+                    dtype=query.dtype, device='meta')
+    dropout_mask_out = torch.empty(
+        [batch * attn_head_num * tgt_len * src_len // 8], dtype=torch.uint8, device='meta')
+    query_res = torch.empty([batch, attn_head_num, tgt_len,
+                            attn_dim_per_head], dtype=query.dtype, device='meta')
+    key_res = torch.empty([batch, attn_head_num, src_len,
+                          attn_dim_per_head], dtype=query.dtype, device='meta')
+    value_res = torch.empty([batch, attn_head_num, src_len,
+                            attn_dim_per_head], dtype=query.dtype, device='meta')
+    if softmax_use_float:
+        attn_scores = torch.empty(
+            [batch, attn_head_num, tgt_len, src_len], dtype=torch.float32, device='meta')
+    else:
+        attn_scores = torch.empty(
+            [batch, attn_head_num, tgt_len, src_len], dtype=query.dtype, device='meta')
+    attn_res = torch.empty(
+        [batch, attn_head_num, tgt_len, src_len], dtype=query.dtype, device='meta')
+    context = torch.empty([query_shape[0], weight_col],
+                          dtype=query.dtype, device='meta')
+
+    return (y, dropout_mask_out, query_res, key_res, value_res, attn_scores, attn_res, context)
+
+
+@impl(m, "npu_lstm_cell")
+def npu_lstm_cell_meta(input, w_ih, w_hh, h, c, b_ih=None, b_hh=None):
+    batch_size = input.size(0)
+    hidden_size = w_hh.size(1) // 4
+    num_step = 1
+
+    y_output = torch.empty(
+        [num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    h_out = torch.empty([batch_size, hidden_size],
+                        dtype=input.dtype, device='meta')
+    c_out = torch.empty([batch_size, hidden_size],
+                        dtype=input.dtype, device='meta')
+    i_output = torch.empty(
+        [num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    j_output = torch.empty(
+        [num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    f_output = torch.empty(
+        [num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    o_output = torch.empty(
+        [num_step, batch_size, hidden_size], dtype=input.dtype, device='meta')
+    tanhc = torch.empty([num_step, batch_size, hidden_size],
+                        dtype=input.dtype, device='meta')
+
+    return (y_output, h_out, c_out, i_output, j_output, f_output, o_output, tanhc)
+
+
+@impl(m, "npu_lstm_cell_backward")
+def npu_lstm_cell_backward_meta(grad_y=None, grad_h=None, grad_c=None, input=None, w_ih=None, w_hh=None, h=None, c=None,
+                                y_output=None, h_output=None, c_output=None, i=None, j=None, f=None, o=None, tanhc=None):
+    hidden_size = y_output.size(2)
+
+    grad_input = torch.empty_like(input, dtype=input.dtype, device='meta')
+    grad_wih = torch.empty_like(w_ih, dtype=w_ih.dtype, device='meta')
+    grad_whh = torch.empty_like(w_hh, dtype=w_hh.dtype, device='meta')
+    grad_bias = torch.empty(
+        [4 * hidden_size], dtype=input.dtype, device='meta')
+    grad_ht = torch.empty_like(h, dtype=h.dtype, device='meta')
+    grad_ct = torch.empty_like(c, dtype=c.dtype, device='meta')
+
+    return (grad_input, grad_wih, grad_whh, grad_bias, grad_bias, grad_ht, grad_ct)
+
+
+@impl(m, "npu_fused_attention_score_fwd")
+def npu_fused_attention_score_fwd_meta(query_layer, key_layer, value_layer, attention_mask, scale, keep_prob=1.0,
+                                       query_transpose=False, key_transpose=False, bmm_score_transpose_a=False,
+                                       bmm_score_transpose_b=False, value_transpose=False, dx_transpose=False):
+    attention_score = torch.empty([query_layer.size(0) * query_layer.size(2), query_layer.size(1) * query_layer.size(3)],
+                                  dtype=query_layer.dtype, device='meta')
+    softmax_output = torch.empty([query_layer.size(0), query_layer.size(1), query_layer.size(2), query_layer.size(2)],
+                                 dtype=query_layer.dtype, device='meta')
+    drop_mask = torch.empty([softmax_output.numel()],
+                            dtype=torch.uint8, device='meta')
+
+    return (attention_score, softmax_output, drop_mask)
+
+
+@impl(m, "npu_fused_attention_score")
+def npu_fused_attention_score_meta(query_layer, key_layer, value_layer, attention_mask, scale, keep_prob=1.0,
+                                   query_transpose=False, key_transpose=False, bmm_score_transpose_a=False,
+                                   bmm_score_transpose_b=False, value_transpose=False, dx_transpose=False):
+    attention_score = torch.empty([query_layer.size(0) * query_layer.size(2), query_layer.size(1) * query_layer.size(3)],
+                                  dtype=query_layer.dtype, device='meta')
+    return attention_score
+
+@impl(m, "npu_fused_attention_score_backward")
+def npu_fused_attention_score_backward_meta(grad_output, softmax_output, query_layer, key_layer, value_layer, drop_mask,
+                                              scale, keep_prob=1.0, query_transpose=False, key_transpose=False,
+                                              value_transpose=False, dx_transpose=False):
+    query_dx = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+    key_dw = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+    value_dw = torch.empty_like(grad_output, dtype=grad_output.dtype, device='meta')
+
+    return (query_dx, key_dw, value_dw)
+
+
+@impl(m, "npu_multi_head_attention_backward")
+def npu_multi_head_attention_backward_meta(query, key, value, query_weight, key_weight, value_weight, out_proj_weight,
+                                          query_bias=None, key_bias=None, value_bias=None, out_proj_bias=None,
+                                          query_res=None, key_res=None, value_res=None, attn_scores=None,
+                                          attn_res=None, context=None, y_grad=None, dropout_mask=None,
+                                          attn_head_num=1, attn_dim_per_head=64, src_len=1, tgt_len=1,
+                                          dropout_prob=0.0, softmax_use_float=False):
+    query_shape = query.size()
+    batch = query_shape[0] // tgt_len
+    weight_col = attn_head_num * attn_dim_per_head
+
+    query_weight_grad = torch.empty([weight_col, weight_col], dtype=query_weight.dtype, device='meta')
+    key_weight_grad = torch.empty([weight_col, weight_col], dtype=key_weight.dtype, device='meta')
+    value_weight_grad = torch.empty([weight_col, weight_col], dtype=value_weight.dtype, device='meta')
+    out_proj_weight_grad = torch.empty([weight_col, weight_col], dtype=out_proj_weight.dtype, device='meta')
+    query_grad = torch.empty([query_shape[0], weight_col], dtype=query.dtype, device='meta')
+    key_grad = torch.empty([batch * src_len, weight_col], dtype=key.dtype, device='meta')
+    value_grad = torch.empty([batch * src_len, weight_col], dtype=value.dtype, device='meta')
+    query_bias_grad = torch.empty([1, weight_col], dtype=query.dtype, device='meta')
+    key_bias_grad = torch.empty([1, weight_col], dtype=key.dtype, device='meta')
+    value_bias_grad = torch.empty([1, weight_col], dtype=value.dtype, device='meta')
+    out_proj_bias_grad = torch.empty([1, weight_col], dtype=query.dtype, device='meta')
+
+    return (query_weight_grad, key_weight_grad, value_weight_grad, out_proj_weight_grad, query_grad,
+            key_grad, value_grad, query_bias_grad, key_bias_grad, value_bias_grad, out_proj_bias_grad)
+
+
+@impl(m, "npu_rotate_quant")
+def npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None):
+    scale_shape = []
+    scale_shape.append(x.size(0))
+    scale = x.new_empty(scale_shape, dtype=torch.float32)
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
+    if torch_dtype == torch.int8:
+        output = torch.empty_like(x, dtype=torch.int8)
+    elif torch_dtype == torch.quint4x2:
+        dim_num = x.dim()
+        if x.size(dim_num - 1) % 8:
+            raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divided by 8" +
+                               ops_error(ErrCode.NOT_SUPPORT))
+        output_shape = []
+        for dim in range(dim_num - 1):
+            output_shape.append(x.size(dim))
+        output_shape.append(x.size(dim_num - 1) // 8)
+        output = x.new_empty(output_shape, dtype=torch.int32)
+    else:
+        output = torch.empty_like(x, dtype=torch.int8)
+    return output, scale

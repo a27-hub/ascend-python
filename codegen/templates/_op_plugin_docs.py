@@ -3466,6 +3466,7 @@ rotate推荐使用场景
     >>> r1 = torch.rand(1, 2, 1, 128).npu()
     >>> r2 = torch.rand(1, 2, 1, 128).npu()
     >>> out = torch_npu.npu_rotary_mul(x, r1, r2)
+
 示例2
     >>> n = 128
     >>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # interleave
@@ -3476,6 +3477,7 @@ rotate推荐使用场景
     >>> r1 = torch.rand(1, 1, 5, n).npu()
     >>> r2 = torch.rand(1, 1, 5, n).npu()
     >>> out = torch_npu.npu_rotary_mul(x, r1, r2, "interleave", rotate)
+    
 示例3
     >>> n = 128
     >>> rotate = torch.zeros(n, n, dtype=torch.bfloat16) # half
@@ -3917,7 +3919,7 @@ hPre: Tensor类型，可选输出，做完 sigmoid 计算之后的 h_pre 矩阵�
 该接口支持图模式。
 
 支持的PyTorch版本:
-PyTorch 2.6.0
+PyTorch 2.7.1及更高版本
 
 支持的型号:
 - 昇腾950 AI处理器
@@ -4068,6 +4070,137 @@ y = mhc_sinkhorn_model(x, eps=eps, num_iters=num_iters, out_flag=out_flag)
 """
 )
 
+_add_torch_npu_docstr(
+    "npu_mhc_sinkhorn_backward",
+    """
+接口原型:
+torch_npu.npu_mhc_sinkhorn_backward(Tensor grad_y, Tensor norm, Tensor sum) -> Tensor
+
+功能描述
+算子功能：MhcSinkhornBackward是MhcSinkhorn的反向算子。mHC（Manifold-Constrained Hyper-Connections）架构中的MhcSinkhorn算子对输入矩阵做sinkhorn变换得到双随机矩阵$\mathbf{H}_{\text{res}}$，输出的双随机矩阵的所有元素≥0、每一行之和为1且每一列之和为1 (具有范数保持、组合封闭性和凸组合几何解释三大特性)。
+
+参数说明:
+gradOutput: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是3维(T, n, n)或者4维(B, S, n, n), 其中n仅支持4, 6, 8. Sinkhorn变换输出的H_res的梯度。 
+normOut: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是1维, 表示Sinkhorn变换正向计算保存的中间norm结果。
+sumOut: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是1维, 表示Sinkhorn变换正向计算保存的中间sum结果。
+
+输出说明:
+一个Tensor类型的输出, Sinkhorn变换的输入的H_res的梯度. 数据类型和张量形状与输入gradOutput保持一致。数据格式支持ND.
+
+约束说明:
+该接口支持pytorch调用（torch_npu). 
+
+支持的PyTorch版本
+PyTorch 2.7.1
+
+支持的型号:
+Atlas A5 训练系列产品
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+device = "npu:0"
+x_shape = [128, 4 , 4]
+T, n, _ = x_shape
+x = torch.rand(x_shape, dtype=torch.float32, requires_grad=True).clamp(min=1e-4)
+x_npu = x.npu()
+eps = 1e-6
+num_iters = 20
+out_flag = 1
+
+# 正向传播
+y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x_npu, eps=eps, num_iters=num_iters, out_flag=out_flag)
+
+# 反向传播
+grad_y = torch.randn(T, n, n, dtype=torch.float32)
+torch.autograd.backward(tensors=[y], grad_tensors=[grad_y.npu()])
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_mhc_pre_backward",
+    """
+接口原型：
+npu_mhc_pre_backward(Tensor x, Tensor phi, Tensor alpha, Tensor grad_h_in, Tensor grad_h_post, Tensor grad_h_res, Tensor inv_rms, Tensor h_mix, Tensor h_pre, Tensor h_post, Tensor? gamma=None, float hc_eps=1e-6, Tensor? grad_x_post=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+
+功能描述：
+MhcPreBackward算子是MhcPre的反向算子，可选融合post反向grad_x的add操作，首先说明一下正向算子的功能。
+正向算子功能：通过一系列计算，可得到 MHC (流形约束超连接)架构中 hidden 层对应的投影矩阵 Hres 和 Hpost，以及作为 Atten 或 MLP 层输入的矩阵 Hin。
+
+输入说明：
+x: Tensor类型，必选输入，待计算数据，代表网络中 mHC 层的输入数据。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+phi: Tensor类型，必选输入，mHC 的参数矩阵。数据格式为 ND，支持非连续 Tensor，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+alpha: Tensor类型，必选输入，mHC 的缩放参数。支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_h_in: Tensor类型，必选输入，h_in作为Atten/MLP层的输入，正向输出h_in对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 2 维 [T, D] 和 3 维 [B, S, D]。
+grad_h_post: Tensor类型，必选输入，正向输出h_post的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+grad_h_res: Tensor类型，必选输入，正向输出h_res的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 3 维 [T, n, n] 和 4 维 [B, S, n, n]。
+inv_rms: Tensor类型，必选输入，正向RmsNorm计算的invRms。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 1 维 [T] 和 2 维 [B, S]。
+h_mix: Tensor类型，必选输入，正向计算x与phi矩阵乘的结果。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n^2 + 2n] 和 3 维 [B, S, n^2 + 2n]。
+h_pre: Tensor类型，必选输入，做完 sigmoid 计算之后的 h_pre 矩阵。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+h_post: Tensor类型，必选输入，正向的h_post输出。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度可为 2 维 [T, n] 和 3 维 [B, S, n]。
+gamma: Tensor类型，可选输入，RmsNorm的缩放系数。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+hc_eps: Float类型，可选输入，H_pre 经过 sigmoid 运算后的 eps 参数。
+grad_x_post: Tensor类型，可选输入，post反向输出的grad_x，数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+n：shape 中的 n 常取 4、6、8。
+
+输出说明:
+grad_x: Tensor类型，必选输出，x对应的梯度。数据格式为 ND，支持的数据类型为 BFLOAT16 和 FLOAT16，数据维度可为 3 维 [T, n, D] 和 4 维 [B, S, n, D]。
+grad_phi: Tensor类型，必选输出，phi对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n^2 + 2n, nD]。
+grad_alpha: Tensor类型，必选输出，alpha对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [3]。
+grad_bias: Tensor类型，必选输出，bias对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 1 维 [n^2 + 2n]。
+grad_gamma: Tensor类型，可选输出，gamma对应的梯度。数据格式为 ND，支持的数据类型为 FLOAT32，数据维度为 2 维 [n, D]。
+
+
+约束说明:
+该接口支持pytorch调用(torch_npu)。
+该接口支持单算子模式。
+
+支持的PyTorch版本:
+PyTorch 2.7.1及更高版本
+
+支持的型号:
+- 昇腾950 AI处理器
+
+调用示例:
+单算子模式调用:
+import torch
+import torch_npu
+import numpy as np
+
+B=1
+S=1024
+n=4
+D=2560
+x = torch.randn(B, S, n, D).bfloat16()
+phi = torch.randn(n*n + 2*n, n*D)
+alpha = torch.tensor([1.1, 0.9, 1.05])
+bias = torch.randn(n*n + 2*n) * 0.1
+gamma = torch.randn(n, D)
+grad_x_post = torch.randn(B, S, n, D).bfloat16()
+
+x_ = x.detach().clone().requires_grad_(True)
+phi_ = phi.detach().clone().requires_grad_(True)
+alpha_ = alpha.detach().clone().requires_grad_(True)
+bias_ = bias.detach().clone().requires_grad_(True)
+
+dh_in = torch.randn(B, S, D).bfloat16()
+dh_post = torch.randn(B, S, n)
+dh_res = torch.randn(B, S, n, n)
+
+# 正向传播
+h_in, h_post, h_res, inv_rms, h_mix, h_pre = torch_npu.npu_mhc_pre(
+    x_.npu(), phi_.npu(), alpha_.npu(), bias_.npu(), gamma=gamma.npu(), out_flag=1
+)
+
+# 调用npu接口
+dx1, dphi1, da1, db1, dgamma1 = torch_npu.npu_mhc_pre_backward(
+    x.npu(), phi.npu(), alpha.npu(),
+    dh_in.npu(), dh_post.npu(), dh_res.npu(),
+    inv_rms.npu(), h_mix.npu(), h_pre.npu(), h_post.npu(), gamma=gamma.npu(), grad_x_post=grad_x_post.npu()
+)
+"""
+)
 
 _add_torch_npu_docstr(
     "npu_transpose",
@@ -6698,7 +6831,7 @@ _add_torch_npu_docstr(
         场景一、场景二没有compress_lens、seq_lens、compress_seq_offsets这三个可选参数。
 
 接口原型:
-torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None) -> ()
+torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str? cache_mode='PA_NZ') -> ()
 
 参数说明:
 -   key（Tensor）：必选参数。表示待更新的key值，当前step多个token的key，支持3维或4维。数据类型支持float16、float、bfloat16、int8、uint8、int16、uint16、int32、uint32、hifloat8、float8_e5m2、float8_e4m3fn，数据格式支持ND。
@@ -6708,7 +6841,8 @@ torch_npu.npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache
 -   slot_mapping（Tensor）：必选参数，表示每个token key或value在cache中的存储偏移，数据类型支持int32和int64，数据格式支持ND。
 -   compress_lens（Tensor）：可选参数，表示压缩量，数据类型与slot_mapping一致，数据格式支持ND。
 -   compress_seq_offsets（Tensor）：可选参数，表示每个batch每个head的压缩起点，数据类型与slot_mapping一致，数据格式支持ND。
--   seq_lens（Tensor）：可选参数，表示每个batch的实际seqLens，数据类型与slot_mapping一致，数据格式支持ND。。
+-   seq_lens（Tensor）：可选参数，表示每个batch的实际seqLens，数据类型与slot_mapping一致，数据格式支持ND。
+-   cache_mode（str）：可选参数，表示key_cache和value_cache的内存排布格式。当传None或'Norm'时，仅支持ND内存排布格式。当传入'PA_NZ'时，仅支持NZ内存排布格式，默认值为'PA_NZ'。
 
 输出说明：
 -   key_cache（Tensor）：表示Key输出到kv_cache中的Tensor（本质in-place更新）。
@@ -11507,7 +11641,7 @@ conv_states将被原地更新为各序列最新的缓存状态。
 约束说明:
 
 支持的型号:
-昇腾910_95 AI处理器
+昇腾950 AI处理器
 
 调用示例:
 import torch
@@ -11528,6 +11662,90 @@ out = torch_npu.npu_fused_causal_conv1d(
     activation_mode="None",
     residual_connection=0,
     pad_slot_id=-1,
+)
+    """
+)
+
+
+_add_torch_npu_docstr(
+"npu_masked_causal_conv1d",
+"""
+接口原型:
+torch_npu.npu_masked_causal_conv1d(input, weight, *, mask=None) -> Tensor
+
+功能描述:
+带掩码的因果一维深度可分离卷积（Masked Causal Depthwise Conv1d）。对输入张量`input`沿序列维度执行窗口大小为3的因果卷积（仅使用当前及历史时刻的输入），并可选地通过`mask`对输出进行掩码置零。
+
+参数说明:
+input：Tensor类型，必选参数，表示卷积输入张量。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为3维[S, B, H]，S为序列长度，B为批量大小，H为特征维度，H须为64的倍数。
+weight：Tensor类型，必选参数，表示卷积权重张量。数据类型与input相同，不支持空Tensor，数据格式为ND。shape为2维[W, H]，W为卷积核宽度，固定为3；H为特征维度，须与input的H一致。
+mask：Tensor类型，可选参数，表示卷积输出的掩码。数据类型支持bool，数据格式为ND。shape为2维[B, S]，True表示有效位置，False表示需要置零的位置。默认值为None，表示不进行掩码操作。
+
+输出说明:
+output：Tensor类型，因果卷积的输出结果，shape和数据类型与input一致，数据格式为ND。
+
+约束说明:
+该接口支持推理和训练场景下使用。
+该接口支持单算子模式和图模式。
+input和weight的数据类型必须一致。
+weight的W维度目前只支持3。
+H须为64的倍数。
+不支持非连续的input、weight、mask张量。
+
+支持的型号:
+昇腾950 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+S, B, H, W = 2048, 4, 768, 3
+input  = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+weight = torch.randn(W, H, dtype=torch.bfloat16).npu()
+mask   = torch.rand(B, S).npu() > 0.3
+output = torch_npu.npu_masked_causal_conv1d(input, weight, mask=mask)
+    """
+)
+
+_add_torch_npu_docstr(
+    "npu_masked_causal_conv1d_backward",
+    """
+接口原型:
+torch_npu.npu_masked_causal_conv1d_backward(grad_output, input, weight, *, mask=None) -> (Tensor, Tensor)
+
+功能描述:
+torch_npu.npu_masked_causal_conv1d的反向算子。计算带掩码的因果一维深度可分离卷积对输入`input`和权重`weight`的梯度。该接口通常由PyTorch自动微分机制自动调用，也可手动调用用于自定义梯度计算。
+
+参数说明:
+grad_output：Tensor类型，必选参数，表示前向输出的梯度张量。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为3维[S, B, H]。
+input：Tensor类型，必选参数，表示前向的卷积输入张量。数据类型与grad_output相同，不支持空Tensor，数据格式为ND。shape须与grad_output一致。
+weight：Tensor类型，必选参数，表示前向的卷积权重张量。数据类型与grad_output相同，不支持空Tensor，数据格式为ND。shape为2维[W, H]，W固定为3。
+mask：Tensor类型，可选参数，表示前向卷积输出的掩码，与前向调用时传入的mask一致。数据类型支持bool，数据格式为ND。shape为2维[B, S]。默认值为None。
+
+输出说明:
+grad_input：Tensor类型，对前向输入input的梯度，shape和数据类型与grad_output一致，数据格式为ND。
+grad_weight：Tensor类型，对前向权重weight的梯度，shape为[W, H]，W=3，数据类型与grad_output一致，数据格式为ND。
+
+约束说明:
+该接口支持训练场景下使用。
+该接口支持单算子模式和图模式。
+grad_output、input、weight的数据类型必须一致。
+weight的W维度目前只支持3。
+不支持非连续的grad_output、input、weight、mask张量。
+该接口已通过derivatives.yaml与npu_masked_causal_conv1d绑定，PyTorch自动微分时会自动调用，通常无需手动调用。
+
+支持的型号:
+昇腾950 AI处理器
+
+调用示例:
+import torch
+import torch_npu
+S, B, H, W = 2048, 4, 768, 3
+grad_output = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+input       = torch.randn(S, B, H, dtype=torch.bfloat16).npu()
+weight      = torch.randn(W, H, dtype=torch.bfloat16).npu()
+mask        = torch.rand(B, S).npu() > 0.3
+grad_input, grad_weight = torch_npu.npu_masked_causal_conv1d_backward(
+    grad_output, input, weight, mask=mask
 )
     """
 )
@@ -11578,6 +11796,74 @@ input = torch.randn(N, C).npu()
 target = torch.arange(0, N).npu()
     
 loss, log_prob, _, _ = torch_npu.npu_cross_entropy_loss(input, target)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_chunk_gated_delta_rule",
+    """
+功能描述:
+Chunked Gated Delta Rule(CGDR)是GDR的chunk版实现，它通过将输入序列切块，实现了一定的并行效果，在长上下文场景其计算效率相对Recurrent Gated Delta Rule更高，适用于prefill阶段。
+
+接口原型:
+npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? beta=None, Tensor? initial_state=None, Tensor? actual_seq_lengths=None, float? scale=None, Tensor? g=None) -> (Tensor, Tensor)
+
+参数说明:
+令 $B$ 表示batch size，$L_i$ 表示第i个序列的长度，$T=\sum_i^B L_i$ 表示累积序列长度。$N_k$ 表示key的头数，$N_v$ 表示value的头数，$D_k$ 表示key向量的维度，$D_v$ 表示value向量的维度。
+- query (Tensor)：必选输入，对应公式中的q，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- key (Tensor)：必选输入，对应公式中的k，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- value (Tensor)：必选输入，对应公式中的v，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv, Dv）。
+- beta (Tensor)：必选输入，对应公式中的β，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv）。
+- initial_state (Tensor)：必选输入&输出，对应公式中的状态矩阵S，数据类型支持bfloat16，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
+- actual_seq_lengths (Tensor)：必选输入，各batch的输入序列长度。数据类型支持int32，数据格式支持ND，shape为（B,）。
+- g (Tensor)：必选输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持float32，数据格式支持ND，shape为（T, Nv）。
+- scale_value (Scalar)：必选输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持float32。
+
+输出说明:
+注意力计算结果。输出的数据类型为bfloat16，数据格式为ND，形状为(T, Nv, Dv)。
+
+约束说明:
+- 该接口支持推理场景下使用。
+- 该接口支持静态图模式。
+- 输入shape大小需满足约束：$L_i \le 8$，$N_k \le 64$，$N_v \le 64$，$D_k = 128$，$D_v = 128$，$N_v$是$N_k$整数倍。
+
+支持的PyTorch版本:
+PyTorch 2.1 及更高版本
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 构造输入
+B, seqlen, nk, nv, dk, dv = (2, 100, 4, 8, 128, 128)
+actual_seq_lengths = (torch.ones(B) * seqlen).to("npu").to(torch.int32)
+T = int(torch.sum(actual_seq_lengths))
+
+state = torch.rand((B, nv, dv, dk), dtype=torch.bfloat16).npu()
+query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+g = torch.rand((T, nv), dtype=torch.float32).npu() * (-1.0)
+beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
+
+query = torch.nn.functional.normalize(query, p=2, dim=-1)
+key = torch.nn.functional.normalize(key, p=2, dim=-1)
+scale = dk ** -0.5
+
+# 调用算子
+o, final_state = torch_npu.npu_chunk_gated_delta_rule(
+    query, key, value,
+    beta=beta,
+    initial_state=state,
+    actual_seq_lengths=actual_seq_lengths,
+    scale=scale,
+    g=g)
+print(o.shape, final_state.shape)
 """
 )
 
@@ -11826,7 +12112,8 @@ input_positions = torch.tensor(input_position, dtype=torch.int64, device="npu")
 seq_lens = torch.tensor(seq_len, dtype=torch.int64, device="npu")
 slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
 
-block_table = np.random.randint(10, size=(num_seqs, torch.max(seq_lens.cpu()) // block_size + 1))
+max_seq_len = seq_lens.max().item()
+block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
 block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
 
 
@@ -11860,7 +12147,8 @@ slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
 spec_tokens = torch.tensor(spec_token, dtype=torch.int64, device="npu")
 accepted_nums = torch.tensor(accepted_num, dtype=torch.int64, device="npu")
 
-block_table = np.random.randint(10, size=(num_seqs, torch.max(seq_lens.cpu()) // block_size + 1))
+max_seq_len = seq_lens.max().item()
+block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
 block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
 
 
@@ -15081,3 +15369,54 @@ if __name__ == "__main__":
 
 """
 )
+
+
+_add_torch_npu_docstr(
+    "npu_rotate_quant",
+    """
+ 接口原型:
+ torch_npu.npu_rotate_quant(Tensor x, Tensor rotation, *, float? alpha=0.0, int? dst_dtype=None) -> (Tensor, Tensor)
+ 功能描述
+ `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
+
+ 参数说明:
+ x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
+ alpha（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
+ dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。
+
+ 输出说明:
+ y（`Tensor`）：输出的量化结果，shape支持2维[m,n]，与x保持一致，数据类型支持`int4`/`int8`。数据格式支持ND，支持非连续的Tensor。
+ scale（`Tensor`）：输出的量化因子，shape支持1维[m]，数据类型支持`float32`。数据格式支持ND，支持非连续的Tensor。
+
+ 支持的型号: 
+ Atlas A3 训练系列产品/Atlas A3 推理系列产品
+ Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+ 约束说明
+ 关于数据shape的约束，其中：
+ n：取值范围为128~16000，8字节对齐, n可以整除k。
+
+ 调用示例:
+ import torch
+ import torch_npu
+ import numpy as np
+
+ def test_rotate_quant(M=512, N=1024, K=1024, dst_dtype=torch.int8):
+     x = torch.randn(M, N, dtype=torch.bfloat16).npu()
+     rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
+     alpha = 0.0
+     output, output_scale = torch_npu.npu_rotate_quant(
+         x, rotation, alpha=alpha, dst_dtype=dst_dtype
+     )
+     return output, output_scale
+
+ def main():
+     output, output_scale = test_rotate_quant()
+
+ if __name__ == "__main__":
+     main()
+
+ """
+ )
+ 
