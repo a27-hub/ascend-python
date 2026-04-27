@@ -7347,6 +7347,9 @@ custom:
 
   - func: fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
     op_api: all_version
+    
+  - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+    op_api: all_version
 
   - func: npu_dense_lightning_indexer_softmax_lse(Tensor query_index, Tensor key_index, Tensor weights, *, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_klen=None, str? layout='BSND', int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807) -> (Tensor, Tensor)
     op_api: all_version
