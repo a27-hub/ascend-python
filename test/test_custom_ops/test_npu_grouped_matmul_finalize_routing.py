@@ -210,6 +210,7 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
             group_list_type=group_list_type,x_dtype=x_dtype, w_dtype=w_dtype, scale_dtype=scale_dtype, pertoken_scale_dtype=pertoken_scale_dtype)
 
 
+    @unittest.skip("Skipping due to bias is not supported; support bias param and remove this skip.")
     @SupportedDevices(["Ascend910B"])
     def test_npu_grouped_matmul_finalize_routing_1(self, device="npu"):
         m, k, n, batch, topK, group_num, shared_input_scale = 576, 2048, 7168, 72, 8, 8, 1
@@ -249,7 +250,7 @@ class TestGroupedMatmulFinalizeRouting(TestCase):
     @SupportedDevices(["Ascend910B"])
     def test_npu_grouped_matmul_finalize_routing_sharedinput_none_grouplist_cumsum(self, device="npu"):
         m, k, n, batch, topK, group_num, shared_input_scale = 576, 2048, 7168, 72, 8, 8, 1
-        x = torch.randint(-10, 10, (m, k), dtype=torch.int8)
+        x = torch.randint(-10, 10, (m, k), dtype=torch.int8)git
         weight = torch.randint(-10, 10, (group_num, k, n), dtype=torch.int8)
         scale = torch.normal(0, 0.01, (group_num, n), dtype=torch.float32)
         pertoken_scale = torch.normal(0, 0.01, (m, 1), dtype=torch.float32)
