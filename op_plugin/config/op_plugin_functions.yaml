@@ -2289,22 +2289,27 @@ official:
   - func: floor_divide(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: fmod.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version

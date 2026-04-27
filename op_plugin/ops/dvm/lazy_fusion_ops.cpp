@@ -805,6 +805,141 @@ at::Tensor & pow_(at::Tensor & self, const at::Tensor & exponent) {
   return self;
 }
 
+// ===================== FloorDivide =====================
+bool FloorDivideScalar(const at::Tensor &self, const at::Scalar &other, at::Tensor *out) {
+  if (!InputCheck(self)) {
+    return false;
+  }
+  float scalar = 1.0f;
+  auto other_type = other.type();
+  if (other_type == at::ScalarType::Long) {
+    scalar = static_cast<float>(other.toLong());
+  } else if (other_type == at::ScalarType::Double) {
+    scalar = static_cast<float>(other.toDouble());
+    if (self.scalar_type() == at::ScalarType::BFloat16) {
+      scalar = static_cast<float>(at::BFloat16(scalar));
+    } else if (self.scalar_type() == at::ScalarType::Half) {
+      scalar = static_cast<float>(at::Half(scalar));
+    }
+  } else {
+    return false;
+  }
+  if (out == nullptr) {
+    PrepareWritableOutput(self);
+  }
+  PrepareFusionInput(self);
+  auto k = g_lazy_fusion_manager.Get();
+  auto compute_type = self.scalar_type() == at::ScalarType::BFloat16
+                          ? dvm::DType::kFloat32 : k->TransType(self.scalar_type());
+  auto self_obj = k->Input(self);
+  self_obj = k->Cast(self_obj, compute_type);
+  auto div_obj = k->Binary<dvm::BinaryType::kDiv>(self_obj, scalar);
+  auto floor_obj = k->Unary<dvm::UnaryType::kFloor>(div_obj);
+  if (out == nullptr) {
+    k->Output(self, floor_obj, true);
+  } else {
+    *out = k->Output(floor_obj, self.sizes(), self.options().dtype(self.scalar_type()));
+  }
+  return true;
+}
+
+bool FloorDivideTensor(const at::Tensor &self, const at::Tensor &other, at::Tensor *out) {
+  if (IsCPUScalar(other)) {
+    return FloorDivideScalar(self, other.item(), out);
+  }
+  if (!InputCheck(self) || !InputCheck(other)) {
+    return false;
+  }
+  if (out == nullptr) {
+    PrepareWritableOutput(self);
+  }
+  PrepareFusionInputs(self, other);
+  auto k = g_lazy_fusion_manager.Get();
+  auto self_obj = k->Input(self);
+  auto other_obj = k->Input(other);
+  auto result_type = self.scalar_type();
+  if (other.scalar_type() != result_type) {
+    result_type = at::native::result_type(self, other);
+    auto compute_type = result_type == at::ScalarType::BFloat16
+                            ? dvm::DType::kFloat32 : k->TransType(result_type);
+    self_obj = k->Cast(self_obj, compute_type);
+    other_obj = k->Cast(other_obj, compute_type);
+  }
+  auto div_obj = k->Binary<dvm::BinaryType::kDiv>(self_obj, other_obj);
+  auto floor_obj = k->Unary<dvm::UnaryType::kFloor>(div_obj);
+  if (out == nullptr) {
+    k->Output(self, floor_obj, true);
+  } else {
+    *out = k->Output(floor_obj, k->GetShape(floor_obj), self.options().dtype(result_type));
+  }
+  return true;
+}
+
+at::Tensor floor_divide(const at::Tensor & self, const at::Tensor & other) {
+  static auto enable = IsEnabled("floor_divide", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !FloorDivideTensor(self, other, &out)) {
+    return op_api::floor_divide(self, other);
+  }
+  DumpOp("floor_divide", self, other);
+  return out;
+}
+
+at::Tensor floor_divide(const at::Tensor & self, const at::Scalar & other) {
+  static auto enable = IsEnabled("floor_divide", OpLevel_1);
+  at::Tensor out;
+  if (!enable || !FloorDivideScalar(self, other, &out)) {
+    return op_api::floor_divide(self, other);
+  }
+  DumpOp("floor_divide", self, other);
+  return out;
+}
+
+at::Tensor & floor_divide_(at::Tensor & self, const at::Tensor & other) {
+  static auto enable = IsEnabled("floor_divide_", OpLevel_1);
+  if (!enable || !FloorDivideTensor(self, other, nullptr)) {
+    return op_api::floor_divide_(self, other);
+  }
+  DumpOp("floor_divide_", self, other);
+  LazyFusionFlush();
+  return self;
+}
+
+at::Tensor & floor_divide_(at::Tensor & self, const at::Scalar & other) {
+  static auto enable = IsEnabled("floor_divide_", OpLevel_1);
+  if (!enable || !FloorDivideScalar(self, other, nullptr)) {
+    return op_api::floor_divide_(self, other);
+  }
+  DumpOp("floor_divide_", self, other);
+  LazyFusionFlush();
+  return self;
+}
+
+at::Tensor & floor_divide_out(const at::Tensor & self, const at::Tensor & other, at::Tensor & out) {
+  static auto enable = IsEnabled("floor_divide", OpLevel_1);
+  if (!enable || !NpuCheck(out) || IsCPUScalar(other) || !InputCheck(self) || !InputCheck(other)) {
+    return op_api::floor_divide_out(self, other, out);
+  }
+  PrepareWritableOutput(out);
+  PrepareFusionInputs(self, other);
+  auto k = g_lazy_fusion_manager.Get();
+  auto self_obj = k->Input(self);
+  auto other_obj = k->Input(other);
+  if (self.scalar_type() != other.scalar_type()) {
+    auto result_type = at::native::result_type(self, other);
+    auto compute_type = result_type == at::ScalarType::BFloat16
+                            ? dvm::DType::kFloat32 : k->TransType(result_type);
+    self_obj = k->Cast(self_obj, compute_type);
+    other_obj = k->Cast(other_obj, compute_type);
+  }
+  auto div_obj = k->Binary<dvm::BinaryType::kDiv>(self_obj, other_obj);
+  auto floor_obj = k->Unary<dvm::UnaryType::kFloor>(div_obj);
+  k->Output(out, floor_obj, false);
+  DumpOp("floor_divide_out", self, other);
+  LazyFusionFlush();
+  return out;
+}
+
 // ===================== Comparison =====================
 at::Tensor eq(const at::Tensor & self, const at::Scalar & other) {
   static auto enable = IsEnabled("eq", OpLevel_1);
