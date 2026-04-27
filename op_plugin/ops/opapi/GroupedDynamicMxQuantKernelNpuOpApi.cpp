@@ -24,6 +24,7 @@ constexpr int64_t BLOCKSIZE_BASE_NUM = 32;
 constexpr int64_t X_DIM_NUM = 2;
 constexpr int64_t NUM_TWO = 2;
 constexpr int64_t DEFAULT_SCALE_ALG = 0;
+constexpr double DEFAULT_DST_TYPE_MAX = 0.0;
 }; // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
@@ -32,7 +33,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
     c10::string_view round_mode,
     int64_t dst_type,
     int64_t blocksize,
-    int64_t scale_alg)
+    c10::optional<int64_t> scale_alg)
 {
     // input x and group_index dim check
     TORCH_CHECK(x.sizes().size() == X_DIM_NUM,
@@ -64,11 +65,16 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_mx_quant(
     ASCEND_LOGI("[npu_grouped_dynamic_mx_quant]: Setting aclTensor y dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
+    int64_t scale_alg_optional = scale_alg.has_value() ? scale_alg.value() : DEFAULT_SCALE_ALG;
 
     static bool npu_support_v2 = check_aclnn_kernel_available("aclnnGroupedDynamicMxQuantV2");
     if (npu_support_v2) {
-        EXEC_NPU_CMD(aclnnGroupedDynamicMxQuantV2, x, group_index, round_mode_ptr, y_acltype, blocksize, scale_alg, y_wrapper, mxscale_wrapper);
+        EXEC_NPU_CMD(aclnnGroupedDynamicMxQuantV2, x, group_index, round_mode_ptr, y_acltype, blocksize, scale_alg_optional, DEFAULT_DST_TYPE_MAX, y_wrapper, mxscale_wrapper);
     } else {
+        if (scale_alg.has_value()) {
+            TORCH_NPU_WARN_ONCE("CAUTION: The operator aten::npu_grouped_dynamic_mx_quant is "
+                "not support scale_alg, please try to update your CANN version.");
+        }
         EXEC_NPU_CMD(aclnnGroupedDynamicMxQuant, x, group_index, round_mode_ptr, y_acltype, blocksize, y_wrapper, mxscale_wrapper);
     }
 
