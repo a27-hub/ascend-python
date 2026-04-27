@@ -318,479 +318,498 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <th>kvCache per-tile量化<br>dtype</th>
     </tr>
     <tr>
-      <td>tokenX</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td>token_x</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
     </tr>
     <tr>
-      <td>weightDq</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td>weight_dq</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
     </tr>
     <tr>
-      <td>weightUqQr</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td>weight_uq_qr</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
     </tr>
     <tr>
-      <td>weightUk</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td>weight_uk</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td>weightDkvKr</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td>weight_dkv_kr</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
     </tr>
     <tr>
-      <td> rmsnormGammaCq </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> rmsnorm_gamma_cq </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> rmsnormGammaCkv </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> rmsnorm_gamma_ckv </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> ropeSin </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> rope_sin </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> ropeCos </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> rope_cos </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> kvCacheRef </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>BFLOAT16</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>BFLOAT16</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>BFLOAT16</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td> kv_cache </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>bfloat16</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>bfloat16</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>bfloat16</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
     </tr>
     <tr>
-      <td> krCacheRef </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> kr_cache </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> cacheIndexOptional </td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
-      <td>INT64</td>
+      <td> cache_index </td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
+      <td>int64</td>
     </tr>
     <tr>
-      <td> dequantScaleXOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> dequant_scale_x </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> dequantScaleWDqOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> dequant_scale_w_dq </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> dequantScaleWUqQrOptional </td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> dequant_scale_w_uq_qr </td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> dequantScaleWDkvKrOptional </td>
-      <td> NULLPTR </td>
-      <td> NULLPTR </td>
-      <td> NULLPTR </td>
-      <td> NULLPTR </td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> dequant_scale_w_dkv_kr </td>
+      <td> 无需赋值 </td>
+      <td> 无需赋值 </td>
+      <td> 无需赋值 </td>
+      <td> 无需赋值 </td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> quantScaleCkvOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
+      <td> quant_scale_ckv </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
     </tr>
     <tr>
-      <td> quantScaleCkrOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
+      <td> quant_scale_ckr </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
     </tr>
     <tr>
-      <td> smoothScalesCqOptional </td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> smooth_scales_cq </td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> kNopeClipAlphaOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
+      <td> actual_seq_len </td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
+      <td>int32</td>
     </tr>
     <tr>
-      <td> queryOut </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>HIFLOAT8</td>
-      <td>BFLOAT16</td>
+      <td> k_nope_clip_alpha </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
     </tr>
     <tr>
-      <td> queryRopeOut </td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
-      <td>BFLOAT16</td>
+      <td> query_out </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>float8_e4m3fn</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>float8_e4m3fn</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>hifloat8</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> dequantScaleQNopeOutOptional </td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>NULLPTR</td>
+      <td> query_rope_out </td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
+      <td>bfloat16</td>
     </tr>
     <tr>
-      <td> queryNormOutOptional </td>
-      <td>BFLOAT16</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>INT8</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>FLOAT8_E4M3FN</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
-      <td>HIFLOAT8</td>
+      <td> dequant_scale_q_nope_out </td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
+      <td>无需赋值</td>
+      <td>float</td>
+      <td>无需赋值</td>
     </tr>
     <tr>
-      <td> dequantScaleQNormOutOptional </td>
-      <td>NULLPTR</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT8_E8M0</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
-      <td>FLOAT</td>
+      <td> query_norm_out </td>
+      <td>bfloat16</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>int8</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>float8_e4m3fn</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+      <td>hifloat8</td>
+    </tr>
+    <tr>
+      <td> dequant_scale_q_norm_out </td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float8_e8m0</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
+      <td>float</td>
     </tr>
   </table>
   </div>
