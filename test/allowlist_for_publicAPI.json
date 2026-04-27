@@ -124,6 +124,7 @@
       "npu_grouped_matmul",
       "npu_moe_finalize_routing",
       "npu_mhc_sinkhorn",
+      "npu_mhc_sinkhorn_backward",
       "npu_quant_matmul",
       "npu_quant_matmul_reduce_sum",
       "npu_quant_scatter",
@@ -184,8 +185,9 @@
       "npu_mhc_post",
       "npu_mhc_post_backward",
       "npu_mhc_pre",
-      "npu_mhc_pre_backward",
-      "npu_rotate_quant"
+      "npu_chunk_gated_delta_rule",
+      "npu_rotate_quant",
+      "npu_mhc_pre_backward"
     ]
   }
   
