@@ -1485,6 +1485,86 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   return std::make_tuple(std::move(out), std::move(save_mean), std::move(save_invstd));
 }
 
+::std::tuple<at::Tensor,at::Tensor,at::Tensor> native_batch_norm_backward(
+  const at::Tensor & grad_out, const at::Tensor & input, const c10::optional<at::Tensor> & weight,
+  const c10::optional<at::Tensor> & running_mean, const c10::optional<at::Tensor> & running_var,
+  const c10::optional<at::Tensor> & save_mean, const c10::optional<at::Tensor> & save_invstd,
+  bool train, double eps, ::std::array<bool,3> output_mask) {
+  static auto enable = IsEnabled("native_batch_norm_backward", OpLevel_2);
+  if (!enable || train || grad_out.scalar_type() != at::ScalarType::Float || input.scalar_type() != at::ScalarType::Float ||
+      grad_out.scalar_type() != input.scalar_type() || input.dim() < 2 || input.dim() > 4 ||
+      !NpuCheck(grad_out, input, weight, running_mean, running_var)) {
+    return op_api::native_batch_norm_backward(
+      grad_out, input, weight, running_mean, running_var, save_mean, save_invstd, train, eps, output_mask);
+  }
+  auto channels = input.size(1);
+  if (!BatchNormVectorCheck(weight, channels) ||
+      !BatchNormVectorCheck(running_mean, channels) ||
+      !BatchNormVectorCheck(running_var, channels)) {
+    return op_api::native_batch_norm_backward(
+      grad_out, input, weight, running_mean, running_var, save_mean, save_invstd, train, eps, output_mask);
+  }
+
+  auto x = input.contiguous();
+  auto dy = grad_out.contiguous();
+  auto weight_tensor = weight.has_value() ?
+    weight.value().contiguous() : at::ones({channels}, input.options().dtype(at::kFloat));
+  auto running_mean_tensor = running_mean.has_value() ?
+    running_mean.value().contiguous() : at::zeros({channels}, input.options().dtype(at::kFloat));
+  auto running_var_tensor = running_var.has_value() ?
+    running_var.value().contiguous() : at::ones({channels}, input.options().dtype(at::kFloat));
+
+  // Inference BatchNorm backward:
+  //   grad_input = grad_out * weight / sqrt(running_var + eps)
+  //   grad_weight = sum(grad_out * (input - running_mean) / sqrt(running_var + eps))
+  //   grad_bias = sum(grad_out)
+  LazyFusionFlush();
+  auto k = g_lazy_fusion_manager.Get();
+  auto x_obj = k->Input(x);
+  auto dy_obj = k->Input(dy);
+  auto input_dtype = dvm::Kernel::GetDType(x_obj);
+  ShapeVector broadcast_shape(x.dim(), 1);
+  broadcast_shape[1] = channels;
+  auto broadcast_shape_ref = k->GetShapeRef(broadcast_shape);
+  ShapeVector reduce_axis;
+  reduce_axis.reserve(x.dim() - 1);
+  for (int64_t i = 0; i < x.dim(); ++i) {
+    if (i != 1) {
+      reduce_axis.push_back(i);
+    }
+  }
+  auto reduce_axis_ref = k->GetShapeRef(reduce_axis);
+  auto mean_obj = k->Cast(k->Input(running_mean_tensor, true, broadcast_shape_ref), input_dtype);
+  auto var_obj = k->Cast(k->Input(running_var_tensor, true, broadcast_shape_ref), input_dtype);
+  auto invstd_obj =
+    k->Unary<dvm::UnaryType::kReciprocal>(
+      k->Unary<dvm::UnaryType::kSqrt>(k->Binary<dvm::BinaryType::kAdd>(var_obj, static_cast<float>(eps))));
+  auto scale_obj =
+    k->Binary<dvm::BinaryType::kMul>(
+      invstd_obj, k->Cast(k->Input(weight_tensor, true, broadcast_shape_ref), input_dtype));
+
+  at::Tensor grad_input;
+  at::Tensor grad_weight;
+  at::Tensor grad_bias;
+  if (output_mask[0]) {
+    auto grad_input_obj = k->Binary<dvm::BinaryType::kMul>(dy_obj, scale_obj);
+    grad_input = k->Output(grad_input_obj, k->GetShape(grad_input_obj), input.options().dtype(input.scalar_type()));
+  }
+  if (output_mask[1]) {
+    auto centered_obj = k->Binary<dvm::BinaryType::kSub>(x_obj, mean_obj);
+    auto norm_obj = k->Binary<dvm::BinaryType::kMul>(centered_obj, invstd_obj);
+    auto grad_weight_obj = k->Reduce<dvm::ReduceType::kSum>(
+      k->Binary<dvm::BinaryType::kMul>(dy_obj, norm_obj), reduce_axis_ref, false);
+    grad_weight = k->Output(grad_weight_obj, k->GetShape(grad_weight_obj), input.options().dtype(at::kFloat));
+  }
+  if (output_mask[2]) {
+    auto grad_bias_obj = k->Reduce<dvm::ReduceType::kSum>(dy_obj, reduce_axis_ref, false);
+    grad_bias = k->Output(grad_bias_obj, k->GetShape(grad_bias_obj), input.options().dtype(at::kFloat));
+  }
+  DumpOp("native_batch_norm_backward", grad_out, input, weight, running_mean, running_var, train, eps);
+  return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+}
+
 ::std::tuple<at::Tensor,at::Tensor> batch_norm_stats(const at::Tensor & input, double eps) {
   static auto enable = IsEnabled("batch_norm_stats", OpLevel_1);
   if (!enable || input.scalar_type() != at::ScalarType::Float || !NpuCheck(input)) {
