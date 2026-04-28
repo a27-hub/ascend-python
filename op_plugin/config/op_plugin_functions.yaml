@@ -5771,6 +5771,9 @@ custom:
   - func: npu_broadcast(Tensor self, int[] size) -> Tensor
     acl_op: all_version
 
+  - func: npu_cat(Tensor[] tensors, int dim=0, int? input_dtype=None) -> Tensor
+    op_api: all_version
+
   - func: npu_broadcast.out(Tensor self, int[] size, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     device_check: NoCheck
