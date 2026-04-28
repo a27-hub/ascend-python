@@ -72,6 +72,19 @@ bool GetScalarValue(const at::Scalar &scalar, float *v) {
   return true;
 }
 
+constexpr float kTanhClampMin = -8.8f;
+constexpr float kTanhClampMax = 8.8f;
+
+dvm::NDObject *BuildClampedTanhFp32(dvm::Kernel *k, dvm::NDObject *input_f32) {
+  auto clamped = k->Binary<dvm::BinaryType::kMaximum>(input_f32, kTanhClampMin);
+  clamped = k->Binary<dvm::BinaryType::kMinimum>(clamped, kTanhClampMax);
+  auto two_x = k->Binary<dvm::BinaryType::kMul>(clamped, 2.0f);
+  auto exp_two_x = k->Unary<dvm::UnaryType::kExp>(two_x);
+  auto numer = k->Binary<dvm::BinaryType::kSub>(exp_two_x, 1.0f);
+  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
+  return k->Binary<dvm::BinaryType::kDiv>(numer, denom);
+}
+
 // Call this for every tensor that the current fused op reads through k->Input(...),
 // unless the op entry already does an unconditional LazyFusionFlush() before any
 // graph mutation. The helper checks whether the cached dvm_op_ still represents
@@ -1181,12 +1194,9 @@ at::Tensor tanh(const at::Tensor & self) {
   auto k = g_lazy_fusion_manager.Get();
   auto x = k->Input(self);
   x = k->Cast(x, dvm::DType::kFloat32);
-  // tanh(x) = 1 - 2 / (exp(2x) + 1)
-  auto two_x = k->Binary<dvm::BinaryType::kMul>(x, 2.0f);
-  auto exp_two_x = k->Unary<dvm::UnaryType::kExp>(two_x);
-  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
-  auto two_div_denom = k->Binary<dvm::BinaryType::kDiv>(2.0f, denom);
-  auto obj = k->Binary<dvm::BinaryType::kSub>(1.0f, two_div_denom);
+  // Align with the run-package tanh kernel: clip x to [-8.8, 8.8] in float32,
+  // then compute tanh(x) = (exp(2x) - 1) / (exp(2x) + 1).
+  auto obj = BuildClampedTanhFp32(k, x);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("tanh", self);
   return out;
@@ -1201,11 +1211,7 @@ at::Tensor & tanh_(at::Tensor & self) {
   auto k = g_lazy_fusion_manager.Get();
   auto x = k->Input(self);
   x = k->Cast(x, dvm::DType::kFloat32);
-  auto two_x = k->Binary<dvm::BinaryType::kMul>(x, 2.0f);
-  auto exp_two_x = k->Unary<dvm::UnaryType::kExp>(two_x);
-  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_x, 1.0f);
-  auto two_div_denom = k->Binary<dvm::BinaryType::kDiv>(2.0f, denom);
-  auto out_obj = k->Binary<dvm::BinaryType::kSub>(1.0f, two_div_denom);
+  auto out_obj = BuildClampedTanhFp32(k, x);
   k->Output(self, out_obj, true);
   DumpOp("tanh_", self);
   LazyFusionFlush();
@@ -1235,24 +1241,27 @@ at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & outp
 
 at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor & out) {
   static auto enable = IsEnabled("gelu", OpLevel_1);
-  if (!enable || !InputCheck(self) || !NpuCheck(out)) {
+  if (!enable || !InputCheck(self) || !NpuCheck(out) || approximate != "tanh") {
     return op_api::gelu_out(self, approximate, out);
   }
   PrepareWritableOutput(out);
   PrepareFusionInput(self);
   auto k = g_lazy_fusion_manager.Get();
-  constexpr float csv_value = 0.044715f;
-  constexpr float csv_value_sqrt_eight_div_pi = -1.5957691216057308f;
+  constexpr float kGeluCoeffA = 0.044715f;
+  constexpr float kGeluCoeffB = 1.5957691216057308f;
   auto x_obj = k->Input(self);
   x_obj = k->Cast(x_obj, dvm::DType::kFloat32);
   auto x_squared = k->Binary<dvm::BinaryType::kMul>(x_obj, x_obj);
   auto x_cubed = k->Binary<dvm::BinaryType::kMul>(x_squared, x_obj);
-  auto mul_1 = k->Binary<dvm::BinaryType::kMul>(x_cubed, csv_value);
-  auto tanh_res = k->Binary<dvm::BinaryType::kAdd>(x_obj, mul_1);
-  auto y = k->Binary<dvm::BinaryType::kMul>(tanh_res, csv_value_sqrt_eight_div_pi);
-  auto exp_0 = k->Unary<dvm::UnaryType::kExp>(y);
-  auto add_0 = k->Binary<dvm::BinaryType::kAdd>(exp_0, 1.0f);
-  auto obj = k->Binary<dvm::BinaryType::kDiv>(x_obj, add_0);
+  auto cubic_term = k->Binary<dvm::BinaryType::kMul>(x_cubed, kGeluCoeffA);
+  auto tanh_param = k->Binary<dvm::BinaryType::kAdd>(x_obj, cubic_term);
+  auto y = k->Binary<dvm::BinaryType::kMul>(tanh_param, kGeluCoeffB);
+  auto exp_min_y_0 = k->Unary<dvm::UnaryType::kExp>(k->Binary<dvm::BinaryType::kMinimum>(y, 0.0f));
+  auto exp_neg_abs_y = k->Unary<dvm::UnaryType::kExp>(
+      k->Binary<dvm::BinaryType::kMul>(k->Unary<dvm::UnaryType::kAbs>(y), -1.0f));
+  auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_neg_abs_y, 1.0f);
+  auto div = k->Binary<dvm::BinaryType::kDiv>(x_obj, denom);
+  auto obj = k->Binary<dvm::BinaryType::kMul>(div, exp_min_y_0);
   k->Output(out, obj, false);
   DumpOp("gelu", self, approximate);
   return out;
@@ -1280,14 +1289,7 @@ at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self
   auto mul_triple_mul_csvalue = k->Binary<dvm::BinaryType::kMul>(cs_value, x_cubed);
   auto mul_add_x = k->Binary<dvm::BinaryType::kAdd>(x_obj, mul_triple_mul_csvalue);
   auto tanh_para = k->Binary<dvm::BinaryType::kMul>(cs_sqrt_two_div_pi, mul_add_x);
-  auto Tanh = [&k](const auto &input) {
-    auto two_input = k->Binary<dvm::BinaryType::kMul>(input, 2.0f);
-    auto exp_two_input = k->Unary<dvm::UnaryType::kExp>(two_input);
-    auto denom = k->Binary<dvm::BinaryType::kAdd>(exp_two_input, 1.0f);
-    auto two_div_denom = k->Binary<dvm::BinaryType::kDiv>(2.0f, denom);
-    return k->Binary<dvm::BinaryType::kSub>(1.0f, two_div_denom);
-  };
-  auto tanh_res = Tanh(tanh_para);
+  auto tanh_res = BuildClampedTanhFp32(k, tanh_para);
   auto tanh_res_add_one = k->Binary<dvm::BinaryType::kAdd>(1.0f, tanh_res);
   auto half_mul_tanh_res_add_one = k->Binary<dvm::BinaryType::kMul>(0.5f, tanh_res_add_one);
   auto tanh_res_squared = k->Binary<dvm::BinaryType::kMul>(tanh_res, tanh_res);
