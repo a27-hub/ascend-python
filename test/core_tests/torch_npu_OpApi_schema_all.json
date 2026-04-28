@@ -1108,6 +1108,9 @@
   "func: npu_reshape.out(Tensor self, int[] shape, bool can_refresh=False, *, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
   },
+  "func: npu_cat(Tensor[] tensors, int dim=0, int? input_dtype=None) -> Tensor": {
+    "version": ["all_version"]
+  },
   "func: npu_batch_nms(Tensor self, Tensor scores, float score_threshold, float iou_threshold, int max_size_per_class, int max_total_size, bool change_coordinate_frame=False, bool transpose_box=False) -> (Tensor, Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
