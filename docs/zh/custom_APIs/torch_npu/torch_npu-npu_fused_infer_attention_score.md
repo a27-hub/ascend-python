@@ -9,16 +9,9 @@
 
 ## 功能说明<a name="zh-cn_topic_0000001832267082_section14441124184110"></a>
 
-- API功能：适配增量&全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。当`query`矩阵的S为1，进入IncreFlashAttention分支，其余场景进入PromptFlashAttention分支。
-- 模式说明
-  - PromptFlashAttention
-    - 适用场景：prefill/prompt阶段。
-    - 数据特点：通常`query/key/value`都是整段序列的张量，通常配合`atten_mask`和可选`pse_shift`。
-    - 性能侧重点：更关注吞吐，长序列时需要关注超时风险与切分策略。
-  - IncreFlashAttention
-    - 适用场景：decode阶段。
-    - 数据特点：`query`的S维为1，`key/value`往往来自KV Cache。
-    - 性能侧重点：关注单步延迟与KV Cache访问效率，启用page attention可以改善吞吐/访存，但会引入额外约束。
+- API功能：适配增量&全量推理场景的FlashAttention算子，既可以支持全量计算场景（PromptFlashAttention），也可支持增量计算场景（IncreFlashAttention）。当`query`矩阵的S为1，进入IncreFlashAttention分支，其余场景进入PromptFlashAttention分支。支持的两种场景如下。
+  - PromptFlashAttention：用于prefill/prompt阶段，通常`query/key/value`都是整段序列的张量，可配合`atten_mask`和可选`pse_shift`使用。该模式更关注吞吐，长序列场景下需要关注超时风险与切分策略。
+  - IncreFlashAttention：用于decode阶段，`query`的S维为1，`key/value`通常来自KV Cache。该模式更关注单步延迟与KV Cache访问效率，启用page attention可以改善吞吐/访存，但会引入额外约束。
 - 计算公式：
 
   - 基本公式：
