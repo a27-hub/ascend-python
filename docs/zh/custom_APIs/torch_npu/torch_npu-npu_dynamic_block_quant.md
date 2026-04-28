@@ -19,14 +19,25 @@
   $$
 
   $$
-  scale = min(FP8\_MAX(HiF8\_MAX / INT8\_MAX) / input\_max, 1/min\_scale)
+  scale\_raw = input\_max / Q\_MAX
+  $$
+
+  $$
+  scale = max(scale\_raw, min\_scale)
   $$
 
   $$
   y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
 
-  其中$block\_reduce\_max$代表求每个`block`中的最大值。
+  其中$block\_reduce\_max$代表求每个`block`中的最大值。`Q_MAX` 表示目标量化类型可表示的最大正数值，由 `dst_type` 决定。
+  FP8、HiF8、INT8 均为 8-bit 低精度量化目标类型，分别表示 FP8 浮点、HiF8 浮点和 INT8 整数格式。当前支持的最大值如下：
+
+  | 目标类型 | 最大正数值 |
+  | --- | --- |
+  | FP8 | FP8_MAX = 448 |
+  | HiF8 | HiF8_MAX = 32768 |
+  | INT8 | INT8_MAX = 127 |
 
 ## 函数原型
 
@@ -39,7 +50,11 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 - **x** (`Tensor`)：必选参数，输入张量，数据类型支持`float16`、`bfloat16`，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。
 - **min_scale** (`float`)：可选参数，参与`scale`计算的最小`scale`值。当前支持取值大于等于0。
 - **round_mode** (`str`)：可选参数，指定类型转换到输出的转换方式。当前仅支持取值`rint`。
-- **dst_type** (`int`)：可选参数，指定输出`y`的数据类型。当前仅支持取值1，表示输出`y`的数据类型为`int8`。
+- **dst_type** (`int`)：可选参数，指定输出`y`的数据类型。输出数据类型由 `dst_type` 指定，不同输出类型会使用对应的最大正数值参与 `scale` 计算：
+  - 当 `dst_type` 指定为 FP8 时，使用 `FP8_MAX` 参与 `scale` 计算；
+  - 当 `dst_type` 指定为 HiF8 时，使用 `HiF8_MAX` 参与 `scale` 计算；
+  - 当 `dst_type` 指定为 INT8 时，使用 `INT8_MAX` 参与 `scale` 计算；
+  - 当前仅支持取值1，表示输出`y`的数据类型为`int8`。
 - **row_block_size** (`int`)：可选参数，指定单个量化的数据块的行大小。当前仅支持取值1。
 - **col_block_size** (`int`)：可选参数，指定单个量化的数据块的列大小，当前仅支持取值128。
 
