@@ -162,4 +162,72 @@ at::Tensor cat(at::TensorList tensors, at::Dimname dim)
     return at::cat(tensors, dimname_to_position(tensors[0], dim));
 }
 
+static bool is_fp4_dtype(int64_t dtype)
+{
+    return dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+           dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2);
+}
+
+static c10::SmallVector<at::Tensor, op_infer::N> cat_dest_tensor_list_from_tensorlist(
+    at::TensorList tensors)
+{
+    c10::SmallVector<at::Tensor, op_infer::N> dst_tensor_list;
+    for (const at::Tensor& tensor : tensors) {
+        if (tensor.dim() == 1 && tensor.sizes()[0] == 0) {
+            continue;
+        }
+        dst_tensor_list.emplace_back(tensor);
+    }
+    return dst_tensor_list;
+}
+
+at::Tensor npu_cat(at::TensorList tensors, int64_t dim, c10::optional<int64_t> input_dtype)
+{
+    // If input_dtype is not specified or not FP4, fall back to standard cat
+    if (!input_dtype.has_value() || !is_fp4_dtype(input_dtype.value())) {
+        return at::cat(tensors, dim);
+    }
+
+    int64_t fp4_dtype = input_dtype.value();
+
+    // Check no zero-dim tensors (same as cat)
+    for (size_t i = 0; i < tensors.size(); i++) {
+        TORCH_CHECK(tensors[i].dim() > 0,
+            "zero-dimensional tensor (at position ", i, ") cannot be concatenated" + OPS_ERROR(ErrCode::PARAM));
+    }
+
+    // Filter empty tensors (same as cat)
+    c10::SmallVector<at::Tensor, op_infer::N> inputTensors = cat_dest_tensor_list_from_tensorlist(tensors);
+    if (inputTensors.size() == 0) {
+        at::Tensor result = npu_preparation::apply_tensor_without_format(tensors[0]);
+        return result;
+    }
+
+    // Validate: all tensors must be uint8 (FP4 packed storage)
+    for (size_t i = 0; i < inputTensors.size(); i++) {
+        TORCH_CHECK(inputTensors[i].scalar_type() == c10::ScalarType::Byte,
+            "npu_cat: when input_dtype is FP4, tensor at position ", i,
+            " must be of dtype uint8 (Byte), but has dtype ", inputTensors[i].dtype(),
+            OPS_ERROR(ErrCode::PARAM));
+    }
+
+    int64_t dim_post_expr = inputTensors[0].dim();
+    dim = op_plugin::utils::make_warp_dim(dim, dim_post_expr);
+
+    // Pure FP4: all tensors are uint8, physical shape concat is correct
+    auto outputSize = cat_npu_output_size_opapi(inputTensors, dim);
+
+    // Output is uint8 (FP4 packed)
+    at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, c10::ScalarType::Byte);
+
+    // Wrap with unified FP4 ACL type using existing TensorListWrapper
+    at::TensorList tensor_list(inputTensors.begin(), inputTensors.end());
+    aclDataType acl_dtype = c10_npu::GetAclDataType(fp4_dtype);
+    TensorListWrapper input_wrapper = {tensor_list, acl_dtype};
+    TensorWrapper output_wrapper = {result, acl_dtype};
+
+    EXEC_NPU_CMD(aclnnCat, input_wrapper, dim, output_wrapper);
+    return result;
+}
+
 }
