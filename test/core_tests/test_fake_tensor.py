@@ -6060,6 +6060,37 @@ class TestRotateQuant(TestCase):
             self.assertTrue(output1_npu.shape == output1.shape)
             self.assertTrue(output1_npu.dtype == output1.dtype)
 
+class TestNpuMhcSinkhorn(TestCase):
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_mhc_sinkhorn_3d(self):
+        with FakeTensorMode():
+            x = torch.randn(1, 128, 4, dtype=torch.float32).npu()
+            result, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x, 1e-6, 20, 0)
+
+            self.assertEqual(result.shape, x.shape)
+            self.assertEqual(result.dtype, x.dtype)
+
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_mhc_sinkhorn_4d(self):
+        with FakeTensorMode():
+            x = torch.randn(1, 128, 4, 4, dtype=torch.float32).npu()
+            result, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x, 1e-6, 20, 0)
+
+            self.assertEqual(result.shape, x.shape)
+            self.assertEqual(result.dtype, x.dtype)
+
+    @unittest.skipIf(not RUN_NPU, "requires npu")
+    def test_npu_mhc_sinkhorn_out_flag_1(self):
+        with FakeTensorMode():
+            x = torch.randn(2, 64, 6, 6, dtype=torch.float32).npu()
+            result, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x, 1e-6, 10, 1)
+
+            self.assertEqual(result.shape, x.shape)
+            self.assertEqual(result.dtype, x.dtype)
+            self.assertEqual(norm_out.shape, x.shape)
+            self.assertEqual(norm_out.dtype, x.dtype)
+            self.assertEqual(sum_out.shape, x.shape)
+            self.assertEqual(sum_out.dtype, x.dtype)
 
 if __name__ == "__main__":
     run_tests()

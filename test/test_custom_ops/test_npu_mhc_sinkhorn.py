@@ -34,6 +34,18 @@ class TestNpuMhcSinkhorn(TestCase):
         expected_output = self.cpu_op_exec(x, eps, num_iters, out_flag)
         custom_output = self.custom_op_exec(x.npu(), eps, num_iters, out_flag)
         self.assertRtolEqual(expected_output.numpy(), custom_output.cpu().numpy())
+    
+    @SupportedDevices(['Ascend950'])
+    def test_npu_mhc_sinkhorn_net(self, device="npu"):
+        x_shape = [1, 2048, 4, 4]
+        x = torch.randn(x_shape, dtype=torch.float32)
+        eps = 1e-6
+        num_iters = 20
+        out_flag = 0
+
+        expected_output = self.cpu_op_exec(x, eps, num_iters, out_flag)
+        custom_output = self.custom_op_exec(x.npu(), eps, num_iters, out_flag)
+        self.assertRtolEqual(expected_output.numpy(), custom_output.cpu().numpy())
 
 
 if __name__ == "__main__":
