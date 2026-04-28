@@ -6902,9 +6902,13 @@ def npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None):
         output_shape = []
         for dim in range(dim_num - 1):
             output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 8)@impl(m, "npu_cat")
+        output_shape.append(x.size(dim_num - 1) // 8)
+        output = x.new_empty(output_shape, dtype=torch.int32)
+    else:
+        output = torch.empty_like(x, dtype=torch.int8)
+    return output, scale
 
-        
+
 @impl(m, "npu_cat")
 def npu_cat_meta(tensors, dim=0, input_dtype=None):
     # Filter out empty tensors
@@ -6926,4 +6930,3 @@ def npu_cat_meta(tensors, dim=0, input_dtype=None):
         return filtered[0].new_empty(output_shape, dtype=torch.uint8)
 
     return filtered[0].new_empty(output_shape)
-
