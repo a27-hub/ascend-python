@@ -19,14 +19,25 @@
   $$
 
   $$
-  scale = min(FP8\_MAX(HiF8\_MAX / INT8\_MAX) / input\_max, 1/min\_scale)
+  scale\_raw = input\_max / Q\_MAX
+  $$
+
+  $$
+  scale = max(scale\_raw, min\_scale)
   $$
 
   $$
   y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
 
-  其中$block\_reduce\_max$代表求每个`block`中的最大值。
+  其中$block\_reduce\_max$代表求每个`block`中的最大值。`Q_MAX` 表示目标量化类型可表示的最大正数值，由   `dst_type` 决定，不同输出类型会使用对应的最大正数值参与 `scale` 计算。
+  FP8、HiF8、INT8 均为 8-bit 低精度量化目标类型，分别表示 FP8 浮点、HiF8 浮点和 INT8 整数格式。当前支持的最大值如下：
+
+  | 目标类型 | 最大正数值 |
+  | --- | --- |
+  | FP8 | FP8_MAX = 448 |
+  | HiF8 | HiF8_MAX = 32768 |
+  | INT8 | INT8_MAX = 127 |
 
 ## 函数原型
 
