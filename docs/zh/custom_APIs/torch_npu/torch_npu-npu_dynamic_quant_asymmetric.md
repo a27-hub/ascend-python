@@ -11,11 +11,11 @@
 
 - API功能：
 
-    对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式，pertensor模式暂不支持。
+    对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式，pertensor模式暂不支持，支持MoE（Mixture of Experts，混合专家模型）场景。
 
 - 计算公式：
     
-    pertoken场景，rowMax、rowMin代表按行取最大值、按行取最小值，此处的“行”对应`x`最后一个维度的数据，即一个token。DST_MAX、DST_MIN分别对应量化后dtype的最大值和最小值，公式如下：
+    pertoken模式下，rowMax、rowMin代表按行取最大值、按行取最小值，此处的“行”对应`x`最后一个维度的数据，即一个token。DST_MAX、DST_MIN分别对应量化后dtype的最大值和最小值，公式如下：
 
     $$
     \text{scale} = \frac{\text{rowMax}(\mathbf{x}) - \text{rowMin}(\mathbf{x})}{DST\_MAX - DST\_MIN}\\
@@ -23,7 +23,7 @@
     y = \text{round}(\frac{\mathbf{x}}{\text{scale}} + \text{offset})
     $$
 
-    - 若使用smooth quant，非MoE（Mixture of Experts，混合专家模型）场景下，会引入smooth_scales输入，其形状与x最后一个维度大小一致，在进行量化前，会先令x乘以smooth_scales，再按上述公式进行量化。MoE（Mixture of Experts，混合专家模型）场景下会同时引入smooth_scales和group_index，此时smooth_scales中包含多组smooth向量，按group_index中的数值作用到x的不同行上。具体地，假如x包含m个token，smooth_scales有n行，smooth_scales[0]会作用到x[0:group_index[0]]上，smooth_scales[i]会作用到x[group_index[i-1]: group_index[i]]上，i=1,2, ...,n-1。
+    - MoE和非MoE场景下，若使用smooth quant，非MoE场景下会引入smooth_scales输入，其形状与x最后一个维度大小一致，在进行量化前，会先令x乘以smooth_scales，再按上述公式进行量化。MoE场景下会同时引入smooth_scales和group_index，此时smooth_scales中包含多组smooth向量，按group_index中的数值作用到x的不同行上。具体地，假如x包含m个token，smooth_scales有n行，smooth_scales[0]会作用到x[0:group_index[0]]上，smooth_scales[i]会作用到x[group_index[i-1]: group_index[i]]上，i=1,2, ...,n-1。
 
 ## 函数原型
 
