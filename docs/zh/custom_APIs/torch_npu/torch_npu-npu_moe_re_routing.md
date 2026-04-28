@@ -25,7 +25,7 @@
 
 该算子位于 MoE（Mixture of Experts）并行推理流程的**通信与计算衔接阶段**，具体位置如下：
 
-```
+```text
 Gating/TopK Routing
        ↓
 npu_moe_distribute_dispatch_v2  （AlltoAll 分发 token 到各卡）
@@ -46,7 +46,6 @@ npu_moe_distribute_combine_v2  （结果聚合与 AlltoAll 返回）
 3. **后置阶段**：Expert FFN 层根据 `expert_token_num` 中记录的专家 token 数量，依次读取 `permute_tokens` 中连续的数据块进行计算。
 
 4. **数据恢复**：Expert 计算结束后，利用本算子输出的 `permute_token_idx`，通过 `npu_moe_distribute_combine_v2` 将计算结果按原路聚合并返回。
-
 
 ## 函数原型
 
