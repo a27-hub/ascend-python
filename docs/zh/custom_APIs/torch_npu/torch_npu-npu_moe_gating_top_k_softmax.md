@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：MoE计算中，对输入`x`做Softmax计算，再做topk操作。
+- API功能：在MoE（混合专家模型，Mixture of Experts）架构的门控机制中，用于专家路由计算。对输入`x`（门控网络的输出权重）做Softmax计算，再做topk操作，以挑选出权重最高的前K个专家。
 - 计算公式：
 $$
 softmaxOut = softmax(x, axis = -1) \\
@@ -27,8 +27,13 @@ torch_npu.npu_moe_gating_top_k_softmax(x, finished=None, k=1) -> (Tensor, Tensor
 ## 参数说明
 
 - **x** (`Tensor`)：必选参数，公式中的$x$，表示待计算的输入，要求为2维/3维张量，数据类型支持`float16`、`bfloat16`、`float32`，数据格式要求为$ND$。
+<<<<<<< HEAD
 - **finished** (`Tensor`)：可选参数，表示输入中哪些行不参与计算，要求为2维/3维张量，数据类型支持`bool`，shape为`gating_shape[:-1]`，数据格式要求为$ND$。其中，`True`表示对应行不参与计算，`False`表示对应行参与计算。
 - **k** (`int`)：可选参数，公式中的$k$，表示topk的k值，大小为0<k<=x的-1轴大小，k<=1024。
+=======
+- **finished** (`Tensor`)：可选参数，表示输入中需要参与计算的行，要求为2维/3维张量，数据类型支持`bool`，shape为gating_shape[:-1]，数据格式要求为$ND$。默认值为`None`，表示所有输入行均参与计算，不进行屏蔽过滤。
+- **k** (`int`)：可选参数，公式中的$k$，表示topk的k值（即为每个输入选择排名前k个专家），大小为0<k<=x的-1轴大小，k<=1024。默认值为`1`，表示默认选择排名最高的1个专家。
+>>>>>>> b98a6bea (修改文档)
 
 ## 返回值说明
 
