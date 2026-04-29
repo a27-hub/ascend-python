@@ -357,7 +357,7 @@ inline void LazyFusionFlush() { g_lazy_fusion_manager.Flush(); }
 
 inline bool IsEnabled() {
   static const bool global_enabled =
-      g_lazy_fusion_manager.flags_.opt_level > OptLevel_0 &&
+      g_lazy_fusion_manager.flags_.enabled &&
       c10_npu::option::OptionsManager::GetTaskQueueEnable();
   if (!global_enabled) {
     return false;
@@ -375,6 +375,6 @@ inline bool IsEnabled() {
   return torch::autograd::get_current_graph_task_id() >= 0;
 }
 
-bool IsEnabled(const std::string &op, unsigned int required_level);
+bool IsEnabled(const std::string &op);
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_KERNEL_H

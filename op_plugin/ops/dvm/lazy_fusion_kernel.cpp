@@ -579,7 +579,7 @@ void LazyFusionKernel::DumpGraph() {
   dump_buf_ << ")\n}\n";
 }
 
-bool IsEnabled(const std::string &op, unsigned int required_level) {
+bool IsEnabled(const std::string &op) {
   const auto &flags = g_lazy_fusion_manager.flags_;
   const auto &disable_ops = flags.disable_ops;
   const auto &enable_ops = flags.enable_ops;
@@ -587,13 +587,12 @@ bool IsEnabled(const std::string &op, unsigned int required_level) {
   bool enable = false;
   if (!enable_ops_only.empty()) {
     enable = std::find(enable_ops_only.begin(), enable_ops_only.end(), op) != enable_ops_only.end();
-  } else if (flags.opt_level >= required_level) {
+  } else if (flags.enabled) {
     enable = std::find(disable_ops.begin(), disable_ops.end(), op) == disable_ops.end();
   } else {
     enable = std::find(enable_ops.begin(), enable_ops.end(), op) != enable_ops.end();
   }
-  ASCEND_LOGI("op [%s], required_level is %d, opt_level is %lu, enable = %d",
-              op.c_str(), required_level, static_cast<unsigned long>(flags.opt_level), enable);
+  ASCEND_LOGI("op [%s], dvm enabled=%d, op enable=%d", op.c_str(), flags.enabled, enable);
   return enable;
 }
 }  // namespace lazy_fusion

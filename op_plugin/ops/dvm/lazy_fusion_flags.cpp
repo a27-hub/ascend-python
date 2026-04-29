@@ -154,7 +154,6 @@ void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags
   reg.AddFlag("dump_as_text", &flags->dump_as_text);
   reg.AddFlag("dump_dir", &flags->dump_dir);
   reg.AddFlag("synchronize", &flags->synchronize);
-  reg.AddFlag("opt_level", &flags->opt_level);
   reg.AddFlag("online_tuning", &flags->online_tuning);
   reg.AddFlag("disable_ops", &flags->disable_ops);
   reg.AddFlag("enable_ops", &flags->enable_ops);
@@ -165,10 +164,59 @@ void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags
 }
 }  // namespace
 
+namespace {
+bool ParseBoolToken(const std::string &s, bool *out) {
+  if (s == "True" || s == "true" || s == "1" || s == "on" || s == "TRUE") {
+    *out = true;
+    return true;
+  }
+  if (s == "False" || s == "false" || s == "0" || s == "off" || s == "FALSE") {
+    *out = false;
+    return true;
+  }
+  return false;
+}
+}  // namespace
+
 LazyFusionFlags::LazyFusionFlags() {
-  char *env = std::getenv("ASCEND_LAZY_FUSION_FLAGS");
-  std::string str_flags = env == nullptr ? "" : std::string(env);
-  std::map<std::string, std::string> flag_map = ParseFlags(str_flags);
+  // Master switch + optional flags via TORCH_NPU_LAZY_FUSION.
+  //   export TORCH_NPU_LAZY_FUSION=True                     # enable, default flags
+  //   export TORCH_NPU_LAZY_FUSION=1
+  //   export TORCH_NPU_LAZY_FUSION="True --dump_as_text"    # enable + extra flags
+  //   export TORCH_NPU_LAZY_FUSION="True --disable_ops=where,sum"
+  //   export TORCH_NPU_LAZY_FUSION=False                    # disable
+  //   (unset)                                               # disable
+  char *env = std::getenv("TORCH_NPU_LAZY_FUSION");
+  if (env == nullptr) {
+    enabled = false;
+    return;
+  }
+  std::string str = env;
+  size_t i = str.find_first_not_of(" \t");
+  if (i == std::string::npos) {
+    enabled = false;
+    return;
+  }
+  size_t j = str.find_first_of(" \t", i);
+  std::string head = (j == std::string::npos) ? str.substr(i) : str.substr(i, j - i);
+  std::string rest;
+  if (head.rfind("--", 0) == 0) {
+    // No leading bool token — env value is purely a flag list. Treat presence
+    // alone as enable=true; rest is the whole string from i.
+    enabled = true;
+    rest = str.substr(i);
+  } else if (ParseBoolToken(head, &enabled)) {
+    if (!enabled) {
+      return;
+    }
+    rest = (j == std::string::npos) ? "" : str.substr(j + 1);
+  } else {
+    ASCEND_LOGW("Invalid TORCH_NPU_LAZY_FUSION leading token '%s', expect True/False/1/0/--flag",
+                head.c_str());
+    enabled = false;
+    return;
+  }
+  std::map<std::string, std::string> flag_map = ParseFlags(rest);
   RegisterFlags(&flag_map, this);
 }
 }  // namespace lazy_fusion
