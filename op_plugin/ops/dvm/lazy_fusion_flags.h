@@ -19,18 +19,12 @@
 #include <vector>
 
 namespace lazy_fusion {
-constexpr unsigned int OptLevel_0 = 0;  // Disable dvm
-constexpr unsigned int OptLevel_1 = 1;  // Enable OpLevel_1 ops by default
-constexpr unsigned int OptLevel_2 = 2;  // Enable OpLevel_2 ops by default
-constexpr unsigned int OpLevel_1 = OptLevel_1;
-constexpr unsigned int OpLevel_2 = OptLevel_2;
-
 class LazyFusionFlags {
  public:
   LazyFusionFlags();
   ~LazyFusionFlags() = default;
 
-  uint64_t opt_level{OptLevel_0};
+  bool enabled{false};
   bool dump_as_text{false};
   std::string dump_dir{"./lazy_fusion_dump"};
   bool synchronize{false};
