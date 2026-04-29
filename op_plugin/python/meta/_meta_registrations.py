@@ -1463,26 +1463,26 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     )
     ALIGN_BASE = 64
     THREE_DIM_NUM = 3
-    MXFP8_SCALE_THIRD_DIM_SIZE = 2
+    MXFPX_SCALE_THIRD_DIM_SIZE = 2
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn:
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296:
                 torch._check(
                     scale_dim == THREE_DIM_NUM,
-                    lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2 or float8_e4m3fn" + ops_error(ErrCode.VALUE),
+                    lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2, float8_e4m3fn or float4_e2m1" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
                     x.size(0) == scale.size(0),
                     lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
-                    ((x.size(1) + ALIGN_BASE - 1) // ALIGN_BASE) == scale.size(1),
+                    (x.size(1) + ALIGN_BASE - 1) // ALIGN_BASE == scale.size(1),
                     lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
                 )
                 torch._check(
-                    MXFP8_SCALE_THIRD_DIM_SIZE == scale.size(2),
-                    lambda: "the third dim of scale should be the 2" + ops_error(ErrCode.VALUE),
+                    MXFPX_SCALE_THIRD_DIM_SIZE == scale.size(2),
+                    lambda: "the third dim of scale should be 2" + ops_error(ErrCode.VALUE),
                 )
             else:
                 torch._check(
@@ -1550,8 +1550,11 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
-    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
         expanded_scale_dtype = torch.float8_e8m0fnu
+    elif quant_mode == 9:
+        expanded_x_dtype = torch_npu.float4_e2m1fn_x2
+        expanded_scale_dtype = torch.float8_e8m0
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
@@ -1565,11 +1568,14 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
-        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn):
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
             scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
+        elif quant_mode == 9:
+            scale_cols = math.ceil(h / ALIGN_BASE)
+            expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
     if quant_mode in [0, 6, 7]:
         expanded_scale_dim_list = []
 
