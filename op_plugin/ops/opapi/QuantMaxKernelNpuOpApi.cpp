@@ -25,11 +25,13 @@ constexpr int64_t AMAX_SHAPE_SIZE = 1;
 }; // namespace
 
 std::tuple<at::Tensor, at::Tensor> npu_quant_max(
-    const at::Tensor &x,
-    const at::Tensor &scale,
-    c10::string_view round_mode,
-    int64_t dst_dtype)
-{
+    const at::Tensor &x, const at::Tensor &scale, c10::string_view round_mode, int64_t dst_dtype) {
+
+    static const bool is_available = check_aclnn_kernel_available("aclnnQuantMax");
+    TORCH_CHECK(is_available,
+        "Current CANN version do not support this api: npu_quant_max. Please try to update the "
+        "version of CANN." +
+            OPS_ERROR(ErrCode::PARAM));
     // 1. 推导 aclDataType（将 torch_npu DType 枚举值 -256 得到 ACL 枚举值）
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_dtype);
     int64_t acl_dst_type = static_cast<int64_t>(y_acltype);

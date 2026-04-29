@@ -167,7 +167,6 @@
         -   [torch_npu.npu_fused_floyd_attention](./torch_npu/torch_npu-npu_fused_floyd_attention.md)
         -   [torch_npu.npu_clipped_swiglu](./torch_npu/torch_npu-npu_clipped_swiglu.md)
         -   [torch_npu.npu_rotate_quant](./torch_npu/torch_npu-npu_rotate_quant.md)
-        -   [torch_npu.quant_max](./torch_npu/torch_npu-npu_quant_max.md)
 
     -   [torch_npu.contrib](./torch_npu-contrib/torch_npu-contrib.md)
         -   [torch_npu.contrib接口列表](./torch_npu-contrib/torch_npu-contrib_list.md)
