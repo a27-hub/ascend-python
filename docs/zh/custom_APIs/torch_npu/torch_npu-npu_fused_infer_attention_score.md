@@ -14,85 +14,91 @@
   - IncreFlashAttention：用于decode阶段，`query`的S维为1，`key/value`通常来自KV Cache。该模式更关注单步延迟与KV Cache访问效率，启用page attention可以改善吞吐/访存，但会引入额外约束。
 - 计算公式：
 
-  - 基本公式：
-    $$
-    attention\_out = softmax \left(scale * (query * key^\top) + atten\_mask \right) * value
-    $$
+  基本公式：
 
-  - 位置编码：
-	$$
-	attention\_out = softmax\left( scale \cdot (query \cdot key^\top) + pse\_shift + atten\_mask \right) \cdot value
-	$$
+  $$
+  attention\_out = softmax \left(scale * (query * key^\top) + atten\_mask \right) * value
+  $$
 
-  - 全量化公式：
-	$$
-	query_{fp} = query \cdot dequant\_scale1
-    $$
+  位置编码：
 
-    $$
-	key_{fp} = key \cdot dequant\_scale1
-    $$
+  $$
+  attention\_out = softmax\left( scale \cdot (query \cdot key^\top) + pse\_shift + atten\_mask \right) \cdot value
+  $$
 
-    $$
-	value_{fp} = value \cdot dequant\_scale1
-    $$
+  全量化公式：
 
-    $$
-	score_{fp} = scale \cdot (query_{fp} \cdot key_{fp}^\top) + mask
-    $$
+  $$
+  query_{fp} = query \cdot dequant\_scale1
+  $$
 
-    $$
-	score_{int8} = quantize(score_{fp}, quant\_scale1)
-    $$
+  $$
+  key_{fp} = key \cdot dequant\_scale1
+  $$
 
-    $$
-	atten\_prob_{int8} = softmax(score_{int8})
-    $$
+  $$
+  value_{fp} = value \cdot dequant\_scale1
+  $$
 
-    $$
-	out_{fp} = atten\_prob_{int8} \cdot value_{fp}
-    $$
+  $$
+  score_{fp} = scale \cdot (query_{fp} \cdot key_{fp}^\top) + mask
+  $$
 
-    $$
-	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
-	$$
+  $$
+  score_{int8} = quantize(score_{fp}, quant\_scale1)
+  $$
 
-  - 后量化公式：
-	$$
-	out_{fp} = softmax(scale \cdot (query \cdot key^\top) + mask) \cdot value
-    $$
+  $$
+  atten\_prob_{int8} = softmax(score_{int8})
+  $$
 
-    $$
-	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
-	$$
-​       其中，`quantize`为量化函数。
+  $$
+  out_{fp} = atten\_prob_{int8} \cdot value_{fp}
+  $$
 
-  - 伪量化公式：
-	$$
-	key_{fp} = key \cdot antiquant\_scale + antiquant\_offset
-    $$
+  $$
+  attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
+  $$
 
-    $$
-	value_{fp} = value \cdot antiquant\_scale + antiquant\_offset
-    $$
+  后量化公式：
 
-    $$
-	attention\_out = softmax(scale \cdot (query \cdot key_{fp}^\top) + mask) \cdot value_{fp}
-	$$
+  $$
+  out_{fp} = softmax(scale \cdot (query \cdot key^\top) + mask) \cdot value
+  $$
 
-  - MLA场景：
-	$$
-	query_{rot} = RoPE(query, query\_rope)
-    $$
+  $$
+  attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
+  $$
+  其中，`quantize`为量化函数。
 
-    $$
-	key_{rot} = RoPE(key, key\_rope)
-    $$
+  伪量化公式：
 
-    $$
-	attention\_out = softmax(scale \cdot (query_{rot} \cdot key_{rot}^\top) + mask) \cdot value
-	$$
-        其中，`RoPE`为旋转位置编码函数。
+  $$
+  key_{fp} = key \cdot antiquant\_scale + antiquant\_offset
+  $$
+
+  $$
+  value_{fp} = value \cdot antiquant\_scale + antiquant\_offset
+  $$
+
+  $$
+  attention\_out = softmax(scale \cdot (query \cdot key_{fp}^\top) + mask) \cdot value_{fp}
+  $$
+
+  MLA场景：
+
+  $$
+  query_{rot} = RoPE(query, query\_rope)
+  $$
+
+  $$
+  key_{rot} = RoPE(key, key\_rope)
+  $$
+
+  $$
+  attention\_out = softmax(scale \cdot (query_{rot} \cdot key_{rot}^\top) + mask) \cdot value
+  $$
+  其中，`RoPE`为旋转位置编码函数。
 
 ## 函数原型<a name="zh-cn_topic_0000001832267082_section45077510411"></a>
 
