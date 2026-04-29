@@ -1492,7 +1492,7 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   const c10::optional<at::Tensor> & running_mean, const c10::optional<at::Tensor> & running_var,
   const c10::optional<at::Tensor> & save_mean, const c10::optional<at::Tensor> & save_invstd,
   bool train, double eps, ::std::array<bool,3> output_mask) {
-  static auto enable = IsEnabled("native_batch_norm_backward", OpLevel_2);
+  static auto enable = IsEnabled("native_batch_norm_backward");
   if (!enable || train || grad_out.scalar_type() != at::ScalarType::Float || input.scalar_type() != at::ScalarType::Float ||
       grad_out.scalar_type() != input.scalar_type() || input.dim() < 2 || input.dim() > 4 ||
       !NpuCheck(grad_out, input, weight, running_mean, running_var)) {
