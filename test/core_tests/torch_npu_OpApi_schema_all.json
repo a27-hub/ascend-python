@@ -5005,5 +5005,8 @@
   },
   "func: npu_rotate_quant(Tensor x, Tensor rotation, *, float? alpha=0.0, int? dst_dtype=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
+  },
+  "func: _fused_sdp_choice(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None, bool enable_gqa=False) -> int": {
+    "version": ["v2.7", "newest"]
   }
 }
