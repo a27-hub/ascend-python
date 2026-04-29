@@ -23,8 +23,8 @@
 namespace lazy_fusion {
 namespace {
 constexpr auto kLogValidFlag =
-  "Valid flag format is \"--key=value\", flags are separated by spaces(e.g. \"--key1=value1 --key2=value2\"). bool "
-  "flag's value can be implicit, the \"--key\" means \"--key=true\".";
+  "Valid flag format is \"key=value\", flags are separated by spaces(e.g. \"key1=value1 key2=value2\"). bool "
+  "flag's value can be implicit, the \"key\" means \"key=true\".";
 
 std::vector<std::string> GetTokens(const std::string &str, const std::string &delim) {
   std::vector<std::string> tokens;
@@ -44,18 +44,16 @@ std::vector<std::string> GetTokens(const std::string &str, const std::string &de
 }
 
 std::pair<std::string, std::string> ParseFlag(const std::string &flag) {
-  auto i = flag.find("--");
-  constexpr size_t leading_size = 2;
-  if (flag.size() <= leading_size || i != 0) {
+  // Format: "key" (bare boolean flag) or "key=value".
+  if (flag.empty() || flag.rfind("--", 0) == 0) {
     return std::pair<std::string, std::string>();
   }
-  i += leading_size;
-
-  auto j = flag.find('=', i + 1);
-  if (j >= flag.size()) {
-    return std::make_pair(flag.substr(i), "");
-  } else if (j + 1 < flag.size() && flag.find('=', j + 1) == std::string::npos) {
-    return std::make_pair(flag.substr(i, j - i), flag.substr(j + 1));
+  auto j = flag.find('=');
+  if (j == std::string::npos) {
+    return std::make_pair(flag, "");
+  }
+  if (j > 0 && flag.find('=', j + 1) == std::string::npos) {
+    return std::make_pair(flag.substr(0, j), flag.substr(j + 1));
   }
   return std::pair<std::string, std::string>();
 }
@@ -97,9 +95,9 @@ class FlagRegister {
         *flag_var = std::move(var);
       } else {
         if (iter->second.empty()) {
-          ASCEND_LOGW("Warning: The flag --%s is invalid. %s", iter->first.c_str(), kLogValidFlag);
+          ASCEND_LOGW("Warning: The flag '%s' is invalid. %s", iter->first.c_str(), kLogValidFlag);
         } else {
-          ASCEND_LOGW("Warning: The flag --%s=%s is invalid. %s", iter->first.c_str(), iter->second.c_str(), kLogValidFlag);
+          ASCEND_LOGW("Warning: The flag '%s=%s' is invalid. %s", iter->first.c_str(), iter->second.c_str(), kLogValidFlag);
         }
       }
       (void)flag_map_.erase(iter);
@@ -180,12 +178,14 @@ bool ParseBoolToken(const std::string &s, bool *out) {
 
 LazyFusionFlags::LazyFusionFlags() {
   // Master switch + optional flags via TORCH_NPU_LAZY_FUSION.
-  //   export TORCH_NPU_LAZY_FUSION=True                     # enable, default flags
+  //   export TORCH_NPU_LAZY_FUSION=True                          # enable, default flags
   //   export TORCH_NPU_LAZY_FUSION=1
-  //   export TORCH_NPU_LAZY_FUSION="True --dump_as_text"    # enable + extra flags
-  //   export TORCH_NPU_LAZY_FUSION="True --disable_ops=where,sum"
-  //   export TORCH_NPU_LAZY_FUSION=False                    # disable
-  //   (unset)                                               # disable
+  //   export TORCH_NPU_LAZY_FUSION="True dump_as_text"           # enable + bool flag
+  //   export TORCH_NPU_LAZY_FUSION="True dump_dir=/tmp/dvm"      # enable + key=value
+  //   export TORCH_NPU_LAZY_FUSION="True disable_ops=where,sum"
+  //   export TORCH_NPU_LAZY_FUSION=False                         # disable
+  //   (unset)                                                    # disable
+  // Flag tokens use bare "key" (boolean true) or "key=value". No "--" prefix.
   char *env = std::getenv("TORCH_NPU_LAZY_FUSION");
   if (env == nullptr) {
     enabled = false;
@@ -200,21 +200,15 @@ LazyFusionFlags::LazyFusionFlags() {
   size_t j = str.find_first_of(" \t", i);
   std::string head = (j == std::string::npos) ? str.substr(i) : str.substr(i, j - i);
   std::string rest;
-  if (head.rfind("--", 0) == 0) {
-    // No leading bool token — env value is purely a flag list. Treat presence
-    // alone as enable=true; rest is the whole string from i.
-    enabled = true;
-    rest = str.substr(i);
-  } else if (ParseBoolToken(head, &enabled)) {
+  if (ParseBoolToken(head, &enabled)) {
     if (!enabled) {
       return;
     }
     rest = (j == std::string::npos) ? "" : str.substr(j + 1);
   } else {
-    ASCEND_LOGW("Invalid TORCH_NPU_LAZY_FUSION leading token '%s', expect True/False/1/0/--flag",
-                head.c_str());
-    enabled = false;
-    return;
+    // No leading bool token — env value is a flag list. Presence alone enables DVM.
+    enabled = true;
+    rest = str.substr(i);
   }
   std::map<std::string, std::string> flag_map = ParseFlags(rest);
   RegisterFlags(&flag_map, this);
