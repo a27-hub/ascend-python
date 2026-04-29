@@ -12,7 +12,9 @@
 - API功能：针对单输入`x`进行旋转位置编码。
 - 计算公式：
 
-    ![](../../figures/zh-cn_formulaimage_0000002238091144.png)
+    $$q = \text{reshape}(x, [B, N, S, D/2, 2]).\text{transpose}(-1, -2).\text{reshape}([B, N, S, D])$$
+
+    $$q_{\text{embed}} = q \cdot \cos + \text{RotateHalf}(q) \cdot \sin$$
 
      其中：RotateHalf\(q\) 将张量 `q` 在最后一个维度 D 上执行如下变换：
 
@@ -25,7 +27,7 @@
 
      示例：设 $q = [1, 2, 3, 4]$，则前半部分为 $[1, 2]$，后半部分为 $[3, 4]$，变换后得到 $\text{RotateHalf}(q) = [-3, -4, 1, 2]$。
 
-    ![](../../figures/zh-cn_formulaimage_0000002237943254.png)
+    $$\text{RotateHalf}(q)_i = \begin{cases} -q_{i+D/2}, & i < D/2 \\ q_{i-D/2}, & i \geq D/2 \end{cases}$$
 
 ## 函数原型
 
