@@ -18,6 +18,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/AdvancedIndex.h"
+#include "torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -50,6 +51,19 @@ at::Tensor& _index_put_impl_(
     if (self.device().type() == at::kCPU) {
         return at::native::_index_put_impl_(self, indices, value, accumulate, unsafe);
     }
+    if (at_npu::native::has_internal_overlap(self) == at_npu::native::MemOverlap::YES) {
+        TORCH_WARN(
+            "Use of index_put_ on expanded tensors is deprecated. "
+            "Please clone() the tensor before performing this operation. "
+            "This also applies to advanced indexing e.g. tensor[indices] = tensor");
+    }
+    at_npu::native::assert_no_overlap(self, value);
+    for (const c10::optional<at::Tensor>& index : indices) {
+        if (index.has_value()) {
+            at_npu::native::assert_no_overlap(self, *index);
+        }
+    }
+
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
