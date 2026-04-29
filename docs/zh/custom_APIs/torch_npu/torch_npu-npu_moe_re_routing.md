@@ -23,25 +23,25 @@
 
 - 流程说明
 
-该算子位于MoE（Mixture of Experts）并行推理流程的**通信与计算衔接阶段**，具体位置如下：
+    该算子位于MoE（Mixture of Experts）并行推理流程的**通信与计算衔接阶段**，具体位置如下：
 
-```text
-Gating/TopK Routing
-       ↓
-npu_moe_distribute_dispatch_v2  （AlltoAll 分发 token 到各卡）
-       ↓
-npu_moe_re_routing  ← 本算子：按专家顺序重排 token
-       ↓
-Expert FFN 计算
-       ↓
-npu_moe_distribute_combine_v2  （结果聚合与 AlltoAll 返回）
-```
+    ```text
+    Gating/TopK Routing
+        ↓
+    npu_moe_distribute_dispatch_v2  （AlltoAll 分发 token 到各卡）
+        ↓
+    npu_moe_re_routing  ← 本算子：按专家顺序重排 token
+        ↓
+    Expert FFN 计算
+        ↓
+    npu_moe_distribute_combine_v2  （结果聚合与 AlltoAll 返回）
+    ```
 
- - 作用说明：
+  - 作用说明：
 
     1. **前置阶段**：`npu_moe_distribute_dispatch_v2` 通过AlltoAll通信将token从各卡收集到本地。此时token在本地内存中是**按源卡（rank）顺序**排列的。
 
-    2. **本算子作用**：由于每个专家需要连续、批量地处理属于自己的token，本算子将 token 从"按源卡排列"转换为"**按专家（expert）排列**"，即同一专家的token在内存中连续存放。同时输出 `permute_token_idx`，用于后续Expert计算完成后恢复原始token顺序。
+    2. **本算子作用**：由于每个专家需要连续、批量地处理属于自己的token，本算子将token从"按源卡排列"转换为"**按专家（expert）排列**"，即同一专家的token在内存中连续存放。同时输出 `permute_token_idx`，用于后续Expert计算完成后恢复原始token顺序。
 
     3. **后置阶段**：Expert FFN层根据 `expert_token_num` 中记录的专家token数量，依次读取 `permute_tokens` 中连续的数据块进行计算。
 
