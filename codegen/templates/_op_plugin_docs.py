@@ -1830,6 +1830,96 @@ class TestNPUFlashAttention(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+使用pse位置编码的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_pse():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # Build pse in BNSS format; it is added directly to the attention scores.
+    pse = torch.randn(B, N, S, S, dtype=torch.float16, device="npu") * 0.01  # BNSS
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        pse=pse,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: softmax(scale * QK^T + pse) * V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    ref_out = torch.matmul(torch.softmax(ref_scores + pse.float().cpu(), dim=-1), value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_pse()
+
+使用sink注意力头偏置的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_sink():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # sink provides one extra bias value for each attention head, with shape [head_num].
+    sink = torch.linspace(-0.2, 0.2, steps=N, dtype=torch.float32, device="npu")  # [head_num]
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        sink=sink,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: append one sink logit, apply softmax, then drop that column before multiplying by V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    sink_scores = sink.cpu().view(1, N, 1, 1).expand(B, N, S, 1)
+    ref_probs = torch.softmax(torch.cat([ref_scores, sink_scores], dim=-1), dim=-1)[..., :-1]
+    ref_out = torch.matmul(ref_probs, value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_sink()
 """
 )
 
@@ -4071,6 +4161,54 @@ y = mhc_sinkhorn_model(x, eps=eps, num_iters=num_iters, out_flag=out_flag)
 )
 
 _add_torch_npu_docstr(
+    "npu_mhc_sinkhorn_backward",
+    """
+接口原型:
+torch_npu.npu_mhc_sinkhorn_backward(Tensor grad_y, Tensor norm, Tensor sum) -> Tensor
+
+功能描述
+算子功能：MhcSinkhornBackward是MhcSinkhorn的反向算子。mHC（Manifold-Constrained Hyper-Connections）架构中的MhcSinkhorn算子对输入矩阵做sinkhorn变换得到双随机矩阵$\mathbf{H}_{\text{res}}$，输出的双随机矩阵的所有元素≥0、每一行之和为1且每一列之和为1 (具有范数保持、组合封闭性和凸组合几何解释三大特性)。
+
+参数说明:
+gradOutput: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是3维(T, n, n)或者4维(B, S, n, n), 其中n仅支持4, 6, 8. Sinkhorn变换输出的H_res的梯度。 
+normOut: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是1维, 表示Sinkhorn变换正向计算保存的中间norm结果。
+sumOut: Tensor类型, 必选参数. 数据类型支持float32, 数据格式支持ND, shape是1维, 表示Sinkhorn变换正向计算保存的中间sum结果。
+
+输出说明:
+一个Tensor类型的输出, Sinkhorn变换的输入的H_res的梯度. 数据类型和张量形状与输入gradOutput保持一致。数据格式支持ND.
+
+约束说明:
+该接口支持pytorch调用（torch_npu). 
+
+支持的PyTorch版本
+PyTorch 2.7.1
+
+支持的型号:
+Atlas A5 训练系列产品
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+device = "npu:0"
+x_shape = [128, 4 , 4]
+T, n, _ = x_shape
+x = torch.rand(x_shape, dtype=torch.float32, requires_grad=True).clamp(min=1e-4)
+x_npu = x.npu()
+eps = 1e-6
+num_iters = 20
+out_flag = 1
+
+# 正向传播
+y, norm_out, sum_out = torch_npu.npu_mhc_sinkhorn(x_npu, eps=eps, num_iters=num_iters, out_flag=out_flag)
+
+# 反向传播
+grad_y = torch.randn(T, n, n, dtype=torch.float32)
+torch.autograd.backward(tensors=[y], grad_tensors=[grad_y.npu()])
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_mhc_pre_backward",
     """
 接口原型：
@@ -4422,6 +4560,64 @@ h_post = torch.rand(h_post_shape, device='npu', dtype=torch.float32)
 mhc_post_model = MhcPostModel().npu()
 mhc_post_model = torch.compile(mhc_post_model, backend=npu_backend, dynamic=True)
 y = mhc_post_model(x, h_res, h_out, h_post)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_mhc_post_backward",
+    """
+接口原型：
+torch_npu.npu_mhc_post_backward(Tensor grad_output, Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> (Tensor, Tensor, Tensor, Tensor)
+
+功能描述
+算子功能: MhcPostBackward是MhcPost的反向算子. 融合主分支特征h_out与残差分支特征x_l（或residual），通过门控h_post和经sinkhorn投影后的双随机矩阵h_res机制实现信息流动. 
+
+参数说明
+grad_output: Tensor类型, 必选输入, 表示前向输出的梯度张量. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[T, n, D]和4维[B, S, n, D]. 
+x: Tensor类型, 必选输入, 待计算数据, 代表网络中mHC层的输入数据. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[T, n, D]和4维[B, S, n, D]. 
+h_res: Tensor类型, 必选输入, mHC的h_res变换矩阵, 是做完sinkhorn变换之后的双随机矩阵. 数据格式为ND, 支持的数据类型为FLOAT32, 数据维度可为3维[T, n, n]和4维[B, S, n, n].
+h_out: Tensor类型, 必选输入, Attn/MLP层输出. 数据格式为ND, 支持的数据类型为BFLOAT16和FLOAT16, 数据维度可为3维[B, S, D]和2维[T, D].
+h_post: Tensor类型, 必选输入, mHC的h_post变换矩阵. 数据格式为ND, 支持的数据类型为FLOAT32, 数据维度可为3维[B, S, n]和2维[T, n].
+n: shape中n仅支持4, 6, 8.
+
+输出说明
+grad_x: Tensor类型, 对前向输入x的梯度, shape和数据类型与x一致, 数据格式为ND.
+grad_h_res: Tensor类型, 对前向输入h_res的梯度, shape和数据类型与h_res一致, 数据格式为ND.
+grad_h_out: Tensor类型, 对前向输入h_out的梯度, shape和数据类型与h_out一致, 数据格式为ND.
+grad_h_post: Tensor类型, 对前向输入h_post的梯度, shape和数据类型与h_post一致, 数据格式为ND.
+
+约束说明
+该接口支持pytorch调用(torch_npu).
+
+支持的PyTorch版本
+PyTorch 2.7.1
+
+支持的型号
+-昇腾950 AI处理器
+
+调用示例
+单算子模式调用
+import torch 
+import torch_npu
+
+grad_output_shape = (1, 4, 1024)
+x_shape = (1, 4, 1024)
+h_res_shape = (1, 4, 4)
+h_out_shape = (1, 1024)
+h_post_shape = (1, 4)
+grad_output = (torch.rand(grad_output_shape, dtype=torch.bfloat16)).clamp(min=1e-4)
+x = (torch.rand(x_shape, dtype=torch.bfloat16)).clamp(min=1e-4)
+h_res = (torch.rand(h_res_shape, dtype=torch.float32)).clamp(min=1e-4)
+h_out = (torch.rand(h_out_shape, dtype=torch.bfloat16)).clamp(min=1e-4)
+h_post = (torch.rand(h_post_shape, dtype=torch.float32)).clamp(min=1e-4)
+
+grad_output_npu = grad_output.npu()
+x_npu = x.npu()
+h_res_npu = h_res.npu()
+h_out_npu = h_out.npu()
+h_post_npu = h_post.npu()
+
+grad_x, grad_h_res, grad_h_out, grad_h_post = torch_npu.npu_mhc_post_backward(grad_output_npu, x_npu, h_res_npu, h_out_npu, h_post_npu)
 """
 )
 
@@ -11752,6 +11948,74 @@ loss, log_prob, _, _ = torch_npu.npu_cross_entropy_loss(input, target)
 )
 
 _add_torch_npu_docstr(
+    "npu_chunk_gated_delta_rule",
+    """
+功能描述:
+Chunked Gated Delta Rule(CGDR)是GDR的chunk版实现，它通过将输入序列切块，实现了一定的并行效果，在长上下文场景其计算效率相对Recurrent Gated Delta Rule更高，适用于prefill阶段。
+
+接口原型:
+npu_chunk_gated_delta_rule(Tensor query, Tensor key, Tensor value, *, Tensor? beta=None, Tensor? initial_state=None, Tensor? actual_seq_lengths=None, float? scale=None, Tensor? g=None) -> (Tensor, Tensor)
+
+参数说明:
+令 $B$ 表示batch size，$L_i$ 表示第i个序列的长度，$T=\sum_i^B L_i$ 表示累积序列长度。$N_k$ 表示key的头数，$N_v$ 表示value的头数，$D_k$ 表示key向量的维度，$D_v$ 表示value向量的维度。
+- query (Tensor)：必选输入，对应公式中的q，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- key (Tensor)：必选输入，对应公式中的k，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nk, Dk）。
+- value (Tensor)：必选输入，对应公式中的v，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv, Dv）。
+- beta (Tensor)：必选输入，对应公式中的β，数据类型支持bfloat16，数据格式支持ND，shape为（T, Nv）。
+- initial_state (Tensor)：必选输入&输出，对应公式中的状态矩阵S，数据类型支持bfloat16，数据格式支持ND，shape为（BlockNum, Nv, Dv, Dk）。
+- actual_seq_lengths (Tensor)：必选输入，各batch的输入序列长度。数据类型支持int32，数据格式支持ND，shape为（B,）。
+- g (Tensor)：必选输入，衰减系数，对应公式中的α=e^g。默认为None，表示全0。数据类型支持float32，数据格式支持ND，shape为（T, Nv）。
+- scale_value (Scalar)：必选输入，query的缩放因子，对应公式中的 $1/\sqrt{d_k}$。数据类型支持float32。
+
+输出说明:
+注意力计算结果。输出的数据类型为bfloat16，数据格式为ND，形状为(T, Nv, Dv)。
+
+约束说明:
+- 该接口支持推理场景下使用。
+- 该接口支持静态图模式。
+- 输入shape大小需满足约束：$L_i \le 8$，$N_k \le 64$，$N_v \le 64$，$D_k = 128$，$D_v = 128$，$N_v$是$N_k$整数倍。
+
+支持的PyTorch版本:
+PyTorch 2.1 及更高版本
+
+支持的型号:
+Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+
+调用示例:
+单算子模式调用
+import torch
+import torch_npu
+
+# 构造输入
+B, seqlen, nk, nv, dk, dv = (2, 100, 4, 8, 128, 128)
+actual_seq_lengths = (torch.ones(B) * seqlen).to("npu").to(torch.int32)
+T = int(torch.sum(actual_seq_lengths))
+
+state = torch.rand((B, nv, dv, dk), dtype=torch.bfloat16).npu()
+query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+g = torch.rand((T, nv), dtype=torch.float32).npu() * (-1.0)
+beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
+
+query = torch.nn.functional.normalize(query, p=2, dim=-1)
+key = torch.nn.functional.normalize(key, p=2, dim=-1)
+scale = dk ** -0.5
+
+# 调用算子
+o, final_state = torch_npu.npu_chunk_gated_delta_rule(
+    query, key, value,
+    beta=beta,
+    initial_state=state,
+    actual_seq_lengths=actual_seq_lengths,
+    scale=scale,
+    g=g)
+print(o.shape, final_state.shape)
+"""
+)
+
+_add_torch_npu_docstr(
     "npu_gemma_rms_norm",
     """
 接口原型：
@@ -11996,7 +12260,8 @@ input_positions = torch.tensor(input_position, dtype=torch.int64, device="npu")
 seq_lens = torch.tensor(seq_len, dtype=torch.int64, device="npu")
 slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
 
-block_table = np.random.randint(10, size=(num_seqs, torch.max(seq_lens.cpu()) // block_size + 1))
+max_seq_len = seq_lens.max().item()
+block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
 block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
 
 
@@ -12030,7 +12295,8 @@ slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
 spec_tokens = torch.tensor(spec_token, dtype=torch.int64, device="npu")
 accepted_nums = torch.tensor(accepted_num, dtype=torch.int64, device="npu")
 
-block_table = np.random.randint(10, size=(num_seqs, torch.max(seq_lens.cpu()) // block_size + 1))
+max_seq_len = seq_lens.max().item()
+block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
 block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
 
 
@@ -13154,7 +13420,7 @@ torch_npu.npu_gather_sparse_index(input, index) -> torch.Tensor
 从输入Tensor的指定维度dim，按照index中的下标序号提取元素，保存到out Tensor中。
 
 参数说明: 
-input(torch.Tensor): 输入张量，数据维度仅支持2维。
+input(torch.Tensor): 输入张量，数据格式支持ND。
     在Atlas A2/Atlas A3上数据类型支持torch.float32, torch.float16, torch.bfloat16, torch.int64, torch.int32, torch.int16,
     torch.int8, torch.uint8, torch.bool, torch.float64, torch.complex64, torch.complex128
 index(torch.Tensor): 包含目标元素下标序号的张量。数据维度不超过8维。数据类型支持torch.int64, torch.int32。取值范围[0, input.shape[0] - 1], 不支持负数索引。
@@ -13997,7 +14263,7 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 
 参数说明: 
 x (Tensor)：必选参数，输入张量，数据类型支持float16、bfloat16，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。
-min_scale (float)：可选参数，参与scale计算的最小scale值。当前仅支持取值0。
+min_scale (float)：可选参数，参与scale计算的最小scale值。当前支持取值大于等于0。
 round_mode (str)：可选参数，指定cast到输出的转换方式。当前仅支持取值rint。
 dst_type (int)：可选参数，指定输出y的数据类型。当前仅支持取值1，表示代码输出y的数据类型为int8。
 row_block_size (int)：可选参数，指定一个block的行大小。当前仅支持取值1。

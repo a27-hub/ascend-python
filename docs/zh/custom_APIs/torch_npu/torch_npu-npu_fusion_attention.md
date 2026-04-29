@@ -164,7 +164,7 @@ torch_npu.npu_fusion_attention(query, key, value, head_num, input_layout, pse=No
     - 要求T（B\*S）取值范围1\~1M。
     - `atten_mask`输入不支持补pad，即`atten_mask`中不能存在某一行全1的场景。
 
-- 支持输入`query`的N和`key`/`value`的N不相等，但必须成比例关系，即Nq/Nkv必须是非0整数，Nq取值范围1\~256。当Nq/Nkv \> 1时，即为GQA\(grouped-query attention\)；当Nq/Nkv=1时，即为MHA\(multi-head attention，即多头注意力机制)。
+- 支持输入`query`的N和`key`/`value`的N不相等，但必须成比例关系，即Nq/Nkv必须是非0整数，Nq取值范围1\~256。当Nq/Nkv \> 1时，即为GQA\(grouped-query attention，即分组查询注意力机制)；当Nq/Nkv=1时，即为MHA\(multi-head attention，即多头注意力机制)。
 
     > [!NOTE]  
     > 本文如无特殊说明，N表示的是Nq。
@@ -274,6 +274,102 @@ class TestNPUFlashAttention(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+```
+
+使用`pse`位置编码的示例：
+
+```python
+import math
+import torch
+import torch_npu
+
+
+def example_with_pse():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # Build pse in BNSS format; it is added directly to the attention scores.
+    pse = torch.randn(B, N, S, S, dtype=torch.float16, device="npu") * 0.01  # BNSS
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        pse=pse,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: softmax(scale * QK^T + pse) * V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    ref_out = torch.matmul(torch.softmax(ref_scores + pse.float().cpu(), dim=-1), value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_pse()
+```
+
+使用`sink`注意力头偏置的示例：
+
+```python
+import math
+import torch
+import torch_npu
+
+
+def example_with_sink():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # sink provides one extra bias value for each attention head, with shape [head_num].
+    sink = torch.linspace(-0.2, 0.2, steps=N, dtype=torch.float32, device="npu")  # [head_num]
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        sink=sink,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: append one sink logit, apply softmax, then drop that column before multiplying by V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    sink_scores = sink.cpu().view(1, N, 1, 1).expand(B, N, S, 1)
+    ref_probs = torch.softmax(torch.cat([ref_scores, sink_scores], dim=-1), dim=-1)[..., :-1]
+    ref_out = torch.matmul(ref_probs, value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_sink()
 ```
 
 使用外部dropout\_mask的示例：
