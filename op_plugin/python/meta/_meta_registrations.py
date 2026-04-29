@@ -1454,7 +1454,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6, 7, 8],
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6, 7, 8, 9],
         lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 6, 7, 8]"
     )
     torch._check(
@@ -1467,7 +1467,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
-            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch.float4_e2m1:
+            print(x_dtype)
+            if x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296:
                 torch._check(
                     scale_dim == THREE_DIM_NUM,
                     lambda: "the scale shape support only 3D (bs,) in no quant mode and x type is float8_e5m2, float8_e4m3fn or float4_e2m1" + ops_error(ErrCode.VALUE),
@@ -1476,7 +1477,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     x.size(0) == scale.size(0),
                     lambda: "the first dim of scale and the first dim of x should be the same" + ops_error(ErrCode.VALUE),
                 )
-                if x_dtype == torch.float4_e2m1:
+                if x_dtype == 296:
                     torch._check(
                         (x.size(1) * 2 + ALIGN_BASE - 1) // ALIGN_BASE == scale.size(1),
                         lambda: "the scale and x must have compatible second dimensions (x aligned to 64)" + ops_error(ErrCode.VALUE),
@@ -1540,7 +1541,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
 
     bs = x.size(0)
     h = x.size(1)
-    if x_dtype == torch.float4_e2m1:
+    if x_dtype == 296:
         h = x.size(1) * 2
     k = expert_idx.size(1)
 
@@ -1558,30 +1559,31 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode in [6, 7, 8]:
         expanded_x_dtype = torch.uint8
-    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch.float4_e2m1):
+    elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
         expanded_scale_dtype = torch.float8_e8m0fnu
     elif quant_mode == 9:
-        expanded_x_dtype = torch.float4_e2m1
-        expanded_scale_dtype = torch.float8_e8m0
+        expanded_x_dtype = torch.uint8
+        expanded_scale_dtype = torch.float8_e8m0fnu
 
     if drop_pad_mode == 1:
         expanded_x_dim_list = [expert_num, expert_capacity, h]
         expanded_scale_dim_list = [expert_num * expert_capacity]
     else:
         num_expanded_rows = bs * k if active_num <= 0 else min(active_num, bs * k)
-        expanded_x_dim_list = [num_expanded_rows, h]
+        expanded_x_dim_list = [num_expanded_rows, x.size(1)]
         if quant_mode in [2, 3]:
             MXQUANT_BLOCK_SIZE = 32
             PAD_TO_EVEN_FACTOR = 2
             scale_cols = (h + MXQUANT_BLOCK_SIZE - 1) // MXQUANT_BLOCK_SIZE
             scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) // PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR
             expanded_scale_dim_list = [num_expanded_rows, scale_cols]
-        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == torch.float4_e2m1):
+        elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or x_dtype == 296):
             scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
         elif quant_mode == 9:
+            expanded_x_dim_list = [num_expanded_rows, x.size(1) // 2]
             scale_cols = math.ceil(h / ALIGN_BASE)
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
     if quant_mode in [0, 6, 7]:
