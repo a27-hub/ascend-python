@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${memory_overlap_checks}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -61,6 +62,13 @@ ${return_type} ${func_name}(${args_str})
 
 DO_COMPATIBILITY = CodeTemplate("""\
 DO_COMPATIBILITY(${aclnnname}, acl_op::${func_name}(${args_exprs_str}));
+""")
+
+
+MEMORY_OVERLAP_CHECKS = CodeTemplate("""\
+at_npu::native::assert_no_internal_overlap(self);
+at_npu::native::assert_no_overlap(self, index);
+at_npu::native::assert_no_overlap(self, source);
 """)
 
 
@@ -184,6 +192,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
         do_compatibility = DO_COMPATIBILITY.substitute(aclnnname=struct.aclnn_name,
                                                        func_name=name,
                                                        args_exprs_str=args_exprs_str) if struct.acl_op else ""
+        memory_overlap_checks = MEMORY_OVERLAP_CHECKS.substitute() if name == "index_copy_" else ""
 
         tensor_arguments = ", ".join(filt_input_tensor(f.func.arguments.flat_non_out))
 
@@ -262,6 +271,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 args_str=args_str,
                 check_or_apply_tensor=apply_tensor,
                 do_compatibility=do_compatibility,
+                memory_overlap_checks=memory_overlap_checks,
                 compute_names=compute_names,
                 exec_cmd=exec_cmd,
                 aclnnargs=struct.cmd_args,
@@ -284,7 +294,8 @@ def gen_op_api(
         includes = """#include <ATen/native/TypeProperties.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
-#include "op_plugin/utils/op_api_common.h" """
+#include "op_plugin/utils/op_api_common.h"
+#include "torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h" """
 
     fm.write_with_template(
         f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
