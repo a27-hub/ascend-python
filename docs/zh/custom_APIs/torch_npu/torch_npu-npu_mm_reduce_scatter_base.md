@@ -9,29 +9,42 @@
 
 ## 功能说明
 
-- API功能：TP切分场景下，实现matmul和reduce\_scatter的融合，融合算子内部实现计算和通信流水并行。支持perchannel，pertoken量化。
+- API功能：TP切分场景下，实现matmul和reduce\_scatter的融合，融合算子内部实现计算和通信流水并行。支持如下两种量化方式：
+- perchannel 量化：针对权重（Weight）张量，沿输出特征维度（Output Channel）为每个通道维护独立的缩放因子与零点。
+- pertoken 量化：针对激活（Activation）张量，沿序列长度维度（Sequence Length / Token）为每个 Token 维护独立的量化参数。
 
-- 计算公式：
-    $x1$代表输入`input`。
-    
-    - 基础场景：
+- 计算公式：$x_1$代表输入`input`。
+
+    - 基础场景：当不需要节省显存、没有通信瓶颈，或者对计算精度要求极高时
         $$
-        output = reducescatter(x1 \mathbin{@} x2 + bias)
+        output = reducescatter(x_1 \mathbin{@} x_2 + bias)
         $$
-    - 量化场景：
+        - 基础场景触发条件（同时满足所有以下所有条件）：                                                  
+            1. $x_1$、$x_2$ 均为 `float16` 或 `bfloat16` 精度                                
+            2. 未开启量化模式（`quant_mode=None`）                          
+            3. 训练场景且需要高精度梯度  
+
+    - 量化场景：当输入已经是低精度格式（如`int8`）、需要减少卡间通信数据量，或者推理时想要加速时
+        $$
+        output = reducescatter((x_1\_scale * x_2\_scale) * (x_1 \mathbin{@} x_2 + bias))
+        $$
+        
+        量化场景scale参数使用说明：
+        - 仅提供`x2_scale`时：
+        $$
+        output = reducescatter(x2\_scale * (x1 \mathbin{@} x2 + bias))
+        $$
+        - 同时提供`x1_scale`和`x2_scale`时：
         $$
         output = reducescatter((x1\_scale * x2\_scale) * (x1 \mathbin{@} x2 + bias))
         $$
-        量化场景scale参数使用说明：
-        - 仅提供`x2_scale`时：
-            $$
-            output = reducescatter(x2\_scale * (x1 \mathbin{@} x2 + bias))
-            $$
-        - 同时提供`x1_scale`和`x2_scale`时：
-            $$
-            output = reducescatter((x1\_scale * x2\_scale) * (x1 \mathbin{@} x2 + bias))
-            $$
+        
         - 其中，`x1_scale`按\(m, 1\)广播，`x2_scale`按\(1, n\)广播。
+
+        - 量化场景触发条件（满足任一）：                                         
+            1. $x_1$ 与 $x_2$ 类型均为 `int8`                                
+            2. 推理模式且 $M*K*N$ > 性能拐点阈值
+    
 
 > [!NOTE]   
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
