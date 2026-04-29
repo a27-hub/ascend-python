@@ -88,7 +88,7 @@ def normalize_cpp_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def normalize_cpp_type_spacing(text: str) -> str:
+def normalize_cpp_parameter(text: str) -> str:
     text = normalize_cpp_whitespace(text)
     text = re.sub(r"\(\s+", "(", text)
     text = re.sub(r"\s+\)", ")", text)
@@ -149,52 +149,7 @@ def split_top_level(text: str, delimiter: str = ",") -> List[str]:
     return parts
 
 
-def canonicalize_cpp_signature(signature: str) -> str:
-    signature = normalize_cpp_whitespace(signature)
-    open_paren = signature.find("(")
-    close_paren = signature.rfind(")")
-    if open_paren == -1 or close_paren == -1 or close_paren < open_paren:
-        return normalize_cpp_type_spacing(signature)
-    prefix = normalize_cpp_whitespace(signature[:open_paren])
-    prefix = re.sub(r"([&>*])([A-Za-z_][A-Za-z0-9_]*)$", r"\1 \2", prefix)
-    parameter_text = signature[open_paren + 1:close_paren].strip()
-    if not parameter_text:
-        return f"{prefix}()"
-    parameters = [normalize_cpp_type_spacing(item) for item in split_top_level(parameter_text)]
-    return f"{prefix}({', '.join(parameters)})"
-
-
-def strip_signature_defaults(signature: str) -> str:
-    open_paren = signature.find("(")
-    close_paren = signature.rfind(")")
-    if open_paren == -1 or close_paren == -1 or close_paren < open_paren:
-        return signature
-    prefix = signature[:open_paren]
-    parameter_text = signature[open_paren + 1:close_paren].strip()
-    if not parameter_text:
-        return signature
-    parameters = [re.sub(r"\s*=\s*.*$", "", item).strip() for item in split_top_level(parameter_text)]
-    return f"{prefix}({', '.join(parameters)})"
-
-
-def extract_signature_argument_names(signature: str) -> List[str]:
-    open_paren = signature.find("(")
-    close_paren = signature.rfind(")")
-    if open_paren == -1 or close_paren == -1 or close_paren < open_paren:
-        raise RuntimeError(f"malformed implementation signature: {signature}")
-    parameter_text = signature[open_paren + 1:close_paren].strip()
-    if not parameter_text:
-        return []
-    argument_names: List[str] = []
-    for parameter in split_top_level(parameter_text):
-        name_match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*$", parameter.strip())
-        if name_match is None:
-            raise RuntimeError(f"malformed implementation signature: {signature}")
-        argument_names.append(name_match.group(1))
-    return argument_names
-
-
-def split_signature(signature: str) -> Tuple[str, str, str]:
+def split_signature(signature: str, *, strip_defaults: bool = False) -> Tuple[str, str, List[str]]:
     open_paren = signature.find("(")
     close_paren = signature.rfind(")")
     if open_paren == -1 or close_paren == -1 or close_paren < open_paren:
@@ -203,11 +158,31 @@ def split_signature(signature: str) -> Tuple[str, str, str]:
     match = re.match(r"(?P<return_type>.+?)\s+(?P<function_name>[A-Za-z_][A-Za-z0-9_]*)$", prefix)
     if match is None:
         raise RuntimeError(f"malformed implementation signature: {signature}")
-    return (
-        match.group("return_type"),
-        match.group("function_name"),
-        signature[open_paren + 1:close_paren].strip(),
-    )
+    parameter_text = signature[open_paren + 1:close_paren].strip()
+    parameters = split_top_level(parameter_text) if parameter_text else []
+    if strip_defaults:
+        parameters = [re.sub(r"\s*=\s*.*$", "", item).strip() for item in parameters]
+    return match.group("return_type"), match.group("function_name"), parameters
+
+
+def canonicalize_cpp_signature(signature: str, *, strip_defaults: bool = False) -> str:
+    return_type, function_name, parameters = split_signature(signature, strip_defaults=strip_defaults)
+    prefix = normalize_cpp_whitespace(f"{return_type} {function_name}")
+    prefix = re.sub(r"([&>*])([A-Za-z_][A-Za-z0-9_]*)$", r"\1 \2", prefix)
+    if not parameters:
+        return f"{prefix}()"
+    normalized_parameters = [normalize_cpp_parameter(item) for item in parameters]
+    return f"{prefix}({', '.join(normalized_parameters)})"
+
+
+def extract_signature_argument_names(signature: str) -> List[str]:
+    argument_names: List[str] = []
+    for parameter in split_signature(signature)[2]:
+        name_match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*$", parameter.strip())
+        if name_match is None:
+            raise RuntimeError(f"malformed implementation signature: {signature}")
+        argument_names.append(name_match.group(1))
+    return argument_names
 
 
 # config loading
@@ -272,41 +247,6 @@ def extract_atb_registry(cpp_texts: Dict[Path, str]) -> Tuple[Dict[str, str], Di
     return schema_by_op_name, op_names_by_impl_name
 
 
-# implementation signature extraction
-def collect_signature_candidates(text: str, impl_short_name: str) -> List[str]:
-    # Known limitation: this controlled regex/text scan assumes ATB cpp
-    # function definitions keep their current style. If headers switch to
-    # trailing returns, macro-wrapped signatures, or other shapes, update
-    # this parser together with the contract checks.
-    pattern = re.compile(rf"^\s*(?P<prefix>.*\b{re.escape(impl_short_name)}\s*\()", re.M)
-    signature_texts: List[str] = []
-
-    for match in pattern.finditer(text):
-        open_paren = text.find("(", match.start())
-        if open_paren == -1:
-            continue
-        end_paren = find_matching_paren(text, open_paren)
-        if end_paren == -1:
-            continue
-        tail_idx = end_paren + 1
-        while tail_idx < len(text) and text[tail_idx].isspace():
-            tail_idx += 1
-        if tail_idx >= len(text) or text[tail_idx] != "{":
-            continue
-        signature_texts.append(text[match.start():end_paren + 1])
-    return signature_texts
-
-
-def collect_signature_text(text: str, impl_short_name: str) -> str:
-    signature_texts = collect_signature_candidates(text, impl_short_name)
-    normalized = sorted(set(normalize_cpp_whitespace(item) for item in signature_texts))
-    if not normalized:
-        raise RuntimeError(f"no implementation found for atb::{impl_short_name}")
-    if len(normalized) != 1:
-        raise RuntimeError(f"multiple implementations found for atb::{impl_short_name}: {normalized}")
-    return normalized[0]
-
-
 def collect_named_signatures(text: str, impl_name_pattern: re.Pattern[str]) -> Dict[str, List[str]]:
     signatures: Dict[str, List[str]] = {}
     for match in impl_name_pattern.finditer(text):
@@ -344,38 +284,8 @@ def extract_impl_signature_index(cpp_texts: Dict[Path, str], impl_names: List[st
             raise RuntimeError(f"no implementation found for {impl_name}")
         if len(unique) != 1:
             raise RuntimeError(f"multiple implementations found for {impl_name}: {unique}")
-        signatures[impl_name] = canonicalize_cpp_signature(strip_signature_defaults(unique[0]))
+        signatures[impl_name] = canonicalize_cpp_signature(unique[0], strip_defaults=True)
     return signatures
-
-
-def resolve_entry(
-    entry: AtbOpEntry,
-    schema_by_op_name: Dict[str, str],
-    op_names_by_impl_name: Dict[str, List[str]],
-    impl_signatures: Dict[str, str],
-) -> ResolvedAtbOp:
-    impl_short_name = entry.impl_name.removeprefix("atb::")
-    op_names = sorted(set(op_names_by_impl_name.get(impl_short_name, [])))
-    if not op_names:
-        raise RuntimeError(f"no ATB dispatcher registration found for impl_name {entry.impl_name}")
-    if len(op_names) != 1:
-        raise RuntimeError(f"impl_name {entry.impl_name} maps to multiple dispatcher ops: {', '.join(op_names)}")
-
-    dispatcher_op = op_names[0]
-    schema = schema_by_op_name.get(dispatcher_op)
-    if schema is None:
-        raise RuntimeError(f"dispatcher op {dispatcher_op} has no matching m.def schema")
-
-    impl_signature = impl_signatures.get(entry.impl_name)
-    if impl_signature is None:
-        raise RuntimeError(f"no implementation found for {entry.impl_name}")
-
-    return ResolvedAtbOp(
-        cpp_name=entry.cpp_name,
-        cpp_short_name=entry.cpp_short_name,
-        impl_name=entry.impl_name,
-        impl_signature=impl_signature,
-    )
 
 
 def validate_config(
@@ -394,7 +304,25 @@ def validate_config(
         if entry.cpp_short_name in seen_cpp_short_names:
             raise RuntimeError(f"duplicate public C++ function name in config: {entry.cpp_short_name}")
         seen_cpp_short_names.add(entry.cpp_short_name)
-        resolved_entries.append(resolve_entry(entry, schema_by_op_name, op_names_by_impl_name, impl_signatures))
+        impl_short_name = entry.impl_name.removeprefix("atb::")
+        op_names = sorted(set(op_names_by_impl_name.get(impl_short_name, [])))
+        if not op_names:
+            raise RuntimeError(f"no ATB dispatcher registration found for impl_name {entry.impl_name}")
+        if len(op_names) != 1:
+            raise RuntimeError(f"impl_name {entry.impl_name} maps to multiple dispatcher ops: {', '.join(op_names)}")
+        if schema_by_op_name.get(op_names[0]) is None:
+            raise RuntimeError(f"dispatcher op {op_names[0]} has no matching m.def schema")
+        impl_signature = impl_signatures.get(entry.impl_name)
+        if impl_signature is None:
+            raise RuntimeError(f"no implementation found for {entry.impl_name}")
+        resolved_entries.append(
+            ResolvedAtbOp(
+                cpp_name=entry.cpp_name,
+                cpp_short_name=entry.cpp_short_name,
+                impl_name=entry.impl_name,
+                impl_signature=impl_signature,
+            )
+        )
     return resolved_entries
 
 
@@ -452,11 +380,6 @@ def write_if_changed(path: Path, content: str) -> None:
         path.write_text(content, encoding="utf-8")
 
 
-def write_outputs(header_path: Path, source_path: Path, header_content: str, source_content: str) -> None:
-    write_if_changed(header_path, header_content)
-    write_if_changed(source_path, source_content)
-
-
 def extract_generated_declarations(header_content: str) -> Dict[str, str]:
     declarations: Dict[str, str] = {}
     for line in header_content.splitlines():
@@ -465,7 +388,7 @@ def extract_generated_declarations(header_content: str) -> Dict[str, str]:
             continue
         signature = stripped.removeprefix("TORCH_NPU_API ").rstrip(";").strip()
         _, function_name, _ = split_signature(signature)
-        declarations[function_name] = canonicalize_cpp_signature(strip_signature_defaults(signature))
+        declarations[function_name] = canonicalize_cpp_signature(signature, strip_defaults=True)
     return declarations
 
 
@@ -505,7 +428,8 @@ def verify_generated_interface_contract(
     for entry in resolved_entries:
         _, impl_short_name, _ = split_signature(entry.impl_signature)
         expected_signature = canonicalize_cpp_signature(
-            strip_signature_defaults(rename_signature(entry.impl_signature, impl_short_name, entry.cpp_short_name))
+            rename_signature(entry.impl_signature, impl_short_name, entry.cpp_short_name),
+            strip_defaults=True,
         )
         actual_signature = declarations.get(entry.cpp_short_name)
         if actual_signature is None:
@@ -552,7 +476,8 @@ def main() -> None:
     rendered = [render_entry(entry) for entry in resolved_entries]
     header_content, source_content = render_outputs(rendered)
     verify_generated_interface_contract(resolved_entries, header_content, source_content)
-    write_outputs(header_path, source_path, header_content, source_content)
+    write_if_changed(header_path, header_content)
+    write_if_changed(source_path, source_content)
 
 
 if __name__ == "__main__":
