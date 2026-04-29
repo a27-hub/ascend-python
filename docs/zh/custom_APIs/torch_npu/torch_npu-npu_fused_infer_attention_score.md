@@ -27,72 +27,73 @@
   - 全量化公式：
 	$$
 	query_{fp} = query \cdot dequant\_scale1
-    $$
+  $$
 
-    $$
+  $$
 	key_{fp} = key \cdot dequant\_scale1
-    $$
+  $$
 
-    $$
+  $$
 	value_{fp} = value \cdot dequant\_scale1
-    $$
+  $$
 
-    $$
+  $$
 	score_{fp} = scale \cdot (query_{fp} \cdot key_{fp}^\top) + mask
-    $$
+  $$
 
-    $$
+  $$
 	score_{int8} = quantize(score_{fp}, quant\_scale1)
-    $$
+  $$
 
-    $$
+  $$
 	atten\_prob_{int8} = softmax(score_{int8})
-    $$
+  $$
 
-    $$
+  $$
 	out_{fp} = atten\_prob_{int8} \cdot value_{fp}
-    $$
+  $$
 
-    $$
+  $$
 	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
 	$$
 
   - 后量化公式：
 	$$
 	out_{fp} = softmax(scale \cdot (query \cdot key^\top) + mask) \cdot value
-    $$
+  $$
 
-    $$
+  $$
 	attention\_out = quantize(out_{fp}, quant\_scale2, quant\_offset2)
 	$$
-​       其中，`quantize`为量化函数。
+	
+	 	其中，`quantize`为量化函数。
 
   - 伪量化公式：
 	$$
 	key_{fp} = key \cdot antiquant\_scale + antiquant\_offset
-    $$
+  $$
 
-    $$
+  $$
 	value_{fp} = value \cdot antiquant\_scale + antiquant\_offset
-    $$
+  $$
 
-    $$
+  $$
 	attention\_out = softmax(scale \cdot (query \cdot key_{fp}^\top) + mask) \cdot value_{fp}
 	$$
 
   - MLA场景：
 	$$
 	query_{rot} = RoPE(query, query\_rope)
-    $$
+  $$
 
-    $$
+  $$
 	key_{rot} = RoPE(key, key\_rope)
-    $$
+  $$
 
-    $$
+  $$
 	attention\_out = softmax(scale \cdot (query_{rot} \cdot key_{rot}^\top) + mask) \cdot value
 	$$
-        其中，`RoPE`为旋转位置编码函数。
+    	其中，`RoPE`为旋转位置编码函数。
 
 ## 函数原型<a name="zh-cn_topic_0000001832267082_section45077510411"></a>
 
