@@ -2918,7 +2918,7 @@ tensor([[[0, 1],
 _add_torch_npu_docstr(
     "npu_mish",
     """
-按元素计算self的双曲正切。
+按元素计算Mish激活函数结果。Mish激活函数定义：mish(x) = x * tanh(softplus(x))，其中softplus(x) = ln(1 + e^x)。
 
 参数解释：
 self (Tensor) - 数据类型：float16、float32。
@@ -7801,13 +7801,13 @@ Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持BSH、BSND、BNSD�
 Atlas A3 训练系列产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持左padding、tensorlist、pse、page attention、prefix、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
 其中BNSD_BSND含义指当输入为BNSD, 输出格式为BSND, 仅支持Q_S大于1. 
 num_key_value_heads: 整型, 代表key、value中head个数, 用于支持GQA(Grouped-Query Attention, 分组查询注意力)场景, 数据类型支持int64. 用户不特意指定时可传入默认值0, 表示key/value和query的head个数相等, 需要满足num_heads整除num_key_value_heads, num_heads与num_key_value_heads的比值不能大于64. 在BSND、BNSD、BNSD_BSND(仅支持Q_S大于1)场景下, 还需要与shape中的key/value的N轴shape值相同, 否则执行异常. 
-sparse_mode: 整型, 表示sparse的模式. 数据类型支持int64. Q_S为1且不带rope输入时该参数无效. 
+sparse_mode: 整型, 表示sparse的模式, 默认值为0. 数据类型支持int64. Q_S为1且不带rope输入时该参数无效. 当前仅支持取值0、1、2、3、4、9, 取值5、6、7、8(分别代表prefix、global、dilated、block_local)暂未实现, 请勿使用. input_layout为TND、TND_NTD、NTD_TND时, 综合约束请见约束说明. 
 sparse_mode为0时, 代表defaultMask模式, 如果atten_mask未传入则不做mask操作, 忽略pre_tokens和next_tokens(内部赋值为INT_MAX); 如果传入, 则需要传入完整的atten_mask矩阵(S1*S2), 表示pre_tokens和next_tokens之间的部分需要计算. 
 sparse_mode为1时, 代表allMask, 必须传入完整的attenmask矩阵(S1*S2). 
 sparse_mode为2时, 代表leftUpCausal模式的mask, 需要传入优化后的atten_mask矩阵(2048*2048). 
 sparse_mode为3时, 代表rightDownCausal模式的mask, 对应以右顶点为划分的下三角场景, 需要传入优化后的atten_mask矩阵(2048*2048). 
 sparse_mode为4时, 代表band模式的mask, 需要传入优化后的atten_mask矩阵(2048*2048). 
-sparse_mode为5、6、7、8时, 分别代表prefix、global、dilated、block_local, 均暂不支持. 用户不特意指定时可传入默认值0. 综合约束请见约束说明. 
+sparse_mode为9时, 代表treeMask模式, 用于推测解码场景的树形注意力掩码. 需传入自定义tree mask, 仅MLA场景(query_rope和key_rope不为空)支持. 不支持左padding、pse_shift、sharedPrefix, 输出dtype不支持int8, 每个batch需满足Q_S <= KV_S. 综合约束请见约束说明. 
 inner_precise: 整型, 一共4种模式: 0、1、2、3. 一共两位bit位, 第0位(bit0)表示高精度或者高性能选择, 第1位(bit1)表示是否做行无效修正. 数据类型支持int64. Q_S>1时, sparse_mode为0或1, 并传入用户自定义mask的情况下, 建议开启行无效; Q_S为1时该参数仅支持innerPrecise为0和1. 综合约束请见约束说明. 
 inner_precise为0时, 代表开启高精度模式, 且不做行无效修正. 
 inner_precise为1时, 代表高性能模式, 且不做行无效修正. 
@@ -8311,10 +8311,10 @@ quant_offset_out: Tensor类型, 数据类型支持float32、bfloat16. 数据格�
 learnable_sink: Tensor类型, 数据类型支持bfloat16, 数据格式支持ND, shape输入为(Q_N,), 通过可学习的"Sink Token"起到吸收Attention Score的作用, 如果不使用该功能可传入None, 综合约束请见约束说明.
 num_query_heads: 整型, 代表query的head个数, 数据类型支持int64, 在BNSD场景下, 需要与shape中的query的N轴shape值相同, 否则执行异常. 
 num_key_value_heads: 整型, 代表key、value中head个数, 用于支持GQA(Grouped-Query Attention, 分组查询注意力)场景, 数据类型支持int64. 用户不特意指定时可传入默认值0, 表示key/value和query的head个数相等, 需要满足num_query_heads整除num_key_value_heads, num_query_heads与num_key_value_heads的比值不能大于64. 在BSND、BNSD、BNSD_BSND(仅支持Q_S大于1)场景下, 还需要与shape中的key/value的N轴shape值相同, 否则执行异常. 
-softmax_scale: 浮点型, 公式中d开根号的倒数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float. 数据类型与query的数据类型需满足数据类型推导规则. 用户不特意指定时可传入默认值1.0. 
+softmax_scale: 浮点型, 公式中d开根号的倒数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float. 数据类型与query的数据类型需满足数据类型推导规则. 用户不特意指定时可传入默认值1.0, 即不做缩放. 建议传入1/sqrt(D)(D为Head Dim), 例如当D=128时传入1/math.sqrt(128.0), 以获得正确的注意力计算结果. 
 pre_tokens: 整型, 用于稀疏计算, 表示attention需要和前几个Token计算关联, 数据类型支持int64. 用户不特意指定时可传入默认值2147483647, Q_S为1时该参数无效. 
 next_tokens: 整型, 用于稀疏计算, 表示attention需要和后几个Token计算关联. 数据类型支持int64. 用户不特意指定时可传入默认值2147483647, Q_S为1时该参数无效. 
-input_layout: 字符串类型, 用于标识输入query、key、value的数据排布格式, 用户不特意指定时可传入默认值"BSH". 
+input_layout: 字符串类型, 用于标识输入query、key、value的数据排布格式, 用户不特意指定时可传入默认值"BSH". 各layout对应的shape如下: BSH-(B,Q_S,H), BSND-(B,Q_S,Q_N,D), BNSD-(B,Q_N,Q_S,D), BNSD_BSND输入(B,Q_N,Q_S,D)输出(B,Q_S,Q_N,D)仅支持Q_S>1, BSH_NBSD输入(B,Q_S,H)输出(Q_N,B,Q_S,D), BSND_NBSD输入(B,Q_S,Q_N,D)输出(Q_N,B,Q_S,D), BNSD_NBSD输入(B,Q_N,Q_S,D)输出(Q_N,B,Q_S,D)仅支持Q_S为1~16, TND-(T,Q_N,D)其中T为所有Batch的S累加和, TND_NTD输入(T,Q_N,D)输出(Q_N,T,D), NTD_TND输入(Q_N,T,D)输出(T,Q_N,D). 其中H=N*D. 
 Atlas A2 训练系列产品/Atlas 800I A2 推理产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持tensorlist、pse、page attention、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
 Atlas A3 训练系列产品: 支持BSH、BSND、BNSD、BNSD_BSND、TND(不支持tensorlist、pse、page attention、伪量化、全量化、后量化, 综合约束请见约束说明). 当为TND时, 不支持图模式配置Tiling调度优化功能(tiling_schedule_optimize=True). 
 其中BNSD_BSND含义指当输入为BNSD, 输出格式为BSND, 仅支持Q_S大于1. 
