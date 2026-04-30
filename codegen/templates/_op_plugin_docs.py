@@ -1830,6 +1830,96 @@ class TestNPUFlashAttention(TestCase):
 
 if __name__ == "__main__":
     run_tests()
+
+使用pse位置编码的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_pse():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # Build pse in BNSS format; it is added directly to the attention scores.
+    pse = torch.randn(B, N, S, S, dtype=torch.float16, device="npu") * 0.01  # BNSS
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        pse=pse,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: softmax(scale * QK^T + pse) * V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    ref_out = torch.matmul(torch.softmax(ref_scores + pse.float().cpu(), dim=-1), value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_pse()
+
+使用sink注意力头偏置的示例：
+import math
+import torch
+import torch_npu
+
+
+def example_with_sink():
+    # Set random seeds so the example is reproducible.
+    torch.manual_seed(0)
+    torch.npu.manual_seed(0)
+
+    # B: batch size, N: head num, S: sequence length, D: head dim.
+    B, N, S, D = 1, 4, 16, 64
+    scale = 1.0 / math.sqrt(D)
+
+    query = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    key = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    value = torch.randn(B, N, S, D, dtype=torch.float16, device="npu")
+    # sink provides one extra bias value for each attention head, with shape [head_num].
+    sink = torch.linspace(-0.2, 0.2, steps=N, dtype=torch.float32, device="npu")  # [head_num]
+
+    attention_score = torch_npu.npu_fusion_attention(
+        query,
+        key,
+        value,
+        head_num=N,
+        input_layout="BNSD",
+        sink=sink,
+        scale=scale,
+        keep_prob=1.0,
+    )[0]
+
+    # Reference implementation: append one sink logit, apply softmax, then drop that column before multiplying by V.
+    ref_scores = torch.matmul(query.float().cpu(), key.float().cpu().transpose(2, 3)) * scale
+    sink_scores = sink.cpu().view(1, N, 1, 1).expand(B, N, S, 1)
+    ref_probs = torch.softmax(torch.cat([ref_scores, sink_scores], dim=-1), dim=-1)[..., :-1]
+    ref_out = torch.matmul(ref_probs, value.float().cpu())
+
+    max_diff = (attention_score.float().cpu() - ref_out).abs().max().item()
+    print(f"attention_score shape: {attention_score.shape}, max_diff: {max_diff:.6f}")
+
+
+if __name__ == "__main__":
+    if torch.npu.is_available():
+        example_with_sink()
 """
 )
 
@@ -12149,35 +12239,31 @@ Atlas A3训练系列产品
 调用示例:
 非投机场景：
 import numpy as np
-
+ 
 import torch
 import torch_npu
-
+ 
 num_seqs = 16
 num_queries = 8
 block_size = 8
-spec_num = 2
-
-input_token = np.random.randint(10, size=(num_seqs,))
-sampled_token_id = np.random.randint(10, size=(num_queries, 1))
-input_position = np.random.randint(10, size=(num_seqs,))
-seq_len = np.random.randint(10, size=(num_seqs,))
+ 
+input_tokens = np.random.randint(10, size=(num_seqs,))
+sampled_token_ids = np.random.randint(10, size=(num_queries,1))
+input_positions = np.random.randint(10, size=(num_seqs,))
+seq_lens = np.random.randint(10, size=(num_seqs,))
 slot_mapping = np.random.randint(10, size=(num_seqs,))
-
-input_tokens = torch.tensor(input_token, dtype=torch.int64, device="npu")
-sampled_token_ids = torch.tensor(sampled_token_id, dtype=torch.int64, device="npu")
-input_positions = torch.tensor(input_position, dtype=torch.int64, device="npu")
-seq_lens = torch.tensor(seq_len, dtype=torch.int64, device="npu")
-slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
-
+ 
+input_tokens = torch.tensor(input_tokens, dtype=torch.int64, device="npu")
+sampled_token_ids = torch.tensor(sampled_token_ids, dtype=torch.int64, device="npu")
+input_positions = torch.tensor(input_positions, dtype=torch.int64, device="npu")
+seq_lens = torch.tensor(seq_lens, dtype=torch.int64, device="npu")
+slot_mapping = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
+ 
 max_seq_len = seq_lens.max().item()
-block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
-block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
-
-
-torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions,
-                                     seq_lens, slot_mappings, block_tables, num_seqs,
-                                     num_queries, block_size, spec_token=None, accepted_num=None)
+block_tables = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
+block_tables = torch.tensor(block_tables, dtype=torch.int64, device="npu")
+ 
+torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, num_seqs, num_queries, block_size)
 
 投机场景：
 import numpy as np
@@ -12186,33 +12272,33 @@ import torch
 import torch_npu
 
 num_seqs = 16
+num_queries = 16
 block_size = 8
 spec_num = 2
 
-input_token = np.random.randint(10, size=(num_seqs, 1 + spec_num))
-sampled_token_id = np.random.randint(10, size=(num_seqs, 1 + spec_num))
-input_position = np.random.randint(10, size=(num_seqs,))
-seq_len = np.random.randint(10, size=(num_seqs,))
-slot_mapping = np.random.randint(10, size=(num_seqs,))
+input_tokens = np.random.randint(10, size=(num_seqs*(1 + spec_num),))
+sampled_token_ids = np.random.randint(10, size=(num_seqs, 1 + spec_num))
+input_positions = np.random.randint(10, size=(num_seqs*(1 + spec_num),))
+seq_lens = np.random.randint(10, size=(num_seqs*(1 + spec_num),))
+slot_mapping = np.random.randint(10, size=(num_seqs*(1 + spec_num),))
 spec_token = np.random.randint(10, size=(num_seqs, spec_num))
 accepted_num = np.random.randint(10, size=(num_seqs,))
 
-input_tokens = torch.tensor(input_token, dtype=torch.int64, device="npu")
-sampled_token_ids = torch.tensor(sampled_token_id, dtype=torch.int64, device="npu")
-input_positions = torch.tensor(input_position, dtype=torch.int64, device="npu")
-seq_lens = torch.tensor(seq_len, dtype=torch.int64, device="npu")
-slot_mappings = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
-spec_tokens = torch.tensor(spec_token, dtype=torch.int64, device="npu")
-accepted_nums = torch.tensor(accepted_num, dtype=torch.int64, device="npu")
+input_tokens = torch.tensor(input_tokens, dtype=torch.int64, device="npu")
+sampled_token_ids = torch.tensor(sampled_token_ids, dtype=torch.int64, device="npu")
+input_positions = torch.tensor(input_positions, dtype=torch.int64, device="npu")
+seq_lens = torch.tensor(seq_lens, dtype=torch.int64, device="npu")
+slot_mapping = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
+spec_token = torch.tensor(spec_token, dtype=torch.int64, device="npu")
+accepted_num = torch.tensor(accepted_num, dtype=torch.int64, device="npu")
 
 max_seq_len = seq_lens.max().item()
-block_table = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
-block_tables = torch.tensor(block_table, dtype=torch.int64, device="npu")
-
+block_tables = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
+block_tables = torch.tensor(block_tables, dtype=torch.int64, device="npu")
 
 torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions,
-                                     seq_lens, slot_mappings, block_tables, num_seqs,
-                                     num_seqs, block_size, spec_token=spec_tokens, accepted_num=accepted_nums)
+                                     seq_lens, slot_mapping, block_tables, num_seqs,
+                                     num_queries, block_size, spec_token=spec_token, accepted_num=accepted_num)
 """
 )
 
@@ -14173,7 +14259,7 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
 
 参数说明: 
 x (Tensor)：必选参数，输入张量，数据类型支持float16、bfloat16，支持非连续的Tensor，数据格式支持ND。当前shape支持2维和3维。
-min_scale (float)：可选参数，参与scale计算的最小scale值。当前仅支持取值0。
+min_scale (float)：可选参数，参与scale计算的最小scale值。当前支持取值大于等于0。
 round_mode (str)：可选参数，指定cast到输出的转换方式。当前仅支持取值rint。
 dst_type (int)：可选参数，指定输出y的数据类型。当前仅支持取值1，表示代码输出y的数据类型为int8。
 row_block_size (int)：可选参数，指定一个block的行大小。当前仅支持取值1。
@@ -14661,59 +14747,6 @@ x_max_npu, x_sum_npu, output_npu = torch_npu.npu_fused_floyd_attention(
     atten_mask = atten_mask,
     scale_value = scale
 )
-"""
-)
-
-
-_add_torch_npu_docstr(
-    "save_npugraph_tensor",
-    """
-接口原型: 
-save_npugraph_tensor(Tensor self, *, str? save_path=None) -> ()
-
-功能描述：
-支持将aclgraph的图内计算节点保存到文件中，可以使用torch.load接口读取保存的tensor。
-
-参数说明：
-input(Tensor/List[Tensor])：必选参数，用于保存的tensor或tensorlist。当输入为单个tensor时，可以使用此接口保存单个tensor至指定的路径。当输入为tensorlist时，可以将tensorlist中的所有tensor分别保存至指定路径下。
-save_path(str):：可选参数，仅支持在保存单个tensor时使用，文件的保存位置。
-save_name(str)：可选参数，仅支持在保存tensorlist时使用，tensorlist/tuple中所有tensor的保存名主体。
-save_dir(str)：可选参数，仅支持在保存tensorlist时使用，tensorlist/tuple中所有tensor的保存路径。
-suffix(str)：可选参数，仅支持在保存tensorlist时使用，tensorlist/tuple中所有tensor的保存后缀。
-
-返回值说明：
-不涉及。
-
-支持版本: 
-PyTorch 2.6及更高版本
-
-支持的型号: 
-Atlas A2训练系列产品
-Atlas A3训练系列产品
-
-调用示例: 
-import torch
-import torch_npu
-import torchair
-from torchair.configs.compiler_config import CompilerConfig
-
-class Model(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(self, x):
-        output = torch.square(x)
-        torch_npu.save_npugraph_tensor(output, save_path="./tensor.pt")
-        return output
-
-config = CompilerConfig()
-config.mode = "reduce-overhead"
-npu_backend = torchair.get_npu_backend(compiler_config=config)
-
-x = torch.randn([10, 10]).npu()
-model = Model()
-model = torch.compile(model, backend=npu_backend)
-model(x)
 """
 )
 
@@ -15478,3 +15511,81 @@ _add_torch_npu_docstr(
  """
  )
  
+_add_torch_npu_docstr(
+    "npu_quant_max",
+    """
+功能描述:
+算子功能: 对输入张量x进行量化操作，同时计算并输出绝对值最大值amax。
+计算公式: y = cast(x * scale, dst_dtype), amax = max(|x|)
+
+接口原型:
+torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+
+参数说明:
+x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
+数据类型支持`float32`、`bfloat16`和`float16`。
+scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(1,)。数据格式支持ND。
+数据类型支持float32。
+round_mode: String类型, 可选参数, 舍入模式, 默认值为"rint"。支持的取值:
+- "rint": 四舍六入五成双舍入模式, 适用于float8_e5m2/float8_e4m3fn输出类型。
+- "round": 向最近整数舍入模式, 适用于hifloat8输出类型。
+- "hybrid": 混合舍入模式, 适用于hifloat8输出类型。
+dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举值, 默认值为torch.float8_e5m2。支持的取值:
+- torch_npu.hifloat8
+- torch.float8_e5m2
+- torch.float8_e4m3fn
+
+输出说明:
+返回两个Tensor:
+- y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[1]。
+
+约束说明:
+该接口支持推理、训练场景下使用。
+该接口支持图模式。
+x、scale这两个输入中不能含有None。
+round_mode与dst_dtype的搭配需遵循约束: float8_e5m2/float8_e4m3fn仅支持"rint", hifloat8仅支持"round"或"hybrid"。
+
+支持的PyTorch版本
+PyTorch 2.1及以上
+
+支持的NPU产品
+Atlas 350加速卡
+
+调用示例
+单算子调用
+import torch
+import torch_npu
+
+# 输入数据
+x_tensor = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+scale = torch.tensor([2.0], dtype=torch.float32).npu()
+
+# 调用算子
+y, amax = torch_npu.npu_quant_max(x_tensor, scale, round_mode="rint", dst_dtype=torch.float8_e5m2)
+
+图模式调用
+import torch
+import torch_npu
+import torchair as tng
+from torchair.configs.compiler_config import CompilerConfig
+
+config = CompilerConfig()
+config.debug.graph_dump.type = 'pbtxt'
+npu_backend = tng.get_npu_backend(compiler_config=config)
+
+x_tensor = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+scale = torch.tensor([2.0], dtype=torch.float32).npu()
+
+class Model(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x, scale):
+        return torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=torch.float8_e5m2)
+
+cpu_model = Model()
+model = cpu_model.npu()
+model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
+y, amax = model(x_tensor, scale)
+"""
+)

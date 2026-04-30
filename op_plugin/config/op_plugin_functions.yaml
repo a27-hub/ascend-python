@@ -955,6 +955,14 @@ official:
     op_api: all_version
     internal_format_opapi: all_version
 
+  - func: addmm.dtype(Tensor self, Tensor mat1, Tensor mat2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1) -> Tensor
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
+
+  - func: addmm.dtype_out(Tensor self, Tensor mat1, Tensor mat2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
+
   - func: addmm_(Tensor(a!) self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
@@ -1489,7 +1497,15 @@ official:
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
+  
+  - func: bmm.dtype(Tensor self, Tensor mat2, ScalarType output_dtype) -> Tensor
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
 
+  - func: bmm.dtype_out(Tensor self, Tensor mat2, ScalarType output_dtype, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
+  
   - func: bucketize.Scalar(Scalar self, Tensor boundaries, *, bool out_int32=False, bool right=False) -> Tensor
     op_api: all_version
 
@@ -3311,7 +3327,6 @@ official:
     op_api: all_version
 
   - func: max.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
-    sparse: [v2.1, newest]
     acl_op: all_version
     op_api: all_version
 
@@ -3498,6 +3513,14 @@ official:
     acl_op: all_version
     op_api: all_version
     internal_format_opapi: all_version
+
+  - func: mm.dtype(Tensor self, Tensor mat2, ScalarType output_dtype) -> Tensor
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
+
+  - func: mm.dtype_out(Tensor self, Tensor mat2, ScalarType output_dtype, *, Tensor(a!) out) -> Tensor(a!)
+    op_api: [v2.9, newest]
+    internal_format_opapi: [v2.9, newest]
 
   - func: mse_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
     acl_op: all_version
@@ -6872,6 +6895,9 @@ custom:
   - func: npu_swiglu_mx_quant(Tensor x, *, Tensor? group_index=None, int activate_dim=-1, bool activate_left=False, int swiglu_mode=0, float clamp_limit=7.0, float glu_alpha=1.702, float glu_bias=1.0, int group_mode=0, int axis=-1, int dst_type=296, str round_mode="rint", int scale_alg=0, float max_dtype_value=0) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_swiglu_mx_quant_with_dual_axis(Tensor x, *, Tensor? group_index=None, bool activate_left=True, str round_mode="rint", int scale_alg=1, int dst_type=24, float dst_type_max=0) -> (Tensor, Tensor, Tensor, Tensor)
+    op_api: all_version
+
   - func: npu_dequant_rope_quant_kvcache(Tensor x, Tensor cos, Tensor sin, Tensor k_cache, Tensor v_cache, Tensor indices, Tensor scale_k, Tensor scale_v, int[3] size_splits, *, Tensor? offset_k=None, Tensor? offset_v=None, Tensor? weight_scale=None, Tensor? activation_scale=None, Tensor? bias=None, int quant_mode=0, str input_layout="BSND", bool kv_output=False, str cache_mode="contiguous") -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
@@ -7401,11 +7427,6 @@ custom:
   - func: npu_add_quant_matmul(Tensor self, Tensor x1, Tensor x2, Tensor x2_scale, *, Tensor? x1_scale=None, int[]? group_sizes=None, int? x1_dtype=None, int? x2_dtype=None, int? x1_scale_dtype=None, int? x2_scale_dtype=None) -> Tensor
     op_api: all_version
 
-  - func: save_npugraph_tensor(Tensor input, *, str? save_path=None) -> ()
-    op_api: [v2.6, newest]
-    exposed: [v2.6, newest]
-    internal_format_opapi: [v2.6, newest]
-
   - func: npu_masked_causal_conv1d(Tensor input, Tensor weight, *, Tensor? mask=None) -> Tensor
     op_api: [v2.6, newest]
     exposed: [v2.6, newest]
@@ -7435,12 +7456,6 @@ custom:
     exposed: [v2.6, newest]
     internal_format_opapi: [v2.6, newest]
   
-  - func: save_npugraph_tensor.tensorlist(Tensor[] input, *, str? save_name=None, str? save_dir=None, str? suffix=None) -> ()
-    op_api: [v2.6, newest]
-    exposed: [v2.6, newest]
-    internal_format_opapi: [v2.6, newest]
-  
-
   - func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode="rint", int dst_type=296, int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)
     op_api: all_version
   
@@ -7452,6 +7467,9 @@ custom:
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
+
+  - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+    op_api: all_version
 
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
