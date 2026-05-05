@@ -50,7 +50,7 @@ namespace op_api {
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         char* hcom_ptr = const_cast<char*>(hcom.data());
-        EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
+        EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
                      gmm_x,
                      gmm_weight,
                      send_count_tensor_real,
