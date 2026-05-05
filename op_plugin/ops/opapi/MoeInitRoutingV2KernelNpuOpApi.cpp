@@ -1,18 +1,17 @@
- /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (c) 2025 Huawei Technologies Co., Ltd
+// All rights reserved.
+//
+// Licensed under the BSD 3-Clause License  (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// https://opensource.org/licenses/BSD-3-Clause
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
@@ -175,10 +174,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 
     at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
     at::Tensor expert_tokens_count_or_cumsum;
-    if (Is310PBoolCheck()) {
- 	  	expert_tokens_count_or_cumsum =
- 	  	    npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
- 	} else if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
+    if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
         // expert_tokens_count_or_cumsum in [end-start, ]
         expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kLong));
@@ -188,18 +184,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
 
-    if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || Is310PBoolCheck()) {
+    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
         drop_pad_mode = 0;
-        int64_t expert_tokens_count_or_cumsum_flag = Is310PBoolCheck() ? 1 : 2;
+        int64_t expert_tokens_count_or_cumsum_flag = 2;
         bool expert_tokens_before_capacity_flag = false;
-        if (bs == 0) {
-            // return when using empty tensor 
-            expert_tokens_count_or_cumsum.zero_();
-            return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
-        }
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
@@ -224,9 +215,6 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
-    } else if (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) {
-        expanded_scale = npu_preparation::apply_tensor_without_format(
-            {expanded_scale_len, op_infer::CeilDiv(h, 64), 2}, x.options().dtype(at::kByte));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
@@ -235,14 +223,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
-    auto scale_scalar_dtype = p_scale.defined() ? p_scale.scalar_type() : at::kFloat;
-    auto expanded_scale_scalar_dtype = expanded_scale.defined() ? expanded_scale.scalar_type() : at::kFloat;
-    TensorWrapper scale_wrapper = {p_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
-        aclDataType::ACL_FLOAT8_E8M0:
-        npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)};
-    TensorWrapper expanded_scale_wrapper = {expanded_scale, (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn)) ?
-        aclDataType::ACL_FLOAT8_E8M0:
-        npu_preparation::convert_to_acl_data_type(expanded_scale_scalar_dtype)};
+
     TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
         npu_preparation::convert_to_acl_data_type(x.scalar_type())};
@@ -252,15 +233,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     }
-    if (bs == 0) {
-        // return when using empty tensor
-        expert_tokens_count_or_cumsum.zero_();
-        return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
-    }
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,
         expert_idx,
-        scale_wrapper,
+        p_scale,
         p_offset,
         active_num,
         expert_capacity,
@@ -274,7 +250,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
-        expanded_scale_wrapper);
+        expanded_scale);
     return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
 }  // namespace op_api

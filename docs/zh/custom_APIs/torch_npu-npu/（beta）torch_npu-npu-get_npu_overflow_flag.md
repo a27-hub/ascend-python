@@ -1,5 +1,4 @@
 # （beta）torch\_npu.npu.get\_npu\_overflow\_flag
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -12,7 +11,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.get_npu_overflow_flag()
 ```
 
@@ -25,3 +24,4 @@ a = torch.Tensor([65535]).npu().half()
 a = a + a
 ret = torch_npu.npu.get_npu_overflow_flag()
 ```
+

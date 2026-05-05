@@ -1,5 +1,4 @@
 # （beta）torch_npu.npu.config.allow_internal_format
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,16 +14,15 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.config.allow_internal_format = bool
 ```
 
 ## 参数说明
 
 输入`bool`值。
-
-- <term>Atlas A2 训练系列产品</term>/<term>Atlas A3 训练系列产品</term>默认值为`False`。
-- <term>Atlas 推理系列产品</term>/<term>Atlas 训练系列产品</term>默认值为`True`。
+- <term>Atlas A2 训练系列产品</term>/<term>Atlas 推理系列产品</term>/<term>Atlas 训练系列产品</term>默认值为`True`。
+- <term>Atlas A3 训练系列产品</term>默认值为`False`。
 
 ## 约束说明
 
@@ -37,3 +35,4 @@ torch_npu.npu.config.allow_internal_format = bool
 >>> import torch_npu
 >>> torch_npu.npu.config.allow_internal_format = False
 ```
+

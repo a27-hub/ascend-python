@@ -8,13 +8,14 @@
 | <term>Atlas A2 训练系列产品</term> |    √     |
 | <term>Atlas 训练系列产品</term>    |    √     |
 
+
 ## 功能说明
 
 提供PyTorch训练过程中的性能数据采集功能。
 
 ## 函数原型
 
-```python
+```
 torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, record_shapes=False, profile_memory=False, with_stack=False, with_modules, with_flops=False, experimental_config=None)
 ```
 
@@ -42,8 +43,8 @@ torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, 
 
   默认值为False。
 
-  > [!NOTE]  
-  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://sourceware.org/bugzilla/show_bug.cgi?id=19329)，通过升级环境的glibc版本可解决此问题。
+  > **说明：**
+  > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://gitee.com/link?target=https%3A%2F%2Fsourceware.org%2Fbugzilla%2Fshow_bug.cgi%3Fid%3D19329)，通过升级环境的glibc版本可解决此问题。
 
 - **with_stack** (`bool`)：可选参数，算子调用栈。包括框架层及CPU算子层的调用信息。取值为：
 
@@ -96,33 +97,33 @@ import torch_npu
 ...
 
 experimental_config = torch_npu.profiler._ExperimentalConfig(
-    export_type=[
-        torch_npu.profiler.ExportType.Text
-        ],
-    profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
-    msprof_tx=False,
-    aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
-    l2_cache=False,
-    op_attr=False,
-    data_simplification=False,
-    record_op_args=False,
-    gc_detect_threshold=None
+	export_type=[
+		torch_npu.profiler.ExportType.Text
+		],
+	profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
+	msprof_tx=False,
+	aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
+	l2_cache=False,
+	op_attr=False,
+	data_simplification=False,
+	record_op_args=False,
+	gc_detect_threshold=None
 )
 
 with torch_npu.profiler.profile(
-    activities=[
-        torch_npu.profiler.ProfilerActivity.CPU,
-        torch_npu.profiler.ProfilerActivity.NPU
-        ],
-    schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=1),
-    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
-    record_shapes=False,
-    profile_memory=False,
-    with_stack=False,
-    with_modules=False,
-    with_flops=False,
-    experimental_config=experimental_config) as prof:
-    for step in range(steps): # 训练函数
-        train_one_step() # 训练函数
-        prof.step()
+	activities=[
+		torch_npu.profiler.ProfilerActivity.CPU,
+		torch_npu.profiler.ProfilerActivity.NPU
+		],
+	schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1, repeat=1, skip_first=1),
+	on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
+	record_shapes=False,
+	profile_memory=False,
+	with_stack=False,
+	with_modules=False,
+	with_flops=False,
+	experimental_config=experimental_config) as prof:
+	for step in range(steps): # 训练函数
+		train_one_step() # 训练函数
+		prof.step()
 ```

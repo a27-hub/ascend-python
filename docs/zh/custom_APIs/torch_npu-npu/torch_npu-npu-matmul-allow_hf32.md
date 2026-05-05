@@ -1,5 +1,4 @@
 # torch_npu.npu.matmul.allow_hf32
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -9,6 +8,7 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
+
 ## 功能说明
 
 matmul类算子开启对hf32类型的支持能力。
@@ -17,17 +17,18 @@ matmul类算子开启对hf32类型的支持能力。
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.matmul.allow_hf32 = bool
 ```
+
 
 ## 参数说明
 
 输入bool值，默认值False。
 
 ## 返回值说明
-
 `bool`
+
 
 ## 调用示例
 
@@ -43,3 +44,4 @@ True
 >>>torch_npu.npu.matmul.allow_hf32
 False
 ```
+

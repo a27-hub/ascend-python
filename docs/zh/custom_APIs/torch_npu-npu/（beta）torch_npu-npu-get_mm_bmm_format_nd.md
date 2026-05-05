@@ -1,5 +1,4 @@
 # （beta）torch_npu.npu.get_mm_bmm_format_nd
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,13 +14,14 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.get_mm_bmm_format_nd()
 ```
 
 ## 返回值说明
 
 `bool`
+
 
 ## 调用示例
 
@@ -31,3 +31,4 @@ torch_npu.npu.get_mm_bmm_format_nd()
 >>> torch_npu.npu.get_mm_bmm_format_nd()
 True
 ```
+

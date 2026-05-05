@@ -14,7 +14,6 @@
 // limitations under the License.
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -71,16 +70,13 @@ at::Tensor npu_fused_matmul(
     for (int64_t i = 0; i < long_tensor.dim() - X_DIM; i++) {
         output_size[i] = static_cast<int64_t>(batch_record[i]);
     }
-    auto output_type = x.dtype();
-    if (fused_op_type == "16cast32") {
-        output_type = at::kFloat;
-    }
+      
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size,
-                                                                             output_type);
+                                                                             x.dtype());
     const at::Tensor &x3_real = x3.value_or(at::Tensor());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
 
-    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
+    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     char fused_type[FUSED_TYPE_ARRAY_SIZE] = {0};
     TORCH_CHECK(std::string(fused_op_type).size() <= FUSED_TYPE_ARRAY_SIZE,
                 "the len of fused_op_type is bigger than the default");

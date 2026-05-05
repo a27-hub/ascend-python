@@ -32,8 +32,7 @@ at::Tensor max_pool2d_with_indices_backward(
     const at::Tensor& indices)
 {
     at::Tensor grad_input;
-    static auto maxpool2d_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
+    if (!c10_npu::IsAclnnOnly()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward(grad_output, self, kernel_size,
                                                                   stride, padding, dilation, ceil_mode, indices));
@@ -65,8 +64,7 @@ at::Tensor& max_pool2d_with_indices_backward_out(
     const at::Tensor& indices,
     at::Tensor& grad_input)
 {
-    static auto maxpool2d_sc = at_npu::native::env::CheckCompatibleImpl();
-    if (!c10_npu::IsAclnnOnly() && !maxpool2d_sc) {
+    if (!c10_npu::IsAclnnOnly()) {
         DO_COMPATIBILITY(aclnnMaxPool2dWithMaskBackward,
                          acl_op::max_pool2d_with_indices_backward_out(grad_output, self, kernel_size, stride, padding,
                                                                       dilation, ceil_mode, indices, grad_input));

@@ -14,7 +14,7 @@ AI Core的性能指标采集项，Enum类型。用于作为_ExperimentalConfig�
 
 ## 函数原型
 
-```python
+```
 torch_npu.profiler.AiCMetrics
 ```
 

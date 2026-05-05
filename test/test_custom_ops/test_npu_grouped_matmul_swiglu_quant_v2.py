@@ -232,25 +232,6 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             x.to(torch.float32).npu(), torch.tensor([1.], device='npu'), None, torch.quint4x2, -1, False)
         return x_quant, weight_quant, scale.npu(), xScale.npu(), smooth_scale.npu(), groupList.npu()
 
-    def gen_input_data_a8w8(self, E, M, K, N):
-        x = torch.randint(-100, 100, (M, K), dtype=torch.int8)
-        weight = torch.randint(-5, 5, (E, K, N), dtype=torch.int8)
-        weightScale = torch.randn(E, N, dtype=torch.float32) * 0.01
-        xScale = torch.randn(M, dtype=torch.float32) * 0.5
-        groupList = torch.tensor([M], dtype=torch.int64) if E == 1 else torch.tensor([M // 2, M], dtype=torch.int64)
-        return x, weight, weightScale, xScale, groupList
-
-    def prepare_a8w8_npu_inputs(self, x, weight, weightScale, xScale, groupList, E, K, N, weight_format=1):
-        x_npu = x.npu()
-        if weight_format == 1:
-            K_dim, N_dim = weight.shape[1], weight.shape[2]
-            weight_npu = weight.reshape(E, K_dim // 16, 16, N_dim // 32, 32).permute(0, 3, 1, 2, 4).contiguous().npu()
-            weightScale_npu = weightScale[:, :N_dim].contiguous().npu()
-        else:
-            weight_npu = weight.npu()
-            weightScale_npu = weightScale.npu()
-        return x_npu, weight_npu, weightScale_npu, xScale.npu(), groupList.npu()
-
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_swiglu_quant_v2_a4w4(self, device="npu"):
@@ -278,43 +259,6 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         self.assertEqual(output_scale_npu.dim(), 1)
         self.assertEqual(output_scale_npu.shape[0], M)
 
-    @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
-    @SupportedDevices(['Ascend910B'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_a8w8(self, device="npu"):
-        # 生成数据
-        E, M, K, N = 2, 64, 128, 64
-        x, weight, weightScale, xScale, groupList = self.gen_input_data_a8w8(E, M, K, N)
-        x_npu, weight_npu, weightScale_npu, xScale_npu, groupList_npu = self.prepare_a8w8_npu_inputs(
-            x, weight, weightScale, xScale, groupList, E, K, N, weight_format=1)
-        output_npu, output_scale_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-            x_npu,
-            [weight_npu],
-            [weightScale_npu],
-            xScale_npu,
-            groupList_npu,
-            smooth_scale=None,
-            dequant_mode=0,
-            dequant_dtype=torch.float32,
-            group_list_type=0,
-        )
-        self.assertEqual(output_npu.dim(), 2)
-        self.assertEqual(output_npu.shape[0], M)
-        self.assertEqual(output_npu.shape[1], N // 2)
-        self.assertEqual(output_scale_npu.dim(), 1)
-        self.assertEqual(output_scale_npu.shape[0], M)
-        output_cpu, output_scale_cpu = self.process_groups(x, weight, weightScale, xScale, groupList)
-        valid_len = groupList[-1].item()
-        self.assertRtolEqual(
-            output_npu[:valid_len, :].cpu().float(),
-            output_cpu[:valid_len, :].float(),
-            prec=1e-2,
-        )
-        self.assertRtolEqual(
-            output_scale_npu[:valid_len].cpu(),
-            output_scale_cpu[:valid_len],
-            prec=1.0,
-        )
-
     @unittest.skip("skip case")
     @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_swiglu_quant(self, device="npu"):
@@ -329,9 +273,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         output0_valid = output0[:groupList[-1], :]
         output1_valid = output1[:groupList[-1]]
         weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
-        output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-            x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu(),
-            dequant_dtype=torch.float32)
+        output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu())
         output0_npu_valid = output0_npu[:groupList[-1], :]
         output1_npu_valid = output1_npu[:groupList[-1]]
         self.assertEqual(output0_valid, output0_npu_valid.cpu(), 1)
@@ -379,52 +321,6 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         output1_npu_valid = output1_npu[:groupList[-1]]
         self.assertEqual(output0_valid, output0_npu_valid.cpu(), 1)
         self.assertRtolEqual(output1_valid, output1_npu_valid.cpu())
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid_mx(self, device="npu"):
-        """Ascend950 上 dequant_dtype 合法值 (float32) 校验"""
-        E, M, K, N = 2, 2, 16, 128
-        dequant_dtype = torch.float32
-        with self.subTest(dequant_dtype=dequant_dtype):
-            x, weight, weightScale, xScale, groupList = self.gen_input_data_950(E, M, K, N, False)
-            output_npu, output_scale_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-                x.npu(), [weight.npu()], [weightScale.npu()], xScale.npu(), groupList.npu(),
-                dequant_dtype=dequant_dtype, quant_mode=2, dequant_mode=2,
-                quant_dtype=torch.float8_e5m2,
-                weight_scale_dtype=torch_npu.float8_e8m0fnu,
-                x_scale_dtype=torch_npu.float8_e8m0fnu)
-            self.assertEqual(output_npu.dim(), 2)
-    
-    @SupportedDevices(['Ascend950'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid_pertoken(self, device="npu"):
-        """Ascend950 上 dequant_dtype 合法值 (float16/bfloat16) 校验"""
-        E, M, K, N = 2, 128, 128, 64
-        x = torch.randint(0, 256, (M, K), dtype=torch.uint8).to(torch.float8_e4m3fn)
-        weight = torch.randint(0, 256, (E, K, N), dtype=torch.uint8).to(torch.float8_e4m3fn)
-        weightScale = torch.randint(0, 256, (E, N), dtype=torch.float)
-        xScale = torch.randint(0, 256, (M,), dtype=torch.float)
-        groupList = torch.tensor([int(M//2), int(M//2) + 1], dtype=torch.int64)
-        for dequant_dtype in [torch.float16, torch.bfloat16]:
-            with self.subTest(dequant_dtype=dequant_dtype):
-                output_npu, output_scale_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-                    x.npu(), [weight.npu()], [weightScale.npu()], xScale.npu(), groupList.npu(),
-                    dequant_dtype=dequant_dtype, quant_mode=0, dequant_mode=0,
-                    quant_dtype=torch.float8_e5m2
-                    )
-                self.assertEqual(output_npu.dim(), 2)
-
-    @SupportedDevices(['Ascend950'])
-    def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_invalid(self, device="npu"):
-        """Ascend950 上 dequant_dtype 非法值应抛出 RuntimeError"""
-        E, M, K, N = 2, 128, 128, 64
-        x, weight, weightScale, xScale, groupList = self.gen_input_data_950(E, M, K, N, False)
-        with self.assertRaises(RuntimeError):
-            torch_npu.npu_grouped_matmul_swiglu_quant_v2(
-                x.npu(), [weight.npu()], [weightScale.npu()], xScale.npu(), groupList.npu(),
-                dequant_dtype=torch.int32, quant_mode=2, dequant_mode=2,
-                quant_dtype=torch.float8_e5m2,
-                weight_scale_dtype=torch_npu.float8_e8m0fnu,
-                x_scale_dtype=torch_npu.float8_e8m0fnu)
 
 if __name__ == "__main__":
     run_tests()

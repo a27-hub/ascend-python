@@ -6,7 +6,7 @@ torch_npu\csrc\core\npu\NPUFormat.h
 
 ## 函数原型
 
-```cpp
+```
 at::Tensor at_npu::native::empty_with_format(c10::IntArrayRef sizes, const c10::TensorOptions& options, int64_t acl_format, bool keep_format = false)
 ```
 
@@ -30,3 +30,4 @@ keep_format：bool类型，是否指定格式，true表示指定获取tensor的�
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
+

@@ -6,7 +6,7 @@ torch_npu\csrc\core\npu\NPUFunctions.h
 
 ## 函数原型
 
-```cpp
+```
 c10::DeviceIndex c10_npu::current_device()
 ```
 
@@ -20,3 +20,4 @@ NPU设备id获取，返回值类型DeviceIndex，表示获取到的设备id，�
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
+

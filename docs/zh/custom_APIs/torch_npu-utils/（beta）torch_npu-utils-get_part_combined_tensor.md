@@ -1,5 +1,4 @@
 # （beta）torch_npu.utils.get_part_combined_tensor
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,7 +14,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.utils.get_part_combined_tensor(combined_tensor, index, size) -> Tensor
 ```
 
@@ -26,7 +25,6 @@ torch_npu.utils.get_part_combined_tensor(combined_tensor, index, size) -> Tensor
 - **size** (`Long`)：需获取的局部Tensor的大小。
 
 ## 返回值说明
-
 `Tensor`
 
 代表从融合Tensor中获取的局部Tensor。

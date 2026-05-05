@@ -1,5 +1,4 @@
 # （beta）torch_npu.utils.is_combined_tensor_valid
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,7 +14,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.utils.is_combined_tensor_valid(combined_tensor, list_of_tensor) -> bool
 ```
 
@@ -25,7 +24,6 @@ torch_npu.utils.is_combined_tensor_valid(combined_tensor, list_of_tensor) -> boo
 - **list_of_tensor** (`List[Tensor]`)：需要进行校验的Tensor列表。
 
 ## 返回值说明
-
 `bool`
 
 代表Tensor列表`list_of_tensor`中的Tensor是否全部属于融合Tensor `combined_tensor`。
@@ -33,3 +31,4 @@ torch_npu.utils.is_combined_tensor_valid(combined_tensor, list_of_tensor) -> boo
 ## 约束说明
 
 融合Tensor `combined_tensor`及`list_of_tensor`中的Tensor须全部为内存连续的、dtype一致的NPU Tensor。
+

@@ -9,13 +9,14 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
+
 ## 功能说明
 
 使用NPU自定义算子替换原生写法，以提高性能。
 
 ## 函数原型
 
-```python
+```
 torch_npu.contrib.function.matmul_transpose(tensor1, tensor2)
 ```
 
@@ -49,3 +50,4 @@ torch_npu.contrib.function.matmul_transpose(tensor1, tensor2)
 >>> output.shape
 torch.Size([68, 5, 75, 75])
 ```
+

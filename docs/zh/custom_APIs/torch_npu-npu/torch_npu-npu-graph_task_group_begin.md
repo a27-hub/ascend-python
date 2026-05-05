@@ -1,5 +1,4 @@
 # torch_npu.npu.graph_task_group_begin
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -9,13 +8,14 @@
 |<term>Atlas A2 训练系列产品</term>  | √   |
 |<term>Atlas A2 推理系列产品</term> |    √     |
 
+
 ## 功能说明
 
 NPUGraph场景下，用于标记任务组起始位置。
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.graph_task_group_begin(stream) -> None
 ```
 
@@ -32,7 +32,6 @@ torch_npu.npu.graph_task_group_begin(stream) -> None
 图捕获阶段，与[torch_npu.npu.graph_task_group_end](torch_npu-npu-graph_task_group_end.md)配合使用生成任务组handle。
 
 ## 调用示例
-
 ```python
 import torch
 import torch_npu
@@ -99,3 +98,4 @@ with torch.no_grad():
 
 
 ```
+

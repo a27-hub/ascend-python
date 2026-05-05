@@ -23,3 +23,4 @@ option = {}
 option['NPU_FUZZY_COMPILE_BLACKLIST'] = "DynamicGRUV2,DynamicRNN"          #根据实际场景进行替换
 torch.npu.set_option(option)
 ```
+

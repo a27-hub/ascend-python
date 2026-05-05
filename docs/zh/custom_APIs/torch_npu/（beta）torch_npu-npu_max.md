@@ -1,5 +1,4 @@
 # （beta）torch_npu.npu_max
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,9 +14,10 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu_max(self, dim, keepdim=False) -> (Tensor, Tensor)
 ```
+
 
 ## 参数说明
 
@@ -29,6 +29,8 @@ torch_npu.npu_max(self, dim, keepdim=False) -> (Tensor, Tensor)
 
 - **values** (`Tensor`)：输入张量中的最大值。
 - **indices** (`Tensor`)：输入张量中最大值的indices。
+
+
 
 ## 调用示例
 
@@ -60,3 +62,5 @@ tensor([[[1, 1],
         [[1, 1],
         [0, 0]]], device='npu:0', dtype=torch.int32)
 ```
+
+

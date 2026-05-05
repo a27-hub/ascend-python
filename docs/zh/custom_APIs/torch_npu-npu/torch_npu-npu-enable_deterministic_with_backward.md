@@ -1,5 +1,6 @@
 # torch_npu.npu.enable_deterministic_with_backward
 
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -17,7 +18,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.enable_deterministic_with_backward(tensor) -> Tensor
 ```
 
@@ -26,7 +27,6 @@ torch_npu.npu.enable_deterministic_with_backward(tensor) -> Tensor
 **tensor** (`Tensor`)：该接口为透明传输接口，不做数据处理，类型支持和数据格式为PyTorch在各芯片上可支持的数据类型和数据格式，无接口级别的约束。
 
 ## 返回值说明
-
 `Tensor`
 
 代表`enable_deterministic_with_backward`的计算结果。
@@ -35,6 +35,7 @@ torch_npu.npu.enable_deterministic_with_backward(tensor) -> Tensor
 
 - 入参`tensor`需要是训练网络中可以传递下去且与整网的`output`有关联的`tensor`变量，否则无法进行反向设置确定性能力。
 - 不支持图模式。
+
 
 ## 调用示例
 
@@ -94,3 +95,4 @@ Ran 1 test in 4.636s
 
 OK
 ```
+

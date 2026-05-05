@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.contrib.Swish()
 ```
 
@@ -31,3 +31,4 @@ torch_npu.contrib.Swish()
 >>> input_tensor = torch.randn(2, 32, 5, 5).npu()
 >>> output = m(input_tensor)
 ```
+

@@ -1,4 +1,3 @@
-import unittest
 import torch
 import numpy as np
 from torch.nn import functional as F
@@ -40,7 +39,6 @@ class TestBaddBmm(TestCase):
         input1 = input1.numpy()
         return input1
 
-    @unittest.skip("Temporarily skipping")
     def test_baddbmm_common_shape_format(self):
         shape_format = [
             [

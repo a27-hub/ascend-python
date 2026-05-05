@@ -72,7 +72,6 @@ class TestForeachAddcmulScalarList(TestCase):
             
             self.assertRtolEqual(cpu_output, npu_output)
 
-    @unittest.skip("Temporarily skipping")
     def test_foreach_addcmul_scalar_list_out_float16_shpae_tensor_num(self):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :
@@ -108,7 +107,6 @@ class TestForeachAddcmulScalarList(TestCase):
 
             self.assertRtolEqual(cpu_tensors[0], npu_tensors[0])
 
-    @unittest.skip("Temporarily skipping")
     def test_foreach_addcmul_scalar_list_inplace_float16_shpae_tensor_num(self):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list :

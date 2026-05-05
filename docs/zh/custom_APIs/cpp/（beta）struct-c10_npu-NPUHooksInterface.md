@@ -24,3 +24,4 @@ device_index：DeviceIndex类型，指定NPU设备id。
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
+

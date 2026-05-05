@@ -1,5 +1,4 @@
 # （beta）torch_npu.distributed.reinit_process_group
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,7 +12,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.distributed.reinit_process_group(group: Optional[ProcessGroup] = None, rebuild_link: bool = True) -> None
 ```
 
@@ -29,6 +28,7 @@ torch_npu.distributed.reinit_process_group(group: Optional[ProcessGroup] = None,
 ## 约束说明
 
 输入要确保是一个有效的device。
+
 
 ## 调用示例
 
@@ -61,3 +61,4 @@ def _multiprocess(world_size,f):
 if __name__ == '__main__':
     _multiprocess(4, _do_allreduce)
 ```
+

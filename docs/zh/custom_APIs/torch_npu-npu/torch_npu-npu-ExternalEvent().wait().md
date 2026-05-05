@@ -1,5 +1,4 @@
 # torch_npu.npu.ExternalEvent().wait()
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -11,13 +10,14 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
+
 ## 功能说明
 
 阻塞指定Stream的运行，直到指定的Event完成，仅支持单个Stream等待单个Event的场景。
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.ExternalEvent().wait(stream) -> None
 ```
 
@@ -36,7 +36,6 @@ torch_npu.npu.ExternalEvent().wait(stream) -> None
 - 该接口会自动复位Event，不需要调用torch_npu.npu.ExternalEvent().reset()接口手动复位Event。
 
 ## 调用示例
-
 ```python
 import torch
 import torch_npu

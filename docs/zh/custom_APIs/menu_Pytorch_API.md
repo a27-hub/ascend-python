@@ -1,5 +1,4 @@
 # 自定义API参考
-
 -   [概述](./overview.md)
 -   [Python接口](./Python_interface.md)
     -   [torch_npu](./torch_npu/torch_npu.md)
@@ -79,8 +78,6 @@
         -   [torch_npu.npu_anti_quant](./torch_npu/torch_npu-npu_anti_quant.md)
         -   [torch_npu.npu_attention_to_ffn](./torch_npu/torch_npu-npu_attention_to_ffn.md)
         -   [torch_npu.npu_attention_update](./torch_npu/torch_npu-npu_attention_update.md)
-        -   [torch_npu.npu_block_sparse_attention](./torch_npu/torch_npu-npu_block_sparse_attention.md)
-        -   [torch_npu-npu_chunk_gated_delta_rule](./torch_npu/torch_npu-npu_chunk_gated_delta_rule.md)
         -   [torch_npu.npu_convert_weight_to_int4pack](./torch_npu/torch_npu-npu_convert_weight_to_int4pack.md)
         -   [torch_npu.npu_dynamic_quant](./torch_npu/torch_npu-npu_dynamic_quant.md)
         -   [torch_npu.npu_dynamic_quant_asymmetric](./torch_npu/torch_npu-npu_dynamic_quant_asymmetric.md)
@@ -144,7 +141,6 @@
         -   [torch_npu.npu_dequant_swiglu_quant](./torch_npu/torch_npu-npu_dequant_swiglu_quant.md)
         -   [torch_npu.npu_kv_rmsnorm_rope_cache](./torch_npu/torch_npu-npu_kv_rmsnorm_rope_cache.md)
         -   [torch_npu.npu_interleave_rope](./torch_npu/torch_npu-npu_interleave_rope.md)
-        -   [torch_npu.npu_mrope](./torch_npu/torch_npu-npu_mrope.md)
         -   [torch_npu.npu_moe_re_routing](./torch_npu/torch_npu-npu_moe_re_routing.md)
         -   [torch_npu.matmul_checksum](./torch_npu/torch_npu-matmul_checksum.md)
         -   [torch_npu.npu_alltoallv_gmm](./torch_npu/torch_npu-npu_alltoallv_gmm.md)
@@ -163,10 +159,8 @@
         -   [torch_npu.npu_dense_lightning_indexer_grad_kl_loss](./torch_npu/torch_npu-npu_dense_lightning_indexer_grad_kl_loss.md)
         -   [torch_npu.npu_add_rms_norm](./torch_npu/torch_npu-npu_add_rms_norm.md)
         -   [torch_npu.npu_add_rms_norm_dynamic_quant](./torch_npu/torch_npu-npu_add_rms_norm_dynamic_quant.md)
+        -   [torch_npu.save_npugraph_tensor](./torch_npu/torch_npu-save_npugraph_tensor.md)
         -   [torch_npu.npu_fused_floyd_attention](./torch_npu/torch_npu-npu_fused_floyd_attention.md)
-        -   [torch_npu.npu_masked_causal_conv1d](./torch_npu/torch_npu-npu_masked_causal_conv1d.md)
-        -   [torch_npu.npu_clipped_swiglu](./torch_npu/torch_npu-npu_clipped_swiglu.md)
-        -   [torch_npu.npu_rotate_quant](./torch_npu/torch_npu-npu_rotate_quant.md)
 
     -   [torch_npu.contrib](./torch_npu-contrib/torch_npu-contrib.md)
         -   [torch_npu.contrib接口列表](./torch_npu-contrib/torch_npu-contrib_list.md)
@@ -224,8 +218,6 @@
             -   [torch_npu.npu.disable_deterministic_with_backward](./torch_npu-npu/torch_npu-npu-disable_deterministic_with_backward.md)
             -   [torch_npu.npu.matmul.allow_hf32](./torch_npu-npu/torch_npu-npu-matmul-allow_hf32.md)
             -   [torch_npu.npu.conv.allow_hf32](./torch_npu-npu/torch_npu-npu-conv-allow_hf32.md)
-            -   [torch_npu.npu.matmul.cube_math_type](./torch_npu-npu/torch_npu-npu-matmul-cubeMathType.md)
-            -   [torch_npu.npu.NpuGraphOpHandler](./torch_npu-npu/torch_npu-npu_npugraph_handlers.md)
             -   [（beta）torch_npu.npu.set_option](./torch_npu-npu/（beta）torch_npu-npu-set_option.md)
             -   [（beta）torch_npu.npu.config.allow_internal_format](./torch_npu-npu/（beta）torch_npu-npu-config-allow_internal_format.md)
             -   [（beta）torch_npu.npu.stress_detect](./torch_npu-npu/（beta）torch_npu-npu-stress_detect.md)
@@ -394,3 +386,4 @@
 -   [废弃API列表](./scrap_API.md)
 -   [附录](./appendix.md)
     -   [添加二进制黑名单示例](./blacklist.md)
+

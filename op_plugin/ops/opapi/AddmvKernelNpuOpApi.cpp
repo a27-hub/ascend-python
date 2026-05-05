@@ -17,7 +17,6 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -25,7 +24,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 static at::Tensor &addmv_out_op_api(const at::Tensor &self, const at::Tensor &mat, const at::Tensor &vec,
                                     const at::Scalar &beta, const at::Scalar &alpha, at::Tensor &result)
 {
-    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
+    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
     EXEC_NPU_CMD(aclnnAddmv, self, mat, vec, alpha, beta, result, cube_math_type);
     return result;
 }

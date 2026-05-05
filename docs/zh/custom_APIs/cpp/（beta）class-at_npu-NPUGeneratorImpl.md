@@ -16,9 +16,9 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     device_index：DeviceIndex类型，指定npu设备id。
 
-- **std::shared_ptr\<NPUGeneratorImpl> at_npu::NPUGeneratorImpl::clone()**
+- **std::shared_ptr<NPUGeneratorImpl> at_npu::NPUGeneratorImpl::clone()**
 
-    NPUGeneratorImpl拷贝函数，返回值类型shared_ptr\<NPUGeneratorImpl>，返回NPUGeneratorImpl拷贝，与std::shared_ptr\<CUDAGeneratorImpl> at::CUDAGeneratorImpl::clone()相同。
+    NPUGeneratorImpl拷贝函数，返回值类型shared_ptr<NPUGeneratorImpl>，返回NPUGeneratorImpl拷贝，与std::shared_ptr<CUDAGeneratorImpl> at::CUDAGeneratorImpl::clone()相同。
 
 - **void at_npu::NPUGeneratorImpl::set_current_seed(uint64_t seed)**
 
@@ -50,9 +50,9 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     new_state：TensorImpl类型，待设置的状态，需要通过at::detail::check_rng_state检测。
 
-- **c10::intrusive_ptr\<c10::TensorImpl> c10::TensorImpl at_npu::NPUGeneratorImpl::get_state()**
+- **c10::intrusive_ptr<c10::TensorImpl> c10::TensorImpl at_npu::NPUGeneratorImpl::get_state()**
 
-    NPUGeneratorImpl状态获取，返回值类型intrusive_ptr\<c10::TensorImpl>，返回生成器状态，与c10::intrusive_ptr\<c10::TensorImpl> at::CUDAGeneratorImpl::get_state()相同。
+    NPUGeneratorImpl状态获取，返回值类型intrusive_ptr<c10::TensorImpl>，返回生成器状态，与c10::intrusive_ptr<c10::TensorImpl> at::CUDAGeneratorImpl::get_state()相同。
 
 - **void at_npu::NPUGeneratorImpl::set_philox_offset_per_thread(uint64_t offset)**
 
@@ -97,9 +97,9 @@ Pytorch2.5.1及以上版本，新增以下成员函数：
     在capture状态下为aclgraph设置期望的随机数生成状态，与at::CUDAGeneratorImpl::graphsafe_set_state(const c10::intrusive_ptr& state)功能相同。
     
     state：随机数生成器状态。
-- **c10::intrusive_ptr\<c10::GeneratorImpl> graphsafe_get_state()**
+- **c10::intrusive_ptr<c10::GeneratorImpl> graphsafe_get_state()**
 
-    在capture状态下为aclgraph查询随机数生成对象，与c10::intrusive_ptr\<c10::GeneratorImpl> at::CUDAGeneratorImpl::graphsafe_get_state()功能相同。
+    在capture状态下为aclgraph查询随机数生成对象，与c10::intrusive_ptr<c10::GeneratorImpl> at::CUDAGeneratorImpl::graphsafe_get_state()功能相同。
     
     返回值为c10::GeneratorImpl对象。
 - **void register_graph(c10_npu::NPUGraph* graph)**
@@ -115,3 +115,4 @@ Pytorch2.5.1及以上版本，新增以下成员函数：
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
+

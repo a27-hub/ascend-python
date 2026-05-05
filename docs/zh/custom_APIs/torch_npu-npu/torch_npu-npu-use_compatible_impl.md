@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.npu.use_compatible_impl(is_enable)
 ```
 
@@ -35,7 +35,7 @@ torch_npu.npu.use_compatible_impl(is_enable)
 
 ## 约束说明
 
-目前支持`torch.nn.functional.gelu`、`torch.nn.LayerNorm`、`torch.distributed.all_to_all`、`torch.distributed.scatter`、`torch.distributed.gather`、`torch.nn.MaxPool2d`、`torch.nn.functional.max_pool2d`。
+目前仅支持`torch.nn.functional.gelu`。
 
 ## 调用示例
 

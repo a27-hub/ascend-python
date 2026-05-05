@@ -16,7 +16,7 @@ torch_npu\utils\flops_count.py
 
 ## 函数原型
 
-```python
+```
 torch_npu.utils.FlopsCounter()
 ```
 
@@ -56,6 +56,7 @@ torch_npu.utils.FlopsCounter()
 
     获取统计结果。返回列表，包括不含重计算的Flops（recordedCount）和含重计算的Flops（traversedCount），例如[_100, 200_]，_100_为不含重计算的Flops（recordedCount），_200_为含重计算的Flops（traversedCount）。
 
+
 ## 调用示例
 
 ```python
@@ -89,3 +90,4 @@ FlopsCounter.stop()
 matmul()
 print(f"FlopsCounter.stop():{FlopsCounter.get_flops()}") # 含重计算Flops和不含重计算Flops清0且均不累计
 ```
+

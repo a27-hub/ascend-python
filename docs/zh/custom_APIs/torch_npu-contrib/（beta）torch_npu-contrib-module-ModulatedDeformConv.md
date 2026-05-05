@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.module.ModulatedDeformConv
-
 ## 产品支持情况
+
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -15,12 +15,11 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, deformable_groups=1, bias=True, pack=True)
 ```
 
 ## 参数说明
-
 **计算参数**
 
 - **in_channels** (`int`)：输入图像中的通道数。
@@ -39,7 +38,6 @@ torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_s
 - **x**(`Tensor`): 输入张量。
 
 ## 返回值说明
-
 `Tensor`
 
 卷积计算结果。
@@ -47,6 +45,7 @@ torch_npu.contrib.module.ModulatedDeformConv(in_channels, out_channels, kernel_s
 ## 约束说明
 
 ModulatedDeformConv仅实现float32数据类型的操作。conv_offset中权重和偏置必须初始化为0。
+
 
 ## 调用示例
 
@@ -59,3 +58,4 @@ ModulatedDeformConv仅实现float32数据类型的操作。conv_offset中权重�
 >>> output.shape
 torch.Size([2, 32, 5, 5])
 ```
+

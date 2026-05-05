@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-```python
+```
 torch_npu.contrib.BiLSTM(input_size, hidden_size)
 ```
 
@@ -36,3 +36,4 @@ torch_npu.contrib.BiLSTM(input_size, hidden_size)
 >>> input_tensor = torch.randn(26, 2560, 512).npu()
 >>> output = r(input_tensor)
 ```
+

@@ -1,4 +1,3 @@
-import unittest
 import torch
 import numpy as np
 import torch_npu
@@ -25,7 +24,6 @@ class TestAngle(TestCase):
         output = output.numpy()
         return output
 
-    @unittest.skip("Temporarily skipping")
     def test_angle_common_shape_format_fp32(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]
@@ -38,7 +36,6 @@ class TestAngle(TestCase):
             npu_output = self.npu_op_exec(npu_input1)
             self.assertRtolEqual(cpu_output, npu_output)
     
-    @unittest.skip("Temporarily skipping")
     def test_angle_common_shape_format_fp16(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]
@@ -52,7 +49,6 @@ class TestAngle(TestCase):
             self.assertRtolEqual(cpu_output, npu_output)
     
     @SupportedDevices(['Ascend910B'])
-    @unittest.skip("Temporarily skipping")
     def test_angle_common_shape_format_complex64(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]
@@ -68,7 +64,6 @@ class TestAngle(TestCase):
             npu_output = self.npu_op_exec(npu_input)
             self.assertRtolEqual(cpu_output, npu_output)
 
-    @unittest.skip("Temporarily skipping")
     def test_angle_out_common_shape_format_fp32(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]
@@ -82,7 +77,6 @@ class TestAngle(TestCase):
             npu_output = self.npu_op_exec_out(npu_input1, npu_input2)
             self.assertRtolEqual(cpu_output, npu_output)
 
-    @unittest.skip("Temporarily skipping")
     def test_angle_out_common_shape_format_fp16(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]
@@ -97,7 +91,6 @@ class TestAngle(TestCase):
             self.assertRtolEqual(cpu_output, npu_output)
 
     @SupportedDevices(['Ascend910B'])
-    @unittest.skip("Temporarily skipping")
     def test_angle_out_common_shape_format_complex64(self):
         format_list = [0]
         shape_list = [[2, 9], [2, 13, 4], [32, 64, 128, 3]]

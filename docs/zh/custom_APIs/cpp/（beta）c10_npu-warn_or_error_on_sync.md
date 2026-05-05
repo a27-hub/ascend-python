@@ -6,7 +6,7 @@ torch_npu\csrc\core\npu\NPUFunctions.h
 
 ## 函数原型
 
-```cpp
+```
 void c10_npu::warn_or_error_on_sync()
 ```
 
@@ -20,3 +20,4 @@ NPU同步时警告，无返回值，根据当前警告等级进行报错或警�
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
+

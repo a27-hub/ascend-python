@@ -14,7 +14,7 @@
 
 ## 函数原型
 
-```python
+```
 class torch_npu.optim.NpuFusedOptimizerBase(params, default)
 ```
 
@@ -23,6 +23,7 @@ class torch_npu.optim.NpuFusedOptimizerBase(params, default)
 - **params** (`iterable`)：必选参数，模型参数或模型参数组。
 - **default** (`dict`)：包含其他所有参数的字典。
 
+
 ## 返回值说明
 
 类型为`NpuFusedOptimizerBase`的对象。
@@ -30,6 +31,7 @@ class torch_npu.optim.NpuFusedOptimizerBase(params, default)
 ## 约束说明
 
 `NpuFusedOptimizerBase`为基类，无法单独使用，需通过继承子类实现特定功能的融合优化器。
+
 
 ## 调用示例
 
@@ -78,3 +80,4 @@ class NpuFusedSGD(NpuFusedOptimizerBase):
         for group in self.param_groups:            
             group.setdefault('nesterov', False)
 ```
+
