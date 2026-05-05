@@ -50,24 +50,44 @@ namespace op_api {
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         char* hcom_ptr = const_cast<char*>(hcom.data());
-        EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
-                     gmm_x,
-                     gmm_weight,
-                     send_count_tensor_real,
-                     recv_count_tensor_real,
-                     mm_x_real,
-                     mm_weight_real,
-                     hcom_ptr,
-                     ep_world_size,
-                     send_counts,
-                     recv_counts,
-                     trans_gmm_weight,
-                     trans_mm_weight,
-                     permute_out_flag,
-                     comm_mode_real,
-                     gmm_y,
-                     mm_y,
-                     permute_out);
+        if (strcmp(comm_mode_real, "aicpu") == 0) {
+            EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
+                         gmm_x,
+                         gmm_weight,
+                         send_count_tensor_real,
+                         recv_count_tensor_real,
+                         mm_x_real,
+                         mm_weight_real,
+                         hcom_ptr,
+                         ep_world_size,
+                         send_counts,
+                         recv_counts,
+                         trans_gmm_weight,
+                         trans_mm_weight,
+                         permute_out_flag,
+                         comm_mode_real,
+                         gmm_y,
+                         mm_y,
+                         permute_out);
+        } else {
+            EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
+                         gmm_x,
+                         gmm_weight,
+                         send_count_tensor_real,
+                         recv_count_tensor_real,
+                         mm_x_real,
+                         mm_weight_real,
+                         hcom_ptr,
+                         ep_world_size,
+                         send_counts,
+                         recv_counts,
+                         trans_gmm_weight,
+                         trans_mm_weight,
+                         permute_out_flag,
+                         gmm_y,
+                         mm_y,
+                         permute_out);
+        }
         return std::tie(gmm_y, mm_y, permute_out);
     }
 } // namespace op_api
