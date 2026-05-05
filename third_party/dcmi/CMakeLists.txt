@@ -1,1 +1,0 @@
-INSTALL(DIRECTORY inc/ DESTINATION include/third_party/dcmi/inc FILES_MATCHING PATTERN "*.h")

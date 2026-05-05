@@ -1,6 +1,0 @@
-FILE(GLOB _IPC_SRCS *.cpp)
-
-LIST(APPEND IPC_SRCS ${_IPC_SRCS})
-
-# Pass to parent
-set(IPC_SRCS ${IPC_SRCS} PARENT_SCOPE)

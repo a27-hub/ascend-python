@@ -1,6 +1,0 @@
-FILE(GLOB _AFD_SRCS *.cpp)
-
-LIST(APPEND AFD_SRCS ${_AFD_SRCS})
-
-# Pass to parent
-set(AFD_SRCS ${AFD_SRCS} PARENT_SCOPE)
