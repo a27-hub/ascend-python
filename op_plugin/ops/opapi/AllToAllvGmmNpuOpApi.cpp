@@ -19,6 +19,7 @@
 #include "op_plugin/utils/op_api_common.h"
 
 namespace op_api {
+static const char* AICPU_COMM_MODE = "aicpu";
     std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_gmm(const at::Tensor &gmm_x, const at::Tensor &gmm_weight,
                                                                      c10::string_view hcom, int64_t ep_world_size, at::IntArrayRef send_counts, at::IntArrayRef recv_counts,
                                                                      const c10::optional<at::Tensor> &send_counts_tensor, const c10::optional<at::Tensor> &recv_counts_tensor,
@@ -51,7 +52,7 @@ namespace op_api {
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         char* hcom_ptr = const_cast<char*>(hcom.data());
-        if (strcmp(comm_mode_real, "aicpu") == 0) {
+        if (strcmp(comm_mode_real, AICPU_COMM_MODE) == 0) {
             EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
                          gmm_x,
                          gmm_weight,
