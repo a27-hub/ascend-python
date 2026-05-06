@@ -94,9 +94,8 @@ static bool check_v2_param(const c10::optional<at::Tensor> &elastic_info, int64_
         } else {
             output3 = npu_preparation::apply_tensor_without_format({n, 1, h}, expert_ids.options().dtype(at::kHalf));
         }
-
+        float norm_eps_float = static_cast<float>(norm_eps);
         if (check_aclnn_kernel_available("aclnnMoeDistributeCombineAddRmsNormV2")) {
-            float norm_eps_float = static_cast<float>(norm_eps);
             EXEC_NPU_CMD(aclnnMoeDistributeCombineAddRmsNormV2, expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, tp_send_counts, x_active_mask,
                          activation_scale, weight_scale, group_list, expand_scales,
                          shared_expert_x, elastic_info, ori_x, const_expert_alpha_1, const_expert_alpha_2, const_expert_v,
@@ -105,7 +104,6 @@ static bool check_v2_param(const c10::optional<at::Tensor> &elastic_info, int64_
                          expert_shard_type, shared_expert_num, shared_expert_rank_num, global_bs_real, out_dtype, comm_quant_mode, group_list_type, commAlg_ptr, norm_eps_float,
                          zero_expert_num, copy_expert_num, const_expert_num, output, output2, output3);
         } else {
-            float norm_eps_float = static_cast<float>(norm_eps);
             TORCH_CHECK(!check_v2_param(elastic_info, zero_expert_num, copy_expert_num, const_expert_num), "The aclnnMoeDistributeCombineAddRmsNormV2 is not supported", OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(aclnnMoeDistributeCombineAddRmsNorm, expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, tp_send_counts, x_active_mask,
                          activation_scale, weight_scale, group_list, expand_scales,
