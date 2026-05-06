@@ -1664,11 +1664,11 @@ void SetExecConfigV2(const CacheParams& cache_params)
 }
 
 void* GetWorkSpaceAddr(
-    uint64_t workspace_size)
+    uint64_t workspace_size, aclrtStream acl_stream)
 {
     void* workspace_addr = nullptr;
     if (workspace_size != 0) {
-        auto workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size);
+        auto workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, acl_stream);
         workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
     }
     return workspace_addr;
@@ -1681,7 +1681,32 @@ int ExecuteApiFunc(
     aclOpExecutor* executor
 )
 {
-    auto workspace_addr = GetWorkSpaceAddr(workspace_size);
+    auto workspace_addr = GetWorkSpaceAddr(workspace_size, acl_stream);
+    OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);
+    auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
+
+    return api_ret;
+}
+
+void* GetWorkSpaceAddrV2(
+    uint64_t workspace_size, aclrtStream acl_stream)
+{
+    void* workspace_addr = nullptr;
+    if (workspace_size != 0) {
+        auto workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, acl_stream);
+        workspace_addr = const_cast<void*>(workspace_tensor.storage().data());
+    }
+    return workspace_addr;
+}
+
+int ExecuteApiFuncV2(
+    const void* opApiFuncAddr,
+    aclrtStream acl_stream,
+    uint64_t workspace_size,
+    aclOpExecutor* executor
+)
+{
+    auto workspace_addr = GetWorkSpaceAddrV2(workspace_size, acl_stream);
     OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);
     auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);
 
