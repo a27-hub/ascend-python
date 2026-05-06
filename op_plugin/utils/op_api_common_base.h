@@ -467,6 +467,12 @@ TORCH_NPU_API int ExecuteApiFunc(
     uint64_t workspace_size,
     aclOpExecutor* executor
 );
+TORCH_NPU_API int ExecuteApiFuncV2(
+    const void* opApiFuncAddr,
+    aclrtStream acl_stream,
+    uint64_t workspace_size,
+    aclOpExecutor* executor
+);
 
 TORCH_NPU_API void InitExecSubTheadCtx(aclrtStream acl_stream);
 
@@ -509,10 +515,10 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
             auto api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                        \
             /* 7.3.清理参数、内存 */                                                                                     \
             ReleaseConvertTypes(converted_params);                                                                     \
-            UnInitExecCommonCtx();                                                                                     \
             return api_ret;                                                                                            \
         };                                                                                                             \
         RunAclCall(#aclnn_api, acl_call);                                                                              \
+        UnInitExecCommonCtx();                                                                                     \
     } while (false)
 
 #define EXEC_NPU_CMD_V2_EXT(aclnn_api, ...)                                                                            \
@@ -551,7 +557,7 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
             /* 5.6.执行aclnn函数 */                                                                                     \
-            api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
+            api_ret = ExecuteApiFuncV2(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
             /* 5.7.清理参数、内存 */                                                                                      \
             ReleaseConvertTypes(converted_params);                                                                     \
             UnInitExecCommonCtx();                                                                                     \
