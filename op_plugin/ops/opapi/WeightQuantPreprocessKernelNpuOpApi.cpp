@@ -44,8 +44,8 @@ struct QuantContext {
     
     at::Tensor out_weight;
     at::Tensor out_weight_scale;
-    c10::optional<at::Tensor> out_weight_offset;
-    c10::optional<at::Tensor> out_bias;
+    at::Tensor out_weight_offset;
+    at::Tensor out_bias;
 };
 
 using PrepareFunc = void (*)(QuantContext& ctx);
@@ -159,7 +159,7 @@ static const std::unordered_map<c10_npu::SocVersion, std::unordered_map<QuantDat
 
 } // namespace
 
-std::tuple<at::Tensor, at::Tensor, c10::optional<at::Tensor>, c10::optional<at::Tensor>>
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 npu_weight_quant_preprocess(
     const at::Tensor& weight,
     const at::Tensor& weight_scale,
@@ -193,8 +193,8 @@ npu_weight_quant_preprocess(
         false,
         at::Tensor(),
         at::Tensor(),
-        c10::nullopt,
-        c10::nullopt
+        at::Tensor(),
+        at::Tensor()
     };
     
     for (const auto& judge : it->second) {
@@ -229,8 +229,8 @@ npu_weight_quant_preprocess(
         bias.value_or(at::Tensor()),
         x_acl_type, x_scale_acl_type, ctx.k_group_size,
         weight_wrapper, scale_wrapper,
-        ctx.out_weight_offset.has_value() ? ctx.out_weight_offset.value() : at::Tensor(),
-        ctx.out_bias.has_value() ? ctx.out_bias.value() : at::Tensor());
+        ctx.out_weight_offset,
+        ctx.out_bias);
     
     return std::make_tuple(ctx.out_weight, ctx.out_weight_scale, ctx.out_weight_offset, ctx.out_bias);
 }
