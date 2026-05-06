@@ -72,6 +72,10 @@ typedef int (*_aclDestroyScalarList)(const aclScalarList *array);
 
 using OpApiFunc = int (*)(void *, uint64_t, aclOpExecutor *, const aclrtStream);
 
+typedef int (*InitHugeMemThreadLocal)(void *, bool);
+typedef void (*UnInitHugeMemThreadLocal)(void *, bool);
+typedef void (*ReleaseHugeMem)(void *, bool);
+
 TORCH_NPU_API void *GetOpApiFuncAddr(const char *apiName); // GET_OP_API_FUNC
 #define GET_OP_API_FUNC(apiName) reinterpret_cast<_##apiName>(GetOpApiFuncAddr(#apiName))
 
@@ -438,14 +442,21 @@ bool hit_cache_ext(aclrtStream acl_stream, const char* aclnn_api, void* phrase2,
 template <typename ...Ts>
 bool hit_cache_v2_ext(
     aclrtStream acl_stream, const char *aclnn_api, void *phrase2, const std::tuple<Ts...> &args, int* api_ret,
-    const CacheParams& cache_params)
+    bool deterministic_status, uint32_t aic_num, uint32_t aiv_num)
 {
     // 步骤1：检查缓存功能并初始化
     if (!CheckAndInitFuncV2(aclnn_api)) {
         return false;
     }
     // 步骤2：加入缓存
-    BuildCacheHashParamsV2(acl_stream, cache_params, aclnn_api, args);
+    add_param_to_buf_v2(deterministic_status);
+    if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
+        add_param_to_buf_v2(aic_num);
+        add_param_to_buf_v2(aiv_num);
+    }
+    add_param_to_buf_v2(std::string(aclnn_api));
+    add_params_to_buf_v2(args, std::make_index_sequence<sizeof...(Ts)>{});
+    add_param_to_buf_v2(reinterpret_cast<uintptr_t>(acl_stream));
     // 步骤3：执行缓存的算子
     return ExecuteCachedOpV2(acl_stream, aclnn_api, phrase2, api_ret);
 }
@@ -526,23 +537,36 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         auto acl_stream = GetAclStream();                                                                              \
         /* 3.拷贝参数列表 */                                                                                             \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
-        /* 4.获取查询缓存所需参数（部分参数需要在主线程获取） */                                                                \
-        CacheParams cache_params = GetCacheParams();                                                                   \
-        /* 5.定义子线程执行函数 */                                                                                        \
-        auto acl_call = [copied_params, acl_stream, cache_params]()->int {                                             \
-            /* 5.1.初始化子进程上下文 */                                                                                  \
-            InitExecSubTheadCtx(acl_stream);                                                                           \
+        /* 4.获取确定性状态和核心数 - 与V2一致 */                                                                           \
+        auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
+        uint32_t aic_num = UINT32_MAX;                                                                                  \
+        uint32_t aiv_num = UINT32_MAX;                                                                                  \
+        if (c10_npu::is_core_control_enabled()) {                                                                       \
+            aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                           \
+            aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
+        }                                                                                                              \
+        /* 5.定义子线程执行函数 - 与V2保持一致的顺序 */                                                                     \
+        auto acl_call = [copied_params, acl_stream, deterministic_status, aic_num, aiv_num]()->int {                     \
+            /* 5.1.流资源管理 - 移到最前面，与V2一致 */                                                                      \
+            if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
+                c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
+            }                                                                                                          \
             int api_ret = 0;                                                                                           \
             /* 5.2.缓存查询 */                                                                                          \
-            if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, cache_params))        \
+            if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret,                        \
+                                deterministic_status, aic_num, aiv_num))                                               \
             {                                                                                                          \
                 return api_ret;                                                                                        \
             }                                                                                                          \
-            /* 5.3.设置执行配置 */                                                                                       \
-            SetExecConfigV2(cache_params);                                                                             \
-            /* 5.4.初始化执行上下文：内存管理相关 */                                                                         \
-            InitExecCommonCtx();                                                                                       \
-            /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                            \
+            /* 5.3.设置确定性算法 - 改为直接调用，与V2一致 */                                                                \
+            at_npu::native::SetDeterministicOps(deterministic_status);                                                 \
+            /* 5.4.初始化内存管理 - 改为直接调用，与V2一致 */                                                                 \
+            static const auto initMemAddr = GetOpApiFuncAddr("InitHugeMemThreadLocal");                                 \
+            InitHugeMemThreadLocal initMemFunc = initMemAddr ? reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr) : nullptr; \
+            if (initMemFunc) {                                                                                         \
+                initMemFunc(nullptr, false);                                                                          \
+            }                                                                                                          \
+            /* 5.5.参数转换和执行 */                                                                                     \
             uint64_t workspace_size = 0;                                                                               \
             uint64_t *workspace_size_addr = &workspace_size;                                                           \
             aclOpExecutor *executor = nullptr;                                                                         \
@@ -551,10 +575,27 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
             /* 5.6.执行aclnn函数 */                                                                                     \
-            api_ret = ExecuteApiFunc(opApiFuncAddr, acl_stream, workspace_size, executor);                             \
-            /* 5.7.清理参数、内存 */                                                                                      \
+            void *workspace_addr = nullptr;                                                                            \
+            at::Tensor workspace_tensor;                                                                               \
+            if (workspace_size != 0) {                                                                                 \
+                workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, acl_stream);  \
+                workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                \
+            }                                                                                                          \
+            OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
+            api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
+            /* 5.7.清理资源 - 改为与V2一致 */                                                                               \
             ReleaseConvertTypes(converted_params);                                                                     \
-            UnInitExecCommonCtx();                                                                                     \
+            static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                     \
+            static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                             \
+            ReleaseHugeMem releaseMemFunc = releaseMemAddr ? reinterpret_cast<ReleaseHugeMem>(releaseMemAddr) : nullptr; \
+            UnInitHugeMemThreadLocal unInitMemFunc = unInitMemAddr ? reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr) : nullptr; \
+            if (releaseMemFunc) {                                                                                      \
+                releaseMemFunc(nullptr, false);                                                                       \
+            }                                                                                                          \
+            if (unInitMemFunc) {                                                                                       \
+                unInitMemFunc(nullptr, false);                                                                        \
+            }                                                                                                          \
+            UnInitCacheThreadLocal();                                                                                  \
             return api_ret;                                                                                            \
         };                                                                                                             \
         /* 6.调用子线程执行函数 */                                                                                        \
