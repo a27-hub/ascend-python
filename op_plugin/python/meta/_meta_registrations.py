@@ -7020,3 +7020,18 @@ def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
         y = torch.empty_like(x, dtype=torch.uint8)
     amax = x.new_empty([1], dtype=x.dtype)
     return (y, amax)
+
+@impl(m, "npu_weight_quant_preprocess")
+def npu_weight_quant_preprocess_meta(weight, weight_scale, x_dtype, weight_dtype, weight_scale_dtype,
+                                     weight_offset=None, bias=None, x_scale_dtype=None, k_group_size=0):
+    out_weight = torch.empty_like(weight)
+    out_weight_scale = torch.empty_like(weight_scale)
+    if weight_offset is not None:
+        out_weight_offset = torch.empty_like(weight_offset)
+    else:
+        out_weight_offset = torch.empty([0], dtype=weight.dtype, device='meta')
+    if bias is not None:
+        out_bias = torch.empty_like(bias)
+    else:
+        out_bias = torch.empty([0], dtype=weight.dtype, device='meta')
+    return (out_weight, out_weight_scale, out_weight_offset, out_bias)
