@@ -4,7 +4,7 @@ PR描述模板更新日期：20260203
 
 # 【合入来源】
 
-> <font color="red">**如有社区issue，请关联issue链接**</font>\
+> <font color="red">**请关联issue链接**</font>\
 > <font color="red">**请勿携带内部流程信息（需求链接、问题单、内部issue等）**</font>
 
 - [ ] 问题单
