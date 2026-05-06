@@ -30,8 +30,6 @@ static const int DIM_FOUR = 4;
 static const int NO_QUANT_MODE = 0;
 static const int PERTENSOR_QUANT_MODE = 1;
 static const int MX_QUANT_MODE = 6;
-// comm mode
-static const char* AICPU_COMM_MODE = "aicpu";
 // support list
 const std::set<int> SUPPORT_WORLD_SIZE_LIST{ 2, 4, 8, 16, 32, 64, 128, 256 };
 static const std::set<int64_t> SUPPORT_MX_QUANT_DTYPE_LIST = { static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN),
@@ -455,7 +453,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     bool transposeGmmWeight = false;
     bool transposeMmWeight = false;
 
-    if (strcmp(comm_mode_real, AICPU_COMM_MODE) == 0) {
+    if (comm_mode.has_value()) {
+        const char* comm_mode_real = comm_mode.value().data();
         EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMulV2, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
             gmm_weight_scale_wrapper, send_count_tensor_real, recv_count_tensor_real, mm_x_wrapper, mm_weight_wrapper,
             mm_x_scale_wrapper, mm_weight_scale_wrapper, gmm_x_quant_mode_value, gmm_weight_quant_mode_value,
