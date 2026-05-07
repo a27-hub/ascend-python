@@ -2046,4 +2046,68 @@ void _foreach_addcdiv_(const at::TensorList input, const at::TensorList tensors1
   DumpOp("_foreach_addcdiv_", input, tensors1, tensors2, scalars);
   LazyFusionFlush();
 }
+
+// ===================== SwiGLU =====================
+at::Tensor npu_swiglu(const at::Tensor &self, int64_t dim) {
+  static auto enable = IsEnabled("npu_swiglu");
+  if (!enable || !InputCheck(self)) {
+    return op_api::npu_swiglu(self, dim);
+  }
+  auto ndim = self.dim();
+  int64_t real_dim = dim < 0 ? dim + ndim : dim;
+  if (real_dim < 0 || real_dim >= ndim || self.size(real_dim) % 2 != 0) {
+    return op_api::npu_swiglu(self, dim);
+  }
+  PrepareFusionInput(self);
+  auto k = g_lazy_fusion_manager.Get();
+
+  // chunk(x, 2, dim) => x0 and x1 are views along dim
+  // Use ViewInput to load each half directly with stride, avoiding View tensors
+  auto self_sizes = self.sizes().vec();
+  auto self_strides = self.strides().vec();
+  int64_t half = self_sizes[real_dim] / 2;
+  int64_t dim_stride = self_strides[real_dim];
+
+  auto x0_sizes = self_sizes;
+  x0_sizes[real_dim] = half;
+  auto x0_strides = self_strides;
+
+  auto x1_sizes = self_sizes;
+  x1_sizes[real_dim] = half;
+  auto x1_strides = self_strides;
+
+  // Load x0 with stride (view of first half)
+  auto x0_shape_ref = k->GetShapeRef(x0_sizes);
+  auto x0_stride_ref = k->GetShapeRef(x0_strides);
+  auto x0_obj = k->ViewInput(self, self.data_ptr(), x0_shape_ref, x0_stride_ref);
+
+  // Load x1 with stride (view of second half, offset by half * dim_stride * element_size)
+  auto elem_size = self.element_size();
+  auto x1_data_ptr = static_cast<void *>(static_cast<char *>(self.data_ptr()) + half * dim_stride * elem_size);
+  auto x1_shape_ref = k->GetShapeRef(x1_sizes);
+  auto x1_stride_ref = k->GetShapeRef(x1_strides);
+  auto x1_obj = k->ViewInput(self, x1_data_ptr, x1_shape_ref, x1_stride_ref);
+
+  // aclnn SwiGlu fp16 specialization explicitly casts to fp32 for swish accuracy
+  // (CANN .../swiglu_common_impl.h). Match that here so DVM's fp16 path stays
+  // bit-exact with aclnn.
+  if (self.scalar_type() == at::ScalarType::Half) {
+    x0_obj = k->Cast(x0_obj, dvm::DType::kFloat32);
+    x1_obj = k->Cast(x1_obj, dvm::DType::kFloat32);
+  }
+  // silu(x0) = x0 * sigmoid(x0) = x0 / (1 + exp(-x0))
+  auto neg_x0 = k->Binary<dvm::BinaryType::kMul>(x0_obj, -1.0f);
+  auto exp_neg_x0 = k->Unary<dvm::UnaryType::kExp>(neg_x0);
+  auto add_exp = k->Binary<dvm::BinaryType::kAdd>(exp_neg_x0, 1.0f);
+  auto silu_x0 = k->Binary<dvm::BinaryType::kDiv>(x0_obj, add_exp);
+
+  // swiglu = silu(x0) * x1
+  auto out_obj = k->Binary<dvm::BinaryType::kMul>(silu_x0, x1_obj);
+
+  auto out_shape = self_sizes;
+  out_shape[real_dim] = half;
+  auto out = k->Output(out_obj, out_shape, self.options().dtype(self.scalar_type()));
+  DumpOp("npu_swiglu", self, dim);
+  return out;
+}
 }  // namespace lazy_fusion
