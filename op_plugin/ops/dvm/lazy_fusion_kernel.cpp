@@ -331,6 +331,11 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   }
   load->data_ptr = x.data_ptr();
   load->tensor = x;
+  // Always use the simple (non-strided) Load. For matmul's transpose-of-contig case,
+  // the caller passes a swapped `shape` override and lets MatMul's trans flag handle
+  // the transpose semantics; the underlying bytes are physically contiguous so reading
+  // them as a plain row-major tensor with the swapped shape is correct.
+  // Strided reads of arbitrary view tensors should go through ViewInput instead.
   auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), input_type);
   ASCEND_LOGD("dvm Input: new Load p%zu, tensor %p, addr=%p, shape=%s, dtype=%s",
               input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
@@ -339,6 +344,57 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
   CacheDvmOp(storage, x, nullptr, load_op, &(load->shape), true);
+  return cast_to_fp32 ? Cast(load_op, dvm::DType::kFloat32) : load_op;
+}
+
+dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_ptr, dvm::ShapeRef *shape,
+                                             dvm::ShapeRef *stride, bool enable_cast) {
+  auto input_type = TransType(base.scalar_type());
+  bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16);
+
+  if (input_used_ == inputs_.size()) {
+    inputs_.push_back(new Load());
+  }
+  auto load = inputs_[input_used_++];
+  load->shape = *shape;
+  load->stride = *stride;
+  load->data_ptr = data_ptr;
+  load->tensor = base;  // hold base tensor to keep storage alive until Flush
+  auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), &(load->stride), input_type);
+  ASCEND_LOGD("dvm ViewInput: new StridedLoad p%zu, base=%p, addr=%p, dtype=%s",
+              input_used_ - 1, base.unsafeGetTensorImpl(), data_ptr,
+              c10::toString(base.scalar_type()));
+  if (DumpEnabled()) {
+    dump_buf_ << "p" << (input_used_ - 1) << ": ViewInput(base=" << ToString(base) << ")\n";
+  }
+
+  // Register a DvmOp on base.storage->dvm_op_ with the *view's* metadata.
+  // This protects against the read/write race scenario:
+  //
+  //   y = npu_swiglu(x, -1)   // ViewInput on x.storage at two offsets, no flush yet
+  //   x.mul_(2)               // inplace write to same storage
+  //                           // PrepareWritableOutput(x) checks storage->dvm_op_:
+  //                           //   - if null/missing → would NOT flush → race in fused kernel
+  //                           //   - now non-null with view metadata → strict mismatch
+  //                           //     against full-x metadata → triggers flush ✓
+  //
+  // reloadable_from_gm=true because data is on GM and any later Input()/ViewInput()
+  // can re-Load with new shape/stride without flushing.
+  auto req_shape = c10::IntArrayRef(shape->data, shape->size);
+  auto req_stride = c10::IntArrayRef(stride->data, stride->size);
+  TensorMeta view_meta;
+  view_meta.tensor_impl = base.unsafeGetTensorImpl();
+  view_meta.data_ptr = data_ptr;
+  view_meta.storage_offset = static_cast<int64_t>(
+      (static_cast<const char *>(data_ptr) - static_cast<const char *>(base.storage().data())) /
+      base.element_size());
+  view_meta.dtype = base.scalar_type();
+  view_meta.dim = static_cast<int64_t>(req_shape.size());
+  view_meta.sizes.assign(req_shape.begin(), req_shape.end());
+  view_meta.strides.assign(req_stride.begin(), req_stride.end());
+  auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(base);
+  CacheDvmOp(storage, base, &view_meta, load_op, shape, true);
+
   return cast_to_fp32 ? Cast(load_op, dvm::DType::kFloat32) : load_op;
 }
 

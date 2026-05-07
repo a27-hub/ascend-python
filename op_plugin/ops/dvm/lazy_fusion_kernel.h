@@ -42,6 +42,8 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
   size_t id() const { return id_; }
 
   dvm::NDObject *Input(const at::Tensor &x, bool enable_cast = true, dvm::ShapeRef *shape = nullptr);
+  dvm::NDObject *ViewInput(const at::Tensor &base, void *data_ptr, dvm::ShapeRef *shape,
+                            dvm::ShapeRef *stride, bool enable_cast = true);
   void Output(const at::Tensor &tensor, dvm::NDObject *obj, bool inplace = false);
   bool NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *shape = nullptr) const;
   bool NeedFlushForWritableOutput(const at::Tensor &tensor) const;
@@ -204,6 +206,7 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
 
   struct Load {
     dvm::ShapeRef shape;
+    dvm::ShapeRef stride;             // populated only by ViewInput (strided Load form)
     void *data_ptr{nullptr};
     at::Tensor tensor;
   };
