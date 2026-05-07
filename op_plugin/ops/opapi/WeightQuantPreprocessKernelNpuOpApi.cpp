@@ -223,10 +223,12 @@ npu_weight_quant_preprocess(
     aclDataType x_scale_acl_type =
         x_scale_dtype.has_value() ? c10_npu::GetAclDataType(x_scale_dtype.value()) : ACL_DT_UNDEFINED;
 
+    at::Tensor weight_offset_tensor = weight_offset.value_or(at::Tensor());
+    at::Tensor bias_tensor = bias.value_or(at::Tensor());
     EXEC_NPU_CMD(aclnnWeightQuantPreprocess,
         weight, weight_scale,
-        weight_offset.value_or(at::Tensor()),
-        bias.value_or(at::Tensor()),
+        weight_offset_tensor,
+        bias_tensor,
         x_acl_type, x_scale_acl_type, ctx.k_group_size,
         weight_wrapper, scale_wrapper,
         ctx.out_weight_offset,
