@@ -194,7 +194,7 @@ class TestMoeReRouting(TestCase):
         importlib.util.find_spec("en_dtypes") is None,
         "Unittest for hif8 need package en_dtypes"
     )
-    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_moe_re_routing_hif8(self, device="npu"):
         bs_list = [32, 128]
         hidden_dim_list = [4096, 7168]
@@ -230,7 +230,7 @@ class TestMoeReRouting(TestCase):
         importlib.util.find_spec("en_dtypes") is None,
         "Unittest for hif8 need package en_dtypes"
     )
-    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_moe_re_routing_hif8_with_scales(self, device="npu"):
         bs_list = [32]
         hidden_dim_list = [4096]
@@ -262,7 +262,7 @@ class TestMoeReRouting(TestCase):
         importlib.util.find_spec("ml_dtypes") is None,
         "Unittest for fp4 need package ml_dtypes"
     )
-    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_moe_re_routing_fp4_e2m1(self, device="npu"):
         bs_list = [32, 128]
         hidden_dim_list = [4096, 7168]
@@ -288,7 +288,7 @@ class TestMoeReRouting(TestCase):
         importlib.util.find_spec("ml_dtypes") is None,
         "Unittest for fp4 need package ml_dtypes"
     )
-    @SupportedDevices(['Ascend910_95', 'Ascend950'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_moe_re_routing_fp4_e2m1_with_scales(self, device="npu"):
         bs_list = [32]
         hidden_dim_list = [4096]
