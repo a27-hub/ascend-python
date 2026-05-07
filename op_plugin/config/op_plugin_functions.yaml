@@ -6944,6 +6944,7 @@ custom:
 
   - func: npu_swiglu(Tensor self, int dim=-1) -> Tensor
     op_api: all_version
+    dvm: all_version
     exposed: all_version
     gen_opapi:
       out:
