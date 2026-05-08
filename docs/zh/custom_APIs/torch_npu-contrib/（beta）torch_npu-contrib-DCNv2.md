@@ -29,7 +29,7 @@ torch_npu.contrib.DCNv2(in_channels, out_channels, kernel_size, stride=1, paddin
 - **kernel_size**（`int`, `tuple`）：卷积核的尺寸。
 - **stride**（`int`, `tuple`）：卷积的stride，默认值为1。
 - **padding**（`int` or `tuple`）：对输入图像两侧添加0填充，默认值为0。
-- **dilation**（`int` or `tuple`）：卷积核元素间距，默认值为1。
+- xxxxxxxxxx import torch, torch_npufrom torch_npu.contrib.function import npu_functional as Finput = torch.randn(4,4).npu()input = torch_npu.npu_format_cast(input, 2)output = F.dropout_with_byte_mask(input, p=0.2, training=True)outputpython
 - **groups**（`int`）：输入通道和输出通道的组数量，默认值为1。
 - **deformable_groups**（`int`）：可变形分区数量。
 - **bias**（`bool`）：设置为True将对output添加bias，默认值为False。

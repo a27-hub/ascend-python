@@ -15,7 +15,7 @@
 ## 函数原型
 
 ```python
-torch_npu.profiler._KinetoProfile(activities=None, record_shapes=False, profile_memory=False, with_stack=False, with_flops=False, with_modules=False, experimental_config=None)
+torch_npu.profiler._KinetoProfile(activities=None, record_shapes=False, profile_memory=False, with_stack=False, with_flops=False, with_modules=False, experimental_config=None, custom_trace_id_callback=None)
 ```
 
 ## 参数说明
@@ -60,6 +60,8 @@ torch_npu.profiler._KinetoProfile(activities=None, record_shapes=False, profile_
      开启torch_npu.profiler.ProfilerActivity.CPU时生效。
 
 - **experimental_config**：可选参数，性能数据采集扩展。支持采集项和详细介绍请参见[torch_npu.profiler._ExperimentalConfig](torch_npu-profiler-_ExperimentalConfig.md)。
+
+- **custom_trace_id_callback** (`str`)：可选参数，为每一份Profiler数据生成一个trace_id进行标识。trace_id输出在profiler_metadata.json文件中。
 
 ## 返回值说明
 

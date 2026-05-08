@@ -36,7 +36,7 @@ torch_npu.contrib.function.npu_bbox_coder_encode_xyxy2xywh(bboxes,gt_bboxes, mea
 
 ## 约束说明
 
-不支持动态shape。由于算子语义限制，仅支持二维\(n, 4\)场景。`bboxes`和`gt_bboxes`的shape和dtype必须相同，dtype只可为float16和float32。第三个输入（步长）仅支持1D，且第一个维度与第一个输入（`bboxes`）相同。
+xxxxxxxxxx >>> import torch, torch_npu>>> from torch_npu.contrib.function import npu_bbox_coder_decode_xywh2xyxy>>> A = 1024>>> max_shape = 512>>> bboxes = torch.randint(0, max_shape, size=(A, 4)).npu()>>> pred_bboxes = torch.randn(A, 4).npu()>>> out = npu_bbox_coder_decode_xywh2xyxy(bboxes, pred_bboxes, max_shape=(max_shape, max_shape))>>> torch.npu.synchronize()>>> print('npu_bbox_coder_decode_xywh2xyxy done. output shape is ', out.shape)npu_bbox_coder_decode_xywh2xyxy done. output shape is torch.Size([1024, 4])python
 
 ## 调用示例
 
