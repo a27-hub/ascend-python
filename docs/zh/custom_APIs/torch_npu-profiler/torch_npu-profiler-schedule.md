@@ -15,7 +15,7 @@
 ## 函数原型
 
 ```python
-torch_npu.profiler.schedule (wait, active, warmup = 0, repeat = 0, skip_first = 0)
+torch_npu.profiler.schedule (wait, active, warmup = 0, repeat = 0, skip_first = 0, skip_first_wait = 0)
 ```
 
 ## 参数说明
@@ -34,6 +34,8 @@ torch_npu.profiler.schedule (wait, active, warmup = 0, repeat = 0, skip_first = 
   - repeat = 0时，重复执行的具体次数就由总训练步数决定，例如总训练步数为100，wait + active + warmup = 10，skip_first = 10，则repeat = ( 100 - 10 ) / 10 = 9，表示重复执行9次，生成9份性能数据。
 
 - **skip_first** (`int`)：可选参数，采集前先跳过的step轮数。默认值为0。动态Shape场景建议跳过前10轮保证性能数据稳定；对于其他场景，可以根据实际情况自行配置。
+
+- **skip_first_wait** (`int`)：可选参数，采集时跳过第一个wait。默认值为0，表示关闭该参数功能，配置为非0的int值时，表示开启该参数功能。<br>开启该参数功能时，会取消wait参数的第一次wait，即在第一个repeat中的第一个step直接执行下一步动作，但第二个repeat之后仍正常执行。可用于节省采集的时间。
 
 ## 返回值说明
 
@@ -59,7 +61,8 @@ with torch_npu.profiler.profile(
         warmup=1,                      # 预热阶段，跳过1个step
         active=2,                      # 记录2个step的活动数据，并在之后调用on_trace_ready
         repeat=2,                      # 循环wait+warmup+active过程2遍
-        skip_first=1                   # 跳过1个step
+        skip_first=1,                  # 跳过1个step
+        skip_first_wait = 1            # 跳过第一个wait
     ),
     on_trace_ready=torch_npu.profiler.tensorboard_trace_handler('./result')
     ) as prof:
