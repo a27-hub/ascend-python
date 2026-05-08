@@ -63,22 +63,32 @@ void set_tensor_format_and_storage_shape(at::Tensor& tensor, int64_t format,
 }
 
 void judge_mm_mx_a8w4(QuantContext& ctx) {
-    bool dtype_match = (ctx.x_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN)) &&
-        (ctx.weight_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
-        (ctx.x_scale_dtype.has_value() &&
-            ctx.x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)) &&
-        (ctx.weight_scale_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0));
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType x_scale_acl_dtype = ctx.x_scale_dtype.has_value() ? 
+        c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    
+    bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) &&
+        (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
+        (x_scale_acl_dtype == ACL_FLOAT8_E8M0) &&
+        (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == 2) {
         ctx.data_flow = QuantDataFlow::MM_MX_A8W4;
     }
 }
 
 void judge_gmm_mx_a8w4(QuantContext& ctx) {
-    bool dtype_match = (ctx.x_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN)) &&
-        (ctx.weight_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
-        (ctx.x_scale_dtype.has_value() &&
-            ctx.x_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0)) &&
-        (ctx.weight_scale_dtype == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0));
+    aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
+    aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
+    aclDataType x_scale_acl_dtype = ctx.x_scale_dtype.has_value() ? 
+        c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
+    aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    
+    bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) &&
+        (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
+        (x_scale_acl_dtype == ACL_FLOAT8_E8M0) &&
+        (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == 3) {
         ctx.is_gmm = true;
         ctx.data_flow = QuantDataFlow::GMM_MX_A8W4;
