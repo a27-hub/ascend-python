@@ -206,7 +206,8 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
 
   struct Load {
     dvm::ShapeRef shape;
-    dvm::ShapeRef stride;             // populated only by ViewInput (strided Load form)
+    dvm::ShapeRef stride;             // populated when has_stride=true
+    bool has_stride{false};           // true → strided Load form (Input non-contig path / ViewInput)
     void *data_ptr{nullptr};
     at::Tensor tensor;
   };

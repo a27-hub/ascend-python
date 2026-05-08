@@ -331,15 +331,30 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
   }
   load->data_ptr = x.data_ptr();
   load->tensor = x;
-  // Always use the simple (non-strided) Load. For matmul's transpose-of-contig case,
-  // the caller passes a swapped `shape` override and lets MatMul's trans flag handle
-  // the transpose semantics; the underlying bytes are physically contiguous so reading
-  // them as a plain row-major tensor with the swapped shape is correct.
-  // Strided reads of arbitrary view tensors should go through ViewInput instead.
-  auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), input_type);
-  ASCEND_LOGD("dvm Input: new Load p%zu, tensor %p, addr=%p, shape=%s, dtype=%s",
-              input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
-              ToString(x).c_str(), c10::toString(x.scalar_type()));
+  // Three cases:
+  //   1) shape != nullptr  : caller provided a physical-shape override, e.g. matmul's
+  //                          transpose-of-contig path (uses trans flag downstream).
+  //                          → simple Load (no stride).
+  //   2) shape == nullptr + tensor contig
+  //                          → simple Load (no stride).
+  //   3) shape == nullptr + tensor non-contig (e.g. PyTorch view from chunk/slice)
+  //                          → strided Load using the tensor's own strides.
+  dvm::NDObject *load_op = nullptr;
+  if (shape == nullptr && !x.is_contiguous()) {
+    auto stride_ptr = GetShapeRef(x.strides());
+    load->stride = *stride_ptr;
+    load->has_stride = true;
+    load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), &(load->stride), input_type);
+    ASCEND_LOGD("dvm Input: new StridedLoad p%zu, tensor %p, addr=%p, shape=%s, dtype=%s",
+                input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
+                ToString(x).c_str(), c10::toString(x.scalar_type()));
+  } else {
+    load->has_stride = false;
+    load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), input_type);
+    ASCEND_LOGD("dvm Input: new Load p%zu, tensor %p, addr=%p, shape=%s, dtype=%s",
+                input_used_ - 1, x.unsafeGetTensorImpl(), x.data_ptr(),
+                ToString(x).c_str(), c10::toString(x.scalar_type()));
+  }
   if (DumpEnabled()) {
     dump_buf_ << "p" << (input_used_ - 1) << ": " << ToString(x) << "\n";
   }
@@ -358,6 +373,7 @@ dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_pt
   auto load = inputs_[input_used_++];
   load->shape = *shape;
   load->stride = *stride;
+  load->has_stride = true;
   load->data_ptr = data_ptr;
   load->tensor = base;  // hold base tensor to keep storage alive until Flush
   auto load_op = dvm::Kernel::Load(load->data_ptr, &(load->shape), &(load->stride), input_type);

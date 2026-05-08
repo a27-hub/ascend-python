@@ -33,8 +33,47 @@ bool IsFloatIntType(const at::ScalarType &type) { return IsFloatType(type) || ty
 
 bool IsSupportType(const at::ScalarType &type) { return IsFloatIntType(type) || type == at::ScalarType::Bool; }
 
-bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarType &type)> &type_check = IsFloatType) {
-  return x.is_contiguous() && torch_npu::utils::is_npu(x) && type_check(x.scalar_type());
+// DVM's strided Load (ViewLoad) is implemented only for sub-rectangular blocks
+// of a contiguous storage: the innermost stride must be 1 and outer strides must
+// not introduce axis swapping. Non-contig views from chunk/narrow/slice along
+// outer dims qualify; transpose/permute and ::step!=1 in the innermost dim do
+// NOT qualify and would silently produce wrong data.
+//
+// View-loadable means: stride[-1] == 1 AND stride[i] >= shape[i+1]*stride[i+1]
+// for all i < ndim - 1. (Equality is the contig-sub-rectangle case; greater is
+// allowed for the swiglu-style "split with gap in inner dim".)
+bool IsViewLoadable(const at::Tensor &x) {
+  auto ndim = x.dim();
+  if (ndim == 0) {
+    return true;
+  }
+  auto sizes = x.sizes();
+  auto strides = x.strides();
+  if (strides[ndim - 1] != 1) {
+    return false;
+  }
+  for (int64_t i = 0; i < ndim - 1; ++i) {
+    if (strides[i] < sizes[i + 1] * strides[i + 1]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// `allow_non_contig`:
+//   false (default) — strict mode, requires the tensor to be physically contiguous.
+//                     Use for inplace targets / writable tensors (DVM Store has no
+//                     strided form, so writes must be contig).
+//   true            — relaxed mode, accepts contig OR view-loadable non-contig
+//                     views (sub-rectangular blocks). Use for read-only inputs
+//                     that go through k->Input(); Input() auto-routes view-
+//                     loadable non-contig to a strided Load.
+bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarType &type)> &type_check = IsFloatType,
+                bool allow_non_contig = false) {
+  if (!x.is_contiguous() && !(allow_non_contig && IsViewLoadable(x))) {
+    return false;
+  }
+  return torch_npu::utils::is_npu(x) && type_check(x.scalar_type());
 }
 
 bool IsCPUScalar(const at::Tensor &x) {
@@ -175,7 +214,9 @@ bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
   if (IsCPUScalar(other)) {
     return AddScalar(self, other.item(), alpha, out);
   }
-  if (!InputCheck(self, IsFloatIntType) || !InputCheck(other, IsFloatIntType)) {
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/!inplace) ||
+      !InputCheck(other, IsFloatIntType, /*allow_non_contig=*/true)) {
     return false;
   }
   auto input_type = self.scalar_type();
@@ -222,7 +263,9 @@ bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
 }
 
 bool Sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor *out = nullptr) {
-  if (!InputCheck(self, IsFloatIntType) || !InputCheck(other, IsFloatIntType)) {
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/!inplace) ||
+      !InputCheck(other, IsFloatIntType, /*allow_non_contig=*/true)) {
     return false;
   }
   float scalar = 1.0f;
@@ -263,7 +306,11 @@ bool Sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
 bool BinaryScalar(const at::Tensor &self, const at::Scalar &other, dvm::BinaryOpType op_type,
             const std::function<bool(const at::ScalarType &type)> &type_check,
             dvm::DType dst_type = dvm::DType::kDataTypeEnd, at::Tensor *out = nullptr) {
-  if (!InputCheck(self, type_check)) {
+  // out == nullptr is the inplace path (writes back to self) → must be contig.
+  // out != nullptr is the functional path (fresh output) → self is read-only,
+  // can be a non-contig view; Input() will route to a strided Load.
+  bool allow_non_contig = (out != nullptr);
+  if (!InputCheck(self, type_check, allow_non_contig)) {
     return false;
   }
   float scalar = 1.0f;
@@ -323,7 +370,13 @@ bool BinaryTensor(const at::Tensor &self, const at::Tensor &other, dvm::BinaryOp
             dvm::DType dst_type = dvm::DType::kDataTypeEnd, at::Tensor *out = nullptr) {
   if (IsCPUScalar(other)) {
     return BinaryScalar(self, other.item(), op_type, type_check, dst_type, out);
-  } else if (!InputCheck(self, type_check) || !InputCheck(other, type_check)) {
+  }
+  // out == nullptr → inplace into self → self must be contig (DVM Store has no
+  // strided form). other is always read-only and may be non-contig.
+  // out != nullptr → functional path, both self and other are read-only.
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, type_check, /*allow_non_contig=*/!inplace) ||
+      !InputCheck(other, type_check, /*allow_non_contig=*/true)) {
     return false;
   }
   if (out == nullptr) {
@@ -553,7 +606,7 @@ void DumpOp(const std::string &op_name, const Args &...inputs) {
 // ===================== Cast =====================
 at::Tensor _npu_dtype_cast(const at::Tensor & self, at::ScalarType dtype) {
   static auto enable = IsEnabled("cast");
-  if (!enable || !InputCheck(self, IsSupportType) || !IsSupportType(dtype)) {
+  if (!enable || !InputCheck(self, IsSupportType, /*allow_non_contig=*/true) || !IsSupportType(dtype)) {
     return op_api::_npu_dtype_cast(self, dtype);
   }
   PrepareFusionInput(self);
@@ -569,7 +622,7 @@ at::Tensor _npu_dtype_cast(const at::Tensor & self, at::ScalarType dtype) {
 // ===================== Unary =====================
 at::Tensor abs(const at::Tensor & self) {
   static auto enable = IsEnabled("abs");
-  if (!enable || !InputCheck(self, IsFloatIntType)) {
+  if (!enable || !InputCheck(self, IsFloatIntType, /*allow_non_contig=*/true)) {
     return op_api::abs(self);
   }
   PrepareFusionInput(self);
@@ -582,7 +635,7 @@ at::Tensor abs(const at::Tensor & self) {
 
 at::Tensor neg(const at::Tensor & self) {
   static auto enable = IsEnabled("neg");
-  if (!enable || !InputCheck(self, IsFloatIntType)) {
+  if (!enable || !InputCheck(self, IsFloatIntType, /*allow_non_contig=*/true)) {
     return op_api::neg(self);
   }
   PrepareFusionInput(self);
@@ -595,7 +648,7 @@ at::Tensor neg(const at::Tensor & self) {
 
 at::Tensor sqrt(const at::Tensor & self) {
   static auto enable = IsEnabled("sqrt");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::sqrt(self);
   }
   PrepareFusionInput(self);
@@ -608,7 +661,7 @@ at::Tensor sqrt(const at::Tensor & self) {
 
 at::Tensor exp(const at::Tensor & self) {
   static auto enable = IsEnabled("exp");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::exp(self);
   }
   PrepareFusionInput(self);
@@ -635,7 +688,7 @@ at::Tensor & exp_(at::Tensor & self) {
 
 at::Tensor reciprocal(const at::Tensor & self) {
   static auto enable = IsEnabled("reciprocal");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::reciprocal(self);
   }
   PrepareFusionInput(self);
@@ -820,7 +873,8 @@ at::Tensor & pow_(at::Tensor & self, const at::Tensor & exponent) {
 
 // ===================== FloorDivide =====================
 bool FloorDivideScalar(const at::Tensor &self, const at::Scalar &other, at::Tensor *out) {
-  if (!InputCheck(self)) {
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace)) {
     return false;
   }
   float scalar = 1.0f;
@@ -860,7 +914,9 @@ bool FloorDivideTensor(const at::Tensor &self, const at::Tensor &other, at::Tens
   if (IsCPUScalar(other)) {
     return FloorDivideScalar(self, other.item(), out);
   }
-  if (!InputCheck(self) || !InputCheck(other)) {
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace) ||
+      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
     return false;
   }
   if (out == nullptr) {
@@ -930,7 +986,9 @@ at::Tensor & floor_divide_(at::Tensor & self, const at::Scalar & other) {
 
 at::Tensor & floor_divide_out(const at::Tensor & self, const at::Tensor & other, at::Tensor & out) {
   static auto enable = IsEnabled("floor_divide");
-  if (!enable || !NpuCheck(out) || IsCPUScalar(other) || !InputCheck(self) || !InputCheck(other)) {
+  if (!enable || !NpuCheck(out) || IsCPUScalar(other) ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::floor_divide_out(self, other, out);
   }
   PrepareWritableOutput(out);
@@ -1097,9 +1155,11 @@ at::Tensor minimum(const at::Tensor & self, const at::Tensor & other) {
 // ===================== Select =====================
 at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at::Tensor & other) {
   static auto enable = IsEnabled("where");
-  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
+  auto cond_ok = condition.defined() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
-  if (!enable || !cond_ok || !InputCheck(self) || !InputCheck(other)) {
+  if (!enable || !cond_ok ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::where(condition, self, other);
   }
   PrepareFusionInputs(condition, self, other);
@@ -1123,9 +1183,12 @@ at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at
 at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
                        const at::Tensor & other, at::Tensor & out) {
   static auto enable = IsEnabled("where");
-  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
+  auto cond_ok = condition.defined() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
-  if (!enable || !cond_ok || !InputCheck(self) || !InputCheck(other) || !NpuCheck(out)) {
+  if (!enable || !cond_ok ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true) ||
+      !NpuCheck(out)) {
     return op_api::where_out(condition, self, other, out);
   }
   PrepareWritableOutput(out);
@@ -1150,7 +1213,7 @@ at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
 // ===================== Activation =====================
 at::Tensor sigmoid(const at::Tensor & self) {
   static auto enable = IsEnabled("sigmoid");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::sigmoid(self);
   }
   PrepareFusionInput(self);
@@ -1168,7 +1231,10 @@ at::Tensor sigmoid(const at::Tensor & self) {
 
 at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & output) {
   static auto enable = IsEnabled("sigmoid_backward");
-  if (!enable || !InputCheck(grad_output) || !InputCheck(output) || grad_output.scalar_type() != output.scalar_type()) {
+  if (!enable ||
+      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(output, IsFloatType, /*allow_non_contig=*/true) ||
+      grad_output.scalar_type() != output.scalar_type()) {
     return op_api::sigmoid_backward(grad_output, output);
   }
   PrepareFusionInputs(grad_output, output);
@@ -1187,7 +1253,7 @@ at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & o
 
 at::Tensor tanh(const at::Tensor & self) {
   static auto enable = IsEnabled("tanh");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::tanh(self);
   }
   PrepareFusionInput(self);
@@ -1220,7 +1286,9 @@ at::Tensor & tanh_(at::Tensor & self) {
 
 at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & output) {
   static auto enable = IsEnabled("tanh_backward");
-  if (!enable || !InputCheck(grad_output) || !InputCheck(output) ||
+  if (!enable ||
+      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(output, IsFloatType, /*allow_non_contig=*/true) ||
       grad_output.scalar_type() != output.scalar_type()) {
     return op_api::tanh_backward(grad_output, output);
   }
@@ -1241,7 +1309,8 @@ at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & outp
 
 at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor & out) {
   static auto enable = IsEnabled("gelu");
-  if (!enable || !InputCheck(self) || !NpuCheck(out) || approximate != "tanh") {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      !NpuCheck(out) || approximate != "tanh") {
     return op_api::gelu_out(self, approximate, out);
   }
   PrepareWritableOutput(out);
@@ -1269,7 +1338,10 @@ at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at:
 
 at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self, c10::string_view approximate) {
   static auto enable = IsEnabled("gelu_backward");
-  if (!enable || !InputCheck(grad_output) || !InputCheck(self) || grad_output.scalar_type() != self.scalar_type()) {
+  if (!enable ||
+      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      grad_output.scalar_type() != self.scalar_type()) {
     return op_api::gelu_backward(grad_output, self, approximate);
   }
   PrepareFusionInputs(grad_output, self);
@@ -1306,7 +1378,7 @@ at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self
 
 at::Tensor relu(const at::Tensor & self) {
   static auto enable = IsEnabled("relu");
-  if (!enable || !InputCheck(self, IsFloatIntType)) {
+  if (!enable || !InputCheck(self, IsFloatIntType, /*allow_non_contig=*/true)) {
     return op_api::relu(self);
   }
   PrepareFusionInput(self);
@@ -1333,10 +1405,12 @@ at::Tensor & relu_(at::Tensor & self) {
 
 bool LeakyRelu(const at::Tensor &self, const at::Scalar &negative_slope, at::Tensor *out = nullptr) {
   float slope = 0.0f;
-  if (!InputCheck(self) || !GetScalarValue(negative_slope, &slope)) {
+  bool inplace = (out == nullptr);
+  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace) ||
+      !GetScalarValue(negative_slope, &slope)) {
     return false;
   }
-  if (out == nullptr) {
+  if (inplace) {
     PrepareWritableOutput(self);
   }
   PrepareFusionInput(self);
@@ -1381,7 +1455,7 @@ at::Tensor & leaky_relu_(at::Tensor & self, const at::Scalar & negative_slope) {
 
 at::Tensor silu(const at::Tensor & self) {
   static auto enable = IsEnabled("silu");
-  if (!enable || !InputCheck(self)) {
+  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::silu(self);
   }
   PrepareFusionInput(self);
@@ -1399,7 +1473,10 @@ at::Tensor silu(const at::Tensor & self) {
 
 at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self) {
   static auto enable = IsEnabled("silu_backward");
-  if (!enable || !InputCheck(grad_output) || !InputCheck(self) || grad_output.scalar_type() != self.scalar_type()) {
+  if (!enable ||
+      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      grad_output.scalar_type() != self.scalar_type()) {
     return op_api::silu_backward(grad_output, self);
   }
   PrepareFusionInputs(grad_output, self);
@@ -1768,7 +1845,8 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
 at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
   static auto enable = IsEnabled("sum");
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
+  if (!enable || out_type != at::ScalarType::Float ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::sum(self, dtype);
   }
   PrepareFusionInput(self);
@@ -1789,7 +1867,8 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
 at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<at::ScalarType> dtype) {
   static auto enable = IsEnabled("sum");
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self)) {
+  if (!enable || out_type != at::ScalarType::Float ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return op_api::sum(self, dim, keepdim, dtype);
   }
   PrepareFusionInput(self);
@@ -1819,7 +1898,8 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
                      c10::optional<at::ScalarType> dtype, at::Tensor & out) {
   static auto enable = IsEnabled("sum");
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
-  if (!enable || out_type != at::ScalarType::Float || !InputCheck(self) || !NpuCheck(out)) {
+  if (!enable || out_type != at::ScalarType::Float ||
+      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || !NpuCheck(out)) {
     return op_api::sum_out(self, dim, keepdim, dtype, out);
   }
   PrepareWritableOutput(out);
