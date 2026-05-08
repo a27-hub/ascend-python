@@ -65,7 +65,7 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 
     默认值为False。
 
-    torch_npu.profiler.ProfilerLevel.None时，该参数不生效。
+     torch_npu.profiler.ProfilerLevel.Level_none时，该参数不生效。
 
 - **data_simplification** (`bool`)：可选参数，开启后将在导出性能数据后删除多余数据，仅保留profiler_*.json文件、ASCEND_PROFILER_OUTPUT目录、PROF_XXX目录下的原始性能数据、FRAMEWORK目录和logs目录，以节省存储空间。取值为：
 
