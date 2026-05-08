@@ -36,7 +36,7 @@ torch_npu.contrib.function.npu_bbox_coder_encode_xyxy2xywh(bboxes,gt_bboxes, mea
 
 ## 约束说明
 
-不支持动态shape。由于算子语义限制，仅支持二维\(n, 4\)场景。`bboxes`和`gt_bboxes`的shape和dtype必须相同，dtype只可为float16和float32。第三个输入（步长）仅支持1D，且第一个维度与第一个输入（`bboxes`）相同。
+ 不支持动态shape。由于算子语义限制，仅支持二维\(n, 4\)场景。`bboxes`和`gt_bboxes`的shape和dtype必须相同，dtype只可为float16和float32。第三个输入（步长）仅支持1D，且第一个维度与第一个输入（`bboxes`）相同。
 
 ## 调用示例
 
