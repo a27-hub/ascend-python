@@ -24,7 +24,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
 constexpr int64_t NZ_16 = 16;
-constexpr int64_t NZ_C0_32 = 32;
+constexpr int64_t NZ_C0_32_FOR_B4 = 16;
 
 enum class QuantDataFlow { UNKNOWN = 0, MM_MX_A8W4 = 1, GMM_MX_A8W4 = 2 };
 
@@ -108,12 +108,12 @@ static void prepare_out_weight_nz_c0_32_nk(QuantContext& ctx)
     c10::SmallVector<int64_t, 5> storage_shape;
     if (ctx.is_gmm) {
         int64_t G = weight_sizes[0];
-        storage_shape = {G, ceil_div(K, NZ_C0_32), ceil_div(N, NZ_16), NZ_16, NZ_C0_32};
+        storage_shape = {G, ceil_div(K, NZ_C0_32_FOR_B4), ceil_div(N, NZ_16), NZ_16, NZ_C0_32_FOR_B4};
     } else {
-        storage_shape = {ceil_div(K, NZ_C0_32), ceil_div(N, NZ_16), NZ_16, NZ_C0_32};
+        storage_shape = {ceil_div(K, NZ_C0_32_FOR_B4), ceil_div(N, NZ_16), NZ_16, NZ_C0_32_FOR_B4};
     }
     
-    set_tensor_format_and_storage_shape(ctx.out_weight, ACL_FORMAT_FRACTAL_NZ_C0_32, storage_shape);
+    set_tensor_format_and_storage_shape(ctx.out_weight, ACL_FORMAT_FRACTAL_NZ_C0_16, storage_shape);
 }
 
 static void prepare_out_weight_scale(QuantContext& ctx)
