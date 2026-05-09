@@ -15608,12 +15608,12 @@ query(Tensor)：必选参数，待执行旋转位置编码的第一个张量。�
 key(Tensor)：必选参数，待执行旋转位置编码的第二个张量。要求为连续的Tensor，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据格式支持ND。
 cos(Tensor)：必选参数，旋转位置编码余弦值张量。要求为连续的Tensor，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据格式支持ND。
 sin(Tensor)：必选参数，旋转位置编码正弦值张量。要求为连续的Tensor，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据格式支持ND。
-layout(str)：可选参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"，默认值为"BSND"。
-rotary_mode(str)：可选参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
+layout(str)：可选参数，张量布局格式，支持\"BSND\"、\"SBND\"、\"BNSD\"、\"TND\"，默认值为\"BSND\"。
+rotary_mode(str)：可选参数，旋转编码模式，支持\"half\"、\"quarter\"、\"interleave\"，默认值为\"half\"。
 
 返回值说明：
-query_out(Tensor)：表示原地更新后的query张量。
-key_out(Tensor)：表示原地更新后的key张量。
+query_out(Tensor)：原地更新后的query张量。
+key_out(Tensor)：原地更新后的key张量。
 
 支持版本:
 PyTorch 2.7.1+
@@ -15626,34 +15626,20 @@ Atlas A3训练系列产品
 import torch
 import torch_npu
 
-# 标准输入维度
 batch_size = 1
 seq_len = 64
 num_heads = 8
 head_dim = 64
 
-# RoPE规则：cos/sin最后一维 = head_dim // 2（特征维度对半拆分）
 cos_dim = head_dim // 2
 
-# 初始化NPU张量
 query = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
 key = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
 cos = torch.randn(seq_len, cos_dim, dtype=torch.float16).npu()
 sin = torch.randn(seq_len, cos_dim, dtype=torch.float16).npu()
 
-# NPU算子调用
 torch_npu.npu_apply_rotary_pos_emb(
-    query,
-    key,
-    cos,
-    sin,
-    layout="BSND",
-    rotary_mode="half"
+    query, key, cos, sin, layout="BSND", rotary_mode="half"
 )
 """
 )
-
-
-
-
-
