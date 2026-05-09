@@ -7,6 +7,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas 350 加速卡系列产品</term>            |    √     |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
@@ -27,7 +28,7 @@ torch_npu.npu_ciou(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_f
 - **boxes1** (`Tensor`)：必选参数，格式为xywh、shape为(4, n)的预测检测框。
 - **boxes2** (`Tensor`)：必选参数，相应的gt检测框，shape为(4, n)。
 - **trans** (`bool`)：可选参数，是否有偏移。默认值为False。
-- **is_cross** (`bool`)：可选参数，box1和box2之间是否有交叉操作。默认值为True。
+- **is_cross** (`bool`)：可选参数，box1和box2之间是否有交叉操作。默认值为True。当前仅支持is_cross为False。
 - **mode** (`int`)：可选参数，选择CIoU的计算方式。0表示IoU，1表示IoF。默认值为0。
 - **atan_sub_flag** (`bool`)：可选参数，是否将正向的第二个值传递给反向。默认值为False。
 
@@ -39,7 +40,8 @@ mask操作的结果。
 
 ## 约束说明
 
-到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
+在Atlas 350平台，boxes1或boxes2的第二维度必须为1024的倍数，且暂不支持反向计算。
+在Atlas 350平台之外的其他平台，到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
 
 ## 调用示例
 
