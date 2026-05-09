@@ -30,6 +30,12 @@ at::Tensor& trunc_nocheck(at::Tensor& result, const at::Tensor& self)
         .Run();
     return result;
 }
+
+bool trunc_integral_identity(const at::Tensor& self) {
+  // Match PyTorch CPU: trunc on integer tensors is the identity.
+  // CANN aclnn trunc ops only support floating dtypes; skip the kernel for integers.
+  return at::isIntegralType(self.scalar_type(), /*includeBool=*/false);
+}
 } // namespace
 
 at::Tensor& trunc_out(const at::Tensor& self, at::Tensor& out)
@@ -38,6 +44,16 @@ at::Tensor& trunc_out(const at::Tensor& self, at::Tensor& out)
         {self},
         out,
         self);
+    if (trunc_integral_identity(self)) {
+        if (!npu_utils::check_match(&out)) {
+            at::Tensor contiguous_result = npu_utils::format_contiguous(out);
+            contiguous_result.copy_(self);
+            npu_utils::format_fresh_view(out, contiguous_result);
+        } else {
+            out.copy_(self);
+        }
+        return out;
+    }
     if (!npu_utils::check_match(&out)) {
         at::Tensor contiguous_result = npu_utils::format_contiguous(out);
         trunc_nocheck(contiguous_result, self);
@@ -56,6 +72,9 @@ at::Tensor& trunc_(at::Tensor& self)
 
 at::Tensor trunc(const at::Tensor& self)
 {
+    if (trunc_integral_identity(self)) {
+        return self.clone();
+    }
     at::Tensor result = npu_preparation::apply_tensor(self);
     trunc_nocheck(result, self);
     return result;

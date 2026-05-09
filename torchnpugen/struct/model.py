@@ -110,6 +110,7 @@ class StructInfo:
     acl_op: bool = None
     results: List[ResInfo] = None
     new_params: Dict[str, str] = None
+    integral_identity_tensor: str = None
 
     @staticmethod
     def from_yaml(
@@ -184,6 +185,8 @@ class StructInfo:
                         raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
                     gen_opapi_info = gen_opapi_info.get('gen_opapi')
 
+            integral_identity_tensor = gen_opapi_info.pop(
+                'integral_identity_tensor', None)
             aclnn_arguments = gen_opapi_info.pop('exec', None)
 
             aclnn_arguments_list = [argument.strip()
@@ -243,6 +246,7 @@ class StructInfo:
                 return_args=return_args,
                 acl_op=acl_op,
                 new_params=new_params_dict,
+                integral_identity_tensor=integral_identity_tensor,
             )
             struct_infos.append(struct_info)
 
