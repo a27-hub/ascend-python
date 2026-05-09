@@ -64,6 +64,26 @@ class TestTrunc(TestCase):
             npu_output = self.npu_op_exec(npu_input1)
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_trunc_integer_identity_npu(self):
+        """Integer trunc/trunc_ is identity on NPU (no aclnnTrunc / aclnnInplaceTrunc for integral dtypes)."""
+        dtypes = [
+            torch.int8,
+            torch.uint8,
+            torch.int16,
+            torch.int32,
+            torch.int64,
+        ]
+        for dt in dtypes:
+            cpu_x = torch.tensor([[1, -2, 7], [-3, 0, 42]], dtype=dt)
+            npu_x = cpu_x.npu()
+
+            self.assertEqual(torch.trunc(cpu_x), cpu_x)
+            self.assertEqual(torch.trunc(npu_x).cpu(), cpu_x)
+
+            npu_inplace = cpu_x.clone().npu()
+            npu_inplace.trunc_()
+            self.assertEqual(npu_inplace.cpu(), cpu_x)
+
 
 if __name__ == "__main__":
     run_tests()
