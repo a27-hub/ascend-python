@@ -7,6 +7,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas 350 加速卡系列产品</term>            |    √     |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
@@ -39,7 +40,8 @@ mask操作的结果。
 
 ## 约束说明
 
-到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
+在Atlas 350加速卡：boxes1或boxes2的第二维度只支持1024的倍数，is_cross只支持False，且暂不支持反向计算。
+在其他平台：到目前为止，CIoU向后只支持当前版本中的trans==True、is_cross==False、mode==0('iou')。如果需要反向传播，确保参数正确。
 
 ## 调用示例
 
