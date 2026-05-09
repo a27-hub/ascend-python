@@ -38,6 +38,7 @@ PYTORCH_VERSION = os.environ.get('PYTORCH_VERSION').split('.')
 ACLNN_FUNCTIONS_DEFINITION = CodeTemplate("""\
 ${return_type} ${func_name}(${args_str})
 {
+    ${integral_identity_guard}
     ${do_compatibility}
     ${new_params_def}
     ${compute_names}
@@ -61,6 +62,14 @@ ${return_type} ${func_name}(${args_str})
 
 DO_COMPATIBILITY = CodeTemplate("""\
 DO_COMPATIBILITY(${aclnnname}, acl_op::${func_name}(${args_exprs_str}));
+""")
+
+
+INTEGRAL_IDENTITY_GUARD = CodeTemplate("""\
+if (at::isIntegralType(${tensor}.scalar_type(), /*includeBool=*/false)) {
+    return acl_op::${func_name}(${args_exprs_str});
+}
+
 """)
 
 
@@ -185,6 +194,13 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                                                        func_name=name,
                                                        args_exprs_str=args_exprs_str) if struct.acl_op else ""
 
+        integral_identity_guard = ""
+        if struct.integral_identity_tensor is not None:
+            integral_identity_guard = INTEGRAL_IDENTITY_GUARD.substitute(
+                tensor=struct.integral_identity_tensor,
+                func_name=name,
+                args_exprs_str=args_exprs_str)
+
         tensor_arguments = ", ".join(filt_input_tensor(f.func.arguments.flat_non_out))
 
         new_params_def = "".join(
@@ -257,6 +273,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             ACLNN_FUNCTIONS_DEFINITION.substitute(
                 return_type=return_type,
                 func_name=name,
+                integral_identity_guard=integral_identity_guard,
                 new_params_def=new_params_def,
                 define_size_or_dtype=define_size_or_dtype,
                 args_str=args_str,
@@ -279,6 +296,7 @@ def gen_op_api(
         includes = """#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
 #include <torch/extension.h>
+#include <ATen/native/TypeProperties.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
         includes = """#include <ATen/native/TypeProperties.h>
