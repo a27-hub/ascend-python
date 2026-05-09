@@ -29,12 +29,13 @@
 
     <a id="table1"></a>
 
-   | PyTorch | Ascend Extension for PyTorch | OpPlugin | Python          | GCC  |
-   |---------|------------------------------|----------|-----------------|------|
-   | 2.7.1   | v2.7.1-26.0.0                | 26.0.0   | 3.9, 3.10, 3.11 | 11.2 |
-   | 2.8.0   | v2.8.0-26.0.0                | 26.0.0   | 3.9, 3.10, 3.11 | 13.3 |
-   | 2.9.0   | v2.9.0-26.0.0                | 26.0.0   | 3.10, 3.11      | 13.3 |
-   | 2.10.0  | v2.10.0-26.0.0               | 26.0.0   | 3.10, 3.11      | 13.3 |
+   | PyTorch | Ascend Extension for PyTorch | OpPlugin | Python                      | GCC  |
+   |---------|------------------------------|----------|-----------------------------|------|
+   | 2.7.1   | v2.7.1                       | master   | 3.9, 3.10, 3.11, 3.12, 3.13 | 11.2 |
+   | 2.8.0   | v2.8.0                       | master   | 3.9, 3.10, 3.11, 3.12, 3.13 | 13.3 |
+   | 2.9.0   | v2.9.0                       | master   | 3.10, 3.11, 3.12, 3.13      | 13.3 |
+   | 2.10.0  | v2.10.0                      | master   | 3.10, 3.11, 3.12, 3.13      | 13.3 |
+   | 2.11.0  | master                       | master   | 3.10, 3.11, 3.12, 3.13      | 13.3 |
 
 ## 安装依赖
 
@@ -55,14 +56,14 @@
    下载对应OpPlugin版本分支代码，进入插件根目录。
 
    ```bash
-   git clone --branch 26.0.0 https://gitcode.com/ascend/op-plugin.git
+   git clone --branch master https://gitcode.com/ascend/op-plugin.git
    cd op-plugin
    ```
 
-   执行编译构建，以下命令以PyTorch版本2.7.1为例。
+   执行编译构建，以下命令以PyTorch版本2.10.0为例。
 
    ```bash
-   bash ci/build.sh --python=3.9 --pytorch=v2.7.1-26.0.0
+   bash ci/build.sh --python=3.9 --pytorch=v2.10.0
    ```
 
     > [!NOTICE] 
