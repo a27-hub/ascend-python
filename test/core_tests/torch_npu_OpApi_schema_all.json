@@ -4943,7 +4943,7 @@
   "func: npu_rotate_quant(Tensor x, Tensor rotation, *, float? alpha=0.0, int? dst_dtype=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
- "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, *, int mode=0, bool fused=True) -> (Tensor, Tensor)": {
+"func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout=\"BSND\", str rotary_mode=\"half\") -> (Tensor, Tensor)": {
     "version": ["v2.7", "newest"]
-  }
+}
 }
