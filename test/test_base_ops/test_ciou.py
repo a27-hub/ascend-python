@@ -81,6 +81,77 @@ class TestNpuCiou(TestCase):
             overlap = self.npu_op_exec(list1[2], list1[3], item[1], is_cross, mode_digit)
             self.assertRtolEqual(cpu_overlap, overlap)
 
+    def test_npu_ciou_fp16(self):
+        list1 = self.generate_giou_data(12, 12, np.float16)
+        cpu_overlap = self.cpu_op_exec(list1[0], list1[1], trans=True, is_cross=False, mode="iou")
+        overlap = self.npu_op_exec(list1[2], list1[3], trans=True, is_cross=False, mode=0)
+        self.assertRtolEqual(cpu_overlap, overlap)
+
+    def test_npu_ciou_fp32_small(self):
+        n = 6
+        list1 = self.generate_giou_data(n, n, np.float32)
+        cpu_overlap = self.cpu_op_exec(list1[0], list1[1], trans=True, is_cross=False, mode="iou")
+        overlap = self.npu_op_exec(list1[2], list1[3], trans=True, is_cross=False, mode=0)
+        self.assertRtolEqual(cpu_overlap, overlap)
+
+    def test_npu_ciou_fp32_large(self):
+        n = 200
+        list1 = self.generate_giou_data(n, n, np.float32)
+        cpu_overlap = self.cpu_op_exec(list1[0], list1[1], trans=True, is_cross=False, mode="iou")
+        overlap = self.npu_op_exec(list1[2], list1[3], trans=True, is_cross=False, mode=0)
+        self.assertRtolEqual(cpu_overlap, overlap)
+
+    def test_npu_ciou_is_cross_shape(self):
+        n = 6
+        m = 8
+        data_bboxes = 20 * np.random.rand(4, n).astype(np.float32)
+        data_gtboxes = 20 * np.random.rand(4, m).astype(np.float32)
+        npu_bboxes = torch.from_numpy(data_bboxes).npu()
+        npu_gtboxes = torch.from_numpy(data_gtboxes).npu()
+        overlap = torch_npu.npu_ciou(npu_bboxes, npu_gtboxes, trans=True, is_cross=True, mode=0, atan_sub_flag=True)
+        self.assertEqual(overlap.shape, [m, n])
+
+    def test_npu_ciou_not_cross_shape(self):
+        n = 12
+        list1 = self.generate_giou_data(n, n, np.float32)
+        overlap = torch_npu.npu_ciou(list1[2], list1[3], trans=True, is_cross=False, mode=0, atan_sub_flag=True)
+        self.assertEqual(overlap.shape, [1, n])
+
+    def test_npu_ciou_mode_iof(self):
+        n = 12
+        list1 = self.generate_giou_data(n, n, np.float32)
+        overlap = self.npu_op_exec(list1[2], list1[3], trans=True, is_cross=False, mode=1)
+        self.assertEqual(overlap.shape[0], 1)
+        self.assertEqual(overlap.shape[1], n)
+
+    def test_npu_ciou_atan_sub_flag_false(self):
+        n = 12
+        list1 = self.generate_giou_data(n, n, np.float32)
+        overlap = torch_npu.npu_ciou(list1[2], list1[3], trans=True, is_cross=False, mode=0, atan_sub_flag=False)
+        overlap_cpu = overlap.to("cpu").numpy()
+        cpu_overlap = self.cpu_op_exec(list1[0], list1[1], trans=True, is_cross=False, mode="iou")
+        self.assertRtolEqual(cpu_overlap, overlap_cpu)
+
+    def test_npu_ciou_fp16_is_cross(self):
+        n = 6
+        m = 8
+        data_bboxes = 20 * np.random.rand(4, n).astype(np.float16)
+        data_gtboxes = 20 * np.random.rand(4, m).astype(np.float16)
+        npu_bboxes = torch.from_numpy(data_bboxes).npu()
+        npu_gtboxes = torch.from_numpy(data_gtboxes).npu()
+        overlap = torch_npu.npu_ciou(npu_bboxes, npu_gtboxes, trans=True, is_cross=True, mode=0, atan_sub_flag=True)
+        self.assertEqual(overlap.shape, [m, n])
+        self.assertEqual(overlap.dtype, torch.float16)
+
+    def test_npu_ciou_mixed_precision(self):
+        n = 12
+        data_bboxes = 20 * np.random.rand(4, n).astype(np.float16)
+        data_gtboxes = 20 * np.random.rand(4, n).astype(np.float32)
+        npu_bboxes = torch.from_numpy(data_bboxes).npu()
+        npu_gtboxes = torch.from_numpy(data_gtboxes).npu()
+        overlap = torch_npu.npu_ciou(npu_bboxes, npu_gtboxes, trans=True, is_cross=False, mode=0, atan_sub_flag=True)
+        self.assertEqual(overlap.shape, [1, n])
+
 
 if __name__ == "__main__":
     run_tests()
