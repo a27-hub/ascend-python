@@ -643,6 +643,9 @@
   "op_api: torch_npu.npu_masked_causal_conv1d_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_apply_rotary_pos_emb(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.7", "newest"]
+  },
   "func: npu_masked_causal_conv1d(Tensor input, Tensor weight, *, Tensor? mask=None) -> Tensor": {
     "version": ["v2.6", "newest"]
   },
@@ -5011,5 +5014,9 @@
   },
   "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout=\"BSND\", str rotary_mode=\"half\") -> (Tensor, Tensor)": {
     "version": ["v2.7", "newest"]
+<<<<<<< HEAD
 }
+=======
+  }
+>>>>>>> cd47690c53d59dd505b2fdb96eab7877ef8e9ead
 }
