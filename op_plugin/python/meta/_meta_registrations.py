@@ -6962,3 +6962,22 @@ def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
         y = torch.empty_like(x, dtype=torch.uint8)
     amax = x.new_empty([1], dtype=x.dtype)
     return (y, amax)
+
+
+@impl(m, "_npu_ciou")
+def _npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_flag=False):
+    if is_cross:
+        output_size = [gtboxes.size(1), self.size(1)]
+    else:
+        output_size = [1, self.size(1)]
+    return (torch.empty(output_size, dtype=self.dtype, device=self.device),
+            torch.empty(output_size, dtype=self.dtype, device=self.device))
+
+
+@impl(m, "npu_ciou")
+def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_flag=False):
+    if is_cross:
+        output_size = [gtboxes.size(1), self.size(1)]
+    else:
+        output_size = [1, self.size(1)]
+    return torch.empty(output_size, dtype=self.dtype, device=self.device)
