@@ -15592,3 +15592,6 @@ model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
 y, amax = model(x_tensor, scale)
 """
 )
+
+
+123
