@@ -33,7 +33,6 @@
       "npu_fused_causal_conv1d",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
-      "npu_apply_rotary_pos_emb",
       "npu_apply_rotary_pos_emb"
     ],
     "v2.9": [
