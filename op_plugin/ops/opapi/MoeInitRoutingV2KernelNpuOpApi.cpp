@@ -113,7 +113,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         "The expert_idx should be ",
         DIM_EXPERT_IDX,
         "-Dimension, current is ",
-        expert_idx,
+        expert_idx_dim,
         "-Dimension.",
         OPS_ERROR(ErrCode::PARAM));
 
