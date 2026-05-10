@@ -27,6 +27,7 @@ def numpy_to_torch(np_arr):
         "float8_e4m3fn": torch.float8_e4m3fn,
         "float8_e8m0": None if not hasattr(torch, "float8_e8m0fnu") else getattr(torch, "float8_e8m0fnu"),
         "hifloat8": torch_npu.hifloat8,
+        "float4_e2m1": torch_npu.float4_e2m1fn_x2,
     }
 
     def _bitcast_float8_to_torch(np_arr):
@@ -122,7 +123,7 @@ def simplified_mx_quantize(fp_array: np.ndarray, mx_ele_dtype: str = "float8_e4m
     """
     try:
         from ml_dtypes import float8_e5m2, float8_e4m3fn
-        from en_dtypes import float8_e8m0
+        from en_dtypes import float8_e8m0, float4_e2m1
     except ImportError:
         raise AssertionError("Unsupported UT testcase due to lack of package ml_dtypes or en_dtypes")
 
@@ -138,6 +139,10 @@ def simplified_mx_quantize(fp_array: np.ndarray, mx_ele_dtype: str = "float8_e4m
         max_norm = 448.0
         exp_bits, mantissa_bits = 4, 3
         target_dtype = float8_e4m3fn
+    elif mx_ele_dtype == "float4_e2m1":
+        max_norm = float.fromhex("0x1.8p2")
+        exp_bits, mantissa_bits = 2, 1
+        target_dtype = float4_e2m1
     else:
         raise ValueError(f"Unsupported mx_ele_dtype: {mx_ele_dtype}")
 
@@ -459,6 +464,10 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expanded_x = expanded_x / expand_scale_safe
             expanded_x = np.clip(expanded_x, HIFLOAT8_MIN, HIFLOAT8_MAX)
             expanded_x = expanded_x.astype(numpy_hifloat8(), copy=False)
+        
+        elif quant_mode == 9:
+            expanded_scale, expanded_x = simplified_mx_quantize(
+                expanded_x, mx_ele_dtype=quant_mode_dtype_str_map[quant_mode])
 
         if drop_pad_mode == 1:
             expanded_x = np.ma.array(
@@ -503,6 +512,9 @@ class TestNpuMoeInitRoutingV2(TestCase):
         elif dtype == torch.float8_e4m3fn or dtype == torch.float8_e5m2:
             x = torch.randn((bs, h), dtype = torch.float32).to(dtype)
             x_npu = x.npu()
+        elif dtype == torch_npu.float4_e2m1fn_x2:
+            x = torch.randn((bs, h), dtype = torch.float32).to(torch.uint8)
+            x_npu = x.npu()
         else:
             x = np.random.uniform(-1, 1, size=(bs, h)).astype(dtype)
             x_npu = torch.from_numpy(x).npu()
@@ -511,7 +523,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         if none_scale:
             scale = None
         else:
-            if dtype == torch.float8_e4m3fn or dtype == torch.float8_e5m2:
+            if dtype == torch.float8_e4m3fn or dtype == torch.float8_e5m2 or dtype == torch_npu.float4_e2m1fn_x2:
                 scale = torch.randint(0, 256, scale_shape, dtype=torch.uint8)
                 scale = scale.view(torch.float8_e8m0fnu)
                 scale_npu = scale.npu()
@@ -765,7 +777,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_scale, local_expanded_scale_npu.numpy())
     
     @SupportedDevices(['Ascend950'])
-    def test_npu_moe_init_routing_mxfp8_no_quant(self):
+    def test_npu_moe_init_routing_mxfp_no_quant(self):
         ALIGN_BASE = 64
         MXFP8_SCALE_THIRD_DIM_SIZE = 2
         bs_list = [32]
@@ -776,7 +788,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         drop_pad_mode_list = [0, 1]
         row_idx_type_list = [0, 1]
         expert_tokens_num_flags = [True, False]
-        dtype_list = [torch.float8_e4m3fn, torch.float8_e5m2]
+        dtype_list = [torch.float8_e4m3fn, torch.float8_e5m2, torch_npu.float4_e2m1fn_x2]
         none_scales = [True, False]
         none_offsets = [True]
         for bs, h, k, expert_range, quant_mode, row_idx_type, dtype, none_scale, none_offset, expert_tokens_num_flag, drop_pad_mode in itertools.product(
@@ -788,6 +800,9 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
             if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
                 continue
+            x_dtype = None
+            if dtype == torch_npu.float4_e2m1fn_x2:
+                x_dtype = torch_npu.float4_e2m1fn_x2
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
                 expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
                 = self.calc_npu_vs_golden(x, expert_idx, scale, offset,
@@ -813,12 +828,12 @@ class TestNpuMoeInitRoutingV2(TestCase):
         "Unittest for mxfp8 need torch.version>=2.7 and package ml_dtypes, en_dtypes"
     )
     @SupportedDevices(['Ascend950'])
-    def test_npu_moe_init_routing_mxfp8_quant(self):
+    def test_npu_moe_init_routing_mxfp_quant(self):
         bs_list = [32]
         h_list = [7168, 7184]
         k_list = [8]
         expert_range_list = [[0, 32]]
-        quant_mode_list = [2, 3]
+        quant_mode_list = [2, 3, 9]
         drop_pad_mode_list = [0]
         row_idx_type_list = [0, 1]
         expert_tokens_num_type = 1
