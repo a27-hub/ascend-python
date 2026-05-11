@@ -5,6 +5,11 @@ from torch_npu.testing.testcase import TestCase, run_tests
 
 
 class TestDropout(TestCase):
+    def _native_dropout_zero_ratio(self, p):
+        torch.manual_seed(2026)
+        input_tensor = torch.ones((100, 100), dtype=torch.float32).npu()
+        output, _mask = torch.ops.aten.native_dropout(input_tensor, p, True)
+        return output.eq(0).float().mean().cpu().item()
 
     def _test_dropout_randomness(self, dtype, p):
         input_tensor = torch.randn(12, 12, dtype=dtype).npu()
@@ -78,6 +83,14 @@ class TestDropout(TestCase):
 
         self.assertTrue(input_tensor is output_inplace)
         self.assertTrue(torch.all(input_tensor == 0))
+
+    def test_native_dropout_probability_semantics(self):
+        zero_ratio_p01 = self._native_dropout_zero_ratio(0.1)
+        zero_ratio_p09 = self._native_dropout_zero_ratio(0.9)
+
+        self.assertTrue(0.05 < zero_ratio_p01 < 0.15)
+        self.assertTrue(0.85 < zero_ratio_p09 < 0.95)
+        self.assertTrue(zero_ratio_p09 > zero_ratio_p01)
 
      
 if __name__ == '__main__':
