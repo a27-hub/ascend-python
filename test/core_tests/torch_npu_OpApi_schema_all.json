@@ -628,6 +628,12 @@
   "op_api: torch_npu.npu_fused_causal_conv1d(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
   },
+  "op_api: torch_npu.npu_inplace_fused_causal_conv1d(*args, **kwargs)": {
+    "version": ["v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_inplace_fused_causal_conv1d(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
+  },
   "op_api: torch_npu.npu_masked_causal_conv1d(*args, **kwargs)": {
     "version": ["v2.6", "v2.7"]
   },
