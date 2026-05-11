@@ -871,7 +871,7 @@
   "func: npu_attn_softmax_(Tensor(a!) self) -> Tensor(a!)": {
     "version": ["all_version"]
   },
-  "func: _npu_dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
+  "func: _dtype_cast_backward(Tensor grad, ScalarType dtype) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_grouped_matmul_add(Tensor self, Tensor x, Tensor weight, Tensor group_list, *, bool transpose_x=True, bool transpose_weight=False, int group_type=2, int? group_list_type=0) -> Tensor": {
@@ -1033,8 +1033,8 @@
   "func: npu_group_norm_silu(Tensor input, Tensor? weight, Tensor? bias, int group, float eps=0.00001) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSND') -> (Tensor, Tensor)": {
-    "version": ["all_version"]
+  "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSND', str rotary_mode=''half) -> (Tensor, Tensor)": {
+    "version": ["v2.7", "newest"]
   },
   "func: npu_roi_alignbk(Tensor self, Tensor rois, int[] xdiff_shape, int pooled_width, int pooled_height, float spatial_scale, int sample_num, int? roi_end_mode=None) -> Tensor": {
     "version": ["all_version"]
@@ -5007,9 +5007,6 @@
     "version": ["v2.8", "newest"]
   },
   "func: _fused_sdp_choice(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None, bool enable_gqa=False) -> int": {
-    "version": ["v2.7", "newest"]
-  },
-  "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout=\"BSND\", str rotary_mode=\"half\") -> (Tensor, Tensor)": {
     "version": ["v2.7", "newest"]
   }
 }
