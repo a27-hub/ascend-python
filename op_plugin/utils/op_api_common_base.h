@@ -583,4 +583,8 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
         }                                                                                                              \
     } while (false)
 
+#include "op_plugin/utils/SearchsortedSideUtil.h"
+#include "op_plugin/utils/SearchsortedValidateUtil.h"
+#include "op_plugin/utils/SearchsortedWarnUtil.h"
+
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_BASE_H_
