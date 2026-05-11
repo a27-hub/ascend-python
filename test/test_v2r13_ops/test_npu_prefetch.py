@@ -57,7 +57,7 @@ class TestNpuPrefetch(TestCase):
         input_shape = [np.float16, -1, (8, 8)]
         _, npu_input = create_common_tensor(input_shape, -100, 100)
         with self.assertRaises(RuntimeError) as cm:
-            npu_output = self.npu_op_exec(npu_input, None, -1)
+            self.npu_op_exec(npu_input, None, -1)
         exception = cm.exception
         self.assertTrue("max_size should be greater than zero, but got -1" in str(exception))
 
@@ -66,11 +66,11 @@ class TestNpuPrefetch(TestCase):
         input_shape = [np.float16, -1, (8, 8)]
         _, npu_input = create_common_tensor(input_shape, -100, 100)
         with self.assertRaises(RuntimeError) as cm:
-            npu_output = self.npu_op_exec(npu_input, None, 1000, -1)
+            self.npu_op_exec(npu_input, None, 1000, -1)
         exception = cm.exception
         self.assertTrue("offset should not be smaller than zero, but got -1" in str(exception))
         with self.assertRaises(RuntimeError) as cm:
-            npu_output = self.npu_op_exec(npu_input, None, 1000, 1000)
+            self.npu_op_exec(npu_input, None, 1000, 1000)
         exception = cm.exception
         self.assertTrue("offset out of range of tensor size, tensor size: 128, offset: 1000" in str(exception))
 

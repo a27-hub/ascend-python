@@ -29,7 +29,7 @@ class TestForeachNorm(TestCase):
         npu_tensors = []
         for shape in shapes:
             t = torch.randn((shape[0], shape[1]), dtype=self.torch_dtypes.get(dtype))
-            if dtype == "float16" or dtype == "bfloat16":
+            if dtype in ("float16", "bfloat16"):
                 cpu_tensors.append(t.float())
             else:
                 cpu_tensors.append(t)
@@ -64,7 +64,7 @@ class TestForeachNorm(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list:
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "float16")
-            cpu_output = tuple([out for out in torch._foreach_norm(cpu_tensors[0], ord=1, dtype=torch.float32)])
+            cpu_output = tuple(torch._foreach_norm(cpu_tensors[0], ord=1, dtype=torch.float32))
             npu_output = torch._foreach_norm(npu_tensors[0], ord=1, dtype=torch.float32)
 
             self.assert_equal(cpu_output, npu_output)
@@ -74,7 +74,7 @@ class TestForeachNorm(TestCase):
         tensor_num_list = [20, 50]
         for tensor_num in tensor_num_list:
             cpu_tensors, npu_tensors = self.create_input_tensors(tensor_num, "bfloat16")
-            cpu_output = tuple([out for out in torch._foreach_norm(cpu_tensors[0], ord=2, dtype=torch.float32)])
+            cpu_output = tuple(torch._foreach_norm(cpu_tensors[0], ord=2, dtype=torch.float32))
             npu_output = torch._foreach_norm(npu_tensors[0], ord=2, dtype=torch.float32)
 
             self.assert_equal(cpu_output, npu_output)
