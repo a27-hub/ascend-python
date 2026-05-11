@@ -45,7 +45,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
 
     static const bool is_available = check_aclnn_kernel_available("aclnnSwigluBackwardMxQuantWithDualAxis");
     TORCH_CHECK(is_available,
-                "Current CANN version do not support this api: npu_swiglu_backward_mx_quant_with_dual_axis. Please try to update the version of CANN."
+                "Current CANN version do not support this api: "
+                "npu_swiglu_backward_mx_quant_with_dual_axis. "
+                "Please try to update the version of CANN."
                 + OPS_ERROR(ErrCode::PARAM));
 
     const at::Tensor& group_index_opt = c10::value_or_else(group_index, [] { return at::Tensor(); });
@@ -55,10 +57,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
     // x_grad1 and x_grad2 have the same shape as x
     auto x_grad_shape = op_infer::array_to_small_vector(x.sizes());
 
-    // Infer mxscale1 shape: based on x.size(-1)/2, ceil(last_dim/2 / 64) + append 2
+    // Infer mxscale1 shape: ceil(last_dim / 64) + append 2
     auto mxscale1_shape = op_infer::array_to_small_vector(x.sizes());
-    int64_t half_last_dim = x.size(-1) / NUM_TWO;
-    mxscale1_shape[mxscale1_shape.size() - 1] = static_cast<int64_t>(std::ceil(static_cast<double>(half_last_dim) / SPLIT_BLOCK_SIZE));
+    int64_t last_dim = x.size(-1);
+    mxscale1_shape[mxscale1_shape.size() - 1] =
+        static_cast<int64_t>(std::ceil(static_cast<double>(last_dim) / SPLIT_BLOCK_SIZE));
     mxscale1_shape.emplace_back(NUM_TWO);
 
     // Infer mxscale2 shape: floor(second_to_last_dim / 64) + group_num + append 2
@@ -69,14 +72,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
         quant_size = quant_size + group_index_opt.size(0);
     }
     mxscale2_shape[mxscale2_shape.size() - 2] = quant_size;
-    mxscale2_shape[mxscale2_shape.size() - 1] = half_last_dim;
     mxscale2_shape.emplace_back(NUM_TWO);
 
-    aclDataType x_acltype;
+    aclDataType x_acltype = c10_npu::GetAclDataType(dst_type);
+    ASCEND_LOGI("[npu_swiglu_backward_mx_quant_with_dual_axis]: "
+        "Getting aclTensor x_grad1 and x_grad2 dtype by Parameter(dst_type): %ld", dst_type);
+
     bool special_output_type = (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                                 dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
-
-    ASCEND_LOGI("[npu_swiglu_backward_mx_quant_with_dual_axis]: Getting aclTensor x_grad1 and x_grad2 dtype by Parameter(dst_type): %ld", dst_type);
 
     if (special_output_type) {
         int64_t x_last_dim_val = x_grad_shape[x_grad_shape.size() - 1];
@@ -86,9 +89,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
         x_grad_shape[x_grad_shape.size() - 1] = x_last_dim_val / NUM_TWO;
         x_grad1 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
         x_grad2 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
-        x_acltype = c10_npu::GetAclDataType(dst_type);
     } else {
-        x_acltype = c10_npu::GetAclDataType(dst_type);
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(x_acltype);
         x_grad1 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
         x_grad2 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
