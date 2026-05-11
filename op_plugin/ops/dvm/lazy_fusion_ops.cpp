@@ -68,18 +68,14 @@ bool IsViewLoadable(const at::Tensor &x) {
   return strides[ndim - 1] == 1 && sizes[ndim - 1] != 1;
 }
 
-// `allow_non_contig`:
-//   false (default) — strict mode, requires the tensor to be physically contiguous.
-//                     Use for inplace targets / writable tensors (DVM Store has no
-//                     strided form, so writes must be contig).
-//   true            — relaxed mode, accepts contig OR view-loadable non-contig
-//                     views (sub-rectangular blocks). Use for read-only inputs
-//                     that go through k->Input(); Input() auto-routes view-
-//                     loadable non-contig to a strided Load.
 bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarType &type)> &type_check = IsFloatType,
                 bool allow_non_contig = false) {
-  if (!x.is_contiguous() && !(allow_non_contig && IsViewLoadable(x))) {
-    return false;
+  if (!x.is_contiguous()) {
+    bool can_viewload = g_lazy_fusion_manager.flags_.enable_all && 
+                        allow_non_contig && IsViewLoadable(x);
+    if (!can_viewload) {
+      return false;
+    }
   }
   return torch_npu::utils::is_npu(x) && type_check(x.scalar_type());
 }
@@ -923,8 +919,7 @@ bool FloorDivideTensor(const at::Tensor &self, const at::Tensor &other, at::Tens
     return FloorDivideScalar(self, other.item(), out);
   }
   bool inplace = (out == nullptr);
-  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace) ||
-      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
+  if (!InputCheck(self, IsFloatType) || !InputCheck(other, IsFloatType)) {
     return false;
   }
   if (out == nullptr) {
@@ -995,8 +990,7 @@ at::Tensor & floor_divide_(at::Tensor & self, const at::Scalar & other) {
 at::Tensor & floor_divide_out(const at::Tensor & self, const at::Tensor & other, at::Tensor & out) {
   static auto enable = IsEnabled("floor_divide");
   if (!enable || !NpuCheck(out) || IsCPUScalar(other) ||
-      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
-      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
+      !InputCheck(self, IsFloatType) || !InputCheck(other, IsFloatType)) {
     return op_api::floor_divide_out(self, other, out);
   }
   PrepareWritableOutput(out);
@@ -1166,8 +1160,7 @@ at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at
   auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
   if (!enable || !cond_ok ||
-      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
-      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true)) {
+      !InputCheck(self, IsFloatType) || !InputCheck(other, IsFloatType)) {
     return op_api::where(condition, self, other);
   }
   PrepareFusionInputs(condition, self, other);
@@ -1194,9 +1187,7 @@ at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
   auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
   if (!enable || !cond_ok ||
-      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
-      !InputCheck(other, IsFloatType, /*allow_non_contig=*/true) ||
-      !NpuCheck(out)) {
+      !InputCheck(self, IsFloatType) || !InputCheck(other, IsFloatType) || !NpuCheck(out)) {
     return op_api::where_out(condition, self, other, out);
   }
   PrepareWritableOutput(out);
@@ -1295,8 +1286,7 @@ at::Tensor & tanh_(at::Tensor & self) {
 at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & output) {
   static auto enable = IsEnabled("tanh_backward");
   if (!enable ||
-      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
-      !InputCheck(output, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(grad_output, IsFloatType) || !InputCheck(output, IsFloatType) ||
       grad_output.scalar_type() != output.scalar_type()) {
     return op_api::tanh_backward(grad_output, output);
   }
@@ -1317,8 +1307,7 @@ at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & outp
 
 at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at::Tensor & out) {
   static auto enable = IsEnabled("gelu");
-  if (!enable || !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
-      !NpuCheck(out) || approximate != "tanh") {
+  if (!enable || !InputCheck(self, IsFloatType) || !NpuCheck(out) || approximate != "tanh") {
     return op_api::gelu_out(self, approximate, out);
   }
   PrepareWritableOutput(out);
@@ -1347,8 +1336,7 @@ at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at:
 at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self, c10::string_view approximate) {
   static auto enable = IsEnabled("gelu_backward");
   if (!enable ||
-      !InputCheck(grad_output, IsFloatType, /*allow_non_contig=*/true) ||
-      !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
+      !InputCheck(grad_output, IsFloatType) || !InputCheck(self, IsFloatType) ||
       grad_output.scalar_type() != self.scalar_type()) {
     return op_api::gelu_backward(grad_output, self, approximate);
   }
@@ -1851,7 +1839,7 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
 
 // ===================== Reduce =====================
 at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
-  static auto enable = IsEnabled("sum");
+  static auto enable = IsEnabled("sum", /*unable_default=*/true);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
@@ -1873,7 +1861,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
 }
 
 at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<at::ScalarType> dtype) {
-  static auto enable = IsEnabled("sum");
+  static auto enable = IsEnabled("sum", /*unable_default=*/true);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
@@ -1904,7 +1892,7 @@ at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdi
 
 at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim,
                      c10::optional<at::ScalarType> dtype, at::Tensor & out) {
-  static auto enable = IsEnabled("sum");
+  static auto enable = IsEnabled("sum", /*unable_default=*/true);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || !NpuCheck(out)) {
@@ -1936,7 +1924,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
 
 // ===================== MatMul =====================
 at::Tensor matmul(const at::Tensor & self, const at::Tensor & other) {
-  static auto enable = IsEnabled("matmul");
+  static auto enable = IsEnabled("matmul", /*unable_default=*/true);
   if (!enable) {
     return op_api::matmul(self, other);
   }
@@ -1949,7 +1937,7 @@ at::Tensor matmul(const at::Tensor & self, const at::Tensor & other) {
 }
 
 at::Tensor mm(const at::Tensor & self, const at::Tensor & mat2) {
-  static auto enable = IsEnabled("mm");
+  static auto enable = IsEnabled("mm", /*unable_default=*/true);
   if (!enable) {
     return op_api::mm(self, mat2);
   }
@@ -1962,7 +1950,7 @@ at::Tensor mm(const at::Tensor & self, const at::Tensor & mat2) {
 }
 
 at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
-  static auto enable = IsEnabled("bmm");
+  static auto enable = IsEnabled("bmm", /*unable_default=*/true);
   if (!enable) {
     return op_api::bmm(self, mat2);
   }
@@ -1976,7 +1964,7 @@ at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
 
 at::Tensor addmm(const at::Tensor & self, const at::Tensor & mat1, const at::Tensor & mat2,
                  const at::Scalar & beta, const at::Scalar & alpha) {
-  static auto enable = IsEnabled("addmm");
+  static auto enable = IsEnabled("addmm", /*unable_default=*/true);
   float beta_value = 1.0f;
   float alpha_value = 1.0f;
   if (!enable || !GetScalarValue(beta, &beta_value) || !GetScalarValue(alpha, &alpha_value)) {
@@ -2137,7 +2125,7 @@ void _foreach_addcdiv_(const at::TensorList input, const at::TensorList tensors1
 
 // ===================== SwiGLU =====================
 at::Tensor npu_swiglu(const at::Tensor &self, int64_t dim) {
-  static auto enable = IsEnabled("npu_swiglu");
+  static auto enable = IsEnabled("npu_swiglu", /*unable_default=*/true);
   if (!enable || !InputCheck(self)) {
     return op_api::npu_swiglu(self, dim);
   }

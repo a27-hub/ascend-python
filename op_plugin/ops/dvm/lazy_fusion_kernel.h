@@ -379,6 +379,6 @@ inline bool IsEnabled() {
   return torch::autograd::get_current_graph_task_id() >= 0;
 }
 
-bool IsEnabled(const std::string &op);
+bool IsEnabled(const std::string &op, bool unable_default = false);
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_KERNEL_H
