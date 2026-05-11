@@ -25,6 +25,7 @@ class LazyFusionFlags {
   ~LazyFusionFlags() = default;
 
   bool enabled{false};
+  bool enable_all{false};
   bool dump_as_text{false};
   std::string dump_dir{"./lazy_fusion_dump"};
   bool synchronize{false};

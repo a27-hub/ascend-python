@@ -152,6 +152,7 @@ void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags
   reg.AddFlag("dump_as_text", &flags->dump_as_text);
   reg.AddFlag("dump_dir", &flags->dump_dir);
   reg.AddFlag("synchronize", &flags->synchronize);
+  reg.AddFlag("enable_all", &flags->enable_all);
   reg.AddFlag("online_tuning", &flags->online_tuning);
   reg.AddFlag("disable_ops", &flags->disable_ops);
   reg.AddFlag("enable_ops", &flags->enable_ops);
