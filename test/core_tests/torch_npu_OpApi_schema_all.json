@@ -638,10 +638,10 @@
     "version": ["v2.6", "v2.7"]
   },
   "op_api: torch_npu.npu_masked_causal_conv1d_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
-    "version": ["v2.8", "newest"]
+    "version": ["v2.7"]
   },
   "op_api: torch_npu.npu_apply_rotary_pos_emb(*args, **kwargs)": {
-    "version": ["v2.7", "newest"]
+    "version": ["v2.8", "newest"]
   },
   "op_api: torch_npu.npu_apply_rotary_pos_emb(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.7", "newest"]
@@ -1037,7 +1037,7 @@
     "version": ["all_version"]
   },
   "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH', str rotary_mode='half') -> (Tensor, Tensor)": {
-    "version": ["v2.7"]
+    "version": ["v2.7", "newest"]
   },    
   "func: npu_roi_alignbk(Tensor self, Tensor rois, int[] xdiff_shape, int pooled_width, int pooled_height, float spatial_scale, int sample_num, int? roi_end_mode=None) -> Tensor": {
     "version": ["all_version"]
