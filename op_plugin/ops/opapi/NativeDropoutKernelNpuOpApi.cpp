@@ -58,7 +58,11 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
         const uint64_t offset = pair.second;
         c10::optional<at::Tensor> noiseOpt = c10::nullopt;
         at::Tensor optionalNoiseShape = c10::value_or_else(noiseOpt, [] { return at::Tensor(); });
-        EXEC_NPU_CMD(aclnnDropoutV3, self, optionalNoiseShape, p, seed, offset, result, mask);
+        // PyTorch dropout(p) exposes p as drop probability, while this aclnnDropoutV3
+        // path consumes keep probability internally. Convert here so the AclnnOnly
+        // path matches the established dropout semantics.
+        const double keep_prob = NUMBER_ONE - p;
+        EXEC_NPU_CMD(aclnnDropoutV3, self, optionalNoiseShape, keep_prob, seed, offset, result, mask);
         return std::tie(result, mask);
     }
 
