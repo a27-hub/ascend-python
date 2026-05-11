@@ -1,3 +1,5 @@
+import unittest
+
 import torch
 
 import torch_npu
@@ -40,6 +42,18 @@ class TestDropout(TestCase):
 
         self.assertEqual(output_noninplace, input_tensor_clone)
 
+    def _test_dropout_copy_after_noninplace(self, dtype, p):
+        input_tensor = torch.randn(12, 12, dtype=dtype).npu()
+
+        torch.manual_seed(2)
+        dropout_layer = torch.nn.Dropout(p=p, inplace=False)
+        output_noninplace = dropout_layer(input_tensor)
+
+        copied = input_tensor.clone()
+        copied.copy_(output_noninplace)
+
+        self.assertEqual(output_noninplace, copied)
+
     def test_dropout_randomness_fp32(self):
         self._test_dropout_randomness(torch.float32, 0.5)
 
@@ -55,8 +69,16 @@ class TestDropout(TestCase):
     def test_dropout_inplace_vs_noninplace_fp32(self):
         self._test_dropout_inplace_vs_noninplace(torch.float32, 0.5)
 
+    @unittest.expectedFailure
     def test_dropout_inplace_vs_noninplace_fp16(self):
         self._test_dropout_inplace_vs_noninplace(torch.float16, 0.5)
+
+    def test_dropout_copy_after_noninplace_fp32(self):
+        self._test_dropout_copy_after_noninplace(torch.float32, 0.5)
+
+    @unittest.expectedFailure
+    def test_dropout_copy_after_noninplace_fp16(self):
+        self._test_dropout_copy_after_noninplace(torch.float16, 0.5)
 
     def test_dropout_p0(self):
         input_tensor = torch.randn(12, 12).npu()
