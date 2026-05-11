@@ -427,7 +427,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_x = x_final / expanded_scale
                 expanded_x = np.round(expanded_x).astype(np.int8)
             if x.dtype == np.int8:
-                expanded_scale == None
+                expanded_scale = None
 
         if quant_mode == 2 or quant_mode == 3:
             quant_mode_dtype_str_map = {2: "float8_e5m2", 3: "float8_e4m3fn"}
@@ -477,8 +477,6 @@ class TestNpuMoeInitRoutingV2(TestCase):
         return expanded_x, expanded_row_idx.astype(np.int32), expert_tokens_count, expanded_scale
 
     def npu_op_exec(self, x, expert_idx, scale, offset, active_expert_range, quant_mode, row_idx_type, expert_tokens_num_flag, expert_tokens_num_type, drop_pad_mode, active_num, expert_capacity, x_dtype=None):
-        bs = x.shape[0]
-        k = expert_idx.shape[1]
         expert_num = 32
         expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2(
             x, expert_idx, scale=scale, offset=offset,
@@ -573,7 +571,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             local_expanded_x_npu = local_expanded_x_npu[:actual_expert_count]
             local_expanded_scale_npu = local_expanded_scale_npu[:actual_expert_count]
 
-        if expert_tokens_num_flag == True and expert_tokens_num_type == 2:
+        if expert_tokens_num_flag and expert_tokens_num_type == 2:
             length = expert_tokens_count.shape[0]
             local_expert_tokens_count_npu = local_expert_tokens_count_npu[:length]
 
@@ -635,7 +633,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+            if drop_pad_mode == 1 or not expert_tokens_num_flag or expert_tokens_num_type == 0:
                 continue
             x_dtype = None
             if dtype == torch_npu.hifloat8:
@@ -715,7 +713,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+            if drop_pad_mode == 1 or not expert_tokens_num_flag or expert_tokens_num_type == 0:
                 continue
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
                 expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
@@ -755,7 +753,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+            if drop_pad_mode == 1 or not expert_tokens_num_flag or expert_tokens_num_type == 0:
                 continue
             x_dtype = torch_npu.hifloat8
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
@@ -798,7 +796,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+            if drop_pad_mode == 1 or not expert_tokens_num_flag or expert_tokens_num_type == 0:
                 continue
             x_dtype = None
             if dtype == torch_npu.float4_e2m1fn_x2:
@@ -919,7 +917,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
             expert_range = [0, 32] if drop_pad_mode == 1 else [0, 16]
             x, expert_idx, scale, offset, x_npu, expert_idx_npu, scale_npu, offset_npu, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = self.generate_inputs(
                 bs, h, k, dtype, scale_shape, none_scale, none_offset, drop_pad_mode)
-            if drop_pad_mode == 1 or expert_tokens_num_flag == False or expert_tokens_num_type == 0:
+            if drop_pad_mode == 1 or not expert_tokens_num_flag or expert_tokens_num_type == 0:
                 continue
             expanded_x, local_expanded_x_npu, expanded_row_idx, local_expanded_row_idx_npu, \
                 expert_tokens_count, local_expert_tokens_count_npu, expanded_scale, local_expanded_scale_npu \
