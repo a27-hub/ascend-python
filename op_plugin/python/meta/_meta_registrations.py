@@ -4176,12 +4176,12 @@ def quant_matmul_shape_check(*args):
         else:
             torch._check(
                 x1_k_dim == x2_k_dim * x2_unpack_factor,
-                lambda: "a8w4_float nd only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
+                lambda: "a8w4_float (nd) only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
             )
     elif is_a8w4 and transpose_x2:
         torch._check(
                 x1_k_dim == x2_k_dim * x2_unpack_factor,
-                lambda: "a8w4_float nd only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
+                lambda: "a8w4_float (nd) only support x1 not transpose and x2 transpose and k dim of x1 should be 2 multiple of k dim of x2, please check k dim of x1 and x2" + ops_error(ErrCode.VALUE),
             )
     else:
         torch._check(
@@ -6872,14 +6872,14 @@ def npu_lstm_cell_backward_meta(grad_y=None, grad_h=None, grad_c=None, input=Non
     hidden_size = y_output.size(2)
 
     grad_input = torch.empty_like(input, dtype=input.dtype, device='meta')
-    grad_wih = torch.empty_like(w_ih, dtype=w_ih.dtype, device='meta')
+    grad_w_ih = torch.empty_like(w_ih, dtype=w_ih.dtype, device='meta')
     grad_whh = torch.empty_like(w_hh, dtype=w_hh.dtype, device='meta')
     grad_bias = torch.empty(
         [4 * hidden_size], dtype=input.dtype, device='meta')
     grad_ht = torch.empty_like(h, dtype=h.dtype, device='meta')
     grad_ct = torch.empty_like(c, dtype=c.dtype, device='meta')
 
-    return (grad_input, grad_wih, grad_whh, grad_bias, grad_bias, grad_ht, grad_ct)
+    return (grad_input, grad_w_ih, grad_whh, grad_bias, grad_bias, grad_ht, grad_ct)
 
 
 @impl(m, "npu_fused_attention_score_fwd")
