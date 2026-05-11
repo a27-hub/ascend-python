@@ -33,31 +33,39 @@ bool IsFloatIntType(const at::ScalarType &type) { return IsFloatType(type) || ty
 
 bool IsSupportType(const at::ScalarType &type) { return IsFloatIntType(type) || type == at::ScalarType::Bool; }
 
-// DVM's strided Load (ViewLoad) is implemented only for sub-rectangular blocks
-// of a contiguous storage: the innermost stride must be 1 and outer strides must
-// not introduce axis swapping. Non-contig views from chunk/narrow/slice along
-// outer dims qualify; transpose/permute and ::step!=1 in the innermost dim do
-// NOT qualify and would silently produce wrong data.
+// DVM's strided Load (ViewLoad) is implemented for sub-rectangular blocks of a
+// contiguous storage where the innermost load-carrying dim has unit stride.
+// Aligned with MindSpore's IsViewLoadSupported (same DVM library underneath).
 //
-// View-loadable means: stride[-1] == 1 AND stride[i] >= shape[i+1]*stride[i+1]
-// for all i < ndim - 1. (Equality is the contig-sub-rectangle case; greater is
-// allowed for the swiglu-style "split with gap in inner dim".)
+// Key correctness gate: `sizes[-1] != 1`. Without it, views with a trailing
+// unsqueezed dim (size==1, stride==1) would slip past a naive `strides[-1]==1`
+// check while the *real* load-carrying dim has stride>1. Concrete GLM4.7 RoPE
+// example:
+//   shape  = [8192, 1, 16, 32, 1]
+//   stride = [1024, 1024, 64,  2, 1]
+// strides[-1]==1 only because sizes[-1]==1. The actual load-carrying dim is
+// shape[3]=32 with stride=2 (an `x.view(..., D/2, 2)[..., 0]` even/odd slice).
+// DVM cannot ViewLoad with stride=2 and silently corrupts the matmul output,
+// which manifested as GLM4.7 forward loss going wrong.
+//
+// Negative-stride and zero/negative-size views are rejected as well because
+// DVM's address arithmetic assumes non-negative strides over real elements.
 bool IsViewLoadable(const at::Tensor &x) {
+  if (!x.defined()) {
+    return false;
+  }
   auto ndim = x.dim();
   if (ndim == 0) {
-    return true;
+    return false;
   }
   auto sizes = x.sizes();
   auto strides = x.strides();
-  if (strides[ndim - 1] != 1) {
-    return false;
-  }
-  for (int64_t i = 0; i < ndim - 1; ++i) {
-    if (strides[i] < sizes[i + 1] * strides[i + 1]) {
+  for (int64_t i = 0; i < ndim; ++i) {
+    if (sizes[i] <= 0 || strides[i] < 0) {
       return false;
     }
   }
-  return true;
+  return strides[ndim - 1] == 1 && sizes[ndim - 1] != 1;
 }
 
 // `allow_non_contig`:
@@ -1155,7 +1163,7 @@ at::Tensor minimum(const at::Tensor & self, const at::Tensor & other) {
 // ===================== Select =====================
 at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at::Tensor & other) {
   static auto enable = IsEnabled("where");
-  auto cond_ok = condition.defined() && torch_npu::utils::is_npu(condition) &&
+  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
   if (!enable || !cond_ok ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
@@ -1183,7 +1191,7 @@ at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at
 at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
                        const at::Tensor & other, at::Tensor & out) {
   static auto enable = IsEnabled("where");
-  auto cond_ok = condition.defined() && torch_npu::utils::is_npu(condition) &&
+  auto cond_ok = condition.defined() && condition.is_contiguous() && torch_npu::utils::is_npu(condition) &&
                  condition.scalar_type() == at::ScalarType::Bool;
   if (!enable || !cond_ok ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
