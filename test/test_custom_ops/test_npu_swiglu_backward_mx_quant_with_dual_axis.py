@@ -25,7 +25,7 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         return torch.full(shape, value, dtype=data_type)
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_swiglu_backward_mx_quant_with_dual_axis_float8_e4m3fn(self, device="npu"):
+    def test_npu_swiglu_backward_mx_quant_with_dual_axis(self, device="npu"):
         x = self.generate_input([4, 8], value=1, dtype="bfloat16").to(device)
         y_grad = self.generate_input([4, 8], value=1, dtype="bfloat16").to(device)
         group_index = torch.tensor([2, 4], dtype=torch.int64).npu()
