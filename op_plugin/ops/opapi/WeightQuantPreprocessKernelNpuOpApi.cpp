@@ -29,7 +29,7 @@ constexpr int64_t NZ_C0_32_FOR_B4 = 16;
 enum class QuantDataFlow { UNKNOWN = 0, MM_MX_A8W4 = 1, GMM_MX_A8W4 = 2 };
 
 struct QuantContext {
-    const at::Tensor& weight;
+    at::Tensor& weight;
     const at::Tensor& weight_scale;
     const c10::optional<at::Tensor>& weight_offset;
     const c10::optional<at::Tensor>& bias;
@@ -95,6 +95,25 @@ void judge_gmm_mx_a8w4(QuantContext& ctx) {
     }
 }
 
+static void prepare_weight_nk(QuantContext& ctx)
+{
+    auto weight_sizes = ctx.weight.sizes();
+    int64_t weight_dim = ctx.weight.dim();
+    
+    int64_t K = weight_sizes[weight_dim - 2];
+    int64_t N = weight_sizes[weight_dim - 1];
+    
+    c10::SmallVector<int64_t, 5> storage_shape;
+    if (ctx.is_gmm) {
+        int64_t G = weight_sizes[0];
+        storage_shape = {G, N, K};
+    } else {
+        storage_shape = {N, K};
+    }
+    
+    set_tensor_format_and_storage_shape(ctx.weight, ACL_FORMAT_ND, storage_shape);
+}
+
 static void prepare_out_weight_nz_c0_32_nk(QuantContext& ctx)
 {
     auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
@@ -153,12 +172,14 @@ static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowJudgeFu
 static const std::unordered_map<c10_npu::SocVersion, std::unordered_map<QuantDataFlow, std::vector<PrepareFunc>>> SOC_DATA_FLOW_PREPARE_MAP = {
     {c10_npu::SocVersion::Ascend950, {
         {QuantDataFlow::MM_MX_A8W4, {
+            prepare_weight_nk,
             prepare_out_weight_nz_c0_32_nk,
             prepare_out_weight_scale,
             prepare_out_weight_offset,
             prepare_out_bias
         }},
         {QuantDataFlow::GMM_MX_A8W4, {
+            prepare_weight_nk,
             prepare_out_weight_nz_c0_32_nk,
             prepare_out_weight_scale,
             prepare_out_weight_offset,
@@ -171,7 +192,7 @@ static const std::unordered_map<c10_npu::SocVersion, std::unordered_map<QuantDat
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 npu_weight_quant_preprocess(
-    const at::Tensor& weight,
+    at::Tensor& weight,
     const at::Tensor& weight_scale,
     int64_t x_dtype,
     int64_t weight_dtype,
@@ -224,9 +245,13 @@ npu_weight_quant_preprocess(
     
     execute_prepares(data_flow_it->second, ctx);
     
-    TensorWrapper weight_wrapper = make_wrapper(ctx.out_weight, 
+    TensorWrapper weight_wrapper = make_wrapper(ctx.weight, 
         c10::optional<int64_t>(ctx.weight_dtype));
-    TensorWrapper scale_wrapper = make_wrapper(ctx.out_weight_scale,
+    TensorWrapper scale_wrapper = make_wrapper(ctx.weight_scale,
+        c10::optional<int64_t>(ctx.weight_scale_dtype));
+    TensorWrapper out_weight_wrapper = make_wrapper(ctx.out_weight, 
+        c10::optional<int64_t>(ctx.weight_dtype));
+    TensorWrapper out_scale_wrapper = make_wrapper(ctx.out_weight_scale,
         c10::optional<int64_t>(ctx.weight_scale_dtype));
     
     aclDataType x_acl_type = c10_npu::GetAclDataType(x_dtype);
@@ -236,11 +261,11 @@ npu_weight_quant_preprocess(
     at::Tensor weight_offset_tensor = weight_offset.value_or(at::Tensor());
     at::Tensor bias_tensor = bias.value_or(at::Tensor());
     EXEC_NPU_CMD(aclnnWeightQuantPreprocess,
-        weight, weight_scale,
+        weight_wrapper, scale_wrapper,
         weight_offset_tensor,
         bias_tensor,
         x_acl_type, x_scale_acl_type, ctx.k_group_size,
-        weight_wrapper, scale_wrapper,
+        out_weight_wrapper, out_scale_wrapper,
         ctx.out_weight_offset,
         ctx.out_bias);
     
