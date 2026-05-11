@@ -141,6 +141,7 @@ class TestForeachCopy(TestCase):
             cpu_tensors_x, npu_tensors_x = self.create_tensors(tensor_num, "int32")
             cpu_tensors_y, npu_tensors_y = self.create_tensors(tensor_num, "double")
             torch._foreach_copy_(npu_tensors_y, npu_tensors_x)
+            torch.npu.synchronize()
             self.assertRtolEqual(npu_tensors_y, npu_tensors_x) 
 
 if __name__ == "__main__":

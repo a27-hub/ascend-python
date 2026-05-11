@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+
 #include <ATen/native/ForeachUtils.h>
 
 #include "op_plugin/utils/op_api_common.h"
@@ -25,6 +27,25 @@
 
 namespace op_api {
 namespace {
+    bool can_use_foreach_copy_d2d_fast_path(const at::TensorList self, const at::TensorList src)
+    {
+        return at::native::_check_tensors_share_device_and_dtype({self, src}, true) &&
+            std::all_of(src.cbegin(), src.cend(), [&src](const at::Tensor& tensor) -> bool {
+                return tensor.dtype() == src[0].dtype();
+            }) &&
+            std::all_of(self.cbegin(), self.cend(), [&self](const at::Tensor& tensor) -> bool {
+                return tensor.dtype() == self[0].dtype();
+            }) &&
+            at::native::_check_tensors_share_sizes_and_strides({self, src});
+    }
+
+    void foreach_copy_d2d_fast_path(const at::TensorList self, const at::TensorList src)
+    {
+        for (const auto i : c10::irange(self.size())) {
+            self[i].copy_(src[i], true);
+        }
+    }
+
     bool should_group(const at::TensorList tensors, const at::TensorList tensors2)
     {
         if (tensors.empty() && tensors2.empty()) {
@@ -256,6 +277,10 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
 {
     DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
     at::native::check_foreach_api_restrictions(self, src);
+    if (can_use_foreach_copy_d2d_fast_path(self, src)) {
+        return foreach_copy_d2d_fast_path(self, src);
+    }
+
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
