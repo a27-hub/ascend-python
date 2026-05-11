@@ -15626,20 +15626,32 @@ Atlas A3训练系列产品
 import torch
 import torch_npu
 
-batch_size = 1
-seq_len = 64
-num_heads = 8
-head_dim = 64
+def test_npu_apply_rotary_pos_emb():
 
-cos_dim = head_dim // 2
+    # 固定参数
+    batch = 1
+    seq_len = 64
+    num_heads = 8
+    head_dim = 64
 
-query = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
-key = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
-cos = torch.randn(seq_len, cos_dim, dtype=torch.float16).npu()
-sin = torch.randn(seq_len, cos_dim, dtype=torch.float16).npu()
+    # 创建输入数据
+    query = torch.randn(batch, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
+    key = torch.randn(batch, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
+    cos = torch.randn(batch, seq_len, 1, head_dim, dtype=torch.float16).npu()
+    sin = torch.randn(batch, seq_len, 1, head_dim, dtype=torch.float16).npu()
 
-torch_npu.npu_apply_rotary_pos_emb(
-    query, key, cos, sin, layout="BSND", rotary_mode="half"
-)
-"""
+    # 调用 npu_apply_rotary_pos_emb API
+    q_out, k_out = torch_npu.npu_apply_rotary_pos_emb(
+        query, key, cos, sin,
+        layout="BSND",
+        rotary_mode="half"
+    )
+
+    print("API: npu_apply_rotary_pos_emb test passed!")
+    print(f"Output query: {q_out}")
+    print(f"Output key: {k_out}")
+
+if __name__ == "__main__":
+    test_npu_apply_rotary_pos_emb()
+
 )
