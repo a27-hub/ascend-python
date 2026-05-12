@@ -7,8 +7,8 @@ ci:
   autoupdate_schedule: monthly
 
 repos:
-  # pre-commit 基础检查
-  - repo: https://gitcode.com/pre-commit/pre-commit-hooks
+  # pre-commit 基础检查（官方源，稳定）
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
@@ -21,20 +21,20 @@ repos:
       - id: check-json
 
   # -------------------------- Python 核心检查 --------------------------
-  # Ruff：指定读取 pre-commit/pyproject.toml
-  - repo: https://gitcode.com/gh_mirrors/ru/ruff-pre-commit
-    rev: v0.14.14
+  # Ruff（官方源，v0.8.0 稳定支持 ruff 和 ruff-format）
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
     hooks:
-      - id: ruff-check
+      - id: ruff
         args: ["--config", "pre-commit/pyproject.toml", "--output-format", "github", "--fix"]
         types: [python]
       - id: ruff-format
         args: ["--config", "pre-commit/pyproject.toml"]
         types: [python]
 
-  # codespell
-  - repo: https://gitcode.com/gh_mirrors/co/codespell
-    rev: v2.4.1
+  # codespell（官方源，v2.2.6 存在）
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
     hooks:
       - id: codespell
         args: [
@@ -44,9 +44,9 @@ repos:
             "*.toml,*.py,*.cpp,*.hpp,*.c,*.h",
           ]
 
-  # pylint：指定 pre-commit/pyproject.toml
-  - repo: https://gitcode.com/gh_mirrors/pyl/pylint
-    rev: v4.0.5
+  # pylint（官方源，v3.1.0 稳定）
+  - repo: https://github.com/pylint-dev/pylint
+    rev: v3.1.0
     hooks:
       - id: pylint
         name: pylint (Python code quality check)
@@ -54,9 +54,9 @@ repos:
         args: ["--rcfile=pre-commit/pyproject.toml"]
         verbose: false
 
-  # Bandit：指定 pre-commit/pyproject.toml
-  - repo: https://gitcode.com/gh_mirrors/ba/bandit
-    rev: 1.9.4
+  # Bandit（官方源，1.7.8 稳定）
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
     hooks:
       - id: bandit
         name: bandit (Python 安全漏洞检查)
@@ -66,20 +66,21 @@ repos:
           "--quiet",
         ]
 
-  # typos
-  - repo: https://gitcode.com/gh_mirrors/ty/typos
-    rev: v1.32.0
+  # typos（官方源，v1.21.0 稳定）
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.21.0
     hooks:
       - id: typos
         args: ["--force-exclude", "--config", "pre-commit/typos.toml"]
 
   #--------------- C++ 核心检查 ---------------------------------------------
+  # clang-format（使用 gitcode 镜像，v18.1.8 存在）
   - repo: https://gitcode.com/pre-commit-clang/mirrors-clang-format
     rev: v18.1.8
     hooks:
       - id: clang-format
         files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
         args:
-          - "--style=file"  # 读取 .clang-format 文件
+          - "--style=file"
           - "--verbose"
           - "-i"
