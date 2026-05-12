@@ -40,7 +40,7 @@ torch_npu.npu_apply_rotary_pos_emb(query, key,  cos, sin, *, layout='BSND', rota
   - layout为"BSND"或"SBND"时，query、key、cos、sin输入shape的前2维（B、S）必须相等；layout为"TND"时，第1维（T）必须相等。
   - query、key输入shape的最后一维（D）必须相等，cos、sin输入shape的最后一维（D）必须相等。
   - 输入张量query、key、cos、sin的dtype必须相同。
-  - layout为1时，输入query_out的shape用（q_b, q_s, q_n, q_d）表示，keyout shape用（q_b, q_s, k_n, q_d）表示，cos和sin shape用（q_b, q_s, 1, cos_d）表示。其中，b表示batch_size，s表示seq_length，n表示head_num，d表示head_dim。layout为4时，输入query的shape用（q_t, q_n, q_d）表示，key shape用（q_t, k_n, q_d）表示，cos和sin shape用（q_t, 1, cos_d）表示。其中，t表示b和s合轴，n表示head_num，d表示head_dim
+  - layout为"BSND"时，输入query的shape用（q_b, q_s, q_n, q_d）表示，keyout shape用（q_b, q_s, k_n, q_d）表示，cos和sin shape用（q_b, q_s, 1, cos_d）表示。其中，b表示batch_size，s表示seq_length，n表示head_num，d表示head_dim。layout为"TND"时，输入query的shape用（q_t, q_n, q_d）表示，key shape用（q_t, k_n, q_d）表示，cos和sin shape用（q_t, 1, cos_d）表示。其中，t表示b和s合轴，n表示head_num，d表示head_dim
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - 对于任意layout，query与key除N维度外其他维度必须相同；query、key输入shape的最后一维（D）必须相等，cos、sin输入shape的最后一维（D）必须相等，且小于等于query、key输入shape的最后一维（D）。
