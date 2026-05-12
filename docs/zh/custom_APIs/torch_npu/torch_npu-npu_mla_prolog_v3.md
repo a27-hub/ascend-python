@@ -158,15 +158,15 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **kc_scale**（`float`）：可选参数，表示Key的尺度矫正系数，默认值为1.0。
 
-- **token_x_dtype**（`dtype`）：可选参数，表示参数token_x的传入dtype。
+- **token_x_dtype**（`dtype`）：可选参数，表示参数token_x的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_dq_dtype**（`dtype`）：可选参数，表示参数weight_dq的传入dtype。
+- **weight_dq_dtype**（`dtype`）：可选参数，表示参数weight_dq的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_uq_qr_dtype**（`dtype`）：可选参数，表示参数weight_uq_qr的传入dtype。
+- **weight_uq_qr_dtype**（`dtype`）：可选参数，表示参数weight_uq_qr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_dkv_kr_dtype**（`dtype`）：可选参数，表示参数weight_dkv_kr的传入dtype。
+- **weight_dkv_kr_dtype**（`dtype`）：可选参数，表示参数weight_dkv_kr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **kv_cache_dtype**（`dtype`）：可选参数，表示参数kv_cache的传入dtype。
+- **kv_cache_dtype**（`dtype`）：可选参数，表示参数kv_cache的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
 > [!NOTE]
 >
