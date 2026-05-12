@@ -26,7 +26,7 @@ from torchnpugen.api import cpp
 
 
 def filt_input_tensor(arguments: Sequence[Argument]) -> List[str]:
-    input_tensors = list()
+    input_tensors = []
     for arg in arguments:
         if isinstance(arg.type, BaseType) and arg.type.name == BaseTy.Tensor:
             input_tensors.append(arg.name)
@@ -60,7 +60,7 @@ class ResInfo:
         if kind == SchemaKind.out:
             result_names = cpp.return_names(f)
         else:
-            result_names = [k for k in results.keys()]
+            result_names = list(results)
 
         for name in result_names:
             info = results.get(name, None)
@@ -117,10 +117,10 @@ class StructInfo:
         es: Sequence[Dict[str, object]],
         native_functions: Sequence[NativeFunction],
     ) -> "List[StructInfo]":
-        '''
-        Parse a StructInfo from a dictionary as directly parsed 
+        """
+        Parse a StructInfo from a dictionary as directly parsed
         from op_plugin_functions.yaml
-        '''
+        """
         functions_by_schema: Dict[str, NativeFunction] = {}
 
         for function in native_functions:
@@ -152,7 +152,7 @@ class StructInfo:
 
             if not schema_function:
                 avail = "\n".join(
-                    k for k in functions_by_schema.keys() if gen_func_name(k) == defn_name
+                    k for k in functions_by_schema if gen_func_name(k) == defn_name
                 )
                 raise RuntimeError(
                     f"could not find ATen function for schema: {schema_str} "
@@ -179,11 +179,10 @@ class StructInfo:
                     )
                     struct_infos.append(struct_info)
                     continue
-                else:
-                    gen_opapi_info = struct_map.get(structured_inherit)
-                    if gen_opapi_info is None:
-                        raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
-                    gen_opapi_info = gen_opapi_info.get('gen_opapi')
+                gen_opapi_info = struct_map.get(structured_inherit)
+                if gen_opapi_info is None:
+                    raise RuntimeError(f'The structured_inherit func {structured_inherit} is None')
+                gen_opapi_info = gen_opapi_info.get('gen_opapi')
 
             integral_identity_tensor = gen_opapi_info.pop(
                 'integral_identity_tensor', None)
@@ -207,7 +206,7 @@ class StructInfo:
 
             if func_kind == SchemaKind.out:
                 output_names = cpp.return_names(schema_function)
-                for key in gen_opapi_info.keys():
+                for key in gen_opapi_info:
                     if key not in output_names:
                         raise ValueError(
                             f"Result infomations contains invalid key: {key} in {schema_str}")

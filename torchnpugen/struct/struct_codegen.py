@@ -129,7 +129,7 @@ def filt_op_branch(struct_ops: Dict) -> Dict:
             if is_support_version(op):
                 SYMINT_OPS.add(op['func'].split("(")[0])
 
-    filt_ops = list(filter(lambda op: filt_gen_opapi(op), support_ops))
+    filt_ops = [op for op in support_ops if filt_gen_opapi(op)]
     return filt_ops
 
 
@@ -142,7 +142,7 @@ def remove_empty_lines(text):
 def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[StructInfo]:
     path = os.path.realpath(path)
     PathManager.check_directory_path_readable(path)
-    with open(path, 'r') as struct_file:
+    with open(path, 'r', encoding='utf-8') as struct_file:
         struct_ops = yaml.safe_load(struct_file)
 
     filt_ops = filt_op_branch(struct_ops)
@@ -304,11 +304,19 @@ def gen_op_api(
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h" """
 
-    fm.write_with_template(
-        f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
+    def struct_kernel_template_env():
+        return {
             'includes': includes,
-            'op_api_definition': list(concatMap(
-                lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
-                struct_functions
-            ))}
+            'op_api_definition': list(
+                concatMap(
+                    lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
+                    struct_functions,
+                )
+            ),
+        }
+
+    fm.write_with_template(
+        'StructKernelNpuOpApi.cpp',
+        'StructKernelNpuOpApi.cpp',
+        struct_kernel_template_env,
     )
