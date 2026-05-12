@@ -1,4 +1,4 @@
-# （beta）npu_apply_rotary_pos_emb
+# npu_apply_rotary_pos_emb
 
 ## 产品支持情况
 
