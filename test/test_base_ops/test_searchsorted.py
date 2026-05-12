@@ -2,15 +2,11 @@ import warnings
 
 import torch
 import numpy as np
-
-import torch_npu
-
 from torch_npu.testing.testcase import TestCase, run_tests
 from torch_npu.testing.common_utils import create_common_tensor
 
 
 class TestSearchsorted(TestCase):
-
     def cpu_sorted_input(self, input1):
         input_dim = input1.dim() - 1
         input_op, _ = input1.float().sort(input_dim)
@@ -104,11 +100,7 @@ class TestSearchsorted(TestCase):
             self.assertRtolEqual(cpu_output, npu_output)
 
     def test_searchsorted_scalar_bool(self):
-        shape_format = [
-            [[np.float32, 0, [64]], 2.5],
-            [[np.int32, 0, [128]], 2],
-            [[np.int64, 0, [256]], 3]
-        ]
+        shape_format = [[[np.float32, 0, [64]], 2.5], [[np.int32, 0, [128]], 2], [[np.int64, 0, [256]], 3]]
 
         for item in shape_format:
             cpu_input, npu_input = create_common_tensor(item[0], -10, 10)
