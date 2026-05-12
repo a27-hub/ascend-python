@@ -30,4 +30,9 @@ OP_PLUGIN_HIDDEN bool npu_add_rms_norm_quant_param_check(c10::optional<at::Tenso
                                                          bool div_mode);
 
 } // namespace op_infer
+
+#include "op_plugin/utils/SearchsortedSideUtil.h"
+#include "op_plugin/utils/SearchsortedValidateUtil.h"
+#include "op_plugin/utils/SearchsortedWarnUtil.h"
+
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_NEW_PARAMS
