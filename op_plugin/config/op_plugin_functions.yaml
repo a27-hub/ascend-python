@@ -90,7 +90,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-        exec: aclnnInplaceAddRelu
+      exec: aclnnInplaceAddRelu
 
   - func: _aminmax(Tensor self) -> (Tensor, Tensor)
     acl_op: all_version
