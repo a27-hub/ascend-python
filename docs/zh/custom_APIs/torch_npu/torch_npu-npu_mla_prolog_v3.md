@@ -116,13 +116,13 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **cache_index**（`Tensor`）：可选参数，用于存储`kv_cache`和`kr_cache`的索引。不支持非连续，数据格式支持ND，数据类型支持`int64`，当`cache_mode`为"PA_BSND"或"PA_NZ"：BS合轴时shape为[T]，BS非合轴时shape为[B, S]，取值范围需在[0, BlockNum*BlockSize)内; 当`cache_mode`为"PA_BLK_BSND"或"PA_BLK_NZ"：BS合轴时shape为[Sum(Ceil(S_i/BlockSize))]（S_i表示第i个batch的序列长度），BS非合轴时shape为[B, Ceil(S/BlockSize)]，取值范围需在[0, BlockNum)内；当`cache_mode`为"BSND"或"TND"：`cache_index`无需传入。当前不会对传入值的合法性进行校验，需用户自行保证。
 
-- **dequant_scale_x**（`Tensor`）：可选参数，token_x的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`，shape为[T]或[B*S, 1]，支持B=0,S=0,T=0的空Tensor。
+- **dequant_scale_x**（`Tensor`）：可选参数，token_x的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[T]或[B\*S, 1]；weight_quant_mode=3时，shape为[T, He/32]或[B*S, He/32]。支持B=0,S=0,T=0的空Tensor。
 
-- **dequant_scale_w_dq**（`Tensor`）：可选参数，weight_dq的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`，shape为[1, Hcq]。
+- **dequant_scale_w_dq**（`Tensor`）：可选参数，weight_dq的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[1,Hcq]；weight_quant_mode=3时，shape为[Hcq, He/32]。
 
-- **dequant_scale_w_uq_qr**（`Tensor`）：可选参数，用于MatmulQcQr矩阵乘后反量化操作的per-channel参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`，shape为[1, N*(D+Dr)]。
+- **dequant_scale_w_uq_qr**（`Tensor`）：可选参数，用于MatmulQcQr矩阵乘后反量化操作的per-channel参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=1/2/4/5时，shape为[1,N*(D+Dr)]；weight_quant_mode=3时，shape为[N*(D+Dr), Hcq/32]。
 
-- **dequant_scale_w_dkv_kr**（`Tensor`）：可选参数，weight_dkv_kr的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`，shape为[1, Hckv+Dr]。
+- **dequant_scale_w_dkv_kr**（`Tensor`）：可选参数，weight_dkv_kr的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[(1,Hckv+Dr)]；weight_quant_mode=3时，shape为[Hckv+Dr, He/32]。
 
 - **quant_scale_ckv**（`Tensor`）：可选参数，用于对kv_cache输出数据做量化操作的参数。不支持非连续，数据格式支持ND，数据类型支持`float`，kv_cache_quant_mode=1时shape为[1]，kv_cache_quant_mode=2时shape为[1, Hckv]，支持非空Tensor（kv_cache_quant_mode=1/2的场景需传）。
 
@@ -134,9 +134,9 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **k_nope_clip_alpha**（`Tensor`）：可选参数，表示kv_cache做clip操作时的缩放因子，在部分量化per-tile场景和int8全量化per-tile场景下使用，其余场景可不填。不支持非连续，数据格式支持ND，数据类型支持`float`，shape为[1]。
 
-- **rmsnorm_epsilon_cq**（`float`）：可选参数，计算$c^Q$的RmsNorm公式中的$\epsilon$参数。默认值为1e-05。
+- **rmsnorm_epsilon_cq**（`double`）：可选参数，计算$c^Q$的RmsNorm公式中的$\epsilon$参数。默认值为1e-05。
 
-- **rmsnorm_epsilon_ckv**（`float`）：可选参数，计算$c^{KV}$的RmsNorm公式中的$\epsilon$参数。默认值为1e-05。
+- **rmsnorm_epsilon_ckv**（`double`）：可选参数，计算$c^{KV}$的RmsNorm公式中的$\epsilon$参数。默认值为1e-05。
 
 - **cache_mode**（`str`）：可选参数，表示kv_cache的模式。可选值为"PA_BSND"、"PA_NZ"、"PA_BLK_BSND"、"PA_BLK_NZ"、"TND"（对应BS合轴）和"BSND"（对应非BS合轴），默认为"PA_BSND"。
 
@@ -154,9 +154,9 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **tile_size**（`int`）：可选参数，表示per-tile量化时每个tile的大小，仅在kv_cache_quant_mode为3时有效，默认值为128。
 
-- **qc_qr_scale**（`float`）：可选参数，表示Query的尺度矫正系数，默认值为1.0。
+- **qc_qr_scale**（`double`）：可选参数，表示Query的尺度矫正系数，默认值为1.0。
 
-- **kc_scale**（`float`）：可选参数，表示Key的尺度矫正系数，默认值为1.0。
+- **kc_scale**（`double`）：可选参数，表示Key的尺度矫正系数，默认值为1.0。
 
 - **token_x_dtype**（`dtype`）：可选参数，表示参数token_x的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
