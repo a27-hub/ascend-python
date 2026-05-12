@@ -129,7 +129,7 @@ def filt_op_branch(struct_ops: Dict) -> Dict:
             if is_support_version(op):
                 SYMINT_OPS.add(op['func'].split("(")[0])
 
-    filt_ops = list(filter(lambda op: filt_gen_opapi(op), support_ops))
+    filt_ops = [op for op in support_ops if filt_gen_opapi(op)]
     return filt_ops
 
 
@@ -142,7 +142,7 @@ def remove_empty_lines(text):
 def parse_struct_yaml(path, native_functions: Sequence[NativeFunction]) -> List[StructInfo]:
     path = os.path.realpath(path)
     PathManager.check_directory_path_readable(path)
-    with open(path, 'r') as struct_file:
+    with open(path, 'r', encoding='utf-8') as struct_file:
         struct_ops = yaml.safe_load(struct_file)
 
     filt_ops = filt_op_branch(struct_ops)
@@ -220,7 +220,7 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
             [f"auto {name} = {size};\n" for size, name in size_map.items()])
         define_dtype = "".join(
             [f"auto {name} = {dtype};\n" for dtype, name in dtype_map.items()])
-        
+
         define_size_or_dtype = "" if kind == SchemaKind.inplace else "".join([define_size, define_dtype])
 
         if kind == SchemaKind.out:
@@ -240,15 +240,16 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                                             size=size_map[res_info.size],
                                             dtype=f'{res_info.option}.options().dtype({dtype_map[res_info.dtype]})')],
                 res_infos))
-        
+
         compute_name_list = []
         infer_name_list = []
         for res_info in res_infos:
             if res_info.infer_name is not None:
                 tensor_list = res_info.infer_name.split(", ")
                 if len(tensor_list) == 1:
-                    names = INFER_NAME.substitute(result_name=res_info.name,
-                                                  infer_func=res_info.infer_name) 
+                    names = INFER_NAME.substitute(
+                        result_name=res_info.name, infer_func=res_info.infer_name
+                    )
                     infer_name_list.append(names)
                     compute_name_list.append("")
                 else:
@@ -261,11 +262,11 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
                 compute_name_list.append("")
 
         compute_names = "".join(compute_name_list)
-        
+
         infer_name = "".join(infer_name_list)
 
         apply_tensor = "".join(apply_tensor_list)
-        
+
         # 根据环境变量选择使用 EXEC_NPU_CMD 还是 EXEC_NPU_CMD_EXT
         exec_cmd = "EXEC_NPU_CMD_EXT" if env_aclnn_extension_switch else "EXEC_NPU_CMD"
 
@@ -304,11 +305,19 @@ def gen_op_api(
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h" """
 
-    fm.write_with_template(
-        f'StructKernelNpuOpApi.cpp', f'StructKernelNpuOpApi.cpp', lambda: {
+    def struct_kernel_template_env():
+        return {
             'includes': includes,
-            'op_api_definition': list(concatMap(
-                lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
-                struct_functions
-            ))}
+            'op_api_definition': list(
+                concatMap(
+                    lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
+                    struct_functions,
+                )
+            ),
+        }
+
+    fm.write_with_template(
+        'StructKernelNpuOpApi.cpp',
+        'StructKernelNpuOpApi.cpp',
+        struct_kernel_template_env,
     )
