@@ -35,7 +35,6 @@ torch_npu.npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor 
 - **query_out**（`Tensor`）：表示原地更新后的query张量。
 - **key_out**（`Tensor`）：表示原地更新后的key张量。
 
-
 ## 约束说明
 
 - 确定性计算：
@@ -58,7 +57,6 @@ torch_npu.npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor 
   - 对于任意layout，queryRef与keyRef除N维度外其他维度必须相同；queryRef、keyRef输入shape的最后一维（D）必须相等，cos、sin输入shape的最后一维（D）必须相等，且小于等于queryRef、keyRef输入shape的最后一维（D）。
   - 输入张量queryRef、keyRef、cos、sin的dtype必须相同。
   - rotaryMode为"half"和"interleave"时，输入shape最后一维必须被2整除；rotaryMode为"quarter"时，输入shape最后一维必须被4整除。
-
 
 ## 调用示例
 
