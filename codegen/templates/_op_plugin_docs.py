@@ -15601,7 +15601,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, *, str layout, str rotary_mode) -> (Tensor, Tensor)
 
 功能描述：
-对输入的query和key张量执行旋转位置编码（Rotary Position Embedding,RoPE）计算，将位置信息嵌入到特征中，并输出更新的2个张量。
+接口功能：推理网络为了提升性能，将query和key两路算子融合成一路。执行旋转位置编码计算，计算结果执行原地更新。
 
 参数说明：
 query(Tensor)：必选参数，待执行旋转位置编码的第一个张量。要求为连续的Tensor，数据类型支持BFLOAT16、FLOAT16、FLOAT，数据格式支持ND。
@@ -15619,8 +15619,10 @@ key_out(Tensor)：原地更新后的key张量。
 PyTorch 2.7.1+
 
 支持的型号:
-Atlas A2训练系列产品
-Atlas A3训练系列产品
+Ascend 950PR/Ascend 950DT	
+Atlas A3 训练系列产品/Atlas A3 推理系列产品	
+Atlas A2 训练系列产品/Atlas A2 推理系列产品	
+Atlas 推理系列产品	
 
 调用示例:
 import torch
