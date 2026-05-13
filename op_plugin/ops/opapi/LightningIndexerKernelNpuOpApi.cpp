@@ -18,6 +18,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/custom_functions/opapi/update_op_api_common.h"
+#include <iostream>
 
 namespace op_api {
 const static int64_t DIM_0 = 0;
@@ -69,6 +70,14 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
 {
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
+
+    std::cout << "[torch_npu] query shape: "
+          << query.sizes()
+          << std::endl;
+
+    std::cout << "[torch_npu] actual_seq_lengths_query: "
+              << actual_seq_lengths_query.value().cpu()
+              << std::endl;
 
     std::string query_layout_str = std::string(layout_query);
     std::string key_layout_str = std::string(layout_key);
