@@ -34,7 +34,7 @@ torch_npu.npu_apply_rotary_pos_emb(query, key,  cos, sin, *, layout='BSND', rota
   - 维度（shape）：layout为TND时，key维度为3，其他layout场景下为4。
   - 使用说明：
     - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor,shape中B维度与queryRef、keyRef的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
-    - Ascend 950PR/Ascend 950DT：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape中N维度必须等于1，shape最后一维（D）小于等于1024。
+    - Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape中N维度必须等于1，shape最后一维（D）小于等于1024。
 - **sin**（`Tensor`）：必选参数，旋转位置编码正弦值张量。要求为连续的Tensor，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$。
   - 维度（shape）：layout为TND时，sin维度为3，其他layout场景下为4。
   - 使用说明：
