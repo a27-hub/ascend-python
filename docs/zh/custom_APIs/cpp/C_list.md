@@ -216,3 +216,16 @@
 </tr>
 </tbody>
 </table>
+
+## LibTorch C++接口说明
+
+在本仓的LibTorch Stable ABI实现中，stable C headers构成了稳定ABI的基础接口层。当前这部分接口主要包括：
+
+- `torch_npu/csrc/inductor/aoti_torch/c/shim.h`：提供基础C风格shim接口，覆盖`AtenTensorHandle`、dtype、device、layout、memory format、尺寸/stride查询、张量生命周期管理等通用能力。
+- `torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`：提供自动生成的NPU C风格shim接口，承接当前代码生成流程导出的NPU能力入口，接口名形如`aoti_torch_npu_*`。
+- `torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.cpp`：提供`c_shim_npu.h`对应实现，与声明头文件一起组成当前NPU backend的stable ABI导出面。
+- `torchnpugen/gen_npu_c_shim.py`：用于生成`c_shim_npu.h`和`c_shim_npu.cpp`，决定当前NPU C shim接口集合。
+
+这组NPU C shim接口面向NPU执行路径使用，用于在稳定ABI边界上传递张量句柄、标量参数和返回值；它们不是按单个算子文档逐个展开描述，而是作为本仓LibTorch Stable ABI能力的统一底层接口面存在。
+
+在C++侧，稳定注册与包装接口通过`torch/csrc/stable/*`和`torch/headeronly/*`接入，开发者可结合`STABLE_TORCH_LIBRARY`、`STABLE_TORCH_LIBRARY_IMPL`、`TORCH_BOX`以及`torch::stable`、`torch::headeronly`命名空间完成扩展注册和调用封装。
