@@ -22,26 +22,32 @@ torch_npu.npu_apply_rotary_pos_emb(query, key,  cos, sin, *, layout='BSND', rota
 
 - **query**（`Tensor`）：必选参数，待执行旋转位置编码的第一个张量。要求为连续的Tensor，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$。
   - 维度（shape）：layout=4时，维度为3，其他layout场景下为4。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
-  - Atlas 350 加速卡：支持空Tensor，shape最后一维（D）小于等于1024。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
+    - Atlas 350 加速卡：支持空Tensor，shape最后一维（D）小于等于1024。
 - **key**（`Tensor`）：必选参数，待执行旋转位置编码的第二个张量。要求为连续的Tensor，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$。
   - 维度（shape）：layout=4时，维度为3，其他layout场景下为4。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
-  - Atlas 350 加速卡：支持空Tensor,shape最后一维（D）小于等于1024。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
+    - Atlas 350 加速卡：支持空Tensor,shape最后一维（D）小于等于1024。
 - **cos**（`Tensor`）：必选参数，旋转位置编码余弦值张量。要求为连续的Tensor，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$。
   - 维度（shape）：layout=4时，维度为3，其他layout场景下为4。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor,shape中B维度与queryRef、keyRef的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
-  - Ascend 950PR/Ascend 950DT：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape中N维度必须等于1，shape最后一维（D）小于等于1024。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor,shape中B维度与queryRef、keyRef的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
+    - Ascend 950PR/Ascend 950DT：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape中N维度必须等于1，shape最后一维（D）小于等于1024。
 - **sin**（`Tensor`）：必选参数，旋转位置编码正弦值张量。要求为连续的Tensor，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$。
   - 维度（shape）：layout=4时，维度为3，其他layout场景下为4。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape中B维度与query、key的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
-  - Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape最后一维（D）小于等于1024。
-- **layout**（`str`）：可选参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"，默认值为"BSND"。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持1-BSND的4维Tensor、4-TND的3维Tensor。
-  - Atlas 350 加速卡：支持1-BSND、2-SBND、3-BNSD的4维Tensor, 4-TND的3维Tensor。
-- **rotary_mode**（`str`）：可选参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
-  - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持"half"模式。
-  - Atlas 350 加速卡：支持"half"、"interleave"、"quarter"模式。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape中B维度与query、key的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
+    - Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape最后一维（D）小于等于1024。
+- **layout**（`str`）：必选参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"，默认值为"BSND"。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持1-BSND的4维Tensor、4-TND的3维Tensor。
+    - Atlas 350 加速卡：支持1-BSND、2-SBND、3-BNSD的4维Tensor, 4-TND的3维Tensor。
+- **rotary_mode**（`str`）：必选参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
+  - 使用说明：
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持"half"模式。
+    - Atlas 350 加速卡：支持"half"、"interleave"、"quarter"模式。
 
 ## 返回值说明
 
