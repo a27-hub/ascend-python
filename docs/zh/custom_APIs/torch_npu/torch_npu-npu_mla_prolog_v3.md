@@ -132,7 +132,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **actual_seq_len**（`Tensor`）：可选参数，表示每个batch中的序列长度，以前缀和的形式储存。不支持非连续，数据格式支持ND，数据类型支持`int32`，shape为[B]，支持非空tensor（仅BS合轴且cache_mode为"PA_BLK_BSND"或"PA_BLK_NZ"时需要传入）。当前不会对传入值的合法性进行校验，需用户自行保证。
 
-- **k_nope_clip_alpha**（`Tensor`）：可选参数，表示kv_cache做clip操作时的缩放因子，在部分量化per-tile场景和int8全量化per-tile场景下使用，其余场景可不填。不支持非连续，数据格式支持ND，数据类型支持`float`，shape为[1]。
+- **k_nope_clip_alpha**（`Tensor`）：可选参数，表示kv_cache做clip操作时的缩放因子，在部分量化per-tile场景和int8全量化per-tile场景下使用，其他场景无需赋值。不支持非连续，数据格式支持ND，数据类型支持`float`，shape为[1]。
 
 - **rmsnorm_epsilon_cq**（`double`）：可选参数，计算$c^Q$的RmsNorm公式中的$\epsilon$参数。默认值为1e-05。
 
