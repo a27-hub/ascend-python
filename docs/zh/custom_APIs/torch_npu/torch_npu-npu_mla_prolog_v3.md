@@ -128,7 +128,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **quant_scale_ckr**（`Tensor`）：可选参数，用于对kr_cache输出数据做量化操作的参数。不支持非连续，数据格式支持ND，数据类型支持`float`。kv_cache_quant_mode=2时，shape为[1, Dr]；kv_cache_quant_mode=1/3时无需赋值。支持非空Tensor。
 
-- **smooth_scales_cq**（`Tensor`）：可选参数，用于对RmsNorm_cq输出做动态量化操作的参数。不支持非连续，数据格式支持ND，数据类型支持`float`。weight_quant_mode=1/2/4/5时，shape为[1, Hcq]。支持非空Tensor。
+- **smooth_scales_cq**（`Tensor`）：可选参数，用于对RmsNorm_cq输出做动态量化操作的参数。不支持非连续，数据格式支持ND，数据类型支持`float`。weight_quant_mode=1/2/4/5时，shape为[1, Hcq]；weight_quant_mode=3时无需赋值。支持非空Tensor。
 
 - **actual_seq_len**（`Tensor`）：可选参数，表示每个batch中的序列长度，以前缀和的形式储存。不支持非连续，数据格式支持ND，数据类型支持`int32`，shape为[B]，支持非空tensor（仅BS合轴且cache_mode为"PA_BLK_BSND"或"PA_BLK_NZ"时需要传入）。当前不会对传入值的合法性进行校验，需用户自行保证。
 
@@ -152,7 +152,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **quant_scale_repo_mode**（`int`）：可选参数，表示量化scale的存储模式。0表示量化scale和数据分别存储，1表示量化scale和数据合并存储，默认值为0。
 
-- **tile_size**（`int`）：可选参数，表示per-tile量化时每个tile的大小，仅在kv_cache_quant_mode为3时有效，默认值为128。
+- **tile_size**（`int`）：可选参数，表示per-tile量化时每个tile的大小，仅在kv_cache_quant_mode为3时有效，默认值为128；kv_cache_quant_mode=1/2时无需赋值。
 
 - **qc_qr_scale**（`double`）：可选参数，表示Query的尺度矫正系数，默认值为1.0。
 
