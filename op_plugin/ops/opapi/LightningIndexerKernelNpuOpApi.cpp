@@ -71,11 +71,11 @@ std::tuple<at::Tensor, at::Tensor> npu_lightning_indexer(
     TORCH_CHECK(query.numel() > 0, "Tensor query is empty.")
     TORCH_CHECK(key.numel() > 0, "Tensor key is empty.")
 
-    std::cout << "[lightning_indexer] query shape: "
+    std::cout << "[torch_npu] query shape: "
           << query.sizes()
           << std::endl;
 
-    std::cout << "[lightning_indexer] actual_seq_lengths_query: "
+    std::cout << "[torch_npu] actual_seq_lengths_query: "
               << actual_seq_lengths_query.value().cpu()
               << std::endl;
 
