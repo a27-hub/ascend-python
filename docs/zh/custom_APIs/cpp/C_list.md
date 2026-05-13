@@ -216,3 +216,30 @@
 </tr>
 </tbody>
 </table>
+
+## LibTorch C++接口说明
+
+LibTorch C++接口由常规C++接口与Stable ABI接口组成。
+
+### 常规C++接口
+
+常规C++接口通过`libtorch_npu`直接调用。`torch_npu/csrc/libs/init_npu.h` 和 `torch_npu/csrc/libs/torch_npu.h` 提供设备初始化与同步相关入口，主要包括：
+
+- `torch_npu::init_npu`
+- `torch_npu::finalize_npu`
+- `torch::npu::synchronize`
+- `c10::npu::current_device`
+
+### Stable ABI接口
+
+PyTorch原生社区已提供LibTorch Stable ABI能力，以AOTI C shim和stable C shim作为稳定ABI边界。`Ascend Extension for PyTorch`在此基础上补充NPU侧能力，对外提供以下接口：
+
+- `torch_npu/csrc/inductor/aoti_torch/c/shim.h`：补充NPU设备类型及NPU相关Stable ABI接口。
+- `torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`：提供NPU算子的Stable ABI声明，接口名形如`aoti_torch_npu_*`。
+
+其中，NPU侧新增能力主要包括：
+
+- 设备类型与张量创建：`aoti_torch_device_type_npu`、`aoti_torch_create_tensor_from_blob_npu`、`aoti_torch_create_tensor_from_blob_npu_v2`
+- 设备guard能力：`aoti_torch_create_npu_guard`、`aoti_torch_delete_npu_guard`、`aoti_torch_npu_guard_set_index`
+- stream管理能力：`aoti_torch_create_npu_stream_guard`、`aoti_torch_delete_npu_stream_guard`、`aoti_torch_get_current_npu_stream`
+- NPU缓存分配器能力：`aoti_torch_npu_caching_allocator_raw_alloc`、`aoti_torch_npu_caching_allocator_raw_delete`
