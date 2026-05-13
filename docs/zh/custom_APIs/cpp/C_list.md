@@ -216,3 +216,40 @@
 </tr>
 </tbody>
 </table>
+
+## LibTorch C++接口说明
+
+LibTorch C++接口由常规C++接口与Stable ABI接口组成。
+
+### 常规C++接口（`libtorch_npu`直接调用）
+
+`torch_npu/csrc/libs/init_npu.h` 和 `torch_npu/csrc/libs/torch_npu.h` 提供设备初始化与同步相关入口，主要包括：
+
+- `torch_npu::init_npu`
+- `torch_npu::finalize_npu`
+- `torch::npu::synchronize`
+- `c10::npu::current_device`
+
+### Stable ABI接口（AOTI C shim）
+
+stable C headers 构成稳定ABI边界，核心文件包括：
+
+- `torch_npu/csrc/inductor/aoti_torch/c/shim.h`：基础句柄、数据类型、张量生命周期与dispatcher相关接口。
+- `torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`：自动生成的NPU算子shim声明，接口名形如`aoti_torch_npu_*`。
+- `torch_npu/csrc/inductor/aoti_torch/shim_npu.cpp`：NPU专有shim实现（含guard、stream、allocator等接口）。
+
+与`shim.h`相关的NPU专有能力除算子调用外，还包括：
+
+- `aoti_torch_create_npu_guard` / `aoti_torch_delete_npu_guard`
+- `aoti_torch_create_npu_stream_guard` / `aoti_torch_delete_npu_stream_guard`
+- `aoti_torch_get_current_npu_stream`
+- `aoti_torch_npu_caching_allocator_raw_alloc` / `aoti_torch_npu_caching_allocator_raw_delete`
+
+### 代码生成关系
+
+- `torchnpugen/gen_npu_c_shim.py` 生成 `c_shim_npu.h` 与 `c_shim_npu.cpp`。
+- `c_shim_npu.cpp` 为代码生成产物，构建时参与 Stable ABI 导出。
+
+### Stable ABI C++封装与注册
+
+Stable ABI场景下，C++封装与注册可通过PyTorch stable头文件（来自PyTorch安装目录）接入，例如 `torch/csrc/stable/library.h`、`torch/csrc/stable/tensor.h`。封装与注册可使用 `STABLE_TORCH_LIBRARY_FRAGMENT`、`STABLE_TORCH_LIBRARY_IMPL`、`TORCH_BOX` 及 `torch::stable` 命名空间。
