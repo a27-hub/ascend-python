@@ -118,7 +118,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **dequant_scale_x**（`Tensor`）：可选参数，token_x的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[T]或[B\*S, 1]；weight_quant_mode=3时，shape为[T, He/32]或[B*S, He/32]；weight_quant_mode=1时无需赋值。支持B=0,S=0,T=0的空Tensor。
 
-- **dequant_scale_w_dq**（`Tensor`）：可选参数，weight_dq的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[1,Hcq]；weight_quant_mode=3时，shape为[Hcq, He/32]。
+- **dequant_scale_w_dq**（`Tensor`）：可选参数，weight_dq的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[1,Hcq]；weight_quant_mode=3时，shape为[Hcq, He/32]；weight_quant_mode=1时无需赋值。
 
 - **dequant_scale_w_uq_qr**（`Tensor`）：可选参数，用于MatmulQcQr矩阵乘后反量化操作的per-channel参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=1/2/4/5时，shape为[1,N*(D+Dr)]；weight_quant_mode=3时，shape为[N*(D+Dr), Hcq/32]。
 
