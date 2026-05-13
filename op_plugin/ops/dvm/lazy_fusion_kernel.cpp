@@ -489,12 +489,12 @@ void LazyFusionKernel::Flush() {
   if (DumpEnabled()) {
     DumpGraph();
   }
-  ClearGraphRefs();
 
   static const bool codegen_in_task_queue =
       c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
   if (codegen_in_task_queue) {
     // Level 2: codegen + workspace alloc/free + launch all run on the TaskQueue thread.
+    ClearGraphRefs();
     at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int {
       CodeGenAndDump();
       auto ret = Launch();
@@ -504,11 +504,14 @@ void LazyFusionKernel::Flush() {
     });
     return;
   }
-  // Level 1: codegen (which calls Alloc) runs on the caller thread, so workspace
-  // is freed on the caller thread too. Only Launch runs on the TaskQueue thread,
-  // and ClearRuntimeState must follow Launch so the kernel object isn't reused
-  // before its launched work has been submitted.
+  // Level 1: codegen (which calls Alloc for the N-pad workspace) runs on the caller
+  // thread. Run it *before* ClearGraphRefs so the inputs are still alive while Alloc
+  // picks a block -- otherwise ClearGraphRefs frees a short-lived input (e.g. a freshly
+  // computed grad_output whose only ref is the lazy cache) and Alloc immediately hands
+  // that same block back as the workspace; the matmul's AIV pre-pass then copies the
+  // input into a buffer that overlaps it -> garbled rhs -> wrong grad -> grad_norm explodes.
   CodeGenAndDump();
+  ClearGraphRefs();
   workspace_.clear();
   at_npu::native::OpCommand::RunOpApiV2("Dvm", [this]() -> int {
     auto ret = Launch();
