@@ -15656,7 +15656,7 @@ import torch
 import torch_npu
 
 def test_npu_apply_rotary_pos_emb():
-    
+
     batch = 1
     seq_len = 64
     num_heads = 8
@@ -15677,4 +15677,5 @@ def test_npu_apply_rotary_pos_emb():
 
 if __name__ == "__main__":
     test_npu_apply_rotary_pos_emb()
-""")
+"""
+)
