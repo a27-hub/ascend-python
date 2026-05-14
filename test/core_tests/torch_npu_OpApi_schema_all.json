@@ -1669,6 +1669,9 @@
   "func: npu_weight_quant_batchmatmul(Tensor x, Tensor weight, Tensor antiquant_scale, Tensor? antiquant_offset=None, Tensor? quant_scale=None, Tensor? quant_offset=None, Tensor? bias=None, int antiquant_group_size=0) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_weight_quant_preprocess(Tensor weight, Tensor weight_scale, int x_dtype, int weight_dtype, int weight_scale_dtype, Tensor? weight_offset=None, Tensor? bias=None, int? x_scale_dtype=None, int? k_group_size=0) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_convert_weight_to_int4pack(Tensor weight, int inner_k_tiles=0) -> Tensor": {
     "version": ["all_version"]
   },
