@@ -273,17 +273,17 @@ void LazyFusionKernel::CacheDvmOp(torch_npu::NPUStorageImpl *storage, const at::
   }
   CacheDvmShape(p, shape, tensor.sizes());
   p->reloadable_from_gm = reloadable_from_gm;
-  storage->dvm_op_ = p;
+  storage->lazy_fusion_data_ = p;
 }
 
 // Input-side flush is decided before graph mutation; by the time Input() runs,
 // a non-reloadable alias miss should already have forced a flush.
 bool LazyFusionKernel::NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *shape) const {
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(x);
-  if (storage->dvm_op_ == nullptr) {
+  if (storage->lazy_fusion_data_ == nullptr) {
     return false;
   }
-  auto dvm_op = static_cast<DvmOp *>(storage->dvm_op_);
+  auto dvm_op = static_cast<DvmOp *>(storage->lazy_fusion_data_);
   if (dvm_op->reloadable_from_gm) {
     return false;
   }
@@ -294,18 +294,18 @@ bool LazyFusionKernel::NeedFlushForInput(const at::Tensor &x, dvm::ShapeRef *sha
 // is conservatively flushed to avoid aliasing/overlap write hazards.
 bool LazyFusionKernel::NeedFlushForWritableOutput(const at::Tensor &tensor) const {
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(tensor);
-  if (storage->dvm_op_ == nullptr) {
+  if (storage->lazy_fusion_data_ == nullptr) {
     return false;
   }
-  return !MatchDvmOp(static_cast<DvmOp *>(storage->dvm_op_), tensor, nullptr);
+  return !MatchDvmOp(static_cast<DvmOp *>(storage->lazy_fusion_data_), tensor, nullptr);
 }
 
 dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dvm::ShapeRef *shape) {
   auto input_type = TransType(x.scalar_type());
   bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16);
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(x);
-  if (storage->dvm_op_ != nullptr) {
-    auto dvm_op = static_cast<DvmOp *>(storage->dvm_op_);
+  if (storage->lazy_fusion_data_ != nullptr) {
+    auto dvm_op = static_cast<DvmOp *>(storage->lazy_fusion_data_);
     if (MatchDvmOp(dvm_op, x, shape)) {
       ASCEND_LOGD("dvm Input: cache hit, reuse NDObject for tensor %p, shape=%s",
                   x.unsafeGetTensorImpl(), ToString(x).c_str());
@@ -384,12 +384,12 @@ dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_pt
     dump_buf_ << "p" << (input_used_ - 1) << ": ViewInput(base=" << ToString(base) << ")\n";
   }
 
-  // Register a DvmOp on base.storage->dvm_op_ with the *view's* metadata.
+  // Register a DvmOp on base.storage->lazy_fusion_data_ with the *view's* metadata.
   // This protects against the read/write race scenario:
   //
   //   y = npu_swiglu(x, -1)   // ViewInput on x.storage at two offsets, no flush yet
   //   x.mul_(2)               // inplace write to same storage
-  //                           // PrepareWritableOutput(x) checks storage->dvm_op_:
+  //                           // PrepareWritableOutput(x) checks storage->lazy_fusion_data_:
   //                           //   - if null/missing → would NOT flush → race in fused kernel
   //                           //   - now non-null with view metadata → strict mismatch
   //                           //     against full-x metadata → triggers flush ✓
@@ -420,7 +420,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
     obj = Cast(obj, tensor_type);
   }
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(tensor);
-  if (inplace && storage->dvm_op_ != nullptr) {
+  if (inplace && storage->lazy_fusion_data_ != nullptr) {
     // %0 = Mul(p0, p1)
     // %1 = InplaceAddExt(%0, p2, 1)
     // here Inplace op's first input come from another op, should not emit Store for %0,

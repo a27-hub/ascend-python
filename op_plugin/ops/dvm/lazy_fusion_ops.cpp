@@ -130,7 +130,7 @@ dvm::NDObject *BuildClampedTanhFp32(dvm::Kernel *k, dvm::NDObject *input_f32) {
 
 // Call this for every tensor that the current fused op reads through k->Input(...),
 // unless the op entry already does an unconditional LazyFusionFlush() before any
-// graph mutation. The helper checks whether the cached dvm_op_ still represents
+// graph mutation. The helper checks whether the cached lazy_fusion_data_ still represents
 // the exact same tensor metadata + logical DVM shape, or whether the old value
 // was only a fusion value that can no longer be rebuilt safely from GM.
 //
@@ -149,7 +149,7 @@ dvm::NDObject *BuildClampedTanhFp32(dvm::Kernel *k, dvm::NDObject *input_f32) {
 //   y1 = y0[0, :]
 //   y2 = add(y0, y1)  // need flush before this op
 //
-// PTA only sees abs/add here. When add asks for y1, the cached dvm_op_ points
+// PTA only sees abs/add here. When add asks for y1, the cached lazy_fusion_data_ points
 // to y0's fusion value, but the slice view between them is invisible in this repo
 // and cannot be rebuilt from GM. The flush must happen before add starts building,
 // otherwise Input(y1) would hit a non-reloadable alias miss after the current op

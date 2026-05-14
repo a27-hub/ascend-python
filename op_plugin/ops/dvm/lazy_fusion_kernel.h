@@ -25,8 +25,8 @@
 #include <ATen/ATen.h>
 #include <torch/csrc/autograd/graph_task.h>
 #include "op_plugin/utils/OpAdapter.h"
-#include "dvm.h"
 #include "op_plugin/ops/dvm/lazy_fusion_flags.h"
+#include "third_party/dvm/dvm/include/dvm.h"
 
 namespace lazy_fusion {
 class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
@@ -109,7 +109,7 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
       auto p = inputs_[i]->tensor.storage().getWeakStorageImpl().lock();
       if (p) {
         auto storage = static_cast<torch_npu::NPUStorageImpl *>(p.get());
-        storage->dvm_op_ = nullptr;
+        storage->lazy_fusion_data_ = nullptr;
       }
       inputs_[i]->tensor = at::Tensor();
     }
@@ -117,7 +117,7 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
       auto p = output.storage.lock();
       if (p) {
         auto storage = static_cast<torch_npu::NPUStorageImpl *>(p.get());
-        storage->dvm_op_ = nullptr;
+        storage->lazy_fusion_data_ = nullptr;
       }
     }
     outputs_.clear();
