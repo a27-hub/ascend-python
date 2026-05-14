@@ -831,5 +831,10 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_print_npugraph_tensor_desc"><a name="p_print_npugraph_tensor_desc"></a><a name="p_print_npugraph_tensor_desc"></a><span>print_npugraph_tensor接口提供了类似原生Python的print接口特性且不影响aclgraph捕获、重放的tensor打印能力，允许将aclgraph中间节点的tensor数据、数据类型、shape信息直接打印出来，以便用户观察aclgraph的执行过程中的tensor数据，以快速定位问题。</span></p>
 </td>
 </tr>
+<tr id="row_ring_attention_update_v2"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update_v2"><a name="p_ring_attention_update_v2"></a><a name="p_ring_attention_update_v2"></a><a href="torch_npu-npu_ring_attention_update_v2.md">torch_npu.npu_ring_attention_update_v2</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_v2_desc"><a name="p_ring_attention_update_v2_desc"></a><a name="p_ring_attention_update_v2_desc"></a><span>将两次 FlashAttention 的输出按照 softmax max 和 softmax sum 进行增量更新，支持 SBH 与 TND 排布。</span></p>
+</td>
+</tr>
 </tbody>
 </table>
