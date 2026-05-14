@@ -5733,7 +5733,7 @@ custom:
     acl_op: all_version
     op_api: all_version
 
-  - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout, str rotary_mode) -> (Tensor, Tensor)
+  - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH', str rotary_mode='half') -> (Tensor, Tensor)
     op_api: all_version
     exposed: [v2.7, newest] 
 
