@@ -1036,7 +1036,7 @@
   "func: npu_group_norm_silu(Tensor input, Tensor? weight, Tensor? bias, int group, float eps=0.00001) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout, str rotary_mode) -> (Tensor, Tensor)": {
+  "func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH', str rotary_mode='half') -> (Tensor, Tensor)": {
     "version": ["v2.7", "newest"]
   },
   "func: npu_roi_alignbk(Tensor self, Tensor rois, int[] xdiff_shape, int pooled_width, int pooled_height, float spatial_scale, int sample_num, int? roi_end_mode=None) -> Tensor": {
