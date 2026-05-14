@@ -58,6 +58,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_block_sparse_attention_backwa
     double scale_value)
 {
     check_params(query, key, value);
+    if (q_input_layout == "TND") {
+        TORCH_CHECK(actual_seq_lengths.has_value() && actual_seq_lengths->size() > 0,
+            "actual_seq_lengths must be specified when q_input_layout is TND",
+            OPS_ERROR(ErrCode::PARAM));
+    }
+    if (kv_input_layout == "TND") {
+        TORCH_CHECK(actual_seq_lengths_kv.has_value() && actual_seq_lengths_kv->size() > 0,
+            "actual_seq_lengths_kv must be specified when kv_input_layout is TND",
+            OPS_ERROR(ErrCode::PARAM));
+    }
 
     // 分配输出 Tensor
     at::Tensor d_query = npu_preparation::apply_tensor_without_format(query);
