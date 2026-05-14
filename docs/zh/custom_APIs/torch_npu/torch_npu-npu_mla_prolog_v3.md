@@ -81,14 +81,14 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index=None, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None, quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, actual_seq_len=None, k_nope_clip_alpha=None, rmsnorm_epsilon_cq=1e-05, rmsnorm_epsilon_ckv=1e-05, cache_mode='PA_BSND', query_norm_flag=False, weight_quant_mode=0, kv_cache_quant_mode=0, query_quant_mode=0, ckvkr_repo_mode=0, quant_scale_repo_mode=0, tile_size=128, qc_qr_scale=1.0, kc_scale=1.0,token_x_dtype=None,weight_dq_dtype=None,weight_uq_qr_dtype=None,weight_dkv_kr_dtype=None,kv_cache_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv_kr, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, rope_sin, rope_cos, kv_cache, kr_cache, cache_index=None, dequant_scale_x=None, dequant_scale_w_dq=None, dequant_scale_w_uq_qr=None, dequant_scale_w_dkv_kr=None, quant_scale_ckv=None, quant_scale_ckr=None, smooth_scales_cq=None, actual_seq_len=None, k_nope_clip_alpha=None, rmsnorm_epsilon_cq=1e-05, rmsnorm_epsilon_ckv=1e-05, cache_mode='PA_BSND', query_norm_flag=False, weight_quant_mode=0, kv_cache_quant_mode=0, query_quant_mode=0, ckvkr_repo_mode=0, quant_scale_repo_mode=0, tile_size=128, qc_qr_scale=1.0, kc_scale=1.0, token_x_dtype=None, weight_dq_dtype=None, weight_uq_qr_dtype=None, weight_dkv_kr_dtype=None, kv_cache_dtype=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
 
-> [!NOTE]
->
-> - B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、He（Head Size）表示隐藏层大小、N（Head Num）表示多头数、Hcq表示q低秩矩阵维度、Hckv表示kv低秩矩阵维度、Dtile表示kv_cache的D轴维度、D表示qk不含位置编码维度、Dr表示qk位置编码维度、Nkv表示kv的head数、BlockNum表示PagedAttention场景下的块数、BlockSize表示PagedAttention场景下的块大小、T表示BS合轴后的大小。
+  > [!NOTE]
+  >
+  > - B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、He（Head Size）表示隐藏层大小、N（Head Num）表示多头数、Hcq表示q低秩矩阵维度、Hckv表示kv低秩矩阵维度、Dtile表示kv_cache的D轴维度、D表示qk不含位置编码维度、Dr表示qk位置编码维度、Nkv表示kv的head数、BlockNum表示PagedAttention场景下的块数、BlockSize表示PagedAttention场景下的块大小、T表示BS合轴后的大小。
 
 - **token_x**（`Tensor`）：必选参数，公式中用于计算Query和Key的输入tensor。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`、`int8`、`float8_e4m3fn`、`hifloat8`。BS合轴时，shape为[T, He]；BS非合轴时，shape为[B, S, He]。
 
@@ -158,22 +158,22 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **kc_scale**（`double`）：可选参数，表示Key的尺度矫正系数，默认值为1.0。
 
-- **token_x_dtype**（`dtype`）：可选参数，表示参数token_x的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
+- **token_x_dtype**（`int`）：可选参数，表示参数token_x的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_dq_dtype**（`dtype`）：可选参数，表示参数weight_dq的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
+- **weight_dq_dtype**（`int`）：可选参数，表示参数weight_dq的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_uq_qr_dtype**（`dtype`）：可选参数，表示参数weight_uq_qr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
+- **weight_uq_qr_dtype**（`int`）：可选参数，表示参数weight_uq_qr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **weight_dkv_kr_dtype**（`dtype`）：可选参数，表示参数weight_dkv_kr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
+- **weight_dkv_kr_dtype**（`int`）：可选参数，表示参数weight_dkv_kr的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-- **kv_cache_dtype**（`dtype`）：可选参数，表示参数kv_cache的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
+- **kv_cache_dtype**（`int`）：可选参数，表示参数kv_cache的传入dtype，在hif8全量化场景必须传入，其他场景可不传。
 
-> [!NOTE]
->
-> <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-> 
-> - token_x、weight_dq、weight_uq_qr、weight_dkv_kr、kv_cache不支持float8_e4m3fn、hifloat8数据类型。
-> - dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr不支持float8_e8m0数据类型。
+  > [!NOTE]
+  >
+  > <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+  > 
+  > - token_x、weight_dq、weight_uq_qr、weight_dkv_kr、kv_cache不支持float8_e4m3fn、hifloat8数据类型。
+  > - dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr不支持float8_e8m0数据类型。
 
 ## 返回值说明
 
@@ -187,12 +187,12 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **dequant_scale_q_norm**（`Tensor`）：Query做RmsNorm_cq后的反量化参数。数据格式支持ND，数据类型支持`float`、`float8_e8m0`。shape支持2维，`query_norm_flag=True`且`weight_quant_mode=1/2/3/4/5`时有效。`weight_quant_mode=0`时为nullptr。`weight_quant_mode=1/2/4/5`时，shape为[T,1]或[B\*S,1]；`weightQuantMode=3`时，shape为[T, Hcq/32]或[B*S, Hcq/32]。
 
-> [!NOTE]
->
-> <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-> 
-> - query、query_norm不支持float8_e4m3fn、hifloat8数据类型。
-> - dequant_scale_q_norm不支持float8_e8m0数据类型。
+  > [!NOTE]
+  >
+  > <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+  > 
+  > - query、query_norm不支持float8_e4m3fn、hifloat8数据类型。
+  > - dequant_scale_q_norm不支持float8_e8m0数据类型。
 
 ## 约束说明
 
@@ -220,11 +220,11 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - 支持场景：
 
-> [!NOTE]
->
-> <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-> 
-> - 当前不支持 fp8/hif8/mxfp8 全量化场景
+  > [!NOTE]
+  >
+  > <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+  > 
+  > - 当前不支持 fp8/hif8/mxfp8 全量化场景
 
   <table style="table-layout: auto;" border="1">
     <tr>
