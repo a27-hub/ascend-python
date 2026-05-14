@@ -115,9 +115,6 @@ void judge_gmm_mx_a8w4(QuantContext& ctx) {
 
 static void prepare_out_weight_nz_c0_32(QuantContext& ctx)
 {
-    auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
-    ctx.out_weight = npu_preparation::apply_tensor_without_format(weight_view_shape, ctx.weight.options());
-    
     auto weight_sizes = ctx.weight.sizes();
     int64_t weight_dim = ctx.weight.dim();
     int64_t K = weight_sizes[weight_dim - 2];
@@ -130,17 +127,17 @@ static void prepare_out_weight_nz_c0_32(QuantContext& ctx)
     int64_t nz_c0 = is_b4 ? NZ_C0_32_FOR_B4 : NZ_C0_32;
 
     c10::SmallVector<int64_t, 5> storage_shape;
+    c10::SmallVector<int64_t, 5> trans_stride;
+    
     if (ctx.is_weight_trans) {
-        c10::SmallVector<int64_t, 5> trans_stride;
         if (ctx.is_gmm) {
             int64_t G = weight_sizes[0];
-            trans_stride = {K * N, 1, K};
             storage_shape = {G, ceil_div(K, nz_c0), ceil_div(N, NZ_16), NZ_16, nz_c0};
+            trans_stride = {K * N, 1, K};
         } else {
-            trans_stride = {1, K};
             storage_shape = {ceil_div(K, nz_c0), ceil_div(N, NZ_16), NZ_16, nz_c0};
+            trans_stride = {1, K};
         }
-        ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
     } else {
         if (ctx.is_gmm) {
             int64_t G = weight_sizes[0];
@@ -149,6 +146,22 @@ static void prepare_out_weight_nz_c0_32(QuantContext& ctx)
             storage_shape = {ceil_div(N, nz_c0), ceil_div(K, NZ_16), NZ_16, nz_c0};
         }
     }
+
+    int64_t storage_size = 1;
+    for (auto dim : storage_shape) {
+        storage_size *= dim;
+    }
+
+    ctx.out_weight = npu_preparation::apply_tensor_without_format({storage_size}, ctx.weight.options());
+    
+    auto weight_view_shape = op_infer::array_to_small_vector(ctx.weight.sizes());
+    
+    if (ctx.is_weight_trans) {
+        ctx.out_weight = ctx.out_weight.as_strided_(weight_view_shape, trans_stride);
+    } else {
+        ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(weight_view_shape);
+    }
+    
     set_tensor_format_and_storage_shape(ctx.out_weight, ACL_FORMAT_FRACTAL_NZ_C0_16, storage_shape);
 }
 
