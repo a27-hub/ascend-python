@@ -74,6 +74,7 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
 - **per\_token\_scales：** (`Tensor`)：可选参数，表示每个token对应的scale，需要随token同样进行重新排布。要求为1维，shape为\[A\]，数据类型支持`float32`，数据格式为$ND$。
 - **expert\_token\_num\_type** (`int`)：可选参数，表示输出`expert_token_num`的模式。0为cumsum模式，1为count模式，默认值为1。当前只支持为1。
 - **idx\_type** (`int`)：可选参数，表示输出`permute_token_idx`的索引类型。0为gather索引，1为scatter索引，默认值为0。当前只支持为0。
+- **tokens\_dtype** (`int`)：可选参数，表示输入`tokens`的数据类型。290为hifloat8类型，296为float4_e2m1类型，297为float4_e1m2类型。
 
 ## 返回值说明
 
