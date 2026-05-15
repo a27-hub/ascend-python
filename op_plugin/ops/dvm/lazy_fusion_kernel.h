@@ -284,18 +284,8 @@ class Manager {
   LazyFusionKernel *Get() {
     static bool runtime_init = false;
     if (!runtime_init) {
-      bool enable_deterministic = at::globalContext().deterministicAlgorithms();
       auto &conf = dvm::Config::Instance();
-      if (enable_deterministic) {
-        conf.SetDeterm();
-      } else {
-        conf.UnsetDeterm();
-      }
-      ASCEND_LOGI("Set dvm deterministic = %d", enable_deterministic);
       bool enable_tuning = flags_.online_tuning;
-      if (enable_deterministic) {
-        enable_tuning = false;
-      }
       if (enable_tuning) {
         conf.SetLazyTuner();
       } else {
@@ -379,6 +369,8 @@ inline bool IsEnabled() {
   return torch::autograd::get_current_graph_task_id() >= 0;
 }
 
-bool IsEnabled(const std::string &op, bool unable_default = false);
+// Per-op enable check. `required` declares the minimum optimization level the
+// op needs (defaults to kO1; ops with workload-sensitive payoff pass kO2).
+bool IsEnabled(const std::string &op, Level required = Level::kO1);
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_KERNEL_H

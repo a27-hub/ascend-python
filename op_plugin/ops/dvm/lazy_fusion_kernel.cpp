@@ -19,6 +19,7 @@
 #include <ATen/record_function.h>
 #include "torch_npu/csrc/core/npu/NPUFunctions.h"
 #include "torch_npu/csrc/core/npu/NPUStream.h"
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 #include "torch_npu/csrc/core/npu/npu_log.h"
 #include "torch_npu/csrc/core/npu/NPUWorkspaceAllocator.h"
@@ -29,6 +30,14 @@ namespace lazy_fusion {
 static inline bool DumpEnabled() {
   static const bool v = g_lazy_fusion_manager.flags_.dump_as_text;
   return v;
+}
+
+// Whether bf16 inputs must be cast to fp32 before entering DVM. Required on
+// Ascend910B-class chips; on Ascend950 (A5) DVM handles bf16 natively, so the
+// cast (which costs an extra round-trip in the fused kernel) is skipped.
+static inline bool NeedBf16ToFp32Cast() {
+  static const bool need = (c10_npu::GetSocVersion() != c10_npu::SocVersion::Ascend950);
+  return need;
 }
 namespace {
 class LazyFusionDump {
@@ -302,7 +311,7 @@ bool LazyFusionKernel::NeedFlushForWritableOutput(const at::Tensor &tensor) cons
 
 dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dvm::ShapeRef *shape) {
   auto input_type = TransType(x.scalar_type());
-  bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16);
+  bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16 && NeedBf16ToFp32Cast());
   auto storage = torch_npu::NPUBridge::GetNpuStorageImpl(x);
   if (storage->lazy_fusion_data_ != nullptr) {
     auto dvm_op = static_cast<DvmOp *>(storage->lazy_fusion_data_);
@@ -365,7 +374,7 @@ dvm::NDObject *LazyFusionKernel::Input(const at::Tensor &x, bool enable_cast, dv
 dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_ptr, dvm::ShapeRef *shape,
                                              dvm::ShapeRef *stride, bool enable_cast) {
   auto input_type = TransType(base.scalar_type());
-  bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16);
+  bool cast_to_fp32 = (enable_cast && input_type == dvm::DType::kBFloat16 && NeedBf16ToFp32Cast());
 
   if (input_used_ == inputs_.size()) {
     inputs_.push_back(new Load());
@@ -654,10 +663,13 @@ void LazyFusionKernel::DumpGraph() {
   dump_buf_ << ")\n}\n";
 }
 
-bool IsEnabled(const std::string &op, bool unable_default) {
+bool IsEnabled(const std::string &op, Level required) {
   const auto &flags = g_lazy_fusion_manager.flags_;
-  // Aggressive ops require enable_all to be set
-  if (unable_default && !flags.enable_all) {
+  // Each op declares the minimum level it needs. The user-visible default is
+  // kO2 (everything on); internal debug can drop to kO1 via
+  // `TORCH_NPU_LAZY_FUSION="level=O1"` to disable the heavier ops
+  // (matmul / sum / npu_swiglu / native_batch_norm_backward / ViewLoad).
+  if (flags.level < required) {
     return false;
   }
   const auto &disable_ops = flags.disable_ops;
@@ -671,8 +683,8 @@ bool IsEnabled(const std::string &op, bool unable_default) {
   } else {
     enable = std::find(enable_ops.begin(), enable_ops.end(), op) != enable_ops.end();
   }
-  ASCEND_LOGI("op [%s], dvm enabled=%d, aggressive=%d, op enable=%d",
-              op.c_str(), flags.enabled, flags.enable_all, enable);
+  ASCEND_LOGI("op [%s], dvm enabled=%d, level=O%d, op enable=%d",
+              op.c_str(), flags.enabled, static_cast<int>(flags.level), enable);
   return enable;
 }
 }  // namespace lazy_fusion

@@ -71,7 +71,9 @@ bool IsViewLoadable(const at::Tensor &x) {
 bool InputCheck(const at::Tensor &x, const std::function<bool(const at::ScalarType &type)> &type_check = IsFloatType,
                 bool allow_non_contig = false) {
   if (!x.is_contiguous()) {
-    bool can_viewload = g_lazy_fusion_manager.flags_.enable_all && 
+    // ViewLoad on non-contig inputs is an O2-level optimization
+    // (same gating as the historical enable_all switch).
+    bool can_viewload = g_lazy_fusion_manager.flags_.level >= Level::kO2 &&
                         allow_non_contig && IsViewLoadable(x);
     if (!can_viewload) {
       return false;
@@ -1565,7 +1567,7 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   const c10::optional<at::Tensor> & running_mean, const c10::optional<at::Tensor> & running_var,
   const c10::optional<at::Tensor> & save_mean, const c10::optional<at::Tensor> & save_invstd,
   bool train, double eps, ::std::array<bool,3> output_mask) {
-  static auto enable = IsEnabled("native_batch_norm_backward", /*unable_default=*/true);
+  static auto enable = IsEnabled("native_batch_norm_backward", Level::kO2);
   if (!enable || train || grad_out.scalar_type() != at::ScalarType::Float || input.scalar_type() != at::ScalarType::Float ||
       grad_out.scalar_type() != input.scalar_type() || input.dim() < 2 || input.dim() > 4 ||
       !NpuCheck(grad_out, input, weight, running_mean, running_var)) {
@@ -1839,7 +1841,7 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
 
 // ===================== Reduce =====================
 at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
-  static auto enable = IsEnabled("sum", /*unable_default=*/true);
+  static auto enable = IsEnabled("sum", Level::kO2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
@@ -1861,7 +1863,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
 }
 
 at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim, c10::optional<at::ScalarType> dtype) {
-  static auto enable = IsEnabled("sum", /*unable_default=*/true);
+  static auto enable = IsEnabled("sum", Level::kO2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
@@ -1892,7 +1894,7 @@ at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdi
 
 at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim,
                      c10::optional<at::ScalarType> dtype, at::Tensor & out) {
-  static auto enable = IsEnabled("sum", /*unable_default=*/true);
+  static auto enable = IsEnabled("sum", Level::kO2);
   auto out_type = dtype.has_value() ? dtype.value() : self.scalar_type();
   if (!enable || out_type != at::ScalarType::Float ||
       !InputCheck(self, IsFloatType, /*allow_non_contig=*/true) || !NpuCheck(out)) {
@@ -1924,7 +1926,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
 
 // ===================== MatMul =====================
 at::Tensor matmul(const at::Tensor & self, const at::Tensor & other) {
-  static auto enable = IsEnabled("matmul", /*unable_default=*/true);
+  static auto enable = IsEnabled("matmul", Level::kO2);
   if (!enable) {
     return op_api::matmul(self, other);
   }
@@ -1937,7 +1939,7 @@ at::Tensor matmul(const at::Tensor & self, const at::Tensor & other) {
 }
 
 at::Tensor mm(const at::Tensor & self, const at::Tensor & mat2) {
-  static auto enable = IsEnabled("mm", /*unable_default=*/true);
+  static auto enable = IsEnabled("mm", Level::kO2);
   if (!enable) {
     return op_api::mm(self, mat2);
   }
@@ -1950,7 +1952,7 @@ at::Tensor mm(const at::Tensor & self, const at::Tensor & mat2) {
 }
 
 at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
-  static auto enable = IsEnabled("bmm", /*unable_default=*/true);
+  static auto enable = IsEnabled("bmm", Level::kO2);
   if (!enable) {
     return op_api::bmm(self, mat2);
   }
@@ -1964,7 +1966,7 @@ at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
 
 at::Tensor addmm(const at::Tensor & self, const at::Tensor & mat1, const at::Tensor & mat2,
                  const at::Scalar & beta, const at::Scalar & alpha) {
-  static auto enable = IsEnabled("addmm", /*unable_default=*/true);
+  static auto enable = IsEnabled("addmm", Level::kO2);
   float beta_value = 1.0f;
   float alpha_value = 1.0f;
   if (!enable || !GetScalarValue(beta, &beta_value) || !GetScalarValue(alpha, &alpha_value)) {
@@ -2125,7 +2127,7 @@ void _foreach_addcdiv_(const at::TensorList input, const at::TensorList tensors1
 
 // ===================== SwiGLU =====================
 at::Tensor npu_swiglu(const at::Tensor &self, int64_t dim) {
-  static auto enable = IsEnabled("npu_swiglu", /*unable_default=*/true);
+  static auto enable = IsEnabled("npu_swiglu", Level::kO2);
   if (!enable || !InputCheck(self)) {
     return op_api::npu_swiglu(self, dim);
   }
