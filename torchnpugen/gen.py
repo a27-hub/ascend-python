@@ -29,6 +29,9 @@ from torchnpugen.model import (NativeFunction, SelfArgument,
                            assert_never)
 from torchnpugen.api.types.signatures import NativeSignature
 from torchnpugen.context import native_function_manager
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+USE_DVM = os.path.exists(os.path.join(_HERE, "..", "..", "dvm", "dvm", "include", "dvm.h"))
 from torchnpugen.op_codegen_utils import concatMap, context
 
 
@@ -244,7 +247,7 @@ def gen_function_declaration(
         sig_str = f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};"
         backend_decalarations["op_api"].append(sig_str)
         backend_decalarations["acl_op"].append(sig_str)
-        if "dvm" in f.impl_ns:
+        if USE_DVM and "dvm" in f.impl_ns:
             backend_decalarations["lazy_fusion"].append(sig_str)
         if f.sparse is not None:
             op_name += "_sparse"
@@ -306,7 +309,7 @@ Use {deprecated_replace} instead.");'
         aclnn_extension = os.getenv('ACLNN_EXTENSION_SWITCH') == 'TRUE'
 
         dvm_call = ""
-        if "dvm" in f.impl_ns:
+        if USE_DVM and "dvm" in f.impl_ns:
             if len(f.func.returns) == 0:
                 dvm_call = f"""if (lazy_fusion::IsEnabled()) {{
             lazy_fusion::{impl_name}({args_exprs_str});
