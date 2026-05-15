@@ -8,8 +8,12 @@ FILE(GLOB _OPS_PLUGIN_SRCS
 
 FILE(GLOB _OPPLUGIN_BASE_OPS_SRCS
     ops/aclops/*.cpp
-    ops/opapi/*.cpp
-    ops/dvm/*.cpp)
+    ops/opapi/*.cpp)
+
+if(EXISTS "${PROJECT_SOURCE_DIR}/third_party/dvm/dvm/include/dvm.h")
+    FILE(GLOB _OPPLUGIN_DVM_SRCS ops/dvm/*.cpp)
+    LIST(APPEND _OPPLUGIN_BASE_OPS_SRCS ${_OPPLUGIN_DVM_SRCS})
+endif()
 
 FILE(GLOB _OPPLUGIN_UTILS_SRCS
     *.cpp
