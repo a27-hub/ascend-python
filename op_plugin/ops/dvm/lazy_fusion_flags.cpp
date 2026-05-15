@@ -146,13 +146,37 @@ class FlagRegister {
   std::map<std::string, std::string> &flag_map_;
 };
 
+bool ParseLevel(const std::string &s, Level *out) {
+  if (s == "O1" || s == "o1") {
+    *out = Level::kO1;
+    return true;
+  }
+  if (s == "O2" || s == "o2") {
+    *out = Level::kO2;
+    return true;
+  }
+  return false;
+}
+
 void RegisterFlags(std::map<std::string, std::string> *flag_map, LazyFusionFlags *flags) {
   FlagRegister reg(flag_map);
+
+  // `level` is internal-debug; default (kO2, enable everything) stays if absent.
+  auto level_it = flag_map->find("level");
+  if (level_it != flag_map->end()) {
+    Level parsed;
+    if (ParseLevel(level_it->second, &parsed)) {
+      flags->level = parsed;
+    } else {
+      ASCEND_LOGW("Warning: level='%s' is invalid; valid values are O1, O2.",
+                  level_it->second.c_str());
+    }
+    flag_map->erase(level_it);
+  }
 
   reg.AddFlag("dump_as_text", &flags->dump_as_text);
   reg.AddFlag("dump_dir", &flags->dump_dir);
   reg.AddFlag("synchronize", &flags->synchronize);
-  reg.AddFlag("enable_all", &flags->enable_all);
   reg.AddFlag("online_tuning", &flags->online_tuning);
   reg.AddFlag("disable_ops", &flags->disable_ops);
   reg.AddFlag("enable_ops", &flags->enable_ops);
@@ -179,13 +203,19 @@ bool ParseBoolToken(const std::string &s, bool *out) {
 
 LazyFusionFlags::LazyFusionFlags() {
   // Master switch + optional flags via TORCH_NPU_LAZY_FUSION.
-  //   export TORCH_NPU_LAZY_FUSION=True                          # enable, default flags
-  //   export TORCH_NPU_LAZY_FUSION=1
-  //   export TORCH_NPU_LAZY_FUSION="True dump_as_text"           # enable + bool flag
-  //   export TORCH_NPU_LAZY_FUSION="True dump_dir=/tmp/dvm"      # enable + key=value
+  //
+  // Public usage:
+  //   export TORCH_NPU_LAZY_FUSION=True              # enable, default level O2 (all ops)
+  //   export TORCH_NPU_LAZY_FUSION=1                 # same as above
+  //   export TORCH_NPU_LAZY_FUSION=False             # disable
+  //   (unset)                                        # disable
+  //
+  // Internal debug (must use the level=... key form, bare "O1"/"O2" is rejected):
+  //   export TORCH_NPU_LAZY_FUSION="level=O1"        # enable, only the L1 op set
+  //   export TORCH_NPU_LAZY_FUSION="level=O2"        # enable, explicit L2 (same as True)
+  //   export TORCH_NPU_LAZY_FUSION="True dump_as_text dump_dir=/tmp/dvm"
   //   export TORCH_NPU_LAZY_FUSION="True disable_ops=where,sum"
-  //   export TORCH_NPU_LAZY_FUSION=False                         # disable
-  //   (unset)                                                    # disable
+  //
   // Flag tokens use bare "key" (boolean true) or "key=value". No "--" prefix.
   char *env = std::getenv("TORCH_NPU_LAZY_FUSION");
   if (env == nullptr) {

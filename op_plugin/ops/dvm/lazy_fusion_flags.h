@@ -19,13 +19,30 @@
 #include <vector>
 
 namespace lazy_fusion {
+
+// Optimization level. Op-level promotion rule:
+//   kO1 — conservative set (elementwise / activations / where /
+//         batch-norm forward / foreach). Same set as the historical "level 1".
+//   kO2 — kO1 plus the heavier ops (matmul / mm / bmm / addmm / sum /
+//         native_batch_norm_backward / npu_swiglu) whose payoff depends on
+//         workload. Same as historical "level 2".
+// `TORCH_NPU_LAZY_FUSION=True` defaults to kO2 (enable everything). Setting
+// `level=O1` / `level=O2` via the env flag list is internal-debug only.
+enum class Level : int {
+  kO1 = 1,
+  kO2 = 2,
+};
+
 class LazyFusionFlags {
  public:
   LazyFusionFlags();
   ~LazyFusionFlags() = default;
 
+  // Public knobs.
   bool enabled{false};
-  bool enable_all{false};
+  Level level{Level::kO2};
+
+  // Internal debug knobs (not advertised in user-facing docs).
   bool dump_as_text{false};
   std::string dump_dir{"./lazy_fusion_dump"};
   bool synchronize{false};
