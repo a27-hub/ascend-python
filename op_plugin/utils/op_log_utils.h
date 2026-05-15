@@ -80,7 +80,10 @@ inline std::string convert_info(const at::Tensor &at_tensor)
 
     if (at_tensor.dim() == 0) {
         if (torch_npu::utils::is_npu(at_tensor)) {
-            ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
+            ss << "NPU scalar Tensor, dtype: " << at_tensor.dtype();
+            if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) {
+                ss << ", data_ptr: " << at_tensor.data_ptr();
+            }
             std::string res = ss.str();
             replace_and_append_newline(res);
             return res;
@@ -333,7 +336,10 @@ inline std::string convert_info(const TensorWrapper &tensor_r)
 
     if (at_tensor.dim() == 0) {
         if (torch_npu::utils::is_npu(at_tensor)) {
-            ss << "NPU scalar Tensor: " << at_tensor << ", dtype: " << at_tensor.dtype();
+            ss << "NPU scalar Tensor, dtype: " << at_tensor.dtype();
+            if (typeid(*at_tensor.storage().unsafeGetStorageImpl()) == typeid(torch_npu::NPUStorageImpl)) {
+                ss << ", data_ptr: " << at_tensor.data_ptr();
+            }
             std::string res = ss.str();
             replace_and_append_newline(res);
             return res;
@@ -402,9 +408,7 @@ inline std::string convert_debug_info(const at::Tensor &at_tensor)
         }
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
         if (at_tensor.dim() == 0) {
-            ss << "NPU scalar Tensor: "
-               << at_tensor
-               << ", npu_format: "
+            ss << "NPU scalar Tensor, npu_format: "
                << at_tensor_sizes.npu_format_
                << ", base_sizes: "
                << at_tensor_sizes.base_sizes_
@@ -479,9 +483,7 @@ inline std::string convert_debug_info(const TensorWrapper &tensor_r)
     if (torch_npu::utils::is_npu(at_tensor)) {
         auto at_tensor_sizes = torch_npu::NPUBridge::GetNpuStorageImpl(at_tensor)->get_npu_desc();
         if (at_tensor.dim() == 0) {
-            ss << "NPU scalar Tensor: "
-               << at_tensor
-               << ", npu_format: "
+            ss << "NPU scalar Tensor, npu_format: "
                << at_tensor_sizes.npu_format_
                << ", base_sizes: "
                << at_tensor_sizes.base_sizes_
