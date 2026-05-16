@@ -16,6 +16,8 @@
 #ifndef TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
 #define TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
 
+#include <cstdio>
+
 #include "op_api_common_base.h"
 
 constexpr int g_hash_buf_size = 8192;
@@ -396,11 +398,17 @@ auto DecodeDevice(Ts&... args) -> at::Device
             InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                \
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
             int api_ret = 0;                                                                                           \
+            printf("DEBUG_EXEC_NPU_CMD_V2 before hit_cache_v2 op=%s\n", #aclnn_api);                                   \
+            fflush(stdout);                                                                                             \
             if (hit_cache_v2(                                                                                          \
                acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aic_num, aiv_num))  \
             {                                                                                                          \
+                printf("DEBUG_EXEC_NPU_CMD_V2 hit_cache_v2 op=%s api_ret=%d\n", #aclnn_api, api_ret);                  \
+                fflush(stdout);                                                                                         \
                 return api_ret;                                                                                        \
             }                                                                                                          \
+            printf("DEBUG_EXEC_NPU_CMD_V2 miss_cache_v2 op=%s\n", #aclnn_api);                                         \
+            fflush(stdout);                                                                                             \
             at_npu::native::SetDeterministicOps(deterministic_status);                                                 \
             if (initMemFunc) {                                                                                         \
                 initMemFunc(nullptr, false);                                                                           \
