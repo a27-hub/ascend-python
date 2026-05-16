@@ -91,5 +91,27 @@ class TestNPUQuantFlashAttentionV2(TestCase):
                                               d_scale_v.npu(), p_scale.npu())
         self.assertRtolEqual(output.half(), fa_result[0], prec=0.01, prec16=0.01)
 
+    @SupportedDevices(['Ascend950'])
+    def test_npu_quant_flash_attention_with_hifp8(self, device="npu"):
+        query = torch.randn(1, 8, 256, 128, dtype=torch.float16)
+        key = torch.randn(1, 8, 256, 128, dtype=torch.float16)
+        value = torch.randn(1, 8, 256, 128, dtype=torch.float16)
+        scale_q = self.calc_quant_scale(query, 128).to(torch.float32)
+        scale_k = self.calc_quant_scale(key, 256).to(torch.float32)
+        scale_v = self.calc_quant_scale(value, 256).to(torch.float32)
+        p_scale = torch.randn(1, dtype=torch.float32)
+        d_scale_q = 1 / scale_q
+        d_scale_k = 1 / scale_k
+        d_scale_v = 1 / scale_v
+        query_fp8 = self.npu_block_quant(query, scale_q, 128).to(torch.float8_e4m3fn)
+        key_fp8 = self.npu_block_quant(key, scale_k, 256).to(torch.float8_e4m3fn)
+        value_fp8 = self.npu_block_quant(value, scale_v, 256).to(torch.float8_e4m3fn)
+        output = self.supported_op_exec_quant(query_fp8.to(torch.float32), key_fp8.to(torch.float32), value_fp8.to(torch.float32),
+                                              d_scale_q, d_scale_k, d_scale_v)
+        fa_result = self.custom_op_exec_quant(query_fp8.npu(), key_fp8.npu(), value_fp8.npu(), d_scale_q.npu(), d_scale_k.npu(),
+                                              d_scale_v.npu(), p_scale.npu())
+        self.assertRtolEqual(output.half(), fa_result[0], prec=0.01, prec16=0.01)
+
+
 if __name__ == "__main__":
     run_tests()
