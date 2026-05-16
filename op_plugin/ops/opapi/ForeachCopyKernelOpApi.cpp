@@ -161,6 +161,29 @@ bool check_tensor_device_dtype_base(const at::TensorList dsts, const at::TensorL
     return true;
 }
 
+bool is_supported_cross_dtype_copy(at::ScalarType src_dtype, at::ScalarType dst_dtype)
+{
+    if (src_dtype == at::ScalarType::Float) {
+        return dst_dtype == at::ScalarType::Half || dst_dtype == at::ScalarType::BFloat16;
+    }
+    if (src_dtype == at::ScalarType::Half || src_dtype == at::ScalarType::BFloat16) {
+        return dst_dtype == at::ScalarType::Float;
+    }
+    return false;
+}
+
+bool check_cross_dtype_supported(const at::TensorList dst, const at::TensorList src)
+{
+    for (size_t i = 0; i < src.size(); ++i) {
+        auto src_dtype = src[i].scalar_type();
+        auto dst_dtype = dst[i].scalar_type();
+        if (src_dtype != dst_dtype && !is_supported_cross_dtype_copy(src_dtype, dst_dtype)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
@@ -235,7 +258,9 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
 void process_tensor_list_batch(const at::TensorList self, const at::TensorList src, bool non_blocking,
     bool is_support_nd_out, bool is_support_batch)
 {
-    if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
+    bool fast_route = at::native::can_use_fast_route(self, src);
+    bool cross_dtype = !fast_route && check_cross_dtype_supported(self, src);
+    if (!is_support_nd_out || !(fast_route || cross_dtype) || !check_tensor_dtype_support_base(src)) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
             return memcpyBatch(self, src, non_blocking);
