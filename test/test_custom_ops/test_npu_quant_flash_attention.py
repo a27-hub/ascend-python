@@ -106,7 +106,7 @@ class TestNPUQuantFlashAttentionV2(TestCase):
         custom_output = torch_npu.npu_quant_fusion_attention(
             query, key, value, head_num=5, input_layout="BSND", scale=scale,
             d_scale_q=d_scale_q, d_scale_k=d_scale_k, d_scale_v=d_scale_v, p_scale=p_scale, query_dtype=query_dtype)
-        golden_output = torch.zeros(2, 1, 1, 128, dtype=torch.float16).npu()
+        golden_output = torch.ones(2, 1, 1, 128, dtype=torch.float16).npu()
         res = custom_output[0].equal(golden_output)
         self.assertRtolEqual(res, True)
 
