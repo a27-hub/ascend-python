@@ -10,6 +10,12 @@ FILE(GLOB _OPPLUGIN_BASE_OPS_SRCS
     ops/aclops/*.cpp
     ops/opapi/*.cpp)
 
+# DVM lazy-fusion sources compile only when the host repo opts in via the ENABLE_DVM env var
+if(DEFINED ENV{ENABLE_DVM} AND "$ENV{ENABLE_DVM}" STREQUAL "1")
+    FILE(GLOB _OPPLUGIN_DVM_SRCS ops/dvm/*.cpp)
+    LIST(APPEND _OPPLUGIN_BASE_OPS_SRCS ${_OPPLUGIN_DVM_SRCS})
+endif()
+
 FILE(GLOB _OPPLUGIN_UTILS_SRCS
     *.cpp
     utils/*.cpp
