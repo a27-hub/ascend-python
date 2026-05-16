@@ -141,7 +141,47 @@ class TestForeachCopy(TestCase):
             cpu_tensors_x, npu_tensors_x = self.create_tensors(tensor_num, "int32")
             cpu_tensors_y, npu_tensors_y = self.create_tensors(tensor_num, "double")
             torch._foreach_copy_(npu_tensors_y, npu_tensors_x)
-            self.assertRtolEqual(npu_tensors_y, npu_tensors_x) 
+            self.assertRtolEqual(npu_tensors_y, npu_tensors_x)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_foreach_copy_float32_to_float16(self):
+        tensor_num_list = [20, 50]
+        for tensor_num in tensor_num_list:
+            cpu_src, npu_src = self.create_tensors(tensor_num, "float32")
+            cpu_dst, npu_dst = self.create_tensors(tensor_num, "float16")
+            torch._foreach_copy_(cpu_dst, cpu_src)
+            torch._foreach_copy_(npu_dst, npu_src)
+            self.assert_equal(cpu_dst, npu_dst)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_foreach_copy_float32_to_bfloat16(self):
+        tensor_num_list = [20, 50]
+        for tensor_num in tensor_num_list:
+            cpu_src, npu_src = self.create_tensors(tensor_num, "float32")
+            cpu_dst, npu_dst = self.create_tensors(tensor_num, "bfloat16")
+            torch._foreach_copy_(cpu_dst, cpu_src)
+            torch._foreach_copy_(npu_dst, npu_src)
+            self.assert_equal(cpu_dst, npu_dst)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_foreach_copy_float16_to_float32(self):
+        tensor_num_list = [20, 50]
+        for tensor_num in tensor_num_list:
+            cpu_src, npu_src = self.create_tensors(tensor_num, "float16")
+            cpu_dst, npu_dst = self.create_tensors(tensor_num, "float32")
+            torch._foreach_copy_(cpu_dst, cpu_src)
+            torch._foreach_copy_(npu_dst, npu_src)
+            self.assert_equal(cpu_dst, npu_dst)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_foreach_copy_bfloat16_to_float32(self):
+        tensor_num_list = [20, 50]
+        for tensor_num in tensor_num_list:
+            cpu_src, npu_src = self.create_tensors(tensor_num, "bfloat16")
+            cpu_dst, npu_dst = self.create_tensors(tensor_num, "float32")
+            torch._foreach_copy_(cpu_dst, cpu_src)
+            torch._foreach_copy_(npu_dst, npu_src)
+            self.assert_equal(cpu_dst, npu_dst)
 
 if __name__ == "__main__":
     run_tests()
