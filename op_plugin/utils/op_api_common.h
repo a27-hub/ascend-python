@@ -16,6 +16,8 @@
 #ifndef TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
 #define TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_
 
+#include <cstdio>
+
 #include "op_api_common_base.h"
 
 constexpr int g_hash_buf_size = 8192;
@@ -324,16 +326,27 @@ auto DecodeDevice(Ts&... args) -> at::Device
         aclOpExecutor **executor_addr = &executor;                                                                     \
         InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                    \
         UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);            \
+        printf("DEBUG_EXEC_NPU_CMD_V1 before hit_cache op=%s\n", #aclnn_api);                                          \
+        fflush(stdout);                                                                                                 \
         if (hit_cache(acl_stream, #aclnn_api, opApiFuncAddr, __VA_ARGS__)) {                                           \
+            printf("DEBUG_EXEC_NPU_CMD_V1 hit_cache op=%s\n", #aclnn_api);                                             \
+            fflush(stdout);                                                                                             \
             break;                                                                                                     \
         }                                                                                                              \
+        printf("DEBUG_EXEC_NPU_CMD_V1 miss_cache op=%s\n", #aclnn_api);                                                \
+        fflush(stdout);                                                                                                 \
         at_npu::native::SetDeterministic();                                                                            \
         if (initMemFunc) {                                                                                             \
             initMemFunc(nullptr, false);                                                                               \
         }                                                                                                              \
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                         \
         static auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);             \
+        printf("DEBUG_EXEC_NPU_CMD_V1 before GetWorkspace op=%s\n", #aclnn_api);                                       \
+        fflush(stdout);                                                                                                 \
         auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                          \
+        printf("DEBUG_EXEC_NPU_CMD_V1 after GetWorkspace op=%s status=%d workspace=%lu executor=%p\n",                 \
+               #aclnn_api, workspace_status, workspace_size, executor);                                                \
+        fflush(stdout);                                                                                                 \
         NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                               \
         void *workspace_addr = nullptr;                                                                                \
         at::Tensor workspace_tensor;                                                                                   \
@@ -346,7 +359,12 @@ auto DecodeDevice(Ts&... args) -> at::Device
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
+            printf("DEBUG_EXEC_NPU_CMD_V1 before phase2 op=%s workspace=%lu executor=%p\n",                           \
+                   #aclnn_api, workspace_size, executor);                                                              \
+            fflush(stdout);                                                                                             \
             auto api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                            \
+            printf("DEBUG_EXEC_NPU_CMD_V1 after phase2 op=%s api_ret=%d\n", #aclnn_api, api_ret);                      \
+            fflush(stdout);                                                                                             \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
@@ -396,18 +414,29 @@ auto DecodeDevice(Ts&... args) -> at::Device
             InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                \
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
             int api_ret = 0;                                                                                           \
+            printf("DEBUG_EXEC_NPU_CMD_V2 before hit_cache_v2 op=%s\n", #aclnn_api);                                   \
+            fflush(stdout);                                                                                             \
             if (hit_cache_v2(                                                                                          \
                acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aic_num, aiv_num))  \
             {                                                                                                          \
+                printf("DEBUG_EXEC_NPU_CMD_V2 hit_cache_v2 op=%s api_ret=%d\n", #aclnn_api, api_ret);                  \
+                fflush(stdout);                                                                                         \
                 return api_ret;                                                                                        \
             }                                                                                                          \
+            printf("DEBUG_EXEC_NPU_CMD_V2 miss_cache_v2 op=%s\n", #aclnn_api);                                         \
+            fflush(stdout);                                                                                             \
             at_npu::native::SetDeterministicOps(deterministic_status);                                                 \
             if (initMemFunc) {                                                                                         \
                 initMemFunc(nullptr, false);                                                                           \
             }                                                                                                          \
             auto converted_params = ConvertTypesV2(copied_params, workspace_size_addr, executor_addr);                 \
             auto getWorkspaceSizeFunc = ConvertToOpApiFunc(converted_params, getWorkspaceSizeFuncAddr);                \
+            printf("DEBUG_EXEC_NPU_CMD_V2 before GetWorkspace op=%s\n", #aclnn_api);                                   \
+            fflush(stdout);                                                                                             \
             auto workspace_status = call(getWorkspaceSizeFunc, converted_params);                                      \
+            printf("DEBUG_EXEC_NPU_CMD_V2 after GetWorkspace op=%s status=%d workspace=%lu executor=%p\n",             \
+                   #aclnn_api, workspace_status, workspace_size, executor);                                            \
+            fflush(stdout);                                                                                             \
             NPU_CHECK_ERROR(workspace_status, "call " #aclnn_api " failed");                                           \
             void *workspace_addr = nullptr;                                                                            \
             at::Tensor workspace_tensor;                                                                               \
@@ -416,7 +445,12 @@ auto DecodeDevice(Ts&... args) -> at::Device
                 workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                \
             }                                                                                                          \
             OpApiFunc opApiFunc = reinterpret_cast<OpApiFunc>(opApiFuncAddr);                                          \
+            printf("DEBUG_EXEC_NPU_CMD_V2 before phase2 op=%s workspace=%lu executor=%p\n",                           \
+                   #aclnn_api, workspace_size, executor);                                                              \
+            fflush(stdout);                                                                                             \
             api_ret = opApiFunc(workspace_addr, workspace_size, executor, acl_stream);                                 \
+            printf("DEBUG_EXEC_NPU_CMD_V2 after phase2 op=%s api_ret=%d\n", #aclnn_api, api_ret);                      \
+            fflush(stdout);                                                                                             \
             NPU_CHECK_ERROR(api_ret, "call " #aclnn_api " failed");                                                    \
             ReleaseConvertTypes(converted_params);                                                                     \
             ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                          \
@@ -435,6 +469,8 @@ auto DecodeDevice(Ts&... args) -> at::Device
 #define EXEC_NPU_CMD(aclnn_api, ...)                                                                                   \
     do {                                                                                                               \
         static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
+        printf("DEBUG_EXEC_NPU_CMD dispatch op=%s task_queue_enable=%d\n", #aclnn_api, task_queue_enable);             \
+        fflush(stdout);                                                                                                 \
         if (task_queue_enable == 2) {                                                                                  \
             EXEC_NPU_CMD_V2(aclnn_api, __VA_ARGS__);                                                                   \
         } else {                                                                                                       \
