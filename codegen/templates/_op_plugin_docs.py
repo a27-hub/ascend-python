@@ -15624,11 +15624,11 @@ sin (Tensor): 必选参数，旋转位置编码正弦值张量。要求为连续
     Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape中B维度与query、key的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
     Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape最后一维（D）小于等于1024。
 
-layout (str): 非必传参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"。默认"BSND"。
+layout (str): 可选参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"。默认"BSND"。
     Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持BSND的4维Tensor、TND的3维Tensor。
     Atlas 350 加速卡：支持BSND、SBND、BNSD的4维Tensor，TND的3维Tensor。
 
-rotary_mode (str): 非必传参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
+rotary_mode (str): 可选参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
     Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持"half"模式。
     Atlas 350 加速卡：支持"half"、"interleave"、"quarter"模式。
 
