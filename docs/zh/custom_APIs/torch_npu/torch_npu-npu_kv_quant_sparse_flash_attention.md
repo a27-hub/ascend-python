@@ -58,7 +58,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 - **actual\_seq\_lengths\_kv**（`Tensor`）：可选参数，表示不同Batch中`key`和`value`的有效token数，数据类型支持`int32`。如果不指定None，表示和key的shape的S长度相同。该参数中每个Batch的有效token数不超过`key/value`中的维度S大小且不小于0。支持长度为B的一维tensor。<br>当`layout_kv`为TND或PA_BSND时，该入参必须传入，`layout_kv`为TND，该参数中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须大于等于前一个元素的值。
 
-- **sparse\_block\_size**（`int`）：可选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持`int64`，支持范围为[1, 16]，且为2的幂次方。
+- **sparse\_block\_size**（`int`）：可选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持`int64`。
 
 - **layout\_query**（`str`）：可选参数，用于标识输入`query`的数据排布格式，默认值"BSND"，支持传入BSND和TND。
 
@@ -96,7 +96,11 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 - 该接口支持图模式。
 - 参数query中的D值为576，即nope\+rope=512\+64。
 - 参数key、value中的D值为656，即nope\+rope\*2\+dequant\_scale\*4=512\+64\*2\+4\*4。
-- 支持sparse\_block\_size整除block\_size。
+- sparse\_block\_size需要整除block\_size。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 只支持sparse_block_size为1。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+    - 支持[1,16]，且要求是2的幂次方，在PageAttention场景下要求sparse_block_size整除block_size
 - 非PageAttention场景layout\_query和layout\_kv需要保持一致。
 
 ## 调用示例
