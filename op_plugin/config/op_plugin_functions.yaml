@@ -3652,11 +3652,12 @@ official:
       out0:
         size: input
         dtype: input
+      # Eval used {0} here; PyTorch meta/CUDA use [num_features] for save_mean/save_invstd (unused buffers).
       out1:
-        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
         dtype: 'training ? at::kFloat : input.scalar_type()'
       out2:
-        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
         dtype: 'training ? at::kFloat : input.scalar_type()'
       exec: aclnnBatchNorm
 
