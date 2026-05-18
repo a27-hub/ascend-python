@@ -464,6 +464,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
             mm_x_quant_mode_value, mm_weight_quant_mode_value, hcom_ptr, ep_world_size, send_counts, recv_counts,
             transposeGmmWeight, transposeMmWeight, group_sizes, permute_out_flag, comm_mode_real,
             gmm_y, mm_y, permute_out_wrapper);
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMulV2 end"<< std::endl;
+        return std::tie(gmm_y, mm_y, permute_out);
     } else {
         std::cout << "pta aclnnAlltoAllvQuantGroupedMatMul"<< std::endl;
         EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMul, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
@@ -471,8 +473,10 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
             mm_x_scale_wrapper, mm_weight_scale_wrapper, gmm_x_quant_mode_value, gmm_weight_quant_mode_value,
             mm_x_quant_mode_value, mm_weight_quant_mode_value, hcom_ptr, ep_world_size, send_counts, recv_counts,
             transposeGmmWeight, transposeMmWeight, group_sizes, permute_out_flag, gmm_y, mm_y, permute_out_wrapper);
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMul end"<< std::endl;
+        return std::tie(gmm_y, mm_y, permute_out);
     }
 
-    return std::tie(gmm_y, mm_y, permute_out);
+    // return std::tie(gmm_y, mm_y, permute_out);
 }
 } // namespace op_api

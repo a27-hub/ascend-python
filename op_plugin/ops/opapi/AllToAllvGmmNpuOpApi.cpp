@@ -74,6 +74,8 @@ namespace op_api {
                          gmm_y,
                          mm_y,
                          permute_out);
+            std::cout << "pta aclnnAlltoAllvGroupedMatMulV2 end"<< std::endl;
+            return std::tie(gmm_y, mm_y, permute_out);
         } else {
             std::cout << "pta aclnnAlltoAllvGroupedMatMul"<< std::endl;
             EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
@@ -93,7 +95,9 @@ namespace op_api {
                          gmm_y,
                          mm_y,
                          permute_out);
+            std::cout << "pta aclnnAlltoAllvGroupedMatMul end"<< std::endl;
+            return std::tie(gmm_y, mm_y, permute_out);
         }
-        return std::tie(gmm_y, mm_y, permute_out);
+        // return std::tie(gmm_y, mm_y, permute_out);
     }
 } // namespace op_api
