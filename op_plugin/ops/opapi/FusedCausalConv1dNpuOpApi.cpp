@@ -75,7 +75,7 @@ namespace op_api
             max_query_len_value, residual_connection_value,
             block_size_value, conv_mode_value, y);
 
-        return std::make_tuple(conv_states_clone, y);
+        return std::make_tuple(y, conv_states_clone);
     }
 
     at::Tensor npu_fused_causal_conv1d(
