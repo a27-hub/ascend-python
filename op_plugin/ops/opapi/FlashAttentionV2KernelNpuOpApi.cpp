@@ -155,10 +155,6 @@ at::Tensor static dropout_gen_mask(const at::Tensor &query, const at::Tensor &ke
     int64_t length = (numels + 128 - 1) / 128 * 128 / 8;
     length += LENGTH_BIAS;
     if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
-        const auto gen = at_npu::detail::getDefaultNPUGenerator();
-        auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
-        seed = static_cast<int64_t>(pair.first);
-        offset = static_cast<int64_t>(pair.second);
         if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
             drop_mask = dropout_gen_mask_dispatch(query, keep_prob, seed, offset, numels, gen_mask_parallel, sync);
         }
