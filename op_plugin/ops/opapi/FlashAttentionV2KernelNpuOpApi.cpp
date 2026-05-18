@@ -20,6 +20,7 @@
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
 const int THIRD_ELEMENT = 2;
@@ -142,6 +143,7 @@ at::Tensor dropout_gen_mask_dispatch(const at::Tensor &query, double keep_prob, 
 at::Tensor static dropout_gen_mask(const at::Tensor &query, const at::Tensor &key, double keep_prob, int64_t head_num,
     std::string input_layout, bool gen_mask_parallel, bool sync, int64_t &seed, int64_t &offset, int64_t &numels)
 {
+    ASCEND_LOGD("YYJ_DEBUG: 003 \n");
     at::Tensor drop_mask;
     if (input_layout == "BSH") {
         numels = query.size(0) * head_num * query.size(1) * key.size(1); // [B,N,S,S]
@@ -156,6 +158,7 @@ at::Tensor static dropout_gen_mask(const at::Tensor &query, const at::Tensor &ke
     length += LENGTH_BIAS;
     if (get_dropout_status(keep_prob) == DropOutStatus::DROPOUT_NORMAL) {
         if (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) {
+            ASCEND_LOGD("YYJ_DEBUG: 004 \n");
             const auto gen = at_npu::detail::getDefaultNPUGenerator();
             auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(10);
             seed = static_cast<int64_t>(pair.first);
@@ -638,6 +641,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, c10::optional<int64_t> query_quant_mode,
     c10::optional<int64_t> query_dtype, bool is_fp8, const c10::optional<at::Tensor> &dropout_mask_opt, int64_t seed, int64_t offset)
 {
+    ASCEND_LOGD("YYJ_DEBUG: 002 \n");
     const at::Tensor &pse_const = pse.value_or(at::Tensor());
     const at::Tensor &padding_mask_const = padding_mask.value_or(at::Tensor());
     const at::Tensor &atten_mask_const = atten_mask.value_or(at::Tensor());
@@ -966,6 +970,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink, const c10::optional<at::Tensor> &dropout_mask_opt,
     int64_t seed, int64_t offset)
 {
+    ASCEND_LOGD("YYJ_DEBUG: 001 \n");
     const at::Tensor &d_scale_q_opt = at::Tensor();
     const at::Tensor &d_scale_k_opt = at::Tensor();
     const at::Tensor &d_scale_v_opt = at::Tensor();
