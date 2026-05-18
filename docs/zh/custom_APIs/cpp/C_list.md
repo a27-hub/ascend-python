@@ -2,6 +2,10 @@
 
 本章节包含Ascend Extension for PyTorch中提供的C++拓展接口，供深度优化使用。
 
+## 常规C++接口
+
+常规C++接口如表1所示。
+
 **表1** C++ API
 <a name="table1728514451512"></a>
 <table><thead align="left"><tr id="row1128511418151"><th class="cellrowborder" valign="top" width="36.13%" id="mcps1.2.3.1.1"><p id="p102854481517"><a name="p102854481517"></a><a name="p102854481517"></a>API名称</p>
@@ -226,3 +230,17 @@ Ascend Extension for PyTorch提供了一组ATB C++接口，用于在C++侧调用
 - `libop_plugin_atb.so`：导出上述ATB C++接口对应符号。
 
 相关接口可通过`at_npu::native::atb`命名空间访问。
+
+## LibTorch Stable ABI 接口
+
+PyTorch原生社区已提供LibTorch Stable ABI能力，提供一组稳定的二进制接口，让自定义算子/扩展无需绑定特定 PyTorch 版本也能跨版本兼容。`Ascend Extension for PyTorch`在此基础上补充NPU侧能力，对外提供以下接口：
+
+- [`torch_npu/csrc/inductor/aoti_torch/c/shim.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/c/shim.h)：补充NPU设备类型及NPU相关Stable ABI接口。
+- [`torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h)：提供NPU算子的Stable ABI声明，接口名形如`aoti_torch_npu_*`（对应文件由代码生成工具自动生成）。
+
+其中，NPU侧新增能力主要包括：
+
+- 设备类型与张量创建：`aoti_torch_device_type_npu`、`aoti_torch_create_tensor_from_blob_npu`、`aoti_torch_create_tensor_from_blob_npu_v2`
+- 设备guard能力：`aoti_torch_create_npu_guard`、`aoti_torch_delete_npu_guard`、`aoti_torch_npu_guard_set_index`
+- stream管理能力：`aoti_torch_create_npu_stream_guard`、`aoti_torch_delete_npu_stream_guard`、`aoti_torch_get_current_npu_stream`
+- NPU缓存分配器能力：`aoti_torch_npu_caching_allocator_raw_alloc`、`aoti_torch_npu_caching_allocator_raw_delete`
