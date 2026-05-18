@@ -54,7 +54,8 @@ static at::Tensor &add_out_npu_nocheck(
         if (self.dim() == 0 && !torch_npu::utils::is_npu(self)) {
             // self is a scalar.
             static const bool is_aclnn_available = check_aclnn_kernel_available("aclnnAddV3");
-            if (is_aclnn_available && self.dtype() != at::kBool) {
+            if (is_aclnn_available && self.dtype() != at::kBool && self.dtype() != at::kLong
+                && self.dtype() != at::kShort && self.dtype() != at::kByte && self.dtype() != at::kDouble) {
                 c10::Scalar selfs = self.item();
                 EXEC_NPU_CMD(aclnnAddV3, selfs, other, alpha, result);
             } else {
