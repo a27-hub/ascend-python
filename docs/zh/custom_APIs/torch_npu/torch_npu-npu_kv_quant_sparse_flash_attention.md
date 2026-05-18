@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>   | √  |
 |<term>Atlas A2 推理系列产品</term>   | √  |
 |<term>Atlas A3 推理系列产品</term>   | √  |
 
@@ -21,7 +22,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, scale_value, key_quant_mode, value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, attention_mode=0, quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64) -> Tensor
+torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, scale_value, key_quant_mode, value_quant_mode, *, key_dequant_scale=None, value_dequant_scale=None, block_table=None, actual_seq_lengths_query=None, actual_seq_lengths_kv=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND", sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, attention_mode=0, quant_scale_repo_mode=1, tile_size=128, rope_head_dim=64，key_dtype=None, value_dtype=None) -> Tensor
 ```
 
 ## 参数说明
@@ -33,11 +34,11 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 - **query**（`Tensor`）：必选参数，表示attention结构的Q输入，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`和`float16`，query由相同dtype的q_nope和q_rope按D维度拼接得到。`layout_query`为BSND时shape为[B,S1,Q\_N,D]，当`layout_query`为TND时shape为[Q\_T,Q\_N,D]，其中Q\_N支持1/2/4/8/16/32/64/128。
 
-- **key**（`Tensor`）：必选参数，表示attention结构的K输入，不支持非连续，数据格式支持$ND$，数据类型支持`int8`，`int8`的k_nope、query相同dtype的k_rope和`float32`的量化参数按D维度拼接得到，layout\_kv为PA\_BSND时shape为[block\_num, block\_size, KV\_N, D]，其中block\_num为PageAttention时block总数，block\_size为一个block的token数，block\_size取值为16的整数倍，最大支持到1024。`layout_kv`为BSND时shape为[B, S2, KV\_N, D]，`layout_kv`为TND时shape为[KV\_T, KV\_N, D]，其中KV\_N只支持1。
+- **key**（`Tensor`）：必选参数，表示attention结构的K输入，不支持非连续，数据格式支持$ND$，A2/A3数据类型支持`int8`，950PR/950DT支持`int8`、`hifloat8`和`float8_e4m3fn`。`key`由`int8`、`hifloat8`或`float8_e4m3fn`的k_nope、与query相同dtype的k_rope和`float32`的量化参数按D维度拼接得到，layout\_kv为PA\_BSND时shape为[block\_num, block\_size, KV\_N, D]，其中block\_num为PageAttention时block总数，block\_size为一个block的token数，block\_size取值为16的整数倍，最大支持到1024。`layout_kv`为BSND时shape为[B, S2, KV\_N, D]，`layout_kv`为TND时shape为[KV\_T, KV\_N, D]，其中KV\_N只支持1。
 
-- **value**（`Tensor`）：必选参数，表示attention结构的V输入，不支持非连续，数据格式支持$ND$，数据类型支持`int8`。value的N仅支持1。
+- **value**（`Tensor`）：必选参数，表示attention结构的V输入，不支持非连续，数据格式支持$ND$，A2/A3数据类型支持`int8`，950PR/950DT支持`int8`、`hifloat8`和`float8_e4m3fn`。value的N仅支持1。`value`的数据类型需与`key`保持一致。
 
-- **sparse\_indices**（`Tensor`）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持$ND$，数据类型支持`int32`，当`layout_query`为BSND时，shape需要传入[B, Q\_S, KV\_N, sparse\_size]，当`layout_query`为TND时，shape需要传入[Q\_T, KV\_N, sparse\_size]，其中sparse\_size为一次离散选取的block数，需要保证每行有效值均在前半部分，无效值均在后半部分，且需要满足sparse\_size大于0。
+- **sparse\_indices**（`Tensor`）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持$ND$，数据类型支持`int32`，当`layout_query`为BSND时，shape需要传入[B, Q\_S, KV\_N, sparse\_size]，当`layout_query`为TND时，shape需要传入[Q\_T, KV\_N, sparse\_size]，其中sparse\_size为一次离散选取的block数，需要保证每行有效值均在前半部分，无效值均在后半部分，且需要满足sparse\_size大于0。当`key`和`value`的数据类型为`hifloat8`时，sparse\_size仅支持2048。
 
 - **scale\_value**（`double`）：必选参数，公式中$d_k$开根号的倒数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持`double`。
 
@@ -78,6 +79,10 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 - **tile\_size**（`int`）：可选参数，表示per_tile时每个参数对应的数据块大小，仅在per_tile时有效。数据类型支持`int64`，仅支持默认值128。
 
 - **rope\_head\_dim**（`int`）：可选参数，表示MLA架构下的rope\_head\_dim大小，仅在attention\_mode为2时有效。数据类型支持`int64`，仅支持默认值64。
+
+- **key\_dtype**（`int`）：可选参数，表示`key`传入的数据类型，支持传入`hifloat8`数据类型或不传。当传入`hifloat8`时，表示`key`传入数据类型为`hifloat8`，当不传时，表示`key`传入数据类型为`int8`或`float8_e4m3fn`，具体数据类型根据`key`进行推导。
+
+- **value\_dtype**（`int`）：可选参数，表示`value`传入的数据类型，支持传入`hifloat8`数据类型或不传。当传入`hifloat8`时，表示`key`传入数据类型为`hifloat8`，当不传时，表示`key`传入数据类型为`int8`或`float8_e4m3fn`，具体数据类型根据`key`进行推导。数据类型需要与`key_dtype`保持一致。
 
 ## 返回值说明
 
