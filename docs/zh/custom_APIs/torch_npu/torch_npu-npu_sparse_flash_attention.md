@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas 350 加速卡</term>   | √  |
 |<term>Atlas A2 推理系列产品</term>   | √  |
 |<term>Atlas A3 推理系列产品</term>   | √  |
 
@@ -80,7 +81,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **key\_rope**（`Tensor`）：可选参数，表示MLA结构中的key的rope信息，不支持非连续，数据格式支持ND,数据类型支持`bfloat16`和`float16`。
 
-- **sparse\_block\_size**（`int`）：可选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持`int64`，取值范围为[1,128]，且为2的幂次方。
+- **sparse\_block\_size**（`int`）：可选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持`int64`。
     - sparse_block_size为1时，为Token-wise稀疏化场景，将每个token视为独立单元，在计算重要性分数时，评估每个查询token与每个键值token之间的独立关联程度。
     - sparse_block_size为大于1小于等于128时，为Block-wise稀疏化场景，将token序列划分为固定大小的连续块，以块为单位进行重要性评估，块内token共享相同的稀疏化决策。
 
@@ -98,7 +99,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **attention\_mode**（`int`）：可选参数，表示attention的模式，数据类型支持`int64`，仅支持传入2，表示MLA-absorb模式，即计算过程中会将query和key的nope部分分别和query_rope和key_rope的rope部分沿头维度（D）拼接，合并形成最终的query和key用于后续计算，且key和value共享同一份底层张量数据。
 
-- **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
+- **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
 
 ## 返回值说明
 
@@ -112,8 +113,13 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 - 该接口支持图模式。
 - 参数query中的D和key、value的D值相等为512，参数query\_rope中的D和key\_rope的D值相等为64。
 - 参数query、key、value的数据类型必须保持一致。
-- 支持sparse\_block\_size整除block\_size。
+- sparse\_block\_size约束：
+  - <term>Atlas 350 加速卡</term>：
+    - 只支持sparse_block_size为1。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+    - 支持[1,128]，且要求是2的幂次方，在PageAttention场景下要求sparse_block_size整除block_size
 - `layout_kv`为PA_BSND时，`layout_query`和`layout_kv`无需一致； `layout_kv`为BSND或TND时，`layout_query`和`layout_kv`需保持一致。
+- 当前只支持query_rope和key_rope传入，不支持rope为空
 
 ## 调用示例
 
