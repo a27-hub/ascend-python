@@ -44,7 +44,8 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
                                            at::OptionalIntArrayRef perm_x1,
                                            at::OptionalIntArrayRef perm_x2,
                                            at::OptionalIntArrayRef perm_y,
-                                           c10::optional<int64_t> batch_split_factor)
+                                           c10::optional<int64_t> batch_split_factor,
+                                           c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype)
 {
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
@@ -73,15 +74,17 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
     
     
     bool is_nd_nz_format = op_plugin::utils::is_nz_format(x2) && !op_plugin::utils::is_nz_format(x1);
-    
+    TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
+    TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
+    TensorWrapper result_wrapper = make_wrapper(result, dtype);
     if (is_nd_nz_format) {
-        EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMulWeightNz, x1, x2, bias_real, x1_scale_real, x2_scale_real,
+        EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMulWeightNz, x1_wrapper, x2_wrapper, bias_real, x1_scale_real, x2_scale_real,
                      dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
-                     batch_split_factor_value, result);
+                     batch_split_factor_value, result_wrapper);
     } else {
-        EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMul, x1, x2, bias_real, x1_scale_real, x2_scale_real,
+        EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMul, x1_wrapper, x2_wrapper, bias_real, x1_scale_real, x2_scale_real,
                      dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
-                     batch_split_factor_value, result);
+                     batch_split_factor_value, result_wrapper);
     }
     
     return result;
