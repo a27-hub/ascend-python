@@ -285,6 +285,13 @@ class Manager {
     static bool runtime_init = false;
     if (!runtime_init) {
       auto &conf = dvm::Config::Instance();
+      bool enable_determ = at::globalContext().deterministicAlgorithms();
+      if (enable_determ) {
+        conf.SetDeterm();
+      } else {
+        conf.UnsetDeterm();
+      }
+      ASCEND_LOGI("Set dvm deterministic = %d", enable_determ);
       bool enable_tuning = flags_.online_tuning;
       if (enable_tuning) {
         conf.SetLazyTuner();
