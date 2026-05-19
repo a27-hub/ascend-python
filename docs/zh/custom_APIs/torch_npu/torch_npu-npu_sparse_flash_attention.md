@@ -98,7 +98,7 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 
 - **attention\_mode**（`int`）：可选参数，表示attention的模式，数据类型支持`int64`，仅支持传入2，表示MLA-absorb模式，即计算过程中会将query和key的nope部分分别和query_rope和key_rope的rope部分沿头维度（D）拼接，合并形成最终的query和key用于后续计算，且key和value共享同一份底层张量数据。
 
-- **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，但图模式下不支持，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
+- **return\_softmax\_lse**（`bool`）：可选参数，用于表示是否返回softmax_max和softmax_sum。True表示返回，False表示不返回；默认值为False。该参数仅在训练且`layout_kv`不为PA_BSND场景支持。
 
 ## 返回值说明
 
