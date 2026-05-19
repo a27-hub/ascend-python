@@ -21,7 +21,17 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_weight_quant_preprocess(weight, weight_scale, x_dtype, weight_dtype, weight_scale_dtype, weight_offset=None, bias=None, x_scale_dtype=None, k_group_size=None) -> Tuple[Tensor, Tensor, Tensor, Tensor]
+torch_npu.npu_weight_quant_preprocess(
+    weight,
+    weight_scale,
+    x_dtype,
+    weight_dtype,
+    weight_scale_dtype,
+    weight_offset=None,
+    bias=None,
+    x_scale_dtype=None,
+    k_group_size=None
+) -> Tuple[Tensor, Tensor, Tensor, Tensor]
 ```
 
 ## 参数说明
