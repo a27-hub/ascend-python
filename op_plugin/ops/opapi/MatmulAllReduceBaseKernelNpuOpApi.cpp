@@ -172,8 +172,12 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
                                   c10::optional<int64_t> x1_dtype, c10::optional<int64_t> x2_dtype,
                                   c10::optional<int64_t> dequant_scale_dtype,
                                   c10::optional<int64_t> pertoken_scale_dtype,
-                                  int64_t comm_quant_mode)
+                                  int64_t comm_quant_mode, c10::optional<c10::string_view> comm_mode)
 {
+    bool is_comm_mode = comm_mode.has_value();
+    std::cout << "is_comm_mode: " << is_comm_mode << std::endl;
+    c10::string_view comm_mode_value = comm_mode.value_or("none");
+    char *comm_mode_ptr = const_cast<char *>(comm_mode_value.data());
     bool is_a8 = (x1_dtype.has_value() ?
         (x1_dtype.value() == static_cast<int>(c10_npu::DType::HIFLOAT8)) : false) ||
         (x1.scalar_type() == at::kFloat8_e4m3fn) || (x1.scalar_type() == at::kFloat8_e5m2);
@@ -241,14 +245,27 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
         TensorWrapper dequant_scale_wrapper = {dequant_scale.value(), (dequant_scale_dtype.has_value()) ?
             c10_npu::GetAclDataType(dequant_scale_dtype.value()) :
             npu_preparation::convert_to_acl_data_type(dequant_scale.value().scalar_type())};
-        EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV4, x1_wrapper, x2_wrapper, bias_real, x3_real, pertoken_scale_wrapper,
-                     dequant_scale_wrapper, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr, reduce_op_ptr,
-                     comm_turn, stream_mode, group_size, comm_quant_mode, result);
+        if (is_comm_mode) {
+            std::cout << "all quant sence, enter aclnnQuantMatmulAllReduceV5" << std::endl;
+            EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV5, x1_wrapper, x2_wrapper, bias_real, x3_real, pertoken_scale_wrapper,
+                        dequant_scale_wrapper, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr, reduce_op_ptr,
+                        comm_mode_ptr, comm_turn, stream_mode, group_size, comm_quant_mode, result);
+        } else {
+            EXEC_NPU_CMD(aclnnQuantMatmulAllReduceV4, x1_wrapper, x2_wrapper, bias_real, x3_real, pertoken_scale_wrapper,
+                         dequant_scale_wrapper, comm_quant_scale_1_real, comm_quant_scale_2_real, hcom_ptr, reduce_op_ptr,
+                         comm_turn, stream_mode, group_size, comm_quant_mode, result);
+        }
     }
 
     if (!isIntegralType(x1.scalar_type()) && !isIntegralType(x2.scalar_type()) && !is_fp8 && !is_a4) {
         if (x3.has_value()) {
-            EXEC_NPU_CMD(aclnnMatmulAllReduceV2, x1, x2, bias_real, x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
+            if (is_comm_mode) {
+                std::cout << "none quant sence, enter aclnnMatmulAllReduceV3" << std::endl;
+                EXEC_NPU_CMD(aclnnMatmulAllReduceV3, x1, x2, bias_real, x3_real, hcom_ptr, reduce_op_ptr,
+                             comm_mode_ptr, comm_turn, stream_mode, result);
+            } else {
+                EXEC_NPU_CMD(aclnnMatmulAllReduceV2, x1, x2, bias_real, x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
+            }
         } else {
             EXEC_NPU_CMD(aclnnMatmulAllReduce, x1, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
         }
@@ -274,8 +291,14 @@ at::Tensor npu_mm_all_reduce_base(const at::Tensor& x1, const at::Tensor& x2, c1
     if (!isIntegralType(x1.scalar_type()) && isIntegralType(x2.scalar_type()) || (!is_a8 && is_w8)) {
         const at::Tensor& antiquant_scale_real = antiquant_scale.value_or(at::Tensor());
         const at::Tensor& antiquant_offset_real = antiquant_offset.value_or(at::Tensor());
-        EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1_wrapper, x2_wrapper, bias_real, antiquant_scale_real, antiquant_offset_real,
-                     x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, antiquant_group_size, result);
+        if (is_comm_mode) {
+            std::cout << "weight quant sence, enter aclnnWeightQuantMatmulAllReduceV2" << std::endl;
+            EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduceV2, x1_wrapper, x2_wrapper, bias_real, antiquant_scale_real, antiquant_offset_real,
+                         x3_real, hcom_ptr, reduce_op_ptr, comm_mode_ptr, comm_turn, stream_mode, antiquant_group_size, result);
+        } else {
+            EXEC_NPU_CMD(aclnnWeightQuantMatmulAllReduce, x1_wrapper, x2_wrapper, bias_real, antiquant_scale_real, antiquant_offset_real,
+                         x3_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, antiquant_group_size, result);
+        }
     }
 
     FLOP_COUNT(FlopCounter::mm_flop, x1, x2);
