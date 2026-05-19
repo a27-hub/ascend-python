@@ -235,7 +235,11 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
 void process_tensor_list_batch(const at::TensorList self, const at::TensorList src, bool non_blocking,
     bool is_support_nd_out, bool is_support_batch)
 {
-    if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
+    const bool same_device = self[0].device() == src[0].device();
+    // The NPU fast path does not support cross-dtype foreach copy yet.
+    const bool can_use_fast_path =
+        is_support_nd_out && at::native::can_use_fast_route(self, src) && check_tensor_dtype_support_base(src);
+    if (!can_use_fast_path) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
             return memcpyBatch(self, src, non_blocking);
@@ -249,7 +253,7 @@ void process_tensor_list_batch(const at::TensorList self, const at::TensorList s
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 
-    split_and_exec_npu_cmd_copy(self, src, non_blocking);
+    split_and_exec_npu_cmd_copy(self, src, same_device ? true : non_blocking);
 }
 
 void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
