@@ -472,6 +472,19 @@ void LazyFusionKernel::Flush() {
   if (flushed_) {
     return;
   }
+  thread_local int cached_determ = -1;
+  int want_determ = at::globalContext().deterministicAlgorithms() ? 1 : 0;
+  if (cached_determ != want_determ) {
+    auto &conf = dvm::Config::Instance();
+    if (want_determ) {
+      conf.SetDeterm();
+    } else {
+      conf.UnsetDeterm();
+    }
+    cached_determ = want_determ;
+    ASCEND_LOGI("dvm: bridge PyTorch deterministic flag -> %d", want_determ);
+  }
+
   if (outputs_.empty()) {
     ASCEND_LOGD("dvm Flush: empty graph, skip (id=%zu)", id_);
     Clear();
