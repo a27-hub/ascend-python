@@ -236,11 +236,9 @@ void process_tensor_list_batch(const at::TensorList self, const at::TensorList s
     bool is_support_nd_out, bool is_support_batch)
 {
     const bool same_device = self[0].device() == src[0].device();
-    const bool same_dtype = self[0].scalar_type() == src[0].scalar_type();
     // The NPU fast path does not support cross-dtype foreach copy yet.
     const bool can_use_fast_path =
-        is_support_nd_out && same_dtype && at::native::_check_tensors_share_device_and_dtype({self, src}, true) &&
-        at::native::_check_tensors_share_sizes_and_strides({self, src}) && check_tensor_dtype_support_base(src);
+        is_support_nd_out && at::native::can_use_fast_route(self, src) && check_tensor_dtype_support_base(src);
     if (!can_use_fast_path) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
