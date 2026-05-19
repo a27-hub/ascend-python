@@ -113,12 +113,13 @@ torch_npu.npu_sparse_flash_attention(query, key, value, sparse_indices, scale_va
 - 该接口支持图模式。
 - 参数query中的D和key、value的D值相等为512，参数query\_rope中的D和key\_rope的D值相等为64。
 - 参数query、key、value的数据类型必须保持一致。
-- sparse\_block\_size需要整除block\_size。
+- sparse\_block\_size约束：
   - <term>Atlas 350 加速卡</term>：
     - 只支持sparse_block_size为1。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     - 支持[1,128]，且要求是2的幂次方，在PageAttention场景下要求sparse_block_size整除block_size
 - `layout_kv`为PA_BSND时，`layout_query`和`layout_kv`无需一致； `layout_kv`为BSND或TND时，`layout_query`和`layout_kv`需保持一致。
+- 当前只支持query_rope和key_rope传入，不支持rope为空
 
 ## 调用示例
 
