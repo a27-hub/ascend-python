@@ -25,10 +25,13 @@ using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 constexpr int64_t NZ_16 = 16;
 constexpr int64_t NZ_C0_32 = 32;
-constexpr int64_t NZ_C0_32_FOR_B4 = 16;
-
-
-enum class QuantDataFlow { UNKNOWN = 0, MM_MX_A8W4 = 1, GMM_MX_A8W4 = 2 };
+constexpr int64_t NZ_C0_16 = 16;
+constexpr int64_t IDX_0 = 0;
+constexpr int64_t IDX_1 = 1;
+constexpr int64_t IDX_2 = 2;
+constexpr int64_t IDX_3 = 3;
+constexpr int64_t IDX_4 = 4;
+constexpr int64_t DOUBLE = 2;
 
 struct QuantContext {
     const at::Tensor& weight;
@@ -41,7 +44,6 @@ struct QuantContext {
     int64_t weight_scale_dtype;
     int64_t k_group_size;
     c10_npu::SocVersion soc_version;
-    QuantDataFlow data_flow;
     bool is_gmm = false;
     bool is_weight_trans = false;
 
@@ -52,9 +54,11 @@ struct QuantContext {
 };
 
 using PrepareFunc = void (*)(QuantContext& ctx);
-using DataFlowJudgeFunc = void (*)(QuantContext& ctx);
+using DataFlowJudgeFunc = bool (*)(QuantContext& ctx);
+using DataFlowConfig = std::pair<DataFlowJudgeFunc, std::vector<PrepareFunc>>;
 
 inline int64_t ceil_div(int64_t a, int64_t b) {
+    TORCH_CHECK(b != 0, "Division by zero in ceil_div." + OPS_ERROR(ErrCode::VALUE));
     return (a + b - 1) / b;
 }
 
@@ -67,36 +71,48 @@ void set_tensor_format_and_storage_shape(at::Tensor& tensor, int64_t format,
 
 static bool is_transpose_certain_two_dims(const at::Tensor &tensor, int64_t first_dim)
 {
+    TORCH_CHECK(first_dim >= 0 && first_dim + 1 < tensor.dim(),
+        "first_dim out of bounds: first_dim=", first_dim, ", tensor.dim()=", tensor.dim(),
+        OPS_ERROR(ErrCode::PARAM));
     return tensor.stride(first_dim + 1) == tensor.stride(first_dim) * tensor.size(first_dim);
 }
 
-void judge_mm_mx_a8w4(QuantContext& ctx) {
+bool judge_mm_mx_a8w4(QuantContext& ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType x_scale_acl_dtype = ctx.x_scale_dtype.has_value() ? 
         c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
     
+    OP_LOG_DEBUG("judge_mm_mx_a8w4: x_acl_dtype=%d, weight_acl_dtype=%d, x_scale_acl_dtype=%d, weight_scale_acl_dtype=%d, weight_dim=%d",
+        static_cast<int>(x_acl_dtype), static_cast<int>(weight_acl_dtype),
+        static_cast<int>(x_scale_acl_dtype), static_cast<int>(weight_scale_acl_dtype),
+        static_cast<int>(ctx.weight.dim()));
+    
     bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) &&
         (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
         (x_scale_acl_dtype == ACL_FLOAT8_E8M0) &&
         (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == 2) {
-        ctx.data_flow = QuantDataFlow::MM_MX_A8W4;
         ctx.is_weight_trans = true;
-        if (ctx.is_weight_trans) {
-            TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 0),
-                "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        }
+        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 0),
+            "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
+        return true;
     }
+    return false;
 }
 
-void judge_gmm_mx_a8w4(QuantContext& ctx) {
+bool judge_gmm_mx_a8w4(QuantContext& ctx) {
     aclDataType x_acl_dtype = c10_npu::GetAclDataType(ctx.x_dtype);
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     aclDataType x_scale_acl_dtype = ctx.x_scale_dtype.has_value() ? 
         c10_npu::GetAclDataType(ctx.x_scale_dtype.value()) : ACL_DT_UNDEFINED;
     aclDataType weight_scale_acl_dtype = c10_npu::GetAclDataType(ctx.weight_scale_dtype);
+    
+    OP_LOG_DEBUG("judge_gmm_mx_a8w4: x_acl_dtype=%d, weight_acl_dtype=%d, x_scale_acl_dtype=%d, weight_scale_acl_dtype=%d, weight_dim=%d",
+        static_cast<int>(x_acl_dtype), static_cast<int>(weight_acl_dtype),
+        static_cast<int>(x_scale_acl_dtype), static_cast<int>(weight_scale_acl_dtype),
+        static_cast<int>(ctx.weight.dim()));
     
     bool dtype_match = (x_acl_dtype == ACL_FLOAT8_E4M3FN) &&
         (weight_acl_dtype == ACL_FLOAT4_E2M1) &&
@@ -104,46 +120,45 @@ void judge_gmm_mx_a8w4(QuantContext& ctx) {
         (weight_scale_acl_dtype == ACL_FLOAT8_E8M0);
     if (dtype_match && ctx.weight.dim() == 3) {
         ctx.is_gmm = true;
-        ctx.data_flow = QuantDataFlow::GMM_MX_A8W4;
         ctx.is_weight_trans = true;
-        if (ctx.is_weight_trans) {
-            TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 1),
-                "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
-        }
+        TORCH_CHECK(is_transpose_certain_two_dims(ctx.weight_scale, 1),
+            "Input weight scale tensor should be transposed, please check input.", OPS_ERROR(ErrCode::PARAM));
+        return true;
     }
+    return false;
 }
 
 static void prepare_out_weight_nz_c0_32(QuantContext& ctx)
 {
     auto weight_sizes = ctx.weight.sizes();
     int64_t weight_dim = ctx.weight.dim();
-    int64_t K = weight_sizes[weight_dim - 2];
-    int64_t N = weight_sizes[weight_dim - 1];
+    int64_t k = weight_sizes[weight_dim - IDX_2];
+    int64_t n = weight_sizes[weight_dim - IDX_1];
 
     aclDataType weight_acl_dtype = c10_npu::GetAclDataType(ctx.weight_dtype);
     bool is_b4 = (weight_acl_dtype == ACL_INT4 || 
                   weight_acl_dtype == ACL_FLOAT4_E2M1 || 
                   weight_acl_dtype == ACL_FLOAT4_E1M2);
-    int64_t nz_c0 = is_b4 ? NZ_C0_32_FOR_B4 : NZ_C0_32;
+    int64_t nz_c0 = is_b4 ? NZ_C0_16 : NZ_C0_32;
 
     c10::SmallVector<int64_t, 5> storage_shape;
     c10::SmallVector<int64_t, 5> trans_stride;
     
     if (ctx.is_weight_trans) {
         if (ctx.is_gmm) {
-            int64_t G = weight_sizes[0];
-            storage_shape = {G, ceil_div(K, nz_c0), ceil_div(N, NZ_16), NZ_16, nz_c0};
-            trans_stride = {K * N, 1, K};
+            int64_t g = weight_sizes[IDX_0];
+            storage_shape = {g, ceil_div(k, nz_c0), ceil_div(n, NZ_16), NZ_16, nz_c0};
+            trans_stride = {k * n, 1, k};
         } else {
-            storage_shape = {ceil_div(K, nz_c0), ceil_div(N, NZ_16), NZ_16, nz_c0};
-            trans_stride = {1, K};
+            storage_shape = {ceil_div(k, nz_c0), ceil_div(n, NZ_16), NZ_16, nz_c0};
+            trans_stride = {1, k};
         }
     } else {
         if (ctx.is_gmm) {
-            int64_t G = weight_sizes[0];
-            storage_shape = {G, ceil_div(N, nz_c0), ceil_div(K, NZ_16), NZ_16, nz_c0};
+            int64_t g = weight_sizes[IDX_0];
+            storage_shape = {g, ceil_div(n, nz_c0), ceil_div(k, NZ_16), NZ_16, nz_c0};
         } else {
-            storage_shape = {ceil_div(N, nz_c0), ceil_div(K, NZ_16), NZ_16, nz_c0};
+            storage_shape = {ceil_div(n, nz_c0), ceil_div(k, NZ_16), NZ_16, nz_c0};
         }
     }
 
@@ -173,14 +188,14 @@ static void prepare_out_weight_scale_mx(QuantContext& ctx)
     if (ctx.is_weight_trans) {
         auto scale_sizes = ctx.weight_scale.sizes();
         int64_t scale_dim = ctx.weight_scale.dim();
-        int64_t K = scale_view_shape[scale_dim - 3];
-        int64_t N = scale_view_shape[scale_dim - 2];
-        c10::SmallVector<int64_t, 5> trans_stride;
+        int64_t k_scale = scale_view_shape[scale_dim - IDX_3];
+        int64_t n = scale_view_shape[scale_dim - IDX_2];
+        c10::SmallVector<int64_t, 5> trans_stride; // 对应内存转置存储
         if (ctx.is_gmm) {
-            int64_t G = scale_view_shape[0];
-            trans_stride = {2 * K * N, 2, 2 * K, 1};
+            int64_t g = scale_view_shape[IDX_0];
+            trans_stride = {DOUBLE * k_scale * n, DOUBLE, DOUBLE * k_scale, 1}; // 对应内存中的 [g, n, k_scale, 2]
         } else {
-            trans_stride = {2, 2 * K, 1};
+            trans_stride = {DOUBLE, DOUBLE * k_scale, 1}; // 对应内存中的 [n, k_scale, 2]
         }
         ctx.out_weight_scale = ctx.out_weight_scale.as_strided_(scale_view_shape, trans_stride);
     }
@@ -210,19 +225,15 @@ static void execute_prepares(const std::vector<PrepareFunc>& prepares, QuantCont
     }
 }
 
-static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowJudgeFunc>> SOC_VERSION_DATA_FLOW_MAP = {
-    {c10_npu::SocVersion::Ascend950, {judge_mm_mx_a8w4, judge_gmm_mx_a8w4}},
-};
-
-static const std::unordered_map<c10_npu::SocVersion, std::unordered_map<QuantDataFlow, std::vector<PrepareFunc>>> SOC_DATA_FLOW_PREPARE_MAP = {
+static const std::unordered_map<c10_npu::SocVersion, std::vector<DataFlowConfig>> SOC_DATA_FLOW_CONFIG_MAP = {
     {c10_npu::SocVersion::Ascend950, {
-        {QuantDataFlow::MM_MX_A8W4, {
+        {judge_mm_mx_a8w4, {
             prepare_out_weight_nz_c0_32,
             prepare_out_weight_scale_mx,
             prepare_out_weight_offset,
             prepare_out_bias
         }},
-        {QuantDataFlow::GMM_MX_A8W4, {
+        {judge_gmm_mx_a8w4, {
             prepare_out_weight_nz_c0_32,
             prepare_out_weight_scale_mx,
             prepare_out_weight_offset,
@@ -246,8 +257,8 @@ npu_weight_quant_preprocess(
     c10::optional<int64_t> k_group_size)
 {
     auto soc_version = c10_npu::GetSocVersion();
-    auto it = SOC_VERSION_DATA_FLOW_MAP.find(soc_version);
-    TORCH_CHECK(it != SOC_VERSION_DATA_FLOW_MAP.end(),
+    auto it = SOC_DATA_FLOW_CONFIG_MAP.find(soc_version);
+    TORCH_CHECK(it != SOC_DATA_FLOW_CONFIG_MAP.end(),
         "Unsupported NPU architecture: " + std::to_string(static_cast<int>(soc_version)) + OPS_ERROR(ErrCode::NOT_SUPPORT));
     
     int64_t k_group_size_real = k_group_size.value_or(0);
@@ -263,7 +274,6 @@ npu_weight_quant_preprocess(
         weight_scale_dtype,
         k_group_size_real,
         soc_version,
-        QuantDataFlow::UNKNOWN,
         false,
         false,
         at::Tensor(),
@@ -272,22 +282,15 @@ npu_weight_quant_preprocess(
         at::Tensor()
     };
     
-    for (const auto& judge : it->second) {
-        judge(ctx);
-        if (ctx.data_flow != QuantDataFlow::UNKNOWN) break;
+    bool matched = false;
+    for (const auto& [judge, prepares] : it->second) {
+        if (judge(ctx)) {
+            execute_prepares(prepares, ctx);
+            matched = true;
+            break;
+        }
     }
-    TORCH_CHECK(ctx.data_flow != QuantDataFlow::UNKNOWN,
-        "Unsupported data flow combination." + OPS_ERROR(ErrCode::PARAM));
-    
-    auto arch_it = SOC_DATA_FLOW_PREPARE_MAP.find(soc_version);
-    TORCH_CHECK(arch_it != SOC_DATA_FLOW_PREPARE_MAP.end(),
-        "No prepare functions registered for SocVersion: " + std::to_string(static_cast<int>(soc_version)) + OPS_ERROR(ErrCode::PARAM));
-    
-    auto data_flow_it = arch_it->second.find(ctx.data_flow);
-    TORCH_CHECK(data_flow_it != arch_it->second.end(),
-        "No prepare functions registered for DataFlow: " + std::to_string(static_cast<int>(ctx.data_flow)) + OPS_ERROR(ErrCode::PARAM));
-    
-    execute_prepares(data_flow_it->second, ctx);
+    TORCH_CHECK(matched, "Unsupported data flow combination." + OPS_ERROR(ErrCode::PARAM));
     
     TensorWrapper weight_wrapper = make_wrapper(ctx.weight, 
         c10::optional<int64_t>(ctx.weight_dtype));
