@@ -16,14 +16,18 @@
 using namespace std;
 namespace atb {
 using SelfAttentionParam = atb::infer::SelfAttentionParam;
-void _npu_flash_attention_unpad(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &seq_len, const double scale_value, const int64_t num_heads, const int64_t num_kv_heads, at::Tensor &out)
+void _npu_flash_attention_unpad(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value, const at::Tensor &seq_len, const double scale_value, const int64_t num_heads, const int64_t num_kv_heads, at::Tensor &out, const c10::optional<int64_t> kernel_type)
 {
     const c10::OptionalDeviceGuard device_guard(device_of(query));
+    int64_t ktype = kernel_type.has_value() ? kernel_type.value() : 0;
+    TORCH_CHECK(ktype == SelfAttentionParam::KERNELTYPE_DEFAULT ||
+                ktype == SelfAttentionParam::KERNELTYPE_EXP_M8V2,
+                "kernel_type only supports KERNELTYPE_DEFAULT(0) and KERNELTYPE_EXP_M8V2(2), but got: ", kernel_type);
     OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
 
     selfattentionparam.calcType = SelfAttentionParam::PA_ENCODER;
-    selfattentionparam.kernelType = SelfAttentionParam::KERNELTYPE_DEFAULT;
+    selfattentionparam.kernelType = static_cast<SelfAttentionParam::KernelType>(ktype);
     selfattentionparam.clampType = SelfAttentionParam::CLAMP_TYPE_UNDEFINED;
     selfattentionparam.maskType = SelfAttentionParam::MASK_TYPE_UNDEFINED;
     selfattentionparam.kvcacheCfg = SelfAttentionParam::K_CACHE_V_CACHE;
@@ -58,7 +62,7 @@ void _npu_flash_attention_unpad(const at::Tensor &query, const at::Tensor &key, 
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_flash_attention_unpad(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, Tensor(a!) out) -> ()");
+    m.def("_npu_flash_attention_unpad(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, Tensor(a!) out,  " " *, int ? kernel_type = 0) -> ()");
 }
 }
 
