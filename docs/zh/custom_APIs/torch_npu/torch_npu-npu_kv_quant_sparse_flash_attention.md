@@ -96,7 +96,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 - 该接口支持图模式。
 - 参数query中的D值为576，即nope\+rope=512\+64。
 - 参数key、value中的D值为656，即nope\+rope\*2\+dequant\_scale\*4=512\+64\*2\+4\*4。
-- sparse\_block\_size需要整除block\_size。
+- sparse\_block\_size约束：
   - <term>Atlas 350 加速卡</term>：
     - 只支持sparse_block_size为1。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
