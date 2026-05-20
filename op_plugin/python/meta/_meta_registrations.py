@@ -1742,6 +1742,33 @@ def npu_moe_gating_top_k_meta(x, k=1, bias=None, k_group=1, group_count=1, group
             x.new_empty(tuple(y2_dim_list), dtype=torch.float32))
 
 
+def npu_moe_gating_top_k_backward_meta(x_norm, grad_y, expertIdx, renorm=0, norm_type=0, routed_scaling_factor=1.0, eps=1e-20):
+    x_norm_dim = x_norm.dim()
+    torch._check(
+        x_norm_dim == 2,
+        lambda: "x_norm shape support only 2d" + ops_error(ErrCode.VALUE),
+    )
+    grad_y_dim = grad_y.dim()
+    torch._check(
+        grad_y_dim == 2,
+        lambda: "grad_y shape support only 2d" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        grad_y.size(0) == x_norm.size(0),
+        lambda: "x_norm 1st dim must be same as grad_y's" + ops_error(ErrCode.VALUE),
+    )
+    expertIdx_dim = expertIdx.dim()
+    torch._check(
+        expertIdx_dim == 2,
+        lambda: "expertIdx shape support only 2d" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        grad_y.size(0) == expertIdx.size(0) and grad_y.size(1) == expertIdx.size(1),
+        lambda: "expertIdx shape must be same as grad_y's" + ops_error(ErrCode.VALUE),
+    )
+    return x_norm.new_empty(x_norm.size, dtype=grad_y.dtype)
+
+
 def get_query_and_attention_out_layout(query, input_layout):
     class ParserLayout:
         def __init__(self, qLayout: str, outLayout: str, qDim: int):
