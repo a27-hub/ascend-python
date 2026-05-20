@@ -23,9 +23,9 @@ torch_npu.npu.mstx.mark(message: str='None', stream=None, domain: str='default')
 
 ## 参数说明
 
-- **message** (`str`)：可选参数，打点携带信息字符串指针，默认为None。传入的message字符串长度要求：
-  - MSPTI场景：不能超过255字节。
-  - 非MSPTI场景：不能超过156字节。
+- **message** (`str`)：可选参数，打点携带信息的字符串指针，默认为None。传入的message字符串长度要求：
+  - msPTI场景：不能超过255字节。
+  - 非msPTI场景：不能超过156字节。
 - **stream** (`int`)：可选参数，用于执行打点任务的stream，默认为None。
   - 配置为None时，只标记Host侧的瞬时事件。
   - 配置为有效的stream时，标记Host侧和对应Device侧的瞬时事件。
