@@ -4329,6 +4329,16 @@ instantiate_device_type_tests(FakeTensorOpInfoTest, globals(), only_for="cpu")
 
 
 class TestGroupedMatmulSwigluQuant(TestCase):
+    def _assert_npu_grouped_matmul_swiglu_quant_shape(self, x, weight, groupList, weightScale, xScale, output_shape):
+        output0_npu, output1_npu, output2_npu = torch_npu.npu_grouped_matmul_swiglu_quant(
+            x.npu(), weight.npu(), groupList.npu(), weightScale.npu(), xScale.npu(), bias=None, offset=None)
+        self.assertTrue(output0_npu.shape == output_shape)
+        self.assertTrue(output0_npu.dtype == torch.int8)
+        self.assertTrue(output1_npu.shape == torch.Size([x.size(0)]))
+        self.assertTrue(output1_npu.dtype == torch.float32)
+        self.assertTrue(output2_npu.shape == torch.Size([]))
+        self.assertTrue(output2_npu.dtype == torch.float32)
+
     def test_npu_grouped_matmul_swiglu_quant(self):
         with FakeTensorMode():
             E = 16
@@ -4350,6 +4360,52 @@ class TestGroupedMatmulSwigluQuant(TestCase):
             self.assertTrue(output1_npu.dtype == output1.dtype)
             self.assertTrue(output2_npu.shape == output2.shape)
             self.assertTrue(output2_npu.dtype == output2.dtype)
+
+    def test_npu_grouped_matmul_swiglu_quant_nz_shape(self):
+        with FakeTensorMode():
+            # A8W8 NZ: logical N is carried by weightScale, not by the physical weight shape.
+            E = 2
+            M = 8
+            K = 64
+            N = 128
+            x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
+            weight = torch.randint(-128, 127, (E, N // 32, K // 16, 16, 32), dtype=torch.int8)
+            weightScale = torch.randn(E, N)
+            xScale = torch.randn(M)
+            groupList = torch.zeros(E, dtype=torch.int64)
+            self._assert_npu_grouped_matmul_swiglu_quant_shape(
+                x, weight, groupList, weightScale, xScale, torch.Size([M, N // 2]))
+
+    def test_npu_grouped_matmul_swiglu_quant_nz_int32_pack_shape(self):
+        with FakeTensorMode():
+            # A8W4 INT32 packed NZ: physical weight.size(2) is K/16, so N must come from weightScale.
+            E = 2
+            M = 8
+            K = 64
+            N = 128
+            x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
+            weight = torch.randint(-128, 127, (E, N // 64, K // 16, 16, 8), dtype=torch.int32)
+            weightScale = torch.randn(E, N)
+            xScale = torch.randn(M)
+            groupList = torch.zeros(E, dtype=torch.int64)
+            self._assert_npu_grouped_matmul_swiglu_quant_shape(
+                x, weight, groupList, weightScale, xScale, torch.Size([M, N // 2]))
+
+    def test_npu_grouped_matmul_swiglu_quant_nz_per_group_shape(self):
+        with FakeTensorMode():
+            # A8W4 per-group NZ: weightScale has shape (E, K_group_num, N), and N is the tail axis.
+            E = 2
+            M = 8
+            K = 64
+            N = 128
+            k_group_num = 2
+            x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
+            weight = torch.randint(-128, 127, (E, N // 64, K // 16, 16, 8), dtype=torch.int32)
+            weightScale = torch.randn(E, k_group_num, N)
+            xScale = torch.randn(M)
+            groupList = torch.zeros(E, dtype=torch.int64)
+            self._assert_npu_grouped_matmul_swiglu_quant_shape(
+                x, weight, groupList, weightScale, xScale, torch.Size([M, N // 2]))
 
 
 @unittest.skip("skip until CANN is updated to support aclnnGroupedMatmulSwigluQuantWeightNzV2")
