@@ -5189,7 +5189,7 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
 @impl(m, "npu_anti_mx_quant")
 def npu_anti_mx_quant(input_dummy, mxscale, *, axis=-1, dst_type=15):
     dim_num = input_dummy.dim()
-    if input_dummy.size(dim_num - 1) % 2:
+    if (input_dummy.dtype == torch.float4_e1m2fn_x2 or input_dummy.dtype == torch.float4_e1m2fn_x2) and input_dummy.size(dim_num - 1) % 2:
         raise RuntimeError("If input dtype is float4_e2m1 or float4_e1m2, " \
                             "the last dim of input must be divisible by 2, " +
                             ops_error(ErrCode.PARAM))
@@ -5205,10 +5205,10 @@ def npu_anti_mx_quant(input_dummy, mxscale, *, axis=-1, dst_type=15):
     dim_size = (dim_size + 2 - 1) // 2
 
     for i in range (axis_change):
-        if (input_dummy[i] != mxscale[i]):
+        if (input_dummy.size(i) != mxscale.size(i)):
             raise RuntimeError("Apart from the last two dimensions, x and mxscale should be consistent" +
                                ops_error(ErrCode.PARAM))
-    if (mxscale[axis_change + 1] != 2 or mxscale[axis_change] != dim_size):
+    if (mxscale.size(axis_change + 1) != 2 or mxscale.size(axis_change) != dim_size):
         raise RuntimeError("The shape of mxscale does not satisfy the constraint condiditons" +
                            ops_error(ErrCode.PARAM))
 

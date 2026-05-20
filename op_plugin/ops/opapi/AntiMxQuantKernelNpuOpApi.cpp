@@ -28,10 +28,10 @@ constexpr int64_t ALIGN_NUM = 2;
 constexpr int64_t FP4_IN_UINT8_NUM = 2;
 }; // namespace
 
-std::tuple<at::Tensor, at::Tensor> npu_anti_mx_quant(
+at::Tensor npu_anti_mx_quant(
     const at::Tensor &x,
     const at::Tensor &mxscale,
-    const int64_t axis,
+    int64_t axis,
     int64_t dst_type)
 {
     // input x and mxscale dim check
@@ -49,33 +49,43 @@ std::tuple<at::Tensor, at::Tensor> npu_anti_mx_quant(
     dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
 
     for (int64_t i = 0; i < axis_change; i++) {
-        TORCH_CHECK(x[i] == mxscale[i],
-        "Apart from the last two dimensions, x and mxscale should be consistent, got ", mxscale[i], OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(x.size(i) == mxscale.size(i),
+        "Apart from the last two dimensions, x and mxscale should be consistent, got ", mxscale.size(i), OPS_ERROR(ErrCode::PARAM));
     }
-    TORCH_CHECK(mxscale[axis_change + 1] == 2 && mxscale[axis_change] == dim_size,
+    TORCH_CHECK(mxscale.size(axis_change + 1) == 2 && mxscale.size(axis_change) == dim_size,
         "The shape of mxscale does not satisfy the constraint condiditons" + OPS_ERROR(ErrCode::PARAM));
     
     at::Tensor y;
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
 
-    aclDataType y_acltype;
     ASCEND_LOGI("[npu_anti_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
 
-    bool special_input_type = (x.dtype() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-                               x.dtype() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
+    bool special_input_type = (x.scalar_type() == npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1) ||
+                               x.scalar_type() == npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E1M2));
     if (special_input_type) {
-        int64_t last_dim_val = x[x.dim() - 1];
+        int64_t last_dim_val = x.size(x.dim() - 1);
         TORCH_CHECK(last_dim_val % FP4_IN_UINT8_NUM == 0,
                     "The last dim input shape must be divisible by 2 if "
                     "x dtype is torch_npu.float4_e2m1 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
     }
 
-    y = npu_preparation::apply_tensor_without_format(y_shape, c10::ScalarType::Byte);
-    y_acltype = c10_npu::GetAclDataType(dst_type);
+    aclDataType x_acltype = aclDataType::ACL_FLOAT8_E4M3FN;
+    if (x.scalar_type() == npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E2M1)) {
+        x_acltype = aclDataType::ACL_FLOAT4_E2M1;
+    } else if (x.scalar_type() == npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT4_E1M2)) {
+        x_acltype = aclDataType::ACL_FLOAT4_E1M2;
+    } else if (x.scalar_type() == npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E5M2)) {
+        x_acltype = aclDataType::ACL_FLOAT8_E5M2;
+    }
+
+    aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
+    at::ScalarType dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+    y = npu_preparation::apply_tensor_without_format(y_shape, dtype);
     ASCEND_LOGI("[npu_anti_mx_quant]: Setting aclTensor y dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());
 
-    TensorWrapper y_wrapper = {y, y_acltype};
-    EXEC_NPU_CMD(aclnnAntiMxQuant, x, mxscale, axis, y_acltype, y_wrapper);
+    TensorWrapper x_wrapper = {x, x_acltype};
+    TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
+    EXEC_NPU_CMD(aclnnAntiMxQuant, x_wrapper, mxscale_wrapper, axis, y_acltype, y);
     
     return y;
 }
