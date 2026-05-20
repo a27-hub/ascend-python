@@ -173,6 +173,14 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     }
     int64_t quant_mode_real = quant_mode.value_or(0);
     int64_t group_list_type_real = group_list_type.value_or(0);
+    ASCEND_LOGI("[DEBUG_GMM_V2] raw params: dequant_mode.has_value=%d, dequant_mode.val=%ld, "
+                "quant_mode.has_value=%d, quant_mode.val=%ld, "
+                "dequant_mode_real=%ld, quant_mode_real=%ld, is_weight_nz=%d, "
+                "weight_scale_dtype.has_value=%d",
+                dequant_mode.has_value(), dequant_mode.value_or(-1),
+                quant_mode.has_value(), quant_mode.value_or(-1),
+                dequant_mode_real, quant_mode_real, is_weight_nz,
+                weight_scale_dtype.has_value());
     auto weight_assist_matrix_real = weight_assist_matrix.value_or(at::TensorList());
     auto tuning_config_real = tuning_config.value_or(at::IntArrayRef{});
     auto bias_real = bias.value_or(at::Tensor());
@@ -276,6 +284,9 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         }
         c10::SmallVector<at::Tensor, 1> weight_nz_vec = {weight_for_nz};
         at::TensorList weight_nz_list(weight_nz_vec);
+        ASCEND_LOGI("[DEBUG_GMM_V2] NZ path EXEC_NPU_CMD: dequant_mode_real=%ld, dequant_dtype_real=%ld, "
+                    "quant_mode_real=%ld, group_list_type_real=%ld",
+                    dequant_mode_real, dequant_dtype_real, quant_mode_real, group_list_type_real);
         EXEC_NPU_CMD(
             aclnnGroupedMatmulSwigluQuantWeightNzV2,
             x,
@@ -294,6 +305,9 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             output,
             output_scale_wrapper);
     } else {
+        ASCEND_LOGI("[DEBUG_GMM_V2] ND path EXEC_NPU_CMD: dequant_mode_real=%ld, dequant_dtype_real=%ld, "
+                    "quant_mode_real=%ld, group_list_type_real=%ld",
+                    dequant_mode_real, dequant_dtype_real, quant_mode_real, group_list_type_real);
         EXEC_NPU_CMD(
             aclnnGroupedMatmulSwigluQuantV2,
             x_wrapper,
