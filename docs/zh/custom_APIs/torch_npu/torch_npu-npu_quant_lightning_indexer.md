@@ -66,9 +66,9 @@ torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, 
 
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`，仅支持默认值2^63-1。
 
-- **query\_dtype**（`int`）：可选参数，表示query实际传入的数据类型，仅支持传入`hifloat8`。
+- **query\_dtype**（`int`）：可选参数，表示query实际传入的数据类型，Atlas 350 加速卡仅支持传入`hifloat8`，A3/A2 推理系列产品仅支持传入默认值None。
 
-- **key\_dtype**（`int`）：可选参数，表示key实际传入的数据类型，仅支持传入`hifloat8`。
+- **key\_dtype**（`int`）：可选参数，表示key实际传入的数据类型，Atlas 350 加速卡仅支持传入`hifloat8`，A3/A2 推理系列产品仅支持传入默认值None。
 
 ## 返回值说明
 
@@ -84,14 +84,12 @@ torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, 
 - Atlas A3 推理系列产品：
     - query和key的数据类型支持`int8`。
     - 仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`float16、float16、float16`。
-    - 不支持传入query_dtype、key_dtype。
 - Atlas 350 加速卡：
     - query N1仅支持8、16、24、32、64。
     - query和key的数据类型支持`float8_e4m3fn、hifloat8、int8`。
     - 当query和key的数据类型为`float8_e4m3fn`时，支持weights、query_dequant_scale、key_dequant_scale的数据类型为`bfloat16、float、float`或`float16、float16、float16`；
     - 当query和key的数据类型为`hifloat8`时，仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`bfloat16、float、float`；
     - 当query和key的数据类型为`int8`时，仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`float16、float16、float16`。
-    - query_dtype、key_dtype仅支持传入`hifloat8`。
 
 ## 调用示例
 
