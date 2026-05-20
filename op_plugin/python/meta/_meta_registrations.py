@@ -6217,7 +6217,7 @@ def npu_moe_token_unpermute_grad_meta(permuted_tokens, grad_unpermuted_tokens, s
 @impl(m, "npu_grouped_matmul_swiglu_quant")
 def npu_grouped_matmul_swiglu_quant_meta(x, weight, group_list, weight_scale, x_scale, *, bias=None, offset=None):
     batch_size = x.size(0)
-    n = weight.size(2)
+    n = weight_scale.size(-1)
     output_shape = torch.empty([batch_size, n // 2], dtype=torch.int8, device=x.device)
     output_scale_shape = torch.empty([batch_size], dtype=torch.float32, device=x.device)
     output_offset_shape = torch.empty([], dtype=torch.float32, device=x.device)

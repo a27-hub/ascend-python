@@ -9,6 +9,13 @@ import math
 
 
 class TestNpuGroupedMatmulSwigluQuant(TestCase):
+    def setUp(self):
+        self.ori_allow_internal_format = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
+        torch.npu.config.allow_internal_format = True
+
+    def tearDown(self):
+        torch.npu.config.allow_internal_format = self.ori_allow_internal_format
+
     def GMM_Swiglu_quant(self, x: torch.Tensor, weight: torch.Tensor, perChannelScale: torch.Tensor, perTokenScale: torch.Tensor, m: int):
         """
         执行量化的 GMM（通用矩阵乘法）操作，并使用 SwiGLU 激活函数。
@@ -250,6 +257,239 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             weight_npu = weight.npu()
             weightScale_npu = weightScale.npu()
         return x_npu, weight_npu, weightScale_npu, xScale.npu(), groupList.npu()
+
+    def _assert_gmm_swiglu_quant_shape(self, output, output_scale, output_shape, output_scale_shape):
+        print("[GMM_SWIGLU_V2_DEBUG] actual_output:",
+              f"output_shape={tuple(output.shape)}",
+              f"output_dtype={output.dtype}",
+              f"output_scale_shape={tuple(output_scale.shape)}",
+              f"output_scale_dtype={output_scale.dtype}",
+              f"expected_output_shape={output_shape}",
+              f"expected_output_scale_shape={output_scale_shape}",
+              flush=True)
+        self.assertEqual(tuple(output.shape), output_shape)
+        self.assertEqual(tuple(output_scale.shape), output_scale_shape)
+
+    def _debug_shape_guard(self, case_name, m, n, buggy_n):
+        print("[GMM_SWIGLU_V2_DEBUG] shape_guard:",
+              f"case={case_name}",
+              f"expected_fixed_output_shape={(m, n // 2)}",
+              f"expected_buggy_output_shape={(m, buggy_n // 2)}",
+              f"fixed_n={n}",
+              f"buggy_n_from_weight_size_2={buggy_n}",
+              flush=True)
+
+    def _assert_nz_weight(self, weight):
+        weight_format = torch_npu.get_npu_format(weight)
+        print("[GMM_SWIGLU_V2_DEBUG] weight_before_op:",
+              f"shape={tuple(weight.shape)}",
+              f"stride={tuple(weight.stride())}",
+              f"dtype={weight.dtype}",
+              f"device={weight.device}",
+              f"format={weight_format}",
+              f"dim={weight.dim()}",
+              flush=True)
+        self.assertEqual(weight_format, torch_npu.Format.FRACTAL_NZ)
+        self.assertEqual(weight.dim(), 5)
+
+    def _debug_tensor(self, name, tensor):
+        tensor_format = None
+        if tensor.device.type == "npu":
+            tensor_format = torch_npu.get_npu_format(tensor)
+        print("[GMM_SWIGLU_V2_DEBUG]", name,
+              f"shape={tuple(tensor.shape)}",
+              f"stride={tuple(tensor.stride())}",
+              f"dtype={tensor.dtype}",
+              f"device={tensor.device}",
+              f"format={tensor_format}",
+              f"dim={tensor.dim()}",
+              flush=True)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_a8w4_int32_pack_shape(self, device="npu"):
+        # A8W4 INT32 packed NZ: physical weight shape packs N, so logical N must come from weightScale.
+        E, M, K, N = 2, 2, 64, 128
+        x = torch.empty((M, K), dtype=torch.int8).npu()
+        weight_pack = torch.empty((E, K, N // 2), dtype=torch.int8).npu()
+        weight_pack_nz = torch_npu.npu_format_cast(weight_pack, 29)
+        weight = weight_pack_nz.view(torch.int32).view(E, N // 64, K // 16, 16, 8)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, N), dtype=torch.int64).npu()
+        weight_assist = torch.empty((E, N), dtype=torch.float32).npu()
+        x_scale = torch.empty((M,), dtype=torch.float32).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_a8w4_int32_pack", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_a8w4_int32_pack",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"expected_n_from_weight_scale={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("weight_assist", weight_assist)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            weight_assist_matrix=[weight_assist], dequant_mode=0, dequant_dtype=torch.float32)
+        self._assert_gmm_swiglu_quant_shape(output, output_scale, (M, N // 2), (M,))
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_a8w8_int8_shape(self, device="npu"):
+        # A8W8 NZ: validates weightScale-based N inference does not regress int8 weights.
+        E, M, K, N = 2, 2, 64, 128
+        x = torch.empty((M, K), dtype=torch.int8).npu()
+        weight_nd = torch.empty((E, K, N), dtype=torch.int8).npu()
+        weight = torch_npu.npu_format_cast(weight_nd, 29).view(E, N // 32, K // 16, 16, 32)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, N), dtype=torch.float32).npu()
+        x_scale = torch.empty((M,), dtype=torch.float32).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_a8w8_int8", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_a8w8_int8",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"expected_n_from_weight_scale={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            dequant_mode=0, dequant_dtype=torch.float32)
+        self._assert_gmm_swiglu_quant_shape(output, output_scale, (M, N // 2), (M,))
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_per_group_shape(self, device="npu"):
+        # A8W4 per-group NZ: weightScale has shape (E, K_group_num, N), and N is the tail axis.
+        E, M, K, N, k_group_num = 2, 2, 64, 128, 2
+        x = torch.empty((M, K), dtype=torch.int8).npu()
+        weight_pack = torch.empty((E, K, N // 2), dtype=torch.int8).npu()
+        weight_pack_nz = torch_npu.npu_format_cast(weight_pack, 29)
+        weight = weight_pack_nz.view(torch.int32).view(E, N // 64, K // 16, 16, 8)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, k_group_num, N), dtype=torch.int64).npu()
+        weight_assist = torch.empty((E, N), dtype=torch.float32).npu()
+        x_scale = torch.empty((M,), dtype=torch.float32).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_per_group", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_per_group",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}", f"k_group_num={k_group_num}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"expected_n_from_weight_scale={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("weight_assist", weight_assist)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            weight_assist_matrix=[weight_assist], dequant_mode=1, dequant_dtype=torch.float32)
+        self._assert_gmm_swiglu_quant_shape(output, output_scale, (M, N // 2), (M,))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mx_shape(self, device="npu"):
+        # MX NZ non-transpose: 4D weightScale uses dim 2 as logical N, with tail dim fixed to 2.
+        E, M, K, N = 2, 2, 128, 128
+        x = torch.empty((M, K), dtype=torch.float8_e4m3fn).npu()
+        weight_nd = torch.empty((E, K, N), dtype=torch.float8_e4m3fn).npu()
+        weight = torch_npu.npu_format_cast(weight_nd, 29).view(E, N // 32, K // 16, 16, 32)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, math.ceil(K / 64), N, 2), dtype=torch.uint8).npu()
+        x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_mx", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_mx",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"mx_n_dim2={weight_scale.size(2)}",
+              f"mx_tail_dim={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+            quant_dtype=torch.float8_e5m2,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu)
+        self._assert_gmm_swiglu_quant_shape(
+            output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mx_transpose_shape(self, device="npu"):
+        # MX NZ transpose: transposed weight layout uses weightScale dim 1 as logical N.
+        E, M, K, N = 2, 2, 128, 128
+        x = torch.empty((M, K), dtype=torch.float8_e4m3fn).npu()
+        weight_nd = torch.empty((E, N, K), dtype=torch.float8_e4m3fn).npu()
+        weight_base = torch_npu.npu_format_cast(weight_nd, 29).view(E, K // 32, N // 16, 16, 32)
+        weight = weight_base.transpose(-1, -2)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, N, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_mx_transpose", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_mx_transpose",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"mx_n_dim1={weight_scale.size(1)}",
+              f"mx_tail_dim={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+            quant_dtype=torch.float8_e5m2,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu)
+        self._assert_gmm_swiglu_quant_shape(
+            output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mxfp4_transpose_shape(self, device="npu"):
+        # MXFP4 NZ transpose: packed fp4 weight uses transpose-aware MX N inference.
+        E, M, K, N = 2, 2, 128, 128
+        x = torch.empty((M, K), dtype=torch.uint8).npu()
+        weight_base = torch.empty((E, K // 64, N // 16, 16, 64), dtype=torch.uint8).npu()
+        weight = weight_base.transpose(-1, -2)
+        self._assert_nz_weight(weight)
+        weight_scale = torch.empty((E, N, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        group_list = torch.tensor([1, M], dtype=torch.int64).npu()
+        self._debug_shape_guard("nz_mxfp4_transpose", M, N, weight.size(2))
+        print("[GMM_SWIGLU_V2_DEBUG] case=nz_mxfp4_transpose",
+              f"E={E}", f"M={M}", f"K={K}", f"N={N}",
+              f"old_weight_size_2={weight.size(2)}",
+              f"mx_n_dim1={weight_scale.size(1)}",
+              f"mx_tail_dim={weight_scale.size(-1)}",
+              flush=True)
+        self._debug_tensor("x", x)
+        self._debug_tensor("weight_scale", weight_scale)
+        self._debug_tensor("x_scale", x_scale)
+        self._debug_tensor("group_list", group_list)
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+            quant_dtype=torch.float8_e5m2,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_dtype=torch_npu.float4_e2m1fn_x2,
+            weight_dtype=torch_npu.float4_e2m1fn_x2)
+        self._assert_gmm_swiglu_quant_shape(
+            output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
 
     @unittest.skip("Skipping due to outdated CANN version; please update CANN to the latest version and remove this skip")
     @SupportedDevices(['Ascend910B'])
