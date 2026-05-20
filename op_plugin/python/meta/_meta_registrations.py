@@ -5186,6 +5186,42 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
     return (output, mxscale)
 
 
+@impl(m, "npu_anti_mx_quant")
+def npu_anti_mx_quant(input_dummy, mxscale, *, axis=-1, dst_type=15):
+    dim_num = input_dummy.dim()
+    if (input_dummy.dtype == torch.float4_e1m2fn_x2 or input_dummy.dtype == torch.float4_e1m2fn_x2) and input_dummy.size(dim_num - 1) % 2:
+        raise RuntimeError("If input dtype is float4_e2m1 or float4_e1m2, " \
+                            "the last dim of input must be divisible by 2, " +
+                            ops_error(ErrCode.PARAM))
+    if axis < -dim_num or axis >= dim_num:
+        raise RuntimeError("Parameter axis is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
+                           ops_error(ErrCode.PARAM))
+    axis_change = axis if axis >= 0 else axis + dim_num
+    mxscale_shape = []
+    for dim in range(dim_num):
+        mxscale_shape.append(input_dummy.size(dim))
+    mxscale_shape.append(2)
+    dim_size = int(math.ceil(mxscale_shape[axis_change] / 32))
+    dim_size = (dim_size + 2 - 1) // 2
+
+    for i in range (axis_change):
+        if (input_dummy.size(i) != mxscale.size(i)):
+            raise RuntimeError("Apart from the last two dimensions, x and mxscale should be consistent" +
+                               ops_error(ErrCode.PARAM))
+    if (mxscale.size(axis_change + 1) != 2 or mxscale.size(axis_change) != dim_size):
+        raise RuntimeError("The shape of mxscale does not satisfy the constraint condiditons" +
+                           ops_error(ErrCode.PARAM))
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    if torch_dtype == torch.float16 or dst_type == 5:
+        output = torch.empty_like(input_dummy, dtype=torch.float16)
+    elif torch_dtype == torch.float32 or dst_type == 6:
+        output = torch.empty_like(input_dummy, dtype=torch.float32)
+    elif torch_dtype == torch.bfloat16 or dst_type == 15:
+        output = torch.empty_like(input_dummy, dtype=torch.bfloat16)
+    return output
+
+
 @impl(m, "npu_dynamic_dual_level_mx_quant")
 def npu_dynamic_dual_level_mx_quant(input_dummy, *, smooth_scale=None, round_mode="rint"):
     dim_num = input_dummy.dim()
