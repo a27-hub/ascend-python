@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Ascend 950PR/Ascend 950DT</term>   |  √  |
+|<term>Atlas 350 加速卡</term>        | √  |
 |<term>Atlas A3 推理系列产品</term>   | √  |
 |<term>Atlas A2 推理系列产品</term>   | √  |
 
@@ -22,8 +22,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1,
-query_dtype=None, key_dtype=None) -> Tensor
+torch_npu.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key_dequant_scale, query_quant_mode, key_quant_mode, *, actual_seq_lengths_query=None, actual_seq_lengths_key=None, block_table=None, layout_query='BSND', layout_key='BSND', sparse_count=2048, sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1, query_dtype=None, key_dtype=None) -> Tensor
 ```
 
 ## 参数说明
@@ -67,9 +66,9 @@ query_dtype=None, key_dtype=None) -> Tensor
 
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`，仅支持默认值2^63-1。
 
-- **query\_dtype**（`int`）：可选参数，表示query实际传入的数据类型，支持`int8`、`float8_e4m3fn`、`hifloat8`。
+- **query\_dtype**（`int`）：可选参数，表示query实际传入的数据类型，Atlas 350 加速卡仅支持传入`hifloat8`，Atlas A3 推理系列产品以及Atlas A2 推理系列产品仅支持传入默认值None。
 
-- **key\_dtype**（`int`）：可选参数，表示key实际传入的数据类型，支持`int8`、`float8_e4m3fn`、`hifloat8`。
+- **key\_dtype**（`int`）：可选参数，表示key实际传入的数据类型，Atlas 350 加速卡仅支持传入`hifloat8`，Atlas A3 推理系列产品以及Atlas A2 推理系列产品仅支持传入默认值None。
 
 ## 返回值说明
 
@@ -85,12 +84,12 @@ query_dtype=None, key_dtype=None) -> Tensor
 - Atlas A3 推理系列产品：
     - query和key的数据类型支持`int8`。
     - 仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`float16、float16、float16`。
-- Ascend 950PR/Ascend 950DT：
+- Atlas 350 加速卡：
     - query N1仅支持8、16、24、32、64。
     - query和key的数据类型支持`float8_e4m3fn、hifloat8、int8`。
     - 当query和key的数据类型为`float8_e4m3fn`时，支持weights、query_dequant_scale、key_dequant_scale的数据类型为`bfloat16、float、float`或`float16、float16、float16`；
     - 当query和key的数据类型为`hifloat8`时，仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`bfloat16、float、float`；
-    - 当query和key的数据类型为`int88`时，仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`float16、float16、float16`。
+    - 当query和key的数据类型为`int8`时，仅支持weights、query_dequant_scale、key_dequant_scale数据类型为`float16、float16、float16`。
 
 ## 调用示例
 
