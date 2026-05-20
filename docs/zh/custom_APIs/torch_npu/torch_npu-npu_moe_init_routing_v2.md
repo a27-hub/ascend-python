@@ -6,42 +6,43 @@
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>  | √   |
 
 ## 功能说明<a name="zh-cn_topic_0000002271534921_section1650913464367"></a>
 
 - API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化、动态量化和静态量化模式。
-- 计算公式：
+- 计算公式：  
 
-    1. 对输入expertIdx做排序，得出排序后的结果sortedExpertIdx和对应的序号sortedRowIdx：
+  1.对输入expertIdx做排序，得出排序后的结果sortedExpertIdx和对应的序号sortedRowIdx：
 
-        $$
-        sortedExpertIdx, sortedRowIdx=keyValueSort(expertIdx,rowIdx)
-        $$
+    $$
+    sortedExpertIdx, sortedRowIdx=keyValueSort(expertIdx,rowIdx)
+    $$
 
-    2. 以sortedRowIdx做位置映射得出expandedRowIdxOut：
-        - rowIdxType等于1时, 输出scatter索引
-        $$
-        expandedRowIdxOut[i]=sortedRowIdx[i]
-        $$
-        - rowIdxType等于0时, 输出gather索引
-        $$
-        expandedRowIdxOut[sortedRowIdx[i]]=i
-        $$
+  2.以sortedRowIdx做位置映射得出expandedRowIdxOut：
+    - rowIdxType等于1时, 输出scatter索引
+      $$
+      expandedRowIdxOut[i]=sortedRowIdx[i]
+      $$
+    - rowIdxType等于0时, 输出gather索引
+      $$
+      expandedRowIdxOut[sortedRowIdx[i]]=i
+      $$
       
-    3. 对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
+  3.对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
 
-        $$
-        expertTokensCountOrCumsumOutOptional[i]=Histogram(sortedExpertIdx)
-        $$
+    $$
+    expertTokensCountOrCumsumOutOptional[i]=Histogram(sortedExpertIdx)
+    $$
 
-    4. 如果quantMode不等于-1, 计算量化结果：
-        - 静态量化：
-        $$
-        quantResult=round((x∗scaleOptional)+offsetOptional)
-        $$
-        
-        - 动态量化：
-            - 若不输入scale：
+  4.如果quantMode不等于-1, 计算量化结果：
+     - 静态量化：
+     $$
+     quantResult=round((x∗scaleOptional)+offsetOptional)
+     $$
+     
+     - 动态量化：
+        - 若不输入scale：
             $$
             dynamicQuantScaleOutOptional = row\_max(abs(x)) / 127
             $$
@@ -49,7 +50,7 @@
             $$
             quantResult = round(x / dynamicQuantScaleOutOptional)
             $$
-            - 若输入scale:
+        - 若输入scale:
             $$
             dynamicQuantScaleOutOptional = row\_max(abs(x * scaleOptional)) / 127
             $$
@@ -57,31 +58,31 @@
             $$
             quantResult = round(x / dynamicQuantScaleOutOptional)
             $$
-    
-    5. 若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
-        - 非量化场景
-            - 按照Scatter索引搬运
-            $$
-            expandedXOut[i]=x[scatterRowIdx[i]//K]
-            $$
-            - 按照Gather索引搬运
-            $$
-            expandedXOut[gatherRowIdx[i]]=x[i//K]
-            $$
-        - 量化场景
-            - 按照Scatter索引搬运
-            $$
-            expandedXOut[i]=quantResult[scatterRowIdx[i]//K]
-            $$
-            - 按照Gather索引搬运
-            $$
-            expandedXOut[gatherRowIdx[i]]=quantResult[i//K]
-            $$
+  
+  5.若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
+    - 非量化场景
+      - 按照Scatter索引搬运
+      $$
+      expandedXOut[i]=x[scatterRowIdx[i]//K]
+      $$
+      - 按照Gather索引搬运
+      $$
+      expandedXOut[gatherRowIdx[i]]=x[i//K]
+      $$
+    - 量化场景
+      - 按照Scatter索引搬运
+      $$
+      expandedXOut[i]=quantResult[scatterRowIdx[i]//K]
+      $$
+      - 按照Gather索引搬运
+      $$
+      expandedXOut[gatherRowIdx[i]]=quantResult[i//K]
+      $$
 
-    6. expandedRowIdxOut的有效元素数量availableIdxNum，计算方式为expertIdx中activeExpertRangeOptional范围内的元素的个数
-        $$
-        availableIdxNum = |\{x\in expertIdx| expert\_start \le x<expert\_end \ \}|
-        $$
+  6.expandedRowIdxOut的有效元素数量availableIdxNum，计算方式为expertIdx中activeExpertRangeOptional范围内的元素的个数
+    $$
+    availableIdxNum = |\{x\in expertIdx| expert\_start \le x<expert\_end \ \}|
+    $$
 
 - 等价计算逻辑
 
@@ -639,11 +640,24 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
     - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
     - 静态量化场景下不输出。
+    - **Atlas 推理系列产品**：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示 drop 之前每个专家处理的 token 数量的统计结果。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
+
+### Atlas 推理系列产品特有约束
+
+Atlas 推理系列产品在该接口上有以下特殊约束：
+
+- **输入x的数据类型**：仅支持 `float16` 和 `float32`，不支持 `bfloat16`。
+- **量化模式**：仅支持非量化场景（`quant_mode=-1`），不支持静态量化（`quant_mode=0`）、动态量化（`quant_mode=1`）及 MXFP8/HIF8 等量化模式。
+- **drop_pad 模式**：仅支持 dropless 场景（`drop_pad_mode=0`），不支持 drop_pad 场景（`drop_pad_mode=1`）。运行时无论入参 `drop_pad_mode` 为何值，均会被强制置为 0。
+- **expert_capacity 参数**：运行时无论入参 `expert_capacity` 为何值，均会被强制置为 0。
+- **expert_tokens_count_or_cumsum_flag**：该路径上固定为 1，底层算子按 cumsum（前缀和）模式计算，即 `expert_tokens_count_or_cumsum` 输出为 `active_expert_range` 范围内各 expert 处理 token 数量的前缀和，与入参 `expert_tokens_num_type` 无关。
+- **expert_tokens_num_type**：入参仍可传入 0/1/2，但实际底层按 cumsum 模式（前缀和）计算，与入参值无关。
+- **输出参数差异**：第4个返回值是 `expert_tokens_before_capacity`（`int32` 类型Tensor，shape为(expert_num,)），表示 drop 之前每个专家处理的 token 数量的统计结果。
 - 进入低时延性能模板需要同时满足以下条件：
     - `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
     - `x`数据类型要求：`bfloat16`
