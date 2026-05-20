@@ -78,9 +78,13 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
     TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
     TensorWrapper result_wrapper = make_wrapper(result, dtype);
     if (is_nd_nz_format) {
-        EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMulWeightNz, x1_wrapper, x2_wrapper, bias_real, x1_scale_real, x2_scale_real,
-                     dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
-                     batch_split_factor_value, result_wrapper);
+        if (check_aclnn_kernel_available("aclnnTransposeQuantBatchMatMulWeightNz")) {
+            EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMulWeightNz, x1_wrapper, x2_wrapper, bias_real, x1_scale_real,
+                         x2_scale_real, dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
+                         batch_split_factor_value, result_wrapper);
+        } else {
+            TORCH_CHECK(false, "In the current CANN version, aclnnTransposeQuantBatchMatMulWeightNz does not support x2 as WeightNz input. Please upgrade the CANN package to version 9.1 or higher, or set the x2 to ND mode.", OPS_ERROR(ErrCode::PARAM));
+        }
     } else {
         EXEC_NPU_CMD(aclnnTransposeQuantBatchMatMul, x1_wrapper, x2_wrapper, bias_real, x1_scale_real, x2_scale_real,
                      dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
