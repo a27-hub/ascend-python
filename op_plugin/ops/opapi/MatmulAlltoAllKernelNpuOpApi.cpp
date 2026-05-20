@@ -59,8 +59,8 @@ at::Tensor npu_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x2, c10
 
     // 调用aclnn接口
     if (comm_mode.has_value()) {
-        char *comm_mode_real = const_cast<char *>(comm_mode.value().data());
-        EXEC_NPU_CMD(aclnnMatmulAlltoAllV2, x1, x2, bias, all2all_axes, group_ptr, comm_mode_real, transpose_x1,
+        char *comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
+        EXEC_NPU_CMD(aclnnMatmulAlltoAllV2, x1, x2, bias, all2all_axes, group_ptr, comm_mode_ptr, transpose_x1,
             transpose_x2, output_tensor);
     } else {
         EXEC_NPU_CMD(

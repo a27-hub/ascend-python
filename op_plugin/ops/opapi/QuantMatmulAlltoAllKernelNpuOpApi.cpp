@@ -92,9 +92,9 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
 
     // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
     if (comm_mode.has_value()) {
-        char *comm_mode_real = const_cast<char *>(comm_mode.value().data());
+        char *comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
         EXEC_NPU_CMD(aclnnQuantMatmulAlltoAllV2, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
-            common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, comm_mode_real, x1QuantMode, x2QuantMode,
+            common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, comm_mode_ptr, x1QuantMode, x2QuantMode,
             commonQuantMode, commQuantDtype, group_size, transpose_x1, transpose_x2, output_tensor);
     } else {
         EXEC_NPU_CMD(aclnnQuantMatmulAlltoAll, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
