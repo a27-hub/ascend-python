@@ -8,6 +8,40 @@ from torch_npu.testing.common_utils import create_common_tensor, SupportedDevice
 
 
 class TestNpuGroupedMatmulSwigluQuant(TestCase):
+    def setUp(self):
+        self.ori_allow_internal_format = torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT")
+        torch.npu.config.allow_internal_format = True
+        print("[GMM_SWIGLU_DEBUG] setUp ori_ALLOW_INTERNAL_FORMAT=",
+              self.ori_allow_internal_format,
+              "current_ALLOW_INTERNAL_FORMAT=",
+              torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT"),
+              flush=True)
+
+    def tearDown(self):
+        torch.npu.config.allow_internal_format = self.ori_allow_internal_format
+        print("[GMM_SWIGLU_DEBUG] tearDown restored_ALLOW_INTERNAL_FORMAT=",
+              torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT"),
+              flush=True)
+
+    def _debug_tensor(self, name, tensor):
+        msg = [
+            f"[GMM_SWIGLU_DEBUG] {name}:",
+            f"shape={tuple(tensor.shape)}",
+            f"stride={tuple(tensor.stride())}",
+            f"dtype={tensor.dtype}",
+            f"device={tensor.device}",
+            f"is_contiguous={tensor.is_contiguous()}",
+        ]
+        try:
+            msg.append(f"npu_format={torch_npu.get_npu_format(tensor)}")
+        except Exception as err:  # pylint:disable=broad-except
+            msg.append(f"npu_format_error={type(err).__name__}: {err}")
+        try:
+            msg.append(f"storage_size={tensor.storage().size()}")
+        except Exception as err:  # pylint:disable=broad-except
+            msg.append(f"storage_size_error={type(err).__name__}: {err}")
+        print(" ".join(msg), flush=True)
+
     def GMM_Swiglu_quant(self, x: torch.Tensor, weight: torch.Tensor, perChannelScale: torch.Tensor, perTokenScale: torch.Tensor, m: int):
         """
         执行量化的 GMM（通用矩阵乘法）操作，并使用 SwiGLU 激活函数。
@@ -114,6 +148,67 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         groupList = self.generate_non_decreasing_sequence(E, M)
         # pylint:disable=too-many-return-values
         return x, weight, weightScale, xScale, groupList
+
+    def _assert_npu_grouped_matmul_swiglu_quant_shape(
+            self, x, weight, weightScale, xScale, groupList, output_shape, weight_is_nz=False):
+        print("[GMM_SWIGLU_DEBUG] case_config:",
+              f"weight_is_nz={weight_is_nz}",
+              f"ALLOW_INTERNAL_FORMAT={torch_npu._C._npu_getOption('ALLOW_INTERNAL_FORMAT')}",
+              f"expected_output_shape={output_shape}",
+              flush=True)
+        self._debug_tensor("cpu_x", x)
+        self._debug_tensor("cpu_weight", weight)
+        self._debug_tensor("cpu_weightScale", weightScale)
+        self._debug_tensor("cpu_xScale", xScale)
+        self._debug_tensor("cpu_groupList", groupList)
+        weight_npu = weight.npu() if weight_is_nz else torch_npu.npu_format_cast(weight.npu(), 29)
+        self._debug_tensor("npu_weight_before_op", weight_npu)
+        self._debug_tensor("npu_x_before_op", x.npu())
+        self._debug_tensor("npu_weightScale_before_op", weightScale.npu())
+        output, output_scale, output_offset = torch_npu.npu_grouped_matmul_swiglu_quant(
+            x.npu(), weight_npu, groupList.npu(), weightScale.npu(), xScale.npu())
+        self.assertEqual(tuple(output.shape), output_shape)
+        self.assertEqual(output.dtype, torch.int8)
+        self.assertEqual(tuple(output_scale.shape), (x.shape[0],))
+        self.assertEqual(output_scale.dtype, torch.float32)
+        self.assertEqual(tuple(output_offset.shape), ())
+        self.assertEqual(output_offset.dtype, torch.float32)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_nz_a8w8_shape(self, device="npu"):
+        # A8W8 NZ: logical N is carried by weightScale, not by the physical weight shape.
+        E, M, K, N = 2, 0, 64, 128
+        x = torch.empty((M, K), dtype=torch.int8)
+        weight = torch.empty((E, N // 32, K // 16, 16, 32), dtype=torch.int8)
+        weightScale = torch.empty((E, N), dtype=torch.float32)
+        xScale = torch.empty((M,), dtype=torch.float32)
+        groupList = torch.zeros((E,), dtype=torch.int64)
+        self._assert_npu_grouped_matmul_swiglu_quant_shape(
+            x, weight, weightScale, xScale, groupList, (M, N // 2), weight_is_nz=True)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_nz_a8w4_int32_pack_shape(self, device="npu"):
+        # A8W4 INT32 packed NZ: physical weight.size(2) is K/16, so N must come from weightScale.
+        E, M, K, N = 2, 0, 64, 128
+        x = torch.empty((M, K), dtype=torch.int8)
+        weight = torch.empty((E, N // 64, K // 16, 16, 8), dtype=torch.int32)
+        weightScale = torch.empty((E, N), dtype=torch.float32)
+        xScale = torch.empty((M,), dtype=torch.float32)
+        groupList = torch.zeros((E,), dtype=torch.int64)
+        self._assert_npu_grouped_matmul_swiglu_quant_shape(
+            x, weight, weightScale, xScale, groupList, (M, N // 2), weight_is_nz=True)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_nz_per_group_shape(self, device="npu"):
+        # A8W4 per-group NZ: weightScale has shape (E, K_group_num, N), and N is the tail axis.
+        E, M, K, N, k_group_num = 2, 0, 64, 128, 2
+        x = torch.empty((M, K), dtype=torch.int8)
+        weight = torch.empty((E, N // 64, K // 16, 16, 8), dtype=torch.int32)
+        weightScale = torch.empty((E, k_group_num, N), dtype=torch.float32)
+        xScale = torch.empty((M,), dtype=torch.float32)
+        groupList = torch.zeros((E,), dtype=torch.int64)
+        self._assert_npu_grouped_matmul_swiglu_quant_shape(
+            x, weight, weightScale, xScale, groupList, (M, N // 2), weight_is_nz=True)
 
     @unittest.skip("skip case")
     @SupportedDevices(['Ascend910B'])
