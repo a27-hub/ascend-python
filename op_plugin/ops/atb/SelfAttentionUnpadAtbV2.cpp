@@ -22,7 +22,7 @@ void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &ke
     int64_t ktype = kernel_type.has_value() ? kernel_type.value() : 0;
     TORCH_CHECK(ktype == SelfAttentionParam::KERNELTYPE_DEFAULT ||
                 ktype == SelfAttentionParam::KERNELTYPE_EXP_M8V2,
-                "kernel_type only supports KERNELTYPE_DEFAULT(0) and KERNELTYPE_EXP_M8V2(2), but got: ", kernel_type);
+                "kernel_type only supports KERNELTYPE_DEFAULT(0) and KERNELTYPE_EXP_M8V2(2), but got: ", ktype
     OpParamCache<SelfAttentionParam>& selfAttentionParamCache = OpParamCache<SelfAttentionParam>::getInstance();
     SelfAttentionParam selfattentionparam;
 
