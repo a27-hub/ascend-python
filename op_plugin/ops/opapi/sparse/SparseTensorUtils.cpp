@@ -76,6 +76,32 @@ SparseTensor& mul_out_sparse_scalar(SparseTensor& r, const SparseTensor& t, cons
     return mul_out_sparse_zerodim(r, t, at::native::wrapped_scalar_tensor(value));
 }
 
+at::Tensor& mul_out_sparse(const at::Tensor& self, const at::Tensor& other, at::Tensor& out)
+{
+    TORCH_CHECK(self.is_sparse() || other.is_sparse(), "mul: expected at least one sparse input",
+        OPS_ERROR(ErrCode::VALUE));
+    TORCH_CHECK(out.is_sparse(), "mul: expected 'out' to be a sparse tensor", OPS_ERROR(ErrCode::VALUE));
+
+    auto common_dtype = at::result_type(self, other);
+    TORCH_CHECK(c10::canCast(common_dtype, out.scalar_type()), "Can't convert result type ", common_dtype,
+        " to output ", out.scalar_type(), " in mul operation", OPS_ERROR(ErrCode::TYPE));
+
+    const auto& sparse_input = self.is_sparse() ? self : other;
+    auto dense_self = self.is_sparse() ? self.to_dense() : self;
+    auto dense_other = other.is_sparse() ? other.to_dense() : other;
+    auto dense_result = at::mul(dense_self, dense_other);
+    auto sparse_result = dense_result.to_sparse(sparse_input.sparse_dim());
+
+    out.resize_as_(sparse_result);
+    auto values = sparse_result._values();
+    if (values.scalar_type() != out.scalar_type()) {
+        values = values.to(out.scalar_type());
+    }
+    alias_into_sparse(out, sparse_result._indices(), values);
+    out._coalesced_(sparse_result.is_coalesced());
+    return out;
+}
+
 }
 
 namespace at {
