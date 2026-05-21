@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Ascend 950PR/Ascend 950DT</term>     | √  |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>    | √  |
 
@@ -53,6 +54,7 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 - **world\_size** (`int`)：必选参数。通信域内的rank总数。
     - <term>Atlas A2 训练系列产品</term>支持2、4、8卡，支持HCCS链路all mesh组网（每张卡和其它卡两两相连）。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>支持2、4、8、16、32卡，支持HCCS链路double ring组网（多张卡按顺序组成一个圈，每张卡只和左右卡相连）。
+    - <term>Ascend 950PR/Ascend 950DT</term>支持2、4、8、16、32、64卡，仅支持HCCS链路all mesh组网。
 
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **reduce\_op** (`str`)：可选参数。reduce操作类型，当前仅支持'sum'，默认值为'sum'。
@@ -75,12 +77,21 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 
 - `input`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`input`的最后一维相同，满足matmul的计算条件。
 - `world_size`必须等于实际通信域中的rank总数，且`input`的m轴必须能够被`world_size`整除。
-- **通信模式约束**
+- **通信引擎约束**
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：仅支持Host CPU+TS通信。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持AI CPU+TS通信。
+    - <term>Ascend 950PR/Ascend 950DT</term>：仅支持CCU通信。
+- **comm_mode约束**
   - `comm_mode`为`ai_cpu`时：
        - 该接口仅在训练场景下使用。
-       - 该接口支持图模式。
+       - 该接口支持单算子模式和TorchAir图模式。
        - <term>Atlas A2 训练系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
-  - `comm_mode`为`aiv`时，训练和推理场景均可使用。  
+       - 当前版本暂不支持`bias`输入为非0的场景。
+  - `comm_mode`为`aiv`时，训练和推理场景均可使用。
+       - 当前版本暂不支持`bias`输入为非0的场景。
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+       - ReduceScatter集合通信数据总量不能超过16×256MB，集合通信数据总量计算方式为：m × n × sizeof(output\_dtype)。由于shape不同，算子内部实现可能存在差异，实际支持的总通信量可能略小于该值。
+       - 支持bias输入为非0的场景。  
 
 - **comm_mode支持矩阵**
 
