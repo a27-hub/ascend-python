@@ -26,6 +26,7 @@ namespace op_api {
                                                          const c10::optional<at::Tensor> &mm_weight, bool trans_gmm_weight, bool trans_mm_weight,
                                                          c10::optional<c10::string_view> comm_mode)
     {
+        std::cout << "pta npu_gmm_alltoallv" << std::endl;
         at::Tensor mm_y{nullptr};
         int64_t bsk = 0;
         for (auto &i : recv_counts) {
@@ -47,6 +48,8 @@ namespace op_api {
         char* hcom_ptr = const_cast<char*>(hcom.data());
         if (comm_mode.has_value()) {
             const char* comm_mode_real = comm_mode.value().data();
+            std::cout << "comm_mode_real:" << comm_mode_real << std::endl;
+            std::cout << "pta aclnnGroupedMatMulAlltoAllvV2"<< std::endl;
             EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
                      gmm_x,
                      gmm_weight,
@@ -63,7 +66,9 @@ namespace op_api {
                      comm_mode_real,
                      y,
                      mm_y);
+            std::cout << "pta aclnnGroupedMatMulAlltoAllvV2 end"<< std::endl;
         } else {
+            std::cout << "pta aclnnGroupedMatMulAlltoAllv"<< std::endl;
             EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllv,
                          gmm_x,
                          gmm_weight,
@@ -79,6 +84,7 @@ namespace op_api {
                          trans_mm_weight,
                          y,
                          mm_y);
+            std::cout << "pta aclnnGroupedMatMulAlltoAllv end"<< std::endl;
         }
 
         return std::tie(y, mm_y);

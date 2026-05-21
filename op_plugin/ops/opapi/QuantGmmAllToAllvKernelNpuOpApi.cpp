@@ -96,6 +96,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
     {
         // const char* comm_mode_real = comm_mode.has_value() ? comm_mode.value() : "default";
         // gmm_x_quant_mode
+        std::cout << "pta npu_quant_gmm_alltoallv"<< std::endl;
         TORCH_CHECK(gmm_x_quant_mode.has_value(),
             "The input gmm_x_quant_mode must be provided, but got None.",
             OPS_ERROR(ErrCode::PARAM));
@@ -566,6 +567,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
 
         if (comm_mode.has_value()) {
             const char* comm_mode_real = comm_mode.value().data();
+            std::cout << "comm_mode_real:" << comm_mode_real << std::endl;
+            std::cout << "pta aclnnQuantGroupedMatMulAlltoAllvV2"<< std::endl;
             EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllvV2,
                          gmm_x_wrapper,
                          gmm_weight_wrapper,
@@ -594,7 +597,9 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                          comm_mode_real,
                          gmm_y,
                          mm_y);
+            std::cout << "pta aclnnQuantGroupedMatMulAlltoAllvV2 end"<< std::endl;
         } else {
+            std::cout << "pta aclnnQuantGroupedMatMulAlltoAllv"<< std::endl;
             EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllv,
                          gmm_x_wrapper,
                          gmm_weight_wrapper,
@@ -622,6 +627,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                          trans_mm_weight,
                          gmm_y,
                          mm_y);
+            std::cout << "pta aclnnQuantGroupedMatMulAlltoAllv end"<< std::endl;
         }
         return std::tie(gmm_y, mm_y);
     }
