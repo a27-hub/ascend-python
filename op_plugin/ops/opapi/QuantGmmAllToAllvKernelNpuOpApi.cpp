@@ -589,12 +589,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                          comm_quant_dtype_real,
                          group_sizes,
                          hcom_ptr,
+                         comm_mode_real,
                          ep_world_size,
                          send_counts,
                          recv_counts,
                          trans_gmm_weight,
                          trans_mm_weight,
-                         comm_mode_real,
                          gmm_y,
                          mm_y);
             std::cout << "pta aclnnQuantGroupedMatMulAlltoAllvV2 end"<< std::endl;

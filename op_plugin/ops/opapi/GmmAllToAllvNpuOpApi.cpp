@@ -58,12 +58,12 @@ namespace op_api {
                      mm_x_real,
                      mm_weight_real,
                      hcom_ptr,
+                     comm_mode_real,
                      ep_world_size,
                      send_counts,
                      recv_counts,
                      trans_gmm_weight,
                      trans_mm_weight,
-                     comm_mode_real,
                      y,
                      mm_y);
             std::cout << "pta aclnnGroupedMatMulAlltoAllvV2 end"<< std::endl;
