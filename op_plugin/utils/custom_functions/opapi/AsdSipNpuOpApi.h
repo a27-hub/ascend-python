@@ -245,13 +245,13 @@ inline bool operator==(const FFTParam &one, const FFTParam &other)
 inline asdFftHandle createHandle(const FFTParam &param)
 {
     asdFftHandle handle;
-    TORCH_CHECK(asdSipFftCreate(handle) == ASD_SIP_SUCCESS,
+    TORCH_CHECK(asdSipFftCreate(handle) == 0,
         "asdSipFftCreate failed", OPS_ERROR(ErrCode::INTERNAL));
     if (param.fftYSize == 0) {
-        TORCH_CHECK(asdSipFftMakePlan1D(handle, param.fftXSize, param.fftType, param.direction, param.batchSize, param.dimType) == ASD_SIP_SUCCESS,
+        TORCH_CHECK(asdSipFftMakePlan1D(handle, param.fftXSize, param.fftType, param.direction, param.batchSize, param.dimType) == 0,
             "asdSipFftMakePlan1D failed", OPS_ERROR(ErrCode::INTERNAL));
     } else {
-        TORCH_CHECK(asdSipFftMakePlan2D(handle, param.fftXSize, param.fftYSize, param.fftType, param.direction, param.batchSize) == ASD_SIP_SUCCESS,
+        TORCH_CHECK(asdSipFftMakePlan2D(handle, param.fftXSize, param.fftYSize, param.fftType, param.direction, param.batchSize) == 0,
             "asdSipFftMakePlan2D failed", OPS_ERROR(ErrCode::INTERNAL));
     }
     return handle;
@@ -259,9 +259,9 @@ inline asdFftHandle createHandle(const FFTParam &param)
 
 inline void destoryHandle(asdFftHandle handle)
 {
-    TORCH_CHECK(asdSipFftSynchronize(handle) == ASD_SIP_SUCCESS,
+    TORCH_CHECK(asdSipFftSynchronize(handle) == 0,
         "asdSipFftSynchronize failed", OPS_ERROR(ErrCode::INTERNAL));
-    TORCH_CHECK(asdSipFftDestroy(handle) == ASD_SIP_SUCCESS,
+    TORCH_CHECK(asdSipFftDestroy(handle) == 0,
         "asdSipFftDestroy failed", OPS_ERROR(ErrCode::INTERNAL));
 }
 
