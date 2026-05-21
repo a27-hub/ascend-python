@@ -73,7 +73,9 @@ int64_t infer_nz_logical_n(const at::Tensor &weight_scale, bool weight_trans, bo
 {
     TORCH_CHECK(weight_scale.dim() >= DIM_2, "The dim of weight_scale[0] should be greater than or equal to 2, "
                 "but got ", weight_scale.dim(), OPS_ERROR(ErrCode::PARAM));
-    // For NZ V2, logical N follows CANN's weightScale contract. MX uses a 4D scale whose last dim is fixed to 2.
+    // For NZ V2, logical N follows CANN's weightScale contract. In MX mode CANN only accepts
+    // 4D weightScale: [E, ceil(K/64), N, 2] or [E, N, ceil(K/64), 2] for transposed weight.
+    // The last dim is fixed to 2, so it cannot be used as logical N.
     if (is_mx_quant) {
         TORCH_CHECK(weight_scale.dim() == DIM_4, "The dim of weight_scale[0] should be equal to 4 in MX quant mode, "
                     "but got ", weight_scale.dim(), OPS_ERROR(ErrCode::PARAM));
