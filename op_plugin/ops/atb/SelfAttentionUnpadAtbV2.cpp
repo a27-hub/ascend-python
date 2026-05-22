@@ -62,7 +62,7 @@ void _npu_flash_attention_unpad_v2(const at::Tensor &query, const at::Tensor &ke
 namespace {
 TORCH_LIBRARY_FRAGMENT(atb, m)
 {
-    m.def("_npu_flash_attention_unpad_v2(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, " " *, int ? kernel_type = 0, Tensor(a!) out) -> ()");
+    m.def("_npu_flash_attention_unpad_v2(Tensor query, Tensor key, Tensor value, Tensor seq_len, float scale_value, int num_heads, int num_kv_heads, *, int ? kernel_type = 0, Tensor(a!) out) -> ()");
 }
 }
 
