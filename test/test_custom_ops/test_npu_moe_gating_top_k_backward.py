@@ -173,66 +173,36 @@ def topk_routing_with_score_function(
     logits: torch.Tensor,
     topk: int,
     use_pre_softmax: bool = False,
-    num_groups: Optional[int] = None,
-    group_topk: Optional[int] = None,
     scaling_factor: Optional[float] = None,
     score_function: str = "softmax",
     expert_bias: Optional[torch.Tensor] = None,
     norm_topk_prob: bool = False,
 ):
-    """Compute the routing probabilities and map for top-k selection with score function.
-    Args:
-        logits (torch.Tensor): Logits tensor.
-        topk (int): The number of experts to select for each token.
-        use_pre_softmax (bool): Whether to apply softmax or sigmoid before top-k selection.
-        num_groups (int): Number of groups for routed experts.
-        group_topk (int): Number of selected groups for each token.
-        scaling_factor (float): Scaling factor of routing score in top-k selection.
-        score_function (str): The score function to use. Can be either "softmax" or "sigmoid".
-        expert_bias (torch.Tensor): The bias added to logits for expert routing.
-    Returns:
-        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-            - routing_probs (torch.Tensor): A tensor of shape [num_tokens, num_experts] containing
-              the routing probabilities for each token to each expert.
-            - routing_map (torch.Tensor): A mask tensor of shape [num_tokens, num_experts]
-              indicating which experts were selected for each token. True values represent
-              the selected experts.
-    """
     assert logits.dim() == 2, f"Expected 2D logits [num_tokens, num_experts], got {logits.dim()}."
     num_tokens, num_experts = logits.shape
 
-    def compute_topk(scores, topk, num_groups=None, group_topk=None):
-        if group_topk:
-            return group_limited_topk(
-                scores=scores,
-                topk=topk,
-                num_tokens=num_tokens,
-                num_experts=num_experts,
-                num_groups=num_groups,
-                group_topk=group_topk,
-            )
-        else:
-            return torch.topk(scores, k=topk, dim=1)
+    def compute_topk(scores, topk):
+        return torch.topk(scores, k=topk, dim=1)
 
     if score_function == "softmax":
         if use_pre_softmax:
             scores = torch.softmax(logits, dim=-1, dtype=torch.float32)
             if expert_bias is not None:
                 scores += expert_bias
-            probs, top_indices = compute_topk(scores, topk, num_groups, group_topk)
+            probs, top_indices = compute_topk(scores, topk)
         else:
             if expert_bias is not None:
                 logits += expert_bias
-            scores, top_indices = compute_topk(logits, topk, num_groups, group_topk)
+            scores, top_indices = compute_topk(logits, topk)
             probs = torch.softmax(scores, dim=-1, dtype=torch.float32)
     elif score_function == "sigmoid":
         scores = torch.sigmoid(logits.float())
         if expert_bias is not None:
             scores_for_routing = scores + expert_bias
-            _, top_indices = compute_topk(scores_for_routing, topk, num_groups, group_topk)
+            _, top_indices = compute_topk(scores_for_routing, topk)
             scores = torch.gather(scores, dim=1, index=top_indices)
         else:
-            scores, top_indices = compute_topk(scores, topk, num_groups, group_topk)
+            scores, top_indices = compute_topk(scores, topk)
         probs = scores
     else:
         raise ValueError(f"Invalid score_function: {score_function}")

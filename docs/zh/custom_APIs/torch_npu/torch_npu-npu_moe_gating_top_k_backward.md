@@ -148,7 +148,7 @@ npu_moe_gating_top_k_backward(x_norm, grad_y, expertIdx, *, renorm=0, norm_type=
   grad_y = torch.randn_like(y)
 
   # 反向传播
-  grad_x = y.backward(grad_y)
-
+  y.backward(grad_y)
+  grad_x = x.grad.detach().clone()
   print(f"grad_x shape: {grad_x.shape}")   # [2048, 192]
   ```
