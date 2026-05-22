@@ -50,7 +50,7 @@ class torch_npu.optim.NpuFusedBertAdam(params, lr=1e-3, warmup=-1, t_total=-1, s
 ```python
 import torch
 from torch_npu.npu.amp import GradScaler, autocast
-from torch_npu.optim import NpuFusedBertAdam 
+from torch_npu.optim import NpuFusedBertAdam
 
 def _create_simple_params_and_grads():
     params = [

@@ -22,7 +22,7 @@
   $$topKMask = sortedValue < topKValue$$
   - 通过topKMask将小于阈值的部分置为-inf。
   $$
-  sortedValue[b][v] = 
+  sortedValue[b][v] =
   \begin{cases}
   -inf & \text{topKMask[b][v]=true}\\
   sortedValue[b][v] & \text{topKMask[b][v]=false}
@@ -37,7 +37,7 @@
   $$topPMask[b][-1] = false$$
   - 通过topPMask将小于阈值的部分置为-inf。
   $$
-  sortedValue[b][v] = 
+  sortedValue[b][v] =
   \begin{cases}
   -inf & \text{topPMask[b][v]=true}\\
   sortedValue[b][v] & \text{topPMask[b][v]=false}

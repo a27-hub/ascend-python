@@ -15,7 +15,7 @@
     output = allreduce\left(x1 \mathbin{@} \left((x2 + antiquantOffset) * antiquantScale\right) + bias + x3\right)
     $$
 
-> [!NOTE]  
+> [!NOTE]
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
 
 ## 函数原型
@@ -37,18 +37,18 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     - perchannel场景：shape为$[1,n]$或者$[n]$，$n$为`x2`最后一维的大小。
     - pergroup场景：shape为$[ceil(k, antiquant\_group\_size), n]$。其中$k$为`x2`第一维的大小，$n$为`x2`最后一维的大小，$antiquant\_group\_size$为伪量化场景对输入`x2`进行反量化计算的groupSize输入。
 
-        > [!NOTE]  
+        > [!NOTE]
         > $ceil(k, antiquant\_group\_size)$的计算逻辑为：$(k + antiquant\_group\_size - 1) / antiquant\_group\_size$，并对计算结果取整数部分。
 
 - **antiquant_offset** (`Tensor`)：可选参数，对应公式中的$antiquantOffset$。伪量化场景对`x2`进行去量化的系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和`antiquant_scale`保持一致。
 - **x3** (`Tensor`)：可选参数。matmul计算后的偏移。数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。数据类型、shape需要和输出`output`保持一致。
-  
+
 - **dequant_scale** (`Tensor`)：可选参数。matmul计算后的去量化系数。数据类型支持`int64`、`uint64`、`bfloat16`、`float32`；数据格式支持$ND$。
     - pertensor场景：shape为$[1]$。
     - perchannel场景：shape为$[n]/[1,n]$，$n$为`x2`最后一维的大小。
 
 - **pertoken_scale** (`Tensor`)：可选参数。matmul计算后的pertoken去量化系数。数据类型支持`float32`。当`x1`为$[m,k]$时`pertoken_scale` shape为$[m]$；当`x1`为$[b, s, k]$时`pertoken_scale` shape为$[b*s]$。
-  
+
 - **comm_quant_scale_1** (`Tensor`)：可选参数。alltoall通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
 - **comm_quant_scale_2** (`Tensor`)：可选参数。allgather通信前后的量化、去量化系数。支持`float16`、`bfloat16`，支持$ND$格式。`x2`为$[k, n]$时shape为$[1, n]$或$[n]$，用户需保证每张卡上数据保持一致且正确。
 - **comm_turn** (`int`)：可选参数。表示rank间通信切分粒度，默认值：`0`，表示默认的切分方式。当前版本仅支持输入`0`。
@@ -87,14 +87,14 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`float16`|`float16`|`float16`|`float16`|`float16`|None|None|None|
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|None|None|
-    
+
     **表2** 伪量化场景
 
     |产品型号|x1|x2|bias|x3|output（输出）|antiquant_scale|antiquant_offset|dequant_scale|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`float16`|`int8`|`float16`|`float16`|`float16`|`float16`|`float16`|None|
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`bfloat16`|`int8`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|`bfloat16`|None|
-    
+
     **表3** 全量化场景
 
     |产品型号|x1|x2|bias|x3|output（输出）|antiquant_scale|antiquant_offset|dequant_scale|pertoken_scale|
@@ -104,7 +104,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`float16`|`float16`|None|None|`float32`|`float32`|
     |Atlas A2 训练系列产品/Atlas A2 推理系列产品|`int8`|`int8`|`int32`|`bfloat16`|`bfloat16`|None|None|`bfloat16`|`float32`|
 
-    > [!NOTE]  
+    > [!NOTE]
     > 全量化场景：若`dequant_scale`需要以`float32`类型传入，在调用`torch_npu.npu_mm_all_reduce_base`前，需通过`torch_npu.npu_trans_quant_param`接口对`dequant_scale`进行处理为`int64`类型（处理方法见对应的接口使用说明）。
 
 ## 调用示例
@@ -116,24 +116,24 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     import torch_npu
     import torch.distributed as dist
     import torch.multiprocessing as mp
-    
+
     def run_mm_all_reduce_base(rank, world_size, master_ip, master_port, x1_shape, x2_shape, dtype):
         torch_npu.npu.set_device(rank)
         init_method = "tcp://" + master_ip + ":" + master_port
         dist.init_process_group(backend="hccl", rank=rank, world_size=world_size, init_method=init_method)
         from torch.distributed.distributed_c10d import _get_default_group
-    
+
         default_pg = _get_default_group()
         if torch.__version__ > "2.0.1":
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input_ = torch.randn(x1_shape, dtype=dtype).npu()
         weight = torch.randn(x2_shape, dtype=dtype).npu()
         output = torch_npu.npu_mm_all_reduce_base(input_, weight, hcom_info, reduce_op="sum")
         print("output: ", output)
-    
+
     if __name__ == "__main__":
         worksize = 8
         master_ip = "127.0.0.1"
@@ -141,12 +141,12 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
         x1_shape = [128, 512]
         x2_shape = [512, 64]
         dtype = torch.float16
-    
+
         mp.spawn(
             run_mm_all_reduce_base,
             args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype),
             nprocs=worksize)
-    
+
     # 执行上述代码的输出类似如下
     output:  tensor([[ 60.7500,  -0.8770, -32.7812,  ...,   6.9219,  45.1250,  -1.4062],
             [-32.4688,  -5.7734, -19.7500,  ...,   6.2227, -63.9688, -42.1250],
@@ -165,7 +165,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
             [-25.3750,  13.9141,   9.8281,  ..., -21.7188,  64.5625, -56.1562]],
         device='npu:0', dtype=torch.float16)
     ```
-    
+
 - 图模式调用
 
      非量化、伪量化、全量化使能NZ调用示例如下：
@@ -176,11 +176,11 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     import torch.distributed as dist
     import torch.multiprocessing as mp
     import numpy as np
-    
+
     class MM_ALLREDUCE_GRAPH_Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(
             self,
             x1,
@@ -205,11 +205,11 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
                 dequant_scale=dequant_scale,
             )
             return output_npu
-    
+
     class MM_ALLREDUCE_A8W8_GRAPH_Model(MM_ALLREDUCE_GRAPH_Model):
         def __init__(self):
             super().__init__()
-    
+
         def forward(
             self,
             x1,
@@ -234,10 +234,10 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
                 dequant_scale=dequant_scale,
             )
             return output_npu
-    
+
     def define_model(model, graph_type):
         import torchair
-    
+
         if graph_type == 1:  # 传统入图模式，静态shape+在线编译场景
             npu_backend = torchair.get_npu_backend(compiler_config=None)
             model = torch.compile(model, backend=npu_backend, dynamic=False)
@@ -247,7 +247,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
         else:
             print("Error type")
         return model
-    
+
     def get_graph(
         input,
         weight,
@@ -324,7 +324,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
             backend="hccl", rank=rank, world_size=world_size, init_method=init_method
         )
         from torch.distributed.distributed_c10d import _get_default_group
-    
+
         default_pg = _get_default_group()
         if torch.__version__ > "2.0.1":
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(
@@ -343,7 +343,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
         if op_type == "a8w8":
             output = run_mc2_a8w8(x1_shape, x2_shape, hcom_info)
         print("output:", output)
-    
+
     if __name__ == "__main__":
         worksize = 2
         master_ip = "127.0.0.1"
@@ -355,7 +355,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
             run_mm_all_reduce_base,
             args=(worksize, master_ip, master_port, x1_shape, x2_shape, op_type),
             nprocs=worksize)
-        
+
     # 执行上述代码的输出类似如下
     output: tensor([[-3.6594e+01, -8.4219e+00, -7.3688e+01,  ..., -4.9531e+01,
             -4.4438e+01, -1.2300e+02],

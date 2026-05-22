@@ -1,6 +1,6 @@
 # torch_npu.npu_clipped_swiglu
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -58,21 +58,21 @@
         $$
         A = A.clamp(min=None, max=limit)
         $$
-        
+
         $$
         B = B.clamp(min=-limit, max=limit)
         $$
-        
+
         $$
         y\_glu = A * sigmoid(alpha * A)
         $$
-        
+
         $$
         y = y\_glu * (B + bias)
         $$
-    
+
     5. 重塑输出张量y的维度数量与合轴前的x的维度数量一致，第`dim`轴上的大小为`x`的一半，其他维度与`x`相同。
-    
+
 ## 函数原型
 
 ```python
@@ -138,11 +138,11 @@ torch_npu.npu_clipped_swiglu(x, *, group_index=None, dim=-1, alpha=1.702, limit=
 
     device = torch.device(f'npu:0')
     torch_npu.npu.set_device(device)
-    
+
     class ClippedSwigluModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, x, group_index, dim, alpha, limit, bias, interleaved):
             y = torch_npu.npu_clipped_swiglu(
                 x.npu(),
@@ -154,7 +154,7 @@ torch_npu.npu_clipped_swiglu(x, *, group_index=None, dim=-1, alpha=1.702, limit=
                 interleaved=interleaved
             )
             return y
-    
+
     tokens_num = 4608
     hidden_size = 2048
     x = torch.randint(-10, 10, (tokens_num, hidden_size), dtype=torch.float32)

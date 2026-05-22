@@ -90,7 +90,7 @@ torch_npu.npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -
   class MyModel(torch.nn.Module):
       def __init__(self):
           super().__init__()
- 
+
       def forward(self, x1, x2, scale, pertoken_scale):
           return torch_npu.npu_quant_matmul_reduce_sum(x1, x2, x1_scale=pertoken_scale, x2_scale=scale)
 

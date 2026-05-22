@@ -41,7 +41,7 @@ torch_npu.profiler.profile.enable_profiler_in_child_thread(record_shapes=False, 
 
   默认值为False。
 
-  > [!NOTE]  
+  > [!NOTE]
   > 已知在安装有glibc<2.34的环境上采集memory数据，可能触发glibc的一个已知[Bug 19329](https://sourceware.org/bugzilla/show_bug.cgi?id=19329)，通过升级环境的glibc版本可解决此问题。
 
 - **with_stack**(`bool`)：可选参数，算子调用栈。包括框架层及CPU算子层的调用信息。取值为：
@@ -94,7 +94,7 @@ def infer(device, child_thread):
     if child_thread:
         # 开始采集子线程的torch算子等框架侧数据
         torch_npu.profiler.profile.enable_profiler_in_child_thread(with_modules=True)
-    
+
     for _ in range(5):
         outputs = model(input_data)
 

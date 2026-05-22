@@ -45,8 +45,8 @@ class TestCheckOverFlow(TestCase):
         a = a + a
         ret = utils.npu_check_overflow(a)
         self.assertTrue(ret)
- 
- 
+
+
 if __name__ == "__main__":
     run_tests()
 ```

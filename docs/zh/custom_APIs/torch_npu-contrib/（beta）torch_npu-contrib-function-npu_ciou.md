@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.function.npu_ciou
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -32,7 +32,7 @@ torch_npu.contrib.function.npu_ciou(boxes1, boxes2, trans=True, is_cross=False, 
 
 ## 返回值说明
 
-`Tensor` 
+`Tensor`
 
  IoU，size为[1,n]。
 
@@ -48,7 +48,7 @@ torch_npu.contrib.function.npu_ciou(boxes1, boxes2, trans=True, is_cross=False, 
 >>> box1.requires_grad = True
 >>> box2 = torch.randn(4, 32).npu()
 >>> box2.requires_grad = True
->>> ciou = npu_ciou(box1, box2) 
+>>> ciou = npu_ciou(box1, box2)
 >>> l = ciou.sum()
 >>> l.backward()
 ```

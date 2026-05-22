@@ -22,18 +22,18 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
 ## 参数说明
 
 - **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`updates`一致，维数只能是1~8维。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。 
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
-      
+
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`、`int64`，数据格式支持$ND$，支持非连续的Tensor，`indices`中的索引数据不支持越界。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`input`一致。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。 
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
-   
+
 ## 返回值
 
 `Tensor`
@@ -57,7 +57,7 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
     >>>
     >>> data_var = np.random.uniform(0, 1, [24, 128]).astype(np.float16)
     >>> var = torch.from_numpy(data_var).to(torch.float16).npu()
-    >>>    
+    >>>
     >>> data_indices = np.random.uniform(0, 12, [12, 1]).astype(np.int32)
     >>> indices = torch.from_numpy(data_indices).to(torch.int32).npu()
     >>>
@@ -89,36 +89,36 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
     import numpy as np
     import numpy
     torch_npu.npu.set_compile_mode(jit_compile=True)
-    
+
     os.environ["ENABLE_ACLNN"] = "false"
-    
+
     class Network(nn.Module):
         def __init__(self):
             super(Network, self).__init__()
-    
+
         def forward(self, var, indices, update):
             # 调用目标接口
             res = torch_npu.npu_scatter_nd_update_(var, indices, update)
             return res
-            
+
     npu_mode = Network()
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
     npu_mode = torch.compile(npu_mode, fullgraph=True, backend=npu_backend, dynamic=False)
-    
+
     dtype = np.float32
     x = [33 ,5]
     indices = [33,25,1]
     update = [33,25,5]
-    
+
     data_x = np.random.uniform(0, 1, x).astype(dtype)
     data_indices = np.random.uniform(0, 10, indices).astype(dtype)
     data_update = np.random.uniform(0, 1, update).astype(dtype)
-    
+
     tensor_x = torch.from_numpy(data_x).to(torch.float16)
     tensor_indices = torch.from_numpy(data_indices).to(torch.int32)
     tensor_update = torch.from_numpy(data_update).to(torch.float16)
-    
+
     # 传参
     out=npu_mode(tensor_x.npu(), tensor_indices.npu(), tensor_update.npu())
     print(out.shape, out.dtype)

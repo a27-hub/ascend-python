@@ -28,7 +28,7 @@ torch_npu.contrib.function.npu_single_level_responsible_flags(featmap_size, gt_b
 
 ## 返回值说明
 
-`Tensor` 
+`Tensor`
 
 代表单层特征图中每个锚点的有效标志。输出大小为[featmap_size[0] \* featmap_size[1] \* num_base_anchors]。
 

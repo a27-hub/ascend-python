@@ -46,7 +46,7 @@ ATB_MODULE = types.ModuleType(ATB_MODULE_NAME)
 
 
 def _add_atb_module():
-    
+
     setattr(torch_npu, ATB_MODULE_NAME, ATB_MODULE)
     sys.modules[f'torch_npu.{ATB_MODULE_NAME}'] = ATB_MODULE
 
@@ -95,7 +95,7 @@ def lazy_load_atb_so(api_func):
     def wrapper(*args, **kwargs):
         _register_atb_extensions()
         return api_func(*args, **kwargs)
-    
+
     return wrapper
 
 

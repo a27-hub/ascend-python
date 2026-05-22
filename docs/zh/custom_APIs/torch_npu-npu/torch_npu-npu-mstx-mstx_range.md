@@ -56,7 +56,7 @@ with torch_npu.profiler.profile(
     schedule=torch_npu.profiler.schedule(wait=1, warmup=1, active=2, repeat=1, skip_first=1),
     on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
     experimental_config=experimental_config) as prof:
-       
+
     for epoch in range(epochs):
         for step in range(steps):
             train_one_step(step, steps, train_loader, model, optimizer, criterion)

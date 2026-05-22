@@ -53,7 +53,7 @@ with torch_npu.profiler.profile(
     schedule=torch_npu.profiler.schedule(wait=1, warmup=1, active=2, repeat=1, skip_first=1),
     on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result"),
     experimental_config=experimental_config) as prof:
-       
+
     for step in range(steps):
         train_one_step()    # 用户代码，包含调用mstx接口
         prof.step()

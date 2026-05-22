@@ -14,7 +14,7 @@
 - 计算公式：
 
      $$
-     y = x @ ANTIQUANT(weight) + bias 
+     y = x @ ANTIQUANT(weight) + bias
      $$
      公式中的$weight$为伪量化场景的输入，其反量化公式$ANTIQUANT(weight)$ 为:
      $$
@@ -119,7 +119,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
             ```python
             import torch
             import torch_npu
-            # 输入int8+ND 
+            # 输入int8+ND
             cpu_x = torch.randn((8192, 320),dtype=torch.float16)
             cpu_weight = torch.randint(low=-8, high=8, size=(320, 256),dtype=torch.int8)
             cpu_antiquantscale = torch.randn((1, 256),dtype=torch.float16)
@@ -156,7 +156,7 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
             ```python
             import torch
             import torch_npu
-            # 输入int8+ND 
+            # 输入int8+ND
             cpu_x = torch.randn((96, 320),dtype=torch.float16)
             cpu_weight = torch.randint(low=-8, high=8, size=(256, 320),dtype=torch.int8)
             cpu_antiquantscale = torch.randn((256,1),dtype=torch.float16)
@@ -176,19 +176,19 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
         config = CompilerConfig()
         config.debug.graph_dump.type = "pbtxt"
         npu_backend = tng.get_npu_backend(compiler_config=config)
-        
+
         cpu_x = torch.randn((8192, 320),device='npu',dtype=torch.bfloat16)
         cpu_weight = torch.randint(low=-8, high=8, size=(320, 256), dtype=torch.int8, device='npu')
         cpu_antiquantscale = torch.randn((1, 256),device='npu',dtype=torch.bfloat16)
         cpu_antiquantoffset = torch.randn((1, 256),device='npu',dtype=torch.bfloat16)
-        
+
         class MyModel(torch.nn.Module):
             def __init__(self):
                 super().__init__()
-        
+
             def forward(self, x, weight, antiquant_scale, antiquant_offset, quant_scale,quant_offset, bias, antiquant_group_size):
                 return torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_offset, quant_scale ,quant_offset, bias, antiquant_group_size)
-        
+
         cpu_model = MyModel()
         model = cpu_model.npu()
         model = torch.compile(model, backend=npu_backend, dynamic=True)
@@ -217,23 +217,23 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
                          transpose_weight=True,
                          w4=False):
                 super().__init__()
-        
+
                 self.dtype = torch.float16
                 self.weight = weight.to(torch.int8).npu()
                 self.transpose_weight = transpose_weight
-        
+
                 if self.transpose_weight:
                     self.weight = torch_npu.npu_format_cast(self.weight.contiguous(), 29)
                 else:
                     self.weight = torch_npu.npu_format_cast(self.weight.transpose(0, 1).contiguous(), 29) # n,k ->nz
-        
+
                 self.bias = None
                 self.antiquant_scale = antiquant_scale
                 self.antiquant_offset = antiquant_offset
                 self.quant_offset = quant_offset
                 self.quant_scale = quant_scale
                 self.transpose_x = transpose_x
-        
+
             def forward(self, x):
                 x = torch_npu.npu_weight_quant_batchmatmul(x.transpose(0, 1) if self.transpose_x else x,
                                                            self.weight.transpose(0, 1),
@@ -243,13 +243,13 @@ torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_off
                                                            self.quant_offset,
                                                            self.bias)
                 return x
-        
-        
+
+
         m, k, n = 4, 1024, 4096
         cpu_x = torch.randn((m, k),dtype=torch.float16)
         cpu_weight = torch.randint(1, 10, (k, n),dtype=torch.int8)
         cpu_weight = cpu_weight.transpose(-1, -2)
-        
+
         cpu_antiquantscale = torch.randn((1, n),dtype=torch.float16)
         cpu_antiquantoffset = torch.randn((1, n),dtype=torch.float16)
         cpu_antiquantscale = cpu_antiquantscale.transpose(-1, -2)

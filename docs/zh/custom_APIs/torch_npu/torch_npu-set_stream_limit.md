@@ -65,7 +65,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
      >>>    record_shapes=False,             # 采集算子的input shape和input type开关，默认关闭
      >>>    profile_memory=False,            # 采集memory相关数据开关，默认关闭
      >>>    schedule=torch_npu.profiler.schedule(wait=0, warmup=0, active=1),           # warmup默认为0，老版本torch_npu包该参数为必填项
-     >>>    experimental_config=experimental_config,                                   
+     >>>    experimental_config=experimental_config,
      >>>    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./result_dir") # 导出tensorboard可视化数据
      >>>    ) as prof:
      >>>    torch.npu.set_stream_limit(stream1, 12, 22)
@@ -87,7 +87,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
    关键产物如下：
 
      ```shell
-     |-- /home/prof/${hostname}_${pid}_${timestamp}_ascend_pt   
+     |-- /home/prof/${hostname}_${pid}_${timestamp}_ascend_pt
        |-- ASCEND_PROFILER_OUTPUT           // 采集并解析的性能数据目录
          |-- api_statistic.csv             // profiler_level配置为Level1或Level2级别时生成，统计CANN层API执行耗时信息
          |-- kernel_details.csv            // activities配置为NPU类型时生成
@@ -101,7 +101,7 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
        ......
    ```
 
-2. 查看采集结果文件（json、csv等格式）。 
+2. 查看采集结果文件（json、csv等格式）。
 
    单算子控核可以查看**kernel_details.csv**文件，查看算子的**BlockDim**列（算子计算所用核数），BlockDim小于等于用户设置的控核数即可认为控核成功。
    示例的SwiGlu算子的BlockDim分别为22和23，符合控核逻辑。

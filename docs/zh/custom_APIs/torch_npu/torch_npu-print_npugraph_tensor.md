@@ -73,7 +73,7 @@ torch_npu.print_npugraph_tensor(input, tensor_name=None) -> None
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-        
+
         def forward(self, x):
             x = torch.add(x, x)
             torch_npu.print_npugraph_tensor(x, tensor_name ="x")

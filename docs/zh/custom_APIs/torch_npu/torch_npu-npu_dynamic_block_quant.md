@@ -65,13 +65,13 @@ torch_npu.npu_dynamic_block_quant(x, *, min_scale=0.0, round_mode="rint", dst_ty
   ```python
   >>> import torch
   >>> import torch_npu
-  
+
   >>> x = torch.rand(3, 4).to("npu").to(torch.float16)
   >>> min_scale = 0
   >>> dst_type = 1
   >>> row_block_size = 1
   >>> col_block_size = 128
-  
+
   >>> y, scale = torch_npu.npu_dynamic_block_quant(x, min_scale=min_scale, dst_type=dst_type, row_block_size=row_block_size, col_block_size=col_block_size)
   >>> print(y)
   tensor([[ 92,  65,  15, 127],

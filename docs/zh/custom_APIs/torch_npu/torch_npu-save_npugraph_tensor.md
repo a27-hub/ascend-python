@@ -1,6 +1,6 @@
 # torch_npu.save_npugraph_tensor
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -34,7 +34,7 @@ torch_npu.save_npugraph_tensor(input, save_path=None, overwrite=False) -> None
   - 支持绝对/相对路径，需要具体到文件名，如果路径不存在会优先尝试创建。
   - 支持的文件后缀与原生`torch.save`一致，支持".pt"，".pth"，".bin"等后缀。
   - 如果不指定文件保存路径则在默认当前路径保存，默认命名格式为"tensor_当前时间戳_device_设备序号_计数标识.pt"，例如"tensor_20260101_000000_000000_device_0_0.pt"。
-  
+
 - **overwrite** (`bool`)：可选参数，是否覆盖已有同名文件，默认值为`False`。
   - 当`overwrite=False`时，遇到同名文件自动添加计数标识，例如"tensor_device_0_0.pt"、"tensor_device_0_1.pt"。
   - 当`overwrite=True`时，会直接覆盖同名文件，文件名不添加计数标识，例如"tensor_device_0.pt"。
@@ -90,7 +90,7 @@ torch_npu.save_npugraph_tensor(input, save_path=None, overwrite=False) -> None
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-        
+
         def forward(self, x):
             x = torch.add(x, x)
             torch_npu.save_npugraph_tensor(x, save_path="/home/dump/output.pt")

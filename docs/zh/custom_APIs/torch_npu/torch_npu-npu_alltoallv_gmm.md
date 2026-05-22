@@ -107,7 +107,7 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     import torch_npu
     import torch.distributed as dist
     import torch.multiprocessing as mp
-    
+
     def run_npu_alltoallv_gmm(rank, ep_world_size, master_ip, master_port, gmm_x, gmm_w, send_counts, recv_counts, dtype):
         torch_npu.npu.set_device(rank)
         init_method = 'tcp://' + master_ip + ':' + master_port
@@ -118,10 +118,10 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input = torch.randn(gmm_x, dtype=dtype).npu()
         weight = torch.randn(gmm_w, dtype=dtype).npu()
-    
+
         print(torch_npu.npu_alltoallv_gmm(gmm_x =input,
                                                 gmm_weight = weight,
                                                 hcom= hcom_info,
@@ -135,7 +135,7 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                                                 trans_gmm_weight = False,
                                                 trans_mm_weight  = False,
                                                 permute_out_flag  = False))
-    
+
     if __name__ == "__main__":
         epWorkSize = 8
         e = 4
@@ -159,7 +159,7 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     import torch.distributed as dist
     import torch.multiprocessing as mp
     import torchair
-    
+
     class ALLTOALLV_GMM_GRAPH_Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -181,7 +181,7 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                                                 trans_gmm_weight = trans_gmm_weight,
                                                 trans_mm_weight  = trans_mm_weight,
                                                 permute_out_flag  = permute_out_flag)
-    
+
     def run_npu_alltoallv_gmm(rank, ep_world_size, master_ip, master_port, gmm_x, gmm_w, send_counts, recv_counts, dtype):
         torch_npu.npu.set_device(rank)
         init_method = 'tcp://' + master_ip + ':' + master_port
@@ -192,10 +192,10 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input = torch.randn(gmm_x, dtype=dtype).npu()
         weight = torch.randn(gmm_w, dtype=dtype).npu()
-    
+
         model = ALLTOALLV_GMM_GRAPH_Model()
         npu_backend = torchair.get_npu_backend(compiler_config=None)
         # 静态图：dynamic=False；动态图：dynamic=True
@@ -213,7 +213,7 @@ torch_npu.npu_alltoallv_gmm(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                         trans_gmm_weight=False,
                         trans_mm_weight=False,
                         permute_out_flag=True))
-    
+
     if __name__ == "__main__":
         epWorkSize = 8
         e = 4

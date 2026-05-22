@@ -46,15 +46,15 @@ import os
 import torch
 import torch_npu
 import torch.distributed as dist
- 
+
 dist.init_process_group(backend="hccl")
 rank = int(os.getenv('LOCAL_RANK'))
 torch.npu.set_device(rank)
- 
+
 output_split_sizes = [2, 3]
 input_tensors = [torch.tensor([1, 2], dtype=torch.int32).npu(), torch.tensor([4, 5, 6], dtype=torch.int32).npu()]
 output_tensor = torch.zeros(sum(output_split_sizes), dtype=torch.int32).npu()
- 
+
 torch_npu.distributed.all_gather_into_tensor_uneven(
     output_tensor,
     input_tensors[rank],

@@ -28,7 +28,7 @@
 ```
 
 > [!NOTE]
-> 
+>
 > 以上适配文件仅以add算子和trig算子为例，用户可自行适配自定义算子，更多add算子和trig算子信息可参考[算子详情](#参考信息)。
 
 ### 操作步骤
@@ -38,7 +38,7 @@
 1. 在算子适配层C++代码目录（csrc）中的*.asc文件（如add_custom.asc）完成C++侧算子代码、适配代码、注册自定义算子schema及绑定具体实现。在add_custom.asc中定义了一个名为cpp_extension_acs的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。PyTorch提供TORCH_LIBRARY宏来定义新的命名空间，并在该命名空间里注册schema。注意命名空间的名字必须是唯一的。具体示例如下：
 <!-- 代码中没有const c10::OptionalDeviceGuard device_guard(device_of(Tensor))，是否需要增加 -->
     > [!NOTE]
-    > 
+    >
     > 多卡场景必须在适配代码中加`const c10::OptionalDeviceGuard device_guard(device_of(Tensor))`保障跨device访问，单卡场景可不加此代码。
 
     ```cpp
@@ -178,7 +178,7 @@
         atb_so_path = str(so_files[0])
         torch.ops.load_library(atb_so_path)
     ```
-        
+
 ## 调用样例
 
 完成了算子适配开发后，即可实现C++ extensions的方式调用自定义算子。
@@ -214,13 +214,13 @@
 - 算子功能：
 
   Add算子实现了两个数据相加，返回相加结果的功能。对应的算子原型为：
-  
+
   ```python
   ascendc_add(Tensor x, Tensor y) -> Tensor
   ```
 
 - 算子规格：
-  
+
   <table>
    <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">add_custom</td></tr>
   <tr><td rowspan="3" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
@@ -234,7 +234,7 @@
 - 算子功能：
 
   该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回值tan(x)计算结果。对应的算子原型为：
-  
+
   ```python
   ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
   ```

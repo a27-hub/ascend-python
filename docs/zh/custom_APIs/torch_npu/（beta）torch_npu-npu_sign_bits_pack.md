@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_sign_bits_pack
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -17,13 +17,13 @@
 - API功能：将`float`类型的输入打包为`uint8`类型。每8个浮点数打包为一个`uint8`数值，-1.0编码为二进制位0，1.0编码为二进制位1，并按小端序进行打包。
 
 - 等价计算逻辑：
-    
+
      可使用`sign_pack`等价替换`torch_npu.npu_sign_bits_pack`，两者计算逻辑一致。
-     
+
      ```python
     import torch
     import numpy as np
-    
+
     def sign_pack(in_data, size):
         sign_data = np.sign(in_data)
         sign_data = sign_data + 1

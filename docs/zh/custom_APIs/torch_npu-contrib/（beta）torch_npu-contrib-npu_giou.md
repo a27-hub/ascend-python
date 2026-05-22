@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.npu_giou
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -33,7 +33,7 @@ torch_npu.contrib.npu_giou(boxes1, boxes2, is_permuted=True)
 ```python
 >>> import torch, torch_npu
 >>> box1 = torch.randn(32, 4).npu()
->>> box1.requires_grad = True      
+>>> box1.requires_grad = True
 >>> box2 = torch.randn(32, 4).npu()
 >>> box2.requires_grad = True
 >>> iou = torch_npu.contrib.npu_giou(box1, box2)

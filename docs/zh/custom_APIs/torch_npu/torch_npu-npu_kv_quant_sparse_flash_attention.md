@@ -26,7 +26,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
 
 ## 参数说明
 
-> [!NOTE]  
+> [!NOTE]
 >
 > - query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
 > - Q\_S和S1表示query shape中的S，KV\_S和S2表示key shape中的S，Q\_N表示num\_query\_heads，KV\_N表示num\_key\_value\_heads，Q\_T表示query shape中的T，KV\_T表示key shape中的T。
@@ -138,7 +138,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
     block_table = torch.tensor([range(b * s2 // block_size)], dtype=torch.int32).reshape(b, -1).npu()
 
     # 调用qsfa算子
-    out = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, 
+    out = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
         scale_value=scale_value, sparse_block_size=sparse_block_size,
         actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
         layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
@@ -217,7 +217,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
         def __init__(self):
             super().__init__()
         def forward(self):
-            return torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, 
+            return torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
                 scale_value=scale_value, sparse_block_size=sparse_block_size,
                 actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
                 layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,
@@ -228,7 +228,7 @@ torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
             model = Model()
             model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
             graph_output = model()
-        single_op = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices, 
+        single_op = torch_npu.npu_kv_quant_sparse_flash_attention(query, key, value, sparse_indices,
                 scale_value=scale_value, sparse_block_size=sparse_block_size,
                 actual_seq_lengths_query=act_seq_q, actual_seq_lengths_kv=act_seq_kv,
                 layout_query='BSND', layout_kv='PA_BSND', sparse_mode=3, block_table=block_table,

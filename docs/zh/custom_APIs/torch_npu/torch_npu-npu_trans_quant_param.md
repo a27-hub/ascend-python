@@ -21,7 +21,7 @@
         $$
 
     3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将第46位修改为1。
-     
+
         $$
         out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
         $$
@@ -30,7 +30,7 @@
         - 若`offset`不存在，不再后续计算。
         - 若`offset`存在：
             1. 将`offset`值处理为int，范围为[-256, 255]。
-     
+
                 $$
                 offset = Max(Min(INT(Round(offset)),255),-256)
                 $$
@@ -113,9 +113,9 @@ torch_npu.npu_trans_quant_param(scale, offset=None, round_mode=0) -> Tensor
     import numpy as np
 
     os.environ["ENABLE_ACLNN"] = "true"
-    config = CompilerConfig()    
+    config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     class MyModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -133,7 +133,7 @@ torch_npu.npu_trans_quant_param(scale, offset=None, round_mode=0) -> Tensor
     round_mode = 1
     bias = torch.randint(-1,1, (15, 1, 128), dtype=torch.int32)
     model = torch.compile(model, backend=npu_backend, dynamic=True)
-    
+
     npu_out = model(cpu_x1.npu(), cpu_x2.npu(), scale.npu(), offset.npu(), bias.npu(), round_mode)
     print(npu_out.shape)
     print(npu_out)

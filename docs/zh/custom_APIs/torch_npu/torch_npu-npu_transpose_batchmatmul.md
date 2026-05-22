@@ -19,7 +19,7 @@
     - 量化融合：
     $$
     Y = (input^{T_1} @ weight^{T_2} + bias)^{T_y} * scale
-    $$    
+    $$
 
     $T_1$、$T_2$、$T_y$分别通过参数`perm_x1`、`perm_x2`、`perm_y`描述转置序列。
 

@@ -81,24 +81,24 @@ torch_npu.npu_group_norm_silu(input, weight, bias, group, eps=0.00001) -> (Tenso
 import torch
 import numpy as np
 import torch_npu
-     
+
 dtype = np.float32
 shape_x = [24,320,48,48]
 num_groups = 32
 shape_c = [320]
 eps = 0.00001
-     
+
 input_npu=torch.randn(shape_x,dtype=torch.float32).npu()
 weight_npu=torch.randn(shape_c,dtype=torch.float32).npu()
 bias_npu=torch.randn(shape_c,dtype=torch.float32).npu()
 out_npu, mean_npu, rstd_out = torch_npu.npu_group_norm_silu(input_npu, weight_npu, bias_npu, group=num_groups, eps=eps)
-     
-     
+
+
 input_npu=torch.randn(shape_x,dtype=torch.bfloat16).npu()
 weight_npu=torch.randn(shape_c,dtype=torch.bfloat16).npu()
 bias_npu=torch.randn(shape_c,dtype=torch.bfloat16).npu()
 out_npu, mean_npu, rstd_out = torch_npu.npu_group_norm_silu(input_npu, weight_npu, bias_npu, group=num_groups, eps=eps)
-     
+
 input_npu=torch.randn(shape_x,dtype=torch.float16).npu()
 weight_npu=torch.randn(shape_c,dtype=torch.float16).npu()
 bias_npu=torch.randn(shape_c,dtype=torch.float16).npu()

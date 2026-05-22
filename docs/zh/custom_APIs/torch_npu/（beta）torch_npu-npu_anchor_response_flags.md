@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_anchor_response_flags
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -22,7 +22,7 @@
 
     ```python
     import torch
-    
+
     def anchor_response_flags_golden(self, featmap_size, strides, num_base_anchors):
         feat_h, feat_w = featmap_size
         gt_bboxes_cx = (self[:, 0] + self[:, 2]) * 0.5
@@ -43,7 +43,7 @@
             .view(-1)
         )
         return responsible_grid
-    
+
     ```
 
 ## 函数原型

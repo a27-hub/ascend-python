@@ -22,7 +22,7 @@
       ![](../../figures/zh-cn_formulaimage_0000002313785750.png)
 
     对计算结果按照`group_count`进行分组：
-    
+
     - 如果`group_select_mode`为1，每组按照topk2的sum值对group进行排序，取前`k_group`个组：
 
       ![](../../figures/zh-cn_formulaimage_0000002219010398.png)
@@ -63,7 +63,7 @@
         original_x = x
         if bias is not None:
             x = x + bias
-            
+
         if group_count > 1:
             x = x.reshape(x.shape[0], group_count, -1)
             if group_select_mode == 0:
@@ -90,7 +90,7 @@
             out = None
 
         y = torch.tensor(y, dtype=dtype)
-        return y, indices.astype(numpy.int32), out   
+        return y, indices.astype(numpy.int32), out
 
     k = 6
     k_group = 4
@@ -101,7 +101,7 @@
     out_flag = False
     routed_scaling_factor = 1.0
     eps = 1e-20
-        
+
 
     x = numpy.random.uniform(-2, 2, (8, 256)).astype(numpy.float32)
     bias = numpy.random.uniform(-2, 2, (256,)).astype(numpy.float32)
@@ -112,8 +112,8 @@
                                 group_select_mode = group_select_mode, renorm = renorm, norm_type = norm_type, out_flag = out_flag,
                                 routed_scaling_factor = routed_scaling_factor, eps = eps)
 
-    print(f"yOut shape: {y.shape}")              
-    print(f"expertIdxOut shape: {expert_idx.shape}")  
+    print(f"yOut shape: {y.shape}")
+    print(f"expertIdxOut shape: {expert_idx.shape}")
     print(f"Selected experts: {expert_idx[0]}")
     ```
 
@@ -130,7 +130,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
 - **k**（`int`）：必选参数，表示每个token最终筛选得到的专家个数，数据类型为`int64`。要求`1 <= k <= x_shape[-1] / group_count * k_group`。
 
 - <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
- 
+
 - **bias**（`Tensor`）：可选参数，表示与输入`x`进行计算的bias值。要求是1D的Tensor，要求shape值与`x`的最后一维相等。数据类型支持`float16`、`bfloat16`、`float32`，数据类型需要与`x`保持一致，数据格式要求为ND。支持非连续`Tensor`。
 
 - **k_group**（`int`）：可选参数，表示每个token组筛选过程中，选出的专家组个数，数据类型为`int64`，默认值为`1`。要求`1 <= k_group <= group_count`，并且`k_group * x_shape[-1] / group_count`的值要大于等于`k`。
@@ -165,7 +165,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
     import torch
     import torch_npu
     import numpy
-    
+
     k = 1
     k_group = 4
     group_count = 8
@@ -175,13 +175,13 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
     out_flag = False
     routed_scaling_factor = 1.0
     eps = 1e-20
-    
+
     # 生成随机数据, 并发送到npu
     x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
     bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
     x_tensor = torch.tensor(x).npu()
     bias_tensor = torch.tensor(bias).npu()
-    
+
     # 调用MoeGatingTopK算子
     y_npu, expert_idx_npu, out_npu = torch_npu.npu_moe_gating_top_k(x_tensor, k, bias=bias_tensor, k_group=k_group, group_count=group_count, group_select_mode=group_select_mode, renorm=renorm, norm_type=norm_type, out_flag=out_flag, routed_scaling_factor=routed_scaling_factor, eps=eps)
     ```
@@ -194,7 +194,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
     import torch_npu
     import torchair
     import numpy
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -207,7 +207,7 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
     npu_backend = torchair.get_npu_backend(compiler_config=config)
     # 使用TorchAir的backend去调用compile接口编译模型
     model = torch.compile(model, backend=npu_backend)
-    
+
     k = 1
     k_group = 4
     group_count = 8
@@ -217,14 +217,13 @@ npu_moe_gating_top_k(x, k, *, bias=None, k_group=1, group_count=1, group_select_
     out_flag = False
     routed_scaling_factor = 1.0
     eps = 1e-20
-    
+
     # 生成随机数据, 并发送到npu
     x = numpy.random.uniform(0, 2, (16, 256)).astype(numpy.float16)
     bias = numpy.random.uniform(0, 2, (256,)).astype(numpy.float16)
     x_tensor = torch.tensor(x).npu()
     bias_tensor = torch.tensor(bias).npu()
-    
+
     # 调用MoeGatingTopK算子
     y_npu, expert_idx_npu, out_npu = model(x_tensor, bias_tensor)
     ```
-    

@@ -7,15 +7,15 @@
 本样例适用于以下情况：
 
 - **需要接入自定义 aclnn 算子**：CANN 已提供 aclnn 接口（如 `aclnnFastGelu`），希望以 PyTorch 自定义算子的形式在 `torch_npu` 中暴露给用户。
-- **算子满足「结构化适配」条件**：  
-  aclnn 算子与目标 ATen IR 的语义一致，适配层**除申请 output tensor（shape/dtype 由输入推导）外，无其他复杂逻辑**。  
+- **算子满足「结构化适配」条件**：
+  aclnn 算子与目标 ATen IR 的语义一致，适配层**除申请 output tensor（shape/dtype 由输入推导）外，无其他复杂逻辑**。
   满足时即可用 YAML 做结构化描述，由工具自动生成 C++ 适配代码，无需手写适配层。
 
 不适用或需手写适配的情况：算子语义与 ATen 不一致、需要复杂 shape/type 推导、或需在适配层写额外逻辑时，应使用非结构化方式（如 opapi）。
 
 ## 环境与依赖
 
-- **运行/编译依赖**：PyTorch、torch_npu、CANN。  
+- **运行/编译依赖**：PyTorch、torch_npu、CANN。
   安装与版本要求见 [torch_npu 安装说明](https://gitcode.com/ascend/pytorch#%E5%AE%89%E8%A3%85)。
 
 ## 目录与文件结构
@@ -82,7 +82,7 @@ cd test && python test_npu_fast_gelu_custom.py
 
 ### 1. 编写自定义算子 YAML（结构化描述）
 
-在 `npu_fast_gelu.yaml` 的 `custom` 段中，按「ATen IR ↔ aclnn」一一对应的方式填写。  
+在 `npu_fast_gelu.yaml` 的 `custom` 段中，按「ATen IR ↔ aclnn」一一对应的方式填写。
 是否可结构化的判断标准：**opapi 对应的 aclnn 与 ATen IR 语义一致，适配层除申请 output tensor 外无其他逻辑**。
 
 示例（前向 + 反向）：
@@ -193,6 +193,6 @@ python test_npu_fast_gelu_custom.py
 
 ## 小结
 
-- **适用**：自定义 aclnn 算子、语义与 ATen 对齐、适配层仅做 output 申请的结构化场景。  
-- **执行流程**：先执行 `gen.sh npu_custom.yaml` 生成适配代码，再执行 `setup.py` 构建得到 `aclnn_extension*.whl`，`pip install` 后即可调用接入的算子。  
+- **适用**：自定义 aclnn 算子、语义与 ATen 对齐、适配层仅做 output 申请的结构化场景。
+- **执行流程**：先执行 `gen.sh npu_custom.yaml` 生成适配代码，再执行 `setup.py` 构建得到 `aclnn_extension*.whl`，`pip install` 后即可调用接入的算子。
 - **自用**：把 YAML 里的内容换成自己算子的定义，gen.sh 传入对应 YAML 文件名，同样先 gen.sh 再 setup.py 即可。

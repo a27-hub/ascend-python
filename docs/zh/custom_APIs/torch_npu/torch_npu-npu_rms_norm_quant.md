@@ -1,6 +1,6 @@
 # torch_npu.npu_rms_norm_quant
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -16,7 +16,7 @@
 
 - API 功能：RmsNormQuant算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。RmsNormQuant算子将RmsNorm算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出的操作。
 - 计算公式：
-  
+
   $$
   quant\_in_i = \frac{x_i}{Rms(x)}g_i+b_i, where \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
@@ -57,9 +57,9 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_d
 - **dst_dtype** (`int`): 可选参数，指定量化输出的类型，默认值为`int8`。传`None`时当做int8处理，支持取值`int8`、`quint4x2`。
 
 ## 返回值说明
-  
+
   `Tensor`
-  
+
   返回结果，对应公式中的$y$，即最终量化输出张量，数据类型由`dst_dtype`指定。当`dst_dtype`是`quint4x2`时，`y`的数据类型为`int32`，形状最后一维为`x`最后一维除以8，其余维度与`x`一致，每个`int32`元素包含8个`int4`结果。其他场景下`y`形状与输入`x`一致，数据类型由`dst_dtype`指定。
 
 ## 约束说明
@@ -67,7 +67,7 @@ torch_npu.npu_rms_norm_quant(x, gamma, beta, scale, offset, epsilon=1e-06, dst_d
 - <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当`dst_dtype`取`quint4x2`时，`x`、`gamma`以及`beta`的最后一维必须为偶数，并且`x`最后一维必须能够被8整除。
 - 各产品型号支持数据类型说明：
-  
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     | x | gamma | beta | scale | offset | epsilon | y |

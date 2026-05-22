@@ -27,7 +27,7 @@
         $$
         expandedRowIdxOut[sortedRowIdx[i]]=i
         $$
-      
+
     3. 对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
 
         $$
@@ -39,7 +39,7 @@
         $$
         quantResult=round((x∗scaleOptional)+offsetOptional)
         $$
-        
+
         - 动态量化：
             - 若不输入scale：
             $$
@@ -57,7 +57,7 @@
             $$
             quantResult = round(x / dynamicQuantScaleOutOptional)
             $$
-    
+
     5. 若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
         - 非量化场景
             - 按照Scatter索引搬运
@@ -236,13 +236,13 @@
                         sorted_row_idx[i] = -1
 
         @staticmethod
-        def cpu_op_exec(x, expert_idx, scale=None, offset=None, expert_range=None, 
-                        quant_mode=-1, row_idx_type=0, expert_tokens_num_flag=False, 
-                        expert_tokens_num_type=0, drop_pad_mode=0, active_num=-1, 
+        def cpu_op_exec(x, expert_idx, scale=None, offset=None, expert_range=None,
+                        quant_mode=-1, row_idx_type=0, expert_tokens_num_flag=False,
+                        expert_tokens_num_type=0, drop_pad_mode=0, active_num=-1,
                         expert_capacity=-1):
             """
             CPU上MoeInitRoutingV2的等价计算逻辑
-            
+
             参数:
                 x: 输入tensor, shape (bs, h)
                 expert_idx: 专家索引, shape (bs, k)
@@ -256,13 +256,13 @@
                 drop_pad_mode: drop_pad模式 (0或1)
                 active_num: 激活数量
                 expert_capacity: 专家容量
-                
+
             返回:
                 expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale
             """
             if expert_range is None:
                 expert_range = [0, 16]
-                
+
             expert_start = expert_range[0]
             expert_end = expert_range[1]
             expert_num = 32
@@ -278,7 +278,7 @@
             sorted_expert_indices = np.argsort(
                 expert_idx_in, axis=-1, kind="stable")
             sorted_expert_idx = expert_idx_in[sorted_expert_indices]
-            
+
             if row_idx_type == 1:
                 expanded_row_idx = sorted_expert_indices.astype(np.int32)
             else:
@@ -432,7 +432,7 @@
                 x = np.random.uniform(-127, 128, size=(bs, h)).astype(np.int8)
             else:
                 x = np.random.uniform(-1, 1, size=(bs, h)).astype(np.float32)
-                
+
             expert_idx = np.random.randint(0, 32, size=(bs, k)).astype(np.int32)
             scale = None if none_scale else np.random.uniform(
                 -1, 1, size=scale_shape).astype(np.float32)
@@ -451,14 +451,14 @@
         print("=" * 50)
         print("Demo: 无量化模式 (quant_mode=-1)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 16]
-        
+
         # 生成输入
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float16, (bs,), False, True, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -472,7 +472,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input expert_idx shape: {expert_idx.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -487,14 +487,14 @@
         print("=" * 50)
         print("Demo: 静态量化模式 (quant_mode=0)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 16]
-        
+
         # 生成输入 (需要scale和offset)
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float32, (1,), False, False, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -508,7 +508,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input scale shape: {scale.shape}, offset shape: {offset.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -522,15 +522,15 @@
         print("=" * 50)
         print("Demo: 动态量化模式 (quant_mode=1)")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 8
         expert_range = [0, 16]
         expert_range_length = expert_range[1] - expert_range[0]
-        
+
         # 生成输入 (可选scale)
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float32, (expert_range_length, h), False, True, 0)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -544,7 +544,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input scale shape: {scale.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -557,14 +557,14 @@
         print("=" * 50)
         print("Demo: drop_pad_mode=1")
         print("=" * 50)
-        
+
         bs, h, k = 32, 200, 5
         expert_range = [0, 32]  # drop_pad_mode=1时通常使用全范围
-        
+
         # 生成输入
         x, expert_idx, scale, offset, expert_tokens_num_type, row_idx_type, active_num, expert_capacity = \
             MoeInitRoutingV2CPU.generate_inputs(bs, h, k, np.float16, (bs,), False, True, 1)
-        
+
         # 执行计算
         expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = \
             MoeInitRoutingV2CPU.cpu_op_exec(
@@ -578,7 +578,7 @@
                 active_num=active_num,
                 expert_capacity=expert_capacity
             )
-        
+
         print(f"Input x shape: {x.shape}, dtype: {x.dtype}")
         print(f"Input expert_idx shape: {expert_idx.shape}")
         print(f"Output expanded_x shape: {expanded_x.shape}, dtype: {expanded_x.dtype}")
@@ -667,7 +667,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     ```python
     import torch
     import torch_npu
-    
+
     bs = 1
     h = 613
     k = 475
@@ -680,15 +680,15 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     quant_mode = -1
     active_expert_range = [23, 35]
     row_idx_type = 0
-    
+
     x = torch.randn((bs, h), dtype=torch.float32).npu()
     expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
     scale = torch.randn((bs,), dtype=torch.float32).npu()
     offset = None
-    
+
     expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = torch_npu.npu_moe_init_routing_v2(
                     x, expert_idx, scale=scale, offset=offset,
-                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                     expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                     active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
     ```
@@ -701,27 +701,27 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
     import torch_npu
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     class MoeInitRoutingV2Model(nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1,
                     expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False,
                     quant_mode=0, active_expert_range=0, row_idx_type=0):
             return torch.ops.npu.npu_moe_init_routing_v2(x, expert_idx, scale=scale, offset=offset,
-                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                    active_num=active_num, expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                     expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                     active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
-    
+
     def main():
         bs = 1
         h = 613
         k = 475
-    
+
         active_num = 475
         expert_capacity = -1
         expert_num = 226
@@ -731,20 +731,20 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
         quant_mode = -1
         active_expert_range = [23, 35]
         row_idx_type = 0
-    
+
         x = torch.randn((bs, h), dtype=torch.float32).npu()
         expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
         scale = torch.randn((bs,), dtype=torch.float32).npu()
         offset = None
-    
+
         moe_init_routing_v2_model = MoeInitRoutingV2Model().npu()
         moe_init_routing_v2_model = torch.compile(moe_init_routing_v2_model, backend=npu_backend, dynamic=False)
         expanded_x, expanded_row_idx, expert_token_cumsum_or_count, expanded_scale = moe_init_routing_v2_model(x,
                                         expert_idx, scale=scale, offset=offset, active_num=active_num,
-                                        expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode, 
+                                        expert_capacity=expert_capacity, expert_num=expert_num, drop_pad_mode=drop_pad_mode,
                                         expert_tokens_num_type=expert_tokens_num_type, expert_tokens_num_flag=expert_tokens_num_flag,
                                         active_expert_range=active_expert_range, quant_mode=quant_mode, row_idx_type=row_idx_type)
-    
+
     if __name__ == '__main__':
         main()
     ```

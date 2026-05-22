@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_fused_attention_score
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch_npu.npu_fusion_attention。
 
 ## 产品支持情况

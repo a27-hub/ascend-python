@@ -77,17 +77,17 @@ torch_npu.npu_fast_gelu(input) -> Tensor
     import torch.nn as nn
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     os.environ["ENABLE_ACLNN"] = "false"
     torch_npu.npu.set_compile_mode(jit_compile=True)
-    
+
     class Network(nn.Module):
         def __init__(self):
             super(Network, self).__init__()
-        def forward(self, x): 
+        def forward(self, x):
             y = torch_npu.npu_fast_gelu(x)
             return y
-            
+
     npu_mode = Network()
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -97,7 +97,7 @@ torch_npu.npu_fast_gelu(input) -> Tensor
     y =npu_mode(x).cpu().numpy()
     print("shape of y:",y.shape)
     print("dtype of y:",y.dtype)
-    
+
     # 执行上述代码的输出类似如下
     shape of y: (4, 2048, 16, 128)
     dtype of y: float32

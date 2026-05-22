@@ -36,7 +36,7 @@ torch_npu.contrib.module.MultiheadAttention(embed_dim, num_heads, kdim=None, vdi
 
 ## 返回值说明
 
-`Tensor` 
+`Tensor`
 
 Multi-head attention的计算结果。
 

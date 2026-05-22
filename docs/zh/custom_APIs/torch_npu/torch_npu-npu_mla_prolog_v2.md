@@ -1,6 +1,6 @@
 # torch_npu.npu_mla_prolog_v2
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口中kv_cache和kr_cache进行原地计算，未按in-place算子实现接口，推荐使用`torch_npu.npu_mla_prolog_v3`接口进行替换。
 
 ## 产品支持情况
@@ -793,7 +793,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     rmsnorm_epsilon_cq = 1.0e-5
     rmsnorm_epsilon_ckv = 1.0e-5
     cache_mode = "PA_BSND"
-    
+
     # 调用MlaProlog算子
     query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla, dequant_scale_q_nope_mla = torch_npu.npu_mla_prolog_v2(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq, rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv, cache_mode=cache_mode)
     print(query_mla)
@@ -816,12 +816,12 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     import torch_npu
     import math
     import torchair as tng
-    
+
     from torchair.configs.compiler_config import CompilerConfig
     import torch._dynamo
     TORCHDYNAMO_VERBOSE=1
     TORCH_LOGS="+dynamo"
-    
+
     # 支持入图的打印宏
     import logging
     from torchair.core.utils import logger
@@ -831,7 +831,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
     torch.npu.config.allow_internal_format = True
-    
+
     # 数据生成
     B = 8
     He = 7168
@@ -877,10 +877,10 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
         query_mla, query_rope_mla, kv_cache_out_mla, kr_cache_out_mla, dequant_scale_q_nope_mla = torch_npu.npu_mla_prolog_v2(token_x, w_dq_cast, w_uq_qr_cast, w_uk, w_dkv_kr_cast, rmsnorm_gamma_cq,rmsnorm_gamma_ckv, rope_sin, rope_cos, cache_index, kv_cache, kr_cache, rmsnorm_epsilon_cq=rmsnorm_epsilon_cq, rmsnorm_epsilon_ckv=rmsnorm_epsilon_ckv, cache_mode=cache_mode)
         print("single op output:", query_mla)
         print("graph output:", graph_output)
-        
+
     if __name__ == "__main__":
         MetaInfershape()
-    
+
     # 执行上述代码的输出类似如下
     single op output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
@@ -890,7 +890,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
             [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
             [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
             device='npu:0', dtype=torch.bfloat16)
-    
+
     graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
             [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
@@ -898,5 +898,5 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
             [ 0.0177,  0.0194, -0.0060,  ...,  0.0226,  0.0029, -0.0039],
             [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
             [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
-            device='npu:0', dtype=torch.bfloat16) 
+            device='npu:0', dtype=torch.bfloat16)
     ```

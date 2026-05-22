@@ -63,7 +63,7 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
 - **scale_value** (`float`)：可选参数。代表缩放系数，用来约束梯度，默认值为`1.0`，典型值为$\frac{1}{\sqrt{D}}$；数据类型为`float32`。
 - **input_layout** (`str`)：可选参数。代表`query`、`key`、`value`的布局，根据输入的`query`、`key`、`value`的`shape`确定，三维`Tensor`是$BSH$，四维`Tensor`是$BNSD$或$BSND$，默认值为$BSH$，不支持其他值；数据类型为`str`。
 
-    > [!NOTE]  
+    > [!NOTE]
     > `query`、`key`、`value`支持多种排布格式，其中$B$（Batch Size）表示输入样本批量大小、$S$（Seq-Length）表示输入样本序列长度、$H$（Hidden Size）表示隐藏层总维度、$N$（Head-Num）表示多头数、$D$（Head-Dim）表示每个Head的隐藏维度。
     > 当`input_layout`为$BSH$时，`query`、`key`、`value`的`shape`为$(B, S, H)$；当为$BNSD$时，`shape`为$(B, N, S, D)$；当为$BSND$时，`shape`为$(B, S, N, D)$。
 
@@ -134,7 +134,7 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
     >>> scale = 1/math.sqrt(128.0)
     >>>
     >>> # 调用IFA算子
-    >>> out = torch_npu.npu_incre_flash_attention(q, k, v, num_heads=40, input_layout="BSH", scale_value=scale)                                        
+    >>> out = torch_npu.npu_incre_flash_attention(q, k, v, num_heads=40, input_layout="BSH", scale_value=scale)
     >>> print(out)
     [W compiler_depend.ts:133] Warning: Warning: Device do not support double dtype now, dtype cast replace with float. (function operator())
     tensor([[[-1.4863,  0.1667,  0.7256,  ...,  0.3052, -0.3630, -0.1936]],
@@ -150,13 +150,13 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
     import torch
     import torch_npu
     import math
-    
+
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
     import torch._dynamo
     TORCHDYNAMO_VERBOSE=1
     TORCH_LOGS="+dynamo"
-    
+
     # 支持入图的打印宏
     import logging
     from torchair.core.utils import logger
@@ -165,14 +165,14 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
     config.debug.graph_dump.type = "pbtxt"
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
-    
+
     # 数据生成
     q = torch.randn(2, 1, 40 * 128, dtype=torch.float16).npu()
     k = torch.randn(2, 2048, 40 * 128, dtype=torch.float16).npu()
     v = torch.randn(2, 2048, 40 * 128, dtype=torch.float16).npu()
     atten = torch.randn(2, 1, 1, 2048).bool().npu()
     scale_value = 1/math.sqrt(128.0)
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -185,14 +185,14 @@ torch_npu.npu_incre_flash_attention(query, key, value, *, padding_mask=None, pse
             model = Model()
             model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
             graph_output = model()
-            
+
         single_op = torch_npu.npu_incre_flash_attention(q, k, v, num_heads=40, input_layout="BSH", scale_value=scale_value, atten_mask=atten)
         print("single op output with mask:", single_op, single_op.shape)
         print("graph output with mask:", graph_output, graph_output.shape)
 
     if __name__ == "__main__":
         MetaInfershape()
-    
+
     # 执行上述代码的输出类似如下
     single op output with mask: tensor([[[ 0.2488, -0.6572,  1.0928,  ...,  0.1694,  0.1142, -2.2266]],
             [[-0.9595, -0.9609, -0.6602,  ...,  0.7959,  1.7920,  0.0783]]],

@@ -1,6 +1,6 @@
 # （beta）torch\_npu.npu\_nms\_with\_mask
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -47,7 +47,7 @@ torch_npu.npu_nms_with_mask(input, iou_threshold) -> (Tensor, Tensor, Tensor)
 >>> output1, output2, output3, = torch_npu.npu_nms_with_mask(input, iou_threshold)
 >>> print(output1)
 tensor([[0.0000, 1.0000, 2.0000, 3.0000, 0.6001],
-        [6.0000, 7.0000, 8.0000, 9.0000, 0.3999]], device='npu:0',      
+        [6.0000, 7.0000, 8.0000, 9.0000, 0.3999]], device='npu:0',
         dtype=torch.float16)
 >>> print(output2)
 tensor([0, 1], device='npu:0', dtype=torch.int32)

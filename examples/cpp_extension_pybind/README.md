@@ -31,8 +31,8 @@
 1. 在算子适配层c++代码目录（csrc）中，通过`add_custom.cpp`文件完成C++侧的算子代码适配、注册自定义算子schema及具体实现的绑定。具体示例如下：
 
     > [!NOTE]
-    > 
-    > 以下是基于单卡场景提供的示例代码。在此场景下，`const c10::OptionalDeviceGuard device_guard(device_of(self));`语句是可选的。在多卡场景中，则必须在适配代码中加入此语句。   
+    >
+    > 以下是基于单卡场景提供的示例代码。在此场景下，`const c10::OptionalDeviceGuard device_guard(device_of(self));`语句是可选的。在多卡场景中，则必须在适配代码中加入此语句。
 
     ```cpp
     // 为NPU设备注册前向实现
@@ -96,4 +96,3 @@
     Ran xx tests in xx s
     OK
     ```
-    

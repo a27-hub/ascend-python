@@ -31,7 +31,7 @@ torch_npu.utils.FlopsCounter()
 
 首次创建（初始化）参数状态，或通过成员函数对参数进行修改后，参数的状态如[图1](#fig1515653134316)所示。
 
-**图1** 参数状态<a name="fig1515653134316"></a>  
+**图1** 参数状态<a name="fig1515653134316"></a>
 ![](../../figures/参数状态.png "参数状态")
 
 ## 成员函数
@@ -61,29 +61,29 @@ torch_npu.utils.FlopsCounter()
 ```python
 import torch
 import torch_npu
- 
+
 def matmul():
     x = torch.randn(3, 4).npu()
     y = torch.randn(4, 3).npu()
     torch.matmul(x,y)
- 
+
 FlopsCounter = torch_npu.utils.FlopsCounter()
- 
+
 # 1.开启统计后进行统计
 FlopsCounter.start()
 matmul() # 算子计算
 print(f"FlopsCounter.start():{FlopsCounter.get_flops()}") # 打印统计结果，含重计算的Flops和不含重计算的Flops累计
- 
+
 # 2. 暂停Flops不含重计算统计后进行统计
 FlopsCounter.pause()
 matmul() # 这里视作重计算操作
 print(f"FlopsCounter.pause():{FlopsCounter.get_flops()}") # 仅含重计算Flops累计
- 
+
 # 3. 恢复Flops不含重计算统计后进行统计
 FlopsCounter.resume()
 matmul()
 print(f"FlopsCounter.resume():{FlopsCounter.get_flops()}") # 含重计算Flops和不含重计算Flops均累计
- 
+
 # 4.关闭Flops统计
 FlopsCounter.stop()
 matmul()

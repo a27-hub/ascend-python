@@ -61,7 +61,7 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     ```python
     import torch
     import torch_npu
-    
+
     # 生成随机数据
     x = torch.randn(32, 32, 1, 64, dtype = torch.float16)
     cos = torch.randn(32, 1, 1, 64, dtype = torch.float16)
@@ -69,7 +69,7 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     x_npu = x.npu()
     cos_npu = cos.npu()
     sin_npu = sin.npu()
-    
+
     # 调用InterleaveRope算子
     q_embed_npu = torch_npu.npu_interleave_rope(x_npu, cos_npu, sin_npu)
     ```
@@ -82,7 +82,7 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     import torch_npu
     import torchair
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     # 生成随机数据
     x = torch.randn(32, 32, 1, 64, dtype = torch.float16)
     cos = torch.randn(32, 1, 1, 64, dtype = torch.float16)
@@ -90,13 +90,13 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     x_npu = x.npu()
     cos_npu = cos.npu()
     sin_npu = sin.npu()
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
         def forward(self, x_npu, cos_npu, sin_npu):
             return torch_npu.npu_interleave_rope(x_npu, cos_npu, sin_npu)
-    
+
     # 实例化模型model
     model = Model().npu()
     # 从TorchAir获取NPU提供的默认backend
@@ -104,7 +104,7 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     npu_backend = torchair.get_npu_backend(compiler_config=config)
     # 使用TorchAir的backend去调用compile接口编译模型
     model = torch.compile(model, backend=npu_backend)
-    
+
     # 调用InterleaveRope算子
     q_embed_npu = model(x_npu, cos_npu, sin_npu)
     ```

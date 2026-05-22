@@ -17,17 +17,17 @@
         $$
         I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
         $$
-  
+
         - $W_{t,:}$是第$t$个token对应的$weights$；
         - $\tilde{q}_{t,:}$是$Q_{index}$矩阵第$t$个token对应的$G$个头合轴后的结果；
         - $\tilde{K}_{:t,:}$为$K_{index}$矩阵$t$行。
-  
+
     2. 正向的Softmax对应公式：
 
         $$
         p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
         $$
-    
+
         - $p_{t,:}$是第$t$个token对应的Softmax结果；
         - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
         - $K$为$K$矩阵$t$行。
@@ -52,11 +52,11 @@
         $$
         dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
         $$
-  
+
         $$
         d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
         $$
-  
+
         $$
         d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
         $$
@@ -154,7 +154,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
         output_dtype = torch.float16
         q = torch.randn(B, S1, NQuery, D, dtype=output_dtype, device=torch.device('npu'))
         k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
-    
+
         q_index = torch.randn(B, S1, NQueryIndex, DIndex, dtype=output_dtype, device=torch.device('npu'))
         k_index = torch.randn(B, S2, N2, DIndex, dtype=output_dtype, device=torch.device('npu'))
         if DR != 0:
@@ -178,7 +178,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
                     s2RealSize = (int)((seqlens_list_kv_array[bIdx] - seqlens_list_array[bIdx]) + s1Idx + 1)
                     if s2RealSize <= 0:
                         s2RealSize = seqlens_list_kv_array[bIdx]
-                    
+
                     if s2RealSize > topK:
                         s2RealLen = topK
                     else:
@@ -198,7 +198,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
                 q_rope_tnd = None
                 k_rope_tnd = None
             weights_tnd = weights.squeeze(dim=0)
-            
+
             softmax_max = torch.randn(N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             return q_tnd, k_tnd, q_index_tnd, k_index_tnd, q_rope_tnd, k_rope_tnd, weights_tnd, sparse_indices, softmax_max, softmax_sum
@@ -208,14 +208,14 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
                 s2RealSize = (int)(S2 - S1 + s1Idx + 1)
                 if s2RealSize <= 0:
                     s2RealSize = S2
-    
+
                 if s2RealSize > topK:
                     s2RealLen = topK
                 else:
                     s2RealLen = s2RealSize
                 sparse_indices[:, s1Idx, 0,  0 : s2RealLen] = (torch.randint(0, s2RealSize, (s2RealLen,)).to(torch.int32)).npu()
                 sparse_indices[:, s1Idx, 0,  s2RealLen : topK] = -1
-    
+
             softmax_max = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             softmax_sum = torch.randn(B, N2, S1, NQuery, dtype=torch.float, device=torch.device('npu'))
             return q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum
@@ -228,7 +228,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
    sparse_mode = 3
    scale = 1.0 / math.sqrt(512)
    q, k, q_index, k_index, q_rope, k_rope, weights, sparse_indices, softmax_max, softmax_sum = gen_inputs(actual_seq_qlen, actual_seq_kvlen, isTnd)
-   
+
    torch_npu.npu_sparse_lightning_indexer_grad_kl_loss(
           q, k, q_index, k_index, weights, sparse_indices, softmax_max, softmax_sum, scale,
           query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,

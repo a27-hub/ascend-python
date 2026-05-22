@@ -95,12 +95,12 @@ Pytorch2.5.1及以上版本，新增以下成员函数：
 - **void graphsafe_set_state(const c10::intrusive_ptr& state)**
 
     在capture状态下为aclgraph设置期望的随机数生成状态，与at::CUDAGeneratorImpl::graphsafe_set_state(const c10::intrusive_ptr& state)功能相同。
-    
+
     state：随机数生成器状态。
 - **c10::intrusive_ptr\<c10::GeneratorImpl> graphsafe_get_state()**
 
     在capture状态下为aclgraph查询随机数生成对象，与c10::intrusive_ptr\<c10::GeneratorImpl> at::CUDAGeneratorImpl::graphsafe_get_state()功能相同。
-    
+
     返回值为c10::GeneratorImpl对象。
 - **void register_graph(c10_npu::NPUGraph* graph)**
 

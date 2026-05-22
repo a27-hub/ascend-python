@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_iou
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -20,7 +20,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_iou(bboxes, gtboxes, mode=0) -> Tensor 
+torch_npu.npu_iou(bboxes, gtboxes, mode=0) -> Tensor
 ```
 
 ## 参数说明
@@ -43,6 +43,6 @@ torch_npu.npu_iou(bboxes, gtboxes, mode=0) -> Tensor
 >>> output_iou = torch_npu.npu_iou(bboxes, gtboxes, 0)
 >>> print(output_iou)
 tensor([[0.4985, 0.0000, 0.0000],
-        [0.0000, 0.0000, 0.0000], 
+        [0.0000, 0.0000, 0.0000],
        [0.0000, 0.9961, 0.0000]], device='npu:0', dtype=torch.float16)
 ```

@@ -68,7 +68,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
 
 ## 参数说明
 
-> [!NOTE]  
+> [!NOTE]
 > Tensor中shape使用的变量说明：
 >
 >- TokensNum：表示传输的Tokens数，取值≥0。

@@ -1,6 +1,6 @@
 # torch_npu.npu_dense_lightning_indexer_grad_kl_loss
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -22,17 +22,17 @@
         $$
         I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
         $$
-    
+
         - $W_{t,:}$是$W$矩阵中第$t$个token对应的$weights$；
         - $\tilde{q}_{t,:}$是$\tilde{Q}$矩阵第$t$个token对应的$G$个query头合轴后的结果；
         - $\tilde{K}_{:t,:}$为$t$行$\tilde{K}$矩阵。
-  
+
     2. 正向的Softmax对应公式：
 
         $$
         p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
         $$
-        
+
         - $p_{t,:}$是第$t$个token对应的Softmax结果；
         - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
         - $K_{:t,:}$为$t$行$K$矩阵。
@@ -57,11 +57,11 @@
         $$
         dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
         $$
-    
+
         $$
         d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
         $$
-    
+
         $$
         d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
         $$
@@ -157,7 +157,7 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
         output_dtype = torch.float16
         q = torch.randn(B, S1, N1, D, dtype=output_dtype, device=torch.device('npu'))
         k = torch.randn(B, S2, N2, D, dtype=output_dtype, device=torch.device('npu'))
-    
+
         q_index = torch.randn(B, S1, N1_index, D, dtype=output_dtype, device=torch.device('npu'))
         k_index = torch.randn(B, S2, N2_index, D, dtype=output_dtype, device=torch.device('npu'))
         if Dr != 0:
@@ -179,7 +179,7 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
                 q_rope_tnd = None
                 k_rope_tnd = None
             weights_tnd = weights.squeeze(dim=0)
-            
+
             softmax_max = (torch.randn(N2, S1, 1, dtype=torch.float32, device=torch.device('npu')).abs() + 0.4) * D
             softmax_sum = torch.ones(N2, S1, 1, dtype=torch.float32, device=torch.device('npu'))
             actual_seq_qlen = [S1]
@@ -202,7 +202,7 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
             actual_seq_klen=actual_seq_klen,
             layout=input_layout,
             sparse_mode=sparse_mode)
-    
+
     torch_npu.npu_dense_lightning_indexer_grad_kl_loss(
             q, k, q_index, k_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale,
             query_rope=q_rope, key_rope=k_rope, actual_seq_qlen=actual_seq_qlen,

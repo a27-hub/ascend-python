@@ -108,7 +108,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 
 ## 参数说明<a name="zh-cn_topic_0000001832267082_section112637109429"></a>
 
-> [!NOTE]  
+> [!NOTE]
 >
 > - query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示隐藏层的大小、N（Head Num）表示多头数、D（Head Dim）表示隐藏层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
 > - Q_S和S1表示query shape中的S，KV_S和S2表示key和value shape中的S，Q_N表示num\_query\_heads，KV_N表示num\_key\_value\_heads。
@@ -164,7 +164,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
 - **next_tokens** (`int`)：可选参数。用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为2147483647，Q\_S为1时该参数无效。
 - **input_layout** (`string`)：可选参数。用于标识输入`query`、`key`、`value`的数据排布格式，默认值为"BSH"。
 
-    > [!NOTE]   
+    > [!NOTE]
     > 注意排布格式带下划线时，下划线左边表示输入`query`的layout，下划线右边表示输出output的格式，算子内部会进行layout转换。
 
     支持BSH、BSND、BNSD、BNSD\_BSND（输入为BNSD时，输出格式为BSND，仅支持Q\_S大于1）、BSH\_NBSD、BSND\_NBSD、BNSD\_NBSD（输出格式为NBSD时，仅支持Q\_S大于1且小于等于16）、TND、TND\_NTD、NTD\_TND（TND相关场景综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)）。其中BNSD\_BSND含义指当输入为BNSD，输出格式为BSND，仅支持Q\_S大于1。
@@ -185,14 +185,14 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     - `inner_precise`为2时，代表开启高精度模式，且做行无效修正。
     - `inner_precise`为3时，代表高性能模式，且做行无效修正。
 
-    > [!NOTE]   
+    > [!NOTE]
     > `bfloat16`和`int8`不区分高精度和高性能，行无效修正对`float16`、`bfloat16`和`int8`均生效。当前0、1为保留配置值，当计算过程中“参与计算的mask部分”存在某整行全为1的情况时，精度可能会有损失。此时可以尝试将该参数配置为2或3来使能行无效功能以提升精度，但是该配置会导致性能下降。
 
 - **block_size** (`int`)：可选参数。page attention中KV存储每个block中最大的token个数，默认为0，数据类型支持`int64`。
 - **antiquant_mode** (`int`)：可选参数。表示伪量化方式，传入0时表示为perchannel（perchannel包含pertensor），传入1时表示pertoken。默认值为0。
-    
+
     Q\_S大于等于2时该参数无效；Q\_S等于1时传入0和1之外的其他值会执行异常。
-    
+
 - **softmax_lse_flag** (`bool`)：可选参数。表示是否输出softmax\_lse，支持S轴外切（增加输出）。True表示输出softmax\_lse，False表示不输出；默认值为False。
 - **key_antiquant_mode** (`int`)：可选参数。表示`key`的伪量化方式。默认值为0，取值除了`key_antiquant_mode`为0并且`value_antiquant_mode`为1的场景外，需要与`value_antiquant_mode`一致。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
 
@@ -206,7 +206,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     - `key_antiquant_mode`为5时，代表pertoken叠加per head并使用page attention模式管理scale/offset模式。
 
 - **value_antiquant_mode** (`int`)：可选参数。表示`value`的伪量化方式，模式编号与`key_antiquant_mode`一致。默认值为0，取值除了`key_antiquant_mode`为0并且`value_antiquant_mode`为1的场景外，需要与`key_antiquant_mode`一致。综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
-    
+
     Q\_S大于等于2时仅支持传入值为0、1；Q\_S等于1时支持取值0、1、2、3、4、5。
 
 ## 返回值说明<a name="zh-cn_topic_0000001832267082_section22231435517"></a>
@@ -262,9 +262,9 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             - 不支持开启`softmax_lse`、左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
 
         - 当query的D等于128时：
-            - `input_layout`：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。  
-            - `query_rope`配置时要求`query_rope`的shape中D为64，其余维度与`query`一致。  
-            - `key_rope`配置时要求`key_rope`的shape中D为64，其余维度与`key`一致。  
+            - `input_layout`：BSH、BSND、TND、BNSD、NTD、BSH\_BNSD、BSND\_BNSD、BNSD\_BSND、NTD\_TND。
+            - `query_rope`配置时要求`query_rope`的shape中D为64，其余维度与`query`一致。
+            - `key_rope`配置时要求`key_rope`的shape中D为64，其余维度与`key`一致。
             - 不支持左padding、tensorlist、pse、prefix、伪量化、全量化、后量化。
             - 其余约束同TND、NTD\_TND场景下的综合限制保持一致。
 
@@ -313,24 +313,24 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`query`、`key`、`value`输入类型包含`int8`时，D轴需要32对齐；`query`、`key`、`value`或`attention_out`类型包含`int4`时，D轴需要64对齐；输入类型全为`float16`、`bfloat16`时，D轴需16对齐。
 
     - `actual_seq_lengths`：
-    
+
         <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于`query`中对应batch的Sequence Length。seqlen的传入长度为1时，每个Batch使用相同seqlen；传入长度大于等于Batch时取seqlen的前Batch个数。其他长度不支持。当`query`的`input_layout`为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
-        
+
     - `actual_seq_lengths_kv`：
-    
+
         <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于`key`/`value`中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当`key`/`value`的`input_layout`为TND/NTD\_TND时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
-        
+
     - 参数`sparse_mode`当前仅支持值为0、1、2、3、4的场景，取其他值时会报错。
-        
+
         - `sparse_mode`为0时，`atten_mask`如果为None，或者在左padding场景传入`atten_mask`，则忽略入参pre\_tokens、next\_tokens（内部赋值为INT\_MAX）。
-        - `sparse_mode`为2、3、4时，`atten_mask`的shape需要为\(S, S\)或\(1, S, S\)或\(1, 1, S, S\)，其中S的值需要固定为2048，且需要用户保证传入的`atten_mask`为下三角，不传入`atten_mask`或者传入的shape不正确报错。        
+        - `sparse_mode`为2、3、4时，`atten_mask`的shape需要为\(S, S\)或\(1, S, S\)或\(1, 1, S, S\)，其中S的值需要固定为2048，且需要用户保证传入的`atten_mask`为下三角，不传入`atten_mask`或者传入的shape不正确报错。
         - `sparse_mode`为1、2、3的场景忽略入参pre\_tokens、next\_tokens并按照相关规则赋值。
-        
+
     - kvCache反量化的合成参数场景仅支持`int8`反量化到`float16`。入参`key`、`value`的data range与入参`antiquant_scale`的data range乘积范围在（-1, 1）内，高性能模式可以保证精度，否则需要开启高精度模式来保证精度。
     - page attention场景：
         - page attention的使能必要条件是`block_table`存在且有效，同时`key`、`value`是按照`block_table`中的索引在一片连续内存中排布，支持`key`、`value`数据类型为`float16`、`bfloat16`。在该场景下`key`、`value`的`input_layout`参数无效。`block_table`中填充的是blockid，当前不会对blockid的合法性进行校验，需用户自行保证。
         - `block_size`是用户自定义的参数，该参数的取值会影响page attention的性能，在使能page attention场景下，`block_size`最小为128，最大为512，且要求是128的倍数。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
-    
+
         - page attention场景下，当输入kv cache排布格式为（blocknum, blocksize, H），且KV\_N\*D超过65535时，受硬件指令约束，会被拦截报错。可通过使能GQA（减小KV\_N）或调整kv cache排布格式为（blocknum, KV\_N, blocksize, D）解决。当`query`的`input_layout`为BNSD、TND时，kv cache排布支持（blocknum, blocksize, H）和（blocknum, KV\_N, blocksize, D）两种格式，当`query`的`input_layout`为BSH、BSND时，kv cache排布只支持（blocknum, blocksize, H）一种格式。blocknum不能小于根据`actual_seq_lengths_kv`和`block_size`计算的每个batch的block数量之和。且`key`和`value`的shape需保证一致。
         - page attention不支持伪量化场景，不支持tensorlist场景，不支持左padding场景。
         - page attention场景下，必须传入`actual_seq_lengths_kv`。
@@ -339,34 +339,34 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         - page attention使能场景下，以下场景输入需满足KV\_S\>=maxBlockNumPerSeq\*blockSize：
             - 传入`atten_mask`时，如mask shape为（B, 1, Q\_S, KV\_S）。
             - 传入`pse_shift`时，如pseShift shape为（B, Q\_N, Q\_S, KV\_S）。
-    
+
     - `query`左padding场景：
         - `query`左padding场景`query`的搬运起点计算公式为：Q\_S-query\_padding\_size-actual\_seq\_lengths。`query`的搬运终点计算公式为：Q\_S-query\_padding\_size。其中`query`的搬运起点不能小于0，终点不能大于Q\_S，否则结果将不符合预期。
         - `query`左padding场景`kv_padding_size`小于0时将被置为0。
-        - `query`左padding场景需要与`actual_seq_lengths`参数一起使能，否则默认为`query`右padding场景。    
+        - `query`左padding场景需要与`actual_seq_lengths`参数一起使能，否则默认为`query`右padding场景。
         - `query`左padding场景不支持page attention，不能与`block_table`参数一起使能。
-        
+
     - kv左padding场景：
         - kv左padding场景`key`和`value`的搬运起点计算公式为：KV\_S-kv\_padding\_size-actual\_seq\_lengths\_kv。`key`和`value`的搬运终点计算公式为：KV\_S-kv\_padding\_size。其中`key`和`value`的搬运起点不能小于0，终点不能大于KV\_S，否则结果将不符合预期。
         - kv左padding场景`kv_padding_size`小于0时将被置为0。
-        - kv左padding场景需要与`actual_seq_lengths_kv`参数一起使能，否则默认为kv右padding场景。    
+        - kv左padding场景需要与`actual_seq_lengths_kv`参数一起使能，否则默认为kv右padding场景。
         - kv左padding场景不支持page attention，不能与`block_table`参数一起使能。
-        
+
     - 入参`quant_scale2`和`quant_offset2`支持pertensor、perchannel量化，支持`float32`、`bfloat16`类型。若传入`quant_offset2`，需保证其类型和shape信息与 `quant_scale2`一致。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel场景下，当输出layout为BSH时，要求`quant_scale2`所有维度的乘积等于H；其他layout要求乘积等于N\*D。当输出layout为BSH时，`quant_scale2` shape建议传入\(1, 1, H\)或\(H,\)；当输出layout为BNSD时，建议传入\(1, Q\_N, 1, D\)或\(Q\_N, D\)；当输出为BSND时，建议传入\(1, 1, Q\_N, D\)或\(Q\_N, D)。
     - 输出为`int8`，`quant_scale2`和`quant_offset2`为perchannel时，暂不支持左padding、Ring Attention或者D非32Byte对齐的场景。
     - 输出为`int8`时，暂不支持sparse为band且preTokens/nextTokens为负数。
     - `pse_shift`功能使用限制如下：
-        
+
         - 支持`query`数据类型为`float16`或`bfloat16`或`int8`场景下使用该功能。
         - `query`、`key`、`value`数据类型为`float16`且`pse_shift`存在时，强制走高精度模式，对应的限制继承自高精度模式的限制。
         - Q\_S需大于等于`query`的S长度，KV\_S需大于等于`key`的S长度。prefix场景KV\_S需大于等于`actual_shared_prefix_len`与`key`的S长度之和。
-        
+
     - 输出为`int8`，入参`quant_offset2`传入非None和非空tensor值，并且`sparse_mode`、`pre_tokens`和`next_tokens`满足以下条件，矩阵会存在某几行不参与计算的情况，导致计算结果误差，该场景会拦截：
         - `sparse_mode`为0，`atten_mask`如果非None，每个batch actual\_seq\_lengths-actual\_seq\_lengths\_kv-pre\_tokens\>0或next\_tokens<0时，满足拦截条件。
         - `sparse_mode`为1或2，不会出现满足拦截条件的情况。
         - `sparse_mode`为3，每个batch actual\_seq\_lengths\_kv-actual\_seq\_lengths<0，满足拦截条件。
         - `sparse_mode`为4，pre\_tokens<0或每个batch next\_tokens+actual\_seq\_lengths\_kv-actual\_seq\_lengths<0时，满足拦截条件。
-        
+
     - prefix相关参数约束：
         - `key_shared_prefix`和`value_shared_prefix`要么都为空，要么都不为空。
         - `key_shared_prefix`和`value_shared_prefix`都不为空时，`key_shared_prefix`、`value_shared_prefix`、`key`、`value`的维度相同、dtype保持一致。
@@ -377,19 +377,19 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         - prefix场景不支持`query`、`key`、`value`数据类型同时为`int8`。
         - prefix场景，sparse为0或1时，如果传入attenmask，则S2需大于等于`actual_shared_prefix_len`与`key`的S长度之和。
         - prefix场景，不支持输入qkv全部为`int8`的场景。
-        
+
     - kv伪量化参数分离：
-        - 当伪量化参数和KV分离量化参数同时传入时，以KV分离量化参数为准。     
+        - 当伪量化参数和KV分离量化参数同时传入时，以KV分离量化参数为准。
         - `key_antiquant_mode`和`value_antiquant_mode`取值需要保持一致。
         - `key_antiquant_scale`和`value_antiquant_scale`要么都为空，要么都不为空；`key\_antiquant_offset`和`value_antiquant_offset`要么都为空，要么都不为空。
-        - `key_antiquant_scale`和`value_antiquant_scale`都不为空时，其shape需要保持一致；`key_antiquant_offset`和`value_antiquant_offset`都不为空时，其shape需要保持一致。  
+        - `key_antiquant_scale`和`value_antiquant_scale`都不为空时，其shape需要保持一致；`key_antiquant_offset`和`value_antiquant_offset`都不为空时，其shape需要保持一致。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
             - 仅支持pertoken和perchannel模式，pertoken模式下要求两个参数的shape均为\(B, KV\_S\)，数据类型固定为`float32`；perchannel模式下要求两个参数的shape为（KV\_N，D），\(KV\_N, D\)，\(H\)，数据类型固定为`bfloat16`。
             - `key_antiquant_scale`与`value_antiquant_scale`非空场景，要求`query`的s小于等于16；要求`query`的dtype为`bfloat16`，`key`、`value`的dtype为`int8`，输出的dtype为`bfloat16`；不支持tensorlist、左padding、page attention、prefix特性。
-    
+
         - 管理scale/offset的量化模式如下：
-    
-            > [!NOTE]   
+
+            > [!NOTE]
             > 注意scale、offset两个参数指`key_antiquant_scale`、`value_antiquant_scale`、`key_antiquant_offset`、`value_antiquant_offset`参数。
 
             <a name="zh-cn_topic_0000001832267082_table3276159203213"></a>
@@ -421,7 +421,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             </tr>
             </tbody>
             </table>
-    
+
 - **当Q\_S等于1时：**
     - `query`、`key`、`value`输入，功能使用限制如下：
         - 支持B轴小于等于65536，支持N轴小于等于256，支持S轴小于等于262144，支持D轴小于等于512。
@@ -430,19 +430,19 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         - 在`int4`（`int32`）伪量化场景下，若KV `int4`拼接成`int32`输入，那么KV的N、D或者H是实际值的八分之一（prefix同理）。并且，`int4`伪量化仅支持D 64对齐（`int32`支持D 8对齐）。
 
     - `actual_seq_lengths`：
-    
+
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当`query`的`input_layout`不为TND时，Q\_S为1时该参数无效。当`query`的`input_layout`为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
-        
+
     - `actual_seq_lengths_kv`：
-    
+
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该入参中每个batch的有效Sequence Length应该不大于`key`/`value`中对应batch的Sequence Length。seqlenKv的传入长度为1时，每个Batch使用相同seqlenKv；传入长度大于等于Batch时取seqlenKv的前Batch个数。其他长度不支持。当`key`/`value`的`input_layout`为TND/TND\_NTD时，综合约束请见[约束说明](#zh-cn_topic_0000001832267082_section12345537164214)。
-        
+
     - page attention场景：
         - 使能必要条件是`block_table`存在且有效，同时`key`、`value`是按照`block_table`中的索引在一片连续内存中排布，在该场景下`key`、`value`的`input_layout`参数无效。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
             - 支持`key`、`value`数据类型为`float16`、`bfloat16`、`int8`。
             - 不支持`query`为`bfloat16`、`float16`，且`key`和`value`为`int4`（`int32`）的场景。
-    
+
         - 该场景下，`block_size`是用户自定义的参数，该参数的取值会影响page attention的性能，`block_size`需要传入非0值，且最大不超过512，`key`、`value`输入类型为`float16`、`bfloat16`时需要16对齐，`key`、`value`输入类型为`int8`时需要32对齐，推荐使用128。通常情况下，page attention可以提高吞吐量，但会带来性能上的下降。
         - 参数`key`、`value`各自对应tensor的shape所有维度相乘不能超过`int32`的表示范围。
         - page attention场景下，`block_table`必须为二维，第一维长度需等于B，第二维长度不能小于maxBlockNumPerSeq（maxBlockNumPerSeq为不同batch中最大`actual_seq_lengths_kv`对应的block数量）。
@@ -456,23 +456,23 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         - page attention场景下，以下场景输入S需要大于等于`block_table`的第二维 * `block_size`。
             - 使能伪量化pertoken模式：输入参数`antiquant_scale`和`antiquant_offset`的shape均为\(2, B, S\)。
             - 使能pertoken叠加perhead模式：两个参数的shape均为\(B, N, S\)，数据类型固定为`float32`。支持`key`、`value`数据类型为`int8`、`int4`\(`int32`\)。
-    
+
     - kv左padding场景：
         - kvCache的搬运起点计算公式为：Smax-kv\_padding\_size-actual\_seq\_lengths。kvCache的搬运终点计算公式为：Smax-kv\_padding\_size。其中kvCache的搬运起点或终点小于0时，返回数据结果为全0。
         - `kv_padding_size`小于0时将被置为0。
         - 使能需要同时存在`actual_seq_lengths`参数，否则默认为kv右padding场景。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：kv左padding场景不支持Q为`bfloat16`/`float16`、KV为`int4`（`int32`）的场景。
-    
+
     - kv伪量化参数分离：
-        - 除了`keyantiquant_mode`为0并且`value_antiquant_mode`为1的场景外，`key_antiquant_mode`和`value_antiquant_mode`取值需要保持一致。   
+        - 除了`keyantiquant_mode`为0并且`value_antiquant_mode`为1的场景外，`key_antiquant_mode`和`value_antiquant_mode`取值需要保持一致。
         - `key_antiquant_scale`和`value_antiquant_scale`要么都为空，要么都不为空；`key_antiquant_offset`和`value_antiquant_offset`要么都为空，要么都不为空。
         - `key_antiquant_scale`和`value_antiquant_scale`都不为空时，除了`key_antiquant_mode`为0并且`value_antiquant_mode`为1的场景外，其shape需要保持一致；`key_antiquant_offset`和`value_antiquant_offset`都不为空时，除了`key_antiquant_mode`为0并且`value_antiquant_mode`为1的场景外，其shape需要保持一致。
         - `int4`（`int32`）伪量化场景不支持后量化。
         - 管理scale/offset的量化模式如下：
-    
-            > [!NOTE]   
+
+            > [!NOTE]
             > 注意scale、offset两个参数指`key_antiquant_scale`、`value_antiquant_scale`、`key_antiquant_offset`、`value_antiquant_offset`参数。
-    
+
             <a name="zh-cn_topic_0000001832267082_table4401182238"></a>
             <table><thead align="left"><tr id="zh-cn_topic_0000001832267082_row124112817233"><th class="cellrowborder" valign="top" width="16.950000000000003%" id="mcps1.1.5.1.1"><p id="zh-cn_topic_0000001832267082_p341780235"><a name="zh-cn_topic_0000001832267082_p341780235"></a><a name="zh-cn_topic_0000001832267082_p341780235"></a>量化模式</p>
             </th>
@@ -569,7 +569,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             </tr>
             </tbody>
             </table>
-    
+
     - `pse_shift`功能使用限制如下：
         - `pse_shift`数据类型需与`query`数据类型保持一致。
         - 仅支持D轴对齐，即D轴可以被16整除。
@@ -589,12 +589,12 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     scale = 1/math.sqrt(128.0)
     actseqlen = [164]
     actseqlenkv = [1024]
-    
+
     # 调用FIA算子
-    out, _ = torch_npu.npu_fused_infer_attention_score(q, k, v, 
+    out, _ = torch_npu.npu_fused_infer_attention_score(q, k, v,
     actual_seq_lengths = actseqlen, actual_seq_lengths_kv = actseqlenkv,
     num_heads = 8, input_layout = "BNSD", scale = scale, pre_tokens=65535, next_tokens=65535)
-    
+
     print(out)
     # 执行上述代码的输出out类似如下
     tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
@@ -615,12 +615,12 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     import torch_npu
     import math
     import torchair as tng
-    
+
     from torchair.configs.compiler_config import CompilerConfig
     import torch._dynamo
     TORCHDYNAMO_VERBOSE=1
     TORCH_LOGS="+dynamo"
-    
+
     # 支持入图的打印宏
     import logging
     from torchair.core.utils import logger
@@ -629,13 +629,13 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
     config.debug.graph_dump.type = "pbtxt"
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
-    
+
     # 数据生成
     q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
     k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     scale = 1/math.sqrt(128.0)
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -651,7 +651,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
         print("graph output with mask:", graph_output[0], graph_output[0].shape)
     if __name__ == "__main__":
         MetaInfershape()
-    
+
     # 执行上述代码的输出类似如下
     single op output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
@@ -661,7 +661,7 @@ torch_npu.npu_fused_infer_attention_score(query, key, value, *, pse_shift=None, 
             [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
             [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
             device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
-    
+
     graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
             [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],

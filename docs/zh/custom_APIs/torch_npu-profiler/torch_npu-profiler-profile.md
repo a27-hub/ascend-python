@@ -130,31 +130,31 @@ torch_npu.profiler.profile(activities=None, schedule=None, on_trace_ready=None, 
   import torch
   import torch_npu
   ...
-  
+
   # 自定义trace_id生成器
   class RepeatTraceIdGenerator:
       def __init__(self):
           self.repeat_count = 0    #从0开始计数
-  
+
       def __call__(self) -> str:
           # 每一轮profile启动，计数+1
           current_id = self.repeat_count
           self.repeat_count += 1
           return str(current_id)
-  
+
   # 创建trace_id生成器
   trace_id_gen = RepeatTraceIdGenerator()
-  
+
   if __name__ == "__main__":
       device = torch.device('npu:1')
       torch.npu.set_device(device)
       x0 =torch.rand(3, 4).npu()
       x1 =torch.rand(3, 4).npu()
-  
-  
+
+
       stream = torch.npu.current_stream()
       stream.synchronize()
-  
+
   # 添加Profiling采集基础配置参数
   with torch_npu.profiler.profile(
       activities=[

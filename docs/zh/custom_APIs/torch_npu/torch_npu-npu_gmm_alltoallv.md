@@ -104,7 +104,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     import torch_npu
     import torch.distributed as dist
     import torch.multiprocessing as mp
-    
+
     def run_npu_gmm_alltoallv(rank, ep_world_size, master_ip, master_port, gmm_x, gmm_w, send_counts, recv_counts, dtype):
         torch_npu.npu.set_device(rank)
         init_method = 'tcp://' + master_ip + ':' + master_port
@@ -115,10 +115,10 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input = torch.randn(gmm_x, dtype=dtype).npu()
         weight = torch.randn(gmm_w, dtype=dtype).npu()
-    
+
         print(torch_npu.npu_gmm_alltoallv(gmm_x =input,
                                                 gmm_weight = weight,
                                                 hcom= hcom_info,
@@ -131,7 +131,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                                                 mm_weight = None,
                                                 trans_gmm_weight = False,
                                                 trans_mm_weight  = False))
-    
+
     if __name__ == "__main__":
         epWorkSize = 8
         e = 4
@@ -143,9 +143,9 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
         gmm_weight_shape = [e, 2048, 2048]
         send_counts = [128] * (e * epWorkSize)
         recv_counts = [128] * (e * epWorkSize)
-    
+
         dtype = torch.float16
-    
+
         mp.spawn(run_npu_gmm_alltoallv, args=(epWorkSize, master_ip, master_port, gmm_x_shape, gmm_weight_shape, send_counts, recv_counts, dtype), nprocs=epWorkSize)
     ```
 
@@ -157,7 +157,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     import torch.distributed as dist
     import torch.multiprocessing as mp
     import torchair
-    
+
     class GMM_ALLTOALLV_GRAPH_Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -178,7 +178,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                                                 mm_weight = mm_weight,
                                                 trans_gmm_weight = trans_gmm_weight,
                                                 trans_mm_weight  = trans_mm_weight)
-    
+
     def run_npu_gmm_alltoallv(rank, ep_world_size, master_ip, master_port, gmm_x, gmm_w, send_counts, recv_counts, dtype):
         torch_npu.npu.set_device(rank)
         init_method = 'tcp://' + master_ip + ':' + master_port
@@ -189,10 +189,10 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input = torch.randn(gmm_x, dtype=dtype).npu()
         weight = torch.randn(gmm_w, dtype=dtype).npu()
-    
+
         model = GMM_ALLTOALLV_GRAPH_Model()
         npu_backend = torchair.get_npu_backend(compiler_config=None)
         # 静态图：dynamic=False；动态图：dynamic=True
@@ -209,7 +209,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
                         recv_counts=recv_counts,
                         trans_gmm_weight=False,
                         trans_mm_weight=False))
-    
+
     if __name__ == "__main__":
         epWorkSize = 8
         e = 4
@@ -221,8 +221,8 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
         gmm_weight_shape = [e, 2048, 2048]
         send_counts = [128] * (e * epWorkSize)
         recv_counts = [128] * (e * epWorkSize)
-    
+
         dtype = torch.float16
-    
+
         mp.spawn(run_npu_gmm_alltoallv, args=(epWorkSize, master_ip, master_port, gmm_x_shape, gmm_weight_shape, send_counts, recv_counts, dtype), nprocs=epWorkSize)
     ```

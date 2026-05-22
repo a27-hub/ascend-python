@@ -31,7 +31,7 @@
 
     量化场景公式中，`allgather(x1_scale)`由底层算子内部完成，用户无需手动对`x1_scale`执行allgather操作。用户只需将当前rank本地的`x1_scale`（shape为(m, 1)）直接传入接口即可，底层算子会自动聚合所有rank的`x1_scale`后参与计算。`x2_scale`为全局共享的perchannel量化参数，各rank相同，无需执行allgather操作。
 
-> [!NOTE]    
+> [!NOTE]
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
 
 ## 函数原型
@@ -69,7 +69,7 @@ torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None, x1_scale=N
 - `x1`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
 - `comm_mode`为`ai_cpu`时：
      - 该接口支持训练场景下使用。
-     - 该接口支持图模式。  
+     - 该接口支持图模式。
      - <term>Atlas A2 训练系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
 - `comm_mode`为`aiv`时，训练和推理场景均可使用。
 
@@ -92,14 +92,14 @@ torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None, x1_scale=N
             hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcomm_info = default_pg.get_hccl_comm_name(rank)
-    
+
         tensor_allgather_shape = x1_shape
         single_shape = [x1_shape[0] // world_size, x1_shape[1]]
-    
+
         input_ = torch.randn(single_shape, dtype=dtype).npu()
         weight = torch.randn(x2_shape, dtype=dtype).npu()
         output, gather_out = torch_npu.npu_all_gather_base_mm(input_, weight, hcomm_info, world_size)
-    
+
     if __name__ == "__main__":
         worksize = 8
         master_ip = '127.0.0.1'
@@ -107,7 +107,7 @@ torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None, x1_scale=N
         x1_shape = [128, 512]
         x2_shape = [512, 64]
         dtype = torch.float16
-    
+
         mp.spawn(run_all_gather_base_mm, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
     ```
 

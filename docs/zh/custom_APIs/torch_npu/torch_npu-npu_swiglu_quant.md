@@ -1,6 +1,6 @@
 # torch\_npu.npu\_swiglu\_quant
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -50,7 +50,7 @@ torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=N
 
 ## 参数说明
 
-> [!NOTE]  
+> [!NOTE]
 > Tensor中shape使用的变量说明：
 >
 > - G：表示group_index分组数量，取值\>0。
@@ -84,7 +84,7 @@ class TestNPUSwigluQuant(TestCase):
         batch_size, hidden_size = 4608, 2048
         num_groups = 8
         group_size = batch_size // num_groups
-        
+
         npu_x = torch.randn(batch_size, hidden_size, dtype=torch.float32, device=device)
         g_index = torch.tensor([(i + 1) * group_size for i in range(num_groups)], dtype=torch.int32, device=device)
         s_scales = torch.randn(num_groups, hidden_size // 2, dtype=torch.float32, device=device)

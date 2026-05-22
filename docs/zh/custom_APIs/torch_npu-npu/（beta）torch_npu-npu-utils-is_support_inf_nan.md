@@ -31,18 +31,18 @@ torch_npu.npu.utils.is_support_inf_nan() -> bool
 
 ```python
 import torch
- 
+
 import torch_npu.npu.utils as utils
 from torch_npu.testing.testcase import TestCase, run_tests
- 
- 
+
+
 class TestCheckOverFlow(TestCase):
- 
+
     def test_check_over_flow(self):
         ret = utils.is_support_inf_nan()
         self.assertTrue(ret)
- 
- 
+
+
 if __name__ == "__main__":
     run_tests()
 ```

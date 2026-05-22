@@ -47,7 +47,7 @@ class torch_npu.optim.NpuFusedLamb(params, lr=1e-3, betas=(0.9, 0.999), eps=1e-6
 ```python
 import torch
 from torch_npu.npu.amp import GradScaler, autocast
-from torch_npu.optim import NpuFusedLamb 
+from torch_npu.optim import NpuFusedLamb
 
 def _create_simple_params_and_grads():
     params = [

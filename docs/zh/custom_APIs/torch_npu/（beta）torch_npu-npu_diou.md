@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_diou
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -47,7 +47,7 @@ mask操作的结果。
     >>> box1.requires_grad = True
     >>> box2 = torch.randn(4, 32).npu()
     >>> box2.requires_grad = True
-    >>> diou = torch_npu.contrib.function.npu_diou(box1, box2) 
+    >>> diou = torch_npu.contrib.function.npu_diou(box1, box2)
     >>> l = diou.sum()
     >>> l.backward()
 ```

@@ -77,7 +77,7 @@ std::vector<at::Tensor> _foreach_erfc(const at::TensorList self)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_erfc_slow(self);
     }
-    
+
     // datatype check
     if (!op_plugin::utils::check_dtype_foreach(self[0].scalar_type(), op_plugin::utils::ForeachTensorDtypeSupport::BASE_DTYPE,
                                                op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {

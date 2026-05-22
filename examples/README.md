@@ -32,5 +32,5 @@ C++ extensions插件提供了将自定义算子映射到昇腾AI处理器的功�
 |cpp_extension_pybind（pybind）  | 灵活接口  | 算子定义、算子适配、Pybind绑定 |                       具体操作请参考[pybind绑定适配样例](./cpp_extension_pybind/README.md)                       |
 
 > [!NOTE]
-> 
+>
 > cpp_extension_structured（结构化实现）使用前提：opapi对应的aclnn与ATen IR语义一致，适配层除申请output tensor外无其他逻辑。

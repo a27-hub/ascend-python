@@ -21,11 +21,11 @@
     key_cache:[num_blocks, num_head * k_head_size // last_dim_k, block_size, last_dim_k]
     value_cache:[num_blocks, num_head * v_head_size // last_dim_k, block_size, last_dim_k]
     slot_mapping:[batch]
-    ```    
+    ```
 
 - 场景二：
 
-    ```python    
+    ```python
     key:[batch, seq_len, num_head, k_head_size]
     value:[batch, seq_len, num_head, v_head_size]
     key_cache:[num_blocks, block_size, 1, k_head_size]
@@ -34,7 +34,7 @@
     compress_lens:[batch, num_head]
     seq_lens:[batch]
     compress_seq_offsets:[batch * num_head]
-    ```    
+    ```
 
 上述场景根据构造的参数来区别，符合第一种入参构造走场景一，符合第二种构造走场景二。场景一没有`compress_lens`、`seq_lens`、`compress_seq_offsets`这三个可选参数。
 

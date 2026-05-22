@@ -1,6 +1,6 @@
 # （beta）torch\_npu.npu\_sign\_bits\_unpack
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -17,13 +17,13 @@
 - API功能：将`uint8`类型的输入拆包为`float`类型。将`uint8`数值中的8个二进制位解码为8个浮点数，0解码为-1.0，1解码为1.0，并以小端序进行返回。
 
 - 等价计算逻辑：
-    
+
      可使用`sign_unpack`等价替换`torch_npu.npu_sign_bits_unpack`，两者计算逻辑一致。
-     
+
      ```python
     import torch
     import numpy as np
-    
+
     def sign_unpack(in_data, size, dtype):
         unpack_data = np.unpackbits(in_data, bitorder="little")
         unpack_data = unpack_data.astype(dtype)

@@ -154,7 +154,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
     import torch._dynamo
     TORCHDYNAMO_VERBOSE=1
     TORCH_LOGS="+dynamo"
-    
+
     # 支持入图的打印宏
     import logging
     from torchair.core.utils import logger
@@ -163,7 +163,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
     config.debug.graph_dump.type = "pbtxt"
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
-    
+
     # 数据生成
     dtype_list2 =["fp16","int8","int32","fp32","fp16"]
     dtype_list =[np.float16,np.int8,np.int32,np.float32]
@@ -172,7 +172,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
     indices_shape =[1,2]
     quant_scales_shape =[1,1,1,32]
     quant_zero_points_shape =[1,1,1,32]
-    
+
     axis =-2
     quant_axis=-1
     reduce = "update"
@@ -206,7 +206,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
 
     if __name__ == "__main__":
         MetaInfershape()
-    
+
     # 执行上述代码的输出类似如下
     single op output with mask: tensor([[[ 0,  0,  1,  1,  1,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  1,  0,
                1,  1,  1,  0,  0,  0,  0,  0,  1,  1,  1,  0,  1,  1,  1]],

@@ -63,7 +63,7 @@ torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert
     class GMMModel(nn.Module):
         def __init__(self):
             super().__init__()
-        
+
         def forward(self, sorted_experts, num_experts):
             return torch_npu.npu_moe_compute_expert_tokens(sorted_experts, num_experts)
     def main():

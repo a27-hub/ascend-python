@@ -22,7 +22,7 @@
 │   └── _load.py                // 加载模块
 └── test
     ├── add_aclgraph_test.py    // Add算子aclgraph测试demo
-    └── trig_aclgraph_test.py   // 原地三角函数aclgraph测试demo             
+    └── trig_aclgraph_test.py   // 原地三角函数aclgraph测试demo
 ```
 
 ## 算子描述
@@ -32,13 +32,13 @@
 - 算子功能：
 
   Add算子实现了两个数据相加，返回相加结果的功能。对应的算子原型为：
-  
+
   ```python
   ascendc_add(Tensor x, Tensor y) -> Tensor
   ```
 
 - 算子规格：
-  
+
   <table>
    <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">add_custom</td></tr>
   <tr><td rowspan="3" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
@@ -52,7 +52,7 @@
 - 算子功能：
 
   该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回值tan(x)计算结果。对应的算子原型为：
-  
+
   ```python
   ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
   ```
@@ -77,18 +77,18 @@
     ```c++
       add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
     ```
-  
+
   - PyTorch提供`TORCH_LIBRARY_FRAGMENT`宏作为自定义算子注册的核心接口，用于创建并初始化自定义算子库，注册后在Python侧可以通过`torch.ops.namespace.op_name`方式进行调用，例如：
-  
+
     ```c++
     TORCH_LIBRARY_FRAGMENT(ascendc_ops, m)
     {
         m.def(ascendc_add"(Tensor x, Tensor y) -> Tensor");
     }
     ```
-  
+
   - `TORCH_LIBRARY_IMPL`用于将算子逻辑绑定到特定的DispatchKey（PyTorch设备调度标识）。针对NPU设备，需要将算子实现注册到PrivateUse1这一专属的DispatchKey上，例如：
-  
+
     ```c++
     TORCH_LIBRARY_IMPL(ascendc_ops, PrivateUse1, m)
     {
@@ -97,7 +97,7 @@
     ```
 
   - 注册Meta函数：
-  
+
     注册Meta函数使faketensor流程正常工作，在使用fx, compile等功能涉及，注册代码如下：
 
     ```c++
@@ -120,28 +120,28 @@
 在本样例根目录下执行如下步骤，编译并执行算子。
 
 - 环境安装
-  
+
 1. 请参考与您当前使用的版本配套的[《Ascend Extension for PyTorch
    软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和torch_npu详细的安装步骤。
-   
+
    本样例需torch2.6.0及以上版本，支持`backend="npugraph_ex"`需7.3.0及以上版本。
 2. 根据实际环境安装CANN toolkit包，本样例需8.5.0及以上版本，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 3. 根据实际环境安装CANN ops包。根据产品型号和环境架构，下载对应安装包，可参考[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)并执行如下命令安装：
-   
+
    ```bash
    # 确保安装包具有可执行权限
    chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
    # 安装命令
    ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run  --install --quiet --install-path=${install_path}
    ```
-   
+
    - \$\{soc\_name\}：表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。
    - \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
 
 - 配置环境变量
-  
+
   请根据当前环境上CANN开发套件包的安装位置，执行如下配置环境变量的命令。
-  
+
     ```bash
     source ${install_path}/ascend-toolkit/set_env.sh
     ```

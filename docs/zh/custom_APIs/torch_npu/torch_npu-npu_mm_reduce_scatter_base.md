@@ -20,7 +20,7 @@
         $$
         output = reducescatter(x_1 \mathbin{@} x_2 + bias)
         $$
-                                
+
     - 量化场景：
         $$
         output = reducescatter((x1\_scale * x2\_scale) * (x_1 \mathbin{@} x_2 + bias))
@@ -36,7 +36,7 @@
             $$
         - 其中，`x1_scale`按\(m, 1\)广播，`x2_scale`按\(1, n\)广播。
 
-> [!NOTE]   
+> [!NOTE]
 > 使用该接口时，请确保驱动固件包和CANN包都为配套的8.0.RC2版本或者配套的更高版本，否则将会引发报错，比如BUS ERROR等。
 
 ## 函数原型
@@ -80,7 +80,7 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
        - 该接口仅在训练场景下使用。
        - 该接口支持图模式。
        - <term>Atlas A2 训练系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
-  - `comm_mode`为`aiv`时，训练和推理场景均可使用。  
+  - `comm_mode`为`aiv`时，训练和推理场景均可使用。
 
 - **comm_mode支持矩阵**
 
@@ -120,11 +120,11 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
             hcomm_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcomm_info = default_pg.get_hccl_comm_name(rank)
-    
+
         input_ = torch.randn(x1_shape, dtype=dtype).npu()
         weight = torch.randn(x2_shape, dtype=dtype).npu()
         output = torch_npu.npu_mm_reduce_scatter_base(input_, weight, hcomm_info, world_size)
-    
+
     if __name__ == "__main__":
         worksize = 8
         master_ip = '127.0.0.1'
@@ -132,7 +132,7 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
         x1_shape = [128, 512]
         x2_shape = [512, 64]
         dtype = torch.float16
-    
+
         mp.spawn(run_mm_reduce_scatter_base, args=(worksize, master_ip, master_port, x1_shape, x2_shape, dtype), nprocs=worksize)
     ```
 

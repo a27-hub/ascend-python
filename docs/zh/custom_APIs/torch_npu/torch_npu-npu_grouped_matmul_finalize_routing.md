@@ -11,7 +11,7 @@
 
 - **API功能**: GroupedMatMul和MoeFinalizeRouting的融合算子，其中，GroupedMatMul负责分专家计算，MoeFinalizeRouting负责按路由关系回填并聚合GroupedMatMul结果，两者串联形成完整的MoE输出路径。
   - **MoE**: Mixture of Experts，混合专家模型。每个token按路由结果分配到一个或多个专家进行计算。
-  - **MoeFinalizeRouting**: MoE路由最终化过程。将各专家计算结果按路由索引回填到token原始顺序，并对同一token的多个专家结果进行聚合，得到最终输出。  
+  - **MoeFinalizeRouting**: MoE路由最终化过程。将各专家计算结果按路由索引回填到token原始顺序，并对同一token的多个专家结果进行聚合，得到最终输出。
 
 其中，GroupedMatMul是一种针对批量稀疏矩阵乘法的优化计算模式。在MoE（Mixture of Experts，混合专家模型）结构中，每个token被分配给某个专家，不同专家处理的token数量不同。GroupedMatMul将同一专家负责的所有token聚合为一个组，然后一次性执行该专家的矩阵乘法，从而避免为每个token单独调用矩阵乘法带来的调度开销，提升计算效率。
 
@@ -86,7 +86,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     batch = 72
     topK = 8
     group_num = 8
-     
+
     x = np.random.randint(-10, 10, (m, k)).astype(np.int8)
     weight = np.random.randint(-10, 10, (group_num, k, n)).astype(np.int8)
     scale = np.random.normal(0, 0.01, (group_num, n)).astype(np.float32)
@@ -98,7 +98,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     logit = softmax(logit_ori[np.arange(batch).reshape(-1, 1).repeat(topK, axis=1), routing], axis=1).astype(np.float32)
     logit = logit.reshape(m)
     row_index = (np.argsort(routing.reshape(-1)) // topK).astype(np.int64)
-     
+
     x_clone = torch.from_numpy(x).npu()
     weight_clone = torch.from_numpy(weight).npu()
     weightNz = torch_npu.npu_format_cast(weight_clone, 29)
@@ -125,10 +125,10 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     import torchair as tng
     from scipy.special import softmax
     from torchair.configs.compiler_config import CompilerConfig
-     
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-     
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -137,12 +137,12 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
                         scale=scale, pertoken_scale=pertoken_scale, shared_input=shared_input,
                         logit=logit, row_index=row_index, shared_input_offset=shared_input_offset, output_bs=output_bs)
             return output
-     
+
     m, k, n = 576, 2048, 7168
     batch = 72
     topK = 8
     group_num = 8
-     
+
     x = np.random.randint(-10, 10, (m, k)).astype(np.int8)
     weight = np.random.randint(-10, 10, (group_num, k, n)).astype(np.int8)
     scale = np.random.normal(0, 0.01, (group_num, n)).astype(np.float32)
@@ -154,7 +154,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     logit = softmax(logit_ori[np.arange(batch).reshape(-1, 1).repeat(topK, axis=1), routing], axis=1).astype(np.float32)
     logit = logit.reshape(m)
     row_index = (np.argsort(routing.reshape(-1)) // topK).astype(np.int64)
-     
+
     x_clone = torch.from_numpy(x).npu()
     weight_clone = torch.from_numpy(weight).npu()
     weightNz = torch_npu.npu_format_cast(weight_clone, 29)
@@ -166,9 +166,8 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     row_index_clone = torch.from_numpy(row_index).npu()
     shared_input_offset = batch // 2
     output_bs = batch
-     
+
     model = Model().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     y = model(x_clone, weightNz, group_list_clone, scale_clone, pertoken_scale_clone, shared_input_clone, logit_clone, row_index_clone, shared_input_offset, output_bs)
     ```
-    

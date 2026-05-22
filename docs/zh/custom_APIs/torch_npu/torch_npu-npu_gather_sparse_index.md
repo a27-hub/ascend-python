@@ -7,7 +7,7 @@
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √   |
 
-## 功能说明 
+## 功能说明
 
 - API功能：从输入Tensor的指定维度，按照`index`中的下标序号提取元素，保存到输出Tensor中。
 

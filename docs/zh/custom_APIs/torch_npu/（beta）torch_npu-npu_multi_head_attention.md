@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_multi_head_attention
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
@@ -68,7 +68,7 @@ torch_npu.npu_multi_head_attention(query, key, value, query_weight, key_weight, 
 import torch
 import torch_npu
 import numpy as np
- 
+
 batch = 8
 attn_head_num = 16
 attn_dim_per_head = 64
@@ -76,7 +76,7 @@ src_len = 64
 tgt_len = 64
 dropout_prob = 0.0
 softmax_use_float = True
- 
+
 weight_col = attn_head_num * attn_dim_per_head
 query = torch.from_numpy(np.random.uniform(-1, 1, (batch * tgt_len, weight_col)).astype("float16")).npu()
 key = torch.from_numpy(np.random.uniform(-1, 1, (batch * src_len, weight_col)).astype("float16")).npu()
@@ -91,13 +91,13 @@ key_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("floa
 value_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
 out_proj_bias = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
 dropout_mask = torch.from_numpy(np.random.uniform(-1, 1, (weight_col,)).astype("float16")).npu()
-            
+
 npu_result, npu_dropout_mask, npu_query_res, npu_key_res, npu_value_res, npu_attn_scores, npu_attn_res, npu_context = torch_npu.npu_multi_head_attention (query, key, value, query_weight, key_weight, value_weight, attn_mask, out_proj_weight, query_bias, key_bias, value_bias, out_proj_bias,  dropout_mask, attn_head_num, attn_dim_per_head, src_len, tgt_len, dropout_prob, softmax_use_float)
- 
+
 print(npu_result)
- 
- 
- 
+
+
+
 tensor([[ 623.5000,   75.5000,  307.0000,  ...,   25.3125, -418.7500,
            35.9688],
         [-254.2500, -165.6250,  176.2500,  ...,   87.3750,   78.0000,

@@ -55,7 +55,7 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
 
 ## 参数说明<a name="zh-cn_topic_0000002236535552_section1723416525369"></a>
 
-> [!NOTE]   
+> [!NOTE]
 > Tensor中shape使用的变量说明：
 >
 > - batch\_size：batch的大小。
@@ -166,18 +166,18 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
     # 示例1：基础样例（非量化，cache_mode="PA_BNSD"）
     import torch
     import torch_npu
-    
+
     batch_size=8
     seq_len=1
     page_num=8
     page_size=128
     input_dtype = torch.float16
-    
+
     kv = torch.randn(batch_size, 1, seq_len, 576, dtype = input_dtype).npu()
     gamma = torch.randn(512, dtype = input_dtype).npu()
     cos = torch.randn(batch_size, 1, seq_len, 64, dtype = input_dtype).npu()
     sin = torch.randn(batch_size, 1, seq_len, 64, dtype = input_dtype).npu()
-    
+
     k_cache = torch.ones(page_num, page_size, 1, 64, dtype = input_dtype).npu()
     ckv_cache = torch.ones(page_num, page_size, 1, 512, dtype = input_dtype).npu()
     k_rope_scale = None
@@ -186,12 +186,12 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
     index_shape = (batch_size * seq_len,)
     index = torch.arange(start=0, end=index_shape[0], step=1, dtype=torch.int64).npu()
     is_output_kv = True
-    
-    
+
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                     k_rope_scale=None, c_kv_scale=None, k_rope_offset=None, c_kv_offset=None,
                     epsilon=1e-05, cache_mode="Norm", is_output_kv=False):
@@ -205,15 +205,15 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
                                                                                  cache_mode=cache_mode,
                                                                                  is_output_kv=is_output_kv)
             return k_cache, v_cache, k_rope, c_kv
-    
+
     model = Model().npu()
     _, _, k_rope, c_kv = model(kv, gamma, cos, sin, index, k_cache, ckv_cache, k_rope_scale, c_kv_scale, None, None, 1e-5, cache_mode, is_output_kv)
-    
+
     # 示例2： 量化模式
     ## 1. 创建int8 cache (量化)
     k_cache = torch.ones(page_num, page_size, 1, 64, dtype = torch.int8).npu()
     ckv_cache = torch.ones(page_num, page_size, 1, 512, dtype = input_dtype).npu()
-    ## 2. 准备量化参数 
+    ## 2. 准备量化参数
     k_rope_scale = torch.randn([64], dtype=torch.float32).npu() # K的RoPE部分scale
     c_kv_scale = torch.randn([512], dtype=torch.float32).npu() # 压缩KV的scale
     # 其余代码不变
@@ -250,18 +250,18 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
     config = CompilerConfig()
     config.experimental_config.keep_inference_input_mutations = True
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     batch_size=8
     seq_len=1
     page_num=8
     page_size=128
     input_dtype = torch.float16
-    
+
     kv = torch.randn(batch_size, 1, seq_len, 576, dtype = input_dtype).npu()
     gamma = torch.randn(512, dtype = input_dtype).npu()
     cos = torch.randn(batch_size, 1, seq_len, 64, dtype = input_dtype).npu()
     sin = torch.randn(batch_size, 1, seq_len, 64, dtype = input_dtype).npu()
-    
+
     k_cache = torch.ones(page_num, page_size, 1, 64, dtype = input_dtype).npu()
     ckv_cache = torch.ones(page_num, page_size, 1, 512, dtype = input_dtype).npu()
     k_rope_scale = None
@@ -270,12 +270,12 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
     index_shape = (batch_size * seq_len,)
     index = torch.arange(start=0, end=index_shape[0], step=1, dtype=torch.int64).npu()
     is_output_kv = True
-    
-    
+
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, kv, gamma, cos, sin, index, k_cache, ckv_cache,
                     k_rope_scale=None, c_kv_scale=None, k_rope_offset=None, c_kv_offset=None,
                     epsilon=1e-05, cache_mode="Norm", is_output_kv=False):
@@ -289,7 +289,7 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
                                                                                  cache_mode=cache_mode,
                                                                                  is_output_kv=is_output_kv)
             return k_cache, v_cache, k_rope, c_kv
-    
+
     model = Model().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     _, _, k_rope, c_kv = model(kv, gamma, cos, sin, index, k_cache, ckv_cache, k_rope_scale, c_kv_scale, None, None, 1e-5, cache_mode, is_output_kv)
@@ -298,7 +298,7 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
     ## 1. 创建int8 cache (量化)
     k_cache = torch.ones(page_num, page_size, 1, 64, dtype = torch.int8).npu()
     ckv_cache = torch.ones(page_num, page_size, 1, 512, dtype = input_dtype).npu()
-    ## 2. 准备量化参数 
+    ## 2. 准备量化参数
     k_rope_scale = torch.randn([64], dtype=torch.float32).npu() # K的RoPE部分scale
     c_kv_scale = torch.randn([512], dtype=torch.float32).npu() # 压缩KV的scale
     # 其余代码不变

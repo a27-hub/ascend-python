@@ -1,6 +1,6 @@
 # torch_npu.npu_quant_matmul_gelu
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -88,7 +88,7 @@ A8W8量化场景下，支持昇腾亲和的$NZ$数据排布格式，可通过`to
     A4W4量化场景支持两种输入类型：
     - **`int4`类型**：直接使用`int4`数据类型。
     - **`int32`类型**：每个`int32`数据存放8个`int4`数据。
-    
+
     当使用`int32`类型时，输入的`int32` shape需要将数据原本`int4`类型时shape的最后一维缩小8倍。`int4`数据的shape最后一维应为8的倍数。
 
     - `x1`和`x2`的内轴（k轴）必须为偶数。
@@ -213,7 +213,7 @@ A8W8量化场景下，支持昇腾亲和的$NZ$数据排布格式，可通过`to
     >>> # A4W4量化仅支持ND格式，不支持NZ格式
     >>> # 转置信息由算子内部根据tensor的stride自动推导
     >>> output = torch_npu.npu_quant_matmul_gelu(
-    ...     x1, x2, x1_scale, x2_scale, 
+    ...     x1, x2, x1_scale, x2_scale,
     ...     approximate="gelu_tanh"
     ... )
     >>> print(output.shape)  # torch.Size([128, 512])

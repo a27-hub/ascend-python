@@ -1,6 +1,6 @@
 # torch\_npu.npu\_attention\_to\_ffn
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -122,7 +122,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
         else:
             hcomm_info = comm_group.get_hccl_comm_name(rank)
         return hcomm_info
-    
+
 
     def set_windows(rank, comm_group, hcomm_info):
         if rank >= ffn_worker_num:
@@ -172,7 +172,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             scales = torch.randn(scales_shape, dtype=torch.float32).npu()
         else:
             scales = None
-        
+
         if is_mask:
             active_mask = torch.tensor([[1, 1, 1, 1, 0, 0, 0, 0]], dtype=torch.bool).npu()
         else:
@@ -198,7 +198,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
                 sync_flag=sync_flag)
 
             print(f'rank {rank} npu finished! \n')
-        
+
         if rank < ffn_worker_num:
             time.sleep(10)
 
@@ -301,7 +301,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
                 active_mask=active_mask,
                 quant_mode=quant_mode,
                 sync_flag=sync_flag)
-            
+
             return output
 
 
@@ -311,7 +311,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
         else:
             hcomm_info = comm_group.get_hccl_comm_name(rank)
         return hcomm_info
-    
+
 
     def set_windows(rank, comm_group, hcomm_info):
         if rank >= ffn_worker_num:
@@ -366,7 +366,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             scales = torch.randn(scales_shape, dtype=torch.float32).npu()
         else:
             scales = None
-        
+
         if is_mask:
             active_mask = torch.tensor([[1, 1, 1, 1, 0, 0, 0, 0]], dtype=torch.bool).npu()
         else:
@@ -379,7 +379,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             model = torch.compile(model, backend=npu_backend, dynamic=False)
             _ = model.forward(
                 x, session_id, micro_batch_id, layer_id, expert_ids, expert_rank_table,
-                hcomm_info, world_size, moe_expert_num, ffn_token_info_table_shape, 
+                hcomm_info, world_size, moe_expert_num, ffn_token_info_table_shape,
                 ffn_token_data_shape, attn_token_info_table_shape, scales, active_mask, quant_mode, sync_flag
             )
 

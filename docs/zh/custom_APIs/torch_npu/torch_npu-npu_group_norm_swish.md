@@ -14,8 +14,8 @@
   - GroupNorm: 公式中的$x$代表`input`， $E[x] = \bar{x}$ 代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^{n} (x_i - E[x])^2$ 代表$x$的方差，$\gamma$代表`weight`，$\beta$代表`bias`，则公式如下：
   $$
   \begin{cases}
-  y & = \frac{x - E[x]}{\sqrt{{Var[x]} + eps}} * \gamma + \beta \\ 
-  mean & = E[x] \\ 
+  y & = \frac{x - E[x]}{\sqrt{{Var[x]} + eps}} * \gamma + \beta \\
+  mean & = E[x] \\
   rstd & = \frac{1}{\sqrt{{Var[x]} + eps}}
   \end{cases}
   $$
@@ -24,7 +24,7 @@
   $$
   y = \frac{x}{1 + e^{-scale \cdot x}}
   $$
-  
+
 > **说明：**<br>
 > 需要计算反向梯度场景时，若需要输出结果排除随机性，则需要[设置确定性计算开关](../determin_API_list.md)。
 
@@ -43,7 +43,7 @@ torch_npu.npu_group_norm_swish(input, num_groups, weight, bias, eps=1e-5, swish_
   - `num_groups=C`（C为通道数）：等价于InstanceNorm（实例归一化），每个通道独立归一化，适用于风格迁移、图像生成等场景。
   - `1 < num_groups < C`：标准GroupNorm，在通道维度上划分若干组进行归一化，`num_groups=32`是常用的默认值。
   > [!NOTE]
-  > 
+  >
   > 当需要计算反向梯度时，`input.shape[1] / num_groups` 的结果不能超过4000。违反此约束可能导致训练时的错误。
 
 - **weight**(`Tensor`)：必选参数，表示权重，支持1D张量，并且第0维大小与`input`的第1维相同；数据类型支持`float16`，`float32`，`bfloat16`，并且需要与`input`一致。
@@ -72,7 +72,7 @@ torch_npu.npu_group_norm_swish(input, num_groups, weight, bias, eps=1e-5, swish_
 ```python
 import torch
 import torch_npu
- 
+
 input = torch.randn(3, 4, 6, dtype=torch.float32).npu()
 weight = torch.randn(input.size(1), dtype=torch.float32).npu()
 bias = torch.randn(input.size(1), dtype=torch.float32).npu()

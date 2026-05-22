@@ -14,9 +14,9 @@
 - 计算公式：
 
   **MRoPE模式**：
-  
+
   positions的shape输入是[m, num_tokens], m为mropeSection的元素数，支持3或4：
-    
+
   $$
   cosSin[i] = cosSinCache[positions[i]]
   $$
@@ -77,7 +77,7 @@
         $$
         sin = torch.cat([m[i]\ for\ i, m\ in\ enumerate(sin.split(mropeSection, dim=-1))], dim=-1)
         $$
-        
+
         $$
         queryRot = query[..., :rotaryDim]
         $$
@@ -169,7 +169,7 @@
       $$
 
   **RoPE模式**：
-  
+
   positions的shape输入是[num_tokens]：
 
   $$
@@ -246,9 +246,9 @@ torch_npu.npu_mrope(positions, query, key, cos_sin_cache, head_size, *, mrope_se
 
 ## 参数说明
 
-- **positions**（`Tensor`）：必选参数，位置索引，用于从cache中选取位置编码，对应公式中的$positions$。  
-  - RoPE模式：1维张量，shape`(num_tokens)`，数据类型为`int32`、`int64`，格式$ND$，支持非连续张量。  
-  - MRoPE模式：2维张量，shape`(3, num_tokens)`或`(4, num_tokens)`，要求与`mrope_section`分段数一致。  
+- **positions**（`Tensor`）：必选参数，位置索引，用于从cache中选取位置编码，对应公式中的$positions$。
+  - RoPE模式：1维张量，shape`(num_tokens)`，数据类型为`int32`、`int64`，格式$ND$，支持非连续张量。
+  - MRoPE模式：2维张量，shape`(3, num_tokens)`或`(4, num_tokens)`，要求与`mrope_section`分段数一致。
   - 通过`positions`从`cos_sin_cache`中选取位置编码时，每个取值作为cache行索引，应均小于第0维长度`max_seq_len`。
 - **query**（`Tensor`）：必选参数，待施加RoPE的Query，对应公式中的$query$。2维张量，shape`(num_tokens, num_q_heads * head_size)`，类型`float16`、`bfloat16`、`float32`，格式$ND$，支持非连续张量。
 - **key**（`Tensor`）：必选参数，待施加RoPE的Key。2维张量，shape`(num_tokens, num_k_heads * head_size)`，类型与`query`一致，格式$ND$，支持非连续张量。

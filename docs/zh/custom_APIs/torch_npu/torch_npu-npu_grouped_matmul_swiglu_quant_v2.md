@@ -178,16 +178,16 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     import torch
     import torch_npu
     from scipy.special import softmax
-    
+
     torch.npu.config.allow_internal_format = True
-    
+
     def gen_input_data(E, M, K, N):
         x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
         weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8)
         weightScale = torch.randn(E, N)
         xScale = torch.randn(M)
         groupList = torch.tensor([128, 128], dtype=torch.int64)
-        return x, weight, weightScale, xScale, groupList    
+        return x, weight, weightScale, xScale, groupList
     E = 2
     M = 512
     K = 7168
@@ -206,25 +206,25 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     import torchair as tng
     from scipy.special import softmax
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     torch.npu.config.allow_internal_format = True
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-     
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
         def forward(self, x, weight, weightscale, xscale, group_list, quant_dtype):
             output = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weightscale, xscale, group_list, quant_dtype=quant_dtype)
-            return output    
-     
+            return output
+
     def gen_input_data(E, M, K, N):
         x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
         weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8)
         weightScale = torch.randn(E, N)
         xScale = torch.randn(M)
         groupList = torch.tensor([128, 128], dtype=torch.int64)
-        return x, weight, weightScale, xScale, groupList    
+        return x, weight, weightScale, xScale, groupList
     E = 2
     M = 512
     K = 7168
@@ -232,7 +232,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     quant_dtype = 2
     x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
     weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
-     
+
     model = Model().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     y = model(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu(), quant_dtype)

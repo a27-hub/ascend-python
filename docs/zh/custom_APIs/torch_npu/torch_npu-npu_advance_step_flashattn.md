@@ -16,7 +16,7 @@
      inputTokens[blockIdx] = sampledTokenIds[blockIdx]  \\
      inputPositions[blockIdx] = seqLens[blockIdx] \\
      seqLens[blockIdx] = seqLens[blockIdx] + 1 \\
-     
+
      slotMapping[blockIdx] = ({blockTables}[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx]\%blockSize)
      $$
 - 投机场景计算公式：$i$是当前代码被执行的请求的索引，$inputTokens$按shape为[num_seqs, 1 + spec_num]的二维视图理解。
@@ -69,30 +69,30 @@ torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_posi
 
 ```python
 import numpy as np
- 
+
 import torch
 import torch_npu
- 
+
 num_seqs = 16
 num_queries = 8
 block_size = 8
- 
+
 input_tokens = np.random.randint(10, size=(num_seqs,))
 sampled_token_ids = np.random.randint(10, size=(num_queries,1))
 input_positions = np.random.randint(10, size=(num_seqs,))
 seq_lens = np.random.randint(10, size=(num_seqs,))
 slot_mapping = np.random.randint(10, size=(num_seqs,))
- 
+
 input_tokens = torch.tensor(input_tokens, dtype=torch.int64, device="npu")
 sampled_token_ids = torch.tensor(sampled_token_ids, dtype=torch.int64, device="npu")
 input_positions = torch.tensor(input_positions, dtype=torch.int64, device="npu")
 seq_lens = torch.tensor(seq_lens, dtype=torch.int64, device="npu")
 slot_mapping = torch.tensor(slot_mapping, dtype=torch.int64, device="npu")
- 
+
 max_seq_len = seq_lens.max().item()
 block_tables = np.random.randint(10, size=(num_seqs, max_seq_len // block_size + 1))
 block_tables = torch.tensor(block_tables, dtype=torch.int64, device="npu")
- 
+
 torch_npu.npu_advance_step_flashattn(input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, num_seqs, num_queries, block_size)
 ```
 

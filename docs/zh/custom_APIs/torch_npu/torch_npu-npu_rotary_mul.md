@@ -35,30 +35,30 @@
          $$
 
 - 等价计算逻辑：
-    
+
      可使用`fused_rotary_position_embedding`等价替换`torch_npu.npu_rotary_mul`，两者计算逻辑一致。
-     
+
      ```python
      import torch
      from einops import rearrange
-     
+
      # mode = 0
      def rotate_half(x):
          x1, x2 = torch.chunk(x, 2, dim=-1)
          return torch.cat((-x2, x1), dim=-1)
-     
+
      # mode = 1
      def rotate_interleaved(x):
         x1 = x[..., ::2]
         x2 = x[..., 1::2]
         return rearrange(torch.stack((-x2, x1), dim=-1), "... d two -> ...(d two)", two=2)
-     
+
      def fused_rotary_position_embedding(x, cos, sin, interleaved=False):
          if not interleaved:
              return x * cos + rotate_half(x) * sin
          else:
              return x * cos + rotate_interleaved(x) * sin
-     ```     
+     ```
 
 ## 函数原型
 
@@ -66,7 +66,7 @@
 torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tensor
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > 在模型训练场景中，正向算子的输入`input`将被保留以供反向计算时使用。在`r1`、`r2`不需要计算反向梯度场景下（`requires_grad=False`），使用该接口相较融合前小算子使用的设备内存占用会有所增加。输入`rotate`参数时不支持反向传播。
 
 ## 参数说明
@@ -97,7 +97,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
         - x为$SBND$: $S11D、SB1D、SBND$;
         - x为$TND$: $T1D、TND$。
 
-            > [!NOTICE]  
+            > [!NOTICE]
             > half模式下，当输入layout是$BNSD$，且$D$为非32Bytes对齐时，建议不使用该融合算子（模型启动脚本中不开启`--use-fused-rotary-pos-emb`选项），否则可能出现性能下降。
 
     - interleave模式：
@@ -221,7 +221,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
         result[:A.size(0), :A.size(1)] = A
         b_row_start = A.size(0)
         b_col_start = A.size(1)
-        result[b_row_start:b_row_start + B.size(0), 
+        result[b_row_start:b_row_start + B.size(0),
             b_col_start:b_col_start + B.size(1)] = B
         return result
 

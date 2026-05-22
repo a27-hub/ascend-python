@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_bmmV2
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，可以使用`torch.bmm`和`torch.view`接口进行替换。
 
 ## 产品支持情况

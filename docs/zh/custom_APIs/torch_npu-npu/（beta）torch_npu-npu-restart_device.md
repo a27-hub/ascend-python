@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu.restart_device
 
-> [!NOTICE]  
+> [!NOTICE]
 > 本接口为预留接口，暂不支持。
 
 ## 产品支持情况
@@ -34,8 +34,8 @@ torch_npu.npu.restart_device(device_id, rebuild_all_resources=False, disable_ten
 
  ```python
 >>> import torch
->>> import torch_npu  
->>> torch.npu.set_device(0) 
+>>> import torch_npu
+>>> torch.npu.set_device(0)
 >>> torch_npu.npu.stop_device(0)
 >>> torch_npu.npu.restart_device(0)
  ```

@@ -1,6 +1,6 @@
 # torch_npu.npu.NpuGraphOpHandler
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -105,7 +105,7 @@ def register_npu_graph_handler(op_names: str | list[str]): ...
 
 ### register_npu_graph_handler装饰器
 
-返回被装饰的原始类。 
+返回被装饰的原始类。
 
 ## 调用示例
 

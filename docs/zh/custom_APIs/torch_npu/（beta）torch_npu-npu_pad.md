@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_pad
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch.nn.functional.pad。
 
 ## 产品支持情况

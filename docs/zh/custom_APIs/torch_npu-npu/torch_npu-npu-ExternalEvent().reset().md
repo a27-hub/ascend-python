@@ -1,6 +1,6 @@
 # torch_npu.npu.ExternalEvent().reset()
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，torch_npu.npu.ExternalEvent().wait()会自动复位Event，不推荐调用本接口手动复位Event。
 
 ## 产品支持情况

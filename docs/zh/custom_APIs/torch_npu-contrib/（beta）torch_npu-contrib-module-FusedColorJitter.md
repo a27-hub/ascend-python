@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.module.FusedColorJitter
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，可以使用`torchvision.transforms.ColorJitter`接口进行替换。
 
 ## 产品支持情况
@@ -33,7 +33,7 @@ torch_npu.contrib.module.FusedColorJitter(torch.nn.Module)
 
 ```python
 >>> import torch
->>> from PIL import Image 
+>>> from PIL import Image
 >>> from torch_npu.contrib.module import FusedColorJitter
 >>> import numpy as np
 >>> image = Image.fromarray(torch.randint(0, 256, size=(224, 224, 3)).numpy().astype(np.uint8))

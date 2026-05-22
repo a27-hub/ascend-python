@@ -49,7 +49,7 @@ class torch_npu.optim.NpuFusedRMSpropTF(params, lr=1e-2, alpha=0.9, eps=1e-10, w
 ```python
 import torch
 from torch_npu.npu.amp import GradScaler, autocast
-from torch_npu.optim import NpuFusedRMSpropTF 
+from torch_npu.optim import NpuFusedRMSpropTF
 
 def _create_simple_params_and_grads():
     params = [

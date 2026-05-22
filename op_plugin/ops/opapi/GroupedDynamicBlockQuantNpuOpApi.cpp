@@ -59,7 +59,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_dynamic_block_quant(
     } else {
         ASCEND_LOGI("[npu_grouped_dynamic_block_quant]: group_list_type only supports value 0.");
     }
-    
+
     ASCEND_LOGI("[npu_grouped_dynamic_block_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
     at::ScalarType dtype = npu_preparation::convert_to_scalar_type(y_acltype);

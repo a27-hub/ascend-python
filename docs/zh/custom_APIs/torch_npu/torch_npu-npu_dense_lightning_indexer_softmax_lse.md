@@ -1,6 +1,6 @@
 # torch_npu.npu_dense_lightning_indexer_softmax_lse
 
-> [!NOTICE]  
+> [!NOTICE]
 > 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
 
 ## 产品支持情况
@@ -116,12 +116,12 @@ $，数据格式支持$ND$，数据类型支持`float32`。
 
     query_index, key_index, weights, actual_seq_qlen, actual_seq_klen, layout, sparse_mode, pre_tokens, next_tokens = gen_inputs(isTnd=False)
     softmax_max_index, softmax_sum_index = torch_npu.npu_dense_lightning_indexer_softmax_lse(
-        query_index, 
-        key_index, 
-        weights, 
-        actual_seq_qlen=actual_seq_qlen, 
-        actual_seq_klen=actual_seq_klen, 
-        layout=layout, 
+        query_index,
+        key_index,
+        weights,
+        actual_seq_qlen=actual_seq_qlen,
+        actual_seq_klen=actual_seq_klen,
+        layout=layout,
         sparse_mode=sparse_mode,
         pre_tokens=pre_tokens,
         next_tokens=next_tokens)

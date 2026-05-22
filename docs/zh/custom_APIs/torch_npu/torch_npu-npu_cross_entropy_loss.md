@@ -18,12 +18,12 @@
     $$
     loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reduction = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reduction = ‘sum’ }\\\{l_0,l_1,...,l_n\},&\text{if reduction = ‘None’ }\end{cases}
     $$
-    
+
     其中$l_n$的计算公式为：
     $$
     l_n = -weight_{y_n}*log\frac{exp(x_{n,y_n})}{\sum_{c=1}^Cexp(x_{n,c})}*1\{y_n\ !=\ ignoreIndex \}
     $$
-  
+
     第*n*个样本对第*c*个类别的对数概率`log_prob`计算公式为：
     $$
     lse_n = log*\sum_{c=1}^{C}exp(x_{n,c})
@@ -85,7 +85,7 @@ torch_npu.npu_cross_entropy_loss(input, target, weight=None, reduction="mean", i
 
     loss.backward()
     ```
-    
+
 - 当reduction设置为`sum`时，示例如下：
 
     ```python

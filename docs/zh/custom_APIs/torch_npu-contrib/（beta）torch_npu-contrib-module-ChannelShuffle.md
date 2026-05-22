@@ -14,7 +14,7 @@
 - API功能：应用NPU兼容的通道shuffle操作。
 
 - 等价计算逻辑：
-  
+
     split_shuffle=False场景可使用`cpu_channel_shuffle`等价替换`torch_npu.contrib.module.ChannelShuffle`，两者计算逻辑一致。
 
   ```python
@@ -26,15 +26,15 @@
       x.requires_grad_(True)
       # reshape
       x = x.view(batchsize, groups, channels_per_group, height, width)
-    
+
       x = torch.transpose(x, 1, 2).contiguous()
-    
+
       # flatten
       x = x.view(batchsize, -1, height, width)
       output = x.view(batchsize, -1, height, width)
       return output
   ```
-  
+
 ## 函数原型
 
 ```python

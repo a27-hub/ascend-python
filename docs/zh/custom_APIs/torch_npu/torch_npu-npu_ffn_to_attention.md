@@ -88,7 +88,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
     bs = 8  # token数量
     h = 7168  # 每个token的长度
     scale = 128
-    hs = h + scale 
+    hs = h + scale
     k = 4
     random_seed = 0
     shared_expert_num = 1  # 共享专家数
@@ -123,7 +123,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
         expert_offsets = expert_offsets.to(torch.int32).npu()
         actual_token_num = actual_token_num.to(torch.int64).npu()
         attn_rank_table = attn_rank_table.to(torch.int32).npu()
-        
+
         return {
             'x':x,
             'session_ids':session_ids,
@@ -235,7 +235,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
     bs = 8  # token数量
     h = 7168  # 每个token的长度
     scale = 128
-    hs = h + scale 
+    hs = h + scale
     k = 4
     random_seed = 0
     shared_expert_num = 1  # 共享专家数
@@ -264,7 +264,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
             super().__init__()
 
         def forward(
-                self, x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, group, world_size, token_info_table_shape, 
+                self, x, session_ids, micro_batch_ids, token_ids, expert_offsets, actual_token_num, attn_rank_table, group, world_size, token_info_table_shape,
                 token_data_shape
             ):
             output = torch_npu.npu_ffn_to_attention(
@@ -319,7 +319,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
             model = torch.compile(model, backend = npu_backend, dynamic = False)
             _ = model.forward(
                 x, session_ids, micro_batch_ids, token_ids, expert_offsets, token_num,
-                attn_rank_table, hcomm_info, world_size, token_info_table_shape, 
+                attn_rank_table, hcomm_info, world_size, token_info_table_shape,
                 token_data_table_shape)
 
         else:

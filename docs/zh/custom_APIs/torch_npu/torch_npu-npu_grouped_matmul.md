@@ -10,7 +10,7 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002262888689_section1290611593405"></a>
 
-- API功能：`npu_grouped_matmul`是一种对多个矩阵乘法（matmul）操作进行分组计算的高效方法。该API实现了对多个矩阵乘法操作的批量处理，通过将具有相同形状或相似形状的矩阵乘法操作组合在一起，减少内存访问开销和计算资源的浪费，从而提高计算效率。如 
+- API功能：`npu_grouped_matmul`是一种对多个矩阵乘法（matmul）操作进行分组计算的高效方法。该API实现了对多个矩阵乘法操作的批量处理，通过将具有相同形状或相似形状的矩阵乘法操作组合在一起，减少内存访问开销和计算资源的浪费，从而提高计算效率。如
 $y_i[m_i, n_i] =  x_i[m_i, k_i] \times weight_i[k_i, n_i], i = 1 \ldots g$ , 其中g为分组个数。当前支持m轴和k轴分组，对应的功能为：
   - m轴分组：$k_i, n_i$各组相同，$m_i$可以不相同。
   - k轴分组：$m_i, n_i$各组相同，$k_i$可以不相同。
@@ -49,7 +49,7 @@ $y_i[m_i, n_i] =  x_i[m_i, k_i] \times weight_i[k_i, n_i], i = 1 \ldots g$ , 其
         - `x`为`int4`输入, `weight`的数据类型为`int4`，数据排布格式为`NZ`的输入（公式3-3）:
 
             $y_i=x_i@ (weight_i \times scale_i) \times pertokenscale_i$
-        
+
     - 伪量化场景（公式4）：
 
         $y_i = x_i @ ((weight_i + antiquant\_offset_i) \times antiquant\_scale_i) + bias_i$
@@ -160,7 +160,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         - 2：`group_list` shape为$[E, 2]$，E表示Group大小，数据排布为$[[groupIdx0, groupSize0], [groupIdx1, groupSize1]...]$，其中groupSize为分组轴上每组大小。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅当`x`和`weight`参数输入类型为`INT8`，并且`group_type`取0（m轴分组）时，支持取2。
         - <term>Atlas 推理系列产品</term>：不支持取2。
-    
+
 - **act_type** (`int`)：可选参数。代表激活函数类型。数据类型支持`int32`。
     - `group_list`输入类型为`List[int]`时仅支持传入`None`。
 
@@ -234,7 +234,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             |伪量化|`float16`|`int8`/`int4`|`float16`|无需赋值|`float16`|`float16`|无需赋值|None/`float16`|`float16`|
             |伪量化|`bfloat16`|`int8`/`int4`|`float32`|无需赋值|`bfloat16`|`bfloat16`|无需赋值|None/`bfloat16`|`bfloat16`|
 
-            > [!NOTE]   
+            > [!NOTE]
             > - 伪量化场景，若`weight`的类型为`int8`，仅支持perchannel模式；若`weight`的类型为`int4`，支持perchannel和pergroup两种模式。若为pergroup，pergroup数$G$或$G_i$必须要能整除对应的$k_i$。若`weight`为多tensor，定义pergroup长度$s_i= k_i/G_i$，要求所有$s_i(i=1,2,...g)$都相等。
             > - 伪量化场景，若`weight`的类型为`int4`，则`weight`中每一组tensor的最后一维大小都应是偶数。<code>weight<sub>i</sub></code>的最后一维指`weight`不转置时<code>weight<sub>i</sub></code>的N轴或当weight转置时weight<sub>i</sub>的$K$轴。并且在pergroup场景下，当`weight`转置时，要求pergroup长度$s_i$是偶数。tensor转置：指若tensor shape为$[M,K]$时，则stride为$[1,M]$,数据排布为$[K,M]$的场景，即非连续tensor。
             > - 当前PyTorch不支持`int4`类型数据，需要使用时可以通过[torch\_npu.npu\_quantize](torch_npu-npu_quantize.md)接口使用`int32`数据表示`int4`。
@@ -246,7 +246,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
             |x|weight|bias|scale|antiquant_scale|antiquant_offset|per_token_scale|output_dtype|y|
             |--------|--------|--------|--------|--------|--------|--------|--------|--------|
             |`float16`|`float16`|`float16`|无需赋值|无需赋值|无需赋值|`float32`|`float16`|`float16`|
-            
+
 - 根据输入`x`、输入`weight`与输出`y`的Tensor数量不同，支持以下几种场景。场景中的“单”表示单个张量，“多”表示多个张量。场景顺序为`x`、`weight`、`y`，例如“单多单”表示`x`为单张量，`weight`为多张量，`y`为单张量。
     - **`group_list`输入类型为`List[int]`时**，<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>各场景的限制。
 
@@ -256,11 +256,11 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         |单多单|`x`为单张量，`weight`为多张量，`y`为单张量。|1.仅支持`split_item`为2或3。<br>2.必须传`group_list`，且最后一个值与`x`中tensor的第一维相等。<br>3.`x`、`weight`、`y`中tensor需为2维。<br>4.`weight`中每个tensor的N轴必须相等。|
         |单多多|`x`为单张量，`weight`为多张量，`y`为多张量。|1.仅支持`split_item`为0或1。<br>2.必须传`group_list`，`group_list`的差值需与`y`中tensor的第一维一一对应。<br>3.`x`、`weight`、`y`中tensor需为2维。|
         |多多单|`x`和`weight`为多张量，`y`为单张量。每组矩阵乘法的结果连续存放在同一个张量中。|1.仅支持`split_item`为2或3。<br>2.`x`、`weight`、`y`中tensor需为2维。<br>3.`weight`中每个tensor的N轴必须相等。<br>4.若传入`group_list`，`group_list`的差值需与`x`中tensor的第一维一一对应。|
-        
+
     - **`group_list`输入类型为`Tensor`时**，各场景的限制。
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
-            > [!NOTE]   
+            > [!NOTE]
             > - 量化、伪量化仅支持`group_type`为-1和0场景。
             > - 仅pertoken量化场景支持激活函数计算。
 
@@ -288,22 +288,22 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         ```python
         import torch
         import torch_npu
-        
+
         x1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
         x2 = torch.randn(1024, 256, device='npu', dtype=torch.float16)
         x3 = torch.randn(512, 1024, device='npu', dtype=torch.float16)
         x = [x1, x2, x3]
-        
+
         weight1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
         weight2 = torch.randn(256, 1024, device='npu', dtype=torch.float16)
         weight3 = torch.randn(1024, 128, device='npu', dtype=torch.float16)
         weight = [weight1, weight2, weight3]
-        
+
         bias1 = torch.randn(256, device='npu', dtype=torch.float16)
         bias2 = torch.randn(1024, device='npu', dtype=torch.float16)
         bias3 = torch.randn(128, device='npu', dtype=torch.float16)
         bias = [bias1, bias2, bias3]
-        
+
         group_list = None
         split_item = 0
         npu_out = torch_npu.npu_grouped_matmul(x, weight, bias=bias, group_list=group_list, split_item=split_item, group_type=-1)
@@ -352,32 +352,32 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
         import torch_npu
         import torchair as tng
         from torchair.configs.compiler_config import CompilerConfig
-        
+
         config = CompilerConfig()
         npu_backend = tng.get_npu_backend(compiler_config=config)
-        
+
         class GMMModel(nn.Module):
             def __init__(self):
                 super().__init__()
-            
+
             def forward(self, x, weight):
                 return torch_npu.npu_grouped_matmul(x, weight, group_type=-1)
-        
+
         def main():
             x1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
             x2 = torch.randn(1024, 256, device='npu', dtype=torch.float16)
             x3 = torch.randn(512, 1024, device='npu', dtype=torch.float16)
             x = [x1, x2, x3]
-            
+
             weight1 = torch.randn(256, 256, device='npu', dtype=torch.float16)
             weight2 = torch.randn(256, 1024, device='npu', dtype=torch.float16)
             weight3 = torch.randn(1024, 128, device='npu', dtype=torch.float16)
             weight = [weight1, weight2, weight3]
-            
+
             model = GMMModel().npu()
             model = torch.compile(model, backend=npu_backend, dynamic=False)
             custom_output = model(x, weight)
-        
+
         if __name__ == '__main__':
             main()
         ```

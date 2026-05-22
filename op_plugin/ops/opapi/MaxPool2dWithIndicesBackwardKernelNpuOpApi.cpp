@@ -50,7 +50,7 @@ at::Tensor max_pool2d_with_indices_backward(
         EXEC_NPU_CMD(aclnnMaxPool2dWithIndicesBackward, grad_output, self, indices, kernel_size,
                      stride, padding, dilation, ceil_mode, grad_input);
     }
-    
+
     return grad_input;
 }
 

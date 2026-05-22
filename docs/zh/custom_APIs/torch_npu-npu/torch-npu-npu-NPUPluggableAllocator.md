@@ -62,13 +62,13 @@ torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name
 #include <sys/types.h>
 #include <iostream>
 #include <torch/extension.h>
- 
+
 #include "third_party/acl/inc/acl/acl_base.h"
 #include "third_party/acl/inc/acl/acl_rt.h"
 #include "torch_npu/csrc/core/npu/NPUCachingAllocator.h"
- 
+
 extern "C" {
- 
+
 void* my_malloc(ssize_t size, int device, aclrtStream stream)
 {
     void *ptr;
@@ -76,22 +76,22 @@ void* my_malloc(ssize_t size, int device, aclrtStream stream)
     std::cout<<"alloc ptr = "<<ptr<<", size = "<<size<<std::endl;
     return ptr;
 }
- 
+
 void my_free(void* ptr, ssize_t size, int device, aclrtStream stream)
 {
     std::cout<<"free ptr = "<<ptr<<std::endl;
     aclrtFree(ptr);
 }
 }
- 
+
 ```
 
 **日志记录示例**：可使用Ascend Extension for PyTorch自带的debug级别日志打印。日志需注意存放至安全路径。
 
 ```cpp
 #include "torch_npu/csrc/core/npu/npu_log.h"
- 
+
 ASCEND_LOGD("Pluggable Allocator malloc: malloc = %zu", size);
- 
+
 ASCEND_LOGD("Pluggable Allocator free: free= %zu", size);
 ```

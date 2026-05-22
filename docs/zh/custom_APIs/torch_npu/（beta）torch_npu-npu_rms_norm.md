@@ -25,7 +25,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor) 
+torch_npu.npu_rms_norm(self, gamma, epsilon=1e-06) -> (Tensor, Tensor)
 ```
 
 ## 参数说明

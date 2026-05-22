@@ -47,7 +47,7 @@ class torch_npu.optim.NpuFusedAdadelta(params, lr=1.0, rho=0.9, eps=1e-6, weight
 ```python
 import torch
 from torch_npu.npu.amp import GradScaler, autocast
-from torch_npu.optim import NpuFusedAdadelta 
+from torch_npu.optim import NpuFusedAdadelta
 
 def _create_simple_params_and_grads():
     params = [

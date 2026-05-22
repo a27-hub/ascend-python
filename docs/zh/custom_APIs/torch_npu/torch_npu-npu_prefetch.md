@@ -105,7 +105,7 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
     print(output)
     print(output.shape)
 
-    # 执行上述代码的输出类似如下    
+    # 执行上述代码的输出类似如下
     tensor([[-516592.8438],
             [-510890.9375],
             [-518402.5938],

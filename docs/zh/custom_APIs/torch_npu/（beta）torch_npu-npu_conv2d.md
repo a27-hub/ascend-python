@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_conv2d
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，可以使用`torch.nn.functional.conv2d`接口进行替换。
 
 ## 产品支持情况

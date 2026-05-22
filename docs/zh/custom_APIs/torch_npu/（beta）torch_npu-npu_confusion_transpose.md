@@ -1,6 +1,6 @@
 # （beta）torch_npu.npu_confusion_transpose
 
-> [!NOTICE]  
+> [!NOTICE]
 > 该接口计划废弃，可以使用`torch.view`和`torch.permute`接口进行替换。
 
 ## 产品支持情况

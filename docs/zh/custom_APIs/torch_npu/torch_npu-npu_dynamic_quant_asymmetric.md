@@ -14,7 +14,7 @@
     对输入的张量进行动态非对称量化。当前版本仅支持pertoken模式，pertensor模式暂不支持，支持MoE（Mixture of Experts，混合专家模型）场景。
 
 - 计算公式：
-    
+
     pertoken模式下，rowMax、rowMin代表按行取最大值、按行取最小值，此处的“行”对应`x`最后一个维度的数据，即一个token。DST_MAX、DST_MIN分别对应量化后dtype的最大值和最小值，公式如下：
 
     $$
@@ -112,19 +112,19 @@ torch_npu.npu_dynamic_quant_asymmetric(x, *, smooth_scales=None, group_index=Non
     torch_npu.npu.set_compile_mode(jit_compile=True)
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    
+
     device=torch.device(f'npu:0')
-    
+
     torch_npu.npu.set_device(device)
-    
+
     class DynamicQuantModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, input_tensor, smooth_scales=None, group_index=None, dst_type=None):
             out, scale, offset = torch_npu.npu_dynamic_quant_asymmetric(input_tensor, smooth_scales=smooth_scales, group_index=group_index, dst_type=dst_type)
             return out, scale, offset
-    
+
     x = torch.randn((2, 4, 6),device='npu',dtype=torch.float16).npu()
     smooth_scales = torch.randn((6),device='npu',dtype=torch.float16).npu()
     dynamic_quant_model = DynamicQuantModel().npu()

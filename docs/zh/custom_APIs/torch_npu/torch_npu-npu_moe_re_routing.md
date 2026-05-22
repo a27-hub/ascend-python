@@ -60,7 +60,7 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
 
 ## 参数说明
 
-> [!NOTE]  
+> [!NOTE]
 > Tensor中shape使用的变量说明：
 >
 > - A：表示token个数，取值要求Sum\(expert\_token\_num\_per\_rank\)=A。
@@ -97,7 +97,7 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
     import random
     import copy
     import math
-    
+
     tokens_num = 16384
     tokens_length = 7168
     rank_num = 16
@@ -140,7 +140,7 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
     import math
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     config = CompilerConfig()
     config.experimental_config.keep_inference_input_mutations = True
     npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -173,14 +173,14 @@ torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, *, per_token_sca
     tokens_npu = copy.deepcopy(tokens).npu()
     per_token_scales_npu = copy.deepcopy(per_token_scales).npu()
     expert_token_num_per_rank_npu = copy.deepcopy(expert_token_num_per_rank).npu()
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
         def forward(self, tokens, expert_token_num_per_rank, per_token_scales=None, expert_token_num_type=1, idx_type=0):
             permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num = torch_npu.npu_moe_re_routing(tokens, expert_token_num_per_rank, per_token_scales=per_token_scales, expert_token_num_type=expert_token_num_type, idx_type=idx_type)
             return permute_tokens, permute_per_token_scales, permute_token_idx, expert_token_num
-    
+
     model = Model().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     permute_tokens_npu, permute_per_token_scales_npu, permute_token_idx_npu, expert_token_num_npu = model(tokens_npu, expert_token_num_per_rank_npu, per_token_scales_npu, expert_token_num_type, idx_type)

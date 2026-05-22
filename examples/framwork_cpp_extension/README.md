@@ -88,7 +88,7 @@
   - 样例执行
 
     样例执行过程中会自动生成测试数据，然后运行pytorch样例，最后检验运行结果。具体过程可参见build_and_run.sh脚本。
-    
+
     ```bash
     bash build_and_run.sh
     ```

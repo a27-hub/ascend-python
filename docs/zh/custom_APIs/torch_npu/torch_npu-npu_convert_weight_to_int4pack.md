@@ -40,12 +40,12 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
     ```python
     import torch
     import torch_npu
-    
+
     m = 128
     k = 64
     n = 32
     trans_weight = False
-    
+
     cpu_x = torch.randn((m, k), dtype=torch.float16)
     if trans_weight:
         cpu_weight = torch.randint(low=-8, high=8, size=(n, k), dtype=torch.int32)
@@ -55,9 +55,9 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
         cpu_weight = torch.randint(low=-8, high=8, size=(k, n), dtype=torch.int32)
         cpu_antiquantscale = torch.randn((1, n), dtype=torch.float16)
         cpu_antiquantoffset = torch.randn((1, n), dtype=torch.float16)
-    
+
     weight_int4 = torch_npu.npu_convert_weight_to_int4pack(cpu_weight.npu())
-    
+
     if trans_weight:
         cpu_weight = cpu_weight.transpose(-1, -2)
         weight_int4 = weight_int4.transpose(-1, -2)
@@ -66,7 +66,7 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
 
     npu_out = torch_npu.npu_weight_quant_batchmatmul(cpu_x.npu(), weight_int4.npu(), cpu_antiquantscale.npu(), cpu_antiquantoffset.npu())
     print(npu_out)
-    # 执行上述代码的输出类似如下    
+    # 执行上述代码的输出类似如下
     tensor([[  27.2344,  -33.7500,   11.8047,  ...,   40.2188,  -15.7188,
                 6.2070],
             [  30.0625,  -66.8750,    7.6758,  ...,  -24.9531,  -11.2031,
@@ -91,14 +91,14 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
     from torchair.configs.compiler_config import CompilerConfig
     config = CompilerConfig()
     npu_backend = torchair.get_npu_backend(compiler_config=config)
-    
+
     m = 16
     k = 17
     n = 72
-    
+
     trans_weight = False
     is_weight_nz = False
-    
+
     cpu_x = torch.randn((m, k),dtype=torch.float16)
     if trans_weight:
         cpu_weight = torch.randint(low=-8, high=8, size=(n, k) ,dtype=torch.int32)
@@ -108,25 +108,25 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
         cpu_weight = torch.randint(low=-8, high=8, size=(k, n) ,dtype=torch.int32)
         cpu_antiquantscale = torch.ones((1, n),dtype=torch.float16)
         cpu_antiquantoffset = torch.zeros((1, n),dtype=torch.float16)
-    
+
     npu_weight = cpu_weight.npu()
     if is_weight_nz:
        # nd to fractal_nz
        npu_weight = torch_npu.npu_format_cast(npu_weight.npu(), 29)
     # int32 to int4pack
     weight_int4pack = torch_npu.npu_convert_weight_to_int4pack(npu_weight)
-    
+
     class MyModel(torch.nn.Module):
         def __init__(self):
             super().__init__()
-    
+
         def forward(self, x, weight, antiquant_scale, antiquant_offset, quant_scale,quant_offset, bias, antiquant_group_size):
             if trans_weight:
                 weight  = weight.transpose(-1, -2)
                 antiquant_scale = antiquant_scale.transpose(-1, -2)
                 antiquant_offset = antiquant_offset.transpose(-1, -2)
             return torch_npu.npu_weight_quant_batchmatmul(x, weight, antiquant_scale, antiquant_offset, quant_scale ,quant_offset, bias, antiquant_group_size)
-    
+
     cpu_model = MyModel()
     model = cpu_model.npu()
     model = torch.compile(model, backend=npu_backend, dynamic=True, fullgraph=True)
@@ -134,7 +134,7 @@ torch_npu.npu_convert_weight_to_int4pack(weight,inner_k_tiles=0) -> Tensor
     npu_out = model(cpu_x.npu(), weight_int4pack, cpu_antiquantscale.npu(), cpu_antiquantoffset.npu(), None, None, None, 0)
     print(npu_out)
 
-    # 执行上述代码的输出类似如下  
+    # 执行上述代码的输出类似如下
     tensor([[  4.6055,   6.0078,  -9.5078,  ...,  29.7188,   9.4688,  -7.6797],
             [-23.0312, -24.9062,  32.2500,  ...,  -7.8789,  14.3359, -19.7812],
             [-10.6172,  -0.8887,   7.7344,  ...,  -2.7676, -26.4531,   8.3906],

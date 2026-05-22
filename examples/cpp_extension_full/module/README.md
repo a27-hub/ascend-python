@@ -30,7 +30,7 @@
 1. 在算子适配层c++代码目录（csrc）中的`add_custom.cpp`完成C++侧算子代码适配、注册自定义算子schema及绑定具体实现。PyTorch提供TORCH_LIBRARY宏来定义新的命名空间，并在该命名空间里注册schema。注意命名空间的名字必须是唯一的。具体示例如下：
 
     > [!NOTE]
-    > 
+    >
     > 多卡场景必须在适配代码中加`const c10::OptionalDeviceGuard device_guard(device_of(Tensor))`保障跨device访问。
 
     ```cpp
@@ -126,7 +126,7 @@
             ctx.save_for_backward(x, y)
             # 执行前向计算
             return torch.ops.cpp_extension_full.add_custom(x, y)
-        
+
         @staticmethod
         def backward(ctx, grad_output):
             # 获取保存的tensor
@@ -156,7 +156,7 @@
     ```
 
     得到结果如下即为执行成功。
-    
+
     ```bash
     Ran xx tests in xx s
     OK

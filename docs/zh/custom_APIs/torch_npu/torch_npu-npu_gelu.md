@@ -1,6 +1,6 @@
 # torch_npu.npu_gelu
 
-> [!NOTICE]  
+> [!NOTICE]
 > 在NPU环境下使用Torch原生接口gelu时，approximate参数不起作用且默认为tanh，如果需要approximate的默认值设定为None或者区分不同的approximate方法需要使用此接口。
 
 ## 产品支持情况
@@ -90,23 +90,23 @@ torch_npu.npu_gelu(input, approximate='none') -> Tensor
     import torch.nn as nn
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
-    
+
     torch_npu.npu.set_compile_mode(jit_compile=True)
-    
+
     class Net(torch.nn.Module):
-    
+
         def __init__(self):
             super().__init__()
         def forward(self, self_0, approximate):
             out = torch_npu.npu_gelu(self_0, approximate=approximate)
             return out
-    
+
     x = torch.randn(100, 10, 20).npu()
     model = Net()
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
     model = torch.compile(model, fullgraph=True, backend=npu_backend, dynamic=False)
-    npu_out = model(x, approximate="none")    
+    npu_out = model(x, approximate="none")
     print(npu_out.shape, npu_out.dtype)
 
     # 执行上述代码的输出类似如下

@@ -68,8 +68,8 @@ torch_npu.npu_matmul_all_to_all(x1, x2, hcom, world_size, bias=None, all2all_axe
             hcom_info = default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rank)
         else:
             hcom_info = default_pg.get_hccl_comm_name(rank)
-        x1_tensor = torch.randn(x1_shape, dtype=torch.float16).npu() 
-        x2_tensor = torch.randn(x2_shape, dtype=torch.float16).npu()    
+        x1_tensor = torch.randn(x1_shape, dtype=torch.float16).npu()
+        x2_tensor = torch.randn(x2_shape, dtype=torch.float16).npu()
         output = torch_npu.npu_matmul_all_to_all(
             x1_tensor,
             x2_tensor,

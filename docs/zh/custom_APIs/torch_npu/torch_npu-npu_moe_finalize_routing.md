@@ -21,8 +21,8 @@
 
     ```python
     import numpy as np
-    from copy import deepcopy   
-        
+    from copy import deepcopy
+
     def generate_input_data(expert_num=16, token_len=10, top_k=4, num_rows=50):
         expanded_permuted_rows = np.random.randn(num_rows * top_k, token_len).astype(np.float32)
         skip1 = np.random.randn(num_rows, token_len).astype(np.float32)
@@ -33,7 +33,7 @@
         np.random.shuffle(expanded_src_to_dst_row)
         expert_for_source_row = np.random.randint(low=0, high=expert_num, size=(num_rows, top_k)).astype(np.int32)
         return expanded_permuted_rows, skip1, skip2_optional, bias, scales,expanded_src_to_dst_row, expert_for_source_row
-        
+
     def generate_input_data_drop_pad(expert_num=16, token_len=10, c=20, top_k=4, num_rows=50):
         expanded_permuted_rows = np.random.randn(expert_num, c, token_len).astype(np.float32)
         skip1 = np.random.randn(num_rows, token_len).astype(np.float32)
@@ -42,15 +42,15 @@
         scales = None
         expanded_src_to_dst_row = np.arange(num_rows * top_k).astype(np.int32)
         np.random.shuffle(expanded_src_to_dst_row)
-        expert_for_source_row = np.random.randint(low=0, high=expert_num, size=(num_rows, top_k)).astype(np.int32) 
+        expert_for_source_row = np.random.randint(low=0, high=expert_num, size=(num_rows, top_k)).astype(np.int32)
         return expanded_permuted_rows, skip1, skip2_optional, bias, scales,expanded_src_to_dst_row, expert_for_source_row
-        
-            
+
+
     def moe_finalize_routing_np(expanded_permuted_rows: np.array,skip1: np.array,skip2_optional: np.array ,bias: np.array ,scales: np.array ,expanded_src_to_dst_row: np.array ,expert_for_source_row: np.array):
         NK = expanded_src_to_dst_row.shape[0]
         K = 1
         if scales is not None:
-            K = scales.shape[1] 
+            K = scales.shape[1]
         num_rows = NK // K
         H = expanded_permuted_rows.shape[-1]
         expanded_permuted_rows = expanded_permuted_rows.reshape(-1, H)
@@ -70,7 +70,7 @@
                 else:
                     dst_row = expanded_permuted_rows[value, :]
                 expert_id = expert_for_source_row[i, k]
-                    
+
                 scalesV = 1.0
                 if scales is not None:
                     scalesV = scales[i, k]
@@ -88,7 +88,7 @@
         #moe_finalize_routing_np_drop_pad
         expanded_permuted_rows, skip1, skip2_optional, bias, scales,expanded_src_to_dst_row, expert_for_source_row = generate_input_data_drop_pad(expert_num=16, token_len=5, top_k=1, num_rows=20)
         out2 = moe_finalize_routing_np(expanded_permuted_rows, skip1, skip2_optional, bias, scales,expanded_src_to_dst_row, expert_for_source_row)
-        print(f"\nout with moe finalize routing drop pad:{out2}")  
+        print(f"\nout with moe finalize routing drop pad:{out2}")
     ```
 
 ## 函数原型
@@ -99,7 +99,7 @@ torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2, bias, s
 
 ## 参数说明
 >
-> [!NOTE]  
+> [!NOTE]
 > shape中的符号说明：
 >
 > - $NUM\_ROWS$：为行数。
@@ -160,7 +160,7 @@ torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2, bias, s
         >>> print(output.dtype)
         torch.float32
         ```
-      
+
     - drop pad模式调用示例
 
       ```python
@@ -203,7 +203,7 @@ torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2, bias, s
     class GMMModel(nn.Module):
         def __init__(self):
             super().__init__()
-        
+
         def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode):
             return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
 
@@ -232,7 +232,7 @@ torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2, bias, s
 
     if __name__ == '__main__':
         main()
-    
+
     # 执行上述代码的输出类似如下
     torch.Size([50, 10]) torch.float32
     ```

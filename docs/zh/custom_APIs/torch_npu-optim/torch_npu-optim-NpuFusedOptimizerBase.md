@@ -75,6 +75,6 @@ class NpuFusedSGD(NpuFusedOptimizerBase):
 
     def __setstate__(self, state):
         super(NpuFusedSGD, self).__setstate__(state)
-        for group in self.param_groups:            
+        for group in self.param_groups:
             group.setdefault('nesterov', False)
 ```
