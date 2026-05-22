@@ -60,6 +60,7 @@ torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale, *, of
 
     compress_weight, compress_index, compress_info = compressor.run()
     ```
+
   - **将原始float类型的反量化参数deqscale进行转换， 得到接口需要的uint64数据**
 
     deqScale原始为float类型，以int32读取并转换为int64
@@ -70,9 +71,11 @@ torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale, *, of
     deq_scale_scale = torch.ones((1, n), dtype=torch.float32)
     deq_scale_uint64 = torch_npu.npu_trans_quant_param(deq_scale_scale.npu()).to(torch.uint64)
     ```
+
 - **调用接口进行计算**
 
   - **单算子模式调用**
+
     ```python
     import torch
     import torch_npu
@@ -88,7 +91,9 @@ torch_npu.npu_matmul_compress_dequant(x1, x2, compress_index, bias, scale, *, of
                                                         bias.npu(),
                                                         deq_scale_uint64)
     ```
+
   - **图模式调用**
+
     ```python
     import torch
     import torch_npu
