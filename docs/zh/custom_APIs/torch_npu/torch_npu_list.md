@@ -730,6 +730,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>MoE网络中，完成路由专家GroupedMatMul、AlltoAllv融合并实现与共享专家MatMul并行融合，先计算后通信。</p>
 </td>
 </tr>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_alltoallv_quant_gmm.md">torch_npu.npu_alltoallv_quant_gmm</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>实现路由专家AlltoAllv和GroupedMatMul的量化融合，先通信后计算。同时与共享专家MatMul计算并行融合。</p>
+</td>
+</tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_distribute_combine_add_rms_norm.md">torch_npu.npu_moe_distribute_combine_add_rms_norm</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>完成moe_distribute_combine+add+rms_norm融合。需与torch_npu.npu_moe_distribute_dispatch配套使用，相当于按npu_moe_distribute_dispatch算子收集数据的路径原路返回后对数据进行add_rms_norm操作。</p>
