@@ -9,29 +9,48 @@
 
 ## 功能说明
 
-- API 功能：`npu_moe_gating_top_k_backward` 是 `npu_moe_gating_top_k` 的反向算子，计算前向算子输入 `x` 的梯度。当前仅支持 sigmoid 模式（`norm_type=1`）。
-
-- 计算公式：
-
-  设上游梯度为 $\frac{\partial L}{\partial \text{weights}} \in \mathbb{R}^{M \times K}$，前向保存的归一化得分为 `x_norm`（即前向输出 `normOut`），前向选出的专家索引为 `expertIdx`（即前向输出 `expertIdxOut`）。
-
-  **Step 1：应用缩放因子的反向**
-
-  $$\frac{\partial L}{\partial w_{ip}} = \text{routed\_scaling\_factor} \cdot \frac{\partial L}{\partial \text{weights}_{ip}}$$
-
-  **Step 2：归一化的反向（sigmoid 模式，`norm_type=1`）**
-
-  令 $D_i = \sum_{p'=1}^{K} w'_{ip'} + \epsilon$，其中 $w'_{ip} = \text{x\_norm}_{i,\,\text{expertIdx}_{ip}}$：
-
-  $$\frac{\partial L}{\partial w'_{ip}} = \frac{1}{D_i}\left(\frac{\partial L}{\partial w_{ip}} - \sum_{q=1}^{K} w_{iq} \cdot \frac{\partial L}{\partial w_{iq}}\right)$$
-
-  **Step 3：gather 的反向（scatter_add）**
-
-  $$\frac{\partial L}{\partial \hat{S}_{ij}} = \sum_{p:\,\text{expertIdx}_{ip}=j} \frac{\partial L}{\partial w'_{ip}}$$
-
-  **Step 4：sigmoid 的反向**
-
-  $$\text{grad\_x}_{ij} = \text{x\_norm}_{ij} \cdot (1 - \text{x\_norm}_{ij}) \cdot \frac{\partial L}{\partial \hat{S}_{ij}}$$
+- 接口功能：完成MoE（Mixture of Experts）门控Top-K选择的反向梯度计算。该算子是aclnnMoeGatingTopK的反向算子，根据前向算子输出的归一化得分（xNorm）、上游梯度（gradY）和专家索引（expertIdx），计算输入得分矩阵的梯度（gradX）。支持sigmoid模式（normType=1）。
+- 计算公式（sigmoid模式，normType=1）：
+  
+  1. 缩放梯度
+  
+    $$
+    gradYScaled_{ip} = routedScalingFactor \cdot gradY_{ip}
+    $$
+  
+  2. 正向renorm的反向传播
+  
+    $$
+    wPrime_{ip} = xNorm_{i,\ expertIdx_{ip}}
+    $$
+  
+    $$
+    D_i = \sum_{p} wPrime_{ip} + eps
+    $$
+    
+    $$
+    w_{ip} = \frac{wPrime_{ip}}{D_i}
+    $$
+    
+    $$
+    beta_i = \sum_{p} w_{ip} \cdot gradYScaled_{ip}
+    $$
+    
+    $$
+    gradWPrime_{ip} = \frac{gradYScaled_{ip} - beta_i}{D_i}
+    $$
+  
+  3. 散射到完整维度
+  
+    $$
+    gradNormX_{ij} = \sum_{p:\ expertIdx_{ip}=j} gradWPrime_{ip}
+    $$
+  
+  4. Sigmoid反向传播
+  
+    $$
+    gradX_{ij} = xNorm_{ij} \cdot (1 - xNorm_{ij}) \cdot gradNormX_{ij}
+    $$
 
 - 等价计算逻辑：
 
@@ -42,7 +61,6 @@
           x_norm, grad_y, expert_idx, *,
           renorm=0, norm_type=1,
           routed_scaling_factor=1.0, eps=1e-20):
-      """CPU float64 参考实现（sigmoid 模式）。"""
       x_norm_f64 = x_norm.double()
       grad_y_f64 = grad_y.double()
       expert_idx_i64 = expert_idx.long()
@@ -74,19 +92,19 @@ npu_moe_gating_top_k_backward(x_norm, grad_y, expertIdx, *, renorm=0, norm_type=
 
 ## 参数说明
 
-- **x_norm**（`Tensor`）：必选参数，前向算子 sigmoid/softmax 归一化后的得分，对应前向输出 `normOut`。要求是一个 2D 的 Tensor，维度为 [M, N]，数据类型支持 `float32`，数据格式要求为 ND。支持非连续 Tensor。最后一维的大小（即专家数 N）要求不大于 `2048`。
+- **x_norm**（`Tensor`）：必选参数，前向算子 sigmoid/softmax 归一化后的得分，对应前向输出 `normOut`。要求是一个 2D 的 Tensor，维度为 [M, N]，数据类型支持 `float32`，数据格式要求为 ND。支持非连续 Tensor。最后一维的大小（即专家数 N）要求大于等于 `2`，并小于等于 `2048`。
 
-- **grad_y**（`Tensor`）：必选参数，前向算子输出 `yOut` 的上游梯度。要求是一个 2D 的 Tensor，维度为 [M, K]，数据类型支持 `float16`、`bfloat16`、`float32`，数据格式要求为 ND。不支持非连续 Tensor。
+- **grad_y**（`Tensor`）：必选参数，前向算子输出 `yOut` 的上游梯度。要求是一个 2D 的 Tensor，维度为 [M, K]，数据类型支持 `float16`、`bfloat16`、`float32`，数据格式要求为 ND。不支持非连续 Tensor。K的范围要求大于等于 `1`，并小于等于 N。
 
 - **expertIdx**（`Tensor`）：必选参数，前向算子输出 `expertIdxOut`，对应 top-K 专家的索引。shape 要求与 `grad_y` 一致，数据类型支持 `int32`，数据格式要求为 ND。不支持非连续 Tensor。
 
-- **renorm**（`int`）：可选参数，renorm 标记，默认值为 `0`，表示先进行 norm 再进行 topk 计算。当前仅支持 `0`。
+- **renorm**（`int`）：可选参数，前向算子在 softmax 模式下的 renorm 标记。`0` 表示不做renorm，`1` 表示需要做 renorm。预留参数，当前仅支持 sigmoid 模式。
 
 - **norm_type**（`int`）：可选参数，norm 函数类型，`1` 表示使用 Sigmoid 函数，`0` 表示 Softmax 函数。默认值为 `0`。当前仅支持 `1`（sigmoid 模式）。
 
 - **routed_scaling_factor**（`float`）：可选参数，前向计算 `yOut` 使用的缩放系数，默认值为 `1.0`。
 
-- **eps**（`float`）：可选参数，前向归一化使用的防除零系数，默认值为 `1e-20`。
+- **eps**（`float`）：可选参数，前向归一化使用的防除零常数，默认值为 `1e-20`。
 
 ## 返回值说明
 
@@ -95,11 +113,6 @@ npu_moe_gating_top_k_backward(x_norm, grad_y, expertIdx, *, renorm=0, norm_type=
 ## 约束说明
 
 - 该接口支持训练场景下使用。
-- 当前仅支持 sigmoid 模式（`norm_type=1`）。
-- `renorm` 当前仅支持 `0`。
-- `x_norm` 最后一维（专家数 N）要求不大于 `2048`。
-- `grad_y` 与 `expertIdx` 的 shape 必须一致。
-- `grad_x` 的数据类型必须与 `grad_y` 一致。
 
 ## 调用示例
 
