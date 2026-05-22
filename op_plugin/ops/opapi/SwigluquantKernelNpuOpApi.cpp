@@ -49,7 +49,7 @@ std::tuple<at::Tensor, at::Tensor> npu_swiglu_quant(const at::Tensor& x, const c
     TORCH_CHECK(quant_mode != 0 || smooth_scales_opt.sizes() == offsets_opt.sizes(),
                 "smooth_scales and offsets should have the same shape when quant_mode is 0",
                 OPS_ERROR(ErrCode::PARAM));
-    
+
     // check x last dim
     int64_t x_last_dim = x.size(x.dim() - 1);
     TORCH_CHECK(x_last_dim <= MAX_LAST_DIM, "x last dim size should not be larger than ", MAX_LAST_DIM, ", but got ",

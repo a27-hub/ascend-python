@@ -35,4 +35,3 @@ PYBIND11_MODULE(custom_ops_lib, m)
 {
     m.def("add_custom", &add_custom_impl_npu, "");
 }
-

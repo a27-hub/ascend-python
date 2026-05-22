@@ -285,7 +285,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     TORCH_CHECK(weight_uk_dim == DIM_3, "weight_uk dim num should be 3, but the actual value is ", weight_uk_dim, OPS_ERROR(ErrCode::PARAM));
 
     auto rope_sin_dim = rope_sin.dim();
-    
+
     at::Tensor query;
     at::Tensor query_rope;
     at::Tensor dequant_scale_q_nope {nullptr};

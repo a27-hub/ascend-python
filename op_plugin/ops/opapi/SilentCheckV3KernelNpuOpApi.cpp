@@ -51,4 +51,3 @@ at::Tensor _npu_silent_check_v3(
     return result;
 }
 } // namespace op_api
-

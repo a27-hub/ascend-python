@@ -60,7 +60,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_dynamic_dual_level_mx_quant(
     TensorWrapper y_wrapper = {y, y_acltype};
     TensorWrapper level1_scale_wrapper = {level1_scale, aclDataType::ACL_FLOAT8_E8M0};
     EXEC_NPU_CMD(aclnnDynamicDualLevelMxQuant, input, smooth_scale, round_mode_ptr, level0_block_size, level1_block_size, y_wrapper, level0_scale, level1_scale_wrapper);
-    
+
     return std::make_tuple(y, level0_scale, level1_scale);
 }
 

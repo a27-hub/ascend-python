@@ -110,7 +110,7 @@ inline void *GetAsdSipApiFuncAddr(const char *apiName)
         ASCEND_LOGW("dlopen %s failed, error:%s.", GetAsdSipApiLibName(), dlerror());
         return nullptr;
     }
-    
+
     auto funcAddr = dlsym(opApiHandler, apiName);
     if (funcAddr == nullptr) {
         ASCEND_LOGW("dlsym %s from %s failed, error:%s.", apiName, GetAsdSipApiLibName(), dlerror());

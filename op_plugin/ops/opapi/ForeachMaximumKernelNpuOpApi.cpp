@@ -284,7 +284,7 @@ std::vector<at::Tensor> _foreach_maximum(at::TensorList tensors, at::ArrayRef<at
     if (!at::native::can_use_fast_route(tensors, scalars, false)) {
         return at::native::foreach_tensor_clamp_min_scalarlist_kernel_slow(tensors, scalars);
     }
-    
+
     // construct the output tensorlist of the NPU
     auto scalar_type = tensors[0].scalar_type();
     if (!op_plugin::utils::check_dtype_foreach(tensors[0].scalar_type(),
