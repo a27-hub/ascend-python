@@ -62,7 +62,7 @@ at::Tensor npu_get_float_status(const at::Tensor& self, int64_t mode) {
                 .Input(self)
                 .Output(out_tensor)
                 .Run();
-            return out_tensor;
+            return self;
         }
     } else {
         at::Tensor out_tensor = npu_preparation::apply_tensor_with_format(
