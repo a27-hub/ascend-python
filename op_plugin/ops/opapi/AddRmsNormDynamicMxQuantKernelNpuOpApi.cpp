@@ -47,7 +47,7 @@ namespace op_api {
         TORCH_CHECK(is_available,
                     "Current CANN version do not support this api. Please try to update the version of CANN."
                     + OPS_ERROR(ErrCode::PARAM));
-        
+
         // 类型推断
         auto y_shape = array_to_small_vector(x1.sizes());
         auto mxscale_shape = array_to_small_vector(x1.sizes());
@@ -101,7 +101,7 @@ namespace op_api {
 
         EXEC_NPU_CMD(aclnnAddRmsNormDynamicMxQuant, x1, x2, gamma, beta, epsilon, scale_alg,
                      round_mode_ptr, y_acltype, output_rstd, y_wrapper, x_out, mxscale_wrapper, rstd);
-        
+
         return std::make_tuple(y, x_out, mxscale, rstd);
     }
 } // namespace op_api

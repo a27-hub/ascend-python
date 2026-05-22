@@ -71,12 +71,12 @@ namespace op_api {
     {
         return capacity;
     }
-    
+
     int64_t FFTMixCache::getSize()
     {
         return list.size();
     }
-    
+
     void FFTMixCache::clear()
     {
         for (auto it = list.begin(); it != list.end(); ++it) {
@@ -87,7 +87,7 @@ namespace op_api {
         }
         list.clear();
     }
-    
+
     void setFFTPlanCapacity(int64_t maxSize)
     {
         if (maxSize < 1 || maxSize > 99) {

@@ -401,6 +401,6 @@ OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute
     const at::Tensor expand_x, int64_t ep_world_size);
 OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown_out_size(
     const at::Tensor expand_x, const at::Tensor expert_ids);
-    
+
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE

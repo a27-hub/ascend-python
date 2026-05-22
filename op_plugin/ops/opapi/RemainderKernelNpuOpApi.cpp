@@ -96,4 +96,3 @@ at::Tensor& remainder_(at::Tensor& self, const at::Tensor& other)
     return self;
 }
 }  // namespace op_api
-

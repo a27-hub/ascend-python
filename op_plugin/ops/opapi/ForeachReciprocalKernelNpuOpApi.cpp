@@ -25,7 +25,7 @@ using npu_calcu_util = at_npu::native::CalcuOpUtil;
 void _split_and_exec_npu_cmd_reciprocal(const at::TensorList tensors1, at::TensorList result_list, bool is_inplace)
 {
     size_t tensor_count = tensors1.size();
-    
+
     size_t max_tensor_count = is_inplace ? SINGLE_FOREACH_OP_TENSOR_COUNT : DOUBLE_FOREACH_OP_TENSOR_COUNT;
 
     size_t loop_time = tensor_count / max_tensor_count;

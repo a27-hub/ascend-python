@@ -131,10 +131,10 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             if (tempV > 0):
             # 调用 GMM_Swiglu_quant 处理当前组
                 quantOutput[start_idx:start_idx + tempV], quantScaleOutput[start_idx:start_idx + tempV] = \
-                    self.GMM_Swiglu_quant(x[start_idx:start_idx + tempV], 
-                                    weight[i], 
-                                    perChannelScale[i], 
-                                    perTokenScale[start_idx:start_idx + tempV], 
+                    self.GMM_Swiglu_quant(x[start_idx:start_idx + tempV],
+                                    weight[i],
+                                    perChannelScale[i],
+                                    perTokenScale[start_idx:start_idx + tempV],
                                     tempV)
 
             start_idx += tempV  # 更新起始索引以处理下一组
@@ -170,10 +170,10 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             if (tempV > 0):
             # 调用 GMM_Swiglu_quant 处理当前组
                 quantOutput[start_idx:start_idx + tempV], quantScaleOutput[start_idx:start_idx + tempV] = \
-                    self.GMM_Swiglu_quant_950(i, x[start_idx:start_idx + tempV], 
-                                    weight[i], 
-                                    weightScale[i], 
-                                    xScale[start_idx:start_idx + tempV], 
+                    self.GMM_Swiglu_quant_950(i, x[start_idx:start_idx + tempV],
+                                    weight[i],
+                                    weightScale[i],
+                                    xScale[start_idx:start_idx + tempV],
                                     tempV)
 
             start_idx += tempV  # 更新起始索引以处理下一组
@@ -357,7 +357,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
         output1_npu_valid = output1_npu[:groupList[-1]]
         self.assertEqual(output0_valid, output0_npu_valid.cpu(), 1)
         self.assertRtolEqual(output1_valid, output1_npu_valid.cpu())
-    
+
     @unittest.skip("skip case")
     @SupportedDevices(['Ascend950'])
     def test_npu_grouped_matmul_swiglu_quant_mxfp4(self, device="npu"):
@@ -394,7 +394,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
                 weight_scale_dtype=torch_npu.float8_e8m0fnu,
                 x_scale_dtype=torch_npu.float8_e8m0fnu)
             self.assertEqual(output_npu.dim(), 2)
-    
+
     @SupportedDevices(['Ascend950'])
     def test_npu_grouped_matmul_swiglu_quant_v2_dequant_dtype_valid_pertoken(self, device="npu"):
         """Ascend950 上 dequant_dtype 合法值 (float16/bfloat16) 校验"""
