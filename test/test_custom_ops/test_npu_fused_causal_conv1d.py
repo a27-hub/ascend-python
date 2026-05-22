@@ -162,9 +162,9 @@ class TestNpuFusedCausalConv1d(TestCase):
             x.npu(), weight.npu(), conv_states_npu,
             cache_indices=cache_indices.npu(),
             num_accepted_tokens=num_accepted_tokens.npu(),
-            num_computed_tokens=num_computed_tokens.npu(),
             residual_connection=0, pad_slot_id=-1,
-            conv_mode=1,
+            num_computed_tokens=num_computed_tokens.npu(),
+            conv_mode="pangu",
         )
         torch.npu.synchronize()
 
@@ -205,9 +205,9 @@ class TestNpuFusedCausalConv1d(TestCase):
             x.npu(), weight.npu(), conv_states_npu,
             query_start_loc=query_start_loc.npu(),
             cache_indices=cache_indices.npu(),
-            num_computed_tokens=num_computed_tokens.npu(),
             residual_connection=1, pad_slot_id=-1,
-            conv_mode=1,
+            num_computed_tokens=num_computed_tokens.npu(),
+            conv_mode="pangu",
         )
         torch.npu.synchronize()
 
@@ -261,12 +261,13 @@ class TestNpuFusedCausalConv1d(TestCase):
             x.npu(), weight.npu(), conv_states_npu,
             query_start_loc=query_start_loc.npu(),
             cache_indices=cache_indices.npu(),
+            residual_connection=1, pad_slot_id=-1,
+            max_query_len=max_query_len,
             num_computed_tokens=num_computed_tokens.npu(),
             block_idx_first_scheduled_token=block_idx_first.npu(),
             block_idx_last_scheduled_token=block_idx_last.npu(),
             initial_state_idx=initial_state_idx.npu(),
-            residual_connection=1, pad_slot_id=-1,
-            max_query_len=max_query_len, block_size=block_size, conv_mode=1,
+            block_size=block_size, conv_mode="pangu",
         )
         torch.npu.synchronize()
 
@@ -314,12 +315,13 @@ class TestNpuFusedCausalConv1d(TestCase):
             x.npu(), weight.npu(), conv_states_npu,
             cache_indices=cache_indices.npu(),
             num_accepted_tokens=num_accepted_tokens.npu(),
+            residual_connection=1, pad_slot_id=-1,
+            max_query_len=seq_len,
             num_computed_tokens=num_computed_tokens.npu(),
             block_idx_first_scheduled_token=block_idx_first.npu(),
             block_idx_last_scheduled_token=block_idx_last.npu(),
             initial_state_idx=initial_state_idx.npu(),
-            residual_connection=1, pad_slot_id=-1,
-            max_query_len=seq_len, block_size=block_size, conv_mode=1,
+            block_size=block_size, conv_mode="pangu",
         )
         torch.npu.synchronize()
 
@@ -328,7 +330,7 @@ class TestNpuFusedCausalConv1d(TestCase):
 
     @unittest.skip("Skip test_npu_fused_causal_conv1d now")
     @SupportedDevices(['Ascend950'])
-    def test_npu_fused_causal_conv1d_conv_mode_0(self):
+    def test_npu_fused_causal_conv1d_conv_mode_default(self):
         batch, dim, kernel_width = 4, 128, 3
         state_len = kernel_width - 1
         dtype = torch.bfloat16
@@ -360,9 +362,9 @@ class TestNpuFusedCausalConv1d(TestCase):
             x.npu(), weight.npu(), conv_states_npu,
             query_start_loc=query_start_loc.npu(),
             cache_indices=cache_indices.npu(),
-            num_computed_tokens=num_computed_tokens.npu(),
             residual_connection=1, pad_slot_id=-1,
-            conv_mode=0,
+            num_computed_tokens=num_computed_tokens.npu(),
+            conv_mode="default",
         )
         torch.npu.synchronize()
 

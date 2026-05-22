@@ -11766,36 +11766,37 @@ _add_torch_npu_docstr(
 接口原型:
 torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
                                 initial_state_mode=None, bias=None, num_accepted_tokens=None,
+                                activation="None", pad_slot_id=-1, run_mode=0,
+                                residual_connection=0, max_query_len=-1,
                                 num_computed_tokens=None, block_idx_first_scheduled_token=None,
                                 block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1) -> Tensor
+                                block_size=128, conv_mode="default") -> Tensor
 
 功能描述:
-对序列执行因果一维卷积。支持 prefill/decode/PD混部场景，支持 APC 模式。
+对序列执行因果一维卷积（非原地版本）。支持 prefill/decode/PD混部场景，支持 APC 模式。
 沿序列维度使用缓存数据对各序列头部进行 padding，卷积完成后将序列尾部数据原地更新到 conv_states 中。
 输出 y 为新分配的 Tensor。
 
 参数说明:
-x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，数据格式为ND。shape为2维[cu_seq_len, dim]或3维[batch, seq_len, dim]。dim需满足dim % 16 == 0。
-weight：Tensor类型，必选参数，因果1维卷积核。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为2维[K, dim]，K为卷积核宽度，固定为3；dim为特征维度，取值范围[64, 16384]。
-conv_states：Tensor类型，必选参数，缓存状态张量，存储各序列的历史token数据，各序列计算完成后原地更新。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为3维[..., K-1, dim]，第0维大小不固定。
-query_start_loc：Tensor类型，可选参数，序列起始位置索引，记录各序列在拼接张量x中的起始位置，query_start_loc[i]表示第i个序列的起始偏移。数据类型支持int32，数据格式为ND。shape为1维[batch+1,]，batch取值范围[1, 256]。x的shape为2维时，不可省略。
-cache_indices：Tensor类型，可选参数，缓存索引，指定每个序列对应的缓存状态在conv_states中的索引。数据类型支持int32，数据格式为ND。APC未开启时为1维[batch,]；APC开启时为2维[batch, max_num_blocks]。x的shape为2维时，不可省略。
-initial_state_mode：Tensor类型，可选参数，初始状态标志，表示各序列是否使用缓存数据。数据类型支持int32，数据格式为ND。shape为1维[batch,]，默认值为None。
-bias：Tensor类型，可选参数，卷积的偏置。数据类型与x相同，数据格式为ND。shape为1维[dim,]，默认值为None。
+x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，数据格式为ND。shape为2维[cu_seq_len, dim]或3维[batch, seq_len, dim]。dim需满足dim % 128 == 0。
+weight：Tensor类型，必选参数，因果1维卷积核。shape为2维[K, dim]，K固定为3。
+conv_states：Tensor类型，必选参数，缓存状态张量。shape为3维[..., state_len, dim]，计算完成后原地更新。
+query_start_loc：Tensor类型，可选参数，序列起始位置索引。shape为1维[batch+1]，x为2维时不可省略。
+cache_indices：Tensor类型，可选参数，缓存索引。APC未开启时为1维[batch]；APC开启时为2维[batch, max_num_blocks]。
+initial_state_mode：Tensor类型，可选参数，初始状态标志。shape为1维[batch]，暂不支持。
+bias：Tensor类型，可选参数，卷积偏置。shape为1维[dim]，暂不支持。
 num_accepted_tokens：Tensor类型，可选参数，投机解码场景下各batch实际接受的token个数。shape为1维[batch]。
-num_computed_tokens：Tensor类型，可选参数，当前batch已处理的token总数。shape为1维[batch]。Pangu v2模式下不能为None。
+activation：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"，暂不支持。
+pad_slot_id：int类型，可选参数，用于跳过不需要参与计算的batch，默认值为-1。
+run_mode：int类型，可选参数，历史遗留接口，默认值为0，暂不支持。
+residual_connection：int类型，可选参数，是否做残差连接。0：不做；1：做。默认值为0。
+max_query_len：int类型，可选参数，所有batch seq_len的最大值，默认值为-1。
+num_computed_tokens：Tensor类型，可选参数，当前batch已处理的token总数。shape为1维[batch]。Pangu模式下不能为None。
 block_idx_first_scheduled_token：Tensor类型，可选参数，APC开启时当前batch首token对应的block索引。shape为1维[batch]。
 block_idx_last_scheduled_token：Tensor类型，可选参数，APC开启时当前batch末token对应的block索引。shape为1维[batch]。
 initial_state_idx：Tensor类型，可选参数，APC开启时初始索引块的索引。shape为1维[batch]。
-activation_mode：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"，暂不支持。
-pad_slot_id：int类型，可选参数，用于跳过不需要参与计算的batch，默认值为-1。
-run_mode：int类型，可选参数，历史遗留接口，默认值为0，暂不支持。
-max_query_len：int类型，可选参数，所有batch seq_len的最大值，默认值为-1。
-residual_connection：int类型，可选参数，用于判断输出结果是否要做残差连接。0：不做残差连接；1：输出为卷积结果与输入x之和（残差连接），默认值为0。
 block_size：int类型，可选参数，APC block大小，支持128/256，默认值为128。
-conv_mode：int类型，可选参数，卷积模式。0：Qwen3-Next社区版本；1：Pangu v2。默认值为1。
+conv_mode：str类型，可选参数，卷积模式。"default"：正常卷积计算；"pangu"：盘古模型下卷积计算前k-1个token置零。默认值为"default"。
 
 输出说明:
 y：Tensor类型，卷积计算结果。residual_connection=1时输出为卷积结果+输入x。shape与x一致。
@@ -11805,7 +11806,7 @@ conv_states将被原地更新。
 x为2维时query_start_loc不可省略。
 APC开启时（cache_indices为2维）：block_size不能为0；必须提供block_idx_first_scheduled_token、block_idx_last_scheduled_token、initial_state_idx。
 dim必须满足dim % 128 == 0。
-Pangu v2模式（conv_mode=1）下首次运行时num_computed_tokens不能为None。
+conv_mode为"pangu"时num_computed_tokens不能为None。
 
 支持的型号:
 昇腾950 AI处理器
@@ -11831,15 +11832,16 @@ out = torch_npu.npu_fused_causal_conv1d(
 )
 
 _add_torch_npu_docstr(
-    "npu_inplace_fused_causal_conv1d",
+    "npu_fused_causal_conv1d_",
     """
 接口原型:
-torch_npu.npu_inplace_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
-                                         initial_state_mode=None, bias=None, num_accepted_tokens=None,
-                                         num_computed_tokens=None, block_idx_first_scheduled_token=None,
-                                         block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                         activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                         max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1) -> None
+torch_npu.npu_fused_causal_conv1d_(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
+                                  initial_state_mode=None, bias=None, num_accepted_tokens=None,
+                                  activation="None", pad_slot_id=-1, run_mode=0,
+                                  residual_connection=0, max_query_len=-1,
+                                  num_computed_tokens=None, block_idx_first_scheduled_token=None,
+                                  block_idx_last_scheduled_token=None, initial_state_idx=None,
+                                  block_size=128, conv_mode="default") -> None
 
 功能描述:
 对序列执行因果一维卷积（原地更新版本）。计算结果直接写回输入x，conv_states同时原地更新。
@@ -11849,7 +11851,7 @@ torch_npu.npu_inplace_fused_causal_conv1d(x, weight, conv_states, *, query_start
 参数与npu_fused_causal_conv1d完全一致，区别在于x也会被原地更新。
 
 输出说明:
-无返回值（None）。x被原地更新为卷积结果（含残差连接），conv_states被原地更新为最新缓存状态。
+无返回值（None）。x被原地更新为卷积结果（含残差连接时包含原始x的残差），conv_states被原地更新为最新缓存状态。
 
 约束说明:
 同npu_fused_causal_conv1d。
@@ -11867,7 +11869,7 @@ x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
 conv_states = torch.randn(batch, K - 1 + 2, dim, dtype=dtype).npu()
 cache_indices = torch.tensor([0, 1, 2, 3], dtype=torch.int32).npu()
 num_accepted_tokens = torch.tensor([1, 2, 1, 3], dtype=torch.int32).npu()
-torch_npu.npu_inplace_fused_causal_conv1d(
+torch_npu.npu_fused_causal_conv1d_(
     x, weight, conv_states,
     cache_indices=cache_indices,
     num_accepted_tokens=num_accepted_tokens,

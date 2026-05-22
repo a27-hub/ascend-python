@@ -5911,43 +5911,25 @@ def npu_masked_causal_conv1d_backward_meta(grad_output, input, weight, *, mask=N
     return grad_input, grad_weight
 
 
-@impl(m, "npu_fused_causal_conv1d_functional")
-def npu_fused_causal_conv1d_functional_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
-                                            initial_state_mode=None, bias=None, num_accepted_tokens=None,
-                                            num_computed_tokens=None, block_idx_first_scheduled_token=None,
-                                            block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                            activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                            max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1):
-    return torch.empty_like(conv_states, dtype=conv_states.dtype), torch.empty_like(x, dtype=x.dtype)
-
-
 @impl(m, "npu_fused_causal_conv1d")
 def npu_fused_causal_conv1d_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
                                 initial_state_mode=None, bias=None, num_accepted_tokens=None,
+                                activation="None", pad_slot_id=-1, run_mode=0,
+                                residual_connection=0, max_query_len=-1,
                                 num_computed_tokens=None, block_idx_first_scheduled_token=None,
                                 block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1):
+                                block_size=128, conv_mode="default"):
     return torch.empty_like(x, dtype=x.dtype)
 
 
-@impl(m, "npu_inplace_fused_causal_conv1d_functional")
-def npu_inplace_fused_causal_conv1d_functional_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
-                                                    initial_state_mode=None, bias=None, num_accepted_tokens=None,
-                                                    num_computed_tokens=None, block_idx_first_scheduled_token=None,
-                                                    block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                                    activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                                    max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1):
-    return torch.empty_like(conv_states, dtype=conv_states.dtype), torch.empty_like(x, dtype=x.dtype)
-
-
-@impl(m, "npu_inplace_fused_causal_conv1d")
-def npu_inplace_fused_causal_conv1d_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
-                                         initial_state_mode=None, bias=None, num_accepted_tokens=None,
-                                         num_computed_tokens=None, block_idx_first_scheduled_token=None,
-                                         block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                         activation_mode="None", pad_slot_id=-1, run_mode=0,
-                                         max_query_len=-1, residual_connection=1, block_size=128, conv_mode=1):
+@impl(m, "npu_fused_causal_conv1d_")
+def npu_fused_causal_conv1d__meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
+                                  initial_state_mode=None, bias=None, num_accepted_tokens=None,
+                                  activation="None", pad_slot_id=-1, run_mode=0,
+                                  residual_connection=0, max_query_len=-1,
+                                  num_computed_tokens=None, block_idx_first_scheduled_token=None,
+                                  block_idx_last_scheduled_token=None, initial_state_idx=None,
+                                  block_size=128, conv_mode="default"):
     return None
 
 
