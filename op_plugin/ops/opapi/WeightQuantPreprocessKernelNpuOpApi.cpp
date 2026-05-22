@@ -165,7 +165,7 @@ static void prepare_out_weight_nz(QuantContext& ctx)
         ctx.out_weight.unsafeGetTensorImpl()->set_sizes_contiguous(weight_view_shape);
     }
     
-    StorageDescHelper::SetDesc(ctx.out_weight, 
+    at_npu::native::StorageDescHelper::SetDesc(ctx.out_weight, 
         ctx.out_weight.sizes(), storage_shape, ctx.out_weight.strides(),
         static_cast<aclFormat>(OutWeightFormat));
 }
