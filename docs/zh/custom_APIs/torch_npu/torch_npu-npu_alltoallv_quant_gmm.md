@@ -111,7 +111,7 @@ torch_npu.npu_alltoallv_quant_gmm(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_sca
     - N2表示共享专家输出维度，取值范围\(0,65536\)。
     - e表示通信后每张卡上的专家数量，取值范围\(0,32\]。$e \times ep\_world\_size \le 256$。
     - A表示路由专家计算输出的总token数。$A=sum(recv\_counts)$。EP通信域内所有卡上的$A$累加和等于所有卡上的$BSK$累加和。
-    - 第$i$张卡发送到第$j$张卡数据量为`send_counts[j]`与第$j$张卡接收数据量为`recv_counts[i]`必须相等。
+    - 第$i$张卡发送到第$j$张卡的数据量（即`send_counts[j]`）与第$j$张卡接收的数据量（即`recv_counts[i]`）必须相等。
 - `gmm_x_quant_mode`、`gmm_weight_quant_mode`、`mm_x_quant_mode`、`mm_weight_quant_mode`值与量化模式关系如下：
     - 0：非量化
     - 1：pertensor
