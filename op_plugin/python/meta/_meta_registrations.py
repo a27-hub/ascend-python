@@ -7132,3 +7132,25 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
 
+@impl(m, "_npu_rms_norm_backward_quant")
+def _npu_rms_norm_backward_quant_meta(
+    dy, x, rstd, gamma, *, scale_x=None, offset_x=None,
+    div_mode=True, quant_mode="static", dst_type=2
+):
+    # dxOut: shape = dy.shape, dtype depends on scale_x and dst_type
+    ACL_INT8 = 2
+    ACL_HIFLOAT8 = 34
+    if scale_x is not None:
+        if dst_type == ACL_INT8:
+            dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
+        elif dst_type == ACL_HIFLOAT8:
+            dx_out = torch.empty(dy.shape, dtype=torch.uint8, device=dy.device)
+        else:
+            dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
+    else:
+        dx_out = torch.empty(dy.shape, dtype=dy.dtype, device=dy.device)
+
+    # dgammaOut: shape = gamma.shape, dtype = float32
+    dgamma_out = torch.empty(gamma.shape, dtype=torch.float32, device=gamma.device)
+
+    return (dx_out, dgamma_out)
