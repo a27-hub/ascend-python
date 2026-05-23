@@ -11841,7 +11841,7 @@ torch_npu.npu_fused_causal_conv1d_(x, weight, conv_states, *, query_start_loc=No
                                   residual_connection=0, max_query_len=-1,
                                   num_computed_tokens=None, block_idx_first_scheduled_token=None,
                                   block_idx_last_scheduled_token=None, initial_state_idx=None,
-                                  block_size=128, conv_mode="default") -> None
+                                  block_size=128, conv_mode="default") -> Tensor
 
 功能描述:
 对序列执行因果一维卷积（原地更新版本）。计算结果直接写回输入x，conv_states同时原地更新。
@@ -11851,7 +11851,7 @@ torch_npu.npu_fused_causal_conv1d_(x, weight, conv_states, *, query_start_loc=No
 参数与npu_fused_causal_conv1d完全一致，区别在于x也会被原地更新。
 
 输出说明:
-无返回值（None）。x被原地更新为卷积结果（含残差连接时包含原始x的残差），conv_states被原地更新为最新缓存状态。
+返回原地更新后的x。x被原地更新为卷积结果（含残差连接时包含原始x的残差），conv_states被原地更新为最新缓存状态。
 
 约束说明:
 同npu_fused_causal_conv1d。

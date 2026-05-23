@@ -5930,7 +5930,7 @@ def npu_fused_causal_conv1d__meta(x, weight, conv_states, *, query_start_loc=Non
                                   num_computed_tokens=None, block_idx_first_scheduled_token=None,
                                   block_idx_last_scheduled_token=None, initial_state_idx=None,
                                   block_size=128, conv_mode="default"):
-    return None
+    return x
 
 
 @impl(m, "npu_dequant_rope_quant_kvcache")
