@@ -133,7 +133,7 @@ at::Tensor npu_quant_reduce_scatter(const at::Tensor &x, const at::Tensor &scale
     TensorWrapper scales_wrapper = make_wrapper(scales, scales_dtype);
 
     // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
-    EXEC_NPU_CMD(aclnnQuantReduceScatter, x_wrapper, scales_wrapper, group_ptr, reduce_op_ptr, output_tensor);
+    EXEC_NPU_CMD(aclnnQuantReduceScatter, x_wrapper, scales_wrapper, group_ptr, reduce_op_ptr, world_size, output_tensor);
     return output_tensor;
 }
 
