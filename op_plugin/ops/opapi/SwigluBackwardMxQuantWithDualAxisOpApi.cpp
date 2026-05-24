@@ -35,9 +35,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
     int64_t dst_type,
     double dst_type_max)
 {
-    at::Tensor x_grad1;
+    at::Tensor y1_out;
     at::Tensor mxscale1;
-    at::Tensor x_grad2;
+    at::Tensor y2_out;
     at::Tensor mxscale2;
 
     TORCH_CHECK(x.dim() >= MIN_INPUT_DIM, "The input x should be at least 2D" + OPS_ERROR(ErrCode::PARAM));
@@ -54,7 +54,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
 
     char *round_mode_ptr = const_cast<char *>(round_mode.data());
 
-    // x_grad1 and x_grad2 have the same shape as x
+    // y1_out and y2_out have the same shape as x
     auto x_grad_shape = op_infer::array_to_small_vector(x.sizes());
 
     // Infer mxscale1 shape: ceil(last_dim / 64) + append 2
@@ -76,7 +76,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
 
     aclDataType x_acltype = c10_npu::GetAclDataType(dst_type);
     ASCEND_LOGI("[npu_swiglu_backward_mx_quant_with_dual_axis]: "
-        "Getting aclTensor x_grad1 and x_grad2 dtype by Parameter(dst_type): %ld", dst_type);
+        "Getting aclTensor y1_out and y2_out dtype by Parameter(dst_type): %ld", dst_type);
 
     bool special_output_type = (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
                                 dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
@@ -87,27 +87,27 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_swiglu_backward_m
                     "The last dim of x_grad must be divisible by 2 if dtype is float4_e2m1 or float4_e1m2"
                     + OPS_ERROR(ErrCode::PARAM));
         x_grad_shape[x_grad_shape.size() - 1] = x_last_dim_val / NUM_TWO;
-        x_grad1 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
-        x_grad2 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
+        y1_out = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
+        y2_out = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::ScalarType::Byte);
     } else {
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(x_acltype);
-        x_grad1 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
-        x_grad2 = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
+        y1_out = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
+        y2_out = npu_preparation::apply_tensor_without_format(x_grad_shape, c10::dtype(scalar_dtype));
     }
 
     mxscale1 = npu_preparation::apply_tensor_without_format(mxscale1_shape, c10::dtype(at::ScalarType::Byte));
     mxscale2 = npu_preparation::apply_tensor_without_format(mxscale2_shape, c10::dtype(at::ScalarType::Byte));
 
-    TensorWrapper x_grad1_wrapper = {x_grad1, x_acltype};
-    TensorWrapper x_grad2_wrapper = {x_grad2, x_acltype};
+    TensorWrapper y1_out_wrapper = {y1_out, x_acltype};
+    TensorWrapper y2_out_wrapper = {y2_out, x_acltype};
     TensorWrapper mxscale1_wrapper = {mxscale1, aclDataType::ACL_FLOAT8_E8M0};
     TensorWrapper mxscale2_wrapper = {mxscale2, aclDataType::ACL_FLOAT8_E8M0};
 
     EXEC_NPU_CMD(aclnnSwigluBackwardMxQuantWithDualAxis, x, y_grad, group_index_opt, activate_left,
                  round_mode_ptr, scale_alg, x_acltype, dst_type_max,
-                 x_grad1_wrapper, mxscale1_wrapper, x_grad2_wrapper, mxscale2_wrapper);
+                 y1_out_wrapper, mxscale1_wrapper, y2_out_wrapper, mxscale2_wrapper);
 
-    return std::make_tuple(x_grad1, mxscale1, x_grad2, mxscale2);
+    return std::make_tuple(y1_out, mxscale1, y2_out, mxscale2);
 }
 
 } // namespace op_api
