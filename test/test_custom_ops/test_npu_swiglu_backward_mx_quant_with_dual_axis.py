@@ -32,11 +32,11 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
 
         npu_output = self.npu_op_exec(x, y_grad, group_index)
 
-        x_grad1, mxscale1, x_grad2, mxscale2 = npu_output
+        y1_out, mxscale1, y2_out, mxscale2 = npu_output
 
-        # x_grad1 and x_grad2 have the same shape as x
-        self.assertEqual(x_grad1.shape, x.shape)
-        self.assertEqual(x_grad2.shape, x.shape)
+        # y1_out and y2_out have the same shape as x
+        self.assertEqual(y1_out.shape, x.shape)
+        self.assertEqual(y2_out.shape, x.shape)
         # mxscale1: [batch, ceil(last_dim/2 / 64), 2]
         self.assertEqual(mxscale1.shape[0], x.shape[0])
         self.assertEqual(mxscale1.shape[-1], 2)
