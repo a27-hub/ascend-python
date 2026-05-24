@@ -16,11 +16,6 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
 
-#include <cstdlib>
-#include <cstdint>
-
-#include <c10/util/Exception.h>
-
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
 namespace acl_op {
@@ -42,34 +37,6 @@ at::Tensor& stride_copy_out_npu_nocheck(
     const bool meta_match = at_npu::native::StorageDescHelper::MetaDataAreMatch(&result);
     const bool use_view_copy =
         (result.nbytes() < 32) && (!meta_match) && !prefer_as_strided_over_view_copy;
-    const char* trace_env = std::getenv("TORCH_NPU_TRACE_Q_VIEW_RAVEL");
-    if (trace_env != nullptr && trace_env[0] != '\0' && trace_env[0] != '0') {
-        TORCH_WARN(
-            "[TORCH_NPU_TRACE_Q_VIEW_RAVEL] stride_copy: nbytes=",
-            static_cast<int64_t>(result.nbytes()),
-            " dtype=",
-            result.scalar_type(),
-            " prefer_as_strided=",
-            prefer_as_strided_over_view_copy,
-            " meta_match=",
-            meta_match,
-            " path=",
-            use_view_copy ? "npu_view_copy" : "AsStrided",
-            " shape=",
-            shape,
-            " stride=",
-            stride,
-            " storage_offset=",
-            storage_offset,
-            " self_tensor_data_ptr=",
-            reinterpret_cast<uintptr_t>(self.data_ptr()),
-            " self_storage_data_ptr=",
-            reinterpret_cast<uintptr_t>(self.storage().data_ptr().get()),
-            " result_tensor_data_ptr=",
-            reinterpret_cast<uintptr_t>(result.data_ptr()),
-            " result_storage_data_ptr=",
-            reinterpret_cast<uintptr_t>(result.storage().data_ptr().get()));
-    }
     if (use_view_copy) {
         // [算子限制] 对于1. 小于一个block的数据搬运 2.result不match，Astrided暂不支持。
         acl_op::npu_view_copy(result, self, false);
