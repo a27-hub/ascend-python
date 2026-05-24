@@ -30,7 +30,14 @@ at::Tensor& stride_copy_out_npu_nocheck(
     at::IntArrayRef stride,
     at::Scalar storage_offset)
 {
-    if ((result.nbytes() < 32) && (!at_npu::native::StorageDescHelper::MetaDataAreMatch(&result))) {
+    // Quantized contiguous clone copies int_repr dtypes (often 1-byte integer); nbytes is often < 32.
+    const bool prefer_as_strided_over_view_copy =
+        at::isIntegralType(result.scalar_type(), /*includeBool=*/false) &&
+        result.element_size() <= 1;
+    const bool meta_match = at_npu::native::StorageDescHelper::MetaDataAreMatch(&result);
+    const bool use_view_copy =
+        (result.nbytes() < 32) && (!meta_match) && !prefer_as_strided_over_view_copy;
+    if (use_view_copy) {
         // [算子限制] 对于1. 小于一个block的数据搬运 2.result不match，Astrided暂不支持。
         acl_op::npu_view_copy(result, self, false);
         return result;
