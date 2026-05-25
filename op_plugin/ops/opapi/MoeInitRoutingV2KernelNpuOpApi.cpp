@@ -35,6 +35,7 @@ constexpr int64_t QUANT_MODE_HIF8_PER_TOKEN_DIM = 8;
 constexpr int64_t QUANT_MODE_MXFP4_E2M1 = 9;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
+constexpr int64_t INT4_NUMS_IN_INT8 = 2;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
@@ -52,6 +53,16 @@ inline bool IsQuantModeMXFP8(int64_t quantMode) {
 
 inline bool IsQuantModeHIF8(int64_t quantMode) {
     return quantMode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
+}
+
+inline bool IsInt4Dtype(c10::optional<int64_t> dtype) {
+    return dtype.has_value() &&
+           (dtype.value() == static_cast<int64_t>(c10_npu::DType::INT4) ||
+            dtype.value() == static_cast<int64_t>(at::ScalarType::QUInt4x2));
+}
+
+inline bool IsDynamicQuantInt4Output(int64_t quantMode, c10::optional<int64_t> xDtype) {
+    return quantMode == QUANT_MODE_DYNAMIC && IsInt4Dtype(xDtype);
 }
 
 namespace op_api {
@@ -129,13 +140,41 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 
     int bs = x_size[0];
     int h = x_size[1];
-    aclDataType x_acl_type = c10_npu::GetAclDataType(x_dtype.value_or(static_cast<int64_t>(x.scalar_type())));
+    bool is_dynamic_int4_output = IsDynamicQuantInt4Output(quant_mode, x_dtype);
+    aclDataType x_acl_type = IsInt4Dtype(x_dtype) ? aclDataType::ACL_INT4 :
+        c10_npu::GetAclDataType(x_dtype.value_or(static_cast<int64_t>(x.scalar_type())));
     if (x_acl_type == aclDataType::ACL_FLOAT4_E2M1) {
         h = h * 2;
     }
     int k = expert_idx_size[1];
     // more suitable cases for v2
     bool using_v2 = CheckV2Case(h, expert_num, active_expert_range, expert_tokens_num_type, quant_mode);
+
+    if (is_dynamic_int4_output) {
+        TORCH_CHECK(drop_pad_mode == 0,
+            "INT4 dynamic quantization of npu_moe_init_routing_v2 only supports drop_pad_mode=0.",
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
+            "INT4 dynamic quantization of npu_moe_init_routing_v2 only supports float32 or bfloat16 x.",
+            OPS_ERROR(ErrCode::TYPE));
+        TORCH_CHECK(!p_offset.defined(),
+            "INT4 dynamic quantization of npu_moe_init_routing_v2 does not support offset.",
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(bs % INT4_NUMS_IN_INT8 == 0,
+            "INT4 dynamic quantization of npu_moe_init_routing_v2 requires x.size(0) to be even.",
+            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(h % INT4_NUMS_IN_INT8 == 0,
+            "INT4 dynamic quantization of npu_moe_init_routing_v2 requires x.size(1) to be even.",
+            OPS_ERROR(ErrCode::PARAM));
+        if (p_scale.defined()) {
+            TORCH_CHECK(p_scale.dim() == DIM_X && p_scale.size(0) == 1 && p_scale.size(1) == h,
+                "INT4 dynamic quantization of npu_moe_init_routing_v2 only supports scale shape (1, x.size(1)).",
+                OPS_ERROR(ErrCode::PARAM));
+            TORCH_CHECK(p_scale.scalar_type() == at::kFloat,
+                "INT4 dynamic quantization of npu_moe_init_routing_v2 only supports float32 scale.",
+                OPS_ERROR(ErrCode::TYPE));
+        }
+    }
 
     int64_t expanded_scale_len = 0;
     at::Tensor expanded_x;
@@ -166,8 +205,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #endif
             case QUANT_MODE_STATIC:
             case QUANT_MODE_DYNAMIC:
-                expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                if (is_dynamic_int4_output) {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h / INT4_NUMS_IN_INT8}, x.options().dtype(at::kByte));
+                } else {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h}, x.options().dtype(at::kChar));
+                }
                 break;
             case QUANT_MODE_HIF8_CAST:
             case QUANT_MODE_HIF8_PERTENSOR:
@@ -272,6 +316,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
+    } else if (is_dynamic_int4_output) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_INT4;
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     } else if (IsQuantModeMXFP4(quant_mode)) {

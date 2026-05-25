@@ -62,6 +62,7 @@ TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP = {
 
 
 TORCH_NPU_DTYPE_TO_STRING_MAP = {
+    285: "torch_npu.int4",
     290: "torch_npu.hifloat8",
     293: "torch_npu.float8_e8m0fnu",
     296: "torch_npu.float4_e2m1fn_x2",
@@ -1464,7 +1465,30 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     ALIGN_BASE = 64
     THREE_DIM_NUM = 3
     MXFPX_SCALE_THIRD_DIM_SIZE = 2
+    INT4_IN_UINT8 = 2
     is_float4_case = (hasattr(torch, 'float4_e2m1fn_x2') and x.dtype == torch.float4_e2m1fn_x2) or x_dtype == torch_npu.float4_e2m1fn_x2
+    is_dynamic_int4_output = quant_mode == 1 and x_dtype in [torch_npu.int4, torch.quint4x2]
+    if is_dynamic_int4_output:
+        torch._check(
+            drop_pad_mode == 0,
+            lambda: "INT4 dynamic quantization only supports drop_pad_mode=0" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            x.dtype in [torch.float32, torch.bfloat16],
+            lambda: "INT4 dynamic quantization only supports float32 or bfloat16 x" + ops_error(ErrCode.TYPE),
+        )
+        torch._check(
+            offset is None,
+            lambda: "INT4 dynamic quantization does not support offset" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            x.size(0) % INT4_IN_UINT8 == 0,
+            lambda: "INT4 dynamic quantization requires x.size(0) to be even" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            x.size(1) % INT4_IN_UINT8 == 0,
+            lambda: "INT4 dynamic quantization requires x.size(1) to be even" + ops_error(ErrCode.VALUE),
+        )
     if scale is not None:
         scale_dim = scale.dim()
         if quant_mode == -1:
@@ -1521,18 +1545,36 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     lambda: "the 1st dim of offset and the 1st dim of scale should be the same" + ops_error(ErrCode.VALUE),
                 )
         elif quant_mode == 1:
-            torch._check(
-                scale_dim == 2,
-                lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
-            )
-            torch._check(
-                scale.size(0) in [expert_range_length, 1],
-                lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
-            )
-            torch._check(
-                x.size(1) == scale.size(1),
-                lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
-            )
+            if is_dynamic_int4_output:
+                torch._check(
+                    scale_dim == 2,
+                    lambda: "the scale shape support only 2D in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    scale.size(0) == 1,
+                    lambda: "the first dim of scale must be 1 in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    scale.dtype == torch.float32,
+                    lambda: "the scale dtype must be float32 in INT4 dynamic quant mode" + ops_error(ErrCode.TYPE),
+                )
+                torch._check(
+                    x.size(1) == scale.size(1),
+                    lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
+                )
+            else:
+                torch._check(
+                    scale_dim == 2,
+                    lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    scale.size(0) in [expert_range_length, 1],
+                    lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
+                )
+                torch._check(
+                    x.size(1) == scale.size(1),
+                    lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
+                )
         if quant_mode == 7:
             torch._check(
                 scale_dim == 1,
@@ -1550,7 +1592,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     expanded_scale_dtype = torch.float32
     if x_dtype == torch_npu.hifloat8:
         expanded_x_dtype = torch.uint8
-    if quant_mode in [0, 1]:
+    if is_dynamic_int4_output:
+        expanded_x_dtype = torch.uint8
+    elif quant_mode in [0, 1]:
         expanded_x_dtype = torch.int8
     elif quant_mode == 2:
         expanded_x_dtype = torch.float8_e5m2
@@ -1581,6 +1625,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         elif quant_mode == -1 and (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn or is_float4_case) and scale is not None:
             scale_cols = (h + ALIGN_BASE - 1) // ALIGN_BASE
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
+        elif is_dynamic_int4_output:
+            expanded_x_dim_list = [num_expanded_rows, x.size(1) // INT4_IN_UINT8]
+            expanded_scale_dim_list = [num_expanded_rows]
         elif quant_mode in [-1, 1, 8]: # quant_mode in [-1, 1, 8]
             expanded_scale_dim_list = [num_expanded_rows]
         elif quant_mode == 9:
@@ -7050,4 +7097,3 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
-
