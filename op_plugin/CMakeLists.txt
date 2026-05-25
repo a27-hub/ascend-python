@@ -1,3 +1,4 @@
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (NOT DEFINED TORCH_VERSION)
     message(FATAL_ERROR "torch version is not defined.")
 endif()
