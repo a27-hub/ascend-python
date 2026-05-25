@@ -1,4 +1,4 @@
-# torch_npu.npu_grouped_matmul_swiglu_quant_v2
+﻿# torch_npu.npu_grouped_matmul_swiglu_quant_v2
 
 ## 产品支持情况
 
@@ -181,8 +181,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - **weight**（`TensorList`）：必选输入，权重矩阵（矩阵乘法右矩阵），对应公式中的$W$。目前仅支持TensorList长度为1。shape支持3维[e,k,n]（$ND$格式）或5维NZ格式，数据格式支持$ND$和FRACTAL_NZ（通过接口npu\_format\_cast，可实现格式转换），支持非连续的Tensor。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-    - 数据类型支持`int8`
-    - A8W8场景下，weight仅支持NZ格式（FRACTAL\_NZ），不支持$ND$数据格式。`int32`为A8W4和A4W4场景下的适配用途，实际1个`int32`会被解释为8个int4数据。
+    - 数据类型支持`int8`。`int32`为A8W4和A4W4场景下的适配用途，实际1个`int32`会被解释为8个int4数据。
+    - A8W8场景下，weight仅支持NZ格式（FRACTAL\_NZ），不支持$ND$数据格式。
   - <term>Atlas 350 加速卡</term>：
     - 数据格式为ND时，shape支持3维，非转置shape\[\[e, k, n\]\]，转置shape\[\[e, n, k\]\]。数据类型支持torch.float8\_e5m2、torch.float8\_e4m3fn、torch\_npu.float4\_e2m1fn\_x2、torch.int8、torch\_npu.hifloat8，其中torch\_npu.hifloat8和float4系列需配置可选参数weight\_dtype为对应类型，此时weight本身的dtype不再生效，但仍需保证weight本身的dtype为8bit位的数据类型，以保证shape正确；其中float4内轴需为偶数，以保证8bits可以转换为2个float4。
     - 数据格式为FRACTAL\_NZ\(通过接口npu\_format\_cast，可实现格式转换\)时，shape支持5维，非转置shape\[e, n/32, k/16, 16, 32\], 转置shape\[e, k/32, n/16, 16, 32\]；数据类型仅支持torch.float8\_e4m3fn。
@@ -220,21 +220,21 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     - 取值为1时，表示count模式，`group_list`中的每个元素代表该分组包含多少元素。
 - **tuning\_config**（`List[int]`）：可选输入，参数数组中的第一个元素表示各个专家处理的token数的预期值。从第二个元素开始预留，用户无须填写，未来会进行扩展。默认设置为None。
 
--   **x\_dtype**（int）：可选参数，指定输入x的真实数据类型。当前仅支持默认值None，表示输入x真实的数据类型与输入x的dtype相同。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> ：暂不支持该参数，使用默认值。
-    -  <term>Atlas 350 加速卡</term>：当x为float4\_e2m1fn\_x2、hifloat8时，x\_dtype需要传入torch\_npu.float4\_e2m1fn\_x2、torch\_npu.hifloat8。
+- **x\_dtype**（int）：可选参数，指定输入x的真实数据类型。当前仅支持默认值None，表示输入x真实的数据类型与输入x的dtype相同。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Atlas 350 加速卡</term>：当x为float4\_e2m1fn\_x2、hifloat8时，x\_dtype需要传入torch\_npu.float4\_e2m1fn\_x2、torch\_npu.hifloat8。
 
--   **weight\_dtype**（int）：可选参数，指定输入weight的真实数据类型。当前仅支持默认值None，表示输入weight真实的数据类型与输入weight的dtype相同。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  ：暂不支持该参数，使用默认值。
-    -  <term>Atlas 350 加速卡</term>：当weight为float4\_e2m1fn\_x2、hifloat8时，weight\_dtype需要传入torch\_npu.float4\_e2m1fn\_x2、torch\_npu.hifloat8。
+- **weight\_dtype**（int）：可选参数，指定输入weight的真实数据类型。当前仅支持默认值None，表示输入weight真实的数据类型与输入weight的dtype相同。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Atlas 350 加速卡</term>：当weight为float4\_e2m1fn\_x2、hifloat8时，weight\_dtype需要传入torch\_npu.float4\_e2m1fn\_x2、torch\_npu.hifloat8。
 
--   **weight\_scale\_dtype**（int）：可选参数，指定输入weight\_scale的真实数据类型。默认值None，表示输入weight\_scale真实的数据类型与输入weight\_scale的dtype相同。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  ：暂不支持该参数，使用默认值。
-    -  <term>Atlas 350 加速卡</term>：当weight\_scale为float8\_e8m0fnu时，weight\_scale\_dtype需要传入torch\_npu.float8\_e8m0fnu。
+- **weight\_scale\_dtype**（int）：可选参数，指定输入weight\_scale的真实数据类型。默认值None，表示输入weight\_scale真实的数据类型与输入weight\_scale的dtype相同。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Atlas 350 加速卡</term>：当weight\_scale为float8\_e8m0fnu时，weight\_scale\_dtype需要传入torch\_npu.float8\_e8m0fnu。
 
--   **x\_scale\_dtype**（int）：可选参数，指定输入x\_scale的真实数据类型。默认值None，表示输入x\_scale真实的数据类型与输入x\_scale的dtype相同。
-    -   <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  ：暂不支持该参数，使用默认值。
-    -   <term>Atlas 350 加速卡</term>：当x\_scale为float8\_e8m0fnu时，x\_scale\_dtype需要传入torch\_npu.float8\_e8m0fnu。
+- **x\_scale\_dtype**（int）：可选参数，指定输入x\_scale的真实数据类型。默认值None，表示输入x\_scale真实的数据类型与输入x\_scale的dtype相同。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：暂不支持该参数，使用默认值。
+  - <term>Atlas 350 加速卡</term>：当x\_scale为float8\_e8m0fnu时，x\_scale\_dtype需要传入torch\_npu.float8\_e8m0fnu。
 
 ## 返回值说明
 
@@ -309,35 +309,35 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 ## 调用示例
 
-- 单算子模式调用
+- 单算子模式调用：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-      ```python
-      import numpy as np
-      import torch
-      import torch_npu
-      from scipy.special import softmax
-      
-      torch.npu.config.allow_internal_format = True
-      
-      def gen_input_data(E, M, K, N):
-          x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
-          weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8)
-          weightScale = torch.randn(E, N)
-          xScale = torch.randn(M)
-          groupList = torch.tensor([128, 128], dtype=torch.int64)
-          return x, weight, weightScale, xScale, groupList    
-      E = 2
-      M = 512
-      K = 7168
-      N = 4096
-      x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
-      weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
-      output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu())
-      ```
+    ```python
+    import numpy as np
+    import torch
+    import torch_npu
+    from scipy.special import softmax
+
+    torch.npu.config.allow_internal_format = True
+
+    def gen_input_data(E, M, K, N):
+        x = torch.randint(-128, 127, (M, K), dtype=torch.int8)
+        weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8)
+        weightScale = torch.randn(E, N)
+        xScale = torch.randn(M)
+        groupList = torch.tensor([128, 128], dtype=torch.int64)
+        return x, weight, weightScale, xScale, groupList
+    E = 2
+    M = 512
+    K = 7168
+    N = 4096
+    x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
+    weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
+    output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu())
+    ```
   
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp4
 
-    ```
+    ```python
     import numpy as np
     import torch
     import torch_npu
@@ -373,7 +373,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp4
 
-    ```
+    ```python
     import numpy as np
     import torch
     import torch_npu
@@ -409,7 +409,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Atlas 350 加速卡</term>：Pertoken量化场景示例
 
-    ```
+    ```python
     import numpy as np
     import torch
     import torch_npu
@@ -478,7 +478,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     ```
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp8
 
-    ```
+    ```python
     import os
     import unittest
     import itertools
@@ -551,7 +551,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp4
 
-    ```
+    ```python
     import os
     import torch
     import torch.nn as nn
@@ -672,7 +672,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
   - <term>Atlas 350 加速卡</term>：Pertoken量化场景示例
 
-    ```
+    ```python
     import os
     import unittest
     import itertools
