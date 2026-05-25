@@ -104,7 +104,16 @@ std::vector<at::Tensor> _foreach_add(const at::TensorList self, const at::Scalar
     if (!at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
     }
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
+    }
     auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_scalar_kernel_slow(self, scalar);
+    }
 
     std::vector<at::Tensor> result;
     result.reserve(self.size());
@@ -132,7 +141,16 @@ void _foreach_add_(const at::TensorList self, const at::Scalar& scalar)
     if (!at::native::can_use_fast_route(self, scalar, false)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
     }
-
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
+    }
+    auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_scalar_kernel_slow_(self, scalar);
+    }
     _split_and_exec_npu_cmd_add_scalar(self, scalar, self, true);
 }
 }
