@@ -35,7 +35,6 @@
           $C_{i,act}, gate_{i} = split(C_{i})$
 
           $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
-
         3. 量化输出结果：
 
           $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
@@ -62,7 +61,6 @@
         2. 将左矩阵int8拆为高低4bit两部分：
 
           $X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8$
-
         3. 分别与权重做矩阵乘并应用per-channel或per-group量化缩放，合并高低位结果：
 
           $C_{i} = (C\_high_{i} * 16 + C\_low_{i} + weightAssistMatrix_{i}) \odot x\_scale_{i}$
@@ -70,7 +68,6 @@
           $C_{i,act}, gate_{i} = split(C_{i})$
 
           $S_{i}=Swish(C_{i,act})\odot gate_{i}$，其中$Swish(x)=\frac{x}{1+e^{-x}}$
-
         4. 量化输出结果：
 
           $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
@@ -105,7 +102,6 @@
           $S_{i} = S_{i} \odot smoothScale_{i\ Broadcast}$
 
           注：当smoothScale形状为(E,)时，会对其进行广播，使其与$S_{i}$的形状匹配。
-
         3. 量化输出结果：
 
           $Q\_scale_{i} = \frac{max(|S_{i}|)}{127}$
@@ -311,6 +307,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - 单算子模式调用：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+
     ```python
     import numpy as np
     import torch
@@ -438,6 +435,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
 
 - 图模式调用：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+
     ```python
     import numpy as np
     import torch
@@ -476,6 +474,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     y = model(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu(), quant_dtype)
     ```
+
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp8
 
     ```python
