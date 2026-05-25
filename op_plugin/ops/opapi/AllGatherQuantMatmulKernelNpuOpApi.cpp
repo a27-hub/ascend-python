@@ -108,8 +108,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_all_gather_quant_mm(
                                       (x2_scale_dtype.has_value())
                                           ? c10_npu::GetAclDataType(x2_scale_dtype.value())
                                           : npu_preparation::convert_to_acl_data_type(x2_scale_scalar_dtype)};
-    c10::string_view comm_mode_value = comm_mode.value_or("aicpu");
-    char *comm_mode_ptr = const_cast<char *>(comm_mode_value.data());
+    char *comm_mode_ptr = "aicpu";
+    if(!comm_mode.has_value()){
+        // 自适应处理，world_size小于等于8p走ccu，大于8p走aicpu
+        if(world_size <= 8) {
+            comm_mode_ptr = "ccu";
+            std::cout << "自适应处理，world_size小于等于8p走ccu, comm_mode_value=" << comm_mode_value << std::endl;
+        }
+    }
+    comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
     EXEC_NPU_CMD(aclnnAllGatherMatmulV2, x1_wrapper, x2_wrapper, bias_value, x1_scale_wrapper, x2_scale_wrapper,
                  quant_scale_value, block_size, hcom_value, gather_index, comm_turn, stream_mode, group_size, comm_mode_ptr,
                  y, gather_out_wrapper, amax);
