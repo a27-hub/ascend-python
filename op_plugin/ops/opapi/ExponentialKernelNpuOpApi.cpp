@@ -17,11 +17,31 @@
 #include <limits>
 #include "op_plugin/OpApiInterface.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
+#include "op_plugin/utils/RandomUtil.h"
 
 namespace op_api {
 
 at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Generator> generator)
 {
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && self.scalar_type() != at::kDouble) {
+        TORCH_CHECK(lambd > 0.0, "npu_sim_exponential_ expects lambd > 0.0, but found lambd=",
+        lambd, OPS_ERROR(ErrCode::PARAM));
+        if (std::isinf(lambd)) {
+            self.zero_();
+            return self;
+        }
+
+        auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
+        auto counter_offset = op_plugin::utils::calc_final_counter_offset(self, 0, 1, generator) // unroll固定为4，这里form和to随便给两个值让unroll为4即可
+        auto pair = gen->philox_engine_inputs(counter_offset);
+        int64_t seed = static_cast<int64_t>(pair.first);
+        int64_t offset = static_cast<int64_t>(pair.second);
+        int64_t count = self.numel();
+        ASCEND_LOGI("count:%lld, lambd:%lf, seed:%lld, offset:%lld", count, lambd, seed, offset);
+
+        EXEC_NPU_CMD(aclnnSimThreadExponential, self, count, lambd, seed, offset);
+        return self;
+    }
     TORCH_CHECK(lambd > 0.0, "exponential_ expects lambd > 0.0, but found lambd=",
         lambd, OPS_ERROR(ErrCode::PARAM));
     if (std::isinf(lambd)) {
