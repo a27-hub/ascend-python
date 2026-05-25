@@ -41,7 +41,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_rms_norm_backward_quant(
     char *quant_mode_ptr = const_cast<char *>(quant_mode_str.c_str());
 
     // Convert dst_type to aclDataType
-    aclDataType dx_acltype = static_cast<aclDataType>(dst_type);
+    aclDataType dx_acltype = dst_type.has_value() ? static_cast<aclDataType>(dst_type) : aclDataType::ACL_INT8;
 
     // dgamma_out: always FLOAT32, shape = gamma.shape
     at::Tensor dgamma_out = npu_preparation::apply_tensor_with_format(
