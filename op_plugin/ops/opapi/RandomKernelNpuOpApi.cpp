@@ -20,6 +20,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/utils/RandomUtil.h"
 #include "torch_npu/csrc/core/npu/NPUGraphsUtils.h"
 
 namespace op_api {
@@ -56,97 +57,6 @@ int64_t get_dtype_max_value(at::ScalarType dtype)
     TORCH_CHECK(iter != DTYPE_MAX_VALUE_MAP.end(),
                 "self scalar_type:", dtype, "is not surpported.", OPS_ERROR(ErrCode::TYPE));
     return iter->second;
-}
-
-static const int64_t BLOCK_SIZE = 256;
-static const int64_t MAX_THREADS_PER_MULTI_PROCESSOR = 2048;
-static const int64_t MAX_PROCESSOR_COUNT = 78;
-static const int64_t UNROLL_2 = 2;
-static const int64_t UNROLL_4 = 4;
-static const int64_t RAND_OFFSET_PER_CALL = 4;
-static const int64_t INT32_MAX_VALUE = 2147483647LL;
-static const int64_t MAX_DIMS = 8;
-static const int64_t RAND_INT64_THRESHOLD = 268435456LL;
-
-struct TensorIterInfo {
-    int64_t shape[MAX_DIMS];
-    int64_t strides[MAX_DIMS];
-    int64_t ndim;
-    int64_t numel;
-    int64_t elementSize;
-    int unroll;
-    
-    TensorIterInfo() : ndim(0), numel(0), elementSize(0), unroll(UNROLL_4) {
-        for (int i = 0; i < MAX_DIMS; i++) {
-            shape[i] = 1;
-            strides[i] = 0;
-        }
-    }
-    
-    bool CanUse32BitIndexing() const {
-        if (numel > INT32_MAX_VALUE) {
-            return false;
-        }
-        int64_t maxOffset = 1;
-        for (int64_t i = 0; i < ndim; i++) {
-            if (shape[i] > 1) {
-                maxOffset += (shape[i] - 1) * std::abs(strides[i]) * elementSize;
-            }
-        }
-        return maxOffset <= INT32_MAX_VALUE;
-    }
-    
-    int64_t GetDimToSplit() const {
-        int64_t maxExtent = -1;
-        int64_t splitDim = -1;
-        for (int64_t dim = ndim - 1; dim >= 0; dim--) {
-            if (shape[dim] >= 2) {
-                int64_t extent = (shape[dim] - 1) * std::abs(strides[dim]) * elementSize;
-                if (extent > maxExtent) {
-                    maxExtent = extent;
-                    splitDim = dim;
-                }
-            }
-        }
-        return splitDim;
-    }
-    
-    void Narrow(int64_t dim, int64_t start, int64_t size) {
-        if (dim < 0 || dim >= ndim || size < 1) {
-            return;
-        }
-        numel = numel / shape[dim] * size;
-        shape[dim] = size;
-    }
-};
-
-inline int64_t CalcCounterOffset(int64_t nelem, int unroll) {
-    unsigned int blocksPerSm = MAX_THREADS_PER_MULTI_PROCESSOR / BLOCK_SIZE;
-    unsigned int gridX = (nelem + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    gridX = std::min((unsigned int)MAX_PROCESSOR_COUNT * blocksPerSm, gridX);
-    return ((nelem - 1) / (BLOCK_SIZE * gridX * unroll) + 1) * RAND_OFFSET_PER_CALL;
-}
-
-inline int64_t CalcSplitCounterOffset(const TensorIterInfo& iter) {
-    if (iter.CanUse32BitIndexing()) {
-        return CalcCounterOffset(iter.numel, iter.unroll);
-    }
-    
-    TensorIterInfo cur = iter;
-    int64_t splitDim = cur.GetDimToSplit();
-    if (splitDim < 0) {
-        return CalcCounterOffset(iter.numel, iter.unroll);
-    }
-    
-    int64_t leftSize = cur.shape[splitDim] / 2;
-    int64_t rightSize = cur.shape[splitDim] - leftSize;
-    
-    TensorIterInfo left = cur;
-    left.Narrow(splitDim, 0, leftSize);
-    
-    cur.Narrow(splitDim, leftSize, rightSize);
-    
-    return CalcSplitCounterOffset(left) + CalcSplitCounterOffset(cur);
 }
 
 #define CHECK_OUT_OF_BOUNDS(var, name, min, max, dtype) \
@@ -210,28 +120,13 @@ at::Tensor& random_op_api_(at::Tensor& self, int64_t from, int64_t to, c10::opti
     check_random_bounds(self.dtype(), from, to);
     auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
-
-    TensorIterInfo iterInfo;
-    iterInfo.ndim = self.dim();
-    iterInfo.numel = self.numel();
-    iterInfo.elementSize = self.itemsize();
-    iterInfo.unroll = ((to - from) >= RAND_INT64_THRESHOLD) ? UNROLL_2 : UNROLL_4;
-    for (int64_t i = 0; i < iterInfo.ndim && i < MAX_DIMS; i++) {
-        iterInfo.shape[i] = self.size(i);
-        iterInfo.strides[i] = self.stride(i);
-    }
-    
-    int64_t counterOffset = CalcCounterOffset(iterInfo.numel, iterInfo.unroll);
-    if (!iterInfo.CanUse32BitIndexing()) {
-        counterOffset += CalcSplitCounterOffset(iterInfo);
-    }
-
+    auto counter_offset = calc_final_counter_offset(self, from, to, generator)
     if (is_capture == c10_npu::CaptureStatus::None) {
-        auto pair = gen->philox_engine_inputs(counterOffset);
+        auto pair = gen->philox_engine_inputs(counter_offset);
         EXEC_NPU_CMD(aclnnInplaceRandom, self, from, to, pair.first, pair.second);
     } else {
 #if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
-        auto gen_state_ = gen->philox_npu_state(counterOffset);
+        auto gen_state_ = gen->philox_npu_state(counter_offset);
         const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
         const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
         const uint64_t offset_intragraph = gen_state_.offset_intragraph_;
@@ -245,28 +140,13 @@ at::Tensor& random_without_from_to_op_api_(at::Tensor& self, c10::optional<at::G
 {
     auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
-
-    TensorIterInfo iterInfo;
-    iterInfo.ndim = self.dim();
-    iterInfo.numel = self.numel();
-    iterInfo.elementSize = self.itemsize();
-    iterInfo.unroll = (self.scalar_type() == at::kLong) ? UNROLL_2 : UNROLL_4;
-    for (int64_t i = 0; i < iterInfo.ndim && i < MAX_DIMS; i++) {
-        iterInfo.shape[i] = self.size(i);
-        iterInfo.strides[i] = self.stride(i);
-    }
-    
-    int64_t counterOffset = CalcCounterOffset(iterInfo.numel, iterInfo.unroll);
-    if (!iterInfo.CanUse32BitIndexing()) {
-        counterOffset += CalcSplitCounterOffset(iterInfo);
-    }
-
+    auto counter_offset = calc_final_counter_offset(self, from, to, generator)
     if (is_capture == c10_npu::CaptureStatus::None) {
-        auto pair = gen->philox_engine_inputs(counterOffset);
+        auto pair = gen->philox_engine_inputs(counter_offset);
         EXEC_NPU_CMD(aclnnInplaceRandomWithoutFromTo, self, pair.first, pair.second);
     } else {
 #if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
-        auto gen_state_ = gen->philox_npu_state(counterOffset);
+        auto gen_state_ = gen->philox_npu_state(counter_offset);
         const at::Tensor* seed_ptr = gen_state_.seed_.ptr;
         const at::Tensor* offset_ptr = gen_state_.offset_.ptr;
         const uint64_t offset_intragraph = gen_state_.offset_intragraph_;
