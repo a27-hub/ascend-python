@@ -15,6 +15,7 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/UtilForOpAdapter.h"
+#include "op_plugin/utils/custom_functions/opapi/scalar_op_api.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -59,8 +60,14 @@ std::vector<at::Tensor> _foreach_mul(at::TensorList tensors1, at::TensorList ten
     if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_mul_list_kernel_slow(tensors1, tensors2);
     }
-    // construct the output tensorlist of the NPU
     auto scalar_type = tensors1[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_mul_list_kernel_slow(tensors1, tensors2);
+    }
+    // construct the output tensorlist of the NPU
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors1) {
         auto output_size = op_infer::input_same_output_size(tensor);
@@ -86,7 +93,13 @@ void _foreach_mul_(at::TensorList tensors1, at::TensorList tensors2)
     if (!at::native::can_use_fast_route(tensors1, tensors2, false)) {
         return at::native::foreach_tensor_mul_list_kernel_slow_(tensors1, tensors2);
     }
-
+    auto scalar_type = tensors1[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_mul_list_kernel_slow_(tensors1, tensors2);
+    }
     _split_and_exec_npu_cmd_mul(tensors1, tensors2, tensors1, true);
     return;
 }
@@ -96,14 +109,18 @@ void _split_and_exec_npu_cmd_mul_scalarlist(at::TensorList &tensors1, at::ArrayR
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 24 : 16;
     size_t loop_time = tensor_count / max_tensor_count;
-
+    std::vector<at::Scalar> adapted_scalars(scalars.size());
+    for (size_t i = 0; i < scalars.size(); i++) {
+        adapted_scalars[i] = op_api::adaptToDouble(scalars[i], tensors1);
+    }
+    at::ArrayRef<at::Scalar> adapted_scalars_ref(adapted_scalars.data(), adapted_scalars.size());
     if (tensor_count <= max_tensor_count) {
-        EXEC_NPU_CMD(aclnnForeachMulScalarList, tensors1, scalars, result_list);
+        EXEC_NPU_CMD(aclnnForeachMulScalarList, tensors1, adapted_scalars_ref, result_list);
         return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + i * max_tensor_count, max_tensor_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
         EXEC_NPU_CMD(aclnnForeachMulScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -111,7 +128,7 @@ void _split_and_exec_npu_cmd_mul_scalarlist(at::TensorList &tensors1, at::ArrayR
     size_t remaining_count = tensor_count % max_tensor_count;
     if (remaining_count != 0) {
         at::TensorList temp_tensors1(tensors1.data() + loop_time * max_tensor_count, remaining_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + loop_time * max_tensor_count, remaining_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + loop_time * max_tensor_count, remaining_count);
         at::TensorList temp_result(result_list.data() + loop_time * max_tensor_count, remaining_count);
         EXEC_NPU_CMD(aclnnForeachMulScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -132,8 +149,13 @@ std::vector<at::Tensor> _foreach_mul(at::TensorList tensors, at::ArrayRef<at::Sc
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars);
     }
-
     auto scalar_type = tensors[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_mul_scalarlist_kernel_slow(tensors, scalars);
+    }
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
@@ -155,7 +177,13 @@ void _foreach_mul_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars);
     }
-
+    auto scalar_type = tensors[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_mul_scalarlist_kernel_slow_(tensors, scalars);
+    }
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(tensors, scalars);
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
