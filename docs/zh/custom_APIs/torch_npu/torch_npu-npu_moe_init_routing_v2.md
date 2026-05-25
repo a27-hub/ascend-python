@@ -637,32 +637,21 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
     expert_idx在active_expert_range范围且剔除对应expert处理token为0的元素对为有效元素对，存放于Tensor头部并保持原序。数据类型支持`int64`，数据格式要求为$ND$。
 - **expanded_scale** (`Tensor`)：数据类型支持`float32`，数据格式要求为$ND$。输出shape为`expert_idx`的shape去掉最后一维之后所有维度的乘积。令available_idx_num为`active_expert_range`范围的元素的个数。
-    - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
-    - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
-    - 静态量化场景下不输出。
-    - **Atlas 推理系列产品**：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示 drop 之前每个专家处理的 token 数量的统计结果。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品/Atlas A3 训练系列产品/Atlas A3 推理系列产品：
+        - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
+        - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
+        - 静态量化场景下不输出。
+    - **Atlas 推理系列产品**：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
+Atlas A2训练系列产品/Atlas A2推理系列产品/Atlas A3训练系列产品/Atlas A3推理系列产品：
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
-
-### Atlas 推理系列产品特有约束
-
-Atlas 推理系列产品在该接口上有以下特殊约束：
-
-- **输入x的数据类型**：仅支持 `float16` 和 `float32`，不支持 `bfloat16`。
-- **量化模式**：仅支持非量化场景（`quant_mode=-1`），不支持静态量化（`quant_mode=0`）、动态量化（`quant_mode=1`）及 MXFP8/HIF8 等量化模式。
-- **drop_pad 模式**：仅支持 dropless 场景（`drop_pad_mode=0`），不支持 drop_pad 场景（`drop_pad_mode=1`）。运行时无论入参 `drop_pad_mode` 为何值，均会被强制置为 0。
-- **expert_capacity 参数**：运行时无论入参 `expert_capacity` 为何值，均会被强制置为 0。
-- **expert_tokens_count_or_cumsum_flag**：该路径上固定为 1，底层算子按 cumsum（前缀和）模式计算，即 `expert_tokens_count_or_cumsum` 输出为 `active_expert_range` 范围内各 expert 处理 token 数量的前缀和，与入参 `expert_tokens_num_type` 无关。
-- **expert_tokens_num_type**：入参仍可传入 0/1/2，但实际底层按 cumsum 模式（前缀和）计算，与入参值无关。
-- **输出参数差异**：第4个返回值是 `expert_tokens_before_capacity`（`int32` 类型Tensor，shape为(expert_num,)），表示 drop 之前每个专家处理的 token 数量的统计结果。
 - 进入低时延性能模板需要同时满足以下条件：
     - `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
     - `x`数据类型要求：`bfloat16`
     - 属性要求：active_expert_range=[0, 256]、 quant_mode=1、expert_tokens_num_type=2、expert_num=256
-
 - 进入大batch性能模板需要同时满足以下条件：
     - NUM_ROWS范围为[384, 8192]
     - K=8
@@ -671,8 +660,16 @@ Atlas 推理系列产品在该接口上有以下特殊约束：
     - quant_mode=-1
     - row_idx_type=1
     - expert_tokens_num_type=1
+- 在算子输入shape较小的场景，操作间的多核同步时间占比较高，成为性能瓶颈。因此，针对这种特化场景，添加全载性能模板。该模板中，搬入、排序、计算都在同一个kernel内完成。需要满足drop_pad_mode=0的条件。
 
-- 在算子输入shape较小的场景，操作间的多核同步时间占比较高，成为性能瓶颈。因此，针对这种特化场景，添加全载性能模板。该模板中，搬入、排序、计算都在同一个kernel内完成。需要满足 drop_pad_mode=0 的条件。
+Atlas推理系列产品在该接口上有以下特殊约束：
+- **输入x的数据类型**：仅支持`float16`和`float32`，不支持`bfloat16`。
+- **量化模式**：仅支持非量化场景（`quant_mode=-1`），不支持静态量化（`quant_mode=0`）、动态量化（`quant_mode=1`）及MXFP8/HIF8等量化模式。
+- **drop_pad模式**：仅支持dropless场景（`drop_pad_mode=0`），不支持drop_pad场景（`drop_pad_mode=1`）。运行时无论入参`drop_pad_mode`为何值，均会被强制置为0。
+- **expert_capacity参数**：运行时无论入参`expert_capacity`为何值，均会被强制置为0。
+- **expert_tokens_count_or_cumsum_flag**：该路径上固定为1，底层算子按cumsum（前缀和）模式计算，即`expert_tokens_count_or_cumsum`输出为`active_expert_range`范围内各expert处理token数量的前缀和，与入参`expert_tokens_num_type`无关。
+- **expert_tokens_num_type**：入参仍可传入0/1/2，但实际底层按cumsum模式（前缀和）计算，与入参值无关。
+- **输出参数差异**：第4个返回值是`expert_tokens_before_capacity`（`int32`类型Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
 
 ## 调用示例<a name="zh-cn_topic_0000002271534921_section12510194643618"></a>
 
