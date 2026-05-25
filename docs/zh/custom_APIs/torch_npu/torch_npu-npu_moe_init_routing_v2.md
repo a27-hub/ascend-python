@@ -641,7 +641,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
         - 非量化场景下，当`scale`输入时，前`available_idx_num`个元素为有效数据。
         - 动态量化场景下，输出量化计算过程中`scale`的中间值，前`available_idx_num`个元素为有效数据。
         - 静态量化场景下不输出。
-    - **Atlas 推理系列产品**：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
+    - Atlas 推理系列产品：此输出非`expanded_scale`，而是`expert_tokens_before_capacity`（Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
 
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
