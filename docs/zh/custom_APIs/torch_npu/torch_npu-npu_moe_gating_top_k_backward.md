@@ -13,13 +13,11 @@
 - 计算公式（sigmoid模式，normType=1）：
   
   1. 缩放梯度
-  
     $$
     gradYScaled_{ip} = routedScalingFactor \cdot gradY_{ip}
     $$
   
   2. 正向renorm的反向传播
-  
     $$
     wPrime_{ip} = xNorm_{i,\ expertIdx_{ip}}
     $$
@@ -41,13 +39,11 @@
     $$
   
   3. 散射到完整维度
-  
     $$
     gradNormX_{ij} = \sum_{p:\ expertIdx_{ip}=j} gradWPrime_{ip}
     $$
   
   4. Sigmoid反向传播
-  
     $$
     gradX_{ij} = xNorm_{ij} \cdot (1 - xNorm_{ij}) \cdot gradNormX_{ij}
     $$
