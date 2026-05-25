@@ -646,6 +646,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 ## 约束说明<a name="zh-cn_topic_0000002271534921_section75102046193618"></a>
 
 Atlas A2训练系列产品/Atlas A2推理系列产品/Atlas A3训练系列产品/Atlas A3推理系列产品：
+
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
 - 进入低时延性能模板需要同时满足以下条件：
@@ -663,6 +664,7 @@ Atlas A2训练系列产品/Atlas A2推理系列产品/Atlas A3训练系列产品
 - 在算子输入shape较小的场景，操作间的多核同步时间占比较高，成为性能瓶颈。因此，针对这种特化场景，添加全载性能模板。该模板中，搬入、排序、计算都在同一个kernel内完成。需要满足drop_pad_mode=0的条件。
 
 Atlas推理系列产品在该接口上有以下特殊约束：
+
 - **输入x的数据类型**：仅支持`float16`和`float32`，不支持`bfloat16`。
 - **量化模式**：仅支持非量化场景（`quant_mode=-1`），不支持静态量化（`quant_mode=0`）、动态量化（`quant_mode=1`）及MXFP8/HIF8等量化模式。
 - **drop_pad模式**：仅支持dropless场景（`drop_pad_mode=0`），不支持drop_pad场景（`drop_pad_mode=1`）。运行时无论入参`drop_pad_mode`为何值，均会被强制置为0。
