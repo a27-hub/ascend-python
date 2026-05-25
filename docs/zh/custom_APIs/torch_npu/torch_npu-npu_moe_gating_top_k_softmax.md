@@ -6,6 +6,7 @@
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>    | √  |
 
 ## 功能说明
 
@@ -42,6 +43,23 @@ torch_npu.npu_moe_gating_top_k_softmax(x, finished=None, k=1) -> (Tensor, Tensor
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
+
+### Ascend 310P 约束
+
+<term>Ascend 310P</term> 场景下存在以下限制：
+
+- **数据类型限制**：
+  - 输入`x`仅支持`float16`，不支持`bfloat16`和`float32`。
+
+- **对齐要求**：
+  - 输入`x`最后一维的大小（即专家数 expert_num）必须满足16对齐，即 expert_num 必须为16的整数倍。
+
+- **参数限制**：
+  - `finished`参数不支持，必须设置为`None`。
+  - `row_idx`输出不支持，返回全0。
+
+- **排序说明**：
+  - 当多个expert的softmax值相同时，310P实现为非稳定排序，与其他芯片实现排序顺序可能不同，这是硬件特性，非功能异常。
 
 ## 调用示例
 
