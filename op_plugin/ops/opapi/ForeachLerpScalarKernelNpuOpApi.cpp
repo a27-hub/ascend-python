@@ -85,7 +85,9 @@ void _foreach_lerp_(const at::TensorList tensors1, const at::TensorList tensors2
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight);
     }
-
+    if (weight.isBoolean()) {
+        return at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight);
+    }
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at::native::can_use_fast_route({tensors1, tensors2}, weight)) {
         return at::native::foreach_tensor_lerp_list_kernel_slow_(tensors1, tensors2, weight);
@@ -105,7 +107,9 @@ std::vector<at::Tensor> _foreach_lerp(const at::TensorList tensors1,
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);
     }
-    
+    if (weight.isBoolean()) {
+        return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);
+    }
     at::native::check_foreach_api_restrictions(tensors1, tensors2);
     if (!at::native::can_use_fast_route({tensors1, tensors2}, weight)) {
         return at::native::foreach_tensor_lerp_list_kernel_slow(tensors1, tensors2, weight);
