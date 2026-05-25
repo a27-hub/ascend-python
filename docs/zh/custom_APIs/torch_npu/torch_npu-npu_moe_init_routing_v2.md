@@ -669,9 +669,8 @@ Atlas推理系列产品在该接口上有以下特殊约束：
 - **量化模式**：仅支持非量化场景（`quant_mode=-1`），不支持静态量化（`quant_mode=0`）、动态量化（`quant_mode=1`）及MXFP8/HIF8等量化模式。
 - **drop_pad模式**：仅支持dropless场景（`drop_pad_mode=0`），不支持drop_pad场景（`drop_pad_mode=1`）。运行时无论入参`drop_pad_mode`为何值，均会被强制置为0。
 - **expert_capacity参数**：运行时无论入参`expert_capacity`为何值，均会被强制置为0。
-- **expert_tokens_count_or_cumsum_flag**：该路径上固定为1，底层算子按cumsum（前缀和）模式计算，即`expert_tokens_count_or_cumsum`输出为`active_expert_range`范围内各expert处理token数量的前缀和，与入参`expert_tokens_num_type`无关。
 - **expert_tokens_num_type**：入参仍可传入0/1/2，但实际底层按cumsum模式（前缀和）计算，与入参值无关。
-- **输出参数差异**：第4个返回值是`expert_tokens_before_capacity`（`int32`类型Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
+- **输出参数差异**：第4个返回值是`expert_tokens_before_capacity`（类型Tensor，shape为(expert_num,)），表示drop之前每个专家处理的token数量的统计结果。
 
 ## 调用示例<a name="zh-cn_topic_0000002271534921_section12510194643618"></a>
 
