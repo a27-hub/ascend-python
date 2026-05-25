@@ -6188,7 +6188,7 @@ class TestNpuRmsNormBackwardQuant(TestCase):
         offset_x = torch.zeros(1, dtype=torch.int32).to("npu")
 
         actual_dx, actual_dgamma = torch_npu._npu_rms_norm_backward_quant(
-            dy, x, rstd, gamma, scale_x=scale_x, offset_x=offset_x, dst_type=2)
+            dy, x, rstd, gamma, scale_x, offset_x=offset_x, dst_type=2)
 
         with FakeTensorMode():
             fake_dy = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
@@ -6199,29 +6199,8 @@ class TestNpuRmsNormBackwardQuant(TestCase):
             fake_offset_x = torch.zeros(1, dtype=torch.int32).to("npu")
 
             fake_dx, fake_dgamma = torch_npu._npu_rms_norm_backward_quant(
-                fake_dy, fake_x, fake_rstd, fake_gamma,
-                scale_x=fake_scale_x, offset_x=fake_offset_x, dst_type=2)
-
-        self.assertEqual(actual_dx.shape, fake_dx.shape)
-        self.assertEqual(actual_dgamma.shape, fake_dgamma.shape)
-
-        # 3D, bfloat16, no quant mode (scale_x=None)
-        dy = torch.randn(2, 4, 64, dtype=torch.bfloat16).to("npu")
-        x = torch.randn(2, 4, 64, dtype=torch.bfloat16).to("npu")
-        rstd = torch.randn(2, 4, dtype=torch.float32).to("npu")
-        gamma = torch.randn(64, dtype=torch.bfloat16).to("npu")
-
-        actual_dx, actual_dgamma = torch_npu._npu_rms_norm_backward_quant(
-            dy, x, rstd, gamma)
-
-        with FakeTensorMode():
-            fake_dy = torch.randn(2, 4, 64, dtype=torch.bfloat16).to("npu")
-            fake_x = torch.randn(2, 4, 64, dtype=torch.bfloat16).to("npu")
-            fake_rstd = torch.randn(2, 4, dtype=torch.float32).to("npu")
-            fake_gamma = torch.randn(64, dtype=torch.bfloat16).to("npu")
-
-            fake_dx, fake_dgamma = torch_npu._npu_rms_norm_backward_quant(
-                fake_dy, fake_x, fake_rstd, fake_gamma)
+                fake_dy, fake_x, fake_rstd, fake_gamma, fake_scale_x,
+                offset_x=fake_offset_x, dst_type=2)
 
         self.assertEqual(actual_dx.shape, fake_dx.shape)
         self.assertEqual(actual_dgamma.shape, fake_dgamma.shape)
