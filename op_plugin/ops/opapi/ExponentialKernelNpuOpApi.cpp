@@ -32,7 +32,7 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
         }
 
         auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
-        auto counter_offset = calc_final_counter_orrset(self, 0, 1, generator) // unroll固定为4，这里form和to随便给两个值让unroll为4即可
+        auto counter_offset = op_plugin::utils::calc_final_counter_offset(self, 0, 1, generator);
         auto pair = gen->philox_engine_inputs(counter_offset);
         int64_t seed = static_cast<int64_t>(pair.first);
         int64_t offset = static_cast<int64_t>(pair.second);
