@@ -103,8 +103,14 @@ std::vector<at::Tensor> _foreach_add(at::TensorList tensors1,
     if (!at::native::can_use_fast_route({tensors1, tensors2}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow(tensors1, tensors2, alpha);
     }
-    // construct the output tensorlist of the NPU
     auto scalar_type = tensors1[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_list_kernel_slow(tensors1, tensors2, alpha);
+    }
+    // construct the output tensorlist of the NPU
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors1) {
         auto output_size = op_infer::input_same_output_size(tensor);
@@ -130,7 +136,13 @@ void _foreach_add_(at::TensorList self, at::TensorList other, const at::Scalar& 
     if (!at::native::can_use_fast_route({self, other}, alpha)) {
         return at::native::foreach_tensor_add_list_kernel_slow_(self, other, alpha);
     }
-
+    auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_list_kernel_slow_(self, other, alpha);
+    }
     _split_and_exec_npu_cmd_add(self, other, alpha, self, true);
     return;
 }
@@ -142,14 +154,18 @@ void _split_and_exec_npu_cmd_add_scalarlist(at::TensorList& tensors1, at::ArrayR
     size_t max_tensor_count = is_inplace ? 48 : 24;
 
     size_t loop_time = tensor_count / max_tensor_count;
-
+    std::vector<at::Scalar> adapted_scalars(scalars.size());
+    for (size_t i = 0; i < scalars.size(); i++) {
+        adapted_scalars[i] = op_api::adaptToDouble(scalars[i], tensors1);
+    }
+    at::ArrayRef<at::Scalar> adapted_scalars_ref(adapted_scalars.data(), adapted_scalars.size());
     if (tensor_count <= max_tensor_count) {
-        EXEC_NPU_CMD(aclnnForeachAddScalarList, tensors1, scalars, result_list);
+        EXEC_NPU_CMD(aclnnForeachAddScalarList, tensors1, adapted_scalars_ref, result_list);
         return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + i * max_tensor_count, max_tensor_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
         EXEC_NPU_CMD(aclnnForeachAddScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -157,7 +173,7 @@ void _split_and_exec_npu_cmd_add_scalarlist(at::TensorList& tensors1, at::ArrayR
     size_t remaining_count = tensor_count % max_tensor_count;
     if (remaining_count != 0) {
         at::TensorList temp_tensors1(tensors1.data() + loop_time * max_tensor_count, remaining_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + loop_time * max_tensor_count, remaining_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + loop_time * max_tensor_count, remaining_count);
         at::TensorList temp_result(result_list.data() + loop_time * max_tensor_count, remaining_count);
         EXEC_NPU_CMD(aclnnForeachAddScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -179,8 +195,13 @@ std::vector<at::Tensor> _foreach_add(at::TensorList tensors, at::ArrayRef<at::Sc
     if (!at::native::can_use_fast_route(tensors, scalars, true)) {
         return at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars);
     }
-
     auto scalar_type = tensors[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_scalarlist_kernel_slow(tensors, scalars);
+    }
     std::vector<at::Tensor> result;
     for (const at::Tensor &tensor : tensors) {
         auto output_size = op_infer::input_same_output_size(tensor);
@@ -202,7 +223,13 @@ void _foreach_add_(at::TensorList self, at::ArrayRef<at::Scalar> scalars)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_add_scalarlist_kernel_slow_(self, scalars);
     }
-    
+    auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_add_scalarlist_kernel_slow_(self, scalars);
+    }
     // default slow path for now, wait for ascendc aclnn framwork support scalarlist type
     at::native::check_foreach_api_restrictions(self, scalars);
     if (!at::native::can_use_fast_route(self, scalars, true)) {
