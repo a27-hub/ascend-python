@@ -64,7 +64,7 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcmul_scalarlist_slow(input, tensors1, tensors2, scalars_);
@@ -103,7 +103,7 @@ void _foreach_addcmul_(const at::TensorList input,
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcmul_scalarlist_slow_(input, tensors1, tensors2, scalars_);

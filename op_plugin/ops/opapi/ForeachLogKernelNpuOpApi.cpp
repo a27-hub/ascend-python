@@ -25,7 +25,7 @@ void _split_and_exec_npu_cmd_log(at::TensorList tensors1, at::TensorList result_
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
-    
+
     size_t loop_time = tensor_count / max_tensor_count;
     if (tensor_count <= max_tensor_count) {
         EXEC_NPU_CMD(aclnnForeachLog, tensors1, result_list);
@@ -80,7 +80,7 @@ std::vector<at::Tensor> _foreach_log(const at::TensorList self)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_log_slow(self);
     }
-    
+
     at::native::check_foreach_api_restrictions(self);
     if (!at::native::can_use_fast_route(self) || at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_log_slow(self);

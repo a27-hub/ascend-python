@@ -24,7 +24,7 @@ void _npu_reshape_and_cache_siso(const at::Tensor &key, at::Tensor &key_cache, c
     ReshapeAndCacheParam reshapeparam;
     reshapeparam.compressType = ReshapeAndCacheParam::COMPRESS_TYPE_UNDEFINED;
     reshapeparam.kvCacheCfg = ReshapeAndCacheParam::K_CACHE_V_BYPASS;
-    
+
     ParamSetter parametter;
     parametter.Input(key, true)
         .Input(key_cache, true)

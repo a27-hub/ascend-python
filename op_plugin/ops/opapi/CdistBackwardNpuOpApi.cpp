@@ -29,7 +29,7 @@ at::Tensor _cdist_backward(
     DO_COMPATIBILITY(aclnnCdistBackward, acl_op::_cdist_backward(grad, x1, x2, p, cdist));
 
     float p_cast;
-    
+
     if (std::isinf(p)) {
         p_cast = -1;
     } else {

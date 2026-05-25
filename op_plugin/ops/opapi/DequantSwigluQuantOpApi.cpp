@@ -112,7 +112,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
         } else {
             TORCH_CHECK(round_mode_value >= ROUND_MODE_RINT && round_mode_value <= ROUND_MODE_TRUNC,
                         "round_mode only support [0, 1, 2, 3, 4], but got", round_mode_value, OPS_ERROR(ErrCode::PARAM));
-    
+
             // transform activate_dim
             if (activate_dim_value < 0) {
                 activate_dim_value = activate_dim_value + x.dim();
@@ -148,7 +148,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
 
             at::Tensor y;
             aclDataType y_acltype;
-        
+
             if (special_output_type) {
                 y = npu_preparation::apply_tensor_without_format(y_size, c10::ScalarType::Byte);
                 y_acltype = c10_npu::GetAclDataType(dst_type_value);

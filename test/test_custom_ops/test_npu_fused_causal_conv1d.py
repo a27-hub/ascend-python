@@ -170,7 +170,7 @@ class TestNpuFusedCausalConv1d(TestCase):
 
         self.assertRtolEqual(out_npu.cpu()[out_valid_mask], golden_out[out_valid_mask])
         self.assertRtolEqual(conv_state_npu.cpu(), golden_states)
-    
+
     @unittest.skip("Skip test_npu_fused_causal_conv1d now")
     @SupportedDevices(['Ascend950'])
     def test_npu_fused_causal_conv1d_fn_float16(self):

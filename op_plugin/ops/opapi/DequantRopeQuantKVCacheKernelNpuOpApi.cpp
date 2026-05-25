@@ -45,7 +45,7 @@ namespace op_api {
         TORCH_CHECK((x.dim() == 3 || x.dim() == 2), "3D or 2D tensor expected for input x" + OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK((v_cache_ref.dim() == 4), "4D tensor expected for input cache" + OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK((size_splits.size() == 3), "size_splits's size should be 3" + OPS_ERROR(ErrCode::PARAM));
-        
+
         const int64_t b = x.size(0);
         const int64_t s = x.size(1);
         const int64_t kv_headdim = v_cache_ref.size(2);

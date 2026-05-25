@@ -101,7 +101,7 @@ std::vector<at::Tensor> _foreach_sub(at::TensorList self, const at::Scalar& scal
     TORCH_CHECK(scalar_type == at::ScalarType::Half || scalar_type == at::ScalarType::Float ||
                 scalar_type == at::ScalarType::Int || scalar_type == at::ScalarType::BFloat16,
                 "input must be half, float, int32 or bfloat16");
-    
+
     std::vector<at::Tensor> result(self.size());
     auto iterRes = result.data();
     int i = 0;
