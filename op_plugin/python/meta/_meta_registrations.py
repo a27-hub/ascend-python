@@ -7033,21 +7033,18 @@ def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
 
 @impl(m, "_npu_rms_norm_backward_quant")
 def _npu_rms_norm_backward_quant_meta(
-    dy, x, rstd, gamma, *, scale_x=None, offset_x=None,
+    dy, x, rstd, gamma, scale_x, *, offset_x=None,
     div_mode=True, quant_mode="static", dst_type=2
 ):
-    # dxOut: shape = dy.shape, dtype depends on scale_x and dst_type
+    # dxOut: shape = dy.shape, dtype depends on dst_type
     ACL_INT8 = 2
     ACL_HIFLOAT8 = 34
-    if scale_x is not None:
-        if dst_type == ACL_INT8:
-            dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
-        elif dst_type == ACL_HIFLOAT8:
-            dx_out = torch.empty(dy.shape, dtype=torch.uint8, device=dy.device)
-        else:
-            dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
+    if dst_type == ACL_INT8:
+        dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
+    elif dst_type == ACL_HIFLOAT8:
+        dx_out = torch.empty(dy.shape, dtype=torch.uint8, device=dy.device)
     else:
-        dx_out = torch.empty(dy.shape, dtype=dy.dtype, device=dy.device)
+        dx_out = torch.empty(dy.shape, dtype=torch.int8, device=dy.device)
 
     # dgammaOut: shape = gamma.shape, dtype = float32
     dgamma_out = torch.empty(gamma.shape, dtype=torch.float32, device=gamma.device)
