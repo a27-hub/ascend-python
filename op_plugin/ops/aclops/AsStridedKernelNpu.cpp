@@ -30,10 +30,11 @@ at::Tensor& stride_copy_out_npu_nocheck(
     at::IntArrayRef stride,
     at::Scalar storage_offset)
 {
-    // Quantized contiguous clone copies int_repr dtypes (often 1-byte integer); nbytes is often < 32.
+    // 1-byte outputs (quantized int_repr, bool): nbytes is often < 32. Prefer AsStrided over
+    // ViewCopy when storage desc mismatches; ViewCopy can normalize non-standard bool bytes.
     const bool prefer_as_strided_over_view_copy =
-        at::isIntegralType(result.scalar_type(), /*includeBool=*/false) &&
-        result.element_size() <= 1;
+        result.element_size() <= 1 &&
+        at::isIntegralType(result.scalar_type(), /*includeBool=*/true);
     const bool meta_match = at_npu::native::StorageDescHelper::MetaDataAreMatch(&result);
     const bool use_view_copy =
         (result.nbytes() < 32) && (!meta_match) && !prefer_as_strided_over_view_copy;
