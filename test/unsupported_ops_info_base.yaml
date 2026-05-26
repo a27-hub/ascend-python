@@ -3615,8 +3615,6 @@ diagflat:
   test_variant_consistency_eager:
   - complex64
   - float32
-  test_operator:
-  - float32
 copysign:
   test_neg_view:
   - float64
