@@ -57,7 +57,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_rms_norm_backward_quant(
     TensorWrapper dx_wrapper = {dx_out, dx_acltype};
     EXEC_NPU_CMD(aclnnRmsNormGradQuant, dy, x, rstd, gamma,
                   scale_x, offset_x, quant_mode_ptr, div_mode,
-                  dx_acltype, dx_wrapper, dgamma_out);
+                  dx_wrapper, dgamma_out);
 
     return std::make_tuple(std::move(dx_out), std::move(dgamma_out));
 }
