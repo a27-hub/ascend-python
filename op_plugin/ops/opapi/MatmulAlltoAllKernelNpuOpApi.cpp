@@ -54,7 +54,7 @@ at::Tensor npu_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x2, c10
 
     // 生成aclnn接口需要的默认值
     char *group_ptr = const_cast<char *>(hcom.data());
-    char *comm_mode_ptr = (comm_mode.has_value()) ? const_cast<char *>(comm_mode.value().data()) : "";
+    char *comm_mode_ptr = const_cast<char *>(comm_mode.value_or("").data());
     bool transpose_x1 = false;
     bool transpose_x2 = false;
 
