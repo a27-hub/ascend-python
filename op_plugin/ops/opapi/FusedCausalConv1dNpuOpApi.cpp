@@ -91,7 +91,7 @@ namespace op_api
 
     // ===================== 算子B：原地 =====================
 
-    at::Tensor & npu_fused_causal_conv1d_(
+    void npu_fused_causal_conv1d_v2(
         at::Tensor &x,
         const at::Tensor &weight,
         at::Tensor &conv_states,
@@ -129,7 +129,7 @@ namespace op_api
             activation_value, pad_slot_id_value, run_mode_value,
             max_query_len_value, residual_connection_value,
             block_size_value, conv_mode_value);
-        return x;
+        return;
     }
 
 } // namespace op_api

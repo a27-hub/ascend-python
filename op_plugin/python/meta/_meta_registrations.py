@@ -5922,8 +5922,8 @@ def npu_fused_causal_conv1d_meta(x, weight, conv_states, *, query_start_loc=None
     return torch.empty_like(x, dtype=x.dtype)
 
 
-@impl(m, "npu_fused_causal_conv1d_")
-def npu_fused_causal_conv1d__meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
+@impl(m, "npu_fused_causal_conv1d_v2")
+def npu_fused_causal_conv1d_v2_meta(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
                                   initial_state_mode=None, bias=None, num_accepted_tokens=None,
                                   activation="None", pad_slot_id=-1, run_mode=0,
                                   residual_connection=0, max_query_len=-1,
