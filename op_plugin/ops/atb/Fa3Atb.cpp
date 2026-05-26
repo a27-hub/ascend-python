@@ -14,6 +14,7 @@
 #include "op_plugin/utils/custom_functions/atb/AtbCommon.h"
 #include <acl/acl.h>
 
+#define M 100
 using namespace std;
 
 namespace atb {
