@@ -80,7 +80,7 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     TensorWrapper y_wrapper = {output_y, y_acltype};
 
     at::Tensor output_scale;
-    TensorWrapper scale_wrapper;
+    aclDataType scale_acltype;
     if (is_mx_type) {
         auto mxscale_shape = op_infer::array_to_small_vector(x.sizes());
         mxscale_shape.emplace_back(ALIGN_NUM);
@@ -89,12 +89,13 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
         mxscale_shape[axis_change] = dim_size;
         output_scale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(c10::ScalarType::Byte));
-        scale_wrapper = {output_scale, aclDataType::ACL_FLOAT8_E8M0};
+        scale_acltype = aclDataType::ACL_FLOAT8_E8M0;
     } else {
         int64_t m = x.size(0);
         output_scale = npu_preparation::apply_tensor_without_format({m}, c10::dtype(c10::ScalarType::Float));
-        scale_wrapper = {output_scale, aclDataType::ACL_FLOAT};
+        scale_acltype = aclDataType::ACL_FLOAT;
     }
+    TensorWrapper scale_wrapper = {output_scale, scale_acltype};
 
     const at::Tensor &alpha_real = alpha.value_or(at::Tensor());
     double dst_type_max_val = dst_type_max.value_or(0.0);
