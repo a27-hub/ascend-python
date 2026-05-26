@@ -284,7 +284,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
-    } else if (is_dynamic_int4_output) {
+    } else if (IsDynamicQuantInt4Output(quant_mode, x_dtype)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_INT4;
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;

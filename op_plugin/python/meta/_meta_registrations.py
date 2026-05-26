@@ -1467,7 +1467,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     MXFPX_SCALE_THIRD_DIM_SIZE = 2
     INT4_IN_UINT8 = 2
     is_float4_case = (hasattr(torch, 'float4_e2m1fn_x2') and x.dtype == torch.float4_e2m1fn_x2) or x_dtype == torch_npu.float4_e2m1fn_x2
-    is_dynamic_int4_output = quant_mode == 1 and x_dtype in [torch_npu.int4, torch.quint4x2]
+    is_dynamic_int4_output = quant_mode == 1 and x_dtype == torch_npu.int4
     if is_dynamic_int4_output:
         torch._check(
             drop_pad_mode == 0,
