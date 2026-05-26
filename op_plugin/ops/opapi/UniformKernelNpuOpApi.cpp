@@ -28,7 +28,7 @@ at::Tensor& uniform_(at::Tensor& self, double from, double to, c10::optional<at:
     DO_COMPATIBILITY(aclnnInplaceUniform, acl_op::uniform_(self, from, to, generator));
     auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
-    auto counter_offset = op_plugin::utils::calc_final_counter_offset(self, from, to, generator, true);
+    auto counter_offset = op_plugin::utils::calc_final_counter_offset(self, from, to, true);
     if (is_capture == c10_npu::CaptureStatus::None) {
         auto pair = gen->philox_engine_inputs(counter_offset);
         int64_t seed = static_cast<int64_t>(pair.first);
