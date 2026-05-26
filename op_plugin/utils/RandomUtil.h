@@ -112,8 +112,7 @@ inline int64_t calc_split_counter_offset(const TensorIterInfo& iter) {
     return calc_split_counter_offset(left) + calc_split_counter_offset(cur);
 }
 
-inline int64_t calc_final_counter_offset(at::Tensor& self, int64_t from, int64_t to,
-    c10::optional<at::Generator> generator, bool use_from_to = false)
+inline int64_t calc_final_counter_offset(at::Tensor& self, int64_t from = 0, int64_t to = 0, bool use_from_to = false)
 {
     TensorIterInfo iter_info;
     iter_info.ndim = self.dim();
