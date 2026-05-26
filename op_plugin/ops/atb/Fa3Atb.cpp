@@ -24,6 +24,7 @@ void _npu_paged_attention_quant(const at::Tensor &query, const at::Tensor &key_c
     const c10::OptionalDeviceGuard device_guard(device_of(query));
     OpParamCache<PagedAttentionParam>& pagedAttentionParamCache = OpParamCache<PagedAttentionParam>::getInstance();
     PagedAttentionParam pagedparam;
+    int test_1 = 0;
 
     pagedparam.headNum = num_heads;
     pagedparam.qkScale = scale_value;
