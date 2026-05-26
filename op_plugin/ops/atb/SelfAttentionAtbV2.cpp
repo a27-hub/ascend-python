@@ -61,7 +61,8 @@ at::Tensor& _npu_flash_attention_v2(
     if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI ||
         selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS ||
         selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_SQRT ||
-        selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_LEFT_ALIGN) {
+        selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI_COMPRESS_LEFT_ALIGN ||
+        selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM_COMPRESS) {
         selfattentionparam.isTriuMask = 1;
     } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM) {
         selfattentionparam.isTriuMask = 0;
@@ -79,7 +80,22 @@ at::Tensor& _npu_flash_attention_v2(
             .Input(seq_len_tensor)
             .Input(slopes)
             .Output(out);
-    } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI || selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM) {
+    } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM_COMPRESS) {
+        at::Tensor sl_npu = seq_len_tensor.device().type() == at::kCPU
+                                ? seq_len_tensor.to(c10::Device(c10::DeviceType::PrivateUse1))
+                                : seq_len_tensor;
+        at::Tensor sl_cpu = seq_len_tensor.device().type() == at::kCPU
+                                ? seq_len_tensor.contiguous()
+                                : seq_len_tensor.cpu().contiguous();
+        parametter.Input(query)
+            .Input(key)
+            .Input(value)
+            .Input(mask)
+            .Input(sl_npu, true)
+            .Output(out);
+        parametter.variant_pack_.inTensors[4].hostData = sl_cpu.data_ptr();
+    } else if (selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_ALIBI ||
+               selfattentionparam.maskType == SelfAttentionParam::MASK_TYPE_NORM) {
         parametter.Input(query)
             .Input(key)
             .Input(value)
