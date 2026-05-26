@@ -35,6 +35,7 @@ constexpr int64_t QUANT_MODE_HIF8_PER_TOKEN_DIM = 8;
 constexpr int64_t QUANT_MODE_MXFP4_E2M1 = 9;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
+constexpr int64_t INT4_NUMS_IN_INT8 = 2;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
@@ -52,6 +53,12 @@ inline bool IsQuantModeMXFP8(int64_t quantMode) {
 
 inline bool IsQuantModeHIF8(int64_t quantMode) {
     return quantMode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
+}
+
+inline bool IsDynamicQuantInt4Output(int64_t quantMode, c10::optional<int64_t> xDtype) {
+    // when quantMode = 1, xDtype is type of expanded_x
+    return quantMode == QUANT_MODE_DYNAMIC && xDtype.has_value() &&
+           xDtype.value() == static_cast<int64_t>(c10_npu::DType::INT4);
 }
 
 namespace op_api {
@@ -166,8 +173,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 #endif
             case QUANT_MODE_STATIC:
             case QUANT_MODE_DYNAMIC:
-                expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                if (IsDynamicQuantInt4Output(quant_mode, x_dtype)) {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h / INT4_NUMS_IN_INT8}, x.options().dtype(at::kByte));
+                } else {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h}, x.options().dtype(at::kChar));
+                }
                 break;
             case QUANT_MODE_HIF8_CAST:
             case QUANT_MODE_HIF8_PERTENSOR:
@@ -272,6 +284,8 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
+    } else if (IsDynamicQuantInt4Output(quant_mode, x_dtype)) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_INT4;
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
     } else if (IsQuantModeMXFP4(quant_mode)) {
