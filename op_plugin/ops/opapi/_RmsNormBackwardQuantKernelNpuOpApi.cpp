@@ -48,7 +48,7 @@ std::tuple<at::Tensor, at::Tensor> _npu_rms_norm_backward_quant(
     at::ScalarType dx_scalar = npu_preparation::convert_to_scalar_type(dx_acltype);
     at::Tensor dx_out;
     if (dst_type.has_value()) { // 默认INT8
-        dx_acltype = static_cast<aclDataType>(dst_type.value());
+        dx_acltype = c10_npu::GetAclDataType(dst_type.value());
         dx_scalar = npu_preparation::convert_to_scalar_type(dx_acltype);
     }
     dx_out = npu_preparation::apply_tensor_with_format(
