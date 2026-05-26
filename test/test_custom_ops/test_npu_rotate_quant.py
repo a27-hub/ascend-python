@@ -1,5 +1,6 @@
 import unittest
 import math
+import math
 import numpy as np
 import torch
 import torch_npu
@@ -30,6 +31,8 @@ class TestNpuRotateQuant(TestCase):
             indices = torch.nonzero(mask, as_tuple=True)
             nibble_indices = indices[0]
             tensor_indices = indices[1:]
+            nibble_indices = indices[0]
+            tensor_indices = indices[1:]
 
             print("Found mismatches (|diff| > 1) with int4 interpretation:")
             for i in range(len(nibble_indices)):
@@ -43,6 +46,7 @@ class TestNpuRotateQuant(TestCase):
         else:
             return True
 
+    def conv_rot(self, input_matrix, rot_matrix):
     def conv_rot(self, input_matrix, rot_matrix):
         stride = rot_matrix.shape[0]
         h, w = input_matrix.shape
@@ -71,8 +75,10 @@ class TestNpuRotateQuant(TestCase):
         N = 1024
         K = 1024
         dst_dtype = torch.int8
+        dst_dtype = torch.int8
         x, rotation = self.gen_input_data(M, N, K)
         output0, output1 = self.rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
+        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
         output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
         self.assertEqual(output0, output0_npu.cpu(), 1)
         self.assertRtolEqual(output1, output1_npu.cpu())
@@ -83,8 +89,11 @@ class TestNpuRotateQuant(TestCase):
         N = 1024
         K = 1024
         dst_dtype = torch.quint4x2
+        dst_dtype = torch.quint4x2
         x, rotation = self.gen_input_data(M, N, K)
         output0, output1 = self.rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
+        output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
+        self.assertTrue(self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu()))
         output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=dst_dtype)
         self.assertTrue(self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu()))
         self.assertRtolEqual(output1, output1_npu.cpu())
@@ -134,6 +143,54 @@ class TestNpuRotateQuant(TestCase):
         self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
         self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
 
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_rotate_quant_mxfp4(self, device="npu"):
+        M = 512
+        N = 1024
+        K = 1024
+        dst_dtype = torch_npu.float4_e2m1fn_x2
+        x, rotation = self.gen_input_data(M, N, K)
+        output0_npu, output1_npu = torch_npu.npu_rotate_quant(
+            x.npu(), rotation.npu(), dst_dtype=dst_dtype,
+            axis=-1, round_mode="rint")
+        self.assertEqual(output0_npu.shape, torch.Size([M, N // 2]))
+        self.assertEqual(output0_npu.dtype, torch.uint8)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_rotate_quant_mxfp8_e5m2(self, device="npu"):
+        M = 512
+        N = 1024
+        K = 1024
+        dst_dtype = torch.float8_e5m2
+        x, rotation = self.gen_input_data(M, N, K)
+        output0_npu, output1_npu = torch_npu.npu_rotate_quant(
+            x.npu(), rotation.npu(), dst_dtype=dst_dtype,
+            axis=-1, round_mode="rint")
+        self.assertEqual(output0_npu.shape, torch.Size([M, N]))
+        self.assertEqual(output0_npu.dtype, torch.float8_e5m2)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_rotate_quant_mxfp8_e4m3fn(self, device="npu"):
+        M = 512
+        N = 1024
+        K = 1024
+        dst_dtype = torch.float8_e4m3fn
+        x, rotation = self.gen_input_data(M, N, K)
+        output0_npu, output1_npu = torch_npu.npu_rotate_quant(
+            x.npu(), rotation.npu(), dst_dtype=dst_dtype,
+            axis=-1, round_mode="rint")
+        self.assertEqual(output0_npu.shape, torch.Size([M, N]))
+        self.assertEqual(output0_npu.dtype, torch.float8_e4m3fn)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_rotate_quant_transpose_y_error(self, device="npu"):
+        M = 512
+        N = 1024
+        K = 1024
+        x, rotation = self.gen_input_data(M, N, K)
+        with self.assertRaises(RuntimeError):
+            torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), dst_dtype=torch.int8, transpose_y=True)
 
 if __name__ == "__main__":
     run_tests()

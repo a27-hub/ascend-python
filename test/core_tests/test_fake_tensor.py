@@ -6171,6 +6171,8 @@ class TestNpuFusedAttentionScoreBackward(TestCase):
 class TestRotateQuant(TestCase):
     @SupportedDevices(['Ascend910B'])
     def test_npu_rotate_quant_int8(self):
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_rotate_quant_int8(self):
         with FakeTensorMode():
             M = 512
             N = 1024
