@@ -124,4 +124,3 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     return std::tuple<at::Tensor, at::Tensor>(output_y, output_scale);
 }
 } // namespace op_api
- // namespace op_api
