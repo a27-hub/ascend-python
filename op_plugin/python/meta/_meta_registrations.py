@@ -5793,6 +5793,45 @@ def npu_swiglu_mx_quant_meta(x, group_index=None, activate_dim=-1, activate_left
             torch.empty(scale_size, dtype=torch.uint8, device=x.device))
 
 
+@impl(m, "npu_swiglu_hi_f4_quant")
+def npu_swiglu_hi_f4_quant_meta(x, group_index=None, activate_dim=-1, activate_left=False,
+                                  swiglu_mode=0, clamp_limit=7.0, glu_alpha=1.702, glu_bias=1.0,
+                                  axis=-1):
+    import math
+    activate_dim = activate_dim if activate_dim is not None else -1
+    select_dim = activate_dim if activate_dim >= 0 else activate_dim + x.dim()
+    quant_dim = axis if axis >= 0 else axis + x.dim()
+    y_size = []
+    scale_size = []
+    swish_num = 2
+    block_size = 64
+
+    for i in range(x.dim()):
+        if i == select_dim:
+            y_size.append(x.size(i) // swish_num)
+            scale_size.append(x.size(i) // swish_num)
+        else:
+            y_size.append(x.size(i))
+            scale_size.append(x.size(i))
+
+    # HIFLOAT4: y last dim halved (2 fp4 per byte)
+    y_size[-1] = y_size[-1] // swish_num
+
+    if group_index is None:
+        quant_size = int(math.ceil(scale_size[quant_dim] / block_size))
+    else:
+        if quant_dim == x.dim() - 1:
+            quant_size = int(math.ceil(scale_size[quant_dim] / block_size))
+        else:
+            quant_size = int(math.floor(scale_size[quant_dim] / block_size) + group_index.shape[0])
+
+    scale_size[quant_dim] = quant_size
+    scale_size.append(1)
+
+    return (torch.empty(y_size, dtype=torch.uint8, device=x.device),
+            torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
 @impl(m, "npu_clipped_swiglu")
 def npu_clipped_swiglu_meta(x, group_index=None, dim=-1, alpha=1.702, limit=7.0, bias=1.0, interleaved=True):
     output_size = []

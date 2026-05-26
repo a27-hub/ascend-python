@@ -5736,6 +5736,20 @@ class TestSwigluMxQuant(TestCase):
             self.assertEqual(mxscale_npu.dtype, torch.uint8)
 
 
+class TestSwigluHiF4Quant(TestCase):
+    def test_npu_swiglu_hi_f4_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([4, 128], dtype=torch.bfloat16, device='npu')
+            y_npu, scale_npu = torch_npu.npu_swiglu_hi_f4_quant(
+                x, group_index=None, activate_dim=-1, activate_left=False, swiglu_mode=0,
+                clamp_limit=7, glu_alpha=1.702, glu_bias=1, axis=-1
+            )
+            self.assertEqual(y_npu.shape, torch.Size([4, 32]))
+            self.assertEqual(y_npu.dtype, torch.uint8)
+            self.assertEqual(scale_npu.shape, torch.Size([4, 1, 1]))
+            self.assertEqual(scale_npu.dtype, torch.float32)
+
+
 @unittest.skip("skip until CANN is updated to support aclnnDynamicBlockMxQuant")
 class TestNpuDynamicBlockMxQuant(TestCase):
     def test_npu_dynamic_block_mx_quant_meta(self):
