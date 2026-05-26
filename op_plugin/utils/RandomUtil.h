@@ -113,16 +113,16 @@ inline int64_t calc_split_counter_offset(const TensorIterInfo& iter) {
 }
 
 inline int64_t calc_final_counter_offset(at::Tensor& self, int64_t from, int64_t to,
-    c10::optional<at::Generator> generator, bool from_to = false)
+    c10::optional<at::Generator> generator, bool use_from_to = false)
 {
     TensorIterInfo iter_info;
     iter_info.ndim = self.dim();
     iter_info.numel = self.numel();
     iter_info.element_size = self.itemsize();
-    if (from_to) {
-        iter_info.unroll = (self.scalar_type() == at::kLong) ? UNROLL_2 : UNROLL_4;
-    } else {
+    if (use_from_to) {
         iter_info.unroll = ((to - from) >= RAND_INT64_THRESHOLD) ? UNROLL_2 : UNROLL_4;
+    } else {
+        iter_info.unroll = (self.scalar_type() == at::kLong) ? UNROLL_2 : UNROLL_4;
     }
     for (int64_t i = 0; i < iter_info.ndim && i < MAX_DIMS; i++) {
         iter_info.shape[i] = self.size(i);
