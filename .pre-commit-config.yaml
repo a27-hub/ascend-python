@@ -88,3 +88,16 @@ repos:
   #         - "--style=file"  # 读取 .clang-format 文件
   #         - "--verbose"
   #         - "-i"
+
+  # --------------- C++ 静态检查（本地 clang-tidy）------------------
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy (本地venv)
+        entry: clang-tidy
+        language: system
+        pass_filenames: true
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx)$
+        args:
+          - --config-file=.clang-tidy
+          - --header-filter=^$
