@@ -10,7 +10,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward"
     ],
@@ -21,7 +21,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -33,7 +33,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -45,7 +45,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -57,7 +57,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -69,7 +69,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -81,7 +81,7 @@
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
       "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"
@@ -93,7 +93,7 @@
  	    "npu_fused_floyd_attention",
  	    "npu_fused_floyd_attention_backward",
  	    "npu_fused_causal_conv1d",
-      "npu_fused_causal_conv1d_",
+      "npu_fused_causal_conv1d_v2",
       "npu_masked_causal_conv1d",
       "npu_masked_causal_conv1d_backward",
       "npu_apply_rotary_pos_emb"

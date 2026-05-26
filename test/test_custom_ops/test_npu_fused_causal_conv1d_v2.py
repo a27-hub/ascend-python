@@ -125,11 +125,11 @@ def causal_conv1d_golden(
     return out if not flattened else out.view(bsz, -1, dim), conv_states
 
 
-class TestNpuFusedCausalConv1d_(TestCase):
+class TestNpuFusedCausalConv1dV2(TestCase):
 
-    @unittest.skip("Skip test_npu_fused_causal_conv1d_ now")
+    @unittest.skip("Skip test_npu_fused_causal_conv1d_v2 now")
     @SupportedDevices(['Ascend950'])
-    def test_npu_fused_causal_conv1d__decode(self):
+    def test_npu_fused_causal_conv1d_v2_decode(self):
         batch, dim, kernel_width = 4, 128, 3
         seq_len, m_num = 3, 2
         state_len = kernel_width - 1 + m_num
@@ -153,7 +153,7 @@ class TestNpuFusedCausalConv1d_(TestCase):
         x_npu = x.clone().npu()
         conv_states_npu = conv_states.clone().npu()
 
-        torch_npu.npu_fused_causal_conv1d_(
+        torch_npu.npu_fused_causal_conv1d_v2(
             x_npu, weight.npu(), conv_states_npu,
             cache_indices=cache_indices.npu(),
             num_accepted_tokens=num_accepted_tokens.npu(),
@@ -166,9 +166,9 @@ class TestNpuFusedCausalConv1d_(TestCase):
         self.assertRtolEqual(x_npu.cpu(), golden_x.to(dtype))
         self.assertRtolEqual(conv_states_npu.cpu(), golden_states.to(dtype))
 
-    @unittest.skip("Skip test_npu_fused_causal_conv1d_ now")
+    @unittest.skip("Skip test_npu_fused_causal_conv1d_v2 now")
     @SupportedDevices(['Ascend950'])
-    def test_npu_fused_causal_conv1d__prefill_2d(self):
+    def test_npu_fused_causal_conv1d_v2_prefill_2d(self):
         batch, dim, kernel_width = 4, 128, 3
         state_len = kernel_width - 1
         dtype = torch.bfloat16
@@ -198,7 +198,7 @@ class TestNpuFusedCausalConv1d_(TestCase):
         x_npu = x.clone().npu()
         conv_states_npu = conv_states.clone().npu()
 
-        torch_npu.npu_fused_causal_conv1d_(
+        torch_npu.npu_fused_causal_conv1d_v2(
             x_npu, weight.npu(), conv_states_npu,
             query_start_loc=query_start_loc.npu(),
             cache_indices=cache_indices.npu(),
@@ -211,9 +211,9 @@ class TestNpuFusedCausalConv1d_(TestCase):
         self.assertRtolEqual(x_npu.cpu(), golden_x.to(dtype))
         self.assertRtolEqual(conv_states_npu.cpu(), golden_states.to(dtype))
 
-    @unittest.skip("Skip test_npu_fused_causal_conv1d_ now")
+    @unittest.skip("Skip test_npu_fused_causal_conv1d_v2 now")
     @SupportedDevices(['Ascend950'])
-    def test_npu_fused_causal_conv1d__apc(self):
+    def test_npu_fused_causal_conv1d_v2_apc(self):
         batch, dim, kernel_width = 4, 128, 3
         dtype, block_size = torch.bfloat16, 128
         seq_lens = [5, 3, 7, 4]
@@ -256,7 +256,7 @@ class TestNpuFusedCausalConv1d_(TestCase):
         x_npu = x.clone().npu()
         conv_states_npu = conv_states.clone().npu()
 
-        torch_npu.npu_fused_causal_conv1d_(
+        torch_npu.npu_fused_causal_conv1d_v2(
             x_npu, weight.npu(), conv_states_npu,
             query_start_loc=query_start_loc.npu(),
             cache_indices=cache_indices.npu(),
