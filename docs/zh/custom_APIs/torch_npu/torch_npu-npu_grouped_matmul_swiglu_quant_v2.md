@@ -183,19 +183,19 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     - 数据格式为ND时，shape支持3维，非转置shape\[\[e, k, n\]\]，转置shape\[\[e, n, k\]\]。数据类型支持torch.float8\_e5m2、torch.float8\_e4m3fn、torch\_npu.float4\_e2m1fn\_x2、torch.int8、torch\_npu.hifloat8，其中torch\_npu.hifloat8和float4系列需配置可选参数weight\_dtype为对应类型，此时weight本身的dtype不再生效，但仍需保证weight本身的dtype为8bit位的数据类型，以保证shape正确；其中float4内轴需为偶数，以保证8bits可以转换为2个float4。
     - 数据格式为FRACTAL\_NZ\(通过接口npu\_format\_cast，可实现格式转换\)时，shape支持5维，非转置shape\[e, n/32, k/16, 16, 32\], 转置shape\[e, k/32, n/16, 16, 32\]；数据类型仅支持torch.float8\_e4m3fn。
   
-- **weight\_scale**（`TensorList`）：必选输入，右矩阵的量化因子，对应公式中的$w_scale$。目前仅支持TensorList长度为1。数据格式支持$ND$，支持非连续的Tensor。
+- **weight\_scale**（`TensorList`）：必选输入，右矩阵的量化因子，对应公式中的$w_{scale}$。目前仅支持TensorList长度为1。数据格式支持$ND$，支持非连续的Tensor。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`weight`数据类型为`int8`时，`weight_scale`的shape支持2维；`weight`数据类型为`int32`时，`weight_scale`的shape支持2维和3维。数据类型支持`float32`、`float16`、`bfloat16`、`uint64`。
-  - <term>Atlas 350 加速卡</term>：MX量化场景下：shape支持4维，非转置shape\[\[e, ceil\(k / 64\), n, 2\]\]，转置shape\[\[e, n, ceil\(k / 64\), 2\]\]，数据类型支持torch\_npu.float8\_e8m0fnu。Pertoken量化场景下：shape支持2维，shape\[\[e, n\]\]，当x为torch.int8时，weightScale需支持torch.bfloat16、torch.float32、torch.float16，当x为torch.float8\_e4m3fn/torch.float8\_e5m2/torch\_npu.hifloat8时，weightScale支持torch.bfloat16、torch.float32。
+  - <term>Atlas 350 加速卡</term>：MX量化场景下：shape支持4维，非转置shape\[\[e, ceil\(k / 64\), n, 2\]\]，转置shape\[\[e, n, ceil\(k / 64\), 2\]\]，数据类型支持torch\_npu.float8\_e8m0fnu。pertoken量化场景下：shape支持2维，shape\[\[e, n\]\]，当x为torch.int8时，weightScale需支持torch.bfloat16、torch.float32、torch.float16，当x为torch.float8\_e4m3fn/torch.float8\_e5m2/torch\_npu.hifloat8时，weightScale支持torch.bfloat16、torch.float32。
 
 - **x\_scale**（`Tensor`）：必选输入，左矩阵的量化因子，对应公式中的$x_scale$。数据格式支持$ND$，支持非连续的Tensor。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：shape支持1维[m]，数据类型支持`float32`。
-  - <term>Atlas 350 加速卡</term>：MX量化场景下：shape支持3维\[m, ceil\(k / 64\), 2\]，数据类型支持torch\_npu.float8\_e8m0fnu。Pertoken量化场景下：shape支持1维\[m\]，数据类型支持torch.float32。
+  - <term>Atlas 350 加速卡</term>：MX量化场景下：shape支持3维\[m, ceil\(k / 64\), 2\]，数据类型支持torch\_npu.float8\_e8m0fnu。pertoken量化场景下：shape支持1维\[m\]，数据类型支持torch.float32。
 
 - **group\_list**（`Tensor`）：必选输入，指示每个分组参与计算的Token个数，对应公式中的$groupList$。shape支持1维[e]，长度需与`weight`的首轴维度相等。数据类型支持`int64`，数据格式支持$ND$，支持非连续的Tensor。
 - **smooth\_scale**（`Tensor`）：可选输入，平滑缩放因子，对应公式中的$smoothScale$。数据类型为`float32`，数据格式支持$ND$。仅A4W4场景下需传入，首轴长度需与`weight`的首轴维度相等，支持两种shape：(E, N/2)或(E,)，当使用(E,)时会进行广播乘法。其他场景传入默认值None。
 - **weight\_assist\_matrix**（`TensorList`）：可选输入，右矩阵的辅助矩阵，对应公式中的$weightAssistMatrix$。数据类型支持`float32`，数据格式支持$ND$，shape支持2维。仅A8W4场景下需传入，首轴长度需与`weight`的首轴维度相等，尾轴长度需要与`weight`还原为ND格式的尾轴相同。其他场景传入默认值None。
 - **bias**（`Tensor`）：可选输入，矩阵乘计算的偏移值，对应公式中的$bias$，shape支持2维，数据类型支持`int32`，当前仅支持传入默认值None。
-- **dequant\_mode**（`int`）：可选输入，表示反量化模式，数据类型为`int32`，默认值为0。取值为0时，表示激活矩阵per-token，权重矩阵per-channel。取值为1时，表示激活矩阵per-token，权重矩阵per-group。取值为2时，表示mx量化。
+- **dequant\_mode**（`int`）：可选输入，表示反量化模式，数据类型为`int32`，默认值为0。取值为0时，表示激活矩阵pertoken，权重矩阵perchannel。取值为1时，表示激活矩阵pertoken，权重矩阵pergroup。取值为2时，表示mx量化。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：A8W4场景下，dequant_mode支持取值0和1；A8W8和A4W4场景下，dequant_mode仅支持取值0。
   - <term>Atlas 350 加速卡</term>：当前仅支持传入0以及2。
 
@@ -238,9 +238,9 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`int8`，shape支持2维[m, n/2]。
   - <term>Atlas 350 加速卡</term>：数据类型支持torch.float8\_e4m3fn、torch.float8\_e5m2、torch\_npu.float4\_e2m1fn\_x2、torch.int8、torch\_npu.hifloat8，shape支持2维\[m，n / 2\]。
 
-- **output\_scale**（`Tensor`）：输出的量化因子，对应公式中的$Q_scale$。数据格式支持$ND$，支持非连续的Tensor。
+- **output\_scale**（`Tensor`）：输出的量化因子，对应公式中的$Q_{scale}$。数据格式支持$ND$，支持非连续的Tensor。
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`，shape支持1维[m]。
-  - <term>Atlas 350 加速卡</term>：MX量化场景：数据类型支持torch\_npu.float8\_e8m0fnu，shape支持3维\[m, ceil\(\(n / 2\) / 64\), 2\]。Pertoken量化场景：shape支持1维\[m\]，数据类型支持torch.float32。
+  - <term>Atlas 350 加速卡</term>：MX量化场景：数据类型支持torch\_npu.float8\_e8m0fnu，shape支持3维\[m, ceil\(\(n / 2\) / 64\), 2\]。pertoken量化场景：shape支持1维\[m\]，数据类型支持torch.float32。
 
 ## 约束说明
 
@@ -332,40 +332,44 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x.npu(), [weight_npu], [weightScale.npu()], xScale.npu(), groupList.npu())
     ```
   
-  - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp4
+  - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp8
 
     ```python
+    import unittest
+    import itertools
     import numpy as np
     import torch
     import torch_npu
     import math
 
-    K = 9
+    def gen_input_data(E, M, K, N):
+        x = torch.randint(-128, 127, (M, K), dtype=torch.int8).to(torch.float8_e4m3fn)
+        weight = torch.randint(-128, 127, (E, K, N), dtype=torch.int8).to(torch.float8_e4m3fn)
+
+        weightScale = torch.randint(low=-128, high=127, size=(E, math.ceil(K / 64), N, 2), dtype=torch.int8)
+        xScale = torch.randint(low=-128, high=127, size=(M, math.ceil(K / 64), 2), dtype=torch.int8)
+        groupList = torch.tensor([int(M / 2), int(M / 2)], dtype=torch.int64)
+        return x, weight, weightScale, xScale, groupList
+
+    K = 2
     E = 2
-    M = 2255
-    N = 896
-
-    x = torch.randint(0, 256, (M, K), dtype=torch.uint8).npu()
-    weight = torch.randint(0, 256, (E, K * 2, N), dtype=torch.uint8).npu()
-    weightScale = torch.randint(0, 256, (E, math.ceil(K / 64), N * 2, 2), dtype=torch.uint8).npu()
-    xScale = torch.randint(0, 256, (M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
-    groupList = torch.tensor([int(M/2), int(M/2) + 1], dtype=torch.int64).npu()
-
-    y, y_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x,
-        [weight], [weightScale],
-        xScale, groupList,
+    M = 16
+    N = 128
+    x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
+    weight_npu = weight.npu()
+    weightScale = weightScale.npu()
+    output0_npu, output1_npu = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+        x.npu(),
+        [weight_npu],
+        [weightScale],
+        xScale.npu(),
+        groupList.npu(),
         dequant_mode=2,
-        dequant_dtype=torch.float32,
         quant_mode=2,
-        quant_dtype=torch_npu.float4_e2m1fn_x2,
+        dequant_dtype=torch.float32,
+        quant_dtype=torch.float8_e4m3fn,
         weight_scale_dtype=torch_npu.float8_e8m0fnu,
-        x_scale_dtype=torch_npu.float8_e8m0fnu,
-        x_dtype=torch_npu.float4_e2m1fn_x2,
-        weight_dtype=torch_npu.float4_e2m1fn_x2,
-        group_list_type=1)
-
-    print("y.shape: ", y.shape)
-    print("y_scale.shape: ", y_scale.shape)
+        x_scale_dtype=torch_npu.float8_e8m0fnu)
     ```
 
   - <term>Atlas 350 加速卡</term>：mx量化场景示例-mxfp4
@@ -387,7 +391,8 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     xScale = torch.randint(0, 256, (M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
     groupList = torch.tensor([int(M/2), int(M/2) + 1], dtype=torch.int64).npu()
 
-    y, y_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x,
+    y, y_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+        x,
         [weight], [weightScale],
         xScale, groupList,
         dequant_mode=2,
@@ -404,7 +409,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     print("y_scale.shape: ", y_scale.shape)
     ```
 
-  - <term>Atlas 350 加速卡</term>：Pertoken量化场景示例
+  - <term>Atlas 350 加速卡</term>：pertoken量化场景示例
 
     ```python
     import numpy as np
