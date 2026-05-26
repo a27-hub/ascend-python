@@ -2818,7 +2818,6 @@ def npu_rms_norm_quant_v2_meta(x, gamma, scale, offset, beta, epsilon=1e-06, div
         rstd_shape.append(x.size(dim))
     rstd_shape.append(1)
     rstd = torch.empty(rstd_shape, dtype=torch.float32, device=x.device)
-
     dst_dtype = dst_dtype if dst_dtype is not None else 1
     dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
     if dst_torch_dtype == torch.quint4x2:
@@ -7081,12 +7080,12 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
     if axis < -dim_num or axis >= dim_num:
         raise RuntimeError("Param (axis) is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
                            ops_error(ErrCode.PARAM))
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, dst_dtype if isinstance(dst_dtype, torch.dtype) else torch.int8)
     is_int4_packed = (torch_dtype == torch.quint4x2)
-    is_fp4 = (dst_dtype == int(torch_npu.float4_e2m1fn_x2))
-    is_mx_type = (dst_dtype == int(torch_npu.float4_e2m1fn_x2) or dst_dtype == int(torch.float8_e5m2) or dst_dtype == int(torch.float8_e4m3fn))
+    is_fp4 = (torch_dtype == torch_npu.float4_e2m1fn_x2 or dst_dtype == 296)  # 296: enum value of torch_npu.float4_e2m1fn_x2
+    is_mx_type = (is_fp4 or torch_dtype == torch.float8_e5m2 or dst_dtype == 291 or torch_dtype == torch.float8_e4m3fn or dst_dtype == 292)  # 291: enum value of torch_npu.float8_e5m2, 292: enum value of torch_npu.float8_e4m3fn
     if is_int4_packed:
-        if x.size(dim_num - 1) % 8:
+        if x.size(dim_num - 1) % 8:  # 8: int4 values packed per int32
             raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divisible by 8" +
                                ops_error(ErrCode.NOT_SUPPORT))
         output_shape = []
@@ -7097,18 +7096,18 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
     elif is_fp4:
-        if x.size(dim_num - 1) % 2:
+        if x.size(dim_num - 1) % 2:  # 2: fp4 values packed per uint8
             raise RuntimeError("If dst_dtype is float4_e2m1, the last dim of input must be divisible by 2" +
                                ops_error(ErrCode.NOT_SUPPORT))
         output_shape = []
         for dim in range(dim_num - 1):
             output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 2)
+        output_shape.append(x.size(dim_num - 1) // 2)  # 2: fp4 values packed per uint8
         output = x.new_empty(output_shape, dtype=torch.uint8)
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
     else:
-        output_shape = list(x.sizes())
+        output_shape = list(x.shape)
         output = x.new_empty(output_shape, dtype=torch_dtype)
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
@@ -7118,10 +7117,10 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         for dim in range(dim_num):
             mxscale_shape.append(x.size(dim))
         mxscale_shape.append(ALIGN_NUM)
-        dim_size = math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM)
+        dim_size = int(math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM))
         dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
         mxscale_shape[axis_change] = dim_size
-        scale = x.new_empty(mxscale_shape, dtype=torch.uint8)
+        scale = x.new_empty(mxscale_shape, dtype=torch_npu.float8_e8m0fnu)
     return output, scale
 
 
