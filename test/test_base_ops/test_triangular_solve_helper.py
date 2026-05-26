@@ -41,6 +41,24 @@ class TestTriangularSolveHelper(TestCase):
         out = [c, d]
         output = torch.triangular_solve(a, b.tril().npu(), upper=False, transpose=True, unitriangular=False, out=out)
 
+    def test_triangular_solve_out_resize_strides(self):
+        cpu_a = torch.tril(torch.randn(2, 3, 4, 4, dtype=torch.float32))
+        cpu_a = cpu_a + torch.eye(4, dtype=torch.float32).reshape(1, 1, 4, 4) * 5
+        cpu_b = torch.randn(4, 2, dtype=torch.float32)
+        npu_a = cpu_a.npu()
+        npu_b = cpu_b.npu()
+
+        cpu_out = (torch.empty(0, dtype=torch.float32), torch.empty(0, dtype=torch.float32))
+        npu_out = (torch.empty(0, dtype=torch.float32, device="npu"), torch.empty(0, dtype=torch.float32, device="npu"))
+
+        cpu_solution, cpu_clone = torch.triangular_solve(cpu_b, cpu_a, upper=False, out=cpu_out)
+        npu_solution, npu_clone = torch.triangular_solve(npu_b, npu_a, upper=False, out=npu_out)
+
+        self.assertEqual(cpu_solution.stride(), npu_solution.stride())
+        self.assertEqual(cpu_clone.stride(), npu_clone.stride())
+        self.assertRtolEqual(cpu_solution.numpy(), npu_solution.cpu().numpy())
+        self.assertRtolEqual(cpu_clone.numpy(), npu_clone.cpu().numpy())
+
 
 if __name__ == "__main__":
     run_tests()
