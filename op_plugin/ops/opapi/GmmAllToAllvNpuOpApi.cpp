@@ -48,12 +48,7 @@ namespace op_api {
         char* hcom_ptr = const_cast<char*>(hcom.data());
         std::cout << "comm_mode.has_value():" << comm_mode.has_value() << std::endl;
         std::cout << "ep_world_size:" << ep_world_size << std::endl;
-        char* comm_mode_real = "";
-        if (comm_mode.has_value()) {
-            comm_mode_real = const_cast<char *>(comm_mode.value().data());
-        } else {
-            comm_mode_real = (ep_world_size <= 8) ? "ccu" : "aicpu";
-        }
+        char comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
         std::cout << "pta begin aclnnGroupedMatMulAlltoAllvV2"<< std::endl;
         EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
                     gmm_x,

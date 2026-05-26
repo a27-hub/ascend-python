@@ -94,8 +94,6 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                                                            c10::optional<c10::string_view> comm_mode
                                                            )
     {
-        // const char* comm_mode_real = comm_mode.has_value() ? comm_mode.value() : "default";
-        // gmm_x_quant_mode
         std::cout << "pta npu_quant_gmm_alltoallv"<< std::endl;
         TORCH_CHECK(gmm_x_quant_mode.has_value(),
             "The input gmm_x_quant_mode must be provided, but got None.",
@@ -566,12 +564,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         bool trans_mm_weight = false;
         std::cout << "comm_mode.has_value():" << comm_mode.has_value() << std::endl;
         std::cout << "ep_world_size:" << ep_world_size << std::endl;
-        char* comm_mode_real = "";
-        if (comm_mode.has_value()) {
-            comm_mode_real = const_cast<char *>(comm_mode.value().data());
-        } else {
-            comm_mode_real = (ep_world_size <= 8) ? "ccu" : "aicpu";
-        }
+        char comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
         std::cout << "pta begin aclnnQuantGroupedMatMulAlltoAllvV2" << std::endl;
         EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllvV2,
                     gmm_x_wrapper,
