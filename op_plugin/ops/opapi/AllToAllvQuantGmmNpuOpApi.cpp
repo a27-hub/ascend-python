@@ -453,7 +453,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     bool transposeMmWeight = false;
     std::cout << "comm_mode.has_value():" << comm_mode.has_value() << std::endl;
     std::cout << "ep_world_size:" << ep_world_size << std::endl;
-    char comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
+    char *comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
     std::cout << "pta begin aclnnAlltoAllvQuantGroupedMatMulV2" << std::endl;
     EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMulV2, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
         gmm_weight_scale_wrapper, send_count_tensor_real, recv_count_tensor_real, mm_x_wrapper, mm_weight_wrapper,
