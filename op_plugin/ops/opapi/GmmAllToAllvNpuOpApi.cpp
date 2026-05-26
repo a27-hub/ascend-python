@@ -46,27 +46,46 @@ namespace op_api {
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
         char* hcom_ptr = const_cast<char*>(hcom.data());
-        std::cout << "comm_mode.has_value():" << comm_mode.has_value() << std::endl;
-        std::cout << "ep_world_size:" << ep_world_size << std::endl;
-        char *comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
-        std::cout << "pta begin aclnnGroupedMatMulAlltoAllvV2"<< std::endl;
-        EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
-                    gmm_x,
-                    gmm_weight,
-                    send_count_tensor_real,
-                    recv_count_tensor_real,
-                    mm_x_real,
-                    mm_weight_real,
-                    hcom_ptr,
-                    comm_mode_real,
-                    ep_world_size,
-                    send_counts,
-                    recv_counts,
-                    trans_gmm_weight,
-                    trans_mm_weight,
-                    y,
-                    mm_y);
-        std::cout << "pta end aclnnGroupedMatMulAlltoAllvV2" << std::endl;
+        if (comm_mode.has_value()) {
+            const char* comm_mode_real = comm_mode.value().data();
+            std::cout << "comm_mode_real:" << comm_mode_real << std::endl;
+            std::cout << "pta aclnnGroupedMatMulAlltoAllvV2"<< std::endl;
+            EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllvV2,
+                     gmm_x,
+                     gmm_weight,
+                     send_count_tensor_real,
+                     recv_count_tensor_real,
+                     mm_x_real,
+                     mm_weight_real,
+                     hcom_ptr,
+                     comm_mode_real,
+                     ep_world_size,
+                     send_counts,
+                     recv_counts,
+                     trans_gmm_weight,
+                     trans_mm_weight,
+                     y,
+                     mm_y);
+            std::cout << "pta aclnnGroupedMatMulAlltoAllvV2 end"<< std::endl;
+        } else {
+            std::cout << "pta aclnnGroupedMatMulAlltoAllv"<< std::endl;
+            EXEC_NPU_CMD(aclnnGroupedMatMulAlltoAllv,
+                         gmm_x,
+                         gmm_weight,
+                         send_count_tensor_real,
+                         recv_count_tensor_real,
+                         mm_x_real,
+                         mm_weight_real,
+                         hcom_ptr,
+                         ep_world_size,
+                         send_counts,
+                         recv_counts,
+                         trans_gmm_weight,
+                         trans_mm_weight,
+                         y,
+                         mm_y);
+            std::cout << "pta aclnnGroupedMatMulAlltoAllv end"<< std::endl;
+        }
         return std::tie(y, mm_y);
     }
 } // namespace op_api

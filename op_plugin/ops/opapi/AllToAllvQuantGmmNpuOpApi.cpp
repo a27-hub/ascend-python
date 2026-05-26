@@ -80,6 +80,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     c10::optional<c10::string_view> comm_mode)
 {
     std::cout << "pta npu_alltoallv_quant_gmm"<< std::endl;
+    // const char* comm_mode_real = comm_mode.has_value() ? comm_mode.value() : "default";
+    // gmm_x_quant_mode
     TORCH_CHECK(gmm_x_quant_mode.has_value(), "The input gmm_x_quant_mode must be provided, but got None.",
         OPS_ERROR(ErrCode::PARAM));
     int64_t gmm_x_quant_mode_value = gmm_x_quant_mode.value();
@@ -452,16 +454,26 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_alltoallv_quant_gmm(const at:
     bool transposeGmmWeight = false;
     bool transposeMmWeight = false;
     std::cout << "comm_mode.has_value():" << comm_mode.has_value() << std::endl;
-    std::cout << "ep_world_size:" << ep_world_size << std::endl;
-    char *comm_mode_real = const_cast<char *>(comm_mode.value_or("").data());
-    std::cout << "pta begin aclnnAlltoAllvQuantGroupedMatMulV2" << std::endl;
-    EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMulV2, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
-        gmm_weight_scale_wrapper, send_count_tensor_real, recv_count_tensor_real, mm_x_wrapper, mm_weight_wrapper,
-        mm_x_scale_wrapper, mm_weight_scale_wrapper, gmm_x_quant_mode_value, gmm_weight_quant_mode_value,
-        mm_x_quant_mode_value, mm_weight_quant_mode_value, hcom_ptr, comm_mode_real, ep_world_size, send_counts, recv_counts,
-        transposeGmmWeight, transposeMmWeight, group_sizes, permute_out_flag,
-        gmm_y, mm_y, permute_out_wrapper);
-    std::cout << "pta end aclnnAlltoAllvQuantGroupedMatMulV2"<< std::endl;
+    if (comm_mode.has_value()) {
+        const char* comm_mode_real = const_cast<char *>(comm_mode.value().data());
+        std::cout << "comm_mode_real:" << comm_mode_real << std::endl;
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMulV2"<< std::endl;
+        EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMulV2, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
+            gmm_weight_scale_wrapper, send_count_tensor_real, recv_count_tensor_real, mm_x_wrapper, mm_weight_wrapper,
+            mm_x_scale_wrapper, mm_weight_scale_wrapper, gmm_x_quant_mode_value, gmm_weight_quant_mode_value,
+            mm_x_quant_mode_value, mm_weight_quant_mode_value, hcom_ptr, comm_mode_real, ep_world_size, send_counts, recv_counts,
+            transposeGmmWeight, transposeMmWeight, group_sizes, permute_out_flag,
+            gmm_y, mm_y, permute_out_wrapper);
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMulV2 end"<< std::endl;
+    } else {
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMul"<< std::endl;
+        EXEC_NPU_CMD(aclnnAlltoAllvQuantGroupedMatMul, gmm_x_wrapper, gmm_weight_wrapper, gmm_x_scale_wrapper,
+            gmm_weight_scale_wrapper, send_count_tensor_real, recv_count_tensor_real, mm_x_wrapper, mm_weight_wrapper,
+            mm_x_scale_wrapper, mm_weight_scale_wrapper, gmm_x_quant_mode_value, gmm_weight_quant_mode_value,
+            mm_x_quant_mode_value, mm_weight_quant_mode_value, hcom_ptr, ep_world_size, send_counts, recv_counts,
+            transposeGmmWeight, transposeMmWeight, group_sizes, permute_out_flag, gmm_y, mm_y, permute_out_wrapper);
+        std::cout << "pta aclnnAlltoAllvQuantGroupedMatMul end"<< std::endl;
+    }
     return std::tie(gmm_y, mm_y, permute_out);
 }
 } // namespace op_api
