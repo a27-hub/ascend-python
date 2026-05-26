@@ -15548,19 +15548,24 @@ _add_torch_npu_docstr(
     "npu_rotate_quant",
     """
  接口原型:
- torch_npu.npu_rotate_quant(Tensor x, Tensor rotation, *, float? alpha=0.0, int? dst_dtype=None) -> (Tensor, Tensor)
+ torch_npu.npu_rotate_quant(Tensor x, Tensor rotation, *, Tensor? alpha=None, int? dst_dtype=None, int? axis=-1, str? round_mode="rint", int? scale_alg=0, float? dst_type_max=0.0, bool? transpose_y=False) -> (Tensor, Tensor)
  功能描述
  `npu_rotate_quant`是一种融合旋转（Rotate）和量化（Quant）的计算方法。该方法适用于需要对输入数据进行旋转变换后进行量化的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。
 
  参数说明:
  x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
- alpha（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
- dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。
+ alpha（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
+ dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
+ axis: int类型, 指定量化输出的轴, 可选输入, 默认值为-1。
+ round_mode: str类型, 指定取整模式, 可选输入, 默认值为"rint"。
+ scale_alg: int类型, 指定scale算法, 可选输入, 默认值为0。
+ dst_type_max: float类型, 指定量化输出的最大值, 可选输入, 默认值为0.0。
+ transpose_y: bool类型, 指定输出是否转置, 可选输入, 默认值为False, 当前版本仅支持False。
 
  输出说明:
- y（`Tensor`）：输出的量化结果，shape支持2维[m,n]，与x保持一致，数据类型支持`int4`/`int8`。数据格式支持ND，支持非连续的Tensor。
- scale（`Tensor`）：输出的量化因子，shape支持1维[m]，数据类型支持`float32`。数据格式支持ND，支持非连续的Tensor。
+ y（`Tensor`）：输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND，支持非连续的Tensor。
+ scale（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型(float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn)时，scale为MX格式量化因子(uint8表示float8_e8m0)；其他类型时，scale为per-token量化因子(float32)。
 
  支持的型号: 
  Atlas A3 训练系列产品/Atlas A3 推理系列产品
@@ -15569,30 +15574,40 @@ _add_torch_npu_docstr(
  约束说明
  关于数据shape的约束，其中：
  n：取值范围为128~16000，8字节对齐, n可以整除k。
+ transpose_y当前版本仅支持False。
+ 当dst_dtype为quint4x2时，输入最后一维必须可被8整除。
+ 当dst_dtype为float4_e2m1fn_x2时，输入最后一维必须可被2整除。
 
  调用示例:
  import torch
  import torch_npu
  import numpy as np
 
- def test_rotate_quant(M=512, N=1024, K=1024, dst_dtype=torch.int8):
+ def test_rotate_quant_int8(M=512, N=1024, K=1024):
      x = torch.randn(M, N, dtype=torch.bfloat16).npu()
      rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
-     alpha = 0.0
      output, output_scale = torch_npu.npu_rotate_quant(
-         x, rotation, alpha=alpha, dst_dtype=dst_dtype
+         x, rotation, dst_dtype=torch.int8
+     )
+     return output, output_scale
+
+ def test_rotate_quant_mxfp4(M=512, N=1024, K=1024):
+     x = torch.randn(M, N, dtype=torch.bfloat16).npu()
+     rotation = torch.randn(K, K, dtype=torch.bfloat16).npu()
+     output, output_scale = torch_npu.npu_rotate_quant(
+         x, rotation, dst_dtype=torch_npu.float4_e2m1fn_x2, axis=-1, round_mode="rint"
      )
      return output, output_scale
 
  def main():
-     output, output_scale = test_rotate_quant()
+     output, output_scale = test_rotate_quant_int8()
 
  if __name__ == "__main__":
      main()
 
- """
- )
- 
+"""
+)
+
 _add_torch_npu_docstr(
     "npu_quant_max",
     """
