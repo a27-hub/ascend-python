@@ -89,7 +89,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                                                            c10::optional<int64_t> mm_x_scale_dtype,
                                                            c10::optional<int64_t> mm_weight_scale_dtype,
                                                            c10::optional<int64_t> comm_quant_dtype,
-                                                           c10::optional<int64_t> mm_y_dtype
+                                                           c10::optional<int64_t> mm_y_dtype,
+                                                           c10::optional<c10::string_view> comm_mode
                                                            )
     {
         // gmm_x_quant_mode
@@ -560,7 +561,8 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
 
         bool trans_gmm_weight = false;
         bool trans_mm_weight = false;
-
+        c10::string_view comm_mode_value = comm_mode.value_or("");
+        char* comm_mode_real = const_cast<char *>(comm_mode_value.data());
         EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllv,
                      gmm_x_wrapper,
                      gmm_weight_wrapper,
@@ -581,6 +583,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                      comm_quant_dtype_real,
                      group_sizes,
                      hcom_ptr,
+                     comm_mode_real,
                      ep_world_size,
                      send_counts,
                      recv_counts,
