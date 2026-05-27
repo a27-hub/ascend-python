@@ -24,11 +24,15 @@
 // Helper functions for ceil_div and round_up
 template <typename T>
 inline T ceil_div(T a, T b) {
+    if (b == 0) return T{};
     return (a + b - 1) / b;
 }
 
 template <typename T>
 inline T round_up(T value, T alignment) {
+    if (alignment == 0) {
+        return value;
+    }
     return (value + alignment - 1) / alignment * alignment;
 }
 
