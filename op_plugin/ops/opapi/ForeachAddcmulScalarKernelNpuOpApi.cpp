@@ -124,7 +124,16 @@ std::vector<at::Tensor> _foreach_addcmul(const at::TensorList input,
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow(input, tensors1, tensors2, scalar);
     }
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_addcmul_scalar_slow(input, tensors1, tensors2, scalar);
+    }
     auto scalar_type = input[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_addcmul_scalar_slow(input, tensors1, tensors2, scalar);
+    }
 
     std::vector<at::Tensor> result;
     result.reserve(input.size());
@@ -154,7 +163,16 @@ void _foreach_addcmul_(const at::TensorList input, const at::TensorList tensors1
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcmul_scalar_slow_(input, tensors1, tensors2, scalar);
     }
-
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_addcmul_scalar_slow_(input, tensors1, tensors2, scalar);
+    }
+    auto scalar_type = input[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16 &&
+        scalar_type != at::ScalarType::Int) {
+        return at::native::foreach_tensor_addcmul_scalar_slow_(input, tensors1, tensors2, scalar);
+    }
     _split_and_exec_npu_cmd_addcmul_scalar(input, tensors1, tensors2, scalar, input, true);
 }
 }
