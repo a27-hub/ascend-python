@@ -195,7 +195,7 @@ bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_r
 
 // Check mxfp8 recipe
 bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-                        c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
+    c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -217,7 +217,7 @@ bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_reci
 std::function<bool(c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&, c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&)>
 make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
     return [expected_a, expected_b](c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-                                    c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
+               c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
         return scaled_blas::check_deepseek_recipe(a_type, a_recipe, a_scale, b_type, b_recipe, b_scale, expected_a, expected_b);
     };
 }
@@ -233,55 +233,60 @@ std::array<std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>, 9> 
 
 
 
-at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
-          ArrayRef<Tensor> scale_a,
-          IntArrayRef scale_recipe_a,
-          IntArrayRef swizzle_a,
-          ArrayRef<Tensor> scale_b,
-          IntArrayRef scale_recipe_b,
-          IntArrayRef swizzle_b,
-          const std::optional<Tensor>& bias,
-          const std::optional<c10::ScalarType> out_dtype, // 当前cpp中不支持float8
-          IntArrayRef contraction_dim,
-          bool use_fast_accum)
+at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
+    c10::ArrayRef<at::Tensor> scale_a,
+    at::IntArrayRef scale_recipe_a,
+    at::IntArrayRef swizzle_a,
+    c10::ArrayRef<at::Tensor> scale_b,
+    at::IntArrayRef scale_recipe_b,
+    at::IntArrayRef swizzle_b,
+    const std::optional<at::Tensor>& bias,
+    const std::optional<c10::ScalarType> out_dtype, // 当前cpp中不支持float8
+    at::IntArrayRef contraction_dim,
+    bool use_fast_accum)
 {
 
     // check A5
     TORCH_CHECK(c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950,
-                "_scaled_mm is supported only on the Ascend950 platform and after.", OPS_ERROR(ErrCode::PARAM));
+        "_scaled_mm is supported only on the Ascend950 platform and after.", OPS_ERROR(ErrCode::PARAM));
 
     // Check data types: mat_a and mat_b must be float8 type
     TORCH_CHECK(mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
-                 mat_a.scalar_type() == c10::ScalarType::Float8_e5m2,
+            mat_a.scalar_type() == c10::ScalarType::Float8_e5m2,
         "mat_a must be float8 type (Float8_e4m3fn or Float8_e5m2), but got ", mat_a.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
     TORCH_CHECK(mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
-                 mat_b.scalar_type() == c10::ScalarType::Float8_e5m2,
+            mat_b.scalar_type() == c10::ScalarType::Float8_e5m2,
         "mat_b must be float8 type (Float8_e4m3fn or Float8_e5m2), but got ", mat_b.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
 
     // Check multiplication of two Float8_e5m2 is not supported (reference: _scaled_mm_out_cuda)
     TORCH_CHECK(mat_a.scalar_type() != c10::ScalarType::Float8_e5m2 ||
-                 mat_b.scalar_type() != c10::ScalarType::Float8_e5m2,
+            mat_b.scalar_type() != c10::ScalarType::Float8_e5m2,
         "Multiplication of two Float8_e5m2 matrices is not supported",
         OPS_ERROR(ErrCode::TYPE));
 
     // Check data types: scale_a and scale_b must be float32 or float8_e8m0 type
-    TORCH_CHECK(scale_a.scalar_type() == c10::ScalarType::Float ||
-                 scale_a.scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
-        "scale_a must be float32 or float8_e8m0 type, but got ", scale_a.scalar_type(),
+    // Check scale_a and scale_b are not empty
+    TORCH_CHECK(!scale_a.empty(), "scale_a must not be empty", OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(!scale_b.empty(), "scale_b must not be empty", OPS_ERROR(ErrCode::PARAM));
+
+    TORCH_CHECK(scale_a[0].scalar_type() == c10::ScalarType::Float ||
+            scale_a[0].scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
+        "scale_a must be float32 or float8_e8m0 type, but got ", scale_a[0].scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
-    TORCH_CHECK(scale_b.scalar_type() == c10::ScalarType::Float ||
-                 scale_b.scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
-        "scale_b must be float32 or float8_e8m0 type, but got ", scale_b.scalar_type(),
+    TORCH_CHECK(scale_b[0].scalar_type() == c10::ScalarType::Float ||
+            scale_b[0].scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
+        "scale_b must be float32 or float8_e8m0 type, but got ", scale_b[0].scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
 
-    // Check scale_a & scale_b
-    TORCH_CHECK(scale_a.numel() == 1, "scale_a size must be 1, but got ", scale_a.numel(),
+    // Check scale_a & scale_b element count
+    TORCH_CHECK(scale_a[0].numel() == 1, "scale_a size must be 1, but got ", scale_a[0].numel(),
         OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(scale_b.numel() == 1, "scale_b size must be 1, but got ", scale_b.numel(),
+    TORCH_CHECK(scale_b[0].numel() == 1, "scale_b size must be 1, but got ", scale_b[0].numel(),
         OPS_ERROR(ErrCode::PARAM));
-// Conversion of implicitly-defined enums to explicit
+
+    // Conversion of implicitly-defined enums to explicit
     auto scale_recipe_a_enum = convert_int_to_enum<ScalingType>(scale_recipe_a);
     auto scale_recipe_b_enum = convert_int_to_enum<ScalingType>(scale_recipe_b);
 
@@ -306,7 +311,7 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
             break;
         }
     }
-    TORCH_CHECK_VALUE(
+    TORCH_CHECK(
         found_impl,
         "Invalid scaling configuration.\n"
         "- For BlockWise 1x128 scaling, a and b should be float8, scales should be float, scale_a should be (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), ") and scale_b should be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "), and both should be outer-dim-major.\n"
@@ -327,34 +332,27 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
             "Bias is not supported when out_dtype is set to Float32",
             OPS_ERROR(ErrCode::TYPE));
         TORCH_CHECK(bias->scalar_type() == c10::ScalarType::BFloat16 ||
-                    bias->scalar_type() == c10::ScalarType::Half,
+                bias->scalar_type() == c10::ScalarType::Half,
             "Bias must be BFloat16 or Half, but got ", bias->scalar_type(),
             OPS_ERROR(ErrCode::TYPE));
         TORCH_CHECK((out_dtype_value != c10::ScalarType::Float &&
-                     out_dtype_value != c10::ScalarType::BFloat16) ||
-                    bias->scalar_type() == c10::ScalarType::BFloat16,
+                        out_dtype_value != c10::ScalarType::BFloat16) ||
+                bias->scalar_type() == c10::ScalarType::BFloat16,
             "Bias must be BFloat16 to compute ", out_dtype_value,
             " output, but got ", bias->scalar_type(),
             OPS_ERROR(ErrCode::TYPE));
         TORCH_CHECK(out_dtype_value != c10::ScalarType::Half ||
-                    bias->scalar_type() == c10::ScalarType::Half,
+                bias->scalar_type() == c10::ScalarType::Half,
             "Bias must be Float16 to compute ", out_dtype_value,
             " output, but got ", bias->scalar_type(),
             OPS_ERROR(ErrCode::TYPE));
     }
 
-
-    // Check scale_result: currently only supports null/empty because output float8 is not supported
-    TORCH_CHECK(!scale_result.has_value() || scale_result == c10::nullopt,
-        "scale_result is not supported currently, as output float8 type is not enabled. "
-        "scale_result is only utilized when output is float8 type.",
-        OPS_ERROR(ErrCode::NOT_SUPPORT));
-
     // Check out_dtype: currently only supports Float32, BFloat16, and Float16
     if (out_dtype.has_value()) {
         TORCH_CHECK(out_dtype.value() == c10::ScalarType::Float ||
-                     out_dtype.value() == c10::ScalarType::BFloat16 ||
-                     out_dtype.value() == c10::ScalarType::Half,
+                out_dtype.value() == c10::ScalarType::BFloat16 ||
+                out_dtype.value() == c10::ScalarType::Half,
             "out_dtype must be Float32, BFloat16, or Float16, but got ", out_dtype.value(),
             OPS_ERROR(ErrCode::TYPE));
     }
@@ -364,7 +362,7 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
     TORCH_CHECK(mat_a.dim() == 2, "mat_a must be a matrix, please check mat_a dim num." ,OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(mat_b.dim() == 2, "mat_b must be a matrix, please check mat_b dim num." ,OPS_ERROR(ErrCode::PARAM));
     if (!contraction_dim.empty()) {
-        TORCH_CHECK_VALUE(contraction_dim.size() == 2, "contraction_dim must have exactly 2 elements");
+        TORCH_CHECK(contraction_dim.size() == 2, "contraction_dim must have exactly 2 elements", OPS_ERROR(ErrCode::PARAM));
         auto mat_a_dim = contraction_dim[0];
         auto mat_b_dim = contraction_dim[1];
         TORCH_CHECK(
@@ -372,15 +370,15 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
             mat_a.size(0), "x", mat_a.size(1), " and ", mat_b.size(0), "x", mat_b.size(1), ") ",
             "with contraction dims mat_a: ", mat_a_dim, ", mat_b: ", mat_b_dim, OPS_ERROR(ErrCode::PARAM));
     } else {
-        TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat_b shapes cannot be multiplied (",mat_a.sizes()[0],
+        TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat2 shapes cannot be multiplied (",mat_a.sizes()[0],
             "x", mat_b.sizes()[1], " and ", mat_b.sizes()[0], "x", mat_b.sizes()[1], ")", OPS_ERROR(ErrCode::PARAM));
     }
 
     //////////////parameters transfer//////////////
     at::Tensor x1 = mat_a;
     at::Tensor x2 = mat_b;
-    c10::optional<at::Tensor> pertoken_scale = scale_a;
-    at::Tensor scale = scale_b;
+    c10::optional<at::Tensor> pertoken_scale = scale_a.size() > 0 ? c10::make_optional(scale_a[0]) : c10::nullopt;
+    at::Tensor scale = scale_b.size() > 0 ? scale_b[0] : at::Tensor();
     c10::optional<int64_t> scale_dtype = c10::nullopt;   // scale_b.scalar_type()
 
     c10::optional<int64_t> output_dtype = ToIntType(out_dtype);
@@ -392,7 +390,7 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
     c10::optional<at::Tensor> y_scale = c10::nullopt;
 
 
-///////////////////////////////////////////npu_quant_matmul//////////////////////////////////////
+    ///////////////////////////////////////////npu_quant_matmul//////////////////////////////////////
     if (is_nz_format(x2)) {
         static const bool is_quant_matmul_weight_nz_available = check_aclnn_kernel_available("aclnnQuantMatmulWeightNz");
         TORCH_CHECK(is_quant_matmul_weight_nz_available,
