@@ -22,6 +22,13 @@ namespace op_api {
 at::Tensor &le_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto outputSize = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at_npu::native::OpPreparation::check_tensor({self_device, other_device}, result, outputSize);
+        EXEC_NPU_CMD(aclnnLeTensor, self_device, other_device, result);
+        return result;
+    }
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
     if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
@@ -49,6 +56,14 @@ at::Tensor &le_out(const at::Tensor &self, const at::Scalar &other, at::Tensor &
 at::Tensor le(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto outputSize = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at::Tensor result =
+            at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self_device.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnLeTensor, self_device, other_device, result);
+        return result;
+    }
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result =
         at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
@@ -84,6 +99,15 @@ at::Tensor &le_(at::Tensor &self, const at::Scalar &other)
 at::Tensor &le_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceLeTensor, acl_op::le_(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        at::Tensor other_device = other;
+        if (!torch_npu::utils::is_npu(other)) {
+            other_device = other.to(self.device());
+        }
+        at_npu::native::OpPreparation::CheckMemory({self, other_device}, {self});
+        EXEC_NPU_CMD(aclnnInplaceLeTensor, self, other_device);
+        return self;
+    }
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         return op_api::le_(self, other.item());
     } else {
