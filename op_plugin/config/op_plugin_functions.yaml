@@ -90,7 +90,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-        exec: aclnnInplaceAddRelu
+      exec: aclnnInplaceAddRelu
 
   - func: _aminmax(Tensor self) -> (Tensor, Tensor)
     acl_op: all_version
@@ -236,6 +236,7 @@ official:
 
   - func: _foreach_add_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_add_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
@@ -251,9 +252,11 @@ official:
 
   - func: _foreach_addcdiv_.Scalar(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar value=1) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcdiv_.ScalarList(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcdiv_.Tensor(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Tensor scalars) -> ()
     op_api: [v2.1, newest]
@@ -269,6 +272,7 @@ official:
 
   - func: _foreach_addcmul_.Scalar(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar value=1) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_addcmul_.ScalarList(Tensor(a!)[] self, Tensor[] tensor1, Tensor[] tensor2, Scalar[] scalars) -> ()
     op_api: all_version
@@ -311,9 +315,11 @@ official:
 
   - func: _foreach_div_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_div_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_exp(Tensor[] tensors) -> Tensor[]
     op_api: all_version
@@ -383,6 +389,7 @@ official:
 
   - func: _foreach_mul_.Scalar(Tensor(a!)[] self, Scalar scalar) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_mul_.ScalarList(Tensor(a!)[] self, Scalar[] scalars) -> ()
     op_api: all_version
@@ -434,9 +441,11 @@ official:
 
   - func: _foreach_sqrt(Tensor[] tensors) -> Tensor[]
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_sqrt_(Tensor(a!)[] self) -> ()
     op_api: all_version
+    dvm: all_version
 
   - func: _foreach_sub.List(Tensor[] tensors1, Tensor[] tensors2, *, Scalar alpha=1) -> Tensor[]
     op_api: all_version
@@ -755,6 +764,7 @@ official:
   - func: abs(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: abs.out
 
@@ -891,10 +901,12 @@ official:
   - func: add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: add.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     sparse: [v2.1, newest]
@@ -908,6 +920,7 @@ official:
   - func: add_.Tensor(Tensor(a!) self, Tensor other, *, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: addbmm(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
@@ -948,6 +961,7 @@ official:
   - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: addmm.out(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
@@ -1297,6 +1311,7 @@ official:
   - func: batch_norm_backward_elemt(Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor? weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: input
@@ -1310,6 +1325,7 @@ official:
   - func: batch_norm_elemt(Tensor input, Tensor? weight, Tensor? bias, Tensor mean, Tensor invstd, float eps) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: batch_norm_elemt.out(Tensor input, Tensor? weight, Tensor? bias, Tensor mean, Tensor invstd, float eps, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -1318,6 +1334,7 @@ official:
   - func: batch_norm_gather_stats_with_counts(Tensor input, Tensor mean, Tensor invstd, Tensor? running_mean, Tensor? running_var, float momentum, float eps, Tensor counts) -> (Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out0:
         size: '{input.size(1)}'
@@ -1330,6 +1347,7 @@ official:
   - func: batch_norm_stats(Tensor input, float eps) -> (Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out0:
         size: '{input.size(1)}'
@@ -1491,6 +1509,7 @@ official:
   - func: bmm(Tensor self, Tensor mat2) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: bmm.out(Tensor self, Tensor mat2, *, Tensor(a!) out) -> Tensor(a!)
@@ -1555,6 +1574,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      integral_identity_tensor: self
       out:
         size: self
         dtype: self
@@ -1565,7 +1585,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      exec: aclnnInplaceCeil
+      structured_inherit: ceil.out
 
   - func: _coalesce(Tensor self) -> Tensor
     sparse: [v2.1, newest]
@@ -1891,6 +1911,7 @@ official:
   - func: div.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div.Scalar_mode(Tensor self, Scalar other, *, str? rounding_mode) -> Tensor
     acl_op: all_version
@@ -1899,6 +1920,7 @@ official:
   - func: div.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div.Tensor_mode(Tensor self, Tensor other, *, str? rounding_mode) -> Tensor
     acl_op: all_version
@@ -1915,6 +1937,7 @@ official:
   - func: div_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div_.Scalar_mode(Tensor(a!) self, Scalar other, *, str? rounding_mode) -> Tensor(a!)
     acl_op: all_version
@@ -1923,6 +1946,7 @@ official:
   - func: div_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: div_.Tensor_mode(Tensor(a!) self, Tensor other, *, str? rounding_mode) -> Tensor(a!)
     acl_op: all_version
@@ -2005,6 +2029,7 @@ official:
   - func: eq.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: eq.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2013,6 +2038,7 @@ official:
   - func: eq.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: eq.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2108,6 +2134,7 @@ official:
   - func: exp(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -2152,6 +2179,7 @@ official:
   - func: exp_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplaceExp
 
@@ -2261,22 +2289,27 @@ official:
   - func: floor_divide(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: floor_divide_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: fmod.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
@@ -2362,6 +2395,7 @@ official:
   - func: ge.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ge.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2370,6 +2404,7 @@ official:
   - func: ge.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ge.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2386,10 +2421,12 @@ official:
   - func: gelu.out(Tensor self, *, str approximate='none', Tensor(a!) out) -> Tensor(a!)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: gelu_backward(Tensor grad_output, Tensor self, *, str approximate='none') -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: glu(Tensor self, int dim=-1) -> Tensor
     acl_op: all_version
@@ -2474,6 +2511,7 @@ official:
   - func: gt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: gt.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2482,6 +2520,7 @@ official:
   - func: gt.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: gt.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2829,6 +2868,7 @@ official:
   - func: le.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: le.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2837,6 +2877,7 @@ official:
   - func: le.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: le.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -2852,6 +2893,7 @@ official:
 
   - func: leaky_relu(Tensor self, Scalar negative_slope=0.01) -> Tensor
     acl_op: all_version
+    dvm: all_version
     op_api: all_version
     gen_opapi:
       structured_inherit: leaky_relu.out
@@ -2867,6 +2909,7 @@ official:
 
   - func: leaky_relu_(Tensor(a!) self, Scalar negative_slope=0.01) -> Tensor(a!)
     acl_op: all_version
+    dvm: all_version
     op_api: all_version
     gen_opapi:
       exec: aclnnInplaceLeakyRelu
@@ -2908,6 +2951,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_op:
+        - param: weight
+          exec: aclnnLerps
       out:
         size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
         dtype: self
@@ -2917,6 +2963,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_op:
+        - param: weight
+          exec: aclnnLerps
       out:
         size: broadcast_ops_npu_output_size(broadcast_ops_npu_output_size(self, end), weight.sizes())
       exec: aclnnLerp
@@ -2931,6 +2980,9 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_op:
+        - param: weight
+          exec: aclnnInplaceLerps
       exec: aclnnInplaceLerp
 
   - func: linalg_cross(Tensor self, Tensor other, *, int dim=-1) -> Tensor
@@ -3127,6 +3179,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_h2d: [other]
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::kBool
@@ -3137,6 +3190,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_h2d: [other]
       out:
         size: broadcast_ops_npu_output_size(self, other)
         name: self, other
@@ -3146,6 +3200,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_h2d: [other]
       self:
         name: self, other
       exec: aclnnInplaceLogicalAnd
@@ -3247,6 +3302,7 @@ official:
   - func: lt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: lt.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3255,6 +3311,7 @@ official:
   - func: lt.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: lt.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3294,6 +3351,7 @@ official:
   - func: matmul(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: [v2.1, newest]
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: matmul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
@@ -3395,6 +3453,7 @@ official:
   - func: maximum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: maximum.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3478,6 +3537,7 @@ official:
   - func: minimum(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: minimum.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3507,6 +3567,7 @@ official:
   - func: mm(Tensor self, Tensor mat2) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     internal_format_opapi: all_version
 
   - func: mm.out(Tensor self, Tensor mat2, *, Tensor(a!) out) -> Tensor(a!)
@@ -3550,10 +3611,12 @@ official:
   - func: mul.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul.out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3562,10 +3625,12 @@ official:
   - func: mul_.Scalar(Tensor(a!) self, Scalar other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: mul_.Tensor(Tensor(a!) self, Tensor other) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: multilabel_margin_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
     acl_op: all_version
@@ -3646,16 +3711,17 @@ official:
 
   - func: native_batch_norm(Tensor input, Tensor? weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float momentum, float eps) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
+    dvm: all_version
     op_api: all_version
     gen_opapi:
       out0:
         size: input
         dtype: input
       out1:
-        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
         dtype: 'training ? at::kFloat : input.scalar_type()'
       out2:
-        size: 'training ? c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)} : c10::SmallVector<int64_t, op_infer::SIZE>{0}'
+        size: c10::SmallVector<int64_t, op_infer::SIZE>{input.size(1)}
         dtype: 'training ? at::kFloat : input.scalar_type()'
       exec: aclnnBatchNorm
 
@@ -3668,6 +3734,7 @@ official:
   - func: native_batch_norm_backward(Tensor grad_out, Tensor input, Tensor? weight, Tensor? running_mean, Tensor? running_var, Tensor? save_mean, Tensor? save_invstd, bool train, float eps, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)
     acl_op: all_version
@@ -3710,6 +3777,7 @@ official:
   - func: ne.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ne.Scalar_out(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3718,6 +3786,7 @@ official:
   - func: ne.Tensor(Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: ne.Tensor_out(Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3734,6 +3803,7 @@ official:
   - func: neg(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: neg.out
 
@@ -3899,6 +3969,7 @@ official:
   - func: pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: pow.Tensor_Scalar_out
 
@@ -3915,6 +3986,7 @@ official:
   - func: pow.Tensor_Tensor(Tensor self, Tensor exponent) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: pow.Tensor_Tensor_out(Tensor self, Tensor exponent, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -3923,12 +3995,14 @@ official:
   - func: pow_.Scalar(Tensor(a!) self, Scalar exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplacePowTensorScalar
 
   - func: pow_.Tensor(Tensor(a!) self, Tensor exponent) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: polar(Tensor abs, Tensor angle) -> Tensor
     acl_op: all_version
@@ -4013,6 +4087,7 @@ official:
   - func: reciprocal(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4124,6 +4199,7 @@ official:
   - func: relu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4134,6 +4210,7 @@ official:
   - func: relu_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       exec: aclnnInplaceRelu
 
@@ -4315,6 +4392,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      integral_identity_tensor: self
       out:
         size: self
         dtype: self
@@ -4325,7 +4403,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      exec: aclnnInplaceRound
+      structured_inherit: round.out
 
   - func: round_.decimals(Tensor(a!) self, *, int decimals) -> Tensor(a!)
     acl_op: all_version
@@ -4372,6 +4450,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_h2d: [self]
       out:
         size: self
         dtype: at::native::result_type(self, other)
@@ -4381,6 +4460,10 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      cpu_scalar_h2d: [self]
+      cpu_scalar_op:
+        - param: other
+          exec: aclnnRsubs
       out:
         size: broadcast_ops_npu_output_size(self, other)
         dtype: at::native::result_type(self, other)
@@ -4427,25 +4510,38 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      new_params:
+        # Comma chain: pre_check and warn must run before right_eff; single entry avoids key-order hazards.
+        right_eff: '(op_plugin::searchsorted_validate_scalar_op(sorted_sequence, self, out_int32, right, side, sorter), op_plugin::warn_if_searchsorted_scalar_inputs_noncontiguous(sorted_sequence, sorter), op_plugin::resolve_searchsorted_effective_right(right, side))'
       out:
         size: 'c10::SmallVector<int64_t, op_infer::SIZE>{}'
         dtype: 'out_int32 ? at::kInt : at::kLong'
-      exec: aclnnSearchSorteds, sorted_sequence, self, out_int32, right, sorter, out
+      exec: aclnnSearchSorteds, sorted_sequence, self, out_int32, right_eff, sorter, out
 
   - func: searchsorted.Tensor(Tensor sorted_sequence, Tensor self, *, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None) -> Tensor
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      structured_inherit: searchsorted.Tensor_out
+      new_params:
+        # Functional: out is not a function arg yet when new_params run — use core check only (incl. sorter size).
+        right_eff: '(op_plugin::searchsorted_validate_core_no_output(sorted_sequence, self, out_int32, right, side, sorter), op_plugin::warn_if_searchsorted_inputs_noncontiguous(sorted_sequence, self, sorter), op_plugin::resolve_searchsorted_effective_right(right, side))'
+      out:
+        size: self
+        dtype: 'out_int32 ? at::kInt : at::kLong'
+      exec: aclnnSearchSorted, sorted_sequence, self, out_int32, right_eff, sorter, out
 
   - func: searchsorted.Tensor_out(Tensor sorted_sequence, Tensor self, *, bool out_int32=False, bool right=False, str? side=None, Tensor? sorter=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      new_params:
+        # Comma chain: full ATen pre_check (incl. out dtype) before warn and before resolve; ensures PyTorch
+        # RuntimeError text before npu_preparation::check_tensor / aclnn ("expected dtype Long...").
+        right_eff: '(op_plugin::searchsorted_validate_tensor_out_op(sorted_sequence, self, out, out_int32, right, side, sorter), op_plugin::warn_if_searchsorted_inputs_noncontiguous(sorted_sequence, self, sorter), op_plugin::resolve_searchsorted_effective_right(right, side))'
       out:
         size: self
         dtype: 'out_int32 ? at::kInt : at::kLong'
-      exec: aclnnSearchSorted, sorted_sequence, self, out_int32, right, sorter, out
+      exec: aclnnSearchSorted, sorted_sequence, self, out_int32, right_eff, sorter, out
 
   - func: sgn(Tensor self) -> Tensor
     acl_op: all_version
@@ -4458,6 +4554,7 @@ official:
   - func: sigmoid(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4484,6 +4581,7 @@ official:
   - func: sigmoid_backward(Tensor grad_output, Tensor output) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       grad_input:
         size: 'broadcast_ops_npu_output_size(grad_output, output)'
@@ -4532,6 +4630,7 @@ official:
   - func: silu(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: silu.out
 
@@ -4553,6 +4652,7 @@ official:
   - func: silu_backward(Tensor grad_output, Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: silu_backward.grad_input(Tensor grad_output, Tensor self, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: all_version
@@ -4802,6 +4902,7 @@ official:
   - func: sqrt(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       out:
         size: self
@@ -4868,6 +4969,7 @@ official:
   - func: sub.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sub.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -4880,10 +4982,12 @@ official:
   - func: sub_.Tensor(Tensor(a!) self, Tensor other, *, Scalar alpha=1) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sum(Tensor self, *, ScalarType? dtype=None) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: sum.DimnameList_out(Tensor self, Dimname[1] dim, bool keepdim=False, *, ScalarType? dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -4892,6 +4996,7 @@ official:
   - func: sum.IntList_out(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None, Tensor(a!) out) -> Tensor(a!)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: sum.dim_DimnameList(Tensor self, Dimname[1] dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
     acl_op: all_version
@@ -4900,6 +5005,7 @@ official:
   - func: sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: all_version
 
   - func: take(Tensor self, Tensor index) -> Tensor
     acl_op: all_version
@@ -4945,6 +5051,7 @@ official:
   - func: tanh(Tensor self) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: tanh.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -4953,10 +5060,12 @@ official:
   - func: tanh_(Tensor(a!) self) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: tanh_backward(Tensor grad_output, Tensor output) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
     gen_opapi:
       structured_inherit: tanh_backward.grad_input
 
@@ -5073,6 +5182,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
+      integral_identity_tensor: self
       out:
         size: self
         dtype: self
@@ -5083,7 +5193,7 @@ official:
     acl_op: all_version
     op_api: all_version
     gen_opapi:
-      exec: aclnnInplaceTrunc
+      structured_inherit: trunc.out
 
   - func: _transform_bias_rescale_qkv(Tensor qkv, Tensor qkv_bias, int num_heads) -> (Tensor, Tensor, Tensor)
     op_api: all_version
@@ -5313,10 +5423,12 @@ official:
   - func: where.self(Tensor condition, Tensor self, Tensor other) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: where.self_out(Tensor condition, Tensor self, Tensor other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
+    dvm: [v2.1, newest]
 
   - func: xlogy.OutScalar_Other(Tensor self, Scalar other, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
@@ -5531,6 +5643,7 @@ custom:
 
   - func: _npu_ciou(Tensor self, Tensor gtboxes, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> (Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: _npu_dropout(Tensor self, float p) -> (Tensor, Tensor)
     acl_op: all_version
@@ -5679,6 +5792,10 @@ custom:
   - func: npu_attention_update(Tensor[] lse, Tensor[] local_out, int update_type) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_ring_attention_update(Tensor prev_attn_out, Tensor prev_softmax_max, Tensor prev_softmax_sum, Tensor cur_attn_out, Tensor cur_softmax_max, Tensor cur_softmax_sum, *, Tensor? actual_seq_qlen=None, str input_layout="SBH", str input_softmax_layout="") -> (Tensor, Tensor, Tensor)
+    op_api: [v2.7, newest]
+    exposed: [v2.7, newest]
+
   - func: npu_alltoallv_gmm(Tensor gmm_x, Tensor gmm_weight, str hcom, int ep_world_size, int[] send_counts, int[] recv_counts, *, Tensor? send_counts_tensor=None, Tensor? recv_counts_tensor=None, Tensor? mm_x=None, Tensor? mm_weight=None, bool trans_gmm_weight=False, bool trans_mm_weight=False, bool permute_out_flag=False) -> (Tensor, Tensor, Tensor)
     op_api: all_version
     exposed: all_version
@@ -5731,8 +5848,9 @@ custom:
     acl_op: all_version
     op_api: all_version
 
-  - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSH', str rotary_mode='half') -> (Tensor, Tensor)
+  - func: npu_apply_rotary_pos_emb(Tensor query, Tensor key, Tensor cos, Tensor sin, str layout='BSND', str rotary_mode='half') -> (Tensor, Tensor)
     op_api: all_version
+    exposed: [v2.7, newest]
 
   - func: npu_kv_rmsnorm_rope_cache(Tensor kv, Tensor gamma, Tensor cos, Tensor sin, Tensor index, Tensor k_cache, Tensor ckv_cache, *, Tensor? k_rope_scale=None, Tensor? c_kv_scale=None, Tensor? k_rope_offset=None, Tensor? c_kv_offset=None, Tensor? v=None, float epsilon=1e-5, str cache_mode='Norm', bool is_output_kv=False) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
@@ -5803,10 +5921,12 @@ custom:
 
   - func: npu_ciou(Tensor self, Tensor gtboxes, bool trans=False, bool is_cross=True, int mode=0, bool atan_sub_flag=False) -> Tensor
     acl_op: all_version
+    op_api: all_version
     exposed: all_version
 
   - func: npu_ciou_backward(Tensor grad, Tensor bboxes, Tensor gtboxes, Tensor? atan_sub, bool trans=False, bool is_cross=True, int mode=0) -> (Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: npu_clear_float_status(Tensor self, int mode=0) -> Tensor
     acl_op: all_version
@@ -5927,6 +6047,7 @@ custom:
   - func: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
+    dvm: all_version
 
   - func: npu_dtype_cast_(Tensor(a!) self, Tensor src) -> Tensor(a!)
     acl_op: all_version
@@ -5985,22 +6106,6 @@ custom:
 
   - func: npu_fused_attention_score_grad(Tensor grad_output, Tensor softmax_output, Tensor query_layer, Tensor key_layer, Tensor value_layer, Tensor mask, Scalar scale, float keep_prob, bool query_transpose=False, bool key_transpose=False, bool value_transpose=False, bool dx_transpose=False) -> (Tensor, Tensor, Tensor)
     acl_op: all_version
-
-  - func: _npu_attention_pioneer(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
-
-  - func: _npu_attention_pioneer.out(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
-
-  - func: _npu_attention_pioneer_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> Tensor
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
-
-  - func: _npu_attention_pioneer_infer_output(Tensor query, Tensor value, *, str input_layout="BSH", Tensor? block_table=None, int num_heads=1, int num_key_value_heads=0, bool softmax_lse_flag=False, Tensor? query_rope=None) -> (Tensor, Tensor)
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
 
   - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, SymInt[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, int key_antiquant_mode=0, int value_antiquant_mode=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
     op_api: [v2.1, newest]
@@ -6228,14 +6333,13 @@ custom:
 
   - func: npu_iou(Tensor bboxes, Tensor gtboxes, int mode=0) -> Tensor
     acl_op: all_version
+    op_api: all_version
     exposed: all_version
 
   - func: npu_kv_quant_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
     op_api: all_version
     exposed: all_version
 
-  - func: _npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
-    op_api: all_version
 
   - func: npu_layer_norm_eval(Tensor input, int[] normalized_shape, Tensor? weight=None, Tensor? bias=None, float eps=1e-05) -> Tensor
     acl_op: all_version
@@ -6862,6 +6966,7 @@ custom:
 
   - func: npu_swiglu(Tensor self, int dim=-1) -> Tensor
     op_api: all_version
+    dvm: all_version
     exposed: all_version
     gen_opapi:
       out:
@@ -7296,6 +7401,14 @@ custom:
         actual_num_out_tokens: '(num_out_tokens_value > 0) ? std::min(num_out_tokens_value, flatten_size) : num_out_tokens_value + flatten_size'
       exec: aclnnMoeTokenPermute, tokens, indices, actual_num_out_tokens, padded_mode, permuted_tokens, sorted_indices
 
+  - func: npu_moe_token_permute_grad_v2(Tensor grad_permuted_tokens, Tensor sorted_indices, int tokens_size_0, ScalarType tokens_dtype, int num_topK, bool padded_mode=False) -> Tensor
+    op_api: [v2.1, newest]
+    gen_opapi:
+      grad_tokens:
+        size: 'npu_moe_token_permute_grad_v2_out_size(tokens_size_0, grad_permuted_tokens, sorted_indices)'
+        dtype: tokens_dtype
+      exec: aclnnMoeTokenPermuteGrad, grad_permuted_tokens, sorted_indices, num_topK, padded_mode, grad_tokens
+
   - func: npu_moe_token_permute_grad(Tensor tokens, Tensor grad_permuted_tokens, Tensor indices, Tensor sorted_indices, bool padded_mode=False) -> Tensor
     op_api: [v2.1, newest]
     gen_opapi:
@@ -7502,18 +7615,6 @@ symint:
 
   - func: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
     op_api: all_version
-
-  - func: _npu_attention_pioneer(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
-
-  - func: _npu_attention_pioneer.out(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False, Tensor? workspace=None, Tensor(a!) attention_out, Tensor(b!) softmax_lse) -> (Tensor(a!), Tensor(b!))
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
-
-  - func: _npu_attention_pioneer_get_max_workspace(Tensor query, Tensor key, Tensor value, *, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? block_table=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_sink=None, Tensor? key_rope_sink=None, Tensor? value_sink=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int block_size=0, bool softmax_lse_flag=False) -> Tensor
-    op_api: [v2.1, newest]
-    internal_format_opapi: [v2.1, newest]
 
   - func: npu_fused_infer_attention_score(Tensor query, Tensor key, Tensor value, *, Tensor? pse_shift=None, Tensor? atten_mask=None, SymInt[]? actual_seq_lengths=None, SymInt[]? actual_seq_lengths_kv=None, Tensor? dequant_scale1=None, Tensor? quant_scale1=None, Tensor? dequant_scale2=None, Tensor? quant_scale2=None, Tensor? quant_offset2=None, Tensor? antiquant_scale=None, Tensor? antiquant_offset=None, Tensor? key_antiquant_scale=None, Tensor? key_antiquant_offset=None, Tensor? value_antiquant_scale=None, Tensor? value_antiquant_offset=None, Tensor? block_table=None, Tensor? query_padding_size=None, Tensor? kv_padding_size=None, Tensor? key_shared_prefix=None, Tensor? value_shared_prefix=None, SymInt[]? actual_shared_prefix_len=None, Tensor? query_rope=None, Tensor? key_rope=None, Tensor? key_rope_antiquant_scale=None, int num_heads=1, float scale=1.0, int pre_tokens=2147483647, int next_tokens=2147483647, str input_layout="BSH", int num_key_value_heads=0, int sparse_mode=0, int inner_precise=0, int block_size=0, int antiquant_mode=0, int key_antiquant_mode=0, int value_antiquant_mode=0, bool softmax_lse_flag=False) -> (Tensor, Tensor)
     op_api: [v2.1, newest]

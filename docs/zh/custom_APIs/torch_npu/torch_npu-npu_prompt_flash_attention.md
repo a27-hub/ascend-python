@@ -13,6 +13,7 @@
 - API功能：全量FA实现。
 
 - 计算公式：
+
 $$
 atten\_out = softmax\left(scale \cdot (Q \cdot K) + atten\_mask\right) \cdot V
 $$
@@ -168,9 +169,9 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     >>> out = torch_npu.npu_prompt_flash_attention(q, k, v,
     ... atten_mask = atten_mask, actual_seq_lengths = actseqlen, actual_seq_lengths_kv = actseqlenkv,
     ... num_heads = 8, input_layout = "BNSD", scale_value=scale, pre_tokens=65535, next_tokens=65535)
-    >>> out.shape
+    >>> print(out.shape)
     torch.Size([1, 8, 164, 128])
-    >>> out.dtype
+    >>> print(out.dtype)
     torch.float16
     ```
 

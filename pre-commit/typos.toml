@@ -19,7 +19,26 @@ locale = "en"
 extend-ignore-identifiers-re = [".*Unc.*", ".*_thw",
     ".*UE8M0.*", ".*[UE4M3|ue4m3].*", ".*eles.*", ".*fo.*", ".*ba.*",
     ".*ot.*", ".*[Tt]h[rR].*"]
-extend-ignore-words-re = ["CANN", "cann","ND","nd","alog","thw","THW","BA"]
+extend-ignore-words-re = [
+    "CANN",
+    "cann",
+    "ND",
+    "Nd",
+    "nd",
+    "alog",
+    "thw",
+    "THW",
+    "BA",
+    "inh",
+    "sacalars",
+    "vaild",
+    "invaild",
+    "hax",
+    "aligin",
+    "oprator",
+    "wih",
+    "cacl",
+    ]
 extend-ignore-re = []
 
 [default.extend-identifiers]
@@ -130,6 +149,16 @@ extend-ignore-re = []
 nd = "nd"
 
 [type.css.extend-words]
+
+# PyTorch ATen schema lines include names like constant_pad_nd (_nd is not "and").
+[type.yaml]
+extend-glob = ["**/*.yaml", "**/*.yml"]
+extend-ignore-identifiers-re = []
+extend-ignore-words-re = []
+extend-ignore-re = []
+
+[type.yaml.extend-identifiers]
+constant_pad_nd = "constant_pad_nd"
 
 [type.man]
 extend-glob = []

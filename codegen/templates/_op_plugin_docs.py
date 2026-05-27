@@ -541,6 +541,9 @@ query 的 head 数 N1 与 key/value 的 head 数 N2，需满足 N1 >= N2 且 N1 
 block_sparse_mask 必传，且shape必须为[batch, headNum, ceilDiv(maxQS, blockShapeX), ceilDiv(maxKVS, blockShapeY)]. 
 block_shape 必传，必须包含至少两个元素[blockShapeX, blockShapeY]，且值必须大于0；blockShapeY 必须为 128 的倍数。
 当 q_input_layout 为 "TND" 时 actual_seq_lengths 必选; 当 kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. 
+actual_seq_lengths 与 actual_seq_lengths_kv 当前必须同时配置或同时不配置，仅配置其中之一会被算子拦截.
+正向路径当前支持 headDim=64 或 128; 反向路径当前支持 headDim=128.
+反向路径支持 q_input_layout 和 kv_input_layout 同为 "BNSD" 或同为 "TND"，并支持 MHA/GQA 场景. MHA 场景下 N1 == N2, GQA 场景下需满足 N1 > N2 且 N1 % N2 == 0, 其中 N1 为 query 的 head 数, N2 为 key/value 的 head 数.
 inner_precise 仅支持 0（表示float32 softmax） 或 1（表示float16 softmax）；当 query/key/value 为 bfloat16 时，仅支持 0.
 
 支持的PyTorch版本
@@ -1380,7 +1383,7 @@ custom.npu_quant_lightning_indexer(query, key, weights, query_dequant_scale, key
 
 参数说明
 
-query（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持int8，Ascend 950PR/Ascend 950DT数据类型支持float8_e4m3fn, hifloat8。layout_query为BSND时shape为[B,S1,N1,D]，当layout_query为TND时shape为[T1,N1,D]。
+query（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持int8，Ascend 950PR/Ascend 950DT数据类型支持float8_e4m3fn, hifloat8。layout_query为BSND时shape为[B,S1,N1,D]，当layout_query为TND时shape为[T1,N1,D]，N1支持小于等于64。
 
 key（Tensor）：必选参数，不支持非连续，数据格式支持ND，Atlas A3 推理系列产品数据类型支持int8，Ascend 950PR/Ascend 950DT数据类型支持float8_e4m3fn，hifloat8。layout_key为PA_BSND时shape为[block_count, block_size, N2, D]，其中block_count为PageAttention时block总数，block_size为一个block的token数。
 
@@ -1548,77 +1551,6 @@ Q_S和S1表示query shape中的S，KV_S和S2表示key shape中的S，Q_N表示nu
 """
 )
 
-_add_torch_npu_docstr(
-    "_npu_kv_quant_sparse_flash_attention_pioneer",
-    """
-功能实现描述
-KVQuantSparseFlashAttentionPioneer在QuantSparseFlashAttention的基础上支持了sink。
-
-接口原型
-torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
-
-query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16，query相同dtype的q_nope和q_rope按D维度拼接得到。
-
-key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float8_e4m3fn，hifloat8，layout_kv为PA_BSND时shape为[block_num, block_size, KV_N, D]，其中block_num为PageAttention时block总数，block_size为一个block的token数。
-
-value（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float8_e4m3fn，hifloat8。
-
-sparse_indices（Tensor）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持ND,数据类型支持int32，shape需要传入[B, Q_S, KV_N, sparse_size]，其中sparse_size为一次离散选取的token数，需要保证每行有效值均在前半部分，无效值均在后半部分。
-
-scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持double。
-
-sparse_block_size（int）：必选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持int64。
-
-key_quant_mode（int）：必选参数，代表key的量化模式，数据类型支持int64，支持传入2，代表per_tile量化模式。
-
-value_quant_mode（int）：必选参数，代表value的量化模式，数据类型支持int64，支持传入2，代表per_tile量化模式。
-
-*：代表其之前的参数是位置相关的，必须按照顺序输入，属于必选参数；其之后的参数是键值对赋值，与位置无关，属于可选参数（不传入会使用默认值）。
-
-key_dequant_scale（Tensor）：可选参数，预留参数，当前不支持。
-
-value_dequant_scale（Tensor）：可选参数，预留参数，当前不支持。
-
-block_table（Tensor）：可选参数，表示PageAttention中kvCache存储使用的block映射表。数据格式支持ND，数据类型支持int32，shape为2维，其中第一维长度为B，第二维长度不小于所有batch中最大的s2对应的block数量，即s2_max / block_size向上取整。
-
-actual_seq_lengths_query（Tensor）：可选参数，表示不同Batch中query的有效token数，数据类型支持int32。如果不指定seqlen可传入None，表示和query的shape的S长度相同。
-
-该入参中每个Batch的有效token数不超过query中的维度S大小。支持长度为B的一维tensor。当query的input_layout为TND时，该入参必须传入，且以该入参元素的数量作为B值，该入参中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须>=前一个元素的值。不能出现负值。
-
-actual_seq_lengths_kv（Tensor）：可选参数，表示不同Batch中key和value的有效token数，数据类型支持int32。如果不指定None，表示和key的shape的S长度相同。
-
-该入参中每个Batch的有效token数不超过key/value中的维度S大小且不小于0。支持长度为B的一维tensor。
-
-key_sink(Tensor)：可选参数，表示添加在压缩在key序列维度上的额外参数。layout为[sink_num, N2, headDim]，其中headDim包含Nope和Rope两部分。
-
-value_sink(Tensor)：可选参数，表示添加在压缩在key序列维度上的额外参数。layout为[sink_num, N2, headDim]，其中headDim包含Nope。
-
-layout_query（str）：可选参数，用于标识输入query的数据排布格式，用户不特意指定时可传入默认值"BSND"，支持传入BSND和TND。
-
-说明： 1、query数据排布格式支持从多种维度解读，其中B（Batch）表示输入样本批量大小、S（Seq-Length）表示输入样本序列长度、H（Head-Size）表示hidden层的大小、N（Head-Num）表示多头数、D（Head-Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
-
-layout_kv（str）：可选参数，用于标识输入key的数据排布格式，用户不特意指定时可传入默认值"BSND"，支持传入PA_BSND，PA_BSND在使能PageAttention时使用。
-
-sparse_mode（int）：可选参数，表示sparse的模式。数据类型支持int64。
-
-sparse_mode为0时，代表全部计算。
-sparse_mode为3时，代表rightDownCausal模式的mask，对应以右下顶点往左上为划分线的下三角场景。
-attention_mode（int）：可选参数，表示attention的模式。数据类型支持int64，支持传入2，表示MLA-absorb模式，即QK的D包含rope和nope两部分，且KV是同一份，默认值为0。
-
-quant_scale_repo_mode（int）：可选参数，表示量化参数的存放模式。数据类型支持int64，支持传入1，表示combine模式，即量化参数和数据混合存放，默认值为0。
-
-tile_size（int）：可选参数，表示per_tile时每个参数对应的数据块大小，仅在per_tile时有效。数据类型支持int64，默认值为0。
-
-rope_head_dim（int）：可选参数，表示MLA架构下的rope head dim大小，仅在attention_mode为2时有效。数据类型支持int64，默认值为0。
-
-out（Tensor）：公式中的输出。数据格式支持ND，数据类型支持bfloat16。
-
-说明：
-query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
-Q_S和S1表示query shape中的S，KV_S和S2表示key shape中的S，Q_N表示num_query_heads，KV_N表示num_key_value_heads。
-
-"""
-)
 
 _add_torch_npu_docstr(
     "npu_fusion_attention",
@@ -2818,6 +2750,61 @@ local_out = [
 
 update_type = 0  
 out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_ring_attention_update",
+    """
+接口原型：
+npu_ring_attention_update(Tensor prev_attn_out, Tensor prev_softmax_max, Tensor prev_softmax_sum, Tensor cur_attn_out, Tensor cur_softmax_max, Tensor cur_softmax_sum, *, Tensor? actual_seq_qlen=None, str input_layout="SBH", str input_softmax_layout="") -> (Tensor, Tensor, Tensor)
+
+功能描述
+将两次FlashAttention的输出按照softmax的max和sum进行更新，输出新的attention结果、softmax_max和softmax_sum。
+
+计算公式：
+softmax_max = max(prev_softmax_max, cur_softmax_max)
+softmax_sum = prev_softmax_sum * exp(prev_softmax_max - softmax_max) + cur_softmax_sum * exp(cur_softmax_max - softmax_max)
+attn_out = prev_attn_out * exp(prev_softmax_max - softmax_max) * prev_softmax_sum / softmax_sum
+         + cur_attn_out * exp(cur_softmax_max - softmax_max) * cur_softmax_sum / softmax_sum
+
+参数说明
+prev_attn_out: Tensor类型, 第一次FlashAttention的输出。数据类型支持FLOAT16、FLOAT、BFLOAT16, 数据格式支持ND。
+prev_softmax_max: Tensor类型, 第一次FlashAttention的softmax max结果。数据类型支持FLOAT, 数据格式支持ND。
+prev_softmax_sum: Tensor类型, 第一次FlashAttention的softmax sum结果。数据类型支持FLOAT, 数据格式支持ND。
+cur_attn_out: Tensor类型, 第二次FlashAttention的输出。数据类型和shape需与prev_attn_out一致。
+cur_softmax_max: Tensor类型, 第二次FlashAttention的softmax max结果。数据类型和shape需与prev_softmax_max一致。
+cur_softmax_sum: Tensor类型, 第二次FlashAttention的softmax sum结果。数据类型和shape需与prev_softmax_sum一致。
+actual_seq_qlen: Tensor类型, 可选参数, TND场景下必选, 表示从0开始累计的query序列长度前缀和。数据类型支持int64, 数据格式支持ND。
+input_layout: string类型, 可选参数, attention输入输出排布。支持"SBH"和"TND", 默认值为"SBH"。
+input_softmax_layout: string类型, 可选参数, softmax相关输入排布。支持""、"SBH"、"TND", 默认值为""。仅在input_layout为"TND"时生效。
+
+输出说明
+attn_out: Tensor类型, 更新后的attention输出。shape和数据类型与prev_attn_out一致。
+softmax_max: Tensor类型, 更新后的softmax max。shape与prev_softmax_max一致, 数据类型为FLOAT。
+softmax_sum: Tensor类型, 更新后的softmax sum。shape与prev_softmax_sum一致, 数据类型为FLOAT。
+
+支持的型号
+----------------
+Ascend 950PR/Ascend 950DT
+Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A2训练系列产品/Atlas A2推理系列产品
+
+调用示例
+----------------
+import torch
+import torch_npu
+
+prev_attn_out = torch.randn((4, 2, 32), dtype=torch.float16, device="npu")
+cur_attn_out = torch.randn((4, 2, 32), dtype=torch.float16, device="npu")
+prev_softmax_max = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+prev_softmax_sum = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+cur_softmax_max = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+cur_softmax_sum = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+attn_out, softmax_max, softmax_sum = torch_npu.npu_ring_attention_update(
+    prev_attn_out, prev_softmax_max, prev_softmax_sum,
+    cur_attn_out, cur_softmax_max, cur_softmax_sum)
 """
 )
 
@@ -15590,5 +15577,92 @@ cpu_model = Model()
 model = cpu_model.npu()
 model = torch.compile(model, backend=npu_backend, dynamic=False, fullgraph=True)
 y, amax = model(x_tensor, scale)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_apply_rotary_pos_emb",
+    """
+接口原型:
+torch_npu.npu_apply_rotary_pos_emb(query, key, cos, sin, *, layout='BSND', rotary_mode='half') -> (Tensor, Tensor)
+
+产品支持情况:                               
+Atlas 350 加速卡                        
+Atlas A3 训练系列产品/Atlas A3 推理系列产品  
+Atlas A2 训练系列产品/Atlas A2 推理系列产品  
+
+功能描述:
+为提升推理网络性能，将query和key两路算子融合为单路，在旋转位置编码计算中直接对结果执行原地更新。
+
+参数说明:
+query (Tensor): 必选参数，待执行旋转位置编码的第一个张量。要求为连续的Tensor，数据类型支持bfloat16、float16、float32，数据格式支持ND。layout为TND时，shape为3维，其他layout场景下shape为4维。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
+    Atlas 350 加速卡：支持空Tensor，shape最后一维（D）小于等于1024。
+
+key (Tensor): 必选参数，待执行旋转位置编码的第二个张量。要求为连续的Tensor，数据类型支持bfloat16、float16、float32，数据格式支持ND。layout为TND时，shape为3维，其他layout场景下shape为4维。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape最后一维（D）必须等于128或者64。
+    Atlas 350 加速卡：支持空Tensor，shape最后一维（D）小于等于1024。
+
+cos (Tensor): 必选参数，旋转位置编码余弦值张量。要求为连续的Tensor，数据类型支持bfloat16、float16、float32，数据格式支持ND。layout为TND时，shape为3维，其他layout场景下shape为4维。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape中B维度与query、key的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
+    Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape中N维度必须等于1，shape最后一维（D）小于等于1024。
+
+sin (Tensor): 必选参数，旋转位置编码正弦值张量。要求为连续的Tensor，数据类型支持bfloat16、float16、float32，数据格式支持ND。layout为TND时，shape为3维，其他layout场景下shape为4维。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持空Tensor，shape中B维度与query、key的B维度一致，shape第3维（N）必须等于1，shape最后一维（D）必须等于128或者64。
+    Atlas 350 加速卡：支持空Tensor，shape中B维度与query、key的B维度一致，或者等于1，shape最后一维（D）小于等于1024。
+
+layout (str): 可选参数，张量布局格式，支持"BSND"、"SBND"、"BNSD"、"TND"。默认"BSND"。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持BSND的4维Tensor、TND的3维Tensor。
+    Atlas 350 加速卡：支持BSND、SBND、BNSD的4维Tensor，TND的3维Tensor。
+
+rotary_mode (str): 可选参数，旋转编码模式，支持"half"、"quarter"、"interleave"，默认值为"half"。
+    Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持"half"模式。
+    Atlas 350 加速卡：支持"half"、"interleave"、"quarter"模式。
+
+返回值说明:
+query_out (Tensor): 原地更新后的query张量。
+key_out (Tensor): 原地更新后的key张量。
+
+约束说明:
+Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品:
+1. layout为"BSND"，query、key、cos、sin输入shape的前2维（B、S）必须相等；layout为"TND"时，第1维（T）必须相等。
+2. query、key输入shape的最后一维（D）必须相等，cos、sin输入shape的最后一维（D）必须相等。
+3. 输入张量query、key、cos、sin的数据类型必须相同。
+4. layout为"BSND"时，输入query的shape用（q_b, q_s, q_n, q_d）表示，key的shape用（q_b, q_s, k_n, q_d）表示，cos和sin的shape用（q_b, q_s, 1, cos_d）表示。其中，b表示batch_size，s表示seq_length，n表示head_num，d表示head_dim。layout为"TND"时，输入query的shape用（q_t, q_n, q_d）表示，key的shape用（q_t, k_n, q_d）表示，cos和sin的shape用（q_t, 1, cos_d）表示。其中，t表示b和s合轴，n表示head_num，d表示head_dim。
+
+Atlas 350 加速卡:
+1. 对于任意layout，query与key除N维度外其他维度必须相同；query、key输入shape的最后一维（D）必须相等，cos、sin输入shape的最后一维（D）必须相等，且小于等于query、key输入shape的最后一维（D）。
+2. 输入张量query、key、cos、sin的数据类型必须相同。
+3. rotary_mode为"half"和"interleave"时，输入shape最后一维必须被2整除；rotary_mode为"quarter"时，输入shape最后一维必须被4整除。
+
+支持版本:
+PyTorch 2.7.1+
+
+调用示例:
+import torch
+import torch_npu
+
+def test_npu_apply_rotary_pos_emb():
+
+    batch = 1
+    seq_len = 64
+    num_heads = 8
+    head_dim = 64
+
+    query = torch.randn(batch, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
+    key = torch.randn(batch, seq_len, num_heads, head_dim, dtype=torch.float16).npu()
+    cos = torch.randn(batch, seq_len, 1, head_dim, dtype=torch.float16).npu()
+    sin = torch.randn(batch, seq_len, 1, head_dim, dtype=torch.float16).npu()
+
+    q_out, k_out = torch_npu.npu_apply_rotary_pos_emb(
+        query, key, cos, sin,
+        layout="BSND",
+        rotary_mode="half"
+    )
+
+    print("API: npu_apply_rotary_pos_emb test passed!")
+
+if __name__ == "__main__":
+    test_npu_apply_rotary_pos_emb()
 """
 )

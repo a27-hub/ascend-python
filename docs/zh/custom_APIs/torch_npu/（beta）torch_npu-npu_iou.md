@@ -7,6 +7,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas 350 加速卡</term>            |    √     |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
@@ -40,7 +41,7 @@ torch_npu.npu_iou(bboxes, gtboxes, mode=0) -> Tensor
                             [0, 10, 10, 10],
                             [10, 10, 20, 20]], dtype=torch.float16).to("npu")
 >>> output_iou = torch_npu.npu_iou(bboxes, gtboxes, 0)
->>> output_iou
+>>> print(output_iou)
 tensor([[0.4985, 0.0000, 0.0000],
         [0.0000, 0.0000, 0.0000], 
        [0.0000, 0.9961, 0.0000]], device='npu:0', dtype=torch.float16)
