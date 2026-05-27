@@ -54,13 +54,18 @@ at::Tensor npu_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x2, c10
 
     // 生成aclnn接口需要的默认值
     char *group_ptr = const_cast<char *>(hcom.data());
-    char *comm_mode_ptr = (comm_mode.has_value()) ? const_cast<char *>(comm_mode.value().data()) : "";
     bool transpose_x1 = false;
     bool transpose_x2 = false;
 
     // 调用aclnn接口
-    EXEC_NPU_CMD(aclnnMatmulAlltoAllV2, x1, x2, bias, all2all_axes, group_ptr, comm_mode_ptr, transpose_x1,
-        transpose_x2, output_tensor);
+    if (comm_mode.has_value()) {
+        char *comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
+        EXEC_NPU_CMD(aclnnMatmulAlltoAllV2, x1, x2, bias, all2all_axes, group_ptr, comm_mode_ptr, transpose_x1,
+            transpose_x2, output_tensor);
+    } else {
+        EXEC_NPU_CMD(
+            aclnnMatmulAlltoAll, x1, x2, bias, all2all_axes, group_ptr, transpose_x1, transpose_x2, output_tensor);
+    }
     return output_tensor;
 }
 } // namespace op_api

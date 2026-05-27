@@ -75,7 +75,6 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
 
     // 生成aclnn接口需要的默认值
     char *group_ptr = const_cast<char *>(hcom.data());
-    char *comm_mode_ptr = (comm_mode.has_value()) ? const_cast<char *>(comm_mode.value().data()) : "";
     int64_t x1QuantMode = x1_quant_mode.has_value() ? x1_quant_mode.value() : PERTOKEN_QUANT_MODE;
     int64_t x2QuantMode = x2_quant_mode.has_value() ? x2_quant_mode.value() : PERCHANNEL_QUANT_MODE;
     int64_t commonQuantMode = common_quant_mode.has_value() ? common_quant_mode.value() : NON_QUANT;
@@ -92,9 +91,16 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
     TensorWrapper x2_scale_wrapper = make_wrapper(x2_scale_real, x2_scale_dtype);
 
     // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
-    EXEC_NPU_CMD(aclnnQuantMatmulAlltoAllV2, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
-        common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, comm_mode_ptr, x1QuantMode, x2QuantMode,
-        commonQuantMode, commQuantDtype, group_size, transpose_x1, transpose_x2, output_tensor);
+    if (comm_mode.has_value()) {
+        char *comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
+        EXEC_NPU_CMD(aclnnQuantMatmulAlltoAllV2, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
+            common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, comm_mode_ptr, x1QuantMode, x2QuantMode,
+            commonQuantMode, commQuantDtype, group_size, transpose_x1, transpose_x2, output_tensor);
+    } else {
+        EXEC_NPU_CMD(aclnnQuantMatmulAlltoAll, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
+            common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, x1QuantMode, x2QuantMode, commonQuantMode,
+            commQuantDtype, group_size, transpose_x1, transpose_x2, output_tensor);
+    }
     return output_tensor;
 }
 } // namespace op_api
