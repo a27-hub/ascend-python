@@ -191,7 +191,6 @@ class TestTransposeQuantBatchMatmul(TestCase):
                                             perm_x1=[1, 0, 2], perm_x2=[0, 1, 2],
                                             perm_y=[1, 0, 2]).to("cpu")
 
-    @unittest.skip("Skipping npu_transpose_quant_batchmatmul temporarily")
     @SupportedDevices(["Ascend950"])
     def test_npu_transpose_quant_batchmatmul_nz(self, device="npu"):
         M, K, N, Batch = 32, 512, 128, 32

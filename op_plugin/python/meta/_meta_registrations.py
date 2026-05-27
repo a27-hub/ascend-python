@@ -4993,7 +4993,10 @@ def npu_transpose_quant_batchmatmul_meta(input_, weight, dtype, bias=None, x1_sc
         tensor_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dtype)
         if tensor_dtype is None or (tensor_dtype not in TORCH_DTYPE_MAP.keys() and tensor_dtype != torch.uint8):
             raise RuntimeError("Not supported output dtype is " + npu_dtype_to_str(dtype))
-    return input_.new_empty(dim_list, dtype=tensor_dtype)
+        return input_.new_empty(dim_list, dtype=tensor_dtype)
+    else:
+        raise RuntimeError("dtype can not be None" +
+                                ops_error(ErrCode.NOT_SUPPORT))
 
 
 @impl(m, "npu_trans_quant_param")

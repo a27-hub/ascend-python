@@ -50,10 +50,14 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
     const at::Tensor &x2_scale_real = x2_scale.value_or(at::Tensor());
-    
-    const auto default_perm_x1 = std::vector<int64_t>{1, 0, 2};
-    const auto default_perm_x2 = std::vector<int64_t>{0, 1, 2};
-    const auto default_perm_y = std::vector<int64_t>{1, 0, 2};
+    const int64_t b_idx = 0;
+    const int64_t m_idx = 1;
+    const int64_t ka_idx = 2;
+    const int64_t kb_idx = 1;
+    const int64_t n_idx = 2;
+    const auto default_perm_x1 = std::vector<int64_t>{m_idx, b_idx, ka_idx};
+    const auto default_perm_x2 = std::vector<int64_t>{b_idx, kb_idx, n_idx};
+    const auto default_perm_y = std::vector<int64_t>{m_idx, b_idx, n_idx};
     const auto default_group_sizes = std::vector<int64_t>{0, 0, 0};
     
     const auto perm_x1_real = perm_x1.value_or(at::IntArrayRef(default_perm_x1));
