@@ -92,6 +92,8 @@ at::Tensor npu_quant_matmul_all_to_all(const at::Tensor &x1, const at::Tensor &x
 
     // 前面的wrapper打包传进去之后，这里直接调用aclnn接口
     if (comm_mode.has_value()) {
+        TORCH_CHECK(check_aclnn_kernel_available("aclnnQuantMatmulAlltoAllV2"),
+                    "Too old ops-transformer package, please update. Or use comm_mode = None." + OPS_ERROR(ErrCode::PARAM));
         char *comm_mode_ptr = const_cast<char *>(comm_mode.value().data());
         EXEC_NPU_CMD(aclnnQuantMatmulAlltoAllV2, x1_wrapper, x2_wrapper, bias, x1_scale_wrapper, x2_scale_wrapper,
             common_scale, x1_offset, x2_offset, all2all_axes, group_ptr, comm_mode_ptr, x1QuantMode, x2QuantMode,
