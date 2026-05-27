@@ -53,6 +53,12 @@ enum class SparseMode {
 };
 
 namespace {
+void validate_input_layout(const std::string& input_layout_str)
+{
+    TORCH_CHECK(!input_layout_str.empty(),
+        "The input_layout is empty", OPS_ERROR(ErrCode::PARAM));
+}
+
 DropOutStatus get_dropout_status(double keep_prob)
 {
     if (std::abs(keep_prob - 0.0) < EPSILON) {
@@ -136,6 +142,7 @@ at::Tensor dropout_gen_mask_dispatch(const at::Tensor &query, double keep_prob, 
     }
     return mask;
 }
+
 } // namespace _
 
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
@@ -477,6 +484,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -682,6 +690,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||

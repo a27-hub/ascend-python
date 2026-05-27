@@ -63,6 +63,12 @@ enum class SparseMode {
 };
 
 namespace {
+void validate_input_layout(const std::string& input_layout_str)
+{
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
+}
+
 DropOutStatus get_dropout_status(double keep_prob)
 {
     if (std::abs(keep_prob - 0.0) < EPSILON) {
@@ -678,6 +684,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -751,6 +758,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -978,6 +986,7 @@ at::Tensor npu_prompt_flash_attention(
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
             {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
@@ -1275,6 +1284,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -1350,6 +1360,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -1613,6 +1624,7 @@ at::Tensor npu_prompt_flash_attention(
     at::Tensor output;
     at::Tensor tmp_output = npu_preparation::apply_tensor_without_format(query);
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "BNSD_BSND") {
         tmp_output = OpPreparation::apply_tensor_without_format(
             {query.size(DIM_0), query.size(DIM_2), query.size(DIM_1), query.size(DIM_3)},
@@ -1685,6 +1697,7 @@ at::Tensor npu_incre_flash_attention_symint(
     at::TensorList valueTensors = value;
 
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
     // dispatch hostAPI
@@ -1956,6 +1969,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusio
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob,
         OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     if (input_layout_str == "TND") {
         TORCH_CHECK((sparse_mode >= static_cast<int64_t>(SparseMode::NO_MASK) &&
                     sparse_mode < static_cast<int64_t>(SparseMode::PREFIX)) ||
@@ -2071,6 +2085,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     TORCH_CHECK(keep_prob > 0 && keep_prob <= 1,
         "The keep_prob value must be in range of (0, 1], but got ", keep_prob, OPS_ERROR(ErrCode::PARAM));
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     std::string softmax_layout_str = std::string(softmax_layout);
 
     TORCH_CHECK(
@@ -2318,6 +2333,7 @@ npu_fusion_attention_v3_out(
     const at::Tensor &sink_const = sink.value_or(at::Tensor());
 
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
@@ -2476,6 +2492,7 @@ npu_fusion_attention_grad_v3_out(
         keep_prob, OPS_ERROR(ErrCode::PARAM));
 
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
@@ -2617,6 +2634,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _npu_fusion_attention_v3_infer_ou
     c10::string_view input_layout)
 {
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
@@ -2645,6 +2663,7 @@ at::Tensor _npu_fusion_attention_v3_get_max_workspace(
     c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
 {
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
@@ -2765,6 +2784,7 @@ at::Tensor _npu_fusion_attention_grad_v3_get_max_workspace(
     c10::string_view softmax_layout, const c10::optional<at::Tensor> &sink)
 {
     std::string input_layout_str = std::string(input_layout);
+    validate_input_layout(input_layout_str);
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
