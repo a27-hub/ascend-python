@@ -222,16 +222,29 @@ make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
     };
 }
 
-std::array<std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>, 9> scale_kernel_dispatch = {{
-    { "block_1x128_128x128", make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise128x128),
-        ScaledGemmImplementation::BLOCK_1x128_128x128},
-    { "block_128x128_1x128", make_deepseek_checker(ScalingType::BlockWise128x128, ScalingType::BlockWise1x128),
-        ScaledGemmImplementation::BLOCK_128x128_1x128},
-    { "block_1x128_1x128", make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise1x128),
-        ScaledGemmImplementation::BLOCK_1x128_1x128},
-    { "mxfp8_mxfp8", scaled_blas::check_mxfp8_recipe, ScaledGemmImplementation::MXFP8_MXFP8}}};
-
-
+using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>;
+const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
+    {
+        "deepseek_block_1x128_128x128",
+        make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise128x128),
+        ScaledGemmImplementation::BLOCK_1x128_128x128
+    },
+    {
+        "deepseek_block_128x128_1x128",
+        make_deepseek_checker(ScalingType::BlockWise128x128, ScalingType::BlockWise1x128),
+        ScaledGemmImplementation::BLOCK_128x128_1x128
+    },
+    {
+        "deepseek_block_1x128_1x128",
+        make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise1x128),
+        ScaledGemmImplementation::BLOCK_1x128_1x128
+    },
+    {
+        "mxfp8_double_channel",
+        scaled_blas::check_mxfp8_recipe,
+        ScaledGemmImplementation::MXFP8_MXFP8
+    }
+}};
 
 at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     c10::ArrayRef<at::Tensor> scale_a,
@@ -290,36 +303,35 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     auto scale_recipe_a_enum = convert_int_to_enum<ScalingType>(scale_recipe_a);
     auto scale_recipe_b_enum = convert_int_to_enum<ScalingType>(scale_recipe_b);
 
-    // at this point we can start working out what we want to be doing
-    // Try to do as few steps as possible.
-    // NOTE: support is deliberately sparse, can explicitly enumerate all combinations allowed.
-    // Do this via a list of defined (name, acceptance, concrete_impl) tuples.
-    bool found_impl = false;
-    ScaledGemmImplementation gemm_impl = ScaledGemmImplementation::NONE;
+    bool impl_matched = false;
+    ScaledGemmImplementation target_gemm_impl = ScaledGemmImplementation::NONE;
 
-    for (const auto& fn_entry : scale_kernel_dispatch) {
-        const auto [name, accept_fn, scaled_gemm_impl] = fn_entry;
-        bool ok = accept_fn(mat_a.scalar_type(),
+    for (const auto& dispatch_item : scale_kernel_dispatch_table) {
+        const auto& [kernel_name, accept_judge, gemm_implementation] = dispatch_item;
+        bool is_config_match = accept_judge(
+            mat_a.scalar_type(),
             scale_recipe_a_enum,
             scale_a,
             mat_b.scalar_type(),
             scale_recipe_b_enum,
-            scale_b);
-        if (ok) {
-            gemm_impl = scaled_gemm_impl;
-            found_impl = true;
+            scale_b
+        );
+        if (is_config_match) {
+            target_gemm_impl = gemm_implementation;
+            impl_matched = true;
             break;
         }
     }
+
     TORCH_CHECK(
-        found_impl,
-        "Invalid scaling configuration.\n"
-        "- For BlockWise 1x128 scaling, a and b should be float8, scales should be float, scale_a should be (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), ") and scale_b should be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "), and both should be outer-dim-major.\n"
-        "- For BlockWise 128x128 scaling, a and b should be float8, scales should be float, scale_a should be (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), ") and scale_b should be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "), and both should be near-inner-dim-major (with 16-byte aligned strides).\n"
-        "- For Blockwise 1x32 scaling, a and b should be float8, scales should be float8_e8m0fnu, scale_a should have ", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), " elements and scale_b should have ", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), " elements, and both should be contiguous.\n"
-        "Got mat_a.dtype()=", mat_a.scalar_type(), ", scale_a[0].dtype()=", scale_a[0].scalar_type(), ", scale_a[0].size()=", scale_a[0].sizes(), ", scale_a[0].stride()=", scale_a[0].strides(), ", ",
-        "mat_b.dtype()=", mat_b.scalar_type(), ", scale_b[0].dtype()=", scale_b[0].scalar_type(), ", scale_b[0].size()=", scale_b[0].sizes(), " and scale_b[0].stride()=", scale_b[0].strides()
-    );
+    impl_matched,
+    "Unsupported scaling parameter combination detected.\n"
+    "- BlockWise 1x128 scaling requirement: Both matrices a/b must be float8 type, scales must be float32, scale_a shape needs to be (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "), scale_b shape needs to be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "), and both follow outer-dim-major layout.\n"
+    "- BlockWise 128x128 scaling requirement: Both matrices a/b must be float8 type, scales must be float32, scale_a shape needs to be (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "), scale_b shape needs to be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "), and both follow near-inner-dim-major layout (strides aligned to 16 bytes).\n"
+    "- Blockwise 1x32 scaling requirement: Both matrices a/b must be float8 type, scales must be float8_e8m0fnu, scale_a needs ", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), " elements, scale_b needs ", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), " elements, and both must be contiguous tensors.\n"
+    "Current input parameters: mat_a.dtype=", mat_a.scalar_type(), ", scale_a[0].dtype=", scale_a[0].scalar_type(), ", scale_a[0].shape=", scale_a[0].sizes(), ", scale_a[0].stride=", scale_a[0].strides(), ", ",
+    "mat_b.dtype=", mat_b.scalar_type(), ", scale_b[0].dtype=", scale_b[0].scalar_type(), ", scale_b[0].shape=", scale_b[0].sizes(), ", scale_b[0].stride=", scale_b[0].strides()
+);
 
     // Check bias (reference: _scaled_mm_out_cuda)
     if (bias.has_value()) {
