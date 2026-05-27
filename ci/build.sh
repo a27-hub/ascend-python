@@ -134,7 +134,7 @@ function main()
     if [[ "${PYTORCH_VERSION}" == v1.11.0* ]] || [[ "${PYTORCH_VERSION}" == v2.0.1* ]]; then
         bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION}
     else 
-        bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION}  --disable_torchair --disable_rpc
+        bash ${PYTORCH_PATH}/ci/build.sh --python=${PY_VERSION} --disable_torchair --disable_rpc
     fi
 
     # copy dist/torch_npu.whl from torch_adapter to op_plugin
