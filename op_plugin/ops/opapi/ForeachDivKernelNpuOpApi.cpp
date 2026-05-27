@@ -100,14 +100,18 @@ void _split_and_exec_npu_cmd_div_scalar_list(at::TensorList& tensors1, at::Array
     size_t max_tensor_count = is_inplace ? 50 : 24;
 
     size_t loop_time = tensor_count / max_tensor_count;
-
+    std::vector<at::Scalar> adapted_scalars(scalars.size());
+    for (size_t i = 0; i < scalars.size(); i++) {
+        adapted_scalars[i] = op_api::adaptToDouble(scalars[i], tensors1);
+    }
+    at::ArrayRef<at::Scalar> adapted_scalars_ref(adapted_scalars.data(), adapted_scalars.size());
     if (tensor_count <= max_tensor_count) {
-            EXEC_NPU_CMD(aclnnForeachDivScalarList, tensors1, scalars, result_list);
+            EXEC_NPU_CMD(aclnnForeachDivScalarList, tensors1, adapted_scalars_ref, result_list);
             return;
     }
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + i * max_tensor_count, max_tensor_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
         EXEC_NPU_CMD(aclnnForeachDivScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -115,7 +119,7 @@ void _split_and_exec_npu_cmd_div_scalar_list(at::TensorList& tensors1, at::Array
     size_t remaining_count = tensor_count % max_tensor_count;
     if (remaining_count) {
         at::TensorList temp_tensors1(tensors1.data() + loop_time * max_tensor_count, remaining_count);
-        at::ArrayRef<at::Scalar> temp_scalars(scalars.data() + loop_time * max_tensor_count, remaining_count);
+        at::ArrayRef<at::Scalar> temp_scalars(adapted_scalars_ref.data() + loop_time * max_tensor_count, remaining_count);
         at::TensorList temp_result(result_list.data() + loop_time * max_tensor_count, remaining_count);
         EXEC_NPU_CMD(aclnnForeachDivScalarList, temp_tensors1, temp_scalars, temp_result);
     }
@@ -135,8 +139,14 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors1, at::TensorList ten
     if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
         return at::native::foreach_tensor_div_list_kernel_slow(tensors1, tensors2);
     }
-    // construct the output tensorlist of the NPU
     auto scalar_type = tensors1[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16) {
+        return at::native::foreach_tensor_div_list_kernel_slow(tensors1, tensors2);
+    }
+    // construct the output tensorlist of the NPU
+    
     std::vector<at::Tensor> result;
 
     for (const at::Tensor &tensor : tensors1) {
@@ -164,7 +174,12 @@ void _foreach_div_(at::TensorList tensors1, at::TensorList tensors2)
     if (!at::native::can_use_fast_route(tensors1, tensors2, true)) {
         return at::native::foreach_tensor_div_list_kernel_slow_(tensors1, tensors2);
     }
-
+    auto scalar_type = tensors1[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16) {
+        return at::native::foreach_tensor_div_list_kernel_slow_(tensors1, tensors2);
+    }
     _split_and_exec_npu_cmd_div(tensors1, tensors2, tensors1, true);
     return;
 }
@@ -191,7 +206,7 @@ std::vector<at::Tensor> _foreach_div(at::TensorList tensors, at::ArrayRef<at::Sc
     if (scalar_type != at::ScalarType::Half
         && scalar_type != at::ScalarType::Float
         && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
+        return at::native::foreach_tensor_div_scalarlist_kernel_slow(tensors, scalars);
     }
 
     std::vector<at::Tensor> result;
@@ -230,7 +245,7 @@ void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars)
     if (scalar_type != at::ScalarType::Half
         && scalar_type != at::ScalarType::Float
         && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
+        return at::native::foreach_tensor_div_scalarlist_kernel_slow_(tensors, scalars);
     }
     _split_and_exec_npu_cmd_div_scalar_list(tensors, scalars, tensors, true);
 }
@@ -280,7 +295,10 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar)
     if (scalar_type != at::ScalarType::Half
         && scalar_type != at::ScalarType::Float
         && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
+        return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
+    }
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_div_scalar_kernel_slow_(self, scalar);
     }
     _split_and_exec_npu_cmd_div_scalar(self, scalar, self, true);
 }
@@ -305,9 +323,11 @@ std::vector<at::Tensor> _foreach_div(at::TensorList self, const at::Scalar& scal
     if (scalar_type != at::ScalarType::Half
         && scalar_type != at::ScalarType::Float
         && scalar_type != at::ScalarType::BFloat16) {
-        TORCH_CHECK(false, "input must be half, float or bfloat16");
+        return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
     }
-
+    if (scalar.isBoolean()) {
+        return at::native::foreach_tensor_div_scalar_kernel_slow(self, scalar);
+    }
     std::vector<at::Tensor> result(self.size());
     auto iterRes = result.data();
     int i = 0;
