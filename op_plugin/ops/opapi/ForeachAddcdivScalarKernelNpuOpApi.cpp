@@ -121,7 +121,15 @@ std::vector<at::Tensor> _foreach_addcdiv(at::TensorList input,
         at::native::has_integral_tensor(input, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensor1, tensor2, value);
     }
+    if (value.isBoolean()) {
+        return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensor1, tensor2, value);
+    }
     auto scalar_type = input[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16) {
+        return at::native::foreach_tensor_addcdiv_scalar_slow(input, tensor1, tensor2, value);
+    }
 
     std::vector<at::Tensor> result;
     result.reserve(input.size());
@@ -152,7 +160,15 @@ void _foreach_addcdiv_(at::TensorList self,
         at::native::has_integral_tensor(self, true)) {
         return at::native::foreach_tensor_addcdiv_scalar_slow_(self, tensor1, tensor2, value);
     }
-
+    if (value.isBoolean()) {
+        return at::native::foreach_tensor_addcdiv_scalar_slow_(self, tensor1, tensor2, value);
+    }
+    auto scalar_type = self[0].scalar_type();
+    if (scalar_type != at::ScalarType::Float &&
+        scalar_type != at::ScalarType::Half &&
+        scalar_type != at::ScalarType::BFloat16) {
+        return at::native::foreach_tensor_addcdiv_scalar_slow_(self, tensor1, tensor2, value);
+    }
     _split_and_exec_npu_cmd_addcdiv_scalar(self, tensor1, tensor2, value, self, true);
 }
 }
