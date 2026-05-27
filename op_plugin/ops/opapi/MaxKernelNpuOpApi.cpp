@@ -17,11 +17,14 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+using npu_preparation = at_npu::native::OpPreparation;
+
 namespace op_api {
 
 at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnMaximum, acl_op::maximum_out(self, other, result));
+    EXEC_BINARY_VALUE_OUT_950(aclnnMaximum);
     at::Tensor cp_self = self;
     if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
         at::Scalar scalar = self.item();
@@ -41,6 +44,7 @@ at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Ten
 at::Tensor maximum(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnMaximum, acl_op::maximum(self, other));
+    EXEC_BINARY_VALUE_950(aclnnMaximum);
     at::Tensor cp_self = self;
     if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
         at::Scalar scalar = self.item();

@@ -21,6 +21,7 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& lt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt_out(self, other, result));
+    EXEC_BINARY_COMPARE_OUT_950(aclnnLtTensor);
   auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
   at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
@@ -39,6 +40,7 @@ at::Tensor& lt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor lt(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt(self, other));
+    EXEC_BINARY_COMPARE_950(aclnnLtTensor);
     // calculate the output size
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
@@ -85,6 +87,7 @@ at::Tensor lt(const at::Tensor &self, const at::Scalar& other)
 
 at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) {
   DO_COMPATIBILITY(aclnnInplaceLtTensor, acl_op::lt_(self, other));
+    EXEC_BINARY_INPLACE_950(aclnnInplaceLtTensor, lt);
   if (npu_preparation::IsCPUScalar(other)) {
       return op_api::lt_(self, other.item());
   } else {

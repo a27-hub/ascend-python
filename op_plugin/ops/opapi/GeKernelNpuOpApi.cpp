@@ -45,6 +45,7 @@ at::Tensor& ge_(at::Tensor& self, const at::Scalar& other) {
 
 at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge_out(self, other, result));
+  EXEC_BINARY_COMPARE_OUT_950(aclnnGeTensor);
   auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
   npu_preparation::check_tensor({self, other}, result, output_size);
   EXEC_NPU_CMD(aclnnGeTensor, self, other, result);
@@ -53,6 +54,7 @@ at::Tensor& ge_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
   DO_COMPATIBILITY(aclnnGeTensor, acl_op::ge(self, other));
+  EXEC_BINARY_COMPARE_950(aclnnGeTensor);
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
     DO_COMPATIBILITY(aclnnGeScalar, acl_op::ge(self, other));
     at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kBool));
@@ -76,6 +78,7 @@ at::Tensor ge(const at::Tensor& self, const at::Tensor& other) {
 at::Tensor& ge_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceGeTensor, acl_op::ge_(self, other));
+    EXEC_BINARY_INPLACE_950(aclnnInplaceGeTensor, ge);
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         return op_api::ge_(self, other.item());
     } else {

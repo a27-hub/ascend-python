@@ -17,11 +17,14 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+using npu_preparation = at_npu::native::OpPreparation;
+
 namespace op_api {
 
 at::Tensor &le_out(const at::Tensor &self, const at::Tensor &other, at::Tensor &result)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le_out(self, other, result));
+    EXEC_BINARY_COMPARE_OUT_950(aclnnLeTensor);
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
     if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
@@ -49,6 +52,7 @@ at::Tensor &le_out(const at::Tensor &self, const at::Scalar &other, at::Tensor &
 at::Tensor le(const at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnLeTensor, acl_op::le(self, other));
+    EXEC_BINARY_COMPARE_950(aclnnLeTensor);
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result =
         at_npu::native::OpPreparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kBool));
@@ -84,6 +88,7 @@ at::Tensor &le_(at::Tensor &self, const at::Scalar &other)
 at::Tensor &le_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceLeTensor, acl_op::le_(self, other));
+    EXEC_BINARY_INPLACE_950(aclnnInplaceLeTensor, le);
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         return op_api::le_(self, other.item());
     } else {

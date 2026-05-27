@@ -816,4 +816,115 @@ std::vector<EnumType> convert_int_to_enum(ArrayType& v) {
     }
     return converted;
 }
+
+/**
+ * @brief Prepare binary op tensors by ensuring both are on NPU device.
+ * @param self First input tensor (NPU or CPU).
+ * @param other Second input tensor (NPU or CPU).
+ * @return Tuple of tensors both on NPU device.
+ * @note If self is NPU: other can be CPU or NPU (CPU tensors are converted to NPU).
+ *       If self is CPU: other must be NPU, and self is converted to NPU.
+ */
+inline std::tuple<at::Tensor, at::Tensor> prepare_binary_tensors(
+    const at::Tensor &self, const at::Tensor &other)
+{
+    at::Tensor self_device = self;
+    at::Tensor other_device = other;
+    if (torch_npu::utils::is_npu(self)) {
+        if (!torch_npu::utils::is_npu(other)) {
+            other_device = other.to(self.device());
+        }
+    } else {
+        TORCH_CHECK(torch_npu::utils::is_npu(other),
+            "when self is a CPU tensor, other must be an NPU tensor", OPS_ERROR(ErrCode::PARAM));
+        self_device = self.to(other.device());
+    }
+    return std::make_tuple(self_device, other_device);
+}
+
+// ============================================================================
+// Ascend950 (CANN >= 9.1.0) 二元算子 device 侧处理归一宏。
+// 因 EXEC_NPU_CMD 用 #aclnn_api 做字符串化/token 粘贴，aclnn 名必须为编译期
+// token，无法以普通函数参数传入，故以宏复用函数体(沿用本仓 DO_COMPATIBILITY/
+// EXEC_NPU_CMD 的捕获式 do{}while 范式，捕获 self/other/result/op_name)。
+// ----------------------------------------------------------------------------
+// COMPARE      : 比较算子(eq/ge/gt/le/lt/ne) 返回 bool 张量, 新建输出, 透传 names
+// COMPARE_OUT  : 同上, 但写入既有 result(check_tensor)
+// INPLACE      : 原地比较(eq_/ge_/...), 校验 self 为 NPU, other 搬设备, 返回 self
+// VALUE        : 取值算子(maximum/minimum) 返回 result_type 提升后的张量, 新建输出
+// VALUE_OUT    : 同上, 但写入既有 result(check_tensor)
+// ============================================================================
+#define EXEC_BINARY_COMPARE_950(aclnn_name)                                                                            \
+    do {                                                                                                               \
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&                                             \
+            op_plugin::utils::is_gte_cann_version_910()) {                                                            \
+            auto [self_device, other_device] = prepare_binary_tensors(self, other);                                   \
+            std::vector<at::Tensor> tensor_list = {self, other};                                                      \
+            auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);                                      \
+            auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);                    \
+            at::Tensor result = npu_preparation::apply_tensor_without_format(                                         \
+                output_size, self_device.options().dtype(at::kBool));                                                 \
+            EXEC_NPU_CMD(aclnn_name, self_device, other_device, result);                                              \
+            at::namedinference::propagate_names_if_nonempty(result, maybe_names);                                     \
+            return result;                                                                                            \
+        }                                                                                                            \
+    } while (false)
+
+#define EXEC_BINARY_COMPARE_OUT_950(aclnn_name)                                                                       \
+    do {                                                                                                               \
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&                                             \
+            op_plugin::utils::is_gte_cann_version_910()) {                                                            \
+            auto [self_device, other_device] = prepare_binary_tensors(self, other);                                   \
+            std::vector<at::Tensor> tensor_list = {self, other};                                                      \
+            auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);                                      \
+            auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);                    \
+            npu_preparation::check_tensor({self_device, other_device}, result, output_size);                          \
+            EXEC_NPU_CMD(aclnn_name, self_device, other_device, result);                                              \
+            at::namedinference::propagate_names_if_nonempty(result, maybe_names);                                     \
+            return result;                                                                                            \
+        }                                                                                                            \
+    } while (false)
+
+#define EXEC_BINARY_INPLACE_950(aclnn_name, op_name)                                                                  \
+    do {                                                                                                               \
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&                                             \
+            op_plugin::utils::is_gte_cann_version_910()) {                                                            \
+            TORCH_CHECK(torch_npu::utils::is_npu(self),                                                               \
+                "inplace " #op_name "_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));                   \
+            at::Tensor other_device = other;                                                                          \
+            if (!torch_npu::utils::is_npu(other)) {                                                                   \
+                other_device = other.to(self.device());                                                              \
+            }                                                                                                        \
+            npu_preparation::CheckMemory({self, other_device}, {self});                                              \
+            EXEC_NPU_CMD(aclnn_name, self, other_device);                                                            \
+            return self;                                                                                             \
+        }                                                                                                            \
+    } while (false)
+
+#define EXEC_BINARY_VALUE_950(aclnn_name)                                                                             \
+    do {                                                                                                               \
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&                                             \
+            op_plugin::utils::is_gte_cann_version_910()) {                                                            \
+            auto [self_device, other_device] = prepare_binary_tensors(self, other);                                   \
+            at::ScalarType result_dtype = at::native::result_type(self_device, other_device);                        \
+            auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);                    \
+            at::Tensor result = npu_preparation::apply_tensor_without_format(                                         \
+                output_size, self_device.options().dtype(result_dtype));                                             \
+            EXEC_NPU_CMD(aclnn_name, self_device, other_device, result);                                              \
+            return result;                                                                                            \
+        }                                                                                                            \
+    } while (false)
+
+#define EXEC_BINARY_VALUE_OUT_950(aclnn_name)                                                                         \
+    do {                                                                                                               \
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&                                             \
+            op_plugin::utils::is_gte_cann_version_910()) {                                                            \
+            auto [self_device, other_device] = prepare_binary_tensors(self, other);                                   \
+            auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);                    \
+            npu_preparation::check_tensor({self_device, other_device}, result, output_size);                          \
+            EXEC_NPU_CMD(aclnn_name, self_device, other_device, result);                                              \
+            return result;                                                                                            \
+        }                                                                                                            \
+    } while (false)
+
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_

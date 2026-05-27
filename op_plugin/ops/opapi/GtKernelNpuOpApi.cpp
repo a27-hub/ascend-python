@@ -53,6 +53,7 @@ at::Tensor& gt_(at::Tensor& self, const at::Scalar& other)
 at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt_out(self, other, result));
+    EXEC_BINARY_COMPARE_OUT_950(aclnnGtTensor);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
     npu_preparation::check_tensor({self, other}, result, output_size);
@@ -72,6 +73,7 @@ at::Tensor& gt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 {
     DO_COMPATIBILITY(aclnnGtTensor, acl_op::gt(self, other));
+    EXEC_BINARY_COMPARE_950(aclnnGtTensor);
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
@@ -94,6 +96,7 @@ at::Tensor gt(const at::Tensor& self, const at::Tensor& other)
 at::Tensor& gt_(at::Tensor &self, const at::Tensor &other)
 {
     DO_COMPATIBILITY(aclnnInplaceGtTensor, acl_op::gt_(self, other));
+    EXEC_BINARY_INPLACE_950(aclnnInplaceGtTensor, gt);
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
         return op_api::gt_(self, other.item());
     } else {

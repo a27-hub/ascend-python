@@ -18,11 +18,14 @@
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 
+using npu_preparation = at_npu::native::OpPreparation;
+
 namespace op_api {
 
 at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
 {
     DO_COMPATIBILITY(aclnnMinimum, acl_op::minimum(self, other));
+    EXEC_BINARY_VALUE_950(aclnnMinimum);
     auto result_type = at::result_type(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::Tensor result =
@@ -33,6 +36,7 @@ at::Tensor minimum(const at::Tensor& self, const at::Tensor& other)
 at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
 {
     DO_COMPATIBILITY(aclnnMinimum, acl_op::minimum_out(self, other, result));
+    EXEC_BINARY_VALUE_OUT_950(aclnnMinimum);
     at::Tensor cp_other = other;
     at::Tensor cp_self = self;
     if (at_npu::native::OpPreparation::IsCPUScalar(other)) {

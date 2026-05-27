@@ -22,6 +22,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq_out(self, other, result));
+    EXEC_BINARY_COMPARE_OUT_950(aclnnEqTensor);
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -40,6 +41,7 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor eq(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnEqTensor, acl_op::eq(self, other));
+    EXEC_BINARY_COMPARE_950(aclnnEqTensor);
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
 
@@ -94,6 +96,7 @@ at::Tensor& eq_out(const at::Tensor& self, const at::Scalar& other, at::Tensor& 
 
 at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
   DO_COMPATIBILITY(aclnnInplaceEqTensor, acl_op::eq_(self, other));
+    EXEC_BINARY_INPLACE_950(aclnnInplaceEqTensor, eq);
 
   const std::initializer_list<at::Tensor> inputs = {self, other};
   const std::initializer_list<at::Tensor> outputs = {self};
