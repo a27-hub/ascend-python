@@ -50,7 +50,7 @@
         * $X∈\mathbb{Z_8}^{M \times K}$：激活矩阵（左矩阵），M是总token数，K是特征维度。
         * $W∈\mathbb{Z_4}^{E \times K \times N}$：分组权重矩阵（右矩阵），E是专家个数，K是特征维度，N是输出维度。
         * $weightAssistMatrix∈\mathbb{R}^{E \times N}$：计算矩阵乘时的辅助矩阵（离线生成，非算子内部完成）。
-        * $w\_scale$：分组权重矩阵的缩放因子，per-channel时shape为$\mathbb{R}^{E \times N}$，per-group时shape为$\mathbb{R}^{E \times K\_group\_num \times N}$。
+        * $w\_scale$：分组权重矩阵的缩放因子，perchannel时shape为$\mathbb{R}^{E \times N}$，pergroup时shape为$\mathbb{R}^{E \times K\_group\_num \times N}$。
         * $x\_scale∈\mathbb{R}^{M}$：激活矩阵的逐token缩放因子。
         * $groupList∈\mathbb{N}^{E}$：cumsum或count的分组索引列表。
       - **输出**：
@@ -61,7 +61,7 @@
         2. 将左矩阵int8拆为高低4bit两部分：
 
           $X\_high\_4bits_{i} = \lfloor \frac{X_{i}}{16} \rfloor$，$X\_low\_4bits_{i} = X_{i}\ \&\ 0x0f - 8$
-        3. 分别与权重做矩阵乘并应用per-channel或per-group量化缩放，合并高低位结果：
+        3. 分别与权重做矩阵乘并应用perchannel或pergroup量化缩放，合并高低位结果：
 
           $C_{i} = (C\_high_{i} * 16 + C\_low_{i} + weightAssistMatrix_{i}) \odot x\_scale_{i}$
 
@@ -204,7 +204,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
   - <term>Atlas 350 加速卡</term>：默认值为torch.int8，当前仅支持传入torch.float32、torch.bfloat16、torch.float16。
 
 - **quant\_mode**（`int`）：可选输入，参数表示SwiGLU后的量化模式。数据类型为`int32`。支持取值：0（默认）表示pertoken量化；1表示pergroup量化；2表示mx量化。
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前仅支持传入默认值0（表示per-token）。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：当前仅支持传入默认值0（表示pertoken）。
   - <term>Atlas 350 加速卡</term>：当前仅支持传入0以及2。
 
 - **quant\_dtype**（`int`）：可选输入，参数表示量化后低比特数据类型。数据类型为`int32`。
@@ -270,7 +270,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
         |量化场景|x|weight|weight\_scale|x\_scale|smooth\_scale|output|output\_scale|
         |--------|--------|--------|--------|--------|--------|--------|--------|
         |A8W8|(M, K)|NZ格式shape形如{(E, N/32, K/16, 16, 32)}|{(E, N)}|(M,)|-|(M, N/2)|(M,)|
-        |A8W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|per-channel:{(E, N)}; per-group:{(E, K\_group\_num, N)}|(M,)|-|(M, N/2)|(M,)|
+        |A8W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|perchannel:{(E, N)}; pergroup:{(E, K\_group\_num, N)}|(M,)|-|(M, N/2)|(M,)|
         |A4W4|(M, K)|$ND$格式{(E, K, N)}或NZ格式|{(E, N)}|(M,)|(E, N/2)或(E,)|(M, N/2)|(M,)|
 
     - A8W8场景下，不支持N轴长度超过10240，不支持`x`的尾轴长度大于等于65536。
