@@ -223,18 +223,13 @@ make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
 }
 
 std::array<std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>, 9> scale_kernel_dispatch = {{
-//    { "tensorwise_tensorwise", scaled_blas::check_tensorwise_recipe, ScaledGemmImplementation::TENSORWISE_TENSORWISE },
-//    { "rowwise_rowwise", scaled_blas::check_rowwise_recipe, ScaledGemmImplementation::ROWWISE_ROWWISE},
     { "block_1x128_128x128", make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise128x128),
         ScaledGemmImplementation::BLOCK_1x128_128x128},
     { "block_128x128_1x128", make_deepseek_checker(ScalingType::BlockWise128x128, ScalingType::BlockWise1x128),
         ScaledGemmImplementation::BLOCK_128x128_1x128},
     { "block_1x128_1x128", make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise1x128),
         ScaledGemmImplementation::BLOCK_1x128_1x128},
-//    { "nvfp4_nvfp4", scaled_blas::check_nvfp4_recipe, ScaledGemmImplementation::NVFP4_NVFP4},
-//    { "nvfp4_nvfp4_single_scale", scaled_blas::check_nvfp4_recipe_single_scale, ScaledGemmImplementation::NVFP4_NVFP4_SINGLE_SCALE },
     { "mxfp8_mxfp8", scaled_blas::check_mxfp8_recipe, ScaledGemmImplementation::MXFP8_MXFP8}}};
-//    { "mxfp4_mxfp4", scaled_blas::check_mxfp4_recipe, ScaledGemmImplementation::MXFP4_MXFP4}}};
 
 
 
@@ -314,12 +309,9 @@ at::Tensor _scaled_mm_v2(const Tensor& mat_a, const Tensor& mat_b,
     TORCH_CHECK_VALUE(
         found_impl,
         "Invalid scaling configuration.\n"
-//        "- For TensorWise scaling, a and b should be float8, scales should be float and singletons.\n"
-//        "- For RowWise scaling, a and b should be float8, scales should be float, scale_a should be (", mat_a.size(0), ", 1) and scale_b should be (1, ", mat_b.size(1), "), and both should be contiguous.\n"
         "- For BlockWise 1x128 scaling, a and b should be float8, scales should be float, scale_a should be (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), ") and scale_b should be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "), and both should be outer-dim-major.\n"
         "- For BlockWise 128x128 scaling, a and b should be float8, scales should be float, scale_a should be (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), ") and scale_b should be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "), and both should be near-inner-dim-major (with 16-byte aligned strides).\n"
         "- For Blockwise 1x32 scaling, a and b should be float8, scales should be float8_e8m0fnu, scale_a should have ", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), " elements and scale_b should have ", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), " elements, and both should be contiguous.\n"
-//        "- For Blockwise 1x16 scaling, a and b should be float4 (packed 2x), scales should be float8_e4m3fn, scale_a should have ", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1) * 2, 16), 4), " elements and scale_b should have ", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0) * 2, 16), 4), " elements, and both should be contiguous.\n"
         "Got mat_a.dtype()=", mat_a.scalar_type(), ", scale_a[0].dtype()=", scale_a[0].scalar_type(), ", scale_a[0].size()=", scale_a[0].sizes(), ", scale_a[0].stride()=", scale_a[0].strides(), ", ",
         "mat_b.dtype()=", mat_b.scalar_type(), ", scale_b[0].dtype()=", scale_b[0].scalar_type(), ", scale_b[0].size()=", scale_b[0].sizes(), " and scale_b[0].stride()=", scale_b[0].strides()
     );
