@@ -21,6 +21,13 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor& lt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
   DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        npu_preparation::check_tensor({self_device, other_device}, result, output_size);
+        EXEC_NPU_CMD(aclnnLtTensor, self_device, other_device, result);
+        return result;
+    }
   auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
   at_npu::native::OpPreparation::check_tensor({self}, result, result.scalar_type(), outputSize);
@@ -39,6 +46,14 @@ at::Tensor& lt_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& 
 
 at::Tensor lt(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnLtTensor, acl_op::lt(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto [self_device, other_device] = prepare_binary_tensors(self, other);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self_device, other_device);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(
+            output_size, self_device.options().dtype(at::kBool));
+        EXEC_NPU_CMD(aclnnLtTensor, self_device, other_device, result);
+        return result;
+    }
     // calculate the output size
     auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
 
@@ -85,6 +100,17 @@ at::Tensor lt(const at::Tensor &self, const at::Scalar& other)
 
 at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) {
   DO_COMPATIBILITY(aclnnInplaceLtTensor, acl_op::lt_(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        TORCH_CHECK(torch_npu::utils::is_npu(self),
+            "inplace lt_ requires self to be NPU tensor", OPS_ERROR(ErrCode::PARAM));
+        at::Tensor other_device = other;
+        if (!torch_npu::utils::is_npu(other)) {
+            other_device = other.to(self.device());
+        }
+        npu_preparation::CheckMemory({self, other_device}, {self});
+        EXEC_NPU_CMD(aclnnInplaceLtTensor, self, other_device);
+        return self;
+    }
   if (npu_preparation::IsCPUScalar(other)) {
       return op_api::lt_(self, other.item());
   } else {
