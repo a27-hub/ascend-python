@@ -225,6 +225,16 @@ make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
 using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>;
 const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
     {
+        "tensorwise_tensorwise",
+        make_deepseek_checker(ScalingType::TensorWise, ScalingType::TensorWise),
+        ScaledGemmImplementation::TENSORWISE_TENSORWISE
+    },
+    {
+        "rowwise_rowwise",
+        make_deepseek_checker(ScalingType::RowWise, ScalingType::RowWise),
+        ScaledGemmImplementation::ROWWISE_ROWWISE
+    },
+    {
         "deepseek_block_1x128_128x128",
         make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise128x128),
         ScaledGemmImplementation::BLOCK_1x128_128x128
@@ -331,6 +341,8 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     TORCH_CHECK(
     matched_valid_impl,
     "Unsupported scaling configuration.\n"
+    "- TensorWise: mat_a/mat_b must be float8; scales float32; scale_a and scale_b are singletons (scalar).\n"
+    "- RowWise: mat_a/mat_b float8; scales float32; scale_a shape (", mat_a.size(0), ", 1); scale_b shape (1, ", mat_b.size(1), "); both contiguous.\n"
     "- BlockWise 1x128: mat_a/mat_b must be float8; scales float32; scale_a shape (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "); outer-dim-major.\n"
     "- BlockWise 128x128: mat_a/mat_b float8; scales float32; scale_a shape (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "); 16B aligned strides.\n"
     "- Blockwise 1x32: mat_a/mat_b float8; scales float8_e8m0fnu; scale_a elements=", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), "; scale_b elements=", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), "; contiguous only.\n"
