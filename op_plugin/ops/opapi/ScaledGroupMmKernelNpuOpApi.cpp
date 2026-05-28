@@ -175,7 +175,7 @@ at::Tensor _scaled_grouped_mm(const at::Tensor &mat_a, const at::Tensor &mat_b, 
 
     // 3. mat_a -> x (TensorList)
     std::vector<at::Tensor> x_vec;
-    if (a_is_2d) {
+    if (use_a_2d) {
         x_vec.push_back(mat_a);
     } else {
         x_vec.push_back(mat_a.reshape({-1, mat_a.size(-1)}));
@@ -185,7 +185,7 @@ at::Tensor _scaled_grouped_mm(const at::Tensor &mat_a, const at::Tensor &mat_b, 
 
     // 4. mat_b -> weight (TensorList)
     std::vector<at::Tensor> weight_vec;
-    if (b_is_2d) {
+    if (use_b_2d) {
         // mat_b 2D [K, N]: NPU singleWeight 需要 3D [G, K, N]
         auto b_expanded = mat_b.unsqueeze(0).expand({1, -1, -1}).contiguous();
         weight_vec.push_back(b_expanded);
@@ -232,7 +232,7 @@ at::Tensor _scaled_grouped_mm(const at::Tensor &mat_a, const at::Tensor &mat_b, 
     c10::optional<int64_t> act_type = 0;
 
     // 9. out_dtype -> output_dtype (ACL int64 格式)
-    c10::optional<int64_t> output_dtype = static_cast<int64_t>(out_dtype_);
+    c10::optional<int64_t> output_dtype = static_cast<int64_t>(out_type);
 
     // 10. 其他可选参数 (默认空)
     c10::optional<at::TensorList> bias_tl = c10::nullopt;

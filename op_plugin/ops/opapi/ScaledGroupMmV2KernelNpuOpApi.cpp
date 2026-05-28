@@ -29,7 +29,7 @@ using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingTyp
 namespace scaled_blas {
 
 // Check rowwise recipe
-bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
+static bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
                           c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
@@ -47,7 +47,7 @@ bool check_rowwise_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_re
 }
 
 // Check mxfp8 recipe
-bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
+static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
                         c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
@@ -255,7 +255,7 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
 
     // 3. mat_a -> x (TensorList)
     std::vector<at::Tensor> x_vec;
-    if (a_is_2d) {
+    if (mat_a_2d) {
         x_vec.push_back(mat_a);
     } else {
         x_vec.push_back(mat_a.reshape({-1, mat_a.size(-1)}));
@@ -265,7 +265,7 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
 
     // 4. mat_b -> weight (TensorList)
     std::vector<at::Tensor> weight_vec;
-    if (b_is_2d) {
+    if (mat_b_2d) {
         // mat_b 2D [K, N]: NPU singleWeight 需要 3D [G, K, N]
         auto b_expanded = mat_b[0].unsqueeze(0).expand({1, -1, -1}).contiguous();
         weight_vec.push_back(b_expanded);
@@ -312,7 +312,7 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     c10::optional<int64_t> act_type = 0;
 
     // 9. out_dtype -> output_dtype (ACL int64 格式)
-    c10::optional<int64_t> output_dtype = static_cast<int64_t>(out_dtype_);
+    c10::optional<int64_t> output_dtype = static_cast<int64_t>(output_type);
 
     // 10. 其他可选参数 (默认空)
     c10::optional<at::TensorList> bias_tl = c10::nullopt;
