@@ -21,36 +21,6 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
 
-// Scaled GEMM implementation types
-enum class ScaledGemmImplementation {
-    NONE = 0,
-    TENSORWISE_TENSORWISE = 1,
-    ROWWISE_ROWWISE = 2,
-    BLOCK_128x128_1x128 = 3,
-    BLOCK_1x128_128x128 = 4,
-    BLOCK_1x128_1x128 = 5,
-    MXFP8_MXFP8 = 6
-};
-
-// Scaling type for quantized matmul
-enum class ScalingType : std::uint8_t {
-    TensorWise, // fp32 scales
-    RowWise, // fp32 scales
-    BlockWise1x16, // fp8_e4m3fn scales
-    BlockWise1x32, // fp8_e8m0fnu scales
-    BlockWise1x128, // fp32 scales
-    BlockWise128x128, // fp32 scales
-};
-
-// Helper function to convert integer array to enum vector
-template <class EnumType, class ArrayType>
-std::vector<EnumType> convert_int_to_enum(ArrayType& v) {
-    std::vector<EnumType> converted;
-    converted.reserve(v.size());
-
-    for (auto vi : v) {
-        converted.push_back(static_cast<EnumType>(vi));
-
 // Helper functions for ceil_div and round_up
 template <typename T>
 inline T ceil_div(T a, T b) {
