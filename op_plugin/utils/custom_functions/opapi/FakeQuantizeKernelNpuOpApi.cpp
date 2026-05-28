@@ -69,7 +69,7 @@ void calculate_moving_average(const at::Tensor& x, at::Tensor & running_min, at:
             running_min[0] = running_min[0].item().toFloat() + averaging_const *
                 (x_min.item().toFloat() - running_min[0].item().toFloat());
         }
-        
+
         if (std::isinf(max_value)) {
             running_max[0] = x_max.item().toFloat();
         } else {
@@ -126,14 +126,14 @@ TensorQuantizationParams choose_quantization_params(float min, float max, int32_
             max *= amplifier;
         }
     }
-    
+
     double zero_point_from_min = qmin - min / static_cast<double>(scale);
     double zero_point_from_max = qmax - max / static_cast<double>(scale);
     double zero_point_form_min_error = std::abs(qmin) - std::abs(min / static_cast<double>(scale));
     double zero_point_form_max_error = std::abs(qmax) - std::abs(max / static_cast<double>(scale));
     double initial_zero_point = zero_point_form_min_error < zero_point_form_max_error ?
         zero_point_from_min : zero_point_from_max;
-    
+
     if (min < 0 && max > 0 && preserve_sparsity) {
         initial_zero_point = static_cast<double>(qmin + qmax) / 2;
     }

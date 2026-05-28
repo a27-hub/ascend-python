@@ -31,15 +31,15 @@ namespace op_api {
         TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kFloat || x.scalar_type() == at::kBFloat16,
             "float16, float32 or bfloat16 tensor expected but got a tensor with dtype: ",
             x.scalar_type(), OPS_ERROR(ErrCode::PARAM));
-        
+
         // check k's datatype
         auto x_size = x.sizes();
         TORCH_CHECK(k >= 0 and k <= x_size[x.dim() - 1], "The k's shape should be in [0, ", x_size[x.dim() - 1], "]", OPS_ERROR(ErrCode::PARAM));
-        
+
         // renorm optional
         int64_t renorm = c10::value_or_else(renorm_opt, [] {return 0;});
         TORCH_CHECK(renorm == 0 || renorm == 1, "renorm must be 0 or 1, but got: ", renorm, OPS_ERROR(ErrCode::PARAM));
-        
+
         bool softmax_result_flag = c10::value_or_else(softmax_flag_opt, [] {return false; });
 
         // finished Tensor

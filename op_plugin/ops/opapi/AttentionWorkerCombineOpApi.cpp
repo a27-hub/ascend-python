@@ -28,7 +28,7 @@ namespace op_api {
     {
         at::SmallVector <int64_t, op_infer::SIZE> y_size;
         at::SmallVector <int64_t, op_infer::SIZE> next_layer_id_size;
- 
+
         y_size.push_back(expert_scales.size(0));
         y_size.push_back(hidden_size);
         next_layer_id_size.push_back(1);

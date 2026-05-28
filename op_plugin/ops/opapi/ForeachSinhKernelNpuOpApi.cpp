@@ -68,7 +68,7 @@ void _foreach_sinh_(at::TensorList self)
     if (self.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_sinh(self, self, true);
 }
 

@@ -72,7 +72,7 @@ void _foreach_atan_(const at::TensorList self_atan)
     if (self_atan.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_atan(self_atan, self_atan, true);
 }
 

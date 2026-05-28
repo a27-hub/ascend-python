@@ -72,7 +72,7 @@ void _foreach_asin_(const at::TensorList self)
     if (self.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_asin(self, self, true);
 }
 

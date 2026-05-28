@@ -280,7 +280,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         for (auto &i : recv_counts) {
             bsk += i;
         }
-        
+
         // 处理group_sizes
         at::IntArrayRef group_size_list = group_size.value_or(at::IntArrayRef{});
         int64_t group_sizes = op_plugin::utils::check_and_get_group_size(group_size_list);
@@ -534,7 +534,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         aclDataType gmm_y_acl_type = c10_npu::GetAclDataType(gmm_y_dtype);
         at::ScalarType gmm_y_scalar_type = npu_preparation::convert_to_scalar_type(gmm_y_acl_type);
         auto gmm_y = at_npu::native::OpPreparation::apply_tensor_without_format({bsk, n1}, c10::dtype(gmm_y_scalar_type));
-        
+
         int64_t comm_quant_mode_real = comm_quant_mode.has_value() ? comm_quant_mode.value() : NO_QUANT_MODE;
 
         if (comm_quant_dtype.has_value()) {
@@ -546,7 +546,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
                 OPS_ERROR(ErrCode::VALUE));
         }
         int64_t comm_quant_dtype_real = comm_quant_dtype.has_value() ? comm_quant_dtype.value() : ACL_UNDEFINED;
-        
+
         // mx量化下scale为fp8_e8m0，需要wrapper包装
         TensorWrapper gmm_x_scale_wrapper = make_wrapper(gmm_x_scale, gmm_x_scale_dtype);
         TensorWrapper gmm_weight_scale_wrapper = make_wrapper(gmm_weight_scale, gmm_weight_scale_dtype);
