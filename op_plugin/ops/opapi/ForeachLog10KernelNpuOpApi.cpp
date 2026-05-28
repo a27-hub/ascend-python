@@ -26,7 +26,7 @@ void _split_and_exec_npu_cmd_log10(at::TensorList tensors1, at::TensorList resul
 {
     size_t tensor_count = tensors1.size();
     size_t max_tensor_count = is_inplace ? 48 : 24;
-    
+
     size_t loop_time = tensor_count / max_tensor_count;
     if (tensor_count <= max_tensor_count) {
         EXEC_NPU_CMD(aclnnForeachLog10, tensors1, result_list);

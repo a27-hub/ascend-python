@@ -72,7 +72,7 @@ static std::pair<std::string, std::string> get_query_and_attention_out_layout(
         query_layout = it->second.qLayout;
         attention_out_layout = it->second.outLayout;
         query_dim = it->second.qDim;
-        
+
         TORCH_CHECK(query.dim() == query_dim,
             "query's dim should be consistent with that of Layout", OPS_ERROR(ErrCode::VALUE));
     } else {
@@ -668,7 +668,7 @@ at::Tensor _npu_fused_infer_attention_score_v2_get_max_workspace_symint(
             dequant_offset_value, key_shared_prefix, value_shared_prefix, default_actual_shared_prefix_len, query_rope_wrapper, key_rope_wrapper, dequant_scale_key_rope, dequant_scale_query_wrapper, learnable_sink, default_q_start_idx, default_kv_start_idx, num_query_heads, softmax_scale, pre_tokens, next_tokens, input_layout_ptr,
             num_key_value_heads, sparse_mode, inner_precise, block_size, antiquant_mode, return_softmax_lse, key_quant_mode, value_quant_mode, query_quant_mode, default_pse_type_value, outTensor_wrapper, softmax_lse);
     }
-    
+
     at::Tensor workspace_tensor = npu_preparation::apply_tensor_without_format({workspace_size}, query.options().dtype(query.dtype()));
     return workspace_tensor;
 }

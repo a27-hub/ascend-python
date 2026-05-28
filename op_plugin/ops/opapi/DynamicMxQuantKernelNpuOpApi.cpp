@@ -82,7 +82,7 @@ std::tuple<at::Tensor, at::Tensor> npu_dynamic_mx_quant(
     } else {
         EXEC_NPU_CMD(aclnnDynamicMxQuant, input, axis, round_mode_ptr, y_acltype, block_size, scale_alg_optional, y_wrapper, mxscale_wrapper);
     }
-    
+
     return std::make_tuple(y, mxscale);
 }
 

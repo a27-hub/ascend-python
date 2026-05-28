@@ -69,7 +69,7 @@ std::vector<at::Tensor> _foreach_cos(const at::TensorList tensors)
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_cos_slow(tensors);
     }
-    
+
     at::native::check_foreach_api_restrictions(tensors);
     if (!at::native::can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_cos_slow(tensors);
