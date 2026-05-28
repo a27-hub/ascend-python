@@ -1,0 +1,63 @@
+import os
+
+# ConvertTypeV2 is selected only by task queue v2. Set this before importing
+# torch_npu so OptionsManager sees it before any op_api macro caches the value.
+os.environ["TASK_QUEUE_ENABLE"] = "2"
+
+import torch
+import torch_npu
+from torch_npu.testing.common_utils import SupportedDevices
+from torch_npu.testing.testcase import TestCase, run_tests
+
+
+class TestOpApiCommonConvertTypeV2(TestCase):
+    @SupportedDevices(["Ascend950"])
+    def test_compact_mx_a8w4_grouped_matmul_weight_nz_task_queue_v2(self):
+        torch.manual_seed(0)
+
+        m = 16
+        k = 256
+        n = 512
+        expert_num = 2
+        group_size = 32
+        group_list = torch.tensor([8, 8], dtype=torch.int64).npu()
+
+        x = torch.ones((m, k), dtype=torch.int8).npu()
+        # Compact W4 layout stores two 4-bit values in each int8 element.
+        # Cast the int8 compact tensor directly to NZ so ConvertTypeV2 handles
+        # a non-base-format TensorWrapper whose logical dtype is 4-bit.
+        weight_compact = torch.zeros((expert_num, k // 2, n), dtype=torch.int8).npu()
+        weight_nz = torch_npu.npu_format_cast(weight_compact, 29, torch.int8)
+        antiquant_scale = torch.full((expert_num, k // group_size, n), 127, dtype=torch.uint8).npu()
+        pertoken_scale = torch.full((m, k // group_size), 127, dtype=torch.uint8).npu()
+
+        output = torch_npu.npu_grouped_matmul(
+            [x],
+            [weight_nz],
+            bias=None,
+            scale=None,
+            offset=None,
+            antiquant_scale=[antiquant_scale],
+            antiquant_offset=None,
+            per_token_scale=[pertoken_scale],
+            group_list=group_list,
+            activation_input=None,
+            activation_quant_scale=None,
+            activation_quant_offset=None,
+            split_item=3,
+            group_type=0,
+            group_list_type=1,
+            act_type=0,
+            output_dtype=torch.float16,
+            weight_dtype=torch_npu.float4_e2m1fn_x2,
+            per_token_scale_dtype=torch_npu.float8_e8m0fnu,
+        )
+
+        torch_npu.npu.synchronize()
+        expected = torch.zeros((m, n), dtype=torch.float16)
+        self.assertEqual(output[0].shape, expected.shape)
+        self.assertRtolEqual(expected.numpy(), output[0].cpu().numpy(), 0.001)
+
+
+if __name__ == "__main__":
+    run_tests()
