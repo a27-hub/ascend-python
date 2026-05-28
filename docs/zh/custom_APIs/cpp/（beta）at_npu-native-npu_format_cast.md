@@ -7,7 +7,7 @@ torch_npu\csrc\core\npu\NPUFormat.h
 ## 函数原型
 
 ```cpp
-at::Tensor at_npu::native::npu_format_cast(const at::Tensor& self, int64_t acl_format)
+at::Tensor at_npu::native::npu_format_cast(const at::Tensor& self, int64_t acl_format, c10::optional<int64_t> customize_dtype = c10::nullopt)
 ```
 
 ## 功能说明
@@ -19,6 +19,8 @@ NPU tensor格式转换，返回值类型Tensor，表示转换后的tensor。
 self：Tensor类型，待转换格式的tensor。
 
 acl_format：int64_t型，待转换的格式。
+
+customize_dtype：可选参数，指定格式转换时的数据类型，传入PyTorch数据类型对应的整数值（如`int(torch.int32)`即`3`）。当且仅当传入`int(torch.int32)`（即`3`）时，FRACTAL_NZ格式的C0设置为8；其他情况下C0保持默认值。仅<term>Atlas A2 训练系列产品</term>上CANN >= 9.1.0时支持。
 
 ## 支持的型号
 
