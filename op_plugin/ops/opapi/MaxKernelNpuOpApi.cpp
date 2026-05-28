@@ -29,9 +29,9 @@ at::Tensor &maximum_out(const at::Tensor &self, const at::Tensor &other, at::Ten
         EXEC_NPU_CMD(aclnnMaximum, self_device, other_device, result);
         return result;
     }
-    at::Tensor cp_self = self;	 
-    if (at_npu::native::OpPreparation::IsCPUScalar(self)) {	 
-        at::Scalar scalar = self.item();	 
+    at::Tensor cp_self = self;
+    if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
+        at::Scalar scalar = self.item();
         cp_self = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, self.scalar_type(), other.device());
     }
     at::Tensor cp_other = other;
@@ -57,9 +57,9 @@ at::Tensor maximum(const at::Tensor &self, const at::Tensor &other)
         EXEC_NPU_CMD(aclnnMaximum, self_device, other_device, result);
         return result;
     }
-    at::Tensor cp_self = self;	 
-    if (at_npu::native::OpPreparation::IsCPUScalar(self)) {	 
-        at::Scalar scalar = self.item();	 
+    at::Tensor cp_self = self;
+    if (at_npu::native::OpPreparation::IsCPUScalar(self)) {
+        at::Scalar scalar = self.item();
         cp_self = at_npu::native::OpPreparation::copy_scalar_to_device(scalar, self.scalar_type(), other.device());
     }
     at::Tensor cp_other = other;

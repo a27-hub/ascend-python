@@ -793,6 +793,9 @@
   "func: npu_rms_norm_quant(Tensor x, Tensor gamma, Tensor beta, Tensor scale, Tensor offset, float epsilon=1e-06, *, int? dst_dtype=None) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: npu_rms_norm_quant_v2(Tensor x, Tensor gamma, Tensor scale, *, Tensor? offset=None, Tensor? beta=None, float epsilon=1e-06, bool div_mode=True, int? dst_dtype=None) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_moe_distribute_combine(Tensor expand_x, Tensor expert_ids, Tensor expand_idx, Tensor ep_send_counts, Tensor expert_scales, str group_ep, int ep_world_size, int ep_rank_id, int moe_expert_num, *, Tensor? tp_send_counts=None, Tensor? x_active_mask=None, Tensor? activation_scale=None, Tensor? weight_scale=None, Tensor? group_list=None, Tensor? expand_scales=None, Tensor? shared_expert_x=None, str group_tp=\"\", int tp_world_size=0, int tp_rank_id=0, int expert_shard_type=0, int shared_expert_num=1, int shared_expert_rank_num=0, int global_bs=0, int out_dtype=0, int comm_quant_mode=0, int group_list_type=0) -> Tensor": {
     "version": ["all_version"]
   },
@@ -1175,6 +1178,9 @@
     "version": ["all_version"]
   },
   "func: npu_dynamic_mx_quant(Tensor input, *, int axis=-1, str round_mode=\"rint\", int dst_type=296, int block_size=32, int? scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
+  "func: npu_anti_mx_quant(Tensor x, Tensor mxscale, *, int? axis=-1, int? dst_type=15, int? src_type=292) -> Tensor": {
     "version": ["all_version"]
   },
   "func: npu_dynamic_dual_level_mx_quant(Tensor input, *, Tensor? smooth_scale=None, str round_mode=\"rint\") -> (Tensor, Tensor, Tensor)": {
@@ -5002,5 +5008,14 @@
   },
   "func: _fused_sdp_choice(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, *, float? scale=None, bool enable_gqa=False) -> int": {
     "version": ["v2.7", "newest"]
+  },
+  "func: npu_moe_gating_top_k_backward(Tensor x_norm, Tensor grad_y, Tensor expertIdx, *, int renorm=0, int norm_type=0, float routed_scaling_factor=1.0, float eps=1e-20) -> Tensor": {
+    "version": ["all_version"]
+  },
+  "op_api: torch_npu.npu_moe_gating_top_k_backward(*args, **kwargs)": {
+    "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
+  },
+  "op_api: torch_npu.npu_moe_gating_top_k_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["v2.8", "newest"]
   }
 }

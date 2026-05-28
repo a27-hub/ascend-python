@@ -129,6 +129,7 @@ at::Tensor& eq_(at::Tensor &self, const at::Tensor &other) {
 
 at::Tensor& eq_(at::Tensor &self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnInplaceEqScalar, acl_op::eq_(self, other));
+
   EXEC_NPU_CMD(aclnnInplaceEqScalar, self, other);
   return self;
 }

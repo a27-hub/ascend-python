@@ -109,8 +109,12 @@ at::Tensor& lt_(at::Tensor& self, const at::Tensor& other) {
       EXEC_NPU_CMD(aclnnInplaceLtTensor, self, other_device);
       return self;
   }
-  EXEC_NPU_CMD(aclnnInplaceLtTensor, self, other);
-  return self;
+  if (npu_preparation::IsCPUScalar(other)) {
+      return op_api::lt_(self, other.item());
+  } else {
+      EXEC_NPU_CMD(aclnnInplaceLtTensor, self, other);
+      return self;
+  }
 }
 
 at::Tensor& lt_(at::Tensor& self, const at::Scalar& other) {

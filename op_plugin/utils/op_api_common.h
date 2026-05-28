@@ -780,6 +780,7 @@ inline TensorListWrapper make_wrapper(const c10::optional<at::TensorList> &opt_t
 {
     return make_wrapper(opt_tensorlist.value_or(at::TensorList()), tensor_dtype);
 }
+
 /**
  * @brief Prepare binary op tensors by ensuring both are on NPU device.
  * @param self First input tensor (NPU or CPU).
