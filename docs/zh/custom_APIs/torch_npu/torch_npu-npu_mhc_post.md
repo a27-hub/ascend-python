@@ -11,8 +11,8 @@
 - API功能：对mHC\(Manifold-Constrained Hyper-Connections\)架构中第l层输出h<sub>l</sub><sup>out</sup>进行Post Mapping，对第l层的输入x<sub>l</sub>进行Res Mapping，然后对二者进行残差连接，得到第\(l+1\)层的输入x<sub>l+1</sub>_。_
 - 计算公式：
 
-    ![](figures/zh-cn_formulaimage_0000002562400899.png)
-
+    $$ x_{l+1} = (H_l^{res}) \times x_l + h_l^{out} \otimes H_l^{post} $$
+    
 ## 函数原型
 
 ```python
