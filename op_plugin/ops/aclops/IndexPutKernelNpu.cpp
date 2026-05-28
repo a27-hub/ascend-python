@@ -35,17 +35,6 @@ const std::string indexed_sizes_str = "indexed_sizes";
 const std::string indexed_strides_str = "indexed_strides";
 const std::string aicore_str = "AiCore";
 
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
-{
-    const auto overlap_status = at_npu::native::get_overlap_status(a, b);
-    TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
-}
-
 bool is_aicpu_valid(const at::Tensor &self, const std::vector<at::Tensor> &all_defined_indices,
                     const at::SmallVector<int64_t, N> masks)
 {
@@ -243,13 +232,6 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
             "Please clone() the tensor before performing this operation. "
             "This also applies to advanced indexing e.g. tensor[indices] = tensor");
     }
-    check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
-        if (index.has_value()) {
-            check_no_overlap(self, *index);
-        }
-    }
-
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     at::SmallVector<int64_t, N> masks;
     std::vector<at::Tensor> all_defined_indices;
