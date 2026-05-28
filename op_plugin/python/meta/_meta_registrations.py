@@ -1334,7 +1334,7 @@ def npu_alltoallv_quant_gmm_meta(gmm_x, gmm_weight, gmm_x_scale, gmm_weight_scal
 def npu_all_gather_quant_mm_meta(self, x2, hcom, world_size, bias=None, x1_scale=None, x2_scale=None,
                                  quant_scale=None, block_size=0, gather_index=0, gather_output=True,
                                  comm_turn=0, group_sizes=None, amax_output=False, y_dtype=None, x1_dtype=None,
-                                 x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None):
+                                 x2_dtype=None, x1_scale_dtype=None, x2_scale_dtype=None, comm_mode=None):
     if world_size <= 0:
         raise RuntimeError("world_size must be bigger than zero")
     # out_gather_mm
@@ -2756,6 +2756,31 @@ def npu_rms_norm_quant_meta(x, gamma, beta, scale, offset, epsilon=1e-06, dst_dt
         output_shape.append(x.size(dim_num - 1) // 8)
         return torch.empty(output_shape, dtype=torch.int32, device=x.device)
     return torch.empty(x.size(), dtype=dst_torch_dtype, device=x.device)
+
+@impl(m, "npu_rms_norm_quant_v2")
+def npu_rms_norm_quant_v2_meta(x, gamma, scale, offset, beta, epsilon=1e-06, div_mode=True, dst_dtype=1):
+    dim_num = x.dim()
+    rstd_shape = []
+    for dim in range(x.dim() - 1):
+        rstd_shape.append(x.size(dim))
+    rstd_shape.append(1)
+    rstd = torch.empty(rstd_shape, dtype=torch.float32, device=x.device)
+    
+    dst_dtype = dst_dtype if dst_dtype is not None else 1
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
+    if dst_torch_dtype == torch.quint4x2:
+        dim_num = x.dim()
+        if x.size(dim_num - 1) % 8:
+            raise RuntimeError("If dtype is quint4x2, the last dim of input must be divided by 8" +
+                               ops_error(ErrCode.NOT_SUPPORT))
+        output_shape = []
+        for dim in range(dim_num - 1):
+            output_shape.append(x.size(dim))
+        output_shape.append(x.size(dim_num - 1) // 8)
+        y = torch.empty(output_shape, dtype=torch.int32, device=x.device)
+        return (y, rstd)
+    y = torch.empty(x.size(), dtype=dst_torch_dtype, device=x.device)
+    return (y, rstd)
 
 
 @impl(m, "npu_rms_norm_dynamic_mx_quant")
@@ -5087,6 +5112,25 @@ def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=29
         output = input_dummy.new_empty(output_shape, dtype=torch.uint8)
     mxscale = input_dummy.new_empty(mxscale_shape, dtype=torch.uint8)
     return (output, mxscale)
+
+
+@impl(m, "npu_anti_mx_quant")
+def npu_anti_mx_quant(input_dummy, mxscale, *, axis=-1, dst_type=15, src_type=292):
+    dim_num = input_dummy.dim()
+    tail_num = input_dummy.size(dim_num - 1)
+    if axis < -dim_num or axis >= dim_num:
+        raise RuntimeError("Parameter axis is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
+                           ops_error(ErrCode.PARAM))
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type)
+    if not (input_dummy.dtype == torch.float8_e5m2 or input_dummy.dtype == torch.float8_e4m3fn):  # float4_e2m1/float4_e1m2
+        input_dummy_shape = input_dummy.size()
+        y_shape = (*(input_dummy_shape[:-1]), input_dummy_shape[-1] * 2)
+        y = input_dummy.new_empty(y_shape, dtype=torch_dtype)
+        return torch.empty_like(y)
+    else:
+        return torch.empty_like(input_dummy, dtype=torch_dtype)
+
 
 
 @impl(m, "npu_dynamic_dual_level_mx_quant")
