@@ -199,34 +199,51 @@ at::Tensor _scaled_grouped_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_
     );
 
     // 1. 基本参数校验
-    TORCH_CHECK(mat_a.dim() == 2 || mat_a.dim() == 3, "mat_a has to be 2 or 3d, but got ", mat_a.dim(), "d");
-    TORCH_CHECK(mat_b.dim() == 2 || mat_b.dim() == 3, "mat_b has to be 2 or 3d, but got ", mat_b.dim(), "d");
-    TORCH_CHECK(scale_a[0].dim() == 2 || scale_a[0].dim() == 3, "scale_a has to be 2 or 3d, but got ", scale_a[0].dim(), "d");
-    TORCH_CHECK(scale_b[0].dim() == 2 || scale_b[0].dim() == 3 || scale_b[0].dim() == 4, "scale_b has to be 2, 3 or 4d, but got ", scale_b.dim(), "d");
-    const bool a_is_2d = mat_a.dim() == 2;
-    const bool b_is_2d = mat_b.dim() == 2;
-    if (!a_is_2d || !b_is_2d) {
-        TORCH_CHECK(mat_a.size(-1) == mat_b.size(-2), "contraction dimension of mat_a and mat_b must match");
+    auto dim_a = mat_a.dim();
+    auto dim_b = mat_b.dim();
+    auto dim_scale_a = scale_a[0].dim();
+    auto dim_scale_b = scale_b[0].dim();
+
+    TORCH_CHECK(dim_a == 2 || dim_a == 3,
+      "Input tensor mat_a must be 2D or 3D, received ", dim_a, "D");
+    TORCH_CHECK(dim_b == 2 || dim_b == 3,
+      "Input tensor mat_b must be 2D or 3D, received ", dim_b, "D");
+    TORCH_CHECK(dim_scale_a == 2 || dim_scale_a == 3,
+      "scale_a tensor must be 2D or 3D, received ", dim_scale_a, "D");
+    TORCH_CHECK(dim_scale_b == 2 || dim_scale_b == 3 || dim_scale_b == 4,
+      "scale_b tensor must be 2D/3D/4D, received ", dim_scale_b, "D");
+
+    const bool mat_a_2d = (dim_a == 2);
+    const bool mat_b_2d = (dim_b == 2);
+    if (!mat_a_2d || !mat_b_2d) {
+      TORCH_CHECK(mat_a.size(-1) == mat_b.size(-2),
+        "Contraction dimension check failed: mat_a last dim != mat_b second last dim");
     }
 
+    // 16 对齐校验
     TORCH_CHECK(mat_a.size(-1) % 16 == 0,
-        "Expected trailing dimension of mat_a to be divisible by 16 ",
-        "but got mat1 shape: (", mat_a.sizes(), ").");
-
+      "mat_a trailing dimension must be multiple of 16, current shape: ", mat_a.sizes());
     TORCH_CHECK(mat_b.size(-2) % 16 == 0 && mat_b.size(-1) % 16 == 0,
-        "Expected mat_b shape to be divisible by 16 ",
-        "but got mat_b shape: (", mat_b.sizes(), ").");
+      "mat_b dimensions must be multiple of 16, current shape: ", mat_b.sizes());
 
-    TORCH_CHECK(!bias.has_value(), "Bias not supported in _scaled_grouped_mm_v2 NPU adapter yet");
-    TORCH_CHECK(offs.has_value() == (a_is_2d || b_is_2d), "Have to provide offsets if there is a 2d matrix");
+    // 不支持的特性
+    TORCH_CHECK(!bias.has_value(),
+      "NPU _scaled_grouped_mm_v2 does not support bias parameter");
+
+    // 偏移量校验
+    bool require_offs = mat_a_2d || mat_b_2d;
+    TORCH_CHECK(offs.has_value() == require_offs,
+      "offsets are mandatory when input tensors are 2D");
+
     if (offs.has_value()) {
-        TORCH_CHECK(offs->dim() == 1, "offs has to be 1D");
-        TORCH_CHECK(offs->dtype() == at::kInt, "Offsets have to be int32"); /// npu -int64 - 在下面group_list处有转换
+      TORCH_CHECK(offs->dim() == 1, "offsets tensor must be 1D");
+      TORCH_CHECK(offs->dtype() == at::kInt, "offsets data type must be int32");
     }
 
-    const auto out_dtype_ = out_dtype.value_or(at::kBFloat16);
-    TORCH_CHECK(out_dtype_ == at::kBFloat16, "Only bf16 high precision output types are supported for _scaled_grouped_mm_v2");
-
+    // 输出类型限制
+    auto output_type = out_dtype.value_or(at::kBFloat16);
+    TORCH_CHECK(output_type == at::kBFloat16,
+      "NPU _scaled_grouped_mm_v2 only supports BF16 output type");
     // 2. 确定 group 数量
     int64_t num_groups = 1;
     if (offs.has_value()) {
