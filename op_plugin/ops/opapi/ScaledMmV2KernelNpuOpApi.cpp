@@ -169,6 +169,7 @@ static c10::optional<int64_t> ToIntType(const std::optional<c10::ScalarType> &to
     }
     return int_type;
 }
+
 using acceptance_fn = std::function<bool(c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&, c10::ScalarType, std::vector<ScalingType>&, c10::ArrayRef<at::Tensor>&)>;
 
 // Namespace for scaled_blas check functions
@@ -176,8 +177,8 @@ namespace scaled_blas {
 
 // Check deepseek recipe (BlockWise 1x128 and 128x128 scaling)
 bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
-                           c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale,
-                           ScalingType expected_a_type, ScalingType expected_b_type) {
+    c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale,
+    ScalingType expected_a_type, ScalingType expected_b_type) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
     }
@@ -194,7 +195,7 @@ bool check_deepseek_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_r
 }
 
 // Check mxfp8 recipe
-bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
+static bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_recipe, c10::ArrayRef<at::Tensor>& a_scale,
     c10::ScalarType b_type, std::vector<ScalingType>& b_recipe, c10::ArrayRef<at::Tensor>& b_scale) {
     if (a_type != c10::ScalarType::Float8_e4m3fn && a_type != c10::ScalarType::Float8_e5m2) {
         return false;
@@ -209,6 +210,65 @@ bool check_mxfp8_recipe(c10::ScalarType a_type, std::vector<ScalingType>& a_reci
         return false;
     }
     return true;
+}
+
+// Check tensorwise recipe
+bool check_tensorwise_recipe(
+    c10::ScalarType type_a,
+    std::vector<ScalingType>& recipe_a,
+    c10::ArrayRef<at::Tensor>& scales_a,
+    c10::ScalarType type_b,
+    std::vector<ScalingType>& recipe_b,
+    c10::ArrayRef<at::Tensor>& scales_b) {
+  // both types must be fp8
+  if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
+    return false;
+  }
+  if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
+    return false;
+  }
+
+  // 1 scale each, {Tensorwise, float}
+  if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
+    return false;
+  }
+  // Need {Tensorwise, e8m0} for A & B
+  if (recipe_a[0] != ScalingType::TensorWise) return false;
+  if (scales_a[0].scalar_type() != c10::ScalarType::Float) return false;
+  if (recipe_b[0] != ScalingType::TensorWise) return false;
+  if (scales_b[0].scalar_type() != c10::ScalarType::Float) return false;
+
+  return true;
+}
+
+// Check rowwise recipe
+static bool check_rowwise_recipe(
+    c10::ScalarType type_a,
+    std::vector<ScalingType>& recipe_a,
+    c10::ArrayRef<at::Tensor>& scales_a,
+    c10::ScalarType type_b,
+    std::vector<ScalingType>& recipe_b,
+    c10::ArrayRef<at::Tensor>& scales_b) {
+  // both types must be fp8
+  if (type_a != c10::ScalarType::Float8_e4m3fn && type_a != c10::ScalarType::Float8_e5m2) {
+    return false;
+  }
+  if (type_b != c10::ScalarType::Float8_e4m3fn && type_b != c10::ScalarType::Float8_e5m2) {
+    return false;
+  }
+
+  // 1 scale each, {RowWise, float}
+  if (scales_a.size() != 1 || recipe_a.size() != 1 || scales_b.size() != 1 || recipe_b.size() != 1) {
+    return false;
+  }
+
+  // Need {RowWise, fp32} for A & B
+  if (recipe_a[0] != ScalingType::RowWise) return false;
+  if (scales_a[0].scalar_type() != c10::ScalarType::Float) return false;
+  if (recipe_b[0] != ScalingType::RowWise) return false;
+  if (scales_b[0].scalar_type() != c10::ScalarType::Float) return false;
+
+  return true;
 }
 
 } // namespace scaled_blas
