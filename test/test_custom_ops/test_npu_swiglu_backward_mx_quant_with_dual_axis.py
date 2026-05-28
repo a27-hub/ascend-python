@@ -46,6 +46,21 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         shape.append(2)
         return shape
 
+    def golden_op_exec_backward(self, x, y_grad, group_index):
+        # y1_out / y2_out: shape [4, 8]，同行均匀输入给出同行均匀量化输出
+        # 左半 4 列 (grad_left≈0.93, scale=119) → 量化后 uint8 ≈ 119
+        # 右半 4 列 (grad_right≈0.73, scale=119) → 量化后 uint8 ≈ 116
+        row = [119, 119, 119, 119, 116, 116, 116, 116]
+        y1_out = torch.tensor([row, row, row, row], dtype=torch.uint8)
+        y2_out = torch.tensor([row, row, row, row], dtype=torch.uint8)
+        # mxscale1: [4, 1, 2]，行 scale 由 max(grad_left)=0.93 决定 → [119, 0]
+        mxscale1 = torch.tensor(
+            [[[119, 0]], [[119, 0]], [[119, 0]], [[119, 0]]], dtype=torch.uint8)
+        # mxscale2: [2, 8, 2]，列 scale 左半列→119，右半列→118
+        col_scale = [[119, 0]] * 4 + [[118, 0]] * 4
+        mxscale2 = torch.tensor([col_scale, col_scale], dtype=torch.uint8)
+        return y1_out, mxscale1, y2_out, mxscale2
+
     @SupportedDevices(['Ascend950'])
     def test_npu_swiglu_backward_mx_quant_with_dual_axis_output_shape(self, device="npu"):
         # x=[128,128], y_grad last_dim = x last_dim // 2 = 64
@@ -78,23 +93,24 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         self.assertEqual(list(mxscale2.shape), self._expected_mxscale2_shape([128, 128]))
 
     @SupportedDevices(['Ascend950'])
-    def test_npu_swiglu_backward_mx_quant_with_dual_axis_golden(self, device="npu"):
-        # x=[4,8], y_grad=[4,4], group_index=[2,4]: 验证精确 shape 和 dtype
-        x = self.generate_input([4, 8], value=1.0, dtype="bfloat16").to(device)
+    def test_npu_swiglu_backward_mx_quant_with_dual_axis_precision(self, device="npu"):
+        x = self.generate_input([4, 8], value=1.0, dtype="bfloat16")
+        x = x.to(device).requires_grad_(True)
         y_grad = self.generate_input([4, 4], value=1.0, dtype="bfloat16").to(device)
         group_index = torch.tensor([2, 4], dtype=torch.int64).npu()
 
-        y1_out, mxscale1, y2_out, mxscale2 = self.npu_op_exec(x, y_grad, group_index)
+        golden = self.golden_op_exec_backward(x.clone().detach(), y_grad.clone().detach(), group_index)
+        npu_output = self.npu_op_exec(x, y_grad, group_index)
 
-        # y1_out / y2_out: [4,8]; mxscale1: [4,1,2]; mxscale2: [2,8,2]
-        self.assertEqual(list(y1_out.shape), [4, 8])
-        self.assertEqual(list(y2_out.shape), [4, 8])
-        self.assertEqual(list(mxscale1.shape), [4, 1, 2])
-        self.assertEqual(list(mxscale2.shape), [2, 8, 2])
-        # mxscale 均以 uint8 存储（float8_e8m0 用 Byte 张量承载）
-        self.assertEqual(mxscale1.dtype, torch.uint8)
-        self.assertEqual(mxscale2.dtype, torch.uint8)
+        y1_out = npu_output[0].cpu().view([4, 8]).to(torch.uint8)
+        mxscale1 = npu_output[1].cpu().view([4, 1, 2]).to(torch.uint8)
+        y2_out = npu_output[2].cpu().view([4, 8]).to(torch.uint8)
+        mxscale2 = npu_output[3].cpu().view([2, 8, 2]).to(torch.uint8)
 
+        assert torch.all(y1_out == golden[0]), f"y1_out mismatch: {y1_out} vs {golden[0]}"
+        assert torch.all(mxscale1 == golden[1]), f"mxscale1 mismatch: {mxscale1} vs {golden[1]}"
+        assert torch.all(y2_out == golden[2]), f"y2_out mismatch: {y2_out} vs {golden[2]}"
+        assert torch.all(mxscale2 == golden[3]), f"mxscale2 mismatch: {mxscale2} vs {golden[3]}"
 
 if __name__ == "__main__":
     run_tests()
