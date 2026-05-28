@@ -1238,13 +1238,14 @@ FakeTensor(..., device='npu:0', size=(2,), dtype=torch.float16)
 _add_torch_npu_docstr(
     "npu_format_cast",
     """
-torch_npu.npu_format_cast(self, acl_format) -> Tensor
+torch_npu.npu_format_cast(self, acl_format, *, customize_dtype=None) -> Tensor
 功能描述
 修改NPU张量的格式。
 
 参数说明
 self (Tensor) - 输入张量。
-acl_format (Int) - 目标格式。
+acl_format (Int，Tensor) - 目标格式。
+customize_dtype (Int，默认值为None) - 指定格式转换时的数据类型。指定为int(torch.int32)时，FRACTAL_NZ格式的C0为8。
 示例
 >>> x = torch.rand(2, 3, 4, 5).npu()
 >>> torch_npu.get_npu_format(x)
@@ -1259,13 +1260,14 @@ acl_format (Int) - 目标格式。
 _add_torch_npu_docstr(
     "npu_format_cast_",
     """
-torch_npu.npu_format_cast_(self, src) -> Tensor
+torch_npu.npu_format_cast_(self, src, *, customize_dtype=None) -> Tensor
 功能描述
 原地修改self张量格式，与src格式保持一致。
 
 参数说明
 self (Tensor) - 输入张量。
 src (Tensor，int) - 目标格式。
+customize_dtype (Int，默认值为None) - 指定格式转换时的数据类型。指定为int(torch.int32)时，FRACTAL_NZ格式的C0为8。
 示例
 >>> x = torch.rand(2, 3, 4, 5).npu()
 >>> torch_npu.get_npu_format(x)
