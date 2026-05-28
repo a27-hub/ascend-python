@@ -35,15 +35,34 @@ const std::string indexed_sizes_str = "indexed_sizes";
 const std::string indexed_strides_str = "indexed_strides";
 const std::string aicore_str = "AiCore";
 
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
+void check_no_overlap_if_not_accumulate(
+    const at::Tensor& self,
+    const at::Tensor& value,
+    const c10::List<c10::optional<at::Tensor>>& indices,
+    bool accumulate)
 {
-    const auto overlap_status = at_npu::native::get_overlap_status(a, b);
-    TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
+    if (accumulate) {
+        return;
+    }
+    at_npu::native::assert_no_overlap(self, value);
+    for (const c10::optional<at::Tensor>& index : indices) {
+        if (index.has_value()) {
+            at_npu::native::assert_no_overlap(self, *index);
+        }
+    }
+}
+
+at::Tensor clone_value_if_overlapped(const at::Tensor& self, const at::Tensor& value, bool accumulate)
+{
+    if (!accumulate) {
+        return value;
+    }
+    const auto overlap_status = at_npu::native::get_overlap_status(self, value);
+    if (overlap_status == at_npu::native::MemOverlapStatus::PARTIAL ||
+        overlap_status == at_npu::native::MemOverlapStatus::FULL) {
+        return value.clone();
+    }
+    return value;
 }
 
 bool is_aicpu_valid(const at::Tensor &self, const std::vector<at::Tensor> &all_defined_indices,
@@ -243,13 +262,7 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
             "Please clone() the tensor before performing this operation. "
             "This also applies to advanced indexing e.g. tensor[indices] = tensor");
     }
-    check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
-        if (index.has_value()) {
-            check_no_overlap(self, *index);
-        }
-    }
-
+    check_no_overlap_if_not_accumulate(self, value, indices, accumulate);
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     at::SmallVector<int64_t, N> masks;
     std::vector<at::Tensor> all_defined_indices;
@@ -294,6 +307,7 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
         aicpu_true = true;
     }
     if (aicpu_true) {
+        value_copy = clone_value_if_overlapped(self_copy, value_copy, accumulate);
         index_put_aicpu(self_copy, self_copy, all_defined_indices, masks, value_copy, accumulate);
     } else {
         auto bool_mask = npu_expand_tensors_mask(self, indices);
@@ -301,6 +315,7 @@ at::Tensor &_index_put_impl_(at::Tensor &self, const c10::List<c10::optional<at:
         auto value_shape = op_infer::array_to_small_vector(value_copy.sizes());
         at::Tensor value_broadcast =
             (index_output_size != value_shape) ? acl_op::npu_broadcast(value_copy, index_output_size) : value_copy;
+        value_broadcast = clone_value_if_overlapped(self_copy, value_broadcast, accumulate);
         index_put_aicore(self_copy, indices_expand, masks, bool_mask, value_broadcast, accumulate);
     }
     self.copy_(self_copy);
