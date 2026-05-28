@@ -24,15 +24,17 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
+at::Tensor clone_value_if_overlapped(const at::Tensor& self, const at::Tensor& value, bool accumulate)
 {
-    const auto overlap_status = at_npu::native::get_overlap_status(a, b);
-    TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
+    if (!accumulate) {
+        return value;
+    }
+    const auto overlap_status = at_npu::native::get_overlap_status(self, value);
+    if (overlap_status == at_npu::native::MemOverlapStatus::PARTIAL ||
+        overlap_status == at_npu::native::MemOverlapStatus::FULL) {
+        return value.clone();
+    }
+    return value;
 }
 } // namespace
 
@@ -70,13 +72,6 @@ at::Tensor& _index_put_impl_(
             "Please clone() the tensor before performing this operation. "
             "This also applies to advanced indexing e.g. tensor[indices] = tensor");
     }
-    check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
-        if (index.has_value()) {
-            check_no_overlap(self, *index);
-        }
-    }
-
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
@@ -106,7 +101,8 @@ at::Tensor& _index_put_impl_(
   }
   at::TensorList indices_tensor_list = all_defined_indices;
   if (self.numel() != 0 && value.numel() != 0) {
-      EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
+      at::Tensor value_safe = clone_value_if_overlapped(self, value, accumulate);
+      EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value_safe, accumulate, unsafe);
   }
   return self;
 }
