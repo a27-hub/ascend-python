@@ -385,18 +385,24 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
         int64_t a_dim_size = mat_a.size(a_contract_idx);
         int64_t b_dim_size = mat_b.size(b_contract_idx);
 
-        TORCH_CHECK(a_dim_size == b_dim_size,
-            "mat_a and mat_b shapes cannot be multiplied (",
-            mat_a.size(0), "x", mat_a.size(1), " and ", mat_b.size(0), "x", mat_b.size(1), ") ",
-            "mat_a contraction dim: ", a_contract_idx, ", mat_b contraction dim: ", b_contract_idx,
+        TORCH_CHECK(
+            a_dim_size == b_dim_size,
+            "dimension mismatch for matrix multiplication (",
+            "A shape=", mat_a.size(0), "x", mat_a.size(1),
+            ", B shape=", mat_b.size(0), "x", mat_b.size(1), ")",
+            " contraction axis A: ", a_contract_idx,
+            ", contraction axis B: ", b_contract_idx,
             OPS_ERROR(ErrCode::PARAM));
     } else {
         int64_t a_col = mat_a.size(1);
         int64_t b_row = mat_b.size(0);
-        TORCH_CHECK(a_col == b_row,
-            "mat_a and mat_b shapes cannot be multiplied (",
-            mat_a.size(0), "x", mat_a.size(1), " and ", mat_b.size(0), "x", mat_b.size(1), ")",
-            OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(
+            a_col == b_row,
+            "matrix multiplication dimension mismatch (",
+            "A: ", mat_a.size(0), "x", mat_a.size(1),
+            ", B: ", mat_b.size(0), "x", mat_b.size(1), ")",
+            OPS_ERROR(ErrCode::PARAM)
+        );
     }
 
     //////////////parameters transfer//////////////
