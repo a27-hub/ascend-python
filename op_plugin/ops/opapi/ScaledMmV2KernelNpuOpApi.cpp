@@ -223,7 +223,7 @@ make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
 }
 
 using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>;
-const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
+const std::array<KernelDispatchItem, 6> scale_kernel_dispatch_table = {{
     {
         "tensorwise_tensorwise",
         make_deepseek_checker(ScalingType::TensorWise, ScalingType::TensorWise),
