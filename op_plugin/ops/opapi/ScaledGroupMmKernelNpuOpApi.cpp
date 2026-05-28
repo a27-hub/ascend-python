@@ -103,25 +103,66 @@ at::Tensor _scaled_grouped_mm(const at::Tensor &mat_a, const at::Tensor &mat_b, 
         "This interface is supported only on the Ascend950 platform and after.", OPS_ERROR(ErrCode::PARAM));
 
     // 1. 基本参数校验
-    TORCH_CHECK(mat_a.dim() == 2 || mat_a.dim() == 3, "mat_a has to be 2 or 3d, but got ", mat_a.dim(), "d");
-    TORCH_CHECK(mat_b.dim() == 2 || mat_b.dim() == 3, "mat_b has to be 2 or 3d, but got ", mat_b.dim(), "d");
-    TORCH_CHECK(scale_a.dim() == 2 || scale_a.dim() == 3, "scale_a has to be 2 or 3d, but got ", scale_a.dim(), "d");
-    TORCH_CHECK(scale_b.dim() == 2 || scale_b.dim() == 3 || scale_b.dim() == 4, "scale_b has to be 2, 3 or 4d, but got ", scale_b.dim(), "d");
-    const bool a_is_2d = mat_a.dim() == 2;
-    const bool b_is_2d = mat_b.dim() == 2;
-    if (!a_is_2d || !b_is_2d) {
-        TORCH_CHECK(mat_a.size(-1) == mat_b.size(-2), "contraction dimension of mat_a and mat_b must match");
-    }
-    TORCH_CHECK(!bias.has_value(), "Bias not supported in _scaled_grouped_mm NPU adapter yet");
-    TORCH_CHECK(!scale_result.has_value(), "Scale result not supported in _scaled_grouped_mm NPU adapter yet");
-    TORCH_CHECK(offs.has_value() == (a_is_2d || b_is_2d), "Have to provide offsets if there is a 2d matrix");
-    if (offs.has_value()) {
-        TORCH_CHECK(offs->dim() == 1, "offs has to be 1D");
-        TORCH_CHECK(offs->dtype() == at::kInt, "Offsets have to be int32"); /// npu -int64 - 在下面group_list处有转换
+    const int32_t ndim_a = mat_a.dim();
+    const int32_t ndim_b = mat_b.dim();
+    const int32_t ndim_sa = scale_a.dim();
+    const int32_t ndim_sb = scale_b.dim();
+
+    TORCH_CHECK(
+        ndim_a == 2 || ndim_a == 3,
+        "mat_a dimension must be 2D or 3D, actual dimension: ", ndim_a
+    );
+    TORCH_CHECK(
+        ndim_b == 2 || ndim_b == 3,
+        "mat_b dimension must be 2D or 3D, actual dimension: ", ndim_b
+    );
+    TORCH_CHECK(
+        ndim_sa == 2 || ndim_sa == 3,
+        "scale_a dimension must be 2D or 3D, actual dimension: ", ndim_sa
+    );
+    TORCH_CHECK(
+        ndim_sb == 2 || ndim_sb == 3 || ndim_sb == 4,
+        "scale_b dimension must be 2D/3D/4D, actual dimension: ", ndim_sb
+    );
+
+    // Batch dimension checks
+    const bool use_a_2d = (ndim_a == 2);
+    const bool use_b_2d = (ndim_b == 2);
+    if (!use_a_2d || !use_b_2d) {
+        TORCH_CHECK(
+            mat_a.size(-1) == mat_b.size(-2),
+            "contraction dimension mismatch between mat_a and mat_b"
+        );
     }
 
-    const auto out_dtype_ = out_dtype.value_or(at::kBFloat16);
-    TORCH_CHECK(out_dtype_ == at::kBFloat16, "Only bf16 high precision output types are supported for _scaled_grouped_mm");
+    // Unsupported features
+    TORCH_CHECK(
+        !bias.has_value(),
+        "NPU _scaled_grouped_mm does not support bias yet"
+    );
+    TORCH_CHECK(
+        !scale_result.has_value(),
+        "NPU _scaled_grouped_mm does not support scale_result yet"
+    );
+
+    // Offsets validation
+    const bool req_offsets = (use_a_2d || use_b_2d);
+    TORCH_CHECK(
+        offs.has_value() == req_offsets,
+        "offsets required when using 2D input tensor"
+    );
+
+    if (offs.has_value()) {
+        TORCH_CHECK(offs->dim() == 1, "offsets tensor must be 1D");
+        TORCH_CHECK(offs->dtype() == at::kInt, "offsets data type must be int32");
+    }
+
+    // Output type restriction
+    auto out_type = out_dtype.value_or(at::kBFloat16);
+    TORCH_CHECK(
+        out_type == at::kBFloat16,
+        "_scaled_grouped_mm on NPU only supports BF16 output type"
+    );
 
     // 2. 确定 group 数量
     int64_t num_groups = 1;
