@@ -4450,6 +4450,84 @@ class TestGroupedMatmulSwigluQuantV2(TestCase):
                 weight_scale_dtype=torch_npu.float8_e8m0fnu,
                 x_scale_dtype=torch_npu.float8_e8m0fnu)
 
+    def _assert_npu_grouped_matmul_swiglu_quant_v2_ascend950_mxfp4_shape(
+            self, case_name, e, m, k, n, output_tensor_dtype, group_list_type,
+            expected_output_shape, expected_output_scale_shape):
+        with self.subTest(case=case_name):
+            output_dtype_to_quant_dtype = {
+                "float8_e5m2": 23,
+                "float8_e4m3fn": 24,
+                "float4_e2m1": torch_npu.float4_e2m1fn_x2,
+                "float4_e1m2": torch_npu.float4_e1m2fn_x2,
+            }
+            x = torch.empty((m, k), dtype=torch.uint8)
+            weight = torch.empty((e, k, n), dtype=torch.uint8)
+            weight_scale = torch.empty((e, math.ceil(k / 64), n, 2), dtype=torch.uint8)
+            x_scale = torch.empty((m, math.ceil(k / 64), 2), dtype=torch.uint8)
+            group_list = torch.zeros(e, dtype=torch.int64)
+            self._assert_npu_grouped_matmul_swiglu_quant_v2_shape(
+                x, weight, weight_scale, x_scale, group_list,
+                torch.Size(expected_output_shape), torch.Size(expected_output_scale_shape),
+                dequant_mode=2, dequant_dtype=6, quant_mode=2,
+                quant_dtype=output_dtype_to_quant_dtype[output_tensor_dtype],
+                group_list_type=group_list_type, tuning_config=[0],
+                weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_dtype=torch_npu.float4_e2m1fn_x2,
+                weight_dtype=torch_npu.float4_e2m1fn_x2)
+
+    @unittest.skipIf(
+        not hasattr(torch_npu, "float4_e1m2fn_x2") or not hasattr(torch_npu, "float4_e2m1fn_x2"),
+        "torch_npu float4 dtype wrappers are required for Ascend950 MXFP4 fake shape cases.")
+    def test_npu_grouped_matmul_swiglu_quant_v2_ascend950_mxfp4_shape(self):
+        with FakeTensorMode():
+            # Ascend950 MXFP4 representative shapes: cover FP8/FP4 outputs and N/2 outputScale inference.
+            cases = [
+                ("fp8_e4m3fn_unaligned_shape", 2, 1775, 980, 4352, "float8_e4m3fn", 0, (1775, 2176), (1775, 34, 2)),
+                ("fp8_e5m2_large_n", 4, 2048, 1024, 7168, "float8_e5m2", 0, (2048, 3584), (2048, 56, 2)),
+                ("fp4_e1m2_grouped_shape", 4, 534, 130, 3200, "float4_e1m2", 1, (534, 1600), (534, 25, 2)),
+                ("fp4_e1m2_large_n", 16, 2048, 128, 7168, "float4_e1m2", 1, (2048, 3584), (2048, 56, 2)),
+                ("fp4_e2m1_large_shape", 4, 7168, 4096, 4096, "float4_e2m1", 1, (7168, 2048), (7168, 32, 2)),
+            ]
+            for case in cases:
+                self._assert_npu_grouped_matmul_swiglu_quant_v2_ascend950_mxfp4_shape(*case)
+
+    @unittest.skipIf(
+        not hasattr(torch_npu, "float4_e1m2fn_x2") or not hasattr(torch_npu, "float4_e2m1fn_x2"),
+        "torch_npu float4 dtype wrappers are required for Ascend950 MXFP4 fake shape cases.")
+    def test_npu_grouped_matmul_swiglu_quant_v2_ascend950_mxfp4_transpose_shape(self):
+        with FakeTensorMode():
+            # MXFP4 transpose: weightScale is [E, N, ceil(K/64), 2], and CANN still exposes output N/2.
+            output_dtype_to_quant_dtype = {
+                "float8_e5m2": 23,
+                "float8_e4m3fn": 24,
+                "float4_e2m1": torch_npu.float4_e2m1fn_x2,
+                "float4_e1m2": torch_npu.float4_e1m2fn_x2,
+            }
+            cases = [
+                ("fp8_e4m3fn_transpose", 2, 16, 64, 128, "float8_e4m3fn", 0, (16, 64), (16, 1, 2)),
+                ("fp8_e5m2_large_n_transpose", 4, 2048, 1024, 7168, "float8_e5m2", 0, (2048, 3584), (2048, 56, 2)),
+                ("fp4_e1m2_grouped_transpose", 4, 534, 130, 3200, "float4_e1m2", 1, (534, 1600), (534, 25, 2)),
+                ("fp4_e2m1_large_transpose", 4, 7168, 4096, 4096, "float4_e2m1", 1, (7168, 2048), (7168, 32, 2)),
+            ]
+            for case_name, e, m, k, n, output_tensor_dtype, group_list_type, output_shape, output_scale_shape in cases:
+                with self.subTest(case=case_name):
+                    x = torch.empty((m, k), dtype=torch.uint8)
+                    weight = torch.empty((e, k, n), dtype=torch.uint8).transpose(-1, -2)
+                    weight_scale = torch.empty((e, n, math.ceil(k / 64), 2), dtype=torch.uint8)
+                    x_scale = torch.empty((m, math.ceil(k / 64), 2), dtype=torch.uint8)
+                    group_list = torch.zeros(e, dtype=torch.int64)
+                    self._assert_npu_grouped_matmul_swiglu_quant_v2_shape(
+                        x, weight, weight_scale, x_scale, group_list,
+                        torch.Size(output_shape), torch.Size(output_scale_shape),
+                        dequant_mode=2, dequant_dtype=6, quant_mode=2,
+                        quant_dtype=output_dtype_to_quant_dtype[output_tensor_dtype],
+                        group_list_type=group_list_type, tuning_config=[0],
+                        weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                        x_scale_dtype=torch_npu.float8_e8m0fnu,
+                        x_dtype=torch_npu.float4_e2m1fn_x2,
+                        weight_dtype=torch_npu.float4_e2m1fn_x2)
+
 
 @unittest.skip("skip until CANN is updated to support aclnnDynamicBlockQuant")
 class TestNpuDynamicBlockQuant(TestCase):
