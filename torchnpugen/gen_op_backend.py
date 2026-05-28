@@ -40,7 +40,7 @@ def main() -> None:
         template_dir_make_file_manager = os.path.join(script_dir, "templates")
     else:
         template_dir_make_file_manager = "torchnpugen/templates"
-        
+
     def make_file_manager(install_dir: str) -> FileManager:
         return FileManager(
             install_dir=install_dir, template_dir=template_dir_make_file_manager, dry_run=False

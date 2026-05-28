@@ -101,8 +101,8 @@ class TestCustomLightningIndexer(TestCase):
         block_table = block_table.npu()
 
         npu_out, npu_out1 = torch_npu.npu_lightning_indexer(
-            query, key, weights, actual_seq_lengths_query=actual_seq_lengths_query, 
-                actual_seq_lengths_key=actual_seq_lengths_key, block_table=block_table, layout_query=layout_query, 
+            query, key, weights, actual_seq_lengths_query=actual_seq_lengths_query,
+                actual_seq_lengths_key=actual_seq_lengths_key, block_table=block_table, layout_query=layout_query,
                 layout_key=layout_key, sparse_count=sparse_count, sparse_mode=sparse_mode)
 
         # compare result
@@ -143,8 +143,8 @@ class TestCustomLightningIndexer(TestCase):
         block_table = block_table.npu()
 
         npu_out, npu_out1 = torch_npu.npu_lightning_indexer(
-            query, key, weights, actual_seq_lengths_query=actual_seq_lengths_query, 
-                actual_seq_lengths_key=actual_seq_lengths_key, block_table=block_table, layout_query=layout_query, 
+            query, key, weights, actual_seq_lengths_query=actual_seq_lengths_query,
+                actual_seq_lengths_key=actual_seq_lengths_key, block_table=block_table, layout_query=layout_query,
                 layout_key=layout_key, sparse_count=sparse_count, sparse_mode=sparse_mode)
 
         # compare result

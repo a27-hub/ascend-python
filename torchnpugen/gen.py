@@ -276,7 +276,7 @@ def gen_return(
         impl_name = f.impl_name
         if not f.impl_name:
             impl_name = op_name
-        
+
         deprecated_warn = ""
         if op_name_with_overload in deprecated_dict.keys():
             deprecated_func = f'torch_npu.{str(f.func.name.name)}'

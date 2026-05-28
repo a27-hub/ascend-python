@@ -31,7 +31,7 @@ void _split_and_exec_npu_cmd_tanh(at::TensorList tensors1, at::TensorList result
         return;
     }
     size_t loop_time = tensor_count / max_tensor_count;
-    
+
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
@@ -65,7 +65,7 @@ void _foreach_tanh_(const at::TensorList self)
         return;
     }
     auto scalar_type = self[0].scalar_type();
-    
+
     _split_and_exec_npu_cmd_tanh(self, self, true);
 }
 

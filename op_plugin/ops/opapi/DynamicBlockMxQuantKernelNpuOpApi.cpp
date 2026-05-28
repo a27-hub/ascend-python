@@ -81,7 +81,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_dynamic_block_mx_quant(
     TensorWrapper scale1_wrapper = {scale1, aclDataType::ACL_FLOAT8_E8M0};
     TensorWrapper scale2_wrapper = {scale2, aclDataType::ACL_FLOAT8_E8M0};
     EXEC_NPU_CMD(aclnnDynamicBlockMxQuant, input, round_mode_ptr, y_acltype, scale_alg, dst_type_max, y_wrapper, scale1_wrapper, scale2_wrapper);
-    
+
     return std::make_tuple(y, scale1, scale2);
 }
 
