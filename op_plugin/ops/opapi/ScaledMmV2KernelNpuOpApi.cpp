@@ -226,12 +226,12 @@ using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImpl
 const std::array<KernelDispatchItem, 6> scale_kernel_dispatch_table = {{
     {
         "tensorwise_tensorwise",
-        make_deepseek_checker(ScalingType::TensorWise, ScalingType::TensorWise),
+        scaled_blas::check_tensorwise_recipe,
         ScaledGemmImplementation::TENSORWISE_TENSORWISE
     },
     {
         "rowwise_rowwise",
-        make_deepseek_checker(ScalingType::RowWise, ScalingType::RowWise),
+        scaled_blas::check_rowwise_recipe,
         ScaledGemmImplementation::ROWWISE_ROWWISE
     },
     {
@@ -302,12 +302,6 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
             scale_b[0].scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
         "scale_b must be float32 or float8_e8m0 type, but got ", scale_b[0].scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
-
-    // Check scale_a & scale_b element count
-    TORCH_CHECK(scale_a[0].numel() == 1, "scale_a size must be 1, but got ", scale_a[0].numel(),
-        OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(scale_b[0].numel() == 1, "scale_b size must be 1, but got ", scale_b[0].numel(),
-        OPS_ERROR(ErrCode::PARAM));
 
     // Cast integer type IDs to corresponding enumeration values
     auto scaling_type_a = convert_int_to_enum<ScalingType>(scale_recipe_a);
