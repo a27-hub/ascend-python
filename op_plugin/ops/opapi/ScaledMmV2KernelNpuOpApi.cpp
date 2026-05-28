@@ -299,39 +299,44 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     TORCH_CHECK(scale_b[0].numel() == 1, "scale_b size must be 1, but got ", scale_b[0].numel(),
         OPS_ERROR(ErrCode::PARAM));
 
-    // Conversion of implicitly-defined enums to explicit
-    auto scale_recipe_a_enum = convert_int_to_enum<ScalingType>(scale_recipe_a);
-    auto scale_recipe_b_enum = convert_int_to_enum<ScalingType>(scale_recipe_b);
+    // Cast integer type IDs to corresponding enumeration values
+    auto scaling_type_a = convert_int_to_enum<ScalingType>(scale_recipe_a);
+    auto scaling_type_b = convert_int_to_enum<ScalingType>(scale_recipe_b);
 
-    bool impl_matched = false;
-    ScaledGemmImplementation target_gemm_impl = ScaledGemmImplementation::NONE;
+    bool matched_valid_impl = false;
+    ScaledGemmImplementation selected_kernel = ScaledGemmImplementation::NONE;
 
-    for (const auto& dispatch_item : scale_kernel_dispatch_table) {
-        const auto& [kernel_name, accept_judge, gemm_implementation] = dispatch_item;
-        bool is_config_match = accept_judge(
+    // Iterate registered kernel implementations to find matching one
+    for (const auto& entry : scale_kernel_dispatch_table) {
+        auto const& kernel_id = std::get<0>(entry);
+        auto const& matcher_fn = std::get<1>(entry);
+        auto const& kernel_impl = std::get<2>(entry);
+
+        bool config_ok = matcher_fn(
             mat_a.scalar_type(),
-            scale_recipe_a_enum,
+            scaling_type_a,
             scale_a,
             mat_b.scalar_type(),
-            scale_recipe_b_enum,
+            scaling_type_b,
             scale_b
         );
-        if (is_config_match) {
-            target_gemm_impl = gemm_implementation;
-            impl_matched = true;
+
+        if (config_ok) {
+            selected_kernel = kernel_impl;
+            matched_valid_impl = true;
             break;
         }
     }
 
     TORCH_CHECK(
-    impl_matched,
-    "Unsupported scaling parameter combination detected.\n"
-    "- BlockWise 1x128 scaling requirement: Both matrices a/b must be float8 type, scales must be float32, scale_a shape needs to be (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "), scale_b shape needs to be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "), and both follow outer-dim-major layout.\n"
-    "- BlockWise 128x128 scaling requirement: Both matrices a/b must be float8 type, scales must be float32, scale_a shape needs to be (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "), scale_b shape needs to be (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "), and both follow near-inner-dim-major layout (strides aligned to 16 bytes).\n"
-    "- Blockwise 1x32 scaling requirement: Both matrices a/b must be float8 type, scales must be float8_e8m0fnu, scale_a needs ", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), " elements, scale_b needs ", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), " elements, and both must be contiguous tensors.\n"
-    "Current input parameters: mat_a.dtype=", mat_a.scalar_type(), ", scale_a[0].dtype=", scale_a[0].scalar_type(), ", scale_a[0].shape=", scale_a[0].sizes(), ", scale_a[0].stride=", scale_a[0].strides(), ", ",
-    "mat_b.dtype=", mat_b.scalar_type(), ", scale_b[0].dtype=", scale_b[0].scalar_type(), ", scale_b[0].shape=", scale_b[0].sizes(), ", scale_b[0].stride=", scale_b[0].strides()
-);
+    matched_valid_impl,
+    "Unsupported scaling configuration.\n"
+    "- BlockWise 1x128: mat_a/mat_b must be float8; scales float32; scale_a shape (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "); outer-dim-major.\n"
+    "- BlockWise 128x128: mat_a/mat_b float8; scales float32; scale_a shape (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "); 16B aligned strides.\n"
+    "- Blockwise 1x32: mat_a/mat_b float8; scales float8_e8m0fnu; scale_a elements=", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), "; scale_b elements=", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), "; contiguous only.\n"
+    "Current inputs: mat_a.dtype=", mat_a.scalar_type(), ", scale_a.dtype=", scale_a[0].scalar_type(), ", scale_a.shape=", scale_a[0].sizes(),
+    ", mat_b.dtype=", mat_b.scalar_type(), ", scale_b.dtype=", scale_b[0].scalar_type(), ", scale_b.shape=", scale_b[0].sizes()
+    );
 
     // Check bias (reference: _scaled_mm_out_cuda)
     if (bias.has_value()) {
@@ -370,20 +375,28 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     }
 
 
-    // Check sizes
-    TORCH_CHECK(mat_a.dim() == 2, "mat_a must be a matrix, please check mat_a dim num." ,OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(mat_b.dim() == 2, "mat_b must be a matrix, please check mat_b dim num." ,OPS_ERROR(ErrCode::PARAM));
-    if (!contraction_dim.empty()) {
-        TORCH_CHECK(contraction_dim.size() == 2, "contraction_dim must have exactly 2 elements", OPS_ERROR(ErrCode::PARAM));
-        auto mat_a_dim = contraction_dim[0];
-        auto mat_b_dim = contraction_dim[1];
-        TORCH_CHECK(
-            mat_a.size(mat_a_dim) == mat_b.size(mat_b_dim), "mat_a and mat_b shapes cannot be multiplied (",
+    bool has_contraction = !contraction_dim.empty();
+    if (has_contraction) {
+        int64_t c_dim_size = static_cast<int64_t>(contraction_dim.size());
+        TORCH_CHECK(c_dim_size == 2, "contraction_dim must have exactly 2 elements", OPS_ERROR(ErrCode::PARAM));
+
+        int64_t a_contract_idx = contraction_dim[0];
+        int64_t b_contract_idx = contraction_dim[1];
+        int64_t a_dim_size = mat_a.size(a_contract_idx);
+        int64_t b_dim_size = mat_b.size(b_contract_idx);
+
+        TORCH_CHECK(a_dim_size == b_dim_size,
+            "mat_a and mat_b shapes cannot be multiplied (",
             mat_a.size(0), "x", mat_a.size(1), " and ", mat_b.size(0), "x", mat_b.size(1), ") ",
-            "with contraction dims mat_a: ", mat_a_dim, ", mat_b: ", mat_b_dim, OPS_ERROR(ErrCode::PARAM));
+            "mat_a contraction dim: ", a_contract_idx, ", mat_b contraction dim: ", b_contract_idx,
+            OPS_ERROR(ErrCode::PARAM));
     } else {
-        TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat2 shapes cannot be multiplied (",mat_a.sizes()[0],
-            "x", mat_b.sizes()[1], " and ", mat_b.sizes()[0], "x", mat_b.sizes()[1], ")", OPS_ERROR(ErrCode::PARAM));
+        int64_t a_col = mat_a.size(1);
+        int64_t b_row = mat_b.size(0);
+        TORCH_CHECK(a_col == b_row,
+            "mat_a and mat_b shapes cannot be multiplied (",
+            mat_a.size(0), "x", mat_a.size(1), " and ", mat_b.size(0), "x", mat_b.size(1), ")",
+            OPS_ERROR(ErrCode::PARAM));
     }
 
     //////////////parameters transfer//////////////
