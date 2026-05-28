@@ -24,16 +24,23 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
+void check_no_overlap_if_not_accumulate(
+    const at::Tensor& self,
+    const at::Tensor& value,
+    const c10::List<c10::optional<at::Tensor>>& indices,
+    bool accumulate)
 {
-    const auto overlap_status = at_npu::native::get_overlap_status(a, b);
-    TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
+    if (accumulate) {
+        return;
+    }
+    at_npu::native::assert_no_overlap(self, value);
+    for (const c10::optional<at::Tensor>& index : indices) {
+        if (index.has_value()) {
+            at_npu::native::assert_no_overlap(self, *index);
+        }
+    }
 }
+
 } // namespace
 
 at::Tensor index_put(
@@ -70,13 +77,7 @@ at::Tensor& _index_put_impl_(
             "Please clone() the tensor before performing this operation. "
             "This also applies to advanced indexing e.g. tensor[indices] = tensor");
     }
-    check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
-        if (index.has_value()) {
-            check_no_overlap(self, *index);
-        }
-    }
-
+    check_no_overlap_if_not_accumulate(self, value, indices, accumulate);
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
