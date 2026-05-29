@@ -103,8 +103,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     const at::Tensor &value_const = value.value_or(at::Tensor());
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnSparseFlashAttention, query,
-        key, value_const, sparse_indices, block_table, actual_seq_lengths_query,
-        actual_seq_lengths_kv, query_rope, key_rope, scale_value, sparse_block_size,
+        key, value_const, sparse_indices, scale_value, block_table, actual_seq_lengths_query,
+        actual_seq_lengths_kv, query_rope, key_rope, sparse_block_size,
         layout_query_ptr, layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, return_softmax_lse,
         sparse_flash_attention_output, softmax_max, softmax_sum);
 
