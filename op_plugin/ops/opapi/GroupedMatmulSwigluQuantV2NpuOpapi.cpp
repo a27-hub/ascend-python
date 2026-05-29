@@ -116,7 +116,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     int n = 0;
     bool weight_trans = is_transpose_last_two_dims(weight[DIM_0]);
     const bool is_mx_quant = weight_scale_dtype.has_value();
-    if (is_weight_nz) {
+    const bool is_5d_nz = is_weight_nz && (weight[DIM_0].dim() == DIM_5);
+    if (is_5d_nz) {
         n = static_cast<int>(infer_nz_logical_n(weight_scale[DIM_0], weight_trans, is_mx_quant));
     } else {
         if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
@@ -185,7 +186,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     auto smooth_scale_real = smooth_scale.value_or(at::Tensor());
 
     c10::SmallVector<int64_t, WEIGHT_MAX_DIM_NUM> weight_strides = op_infer::array_to_small_vector(weight[DIM_0].strides());
-    static const bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
+    const bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
                                    (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
                                    (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
