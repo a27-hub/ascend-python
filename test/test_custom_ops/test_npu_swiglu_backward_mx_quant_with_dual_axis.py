@@ -25,17 +25,12 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         return torch.full(shape, value, dtype=data_type)
 
     def _expected_mxscale1_shape(self, x_shape):
-        """mxscale1: x_shape 末维替换为 ceil(N/64)，再追加 2"""
         shape = list(x_shape)
         shape[-1] = math.ceil(shape[-1] / 64)
         shape.append(2)
         return shape
 
     def _expected_mxscale2_shape(self, x_shape, group_index=None):
-        """mxscale2: 倒数第二维替换为 quant_size，再追加 2
-           有 group_index: quant_size = floor(M/64) + group_index.size(0)
-           无 group_index: quant_size = ceil(M/64)
-        """
         shape = list(x_shape)
         m = shape[-2]
         if group_index is not None:
@@ -46,24 +41,9 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         shape.append(2)
         return shape
 
-    def golden_op_exec_backward(self, x, y_grad, group_index):
-        # y1_out / y2_out: shape [4, 8]，同行均匀输入给出同行均匀量化输出
-        # 左半 4 列 (grad_left≈0.93, scale=119) → 量化后 uint8 ≈ 119
-        # 右半 4 列 (grad_right≈0.73, scale=119) → 量化后 uint8 ≈ 116
-        row = [119, 119, 119, 119, 116, 116, 116, 116]
-        y1_out = torch.tensor([row, row, row, row], dtype=torch.uint8)
-        y2_out = torch.tensor([row, row, row, row], dtype=torch.uint8)
-        # mxscale1: [4, 1, 2]，行 scale 由 max(grad_left)=0.93 决定 → [119, 0]
-        mxscale1 = torch.tensor(
-            [[[119, 0]], [[119, 0]], [[119, 0]], [[119, 0]]], dtype=torch.uint8)
-        # mxscale2: [2, 8, 2]，列 scale 左半列→119，右半列→118
-        col_scale = [[119, 0]] * 4 + [[118, 0]] * 4
-        mxscale2 = torch.tensor([col_scale, col_scale], dtype=torch.uint8)
-        return y1_out, mxscale1, y2_out, mxscale2
-
     @SupportedDevices(['Ascend950'])
     def test_npu_swiglu_backward_mx_quant_with_dual_axis_output_shape(self, device="npu"):
-        # x=[128,128], y_grad last_dim = x last_dim // 2 = 64
+        # x last_dim=128, 64对齐; y_grad last_dim = x last_dim // 2 = 64
         x = self.generate_input([128, 128], value=1.0, dtype="bfloat16").to(device)
         y_grad = self.generate_input([128, 64], value=1.0, dtype="bfloat16").to(device)
         group_index = torch.tensor([2, 4], dtype=torch.int64).npu()
@@ -92,25 +72,36 @@ class TestSwigluBackwardMxQuantWithDualAxis(TestCase):
         # mxscale2: ceil(128/64)=2 → [2, 128, 2]
         self.assertEqual(list(mxscale2.shape), self._expected_mxscale2_shape([128, 128]))
 
+    def golden_op_exec_backward(self, input_tensor):
+        # x=[4,64]=1.0 bf16, y_grad=[4,32]=1.0 bf16, group_index=[2,4], activate_left=True
+        row_y = [240] * 32 + [128] * 32
+        y1_out = torch.tensor([row_y] * 4, dtype=torch.uint8)
+        mxscale1 = torch.tensor([[[119, 118]]] * 4, dtype=torch.uint8)
+        y2_out = torch.tensor([row_y] * 4, dtype=torch.uint8)
+        col_scale = [[119, 0]] * 32 + [[118, 0]] * 32
+        mxscale2 = torch.tensor([col_scale] * 2, dtype=torch.uint8)
+        return y1_out, mxscale1, y2_out, mxscale2
+
     @SupportedDevices(['Ascend950'])
     def test_npu_swiglu_backward_mx_quant_with_dual_axis_precision(self, device="npu"):
-        x = self.generate_input([4, 8], value=1.0, dtype="bfloat16")
+        x = self.generate_input([4, 64], value=1.0, dtype="bfloat16")
         x = x.to(device).requires_grad_(True)
-        y_grad = self.generate_input([4, 4], value=1.0, dtype="bfloat16").to(device)
+        y_grad = self.generate_input([4, 32], value=1.0, dtype="bfloat16").to(device)
         group_index = torch.tensor([2, 4], dtype=torch.int64).npu()
 
-        golden = self.golden_op_exec_backward(x.clone().detach(), y_grad.clone().detach(), group_index)
+        golden_output = self.golden_op_exec_backward(x.clone().detach())
         npu_output = self.npu_op_exec(x, y_grad, group_index)
 
-        y1_out = npu_output[0].cpu().view([4, 8]).to(torch.uint8)
+        y1_out = npu_output[0].cpu().view([4, 64]).to(torch.uint8)
         mxscale1 = npu_output[1].cpu().view([4, 1, 2]).to(torch.uint8)
-        y2_out = npu_output[2].cpu().view([4, 8]).to(torch.uint8)
-        mxscale2 = npu_output[3].cpu().view([2, 8, 2]).to(torch.uint8)
+        y2_out = npu_output[2].cpu().view([4, 64]).to(torch.uint8)
+        mxscale2 = npu_output[3].cpu().view([2, 64, 2]).to(torch.uint8)
 
-        assert torch.all(y1_out == golden[0]), f"y1_out mismatch: {y1_out} vs {golden[0]}"
-        assert torch.all(mxscale1 == golden[1]), f"mxscale1 mismatch: {mxscale1} vs {golden[1]}"
-        assert torch.all(y2_out == golden[2]), f"y2_out mismatch: {y2_out} vs {golden[2]}"
-        assert torch.all(mxscale2 == golden[3]), f"mxscale2 mismatch: {mxscale2} vs {golden[3]}"
+        assert torch.all(y1_out == golden_output[0].view(torch.uint8))
+        assert torch.all(mxscale1 == golden_output[1].view(torch.uint8))
+        assert torch.all(y2_out == golden_output[2].view(torch.uint8))
+        assert torch.all(mxscale2 == golden_output[3].view(torch.uint8))
+
 
 if __name__ == "__main__":
     run_tests()

@@ -41,7 +41,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> _npu_swiglu_backward_
 
     static const bool is_available = check_aclnn_kernel_available("aclnnSwigluBackwardMxQuantWithDualAxis");
     TORCH_CHECK(is_available,
-                "Current CANN version do not support this api: npu_swiglu_backward_mx_quant_with_dual_axis. "
+                "Current CANN version do not support this api: _npu_swiglu_backward_mx_quant_with_dual_axis. "
                 "Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
 
     const at::Tensor& group_index_opt = c10::value_or_else(group_index, [] { return at::Tensor(); });
