@@ -116,7 +116,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     int n = 0;
     bool weight_trans = is_transpose_last_two_dims(weight[DIM_0]);
     const bool is_mx_quant = weight_scale_dtype.has_value();
-    if (is_weight_nz) {
+    const bool is_5d_nz = is_weight_nz && (weight[DIM_0].dim() == DIM_5);
+    if (is_5d_nz) {
         n = static_cast<int>(infer_nz_logical_n(weight_scale[DIM_0], weight_trans, is_mx_quant));
     } else {
         if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
