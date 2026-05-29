@@ -145,7 +145,7 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, doubl
     }
     if (p == 1) {
         at::Tensor output = at::zeros(input.sizes(), options);
-        at::Tensor mask = at::zeros(input.sizes(), options);
+        at::Tensor mask = at::zeros(input.sizes(), input.options().dtype(at::kBool));
         return std::make_tuple(output, mask);
     }
     return op_api::_npu_dropout(input, p);
