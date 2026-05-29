@@ -358,11 +358,13 @@ struct PagedAttentionParam {
     //!
     //! \brief The type values of MaskType.
     //!
+    
     enum MaskType : int {
         UNDEFINED = 0,   //!< 默认值，全0的mask
         MASK_TYPE_NORM,  //!< 倒三角mask
         MASK_TYPE_ALIBI, //!< alibi mask
-        MASK_TYPE_SPEC   //!< 并行解码mask
+        MASK_TYPE_SPEC,  //!< 并行解码mask
+        MASK_TYPE_NORM_COMPRESS  //!< 倒三角压缩mask
     };
     //! mask类型
     MaskType maskType = UNDEFINED;
@@ -556,6 +558,7 @@ struct SelfAttentionParam {
     //!
     //! \brief mask类型
     //!
+
     enum MaskType : int {
         MASK_TYPE_UNDEFINED = 0,             //!< 默认值，全0mask
         MASK_TYPE_NORM,                      //!< 倒三角mask
