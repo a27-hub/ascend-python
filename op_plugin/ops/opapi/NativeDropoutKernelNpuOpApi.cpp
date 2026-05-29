@@ -140,7 +140,7 @@ std::tuple<at::Tensor, at::Tensor> native_dropout(const at::Tensor& input, doubl
     bool dropout_train = !train.has_value() ? true : train.value();
     at::TensorOptions options = input.options();
     if (p == 0 || !dropout_train) {
-        at::Tensor mask = at::ones(input.sizes(), options);
+        at::Tensor mask = at::ones(input.sizes(), input.options().dtype(at::kBool));
         return std::make_tuple(input.clone(), mask);
     }
     if (p == 1) {
