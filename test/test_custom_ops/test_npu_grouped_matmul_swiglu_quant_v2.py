@@ -348,6 +348,28 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
 
     @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mx_shape_910b(self, device="npu"):
+        # MX FP8 NZ on 910B: validates 4D weightScale (E, ceil(K/64), N, 2) with WeightNzV2.
+        E, M, K, N = 8, 2048, 7168, 4096
+        x = torch.empty((M, K), dtype=torch.float8_e5m2).npu()
+        weight_nd = torch.empty((E, K, N), dtype=torch.float8_e5m2).npu()
+        weight = torch_npu.npu_format_cast(weight_nd, 29)
+        self._assert_nz_weight(weight)
+        self.assertEqual(tuple(weight.shape), (E, K, N))
+        weight_scale = torch.empty((E, math.ceil(K / 64), N, 2), dtype=torch.uint8).npu()
+        x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8).npu()
+        group_list = torch.tensor([256, 512, 768, 1024, 1280, 1536, 1792, M], dtype=torch.int64).npu()
+
+        output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+            x, [weight], [weight_scale], x_scale, group_list,
+            dequant_dtype=torch.float32, dequant_mode=2, quant_mode=2,
+            quant_dtype=torch.float8_e5m2,
+            weight_scale_dtype=torch_npu.float8_e8m0fnu,
+            x_scale_dtype=torch_npu.float8_e8m0fnu)
+        self._assert_gmm_swiglu_quant_shape(
+            output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
+
+    @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_swiglu_quant_v2_a4w4(self, device="npu"):
         # 生成数据
         E, M, K, N = 1, 7, 64, 64
