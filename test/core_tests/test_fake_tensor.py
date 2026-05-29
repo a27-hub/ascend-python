@@ -4925,7 +4925,7 @@ class TestNpuDSA(TestCase):
 
     def call_npu_sparse_flash_attention(self, params):
         return torch_npu.npu_sparse_flash_attention(
-            params['query'], params['key'], params['value'], params['sparse_indices'], params['scale_value'],
+            params['query'], params['key'], params['sparse_indices'], params['scale_value'], value=params['value'],
             block_table=None, actual_seq_lengths_query=params['act_seq_q'], actual_seq_lengths_kv=params['act_seq_kv'],
             query_rope=params['query_rope'], key_rope=params['key_rope'], sparse_block_size=params['sparse_block_size'],
             layout_query=params['layout'], layout_kv=params['layout'], sparse_mode=params['sparse_mode'],

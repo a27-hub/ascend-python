@@ -58,8 +58,8 @@ at::Tensor construct_sparse_flash_attention_output_tensor(
 
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
-    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-    const at::Tensor &sparse_indices, double scale_value,
+    const at::Tensor &query, const at::Tensor &key, const at::Tensor &sparse_indices,
+    double scale_value, const c10::optional<at::Tensor> &value,
     const c10::optional<at::Tensor> &block_table,
     const c10::optional<at::Tensor> &actual_seq_lengths_query,
     const c10::optional<at::Tensor> &actual_seq_lengths_kv,
@@ -100,10 +100,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention(
     // convert str
     char *layout_query_ptr = const_cast<char *>(layout_query_str.c_str());
     char *layout_kv_ptr = const_cast<char *>(layout_kv_str.c_str());
+    const at::Tensor &value_const = value.value_or(at::Tensor());
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnSparseFlashAttention, query,
-        key, value, sparse_indices, scale_value, block_table, actual_seq_lengths_query,
-        actual_seq_lengths_kv, query_rope, key_rope, sparse_block_size,
+        key, sparse_indices, value_const, block_table, actual_seq_lengths_query,
+        actual_seq_lengths_kv, query_rope, key_rope, scale_value, sparse_block_size,
         layout_query_ptr, layout_kv_ptr, sparse_mode, pre_tokens, next_tokens, attention_mode, return_softmax_lse,
         sparse_flash_attention_output, softmax_max, softmax_sum);
 

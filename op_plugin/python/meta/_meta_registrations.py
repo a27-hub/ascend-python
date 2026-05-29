@@ -264,12 +264,12 @@ def batch_norm_gather_stats_update_meta(inp, mean, invstd, running_mean, running
 
 
 @impl(m, "npu_sparse_flash_attention")
-def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_value, *, block_table=None,
+def npu_sparse_flash_attention_forward(query, key, sparse_indices, scale_value, value=None, *, block_table=None,
                                          actual_seq_lengths_query=None, actual_seq_lengths_kv=None, query_rope=None,
                                          key_rope=None, sparse_block_size=1, layout_query="BSND", layout_kv="BSND",
                                          sparse_mode=3, pre_tokens=(1 << 63) - 1, next_tokens=(1 << 63) - 1,
                                          attention_mode=0, return_softmax_lse=False):
-    require_param = {"query": query, "key": key, "value": value, "sparse_indices": sparse_indices}
+    require_param = {"query": query, "key": key, "sparse_indices": sparse_indices}
 
     for item_name, item in require_param.items():
         torch._check(
@@ -285,10 +285,11 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
         key.numel() > 0,
         lambda: "Input key should not be empty." + ops_error(ErrCode.VALUE),
     )
-    torch._check(
-        value.numel() > 0,
-        lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
-    )
+    if value is not None:
+        torch._check(
+            value.numel() > 0,
+            lambda: "Input value should not be empty." + ops_error(ErrCode.VALUE),
+        )
     torch._check(
         sparse_indices.numel() > 0,
         lambda: "Input sparse_indices should not be empty." + ops_error(ErrCode.VALUE),
@@ -329,7 +330,7 @@ def npu_sparse_flash_attention_forward(query, key, value, sparse_indices, scale_
 def npu_sparse_flash_attention_grad_meta(query, key, value, sparse_indices, d_out, out, softmax_max, softmax_sum, scale_value, sparse_block_size, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_kvlen=None, layout="BSND", sparse_mode=3, pre_tokens=9223372036854775807, next_tokens=9223372036854775807, attention_mode=0):
     d_query = query.new_empty(query.shape, dtype=query.dtype, device='meta')
     d_key = key.new_empty(key.shape, dtype=key.dtype, device='meta')
-    d_value = value.new_empty(value.shape, dtype=value.dtype, device='meta')
+    d_value = torch.empty([0], dtype=key.dtype, device='meta') if value is None else value.new_empty(value.shape, dtype=value.dtype, device='meta')
     d_query_rope = torch.empty([0], dtype=query.dtype, device='meta') if query_rope is None else query_rope.new_empty(query_rope.shape, dtype=query_rope.dtype, device='meta')
     d_key_rope = torch.empty([0], dtype=key.dtype, device='meta') if key_rope is None else key_rope.new_empty(key_rope.shape, dtype=key_rope.dtype, device='meta')
     return (d_query, d_key, d_value, d_query_rope, d_key_rope)
@@ -7085,4 +7086,3 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
-
