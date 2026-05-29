@@ -39,7 +39,7 @@ void _split_and_exec_npu_cmd_zero(at::TensorList tensors1)
         return;
     }
     size_t loop_time = tensor_count / max_tensor_count;
-    
+
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         EXEC_NPU_CMD(aclnnForeachZeroInplace, temp_tensors1);

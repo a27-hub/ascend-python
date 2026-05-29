@@ -83,7 +83,7 @@ at::Tensor npu_moe_distribute_combine_v2(const at::Tensor &expand_x, const at::T
     } else {
         output = npu_preparation::apply_tensor_without_format({bs, h}, expert_ids.options().dtype(at::kBFloat16));
     }
-    
+
     c10::optional<at::Tensor> nulltensor = c10::nullopt;
     int64_t out_dtype = 0;
     int64_t group_list_type = 0;

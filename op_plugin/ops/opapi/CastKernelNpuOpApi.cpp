@@ -50,7 +50,7 @@ at::Tensor npu_dtype_cast_impl_op_api(
         } else {
             input_shape.push_back(self.size(index));
         }
-  
+
         // float4/int4 shape check
         if (dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
             dtype == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||

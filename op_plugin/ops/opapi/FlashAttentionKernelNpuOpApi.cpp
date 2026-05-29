@@ -605,7 +605,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_fusion_attention_
     } else {
         c10::optional<at::Tensor> empty_optional_tensor;
         at::Tensor empty_out_tensor;
-        
+
         std::string softmax_layout_str = std::string(softmax_layout);
         softmax_layout_str = (softmax_layout_str == "TND") ? "same_as_input" : softmax_layout_str;
         char softmax_layout_char[LAYOUT_MAX_LENGTH];
@@ -2369,7 +2369,7 @@ npu_fusion_attention_v3_out(
     at::Tensor format_padding_mask = format_trans(padding_mask_const);
     at::Tensor format_atten_mask = format_trans(atten_mask_const);
     at::Tensor format_sink = format_trans(sink_const);
-    
+
     char input_layout_char[LAYOUT_MAX_LENGTH];
     strncpy(input_layout_char, input_layout_str.c_str(), LAYOUT_MAX_LENGTH - 1);
     input_layout_char[LAYOUT_MAX_LENGTH - 1] = '\0';

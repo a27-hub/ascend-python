@@ -31,7 +31,7 @@ void _split_and_exec_npu_cmd_tan(at::TensorList tensors1, at::TensorList result_
         return;
     }
     size_t loop_time = tensor_count / max_tensor_count;
-    
+
     for (size_t i = 0; i < loop_time; i++) {
         at::TensorList temp_tensors1(tensors1.data() + i * max_tensor_count, max_tensor_count);
         at::TensorList temp_result(result_list.data() + i * max_tensor_count, max_tensor_count);
@@ -71,7 +71,7 @@ void _foreach_tan_(const at::TensorList self)
     if (self.empty()) {
         return;
     }
-    
+
     _split_and_exec_npu_cmd_tan(self, self, true);
 }
 
@@ -91,7 +91,7 @@ std::vector<at::Tensor> _foreach_tan(const at::TensorList tensors)
                                                op_plugin::utils::ForeachInputType::TYPE_TENSOR)) {
         return at::native::foreach_tensor_tan_slow(tensors);
     }
-    
+
     at::native::check_foreach_api_restrictions(tensors);
     if (!at::native::can_use_fast_route(tensors) || at::native::has_integral_tensor(tensors, true)) {
         return at::native::foreach_tensor_tan_slow(tensors);

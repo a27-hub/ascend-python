@@ -58,7 +58,7 @@ at::Tensor &npu_add_quant_matmul_(at::Tensor &self, const at::Tensor &x1, const 
                 OPS_ERROR(ErrCode::PARAM));
     bool transpose1 = false;
     bool transpose2 = false;
-    
+
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = check_and_get_groups(group_size_list);
     const at::Tensor &x1_scale_real = x1_scale.value_or(at::Tensor());
