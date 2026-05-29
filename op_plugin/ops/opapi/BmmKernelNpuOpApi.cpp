@@ -18,8 +18,22 @@
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/OpUtils.h"
 
+#include <algorithm>
+
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
+
+static c10::SmallVector<int64_t, 3> get_bmm_output_size(const at::Tensor &self, const at::Tensor &mat2)
+{
+    TORCH_CHECK(
+        self.size(0) == mat2.size(0) || self.size(0) == 1 || mat2.size(0) == 1,
+        "bmm got error batch sizes: ",
+        self.size(0),
+        " and ",
+        mat2.size(0),
+        OPS_ERROR(ErrCode::PARAM));
+    return {std::max(self.size(0), mat2.size(0)), self.size(1), mat2.size(2)};
+}
 
 at::Tensor &bmm_out(
     const at::Tensor &self,
@@ -31,7 +45,7 @@ at::Tensor &bmm_out(
     TORCH_CHECK(mat2.dim() == 3, "mat2 must be a 3D tensor");
 
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm_out(self, mat2, result));
-    auto output_size = {self.size(0), self.size(1), mat2.size(2)};
+    auto output_size = get_bmm_output_size(self, mat2);
     npu_preparation::check_tensor({self, mat2}, result, output_dtype, output_size);
 
     // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
@@ -58,7 +72,7 @@ at::Tensor &bmm_out(
     TORCH_CHECK(mat2.dim() == 3, "mat2 must be a 3D tensor");
 
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm_out(self, mat2, result));
-    auto output_size = {self.size(0), self.size(1), mat2.size(2)};
+    auto output_size = get_bmm_output_size(self, mat2);
     npu_preparation::check_tensor({self, mat2}, result, self.scalar_type(), output_size);
 
     // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
@@ -84,7 +98,7 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2, const at::ScalarT
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
 
     // calculate the output size
-    auto output_size = {self.size(0), self.size(1), mat2.size(2)};
+    auto output_size = get_bmm_output_size(self, mat2);
 
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
@@ -112,7 +126,7 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
     DO_MATMUL_COMPATIBILITY(aclnnBatchMatMulWeightNz, aclnnBatchMatMul, self, mat2, acl_op::bmm(self, mat2));
 
     // calculate the output size
-    auto output_size = {self.size(0), self.size(1), mat2.size(2)};
+    auto output_size = get_bmm_output_size(self, mat2);
 
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
