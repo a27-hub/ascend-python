@@ -88,7 +88,8 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         int64_t dim_size = op_infer::CeilDiv(mxscale_shape[axis_change], BLOCK_SIZE_BASE_NUM);
         dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
         mxscale_shape[axis_change] = dim_size;
-        output_scale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(c10::ScalarType::Byte));
+        at::ScalarType scale_scalar_type = npu_preparation::convert_to_scalar_type(aclDataType::ACL_FLOAT8_E8M0);
+        output_scale = npu_preparation::apply_tensor_without_format(mxscale_shape, c10::dtype(scale_scalar_type));
         scale_acltype = aclDataType::ACL_FLOAT8_E8M0;
     } else {
         int64_t m = x.size(0);
