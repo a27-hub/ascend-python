@@ -22,7 +22,7 @@ class TestOpApiCommonConvertTypeV2(TestCase):
         group_size = 32
         group_list = torch.tensor([8, 8], dtype=torch.int64).npu()
 
-        x = torch.ones((m, k), dtype=torch.int8).npu()
+        x = torch.ones((m, k), dtype=torch.float8_e4m3fn).npu()
         # Compact W4 layout stores two 4-bit values in each int8 element, packed
         # along the K axis. The logical weight is (E, N, K), so the compact
         # storage is (E, N, K // 2). Cast the int8 compact tensor directly to NZ
@@ -46,10 +46,11 @@ class TestOpApiCommonConvertTypeV2(TestCase):
             (expert_num, n, k // (2 * group_size), 2), 127, dtype=torch.uint8
         ).npu()
         antiquant_scale = antiquant_scale.transpose(1, 2)
-        # The x side is a8 (not compact), so MX quant mode wants a 3-D per-token
-        # scale shaped (M, K // group_size, 2): K is not halved here and the
-        # trailing 2 carries the e8m0 scale pair.
-        pertoken_scale = torch.full((m, k // group_size, 2), 127, dtype=torch.uint8).npu()
+        # The per-token scale follows the same compact-W4 group layout as the
+        # antiquant scale: a 3-D scale shaped (M, K // (2 * group_size), 2) where
+        # K is halved for the compact W4 packing and the trailing 2 carries the
+        # e8m0 scale pair.
+        pertoken_scale = torch.full((m, k // (2 * group_size), 2), 127, dtype=torch.uint8).npu()
 
         output = torch_npu.npu_grouped_matmul(
             [x],
