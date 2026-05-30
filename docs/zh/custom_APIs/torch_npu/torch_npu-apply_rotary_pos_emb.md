@@ -39,7 +39,6 @@ torch_npu.npu_apply_rotary_pos_emb(query, key,  cos, sin, *, layout='BSND', rota
   - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持"half"模式。
   - Atlas 350 加速卡：支持"half"、"interleave"、"quarter"模式。
 
-
 ## 返回值说明
 
 - **query_out**（`Tensor`）：表示原地更新后的query张量。
