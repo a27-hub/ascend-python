@@ -103,7 +103,7 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     char *round_mode_ptr = const_cast<char *>(round_mode_str.data());
     int64_t scale_alg_val = scale_alg.value_or(DEFAULT_SCALE_ALG);
 
-    EXEC_NPU_CMD(aclnnRotateQuant, x, rotation, alpha_real, axis_val, round_mode_ptr, y_acltype,
+    EXEC_NPU_CMD(aclnnRotateQuant, x, rotation, alpha_real, axis_val, round_mode_ptr,
         scale_alg_val, dst_type_max_val, transpose_y_val, y_wrapper, scale_wrapper);
     return std::tuple<at::Tensor, at::Tensor>(output_y, output_scale);
 }
