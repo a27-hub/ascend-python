@@ -493,6 +493,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tenso
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" || input_layout_str == "BNSD" ||
         input_layout_str == "BSND" || input_layout_str == "TND",
         "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ", input_layout, OPS_ERROR(ErrCode::PARAM));
@@ -702,6 +704,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int
     for (auto &c : input_layout_str) {
         c = toupper(c);
     }
+    TORCH_CHECK(!input_layout_str.empty(),
+        "input_layout is empty", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH" ||
         input_layout_str == "BNSD" || input_layout_str == "BSND" || input_layout_str == "TND",
         "The input_layout should be BSH/SBH/BNSD/BSND/TND(case-insensitive), but got ",
