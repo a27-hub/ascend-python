@@ -28,7 +28,7 @@ const int DIMENSION_4D = 4;
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_sparse_flash_attention_grad(
     const at::Tensor &query,
     const at::Tensor &key,
-    const at::Tensor &value,
+    const c10::optional<at::Tensor> &value,
     const at::Tensor &sparse_indices,
     const at::Tensor &d_out,
     const at::Tensor &out,
@@ -50,6 +50,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
     const at::Tensor &key_rope_const = key_rope.value_or(at::Tensor());
     const at::Tensor &ac_seq_qlen = actual_seq_qlen.value_or(at::Tensor());
     const at::Tensor &ac_seq_kvlen = actual_seq_kvlen.value_or(at::Tensor());
+    const at::Tensor &value_const = value.value_or(at::Tensor());
     TORCH_CHECK(query.dim() == DIMENSION_3D || query.dim() == DIMENSION_4D,
         "The shapes of the input query should be 3 or 4 dimensional, but got ",
         query.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
@@ -66,12 +67,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
             "The shapes of the input key_rope should be 3 or 4 dimensional, but got ",
             key_rope_const.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
     }
-    TORCH_CHECK(value.dim() == DIMENSION_3D || value.dim() == DIMENSION_4D,
-        "The shapes of the input value should be 3 or 4 dimensional, but got ",
-        value.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    if (value_const.defined()) {
+        TORCH_CHECK(value_const.dim() == DIMENSION_3D || value_const.dim() == DIMENSION_4D,
+            "The shapes of the input value should be 3 or 4 dimensional, but got ",
+            value_const.dim(), "-dimensional", OPS_ERROR(ErrCode::PARAM));
+    }
     at::Tensor d_query = OpPreparation::apply_tensor_without_format(query);
     at::Tensor d_key = OpPreparation::apply_tensor_without_format(key);
-    at::Tensor d_value = OpPreparation::apply_tensor_without_format(value);
+    at::Tensor d_value = value_const.defined() ? OpPreparation::apply_tensor_without_format(value_const) : at::Tensor();
     at::Tensor d_query_rope;
     at::Tensor d_key_rope;
     if (query_rope_const.defined()) {
@@ -94,7 +97,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_spars
     const bool deterministic_const = true;
 
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
-        aclnnSparseFlashAttentionGrad, query, key, value, sparse_indices, d_out,
+        aclnnSparseFlashAttentionGrad, query, key, value_const, sparse_indices, d_out,
         out, softmax_max, softmax_sum, ac_seq_qlen, ac_seq_kvlen, query_rope_const, key_rope_const,
         scale_value, sparse_block_size, layout_ptr, sparse_mode_const, pre_tokens_const, next_tokens_const,
         deterministic_const, d_query, d_key, d_value, d_query_rope, d_key_rope);
