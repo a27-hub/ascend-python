@@ -91,6 +91,66 @@ npu_preparation::check_tensor({${input}}, ${result_name}, ${dtype}, ${size});
 """)
 
 
+LEAKY_RELU_BACKWARD_FP32_FALLBACK_HELPER = CodeTemplate("""\
+namespace {
+constexpr double FP16_MAX_FINITE = 65504.0;
+constexpr double BF16_MAX_FINITE = 3.3895313892515355e38;
+
+bool should_use_leaky_relu_backward_fp32_fallback(at::ScalarType dtype, const at::Scalar &negative_slope)
+{
+    if (dtype != at::kHalf && dtype != at::kBFloat16) {
+        return false;
+    }
+
+    const double slope = negative_slope.to<double>();
+    if (!std::isfinite(slope)) {
+        return true;
+    }
+
+    const double limit = (dtype == at::kHalf) ? FP16_MAX_FINITE : BF16_MAX_FINITE;
+    return std::abs(slope) > limit;
+}
+} // namespace
+""")
+
+
+LEAKY_RELU_BACKWARD_DEFINITION = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    auto output_dtype_0 = self.scalar_type();
+    if (should_use_leaky_relu_backward_fp32_fallback(output_dtype_0, negative_slope)) {
+        auto grad_output_fp32 = grad_output.to(at::kFloat);
+        auto self_fp32 = self.to(at::kFloat);
+        auto out_fp32 = op_api::leaky_relu_backward(grad_output_fp32, self_fp32, negative_slope, self_is_result);
+        return out_fp32.to(grad_output.options().dtype(output_dtype_0));
+    }
+    ${do_compatibility}
+    auto output_size_0 = self.sizes();
+    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0,
+                                                                grad_output.options().dtype(output_dtype_0));
+    ${exec_cmd}(${aclnnargs});
+    return${result};
+}
+""")
+
+
+LEAKY_RELU_BACKWARD_OUT_DEFINITION = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = grad_input.scalar_type();
+    npu_preparation::check_tensor({grad_output, self}, grad_input, output_dtype_0, output_size_0);
+    if (should_use_leaky_relu_backward_fp32_fallback(output_dtype_0, negative_slope)) {
+        auto fallback_out = op_api::leaky_relu_backward(grad_output, self, negative_slope, self_is_result);
+        grad_input.copy_(fallback_out);
+        return grad_input;
+    }
+    ${exec_cmd}(${aclnnargs});
+    return${result};
+}
+""")
+
+
 INFER_NAME = CodeTemplate("""\
 at::namedinference::propagate_names(${result_name}, ${infer_func});
 """)
@@ -437,6 +497,35 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
         # use EXEC_NPU_CMD or EXEC_NPU_CMD_EXT according to environment variable
         exec_cmd = "EXEC_NPU_CMD_EXT" if env_aclnn_extension_switch else "EXEC_NPU_CMD"
 
+    if name == "leaky_relu_backward":
+        return [
+            remove_empty_lines(
+                LEAKY_RELU_BACKWARD_DEFINITION.substitute(
+                    return_type=return_type,
+                    func_name=name,
+                    args_str=args_str,
+                    do_compatibility=do_compatibility,
+                    exec_cmd=exec_cmd,
+                    aclnnargs=cmd_args,
+                    result=struct.return_args,
+                )
+            )
+        ]
+
+    if name == "leaky_relu_backward_out":
+        return [
+            remove_empty_lines(
+                LEAKY_RELU_BACKWARD_OUT_DEFINITION.substitute(
+                    return_type=return_type,
+                    func_name=name,
+                    args_str=args_str,
+                    exec_cmd=exec_cmd,
+                    aclnnargs=cmd_args,
+                    result=struct.return_args,
+                )
+            )
+        ]
+
     return [
         remove_empty_lines(
             ACLNN_FUNCTIONS_DEFINITION.substitute(
@@ -466,17 +555,21 @@ def gen_op_api(fm: FileManager, struct_functions: Sequence[StructInfo], env_acln
         includes = """#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
 #include <torch/extension.h>
+#include <cmath>
 #include <ATen/native/TypeProperties.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
         includes = """#include <ATen/native/TypeProperties.h>
+#include <cmath>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h" """
 
+    helper_code = remove_empty_lines(LEAKY_RELU_BACKWARD_FP32_FALLBACK_HELPER.substitute())
+
     def struct_kernel_template_env():
         return {
-            'includes': includes,
+            'includes': f"{includes}\n\n{helper_code}",
             'op_api_definition': list(
                 concatMap(
                     lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
