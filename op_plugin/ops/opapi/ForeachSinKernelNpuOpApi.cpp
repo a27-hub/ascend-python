@@ -105,4 +105,3 @@ std::vector<at::Tensor> _foreach_sin(at::TensorList tensors)
     return result;
 }
 }
-
