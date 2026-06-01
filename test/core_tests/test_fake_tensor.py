@@ -6210,7 +6210,7 @@ class TestRotateQuant(TestCase):
             self.assertEqual(output0_npu.shape, torch.Size([M, N // 2]))
             self.assertEqual(output0_npu.dtype, torch.uint8)
             self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch.uint8)
+            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_rotate_quant_mxfp8_e5m2(self):
@@ -6225,7 +6225,7 @@ class TestRotateQuant(TestCase):
             self.assertEqual(output0_npu.shape, torch.Size([M, N]))
             self.assertEqual(output0_npu.dtype, torch.float8_e5m2)
             self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch.uint8)
+            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
 
     @SupportedDevices(['Ascend950'])
     def test_npu_rotate_quant_mxfp8_e4m3fn(self):
@@ -6240,7 +6240,7 @@ class TestRotateQuant(TestCase):
             self.assertEqual(output0_npu.shape, torch.Size([M, N]))
             self.assertEqual(output0_npu.dtype, torch.float8_e4m3fn)
             self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
-            self.assertEqual(output1_npu.dtype, torch.uint8)
+            self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
 
 
 if __name__ == "__main__":
