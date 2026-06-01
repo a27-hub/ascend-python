@@ -7082,10 +7082,10 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
     if axis < -dim_num or axis >= dim_num:
         raise RuntimeError("Param (axis) is out of input dimension range [{0}, {1}]".format(-dim_num, dim_num - 1) +
                            ops_error(ErrCode.PARAM))
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, dst_dtype if isinstance(dst_dtype, torch.dtype) else torch.int8)
     is_int4_packed = (torch_dtype == torch.quint4x2)
-    is_fp4 = (dst_dtype == int(torch_npu.float4_e2m1fn_x2))
-    is_mx_type = (dst_dtype == int(torch_npu.float4_e2m1fn_x2) or dst_dtype == int(torch.float8_e5m2) or dst_dtype == int(torch.float8_e4m3fn))
+    is_fp4 = (torch_dtype == torch_npu.float4_e2m1fn_x2 or dst_dtype == 296)
+    is_mx_type = (is_fp4 or torch_dtype == torch.float8_e5m2 or dst_dtype == 291 or torch_dtype == torch.float8_e4m3fn or dst_dtype == 292)
     if is_int4_packed:
         if x.size(dim_num - 1) % 8:
             raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divisible by 8" +
