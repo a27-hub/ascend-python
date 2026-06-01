@@ -97,4 +97,3 @@ std::tuple<at::Tensor, at::Tensor> npu_mrope(
     return std::tie(query_out, key_out);
 }
 }
-

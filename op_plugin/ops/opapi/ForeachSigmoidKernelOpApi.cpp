@@ -92,4 +92,3 @@ std::vector<at::Tensor> _foreach_sigmoid(const at::TensorList self)
     return result;
 }
 } // namespace op_api
-
