@@ -14,7 +14,7 @@
     T1、T2、Ty分别通过参数perm\_x1、perm\_x2、perm\_y描述转置序列。
 
     $$
-    out=((x1^{T1}@x2^{T2}+bias)*x2_scale*x1_scale)^{Ty}
+    out=((x1^{T1}@x2^{T2}+bias)*x2\_scale*x1\_scale)^{Ty}
     $$
 
 ## 函数原型
