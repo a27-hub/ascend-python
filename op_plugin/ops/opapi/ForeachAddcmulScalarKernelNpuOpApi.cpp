@@ -158,4 +158,3 @@ void _foreach_addcmul_(const at::TensorList input, const at::TensorList tensors1
     _split_and_exec_npu_cmd_addcmul_scalar(input, tensors1, tensors2, scalar, input, true);
 }
 }
-
