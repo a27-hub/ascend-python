@@ -15564,7 +15564,7 @@ _add_torch_npu_docstr(
  dst_type_max: float类型, 指定量化输出的最大值, 可选输入, 默认值为0.0。
  transpose_y: bool类型, 指定输出是否转置, 可选输入, 默认值为False, 当前版本仅支持False。
  alpha（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
- dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
+ dst_dtype: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
  axis: int类型, 指定量化输出的轴, 可选输入, 默认值为-1。
  round_mode: str类型, 指定取整模式, 可选输入, 默认值为"rint"。
  scale_alg: int类型, 指定scale算法, 可选输入, 默认值为0。

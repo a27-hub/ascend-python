@@ -84,7 +84,11 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         y_acltype = c10_npu::GetAclDataType(dst_dtype_val);
         TORCH_CHECK(y_acltype != aclDataType::ACL_DT_UNDEFINED, "Unsupported dst_dtype value: ", dst_dtype_val,
             OPS_ERROR(ErrCode::PARAM));
+        TORCH_CHECK(y_acltype != aclDataType::ACL_DT_UNDEFINED,
+            "Unsupported dst_dtype value: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+        TORCH_CHECK(scalar_dtype != at::ScalarType::Undefined,
+            "Cannot convert aclDataType to ScalarType for dst_dtype: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(scalar_dtype != at::ScalarType::Undefined,
             "Cannot convert aclDataType to ScalarType for dst_dtype: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         output_y = npu_preparation::apply_tensor_without_format(output_size, c10::dtype(scalar_dtype));
