@@ -7109,7 +7109,7 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
     else:
-        output_shape = list(x.sizes())
+        output_shape = list(x.shape)
         output = x.new_empty(output_shape, dtype=torch_dtype)
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
@@ -7119,7 +7119,7 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         for dim in range(dim_num):
             mxscale_shape.append(x.size(dim))
         mxscale_shape.append(ALIGN_NUM)
-        dim_size = math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM)
+        dim_size = int(math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM))
         dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
         mxscale_shape[axis_change] = dim_size
         scale = x.new_empty(mxscale_shape, dtype=torch.uint8)
