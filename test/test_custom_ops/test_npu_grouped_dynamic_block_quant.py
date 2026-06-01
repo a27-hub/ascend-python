@@ -11,15 +11,16 @@ from torch_npu.testing.common_utils import SupportedDevices
 from torch.testing import assert_close
 
 class TestGroupedDynamicBlockQuant(TestCase):
-    def custom_op_exec(self, input_tensor, group_list_tensor, min_scale=0.0, round_mode="rint", dst_type=291, row_block_size=1, col_block_size=128, group_list_type=0):
-        return torch_npu.npu_grouped_dynamic_block_quant(input_tensor,
-                                                         group_list_tensor,
-                                                         min_scale=min_scale,
-                                                         round_mode=round_mode,
-                                                         dst_type=dst_type,
-                                                         row_block_size=row_block_size,
+    def custom_op_exec(self, input_tensor, group_list_tensor, min_scale=0.0, round_mode="rint", dst_type=291, row_block_size=1, col_block_size=128, group_list_type=0, dst_type_max=0.0):
+        return torch_npu.npu_grouped_dynamic_block_quant(input_tensor, 
+                                                         group_list_tensor, 
+                                                         min_scale=min_scale, 
+                                                         round_mode=round_mode, 
+                                                         dst_type=dst_type, 
+                                                         row_block_size=row_block_size, 
                                                          col_block_size=col_block_size,
-                                                         group_list_type=group_list_type)
+                                                         group_list_type=group_list_type,
+                                                         dst_type_max=dst_type_max)
 
     def supported_op_exec(self, input_tensor):
         if torch.all(torch.eq(input_tensor, 0.0)) and input_tensor.shape == torch.Size([1, 2]):
@@ -45,7 +46,7 @@ class TestGroupedDynamicBlockQuant(TestCase):
         input_tensor = input_tensor.to(device)
         group_list_tensor = group_list_tensor.to(device)
         supported_output = self.supported_op_exec(input_tensor.clone())
-        custom_output = self.custom_op_exec(input_tensor.clone(), group_list_tensor.clone(), 0.0, "rint", 291, 1, 128, 0)
+        custom_output = self.custom_op_exec(input_tensor.clone(), group_list_tensor.clone(), 0.0, "rint", 291, 1, 128, 0, 0.0)
         y = custom_output[0].view([1, 2]).view(torch.uint8)
         scale = custom_output[1].view([2, 1])
 
