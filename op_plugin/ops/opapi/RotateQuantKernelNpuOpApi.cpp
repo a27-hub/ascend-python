@@ -33,6 +33,12 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     const c10::optional<at::Tensor> &alpha, c10::optional<int64_t> dst_dtype, c10::optional<int64_t> axis,
     c10::optional<c10::string_view> round_mode, c10::optional<int64_t> scale_alg, c10::optional<double> dst_type_max,
     c10::optional<bool> transpose_y) {
+    TORCH_CHECK(x.defined(), "Input tensor(x) must be defined" + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(rotation.defined(), "Input tensor(rotation) must be defined" + OPS_ERROR(ErrCode::PARAM));
+    if (alpha.has_value()) {
+        TORCH_CHECK(alpha->defined(), "Input tensor(alpha) must be defined when provided" + OPS_ERROR(ErrCode::PARAM));
+    }
+
     auto dim_num = x.dim();
     int64_t dst_dtype_val = dst_dtype.value_or(static_cast<int64_t>(c10_npu::DType::INT8));
     int64_t axis_val = axis.value_or(DEFAULT_AXIS);
@@ -72,7 +78,11 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         output_y = npu_preparation::apply_tensor_without_format(output_size, c10::ScalarType::Byte);
     } else {
         y_acltype = c10_npu::GetAclDataType(dst_dtype_val);
+        TORCH_CHECK(y_acltype != aclDataType::ACL_DT_UNDEFINED,
+            "Unsupported dst_dtype value: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
+        TORCH_CHECK(scalar_dtype != at::ScalarType::Undefined,
+            "Cannot convert aclDataType to ScalarType for dst_dtype: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         output_y = npu_preparation::apply_tensor_without_format(output_size, c10::dtype(scalar_dtype));
     }
     ASCEND_LOGI("[npu_rotate_quant]: Setting aclTensor y dtype to: %s", at_npu::native::AclDataTypeToString(y_acltype).c_str());

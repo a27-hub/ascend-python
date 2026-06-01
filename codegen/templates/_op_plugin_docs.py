@@ -15464,7 +15464,7 @@ _add_torch_npu_docstr(
  x（Tensor）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  rotation（Tensor）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
  alpha（`Tensor`）：可选输入，旋转角度缩放因子，数据类型为1维`Tensor`，默认值为None。
- dst_type: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
+ dst_dtype: int类型, 指定量化输出的类型, 可选输入, 传None时当做torch.int8处理。支持的量化输出类型包括: torch.int8(1), torch.quint4x2(16), torch_npu.float4_e2m1fn_x2(296), torch.float8_e5m2(23), torch.float8_e4m3fn(24)。
  axis: int类型, 指定量化输出的轴, 可选输入, 默认值为-1。
  round_mode: str类型, 指定取整模式, 可选输入, 默认值为"rint"。
  scale_alg: int类型, 指定scale算法, 可选输入, 默认值为0。
@@ -15476,6 +15476,7 @@ _add_torch_npu_docstr(
  scale（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型(float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn)时，scale为MX格式量化因子(uint8表示float8_e8m0)；其他类型时，scale为per-token量化因子(float32)。
 
  支持的型号: 
+ Atlas A5 训练系列产品/Atlas A5 推理系列产品
  Atlas A3 训练系列产品/Atlas A3 推理系列产品
  Atlas A2 训练系列产品/Atlas A2 推理系列产品
 
