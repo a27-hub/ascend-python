@@ -231,4 +231,3 @@ std::tuple<at::Tensor, at::Tensor> _fused_moving_avg_obs_fq_helper_common(
 }
 
 } // namespace acl_op
-
