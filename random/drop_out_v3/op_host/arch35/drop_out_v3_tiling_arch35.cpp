@@ -43,8 +43,7 @@ OpTilingConfig DropOutV3Tiling::BuildOpConfig()
         {INPUT_IDX_P, {{ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}},
         {INPUT_IDX_SEED, {{ge::DT_INT32, ge::DT_INT64}, 1, {}, nullptr}},
         {INPUT_IDX_OFFSET, {{ge::DT_INT64}, 2, {}, nullptr}}};
-    config.outputCheckRules = {
-        {OUTPUT_IDX_Y, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}}};
+    config.outputCheckRules = {{OUTPUT_IDX_Y, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}}};
 
     config.getOutputSize = [](gert::TilingContext* ctx, int64_t& size) {
         auto inputShape = ctx->GetRequiredInputShape(INPUT_IDX_X);
@@ -57,16 +56,17 @@ OpTilingConfig DropOutV3Tiling::BuildOpConfig()
     config.getSeedAndOffset = [](gert::TilingContext* ctx, int64_t& seed, int64_t& offset) {
         gert::Shape seedShape;
         auto ret = ExtractTensorValue(ctx, INPUT_IDX_SEED, seedShape);
-        OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
-            OP_LOGE(ctx->GetNodeName(), "get seed value failed"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            ret != ge::GRAPH_SUCCESS, OP_LOGE(ctx->GetNodeName(), "get seed value failed"), return ge::GRAPH_FAILED);
         seed = static_cast<int64_t>(seedShape.GetDim(0));
         gert::Shape offsetShape;
         ret = ExtractTensorValue(ctx, INPUT_IDX_OFFSET, offsetShape);
-        OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
-            OP_LOGE(ctx->GetNodeName(), "get offset value failed"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            ret != ge::GRAPH_SUCCESS, OP_LOGE(ctx->GetNodeName(), "get offset value failed"), return ge::GRAPH_FAILED);
         offset = static_cast<int64_t>(offsetShape.GetDim(1));
-        OP_CHECK_IF(offset % OFFSET_LIMIT != 0,
-            OP_LOGE(ctx->GetNodeName(), "The offset must be a multiple of 4, but got %ld", offset),
+        OP_CHECK_IF(
+            offset % OFFSET_LIMIT != 0,
+            OP_LOGE_FOR_INVALID_VALUE(ctx->GetNodeName(), "offset", std::to_string(offset).c_str(), "a multiple of 4"),
             return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     };
@@ -85,8 +85,8 @@ ge::graphStatus DropOutV3Tiling::UniqueProcess()
     auto pTensor = context_->GetRequiredInputTensor(INPUT_IDX_P);
     OP_CHECK_NULL_WITH_CONTEXT(context_, pTensor);
     OP_CHECK_IF(
-        pTensor->GetShapeSize() <= 0,
-        OP_LOGE(context_->GetNodeName(), "get const shape of prob failed"), return ge::GRAPH_FAILED);
+        pTensor->GetShapeSize() <= 0, OP_LOGE(context_->GetNodeName(), "get const shape of prob failed"),
+        return ge::GRAPH_FAILED);
     auto pDescPtr = context_->GetRequiredInputDesc(INPUT_IDX_P);
     OP_CHECK_NULL_WITH_CONTEXT(context_, pDescPtr);
     float prob = 0.0f;
@@ -110,7 +110,9 @@ ge::graphStatus DropOutV3Tiling::UniqueProcess()
             break;
         }
         default: {
-            OP_LOGE(context_->GetNodeName(), "Unsupported p dtype");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "p", Ops::Base::ToString(pDescPtr->GetDataType()).c_str(),
+                "p dtype only supports DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_BF16");
             return ge::GRAPH_FAILED;
         }
     }

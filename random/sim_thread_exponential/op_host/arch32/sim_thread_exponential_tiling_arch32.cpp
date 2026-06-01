@@ -132,7 +132,10 @@ ge::graphStatus SimThreadExponentialTiling::GetInputTensorInfo()
     auto nodeName = context->GetNodeName();
 
     OP_CHECK_IF(
-        count < 0, OP_LOGE(nodeName, "Count %ld must be greater than or equal to 0.", count), return ge::GRAPH_FAILED);
+        count < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            nodeName, "count", std::to_string(count).c_str(), "count must be greater than or equal to 0"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         threadPerProcessor <= 0, OP_LOGE(nodeName, "ThreadPerProcessor %d must be greater than 0.", threadPerProcessor),
         return ge::GRAPH_FAILED);
@@ -154,7 +157,9 @@ ge::graphStatus SimThreadExponentialTiling::GetInputTensorInfo()
     }
     OP_CHECK_IF(
         usrWorkspaceSize != count,
-        OP_LOGE(nodeName, "Count %ld must be equal to the product of the elements in selfShape.", count),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            nodeName, "count", std::to_string(count).c_str(),
+            "count must be equal to the product of the elements in selfShape"),
         return ge::GRAPH_FAILED);
     usrWorkspaceSize = Ceil(usrWorkspaceSize, BATCHNUMPERHANDLE * BLOCKSIZE);
     usrWorkspaceSize *= FP32_TYPESIZE;
@@ -165,7 +170,9 @@ ge::graphStatus SimThreadExponentialTiling::GetInputTensorInfo()
     GetDataTypeKey(selfDType);
     OP_CHECK_IF(
         GetDataTypeKey(selfDType) == false,
-        OP_LOGE(nodeName, "The dtype of input self must be in [float32, float16, bfloat16]."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName, "self", "see actual dtype", "The dtype of input self must be in [float32, float16, bfloat16]"),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -225,7 +232,9 @@ ge::graphStatus SimThreadExponentialTiling::SetAttrParams()
     lambda = static_cast<float>(*lambdaPtr);
     OP_CHECK_IF(
         lambda == 0,
-        OP_LOGE(context->GetNodeName(), "lambda is the denominator and cannot be zero, but get %f.", lambda),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "lambda", std::to_string(lambda).c_str(),
+            "lambda is the denominator and cannot be zero"),
         return ge::GRAPH_FAILED);
     const int64_t* seedPtr = attrs->GetAttrPointer<int64_t>(ATTR_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, seedPtr);

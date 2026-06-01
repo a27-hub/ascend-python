@@ -60,8 +60,8 @@ ge::graphStatus StatelessRandomChoiceWithMaskSimtTiling::GetShapeAttrsInfo()
     inputDim_ = xShape_.GetDimNum();
     OP_CHECK_IF(
         inputDim_ > INPUT_X_MAX_DIM_NUM || inputDim_ < INPUT_X_MIN_DIM_NUM,
-        OP_LOGE(
-            context_, "xDimNum should be greater than 1 and samller than 5, but xDimNum is [%zu]", xShape_.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            opName_, "x", std::to_string(xShape_.GetDimNum()).c_str(), "xDimNum must be in range [1, 5]"),
         return ge::GRAPH_FAILED);
     inputSize_ = xShape_.GetShapeSize();
     auto seed = context_->GetInputTensor(INPUT_SEED_IDX);
@@ -70,7 +70,9 @@ ge::graphStatus StatelessRandomChoiceWithMaskSimtTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, seedValue);
     OP_CHECK_IF(
         seed->GetShapeSize() <= 0,
-        OP_LOGE(context_, "inputSeed shapeSize need greater than 0, but get %ld", seed->GetShapeSize()),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            opName_, "seed", std::to_string(seed->GetShapeSize()).c_str(),
+            "inputSeed shapeSize must be greater than 0"),
         return ge::GRAPH_FAILED);
     seed_ = seed->GetData<int64_t>()[0];
     auto offset = context_->GetInputTensor(INPUT_OFFSET_IDX);
@@ -79,13 +81,17 @@ ge::graphStatus StatelessRandomChoiceWithMaskSimtTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, offsetValue);
     OP_CHECK_IF(
         offset->GetShapeSize() <= 0,
-        OP_LOGE(context_, "inputOffset shapeSize need greater than 0, but get %ld", offset->GetShapeSize()),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            opName_, "offset", std::to_string(offset->GetShapeSize()).c_str(),
+            "inputOffset shapeSize must be greater than 0"),
         return ge::GRAPH_FAILED);
     OP_CHECK_NULL_WITH_CONTEXT(context_, offset);
     offset_ = offset->GetData<int64_t>()[0];
     auto xDesc = context_->GetInputDesc(INPUT_X_IDX);
     ge::DataType xDtype = xDesc->GetDataType();
-    OP_CHECK_IF(SUPPORT_DTYPE.count(xDtype) == 0, OP_LOGE(context_, "invalid dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        SUPPORT_DTYPE.count(xDtype) == 0, OP_LOGE_FOR_INVALID_DTYPE(opName_, "x", "see actual dtype", "DT_BOOL"),
+        return ge::GRAPH_FAILED);
     auto y = context_->GetOutputShape(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, y);
     return ge::GRAPH_SUCCESS;

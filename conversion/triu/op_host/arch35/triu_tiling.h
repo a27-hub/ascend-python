@@ -16,6 +16,7 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_TRILU_H
 
 #include <algorithm>
+#include <string>
 #include "triangulator_tiling.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
@@ -174,7 +175,9 @@ ge::graphStatus Tiling4Trilu(gert::TilingContext* context)
     auto xDtype = xDesc->GetDataType();
     auto xDtypeBytes = GetSizeByDataType(xDtype);
     OP_CHECK_IF(
-        xDtypeBytes == 0, OP_LOGE(context->GetNodeName(), "x data type error"),
+        xDtypeBytes == 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", "unsupported dtype", "data type not supported"),
         return ge::GRAPH_FAILED); // type not supported
 
     auto xShape = context->GetInputShape(INDEX_X);
@@ -182,7 +185,9 @@ ge::graphStatus Tiling4Trilu(gert::TilingContext* context)
     const auto& xOriginShape = EnsureNotScalar(xShape->GetOriginShape());
     auto dimNum = xOriginShape.GetDimNum();
     OP_CHECK_IF(
-        dimNum < 2, OP_LOGE(context->GetNodeName(), "tensor's dimension size is less than 2 or overflow"),
+        dimNum < 2,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "x", std::to_string(dimNum).c_str(), "dimension size must be >= 2"),
         return ge::GRAPH_FAILED);
     auto row = xOriginShape.GetDim(dimNum - 2);
     auto col = xOriginShape.GetDim(dimNum - 1);

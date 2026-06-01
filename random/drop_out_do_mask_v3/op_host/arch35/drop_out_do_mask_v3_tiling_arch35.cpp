@@ -113,12 +113,16 @@ ge::graphStatus DropOutDoMaskV3Tiling::UniqueProcess()
             break;
         }
         default: {
-            OP_LOGE(context_, "Unsupported data type: %d", static_cast<int>(keepDtype));
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "keep_prob", Ops::Base::ToString(keepDtype).c_str(),
+                "keep_prob dtype must be one of [DT_FLOAT, DT_FLOAT16, DT_BF16]");
             return ge::GRAPH_FAILED;
         }
     }
     if (keepProbNum < 0 || keepProbNum > 1) {
-        OP_LOGE(context_, "keepProbNum out of range: %d", static_cast<int>(keepProbNum));
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "keep_prob", std::to_string(keepProbNum).c_str(),
+            "keepProb must be in the range [0, 1]");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

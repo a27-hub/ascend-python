@@ -93,21 +93,20 @@ static ge::graphStatus CheckFromToRange(gert::TilingContext* context, int64_t fr
     GetMinAndMaxByDtype(dtype, dtypeMin, dtypeMax);
 
     if (from < dtypeMin || from > dtypeMax) {
-        OP_LOGE(
-            context->GetNodeName(), "from value %ld is out of valid range [%ld, %ld] for dtype %d", from, dtypeMin,
-            dtypeMax, static_cast<int>(dtype));
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "from", std::to_string(from).c_str(), "from value is out of valid range for dtype")
         return ge::GRAPH_FAILED;
     }
 
     if (to <= dtypeMin || to - 1 > dtypeMax) {
-        OP_LOGE(
-            context->GetNodeName(), "to value %ld is out of valid range (%ld, %lu] for dtype %d", to, dtypeMin,
-            static_cast<uint64_t>(dtypeMax) + 1, static_cast<int>(dtype));
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "to", std::to_string(to).c_str(), "to value is out of valid range for dtype")
         return ge::GRAPH_FAILED;
     }
 
     if (to <= from) {
-        OP_LOGE(context->GetNodeName(), "from(%ld) must be less than to(%ld).", from, to);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "from", std::to_string(from).c_str(), "from must be less than to")
         return ge::GRAPH_FAILED;
     }
 
@@ -229,7 +228,9 @@ ge::graphStatus StatelessRandomTiling::UniqueProcess()
 
     auto ret = CheckFromToRange(context_, from, to, outputDtype);
     if (ret != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "from %ld or to %ld is bounds for dtype(%d)", from, to, outputDtype);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            context_->GetNodeName(), "from and to", (std::to_string(from) + " and " + std::to_string(to)).c_str(),
+            "from or to is out of bounds for dtype")
         return ge::GRAPH_FAILED;
     }
     simtTilingData_.from = from;

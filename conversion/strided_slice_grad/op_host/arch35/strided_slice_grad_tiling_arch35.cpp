@@ -16,6 +16,7 @@
 #include <vector>
 #include <cmath>
 #include <tuple>
+#include <string>
 #include "strided_slice_grad_tiling_arch35.h"
 
 using namespace std;
@@ -350,41 +351,45 @@ static ge::graphStatus CheckInputParamIsValid(
         if (strideI != 0) {
             OP_CHECK_IF(
                 (beginI < endI && strideI < 0),
-                OP_LOGE(
-                    context->GetNodeName(), "StridedSliceGrad param of beginI (%ld) should bigger than endI (%ld).",
-                    beginI, endI),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "beginI, endI",
+                    (std::to_string(beginI) + ", " + std::to_string(endI)).c_str(),
+                    "when strideI < 0, beginI should be >= endI"),
                 return ge::GRAPH_FAILED);
             OP_CHECK_IF(
                 (beginI > endI && strideI > 0),
-                OP_LOGE(
-                    context->GetNodeName(), "StridedSliceGrad param of beginI (%ld) should smaller than endI (%ld).",
-                    beginI, endI),
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "beginI, endI",
+                    (std::to_string(beginI) + ", " + std::to_string(endI)).c_str(),
+                    "when strideI > 0, beginI should be <= endI"),
                 return ge::GRAPH_FAILED);
         } else {
             OP_CHECK_IF(
                 (strideI == 0),
-                OP_LOGE(
-                    context->GetNodeName(), "StridedSliceGrad param of strideI (%ld) should be equal with 0.", strideI),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context->GetNodeName(), "strideI", std::to_string(strideI).c_str(), "strideI must not be 0"),
                 return ge::GRAPH_FAILED);
         }
 
         OP_CHECK_IF(
             (inputParams.beginMask < 0 || inputParams.endMask < 0 || inputParams.ellipsisMask < 0 ||
              inputParams.newAxisMask < 0 || inputParams.shrinkAxisMask < 0),
-            OP_LOGE(
-                context->GetNodeName(),
-                "StridedSliceGrad param of attr (%ld) (%ld) (%ld) (%ld) (%ld) should not smaller than 0.",
-                inputParams.beginMask, inputParams.endMask, inputParams.ellipsisMask, inputParams.newAxisMask,
-                inputParams.shrinkAxisMask),
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                context->GetNodeName(), "beginMask, endMask, ellipsisMask, newAxisMask, shrinkAxisMask",
+                (std::to_string(inputParams.beginMask) + ", " + std::to_string(inputParams.endMask) + ", " +
+                 std::to_string(inputParams.ellipsisMask) + ", " + std::to_string(inputParams.newAxisMask) + ", " +
+                 std::to_string(inputParams.shrinkAxisMask))
+                    .c_str(),
+                "mask attributes must not be smaller than 0"),
             return ge::GRAPH_FAILED);
     }
 
     auto dimNum = inputParams.inShape.GetDimNum();
     OP_CHECK_IF(
         inputParams.begin.GetDimNum() != dimNum,
-        OP_LOGE(
-            context->GetNodeName(), "begin[%zu] and inputShape[%zu] should have same dims length, please check.",
-            inputParams.begin.GetDimNum(), dimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "begin", std::to_string(inputParams.begin.GetDimNum()).c_str(),
+            "begin and inputShape should have same dims length"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "dimNum = %ld", dimNum);
 
@@ -465,13 +470,15 @@ static ge::graphStatus CheckAndSetOfInputParams(
     // 检查输入参数类型
     OP_CHECK_IF(
         CheckTypeIsInvalid(dataTypeInShape, dataTypeInBegin, dataTypeInEnd, dataTypeInStrides, dataTypeInDy),
-        OP_LOGE(
-            context->GetNodeName(),
-            "Check input dtype failed, current support float、float16、bfloat16、int64、uint64、int32、uint32、int16、uint16、int8、uint8. \
-                  current dataTypeInShape: %s, dataTypeInBegin: %s, dataTypeInEnd: %s, dataTypeInStrides: %s, dataTypeInDy: %s",
-            Ops::Base::ToString(dataTypeInShape).c_str(), Ops::Base::ToString(dataTypeInBegin).c_str(),
-            Ops::Base::ToString(dataTypeInEnd).c_str(), Ops::Base::ToString(dataTypeInStrides).c_str(),
-            Ops::Base::ToString(dataTypeInDy).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "shape, begin, end, strides, dy",
+            (Ops::Base::ToString(dataTypeInShape) + ", " + Ops::Base::ToString(dataTypeInBegin) + ", " +
+             Ops::Base::ToString(dataTypeInEnd) + ", " + Ops::Base::ToString(dataTypeInStrides) + ", " +
+             Ops::Base::ToString(dataTypeInDy))
+                .c_str(),
+            "index dtype only support [DT_INT32, DT_INT64], dy dtype only support [DT_FLOAT, DT_FLOAT16, DT_BF16, "
+            "DT_INT64, DT_UINT64, DT_INT32, DT_UINT32, DT_INT16, DT_UINT16, DT_INT8, DT_UINT8, DT_DOUBLE, "
+            "DT_COMPLEX64]"),
         return ge::GRAPH_FAILED);
 
     // 设置StridedSliceGrad算子中的输入值 && 属性值
@@ -721,7 +728,7 @@ static inline void CaluSplitCoreParam(StridedSliceGradParamList& inputParams)
     inputParams.tailAxisTail = 0;
 
     std::tuple<int64_t, int64_t, int64_t> resultInit =
-    AverageTilingLargeBlock(inputParams.inShapeOutSize, inputParams.totalCoreNum, inputParams.bytesForOneData);
+        AverageTilingLargeBlock(inputParams.inShapeOutSize, inputParams.totalCoreNum, inputParams.bytesForOneData);
     inputParams.usedCoreNumForClear = std::get<TUPLE_INDEX_0>(resultInit);
     inputParams.normalCoreProcessNumForClear = std::get<TUPLE_INDEX_1>(resultInit);
     inputParams.tailCoreProcessNumForClear = std::get<TUPLE_INDEX_2>(resultInit);
@@ -910,7 +917,7 @@ ge::graphStatus TilingForStridedSliceGrad(gert::TilingContext* context)
     if (!(inputParams.caluMode == MODE_SPLIT_FRONT_NDDMA || inputParams.caluMode == MODE_SPLIT_ALL_NDDMA)) {
         context->SetScheduleMode(BATCH_MODE);
     }
-    
+
     context->SetBlockDim(maxUsedCoreNum);
     context->SetTilingKey(tilingData.get_tilingKey());
     TilingDataToLogging(tilingData);

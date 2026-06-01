@@ -41,9 +41,12 @@ OpTilingConfig StatelessBernoulliTiling::BuildOpConfig()
         {INPUT_IDX_OFFSET, {{ge::DT_INT64}, 1, {}, nullptr}},
     };
     config.outputCheckRules = {
-        {OUTPUT_IDX_Y, {{ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16,
-        ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64, ge::DT_FLOAT,
-        ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BOOL}, -1, {}, nullptr}},
+        {OUTPUT_IDX_Y,
+         {{ge::DT_INT8, ge::DT_UINT8, ge::DT_INT16, ge::DT_UINT16, ge::DT_INT32, ge::DT_UINT32, ge::DT_INT64,
+           ge::DT_UINT64, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BOOL},
+          -1,
+          {},
+          nullptr}},
     };
 
     config.getOutputSize = [](gert::TilingContext* ctx, int64_t& size) {
@@ -61,8 +64,11 @@ OpTilingConfig StatelessBernoulliTiling::BuildOpConfig()
         const int64_t* offsetVal = offsetTensor->GetData<int64_t>();
         OP_CHECK_NULL_WITH_CONTEXT(ctx, offsetVal);
         offset = *offsetVal;
-        OP_CHECK_IF(offset % OFFSET_MULTIPLE != 0,
-            OP_LOGE(ctx->GetNodeName(), "offset value %ld must be a multiple of 4.", offset), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            offset % OFFSET_MULTIPLE != 0,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                ctx->GetNodeName(), "offset", std::to_string(offset).c_str(), "offset value must be a multiple of 4"),
+            return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     };
 
@@ -74,7 +80,8 @@ OpTilingConfig StatelessBernoulliTiling::BuildOpConfig()
 
 ge::graphStatus StatelessBernoulliTiling::DoSimtBlockTiling()
 {
-    OP_CHECK_IF((totalCoreNum_ <= 0), OP_LOGE(opName_, "totalCoreNum is less than or equal to 0. please check."),
+    OP_CHECK_IF(
+        (totalCoreNum_ <= 0), OP_LOGE(opName_, "totalCoreNum is less than or equal to 0. please check."),
         return ge::GRAPH_FAILED);
 
     auto probTensor = context_->GetRequiredInputTensor(INPUT_IDX_PROB);

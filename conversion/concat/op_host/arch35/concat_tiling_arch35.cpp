@@ -57,14 +57,14 @@ constexpr int64_t B4_BYTES = 1004; // ge::GetSizeByDataType 对 FP4 类型的返
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_THREE = 3;
-constexpr int64_t FP4_TO_B8_RATIO = 2; //用于FP4到B8模板的转换 2个FP4= 1字节
+constexpr int64_t FP4_TO_B8_RATIO = 2; // 用于FP4到B8模板的转换 2个FP4= 1字节
 constexpr int64_t GATHER_MODE = 3;
 constexpr int64_t EVERY_CORE_THRESHOLD = 2048; // 2k
 constexpr int64_t LEAST_BLOCK_BYTES = 512;
 constexpr int64_t PURE_COPY_COL_THRESHOLD_BASE = 256;
 constexpr int64_t PURE_COPY_COL_THRESHOLD_ALIGN = 1024;
 constexpr int64_t PURE_COPY_COL_THRESHOLD_NOALIGN = 2048;
-constexpr int64_t BLOCK_THRESHOLD = 49152;    // 48k
+constexpr int64_t BLOCK_THRESHOLD = 49152; // 48k
 constexpr double LARGE_TENSOR_RATIO_THRESHOLD = 0.9;
 constexpr int64_t PURE_COPY_NO_SPLIT_DIM1_TILINGKEY = 20001;
 constexpr int64_t PURE_COPY_SPLIT_DIM1_TILINGKEY = 20002;
@@ -90,11 +90,11 @@ inline static ge::graphStatus ConcatSetTilingData(gert::TilingContext* context, 
 }
 
 template <typename T>
-static inline void PrintTilingDataList(T &tilingData)
+static inline void PrintTilingDataList(T& tilingData)
 {
     auto strideList = tilingData.get_strideList();
     for (int32_t i = 0; i < tilingData.get_tensorNum(); i++) {
-        OP_LOGI("[Concat list]","tensor: %d, stride: %ld", i, strideList[i]);
+        OP_LOGI("[Concat list]", "tensor: %d, stride: %ld", i, strideList[i]);
     }
 }
 
@@ -109,7 +109,8 @@ tensorNum: %d,catDim1: %ld,isnon: %d,tilingKey: %ld,usedCoreNum: %ld",
         tilingData.get_ubSplitDim1(), tilingData.get_dim(), tilingData.get_blockFactor(),
         tilingData.get_tailBlockFactor(), tilingData.get_ubFactorDim0(), tilingData.get_ubFactorDim1(),
         tilingData.get_tailUbFactorDim0(), tilingData.get_tailUbFactorDim1(), tilingData.get_uoDim0(),
-        tilingData.get_uoDim1(), tilingData.get_tensorNum(), tilingData.get_catDim1(), tilingData.get_isNonContiguous(), tilingKey, usedCoreNum);
+        tilingData.get_uoDim1(), tilingData.get_tensorNum(), tilingData.get_catDim1(), tilingData.get_isNonContiguous(),
+        tilingKey, usedCoreNum);
     PrintTilingDataList(tilingData);
 }
 
@@ -237,7 +238,8 @@ inline static ge::graphStatus CheckFP4Dim1Even(const ConcatTilingParam& param)
 {
     for (const auto& tensorSize : param.tensorListDim1) {
         if (tensorSize % FP4_TO_B8_RATIO != 0) {
-            OP_LOGE("[Concat]", "FP4 Dim1 must be even, but got %ld", tensorSize);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                "[Concat]", "tensor_dim1", std::to_string(tensorSize).c_str(), "FP4 Dim1 must be even");
             return ge::GRAPH_FAILED;
         }
     }
@@ -292,8 +294,8 @@ inline static ge::graphStatus CalcBaseTilingParam(const gert::TilingContext* con
     // FP4 预处理：在对齐判断之前，将 FP4(4bit) 转换为 B8(1byte) 视角
     param.isFP4Type = (param.orgDtypeSize == B4_BYTES) ? 1 : 0;
     OP_CHECK_IF(
-        ConvertFP4DimsToB8(param) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "ConvertFP4DimsToB8 failed."), return ge::GRAPH_FAILED);
+        ConvertFP4DimsToB8(param) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "ConvertFP4DimsToB8 failed."),
+        return ge::GRAPH_FAILED);
     param.isAllTensorAlign = CheckCatDimAlign(param.mergeTensorList, param.dtypeSize) ? 1 : 0;
     param.isDim1AllAlign = CheckDim1Align(param.mergeTensorList, param.dtypeSize) ? 1 : 0;
     OP_CHECK_IF(
@@ -322,9 +324,10 @@ inline static ge::graphStatus GetConcatDimInput(
 inline static bool IsInvalidType(const DataType dtype)
 {
     std::set<ge::DataType> supportedDtype = {
-        ge::DT_FLOAT,  ge::DT_FLOAT16, ge::DT_BF16,   ge::DT_UINT8, ge::DT_INT8, ge::DT_UINT16, ge::DT_INT16,
-        ge::DT_UINT32, ge::DT_INT32,   ge::DT_UINT64, ge::DT_INT64, ge::DT_BOOL, ge::DT_DOUBLE, ge::DT_COMPLEX64,
-        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT4_E2M1};
+        ge::DT_FLOAT,       ge::DT_FLOAT16,  ge::DT_BF16,        ge::DT_UINT8,       ge::DT_INT8,
+        ge::DT_UINT16,      ge::DT_INT16,    ge::DT_UINT32,      ge::DT_INT32,       ge::DT_UINT64,
+        ge::DT_INT64,       ge::DT_BOOL,     ge::DT_DOUBLE,      ge::DT_COMPLEX64,   ge::DT_FLOAT8_E4M3FN,
+        ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT4_E2M1};
     bool isInvalidType = (supportedDtype.count(dtype) == 0);
 
     return isInvalidType;
@@ -421,8 +424,8 @@ inline static bool IsEnablePureCopyTemplate(
             }
             int16_t startIdx = param.startTensorIdx[i];
             CalcLargeTensorNum(
-                param, param.tensorListDim1[startIdx] - param.startTensorOffset[i], rowsUsedCoreNum,
-                largeInputNum, totalInputNum);
+                param, param.tensorListDim1[startIdx] - param.startTensorOffset[i], rowsUsedCoreNum, largeInputNum,
+                totalInputNum);
             for (int16_t k = param.startTensorIdx[i] + 1; k < param.endTensorIdx[i]; k++) {
                 CalcLargeTensorNum(param, param.tensorListDim1[k], rowsUsedCoreNum, largeInputNum, totalInputNum);
             }
@@ -468,7 +471,8 @@ inline static void GenTilingKey(ConcatTilingParam& param)
                       isFirstDim * THOUSANDS_DIGITS + isUseSpcTilingData * TEN_THOUSANDS_DIGITS;
 }
 
-inline static ge::graphStatus IsDimValid(const gert::TilingContext* context, int64_t& dim, int64_t inputIdx, bool isNonContiguous, int64_t& strideDim)
+inline static ge::graphStatus IsDimValid(
+    const gert::TilingContext* context, int64_t& dim, int64_t inputIdx, bool isNonContiguous, int64_t& strideDim)
 {
     gert::Shape inputShape = GetShapeByAll(context, isNonContiguous, inputIdx, 0);
     int64_t shapeSize = static_cast<int64_t>(inputShape.GetDimNum());
@@ -497,7 +501,10 @@ inline static ge::graphStatus IsShapeValid(
     for (const auto& tensorSize : tensorList) {
         int64_t curDimSize = tensorSize.size();
         OP_CHECK_IF(
-            curDimSize != dimSize, OP_LOGE(context->GetNodeName(), "dimSize of input tensor should be equal."),
+            curDimSize != dimSize,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                context->GetNodeName(), "input_tensor", std::to_string(curDimSize).c_str(),
+                "dimSize of all input tensors should be equal"),
             return ge::GRAPH_FAILED);
         for (int64_t j = 0; j < dimSize; j++) {
             if (realDim == j) {
@@ -505,7 +512,9 @@ inline static ge::graphStatus IsShapeValid(
             }
             OP_CHECK_IF(
                 shape0[j] != tensorSize[j],
-                OP_LOGE(context->GetNodeName(), "dim %ld of input tensor should be equal.", j),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "input_tensors", "incompatible_shapes",
+                    "non-concat dimensions of all input tensors must be equal"),
                 return ge::GRAPH_FAILED);
         }
     }
@@ -797,7 +806,8 @@ inline static bool IsEnableb8ToB16(const ConcatTilingParam& param)
 {
     // b8 dim1为偶数 不对齐场景可升为b16处理
     if (param.isNonContiguous) {
-        if (param.dtypeSize != B8_BYTES || param.inputShapeSame != 1 || param.sameShapeTensorDim1 % DIGIT_TWO != 0 || param.strideList[0] % DIGIT_TWO != 0) {
+        if (param.dtypeSize != B8_BYTES || param.inputShapeSame != 1 || param.sameShapeTensorDim1 % DIGIT_TWO != 0 ||
+            param.strideList[0] % DIGIT_TWO != 0) {
             return false;
         }
         for (const auto& tensorSize : param.tensorListDim1) {
@@ -870,7 +880,6 @@ static ge::graphStatus PreProcessForNoAlign(ConcatTilingParam& param)
     }
     return ge::GRAPH_SUCCESS;
 }
-
 
 inline static std::vector<int64_t> FindUniqueCut(int64_t coreNum)
 {
@@ -1207,23 +1216,24 @@ ge::graphStatus Tiling4PackToConcatForAscendC(gert::TilingContext* context)
     param.dim = GetAxis<int64_t>(context);
     OP_CHECK_IF(
         IsPackDimValid(context, param.dim) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "check pack_axis failed, please check pack_axis."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "pack_axis", "invalid_axis", "pack_axis is invalid, please check pack_axis"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         CheckInputShapeSameForPack(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(
-            context->GetNodeName(),
-            "check pack input tensor shape failed, please make sure all input tensor shape same."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "input_tensors", "different_shapes",
+            "all input tensor shapes must be the same for pack"),
         return ge::GRAPH_FAILED);
     auto inputDesc = context->GetDynamicInputDesc(PACK_INPUT_IDX, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     auto inputDataType = inputDesc->GetDataType();
     OP_CHECK_IF(
         IsInvalidTypeForPack(inputDataType),
-        OP_LOGE(
-            context->GetNodeName(),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", "unsupported_dtype",
             "input dtype only support uint8, int8, bool, float32, int32, uint32, int16, float16, bfloat16, uint16, "
-            "int64,"
-            "uint64, doulbe, complex32, complex64 currently, please check."),
+            "int64, uint64, double, complex32, complex64 currently"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         GetDtypeSize(context, param, PACK_INPUT_IDX) != ge::GRAPH_SUCCESS,
@@ -1295,7 +1305,7 @@ gert::Shape GetShapeByAll(const gert::TilingContext* context, bool isNonContiguo
 }
 
 // 校验是否为全连续
-bool IsAllContiguous(gert::TilingContext* context, ConcatTilingParam &param, int64_t inputIdx)
+bool IsAllContiguous(gert::TilingContext* context, ConcatTilingParam& param, int64_t inputIdx)
 {
     auto computeNodeInfo = context->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
@@ -1307,23 +1317,27 @@ bool IsAllContiguous(gert::TilingContext* context, ConcatTilingParam &param, int
         auto nonStrideI = context->GetDynamicInputStride(inputIdx, i);
         if (isViewI && nonStrideI != nullptr && nonStrideI->GetDimNum() > 0) {
             return false;
-        } 
+        }
     }
     return true;
 }
 
-ge::graphStatus CheckNonConBasic(gert::TilingContext* context, ConcatTilingParam &param)
+ge::graphStatus CheckNonConBasic(gert::TilingContext* context, ConcatTilingParam& param)
 {
-    OP_CHECK_IF(param.tensorNum <= 1 || param.tensorNum > NON_CON_TENSOR_SIZE,
-        OP_LOGE(context->GetNodeName(),
-        "input tensor number should be at least 1 and less than 32."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(param.strideDim < 0,
-        OP_LOGE(context->GetNodeName(),
-        "non contiguous scenarious only support concat dim with greater than 0 or greater than -8."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        param.tensorNum <= 1 || param.tensorNum > NON_CON_TENSOR_SIZE,
+        OP_LOGE_FOR_INVALID_TENSORNUM(context->GetNodeName(), "x", std::to_string(param.tensorNum).c_str(), "[2, 32]"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        param.strideDim < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "concat_dim", std::to_string(param.dim).c_str(),
+            "non contiguous scenarios only support concat dim with greater than 0 or greater than -8"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CheckNonContiguous(gert::TilingContext* context, ConcatTilingParam &param, int64_t inputIdx)
+ge::graphStatus CheckNonContiguous(gert::TilingContext* context, ConcatTilingParam& param, int64_t inputIdx)
 {
     if (CheckNonConBasic(context, param) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -1335,23 +1349,32 @@ ge::graphStatus CheckNonContiguous(gert::TilingContext* context, ConcatTilingPar
         int64_t allData = 1;
         auto inputIDesc = context->GetDynamicInputDesc(inputIdx, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, inputIDesc);
-        OP_CHECK_IF(inputIDesc->GetDataType() != input0DataType,
-            OP_LOGE(context->GetNodeName(), "non contiguous scenarious only support identical data type."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            inputIDesc->GetDataType() != input0DataType,
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context->GetNodeName(), "input_tensors", "different_dtypes",
+                "non contiguous scenarios only support identical data type"),
+            return ge::GRAPH_FAILED);
         bool isViewI = context->DynamicInputIsView(inputIdx, i);
         auto nonStrideI = context->GetDynamicInputStride(inputIdx, i);
         if (isViewI && nonStrideI != nullptr && nonStrideI->GetDimNum() > 0) {
             // 非连续校验除stridedim外，其他必须连续
-            OP_CHECK_IF(nonStrideI->GetStride(param.tensorList[i].size() - 1) != 1,
-                OP_LOGE(context->GetNodeName(),
-                "non contiguous scenarious, only the axis immediately preceding the concat dim is allowed to be non contiguous, while all other axis must be contiguous."),
+            OP_CHECK_IF(
+                nonStrideI->GetStride(param.tensorList[i].size() - 1) != 1,
+                OP_LOGE_FOR_INVALID_STRIDE(
+                    context->GetNodeName(), "input_tensor_stride",
+                    std::to_string(nonStrideI->GetStride(param.tensorList[i].size() - 1)).c_str(), "1"),
                 return ge::GRAPH_FAILED);
             for (int32_t j = param.tensorList[i].size() - 2; j >= 0; j--) {
                 if (param.strideDim != j) {
-                    OP_CHECK_IF(nonStrideI->GetStride(j) != nonStrideI->GetStride(j + 1) * param.tensorList[i][j + 1],
-                        OP_LOGE(context->GetNodeName(),
-                        "non contiguous scenarious, only the axis immediately preceding the concat dim is allowed to be non contiguous, while all other axis must be contiguous."),
+                    OP_CHECK_IF(
+                        nonStrideI->GetStride(j) != nonStrideI->GetStride(j + 1) * param.tensorList[i][j + 1],
+                        OP_LOGE_FOR_INVALID_STRIDE(
+                            context->GetNodeName(), "input_tensor_stride",
+                            std::to_string(nonStrideI->GetStride(j)).c_str(),
+                            std::to_string(nonStrideI->GetStride(j + 1) * param.tensorList[i][j + 1]).c_str()),
                         return ge::GRAPH_FAILED);
-                } 
+                }
             }
             param.strideList[i] = static_cast<uint64_t>(nonStrideI->GetStride(param.strideDim));
         } else {
@@ -1360,12 +1383,15 @@ ge::graphStatus CheckNonContiguous(gert::TilingContext* context, ConcatTilingPar
         param.concatDimList[i] = static_cast<uint32_t>(param.tensorList[i][param.dim]);
         // 非连续tensor要校验，不满足尾轴大包；尾轴小包但stride大包；尾轴小包总体数据小包的场景，不支持非连续
         allData = MergeDim(param.tensorList[i], 0, param.tensorList[i].size());
-        OP_CHECK_IF(!(param.tensorListDim1[i] * param.dtypeSize >= SMALL_BAG) 
-            && !(param.strideList[i] * param.dtypeSize > SMALL_BAG) 
-            && !(allData * param.dtypeSize < param.totalCoreNum * ALL_DATA_SMALL),
-            OP_LOGE(context->GetNodeName(),
-            "In non contiguous scenarios, either the combined size of the concat dim and subsequent dim is at least 128 bytes, "
-            "or the stride of the non contiguous axis is greater than 128 bytes, or the total data size of the tensor is less than 8192 bytes multiplied by the core number."),
+        OP_CHECK_IF(
+            !(param.tensorListDim1[i] * param.dtypeSize >= SMALL_BAG) &&
+                !(param.strideList[i] * param.dtypeSize > SMALL_BAG) &&
+                !(allData * param.dtypeSize < param.totalCoreNum * ALL_DATA_SMALL),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "input_tensor_size", "insufficient_size",
+                "In non contiguous scenarios, either the combined size of the concat dim and subsequent dim is at "
+                "least 128 bytes, or the stride of the non contiguous axis is greater than 128 bytes, or the total "
+                "data size of the tensor is less than 8192 bytes multiplied by the core number"),
             return ge::GRAPH_FAILED);
     }
     param.isNonContiguous = true;
@@ -1382,17 +1408,20 @@ ge::graphStatus TilingCommon(gert::TilingContext* context, int64_t inputIdx, int
     param.isNonContiguous = !(IsAllContiguous(context, param, inputIdx));
     OP_CHECK_IF(
         IsDimValid(context, param.dim, inputIdx, param.isNonContiguous, param.strideDim) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "check concat_dim failed, please check concat_dim."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "concat_dim", std::to_string(param.dim).c_str(),
+            "concat_dim is invalid, please check concat_dim"),
+        return ge::GRAPH_FAILED);
     auto inputDesc = context->GetDynamicInputDesc(inputIdx, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     auto inputDataType = inputDesc->GetDataType();
     OP_CHECK_IF(
         IsInvalidType(inputDataType),
-        OP_LOGE(
-            context->GetNodeName(),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", "unsupported_dtype",
             "input dtype only support uint8, int8, bool, float32, int32, uint32, int16, float16, bfloat16, uint16, "
-            "int64,"
-            "uint64, double, complex64, HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT8_E8M0 FLOAT4_E1M2、FLOAT4_E2M1 currently, please check."),
+            "int64, uint64, double, complex64, HIFLOAT8, FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT8_E8M0, FLOAT4_E1M2, "
+            "FLOAT4_E2M1 currently"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         GetDtypeSize(context, param, inputIdx) != ge::GRAPH_SUCCESS,
@@ -1402,12 +1431,16 @@ ge::graphStatus TilingCommon(gert::TilingContext* context, int64_t inputIdx, int
         OP_LOGE(context->GetNodeName(), "GetTensorList failed."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         IsShapeValid(context, param.tensorList, param.dim) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "check input shape failed."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "input_tensors", "incompatible_shapes",
+            "non-concat dimensions of all input tensors must be equal"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         CalcBaseTilingParam(context, param) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "CalcBaseTilingParam failed."), return ge::GRAPH_FAILED);
-     if (param.isNonContiguous) {
-        OP_CHECK_IF(CheckNonContiguous(context, param, inputIdx) != ge::GRAPH_SUCCESS,
+    if (param.isNonContiguous) {
+        OP_CHECK_IF(
+            CheckNonContiguous(context, param, inputIdx) != ge::GRAPH_SUCCESS,
             OP_LOGE(context->GetNodeName(), "input tensor non contiguous validation failed."), return ge::GRAPH_FAILED);
     }
     // 处理simt模板

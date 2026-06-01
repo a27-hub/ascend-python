@@ -40,15 +40,14 @@ OpTilingConfig StatelessNormalTiling::BuildOpConfig()
 {
     OpTilingConfig config;
     config.inputCheckRules = {
-        {0, {{ge::DT_INT64}, -1, {1}, nullptr}},                           // shape: 1D, INT64 only
-        {1, {{ge::DT_INT64}, 1, {}, nullptr}},                             // seed: scalar
-        {2, {{ge::DT_INT64}, -1, {}, nullptr}},                            // offset
-        {3, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}},  // mean
-        {4, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}},  // stdev
+        {0, {{ge::DT_INT64}, -1, {1}, nullptr}},                             // shape: 1D, INT64 only
+        {1, {{ge::DT_INT64}, 1, {}, nullptr}},                               // seed: scalar
+        {2, {{ge::DT_INT64}, -1, {}, nullptr}},                              // offset
+        {3, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}}, // mean
+        {4, {{ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}, -1, {}, nullptr}}, // stdev
     };
     config.outputCheckRules = {
-        {0, {{ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16}, -1, {0, 1, 2, 3, 4, 5, 6, 7, 8}, nullptr}}
-    };
+        {0, {{ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16}, -1, {0, 1, 2, 3, 4, 5, 6, 7, 8}, nullptr}}};
 
     config.getOutputSize = [](gert::TilingContext* ctx, int64_t& shapeSize) -> ge::graphStatus {
         auto outputShape = ctx->GetOutputShape(OUTPUT_IDX_Y);
@@ -58,8 +57,7 @@ OpTilingConfig StatelessNormalTiling::BuildOpConfig()
     };
 
     // 填0占位，seed/offset 由 kernel 从 GM 直接读取
-    config.getSeedAndOffset = [](gert::TilingContext* /*ctx*/,
-                                 int64_t& seed, int64_t& offset) -> ge::graphStatus {
+    config.getSeedAndOffset = [](gert::TilingContext* /*ctx*/, int64_t& seed, int64_t& offset) -> ge::graphStatus {
         seed = 0;
         offset = 0;
         return ge::GRAPH_SUCCESS;
@@ -75,8 +73,8 @@ OpTilingConfig StatelessNormalTiling::BuildOpConfig()
     return config;
 }
 
-StatelessNormalTiling::StatelessNormalTiling(gert::TilingContext* ctx)
-    : RandomTilingArch35(ctx, BuildOpConfig()) {}
+StatelessNormalTiling::StatelessNormalTiling(gert::TilingContext* ctx) : RandomTilingArch35(ctx, BuildOpConfig())
+{}
 
 ge::graphStatus StatelessNormalTiling::UniqueProcess()
 {
@@ -91,8 +89,9 @@ ge::graphStatus StatelessNormalTiling::UniqueProcess()
     OP_CHECK_NULL_WITH_CONTEXT(context_, meanTensor);
     int64_t meanSize = meanTensor->GetShapeSize();
     if (meanSize != outputSize) {
-        OP_LOGE(context_, "StatelessNormal requires mean shapeSize == output shapeSize, "
-                "mean shapeSize: %ld != output shapeSize: %ld.", meanSize, outputSize);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "mean", std::to_string(meanSize).c_str(),
+            "StatelessNormal requires mean shapeSize == output shapeSize")
         return ge::GRAPH_FAILED;
     }
 
@@ -100,8 +99,9 @@ ge::graphStatus StatelessNormalTiling::UniqueProcess()
     OP_CHECK_NULL_WITH_CONTEXT(context_, stdevTensor);
     int64_t stdevSize = stdevTensor->GetShapeSize();
     if (stdevSize != outputSize) {
-        OP_LOGE(context_, "StatelessNormal requires stdev shapeSize == output shapeSize, "
-                "stdev shapeSize: %ld != output shapeSize: %ld.", stdevSize, outputSize);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "stdev", std::to_string(stdevSize).c_str(),
+            "StatelessNormal requires stdev shapeSize == output shapeSize");
         return ge::GRAPH_FAILED;
     }
 

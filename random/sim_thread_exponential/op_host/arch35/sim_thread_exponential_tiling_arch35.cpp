@@ -49,7 +49,8 @@ OpTilingConfig SimThreadExponentialTilingSimt::BuildOpConfig()
         int64_t outputShapeSize = outTensor.GetShapeSize();
         OP_CHECK_IF(
             size != outputShapeSize,
-            OP_LOGE(ctx->GetNodeName(), "count %ld != output shape size %ld.", size, outputShapeSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                ctx->GetNodeName(), "count", std::to_string(size).c_str(), "count must be equal to output shape size"),
             return ge::GRAPH_FAILED);
 
         return ge::GRAPH_SUCCESS;
@@ -65,7 +66,9 @@ OpTilingConfig SimThreadExponentialTilingSimt::BuildOpConfig()
         OP_CHECK_NULL_WITH_CONTEXT(ctx, offsetAttr);
         offset = *offsetAttr;
         OP_CHECK_IF(
-            offset % OFFSET_MULTIPLE != 0, OP_LOGE(ctx->GetNodeName(), "offset %ld must be multiple of 4.", offset),
+            offset % OFFSET_MULTIPLE != 0,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                ctx->GetNodeName(), "offset", std::to_string(offset).c_str(), "offset must be multiple of 4"),
             return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     };
@@ -80,7 +83,8 @@ OpTilingConfig SimThreadExponentialTilingSimt::BuildOpConfig()
              if (lambdAttr == nullptr)
                  return false;
              if (*lambdAttr <= 0.0f) {
-                 OP_LOGE(ctx->GetNodeName(), "lambd must be > 0, got %f.", *lambdAttr);
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     ctx->GetNodeName(), "lambd", std::to_string(*lambdAttr).c_str(), "lambd must be > 0");
                  return false;
              }
              return true;

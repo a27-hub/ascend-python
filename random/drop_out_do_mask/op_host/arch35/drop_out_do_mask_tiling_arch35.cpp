@@ -67,7 +67,7 @@ ge::graphStatus DropOutDoMaskTiling::CheckInputShape()
     int64_t keepProbAxis = keepProbShape.GetShapeSize();
     OP_CHECK_IF(
         (keepProbAxis != 1),
-        OP_LOGE(context_->GetNodeName(), "size of keep_prob has to be 1, but current is %ld.", keepProbAxis),
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "keep_prob", std::to_string(keepProbAxis).c_str(), "1"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -79,9 +79,8 @@ ge::graphStatus DropOutDoMaskTiling::GetShapeAttrsInfo()
     dType_ = xPtr->GetDataType();
     OP_CHECK_IF(
         (DROP_SUPPORTED_DTYPE.find(dType_) == DROP_SUPPORTED_DTYPE.end()),
-        OP_LOGE(
-            context_->GetNodeName(), "x dtype only support float32, float16, bfloat16, but got [%s].",
-            Ops::Base::ToString(dType_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(dType_).c_str(), "DT_FLOAT, DT_FLOAT16, DT_BF16"),
         return ge::GRAPH_FAILED);
 
     auto maskPtr = context_->GetInputDesc(MASK_IDX);
@@ -90,9 +89,8 @@ ge::graphStatus DropOutDoMaskTiling::GetShapeAttrsInfo()
     bool dtypeInValid = (maskDtype != ge::DT_UINT8 && maskDtype != ge::DT_UINT1);
     OP_CHECK_IF(
         dtypeInValid,
-        OP_LOGE(
-            context_->GetNodeName(), "mask dtype only support uint8, uint1 currently, but got [%s].",
-            Ops::Base::ToString(maskDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "mask", Ops::Base::ToString(maskDtype).c_str(), "DT_UINT8, DT_UINT1"),
         return ge::GRAPH_FAILED);
 
     auto probPtr = context_->GetInputDesc(KEEP_PROB_IDX);
@@ -100,9 +98,9 @@ ge::graphStatus DropOutDoMaskTiling::GetShapeAttrsInfo()
     auto probPtrDtype = probPtr->GetDataType();
     OP_CHECK_IF(
         (probPtrDtype != dType_),
-        OP_LOGE(
-            context_->GetNodeName(), "expected keep_prob dtype [%s] to be equal to x dtype [%s].",
-            Ops::Base::ToString(probPtrDtype).c_str(), Ops::Base::ToString(dType_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "keep_prob", Ops::Base::ToString(probPtrDtype).c_str(),
+            "keep_prob dtype must be equal to x dtype"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(

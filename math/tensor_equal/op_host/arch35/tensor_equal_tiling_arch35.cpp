@@ -48,9 +48,7 @@ ge::graphStatus TensorEqualTiling::GetPlatformInfo()
 
     totalCoreNum_ = compileInfo->totalCoreNum;
     ubSize_ = compileInfo->ubSizePlatForm;
-    OP_CHECK_IF((ubSize_ <= 0),
-                    OP_LOGE(opName_, "ub size is invalid."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize_ <= 0), OP_LOGE(opName_, "ub size is invalid."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -61,33 +59,43 @@ ge::graphStatus TensorEqualTiling::CheckDType()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     inputXDType_ = inputXDesc->GetDataType();
     int64_t inputXDTypeSize = ge::GetSizeByDataType(inputXDType_);
-    OP_CHECK_IF(inputXDTypeSize <= 0, OP_LOGE(opName_, "get input x dtype size fail."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputXDTypeSize <= 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "input x", "unsupported dtype", "dtype size is invalid, dtype may be unsupported"),
+        return ge::GRAPH_FAILED);
 
     auto inputYDesc = context_->GetInputDesc(INPUT_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputYDesc);
     inputYDType_ = inputYDesc->GetDataType();
     int64_t inputYDTypeSize = ge::GetSizeByDataType(inputYDType_);
-    OP_CHECK_IF(inputYDTypeSize <= 0, OP_LOGE(opName_, "get input y dtype size fail."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputYDTypeSize <= 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "input y", "unsupported dtype", "dtype size is invalid, dtype may be unsupported"),
+        return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(inputXDType_ != inputYDType_,
-                    OP_LOGE(opName_,
-                    "The dtype of input x and input y could not be different, please check."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputXDType_ != inputYDType_,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "input x, input y", "see actual dtypes", "the dtype of input x and input y must be the same"),
+        return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(inputXDType_) == 0,
-    OP_LOGE(opName_,
-        "Input dtype only support float16, float32, bfloat16, int8, uint8,int32, uint32, int16, uint16, int64, uint64, bool currently, please check."),
-        return ge::GRAPH_FAILED);    
-    
+    OP_CHECK_IF(
+        INPUT_SUPPORT_DTYPE_SET.count(inputXDType_) == 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "input x", "see actual dtype",
+            "dtype must be in [DT_FLOAT16, DT_FLOAT, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, "
+            "DT_INT32, DT_UINT32, DT_INT64, DT_UINT64]"),
+        return ge::GRAPH_FAILED);
+
     auto outputDesc = context_->GetOutputDesc(OUTPUT_Z);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     outputDType_ = outputDesc->GetDataType();
-    OP_CHECK_IF(outputDType_ != ge::DataType::DT_BOOL, 
-                    OP_LOGE(opName_, "output z dtype should be BOOL, please check."),
-                    return ge::GRAPH_FAILED);
-    
+    OP_CHECK_IF(
+        outputDType_ != ge::DataType::DT_BOOL,
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "output z", "see actual dtype", "DT_BOOL"), return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -110,7 +118,7 @@ ge::graphStatus TensorEqualTiling::GetShapeAttrsInfo()
     inputDtypeSize_ = inputXDTypeSize;
     inputShapeSize_ = inputXShape.GetShapeSize();
     vRegSize_ = Ops::Base::GetVRegSize(context_);
-    
+
     tilingKey_ = NORMAL_SHAPE_TILINGKEY;
     if (inputXShape.GetShapeSize() == 0 || inputYShape.GetShapeSize() == 0) {
         tilingKey_ = EMPTY_SHAPE_TILINGKEY;
@@ -150,10 +158,10 @@ ge::graphStatus TensorEqualTiling::DoOpTiling()
     // split ub
     ubFactor_ = perCoreUbFactor >= maxUbAvailable ? maxUbAvailable : perCoreUbFactor;
     perCoreLoopTimes_ = Ops::Base::CeilDiv(perCoreUbFactor, ubFactor_);
-    perCoreTailFactor_ = perCoreUbFactor - (perCoreLoopTimes_ - 1) * ubFactor_ ;
+    perCoreTailFactor_ = perCoreUbFactor - (perCoreLoopTimes_ - 1) * ubFactor_;
 
     tailCoreLoopTimes_ = Ops::Base::CeilDiv(tailCoreUbFactor, ubFactor_);
-    tailCoreTailFactor_ = tailCoreUbFactor - (tailCoreLoopTimes_ - 1) * ubFactor_ ;
+    tailCoreTailFactor_ = tailCoreUbFactor - (tailCoreLoopTimes_ - 1) * ubFactor_;
 
     SetTilingData();
 
@@ -177,7 +185,7 @@ uint64_t TensorEqualTiling::GetTilingKey() const
 ge::graphStatus TensorEqualTiling::GetWorkspaceSize()
 {
     OP_LOGD(opName_, "TensorEqualTiling GetWorkspaceSize .");
-    size_t *workspaces = context_->GetWorkspaceSizes(1);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = WORKSPACE_SAVE_SIZE;
 
@@ -190,14 +198,10 @@ ge::graphStatus TensorEqualTiling::PostTiling()
     OP_LOGD(opName_, "TensorEqualTiling PostTiling.");
 
     auto res = context_->SetBlockDim(static_cast<uint32_t>(usedCoreNum_));
-    OP_CHECK_IF(
-        (res != ge::GRAPH_SUCCESS),
-        OP_LOGE(opName_, "SetBlockDim failed."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(opName_, "SetBlockDim failed."), return ge::GRAPH_FAILED);
     context_->SetScheduleMode(1); // SyncAll need set
     context_->SetTilingKey(tilingKey_);
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(),
-                             context_->GetRawTilingData()->GetCapacity());
+    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
@@ -231,7 +235,7 @@ void TensorEqualTiling::DumpTilingInfo()
     info << ", perCoreTailFactor: " << tilingData_.get_perCoreTailFactor();
     info << ", tailCoreTailFactor: " << tilingData_.get_tailCoreTailFactor();
     info << ", tilingKey: " << tilingData_.get_tilingKey();
-    
+
     OP_LOGI(opName_, "%s", info.str().c_str());
 }
 
@@ -268,13 +272,12 @@ ge::graphStatus TilingPrepare4TensorEqual(gert::TilingParseContext* context)
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get ub size"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 // register tiling interface of the TensorEqual op.
-IMPL_OP_OPTILING(TensorEqual)
-    .Tiling(Tiling4TensorEqual)
-    .TilingParse<TensorEqualCompileInfo>(TilingPrepare4TensorEqual);
+IMPL_OP_OPTILING(TensorEqual).Tiling(Tiling4TensorEqual).TilingParse<TensorEqualCompileInfo>(TilingPrepare4TensorEqual);
 } // namespace optiling

@@ -82,7 +82,8 @@ ge::graphStatus StatelessRandomNormalV2Tiling::GetInputInfo()
     auto algTensor = context_->GetInputTensor(INPUT_IDX_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context_, algTensor);
     if (algTensor->GetShapeSize() != 1) {
-        OP_LOGE(opName, "alg data must be 1 tensor scalar, but got [%ld]", algTensor->GetShapeSize());
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            opName, "alg", std::to_string(algTensor->GetShapeSize()).c_str(), "alg data must be 1 tensor scalar");
         return ge::GRAPH_FAILED;
     }
     const int32_t* algVal = algTensor->GetData<int32_t>();
@@ -93,9 +94,8 @@ ge::graphStatus StatelessRandomNormalV2Tiling::GetInputInfo()
     }
     OP_CHECK_IF(
         alg_ != Algorithm::RNG_ALG_PHILOX,
-        OP_LOGE(
-            opName, "alg only support %d, but got %d.", static_cast<int32_t>(Algorithm::RNG_ALG_PHILOX),
-            static_cast<int32_t>(alg_)),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName, "alg", std::to_string(static_cast<int32_t>(alg_)).c_str(), "alg only support RNG_ALG_PHILOX"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -110,7 +110,9 @@ ge::graphStatus StatelessRandomNormalV2Tiling::GetOutputInfo()
     if (iter != OUTPUT_DATA_TYPE_TO_INT.end()) {
         outputDtypeVal_ = iter->second;
     } else {
-        OP_LOGE(opName, "output dtype = %d not supported, please check.", outputDtype_);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName, "y", std::to_string(outputDtype_).c_str(),
+            "output dtype not supported, only [DT_FLOAT, DT_FLOAT16, DT_BF16] are supported");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

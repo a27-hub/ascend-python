@@ -52,7 +52,9 @@ static ge::graphStatus TensorMoveSetTilingData(gert::TilingContext* context, Ten
 
 static void PrintTilingData(const gert::TilingContext* context, TensorMoveTilingData& tilingData)
 {
-    OP_LOGI(context->GetNodeName(), "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, tailBlockTailUbFactor:%ld, "
+    OP_LOGI(
+        context->GetNodeName(),
+        "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, tailBlockTailUbFactor:%ld, "
         "blockFactor:%ld, tailBlockFactor:%ld, tilingKey:%ld ",
         tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(), tilingData.get_ubFactor(),
         tilingData.get_tailBlockTailUbFactor(), tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(),
@@ -89,17 +91,21 @@ static ge::graphStatus CheckTensorMoveDtype(const gert::TilingContext* context)
     auto inputXPtr = context->GetInputDesc(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto xDtype = inputXPtr->GetDataType();
-    OP_CHECK_IF(IsInvalidType(xDtype),
-        OP_LOGE(context->GetNodeName(),
-            "Input x dtype only support bfloat16, uint8, int8, bool, float32, int32, uint32, int16, float16, uint16, \
-int64, uint64, double, hifloat8, float8_e5m2, float8_e4m3fn, complex32, complex64 currently, please check."),
+    OP_CHECK_IF(
+        IsInvalidType(xDtype),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", "unsupported_dtype",
+            "Input x dtype only support bfloat16, uint8, int8, bool, float32, int32, uint32, int16, float16, uint16, "
+            "int64, uint64, double, hifloat8, float8_e5m2, float8_e4m3fn, complex32, complex64 currently"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(INDEX_OUTPUT_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
-    OP_CHECK_IF(yDtype != xDtype,
-        OP_LOGE(context->GetNodeName(), "The dtype of output must be same with dtype of input, please check."),
+    OP_CHECK_IF(
+        yDtype != xDtype,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, y", "different_dtypes", "The dtype of output must be same with dtype of input"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -115,8 +121,10 @@ static ge::graphStatus CheckTensorMoveShape(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
 
-    OP_CHECK_IF(xShape != yShape,
-        OP_LOGE(context->GetNodeName(), "The shape of output must be same with shape of input, please check."),
+    OP_CHECK_IF(
+        xShape != yShape,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y", "different_shapes", "The shape of output must be same with shape of input"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -158,7 +166,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, TensorMoveTi
     return ge::GRAPH_SUCCESS;
 }
 
-static void SetTilingData(TensorMoveTilingData &tilingData, const TensorMoveTilingParam &tilingParam)
+static void SetTilingData(TensorMoveTilingData& tilingData, const TensorMoveTilingParam& tilingParam)
 {
     tilingData.set_totalCoreNum(tilingParam.totalCoreNum);
     tilingData.set_usedCoreNum(tilingParam.usedCoreNum);
@@ -173,10 +181,12 @@ static ge::graphStatus Tiling4TensorMove(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4TensorMove running begin.");
 
-    OP_CHECK_IF(CheckTensorMoveDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "The dtype check failed."),
+    OP_CHECK_IF(
+        CheckTensorMoveDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "The dtype check failed."),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckTensorMoveShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "The shape check failed."),
+    OP_CHECK_IF(
+        CheckTensorMoveShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "The shape check failed."),
         return ge::GRAPH_FAILED);
 
     auto compileInfo = reinterpret_cast<const TensorMoveCompileInfo*>(context->GetCompileInfo());
@@ -186,7 +196,8 @@ static ge::graphStatus Tiling4TensorMove(gert::TilingContext* context)
     tilingParam.totalCoreNum = compileInfo->coreNum;
     tilingParam.ubSize = compileInfo->ubSize;
 
-    OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Dotiling failed."),
+    OP_CHECK_IF(
+        DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Dotiling failed."),
         return ge::GRAPH_FAILED);
 
     // tilingkey由数据类型所占字节表示(1/2/4/8)
@@ -194,7 +205,8 @@ static ge::graphStatus Tiling4TensorMove(gert::TilingContext* context)
 
     TensorMoveTilingData tilingData;
     SetTilingData(tilingData, tilingParam);
-    OP_CHECK_IF(TensorMoveSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(
+        TensorMoveSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "TensorMoveSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
@@ -215,11 +227,13 @@ ge::graphStatus TilingPrepareTensorMoveForAscendC(gert::TilingParseContext* cont
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to core num."), return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
