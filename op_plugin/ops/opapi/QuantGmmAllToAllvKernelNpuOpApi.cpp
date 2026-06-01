@@ -563,7 +563,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_gmm_alltoallv(const at::Tensor &gmm
         bool trans_mm_weight = false;
         if (comm_mode.has_value()) {
             TORCH_CHECK(check_aclnn_kernel_available("aclnnQuantGroupedMatMulAlltoAllvV2"),
-                        "Too old ops-transformer package, please update. Or use comm_mode = None." + OPS_ERROR(ErrCode::PARAM));
+                        "Current CANN version do not support this api. Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
             const char* comm_mode_real = const_cast<char *>(comm_mode.value().data());
             EXEC_NPU_CMD(aclnnQuantGroupedMatMulAlltoAllvV2,
                          gmm_x_wrapper,
