@@ -13,7 +13,6 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/RandomUtil.h"
 #include "op_plugin/AclOpsInterface.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
 #include "torch_npu/csrc/core/npu/NPUGraphsUtils.h"
