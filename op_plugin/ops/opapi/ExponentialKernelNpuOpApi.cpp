@@ -52,7 +52,7 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
         self.zero_();
         return self;
     }
-    
+
     self.uniform_(0.0, 1.0, generator);
 
     if (self.dtype() == at::kDouble) {

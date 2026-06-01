@@ -82,7 +82,7 @@ std::vector<at::Tensor> _foreach_addcdiv(const at::TensorList input,
         at::native::has_integral_tensor(input, true)) {
             return at::native::foreach_tensor_addcdiv_scalarlist_slow(input, tensors1, tensors2, scalars_);
     }
-    
+
     auto scalar_type = input[0].scalar_type();
     std::vector<at::Tensor> result(input.size());
     auto iterRes = result.data();
@@ -106,13 +106,13 @@ void _foreach_addcdiv_(const at::TensorList input,
     static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
                                           c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
                                           (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    
+
     auto scalars_ = at::native::convert_tensor_to_scalar_list(scalars, input.size());
 
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_addcdiv_scalarlist_slow_(input, tensors1, tensors2, scalars_);
     }
-    
+
     at::native::check_foreach_api_restrictions(input, tensors1, tensors2, scalars_);
     if (!at::native::can_use_fast_route({input, tensors1, tensors2}) ||
         at::native::has_integral_tensor(input, true)) {

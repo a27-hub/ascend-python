@@ -90,7 +90,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rms_norm_dynamic_mx_quant(
 
     EXEC_NPU_CMD(aclnnRmsNormDynamicMxQuant, x, gamma, beta, epsilon, scale_alg,
                  round_mode_ptr, y_acltype, output_rstd, y_wrapper, mxscale_wrapper, rstd);
-    
+
     return std::tuple<at::Tensor, at::Tensor, at::Tensor>(y, mxscale, rstd);
 }
 
