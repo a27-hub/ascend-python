@@ -7122,7 +7122,7 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         dim_size = int(math.ceil(mxscale_shape[axis_change] / BLOCK_SIZE_BASE_NUM))
         dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
         mxscale_shape[axis_change] = dim_size
-scale = x.new_empty(mxscale_shape, dtype=torch_npu.float8_e8m0fnu)
+        scale = x.new_empty(mxscale_shape, dtype=torch_npu.float8_e8m0fnu)
     return output, scale
 
 
