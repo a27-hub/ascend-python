@@ -2902,4 +2902,3 @@ at::Tensor _npu_fusion_attention_grad_v3_get_max_workspace(
 
 #endif
 }
-
