@@ -541,6 +541,9 @@ query 的 head 数 N1 与 key/value 的 head 数 N2，需满足 N1 >= N2 且 N1 
 block_sparse_mask 必传，且shape必须为[batch, headNum, ceilDiv(maxQS, blockShapeX), ceilDiv(maxKVS, blockShapeY)]. 
 block_shape 必传，必须包含至少两个元素[blockShapeX, blockShapeY]，且值必须大于0；blockShapeY 必须为 128 的倍数。
 当 q_input_layout 为 "TND" 时 actual_seq_lengths 必选; 当 kv_input_layout 为 "TND" 时 actual_seq_lengths_kv 必选. 
+actual_seq_lengths 与 actual_seq_lengths_kv 当前必须同时配置或同时不配置，仅配置其中之一会被算子拦截.
+正向路径当前支持 headDim=64 或 128; 反向路径当前支持 headDim=128.
+反向路径支持 q_input_layout 和 kv_input_layout 同为 "BNSD" 或同为 "TND"，并支持 MHA/GQA 场景. MHA 场景下 N1 == N2, GQA 场景下需满足 N1 > N2 且 N1 % N2 == 0, 其中 N1 为 query 的 head 数, N2 为 key/value 的 head 数.
 inner_precise 仅支持 0（表示float32 softmax） 或 1（表示float16 softmax）；当 query/key/value 为 bfloat16 时，仅支持 0.
 
 支持的PyTorch版本
@@ -1548,77 +1551,6 @@ Q_S和S1表示query shape中的S，KV_S和S2表示key shape中的S，Q_N表示nu
 """
 )
 
-_add_torch_npu_docstr(
-    "_npu_kv_quant_sparse_flash_attention_pioneer",
-    """
-功能实现描述
-KVQuantSparseFlashAttentionPioneer在QuantSparseFlashAttention的基础上支持了sink。
-
-接口原型
-torch_npu._npu_kv_quant_sparse_flash_attention_pioneer(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, int key_quant_mode, int value_quant_mode, *, Tensor? key_dequant_scale=None, Tensor? value_dequant_scale=None, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? key_sink=None, Tensor? value_sink=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, int quant_scale_repo_mode=1, int tile_size=128, int rope_head_dim=64, int? key_dtype=None, int? value_dtype=None) -> Tensor
-
-query（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持bfloat16，query相同dtype的q_nope和q_rope按D维度拼接得到。
-
-key（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float8_e4m3fn，hifloat8，layout_kv为PA_BSND时shape为[block_num, block_size, KV_N, D]，其中block_num为PageAttention时block总数，block_size为一个block的token数。
-
-value（Tensor）：必选参数，不支持非连续，数据格式支持ND，数据类型支持float8_e4m3fn，hifloat8。
-
-sparse_indices（Tensor）：必选参数，代表离散取kvCache的索引，不支持非连续，数据格式支持ND,数据类型支持int32，shape需要传入[B, Q_S, KV_N, sparse_size]，其中sparse_size为一次离散选取的token数，需要保证每行有效值均在前半部分，无效值均在后半部分。
-
-scale_value（double）：必选参数，代表缩放系数，作为query和key矩阵乘后Muls的scalar值，数据类型支持double。
-
-sparse_block_size（int）：必选参数，代表sparse阶段的block大小，在计算importance score时使用，数据类型支持int64。
-
-key_quant_mode（int）：必选参数，代表key的量化模式，数据类型支持int64，支持传入2，代表per_tile量化模式。
-
-value_quant_mode（int）：必选参数，代表value的量化模式，数据类型支持int64，支持传入2，代表per_tile量化模式。
-
-*：代表其之前的参数是位置相关的，必须按照顺序输入，属于必选参数；其之后的参数是键值对赋值，与位置无关，属于可选参数（不传入会使用默认值）。
-
-key_dequant_scale（Tensor）：可选参数，预留参数，当前不支持。
-
-value_dequant_scale（Tensor）：可选参数，预留参数，当前不支持。
-
-block_table（Tensor）：可选参数，表示PageAttention中kvCache存储使用的block映射表。数据格式支持ND，数据类型支持int32，shape为2维，其中第一维长度为B，第二维长度不小于所有batch中最大的s2对应的block数量，即s2_max / block_size向上取整。
-
-actual_seq_lengths_query（Tensor）：可选参数，表示不同Batch中query的有效token数，数据类型支持int32。如果不指定seqlen可传入None，表示和query的shape的S长度相同。
-
-该入参中每个Batch的有效token数不超过query中的维度S大小。支持长度为B的一维tensor。当query的input_layout为TND时，该入参必须传入，且以该入参元素的数量作为B值，该入参中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须>=前一个元素的值。不能出现负值。
-
-actual_seq_lengths_kv（Tensor）：可选参数，表示不同Batch中key和value的有效token数，数据类型支持int32。如果不指定None，表示和key的shape的S长度相同。
-
-该入参中每个Batch的有效token数不超过key/value中的维度S大小且不小于0。支持长度为B的一维tensor。
-
-key_sink(Tensor)：可选参数，表示添加在压缩在key序列维度上的额外参数。layout为[sink_num, N2, headDim]，其中headDim包含Nope和Rope两部分。
-
-value_sink(Tensor)：可选参数，表示添加在压缩在key序列维度上的额外参数。layout为[sink_num, N2, headDim]，其中headDim包含Nope。
-
-layout_query（str）：可选参数，用于标识输入query的数据排布格式，用户不特意指定时可传入默认值"BSND"，支持传入BSND和TND。
-
-说明： 1、query数据排布格式支持从多种维度解读，其中B（Batch）表示输入样本批量大小、S（Seq-Length）表示输入样本序列长度、H（Head-Size）表示hidden层的大小、N（Head-Num）表示多头数、D（Head-Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
-
-layout_kv（str）：可选参数，用于标识输入key的数据排布格式，用户不特意指定时可传入默认值"BSND"，支持传入PA_BSND，PA_BSND在使能PageAttention时使用。
-
-sparse_mode（int）：可选参数，表示sparse的模式。数据类型支持int64。
-
-sparse_mode为0时，代表全部计算。
-sparse_mode为3时，代表rightDownCausal模式的mask，对应以右下顶点往左上为划分线的下三角场景。
-attention_mode（int）：可选参数，表示attention的模式。数据类型支持int64，支持传入2，表示MLA-absorb模式，即QK的D包含rope和nope两部分，且KV是同一份，默认值为0。
-
-quant_scale_repo_mode（int）：可选参数，表示量化参数的存放模式。数据类型支持int64，支持传入1，表示combine模式，即量化参数和数据混合存放，默认值为0。
-
-tile_size（int）：可选参数，表示per_tile时每个参数对应的数据块大小，仅在per_tile时有效。数据类型支持int64，默认值为0。
-
-rope_head_dim（int）：可选参数，表示MLA架构下的rope head dim大小，仅在attention_mode为2时有效。数据类型支持int64，默认值为0。
-
-out（Tensor）：公式中的输出。数据格式支持ND，数据类型支持bfloat16。
-
-说明：
-query、key、value参数维度含义：B（Batch Size）表示输入样本批量大小、S（Sequence Length）表示输入样本序列长度、H（Head Size）表示hidden层的大小、N（Head Num）表示多头数、D（Head Dim）表示hidden层最小的单元尺寸，且满足D=H/N、T表示所有Batch输入样本序列长度的累加和。
-Q_S和S1表示query shape中的S，KV_S和S2表示key shape中的S，Q_N表示num_query_heads，KV_N表示num_key_value_heads。
-
-"""
-)
 
 _add_torch_npu_docstr(
     "npu_fusion_attention",
@@ -2818,6 +2750,61 @@ local_out = [
 
 update_type = 0  
 out, lse_out = torch_npu.npu_attention_update(lse, local_out, update_type)
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "npu_ring_attention_update",
+    """
+接口原型：
+npu_ring_attention_update(Tensor prev_attn_out, Tensor prev_softmax_max, Tensor prev_softmax_sum, Tensor cur_attn_out, Tensor cur_softmax_max, Tensor cur_softmax_sum, *, Tensor? actual_seq_qlen=None, str input_layout="SBH", str input_softmax_layout="") -> (Tensor, Tensor, Tensor)
+
+功能描述
+将两次FlashAttention的输出按照softmax的max和sum进行更新，输出新的attention结果、softmax_max和softmax_sum。
+
+计算公式：
+softmax_max = max(prev_softmax_max, cur_softmax_max)
+softmax_sum = prev_softmax_sum * exp(prev_softmax_max - softmax_max) + cur_softmax_sum * exp(cur_softmax_max - softmax_max)
+attn_out = prev_attn_out * exp(prev_softmax_max - softmax_max) * prev_softmax_sum / softmax_sum
+         + cur_attn_out * exp(cur_softmax_max - softmax_max) * cur_softmax_sum / softmax_sum
+
+参数说明
+prev_attn_out: Tensor类型, 第一次FlashAttention的输出。数据类型支持FLOAT16、FLOAT、BFLOAT16, 数据格式支持ND。
+prev_softmax_max: Tensor类型, 第一次FlashAttention的softmax max结果。数据类型支持FLOAT, 数据格式支持ND。
+prev_softmax_sum: Tensor类型, 第一次FlashAttention的softmax sum结果。数据类型支持FLOAT, 数据格式支持ND。
+cur_attn_out: Tensor类型, 第二次FlashAttention的输出。数据类型和shape需与prev_attn_out一致。
+cur_softmax_max: Tensor类型, 第二次FlashAttention的softmax max结果。数据类型和shape需与prev_softmax_max一致。
+cur_softmax_sum: Tensor类型, 第二次FlashAttention的softmax sum结果。数据类型和shape需与prev_softmax_sum一致。
+actual_seq_qlen: Tensor类型, 可选参数, TND场景下必选, 表示从0开始累计的query序列长度前缀和。数据类型支持int64, 数据格式支持ND。
+input_layout: string类型, 可选参数, attention输入输出排布。支持"SBH"和"TND", 默认值为"SBH"。
+input_softmax_layout: string类型, 可选参数, softmax相关输入排布。支持""、"SBH"、"TND", 默认值为""。仅在input_layout为"TND"时生效。
+
+输出说明
+attn_out: Tensor类型, 更新后的attention输出。shape和数据类型与prev_attn_out一致。
+softmax_max: Tensor类型, 更新后的softmax max。shape与prev_softmax_max一致, 数据类型为FLOAT。
+softmax_sum: Tensor类型, 更新后的softmax sum。shape与prev_softmax_sum一致, 数据类型为FLOAT。
+
+支持的型号
+----------------
+Ascend 950PR/Ascend 950DT
+Atlas A3训练系列产品/Atlas A3推理系列产品
+Atlas A2训练系列产品/Atlas A2推理系列产品
+
+调用示例
+----------------
+import torch
+import torch_npu
+
+prev_attn_out = torch.randn((4, 2, 32), dtype=torch.float16, device="npu")
+cur_attn_out = torch.randn((4, 2, 32), dtype=torch.float16, device="npu")
+prev_softmax_max = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+prev_softmax_sum = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+cur_softmax_max = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+cur_softmax_sum = torch.rand((2, 2, 4, 1), dtype=torch.float32, device="npu").repeat(1, 1, 1, 8)
+attn_out, softmax_max, softmax_sum = torch_npu.npu_ring_attention_update(
+    prev_attn_out, prev_softmax_max, prev_softmax_sum,
+    cur_attn_out, cur_softmax_max, cur_softmax_sum)
 """
 )
 
@@ -10882,6 +10869,85 @@ y_npu, expert_idx_npu, out_npu = model(x_tensor, bias_tensor)
 """
 )
 
+_add_torch_npu_docstr( 
+    "npu_moe_gating_top_k_backward",
+    """
+函数原型
+npu_moe_gating_top_k_backward(x_norm, grad_y, expertIdx, *, renorm=0, norm_type=0, routed_scaling_factor=1.0, eps=1e-20) -> Tensor
+
+参数说明
+
+- **x_norm**（`Tensor`）：必选参数，前向算子 sigmoid/softmax 归一化后的得分，对应前向输出 `normOut`。要求是一个 2D 的 Tensor，维度为 [M, N]，数据类型支持 `float32`，数据格式要求为 ND。支持非连续 Tensor。最后一维的大小（即专家数 N）要求大于等于 `2`，并小于等于 `2048`。
+
+- **grad_y**（`Tensor`）：必选参数，前向算子输出 `yOut` 的上游梯度。要求是一个 2D 的 Tensor，维度为 [M, K]，数据类型支持 `float16`、`bfloat16`、`float32`，数据格式要求为 ND。不支持非连续 Tensor。K的范围要求大于等于 `1`，并小于等于 N。
+
+- **expertIdx**（`Tensor`）：必选参数，前向算子输出 `expertIdxOut`，对应 top-K 专家的索引。shape 要求与 `grad_y` 一致，数据类型支持 `int32`，数据格式要求为 ND。不支持非连续 Tensor。
+
+- **renorm**（`int`）：可选参数，前向算子在 softmax 模式下的 renorm 标记。`0` 表示不做renorm，`1` 表示需要做 renorm。预留参数，当前仅支持 sigmoid 模式。
+
+- **norm_type**（`int`）：可选参数，norm 函数类型，`1` 表示使用 Sigmoid 函数，`0` 表示 Softmax 函数。默认值为 `0`。当前仅支持 `1`（sigmoid 模式）。
+
+- **routed_scaling_factor**（`float`）：可选参数，前向计算 `yOut` 使用的缩放系数，默认值为 `1.0`。
+
+- **eps**（`float`）：可选参数，前向归一化使用的防除零常数，默认值为 `1e-20`。
+
+返回值说明
+
+- **grad_x**（`Tensor`）：前向算子输入 `x` 的梯度。要求是一个 2D 的 Tensor，维度为 [M, N]，数据类型与 `grad_y` 需要保持一致，shape 与 `x_norm` 需要一致，数据格式要求为 ND。不支持非连续 Tensor。
+
+约束说明
+
+- 该接口支持训练场景下使用。
+
+调用示例
+单算子模式调用
+
+import torch
+import torch_npu
+
+# 示例参数：M=2048, N=192, K=10，sigmoid 模式，PanGuV3 典型 shape
+M, N, K = 2048, 192, 10
+norm_type = 1
+routed_scaling_factor = 1.0
+eps = 1e-20
+
+# 构造输入（模拟前向算子的保存值） 
+x_norm = torch.rand(M, N, dtype=torch.float32).npu()          # 前向 normOut
+grad_y = torch.randn(M, K, dtype=torch.bfloat16).npu()        # 上游梯度
+expert_idx = torch.randint(0, N, (M, K), dtype=torch.int32).npu()  # 前向 expertIdxOut
+
+# 调用反向算子
+grad_x = torch_npu.npu_moe_gating_top_k_backward(
+    x_norm, grad_y, expert_idx,
+    norm_type=norm_type,
+    routed_scaling_factor=routed_scaling_factor,
+    eps=eps)
+
+print(f"grad_x shape: {grad_x.shape}")   # [2048, 192]
+print(f"grad_x dtype: {grad_x.dtype}")   # bfloat16（与 grad_y 一致）
+
+通过正向算子自动反向调用 
+
+import torch
+import torch_npu
+
+M, N, K = 2048, 192, 10
+
+# 前向传播
+x = torch.randn(M, N, dtype=torch.bfloat16, requires_grad=False).npu().requires_grad_(True)
+y, expert_idx, x_norm = torch_npu.npu_moe_gating_top_k(
+    x, K, norm_type=1, routed_scaling_factor=1.0, eps=1e-20, out_flag=True)
+
+# 模拟上游梯度
+grad_y = torch.randn_like(y)
+
+# 反向传播
+y.backward(grad_y)
+grad_x = x.grad.detach().clone()
+print(f"grad_x shape: {grad_x.shape}")   # [2048, 192]
+"""
+)
+
 _add_torch_npu_docstr(
     "npu_moe_init_routing",
     """
@@ -11764,32 +11830,49 @@ _add_torch_npu_docstr(
     "npu_fused_causal_conv1d",
     """
 接口原型:
-torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=None, cache_indices=None, 
-                                initial_state_mode=None, bias=None, num_accepted_tokens=None, 
-                                activation_mode="None", pad_slot_id=-1, run_mode=0, residual_connection=0) -> Tensor
+torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,
+                                initial_state_mode=None, bias=None, num_accepted_tokens=None,
+                                activation="None", pad_slot_id=-1, run_mode=0,
+                                residual_connection=0, max_query_len=-1,
+                                num_computed_tokens=None, block_idx_first_scheduled_token=None,
+                                block_idx_last_scheduled_token=None, initial_state_idx=None,
+                                block_size=128, conv_mode="default") -> Tensor
 
 功能描述:
-对序列执行因果一维卷积（prefill场景）。沿序列维度，使用缓存数据（长度为卷积核宽减1）对各序列头部进行padding，确保输出依赖当前及历史输入；卷积完成后，将当前序列尾部的数据原地更新到`conv_states`中。
+对序列执行因果一维卷积（非原地版本）。支持 prefill/decode/PD混部场景，支持 APC 模式。
+沿序列维度使用缓存数据对各序列头部进行 padding，卷积完成后将序列尾部数据原地更新到 conv_states 中。
+输出 y 为新分配的 Tensor。
 
 参数说明:
-x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，不支持空Tensor，数据格式为ND。shape为2维[cu_seq_len, dim]，cu_seq_len为batch内所有变长序列拼接后的总长度，取值范围[1, 65536]；dim为特征维度，取值范围[64, 16384]。
-weight：Tensor类型，必选参数，因果1维卷积核。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为2维[K, dim]，K为卷积核宽度，固定为3；dim为特征维度，取值范围[64, 16384]。
-conv_states：Tensor类型，必选参数，缓存状态张量，存储各序列的历史token数据，各序列计算完成后原地更新。数据类型与x相同，不支持空Tensor，数据格式为ND。shape为3维[..., K-1, dim]，第0维大小不固定。
-query_start_loc：Tensor类型，可选参数，序列起始位置索引，记录各序列在拼接张量x中的起始位置，query_start_loc[i]表示第i个序列的起始偏移。数据类型支持int32，数据格式为ND。shape为1维[batch+1,]，batch取值范围[1, 256]。x的shape为2维时，不可省略。
-cache_indices：Tensor类型，可选参数，缓存索引，指定每个序列对应的缓存状态在conv_states中的索引。数据类型支持int32，数据格式为ND。shape为1维[batch,]。x的shape为2维时，不可省略。
-initial_state_mode：Tensor类型，可选参数，初始状态标志，表示各序列是否使用缓存数据。数据类型支持int32，数据格式为ND。shape为1维[batch,]，默认值为None。
-bias：Tensor类型，可选参数，卷积的偏置。数据类型与x相同，数据格式为ND。shape为1维[dim,]，默认值为None。
-num_accepted_tokens：Tensor类型，可选参数，投机解码场景下各batch实际接受的token个数。数据类型支持int32，数据格式为ND。shape为1维[batch,]，默认值为None。
-activation_mode：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"。
+x：Tensor类型，必选参数，输入序列。数据类型支持float16、bfloat16，数据格式为ND。shape为2维[cu_seq_len, dim]或3维[batch, seq_len, dim]。dim需满足dim % 128 == 0。
+weight：Tensor类型，必选参数，因果1维卷积核。shape为2维[K, dim]，K固定为3。
+conv_states：Tensor类型，必选参数，缓存状态张量。shape为3维[..., state_len, dim]，计算完成后原地更新。
+query_start_loc：Tensor类型，可选参数，序列起始位置索引。shape为1维[batch+1]，x为2维时不可省略。
+cache_indices：Tensor类型，可选参数，缓存索引。APC未开启时为1维[batch]；APC开启时为2维[batch, max_num_blocks]。
+initial_state_mode：Tensor类型，可选参数，初始状态标志。shape为1维[batch]，暂不支持。
+bias：Tensor类型，可选参数，卷积偏置。shape为1维[dim]，暂不支持。
+num_accepted_tokens：Tensor类型，可选参数，投机解码场景下各batch实际接受的token个数。shape为1维[batch]。
+activation：str类型，可选参数，激活函数类型，支持"None"、"silu"、"swish"，默认值为"None"，暂不支持。
 pad_slot_id：int类型，可选参数，用于跳过不需要参与计算的batch，默认值为-1。
-run_mode：int类型，可选参数，用于判断哪种场景。0：prefill场景；1：decode场景，默认值为0。
-residual_connection：int类型，可选参数，用于判断输出结果是否要做残差连接。0：不做残差连接；1：输出为卷积结果与输入x之和（残差连接），默认值为0。
+run_mode：int类型，可选参数，历史遗留接口，默认值为0，暂不支持。
+residual_connection：int类型，可选参数，是否做残差连接。0：不做；1：做。默认值为0。
+max_query_len：int类型，可选参数，所有batch seq_len的最大值，默认值为-1。
+num_computed_tokens：Tensor类型，可选参数，当前batch已处理的token总数。shape为1维[batch]。Pangu模式下不能为None。
+block_idx_first_scheduled_token：Tensor类型，可选参数，APC开启时当前batch首token对应的block索引。shape为1维[batch]。
+block_idx_last_scheduled_token：Tensor类型，可选参数，APC开启时当前batch末token对应的block索引。shape为1维[batch]。
+initial_state_idx：Tensor类型，可选参数，APC开启时初始索引块的索引。shape为1维[batch]。
+block_size：int类型，可选参数，APC block大小，支持128/256，默认值为128。
+conv_mode：str类型，可选参数，卷积模式。"default"：正常卷积计算；"pangu"：盘古模型下卷积计算前k-1个token置零。默认值为"default"。
 
 输出说明:
-y：Tensor类型，x经过因果1维卷积计算后的结果，当residual_connection=1时，输出为卷积结果与输入x之和（残差连接）。数据类型与x相同，shape与x保持一致。
-conv_states将被原地更新为各序列最新的缓存状态。
+y：Tensor类型，卷积计算结果。residual_connection=1时输出为卷积结果+输入x。shape与x一致。
+conv_states将被原地更新。
 
 约束说明:
+x为2维时query_start_loc不可省略。
+APC开启时（cache_indices为2维）：block_size不能为0；必须提供block_idx_first_scheduled_token、block_idx_last_scheduled_token、initial_state_idx。
+dim必须满足dim % 128 == 0。
+conv_mode为"pangu"时num_computed_tokens不能为None。
 
 支持的型号:
 昇腾950 AI处理器
@@ -11797,26 +11880,22 @@ conv_states将被原地更新为各序列最新的缓存状态。
 调用示例:
 import torch
 import torch_npu
-K, dim, dtype = 3, 64, torch.bfloat16
+K, dim, dtype = 3, 128, torch.bfloat16
 weight = torch.randn(K, dim, dtype=dtype).npu()
 cu_seq_len = sum([5, 3, 7, 4])
 x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
 query_start_loc = torch.tensor([0, 5, 8, 15, 19], dtype=torch.int32).npu()
 conv_states = torch.randn(8, K - 1, dim, dtype=dtype).npu()
 cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
-initial_state_mode = torch.tensor([1, 1, 0, 0], dtype=torch.int32).npu()
 out = torch_npu.npu_fused_causal_conv1d(
     x, weight, conv_states,
     query_start_loc=query_start_loc,
     cache_indices=cache_indices,
-    initial_state_mode=initial_state_mode,
-    activation_mode="None",
-    residual_connection=0,
+    residual_connection=1,
     pad_slot_id=-1,
 )
     """
 )
-
 
 _add_torch_npu_docstr(
 "npu_masked_causal_conv1d",
