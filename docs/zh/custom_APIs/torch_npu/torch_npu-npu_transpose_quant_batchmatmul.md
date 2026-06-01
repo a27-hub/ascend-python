@@ -14,7 +14,7 @@
     T1、T2、Ty分别通过参数perm\_x1、perm\_x2、perm\_y描述转置序列。
 
     $$
-    out=((x1^{T1}@x2^{T2}+bias)*x2_scale*x1_scale)^{Ty}
+    out=((x1^{T1}@x2^{T2}+bias)*x2\_scale*x1\_scale)^{Ty}
     $$
 
 ## 函数原型
@@ -26,7 +26,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 ## 参数说明
 
 - **x1**（`Tensor`）：必选参数，表示矩阵乘的第一个矩阵。数据格式支持ND。仅支持3维输入，shape要求为（m, b, k）。数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`。
-- **x2**（`Tensor`）：必选参数，表示矩阵乘的第二个矩阵。数据格式支持ND。仅支持3维输入，shape要求为（b, k, n）或（b, n, k）。`x2`的k维度需要与`x1`的k维度大小相等。数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`。
+- **x2**（`Tensor`）：必选参数，表示矩阵乘的第二个矩阵。数据格式支持ND和NZ。仅支持3维输入，shape要求为（b, k, n）或（b, n, k）。`x2`的k维度需要与`x1`的k维度大小相等。数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`。
 - **dtype**（`int`）： 必选参数，表示output的数据类型，支持传值`torch.float16`和`torch.bfloat16`。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias**（`Tensor`）：可选参数，表示矩阵乘的偏置矩阵，当前版本暂不支持该参数，使用默认值即可。
@@ -41,8 +41,8 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - **perm\_x2**（List\[int\]）：可选参数，表示矩阵乘第二个矩阵的转置序列，size大小为3，数据类型为`int64`，数据格式支持ND。支持\[0, 1, 2\]或\[0, 2, 1\]。
 - **perm\_y**（List\[int\]）：可选参数，表示矩阵乘输出矩阵的转置序列，size大小为3，数据类型为`int64`，数据格式支持ND，只支持\[1, 0, 2\]。
 - **batch\_split\_factor**（`int`）：可选参数，用于指定矩阵乘输出矩阵中b维的切分大小。数据类型为`int32`。默认值为1，当前仅支持配置为1。
-- **x1_dtype**（`int`）： 必选参数，表示output的数据类型，支持传值`torch_npu.hifloat8`。
-- **x2_dtype**（`int`）： 必选参数，表示output的数据类型，支持传值`torch_npu.hifloat8`。
+- **x1_dtype**（`int`）： 可选参数，表示x1的数据类型，支持传值`torch_npu.hifloat8`。
+- **x2_dtype**（`int`）： 可选参数，表示x2的数据类型，支持传值`torch_npu.hifloat8`。
 ## 返回值说明
 
 **y**（`Tensor`）：表示最终计算结果，公式中的$out$，数据格式支持ND，shape维度支持3维。shape为\(m, b, n\)；数据类型支持`float16`、`bfloat16`。
@@ -53,6 +53,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - 该接口仅支持单算子模式调用。
 - K-C量化场景下：
   - `x1_scale`、`x2_scale`仅支持1维输入，`x1_scale`要求shape为\(m, \)，`x2_scale`要求shape为\(n, \)。
+  - `x2`仅支持ND格式输入。
   - k仅支持512，n仅支持128。
   - `perm_x2`只支持\[0, 1, 2\]。
 
