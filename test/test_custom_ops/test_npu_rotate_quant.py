@@ -69,7 +69,7 @@ class TestNpuRotateQuant(TestCase):
         torch_npu.npu.synchronize()
         x_rot_int8, x_rot_scale = torch_npu.npu_dynamic_quant(x_rot.to(xdtype), dst_type=dst_dtype)
         return x_rot_int8, x_rot_scale
-    
+
     def gen_input_data(self, M, N, K):
         x = torch.randn(M, N, dtype=torch.bfloat16)
         rotation = torch.randn(K, K, dtype=torch.bfloat16)
@@ -104,7 +104,7 @@ class TestNpuRotateQuant(TestCase):
         output0_npu, output1_npu = torch_npu.npu_rotate_quant(x.npu(), rotation.npu(), alpha=0.0, dst_dtype=dst_dtype)
         self.compare_tensor_nibbles(output0.cpu(), output0_npu.cpu())
         self.assertRtolEqual(output1, output1_npu.cpu())
-    
+
     @unittest.skip("Skipping test_npu_rotate_quant until CANN is updated to support aclnnRotateQuant.")
     @SupportedDevices(['Ascend950'])
     def test_npu_rotate_quant_int4(self, device="npu"):
