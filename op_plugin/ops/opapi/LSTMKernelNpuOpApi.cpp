@@ -200,7 +200,7 @@ inline bool HasMixedFloatDtype(const at::Tensor& input, const at::TensorList hx,
 
 inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList hx, const at::TensorList params)
 {
-    return HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
+    return params.size() != 4 || HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
