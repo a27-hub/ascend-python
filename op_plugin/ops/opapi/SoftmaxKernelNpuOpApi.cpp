@@ -19,6 +19,7 @@
 #include "op_plugin/utils/OpAdapter.h"
 
 namespace op_api {
+using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor softmax(const at::Tensor& self, int64_t dim, c10::optional<at::ScalarType> dtype)
 {
@@ -38,6 +39,19 @@ at::Tensor softmax(const at::Tensor& self, int64_t dim, c10::optional<at::Scalar
 at::Tensor softmax(const at::Tensor& self, at::Dimname dim, c10::optional<at::ScalarType> dtype)
 {
     return op_api::softmax(self, dimname_to_position(self, dim), dtype);
+}
+
+at::Tensor & _softmax_out(const at::Tensor& self, int64_t dim, bool half_to_float, at::Tensor& out)
+{
+    DO_COMPATIBILITY(aclnnSoftmax, acl_op::_softmax_out(self, dim, half_to_float, out));
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = half_to_float ? at::ScalarType::Float : self.scalar_type();
+    if (!out.sizes().equals(output_size_0)) {
+        out.resize_(output_size_0);
+    }
+    npu_preparation::check_tensor({self}, out, output_dtype_0, output_size_0);
+    EXEC_NPU_CMD(aclnnSoftmax, self, dim, out);
+    return out;
 }
 
 }
