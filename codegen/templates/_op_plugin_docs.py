@@ -15472,7 +15472,7 @@ _add_torch_npu_docstr(
  transpose_y: bool类型, 指定输出是否转置, 可选输入, 默认值为False, 当前版本仅支持False。
 
  输出说明:
- y（`Tensor`）：输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND，支持非连续的Tensor。
+ y（`Tensor`）：输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND，int场景中支持非连续的Tensor。
  scale（`Tensor`）：输出的量化因子，数据类型根据dst_dtype决定。当dst_dtype为MX类型(float4_e2m1fn_x2/float8_e5m2/float8_e4m3fn)时，scale为MX格式量化因子(uint8表示float8_e8m0)；其他类型时，scale为per-token量化因子(float32)。
 
  支持的型号: 
