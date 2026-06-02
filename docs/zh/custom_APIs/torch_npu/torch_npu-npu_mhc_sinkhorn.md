@@ -15,7 +15,7 @@
 $$
 \begin{aligned}
 \operatorname{norm\_out}[0] &= \operatorname{softmax}(x, \dim=-1) + \varepsilon\\
-\operatorname{sum\_out}[1] &= \sum_{\dim=-2} \operatorname{norm\_out}[0] + \varepsilon\\
+\operatorname{sum\_out}[1] &= \sum_{\dim=-2,keepdim=True} \operatorname{norm\_out}[0] + \varepsilon\\
 \operatorname{norm\_out}[1] &= \frac{\operatorname{norm\_out}[0]}{\operatorname{sum\_out}[1]}
 \end{aligned}
 $$
@@ -24,9 +24,9 @@ $$
 
 $$
 \begin{aligned}
-\operatorname{sum\_out}[2i] &= \sum_{\dim=-1} \operatorname{norm\_out}[2i-1] + \varepsilon\\
+\operatorname{sum\_out}[2i] &= \sum_{\dim=-1,keepdim=True} \operatorname{norm\_out}[2i-1] + \varepsilon\\
 \operatorname{norm\_out}[2i] &= \frac{\operatorname{norm\_out}[2i-1]}{\operatorname{sum\_out}[2i]}\\
-\operatorname{sum\_out}[2i+1] &= \sum_{\dim=-2} \operatorname{norm\_out}[2i] + \varepsilon\\
+\operatorname{sum\_out}[2i+1] &= \sum_{\dim=-2,keepdim=True} \operatorname{norm\_out}[2i] + \varepsilon\\
 \operatorname{norm\_out}[2i+1] &= \frac{\operatorname{norm\_out}[2i]}{\operatorname{sum\_out}[2i+1]}
 \end{aligned}
 $$
