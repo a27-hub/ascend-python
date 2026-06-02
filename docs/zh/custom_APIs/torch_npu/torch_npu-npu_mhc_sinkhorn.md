@@ -12,25 +12,30 @@
 - 计算公式：
     1. 在第一次迭代即初始化时：
 
-        ![](figures/zh-cn_image_0000002537090628.png)
-
-        ![](figures/zh-cn_image_0000002568010367.png)
-
-        ![](figures/zh-cn_image_0000002568090357.png)
+$$
+\begin{aligned}
+P_{ij} &= \frac{\exp(x_{ij})}{\sum_k \exp(x_{ik})}\\
+H^{(0)}_{ij} &= P_{ij} + \varepsilon\\
+H^{(1)}_{ij} &= \frac{H^{(0)}_{ij}}{\sum_i H^{(0)}_{ij} + \varepsilon}
+\end{aligned}
+$$
 
     2. 第i次迭代\(i=1,2,..., \(num\_iters-1\)\)：
 
-        ![](figures/zh-cn_image_0000002537250558.png)
-
-        ![](figures/zh-cn_image_0000002537090630.png)
-
-        ![](figures/zh-cn_image_0000002568010369.png)
-
-        ![](figures/zh-cn_image_0000002568090359.png)
+$$
+\begin{aligned}
+R^{(i)} &= \sum_j H^{(i)}_{ij} + \varepsilon\\
+\tilde{H}^{(i)}_{ij} &= \frac{H^{(i)}_{ij}}{R^{(i)}}\\
+C^{(i)} &= \sum_i \tilde{H}^{(i)}_{ij} + \varepsilon\\
+H^{(i+1)}_{ij} &= \frac{\tilde{H}^{(i)}_{ij}}{C^{(i)}}
+\end{aligned}
+$$
 
     3. 最终输出
 
-        ![](figures/zh-cn_image_0000002537250560.png)
+$$
+H_{\text{res}} = H^{(num\_iters)}
+$$
 
 ## 函数原型
 
