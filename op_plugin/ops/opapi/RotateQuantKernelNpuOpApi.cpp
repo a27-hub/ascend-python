@@ -59,6 +59,8 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     bool is_mx_type = (dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
         dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2) ||
         dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN));
+        dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2) ||
+        dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN));
 
     ASCEND_LOGI("[npu_rotate_quant]: Getting aclTensor y dtype by Parameter(dst_dtype): %ld", dst_dtype_val);
 
@@ -84,11 +86,7 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
         y_acltype = c10_npu::GetAclDataType(dst_dtype_val);
         TORCH_CHECK(y_acltype != aclDataType::ACL_DT_UNDEFINED, "Unsupported dst_dtype value: ", dst_dtype_val,
             OPS_ERROR(ErrCode::PARAM));
-        TORCH_CHECK(y_acltype != aclDataType::ACL_DT_UNDEFINED,
-            "Unsupported dst_dtype value: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
-        TORCH_CHECK(scalar_dtype != at::ScalarType::Undefined,
-            "Cannot convert aclDataType to ScalarType for dst_dtype: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(scalar_dtype != at::ScalarType::Undefined,
             "Cannot convert aclDataType to ScalarType for dst_dtype: ", dst_dtype_val, OPS_ERROR(ErrCode::PARAM));
         output_y = npu_preparation::apply_tensor_without_format(output_size, c10::dtype(scalar_dtype));
@@ -123,8 +121,8 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     char *round_mode_ptr = const_cast<char *>(round_mode_str.data());
     int64_t scale_alg_val = scale_alg.value_or(DEFAULT_SCALE_ALG);
 
-    EXEC_NPU_CMD(aclnnRotateQuant, x, rotation, alpha_real, axis_val, round_mode_ptr,
-        scale_alg_val, dst_type_max_val, transpose_y_val, y_wrapper, scale_wrapper);
+    EXEC_NPU_CMD(aclnnRotateQuant, x, rotation, alpha_real, axis_val, round_mode_ptr, scale_alg_val, dst_type_max_val,
+        transpose_y_val, y_wrapper, scale_wrapper);
     return std::tuple<at::Tensor, at::Tensor>(output_y, output_scale);
 }
 } // namespace op_api
