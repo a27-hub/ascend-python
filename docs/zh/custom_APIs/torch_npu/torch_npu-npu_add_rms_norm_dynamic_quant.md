@@ -4,6 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
+|<term>Ascend 950PR/Ascend 950DT</term>     | √  |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 
@@ -86,16 +87,19 @@ torch_npu.npu_add_rms_norm_dynamic_quant(x1, x2, gamma, *, smooth_scale1=None, s
 
 ## 返回值说明
 
-- **y1**(`Tensor`)：第一路动态量化后的输出Tensor，对应公式中的$y1Out$。当`output_mask[0]`为`True`时，数据类型支持`int8`、`int4`，shape与`x1`一致；当`output_mask[0]`为`False`时，返回空Tensor。
+- **y1**(`Tensor`)：第一路动态量化后的输出Tensor，对应公式中的$y1Out$。当`output_mask[0]`为`True`时，数据类型支持`int8`、`int4`，shape与`x1`一致；
 - **y2**(`Tensor`)：第二路动态量化后的输出Tensor，对应公式中的$y2Out$。当`output_mask[1]`为`True`时，数据类型支持`int8`、`int4`，shape与`x1`一致；当`output_mask[1]`为`False`时，返回空Tensor。
 - **x_out**(`Tensor`)：Add计算的结果，对应公式中的$x$。数据类型和shape与输入`x1`保持一致。
-- **scale1**(`Tensor`)：第一路动态量化的缩放系数，对应公式中的$scale1Out$。当`output_mask[0]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[0]`为`False`时，返回空Tensor。
+- **scale1**(`Tensor`)：第一路动态量化的缩放系数，对应公式中的$scale1Out$。当`output_mask[0]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；
 - **scale2**(`Tensor`)：第二路动态量化的缩放系数，对应公式中的$scale2Out$。当`output_mask[1]`为`True`时，数据类型为`float32`，shape为`x1`的shape剔除最后一维；当`output_mask[1]`为`False`时，返回空Tensor。
 
 ## 约束说明
 
 - 当`output_mask`不为空时，参数`smooth_scale1`有值时，则`output_mask[0]`必须为True。参数`smooth_scale2`有值时，则`output_mask[1]`必须为True。
 - 当`output_mask`不为空时，`output_mask[0]`与`output_mask[1]`不能同时为False。
+- Ascend 950PR/Ascend 950DT：
+    - `y1`和`y2`输出类型不支持`int4`；
+    - 当`output_mask`不为空时，且`output_mask[0]`不能为False。
 
 ## 调用示例
 
