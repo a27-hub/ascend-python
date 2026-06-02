@@ -7,8 +7,6 @@
 //
 // https://opensource.org/licenses/BSD-3-Clause
 //
-// https://opensource.org/licenses/BSD-3-Clause
-//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,8 +55,6 @@ std::tuple<at::Tensor, at::Tensor> npu_rotate_quant(const at::Tensor &x, const a
     bool is_int4_packed = (dst_dtype_val == DTYPE_NUM_FOR_QUINT4X2);
     bool is_fp4 = (dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
     bool is_mx_type = (dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-        dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2) ||
-        dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN));
         dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E5M2) ||
         dst_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT8_E4M3FN));
 
