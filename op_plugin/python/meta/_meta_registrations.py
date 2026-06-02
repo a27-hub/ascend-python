@@ -7084,10 +7084,10 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
                            ops_error(ErrCode.PARAM))
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, dst_dtype if isinstance(dst_dtype, torch.dtype) else torch.int8)
     is_int4_packed = (torch_dtype == torch.quint4x2)
-    is_fp4 = (torch_dtype == torch_npu.float4_e2m1fn_x2 or dst_dtype == 296)
-    is_mx_type = (is_fp4 or torch_dtype == torch.float8_e5m2 or dst_dtype == 291 or torch_dtype == torch.float8_e4m3fn or dst_dtype == 292)
+    is_fp4 = (torch_dtype == torch_npu.float4_e2m1fn_x2 or dst_dtype == 296)  # 296: enum value of torch_npu.float4_e2m1fn_x2
+    is_mx_type = (is_fp4 or torch_dtype == torch.float8_e5m2 or dst_dtype == 291 or torch_dtype == torch.float8_e4m3fn or dst_dtype == 292)  # 291: enum value of torch_npu.float8_e5m2, 292: enum value of torch_npu.float8_e4m3fn
     if is_int4_packed:
-        if x.size(dim_num - 1) % 8:
+        if x.size(dim_num - 1) % 8:  # 8: int4 values packed per int32
             raise RuntimeError("If dst_dtype is quint4x2, the last dim of input must be divisible by 8" +
                                ops_error(ErrCode.NOT_SUPPORT))
         output_shape = []
@@ -7098,13 +7098,13 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
     elif is_fp4:
-        if x.size(dim_num - 1) % 2:
+        if x.size(dim_num - 1) % 2:  # 2: fp4 values packed per uint8
             raise RuntimeError("If dst_dtype is float4_e2m1, the last dim of input must be divisible by 2" +
                                ops_error(ErrCode.NOT_SUPPORT))
         output_shape = []
         for dim in range(dim_num - 1):
             output_shape.append(x.size(dim))
-        output_shape.append(x.size(dim_num - 1) // 2)
+        output_shape.append(x.size(dim_num - 1) // 2)  # 2: fp4 values packed per uint8
         output = x.new_empty(output_shape, dtype=torch.uint8)
         scale_shape = [x.size(0)]
         scale = x.new_empty(scale_shape, dtype=torch.float32)
