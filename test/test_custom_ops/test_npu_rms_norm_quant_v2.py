@@ -251,5 +251,43 @@ class TestNPURmsNormQuant(TestCase):
         self.assertTrue(self.compare(y_ref_flat, y_npu_flat, benchmark_float32))
         self.assertTrue(self.compare(rstd_ref_flat, rstd_npu_flat, benchmark_float32))
 
+    @SupportedDevices(['Ascend950'])
+    def test_npu_rms_norm_quant_gamma_multi_float8_e5m2(self):
+        x_shape = [4, 32]
+        quant_shape = [1, 32]
+        x = torch.randn(x_shape, dtype=torch.float16)
+        gamma = torch.randn(quant_shape, dtype=torch.float16)
+        scale = (torch.rand(1, dtype=torch.float16) * 0.8 + 0.2)  # [0.2, 1.0)
+        offset = torch.randint(-5, 6, (1,), dtype=torch.float16)
+        beta = torch.randn(quant_shape, dtype=torch.float16)
+        eps = 1e-6
+        div_mode = True
+        dst_dtype = 1
+        output_rstd = True
+
+        x_npu = x.npu().requires_grad_(output_rstd)
+        gamma_npu = gamma.npu()
+        scale_npu = scale.npu()
+        offset_npu = offset.npu()
+        beta_npu = beta.npu()
+
+        y_ref, rstd_ref = self.npu_rms_norm_quant_v2_golden(x, gamma, scale, offset, beta, epsilon=eps, div_mode=div_mode, dst_dtype=dst_dtype)
+
+        y_npu, rstd_npu = torch_npu.npu_rms_norm_quant_v2(x_npu, gamma_npu, scale_npu, offset=offset_npu, beta=beta_npu,
+                                                epsilon=eps, div_mode=div_mode, dst_dtype=dst_dtype)
+        if dst_dtype == 290:
+            y_npu_flat = torch_npu.npu_dtype_cast(y_npu, torch.float32, torch_npu.hifloat8)
+        else:
+            y_npu_flat = y_npu.to(torch.float32)
+        benchmark_float32 = 1e-6
+
+        y_ref_flat = y_ref.reshape(1, y_ref.numel())[0].cpu()
+        y_npu_flat = y_npu_flat.to(torch.float32).reshape(1, y_npu.numel())[0].cpu()
+        rstd_ref_flat = rstd_ref.cpu()
+        rstd_npu_flat = rstd_npu.cpu()
+
+        self.assertTrue(self.compare(y_ref_flat, y_npu_flat, benchmark_float32))
+        self.assertTrue(self.compare(rstd_ref_flat, rstd_npu_flat, benchmark_float32))
+
 if __name__ == "__main__":
     run_tests()
