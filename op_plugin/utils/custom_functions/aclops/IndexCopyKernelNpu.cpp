@@ -59,7 +59,7 @@ void index_copy_npu_par_check(const int64_t dim, const at::Tensor& index,
     TORCH_CHECK_INDEX(source.dim() == 0 || num_indices == source.size(new_dim),
         "index_copy_()", ": Number of indices (", num_indices,
         ") should be equal to source.size(newDim) (", source.size(new_dim), ")", OPS_ERROR(ErrCode::VALUE));
-  
+
     for (int64_t i = 0; i < num_indices; i++) {
         int64_t specifical_index = index.dim() == 0 ? index.item<int64_t>() : index[i].item<int64_t>();
         TORCH_CHECK_INDEX(specifical_index <= boundary_index, "index_copy_()", ": index ", specifical_index,
