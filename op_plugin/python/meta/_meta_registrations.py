@@ -2765,7 +2765,7 @@ def npu_rms_norm_quant_v2_meta(x, gamma, scale, offset, beta, epsilon=1e-06, div
         rstd_shape.append(x.size(dim))
     rstd_shape.append(1)
     rstd = torch.empty(rstd_shape, dtype=torch.float32, device=x.device)
-    
+
     dst_dtype = dst_dtype if dst_dtype is not None else 1
     dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
     if dst_torch_dtype == torch.quint4x2:
@@ -7097,4 +7097,3 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
-
