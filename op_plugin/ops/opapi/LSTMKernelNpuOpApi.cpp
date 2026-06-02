@@ -200,7 +200,9 @@ inline bool HasMixedFloatDtype(const at::Tensor& input, const at::TensorList hx,
 
 inline bool ShouldFallbackToAclOp(const at::Tensor& input, const at::TensorList hx, const at::TensorList params)
 {
-    return HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
+    // weight_ih, weight_hh, bias_ih, bias_hh for a single layer with biases
+    constexpr size_t kSingleLayerBiasParamCount = 4;
+    return params.size() != kSingleLayerBiasParamCount || HasBf16Tensor(input, hx, params) || HasMixedFloatDtype(input, hx, params);
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> lstm(
