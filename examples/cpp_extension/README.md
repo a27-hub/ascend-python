@@ -84,7 +84,7 @@ at::Tensor run_ascendc_add(const at::Tensor &x, const at::Tensor &y)
 
 最后，通过创建ops路径，定义python接口，通过`module_name.ops.custom_add`可以调用自定义算子。测试样例如下：
 
-  ```python
+```python
 import torch
 x = torch.randint(low=1, high=100, size=length, device='cpu', dtype=torch.int)
 y = torch.randint(low=1, high=100, size=length, device='cpu', dtype=torch.int)
@@ -92,7 +92,7 @@ y = torch.randint(low=1, high=100, size=length, device='cpu', dtype=torch.int)
 x_npu = x.npu()
 y_npu = y.npu()
 output = op_extension.ops.custom_add(x_npu, y_npu)
-  ```
+```
 
 ## 运行自定义的算子
 
