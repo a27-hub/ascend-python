@@ -1,4 +1,4 @@
-﻿# torch_npu.npu_grouped_matmul_swiglu_quant_v2
+﻿# `torch_npu.npu_grouped_matmul_swiglu_quant_v2`
 
 ## 产品支持情况
 
