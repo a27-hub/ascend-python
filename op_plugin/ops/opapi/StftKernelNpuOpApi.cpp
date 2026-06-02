@@ -83,7 +83,7 @@ bool is_aclstft_supported(at::Tensor const &self,
     if (self.scalar_type() == at::ScalarType::Double || self.scalar_type() == at::ScalarType::ComplexDouble) {
         return true;
     }
-    
+
     bool res = false;
     int64_t batch = self.dim() == 2 ? self.size(0) : 0;
     int64_t len = self.dim() == 2 ? self.size(1) : self.size(0);

@@ -67,7 +67,7 @@ void _foreach_sign_(const at::TensorList self)
     if (!is_support_nd_out || !is_support_type || !at::native::can_use_fast_route(self)) {
         return at::native::foreach_tensor_sign_slow_(self);
     }
-    
+
     _split_and_exec_npu_cmd_sign(self, self, true);
 }
 

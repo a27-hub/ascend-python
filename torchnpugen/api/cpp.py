@@ -1,5 +1,5 @@
 # Copyright (c) 2023 Huawei Technologies Co., Ltd
-# Copyright (c) 2019, Facebook CORPORATION. 
+# Copyright (c) 2019, Facebook CORPORATION.
 # All rights reserved.
 #
 # Licensed under the BSD 3-Clause License  (the "License");
@@ -188,7 +188,7 @@ def argumenttype_type(
                     binds, ConstRefCType(OptionalCType(BaseCType(tensorT)))
                 )
         elif str(t.elem) == "Scalar":
-            return NamedCType(binds, ConstRefCType(OptionalCType(BaseCType(scalarT))))   
+            return NamedCType(binds, ConstRefCType(OptionalCType(BaseCType(scalarT))))
         elif LooseVersion(PYTORCH_VERSION) >= LooseVersion('2.0'):
             if isinstance(t.elem, ListType) and str(t.elem.elem) == "int":
                 return NamedCType(binds, BaseCType(optionalIntArrayRefT))
