@@ -23,7 +23,7 @@ c10::SmallVector<int64_t, SIZE> cal_output_size(const at::Tensor &input, const a
                                                 at::IntArrayRef perm_x2_real, int64_t batch_split_factor_value)
 {
     c10::SmallVector<int64_t, SIZE> output_size;
-    
+
     auto m_dim = input.size(perm_x1_real[1]);
     auto batch_dim = input.size(perm_x1_real[0]);
     auto n_dim = weight.size(perm_x2_real[2]);
@@ -54,7 +54,7 @@ at::Tensor npu_transpose_batchmatmul(const at::Tensor &input, const at::Tensor &
     const auto perm_y_real = perm_y.value_or(at::IntArrayRef(default_perm_y));
     int64_t batch_split_factor_value = batch_split_factor.value_or(1);
     auto output_size = cal_output_size(input, weight, scale_real, perm_x1_real, perm_x2_real, batch_split_factor_value);
-    
+
     // Construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, input.options());
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();

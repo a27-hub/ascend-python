@@ -35,7 +35,7 @@ void _npu_reshape_and_cache(const at::Tensor &key, const at::Tensor &value, at::
     } else {
         reshapeparam.kvCacheCfg = ReshapeAndCacheParam::K_CACHE_V_CACHE;
     }
-    
+
     ParamSetter parametter;
     parametter.Input(key, true)
         .Input(value, true)

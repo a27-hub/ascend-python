@@ -42,7 +42,7 @@ c10::SmallVector<int64_t, SIZE> _transform_bias_rescale_qkv_out_size(
     TORCH_CHECK(D % num_head == 0, "D of _transform_bias_rescale_qkv must divide evenly by num_head", OPS_ERROR(ErrCode::VALUE));
     const auto dim_per_head = D / num_head;
     c10::SmallVector<int64_t, SIZE> output_shape = {B, num_head, T, dim_per_head};
-    
+
     return output_shape;
 }
 

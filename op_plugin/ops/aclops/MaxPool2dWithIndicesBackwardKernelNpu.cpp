@@ -70,7 +70,7 @@ at::Tensor &max_pool2d_with_indices_backward_out_nocheck(at::Tensor &grad_input,
             shape.emplace_back((i == 3) ? indices.size(i) / INDICES_TYPE_CONVERT / BLOCKSIZE : indices.size(i));
         }
         shape.emplace_back(BLOCKSIZE);
-        
+
         at::Tensor indices_para = indices.view(at::kShort);
         torch_npu::NPUStorageDesc &desc = torch_npu::NPUBridge::GetNpuStorageImpl(indices_para)->npu_desc_;
         desc.npu_format_ = ACL_FORMAT_NC1HWC0;

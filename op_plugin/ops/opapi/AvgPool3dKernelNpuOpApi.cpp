@@ -108,7 +108,7 @@ small_vector calc_avg_pool3d_output_size(const at::Tensor &self, at::IntArrayRef
         otime, oheight, owidth,
         "avg_pool3d()",
         true);
-    
+
     c10::SmallVector<int64_t, op_infer::SIZE> padding_sizes = {pad_d, pad_h, pad_w};
     at::IntArrayRef paddings = at::IntArrayRef(padding_sizes);
 
