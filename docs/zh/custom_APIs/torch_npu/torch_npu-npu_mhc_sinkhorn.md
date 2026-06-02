@@ -14,9 +14,9 @@
 
 $$
 \begin{aligned}
-P_{ij} &= \frac{\exp(x_{ij})}{\sum_k \exp(x_{ik})}\\
-H^{(0)}_{ij} &= P_{ij} + \varepsilon\\
-H^{(1)}_{ij} &= \frac{H^{(0)}_{ij}}{\sum_i H^{(0)}_{ij} + \varepsilon}
+\operatorname{norm\_out}[0] &= \operatorname{softmax}(x, \dim=-1) + \varepsilon\\
+\operatorname{sum\_out}[1] &= \sum_{\dim=-2} \operatorname{norm\_out}[0] + \varepsilon\\
+\operatorname{norm\_out}[1] &= \frac{\operatorname{norm\_out}[0]}{\operatorname{sum\_out}[1]}
 \end{aligned}
 $$
 
@@ -24,17 +24,17 @@ $$
 
 $$
 \begin{aligned}
-R^{(i)} &= \sum_j H^{(i)}_{ij} + \varepsilon\\
-\tilde{H}^{(i)}_{ij} &= \frac{H^{(i)}_{ij}}{R^{(i)}}\\
-C^{(i)} &= \sum_i \tilde{H}^{(i)}_{ij} + \varepsilon\\
-H^{(i+1)}_{ij} &= \frac{\tilde{H}^{(i)}_{ij}}{C^{(i)}}
+\operatorname{sum\_out}[2i] &= \sum_{\dim=-1} \operatorname{norm\_out}[2i-1] + \varepsilon\\
+\operatorname{norm\_out}[2i] &= \frac{\operatorname{norm\_out}[2i-1]}{\operatorname{sum\_out}[2i]}\\
+\operatorname{sum\_out}[2i+1] &= \sum_{\dim=-2} \operatorname{norm\_out}[2i] + \varepsilon\\
+\operatorname{norm\_out}[2i+1] &= \frac{\operatorname{norm\_out}[2i]}{\operatorname{sum\_out}[2i+1]}
 \end{aligned}
 $$
 
     3. 最终输出
 
 $$
-H_{\text{res}} = H^{(num\_iters)}
+\operatorname{output} = \operatorname{norm\_out}[2 \times num\_iters - 1]
 $$
 
 ## 函数原型
