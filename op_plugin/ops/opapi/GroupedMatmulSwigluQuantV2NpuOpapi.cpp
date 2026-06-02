@@ -283,7 +283,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "Format of weight in npu_grouped_matmul is FRACTAL_NZ, current CANN version "
                     "do not support with this format. Please try to update the version of CANN."
                     + OPS_ERROR(ErrCode::PARAM));
-        
+
         if (mxfp8w4_nz_input) {
             EXEC_NPU_CMD(
                 aclnnGroupedMatmulSwigluQuantWeightNzV2,

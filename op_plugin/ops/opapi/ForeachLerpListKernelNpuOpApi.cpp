@@ -98,7 +98,7 @@ std::vector<at::Tensor> _foreach_lerp(const at::TensorList tensors1, const at::T
     if (!is_support_nd_out) {
         return at::native::foreach_tensor_ternary_lerp_slow(tensors1, tensors2, weight);
     }
-    
+
     at::native::check_foreach_api_restrictions(tensors1, tensors2, weight);
     if (!at::native::can_use_fast_route({tensors1, tensors2, weight})) {
         return at::native::foreach_tensor_ternary_lerp_slow(tensors1, tensors2, weight);

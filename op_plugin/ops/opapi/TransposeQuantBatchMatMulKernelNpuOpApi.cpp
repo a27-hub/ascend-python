@@ -59,24 +59,24 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
     const auto default_perm_x2 = std::vector<int64_t>{b_idx, kb_idx, n_idx};
     const auto default_perm_y = std::vector<int64_t>{m_idx, b_idx, n_idx};
     const auto default_group_sizes = std::vector<int64_t>{0, 0, 0};
-    
+
     const auto perm_x1_real = perm_x1.value_or(at::IntArrayRef(default_perm_x1));
     const auto perm_x2_real = perm_x2.value_or(at::IntArrayRef(default_perm_x2));
     const auto perm_y_real = perm_y.value_or(at::IntArrayRef(default_perm_y));
     int64_t group_size_value =
         op_plugin::utils::check_and_get_group_size(group_sizes.value_or(at::IntArrayRef(default_group_sizes)));
     int64_t batch_split_factor_value = batch_split_factor.value_or(1);
-    
+
     auto output_size = npu_transpose_quant_batchmatmul_output_size(
         x1, x2, dtype, x1_scale_real, x2_scale_real, group_size_value,
         perm_x1_real, perm_x2_real, perm_y_real, batch_split_factor_value);
-    
+
     aclDataType dtype_value = c10_npu::GetAclDataType(dtype);
     at::ScalarType scalar_type = npu_preparation::convert_to_scalar_type(dtype_value);
-    
+
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, c10::dtype(scalar_type));
-    
-    
+
+
     bool is_nd_nz_format = op_plugin::utils::is_nz_format(x2) && !op_plugin::utils::is_nz_format(x1);
     TensorWrapper x1_wrapper = make_wrapper(x1, x1_dtype);
     TensorWrapper x2_wrapper = make_wrapper(x2, x2_dtype);
@@ -94,7 +94,7 @@ at::Tensor npu_transpose_quant_batchmatmul(const at::Tensor &x1, const at::Tenso
                      dtype_value, group_size_value, perm_x1_real, perm_x2_real, perm_y_real,
                      batch_split_factor_value, result_wrapper);
     }
-    
+
     return result;
 }
 } // namespace op_api

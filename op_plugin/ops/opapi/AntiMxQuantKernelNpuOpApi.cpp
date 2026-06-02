@@ -50,7 +50,7 @@ at::Tensor npu_anti_mx_quant(
                 "Mxscale dimNum should be between 2 and 8, got ", mxscale.sizes().size(), OPS_ERROR(ErrCode::VALUE));
     TORCH_CHECK(axis_value >= -1 * x.dim() && axis_value < x.dim(),
         "Param (axis) is out of x dimension range" + OPS_ERROR(ErrCode::PARAM));
-    
+
     at::Tensor y;
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
 
@@ -85,7 +85,7 @@ at::Tensor npu_anti_mx_quant(
     TensorWrapper x_wrapper = {x, x_acltype};
     TensorWrapper mxscale_wrapper = {mxscale, aclDataType::ACL_FLOAT8_E8M0};
     EXEC_NPU_CMD(aclnnAntiMxQuant, x_wrapper, mxscale_wrapper, axis_value, y_acltype, y);
-    
+
     return y;
 }
 
