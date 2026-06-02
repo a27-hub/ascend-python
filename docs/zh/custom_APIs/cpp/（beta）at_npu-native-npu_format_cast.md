@@ -24,7 +24,7 @@ customize_dtype：可选参数，指定格式转换时的数据类型，传入Py
 
 ## 约束说明
 
-- **customize_dtype**仅支持<term>Atlas A2 训练系列产品</term>910B/910C且CANN >= 9.1.0的场景，其他产品或CANN版本传入该参数时会抛出异常。
+- **customize_dtype**仅支持<term>Atlas A2 训练系列产品</term>及<term>Atlas A3 训练系列产品</term>且CANN >= 9.1.0的场景，其他产品或CANN版本传入该参数时会抛出异常。
 
 ## 支持的型号
 
