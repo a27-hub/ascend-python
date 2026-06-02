@@ -17,7 +17,7 @@
 cpp_extension_structured/
 ├── cpp_extension_structured/
 │   └── __init__.py                   # 构建用init文件
-├── build_and_run.sh                  # 编译安装及测试一键执行脚本
+├── build_and_run.sh                  # 编译、安装及测试一键执行脚本
 ├── deprecated.yaml                   # 废弃api配置
 ├── gen.sh                            # 一键生成脚本：调用 torchnpugen 生成算子适配代码
 ├── setup.py                          # 项目构建脚本，用于编译生成 whl 包
