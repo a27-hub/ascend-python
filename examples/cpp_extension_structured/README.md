@@ -1,6 +1,6 @@
 # 算子适配开发及调用（结构化）
 
-本文档基于C++ extensions方式，torch_npu单算子API进行自定义NPU算子适配开发的完整流程，流程涵盖了算子定义、算子适配、ATen IR注册绑定。本样例重点阐述结构化内核适配方法，该方法适用于aclnn接口与ATen IR语义一致，且适配层逻辑仅需负责output tensor申请的场景。
+本文档介绍基于C++ extensions方式与torch_npu单算子API进行自定义NPU算子适配开发的完整流程，流程涵盖了算子定义、算子适配、ATen IR注册绑定。本样例重点阐述结构化内核适配方法，该方法适用于aclnn接口与ATen IR语义一致，且适配层逻辑仅需负责output tensor申请的场景。
 
 ## 算子适配开发
 
@@ -17,6 +17,7 @@
 cpp_extension_structured/
 ├── cpp_extension_structured/
 │   └── __init__.py                   # 构建用init文件
+├── build_and_run.sh                  # 编译、安装及测试一键执行脚本
 ├── deprecated.yaml                   # 废弃api配置
 ├── gen.sh                            # 一键生成脚本：调用 torchnpugen 生成算子适配代码
 ├── setup.py                          # 项目构建脚本，用于编译生成 whl 包
@@ -80,7 +81,7 @@ cpp_extension_structured/
 
 ## 调用样例
 
-完成了算子适配开发后，即可实现C++ extensions的方式调用自定义算子。
+完成了算子适配开发后，即可通过C++ extensions的方式调用自定义算子。
 
 1. 完成自定义算子工程创建、算子开发及编译部署流程，具体可参考《[CANN Ascend C算子开发指南](https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0002.html)》。
 
