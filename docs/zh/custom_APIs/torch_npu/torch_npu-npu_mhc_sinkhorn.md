@@ -20,7 +20,7 @@ $$
 \end{aligned}
 $$
 
-    2. 第i次迭代\(i=1,2,..., \(num\_iters-1\)\)：
+    2. 第i次迭代(i=1,2,..., (num_iters-1))：
 
 $$
 \begin{aligned}
