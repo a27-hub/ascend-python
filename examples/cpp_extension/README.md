@@ -104,7 +104,7 @@ output = op_extension.ops.custom_add(x_npu, y_npu)
     ```bash
     python setup.py bdist_wheel
     ```
-    
+
     我们的编译工程通过setuptools已为用户封装好如何编译算子kernel和集成到PyTorch。
 
   2. 安装whl包
