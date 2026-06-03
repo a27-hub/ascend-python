@@ -25,6 +25,26 @@ class TestChunkCat(TestCase):
         output = torch._chunk_cat([x_npu, y_npu], dim, num_chunks, out=out)
         return output.to("cpu").numpy()
 
+    def cpu_op_exec_default(self, tensors, dim, num_chunks):
+        output = torch._chunk_cat(tensors, dim, num_chunks)
+        return output.numpy()
+
+    def npu_op_exec_default(self, tensors, dim, num_chunks):
+        tensors_npu = [tensor.to('npu') for tensor in tensors]
+        output = torch._chunk_cat(tensors_npu, dim, num_chunks)
+        return output.to("cpu").numpy()
+
+    def cpu_op_exec_with_shape(self, tensors, dim, num_chunks, out_shape, out_dtype):
+        out = torch.zeros(out_shape, dtype=out_dtype, device='cpu')
+        output = torch._chunk_cat(tensors, dim, num_chunks, out=out)
+        return output.numpy()
+
+    def npu_op_exec_with_shape(self, tensors, dim, num_chunks, out_shape, out_dtype):
+        tensors_npu = [tensor.to('npu') for tensor in tensors]
+        out = torch.zeros(out_shape, dtype=out_dtype, device='npu')
+        output = torch._chunk_cat(tensors_npu, dim, num_chunks, out=out)
+        return output.to("cpu").numpy()
+
     def test_chunk_cat_float32_dim0_out_fp32(self):
         x = self.generate_data((2, 3, 4), torch.float32)
         y = self.generate_data((2, 3, 4), torch.float32)
@@ -59,6 +79,22 @@ class TestChunkCat(TestCase):
         cpu_y = copy.deepcopy(y)
         cpu_output = self.cpu_op_exec(cpu_x, cpu_y, 1, 2, torch.float32)
         npu_output = self.npu_op_exec(x, y, 1, 2, torch.float32)
+        self.assertRtolEqual(cpu_output, npu_output)
+
+    def test_chunk_cat_float32_negative_dim_default(self):
+        x = self.generate_data((1, 2, 3), torch.float32)
+        y = self.generate_data((1, 2, 3), torch.float32)
+        cpu_output = self.cpu_op_exec_default([copy.deepcopy(x), copy.deepcopy(y)], -1, 5)
+        npu_output = self.npu_op_exec_default([x, y], -1, 5)
+        self.assertRtolEqual(cpu_output, npu_output)
+
+    def test_chunk_cat_float32_negative_dim_out_fp32(self):
+        x = self.generate_data((1, 2, 3), torch.float32)
+        y = self.generate_data((1, 2, 129), torch.float32)
+        cpu_tensors = [copy.deepcopy(x), copy.deepcopy(y)]
+        out_shape = torch._chunk_cat(cpu_tensors, -1, 5).shape
+        cpu_output = self.cpu_op_exec_with_shape(cpu_tensors, -1, 5, out_shape, torch.float32)
+        npu_output = self.npu_op_exec_with_shape([x, y], -1, 5, out_shape, torch.float32)
         self.assertRtolEqual(cpu_output, npu_output)
 
     def test_chunk_cat_float16_dim0_out_fp32(self):
