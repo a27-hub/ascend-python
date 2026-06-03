@@ -47,20 +47,20 @@ cpp_extension_structured/
 
     ```yaml
     custom:
-    - func: npu_fast_gelu_custom(Tensor self) -> Tensor
-      op_api: all_version
-      gen_opapi:
-        out:
-          size: self
-          dtype: self
-        exec: aclnnFastGelu
-    - func: npu_fast_gelu_custom_backward(Tensor grad, Tensor self) -> Tensor
-      op_api: all_version
-      gen_opapi:
-        out:
-          size: grad
-          dtype: grad
-        exec: aclnnFastGeluBackward
+      - func: npu_fast_gelu_custom(Tensor self) -> Tensor
+        op_api: all_version
+        gen_opapi:
+          out:
+            size: self
+            dtype: self
+          exec: aclnnFastGelu
+      - func: npu_fast_gelu_custom_backward(Tensor grad, Tensor self) -> Tensor
+        op_api: all_version
+        gen_opapi:
+          out:
+            size: grad
+            dtype: grad
+          exec: aclnnFastGeluBackward
     ```
 
 2. 在`cpp_extension_structured`目录下的`__init__.py`文件中，读取so文件。

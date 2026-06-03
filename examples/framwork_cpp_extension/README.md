@@ -56,6 +56,7 @@
   - 注册自定义算子converter
 
     ```python
+    from typing import Any
     from torchair import register_fx_node_ge_converter
     from torchair.ge import Tensor
     @register_fx_node_ge_converter(torch.ops.myops.add_custom.default)

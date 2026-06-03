@@ -132,6 +132,7 @@ pip install aclnn_extension*.whl
 安装完成后即可在代码中调用接入的自定义算子（如 `torch_npu.npu_fast_gelu_custom`）。例如用样例自带的测试用例验证：
 
 ```bash
+cd ..
 cd test
 python test_npu_fast_gelu_custom.py
 ```
