@@ -4709,6 +4709,47 @@ def npu_quant_matmul_reduce_sum_meta(x1, x2, *, x1_scale=None, x2_scale=None):
     return torch.empty(dst_shape, dtype=torch.bfloat16, device=x1.device)
 
 
+@impl(m, "npu_quant_matmul_activation_quant")
+def npu_quant_matmul_activation_quant_meta(x1, x2, x1scale, x2scale, activation_type='gelu_tanh', *,
+                                           axis=-1, round_mode='rint', bias=None, output_dtype=None,
+                                           x1_dtype=None, x2_dtype=None, x1scale_dtype=None, x2scale_dtype=None,
+                                           scale_alg=0, dst_type_max=0.0):
+    ALIGN_NUM = 2
+    BLOCK_SIZE = 32
+    
+    torch._check(x1.dim() >= 2, lambda: f"x1 must have at least 2 dimensions, but got {x1.dim()}" + ops_error(ErrCode.VALUE))
+    torch._check(x2.dim() >= 2, lambda: f"x2 must have at least 2 dimensions, but got {x2.dim()}" + ops_error(ErrCode.VALUE))
+    torch._check(x1.size(-1) == x2.size(-2), lambda: f"x1 last dim must equal x2 second last dim for matmul" + ops_error(ErrCode.VALUE))
+    
+    x1_dim_num = x1.dim()
+    x2_dim_num = x2.dim()
+    m = x1.size(x1_dim_num - 2)
+    k = x1.size(x1_dim_num - 1)
+    n = x2.size(x2_dim_num - 1)
+    
+    output_shape = []
+    for i in range(x1_dim_num - 2):
+        output_shape.append(x1.size(i))
+    output_shape.append(m)
+    output_shape.append(n)
+    
+    torch._check(axis >= -1 * len(output_shape) and axis < len(output_shape),
+                 lambda: f"Param (axis) is out of output dimension range, got axis={axis} but output has {len(output_shape)} dimensions" + ops_error(ErrCode.VALUE))
+    axis_change = axis if axis >= 0 else axis + len(output_shape)
+    
+    scale_shape = output_shape.copy()
+    dim_size = (scale_shape[axis_change] + BLOCK_SIZE - 1) // BLOCK_SIZE
+    dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
+    scale_shape[axis_change] = dim_size
+    scale_shape.append(ALIGN_NUM)
+    
+    output_dtype_val = x1.dtype if output_dtype is None else output_dtype
+    output = x1.new_empty(tuple(output_shape), dtype=output_dtype_val)
+    scale = x1.new_empty(tuple(scale_shape), dtype=torch.uint8)
+    
+    return (output, scale)
+
+
 @impl(m, "npu_quant_matmul_gelu")
 def npu_quant_matmul_gelu_meta(x1, x2, x1_scale, x2_scale, *, bias=None, approximate="gelu_erf"):
     INT4_IN_INT32 = 8
