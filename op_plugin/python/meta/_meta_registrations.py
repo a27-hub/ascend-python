@@ -4401,11 +4401,18 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
                     str(scale.dtype) + ops_error(ErrCode.TYPE),
         )
     if is_a4w4:
-        torch._check(
-            output_dtype == TORCH_DTYPE_MAP[torch.float16],
-            lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
-                    npu_dtype_to_str(output_dtype) + ops_error(ErrCode.TYPE),
-        )
+        if pertoken_scale is None:
+            torch._check(
+                output_dtype == TORCH_DTYPE_MAP[torch.float16],
+                lambda: "When input's dtype is int32 and pertoken_scale is None, output_dtype must be float16, but output_dtype is " +
+                        npu_dtype_to_str(output_dtype) + ops_error(ErrCode.TYPE),
+            )
+        else:
+            torch._check(
+                output_dtype in [TORCH_DTYPE_MAP[torch.float16], TORCH_DTYPE_MAP[torch.bfloat16]],
+                lambda: "When input's dtype is int32 and pertoken_scale is not None, output_dtype must be float16 or bfloat16, but output_dtype is " +
+                        npu_dtype_to_str(output_dtype) + ops_error(ErrCode.TYPE),
+            )
 
 
 def quant_matmul_group_sizes_check(*args):
