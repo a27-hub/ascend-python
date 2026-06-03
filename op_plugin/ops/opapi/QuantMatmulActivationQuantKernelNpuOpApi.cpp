@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "torch_npu/csrc/framework/utils/InternalFormatOpAdapter.h"
@@ -96,8 +97,14 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_matmul_activation_quant(
     
     aclDataType output_acltype;
     int64_t output_dtype_val = output_dtype.value_or(0);
-    bool special_output_type = (output_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-                                output_dtype_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
+    bool special_output_type = false;
+    
+    constexpr int64_t DTYPE_FLOAT4_E2M1 = 30;
+    constexpr int64_t DTYPE_FLOAT4_E1M2 = 31;
+    
+    if (output_dtype_val == DTYPE_FLOAT4_E2M1 || output_dtype_val == DTYPE_FLOAT4_E1M2) {
+        special_output_type = true;
+    }
     
     at::Tensor output;
     if (special_output_type) {
