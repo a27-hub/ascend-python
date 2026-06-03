@@ -1309,7 +1309,7 @@ official:
     op_api: [v2.9, newest]
     internal_format_opapi: [v2.9, newest]
 
-  - func: baddbmm.out(Tensor self, Tensor batch1, Tensor batch2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
+  - func: baddbmm.dtype_out(Tensor self, Tensor batch1, Tensor batch2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)
     op_api: [v2.9, newest]
     internal_format_opapi: [v2.9, newest]
 
