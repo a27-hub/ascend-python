@@ -21,6 +21,22 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+static bool is_broadcast_expanded(const at::Tensor &t)
+{
+    return t.stride(0) == 0;
+}
+
+static at::Tensor restore_broadcast_tensor(const at::Tensor &t)
+{
+    return t[0].unsqueeze(0);
+}
+
+static bool is_compatible_impl_enabled()
+{
+    static auto compatible_env = std::getenv("TORCH_NPU_USE_COMPATIBLE_IMPL");
+    return compatible_env != nullptr && std::string(compatible_env) == "1";
+}
+
 at::Tensor &bmm_out(
     const at::Tensor &self,
     const at::Tensor &mat2,
@@ -41,7 +57,26 @@ at::Tensor &bmm_out(
     if (op_plugin::utils::is_nz_format(mat2) && !op_plugin::utils::is_nz_format(self)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {
-        EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+        // TODO: Remove this preprocess when CANN aclnnBatchMatMul supports non-contiguous input.
+        // In compatible mode, _matmul_impl expands tensors before bmm for batch broadcasting,
+        // making them non-contiguous (stride(0)==0). Since aclnnBatchMatMul doesn't support
+        // non-contiguous input, CANN inserts an extra BroadcastTo op, hurting performance.
+        // Here we restore expanded tensors to their pre-broadcast contiguous form
+        // (e.g., [64,m,n] -> [1,m,n]) to avoid the redundant op.
+        // Skip restore when both inputs are broadcast-expanded, as restoring both to batch=1
+        // would make aclnnBatchMatMul produce a batch=1 output that mismatches expected batch=b.
+        bool both_broadcast = is_broadcast_expanded(self) && is_broadcast_expanded(mat2);
+        at::Tensor self_input = self;
+        at::Tensor mat2_input = mat2;
+        if (!both_broadcast && is_compatible_impl_enabled()) {
+            if (is_broadcast_expanded(self)) {
+                self_input = restore_broadcast_tensor(self);
+            }
+            if (is_broadcast_expanded(mat2)) {
+                mat2_input = restore_broadcast_tensor(mat2);
+            }
+        }
+        EXEC_NPU_CMD(aclnnBatchMatMul, self_input, mat2_input, result, cube_math_type);
     }
 
     auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
@@ -68,7 +103,19 @@ at::Tensor &bmm_out(
     if (op_plugin::utils::is_nz_format(mat2) && !op_plugin::utils::is_nz_format(self)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {
-        EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+        // TODO: Remove this preprocess when CANN aclnnBatchMatMul supports non-contiguous input.
+        bool both_broadcast = is_broadcast_expanded(self) && is_broadcast_expanded(mat2);
+        at::Tensor self_input = self;
+        at::Tensor mat2_input = mat2;
+        if (!both_broadcast && is_compatible_impl_enabled()) {
+            if (is_broadcast_expanded(self)) {
+                self_input = restore_broadcast_tensor(self);
+            }
+            if (is_broadcast_expanded(mat2)) {
+                mat2_input = restore_broadcast_tensor(mat2);
+            }
+        }
+        EXEC_NPU_CMD(aclnnBatchMatMul, self_input, mat2_input, result, cube_math_type);
     }
 
     auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
@@ -89,13 +136,23 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2, const at::ScalarT
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(output_dtype));
 
-    // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
-    // use and functions such as hfloat32 can be enabled through this switch
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nz_format(mat2) && !op_plugin::utils::is_nz_format(self)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {
-        EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+        // TODO: Remove this preprocess when CANN aclnnBatchMatMul supports non-contiguous input.
+        bool both_broadcast = is_broadcast_expanded(self) && is_broadcast_expanded(mat2);
+        at::Tensor self_input = self;
+        at::Tensor mat2_input = mat2;
+        if (!both_broadcast && is_compatible_impl_enabled()) {
+            if (is_broadcast_expanded(self)) {
+                self_input = restore_broadcast_tensor(self);
+            }
+            if (is_broadcast_expanded(mat2)) {
+                mat2_input = restore_broadcast_tensor(mat2);
+            }
+        }
+        EXEC_NPU_CMD(aclnnBatchMatMul, self_input, mat2_input, result, cube_math_type);
     }
 
     auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
@@ -117,13 +174,23 @@ at::Tensor bmm(const at::Tensor &self, const at::Tensor &mat2)
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options());
 
-    // cube_math_type, an enumeration value of type int8 that determines which calculation logic the CUBE unit should
-    // use and functions such as hfloat32 can be enabled through this switch
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nz_format(mat2) && !op_plugin::utils::is_nz_format(self)) {
         EXEC_NPU_CMD(aclnnBatchMatMulWeightNz, self, mat2, result, cube_math_type);
     } else {
-        EXEC_NPU_CMD(aclnnBatchMatMul, self, mat2, result, cube_math_type);
+        // TODO: Remove this preprocess when CANN aclnnBatchMatMul supports non-contiguous input.
+        bool both_broadcast = is_broadcast_expanded(self) && is_broadcast_expanded(mat2);
+        at::Tensor self_input = self;
+        at::Tensor mat2_input = mat2;
+        if (!both_broadcast && is_compatible_impl_enabled()) {
+            if (is_broadcast_expanded(self)) {
+                self_input = restore_broadcast_tensor(self);
+            }
+            if (is_broadcast_expanded(mat2)) {
+                mat2_input = restore_broadcast_tensor(mat2);
+            }
+        }
+        EXEC_NPU_CMD(aclnnBatchMatMul, self_input, mat2_input, result, cube_math_type);
     }
 
     auto outnames = at::namedinference::compute_bmm_outnames(result, self, mat2);
