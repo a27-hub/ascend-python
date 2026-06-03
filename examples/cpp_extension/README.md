@@ -80,7 +80,7 @@ at::Tensor run_ascendc_add(const at::Tensor &x, const at::Tensor &y)
 }  // namespace ascendc_ops
   ```
 
-上述主要介绍了一个自定义算子kernel如何集成必备流程。
+上述主要介绍了自定义算子kernel集成的必备流程。
 
 最后，通过创建ops路径，定义python接口，通过`module_name.ops.custom_add`可以调用自定义算子。测试样例如下：
 
