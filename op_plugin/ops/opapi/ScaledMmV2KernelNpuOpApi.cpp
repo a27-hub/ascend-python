@@ -283,7 +283,7 @@ make_deepseek_checker(ScalingType expected_a, ScalingType expected_b) {
 }
 
 using KernelDispatchItem = std::tuple<std::string, acceptance_fn, ScaledGemmImplementation>;
-const std::array<KernelDispatchItem, 6> scale_kernel_dispatch_table = {{
+const std::array<KernelDispatchItem, 4> scale_kernel_dispatch_table = {{
     {
         "tensorwise_tensorwise",
         scaled_blas::check_tensorwise_recipe,
@@ -293,16 +293,6 @@ const std::array<KernelDispatchItem, 6> scale_kernel_dispatch_table = {{
         "rowwise_rowwise",
         scaled_blas::check_rowwise_recipe,
         ScaledGemmImplementation::ROWWISE_ROWWISE
-    },
-    {
-        "deepseek_block_1x128_128x128",
-        make_deepseek_checker(ScalingType::BlockWise1x128, ScalingType::BlockWise128x128),
-        ScaledGemmImplementation::BLOCK_1x128_128x128
-    },
-    {
-        "deepseek_block_128x128_1x128",
-        make_deepseek_checker(ScalingType::BlockWise128x128, ScalingType::BlockWise1x128),
-        ScaledGemmImplementation::BLOCK_128x128_1x128
     },
     {
         "deepseek_block_1x128_1x128",
@@ -348,6 +338,12 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
             mat_b.scalar_type() != c10::ScalarType::Float8_e5m2,
         "Multiplication of two Float8_e5m2 matrices is not supported",
         OPS_ERROR(ErrCode::TYPE));
+
+    // Check sizes
+    TORCH_CHECK(mat_a.dim() == 2, "mat_a must be a matrix, please check mat_a dim num." ,OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(mat_b.dim() == 2, "mat_b must be a matrix, please check mat_b dim num." ,OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat_b shapes cannot be multiplied (",mat_a.sizes()[0],
+        "x", mat_b.sizes()[1], " and ", mat_b.sizes()[0], "x", mat_b.sizes()[1], ")", OPS_ERROR(ErrCode::PARAM));
 
     // Check data types: scale_a and scale_b must be float32 or float8_e8m0 type
     // Check scale_a and scale_b are not empty
@@ -398,7 +394,6 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
     "- TensorWise: mat_a/mat_b must be float8; scales float32; scale_a and scale_b are singletons (scalar).\n"
     "- RowWise: mat_a/mat_b float8; scales float32; scale_a shape (", mat_a.size(0), ", 1); scale_b shape (1, ", mat_b.size(1), "); both contiguous.\n"
     "- BlockWise 1x128: mat_a/mat_b must be float8; scales float32; scale_a shape (", mat_a.size(0), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", mat_b.size(1), "); outer-dim-major.\n"
-    "- BlockWise 128x128: mat_a/mat_b float8; scales float32; scale_a shape (", ceil_div<int64_t>(mat_a.size(0), 128), ", ", ceil_div<int64_t>(mat_a.size(1), 128), "); scale_b shape (", ceil_div<int64_t>(mat_b.size(0), 128), ", ", ceil_div<int64_t>(mat_b.size(1), 128), "); 16B aligned strides.\n"
     "- Blockwise 1x32: mat_a/mat_b float8; scales float8_e8m0fnu; scale_a elements=", round_up<int64_t>(mat_a.size(0), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_a.size(1), 32), 4), "; scale_b elements=", round_up<int64_t>(mat_b.size(1), 128) * round_up<int64_t>(ceil_div<int64_t>(mat_b.size(0), 32), 4), "; contiguous only.\n"
     "Current inputs: mat_a.dtype=", mat_a.scalar_type(), ", scale_a.dtype=", scale_a[0].scalar_type(), ", scale_a.shape=", scale_a[0].sizes(),
     ", mat_b.dtype=", mat_b.scalar_type(), ", scale_b.dtype=", scale_b[0].scalar_type(), ", scale_b.shape=", scale_b[0].sizes()
@@ -471,11 +466,28 @@ at::Tensor _scaled_mm_v2(const at::Tensor& mat_a, const at::Tensor& mat_b,
         );
     }
 
+
+
+    //////////////rowwise transfer//////////////
+    at::Tensor processed_scale_a = scale_a[0];
+    at::Tensor processed_scale_b = scale_b[0];
+    if (mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn
+        && mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn
+        && scale_a[0].scalar_type() == c10::ScalarType::Float
+        && scale_b[0].scalar_type() == c10::ScalarType::Float) {
+        if (scale_a[0].dim() == 2 && scale_a[0].sizes()[1] == 1 && scale_b[0].dim() == 2 && scale_b[0].sizes()[0] == 1) {
+            TORCH_CHECK(mat_a.stride(1) == 1, "mat_a must be contiguous in last dim");
+            TORCH_CHECK(mat_b.stride(0) == 1, "mat_b must be contiguous in first dim");
+            processed_scale_a = scale_a[0].squeeze(-1).contiguous();
+            processed_scale_b = scale_b[0].squeeze(0);
+        }
+    }
+
     //////////////parameters transfer//////////////
     at::Tensor x1 = mat_a;
     at::Tensor x2 = mat_b;
-    c10::optional<at::Tensor> pertoken_scale = scale_a.size() > 0 ? c10::make_optional(scale_a[0]) : c10::nullopt;
-    at::Tensor scale = scale_b.size() > 0 ? scale_b[0] : at::Tensor();
+    c10::optional<at::Tensor> pertoken_scale = scale_a.size() > 0 ? c10::make_optional(processed_scale_a) : c10::nullopt;
+    at::Tensor scale = scale_b.size() > 0 ? processed_scale_b : at::Tensor();
     c10::optional<int64_t> scale_dtype = c10::nullopt;   // scale_b.scalar_type()
 
     c10::optional<int64_t> output_dtype = ToIntType(out_dtype);

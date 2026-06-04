@@ -157,9 +157,9 @@ at::Tensor _scaled_mm(const at::Tensor &mat_a,
     const at::Tensor &scale_a,
     const at::Tensor &scale_b,
     const std::optional<at::Tensor>& bias,
-    const std::optional<at::Tensor>& scale_result, // todo：对result做scale，仅当output为float8时才有用，
-    std::optional<c10::ScalarType> out_dtype,   // todo: 当前cpp中不支持float8
-    bool use_fast_accum) // todo
+    const std::optional<at::Tensor>& scale_result, // 对result做scale，仅当output为float8时才有用，
+    std::optional<c10::ScalarType> out_dtype,   // 当前不支持float8
+    bool use_fast_accum)
 
 {
 
@@ -192,7 +192,6 @@ at::Tensor _scaled_mm(const at::Tensor &mat_a,
                  scale_b.scalar_type() == npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0)),
         "scale_b must be float32 or float8_e8m0 type, but got ", scale_b.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
-
 
     // Check bias (reference: _scaled_mm_out_cuda)
     if (bias.has_value()) {
@@ -244,11 +243,27 @@ at::Tensor _scaled_mm(const at::Tensor &mat_a,
     TORCH_CHECK(mat_a.sizes()[1] == mat_b.sizes()[0], "mat_a and mat_b shapes cannot be multiplied (",mat_a.sizes()[0],
         "x", mat_b.sizes()[1], " and ", mat_b.sizes()[0], "x", mat_b.sizes()[1], ")", OPS_ERROR(ErrCode::PARAM));
 
+
+    //////////////rowwise transfer//////////////
+    at::Tensor processed_scale_a = scale_a;
+    at::Tensor processed_scale_b = scale_b;
+    if (mat_a.scalar_type() == c10::ScalarType::Float8_e4m3fn
+        && mat_b.scalar_type() == c10::ScalarType::Float8_e4m3fn
+        && scale_a.scalar_type() == c10::ScalarType::Float
+        && scale_b.scalar_type() == c10::ScalarType::Float) {
+        if (scale_a.dim() == 2 && scale_a.sizes()[1] == 1 && scale_b.dim() == 2 && scale_b.sizes()[0] == 1) {
+            TORCH_CHECK(mat_a.stride(1) == 1, "mat_a must be contiguous in last dim");
+            TORCH_CHECK(mat_b.stride(0) == 1, "mat_b must be contiguous in first dim");
+            processed_scale_a = scale_a.squeeze(-1).contiguous();
+            processed_scale_b = scale_b.squeeze(0);
+        }
+    }
+
     //////////////parameters transfer//////////////
     at::Tensor x1 = mat_a;
     at::Tensor x2 = mat_b;
-    c10::optional<at::Tensor> pertoken_scale = scale_a;
-    at::Tensor scale = scale_b;
+    c10::optional<at::Tensor> pertoken_scale = processed_scale_a;
+    at::Tensor scale = processed_scale_b;
     c10::optional<int64_t> scale_dtype = c10::nullopt;   // scale_b.scalar_type()
 
     c10::optional<int64_t> output_dtype = ToIntType(out_dtype);
@@ -259,7 +274,8 @@ at::Tensor _scaled_mm(const at::Tensor &mat_a,
     c10::OptionalIntArrayRef group_sizes = c10::nullopt;
     c10::optional<at::Tensor> y_scale = c10::nullopt;
 
-   ///////////////////////////////////////////npu_quant_matmul//////////////////////////////////////
+
+///////////////////////////////////////////npu_quant_matmul//////////////////////////////////////
     if (is_nz_format(x2)) {
         static const bool is_quant_matmul_weight_nz_available = check_aclnn_kernel_available("aclnnQuantMatmulWeightNz");
         TORCH_CHECK(is_quant_matmul_weight_nz_available,

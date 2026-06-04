@@ -373,6 +373,298 @@ class TestScaledGroupedMmV2(TestCase):
             )
         self.assertTrue("K_SPLIT (group_type=2) is not supported yet" in str(context.exception))
 
+  # ========== FP8 K-C 量化功能测试 (pertoken-perchannel, scale 为 fp32) ==========
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_fp8_kc_type_m_e1(self):
+        """测试用例: TypeM (M分组), E=1, 1个group - FP8 K-C量化 (pertoken-perchannel)
+
+        X: (128, 256), M=128, K=256
+        W: (1, 256, 64), E=1, K=256, N=64
+        scale_a (pertoken): (128,)
+        scale_b (perchannel): (1, 64)
+        offs: [128]
+        输出: (128, 64)
+        """
+        M, K, N = 128, 256, 64
+        E = 1
+        seed = 42
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: pertoken (M,) 和 perchannel (E, N)
+        scale_a = torch.rand(M, dtype=torch.float32)  # pertoken
+        scale_b = torch.rand(E, N, dtype=torch.float32)  # perchannel
+
+        # offs: [M]
+        offs = torch.tensor([M], dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_fp8_kc_type_m_e2(self):
+        """测试用例: TypeM (M分组), E=2, 2个group - FP8 K-C量化 (pertoken-perchannel)
+
+        Group 0: M1=128, K=256, N=64
+        Group 1: M2=128, K=256, N=64
+        X: (256, 256), M_total=256
+        W: (2, 256, 64), E=2
+        scale_a (pertoken): (256,)
+        scale_b (perchannel): (2, 64)
+        offs: [128, 256]
+        输出: (256, 64)
+        """
+        group_m = [128, 128]
+        E = len(group_m)
+        M_total = sum(group_m)
+        K, N = 256, 64
+        seed = 123
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M_total, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: pertoken (M_total,) 和 perchannel (E, N)
+        scale_a = torch.rand(M_total, dtype=torch.float32)  # pertoken
+        scale_b = torch.rand(E, N, dtype=torch.float32)  # perchannel
+
+        # offs: [M1, M_total]
+        offs = torch.tensor([group_m[0], M_total], dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M_total, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_fp8_kc_type_m_e4(self):
+        """测试用例: TypeM (M分组), E=4, 4个group - FP8 K-C量化 (pertoken-perchannel)
+
+        Group 0-3: M=64 each, K=256, N=128
+        X: (256, 256), M_total=256
+        W: (4, 256, 128), E=4
+        scale_a (pertoken): (256,)
+        scale_b (perchannel): (4, 128)
+        offs: [64, 128, 192, 256]
+        输出: (256, 128)
+        """
+        group_m = [64, 64, 64, 64]
+        E = len(group_m)
+        M_total = sum(group_m)
+        K, N = 256, 128
+        seed = 456
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M_total, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: pertoken (M_total,) 和 perchannel (E, N)
+        scale_a = torch.rand(M_total, dtype=torch.float32)  # pertoken
+        scale_b = torch.rand(E, N, dtype=torch.float32)  # perchannel
+
+        # offs: cumsum of group_m
+        import itertools
+        offs = torch.tensor(list(itertools.accumulate(group_m)), dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M_total, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    # ========== MXFP8 功能测试 (scale 为 float8_e8m0fnu) ==========
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_mxfp8_type_m_e1(self):
+        """测试用例: TypeM (M分组), E=1, 1个group - MXFP8 (scale 为 float8_e8m0fnu)
+
+        X: (128, 128), M=128, K=128
+        W: (1, 128, 64), E=1, K=128, N=64
+        scale_a (pertoken): (128, num_blocks/2, 2) = (128, 2, 2)
+        scale_b (perchannel): (num_blocks/2, N, 2) = (2, 64, 2)  (E=1时squeeze)
+        offs: [128]
+        输出: (128, 64)
+        """
+        M, K, N = 128, 128, 64
+        E = 1
+        num_blocks_half = K // 64  # K/32/2 = K/64
+        seed = 42
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: MXFP8 格式的 scale (float8_e8m0fnu)
+        # scale_a (pertoken): (M, num_blocks/2, 2)
+        scale_a = torch.rand(M, num_blocks_half, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+        # scale_b (perchannel): (E, num_blocks/2, N, 2) -> E=1 时 squeeze 为 (num_blocks/2, N, 2)
+        scale_b = torch.rand(num_blocks_half, N, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+
+        # offs: [M]
+        offs = torch.tensor([M], dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_mxfp8_type_m_e2(self):
+        """测试用例: TypeM (M分组), E=2, 2个group - MXFP8 (scale 为 float8_e8m0fnu)
+
+        Group 0: M1=128, K=128, N=64
+        Group 1: M2=128, K=128, N=64
+        X: (256, 128), M_total=256
+        W: (2, 128, 64), E=2
+        scale_a (pertoken): (256, num_blocks/2, 2) = (256, 2, 2)
+        scale_b (perchannel): (E, num_blocks/2, N, 2) = (2, 2, 64, 2)
+        offs: [128, 256]
+        输出: (256, 64)
+        """
+        group_m = [128, 128]
+        E = len(group_m)
+        M_total = sum(group_m)
+        K, N = 128, 64
+        num_blocks_half = K // 64  # K/32/2 = K/64
+        seed = 456
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M_total, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: MXFP8 格式的 scale (float8_e8m0fnu)
+        # scale_a (pertoken): (M_total, num_blocks/2, 2)
+        scale_a = torch.rand(M_total, num_blocks_half, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+        # scale_b (perchannel): (E, num_blocks/2, N, 2)
+        scale_b = torch.rand(E, num_blocks_half, N, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+
+        # offs: [M1, M_total]
+        offs = torch.tensor([group_m[0], M_total], dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M_total, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_grouped_mm_v2_mxfp8_type_m_multi_groups(self):
+        """测试用例: TypeM (M分组), E=6, 多个group - MXFP8 (scale 为 float8_e8m0fnu)
+
+        group_m = [128, 128, 256, 128, 512, 6]
+        X: (1138, 128), M_total=1138
+        W: (6, 128, 64), E=6
+        scale_a (pertoken): (1138, num_blocks/2, 2)
+        scale_b (perchannel): (6, num_blocks/2, N, 2)
+        offs: cumsum of group_m
+        输出: (1138, 64)
+        """
+        group_m = [128, 128, 256, 128, 512, 6]
+        E = len(group_m)
+        M_total = sum(group_m)
+        K, N = 128, 64
+        num_blocks_half = K // 64  # K/32/2 = K/64
+        seed = 789
+        torch.manual_seed(seed)
+
+        # 生成 FP8 数据
+        X_fp8 = torch.rand(M_total, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+        W_fp8 = torch.rand(E, K, N, dtype=torch.bfloat16).to(torch.float8_e4m3fn)
+
+        # scale: MXFP8 格式的 scale (float8_e8m0fnu)
+        # scale_a (pertoken): (M_total, num_blocks/2, 2)
+        scale_a = torch.rand(M_total, num_blocks_half, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+        # scale_b (perchannel): (E, num_blocks/2, N, 2)
+        scale_b = torch.rand(E, num_blocks_half, N, 2, dtype=torch.bfloat16).to(torch.float8_e8m0fnu)
+
+        # offs: cumsum of group_m
+        import itertools
+        offs = torch.tensor(list(itertools.accumulate(group_m)), dtype=torch.int32)
+
+        # NPU 计算
+        output = torch._scaled_grouped_mm_v2(
+            X_fp8.npu(), W_fp8.npu(),
+            [scale_a.npu()], [SCALING_TYPE_ROWWISE], [],
+            [scale_b.npu()], [SCALING_TYPE_ROWWISE], [],
+            offs.npu(), None, torch.bfloat16,
+            contraction_dim=(1,),
+            use_fast_accum=False
+        )
+
+        # 验证输出形状和类型
+        if isinstance(output, (list, tuple)):
+            output = output[0]
+        self.assertEqual(output.shape, (M_total, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
 
 if __name__ == "__main__":
     run_tests()

@@ -324,5 +324,154 @@ class TestScaledMmV2(TestCase):
         self.assertTrue("shapes cannot be multiplied" in str(context.exception))
 
 
+    # ========== FP8 Per-Token 功能测试 ==========
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_mm_v2_fp8_pertoken_basic(self):
+        """测试用例1: FP8 Per-Token 基础功能测试 (M=8192, K=320, N=2560)"""
+        M, K, N = 8192, 320, 2560
+        seed = 42
+        torch.manual_seed(seed)
+
+        # 生成数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).npu()
+        W_fp8 = torch.rand(N, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).t().npu()  # (K, N)
+        scale_a = [torch.rand(M, dtype=torch.float32).npu()]
+        scale_b = [torch.rand(N, dtype=torch.float32).npu()]
+        scale_recipe_a = [0]  # ScalingType enum
+        scale_recipe_b = [0]
+        swizzle_a = []
+        swizzle_b = []
+        contraction_dim = []
+
+        # NPU 计算
+        output = torch._scaled_mm_v2(X_fp8, W_fp8,
+                                     scale_a, scale_recipe_a, swizzle_a,
+                                     scale_b, scale_recipe_b, swizzle_b,
+                                     None, torch.bfloat16, contraction_dim, False)
+
+        # 验证输出形状和类型
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_mm_v2_fp8_pertoken_medium(self):
+        """测试用例2: FP8 Per-Token 中等尺寸功能测试 (M=256, K=512, N=1024)"""
+        M, K, N = 256, 512, 1024
+        seed = 123
+        torch.manual_seed(seed)
+
+        # 生成数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).npu()
+        W_fp8 = torch.rand(N, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).t().npu()  # (K, N)
+        scale_a = [torch.rand(M, dtype=torch.float32).npu()]
+        scale_b = [torch.rand(N, dtype=torch.float32).npu()]
+        scale_recipe_a = [0]
+        scale_recipe_b = [0]
+        swizzle_a = []
+        swizzle_b = []
+        contraction_dim = []
+
+        # NPU 计算
+        output = torch._scaled_mm_v2(X_fp8, W_fp8,
+                                     scale_a, scale_recipe_a, swizzle_a,
+                                     scale_b, scale_recipe_b, swizzle_b,
+                                     None, torch.bfloat16, contraction_dim, False)
+
+        # 验证输出形状和类型
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_mm_v2_fp8_pertoken_large(self):
+        """测试用例3: FP8 Per-Token 大尺寸功能测试 (M=4096, K=2048, N=4096)"""
+        M, K, N = 4096, 2048, 4096
+        seed = 456
+        torch.manual_seed(seed)
+
+        # 生成数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).npu()
+        W_fp8 = torch.rand(N, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).t().npu()  # (K, N)
+        scale_a = [torch.rand(M, dtype=torch.float32).npu()]
+        scale_b = [torch.rand(N, dtype=torch.float32).npu()]
+        scale_recipe_a = [0]
+        scale_recipe_b = [0]
+        swizzle_a = []
+        swizzle_b = []
+        contraction_dim = []
+
+        # NPU 计算
+        output = torch._scaled_mm_v2(X_fp8, W_fp8,
+                                     scale_a, scale_recipe_a, swizzle_a,
+                                     scale_b, scale_recipe_b, swizzle_b,
+                                     None, torch.bfloat16, contraction_dim, False)
+
+        # 验证输出形状和类型
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.bfloat16)
+        self.assertTrue(output.device.type == 'npu')
+
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_mm_v2_fp8_pertoken_float16_output(self):
+        """测试用例4: FP8 Per-Token Float16 输出功能测试"""
+        M, K, N = 256, 512, 1024
+        seed = 1001
+        torch.manual_seed(seed)
+
+        # 生成数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).npu()
+        W_fp8 = torch.rand(N, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).t().npu()  # (K, N)
+        scale_a = [torch.rand(M, dtype=torch.float32).npu()]
+        scale_b = [torch.rand(N, dtype=torch.float32).npu()]
+        scale_recipe_a = [0]
+        scale_recipe_b = [0]
+        swizzle_a = []
+        swizzle_b = []
+        contraction_dim = []
+
+        # NPU 计算（Float16 输出）
+        output = torch._scaled_mm_v2(X_fp8, W_fp8,
+                                     scale_a, scale_recipe_a, swizzle_a,
+                                     scale_b, scale_recipe_b, swizzle_b,
+                                     None, torch.float16, contraction_dim, False)
+
+        # 验证输出形状和类型
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.float16)
+        self.assertTrue(output.device.type == 'npu')
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_scaled_mm_v2_fp8_pertoken_float32_output(self):
+        """测试用例5: FP8 Per-Token Float32 输出功能测试"""
+        M, K, N = 256, 512, 1024
+        seed = 2002
+        torch.manual_seed(seed)
+
+        # 生成数据
+        X_fp8 = torch.rand(M, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).npu()
+        W_fp8 = torch.rand(N, K, dtype=torch.bfloat16).to(torch.float8_e4m3fn).t().npu()  # (K, N)
+        scale_a = [torch.rand(M, dtype=torch.float32).npu()]
+        scale_b = [torch.rand(N, dtype=torch.float32).npu()]
+        scale_recipe_a = [0]
+        scale_recipe_b = [0]
+        swizzle_a = []
+        swizzle_b = []
+        contraction_dim = []
+
+        # NPU 计算（Float32 输出）
+        output = torch._scaled_mm_v2(X_fp8, W_fp8,
+                                     scale_a, scale_recipe_a, swizzle_a,
+                                     scale_b, scale_recipe_b, swizzle_b,
+                                     None, torch.float32, contraction_dim, False)
+
+        # 验证输出形状和类型
+        self.assertEqual(output.shape, (M, N))
+        self.assertEqual(output.dtype, torch.float32)
+        self.assertTrue(output.device.type == 'npu')
+
+
 if __name__ == "__main__":
     run_tests()
