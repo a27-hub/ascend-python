@@ -25,6 +25,9 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
                                     const at::Tensor& expanded_src_to_dst_row,
                                     const c10::optional<at::Tensor>& expert_for_source_row,
                                     const c10::optional<int64_t> drop_pad_mode,
+                                    const at::IntArrayRef zero_expert_range,
+                                    const at::IntArrayRef copy_expert_range,
+                                    const at::IntArrayRef constant_expert_range,
                                     const c10::optional<int64_t> k)
 {
     static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
