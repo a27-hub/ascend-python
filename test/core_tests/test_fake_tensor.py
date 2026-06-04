@@ -6188,7 +6188,6 @@ class TestRotateQuant(TestCase):
 
 class TestNpuRmsNormBackwardQuant(TestCase):
     def test_npu_rms_norm_backward_quant_meta(self):
-        # 3D, float16, quant mode (INT8, dst_type=2)
         dy = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
         x = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
         rstd = torch.randn(2, 4, dtype=torch.float32).to("npu")
