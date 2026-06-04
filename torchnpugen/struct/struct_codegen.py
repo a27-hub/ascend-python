@@ -67,6 +67,122 @@ ${return_type} ${func_name}(${args_str})
 """)
 
 
+LEAKY_RELU_OPAPI_HELPERS = """\
+namespace {
+constexpr double kLeakyReluFp16Max = 65504.0;
+constexpr double kLeakyReluBf16Max = 3.3895313892515355e38;
+
+inline bool should_use_leaky_relu_fp32_fallback(const at::Tensor& self, const at::Scalar& negative_slope)
+{
+    const auto dtype = self.scalar_type();
+    if (dtype != at::kHalf && dtype != at::kBFloat16) {
+        return false;
+    }
+
+    const double slope = negative_slope.to<double>();
+    if (!std::isfinite(slope)) {
+        return true;
+    }
+
+    const double limit = dtype == at::kHalf ? kLeakyReluFp16Max : kLeakyReluBf16Max;
+    return std::abs(slope) > limit;
+}
+
+inline at::Tensor cast_leaky_relu_tensor(const at::Tensor& tensor, at::ScalarType dtype)
+{
+    return tensor.scalar_type() == dtype ? tensor : tensor.to(dtype);
+}
+} // namespace
+
+"""
+
+
+LEAKY_RELU_FUNCTIONAL = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    ${do_compatibility}
+    if (should_use_leaky_relu_fp32_fallback(self, negative_slope)) {
+        auto self_fp32 = cast_leaky_relu_tensor(self, at::kFloat);
+        auto out_fp32 = op_api::${func_name}(self_fp32, negative_slope);
+        return cast_leaky_relu_tensor(out_fp32, self.scalar_type());
+    }
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = self.scalar_type();
+    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0,
+                                                                self.options().dtype(output_dtype_0));
+    ${exec_cmd}(${aclnnargs});
+    return out;
+}
+""")
+
+
+LEAKY_RELU_OUT = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    ${do_compatibility}
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = self.scalar_type();
+    npu_preparation::check_tensor({self}, out, output_dtype_0, output_size_0);
+    if (should_use_leaky_relu_fp32_fallback(self, negative_slope)) {
+        out.copy_(op_api::leaky_relu(self, negative_slope));
+        return out;
+    }
+    ${exec_cmd}(${aclnnargs});
+    return out;
+}
+""")
+
+
+LEAKY_RELU_INPLACE = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    ${do_compatibility}
+    if (should_use_leaky_relu_fp32_fallback(self, negative_slope)) {
+        self.copy_(op_api::leaky_relu(self, negative_slope));
+        return self;
+    }
+    ${exec_cmd}(${aclnnargs});
+    return self;
+}
+""")
+
+
+LEAKY_RELU_BACKWARD_FUNCTIONAL = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    ${do_compatibility}
+    if (should_use_leaky_relu_fp32_fallback(self, negative_slope)) {
+        auto grad_output_fp32 = cast_leaky_relu_tensor(grad_output, at::kFloat);
+        auto self_fp32 = cast_leaky_relu_tensor(self, at::kFloat);
+        auto out_fp32 = op_api::${func_name}(grad_output_fp32, self_fp32, negative_slope, self_is_result);
+        return cast_leaky_relu_tensor(out_fp32, self.scalar_type());
+    }
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = self.scalar_type();
+    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0,
+                                                                grad_output.options().dtype(output_dtype_0));
+    ${exec_cmd}(${aclnnargs});
+    return out;
+}
+""")
+
+
+LEAKY_RELU_BACKWARD_OUT = CodeTemplate("""\
+${return_type} ${func_name}(${args_str})
+{
+    auto output_size_0 = self.sizes();
+    auto output_dtype_0 = grad_input.scalar_type();
+    npu_preparation::check_tensor({grad_output, self}, grad_input, output_dtype_0, output_size_0);
+    if (should_use_leaky_relu_fp32_fallback(self, negative_slope)) {
+        grad_input.copy_(op_api::leaky_relu_backward(grad_output, self, negative_slope, self_is_result));
+        return grad_input;
+    }
+    ${exec_cmd}(${aclnnargs});
+    return grad_input;
+}
+""")
+
+
 DO_COMPATIBILITY = CodeTemplate("""\
 DO_COMPATIBILITY(${aclnnname}, acl_op::${func_name}(${args_exprs_str}));
 """)
@@ -88,66 +204,6 @@ at::Tensor ${result_name} = npu_preparation::apply_tensor_without_format(${size}
 
 CHECK_TENSOR = CodeTemplate("""\
 npu_preparation::check_tensor({${input}}, ${result_name}, ${dtype}, ${size});
-""")
-
-
-LEAKY_RELU_BACKWARD_FP32_FALLBACK_HELPER = CodeTemplate("""\
-namespace {
-constexpr double FP16_MAX_FINITE = 65504.0;
-constexpr double BF16_MAX_FINITE = 3.3895313892515355e38;
-
-bool should_use_leaky_relu_backward_fp32_fallback(at::ScalarType dtype, const at::Scalar &negative_slope)
-{
-    if (dtype != at::kHalf && dtype != at::kBFloat16) {
-        return false;
-    }
-
-    const double slope = negative_slope.to<double>();
-    if (!std::isfinite(slope)) {
-        return true;
-    }
-
-    const double limit = (dtype == at::kHalf) ? FP16_MAX_FINITE : BF16_MAX_FINITE;
-    return std::abs(slope) > limit;
-}
-} // namespace
-""")
-
-
-LEAKY_RELU_BACKWARD_DEFINITION = CodeTemplate("""\
-${return_type} ${func_name}(${args_str})
-{
-    auto output_dtype_0 = self.scalar_type();
-    if (should_use_leaky_relu_backward_fp32_fallback(output_dtype_0, negative_slope)) {
-        auto grad_output_fp32 = grad_output.to(at::kFloat);
-        auto self_fp32 = self.to(at::kFloat);
-        auto out_fp32 = op_api::leaky_relu_backward(grad_output_fp32, self_fp32, negative_slope, self_is_result);
-        return out_fp32.to(grad_output.options().dtype(output_dtype_0));
-    }
-    ${do_compatibility}
-    auto output_size_0 = self.sizes();
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size_0,
-                                                                grad_output.options().dtype(output_dtype_0));
-    ${exec_cmd}(${aclnnargs});
-    return${result};
-}
-""")
-
-
-LEAKY_RELU_BACKWARD_OUT_DEFINITION = CodeTemplate("""\
-${return_type} ${func_name}(${args_str})
-{
-    auto output_size_0 = self.sizes();
-    auto output_dtype_0 = grad_input.scalar_type();
-    npu_preparation::check_tensor({grad_output, self}, grad_input, output_dtype_0, output_size_0);
-    if (should_use_leaky_relu_backward_fp32_fallback(output_dtype_0, negative_slope)) {
-        auto fallback_out = op_api::leaky_relu_backward(grad_output, self, negative_slope, self_is_result);
-        grad_input.copy_(fallback_out);
-        return grad_input;
-    }
-    ${exec_cmd}(${aclnnargs});
-    return${result};
-}
 """)
 
 
@@ -409,6 +465,75 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
         cpu_scalar_h2d_code = _gen_cpu_scalar_h2d_code(struct, args)
         cmd_args = _replace_cmd_args_with_copy(struct, args)
 
+        if name == "leaky_relu":
+            return [
+                remove_empty_lines(
+                    LEAKY_RELU_FUNCTIONAL.substitute(
+                        return_type=return_type,
+                        func_name=name,
+                        args_str=args_str,
+                        do_compatibility=do_compatibility,
+                        exec_cmd=exec_cmd,
+                        aclnnargs=cmd_args,
+                    )
+                )
+            ]
+
+        if name == "leaky_relu_out":
+            return [
+                remove_empty_lines(
+                    LEAKY_RELU_OUT.substitute(
+                        return_type=return_type,
+                        func_name=name,
+                        args_str=args_str,
+                        do_compatibility=do_compatibility,
+                        exec_cmd=exec_cmd,
+                        aclnnargs=cmd_args,
+                    )
+                )
+            ]
+
+        if name == "leaky_relu_":
+            return [
+                remove_empty_lines(
+                    LEAKY_RELU_INPLACE.substitute(
+                        return_type=return_type,
+                        func_name=name,
+                        args_str=args_str,
+                        do_compatibility=do_compatibility,
+                        exec_cmd=exec_cmd,
+                        aclnnargs=cmd_args,
+                    )
+                )
+            ]
+
+        if name == "leaky_relu_backward":
+            return [
+                remove_empty_lines(
+                    LEAKY_RELU_BACKWARD_FUNCTIONAL.substitute(
+                        return_type=return_type,
+                        func_name=name,
+                        args_str=args_str,
+                        do_compatibility=do_compatibility,
+                        exec_cmd=exec_cmd,
+                        aclnnargs=cmd_args,
+                    )
+                )
+            ]
+
+        if name == "leaky_relu_backward_out":
+            return [
+                remove_empty_lines(
+                    LEAKY_RELU_BACKWARD_OUT.substitute(
+                        return_type=return_type,
+                        func_name=name,
+                        args_str=args_str,
+                        exec_cmd=exec_cmd,
+                        aclnnargs=cmd_args,
+                    )
+                )
+            ]
+
         valid_param_set = (
             set(struct.new_params.keys())
             | set(map(lambda arg: arg.name, args))
@@ -497,35 +622,6 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
         # use EXEC_NPU_CMD or EXEC_NPU_CMD_EXT according to environment variable
         exec_cmd = "EXEC_NPU_CMD_EXT" if env_aclnn_extension_switch else "EXEC_NPU_CMD"
 
-    if name == "leaky_relu_backward":
-        return [
-            remove_empty_lines(
-                LEAKY_RELU_BACKWARD_DEFINITION.substitute(
-                    return_type=return_type,
-                    func_name=name,
-                    args_str=args_str,
-                    do_compatibility=do_compatibility,
-                    exec_cmd=exec_cmd,
-                    aclnnargs=cmd_args,
-                    result=struct.return_args,
-                )
-            )
-        ]
-
-    if name == "leaky_relu_backward_out":
-        return [
-            remove_empty_lines(
-                LEAKY_RELU_BACKWARD_OUT_DEFINITION.substitute(
-                    return_type=return_type,
-                    func_name=name,
-                    args_str=args_str,
-                    exec_cmd=exec_cmd,
-                    aclnnargs=cmd_args,
-                    result=struct.return_args,
-                )
-            )
-        ]
-
     return [
         remove_empty_lines(
             ACLNN_FUNCTIONS_DEFINITION.substitute(
@@ -552,24 +648,23 @@ def compute_op_api_definition(struct: StructInfo, env_aclnn_extension_switch: bo
 def gen_op_api(fm: FileManager, struct_functions: Sequence[StructInfo], env_aclnn_extension_switch: bool) -> None:
     # 根据环境变量生成不同的include语句
     if env_aclnn_extension_switch:
-        includes = """#include <torch/library.h>
+        includes = """#include <cmath>
+#include <torch/library.h>
 #include <torch/csrc/autograd/custom_function.h>
 #include <torch/extension.h>
-#include <cmath>
 #include <ATen/native/TypeProperties.h>
 #include "op_plugin/include/npu_cpp_extension.h" """
     else:
-        includes = """#include <ATen/native/TypeProperties.h>
-#include <cmath>
+        includes = """#include <cmath>
+#include <ATen/native/TypeProperties.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h" """
 
-    helper_code = remove_empty_lines(LEAKY_RELU_BACKWARD_FP32_FALLBACK_HELPER.substitute())
-
     def struct_kernel_template_env():
         return {
-            'includes': f"{includes}\n\n{helper_code}",
+            'includes': includes,
+            'op_api_helpers': LEAKY_RELU_OPAPI_HELPERS,
             'op_api_definition': list(
                 concatMap(
                     lambda f: compute_op_api_definition(f, env_aclnn_extension_switch),
