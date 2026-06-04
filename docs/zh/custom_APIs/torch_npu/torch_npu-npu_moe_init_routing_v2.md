@@ -598,7 +598,7 @@
 ## 函数原型<a name="zh-cn_topic_0000002271534921_section14509346133618"></a>
 
 ```python
-torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, active_num=-1, expert_capacity=-1, expert_num=-1, drop_pad_mode=0, expert_tokens_num_type=0, expert_tokens_num_flag=False, quant_mode=-1, active_expert_range=[], row_idx_type=0, x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002271534921_section2050919466367"></a>
@@ -609,7 +609,8 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 - **scale** (`Tensor`)：可选参数，默认为None，用于计算量化结果的参数。数据类型支持`float32`，数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
     - 非量化场景下，如果输入则要求为1维张量，shape为(NUM_ROWS,)。
     - 静态量化场景必须输入，输入要求为1D的Tensor，shape为(1,)
-    - 动态量化场景下，如果输入则要求为2维张量，shape为(expert_end-expert_start, H)或(1, H)。
+    - INT8动态量化场景（`quant_mode=1`）下，如果输入则要求为2维张量，shape为(expert_end-expert_start, H)或(1, H)。
+    - INT4动态量化场景（`quant_mode=13`）下，可不输入；如果输入则要求为2维张量，shape为(1, H)。
 
 - **offset** (`Tensor`)：可选参数，默认为None，用于计算量化结果的偏移值。数据类型支持`float32`，数据格式要求为$ND$。
     - 在非量化场景下不输入。
@@ -622,13 +623,14 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 - **drop_pad_mode** (`int`)：可选参数，默认值为0，表示是否为drop_pad场景。0表示dropless场景，该场景下不校验`expert_capacity`。1表示drop_pad场景。
 - **expert_tokens_num_type** (`int`)：可选参数，默认值为0，表示直方图的不同模式。取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值。
 - **expert_tokens_num_flag** (`bool`)：可选参数，默认值为False，取值为False和True，表示是否输出`expert_token_cumsum_or_count`。
-- **quant_mode** (`int`)：可选参数，默认值为-1，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态量化场景。
+- **quant_mode** (`int`)：可选参数，默认值为-1，表示量化模式，支持取值为0、1、13、-1。0表示静态量化，-1表示不量化场景；1表示INT8动态量化场景；13表示INT4动态量化场景。
 - **active_expert_range** (`List[int]`)：可选参数，默认为空, 表示活跃expert的范围。数组内值的范围为[expert_start, expert_end]，左闭右开，表示活跃的expert范围在expert_start到expert_end之间。要求值大于等于0，并且expert_end不大于`expert_num`。drop_pad场景下，expert_start等于0, expert_end等于`expert_num`。传入默认值时，视为活跃的expert范围在0到`expert_num`之间。
 - **row_idx_type** (`int`)：可选参数，默认为0，表示输出`expanded_row_idx`使用的索引类型，支持取值0和1。0表示gather类型的索引；1表示scatter类型的索引。
+- **x_dtype** (`int`)：可选参数，默认值为None，用于指定特殊逻辑数据类型。`quant_mode=13` 时可传 `torch_npu.int4`，用于显式声明 `expanded_x` 的逻辑类型为INT4。
 
 ## 返回值说明<a name="zh-cn_topic_0000002271534921_section18510124618368"></a>
 
-- **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征，Dropless场景shape为[NUM_ROWS \* K, H]。Active场景shape为[min(activeNum, NUM_ROWS * K), H]。Drop/Pad场景下要求是一个3D的Tensor，shape为[expertNum, expertCapacity, H]。非量化场景下数据类型同`x`；量化场景下数据类型为`int8`。数据格式要求为$ND$。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
+- **expanded_x** (`Tensor`)：根据`expert_idx`进行扩展过的特征。Dropless场景shape为[NUM_ROWS \* K, H]。Active场景shape为[min(activeNum, NUM_ROWS * K), H]。Drop/Pad场景下要求是一个3D的Tensor，shape为[expertNum, expertCapacity, H]。非量化场景下数据类型同`x`；INT8量化场景下数据类型为`int8`。`quant_mode=13` 的INT4动态量化场景下，`expanded_x` 的逻辑类型为INT4，torch Tensor 物理承载类型为 `uint8`，shape 为 `[有效行数, H/2]`，每个 `uint8` 打包两个INT4值。数据格式要求为$ND$。量化场景下，当`x`的数据类型为`int8`时，输出值无意义。
 - **expanded_row_idx** (`Tensor`)：`expanded_x`和`x`的映射关系，要求是1维张量，shape为(NUM_ROWS \* K, )，数据类型支持`int32`，数据格式要求为$ND$。当`row_idx_type`为1时， 前available_idx_num个元素为有效数据，无效数据未初始化；当`row_idx_type`为0时，无效数据由-1填充。
 - **expert_token_cumsum_or_count** (`Tensor`)：表示输出每个专家处理的token数量的统计结果或累加值。
     - 在`expert_tokens_num_type`为0时，表示`active_expert_range`范围内expert在排序后处理token总数的前缀和。
@@ -649,6 +651,7 @@ Atlas A2训练系列产品/Atlas A2推理系列产品/Atlas A3训练系列产品
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
+- `quant_mode=13` 的INT4动态量化场景仅支持 `drop_pad_mode=0`，`x` 仅支持 `float32` 和 `bfloat16`，`offset` 必须为None，`H` 必须为偶数，`scale` 非空时只能是 `(1, H)` 的 `float32` Tensor。
 - 进入低时延性能模板需要同时满足以下条件：
     - `x`、`expert_idx`、`scale`输入Shape要求分别为：(1, 7168)、(1, 8)、(256, 7168)
     - `x`数据类型要求：`bfloat16`
