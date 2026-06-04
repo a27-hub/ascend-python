@@ -836,6 +836,72 @@ class TestNpuMoeInitRoutingV2(TestCase):
                 expanded_scale, local_expanded_scale_npu.numpy())
 
     @SupportedDevices(['Ascend950'])
+    def test_npu_moe_init_routing_int4_dynamic_quant_mode_13(self):
+        bs, h, k = 4, 16, 2
+        expert_num = 8
+        active_num = -1
+        expected_rows = bs * k
+        expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
+
+        for dtype, scale in [
+            (torch.float32, None),
+            (torch.float32, torch.ones((1, h), dtype=torch.float32).npu()),
+            (torch.bfloat16, None),
+            (torch.bfloat16, torch.ones((1, h), dtype=torch.float32).npu()),
+        ]:
+            x = torch.randn((bs, h), dtype=dtype).npu()
+            expanded_x, expanded_row_idx, expert_tokens_count, expanded_scale = torch_npu.npu_moe_init_routing_v2(
+                x,
+                expert_idx,
+                scale=scale,
+                offset=None,
+                active_num=active_num,
+                expert_capacity=-1,
+                expert_num=expert_num,
+                drop_pad_mode=0,
+                expert_tokens_num_type=1,
+                expert_tokens_num_flag=True,
+                quant_mode=13,
+                active_expert_range=[0, expert_num],
+                row_idx_type=0,
+                x_dtype=torch_npu.int4,
+            )
+
+            self.assertEqual(expanded_x.dtype, torch.uint8)
+            self.assertEqual(tuple(expanded_x.shape), (expected_rows, h // 2))
+            self.assertEqual(expanded_row_idx.dtype, torch.int32)
+            self.assertEqual(tuple(expanded_row_idx.shape), (expected_rows,))
+            self.assertEqual(expert_tokens_count.dtype, torch.int64)
+            self.assertEqual(tuple(expert_tokens_count.shape), (expert_num,))
+            self.assertEqual(expanded_scale.dtype, torch.float32)
+            self.assertEqual(tuple(expanded_scale.shape), (expected_rows,))
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_moe_init_routing_int4_dynamic_quant_reject_legacy_mode(self):
+        bs, h, k = 4, 16, 2
+        expert_num = 8
+        x = torch.randn((bs, h), dtype=torch.float32).npu()
+        expert_idx = torch.randint(0, expert_num, (bs, k), dtype=torch.int32).npu()
+
+        with self.assertRaisesRegex(RuntimeError, "quant_mode=13"):
+            torch_npu.npu_moe_init_routing_v2(
+                x,
+                expert_idx,
+                scale=None,
+                offset=None,
+                active_num=-1,
+                expert_capacity=-1,
+                expert_num=expert_num,
+                drop_pad_mode=0,
+                expert_tokens_num_type=1,
+                expert_tokens_num_flag=True,
+                quant_mode=1,
+                active_expert_range=[0, expert_num],
+                row_idx_type=0,
+                x_dtype=torch_npu.int4,
+            )
+
+    @SupportedDevices(['Ascend950'])
     def test_npu_moe_init_routing_hif8_no_quant(self):
         bs_list = [32]
         h_list = [14, 200]
