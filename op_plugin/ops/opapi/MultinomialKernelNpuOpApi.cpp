@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iostream>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "torch_npu/csrc/framework/utils/RandomOpAdapter.h"
@@ -35,6 +36,7 @@ at::Tensor& multinomial_op_api(
         auto pair = gen->philox_engine_inputs(10);
         const uint64_t seed = pair.first;
         const uint64_t offset = pair.second;
+        std::cout << "fenglin [Multinomial] seed: " << seed << ", offset: " << offset << std::endl;
         EXEC_NPU_CMD(aclnnMultinomial, self, num_samples, replacement, seed, offset, result);
     } else {
 #if VERSION_BETWEEN(V2R5, VERSION_NEWEST)
