@@ -2896,40 +2896,22 @@ official:
     acl_op: all_version
     dvm: all_version
     op_api: all_version
-    gen_opapi:
-      structured_inherit: leaky_relu.out
 
   - func: leaky_relu.out(Tensor self, Scalar negative_slope=0.01, *, Tensor(a!) out) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnLeakyRelu
 
   - func: leaky_relu_(Tensor(a!) self, Scalar negative_slope=0.01) -> Tensor(a!)
     acl_op: all_version
     dvm: all_version
     op_api: all_version
-    gen_opapi:
-      exec: aclnnInplaceLeakyRelu
 
   - func: leaky_relu_backward(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result) -> Tensor
     acl_op: all_version
     op_api: all_version
-    gen_opapi:
-      out:
-        size: self
-        dtype: self
-      exec: aclnnLeakyReluBackward
 
   - func: leaky_relu_backward.grad_input(Tensor grad_output, Tensor self, Scalar negative_slope, bool self_is_result, *, Tensor(a!) grad_input) -> Tensor(a!)
     op_api: all_version
-    gen_opapi:
-      grad_input:
-        size: self
-      exec: aclnnLeakyReluBackward
 
   - func: lerp.Scalar(Tensor self, Tensor end, Scalar weight) -> Tensor
     acl_op: all_version
