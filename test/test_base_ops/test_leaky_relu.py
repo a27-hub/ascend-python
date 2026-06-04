@@ -99,6 +99,21 @@ class TestLeakRelu(TestCase):
             npu_output = self.npu_op_negative_slope_exec(npu_input, item[1])
             self.assertRtolEqual(cpu_output, npu_output)
 
+    def test_leaky_relu_extreme_negative_slope_fp16(self, device="npu"):
+        negative_slope = -3.1929483934741584e38
+        cpu_input = torch.tensor([-1.0, 0.0, 1.0], dtype=torch.float16)
+        npu_input = cpu_input.to(device)
+
+        cpu_output = torch.nn.functional.leaky_relu(cpu_input.to(torch.float32), negative_slope=negative_slope)
+        cpu_output = cpu_output.to(torch.float16).numpy()
+
+        npu_output = torch.nn.functional.leaky_relu(npu_input, negative_slope=negative_slope)
+        npu_output = npu_output.to("cpu").numpy()
+
+        self.assertFalse(np.isnan(cpu_output).any())
+        self.assertFalse(np.isnan(npu_output).any())
+        self.assertTrue(np.array_equal(cpu_output, npu_output))
+
 
 if __name__ == "__main__":
     run_tests()
