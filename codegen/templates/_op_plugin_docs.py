@@ -5420,7 +5420,7 @@ npu_recurrent_gated_delta_rule(Tensor query, Tensor key, Tensor value, Tensor(a!
 - gk (Tensor)：可选输入，衰减系数，当前版本暂不支持，传None即可。
 
 输出说明:
-注意力计算结果。输出的数据类型为bfloat16，数据格式为ND，形状为(T, Nv, Dv)。
+注意力计算结果。输出的数据类型与value的数据类型一致，数据格式为ND，形状为(T, Nv, Dv)。
 
 约束说明:
 - 该接口支持推理场景下使用。
@@ -5500,7 +5500,7 @@ npu_recurrent_gated_delta_rule_functional(
 - gk (Tensor)：可选输入，衰减系数，当前版本暂不支持，传None即可。
 
 输出说明:
-注意力计算结果。输出的数据类型为bfloat16，数据格式为ND，形状为(T, Nv, Dv)。
+注意力计算结果。输出的数据类型与value的数据类型一致，数据格式为ND，形状为(T, Nv, Dv)。状态矩阵输出的数据类型与state的数据类型一致，数据格式为ND，形状为(BlockNum, Nv, Dv, Dk)。
 
 约束说明:
 - 该接口支持推理场景下使用。
