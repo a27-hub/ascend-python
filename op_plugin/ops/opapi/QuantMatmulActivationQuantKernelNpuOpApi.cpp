@@ -41,12 +41,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_matmul_activation_quant(
     int64_t axis,
     c10::string_view round_mode,
     const c10::optional<at::Tensor>& bias,
-    const c10::optional<int64_t>& output_dtype,
-    const c10::optional<int64_t>& x1_dtype,
-    const c10::optional<int64_t>& x2_dtype,
-    const c10::optional<int64_t>& x1scale_dtype,
-    const c10::optional<int64_t>& x2scale_dtype,
-    const c10::optional<int64_t>& scale_alg,
+    const c10::optional<int64_t> output_dtype,
+    const c10::optional<int64_t> x1_dtype,
+    const c10::optional<int64_t> x2_dtype,
+    const c10::optional<int64_t> x1scale_dtype,
+    const c10::optional<int64_t> x2scale_dtype,
+    const c10::optional<int64_t> scale_alg,
     double dst_type_max)
 {
     TORCH_CHECK(is_nz_format(x2), 
@@ -147,13 +147,10 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_matmul_activation_quant(
     
     EXEC_NPU_CMD(aclnnQuantMatmulActivationQuant, 
                  x1, x2, x1scale, x2scale, 
-                 activation_type_ptr, axis, round_mode_ptr, bias_real,
-                 output_acltype, x1_dtype_val, x2_dtype_val,
-                 x1scale_dtype_val, x2scale_dtype_val, scale_alg_val,
-                 dst_type_max, y_scale, x1_offset, y_offset, 
-                 transpose1, transpose2, group_size,
+                 bias, false, false,activation_type_ptr, axis_change,
+                 round_mode_ptr, scale_alg_val, dst_type_max,
                  output_wrapper, scale_wrapper);
     
-    return std::tie(output, scale);
+    return std::make_tuple(output, scale);
 }
 }
