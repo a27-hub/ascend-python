@@ -56,6 +56,31 @@ class TestLeakyReluBackward(TestCase):
             self.assertEqual(cpu_output1, npu_output1)
             self.assertEqual(cpu_output2, npu_output2)
 
+    def test_leaky_relu_backward_extreme_negative_slope_fp16(self, device="npu"):
+        negative_slope = -3.1929483934741584e38
+        grad_output = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float16)
+        self_tensor = torch.tensor([-1.0, 0.0, 1.0], dtype=torch.float16)
+
+        cpu_output = torch.ops.aten.leaky_relu_backward.default(
+            grad_output.to(torch.float32),
+            self_tensor.to(torch.float32),
+            negative_slope,
+            False,
+        )
+        cpu_output = cpu_output.to(torch.float16).numpy()
+
+        npu_output = torch.ops.aten.leaky_relu_backward.default(
+            grad_output.to(device),
+            self_tensor.to(device),
+            negative_slope,
+            False,
+        )
+        npu_output = npu_output.to("cpu").numpy()
+
+        self.assertFalse(np.isnan(cpu_output).any())
+        self.assertFalse(np.isnan(npu_output).any())
+        self.assertTrue(np.array_equal(cpu_output, npu_output))
+
 
 if __name__ == "__main__":
     run_tests()
