@@ -6757,7 +6757,7 @@ custom:
     exposed: all_version
     internal_format_opapi: all_version
 
-  - func: npu_quant_matmul_activation_quant(Tensor x1, Tensor x2, Tensor x1scale, Tensor x2scale, str activation_type='gelu_tanh', *, int axis=-1, str round_mode='rint', Tensor? bias=None, int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1scale_dtype=None, int? x2scale_dtype=None, int? scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
+  - func: npu_quant_matmul_activation_quant(Tensor x1, Tensor x2, Tensor x1scale, Tensor x2scale, str activation_type="gelu_tanh", *, int axis=-1, str round_mode="rint", Tensor? bias=None, int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1scale_dtype=None, int? x2scale_dtype=None, int? scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
     op_api: all_version
     exposed: all_version
     internal_format_opapi: all_version
