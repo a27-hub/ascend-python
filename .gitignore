@@ -193,3 +193,6 @@ TAGS
 
 # bazel symlinks
 bazel-*
+
+.workflow/raw/design/qkv_rms_norm_rope_cache_with_kscale_tasks
+.workflow/raw/design/qkv_rms_norm_rope_cache_with_kscale_design.md
