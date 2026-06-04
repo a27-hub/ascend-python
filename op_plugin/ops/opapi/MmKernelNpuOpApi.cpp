@@ -22,6 +22,17 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+static bool is_compatible_impl_enabled()
+{
+    static auto compatible_env = std::getenv("TORCH_NPU_USE_COMPATIBLE_IMPL");
+    return compatible_env != nullptr && std::string(compatible_env) == "1";
+}
+
+static bool is_transposed_2d(const at::Tensor &t)
+{
+    return t.stride(0) == 1 && t.stride(1) > 1;
+}
+
 at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, const at::ScalarType output_dtype)
 {
     TORCH_CHECK(self.dim() == 2, "self must be a matrix");
@@ -39,6 +50,14 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2, const at::ScalarTy
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, result, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMm supports non-contiguous input.
+    // In compatible mode, _matmul_impl's should_fold branch transposes the small tensor
+    // before calling mm, making it non-contiguous. Since aclnnMm doesn't support that,
+    // CANN inserts an extra Transpose op. Redirect to aclnnMatmul which handles it natively.
+    } else if (is_compatible_impl_enabled() &&
+               ((self.requires_grad() && is_transposed_2d(self)) ||
+                (mat2.requires_grad() && is_transposed_2d(mat2)))) {
+        EXEC_NPU_CMD(aclnnMatmul, self, mat2, result, cube_math_type);
     } else {
         int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
         if (cube_math_type_passthrough >= 0) {
@@ -68,6 +87,11 @@ at::Tensor mm(const at::Tensor &self, const at::Tensor &mat2)
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, result, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMm supports non-contiguous input.
+    } else if (is_compatible_impl_enabled() &&
+               ((self.requires_grad() && is_transposed_2d(self)) ||
+                (mat2.requires_grad() && is_transposed_2d(mat2)))) {
+        EXEC_NPU_CMD(aclnnMatmul, self, mat2, result, cube_math_type);
     } else {
         EXEC_NPU_CMD(aclnnMm, self, mat2, result, cube_math_type);
     }
@@ -97,6 +121,11 @@ at::Tensor &mm_out(
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMm supports non-contiguous input.
+    } else if (is_compatible_impl_enabled() &&
+               ((self.requires_grad() && is_transposed_2d(self)) ||
+                (mat2.requires_grad() && is_transposed_2d(mat2)))) {
+        EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
     } else {
         int8_t cube_math_type_passthrough = npu_preparation::get_cube_math_type();
         if (cube_math_type_passthrough >= 0) {
@@ -128,6 +157,11 @@ at::Tensor &mm_out(
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMm supports non-contiguous input.
+    } else if (is_compatible_impl_enabled() &&
+               ((self.requires_grad() && is_transposed_2d(self)) ||
+                (mat2.requires_grad() && is_transposed_2d(mat2)))) {
+        EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
     } else {
         EXEC_NPU_CMD(aclnnMm, self, mat2, out, cube_math_type);
     }

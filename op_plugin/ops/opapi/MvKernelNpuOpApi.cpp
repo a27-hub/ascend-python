@@ -22,13 +22,34 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+// TODO: Remove this branch when CANN aclnnMv supports non-contiguous input.
+// In compatible mode, _matmul_impl's should_fold branch transposes the 3D tensor (via mT)
+// before reshaping and calling mv, making the matrix transposed-non-contiguous.
+// Since aclnnMv doesn't support that, CANN inserts an extra Transpose op.
+// Redirect to aclnnMatmul which handles it natively.
+static bool is_compatible_impl_enabled()
+{
+    static auto compatible_env = std::getenv("TORCH_NPU_USE_COMPATIBLE_IMPL");
+    return compatible_env != nullptr && std::string(compatible_env) == "1";
+}
+
+static bool is_transposed_2d(const at::Tensor &t)
+{
+    return t.stride(0) == 1 && t.stride(1) > 1;
+}
+
 at::Tensor &mv_out(const at::Tensor &self, const at::Tensor &vec, at::Tensor &out)
 {
     DO_COMPATIBILITY(aclnnMv, acl_op::mv_out(self, vec, out));
     auto names = at::namedinference::propagate_names_for_addmv(self, vec, out);
     npu_preparation::check_tensor({self, vec}, out, out.scalar_type(), {self.size(0)});
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
-    EXEC_NPU_CMD(aclnnMv, self, vec, out, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMv supports non-contiguous input.
+    if (is_compatible_impl_enabled() && vec.requires_grad() && is_transposed_2d(self)) {
+        EXEC_NPU_CMD(aclnnMatmul, self, vec, out, cube_math_type);
+    } else {
+        EXEC_NPU_CMD(aclnnMv, self, vec, out, cube_math_type);
+    }
     at::namedinference::propagate_names_if_nonempty(out, names);
     return out;
 }
@@ -44,7 +65,12 @@ at::Tensor mv(const at::Tensor &self, const at::Tensor &vec)
     }
     auto names = at::namedinference::propagate_names_for_addmv(self, vec, result);
     int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
-    EXEC_NPU_CMD(aclnnMv, self, vec, result, cube_math_type);
+    // TODO: Remove this branch when CANN aclnnMv supports non-contiguous input.
+    if (is_compatible_impl_enabled() && vec.requires_grad() && is_transposed_2d(self)) {
+        EXEC_NPU_CMD(aclnnMatmul, self, vec, result, cube_math_type);
+    } else {
+        EXEC_NPU_CMD(aclnnMv, self, vec, result, cube_math_type);
+    }
     at::namedinference::propagate_names_if_nonempty(result, names);
     return result;
 }
