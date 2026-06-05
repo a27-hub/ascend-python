@@ -22,6 +22,25 @@ using npu_preparation = at_npu::native::OpPreparation;
 static const int MODE_TRUNC = 1;
 static const int MODE_FLOOR = 2;
 
+namespace {
+static bool is_reduced_floating_scalar_op(const at::Tensor& tensor, const at::Scalar& scalar)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) && scalar.isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_rhs(const at::Tensor& tensor, const at::Tensor& other)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) &&
+        other.dim() == 0 && !torch_npu::utils::is_npu(other) && other.item().isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_lhs(const at::Tensor& self, const at::Tensor& tensor)
+{
+    return self.dim() == 0 && !torch_npu::utils::is_npu(self) && self.item().isFloatingPoint() &&
+        (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16);
+}
+} // namespace
+
 static void check_rounding_mode_npu(c10::optional<c10::string_view> rounding_mode)
 {
     TORCH_CHECK((!rounding_mode.has_value() || *rounding_mode == "trunc" || *rounding_mode == "floor"),
@@ -64,6 +83,23 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
     }
     if (isFloatingType(result.scalar_type()) || isComplexType(result.scalar_type())) {
         result_type = result.scalar_type();
+    }
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cp = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        div_out_npu_opapi_nocheck(self_cp, other, result_cast);
+        result.copy_(result_cast.to(result.scalar_type()));
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor self_cp = npu_preparation::copy_scalar_to_device(self.item(), at::kFloat, result.device());
+        at::Tensor other_cp = other.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        div_out_npu_opapi_nocheck(self_cp, other_cp, result_cast);
+        result.copy_(result_cast.to(result.scalar_type()));
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
     }
     at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
     npu_preparation::check_tensor({self}, result, result_type, output_size);
@@ -123,6 +159,24 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other) {
     at::ScalarType high_type = at::native::result_type(self, other);
     if (!isFloatingType(high_type) && !isComplexType(high_type)) {
         high_type = at::ScalarType::Float;
+    }
+
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cp = self.to(at::kFloat);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(at::kFloat));
+        div_out_npu_opapi_nocheck(self_cp, other, result);
+        result = result.to(high_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor self_cp = npu_preparation::copy_scalar_to_device(self.item(), at::kFloat, outputTensor.device());
+        at::Tensor other_cp = other.to(at::kFloat);
+        at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(at::kFloat));
+        div_out_npu_opapi_nocheck(self_cp, other_cp, result);
+        result = result.to(high_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
     }
 
     at::Tensor self_cp = self_tensor_to_device(self, high_type, outputTensor.device());
@@ -243,6 +297,14 @@ at::Tensor div(const at::Tensor& self, const at::Scalar& other) {
     if (!isFloatingType(high_type) && !isComplexType(high_type)) {
         high_type = at::ScalarType::Float;
     }
+    if (is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kFloat));
+        EXEC_NPU_CMD(aclnnDivs, self_cast, other, result_cast);
+        result_cast = result_cast.to(high_type);
+        at::namedinference::propagate_names(result_cast, self);
+        return result_cast;
+    }
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options().dtype(high_type));
     EXEC_NPU_CMD(aclnnDivs, self, other, result);
     at::namedinference::propagate_names(result, self);
@@ -266,6 +328,14 @@ at::Tensor div(const at::Tensor& self, const at::Scalar& other, c10::optional<c1
         }
     }
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, self.options().dtype(high_type));
+    if (!rounding_mode.has_value() && is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(outputSize, self.options().dtype(at::kFloat));
+        EXEC_NPU_CMD(aclnnDivMods, self_cast, other, mode, result_cast);
+        result_cast = result_cast.to(high_type);
+        at::namedinference::propagate_names(result_cast, self);
+        return result_cast;
+    }
     EXEC_NPU_CMD(aclnnDivMods, self, other, mode, result);
     at::namedinference::propagate_names(result, self);
     return result;
@@ -273,6 +343,13 @@ at::Tensor div(const at::Tensor& self, const at::Scalar& other, c10::optional<c1
 
 at::Tensor& div_(at::Tensor& self, const at::Scalar& other) {
   DO_COMPATIBILITY(aclnnInplaceDivs, acl_op::div_(self, other));
+  if (is_reduced_floating_scalar_op(self, other)) {
+    at::Tensor self_cast = self.to(at::kFloat);
+    at::Tensor result_cast = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kFloat));
+    EXEC_NPU_CMD(aclnnDivs, self_cast, other, result_cast);
+    self.copy_(result_cast.to(self.scalar_type()));
+    return self;
+  }
   EXEC_NPU_CMD(aclnnInplaceDivs, self, other);
   return self;
 }

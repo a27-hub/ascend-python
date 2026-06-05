@@ -24,6 +24,20 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
+static bool is_reduced_floating_scalar_op(const at::Tensor& tensor, const at::Scalar& scalar) {
+  return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) && scalar.isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_rhs(const at::Tensor& tensor, const at::Tensor& other) {
+  return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) &&
+      npu_preparation::IsCPUScalar(other) && other.item().isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_lhs(const at::Tensor& self, const at::Tensor& tensor) {
+  return npu_preparation::IsCPUScalar(self) && self.item().isFloatingPoint() &&
+      (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16);
+}
+
 at::Tensor& mul_out_npu_nocheck(at::Tensor& result, const at::Tensor& self, const at::Scalar& other) {
   at_npu::native::OpCommand cmd;
   cmd.Name("Mul")
@@ -87,6 +101,23 @@ at::Tensor& mul_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
         "result type ", calculate_type, " can't be cast to the desired output type ", result_type,
         OPS_ERROR(ErrCode::TYPE));
 
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        mul_out_npu_nocheck(result_cast, self_cast, other.item());
+        result_cast = at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+        result.copy_(result_cast);
+        return result;
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor other_cast = at_npu::native::custom_ops::_npu_dtype_cast(other, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        mul_out_npu_nocheck(result_cast, other_cast, self.item());
+        result_cast = at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+        result.copy_(result_cast);
+        return result;
+    }
+
     if (calculate_type == at::kBool) {
         calculate_type = at::kFloat;
     }
@@ -118,6 +149,21 @@ at::Tensor mul(const at::Tensor& self, const at::Tensor& other) {
     calculate_type = at::kFloat;
   }
 
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kFloat));
+        mul_out_npu_nocheck(result_cast, self_cast, other.item());
+        return at_npu::native::custom_ops::_npu_dtype_cast(result_cast, calculate_type);
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::Tensor other_cast = at_npu::native::custom_ops::_npu_dtype_cast(other, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, other.options().dtype(at::kFloat));
+        mul_out_npu_nocheck(result_cast, other_cast, self.item());
+        return at_npu::native::custom_ops::_npu_dtype_cast(result_cast, calculate_type);
+    }
+
     at::Tensor self_cast = self;
     at::Tensor other_cast = other;
     if (self.scalar_type() != calculate_type) {
@@ -144,7 +190,14 @@ at::Tensor mul(const at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor mul(const at::Tensor& self, const at::Scalar& other) {
-  at::Tensor result = npu_preparation::apply_tensor(self);
+  auto result_type = at::native::result_type(self, other);
+  if (is_reduced_floating_scalar_op(self, other)) {
+    at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+    at::Tensor result_cast = npu_preparation::apply_tensor(self_cast);
+    mul_out_npu_nocheck(result_cast, self_cast, other);
+    return at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+  }
+  at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(result_type));
   mul_out_npu_nocheck(result, self, other);
   return result;
 }
@@ -154,6 +207,14 @@ at::Tensor& mul_(at::Tensor& self, const at::Tensor& other) {
 }
 
 at::Tensor& mul_(at::Tensor& self, const at::Scalar& other) {
+  if (is_reduced_floating_scalar_op(self, other)) {
+    at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+    at::Tensor result_cast = npu_preparation::apply_tensor(self_cast);
+    mul_out_npu_nocheck(result_cast, self_cast, other);
+    result_cast = at_npu::native::custom_ops::_npu_dtype_cast(result_cast, self.scalar_type());
+    self.copy_(result_cast);
+    return self;
+  }
   if (!npu_utils::check_match(&self)) {
     at::Tensor contiguous_self = npu_utils::format_contiguous(self);
     mul_out_npu_nocheck(contiguous_self, contiguous_self, other);
