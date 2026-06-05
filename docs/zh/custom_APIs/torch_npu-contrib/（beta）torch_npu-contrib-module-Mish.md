@@ -1,4 +1,4 @@
-# （beta）torch_npu.contrib.module.Mish
+# (beta)torch_npu.contrib.module.Mish
 
 > [!NOTICE]  
 > 该接口计划废弃，可以使用`torch.nn.Mish`接口进行替换。
@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-应用基于NPU的Mish操作。
+该接口用于在NPU上执行Mish操作。
 
 ## 函数原型
 

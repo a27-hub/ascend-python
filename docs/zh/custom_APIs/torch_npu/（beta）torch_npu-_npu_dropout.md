@@ -1,4 +1,4 @@
-# （beta）torch\_npu.\_npu\_dropout
+# (beta)torch\_npu.\_npu\_dropout
 
 ## 产品支持情况
 
@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-不使用种子（seed）进行dropout结果计数。
+不使用种子（seed）进行dropout结果操作。
 
 ## 函数原型
 

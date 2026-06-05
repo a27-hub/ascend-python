@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-使用NPU API进行LabelSmoothing Cross Entropy。
+使用NPU API计算LabelSmoothing Cross Entropy。
 
 ## 函数原型
 

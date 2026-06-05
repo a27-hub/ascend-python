@@ -24,7 +24,7 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
 - **token\_ids** (`Tensor`)：必选参数，表示每个token在microBatch中的token索引，要求为1维张量，shape为\(Y, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, BS-1]。
 - **expert\_offsets** (`Tensor`)：必选参数，表示每个token在tokenInfoTableShape中PerTokenExpertNum的索引，要求为1维张量，shape为\(Y, \)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。张量里value取值范围为\[0, ExpertNumPerToken-1]。
 - **actual\_token\_num** (`Tensor`)：必选参数，表示本卡发送的token总数，要求为1维张量，shape为\(1, \)，数据类型支持`int64`，数据格式为$ND$，支持非连续的Tensor。张量里value取值为[0, Y]。
-- **group** (`str`)：必选参数，通信域名称，专家并行的通信域。字符串长度范围为\[1,128\)。
+- **group** (`str`)：必选参数，通信域名称，专家并行的通信域。字符串长度范围为\[1,128\]。
 - **world\_size**(`int64`)：必选参数，通信域size。取值支持\[2, 768\]。
 - **token\_info\_table\_shape**(`List(int)`)：必选参数，Token信息列表大小。包含microBatch的大小（MicroBatchNum）、BatchSize大小（Bs）、以及每个Token对应的Expert数量（ExpertNumPerToken）。
 - **token\_data\_shape**(`List(int)`)：必选参数，Token信息列表大小。包含microBatch的大小（MicroBatchNum）、BatchSize大小（Bs）、每个Token对应的Expert数量(ExpertNumPerToken)、以及token和scale长度(HS)。
@@ -38,13 +38,13 @@ torch_npu.npu_ffn_to_attention(x, session_ids, micro_batch_ids, token_ids, exper
 - 参数说明里shape格式说明：
     - Y：表示本卡需要分发的最大token数量。
 
-    - BS：示各Attention节点上的发送token数，取值范围为0 < `BS` ≤ 512。
+    - BS：表示各Attention节点上的发送token数，取值范围为0 < `BS` ≤ 512。
 
     - H：表示hidden size隐藏层大小，取值范围为1152 ≤ `H` ≤ 8320
 
     - HS：表示hidden与scale 隐藏层大小，取值范围为1024 ≤ `HS` ≤ 8192。
 
-    - MicroBatchNum：表示microBatch的大小，前仅支持MicroBatchNum = 1。
+    - MicroBatchNum：表示microBatch的大小，目前仅支持MicroBatchNum = 1。
 
     - ExpertNumPerToken：表示每个Token对应的发送的Expert数量，`ExpertNumPerToken` = `K` + `sharedExpertNum`。
 
