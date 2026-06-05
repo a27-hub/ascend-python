@@ -22,6 +22,23 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 
 namespace {
+static bool is_reduced_floating_scalar_op(const at::Tensor& tensor, const at::Scalar& scalar)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) && scalar.isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_rhs(const at::Tensor& tensor, const at::Tensor& other)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) &&
+        npu_preparation::IsCPUScalar(other) && other.item().isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_lhs(const at::Tensor& self, const at::Tensor& tensor)
+{
+    return npu_preparation::IsCPUScalar(self) && self.item().isFloatingPoint() &&
+        (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16);
+}
+
 at::Tensor &div_scalar_out_nocheck(at::Tensor &result, const at::Tensor &self, const at::Scalar &other)
 {
     at_npu::native::OpCommand cmd;
@@ -68,6 +85,20 @@ at::Tensor &div_out_with_dtype(at::Tensor &result, const at::Tensor &self, const
 
     auto calculate_type = is_trunc ? op_plugin::utils::get_divide_calculate_type(self, other) :
                                      op_plugin::utils::get_divide_result_type(self, other);
+    if (!is_trunc && is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_cast, self_cast, other.item());
+        result.copy_(at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type));
+        return result;
+    }
+    if (!is_trunc && is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor other_cast = at_npu::native::custom_ops::_npu_dtype_cast(other, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_cast, self.item(), other_cast);
+        result.copy_(at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type));
+        return result;
+    }
     at::Tensor self_cast = (self.scalar_type() == calculate_type) ? self : self.to(calculate_type);
     at::Tensor other_cast = other;
     at::Tensor result_cast;
@@ -99,6 +130,20 @@ at::Tensor &div_out_with_dtype(at::Tensor &result, const at::Tensor &self, const
 
 at::Tensor div_dtype_calibration(const at::Tensor &self, const at::Tensor &other, at::ScalarType calculate_type)
 {
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_temp = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::Tensor result_temp = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_temp, self_temp, other.item());
+        return at_npu::native::custom_ops::_npu_dtype_cast(result_temp, calculate_type);
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor other_temp = at_npu::native::custom_ops::_npu_dtype_cast(other, at::kFloat);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::Tensor result_temp = npu_preparation::apply_tensor_without_format(output_size, other.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_temp, self.item(), other_temp);
+        return at_npu::native::custom_ops::_npu_dtype_cast(result_temp, calculate_type);
+    }
     at::Tensor self_temp = (self.scalar_type() == calculate_type) ? self : self.to(calculate_type);
 
     if (npu_preparation::IsCPUScalar(other) && self.scalar_type() != calculate_type) {
@@ -155,7 +200,17 @@ at::Tensor div(const at::Tensor &self, const at::Tensor &other)
 
 at::Tensor div(const at::Tensor &self, const at::Scalar &other)
 {
-    at::Tensor result = npu_preparation::apply_tensor(self);
+    auto result_type = at::native::result_type(self, other);
+    if (!isFloatingType(result_type) && !isComplexType(result_type)) {
+        result_type = at::kFloat;
+    }
+    if (is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_cast, self_cast, other);
+        return at_npu::native::custom_ops::_npu_dtype_cast(result_cast, result_type);
+    }
+    at::Tensor result = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(result_type));
     div_scalar_out_nocheck(result, self, other);
 
     return result;
@@ -203,6 +258,13 @@ at::Tensor &div_(at::Tensor &self, const at::Tensor &other) { return acl_op::div
 
 at::Tensor &div_(at::Tensor &self, const at::Scalar &other)
 {
+    if (is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kFloat));
+        div_scalar_out_nocheck(result_cast, self_cast, other);
+        self.copy_(at_npu::native::custom_ops::_npu_dtype_cast(result_cast, self.scalar_type()));
+        return self;
+    }
     if (!npu_utils::check_match(&self)) {
         at::Tensor contiguous_self = npu_utils::format_contiguous(self);
         div_scalar_out_nocheck(contiguous_self, contiguous_self, other);
