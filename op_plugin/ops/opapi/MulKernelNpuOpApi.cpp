@@ -22,6 +22,25 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
+namespace {
+static bool is_reduced_floating_scalar_op(const at::Tensor& tensor, const at::Scalar& scalar)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) && scalar.isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_rhs(const at::Tensor& tensor, const at::Tensor& other)
+{
+    return (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16) &&
+        other.dim() == 0 && !torch_npu::utils::is_npu(other) && other.item().isFloatingPoint();
+}
+
+static bool is_reduced_floating_cpu_scalar_lhs(const at::Tensor& self, const at::Tensor& tensor)
+{
+    return self.dim() == 0 && !torch_npu::utils::is_npu(self) && self.item().isFloatingPoint() &&
+        (tensor.scalar_type() == at::kHalf || tensor.scalar_type() == at::kBFloat16);
+}
+} // namespace
+
 static at::Tensor self_tensor_to_device(const at::Tensor &tensor, const at::ScalarType result_type,
                                         const c10::Device device)
 {
@@ -71,6 +90,20 @@ at::Tensor &mul_out(const at::Tensor &self, const at::Tensor &other, at::Tensor 
     at::Tensor output_tensor = mul_dest_output(self, other);
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at::ScalarType result_type = at::native::result_type(self, other);
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        mul_out_npu_no_check(self_cast, other, result_cast);
+        result.copy_(result_cast.to(result.scalar_type()));
+        return result;
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor other_cast = other.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, result.options().dtype(at::kFloat));
+        mul_out_npu_no_check(other_cast, self, result_cast);
+        result.copy_(result_cast.to(result.scalar_type()));
+        return result;
+    }
     at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
     npu_preparation::check_tensor({self}, result, result.scalar_type(), output_size);
     // calculate the output result of the NPU
@@ -87,6 +120,20 @@ at::Tensor mul(const at::Tensor &self, const at::Tensor &other)
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
 
     at::ScalarType result_type = at::native::result_type(self, other);
+    if (is_reduced_floating_cpu_scalar_rhs(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast =
+            npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(at::kFloat));
+        mul_out_npu_no_check(self_cast, other, result_cast);
+        return result_cast.to(result_type);
+    }
+    if (is_reduced_floating_cpu_scalar_lhs(self, other)) {
+        at::Tensor other_cast = other.to(at::kFloat);
+        at::Tensor result_cast =
+            npu_preparation::apply_tensor_without_format(output_size, output_tensor.options().dtype(at::kFloat));
+        mul_out_npu_no_check(other_cast, self, result_cast);
+        return result_cast.to(result_type);
+    }
     at::Tensor self_cp = self_tensor_to_device(self, result_type, output_tensor.device());
 
     // construct the output tensor of the NPU
@@ -103,6 +150,12 @@ at::Tensor mul(const at::Tensor &self, const at::Scalar &other)
     DO_COMPATIBILITY(aclnnMuls, acl_op::mul(self, other));
     auto output_size = op_infer::input_same_output_size(self);
     at::ScalarType result_type = at::native::result_type(self, other);
+    if (is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(at::kFloat));
+        EXEC_NPU_CMD(aclnnMuls, self_cast, other, result_cast);
+        return result_cast.to(result_type);
+    }
     // construct the output tensor of the Npu
     at::Tensor result = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(result_type));
     // calculate the output result of the NPU
@@ -124,6 +177,13 @@ at::Tensor &mul_(at::Tensor &self, const at::Scalar &other)
 {
     DO_COMPATIBILITY(aclnnInplaceMuls, acl_op::mul_(self, other));
     TORCH_CHECK(torch_npu::utils::is_npu(self), "Inplace tensor self must be NPU-Tensor.", OPS_ERROR(ErrCode::PARAM));
+    if (is_reduced_floating_scalar_op(self, other)) {
+        at::Tensor self_cast = self.to(at::kFloat);
+        at::Tensor result_cast = npu_preparation::apply_tensor_without_format(self.sizes(), self.options().dtype(at::kFloat));
+        EXEC_NPU_CMD(aclnnMuls, self_cast, other, result_cast);
+        self.copy_(result_cast.to(self.scalar_type()));
+        return self;
+    }
     EXEC_NPU_CMD(aclnnInplaceMuls, self, other);
     return self;
 }
