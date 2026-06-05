@@ -27,7 +27,7 @@ torch_npu.npu.utils.npu_check_overflow(grad) -> bool
 
 `bool`
 
-True溢出，False未溢出。
+True表示溢出，False表示未溢出。
 
 ## 调用示例
 

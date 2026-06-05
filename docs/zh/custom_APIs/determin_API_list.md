@@ -44,4 +44,4 @@
 
 ## API支持清单
 
-目前昇腾支持确定性计算的自定义API为[（beta）torch_npu.npu_group_norm_swish](torch_npu/torch_npu-npu_group_norm_swish.md)。
+目前昇腾支持确定性计算的自定义API为[(beta)torch_npu.npu_group_norm_swish](torch_npu/torch_npu-npu_group_norm_swish.md)。

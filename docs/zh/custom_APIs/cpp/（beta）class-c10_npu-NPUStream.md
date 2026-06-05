@@ -2,7 +2,7 @@
 
 ## 定义文件
 
-torch_npu\csrc\core\npu\NPUStream.h
+torch_npu/csrc/core/npu/NPUStream.h
 
 ## 功能说明
 
