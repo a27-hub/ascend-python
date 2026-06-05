@@ -15,7 +15,7 @@
 
 ```text
 ├── build_and_run.sh                // 自定义算子wheel包编译安装并执行用例的脚本
-├── csrc                            // C++代码目录
+├── csrc                            // 算子适配层C++代码目录
 │   └── add_custom.cpp              // 自定义算子正反向适配代码、aten ir注册以及绑定
 ├── cpp_extension_pybind            // 自定义算子包python侧代码
 │   ├── __init__.py                 // python初始化文件
