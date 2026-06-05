@@ -5815,8 +5815,8 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
 
 @impl(m, "npu_swiglu_group_quant")
 def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, inv_scale=None,
-                                dst_type=291, quant_mode=1, block_size=128, round_scale=False,
-                                clamp_limit=0.0, dst_type_max_finite=15.0, output_origin=False):
+                                dst_type=None, quant_mode=1, block_size=128, round_scale=False,
+                                clamp_limit=0.0, dst_type_max=0.0, output_origin=False):
     dim_num = x.dim()
     x_last_dim = x.size(dim_num - 1)
     
@@ -5831,18 +5831,18 @@ def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, inv_scale=N
     y_shape = list(x.shape)
     y_shape[dim_num - 1] = x_last_dim // 2
     
-    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    # torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
     
     if quant_mode == 2 or quant_mode == 3:
         y = x.new_empty(y_shape, dtype=torch.uint8)
-    elif dst_type == 296 or dst_type == 297:
+    elif dst_type == torch_npu.float4_e2m1fn_x2 or dst_type == torch_npu.float4_e1m2fn_x2:
         y_last_dim = y_shape[dim_num - 1]
         y_shape_fp4 = list(y_shape)
         y_shape_fp4[dim_num - 1] = y_last_dim // 2
         y = x.new_empty(y_shape_fp4, dtype=torch.uint8)
-    elif dst_type == 291:
+    elif dst_type == torch.float_e5m2:
         y = x.new_empty(y_shape, dtype=torch.float_e5m2)
-    elif dst_type == 292:
+    elif dst_type == torch.float_e4m3fn:
         y = x.new_empty(y_shape, dtype=torch.float_e4m3fn)
     else:
         y = x.new_empty(y_shape, dtype=torch.uint8)
@@ -5880,8 +5880,8 @@ def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, inv_scale=N
     return (y, y_scale, y_origin)
 
 
-@impl(m, "npu_swiglu_group_quant_grad")
-def npu_swiglu_group_quant_grad_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
+@impl(m, "npu_swiglu_group_quant_backward")
+def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
     grad_x = torch.empty_like(x, dtype=x.dtype)
     
     if weight is not None and weight.numel() > 0:
