@@ -34,8 +34,8 @@ constexpr int64_t DEFAULT_BLOCK_SIZE_MODE_4 = 64;
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::Tensor &x,
     const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &group_index,
-    const c10::optional<at::Tensor> &inv_scale, int64_t dst_type, int64_t quant_mode, int64_t block_size,
-    bool round_scale, double clamp_limit, double dst_type_max_finite, bool output_origin)
+    const c10::optional<at::Tensor> &inv_scale, c10::optional<at::ScalarType> dst_type, int64_t quant_mode,
+    int64_t block_size, bool round_scale, double clamp_limit, double dst_type_max, bool output_origin)
 {
     at::Tensor y;
     at::Tensor y_scale;
@@ -58,13 +58,15 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::
     y_shape[x.dim() - 1] = x_last_dim / 2;
 
     aclDataType y_acltype;
-    bool special_output_type = (dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
-        dst_type == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
-    ASCEND_LOGI("[npu_add_rms_norm_dynamic_mx_quant]: Getting aclTensor y dtype by Parameter(dst_type): %ld", dst_type);
+    int64_t dst_type_val = dst_type.has_value() ? static_cast<int64_t>(dst_type.has_value())
+                                                : static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2);
+    bool special_output_type = (dst_type_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) ||
+        dst_type_val == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2));
+    ASCEND_LOGI("[npu_swiglu_group_quant]: Getting aclTensor y dtype by Parameter(dst_type_val): %ld", dst_type_val);
 
     if ( quant_mode == QUANT_MODE_2 || quant_mode == QUANT_MODE_3) {
         y_acltype =ACL_HIFLOAT8;
-        at::Tensor y = npu_preparation::apply_tensor_without_format(y_shape, at::ScalarType::Byte);
+        y = npu_preparation::apply_tensor_without_format(y_shape, at::ScalarType::Byte);
     } else if (special_output_type) {
         int64_t y_last_dim_val = y_shape[x.dim() - 1];
         TORCH_CHECK(y_last_dim_val % FP4_IN_UINT8_NUM == 0,
@@ -72,9 +74,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::
                     "y dtype is torch_npu.float4_e2m1fn_x2 or torch_npu.float4_e1m2" + OPS_ERROR(ErrCode::PARAM));
         y_shape[x.dim() - 1] = y_last_dim_val / FP4_IN_UINT8_NUM;
         y = npu_preparation::apply_tensor_without_format(y_shape, c10::ScalarType::Byte);
-        y_acltype = c10_npu::GetAclDataType(dst_type);
+        y_acltype = c10_npu::GetAclDataType(dst_type_val);
     } else {
-        y_acltype = c10_npu::GetAclDataType(dst_type);
+        y_acltype = c10_npu::GetAclDataType(dst_type_val);
         at::ScalarType scalar_dtype = npu_preparation::convert_to_scalar_type(y_acltype);
         y = npu_preparation::apply_tensor_without_format(y_shape, c10::dtype(scalar_dtype));
     }
@@ -123,9 +125,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::
     
     TensorWrapper y_origin_wrapper = {y_origin, npu_preparation::convert_to_acl_data_type(y_origin.scalar_type())};
     
-    aclDataType dst_acltype = c10_npu::GetAclDataType(dst_type);
+    aclDataType dst_acltype = c10_npu::GetAclDataType(dst_type_val);
     EXEC_NPU_CMD(aclnnSwigluGroupQuant, x, weight, group_index, inv_scale, dst_acltype, quant_mode,
-        block_size, round_scale, clamp_limit, dst_type_max_finite, output_origin, y_wrapper, y_scale_wrapper, y_origin_wrapper);
+        block_size, round_scale, clamp_limit, dst_type_max, output_origin, y_wrapper, y_scale_wrapper, y_origin_wrapper);
 
     return std::make_tuple(y, y_scale, y_origin);
 }
