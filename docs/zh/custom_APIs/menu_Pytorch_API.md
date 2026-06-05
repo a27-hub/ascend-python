@@ -338,6 +338,7 @@
     -   [torch_npu.profiler.dynamic_profile.init](./torch_npu-profiler/torch_npu-profiler-dynamic_profile-init.md)
         -   [torch_npu.profiler.dynamic_profile.step](./torch_npu-profiler/torch_npu-profiler-dynamic_profile-step.md)
         -   [torch_npu.profiler.dynamic_profile.start](./torch_npu-profiler/torch_npu-profiler-dynamic_profile-start.md)
+        -   [torch_npu.profiler.dynamic_profile.start](./torch_npu-profiler/torch_npu-profiler-dynamic_profile-set_state.md)
         -   [torch_npu.profiler.profiler.analyse](./torch_npu-profiler/torch_npu-profiler-profiler-analyse.md)
         -   [torch_npu.profiler.profile.enable_profiler_in_child_thread](./torch_npu-profiler/torch_npu-profiler-profile-enable_profiler_in_child_thread.md)
         -   [torch_npu.profiler.profile.disable_profiler_in_child_thread](./torch_npu-profiler/torch_npu-profiler-profile-disable_profiler_in_child_thread.md)
