@@ -1,4 +1,4 @@
-# （beta）torch_npu.npu.finalize_dump
+# (beta)torch_npu.npu.finalize_dump
 
 ## 产品支持情况
 
