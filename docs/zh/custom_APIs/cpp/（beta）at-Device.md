@@ -1,4 +1,4 @@
-# （beta）at::Device
+# (beta)at::Device
 
 ## 函数原型
 
