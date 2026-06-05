@@ -30,8 +30,10 @@
   |topK-topP-minP-multiNomial采样|√|√|√|multiNomial|Sglang框架标准完整功能|
 
 - 计算公式：
-  输入`logits`为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
-  `logits`中的每一行logits[batch][:]根据相应的top_k[batch]、top_p[batch]、q[batch, :]、min_ps[batch]，执行不同的计算场景。<br> 
+  输入`logits`为大小是[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。
+  
+  `logits`中的每一行logits\[batch\]\[:\]根据相应的top_k\[batch\]、top_p\[batch\]、q\[batch, :\]、min_ps\[batch\]，执行不同的计算场景。
+
   下述公式中使用b和v来分别表示batch和voc_size方向上的索引。
 
   topK采样
@@ -127,7 +129,7 @@
     \end{cases}
     $$
   
-  * 将需要过滤的位置设置为默认无效值defLogit，得到logits_sort，记为sortedValue[b][v]:
+  * 将需要过滤的位置设置为默认无效值defLogit，得到logits_sort，记为sortedValue\[b\]\[v\]:
 
     $$
     sortedValue[b][v] =
@@ -137,7 +139,7 @@
     \end{cases}
     $$
   
-  * 取过滤后sortedValue[b][v]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
+  * 取过滤后sortedValue\[b\]\[v\]每行中前topK个元素，查找这些元素在输入中的原始索引，整合为logits_idx:
 
     $$
     logitsIdx[b][v] = Index(sortedValue[b][v] \in Logits)
