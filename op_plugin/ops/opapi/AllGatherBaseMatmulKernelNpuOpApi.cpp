@@ -47,7 +47,9 @@ std::tuple<at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self
     TORCH_CHECK(self.size(1) == x2.size(0),
                 "The K-axis in the two inputs of Matmul must be equal, but in reality, the K-axis of x1 is ",
                 self.size(1), " and the K-axis of x2 is ", x2.size(0), "." + OPS_ERROR(ErrCode::PARAM));
-    c10::string_view comm_mode_value = comm_mode.value_or("ai_cpu");
+    bool isSocBelowAscend950 = (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950);
+    std::string default_comm_mode = isSocBelowAscend950 ? "ai_cpu" : "";
+    c10::string_view comm_mode_value = comm_mode.value_or(default_comm_mode);
     auto out_gather_mm_size = get_output_size_gather_mm(self, x2, world_size, gather_index);
     auto out_gather_size = get_output_size_gather(self, x2, world_size, gather_index);
     bool has_quant = x2_scale.has_value();
@@ -68,21 +70,20 @@ std::tuple<at::Tensor, at::Tensor> npu_all_gather_base_mm(const at::Tensor &self
     int64_t group_size = 0;
     at::Tensor quant_scale;
     at::Tensor amax_out;
-    if ((c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950) && check_aclnn_kernel_available("aclnnAllGatherMatmul") && check_aclnn_kernel_available("aclnnAllGatherMatmulV2")) {
+    if (isSocBelowAscend950) {
         if (comm_mode_value == "ai_cpu") {
-            std::cout << "====c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950=====" << std::endl;
             TORCH_CHECK(!has_quant, "When comm_mode is ai_cpu, quantization not supported." + OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(aclnnAllGatherMatmul, self, x2, bias_real, hcom_ptr, gather_index, comm_turn, stream_mode,
-                        out_gather_mm, out_gather);
+                         out_gather_mm, out_gather);
         } else {
-            std::cout << "====c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950=====" << std::endl;
             EXEC_NPU_CMD(aclnnAllGatherMatmulV2, self, x2, bias_real, x1_scale, x2_scale, quant_scale, block_size, hcom_ptr,
-                        gather_index, comm_turn, stream_mode, group_size, comm_mode_ptr, out_gather_mm, out_gather, amax_out);
+                         gather_index, comm_turn, stream_mode, group_size, comm_mode_ptr, out_gather_mm, out_gather, amax_out);
         }
     } else {
         EXEC_NPU_CMD(aclnnAllGatherMatmulV2, self, x2, bias_real, x1_scale, x2_scale, quant_scale, block_size, hcom_ptr,
-                        gather_index, comm_turn, stream_mode, group_size, comm_mode_ptr, out_gather_mm, out_gather, amax_out);
+                     gather_index, comm_turn, stream_mode, group_size, comm_mode_ptr, out_gather_mm, out_gather, amax_out);
     }
+
     FLOP_COUNT(FlopCounter::all_gather_mm_flop, self, x2, world_size, gather_index);
     return std::tie(out_gather_mm, out_gather);
 }
