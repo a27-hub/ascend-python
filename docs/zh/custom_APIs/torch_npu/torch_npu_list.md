@@ -858,11 +858,6 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>对序列执行因果一维卷积，沿序列维度使用缓存数据（长度为卷积核宽减1）对各序列头部进行padding，确保输出依赖当前及历史输入；卷积完成后，将当前序列部分数据更新到缓存；在因果一维卷积输出的基础上，将原始输入加到输出上以实现残差连接。支持 APC（Automatic Prefix Caching）、MTP（投机解码）、残差连接等特性。</span></p>
 </td>
 </tr>
-<tr id="row_ring_attention_update"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update"><a name="p_ring_attention_update"></a><a name="p_ring_attention_update"></a><a href="torch_npu-npu_fused_causal_conv1d_v2.md">torch_npu.npu_fused_causal_conv1d_v2</a></p>
-</td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>对序列执行因果一维卷积，沿序列维度使用缓存数据（长度为卷积核宽减1）对各序列头部进行padding，确保输出依赖当前及历史输入；卷积完成后，将当前序列部分数据更新到缓存；在因果一维卷积输出的基础上，将原始输入加到输出上以实现残差连接。支持 APC（Automatic Prefix Caching）、MTP（投机解码）、残差连接、原地更新等特性。</span></p>
-</td>
-</tr>
 <tr id="row_ring_attention_update"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update"><a name="p_ring_attention_update"></a><a name="p_ring_attention_update"></a><a href="torch_npu-npu_grouped_dynamic_block_quant.md">torch_npu.npu_grouped_dynamic_block_quant</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>根据传入的分组索引的起始值（group_list）对各个group以基本块的粒度进行量化，量化为（FP8/HiFP8），并输出量化参数scale（FP32）。</span></p></td>
