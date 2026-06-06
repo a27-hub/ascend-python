@@ -23,6 +23,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 namespace {
 constexpr int64_t ALIGN_NUM = 2;
 constexpr int64_t BLOCK_SIZE = 32;
+constexpr int64_t DEFAULT_SCALE_ALG = 0;
 }; // namespace
 
 static bool is_nz_format(const at::Tensor& tensor)
@@ -41,12 +42,12 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_matmul_activation_quant(
     int64_t axis,
     c10::string_view round_mode,
     const c10::optional<at::Tensor>& bias,
-    const c10::optional<int64_t> output_dtype,
-    const c10::optional<int64_t> x1_dtype,
-    const c10::optional<int64_t> x2_dtype,
-    const c10::optional<int64_t> x1scale_dtype,
-    const c10::optional<int64_t> x2scale_dtype,
-    const c10::optional<int64_t> scale_alg,
+    c10::optional<int64_t> output_dtype,
+    c10::optional<int64_t> x1_dtype,
+    c10::optional<int64_t> x2_dtype,
+    c10::optional<int64_t> x1scale_dtype,
+    c10::optional<int64_t> x2scale_dtype,
+    c10::optional<int64_t> scale_alg,
     double dst_type_max)
 {
     TORCH_CHECK(is_nz_format(x2), 
@@ -127,28 +128,20 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_matmul_activation_quant(
     TensorWrapper output_wrapper = {output, output_acltype};
     TensorWrapper scale_wrapper = {scale, aclDataType::ACL_FLOAT8_E8M0};
     
-    at::Tensor y_scale = at::empty({0}, output.options());
-    at::Tensor x1_offset = at::empty({0}, output.options());
-    at::Tensor y_offset = at::empty({0}, output.options());
-    
     const at::Tensor& bias_real = bias.value_or(at::Tensor());
     
-    int64_t x1_dtype_val = x1_dtype.value_or(0);
-    int64_t x2_dtype_val = x2_dtype.value_or(0);
-    int64_t x1scale_dtype_val = x1scale_dtype.value_or(0);
-    int64_t x2scale_dtype_val = x2scale_dtype.value_or(0);
-    int64_t scale_alg_val = scale_alg.value_or(0);
-    int64_t group_size = 0;
-    bool transpose1 = false;
-    bool transpose2 = false;
+    bool transposeX1 = false;
+    bool transposeX2 = false;
+    int64_t scale_alg_optional = scale_alg.has_value() ? scale_alg.value() : DEFAULT_SCALE_ALG;
     
-    char* activation_type_ptr = const_cast<char*>(std::string(activation_type).c_str());
-    char* round_mode_ptr = const_cast<char*>(std::string(round_mode).c_str());
+    char *activation_type_ptr = const_cast<char *>(activation_type.data());
+    char *round_mode_ptr = const_cast<char *>(round_mode.data());
     
     EXEC_NPU_CMD(aclnnQuantMatmulActivationQuant, 
                  x1, x2, x1scale, x2scale, 
-                 bias, false, false,activation_type_ptr, axis_change,
-                 round_mode_ptr, scale_alg_val, dst_type_max,
+                 bias_real, transposeX1, transposeX2, 
+                 activation_type_ptr, axis, 
+                 round_mode_ptr, scale_alg_optional, dst_type_max,
                  output_wrapper, scale_wrapper);
     
     return std::make_tuple(output, scale);

@@ -4710,8 +4710,8 @@ def npu_quant_matmul_reduce_sum_meta(x1, x2, *, x1_scale=None, x2_scale=None):
 
 
 @impl(m, "npu_quant_matmul_activation_quant")
-def npu_quant_matmul_activation_quant_meta(x1, x2, x1scale, x2scale, activation_type='gelu_tanh', *,
-                                           axis=-1, round_mode='rint', bias=None, output_dtype=None,
+def npu_quant_matmul_activation_quant_meta(x1, x2, x1scale, x2scale, activation_type="gelu_tanh", *,
+                                           axis=-1, round_mode="rint", bias=None, output_dtype=None,
                                            x1_dtype=None, x2_dtype=None, x1scale_dtype=None, x2scale_dtype=None,
                                            scale_alg=0, dst_type_max=0.0):
     ALIGN_NUM = 2
