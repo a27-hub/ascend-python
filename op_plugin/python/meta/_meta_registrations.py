@@ -3829,7 +3829,7 @@ def is_transpose_last_two_dims(tensor):
 def bias_shape_check(*args):
     x2, bias, batch_val, is_a4w4, is_a8w4_float, transpose_x2, is_mxfp4_valid = args
     bias_dim_num = bias.dim()
-    if is_a4w4:
+    if is_a4w4 and pertoken_scale is None:
         torch._check(
             bias_dim_num == 1,
             lambda: "bias_dim_num should be 1 when x1's dtype is int32, please check bias dim num " + ops_error(ErrCode.VALUE),
