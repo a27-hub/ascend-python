@@ -20,7 +20,7 @@
     - conv_states: [-1, K-1, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]（无作用）
     - num_computed_tokens: [batch]
@@ -34,17 +34,16 @@
     - residual_connection: 不做残差: 0, 做残差：1
     - block_size: 典型值 128/256
     - conv_mode：Qwen3-Next模式: "default", Pangu V2: "pangu"
-    - y: [cu_seq_len, dim]
 
     其中cu_seq_len为batch内所有变长序列拼接后的总长度。
 
-  - npu\_fused\_causal\_conv1d（prefill和decode混合场景）：
+  - npu\_fused\_causal\_conv1d\_v2（prefill和decode混合场景）：
     - x: [cu_seq_len, dim]
     - weight: [K, dim]，其中K=3
     - conv_states: [-1, K-1+m, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]
     - num_computed_tokens: [batch]
@@ -58,17 +57,16 @@
     - residual_connection: 不做残差: 0, 做残差：1
     - block_size: 典型值 128/256
     - conv_mode：Qwen3-Next模式: "default", Pangu V2: "pangu"
-    - y: [cu_seq_len, dim]
 
     其中cu_seq_len为batch内所有变长序列拼接后的总长度。
 
-  - npu\_fused\_causal\_conv1d（decode场景 - 变长序列）：
+  - npu\_fused\_causal\_conv1d\_v2（decode场景 - 变长序列）：
     - x: [cu_seq_len, dim]
     - weight: [K, dim]，其中K=3
     - conv_states: [-1, K-1+m, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]
     - num_computed_tokens: [batch]
@@ -82,11 +80,10 @@
     - residual_connection: 不做残差: 0, 做残差：1
     - block_size: 典型值 128/256
     - conv_mode：Qwen3-Next模式: "default", Pangu V2: "pangu"
-    - y: [cu_seq_len, dim]
 
     其中state_len必须大于所有batch中最大的token个数加1。
 
-  - npu\_fused\_causal\_conv1d（decode场景 - 固定batch）：
+  - npu\_fused\_causal\_conv1d\_v2（decode场景 - 固定batch）：
     - x: [batch, m+1, dim]
     - weight: [K, dim]，其中K=3
     - conv_states: [-1, K-1+m, dim]
@@ -106,7 +103,6 @@
     - residual_connection: 不做残差: 0, 做残差：1
     - block_size: 典型值 128/256
     - conv_mode：Qwen3-Next模式: "default", Pangu V2: "pangu"
-    - y: [batch, m+1, dim]
 
 - **计算公式**：
 
@@ -248,10 +244,16 @@
       y[i, dim] = x[i, dim] + y[i, dim]
       $$
 
+  9. 原地更新
+
+      $$
+      x[i, dim] = y[i, dim]
+      $$
+
 ## 函数原型
 
 ```python
-torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,initial_state_mode=None, bias=None, num_accepted_tokens=None,activation="None", pad_slot_id=-1, run_mode=0, residual_connection=0, max_query_len=-1,num_computed_tokens=None, block_idx_first_scheduled_token=None,block_idx_last_scheduled_token=None, initial_state_idx=None, block_size=128, conv_mode="default") -> Tensor
+torch_npu.npu_fused_causal_conv1d_v2(x, weight, conv_states, *, query_start_loc=None, cache_indices=None,initial_state_mode=None, bias=None, num_accepted_tokens=None,activation="None", pad_slot_id=-1, run_mode=0, residual_connection=0, max_query_len=-1,num_computed_tokens=None, block_idx_first_scheduled_token=None,block_idx_last_scheduled_token=None, initial_state_idx=None, block_size=128, conv_mode="default") -> ()
 ```
 
 ## 参数说明
@@ -276,10 +278,6 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 - **initial\_state\_idx**（`Tensor`）：可选参数，表示初始索引块的索引。数据类型支持`int32`，数据格式要求为ND，不支持非连续的Tensor。APC开启时，不可省略，默认值为None。
 - **block\_size**（`int`）：可选参数，表示block块的大小，默认值为128。
 - **conv\_mode**（`str`）：可选参数，支持Qwen3-Next("default")和Pangu V2("pangu")两种实现，默认值为"default"。
-
-## 返回值说明
-
-**y**（`Tensor`）：表示计算结果，公式中的$y$，数据类型和数据格式与`x`保持一致，不支持非连续的Tensor。
 
 ## 约束说明
 
@@ -333,63 +331,104 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     ```python
     import torch
     import torch_npu
+
     K = 3
     dim = 128
     batch = 4
     dtype = torch.bfloat16
+
     weight = torch.randn(K, dim, dtype=dtype).npu()
-    seq_lens = [5, 3, 7, 4]
+    seq_lens = [15, 12, 20, 10]
     cu_seq_len = sum(seq_lens)
     x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
-    query_start_loc = torch.tensor([0, 5, 8, 15, 19], dtype=torch.int32).npu()
+    query_start_loc = torch.tensor([0, 15, 27, 47, 57], dtype=torch.int32).npu()
+
     num_slots = 8
     conv_states = torch.randn(num_slots, K - 1, dim, dtype=dtype).npu()
     cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
-    initial_state_mode = torch.tensor([1, 1, 0, 0], dtype=torch.int32).npu()
-    out = torch_npu.npu_fused_causal_conv1d(
+    num_computed_tokens = torch.tensor([10, 5, 0, 0], dtype=torch.int32).npu()
+
+    max_query_len = max(seq_lens)
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
+    torch_npu.npu_fused_causal_conv1d_v2(
+      x,
+      weight,
+      conv_states,
+      query_start_loc=query_start_loc,
+      cache_indices=cache_indices,
+      initial_state_mode=None,
+      bias=None,
+      num_accepted_tokens=None,
+      num_computed_tokens=num_computed_tokens,
+      block_idx_first_scheduled_token=None,
+      block_idx_last_scheduled_token=None,
+      initial_state_idx=None,
+      activation="None",
+      pad_slot_id=-1,
+      run_mode=0,
+      max_query_len=max_query_len,
+      residual_connection=residual_connection,
+      block_size=block_size,
+      conv_mode=conv_mode,
+    )
+    print(f"output shape: {x.shape}")
+    ```
+
+  - prefill和decode混合场景：
+
+    ```python
+    import torch
+    import torch_npu
+
+    K = 3
+    dim = 128
+    batch = 4
+    dtype = torch.bfloat16
+
+    weight = torch.randn(K, dim, dtype=dtype).npu()
+    seq_lens = [12, 9, 2, 1]
+    cu_seq_len = sum(seq_lens)
+    x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
+    query_start_loc = torch.tensor([0, 12, 21, 23, 24], dtype=torch.int32).npu()
+
+    num_slots = 8
+    m = 2
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
+    cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([0, 20, 50, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([1, 1, 2, 1], dtype=torch.int32).npu()
+
+    max_query_len = max(seq_lens)
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
+    torch_npu.npu_fused_causal_conv1d_v2(
         x,
         weight,
         conv_states,
         query_start_loc=query_start_loc,
         cache_indices=cache_indices,
-        initial_state_mode=initial_state_mode,
+        initial_state_mode=None,
         bias=None,
-        activation_mode="None",
+        num_accepted_tokens=num_accepted_tokens,
+        num_computed_tokens=num_computed_tokens,
+        block_idx_first_scheduled_token=None,
+        block_idx_last_scheduled_token=None,
+        initial_state_idx=None,
+        activation="None",
         pad_slot_id=-1,
         run_mode=0,
-        residual_connection=0,
+        max_query_len=max_query_len,
+        residual_connection=residual_connection,
+        block_size=block_size,
+        conv_mode=conv_mode,
     )
-    print(f"output shape: {out.shape}")
-    ```
-
-  - decode场景（固定batch）：
-
-    ```python
-    import torch
-    import torch_npu
-    K = 3
-    dim = 128
-    batch = 4
-    seq_len = 3
-    dtype = torch.bfloat16
-    weight = torch.randn(K, dim, dtype=dtype).npu()
-    x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
-    num_slots = 8
-    conv_states = torch.randn(num_slots, K-1+seq_len-1, dim, dtype=dtype).npu()
-    cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
-    num_accepted_tokens = torch.tensor([2, 1, 3, 2], dtype=torch.int32).npu()
-    out = torch_npu.npu_fused_causal_conv1d(
-        x,
-        weight,
-        conv_states,
-        cache_indices=cache_indices,
-        num_accepted_tokens=num_accepted_tokens,
-        activation_mode="None",
-        pad_slot_id=-1,
-        run_mode=1,
-        residual_connection=0,
-    )
-    print(f"output shape: {out.shape}")
+    print(f"output shape: {x.shape}")
     ```
 
   - decode场景（变长序列）：
@@ -397,31 +436,106 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     ```python
     import torch
     import torch_npu
+
     K = 3
     dim = 128
     batch = 4
     dtype = torch.bfloat16
+
     weight = torch.randn(K, dim, dtype=dtype).npu()
     seq_lens = [1, 1, 1, 1]
     cu_seq_len = sum(seq_lens)
     x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
     query_start_loc = torch.tensor([0, 1, 2, 3, 4], dtype=torch.int32).npu()
+
     num_slots = 8
-    conv_states = torch.randn(num_slots, K - 1, dim, dtype=dtype).npu()
+    m = 1
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
     cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
-    out = torch_npu.npu_fused_causal_conv1d(
+    num_computed_tokens = torch.tensor([100, 50, 80, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([1, 1, 1, 1], dtype=torch.int32).npu()
+
+    max_query_len = 1
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
+    torch_npu.npu_fused_causal_conv1d_v2(
         x,
         weight,
         conv_states,
         query_start_loc=query_start_loc,
         cache_indices=cache_indices,
-        num_accepted_tokens=None,
-        activation_mode="None",
+        initial_state_mode=None,
+        bias=None,
+        num_accepted_tokens=num_accepted_tokens,
+        num_computed_tokens=num_computed_tokens,
+        block_idx_first_scheduled_token=None,
+        block_idx_last_scheduled_token=None,
+        initial_state_idx=None,
+        activation="None",
         pad_slot_id=-1,
-        run_mode=1,
-        residual_connection=0,
+        run_mode=0,
+        max_query_len=max_query_len,
+        residual_connection=residual_connection,
+        block_size=block_size,
+        conv_mode=conv_mode,
     )
-    print(f"output shape: {out.shape}")
+    print(f"output shape: {x.shape}")
+    ```
+
+  - decode场景（固定batch）：
+
+    ```python
+    import torch
+    import torch_npu
+
+    K = 3
+    dim = 128
+    batch = 4
+    m = 2
+    seq_len = m + 1
+    dtype = torch.bfloat16
+
+    weight = torch.randn(K, dim, dtype=dtype).npu()
+    x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
+
+    num_slots = 8
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
+    cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
+    query_start_loc = torch.tensor([0, 3, 6, 9, 12], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([100, 50, 80, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([2, 1, 3, 2], dtype=torch.int32).npu()
+
+    max_query_len = seq_len
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
+    torch_npu.npu_fused_causal_conv1d_v2(
+        x,
+        weight,
+        conv_states,
+        query_start_loc=query_start_loc,
+        cache_indices=cache_indices,
+        initial_state_mode=None,
+        bias=None,
+        num_accepted_tokens=num_accepted_tokens,
+        num_computed_tokens=num_computed_tokens,
+        block_idx_first_scheduled_token=None,
+        block_idx_last_scheduled_token=None,
+        initial_state_idx=None,
+        activation="None",
+        pad_slot_id=-1,
+        run_mode=0,
+        max_query_len=max_query_len,
+        residual_connection=residual_connection,
+        block_size=block_size,
+        conv_mode=conv_mode,
+    )
+    print(f"output shape: {x.shape}")
     ```
 
 - 图模式调用
@@ -432,76 +546,124 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     import torch_npu
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
+
     K = 3
     dim = 128
     batch = 4
     dtype = torch.bfloat16
+
     weight = torch.randn(K, dim, dtype=dtype).npu()
-    seq_lens = [5, 3, 7, 4]
+    seq_lens = [15, 12, 20, 10]
     cu_seq_len = sum(seq_lens)
     x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
-    query_start_loc = torch.tensor([0, 5, 8, 15, 19], dtype=torch.int32).npu()
+    query_start_loc = torch.tensor([0, 15, 27, 47, 57], dtype=torch.int32).npu()
+
     num_slots = 8
     conv_states = torch.randn(num_slots, K - 1, dim, dtype=dtype).npu()
     cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
-    initial_state_mode = torch.tensor([1, 1, 0, 0], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([10, 5, 0, 0], dtype=torch.int32).npu()
+
+    max_query_len = max(seq_lens)
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    def causal_conv1d_prefill(x, weight, conv_states, query_start_loc,
-                               cache_indices, initial_state_mode):
-        return torch_npu.npu_fused_causal_conv1d(
+
+    def causal_conv1d_v2_prefill(x, weight, conv_states, query_start_loc,
+                              cache_indices, num_computed_tokens):
+        return torch_npu.npu_fused_causal_conv1d_v2(
             x,
             weight,
             conv_states,
             query_start_loc=query_start_loc,
             cache_indices=cache_indices,
-            initial_state_mode=initial_state_mode,
+            initial_state_mode=None,
             bias=None,
-            activation_mode="None",
+            num_accepted_tokens=None,
+            num_computed_tokens=num_computed_tokens,
+            block_idx_first_scheduled_token=None,
+            block_idx_last_scheduled_token=None,
+            initial_state_idx=None,
+            activation="None",
             pad_slot_id=-1,
             run_mode=0,
-            residual_connection=0,
+            max_query_len=max_query_len,
+            residual_connection=residual_connection,
+            block_size=block_size,
+            conv_mode=conv_mode,
         )
-    compiled_func = torch.compile(causal_conv1d_prefill, backend=npu_backend)
-    out = compiled_func(x, weight, conv_states, query_start_loc, cache_indices, initial_state_mode)
-    print(f"output shape: {out.shape}")
+
+    compiled_func = torch.compile(causal_conv1d_v2_prefill, backend=npu_backend)
+    compiled_func(x, weight, conv_states, query_start_loc,
+                        cache_indices, num_computed_tokens)
+    print(f"output shape: {x.shape}")
     ```
 
-  - decode场景（固定batch）：
+  - prefill和decode场景：
 
     ```python
     import torch
     import torch_npu
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
+
     K = 3
     dim = 128
     batch = 4
-    seq_len = 3
     dtype = torch.bfloat16
+
     weight = torch.randn(K, dim, dtype=dtype).npu()
-    x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
+    seq_lens = [12, 9, 2, 1]
+    cu_seq_len = sum(seq_lens)
+    x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
+    query_start_loc = torch.tensor([0, 12, 21, 23, 24], dtype=torch.int32).npu()
+
     num_slots = 8
-    conv_states = torch.randn(num_slots, K-1+seq_len-1, dim, dtype=dtype).npu()
-    cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
-    num_accepted_tokens = torch.tensor([2, 1, 3, 2], dtype=torch.int32).npu()
+    m = 2
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
+    cache_indices = torch.tensor([0, 3, 1, 5], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([0, 20, 50, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([1, 1, 2, 1], dtype=torch.int32).npu()
+
+    max_query_len = max(seq_lens)
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    def causal_conv1d_decode_3d(x, weight, conv_states, cache_indices, num_accepted_tokens):
-        return torch_npu.npu_fused_causal_conv1d(
+
+    def causal_conv1d_v2_mixed(x, weight, conv_states, query_start_loc,
+                            cache_indices, num_computed_tokens, num_accepted_tokens):
+        return torch_npu.npu_fused_causal_conv1d_v2(
             x,
             weight,
             conv_states,
+            query_start_loc=query_start_loc,
             cache_indices=cache_indices,
+            initial_state_mode=None,
+            bias=None,
             num_accepted_tokens=num_accepted_tokens,
-            activation_mode="None",
+            num_computed_tokens=num_computed_tokens,
+            block_idx_first_scheduled_token=None,
+            block_idx_last_scheduled_token=None,
+            initial_state_idx=None,
+            activation="None",
             pad_slot_id=-1,
-            run_mode=1,
-            residual_connection=0,
+            run_mode=0,
+            max_query_len=max_query_len,
+            residual_connection=residual_connection,
+            block_size=block_size,
+            conv_mode=conv_mode,
         )
-    compiled_func = torch.compile(causal_conv1d_decode_3d, backend=npu_backend)
-    out = compiled_func(x, weight, conv_states, cache_indices, num_accepted_tokens)
-    print(f"output shape: {out.shape}")
+
+    compiled_func = torch.compile(causal_conv1d_v2_mixed, backend=npu_backend)
+    compiled_func(x, weight, conv_states, query_start_loc,
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
+    print(f"output shape: {x.shape}")
     ```
 
   - decode场景（变长序列）：
@@ -511,35 +673,125 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     import torch_npu
     import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
+
     K = 3
     dim = 128
     batch = 4
     dtype = torch.bfloat16
+
     weight = torch.randn(K, dim, dtype=dtype).npu()
     seq_lens = [1, 1, 1, 1]
     cu_seq_len = sum(seq_lens)
     x = torch.randn(cu_seq_len, dim, dtype=dtype).npu()
     query_start_loc = torch.tensor([0, 1, 2, 3, 4], dtype=torch.int32).npu()
+
     num_slots = 8
-    conv_states = torch.randn(num_slots, K - 1, dim, dtype=dtype).npu()
+    m = 1
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
     cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([100, 50, 80, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([1, 1, 1, 1], dtype=torch.int32).npu()
+
+    max_query_len = 1
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
-    def causal_conv1d_decode_2d(x, weight, conv_states, query_start_loc, cache_indices):
-        return torch_npu.npu_fused_causal_conv1d(
+
+    def causal_conv1d_v2_decode_2d(x, weight, conv_states, query_start_loc,
+                                cache_indices, num_computed_tokens, num_accepted_tokens):
+        return torch_npu.npu_fused_causal_conv1d_v2(
             x,
             weight,
             conv_states,
             query_start_loc=query_start_loc,
             cache_indices=cache_indices,
-            num_accepted_tokens=None,
-            activation_mode="None",
+            initial_state_mode=None,
+            bias=None,
+            num_accepted_tokens=num_accepted_tokens,
+            num_computed_tokens=num_computed_tokens,
+            block_idx_first_scheduled_token=None,
+            block_idx_last_scheduled_token=None,
+            initial_state_idx=None,
+            activation="None",
             pad_slot_id=-1,
-            run_mode=1,
-            residual_connection=0,
+            run_mode=0,
+            max_query_len=max_query_len,
+            residual_connection=residual_connection,
+            block_size=block_size,
+            conv_mode=conv_mode,
         )
-    compiled_func = torch.compile(causal_conv1d_decode_2d, backend=npu_backend)
-    out = compiled_func(x, weight, conv_states, query_start_loc, cache_indices)
-    print(f"output shape: {out.shape}")
+
+    compiled_func = torch.compile(causal_conv1d_v2_decode_2d, backend=npu_backend)
+    compiled_func(x, weight, conv_states, query_start_loc,
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
+    print(f"output shape: {x.shape}")
+    ```
+
+  - decode场景（固定batch）：
+
+    ```python
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.configs.compiler_config import CompilerConfig
+
+    K = 3
+    dim = 128
+    batch = 4
+    m = 2
+    seq_len = m + 1
+    dtype = torch.bfloat16
+
+    weight = torch.randn(K, dim, dtype=dtype).npu()
+    x = torch.randn(batch, seq_len, dim, dtype=dtype).npu()
+
+    num_slots = 8
+    state_len = K - 1 + m
+    conv_states = torch.randn(num_slots, state_len, dim, dtype=dtype).npu()
+    cache_indices = torch.tensor([0, 2, 4, 6], dtype=torch.int32).npu()
+    query_start_loc = torch.tensor([0, 3, 6, 9, 12], dtype=torch.int32).npu()
+    num_computed_tokens = torch.tensor([100, 50, 80, 30], dtype=torch.int32).npu()
+    num_accepted_tokens = torch.tensor([2, 1, 3, 2], dtype=torch.int32).npu()
+
+    max_query_len = seq_len
+    block_size = 128
+    conv_mode = "default"
+    residual_connection = 0
+
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+
+    def causal_conv1d_v2_decode_3d(x, weight, conv_states, query_start_loc,
+                                cache_indices, num_computed_tokens, num_accepted_tokens):
+        return torch_npu.npu_fused_causal_conv1d_v2(
+            x,
+            weight,
+            conv_states,
+            query_start_loc=query_start_loc,
+            cache_indices=cache_indices,
+            initial_state_mode=None,
+            bias=None,
+            num_accepted_tokens=num_accepted_tokens,
+            num_computed_tokens=num_computed_tokens,
+            block_idx_first_scheduled_token=None,
+            block_idx_last_scheduled_token=None,
+            initial_state_idx=None,
+            activation="None",
+            pad_slot_id=-1,
+            run_mode=0,
+            max_query_len=max_query_len,
+            residual_connection=residual_connection,
+            block_size=block_size,
+            conv_mode=conv_mode,
+        )
+
+    compiled_func = torch.compile(causal_conv1d_v2_decode_3d, backend=npu_backend)
+    compiled_func(x, weight, conv_states, query_start_loc,
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
+    print(f"output shape: {x.shape}")
     ```
     

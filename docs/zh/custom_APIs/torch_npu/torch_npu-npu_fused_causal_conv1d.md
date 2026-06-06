@@ -20,7 +20,7 @@
     - conv_states: [-1, K-1, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]（无作用）
     - num_computed_tokens: [batch]
@@ -44,7 +44,7 @@
     - conv_states: [-1, K-1+m, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]
     - num_computed_tokens: [batch]
@@ -68,7 +68,7 @@
     - conv_states: [-1, K-1+m, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]
     - num_computed_tokens: [batch]
@@ -92,7 +92,7 @@
     - conv_states: [-1, K-1+m, dim]
     - query_start_loc: [batch+1]
     - cache_indices: 不开APC:[batch]或None, 开APC:[block, maxNumBlocks]
-    - initial_state_mode: [batch]
+    - initial_state_mode: [batch]（无作用）
     - bias: [dim]（无作用）
     - num_accepted_tokens: [batch]
     - num_computed_tokens: [batch]
@@ -574,7 +574,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
     def causal_conv1d_prefill(x, weight, conv_states, query_start_loc,
-                              cache_indices, initial_state_mode, num_computed_tokens):
+                              cache_indices, num_computed_tokens):
         return torch_npu.npu_fused_causal_conv1d(
             x,
             weight,
@@ -599,7 +599,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 
     compiled_func = torch.compile(causal_conv1d_prefill, backend=npu_backend)
     out = compiled_func(x, weight, conv_states, query_start_loc,
-                        cache_indices, initial_state_mode, num_computed_tokens)
+                        cache_indices, num_computed_tokens)
     print(f"output shape: {out.shape}")
     ```
 
@@ -639,8 +639,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
     def causal_conv1d_mixed(x, weight, conv_states, query_start_loc,
-                            cache_indices, initial_state_mode,
-                            num_computed_tokens, num_accepted_tokens):
+                            cache_indices, num_computed_tokens, num_accepted_tokens):
         return torch_npu.npu_fused_causal_conv1d(
             x,
             weight,
@@ -665,8 +664,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 
     compiled_func = torch.compile(causal_conv1d_mixed, backend=npu_backend)
     out = compiled_func(x, weight, conv_states, query_start_loc,
-                        cache_indices, initial_state_mode,
-                        num_computed_tokens, num_accepted_tokens)
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
     print(f"output shape: {out.shape}")
     ```
 
@@ -706,8 +704,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
     def causal_conv1d_decode_2d(x, weight, conv_states, query_start_loc,
-                                cache_indices, initial_state_mode,
-                                num_computed_tokens, num_accepted_tokens):
+                                cache_indices, num_computed_tokens, num_accepted_tokens):
         return torch_npu.npu_fused_causal_conv1d(
             x,
             weight,
@@ -732,8 +729,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 
     compiled_func = torch.compile(causal_conv1d_decode_2d, backend=npu_backend)
     out = compiled_func(x, weight, conv_states, query_start_loc,
-                        cache_indices, initial_state_mode,
-                        num_computed_tokens, num_accepted_tokens)
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
     print(f"output shape: {out.shape}")
     ```
 
@@ -772,8 +768,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
     npu_backend = tng.get_npu_backend(compiler_config=config)
 
     def causal_conv1d_decode_3d(x, weight, conv_states, query_start_loc,
-                                cache_indices, initial_state_mode,
-                                num_computed_tokens, num_accepted_tokens):
+                                cache_indices, num_computed_tokens, num_accepted_tokens):
         return torch_npu.npu_fused_causal_conv1d(
             x,
             weight,
@@ -798,8 +793,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 
     compiled_func = torch.compile(causal_conv1d_decode_3d, backend=npu_backend)
     out = compiled_func(x, weight, conv_states, query_start_loc,
-                        cache_indices, initial_state_mode,
-                        num_computed_tokens, num_accepted_tokens)
+                        cache_indices, num_computed_tokens, num_accepted_tokens)
     print(f"output shape: {out.shape}")
     ```
     
