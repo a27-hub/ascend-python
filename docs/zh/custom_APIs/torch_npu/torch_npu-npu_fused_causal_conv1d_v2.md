@@ -107,7 +107,7 @@
 - **计算公式**：
 
   K是卷积核宽度（固定为3），L是原始序列长度，dim是特征维度。
-  1. 缓存读取
+  - 缓存读取
 
       缓存行索引：
 
@@ -149,7 +149,7 @@
       cachedState[i, dim] = convStates[readCacheLine][i, dim], \quad 0 \leq i < offset + K - 1
       $$
 
-  2. 缓存拼接
+  - 缓存拼接
 
       $$
       paddedInput[i, dim] =
@@ -159,7 +159,7 @@
       \end{cases}
       $$
 
-  3. 缓存更新
+  - 缓存更新
 
       $$
       Len = offset + K - 1 + L
@@ -181,13 +181,13 @@
       convStates[writeCacheLine][C - M + i, dim] = paddedInput[Len - M + i, dim], \quad i = 0, 1, \dots, M-1
       $$
 
-  4. Offset 裁剪
+  - Offset 裁剪
 
       $$
       x'[i, dim] = paddedInput[i + offset, dim], \quad 0 \leq i < K - 1 + L
       $$
 
-  5. APC 缓存填充（可选，APC 模式下）
+  - APC 缓存填充（可选，APC 模式下）
 
       $$
       seqCompletedOffsetToken = numComputedTokens[batchId] \mod B
@@ -222,13 +222,13 @@
       convStates[cacheIndices[batchId, \; idxFirst + chunk]][C-(K-1)+j, \; dim] = x'[boundaryIdx + j, \; dim], \quad j = 0, \dots, K-2
       $$
 
-  6. 因果1维卷积
+  - 因果1维卷积
 
       $$
       y[i, dim] = \sum_{k=0}^{K-1} w[k, dim] \cdot x'[i + k, dim], \quad i = 0, 1, \dots, L-1
       $$
 
-  7. 零填充重置（可选，当convMode == 1 并且 numComputedTokens不为空时）
+  - 零填充重置（可选，当convMode == 1 并且 numComputedTokens不为空时）
 
       $$
       resetIdx = \min\!\Big(\max\!\big(K - 1 - numComputedTokens[batchId], \; 0\big), \; L\Big)
@@ -238,13 +238,13 @@
       y[i, dim] = 0, \quad 0 \leq i < resetIdx
       $$
 
-  8. 残差连接（可选）
+  - 残差连接（可选）
 
       $$
       y[i, dim] = x[i, dim] + y[i, dim]
       $$
 
-  9. 原地更新
+  - 原地更新
 
       $$
       x[i, dim] = y[i, dim]

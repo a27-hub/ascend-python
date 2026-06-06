@@ -875,11 +875,9 @@
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>对mHC架构中的H′<sub>res</sub>矩阵（即网络中mHC层的输入数据）执行Sinkhorn迭代归一化变换，最终得到双随机矩阵H<sub>res</sub>，支持输出迭代过程中的中间归一化结果（norm_out）和求和结果（sum_out），用于反向梯度计算。</span></p></td>
 </tr>
-</tr>
 <tr id="row_ring_attention_update"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update"><a name="p_ring_attention_update"></a><a name="p_ring_attention_update"></a><a href="torch_npu-npu_transpose_quant_batchmatmul.md">torch_npu.npu_transpose_quant_batchmatmul</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
 </tr>
 </tbody>
 </table>
-
