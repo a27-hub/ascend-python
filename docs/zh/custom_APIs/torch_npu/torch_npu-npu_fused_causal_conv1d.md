@@ -27,7 +27,7 @@
     - block_idx_first_scheduled_token: 不开APC:None, 开APC:[batch]
     - block_idx_last_scheduled_token: 不开APC:None, 开APC:[batch]
     - initial_state_idx: 不开APC:None, 开APC:[batch]
-    - activation_mode: （无作用）
+    - activation: （无作用）
     - pad_slot_id: 默认值 -1
     - run_mode: （无作用）
     - max_query_len: 大于8
@@ -51,7 +51,7 @@
     - block_idx_first_scheduled_token: 不开APC:None, 开APC:[batch]
     - block_idx_last_scheduled_token: 不开APC:None, 开APC:[batch]
     - initial_state_idx: 不开APC:None, 开APC:[batch]
-    - activation_mode: （无作用）
+    - activation: （无作用）
     - pad_slot_id: 默认值 -1
     - run_mode: （无作用）
     - max_query_len: 大于8
@@ -75,7 +75,7 @@
     - block_idx_first_scheduled_token: 不开APC:None, 开APC:[batch]
     - block_idx_last_scheduled_token: 不开APC:None, 开APC:[batch]
     - initial_state_idx: 不开APC:None, 开APC:[batch]
-    - activation_mode: （无作用）
+    - activation: （无作用）
     - pad_slot_id: 默认值 -1
     - run_mode: （无作用）
     - max_query_len:默认值 1
@@ -99,7 +99,7 @@
     - block_idx_first_scheduled_token: 不开APC:None, 开APC:[batch]
     - block_idx_last_scheduled_token: 不开APC:None, 开APC:[batch]
     - initial_state_idx: 不开APC:None, 开APC:[batch]
-    - activation_mode: （无作用）
+    - activation: （无作用）
     - pad_slot_id: 默认值 -1
     - run_mode: （无作用）
     - max_query_len:默认值 1
