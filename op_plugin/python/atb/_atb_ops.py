@@ -20,6 +20,7 @@ API_LIST = [
     '_npu_reshape_and_cache_siso',
     '_npu_rotary_embedding',
     '_npu_flash_attention',
+    '_npu_flash_attention_v3',
     '_npu_flash_attention_unpad',
     '_npu_flash_attention_unpad_v2',
     '_npu_paged_attention_splitfuse',
@@ -47,7 +48,6 @@ ATB_MODULE = types.ModuleType(ATB_MODULE_NAME)
 
 
 def _add_atb_module():
-    
     setattr(torch_npu, ATB_MODULE_NAME, ATB_MODULE)
     sys.modules[f'torch_npu.{ATB_MODULE_NAME}'] = ATB_MODULE
 
@@ -96,7 +96,6 @@ def lazy_load_atb_so(api_func):
     def wrapper(*args, **kwargs):
         _register_atb_extensions()
         return api_func(*args, **kwargs)
-    
     return wrapper
 
 
