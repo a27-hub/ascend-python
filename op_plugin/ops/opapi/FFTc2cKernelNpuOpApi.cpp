@@ -227,7 +227,7 @@ static at::Tensor& _exec_fft(at::Tensor& out_, const at::Tensor& self_, at::IntA
                 collapsed_sizes[0] = 2;
                 collapsed_sizes[1] = -1;
                 collapsed_sizes[2] = batch_total;
-                tmp_pingpong[ping].reshape(collapsed_sizes);
+                tmp_pingpong[ping] = tmp_pingpong[ping].reshape(collapsed_sizes);
             }
             continue;
         }
