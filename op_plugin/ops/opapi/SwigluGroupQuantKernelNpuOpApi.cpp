@@ -33,7 +33,7 @@ constexpr int64_t DEFAULT_BLOCK_SIZE_MODE_4 = 64;
 }  // namespace
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::Tensor &x,
-    const c10::optional<at::Tensor> &weight, const c10::optional<at::Tensor> &group_index,
+    const c10::optional<at::Tensor> &weight, const c10::OptionalIntArrayRef group_index,
     const c10::optional<at::Tensor> &inv_scale, c10::optional<at::ScalarType> dst_type, int64_t quant_mode,
     int64_t block_size, bool round_scale, double clamp_limit, double dst_type_max, bool output_origin)
 {
@@ -93,8 +93,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_swiglu_group_quant(const at::
     } else if (quant_mode == QUANT_MODE_2) {
         y_scale = at::empty({0}, x.options().dtype(at::kFloat));
     } else if (quant_mode == QUANT_MODE_3) {
-        if (group_index.has_value() && group_index-> defined() ) {
-            y_scale = npu_preparation::apply_tensor_without_format(group_index->sizes(), c10::dtype(at::ScalarType::Float));
+        if (group_index.has_value() && group_index->defined()) {
+            real_group_index = op_infer::array_to_small_vector(group_index.value());
+            y_scale = npu_preparation::apply_tensor_without_format(real_group_index, c10::dtype(at::ScalarType::Float));
         } else {
             y_scale = npu_preparation::apply_tensor_without_format({1}, c10::dtype(at::ScalarType::Float));
         }
