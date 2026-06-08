@@ -455,7 +455,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
 }
 
 void *LazyFusionKernel::Alloc(size_t size) {
-  static const bool use_workspace_allocator =
+  const bool use_workspace_allocator =
       c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
   at::Tensor ws_tensor = use_workspace_allocator
       ? at_npu::native::allocate_workspace(size, stream_)
@@ -499,7 +499,7 @@ void LazyFusionKernel::Flush() {
     DumpGraph();
   }
 
-  static const bool codegen_in_task_queue =
+  const bool codegen_in_task_queue =
       c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
   if (codegen_in_task_queue) {
     // Level 2: codegen + workspace alloc/free + launch all run on the TaskQueue thread.
