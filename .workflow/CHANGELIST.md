@@ -72,3 +72,31 @@
 #### 影响范围
 - PLAN.md 已就绪，可立即进入实现阶段
 - 不影响现有代码
+
+---
+
+### 2026-06-05 | PyTorch 接口封装实现完成
+
+**类型**: 🆕 新功能
+**范围**: op_plugin/config, op_plugin/ops/opapi, test/core_tests, test/test_custom_ops
+
+#### 变更内容
+- 新增 `op_plugin/ops/opapi/QkvRmsNormRopeCacheWithKScaleKernelNpuOpApi.cpp`（171 行）
+  - in-place 函数 `npu_qkv_rms_norm_rope_cache_with_kscale`
+  - functional 函数 `npu_qkv_rms_norm_rope_cache_with_kscale_functional`
+  - 共享验证逻辑 `validate_inputs` 辅助函数
+- 修改 `op_plugin/config/op_plugin_functions.yaml`：新增 2 条 func 定义
+- 修改 `test/core_tests/torch_npu_OpApi_schema_all.json`：新增 2 条 schema 注册
+- 新增 `test/test_custom_ops/test_npu_qkv_rms_norm_rope_cache_with_kscale.py`（119 行）
+  - 2 个正常路径测试 + 6 个报错路径测试
+
+#### 关键决策
+- 使用 `validate_inputs` 辅助函数避免 in-place 和 functional 之间的验证代码重复
+- 使用 `TensorWrapper{tensor, aclDataType::ACL_FLOAT8_E4M3FN}` 包装 fp8 输出和 in-place cache tensor
+- functional 变体 clone 3 个 in-place 参数（k_cache, v_cache, k_scale_cache），返回 5 个输出
+- Python 测试仅验证 shape/dtype/error 行为，不实现 golden 计算（golden 由 kernel 侧负责）
+
+#### 影响范围
+- 新增 2 个文件，修改 2 个文件
+- 不影响已有算子功能
+- CHECKLIST.md 阶段一全部检查项通过

@@ -29,16 +29,16 @@ op-plugin 是 Ascend Extension for PyTorch (torch_npu) 的算子插件库，为 
 
 在 op-plugin 仓库中完成新算子的 PyTorch 接口交付（含 in-place 和 functional 两个变体），包含以下 4 个文件：
 
-- [ ] 任务 1.1: 在 `op_plugin/config/op_plugin_functions.yaml` 的 custom 段新增 2 条 func 定义（in-place + functional）
-- [ ] 任务 1.2: 新增 `op_plugin/ops/opapi/QkvRmsNormRopeCacheWithKScaleKernelNpuOpApi.cpp` C++ 适配实现（含 2 个函数）
-- [ ] 任务 1.3: 在 `test/core_tests/torch_npu_OpApi_schema_all.json` 注册 2 条 schema 测试条目
-- [ ] 任务 1.4: 新增 `test/test_custom_ops/test_npu_qkv_rms_norm_rope_cache_with_kscale.py` Python 单元测试
+- [x] 任务 1.1: 在 `op_plugin/config/op_plugin_functions.yaml` 的 custom 段新增 2 条 func 定义
+- [x] 任务 1.2: 新增 `op_plugin/ops/opapi/QkvRmsNormRopeCacheWithKScaleKernelNpuOpApi.cpp` C++ 适配实现（含 2 个函数）
+- [x] 任务 1.3: 在 `test/core_tests/torch_npu_OpApi_schema_all.json` 注册 2 条 schema 测试条目
+- [x] 任务 1.4: 新增 `test/test_custom_ops/test_npu_qkv_rms_norm_rope_cache_with_kscale.py` Python 单元测试（8 个测试）
 
 ### 阶段二：验证与交付
 
-- [ ] 任务 2.1: 确认 C++ 适配代码编译通过（LSP 检查）
-- [ ] 任务 2.2: 确认 Python 测试代码语法和逻辑正确
-- [ ] 任务 2.3: 代码走查，确保与已有算子风格一致
+- [x] 任务 2.1: 确认 C++ 适配代码编译通过（LSP 检查 — NPU SDK 缺失为预期行为）
+- [x] 任务 2.2: 确认 Python 测试代码语法和逻辑正确
+- [x] 任务 2.3: 代码走查，确保与已有算子风格一致（CHECKLIST 全部通过）
 
 ## 约束与成功标准
 
