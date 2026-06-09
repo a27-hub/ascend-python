@@ -34,7 +34,7 @@
 </tr>
 <tr id="row17497217181119"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p16497617191116"><a name="p16497617191116"></a><a name="p16497617191116"></a><a href="（beta）torch_npu-npu_alloc_float_status.md">（beta）torch_npu.npu_alloc_float_status</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p6497141711115"><a name="p6497141711115"></a><a name="p6497141711115"></a>为溢出检测模式申请Tensor作为入参。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p6497141711115"><a name="p6497141711115"></a><a name="p6497141711115"></a>申请一个专门用于存储浮点运算状态标志的tensor。该tensor用于后续记录计算过程中的溢出状态。</p>
 </td>
 </tr>
 <tr id="row104977172114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1849701710119"><a name="p1849701710119"></a><a name="p1849701710119"></a><a href="（beta）torch_npu-npu_anchor_response_flags.md">（beta）torch_npu.npu_anchor_response_flags</a></p>
@@ -399,7 +399,7 @@
 </tr>
 <tr id="row16527145114477"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1338142581"><a name="p1338142581"></a><a name="p1338142581"></a><a href="torch_npu-npu_convert_weight_to_int4pack.md">torch_npu.npu_convert_weight_to_int4pack</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16338242582"><a name="p16338242582"></a><a name="p16338242582"></a>将数据类型为int32的输入Tensor打包为int4存放，每8个int4数据通过一个int32数据承载，并进行交叠排放。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p16338242582"><a name="p16338242582"></a><a name="p16338242582"></a>将数据类型为int32的输入tensor打包为int4存放，每8个int4数据通过一个int32数据承载，并进行交叠排放。</p>
 </td>
 </tr>
 <tr id="row194591911194818"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p633812455816"><a name="p633812455816"></a><a name="p633812455816"></a><a href="torch_npu-npu_dynamic_quant.md">torch_npu.npu_dynamic_quant</a></p>
@@ -454,7 +454,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p1720095217417"></a><a name="p1720095217417"></a><a href="torch_npu-npu_gelu_mul.md">torch_npu.npu_gelu_mul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p9269284217"><a name="p9269284217"></a><a name="p9269284217"></a>对输入Tensor进行高斯误差线性单元（GELU）与MUL乘法结合的复合计算操作。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p9269284217"><a name="p9269284217"></a><a name="p9269284217"></a>当输入tensor的尾轴为32B对齐场景时，使用该API可对输入tensor进行GELU与MUL结合的复合计算操作以提高算子性能，若尾轴为非32B对齐场景时，建议走小算子拼接逻辑，即按照下述公式分步拼接计算。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p5338134195811"></a><a name="p5338134195811"></a><a href="torch_npu-npu_group_norm_silu.md">torch_npu.npu_group_norm_silu</a></p>
@@ -569,7 +569,7 @@
 </tr>
 <tr id="row9368201625615"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p432973317361"><a name="p432973317361"></a><a name="p432973317361"></a><a href="torch_npu-npu_quant_scatter.md">torch_npu.npu_quant_scatter</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新input中的值，并将结果保存到输出Tensor，input本身的数据不变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新input中的值，并将结果保存到输出tensor，input本身的数据不变。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p20338144125814"></a><a name="p20338144125814"></a><a href="torch_npu-npu_recurrent_gated_delta_rule.md">torch_npu.npu_recurrent_gated_delta_rule</a></p>
@@ -589,7 +589,7 @@
 </tr>
 <tr id="row16875125182711"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p77002833617"><a name="p77002833617"></a><a name="p77002833617"></a><a href="torch_npu-npu_scatter_nd_update.md">torch_npu.npu_scatter_nd_update</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863744477_p15682749165813"><a name="zh-cn_topic_0000001863744477_p15682749165813"></a><a name="zh-cn_topic_0000001863744477_p15682749165813"></a>将updates中的值按指定的索引indices更新input中的值，并将结果保存到输出Tensor，input本身的数据不变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863744477_p15682749165813"><a name="zh-cn_topic_0000001863744477_p15682749165813"></a><a name="zh-cn_topic_0000001863744477_p15682749165813"></a>将updates中的值按指定的索引indices更新input中的值，并将结果保存到输出tensor，input本身的数据不变。</p>
 </td>
 </tr>
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_sparse_flash_attention.md">torch_npu.npu_sparse_flash_attention</a></p>
@@ -619,7 +619,7 @@
 </tr>
 <tr id="row9470191314519"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p83781723143618"><a name="p83781723143618"></a><a name="p83781723143618"></a><a href="torch_npu-npu_scatter_nd_update_.md">torch_npu.npu_scatter_nd_update_</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001816704932_p12276121818501"><a name="zh-cn_topic_0000001816704932_p12276121818501"></a><a name="zh-cn_topic_0000001816704932_p12276121818501"></a>将updates中的值按指定的索引indices更新input中的值，并将结果保存到输出Tensor，input中的数据被改变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001816704932_p12276121818501"><a name="zh-cn_topic_0000001816704932_p12276121818501"></a><a name="zh-cn_topic_0000001816704932_p12276121818501"></a>将updates中的值按指定的索引indices更新input中的值，并将结果保存到输出tensor，input中的数据被改变。</p>
 </td>
 </tr>
 <tr id="row1243753818365"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1332519186295"><a name="p1332519186295"></a><a name="p1332519186295"></a><a href="torch_npu-npu_trans_quant_param.md">torch_npu.npu_trans_quant_param</a></p>
@@ -634,27 +634,27 @@
 </tr>
 <tr id="row10933133063618"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p5743101211585"><a name="p5743101211585"></a><a name="p5743101211585"></a><a href="torch_npu-scatter_update.md">torch_npu.scatter_update</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p874318124582"><a name="p874318124582"></a><a name="p874318124582"></a>将Tensor updates中的值按指定的轴axis和索引indices更新Tensor data中的值，并将结果保存到输出Tensor，data本身的数据不变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p874318124582"><a name="p874318124582"></a><a name="p874318124582"></a>将tensor updates中的值按指定的轴axis和索引indices更新tensor data中的值，并将结果保存到输出tensor，data本身的数据不变。</p>
 </td>
 </tr>
 <tr id="row57012280360"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1274381212587"><a name="p1274381212587"></a><a name="p1274381212587"></a><a href="torch_npu-scatter_update_.md">torch_npu.scatter_update_</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p3743712125811"><a name="p3743712125811"></a><a name="p3743712125811"></a>将Tensor updates中的值按指定的轴axis和索引indices更新Tensor data中的值，并将结果保存到输出Tensor，data本身的数据被改变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p3743712125811"><a name="p3743712125811"></a><a name="p3743712125811"></a>将tensor updates中的值按指定的轴axis和索引indices更新tensor data中的值，并将结果保存到输出tensor，data本身的数据被改变。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-empty_with_swapped_memory.md">torch_npu.empty_with_swapped_memory</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊Tensor。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊tensor。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-erase_stream.md">torch_npu.erase_stream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>Tensor通过record_stream在内存池上添加标记后，该标记已被stream使用，可以通过该接口移除该标记。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>tensor通过record_stream在内存池上添加标记后，该标记已被stream使用，可以通过该接口移除该标记。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_gather_sparse_index.md">torch_npu.npu_gather_sparse_index</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>从输入Tensor的指定维度，按照<code>index</code>中的下标序号提取元素，保存到输出Tensor中。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>从输入tensor的指定维度，按照<code>index</code>中的下标序号提取元素，保存到输出tensor中。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_moe_distribute_combine.md">torch_npu.npu_moe_distribute_combine</a></p>
@@ -718,7 +718,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-matmul_checksum.md">torch_npu.matmul_checksum</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>提供基于原生torch.matmul和Tensor.matmul接口的aicore错误硬件故障接口，内部执行矩阵计算结果校验过程，并对校验误差和实时计算的校验门限进行对比，判断校验误差是否超越门限，若超越则认为发生了aicore错误。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>提供基于原生torch.matmul和tensor.matmul接口的aicore错误硬件故障接口，内部执行矩阵计算结果校验过程，并对校验误差和实时计算的校验门限进行对比，判断校验误差是否超越门限，若超越则认为发生了aicore错误。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_alltoallv_gmm.md">torch_npu.npu_alltoallv_gmm</a></p>
@@ -824,12 +824,12 @@
 </tr>
 <tr id="save_npugraph_tensor"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_save_npugraph_tensor"><a name="p_save_npugraph_tensor"></a><a name="p_save_npugraph_tensor"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.save_npugraph_tensor</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_save_npugraph_tensor_desc"><a name="p_save_npugraph_tensor_desc"></a><a name="p_save_npugraph_tensor_desc"></a><span>当前接口提供了类似原生PyTorch的torch.save接口特性且不影响aclgraph捕获、重放的Tensor dump能力，允许将aclgraph中间节点的Tensor数据、数据类型、shape信息保存到指定二进制文件中以便用户观察aclgraph的执行过程的tensor数据，以快速定位问题。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_save_npugraph_tensor_desc"><a name="p_save_npugraph_tensor_desc"></a><a name="p_save_npugraph_tensor_desc"></a><span>当前接口提供了类似原生PyTorch的torch.save接口特性且不影响aclgraph捕获、重放的tensor dump能力，允许将aclgraph中间节点的tensor数据、数据类型、shape信息保存到指定二进制文件中以便用户观察aclgraph的执行过程的tensor数据，以快速定位问题。</span></p>
 </td>
 </tr>
 <tr id="print_npugraph_tensor"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_print_npugraph_tensor"><a name="p_print_npugraph_tensor"></a><a name="p_print_npugraph_tensor"></a><a href="torch_npu-print_npugraph_tensor.md">torch_npu.print_npugraph_tensor</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_print_npugraph_tensor_desc"><a name="p_print_npugraph_tensor_desc"></a><a name="p_print_npugraph_tensor_desc"></a><span>print_npugraph_tensor接口提供了类似原生Python的print接口特性且不影响aclgraph捕获、重放的Tensor打印能力，允许将aclgraph中间节点的Tensor数据、数据类型、shape信息直接打印出来，以便用户观察aclgraph的执行过程中的Tensor数据，以快速定位问题。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_print_npugraph_tensor_desc"><a name="p_print_npugraph_tensor_desc"></a><a name="p_print_npugraph_tensor_desc"></a><span>print_npugraph_tensor接口提供了类似原生Python的print接口特性且不影响aclgraph捕获、重放的tensor打印能力，允许将aclgraph中间节点的tensor数据、数据类型、shape信息直接打印出来，以便用户观察aclgraph的执行过程中的tensor数据，以快速定位问题。</span></p>
 </td>
 </tr>
 <tr id="npu_apply_rotary_pos_emb">
@@ -867,7 +867,7 @@
 </tr>
 <tr id="row_ring_attention_update"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update"><a name="p_ring_attention_update"></a><a name="p_ring_attention_update"></a><a href="torch_npu-npu_transpose_quant_batchmatmul.md">torch_npu.npu_transpose_quant_batchmatmul</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_ring_attention_update_desc"><a name="p_ring_attention_update_desc"></a><a name="p_ring_attention_update_desc"></a><span>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的tensor传入。tensor支持转置，转置序列根据传入的数列进行变更。perm_x1代表张量x1的转置序列，perm_x2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</span></p></td>
 </tr>
 </tbody>
 </table>

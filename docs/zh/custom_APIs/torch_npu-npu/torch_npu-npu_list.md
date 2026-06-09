@@ -54,7 +54,7 @@
 </tr>
 <tr id="row14664573152"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1366415716151"><a name="p1366415716151"></a><a name="p1366415716151"></a><a href="（beta）torch_npu-npu-config-allow_internal_format.md">（beta）torch_npu.npu.config.allow_internal_format</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的Tensor，避免了适配层出现私有格式流通。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。</p>
 </td>
 </tr>
 <tr id="row103074675219"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p73114695216"><a name="p73114695216"></a><a name="p73114695216"></a><a href="（beta）torch_npu-npu-stress_detect.md">（beta）torch_npu.npu.stress_detect</a></p>
@@ -89,7 +89,7 @@
 </tr>
 <tr id="row10736640964"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p107361340869"><a name="p107361340869"></a><a name="p107361340869"></a><a href="（beta）torch_npu-npu-utils-npu_check_overflow.md">（beta）torch_npu.npu.utils.npu_check_overflow</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p47368401662"><a name="p47368401662"></a><a name="p47368401662"></a>检测梯度是否溢出，INF_NAN模式下检测输入Tensor是否溢出；饱和模式检查硬件溢出标志位判断。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p47368401662"><a name="p47368401662"></a><a name="p47368401662"></a>检测梯度是否溢出，INF_NAN模式下检测输入tensor是否溢出；饱和模式检查硬件溢出标志位判断。</p>
 </td>
 </tr>
 <tr id="row7615177121914"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p961514711913"><a name="p961514711913"></a><a name="p961514711913"></a><a href="torch_npu-npu-Event()-recorded_time-().md">（beta）torch_npu.npu.Event().recorded_time()</a></p>
