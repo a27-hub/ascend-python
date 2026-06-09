@@ -80,8 +80,6 @@ at::Tensor& _index_put_impl_(
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
-    at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
@@ -94,9 +92,7 @@ at::Tensor& _index_put_impl_(
     for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
         if (indices_after[i].defined()) {
             all_defined_indices.emplace_back(indices_after[i]);
-        continue;
         }
-    all_defined_indices.emplace_back(emptyTensor);
     }
 
   for (auto &all_defined_indice : all_defined_indices) {
