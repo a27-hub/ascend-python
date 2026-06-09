@@ -6429,6 +6429,69 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     return output_shape, output_scale_shape
 
 
+@impl(m, "npu_grouped_matmul_activation_quant")
+def npu_grouped_matmul_activation_quant_meta(x, group_list, x_scale, weight, weight_scale, *, activation_type,
+    bias=None, dequant_dtype=0, transpose_weight=False, group_list_type=0, tuning_config=None,
+    quant_dtype=36, round_mode="rint", scale_alg=0, dst_type_max=0.0):
+
+    torch._check(
+        len(weight) == 1,
+        lambda: f"The size of weight should be 1, current size is {len(weight)}.",
+    )
+    torch._check(
+        len(weight_scale) == 1,
+        lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
+    )
+    torch._check(
+        x.dim() == 2,
+        lambda: f"The dim of x should be equal to 2, but got {x.dim()}.",
+    )
+    torch._check(
+        x_scale.dim() == 3,
+        lambda: f"The dim of x_scale should be equal to 3, but got {x_scale.dim()}.",
+    )
+    torch._check(
+        weight_scale[0].dim() == 4,
+        lambda: f"The dim of weight_scale[0] should be equal to 4 in MX quant mode, but got {weight_scale[0].dim()}.",
+    )
+    torch._check(
+        activation_type == "gelu_tanh",
+        lambda: f"The activation_type only supports gelu_tanh for now, but got {activation_type}.",
+    )
+    torch._check(
+        dequant_dtype == 0,
+        lambda: f"The dequant_dtype must be 0 in MX quant mode, but got {dequant_dtype}.",
+    )
+    torch._check(
+        quant_dtype == 36 or quant_dtype == 35,
+        lambda: f"The quant_dtype only supports 36(float8_e4m3fn) or 35(float8_e5m2), but got {quant_dtype}.",
+    )
+    torch._check(
+        round_mode == "rint",
+        lambda: f"The round_mode only supports rint in MX quant mode, but got {round_mode}.",
+    )
+    torch._check(
+        scale_alg == 0 or scale_alg == 1,
+        lambda: f"The scale_alg only supports 0 or 1 in MX quant mode, but got {scale_alg}.",
+    )
+    torch._check(
+        dst_type_max == 0.0,
+        lambda: f"The dst_type_max only supports 0.0 in current MX quant mode, but got {dst_type_max}.",
+    )
+    if bias is not None:
+        torch._check(
+            len(bias) == 0,
+            lambda: "Non-empty bias is not supported in current MX quant mode.",
+        )
+
+    batch_size = x.size(0)
+    n = weight_scale[0].size(1) if transpose_weight else weight_scale[0].size(2)
+    out_dtype = torch.float8_e5m2 if quant_dtype == 35 else torch.float8_e4m3fn
+    output_shape = torch.empty([batch_size, n], dtype=out_dtype, device=x.device)
+    output_scale_shape = torch.empty([batch_size, math.ceil(n / 64), 2], dtype=torch.uint8, device=x.device)
+    return output_shape, output_scale_shape
+
+
 @impl(m, "npu_recurrent_gated_delta_rule")
 def npu_recurrent_gated_delta_rule_meta(query, key, value, state, *, beta=None, scale=None, actual_seq_lengths=None, ssm_state_indices=None, num_accepted_tokens=None, g=None, gk=None):
     torch._check(value.dim() == 3, lambda: f"valueTensor dim must be 3, but got {value.dim()}.")
