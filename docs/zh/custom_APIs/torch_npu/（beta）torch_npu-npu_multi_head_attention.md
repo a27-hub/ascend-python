@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_multi_head_attention
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,10 +18,9 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_multi_head_attention(query, key, value, query_weight, key_weight, value_weight, attn_mask, out_proj_weight, query_bias, key_bias, value_bias, out_proj_bias, dropout_mask, attn_head_num, attn_dim_per_head, src_len, tgt_len, dropout_prob, softmax_use_float) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 ```
-
 
 ## 参数说明
 
@@ -59,7 +61,6 @@ torch_npu.npu_multi_head_attention(query, key, value, query_weight, key_weight, 
 `attn_dim_per_head`：需16整数倍对齐。
 `src_len`：需16整数倍对齐。
 `tgt_len`：需16整数倍对齐。
-
 
 ## 调用示例
 
@@ -111,4 +112,3 @@ tensor([[ 623.5000,   75.5000,  307.0000,  ...,   25.3125, -418.7500,
         [  -2.5996,   36.8750,  100.0625,  ...,  112.7500,  202.0000,
          -166.3750]], device='npu:0', dtype=torch.float16)
 ```
-

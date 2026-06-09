@@ -17,7 +17,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert) -> Tensor
 ```
 
@@ -28,6 +28,7 @@ torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert
 - **num_expert** (`int`)：必选参数，表示总专家数。对应公式中的$numExpert$。
 
 ## 返回值说明
+
 `Tensor`
 
  对应公式中的$expertTokens$，要求的是一个1维张量，数据类型与`sorted_expert_for_source_row`保持一致。
@@ -44,8 +45,8 @@ torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert
     ```python
     import torch
     import torch_npu
-    sorted_experts = torch.tensor([3,3,4,5,6,7], dtype=torch.int32)
-    num_experts = 5
+    sorted_experts = torch.tensor([0,0,0,1,1,2], dtype=torch.int32)
+    num_experts = 3
     output = torch_npu.npu_moe_compute_expert_tokens(sorted_experts.npu(), num_experts)
     ```
 
@@ -66,12 +67,11 @@ torch_npu.npu_moe_compute_expert_tokens(sorted_expert_for_source_row, num_expert
         def forward(self, sorted_experts, num_experts):
             return torch_npu.npu_moe_compute_expert_tokens(sorted_experts, num_experts)
     def main():
-        sorted_experts = torch.tensor([3,3,4,5,6,7], dtype=torch.int32)
-        num_experts = 5
+        sorted_experts = torch.tensor([0,0,0,1,1,2], dtype=torch.int32)
+        num_experts = 3
         model = GMMModel().npu()
         model = torch.compile(model, backend=npu_backend, dynamic=False)
         custom_output = model(sorted_experts, num_experts)
     if __name__ == '__main__':
         main()
     ```
-

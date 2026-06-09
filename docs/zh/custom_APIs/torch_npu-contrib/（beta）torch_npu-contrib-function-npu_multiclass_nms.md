@@ -1,8 +1,6 @@
 # （beta）torch_npu.contrib.function.npu_multiclass_nms
 
-
 ## 产品支持情况
-
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -13,11 +11,11 @@
 
 ## 功能说明
 
-执行多类别的非极大抑制值（NMS）计算。
+执行多类别的非极大抑制（NMS）计算。
 
 ## 函数原型
 
-```
+```python
 torch_npu.contrib.function.npu_multiclass_nms(multi_bboxes, multi_scores, score_thr=0.05, nms_thr=0.45, max_num=50, score_factors=None)
 ```
 
@@ -31,6 +29,7 @@ torch_npu.contrib.function.npu_multiclass_nms(multi_bboxes, multi_scores, score_
 - **score_factors** (`Tensor`): 可选参数，默认值为None。NMS应用前用来乘分数的因子。
 
 ## 返回值说明
+
 `Tuple`
 
 表示候选框和标签(bboxes, labels)，shape为(k, 5)和(k)的张量。标签以0为基础。
@@ -47,9 +46,8 @@ torch_npu.contrib.function.npu_multiclass_nms(multi_bboxes, multi_scores, score_
 >>> boxes = torch.randint(1, 255, size=(1000, 4)).npu().half()
 >>> scores = torch.randn(1000, 81).npu().half()
 >>> det_bboxes, det_labels = npu_multiclass_nms(boxes, scores, score_thr=0.3, nms_thr=0.5, max_num=3)
->>> det_bboxes.shape
+>>> print(det_bboxes.shape)
 torch.Size([3, 5])
->>> det_labels.shape
+>>> print(det_labels.shape)
 torch.Size([3])
 ```
-

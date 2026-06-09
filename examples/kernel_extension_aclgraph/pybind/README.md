@@ -11,7 +11,7 @@
 
 ## 目录结构介绍
 
-```
+```text
 ├── README.md                   // 示例介绍
 ├── setup.py                    // setup文件
 ├── csrc
@@ -25,57 +25,54 @@
 ```
 
 ## 算子描述
+
 ### Add算子
+
 - 算子功能：
+
   Add算子实现了两个数据相加，返回相加结果的功能。对应的算子原型为：
   
-  ```
+  ```python
   ascendc_add(Tensor x, Tensor y) -> Tensor
   ```
+
 - 算子规格：
   
   <table>
    <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">add_custom</td></tr>
-  </tr>
   <tr><td rowspan="3" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">x</td><td align="center">8 * 2048</td><td align="center">int</td><td align="center">ND</td></tr>
   <tr><td align="center">y</td><td align="center">8 * 2048</td><td align="center">int</td><td align="center">ND</td></tr>
-  </tr>
-  </tr>
   <tr><td rowspan="1" align="center">算子输出</td><td align="center">z</td><td align="center">8 * 2048</td><td align="center">int</td><td align="center">ND</td></tr>
-  </tr>
- 
   </table>
 
 ### 原地三角函数算子
+
 - 算子功能：
-  该算子入参为x, out_sin ,out_cos, 算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，返回值tan(x)计算结果。对应的算子原型为：
+
+  该算子入参为x、out_sin和out_cos。算子调用后，out_sin会被原地修改为sin(x)计算结果，out_cos会被原地修改为cos(x)计算结果，并返回tan(x)计算结果。对应的算子原型为：
   
-  ```
+  ```python
   ascendc_trig(Tensor x, Tensor(a!) out_sin, Tensor(b!) out_cos) -> Tensor
   ```
+
 - 算子规格：
 
   <table>
   <tr><td rowspan="1" align="center">核函数名</td><td colspan="4" align="center">trig_inplace_custom</td></tr>
-  </tr>
   <tr><td rowspan="4" align="center">算子输入</td><td align="center">name</td><td align="center">shape</td><td align="center">data type</td><td align="center">format</td></tr>
   <tr><td align="center">x</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">out_sin</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">out_cos</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  
-  </tr>
-  </tr>
   <tr><td rowspan="3" align="center">算子输出</td><td align="center">out_sin</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">out_cos</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
   <tr><td align="center">out_tan</td><td align="center">8 * 2048</td><td align="center">float</td><td align="center">ND</td></tr>
-  </tr>
- 
   </table>
 
 ## 代码实现介绍
 
 - 以Add算子为例，样例在*.asc文件中定义了一个名为ascendc_ops的命名空间，并在其中注册了ascendc_add函数。在ascendc_add函数中通过`c10_npu::getCurrentNPUStream()`函数获取当前NPU上的流，并通过内核调用符<<<>>>调用自定义的Kernel函数add_custom，在NPU上执行算子。
+
     ```c++
       add_custom<<<blockDim, nullptr, aclStream>>>(xGm, yGm, zGm, totalLength);
     ```
@@ -103,7 +100,7 @@
   ```
 
 - 注册Meta函数：
-  注册Meta函数使faketensor流程正常工作，在使用fx, compile等功能涉及，本示例在add_aclgraph_test.py开头注册代码如下：
+  注册Meta函数使faketensor流程正常工作，在使用fx、compile等功能时，本示例在add_aclgraph_test.py开头注册代码如下：
 
   ```python
   @library.impl(ascendc_ops, "ascendc_add", "Meta")
@@ -127,7 +124,7 @@
 1. 请参考与您当前使用的版本配套的[《Ascend Extension for PyTorch
    软件安装指南》](https://www.hiascend.com/document/detail/zh/Pytorch/720/configandinstg/instg/insg_0001.html)，获取PyTorch和torch_npu详细的安装步骤。
    
-   本样例需torch2.6.0及以上版本，支持`backend="npugraph_ex"`需7.3.0及以上版本。
+   本样例需torch2.6.0及以上版本，支持`backend="npugraph_ex"`需torch_npu 7.3.0及以上版本。
 2. 根据实际环境安装CANN toolkit包，本样例需8.5.0及以上版本，安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstSoftware)》。
 3. 根据实际环境安装CANN ops包。根据产品型号和环境架构，下载对应安装包，可参考[下载链接](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1)并执行如下命令安装：
    
@@ -149,8 +146,6 @@
     source ${install_path}/ascend-toolkit/set_env.sh
     ```
 
-
-
 - 样例执行
 
   参考[表格](https://www.hiascend.com/document/detail/zh/canncommercial/850/opdevg/BishengCompiler/atlas_bisheng_10_0010.html)，根据实际昇腾AI处理器架构修改[setup.py](./setup.py)中的--npu-arch参数，并执行如下命令：
@@ -168,5 +163,3 @@
 Ran * test in **s.
 OK
 ```
-
-

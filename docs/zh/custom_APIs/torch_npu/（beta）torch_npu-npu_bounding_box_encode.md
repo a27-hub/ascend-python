@@ -1,6 +1,9 @@
 # （beta）torch_npu.npu_bounding_box_encode
-## 产品支持情况
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -15,10 +18,9 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, means0, means1, means2, means3, stds0, stds1, stds2, stds3) -> Tensor
 ```
-
 
 ## 参数说明
 
@@ -34,10 +36,10 @@ torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, means0, means1, 
 - **stds3** (`float`)：“y1”的缩放值。
 
 ## 返回值说明
+
 `Tensor`
 
 代表编码后的坐标张量，形状为`(N,4)`，分别对应`(x0,y0,x1,y1)`，数据类型为`float32`。
-
 
 ## 调用示例
 
@@ -47,8 +49,7 @@ torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, means0, means1, 
 >>> anchor_box = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> ground_truth_box = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_encode(anchor_box, ground_truth_box, 0, 0, 0, 0, 0.1, 0.1, 0.2, 0.2)
->>> output
+>>> print(output)
 tensor([[13.3281, 13.3281,  0.0000,  0.0000],
         [13.3281,  6.6641,  0.0000,     nan]], device='npu:0')
 ```
-

@@ -14,16 +14,27 @@
 
      activation表示使用的激活函数，$W_1$和$W_2$对应输入参数的`weight1`和`weight2`，$b_1$和$b_2$对应输入参数的`bias1`和`bias2`。
 
-    $$
-    \text{out} = \text{activation}(x * W_1 + b_1) * W_2 + b_2
-    $$
+    - 非量化场景：
+        $$
+        y=activation(x * W1 + b1) * W2 + b2
+        $$
+
+    - 量化场景：
+        $$
+        y=((activation((x * W1 + b1) * deq\_scale1) * scale + offset) * W2 + b2) * deq\_scale2
+        $$
+
+    - 伪量化场景：
+        $$
+        y=activation(x * ((W1 + antiquant\_offset1) * antiquant\_scale1) + b1) * ((W2 + antiquant\_offset2) * antiquant\_scale2) + b2
+        $$
 
 > [!NOTE]  
 > 激活层为geglu/swiglu/reglu时，性能使能需要满足门槛要求，即整网中FFN结构所对应的小算子里，vector耗时30us且占比10%以上的用例，方可尝试FFN融合算子；或在不知道小算子性能的情况下，尝试使能FFN，若性能劣化则不使能FFN。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert_tokens_index=None, bias1=None, bias2=None, scale=None, offset=None, deq_scale1=None, deq_scale2=None, antiquant_scale1=None, antiquant_scale2=None, antiquant_offset1=None, antiquant_offset2=None, inner_precise=None, output_dtype=None) -> Tensor
 ```
 
@@ -65,6 +76,7 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
 - **output_dtype** (`ScalarType`)：可选参数，该参数只在量化场景生效，其他场景不生效。表示输出Tensor的数据类型，支持输入`float16`、`bfloat16`。默认值为`None`，代表输出Tensor数据类型为`float16`。
 
 ## 返回值说明
+
 `Tensor`
 
 一个Tensor类型的输出，对应公式中的输出$y$，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$，输出维度与`x`一致。
@@ -76,7 +88,7 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
 - 有专家时，专家数据的总数需要与`x`的$M$保持一致。
 - 激活层为`geglu/swiglu/reglu`时，仅支持无专家分组时的`float16`高性能场景（`float16`场景指类型为Tensor的必选参数数据类型都为`float16`的场景），且$N1=2*K2$。
 - 激活层为`gelu/fastgelu/relu/silu`时，支持有专家或无专家分组的`float16`高精度及高性能场景，`bfloat16`场景，量化场景及伪量化场景，且$N1=K2$。
-- 所有场景下需满足$K1=N2、K1<65536、K2<65536、M$轴在32Byte对齐后小于`int32`的最大值。
+- 所有场景下需满足通用维度约束：$K1=N2$、$K1<65536$、$K2<65536$、$M$轴在32Byte对齐后小于`int32`的最大值。此外，$N1$与$K2$的对应关系由激活函数类型决定，`geglu/swiglu/reglu`要求$N1=2*K2$，`gelu/fastgelu/relu/silu`要求$N1=K2$。
 - 非量化场景不能输入量化参数和伪量化参数，量化场景不能输入伪量化参数，伪量化场景不能输入量化参数。
 - 量化场景参数类型：`x`为`int8`、`weight`为`int8`、`bias`为`int32`、`scale`为`float32`、`offset`为`float32`，其余参数类型根据`y`不同分两种情况：
     - `y`为`float16`，`deq_scale`支持数据类型`uint64`、`int64`、`float32`。
@@ -100,17 +112,17 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
     >>> import torch
     >>> import torch_npu
     >>>
-    >>> cpu_x = torch.randn((1, 1280), device='npu', dtype=torch.float16)
-    >>> cpu_weight1 = torch.randn(1280, 10240, device='npu', dtype=torch.float16)
-    >>> cpu_weight2 = torch.randn(10240, 1280, device='npu', dtype=torch.float16)
+    >>> x = torch.randn((1, 1280), device='npu', dtype=torch.float16)
+    >>> weight1 = torch.randn(1280, 10240, device='npu', dtype=torch.float16)
+    >>> weight2 = torch.randn(10240, 1280, device='npu', dtype=torch.float16)
     >>> activation = "fastgelu"
-    >>> npu_out = torch_npu.npu_ffn(cpu_x.npu(), cpu_weight1.npu(), cpu_weight2.npu(), activation, inner_precise=1)
+    >>> npu_out = torch_npu.npu_ffn(x, weight1, weight2, activation, inner_precise=1)
     >>>
-    >>> npu_out
+    >>> print(npu_out)
     tensor([[ 1474.0000,  2000.0000,  1683.0000,  ...,  1938.0000, -1353.0000,
             207.8750]], device='npu:0', dtype=torch.float16)
     >>>
-    >>> npu_out.shape
+    >>> print(npu_out.shape)
     torch.Size([1, 1280])
     ```
 
@@ -138,16 +150,15 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
         def forward(self, x, weight1, weight2, activation, expert):
             return torch_npu.npu_ffn(x, weight1, weight2, activation,  expert_tokens=expert, inner_precise=1)
 
-    cpu_model = MyModel()
-    cpu_x = torch.randn((1954, 2560),device='npu',dtype=torch.float16)
-    cpu_weight1 = torch.randn((16, 2560, 5120),device='npu',dtype=torch.float16)
-    cpu_weight2 = torch.randn((16, 5120, 2560),device='npu',dtype=torch.float16)
+    model = MyModel().npu()
+    x = torch.randn((1954, 2560), device='npu', dtype=torch.float16)
+    weight1 = torch.randn((16, 2560, 5120), device='npu', dtype=torch.float16)
+    weight2 = torch.randn((16, 5120, 2560), device='npu', dtype=torch.float16)
     activation = "fastgelu"
     expert = [227, 62, 78, 126, 178, 27, 122, 1, 19, 182, 166, 118, 66, 217, 122, 243]
-    model = cpu_model.npu()
     model = torch.compile(model, backend=npu_backend, dynamic=True)
 
-    npu_out = model(cpu_x.npu(), cpu_weight1.npu(), cpu_weight2.npu(), activation, expert)
+    npu_out = model(x, weight1, weight2, activation, expert)
     print(npu_out.shape)
     print(npu_out)
 
@@ -168,4 +179,3 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
             -58.9688]], device='npu:0', dtype=torch.float16)
 
     ```
-

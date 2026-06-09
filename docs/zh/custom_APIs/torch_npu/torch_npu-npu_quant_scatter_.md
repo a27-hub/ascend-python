@@ -13,8 +13,8 @@
 
 ## 函数原型
 
-```
-torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_points=None, axis=0, quant_axis=1, reduce='update', int? dst_type=None, str? round_mode='rint') -> Tensor
+```python
+torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_points=None, axis=0, quant_axis=1, reduce='update') -> Tensor
 ```
 
 ## 参数说明
@@ -39,6 +39,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
 - **reduce** (`str`)：可选参数，表示数据操作方式；当前只支持`update`，即更新操作。
 
 ## 返回值说明
+
 `Tensor`
 
 代表`input`被更新后的结果。
@@ -54,16 +55,11 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
 - `axis`不能为`updates`的第1维或最后1维。
 - `quant_axis`只能为`updates`的最后1维。
 
-## 支持的型号
-
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>
-- <term>Atlas 推理系列产品</term>
-
 ## 调用示例
 
 - 单算子模式调用
 
-    ```python
+   ```python
    >>> import torch
    >>> import torch_npu
    >>> import numpy as np
@@ -89,11 +85,11 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
    >>> reduce = "update"
    >>>
    >>> out=torch_npu.npu_quant_scatter_(var, indices, updates, quant_scales, quant_zero_points, axis=axis, quant_axis=quant_axis, reduce=reduce)
-   >>> out.shape
+   >>> print(out.shape)
    torch.Size([24, 4096, 128])
-   >>> out.dtype
+   >>> print(out.dtype)
    torch.int8
-   >>> out
+   >>> print(out)
    tensor([[[2, 3, 2,  ..., 3, 6, 1],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
@@ -143,7 +139,7 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0],
             [0, 0, 0,  ..., 0, 0, 0]]], device='npu:0', dtype=torch.int8)
-    ```
+   ```
 
 - 图模式调用
 
@@ -259,4 +255,3 @@ torch_npu.npu_quant_scatter_(input, indices, updates, quant_scales, quant_zero_p
                1,  1,  0,  1,  1,  0,  0,  0,  0,  0,  0,  1,  0,  1,  1]]],
            device='npu:0', dtype=torch.int8) torch.Size([11, 1, 32])
     ```
-

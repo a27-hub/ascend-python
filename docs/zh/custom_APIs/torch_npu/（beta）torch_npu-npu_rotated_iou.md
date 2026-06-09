@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_rotated_iou
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_rotated_iou(self, query_boxes, trans=False, mode=0, is_cross=True,v_threshold=0.0, e_threshold=0.0) -> Tensor
 ```
 
@@ -41,4 +44,3 @@ torch_npu.npu_rotated_iou(self, query_boxes, trans=False, mode=0, is_cross=True,
 >>> box2=torch.from_numpy(b).to("npu")
 >>> output = torch_npu.npu_rotated_iou(box1, box2, trans=False, mode=0, is_cross=True)
 ```
-

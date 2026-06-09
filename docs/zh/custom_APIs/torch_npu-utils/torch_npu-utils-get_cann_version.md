@@ -1,4 +1,5 @@
 # torch_npu.utils.get_cann_version
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,7 +14,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.utils.get_cann_version(module="CANN")
 ```
 
@@ -39,8 +40,8 @@ torch_npu.utils.get_cann_version(module="CANN")
 
 - "DRIVER"：驱动。
 
-
 ## 返回值说明
+
 `str`
 
 代表具体组件的版本号。
@@ -59,6 +60,6 @@ torch_npu.utils.get_cann_version(module="CANN")
 >>> import torch_npu
 >>> from torch_npu.utils import get_cann_version
 >>> version = get_cann_version(module="CANN")
->>> version
+>>> print(version)
 '8.3.RC1'
 ```

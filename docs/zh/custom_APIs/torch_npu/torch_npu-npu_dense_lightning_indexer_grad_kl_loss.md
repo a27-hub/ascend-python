@@ -1,6 +1,10 @@
 # torch_npu.npu_dense_lightning_indexer_grad_kl_loss
 
+> [!NOTICE]  
+> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
+
 ## 产品支持情况
+
 | 产品                           | 是否支持 |
 |------------------------------| :------: |
 | <term>Atlas A3 训练系列产品</term> | √  |
@@ -14,64 +18,64 @@
 
 - 计算公式：
 
-  1. Top-k value的计算公式：
-     $$
-     I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
-     $$
-  
-     - $W_{t,:}$是$W$矩阵中第$t$个token对应的$weights$；
-     - $\tilde{q}_{t,:}$是$\tilde{Q}$矩阵第$t$个token对应的$G$个query头合轴后的结果；
-     - $\tilde{K}_{:t,:}$为$t$行$\tilde{K}$矩阵。
-  
-  2. 正向的Softmax对应公式：
-
-     $$
-     p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
-     $$
+    1. Top-k value的计算公式：
+        $$
+        I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
+        $$
     
-     - $p_{t,:}$是第$t$个token对应的Softmax结果；
-     - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
-     - $K_{:t,:}$为$t$行$K$矩阵。
-
-  3. Lightning Indexer会单独训练，对应的loss function为：
-     $$
-     Loss{=}\sum_tD_{KL}(p_{t,:}||Softmax(I_{t,:}))
-     $$
-
-     其中，$p_{t,:}$是target distribution，通过对main attention score 进行所有的head的求和，然后把求和结果沿着上下文方向进行L1正则化得到。$D_{KL}$为KL散度，其表达式为：
-
-     $$
-     D_{KL}(a||b){=}\sum_ia_i\mathrm{log}{\left(\frac{a_i}{b_i}\right)}
-     $$
-
-  4. 通过求导可得Loss的梯度表达式：
-     $$
-     dI\mathop{{}}\nolimits_{{t,:}}=Softmax \left( I\mathop{{}}\nolimits_{{t,:}} \left) -p\mathop{{}}\nolimits_{{t,:}}\right. \right.
-     $$
-
-     利用链式法则可以进行`weights`，`query`和`key`矩阵的梯度计算：
-     $$
-     dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
-     $$
+        - $W_{t,:}$是$W$矩阵中第$t$个token对应的$weights$；
+        - $\tilde{q}_{t,:}$是$\tilde{Q}$矩阵第$t$个token对应的$G$个query头合轴后的结果；
+        - $\tilde{K}_{:t,:}$为$t$行$\tilde{K}$矩阵。
   
+    2. 正向的Softmax对应公式：
 
-     $$
-     d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
-     $$
-  
-     $$
-     d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
-     $$
+        $$
+        p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
+        $$
+        
+        - $p_{t,:}$是第$t$个token对应的Softmax结果；
+        - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
+        - $K_{:t,:}$为$t$行$K$矩阵。
 
-     其中，$S$为$\tilde{Q}$和$\tilde{K}$矩阵乘的结果，$S_{t,:}$是$S$矩阵中第$t$行。$dW_{t,:}$是$dW$矩阵中第$t$行，$d\mathop{{\tilde{q}}}\nolimits_{{t,:}}$是$d\tilde{Q}$矩阵中第$t$行，$d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}$是$d\tilde{K}$矩阵中$t$行累加值。
+    3. Lightning Indexer会单独训练，对应的loss function为：
+        $$
+        Loss{=}\sum_tD_{KL}(p_{t,:}||Softmax(I_{t,:}))
+        $$
+
+        其中，$p_{t,:}$是target distribution，通过对main attention score 进行所有的head的求和，然后把求和结果沿着上下文方向进行L1正则化得到。$D_{KL}$为KL散度，其表达式为：
+
+        $$
+        D_{KL}(a||b){=}\sum_ia_i\mathrm{log}{\left(\frac{a_i}{b_i}\right)}
+        $$
+
+    4. 通过求导可得Loss的梯度表达式：
+        $$
+        dI\mathop{{}}\nolimits_{{t,:}}=Softmax \left( I\mathop{{}}\nolimits_{{t,:}} \left) -p\mathop{{}}\nolimits_{{t,:}}\right. \right.
+        $$
+
+        利用链式法则可以进行`weights`，`query`和`key`矩阵的梯度计算：
+        $$
+        dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
+        $$
+    
+        $$
+        d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
+        $$
+    
+        $$
+        d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
+        $$
+
+        其中，$S$为$\tilde{Q}$和$\tilde{K}$矩阵乘的结果，$S_{t,:}$是$S$矩阵中第$t$行。$dW_{t,:}$是$dW$矩阵中第$t$行，$d\mathop{{\tilde{q}}}\nolimits_{{t,:}}$是$d\tilde{Q}$矩阵中第$t$行，$d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}$是$d\tilde{K}$矩阵中$t$行累加值。
 
 ## 函数原型
 
-```
+```python
 npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, softmax_max, softmax_sum, softmax_max_index, softmax_sum_index, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
+
 **query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$Q$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
 
 **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
@@ -108,19 +112,18 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
 
 **next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
 
-
-
-
 ## 返回值说明
--   **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{Q}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_weights**(`Tensor`)：对应公式中的$dW$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
--   **loss**(`Tensor`)：对应公式中的$Loss$，表示网络正向输出和golden值的差异，数据类型支持`float32`。
+
+- **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{Q}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_weights**(`Tensor`)：对应公式中的$dW$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
+- **loss**(`Tensor`)：对应公式中的$Loss$，表示网络正向输出和golden值的差异，数据类型支持`float32`。
 
 ## 约束说明
--   参数query、key、query_index、key_index的数据类型应保持一致。
--   参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
--   shape数值约束：
+
+- 参数query、key、query_index、key_index的数据类型应保持一致。
+- 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- shape数值约束：
 
 | 规格项    | 规格       | 规格说明         |
 |-----------|------------|-----------------|
@@ -133,8 +136,8 @@ npu_dense_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, wei
 | D         | 128        | -               |
 | Dr        | 64         | -               |
 
-
 ## 调用示例
+
 - 单算子模式调用
 
     ```python

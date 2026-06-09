@@ -1,4 +1,5 @@
 # torch_npu.npu.conv.allow_hf32
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -8,8 +9,6 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
-
-
 ## 功能说明
 
 conv类算子开启支持hf32类型能力。
@@ -18,10 +17,9 @@ conv类算子开启支持hf32类型能力。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu.conv.allow_hf32 = bool
 ```
-
 
 ## 参数说明
 
@@ -31,19 +29,17 @@ torch_npu.npu.conv.allow_hf32 = bool
 
 `bool`
 
-
 ## 调用示例
 
 ```python
 >>>import torch
 >>>import torch_npu
->>>torch_npu.npu.conv.allow_hf32
+>>>print(torch_npu.npu.conv.allow_hf32)
 True
 >>>torch_npu.npu.conv.allow_hf32=False
->>>torch_npu.npu.conv.allow_hf32
+>>>print(torch_npu.npu.conv.allow_hf32)
 False
 >>>torch_npu.npu.conv.allow_hf32=True
->>>torch_npu.npu.conv.allow_hf32
+>>>print(torch_npu.npu.conv.allow_hf32)
 True
 ```
-

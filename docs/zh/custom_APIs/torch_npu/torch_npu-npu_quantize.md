@@ -25,7 +25,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True) -> Tensor
 ```
 
@@ -67,6 +67,7 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
 - **div_mode** (`bool`)：可选参数，表示计算`scales`模式，对应公式中的`div_mode`。当`div_mode`为`True`时，表示用除法计算`scales`；`div_mode`为`False`时，表示用乘法计算`scales`，默认值为`True`。
 
 ## 返回值说明
+
 `Tensor`
 
 对应公式中的`result`。数据类型由参数`dtype`指定，如果参数`dtype`为`quint4x2`，输出的`dtype`是`int32`，shape的最后一维是`input`的shape最后一维的1/8，shape其他维度和`input`的shape其他维度保持一致；如果参数`dtype`不为`quint4x2`时，shape与输入`input`的shape保持一致。输出的数据格式与输入`input`的数据格式保持一致，且当数据格式为$NZ$时，数据类型仅支持INT32。支持空Tensor，支持非连续的Tensor。
@@ -92,11 +93,11 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
         >>> x = torch.randn(1, 1, 12).bfloat16().npu()
         >>> scale = torch.tensor([0.1] * 12).bfloat16().npu()
         >>> out = torch_npu.npu_quantize(x, scale, None, torch.qint8, -1, False)
-        >>> x
+        >>> print(x)
         tensor([[[ 0.9609,  1.3281, -0.6172,  0.5469, -1.1797, -1.1719, -0.7422,
                 0.9727, -0.9062, -0.0815, -0.8047,  1.0703]]], device='npu:0',
             dtype=torch.bfloat16)
-        >>> out
+        >>> print(out)
         tensor([[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]], device='npu:0',
             dtype=torch.int8)
         ```
@@ -110,7 +111,7 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
         >>> x = torch.randn((2, 3, 12), dtype=torch.float).npu()
         >>> scale = torch.tensor(([3] * 12),dtype=torch.float).npu()
         >>> out = torch_npu.npu_quantize(x, scale, None, torch.qint8, -1, False)
-        >>> x
+        >>> print(x)
         tensor([[[-7.7834e-01, -1.0473e+00, -1.1155e+00,  1.2233e+00, -1.2271e+00,
                 -2.5612e+00, -1.8274e-01,  2.8293e+00,  1.9029e-01, -1.9333e+00,
                 -4.9270e-01, -1.0650e+00],
@@ -130,7 +131,7 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
                 [-1.2505e+00,  1.5474e+00, -7.4332e-02, -1.6657e+00,  1.3275e+00,
                 5.8914e-02,  8.4287e-01, -1.7109e+00,  1.8256e-01,  3.2937e-01,
                 2.4875e+00,  1.3921e+00]]], device='npu:0')
-        >>> out
+        >>> print(out)
         tensor([[[-2, -3, -3,  4, -4, -8, -1,  8,  1, -6, -1, -3],
                 [-3,  0, -2, -1,  0, -1,  0, -2,  2, -1, -4, -1],
                 [ 0,  0, -3, -3,  0,  3,  0,  4,  3, -1,  0, -2]],
@@ -205,4 +206,3 @@ torch_npu.npu_quantize(input, scales, zero_points, dtype, axis=1, div_mode=True)
         dtype=torch.int8)
 
     ```
-

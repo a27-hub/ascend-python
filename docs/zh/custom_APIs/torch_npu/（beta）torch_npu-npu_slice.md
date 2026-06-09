@@ -1,4 +1,8 @@
 # （beta）torch_npu.npu_slice
+
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch.slice。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,13 +11,14 @@
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
+
 ## 功能说明
 
 从张量中提取切片。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_slice(self, offsets, size) -> Tensor
 ```
 
@@ -26,7 +31,6 @@ torch_npu.npu_slice(self, offsets, size) -> Tensor
 - **offsets** (`List[int]`)：支持的数据类型为`int32`，`int64`。
 - **size** (`List[int]`)：支持的数据类型为`int32`，`int64`。
 
-
 ## 调用示例
 
 ```python
@@ -36,7 +40,7 @@ torch_npu.npu_slice(self, offsets, size) -> Tensor
 >>> offsets = [0, 0]
 >>> size = [2, 2]
 >>> output = torch_npu.npu_slice(input, offsets, size)
->>> output
+>>> print(output)
 tensor([[1., 2.],
         [6., 7.]], device='npu:0', dtype=torch.float16)
 ```

@@ -14,11 +14,11 @@
 
 ## 功能说明
 
-按元素计算self的双曲正切。
+按元素计算Mish激活函数结果。Mish激活函数定义：mish(x) = x * tanh(softplus(x))，其中softplus(x) = ln(1 + e^x)。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_mish(self) -> Tensor
 ```
 
@@ -33,7 +33,6 @@ torch_npu.npu_mish(self) -> Tensor
 >>> import torch_npu
 >>> x = torch.rand(10, 30, 10).npu()
 >>> y = torch_npu.npu_mish(x)
->>> y.shape
+>>> print(y.shape)
 torch.Size([10, 30, 10])
 ```
-

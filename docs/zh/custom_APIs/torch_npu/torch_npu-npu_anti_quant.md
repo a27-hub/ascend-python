@@ -10,18 +10,21 @@
 
 ## 功能说明
 
-- API功能：对张量`x`进行反量化操作，即将整数恢复为浮点数。
-- 计算公式：
+- API功能：对张量`x`进行反量化操作，即将量化后的整数恢复为浮点数。反量化是量化的逆过程，用于将低精度整数（如int8）转换回高精度浮点数。
 
-  其中*out*是输出，*quant*是指定的输出类型`dst_dtype`。
+- 计算公式：其中`out`是输出张量，`x`是量化后的输入，`scale`是缩放因子，`offset`是偏移量。
+  
+  - 当`offset`存在时：
 
-  $$
-  out = \text{quant}((x + \text{offset}) * \text{scale}) 
-  $$
+    $out = (x + offset) * scale$
+  
+  - 当`offset`不存在时：
+
+    $out = x * scale$
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_anti_quant(x, scale, *, offset=None, dst_dtype=None, src_dtype=None) -> Tensor
 ```
 
@@ -52,9 +55,10 @@ torch_npu.npu_anti_quant(x, scale, *, offset=None, dst_dtype=None, src_dtype=Non
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`quint4x2`或`int8`。
 
 ## 返回值说明
+
 `Tensor`
 
-代表`npu_anti_quant`的计算结果，对应公式中的*out*。支持非连续的Tensor，支持空Tensor。
+代表`npu_anti_quant`的计算结果，对应公式中的$out$。支持非连续的Tensor，支持空Tensor。
 
 ## 约束说明
 
@@ -74,7 +78,7 @@ torch_npu.npu_anti_quant(x, scale, *, offset=None, dst_dtype=None, src_dtype=Non
     >>> scale = torch.tensor([2.0], dtype=torch.float).npu()
     >>> offset = torch.tensor([2.0], dtype=torch.float).npu()
     >>> out = torch_npu.npu_anti_quant(x_tensor, scale, offset=offset, dst_dtype=torch.float16)
-    >>> out
+    >>> print(out)
     tensor([ 6.,  8., 10., 12.], device='npu:0', dtype=torch.float16)
     ```
 
@@ -109,3 +113,4 @@ torch_npu.npu_anti_quant(x, scale, *, offset=None, dst_dtype=None, src_dtype=Non
     # 执行上述代码的输出类似如下
     tensor([ 6.,  8., 10., 12.], device='npu:0', dtype=torch.float16)
     ```
+    

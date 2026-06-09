@@ -13,49 +13,50 @@
 - API功能：完成量化计算参数`scale`数据类型的转换，将`float32`数据按照bit位存储进一个`int64`数据里。
 - 计算公式：
 
-  1. `out`为64位格式，初始为0。
+    1. `out`为64位格式，初始为0。
 
-  2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
-     $$
-     scale = Round(scale)
-     $$
+    2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
+        $$
+        scale = Round(scale)
+        $$
 
-  3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将第46位修改为1。
+    3. `scale`按bit位取高19位截断，存储于`out`的bit位32位处，并将第46位修改为1。
      
-     $$
-     out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
-     $$
+        $$
+        out = out\ |\ (scale\ \&\ 0XFFFFE000)\ |\ (1\ll46)
+        $$
 
-  4. 根据`offset`取值进行后续计算：
-     - 若`offset`不存在，不再后续计算。
-     - 若`offset`存在：
-       1. 将`offset`值处理为int，范围为[-256, 255]。
+    4. 根据`offset`取值进行后续计算：
+        - 若`offset`不存在，不再后续计算。
+        - 若`offset`存在：
+            1. 将`offset`值处理为int，范围为[-256, 255]。
      
-          $$
-          offset = Max(Min(INT(Round(offset)),255),-256)
-          $$
+                $$
+                offset = Max(Min(INT(Round(offset)),255),-256)
+                $$
 
-       2. 再将`offset`按bit位保留9位并存储于out的37到45位。
-          $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
-          $$
+            2. 再将`offset`按bit位保留9位并存储于out的37到45位。
+                $$
+                out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0X1FF)\ll37)
+                $$
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_trans_quant_param(scale, offset=None, round_mode=0) -> Tensor
 ```
 
 ## 参数说明
 
-- **scale** (`Tensor`)：必选参数。对应公式中的`scale`。数据类型支持`float32`，数据格式支持$ND$，shape支持1维或2维，具体约束参见[约束说明](##约束说明)。不支持非连续的Tensor，不支持空Tensor。
-- **offset** (`Tensor`)：可选参数。对应公式中的`offset`。数据类型支持`float32`，数据格式支持$ND$，shape支持1维或者2维，具体约束参见[约束说明](##约束说明)。不支持非连续的Tensor，不支持空Tensor。
+- **scale** (`Tensor`)：必选参数。对应公式中的`scale`。数据类型支持`float32`，数据格式支持$ND$，shape支持1维或2维，具体约束参见[约束说明](#约束说明)。不支持非连续的Tensor，不支持空Tensor。
+- **offset** (`Tensor`)：可选参数。对应公式中的`offset`。数据类型支持`float32`，数据格式支持$ND$，shape支持1维或者2维，具体约束参见[约束说明](#约束说明)。不支持非连续的Tensor，不支持空Tensor。
 - **round_mode** (`int`)：可选参数。量化计算中数据类型的转换模式选择，默认值为0。0表示截断填充模式（取高19位），1表示R_INT模式（可提升计算精度）。
 
 ## 返回值说明
+
 `Tensor`
 
-代表`trans_quant_param`的计算结果，对应公式中的`out`。数据类型支持`int64`，数据格式支持$ND$。
+代表`trans_quant_param`的计算结果，对应公式中的$out$。数据类型支持`int64`（图模式下为`uint64`），数据格式支持$ND$。
 
 ## 约束说明
 
@@ -83,15 +84,15 @@ torch_npu.npu_trans_quant_param(scale, offset=None, round_mode=0) -> Tensor
     >>> round_mode = 1
     >>> npu_out = torch_npu.npu_trans_quant_param(scale.npu(), offset.npu(), round_mode)
     >>>
-    >>> npu_out
+    >>> print(npu_out)
     tensor([ 70507248869376,  70509369614336,  70507209793536, 140463653937152,
             140603250524160, 140603257561088, 140603230814208,  70369813069824,
             70369794605056, 140463675252736,  70784266256384,  70507233009664,
             140601114345472,  70371966238720, 140603258257408, 140603254505472],
         device='npu:0')
-    >>> npu_out.dtype
+    >>> print(npu_out.dtype)
     torch.int64
-    >>> npu_out.shape
+    >>> print(npu_out.shape)
     torch.Size([16])
     ```
 

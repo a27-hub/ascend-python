@@ -103,4 +103,3 @@ std::tuple<at::Tensor &, at::Tensor &> sort_out(const at::Tensor &self,
 }
 
 }  // namespace op_api
-

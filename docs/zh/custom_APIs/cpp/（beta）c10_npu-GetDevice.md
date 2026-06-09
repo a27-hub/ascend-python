@@ -6,13 +6,13 @@ torch_npu\csrc\core\npu\NPUFunctions.h
 
 ## 函数原型
 
-```
+```cpp
 aclError c10_npu::GetDevice(c10::DeviceIndex* device)
 ```
 
 ## 功能说明
 
-NPU设备id获取，返回值类型aclError，与Pytorch的1.11.0版本中cudaError_t c10::cuda::GetDevice(int\*  _device_)相同。
+NPU设备id获取，返回值类型aclError，与PyTorch的1.11.0版本中cudaError_t c10::cuda::GetDevice(int\*  _device_)相同。
 
 ## 参数说明
 
@@ -24,4 +24,3 @@ device：DeviceIndex类型，存储获取的设备id。
 - <term>Atlas A2 训练系列产品</term>
 - <term>Atlas A3 训练系列产品</term>
 - <term>Atlas 推理系列产品</term>
-

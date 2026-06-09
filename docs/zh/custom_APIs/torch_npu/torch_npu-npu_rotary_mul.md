@@ -11,8 +11,8 @@
 
 ## 功能说明
 
--   API功能：实现Rotary Position Embedding (RoPE) 旋转位置编码，通过对输入特征进行二维平面旋转注入位置信息。
--   计算公式：
+- API功能：实现Rotary Position Embedding (RoPE) 旋转位置编码，通过对输入特征进行二维平面旋转注入位置信息。
+- 计算公式：
      $$
     output = x * cos + rotate(x) * sin
      $$
@@ -34,7 +34,7 @@
          rotate(x) = x \cdot rotate\\
          $$
 
--   等价计算逻辑：
+- 等价计算逻辑：
     
      可使用`fused_rotary_position_embedding`等价替换`torch_npu.npu_rotary_mul`，两者计算逻辑一致。
      
@@ -62,7 +62,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tensor
 ```
 
@@ -78,6 +78,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
 - **rotate** (`Tensor`)：可选参数，表示实现`input`位置变换的等价变化矩阵，输入维度支持2维，数据类型支持`float16`，`bfloat16`，`float32`，构造方式参考调用示例，默认值为None。
 
 ## 返回值说明
+
 `Tensor`
 
 输出计算结果，shape和dtype需与`input`一致。
@@ -125,9 +126,11 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
      那么可以构造一个rotate矩阵，实现调用一次完成x的旋转位置编码计算功能，rotate矩阵构造如下：
      $$rotate = diag(rotate1, rotate2, rotate3) = \begin{pmatrix}rotate1&0&0\\0&rotate2&0\\0&0&rotate3\\\end{pmatrix}$$
      其中rotate1、rotate2、rotate3分别为x1、x2、x3的旋转编码矩阵，单个旋转矩阵构建参考调用示例。
+
 ## 调用示例
 
 - 四维输入示例：
+
     ```python
     >>> import torch
     >>> import torch_npu
@@ -136,9 +139,9 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
     >>> r1 = torch.rand(1, 2, 1, 128).npu()
     >>> r2 = torch.rand(1, 2, 1, 128).npu()
     >>> out = torch_npu.npu_rotary_mul(x, r1, r2)
-    >>> out.shape
+    >>> print(out.shape)
     torch.Size([2, 2, 5, 128])
-    >>> out
+    >>> print(out)
     tensor([[[[ 0.1017, -0.0871,  0.2722,  ...,  0.4668,  0.4320,  0.4252],
             [ 0.2908, -0.0068,  0.4026,  ...,  0.1540,  0.2653,  0.6754],
             [ 0.1124, -0.0637,  0.0834,  ...,  0.5127,  0.1423,  0.0636],
@@ -165,7 +168,9 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
             [-0.2269, -0.1447, -0.0395,  ...,  0.1374,  0.2142,  0.3628]]]],
         device='npu:0')
     ```
+
 - 三维输入示例：
+
     ```python
     >>> import torch
     >>> import torch_npu
@@ -173,8 +178,8 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
     >>> x = torch.rand(2, 5, 128).npu()
     >>> r1 = torch.rand(2, 1, 128).npu()
     >>> r2 = torch.rand(2, 1, 128).npu()
-    >>> out = torch_npu.npu_rotary_mul(x, r1, r2，"half")
-    >>> out
+    >>> out = torch_npu.npu_rotary_mul(x, r1, r2, "half")
+    >>> print(out)
     tensor([[[-0.1200, -0.2515, -0.3189,  ...,  0.2283,  1.1038,  0.3439],
             [ 0.1083,  0.0257,  0.1864,  ...,  0.5940,  0.8644,  0.5961],
             [-0.0147, -0.1542,  0.0516,  ...,  0.7441,  0.2782,  0.4797],
@@ -190,6 +195,7 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
     ```
 
 - rotate生成示例：
+
     ```python
     import torch
     import torch_npu
@@ -229,5 +235,5 @@ torch_npu.npu_rotary_mul(input, r1, r2, rotary_mode='half', rotate=None) -> Tens
         x = torch.rand(2, 2, 5, 128).npu()
         r1 = torch.rand(1, 2, 1, 128).npu()
         r2 = torch.rand(1, 2, 1, 128).npu()
-        out = torch_npu.npu_rotary_mul(x, r1, r2，"interleave", inter_mat_128.npu())
+        out = torch_npu.npu_rotary_mul(x, r1, r2, "interleave", inter_mat_128.npu())
     ```

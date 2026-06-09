@@ -1,4 +1,4 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13]
 backward:
 - name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
   self: cholesky_backward(grad, upper, result)
@@ -62,6 +62,11 @@ backward:
   target: l1_loss_backward(grad, self, target, reduction) * -1
   version: [v2.1, newest]
 
+- name: matmul(Tensor self, Tensor other) -> Tensor
+  self, other: matmul_backward(grad, self, other, grad_input_mask)
+  result: matmul(self_t, other_p) + matmul(self_p, other_t)
+  version: [v2.1, newest]
+
 - name: matmul_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
   output_differentiability: [true, true]
   grad_out, self, other: matmul_double_backward(grads[0], grads[1], grad_out, self, other, grad_input_mask)
@@ -104,7 +109,7 @@ backward:
   x, gx, beta, gamma: npu_deep_norm_backward(grad, x, gx, gamma, result0, result1, alpha)
   version: [v2.1, newest]
 
-- name: npu_deformable_conv2d(Tensor input, Tensor weight, Tensor offset, Tensor? bias, int[2] kernel_size, int[] stride, int[] padding, int[4] dilation=1, int groups=1, int deformable_groups=1, bool modulated=True) -> (Tensor, Tensor)
+- name: npu_deformable_conv2d(Tensor input, Tensor weight, Tensor offset, Tensor? bias, int[2] kernel_size, int[] stride, int[] padding, int[4] dilation=[1,1,1,1], int groups=1, int deformable_groups=1, bool modulated=True) -> (Tensor, Tensor)
   input, weight, offset, bias: npu_deformable_conv2dbk(input, grad, result1, weight, offset, kernel_size, stride, padding, dilation, groups, deformable_groups, modulated)
   version: [v2.1, newest]
 
@@ -237,6 +242,10 @@ backward:
   self: npu_softmax_cross_entropy_with_logits_backward(grad, self, labels)
   version: [v2.1, newest]
 
+- name: npu_masked_causal_conv1d(Tensor input, Tensor weight, *, Tensor? mask=None) -> Tensor
+  input, weight: npu_masked_causal_conv1d_backward(grad, input, weight, mask)
+  version: [v2.6, newest]
+
 - name: npu_swiglu(Tensor self, int dim=-1) -> Tensor
   self: npu_swiglu_backward(grad, self, dim)
   version: [v2.1, newest]
@@ -310,9 +319,9 @@ backward:
   output_differentiability: [true, false, false, false]
   permuted_tokens, probs: "drop_and_pad ? npu_moe_token_unpermute_with_routing_map_grad(grad, result1, result2, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape) : npu_moe_token_unpermute_with_routing_map_grad(grad, sorted_indices, sorted_indices, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape)"
   version: [v2.1, newest]
-  
+
 - name: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)
-  tokens: npu_moe_token_permute_grad(tokens, grad, indices, result1, padded_mode)
+  tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0).expect_int(), tokens.scalar_type(), (indices.dim() == 1) ? 1 : indices.sym_size(-1).expect_int(), padded_mode)"
   version: [v2.1, newest]
 
 - name: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
@@ -335,4 +344,23 @@ backward:
 - name: cdist(Tensor x1, Tensor x2, float p=2, int? compute_mode=None) -> Tensor
   x1: _cdist_backward(grad, x1, x2, p, result)
   x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
+  version: all_version
+
+- name: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, false, false, false]
+  x, phi, alpha, bias, gamma: 'npu_mhc_pre_backward(x, phi, alpha, grads[0], grads[1], grads[2], result3, result4, result5, result1, gamma, hc_eps, c10::nullopt)'
+  version: all_version
+
+- name: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false]
+  x: npu_mhc_sinkhorn_backward(grad, result1, result2)
+  version: all_version
+
+- name: npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+  x, h_res, h_out, h_post: npu_mhc_post_backward(grad, x, h_res, h_out, h_post)
+  version: all_version
+
+- name: npu_moe_gating_top_k(Tensor x, int k, *, Tensor? bias=None, int k_group=1, int group_count=1, int group_select_mode=0, int renorm=0, int norm_type=0, bool out_flag=False, float routed_scaling_factor=1.0, float eps=1e-20) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false]
+  x: npu_moe_gating_top_k_backward(result2, grad, result1, renorm, norm_type, routed_scaling_factor, eps)
   version: all_version

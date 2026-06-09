@@ -9,26 +9,37 @@
 
 ## 功能说明
 
--   API功能：针对单输入`x`进行旋转位置编码。
--   计算公式：
+- API功能：针对单输入`x`进行旋转位置编码。
+- 计算公式：
 
-    ![](../../figures/zh-cn_formulaimage_0000002238091144.png)
+    $$q = \text{reshape}(x, [B, N, S, D/2, 2]).\text{transpose}(-1, -2).\text{reshape}([B, N, S, D])$$
 
-     其中：RotateHalf\(q\)表示将q的D维后半部分元素移至前半部分并乘以-1，后半部分用前半部分的值。
+    $$q_{\text{embed}} = q \cdot \cos + \text{RotateHalf}(q) \cdot \sin$$
 
-    ![](../../figures/zh-cn_formulaimage_0000002237943254.png)
+     其中：RotateHalf\(q\) 将张量 `q` 在最后一个维度 D 上执行如下变换：
+
+     1. 将D维平分为前后两部分，前半部分长度为 $D/2$，后半部分长度也为 $D/2$。
+     2. 后半部分元素整体前移并取相反数，前半部分元素整体后移，保持原始值。
+
+     数学表示：设 $q = [q_0, q_1, \ldots, q_{D/2-1}, q_{D/2}, q_{D/2+1}, \ldots, q_{D-1}]$，则
+
+     $$\text{RotateHalf}(q) = [-q_{D/2}, -q_{D/2+1}, \ldots, -q_{D-1}, q_0, q_1, \ldots, q_{D/2-1}]$$
+
+     示例：设 $q = [1, 2, 3, 4]$，则前半部分为 $[1, 2]$，后半部分为 $[3, 4]$，变换后得到 $\text{RotateHalf}(q) = [-3, -4, 1, 2]$。
+
+    $$\text{RotateHalf}(q)_i = \begin{cases} -q_{i+D/2}, & i < D/2 \\ q_{i-D/2}, & i \geq D/2 \end{cases}$$
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
 ```
 
 ## 参数说明
 
--   **x** (`Tensor`)：表示待处理张量。要求为4维张量，shape为\(B, N, S, D\)，数据类型支持`bfloat16`、`float16`，数据格式为$ND$，不支持非连续的Tensor。
--   **cos** (`Tensor`)：表示RoPE旋转位置编码的余弦分量。要求为4维张量，shape为\(B, N, S, D\)，S可以为1或与`x`的S相同，数据类型、数据格式与`x`一致，不支持非连续的Tensor。
--   **sin** (`Tensor`)：表示RoPE旋转位置编码的正弦分量。shape、数据类型、数据格式需要与`cos`保持一致，不支持非连续的Tensor。
+- **x** (`Tensor`)：表示待处理张量。要求为4维张量，shape为\(B, N, S, D\)，数据类型支持`bfloat16`、`float16`，数据格式为$ND$，不支持非连续的Tensor。
+- **cos** (`Tensor`)：表示RoPE旋转位置编码的余弦分量。要求为4维张量，shape为\(B, N, S, D\)，S可以为1或与`x`的S相同，数据类型、数据格式与`x`一致，不支持非连续的Tensor。
+- **sin** (`Tensor`)：表示RoPE旋转位置编码的正弦分量。shape、数据类型、数据格式需要与`cos`保持一致，不支持非连续的Tensor。
 
 ## 返回值说明
 
@@ -38,14 +49,14 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
 
 ## 约束说明
 
--   该接口支持推理场景下使用。
--   该接口支持图模式。
--   输入`x`、`cos`、`sin`的D维度均必须等于64。
--   `cos`、`sin`的N维度必须等于1。
+- 该接口支持推理场景下使用。
+- 该接口支持图模式。
+- 输入`x`、`cos`、`sin`的D维度均必须等于64。
+- `cos`、`sin`的N维度必须等于1。
 
 ## 调用示例
 
--   单算子模式调用
+- 单算子模式调用
 
     ```python
     import torch
@@ -63,7 +74,7 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     q_embed_npu = torch_npu.npu_interleave_rope(x_npu, cos_npu, sin_npu)
     ```
 
--   图模式调用
+- 图模式调用
 
     ```python
     # 入图方式
@@ -97,4 +108,3 @@ torch_npu.npu_interleave_rope(x, cos, sin) -> Tensor
     # 调用InterleaveRope算子
     q_embed_npu = model(x_npu, cos_npu, sin_npu)
     ```
-

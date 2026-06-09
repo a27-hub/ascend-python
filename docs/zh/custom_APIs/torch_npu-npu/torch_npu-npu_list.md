@@ -5,6 +5,7 @@
 **表1** torch_npu.npu API
 
 <a name="table0664117101518"></a>
+
 <table><thead align="left"><tr id="row466412731514"><th class="cellrowborder" valign="top" width="37.4%" id="mcps1.2.3.1.1"><p id="p11664187201510"><a name="p11664187201510"></a><a name="p11664187201510"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="62.6%" id="mcps1.2.3.1.2"><p id="p10664197111510"><a name="p10664197111510"></a><a name="p10664197111510"></a>说明</p>
@@ -48,7 +49,7 @@
 </tr>
 <tr id="row196641378158"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p36640731519"><a name="p36640731519"></a><a name="p36640731519"></a><a href="（beta）torch_npu-npu-set_option.md">（beta）torch_npu.npu.set_option</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p566467161517"><a name="p566467161517"></a><a name="p566467161517"></a>详细使用参见<span id="ph4356918191716"><a name="ph4356918191716"></a><a name="ph4356918191716"></a>《PyTorch 训练模型迁移调优指南》中的“<a href="https://www.hiascend.com/document/detail/zh/Pytorch/730/ptmoddevg/trainingmigrguide/PT_LMTMOG_0076.html">设置算子编译选项</a>”章节</span>。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p566467161517"><a name="p566467161517"></a><a name="p566467161517"></a>详细使用参见<span id="ph4356918191716"><a name="ph4356918191716"></a><a name="ph4356918191716"></a>《PyTorch 训练模型迁移调优指南》中的“<a href="https://gitcode.com/Ascend/docs/blob/master/FrameworkPTAdapter/26.0.0/zh/pytorch_model_migration_fine_tuning/config_op_comp_opts.md">设置算子编译选项</a>”章节</span>。</p>
 </td>
 </tr>
 <tr id="row14664573152"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1366415716151"><a name="p1366415716151"></a><a name="p1366415716151"></a><a href="（beta）torch_npu-npu-config-allow_internal_format.md">（beta）torch_npu.npu.config.allow_internal_format</a></p>
@@ -268,7 +269,7 @@
 </thead>
 <tbody><tr id="zh-cn_topic_0000001788617484_row1616454104711"><td class="cellrowborder" valign="top" width="38.76%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001788617484_p16616105411477"><a name="zh-cn_topic_0000001788617484_p16616105411477"></a><a name="zh-cn_topic_0000001788617484_p16616105411477"></a>（<span id="zh-cn_topic_0000001788617484_ph168289415199"><a name="zh-cn_topic_0000001788617484_ph168289415199"></a><a name="zh-cn_topic_0000001788617484_ph168289415199"></a>beta</span>）torch_npu.npu.get_rng_state</p>
 </td>
-<td class="cellrowborder" rowspan="9" valign="top" width="61.24000000000001%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001788617484_p45278137545"><a name="zh-cn_topic_0000001788617484_p45278137545"></a><a name="zh-cn_topic_0000001788617484_p45278137545"></a>torch_npu提供随机数相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1-7.3.0/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="9" valign="top" width="61.24000000000001%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001788617484_p45278137545"><a name="zh-cn_topic_0000001788617484_p45278137545"></a><a name="zh-cn_topic_0000001788617484_p45278137545"></a>torch_npu提供随机数相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001788617484_row1661655484720"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001788617484_p116160540479"><a name="zh-cn_topic_0000001788617484_p116160540479"></a><a name="zh-cn_topic_0000001788617484_p116160540479"></a>（<span id="zh-cn_topic_0000001788617484_ph81516268336"><a name="zh-cn_topic_0000001788617484_ph81516268336"></a><a name="zh-cn_topic_0000001788617484_ph81516268336"></a>beta</span>）torch_npu.npu.set_rng_state</p>
@@ -309,7 +310,7 @@
 </thead>
 <tbody><tr id="zh-cn_topic_0000001835217389_row939163412547"><td class="cellrowborder" valign="top" width="54.559999999999995%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001835217389_p13919348541"><a name="zh-cn_topic_0000001835217389_p13919348541"></a><a name="zh-cn_topic_0000001835217389_p13919348541"></a>（<span id="zh-cn_topic_0000001835217389_ph168289415199"><a name="zh-cn_topic_0000001835217389_ph168289415199"></a><a name="zh-cn_topic_0000001835217389_ph168289415199"></a>beta</span>）torch_npu.npu.is_initialized</p>
 </td>
-<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001835217389_p20972816174218"><a name="zh-cn_topic_0000001835217389_p20972816174218"></a><a name="zh-cn_topic_0000001835217389_p20972816174218"></a>torch_npu提供设备相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1-7.3.0/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="11" valign="top" width="45.440000000000005%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001835217389_p20972816174218"><a name="zh-cn_topic_0000001835217389_p20972816174218"></a><a name="zh-cn_topic_0000001835217389_p20972816174218"></a>torch_npu提供设备相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001835217389_row13391173465410"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001835217389_p173915341547"><a name="zh-cn_topic_0000001835217389_p173915341547"></a><a name="zh-cn_topic_0000001835217389_p173915341547"></a>（<span id="zh-cn_topic_0000001835217389_ph1943317523417"><a name="zh-cn_topic_0000001835217389_ph1943317523417"></a><a name="zh-cn_topic_0000001835217389_ph1943317523417"></a>beta</span>）torch_npu.npu.init</p>
@@ -361,7 +362,7 @@
 </thead>
 <tbody><tr id="zh-cn_topic_0000001863035964_row12860101605513"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p486019163553"><a name="zh-cn_topic_0000001863035964_p486019163553"></a><a name="zh-cn_topic_0000001863035964_p486019163553"></a>（<span id="zh-cn_topic_0000001863035964_ph168289415199"><a name="zh-cn_topic_0000001863035964_ph168289415199"></a><a name="zh-cn_topic_0000001863035964_ph168289415199"></a>beta</span>）torch_npu.npu.caching_allocator_alloc</p>
 </td>
-<td class="cellrowborder" rowspan="18" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p6146131084320"><a name="zh-cn_topic_0000001863035964_p6146131084320"></a><a name="zh-cn_topic_0000001863035964_p6146131084320"></a>Torch_npu提供内存管理相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1-7.3.0/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
+<td class="cellrowborder" rowspan="18" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p6146131084320"><a name="zh-cn_topic_0000001863035964_p6146131084320"></a><a name="zh-cn_topic_0000001863035964_p6146131084320"></a>torch_npu提供内存管理相关的部分接口，具体可参考<a href="https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/native_apis/pytorch_2-7-1/torch-cuda.md">torch.cuda</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001863035964_row0860131635519"><td class="cellrowborder" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p19860111610554"><a name="zh-cn_topic_0000001863035964_p19860111610554"></a><a name="zh-cn_topic_0000001863035964_p19860111610554"></a>（<span id="zh-cn_topic_0000001863035964_ph1545853943420"><a name="zh-cn_topic_0000001863035964_ph1545853943420"></a><a name="zh-cn_topic_0000001863035964_ph1545853943420"></a>beta</span>）torch_npu.npu.caching_allocator_delete</p>
@@ -420,12 +421,12 @@
 <td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="p26648741511"><a name="p26648741511"></a><a name="p26648741511"></a>轻量化empty_cache，只释放虚拟内存，调用方式与torch_npu.npu.empty_cache类似。</p>
 </td>
 </tr>
-<tr id="zh-cn_topic_0000001863035964_row1933424017243"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p7819165411224"><a name="zh-cn_topic_0000001863035964_p7819165411224"></a><a name="zh-cn_topic_0000001863035964_p7819165411224"></a>torch.npu.npu.NPUPluggableAllocator</p>
+<tr id="zh-cn_topic_0000001863035964_row1933424017243"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p7819165411224"><a name="zh-cn_topic_0000001863035964_p7819165411224"></a><a name="zh-cn_topic_0000001863035964_p7819165411224"></a>torch_npu.npu.NPUPluggableAllocator</p>
 </td>
 <td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p172891387259"><a name="zh-cn_topic_0000001863035964_p172891387259"></a><a name="zh-cn_topic_0000001863035964_p172891387259"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-NPUPluggableAllocator.md">torch.npu.npu.NPUPluggableAllocator</a>。</p>
 </td>
 </tr>
-<tr id="zh-cn_topic_0000001863035964_row12478193618244"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p681913541224"><a name="zh-cn_topic_0000001863035964_p681913541224"></a><a name="zh-cn_topic_0000001863035964_p681913541224"></a>torch.npu.npu.change_current_allocator</p>
+<tr id="zh-cn_topic_0000001863035964_row12478193618244"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p681913541224"><a name="zh-cn_topic_0000001863035964_p681913541224"></a><a name="zh-cn_topic_0000001863035964_p681913541224"></a>torch_npu.npu.change_current_allocator</p>
 </td>
 <td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p75031810165517"><a name="zh-cn_topic_0000001863035964_p75031810165517"></a><a name="zh-cn_topic_0000001863035964_p75031810165517"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-change_current_allocator.md">torch.npu.npu.change_current_allocator</a>。</p>
 </td>
@@ -458,6 +459,7 @@
 **表7** Profiler API
 
 <a name="table17382716193111"></a>
+
 <table><thead align="left"><tr id="row1238261612314"><th class="cellrowborder" valign="top" width="37.97%" id="mcps1.2.3.1.1"><p id="p18285834183113"><a name="p18285834183113"></a><a name="p18285834183113"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="62.029999999999994%" id="mcps1.2.3.1.2"><p id="p14285193423110"><a name="p14285193423110"></a><a name="p14285193423110"></a>说明</p>
@@ -474,17 +476,32 @@
 <td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001983773542_p2038911486504"><a name="zh-cn_topic_0000001983773542_p2038911486504"></a><a name="zh-cn_topic_0000001983773542_p2038911486504"></a>标记瞬时事件。</p>
 </td>
 </tr>
+<tr id="row2068217208539"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p568362035310"><a name="p568362035310"></a><a name="p568362035310"></a><a href="torch_npu-npu-mstx-range_push.md">torch_npu.npu.mstx.range_push</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p2038911486504"><a name="p2038911486504"></a><a name="p2038911486504"></a>标识打点开始，线程级。</p>
+</td>
+</tr>
+<tr id="row2068217208539"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p568362035310"><a name="p568362035310"></a><a name="p568362035310"></a><a href="torch_npu-npu-mstx-range_pop.md">torch_npu.npu.mstx.range_pop</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p2038911486504"><a name="p2038911486504"></a><a name="p2038911486504"></a>标识打点结束，线程级。</p>
+</td>
+</tr>
 <tr id="row2068217208539"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p568362035310"><a name="p568362035310"></a><a name="p568362035310"></a><a href="torch_npu-npu-mstx-range_start.md">torch_npu.npu.mstx.range_start</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p2038911486504"><a name="p2038911486504"></a><a name="p2038911486504"></a>标识打点开始。</p>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p2038911486504"><a name="p2038911486504"></a><a name="p2038911486504"></a>标识打点开始，进程级。</p>
 </td>
 </tr>
 <tr id="row1373517244535"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p673592411537"><a name="p673592411537"></a><a name="p673592411537"></a><a href="torch_npu-npu-mstx-range_end.md">torch_npu.npu.mstx.range_end</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p1995741111568"><a name="p1995741111568"></a><a name="p1995741111568"></a>标识打点结束。</p>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p1995741111568"><a name="p1995741111568"></a><a name="p1995741111568"></a>标识打点结束，进程级。</p>
 </td>
 </tr>
-<tr id="row1159973155314"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p115992314539"><a name="p115992314539"></a><a name="p115992314539"></a><a href="torch_npu-npu-mstx-mstx_range.md">torch_npu.npu.mstx.mstx_range</a></p>
+<tr id="row1159973155314"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p115992314539"><a name="p115992314539"></a><a name="p115992314539"></a><a href="torch_npu-npu-mstx-annotate.md">torch_npu.npu.mstx.annotate</a></p>
+</td>
+<td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p2038911486504"><a name="p2038911486504"></a><a name="p2038911486504"></a>API级的打点，可自定义选择API或函数进行耗时采集。</p>
+</td>
+</tr>
+<tr id="row1373517244535"><td class="cellrowborder" valign="top" width="37.97%" headers="mcps1.2.3.1.1 "><p id="p673592411537"><a name="p673592411537"></a><a name="p673592411537"></a><a href="torch_npu-npu-mstx-mstx_range.md">torch_npu.npu.mstx_range</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="62.029999999999994%" headers="mcps1.2.3.1.2 "><p id="p1059918319532"><a name="p1059918319532"></a><a name="p1059918319532"></a>range装饰器，用来采集被装饰函数的range执行耗时。</p>
 </td>
@@ -613,4 +630,3 @@
 </tr>
 </tbody>
 </table>
-

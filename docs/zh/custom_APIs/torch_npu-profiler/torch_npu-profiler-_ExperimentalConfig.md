@@ -14,7 +14,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportType.Text], profiler_level=torch_npu.profiler.ProfilerLevel.Level0, mstx=False, mstx_domain_include=[], mstx_domain_exclude=[], aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone, l2_cache=False, op_attr=False, data_simplification=True, record_op_args=False, gc_detect_threshold=None, host_sys=[], sys_io=False, sys_interconnection=False)
 ```
 
@@ -35,7 +35,7 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 
 - **mstx_domain_include** (`list`)：可选参数，输出需要的domain数据。调用torch_npu.npu.mstx系列打点接口，使用默认domain或指定domain进行打点时，可选择只输出本参数配置的domain数据。
 
-    domain名称为用户调用[torch_npu.npu.mstx](torch_npu-npu-mstx.md)系列接口传入的domain或默认domain（'default'），domain名称使用list类型输入。
+    domain名称为用户调用[torch_npu.npu.mstx](../torch_npu-npu/torch_npu-npu-mstx.md)系列接口传入的domain或默认domain（'default'），domain名称使用list类型输入。
 
     与mstx_domain_exclude参数互斥，若同时配置，则只有mstx_domain_include生效。
 
@@ -65,7 +65,7 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 
     默认值为False。
 
-    torch_npu.profiler.ProfilerLevel.None时，该参数不生效。
+     torch_npu.profiler.ProfilerLevel.Level_none时，该参数不生效。
 
 - **data_simplification** (`bool`)：可选参数，开启后将在导出性能数据后删除多余数据，仅保留profiler_*.json文件、ASCEND_PROFILER_OUTPUT目录、PROF_XXX目录下的原始性能数据、FRAMEWORK目录和logs目录，以节省存储空间。取值为：
 
@@ -84,10 +84,10 @@ torch_npu.profiler._ExperimentalConfig(export_type=[torch_npu.profiler.ExportTyp
 - **gc_detect_threshold** (`float`)：可选参数，GC检测阈值。取值范围为大于等于0的数值，单位ms。当用户设置的阈值为数字时，表示开启GC检测，只采集超过阈值的GC事件。配置为0时表示采集所有的GC事件（可能造成采集数据量过大，请谨慎配置），推荐设置为1ms。
 
     默认为None，表示不开启GC检测功能。
-    
+
     - GC是Python进程对已经销毁的对象进行内存回收。
     - GC层在trace_view.json中生成或在ascend_pytorch_profiler_{Rank_ID}.db中生成GC_RECORD表。
-    
+
 - **host_sys** (`list`)：可选参数，Host侧系统数据采集开关。默认未配置，表示未开启Host侧系统数据采集。取值为：
 
     - torch_npu.profiler.HostSystem.CPU：进程级别的CPU利用率。
@@ -125,17 +125,17 @@ import torch_npu
 ...
 
 experimental_config = torch_npu.profiler._ExperimentalConfig(
-	export_type=[
-		torch_npu.profiler.ExportType.Text
-		],
-	profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
-	msprof_tx=False,
-	aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
-	l2_cache=False,
-	op_attr=False,
-	data_simplification=False,
-	record_op_args=False,
-	gc_detect_threshold=None
+    export_type=[
+        torch_npu.profiler.ExportType.Text
+        ],
+    profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
+    msprof_tx=False,
+    aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
+    l2_cache=False,
+    op_attr=False,
+    data_simplification=False,
+    record_op_args=False,
+    gc_detect_threshold=None
 )
 
 with torch_npu.profiler.profile(

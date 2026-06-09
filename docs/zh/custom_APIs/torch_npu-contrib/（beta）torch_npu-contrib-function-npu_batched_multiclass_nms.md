@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.function.npu_batched_multiclass_nms
-## 产品支持情况
 
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -11,15 +11,13 @@
 
 ## 功能说明
 
-执行批量多类别的非极大抑制值（NMS）计算。
+执行批量多类别的非极大抑制（NMS）计算。
 
 ## 函数原型
 
-```
+```python
 torch_npu.contrib.function.npu_batched_multiclass_nms(multi_bboxes, multi_scores, score_thr=0.05, nms_thr=0.45, max_num=50, score_factors=None)
 ```
-
-
 
 ## 参数说明
 
@@ -40,7 +38,6 @@ torch_npu.contrib.function.npu_batched_multiclass_nms(multi_bboxes, multi_scores
 
 在动态shape条件下，最多支持20个类别（nmsed_classes）和10000个框（nmsed_boxes）。
 
-
 ## 调用示例
 
 ```python
@@ -49,9 +46,8 @@ torch_npu.contrib.function.npu_batched_multiclass_nms(multi_bboxes, multi_scores
 >>> boxes = torch.randint(1, 255, size=(4, 200, 80, 4)).npu().half()
 >>> scores = torch.randn(4, 200, 81).npu().half()
 >>> det_bboxes, det_labels = npu_batched_multiclass_nms(boxes, scores, score_thr=0.3, nms_thr=0.5, max_num=3)
->>> det_bboxes.shape
+>>> print(det_bboxes.shape)
 torch.Size([4, 3, 5])
->>> det_labels.shape
+>>> print(det_labels.shape)
 torch.Size([4, 3])
 ```
-

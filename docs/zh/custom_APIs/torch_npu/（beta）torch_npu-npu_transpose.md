@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_transpose
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch.permute。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_transpose(self, perm, require_contiguous=True) -> Tensor
 ```
 
@@ -29,13 +32,12 @@ torch_npu.npu_transpose(self, perm, require_contiguous=True) -> Tensor
 
 ```python
 >>> x = torch.randn(2, 3, 5).npu()
->>> x.shape
+>>> print(x.shape)
 torch.Size([2, 3, 5])
 >>> x1 = torch_npu.npu_transpose(x, (2, 0, 1))
->>> x1.shape
+>>> print(x1.shape)
 torch.Size([5, 2, 3])
 >>> x2 = torch_npu.npu_transpose(x, (2, 0, 1))
->>> x2.shape
+>>> print(x2.shape)
 torch.Size([5, 2, 3])
 ```
-

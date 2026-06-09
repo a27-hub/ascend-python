@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_alloc_float_status
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -8,17 +11,16 @@
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
+
 ## 功能说明
 
 申请一个专门用于存储浮点运算状态标志的Tensor。该Tensor用于后续记录计算过程中的溢出状态。
 
-
 ## 函数原型
 
-```
+```python
 torch_npu.npu_alloc_float_status(input) -> Tensor
 ```
-
 
 ## 参数说明
 
@@ -38,10 +40,10 @@ torch_npu.npu_alloc_float_status(input) -> Tensor
 >>> input = torch.randn([1,2,3]).npu()
 ## 分配状态空间
 >>> output = torch_npu.npu_alloc_float_status(input)
->>> input
+>>> print(input)
 tensor([[[ 2.2324,  0.2478, -0.1056],
         [ 1.1273, -0.2573,  1.0558]]], device='npu:0')
->>> output
+>>> print(output)
 tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 
 ## 清除状态
@@ -54,4 +56,3 @@ tensor([0., 0., 0., 0., 0., 0., 0., 0.], device='npu:0')
 >>> result = torch_npu.npu_get_float_status(output)
 
 ```
-

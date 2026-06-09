@@ -29,28 +29,6 @@ static const uint64_t GROUP_MAX = 65535UL;
 static const size_t GROUP_DIM = 3;
 static const size_t OFFSET_32_BITS = 32;
 static const size_t OFFSET_16_BITS = 16;
-bool is_neox_style(std::string rotary_mode)
-{
-    TORCH_CHECK(rotary_mode != "half" || rotary_mode != "interleave",
-        "rotary_mode only support half or interleave", OPS_ERROR(ErrCode::VALUE));
-    if (rotary_mode == "half") {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-int64_t cache_mode_to_int(std::string cache_mode)
-{
-    if (cache_mode == "default") {
-        return 0;
-    } else if (cache_mode == "interleave") {
-        return 1;
-    } else {
-        TORCH_CHECK(false, "cache_mode only support default or interleave", OPS_ERROR(ErrCode::VALUE));
-        return 0;
-    }
-}
 
 std::string get_reduction_str(int64_t reduction)
 {
@@ -276,7 +254,7 @@ at::ScalarType get_divide_calculate_type(const at::Tensor &self, const at::Tenso
 at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 {
     at::Tensor self_cast = (self.dtype() == calculate_type) ? self : at_npu::native::custom_ops::_npu_dtype_cast(self, calculate_type);
-    self_cast = at_npu::native::OpPreparation::CastBackToOriFormat(self_cast);
+    self_cast = at_npu::native::OpPreparation::CastBackToOriFormat(static_cast<const at::Tensor&>(self_cast));
     return self_cast;
 }
 
@@ -479,18 +457,27 @@ bool is_gte_cann_version_900()
     return result;
 }
 
+bool is_gte_cann_version_910()
+{
+    const static bool result = IsGteCANNVersion("9.1.0", "CANN");
+    return result;
+}
+
 const std::string DTypeToString(int64_t input_type)
 {
     return c10_npu::IsCustomDType(input_type) ?
            c10_npu::CustomDataTypeToString(input_type) : c10::toString(static_cast<at::ScalarType>(input_type));
 }
 
-aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales, int64_t quant_mode)
+aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales,
+                c10::optional<int64_t> scales_dtype, int64_t quant_mode)
 {
     aclDataType dynamic_scale_dtype = ACL_FLOAT;
     if (quant_mode == QuantMode::QUANT_MODE_NO_QUANT) {
+        aclDataType scale_value_type = scales.has_value() ?
+                at_npu::native::OpPreparation::convert_to_acl_data_type(scales.value().scalar_type()) : ACL_FLOAT;
         dynamic_scale_dtype = (x.scalar_type() == at::kBFloat16 || x.scalar_type() == at::kHalf) ? ACL_FLOAT :
-           (scales.has_value() ? at_npu::native::OpPreparation::convert_to_acl_data_type(scales.value().scalar_type()) : ACL_FLOAT);
+           (scales_dtype.has_value() ? c10_npu::GetAclDataType(scales_dtype.value()) : scale_value_type);
     } else if (quant_mode == QuantMode::QUANT_MODE_MX) {
         dynamic_scale_dtype = c10_npu::GetAclDataType(c10_npu::DType::FLOAT8_E8M0);
     }
@@ -505,7 +492,7 @@ std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, 
     std::vector<int64_t> shape{a};
     if (quant_mode == QuantMode::QUANT_MODE_NO_QUANT && scales.has_value()) {
         TORCH_CHECK(scales.value().dim() >= DIM_TWO, "Expected scales to be at least 2D.", OPS_ERROR(ErrCode::PARAM));
-        shape = {a * scales.value().sizes()[1]};
+        shape = {a, scales.value().sizes()[1]};
     } else if (quant_mode == QuantMode::QUANT_MODE_PERTOKEN) {
         shape = {a};
     } else if (quant_mode == QuantMode::QUANT_MODE_PERGROUP) {
@@ -535,6 +522,16 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
     groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << OFFSET_32_BITS) +
                                   (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
     return groups;
+}
+    
+int8_t get_cube_math_type_with_passthrough()
+{
+    int8_t cube_math_type = at_npu::native::OpPreparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type_passthrough = at_npu::native::OpPreparation::get_cube_math_type();
+    if (cube_math_type_passthrough >= 0) {
+        cube_math_type = cube_math_type_passthrough;
+    }
+    return cube_math_type;
 }
 
 }  // namespace utils

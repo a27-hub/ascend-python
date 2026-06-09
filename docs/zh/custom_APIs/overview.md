@@ -1,6 +1,6 @@
 # 概述
 
-基于PyTorch2.10.0/2.9.0/2.8.0/2.7.1版本，提供Ascend Extension for PyTorch自定义API的功能说明、函数原型、参数说明与调用示例等。
+基于PyTorch2.12.0/2.11.0/2.10.0/2.9.0/2.7.1版本，提供Ascend Extension for PyTorch自定义API的功能说明、函数原型、参数说明与调用示例等。
 
 Ascend Extension for PyTorch提供的接口均遵循PyTorch社区公开接口规范，具体规范可参考[Public API definition and documentation](https://github.com/pytorch/pytorch/wiki/Public-API-definition-and-documentation)。本文档展示的接口为Ascend Extension for PyTorch的对外公开接口，其他内部接口后续版本可能会被修改或删除，请尽量不要使用，若必须使用，请在[昇腾社区](https://gitcode.com/ascend/pytorch/issues)提交issue获取帮助。
 
@@ -13,4 +13,4 @@ Ascend Extension for PyTorch项目采用C++和Python联合开发，当前正式�
 所有自定义API接口默认支持Ascend Extension for PyTorch版本匹配的全量PyTorch版本，若非全量支持会在各API的约束说明进行标注。
 
 > [!NOTE]  
-> Ascend Extension for PyTorch部分功能可以通过环境变量实现，具体可参考《[环境变量参考](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-7.3.0/docs/zh/environment_variable_reference/env_variable_list.md)》。
+> Ascend Extension for PyTorch部分功能可以通过环境变量实现，具体可参考《[环境变量参考](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/environment_variable_reference/env_variable_list.md)》。

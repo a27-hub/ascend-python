@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_fused_attention_score
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，建议使用torch_npu.npu_fusion_attention。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -13,7 +16,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_fused_attention_score(query_layer, key_layer, value_layer, attention_mask, scale, keep_prob, query_transpose=False, key_transpose=False, bmm_score_transpose_a=False, bmm_score_transpose_b=False, value_transpose=False, dx_transpose=False) -> Tensor
 ```
 
@@ -33,6 +36,7 @@ torch_npu.npu_fused_attention_score(query_layer, key_layer, value_layer, attenti
 - **dx_transpose**（`bool`）：可选参数，反向计算时dx是否做转置，默认值为False。
 
 ## 返回值说明
+
 `Tensor`
 
 注意力计算后的输出张量，数据类型为float16。在默认参数下，输出张量的形状与query_layer相同。
@@ -63,4 +67,3 @@ tensor([[0.5010, 0.4709, 0.4841,  ..., 0.4321, 0.4448, 0.4834],
         [0.5459, 0.5107, 0.5415,  ..., 0.4641, 0.4688, 0.4531]],
        device='npu:0', dtype=torch.float16)
 ```
-

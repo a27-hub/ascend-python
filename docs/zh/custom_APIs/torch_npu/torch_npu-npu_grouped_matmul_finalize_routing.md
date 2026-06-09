@@ -9,11 +9,23 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002259406069_section14441124184110"></a>
 
-GroupedMatMul和MoeFinalizeRouting的融合算子，GroupedMatMul计算后的输出按照索引做combine动作。
+- **API功能**: GroupedMatMul和MoeFinalizeRouting的融合算子，其中，GroupedMatMul负责分专家计算，MoeFinalizeRouting负责按路由关系回填并聚合GroupedMatMul结果，两者串联形成完整的MoE输出路径。
+  - **MoE**: Mixture of Experts，混合专家模型。每个token按路由结果分配到一个或多个专家进行计算。
+  - **MoeFinalizeRouting**: MoE路由最终化过程。将各专家计算结果按路由索引回填到token原始顺序，并对同一token的多个专家结果进行聚合，得到最终输出。  
+
+其中，GroupedMatMul是一种针对批量稀疏矩阵乘法的优化计算模式。在MoE（Mixture of Experts，混合专家模型）结构中，每个token被分配给某个专家，不同专家处理的token数量不同。GroupedMatMul将同一专家负责的所有token聚合为一个组，然后一次性执行该专家的矩阵乘法，从而避免为每个token单独调用矩阵乘法带来的调度开销，提升计算效率。
+
+GroupedMatMul的输入通常包括输入张量`x`、专家权重`w`以及分组信息`group_list`。其中，`x`的形状为\(M, K\)，\(M\)表示token总数，\(K\)表示输入特征维度；专家权重`w`可理解为包含\(E\)个专家权重的张量；`group_list`用于描述每个专家处理的token数量或分组前缀和。
+
+计算时，算子根据`group_list`将`x`的行按专家划分为多个连续分组。对于每个专家，取其对应的token分组，并与该专家对应的权重执行矩阵乘法，得到该专家的输出。所有专家的输出按分组顺序拼接后得到GroupedMatMul的输出。
+
+随后，MoeFinalizeRouting根据`row_index`将GroupedMatMul的输出按照目标token位置进行combine；当输入`logit`时，专家输出会先与对应token的logit权重相乘后再进行combine；当输入`shared_input`时，共享专家输出会按照`shared_input_weight`和`shared_input_offset`参与最终累加。
+
+该融合算子常用于MoE模型的FFN层、高性能推理以及动态批处理等场景，可减少零填充、降低算子调度开销并提升NPU吞吐量。
 
 ## 函数原型<a name="zh-cn_topic_0000002259406069_section45077510411"></a>
 
-```
+```python
 torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, bias=None, offset=None, pertoken_scale=None, shared_input=None, logit=None, row_index=None, dtype=None, shared_input_weight=1.0, shared_input_offset=0, output_bs=0, group_list_type=1) -> Tensor
 ```
 
@@ -21,8 +33,8 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 
 - **x** (`Tensor`)：必选参数。矩阵计算的左矩阵，不支持非连续的Tensor。数据类型支持`int8`，数据格式支持$ND$，维度为\(m, k\)。m取值范围为\[1, 16\*1024\*8\]。
 - **w** (`Tensor`)：必选参数。矩阵计算的右矩阵，不支持非连续的Tensor。数据类型支持`int8`、`int4`。
-    -   A8W8量化场景下，数据格式支持$NZ$，维度为\(e, n1, k1, k0, n0\)，其中k0=16、n0=32，`x` shape中的k和`w` shape中的k1需要满足以下关系：ceilDiv\(k, 16\) = k1，e取值范围\[1, 256\]，k取值为16整倍数，n取值为32整倍数，且n大于等于256。
-    -   A8W4量化场景下数据格式支持$ND$，维度为\(e, k, n\)，k支持2048，n只支持7168。
+    - A8W8量化场景下，数据格式支持$NZ$，维度为\(e, n1, k1, k0, n0\)，其中k0=16、n0=32，`x` shape中的k和`w` shape中的k1需要满足以下关系：ceilDiv\(k, 16\) = k1，e取值范围\[1, 256\]，k取值为16整倍数，n取值为32整倍数，且n大于等于256。
+    - A8W4量化场景下数据格式支持$ND$，维度为\(e, k, n\)，k支持2048，n只支持7168。
 
 - **group\_list** (`Tensor`)：必选参数。GroupedMatMul的各分组大小。不支持非连续的Tensor。数据类型支持`int64`，数据格式支持$ND$，维度为\(e,\)，e与`w`的e一致。`group_list`的值总和要求≤m。
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
@@ -33,11 +45,11 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 - **shared\_input** (`Tensor`)：可选参数。MoE计算中共享专家的输出，需要与MoE专家的输出进行combine操作，不支持非连续的Tensor。数据类型支持`bfloat16`，数据格式支持$ND$，维度\(batch/dp, n\)，n与`scale`的n一致，batch/dp取值范围\[1, 2\*1024\]，batch取值范围\[1, 16\*1024\]。
 - **logit** (`Tensor`)：可选参数。MoE专家对各个token的logit大小，矩阵乘的计算输出与该logit做乘法，然后索引进行combine，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(m,\)，m与`x`的m一致。
 - **row\_index** (`Tensor`)：可选参数。MoE专家输出按照该row_index进行combine，其中的值即为combine做scatter add的索引，不支持非连续的Tensor。数据类型支持`int32`、`int64`，数据格式支持$ND$，维度为\(m,\)，m与`x`的m一致。
-- **dtype** (`ScalarType`)：可选参数。指定GroupedMatMul计算的输出类型。0表示`float32`，1表示`float16`，2表示`bfloat16`。默认值为0。
+- **dtype** (`ScalarType`)：可选参数。指定GroupedMatMul计算的输出类型。默认值为`float32`，仅支持`float32`。
 - **shared\_input\_weight** (`float`)：可选参数。指共享专家与MoE专家进行combine的系数，`shared_input`先与该参数乘，然后再和MoE专家结果累加。默认为1.0。
 - **shared\_input\_offset** (`int`)：可选参数。共享专家与MoE专家累加的行偏移量。默认值为0，表示没有偏移。
 - **output\_bs** (`int`)：可选参数。输出的最高维大小。默认值为0。
-- **group\_list\_type** (`List[int]`)：可选参数。GroupedMatMul的分组模式。默认为1，表示count模式；若配置为0，表示cumsum模式，即为前缀和。
+- **group\_list\_type** (`int`)：可选参数。GroupedMatMul的分组模式。默认为1，表示count模式；若配置为0，表示cumsum模式，即为前缀和。
 
 ## 返回值说明<a name="zh-cn_topic_0000002259406069_section22231435517"></a>
 
@@ -47,26 +59,29 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
 
 ## 约束说明<a name="zh-cn_topic_0000002259406069_section12345537164214"></a>
 
--   该接口支持推理和训练场景下使用。
--   该接口支持图模式。
--   输入和输出Tensor支持的数据类型组合如下：
+- 该接口支持推理和训练场景下使用。
+- 该接口支持图模式。
+- 输入和输出Tensor支持的数据类型组合如下：
+
     |x|w|group_list|scale|bias|offset|pertoken_scale|shared_input|logit|row_index|y|
     |--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
     |`int8`|`int8`|`int64`|`float32`|None|None|`float32`|`bfloat16`|`float32`|`int64`|`float32`|
-    |`int8`|`int8`|`int64`|`float32`|None|None|`float32`|None|None|`int64`|`float32`|
+    |`int8`|`int8`|`int64`|`float32`|None|None|`float32`|None|`float32`|`int64`|`float32`|
     |`int8`|`int4`|`int64`|`int64`|`float32`|None|`float32`|`bfloat16`|`float32`|`int64`|`float32`|
     |`int8`|`int4`|`int64`|`int64`|`float32`|`float32`|`float32`|`bfloat16`|`float32`|`int64`|`float32`|
 
 ## 调用示例<a name="zh-cn_topic_0000002259406069_section14459801435"></a>
 
--   单算子模式调用
+- 单算子模式调用
 
     ```python
     import numpy as np
     import torch
     import torch_npu
     from scipy.special import softmax
-     
+
+    torch_npu.npu.config.allow_internal_format = True
+
     m, k, n = 576, 2048, 7168
     batch = 72
     topK = 8
@@ -101,7 +116,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
                 shared_input_offset=shared_input_offset, output_bs=output_bs)
     ```
 
--   图模式调用：
+- 图模式调用：
 
     ```python
     import numpy as np
@@ -156,4 +171,4 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     y = model(x_clone, weightNz, group_list_clone, scale_clone, pertoken_scale_clone, shared_input_clone, logit_clone, row_index_clone, shared_input_offset, output_bs)
     ```
-
+    

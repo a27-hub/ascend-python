@@ -13,13 +13,14 @@
 - API功能：全量FA实现。
 
 - 计算公式：
+
 $$
 atten\_out = softmax\left(scale \cdot (Q \cdot K) + atten\_mask\right) \cdot V
 $$
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, padding_mask=None, atten_mask=None, actual_seq_lengths=None, deq_scale1=None, quant_scale1=None, deq_scale2=None, quant_scale2=None, quant_offset2=None, num_heads=1, scale_value=1.0, pre_tokens=2147483647, next_tokens=0, input_layout="BSH",num_key_value_heads=0, actual_seq_lengths_kv=None, sparse_mode=0) -> Tensor
 ```
 
@@ -70,7 +71,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
 - **pre_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention（注意力机制）需要和前几个Token计算关联，数据类型支持`int64`。默认值为2147483647。<term>Atlas 推理系列加速卡产品</term>仅支持默认值2147483647。
 - **next_tokens** (`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个Token计算关联。数据类型支持`int64`。默认值为`0`。<term>Atlas 推理系列加速卡产品</term>仅支持0和2147483647。
 - **input_layout** (`str`)：可选参数，用于标识输入`query`、`key`、`value`的数据排布格式，当前支持$BSH$、$BSND$、$BNSD$、$BNSD\_BSND$（输入为$BNSD$时，输出格式为$BSND$）。默认值为`"BSH"`。
-- **num_key_value_heads**：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，数据类型支持`int64`。默认值为`0`，表示`key`/`value`和`query`的head个数相等。限制：需要满足`num_heads`整除`num_key_value_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64，且在$BSND$、$BNSD$、$BNSD\_BSND$场景下，需要与shape中的`key`/`value`的$N$轴shape值相同，否则报错。<term>Atlas 推理系列加速卡产品</term>仅支持默认值`0`。
+- **num_key_value_heads**：可选参数，代表`key`、`value`中head个数，用于支持GQA（Grouped-Query Attention，分组查询注意力）场景，GQA是介于MHA（Multi-Head Attention，多头注意力）和MQA（Multi-Query Attention，多查询注意力）之间的折中方案：多个query head共享同一组key/value head，从而在保持模型效果接近MHA的同时, 显著降低KV Cache显存占用和访存开销，数据类型支持`int64`。默认值为`0`，表示`key`/`value`和`query`的head个数相等。限制：需要满足`num_heads`整除`num_key_value_heads`，`num_heads`与`num_key_value_heads`的比值不能大于64，且在$BSND$、$BNSD$、$BNSD\_BSND$场景下，需要与shape中的`key`/`value`的$N$轴shape值相同，否则报错。<term>Atlas 推理系列加速卡产品</term>仅支持默认值`0`。
 - **actual_seq_lengths_kv** (`int`)：可选参数，代表不同batch中`key`/`value`的有效seqlenKV。数据类型支持`int64`。限制：该入参中每个batch的有效seqlenKV应该不大于`key`/`value`中对应batch的seqlenKV。seqlenKV的传入长度为1时，每个Batch使用相同seqlenKV；传入长度大于等于Batch数时取seqlenKV的前Batch个数，其它长度不支持。
     - <term>Atlas 推理系列加速卡产品</term>：暂不支持该参数。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持TND格式。当key/value的input_layout为TND时，该入参必须传入，且以该入参元素的数量作为Batch值。该入参中每个元素的值表示当前Batch与之前所有Batch的seqlenKV和，因此后一个元素的值必须大于等于前一个元素的值，且不能出现负值。
@@ -84,6 +85,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - `sparse_mode`为5、6、7、8时，分别代表`prefix、global、dilated、block_local`，均暂不支持。
 
 ## 返回值说明
+
 `Tensor`
 
 公式中的$atten\_out$，表示计算的最终结果。当`input_layout`为$BNSD\_BSND$时，输入`query`的shape是$BNSD$，输出shape为$BSND$，其余情况shape与`query`的shape保持一致。
@@ -128,7 +130,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     - 输入为`int8`，输出为`float16`的场景：入参`deq_scale1`、`quant_scale1`、`deq_scale2`需要同时存在，若存在入参`quant_offset2`或`quant_scale2`（即不为`None`），则报错并返回。
     - 输入为`float16`或`bfloat16`，输出为`int8`的场景：入参`quant_scale2`需存在，`quant_offset2`可选，不传时默认为`0`，若存在入参`deq_scale1`或`quant_scale1`或`deq_scale2`（即不为`None`），则报错并返回。
     - 入参 `quant_offset2`和`quant_scale2`支持pertensor/perchannel两种格式和`float32`/`bfloat16`两种数据类型。若传入`quant_offset2`，需保证其类型和shape信息与`quant_scale2`一致。当输入为`bfloat16`时，同时支持`float32`和`bfloat16`，否则仅支持`float32`。perchannel格式，当输出layout为$BSH$时，要求`quant_scale2`所有维度的乘积等于$H$；其他layout要求乘积等于$N*D$。当输出layout为$BSH$，`quant_scale2` shape传入$(1, 1, H)$或$(H,)$；输出为$BNSD$时，建议传入$(1, N, 1, D)$或$(N, D)$；输出为$BSND$时，建议传入$(1, 1, N, D)$或$(N, D)$。pertensor格式，建议$D$轴对齐到32Byte。
-    - perchannel格式，入参`quant_scale2`和`quant_offset2`暂不支持左padding、Ring Attention或者$D$非32Byte对齐的场景。
+    - perchannel格式，入参`quant_scale2`和`quant_offset2`暂不支持左padding、Ring Attention（一种面向超长序列的分布式注意力计算方案，将KV序列切分到多张卡上，通过卡间环形传递KV分块来完成注意力计算）或者$D$非32Byte对齐的场景。
     - 输出为`int8`时，暂不支持sparse为`band`且`pre_tokens`/`next_tokens`为负数。
 
 - `pse_shift`功能使用限制如下：
@@ -161,14 +163,15 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     >>> scale = 1/math.sqrt(128.0)
     >>> actseqlen = [164]
     >>> actseqlenkv = [1024]
+    >>> atten_mask = torch.triu(torch.ones((164, 1024), dtype=torch.bool), diagonal=1).npu()
     >>>
     >>> # 调用PFA算子
     >>> out = torch_npu.npu_prompt_flash_attention(q, k, v,
-    ... actual_seq_lengths = actseqlen, actual_seq_lengths_kv = actseqlenkv,
+    ... atten_mask = atten_mask, actual_seq_lengths = actseqlen, actual_seq_lengths_kv = actseqlenkv,
     ... num_heads = 8, input_layout = "BNSD", scale_value=scale, pre_tokens=65535, next_tokens=65535)
-    >>> out.shape
+    >>> print(out.shape)
     torch.Size([1, 8, 164, 128])
-    >>> out.dtype
+    >>> print(out.dtype)
     torch.float16
     ```
 
@@ -179,13 +182,13 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     import torch
     import torch_npu
     import math
-    
-    import torchair as tng    
+
+    import torchair as tng
     from torchair.configs.compiler_config import CompilerConfig
     import torch._dynamo
     TORCHDYNAMO_VERBOSE=1
     TORCH_LOGS="+dynamo"
-    
+
     # 支持入图的打印宏
     import logging
     from torchair.core.utils import logger
@@ -194,13 +197,13 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
     config.debug.graph_dump.type = "pbtxt"
     npu_backend = tng.get_npu_backend(compiler_config=config)
     from torch.library import Library, impl
-    
+
     # 数据生成
     q = torch.randn(1, 8, 164, 128, dtype=torch.float16).npu()
     k = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     v = torch.randn(1, 8, 1024, 128, dtype=torch.float16).npu()
     scale = 1/math.sqrt(128.0)
-    
+
     class Model(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -217,10 +220,10 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
         single_op = torch_npu.npu_prompt_flash_attention(q, k, v, num_heads = 8, input_layout = "BNSD", scale_value=scale, pre_tokens=65535, next_tokens=65535)
         print("single op output with mask:", single_op, single_op.shape)
         print("graph output with mask:", graph_output, graph_output.shape)
-        
+
     if __name__ == "__main__":
         MetaInfershape()
-    
+
     # 执行上述代码的输出类似如下
     single op output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
@@ -230,7 +233,7 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
             [ 0.0180,  0.0186, -0.0067,  ...,  0.0204, -0.0045, -0.0164],
             [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
             device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
-    
+
     graph output with mask: tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
             [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
             [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],
@@ -240,4 +243,3 @@ torch_npu.npu_prompt_flash_attention(query, key, value, *, pse_shift=None, paddi
             [ 0.0176,  0.0288, -0.0091,  ...,  0.0304,  0.0033, -0.0173]]]],
             device='npu:0', dtype=torch.float16) torch.Size([1, 8, 164, 128])
     ```
-

@@ -16,11 +16,13 @@
 | [torch_npu.profiler.AiCMetrics](./torch_npu-profiler-AiCMetrics.md) | AI Core的性能指标采集项，作为 _ExperimentalConfig类的aic_metrics参数。 |
 | [torch_npu.profiler.supported_activities](./torch_npu-profiler-supported_activities.md) | 查询当前支持采集的activities参数的CPU、NPU事件。             |
 | [torch_npu.profiler.supported_profiler_level](./torch_npu-profiler-supported_profiler_level.md) | 查询当前支持的torch_npu.profiler.ProfilerLevel级别。         |
-| [torch_npu.profiler.supported_ai_core_metrics](./torch_npu-profiler-supported_ai_core_metrics.md) | 查询当前支持的torch_npu.profiler. AiCMetrics的AI Core性能指标采集项。 |
+| [torch_npu.profiler.supported_ai_core_metrics](./torch_npu-profiler-supported_ai_core_metrics.md) | 查询当前支持的torch_npu.profiler.AiCMetrics的AI Core性能指标采集项。 |
 | [torch_npu.profiler.supported_export_type](./torch_npu-profiler-supported_export_type.md) | 查询当前支持的torch_npu.profiler.ExportType的性能数据结果文件类型。 |
-| [torch_npu.profiler.dynamic_profile.init](./torch_npu-profiler-dynamic_profile.init.md) | 初始化dynamic_profile动态采集。                              |
-| [torch_npu.profiler.dynamic_profile.step](./torch_npu-profiler-dynamic_profile.step.md) | dynamic_profile动态采集划分step。                            |
-| [torch_npu.profiler.dynamic_profile.start](./torch_npu-profiler-dynamic_profile.start.md) | 触发一次dynamic_profile动态采集。                            |
-| [torch_npu.profiler.profiler.analyse](./torch_npu-profiler-profiler.analyse.md) | Ascend PyTorch Profiler性能数据离线解析。                    |
+| [torch_npu.profiler.dynamic_profile.init](./torch_npu-profiler-dynamic_profile-init.md) | 初始化dynamic_profile动态采集。                              |
+| [torch_npu.profiler.dynamic_profile.step](./torch_npu-profiler-dynamic_profile-step.md) | dynamic_profile动态采集划分step。                            |
+| [torch_npu.profiler.dynamic_profile.start](./torch_npu-profiler-dynamic_profile-start.md) | 触发一次dynamic_profile动态采集。                            |
+| [torch_npu.profiler.profiler.analyse](./torch_npu-profiler-profiler-analyse.md) | Ascend PyTorch Profiler性能数据离线解析。                    |
 | [torch_npu.profiler.profile.enable_profiler_in_child_thread](./torch_npu-profiler-profile-enable_profiler_in_child_thread.md) | 注册Profiler采集回调函数。                                   |
 | [torch_npu.profiler.profile.disable_profiler_in_child_thread](./torch_npu-profiler-profile-disable_profiler_in_child_thread.md) | 注销Profiler采集回调函数。                                   |
+| [set_custom_trace_id_callback](set_custom_trace_id_callback.md) | 设置生成trace_id的回调。                                     |
+| [get_trace_id](get_trace_id.md)                              | 获取当前的trace_id。                                         |

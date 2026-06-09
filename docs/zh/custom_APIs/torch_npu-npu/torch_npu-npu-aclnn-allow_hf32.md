@@ -9,14 +9,13 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
-
 ## 功能说明
 
 设置或查询conv类算子是否支持hf32。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu.aclnn.allow_hf32:bool
 ```
 
@@ -34,15 +33,14 @@ torch_npu.npu.aclnn.allow_hf32:bool
 >>> import torch
 >>> import torch_npu
 >>> res = torch_npu.npu.aclnn.allow_hf32
->>> res
+>>> print(res)
 True
 >>> torch_npu.npu.aclnn.allow_hf32 = False
 >>> res = torch_npu.npu.aclnn.allow_hf32
->>> res
+>>> print(res)
 False
 >>> torch_npu.npu.aclnn.allow_hf32 = True
 >>> res = torch_npu.npu.aclnn.allow_hf32
->>> res
+>>> print(res)
 True
 ```
-

@@ -1,6 +1,6 @@
 # （beta）torch_npu.contrib.module.MultiheadAttention
-## 产品支持情况
 
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -15,11 +15,12 @@ Multi-head attention。
 
 ## 函数原型
 
-```
+```python
 torch_npu.contrib.module.MultiheadAttention(embed_dim, num_heads, kdim=None, vdim=None, dropout=0.0, bias=True, add_bias_kv=False, add_zero_attn=False, self_attention=False, encoder_decoder_attention=False, q_noise=0.0, qn_block_size=8)
 ```
 
 ## 参数说明
+
 - **embed_dim** (`int`)：模型总维度。
 - **num_heads** (`int`)：并行attention head。
 - **kdim**(`int`)：key的特性总数。默认值为None。
@@ -57,7 +58,7 @@ Multi-head attention的计算结果。
 >>> s_len=64
 >>> model = model.to("npu")
 >>> output = model(query, key, value, bsz, tgt_len, s_len, key_padding_mask)
->>> output
+>>> print(output)
 (tensor([[-0.0385,  0.0441,  0.2432,  ...,  0.0627,  0.0254,  0.0400],
         [-0.0999, -0.0258,  0.1002,  ...,  0.0632,  0.0344,  0.0573],
         [-0.0830,  0.0405,  0.1694,  ...,  0.0787, -0.0089,  0.0544],
@@ -68,4 +69,3 @@ Multi-head attention的计算结果。
        device='npu:0', dtype=torch.float16,
        grad_fn=<NpuMultiHeadAttentionBackward0>), None)
 ```
-

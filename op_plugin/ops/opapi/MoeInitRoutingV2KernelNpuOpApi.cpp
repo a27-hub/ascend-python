@@ -1,17 +1,18 @@
-// Copyright (c) 2025 Huawei Technologies Co., Ltd
-// All rights reserved.
-//
-// Licensed under the BSD 3-Clause License  (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// https://opensource.org/licenses/BSD-3-Clause
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+ /*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
@@ -31,8 +32,13 @@ constexpr int64_t QUANT_MODE_MXFP8_E4M3FN = 3;
 constexpr int64_t QUANT_MODE_HIF8_CAST = 6;
 constexpr int64_t QUANT_MODE_HIF8_PERTENSOR = 7;
 constexpr int64_t QUANT_MODE_HIF8_PER_TOKEN_DIM = 8;
+constexpr int64_t QUANT_MODE_MXFP4_E2M1 = 9;
+constexpr int64_t QUANT_MODE_FP8_PERBLOCK_E5M2 =11;
+constexpr int64_t QUANT_MODE_FP8_PERBLOCK_E4M3FN = 12;
 constexpr int64_t MXQUANT_BLOCK_SIZE = 32;
+constexpr int64_t FP8_QUANT_BLOCK_SIZE = 128;
 constexpr int64_t PAD_TO_EVEN_FACTOR = 2;
+constexpr int64_t INT4_NUMS_IN_INT8 = 2;
 
 constexpr int64_t EXPERT_NUM_V2 = 128;
 constexpr int64_t EXPERT_NUM_MIN_V2 = 0;
@@ -40,14 +46,26 @@ constexpr int64_t EXPERT_NUM_MAX_V2 = 128;
 constexpr int64_t HIDDEN_DIM_VAL_V2 = 2048;
 };  // namespace
 
-inline bool IsQuantModeMXFP8(int64_t quantMode)
-{
+inline bool IsQuantModeMXFP4(int64_t quantMode) {
+    return quantMode == QUANT_MODE_MXFP4_E2M1;
+}
+
+inline bool IsQuantModeMXFP8(int64_t quantMode) {
     return quantMode == QUANT_MODE_MXFP8_E5M2 || quantMode == QUANT_MODE_MXFP8_E4M3FN;
 }
 
-inline bool IsQuantModeHIF8(int64_t quantMode)
-{
+inline bool IsQuantModeFP8(int64_t quantMode) {
+    return quantMode == QUANT_MODE_FP8_PERBLOCK_E5M2 || quantMode == QUANT_MODE_FP8_PERBLOCK_E4M3FN;
+}
+
+inline bool IsQuantModeHIF8(int64_t quantMode) {
     return quantMode == QUANT_MODE_HIF8_CAST || quantMode == QUANT_MODE_HIF8_PERTENSOR || quantMode == QUANT_MODE_HIF8_PER_TOKEN_DIM;
+}
+
+inline bool IsDynamicQuantInt4Output(int64_t quantMode, c10::optional<int64_t> xDtype) {
+    // when quantMode = 1, xDtype is type of expanded_x
+    return quantMode == QUANT_MODE_DYNAMIC && xDtype.has_value() &&
+           xDtype.value() == static_cast<int64_t>(c10_npu::DType::INT4);
 }
 
 namespace op_api {
@@ -55,8 +73,7 @@ using npu_preparation = at_npu::native::OpPreparation;
 using npu_utils = at_npu::native::NpuUtils;
 using tensor_list = std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>;
 
-at::IntArrayRef init_new_active_expert_range(at::IntArrayRef &active_expert_range, int64_t expert_num)
-{
+at::IntArrayRef init_new_active_expert_range(at::IntArrayRef &active_expert_range, int64_t expert_num) {
     if (active_expert_range.empty()) {
         static std::vector<int64_t> default_active_expert_range = {0, expert_num};
         return at::IntArrayRef(default_active_expert_range);
@@ -66,11 +83,7 @@ at::IntArrayRef init_new_active_expert_range(at::IntArrayRef &active_expert_rang
 }
 
 static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef active_expert_range,
-    int64_t expert_tokens_num_type, int64_t quant_mode)
-{
-    if (Is310PBoolCheck()) {
-        return true;
-    }
+    int64_t expert_tokens_num_type, int64_t quant_mode) {
     if (expert_num == EXPERT_NUM_V2 && active_expert_range[0] == EXPERT_NUM_MIN_V2 &&
         active_expert_range[1] == EXPERT_NUM_MAX_V2 && hidden_dim == HIDDEN_DIM_VAL_V2) {
         if (quant_mode == -1 && expert_tokens_num_type == 1) {
@@ -84,8 +97,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, int64_t active_num,
     int64_t expert_capacity, int64_t expert_num, int64_t drop_pad_mode, int64_t expert_tokens_num_type,
     bool expert_tokens_num_flag, int64_t quant_mode, at::IntArrayRef active_expert_range, int64_t row_idx_type,
-    c10::optional<int64_t> x_dtype)
-{
+    c10::optional<int64_t> x_dtype) {
 #if !VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     // 小于2.7的版本不支持MXFP8量化需要的float8_e8m0fnu类型
     TORCH_CHECK(!IsQuantModeMXFP8(quant_mode),
@@ -109,7 +121,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         "The expert_idx should be ",
         DIM_EXPERT_IDX,
         "-Dimension, current is ",
-        expert_idx,
+        expert_idx_dim,
         "-Dimension.",
         OPS_ERROR(ErrCode::PARAM));
 
@@ -131,6 +143,10 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
 
     int bs = x_size[0];
     int h = x_size[1];
+    aclDataType x_acl_type = c10_npu::GetAclDataType(x_dtype.value_or(static_cast<int64_t>(x.scalar_type())));
+    if (x_acl_type == aclDataType::ACL_FLOAT4_E2M1) {
+        h = h * 2;
+    }
     int k = expert_idx_size[1];
     // more suitable cases for v2
     bool using_v2 = CheckV2Case(h, expert_num, active_expert_range, expert_tokens_num_type, quant_mode);
@@ -157,11 +173,20 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                 expanded_x = npu_preparation::apply_tensor_without_format(
                     {expanded_scale_len, h}, x.options().dtype(at::kFloat8_e4m3fn));
                 break;
+            case QUANT_MODE_MXFP4_E2M1:
+                expanded_x = npu_preparation::apply_tensor_without_format(
+                    {expanded_scale_len, h / 2}, x.options().dtype(at::kByte));
+                break;
 #endif
             case QUANT_MODE_STATIC:
             case QUANT_MODE_DYNAMIC:
-                expanded_x =
-                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kChar));
+                if (IsDynamicQuantInt4Output(quant_mode, x_dtype)) {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h / INT4_NUMS_IN_INT8}, x.options().dtype(at::kByte));
+                } else {
+                    expanded_x = npu_preparation::apply_tensor_without_format(
+                        {expanded_scale_len, h}, x.options().dtype(at::kChar));
+                }
                 break;
             case QUANT_MODE_HIF8_CAST:
             case QUANT_MODE_HIF8_PERTENSOR:
@@ -170,14 +195,27 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
                     npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kByte));
                 break;
             }
+            case QUANT_MODE_FP8_PERBLOCK_E5M2: {
+                expanded_x =
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kFloat8_e5m2));
+                break;
+            }
+            case QUANT_MODE_FP8_PERBLOCK_E4M3FN: {
+                expanded_x =
+                    npu_preparation::apply_tensor_without_format({expanded_scale_len, h}, x.options().dtype(at::kFloat8_e4m3fn));
+                break;
+            }
             default:  // quant_mode == QUANT_MODE_UNQUANT
-                expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, h});
+                expanded_x = npu_preparation::apply_tensor_without_format(x, {expanded_scale_len, x_size[1]});
         }
     }
 
     at::Tensor expanded_row_idx = npu_preparation::apply_tensor_without_format(expert_idx, {bs * k});
     at::Tensor expert_tokens_count_or_cumsum;
-    if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
+    if (Is310PBoolCheck()) {
+ 	  	expert_tokens_count_or_cumsum =
+ 	  	    npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kInt));
+ 	} else if (expert_tokens_num_type < EXPERT_TOKENS_KEY_VALUE) {
         // expert_tokens_count_or_cumsum in [end-start, ]
         expert_tokens_count_or_cumsum =
             npu_preparation::apply_tensor_without_format({expert_length}, x.options().dtype(at::kLong));
@@ -187,15 +225,15 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
             npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
     }
 
-    if (using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) {
+    if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || Is310PBoolCheck()) {
         at::Tensor expert_tokens_before_capacity =
             npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
         expert_capacity = 0;
         drop_pad_mode = 0;
-        int64_t expert_tokens_count_or_cumsum_flag = 2;
+        int64_t expert_tokens_count_or_cumsum_flag = Is310PBoolCheck() ? 1 : 2;
         bool expert_tokens_before_capacity_flag = false;
         if (bs == 0) {
-            // return when using empty tensor 
+            // return when using empty tensor
             expert_tokens_count_or_cumsum.zero_();
             return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expert_tokens_before_capacity);
         }
@@ -223,6 +261,20 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         scale_cols = (scale_cols + PAD_TO_EVEN_FACTOR - 1) / PAD_TO_EVEN_FACTOR * PAD_TO_EVEN_FACTOR;
         expanded_scale = npu_preparation::apply_tensor_without_format(
             {expanded_scale_len, scale_cols}, x.options().dtype(at::kFloat8_e8m0fnu));
+    } else if (IsQuantModeFP8(quant_mode)) {
+        // scale_cols为h向上整除128后向上对齐到偶数倍
+        int64_t block_size = FP8_QUANT_BLOCK_SIZE * 2;
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len, op_infer::CeilDiv(h, block_size), 2}, x.options().dtype(at::kFloat));
+    } else if (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn) && scale.has_value()) {
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len, op_infer::CeilDiv(h, 64), 2}, x.options().dtype(at::kByte));
+    } else if (quant_mode == -1 && (x_acl_type == aclDataType::ACL_FLOAT4_E2M1) && scale.has_value()) {
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len, op_infer::CeilDiv(h, 64), 2}, x.options().dtype(at::kByte));
+    } else if (IsQuantModeMXFP4(quant_mode)) {
+        expanded_scale = npu_preparation::apply_tensor_without_format(
+            {expanded_scale_len, op_infer::CeilDiv(h, 64), 2}, x.options().dtype(at::kByte));
     } else {
         expanded_scale =
             npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
@@ -231,6 +283,22 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_scale =
         npu_preparation::apply_tensor_without_format({expanded_scale_len}, x.options().dtype(at::kFloat));
 #endif
+    auto scale_scalar_dtype = p_scale.defined() ? p_scale.scalar_type() : at::kFloat;
+    auto expanded_scale_scalar_dtype = expanded_scale.defined() ? expanded_scale.scalar_type() : at::kFloat;
+    TensorWrapper scale_wrapper = {
+        p_scale,
+        (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn ||
+        x_acl_type == aclDataType::ACL_FLOAT4_E2M1)) ?
+            aclDataType::ACL_FLOAT8_E8M0:
+            npu_preparation::convert_to_acl_data_type(scale_scalar_dtype)
+    };
+    TensorWrapper expanded_scale_wrapper = {
+        expanded_scale,
+        (quant_mode == -1 && (x.scalar_type() == at::kFloat8_e5m2 || x.scalar_type() == at::kFloat8_e4m3fn ||
+        x_acl_type == aclDataType::ACL_FLOAT4_E2M1)) ?
+            aclDataType::ACL_FLOAT8_E8M0:
+            npu_preparation::convert_to_acl_data_type(expanded_scale_scalar_dtype)
+    };
 
     TensorWrapper x_wrapper = {x, (quant_mode == -1 && x_dtype.has_value()) ?
         c10_npu::GetAclDataType(x_dtype.value()):
@@ -238,8 +306,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     TensorWrapper expanded_x_wrapper = {expanded_x, npu_preparation::convert_to_acl_data_type(expanded_x.scalar_type())};
     if (quant_mode == -1 && x_dtype.has_value()) {
         expanded_x_wrapper.dtype = c10_npu::GetAclDataType(x_dtype.value());
+    } else if (IsDynamicQuantInt4Output(quant_mode, x_dtype)) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_INT4;
     } else if (IsQuantModeHIF8(quant_mode)) {
         expanded_x_wrapper.dtype = aclDataType::ACL_HIFLOAT8;
+    } else if (IsQuantModeMXFP4(quant_mode)) {
+        expanded_x_wrapper.dtype = aclDataType::ACL_FLOAT4_E2M1;
+        expanded_scale_wrapper.dtype = aclDataType::ACL_FLOAT8_E8M0;
     }
     if (bs == 0) {
         // return when using empty tensor
@@ -249,7 +322,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     EXEC_NPU_CMD(aclnnMoeInitRoutingV3,
         x_wrapper,
         expert_idx,
-        p_scale,
+        scale_wrapper,
         p_offset,
         active_num,
         expert_capacity,
@@ -263,7 +336,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expanded_x_wrapper,
         expanded_row_idx,
         expert_tokens_count_or_cumsum,
-        expanded_scale);
+        expanded_scale_wrapper);
     return std::tie(expanded_x, expanded_row_idx, expert_tokens_count_or_cumsum, expanded_scale);
 }
-}  // namespace op_api
+} // namespace op_api

@@ -1924,24 +1924,6 @@ c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, co
     return output_size;
 }
 
-c10::SmallVector<int64_t, SIZE> npu_transpose_quant_batchmatmul_output_size(const at::Tensor &x1, const at::Tensor &x2,
-    int32_t dtype, const at::Tensor &x1_scale_real, const at::Tensor &x2_scale_real, int32_t group_size_value,
-    at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, at::IntArrayRef perm_y_real,
-    int32_t batch_split_factor_value)
-{
-    c10::SmallVector<int64_t, SIZE> output_size;
-    auto m_dim = x1.size(perm_x1_real[1]);
-    auto batch_dim = x1.size(perm_x1_real[0]);
-    auto n_dim = x2.size(perm_x2_real[2]);
-
-    output_size = {m_dim, batch_dim, n_dim};
-
-    if (batch_split_factor_value > 1) {
-        output_size = {batch_split_factor_value, m_dim, batch_dim * n_dim / batch_split_factor_value};
-    }
-    return output_size;
-}
-
 c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype)
 {
     at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Char;});
@@ -2097,6 +2079,18 @@ c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tenso
     TORCH_CHECK(topk > 0, "The topk should be greater than zero in npu_moe_token_unpermute_out_size, but got ", topk, OPS_ERROR(ErrCode::PARAM));
     c10::SmallVector<int64_t, SIZE> output_shape;
     output_shape = {sorted_indices.size(0) / topk, permuted_tokens.size(-1)};
+    return output_shape;
+}
+
+c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_grad_v2_out_size(const int64_t tokens_size_0, const at::Tensor &grad_permuted_tokens, const at::Tensor &sorted_indices)
+{
+    TORCH_CHECK(grad_permuted_tokens.dim() == DIM_2,
+                "The dims of input grad_permuted_tokens should be 2 dimensional, but got ", grad_permuted_tokens.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(sorted_indices.dim() == DIM_1 || sorted_indices.dim() == DIM_2,
+                "The dims of input sorted_indices should be 2 or 1 dimensional, but got ", sorted_indices.dim(), "-dimensional." + OPS_ERROR(ErrCode::PARAM));
+    int64_t num_tokens = tokens_size_0;
+    c10::SmallVector<int64_t, SIZE> output_shape;
+    output_shape = {num_tokens, grad_permuted_tokens.size(1)};
     return output_shape;
 }
 

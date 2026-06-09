@@ -31,6 +31,9 @@ from torchnpugen.api.types.signatures import NativeSignature
 from torchnpugen.context import native_function_manager
 from torchnpugen.op_codegen_utils import concatMap, context
 
+# DVM lazy-fusion codegen is opt-in via the _TORCH_NPU_ENABLE_DVM env var
+ENABLE_DVM = os.environ.get("_TORCH_NPU_ENABLE_DVM", "0").lower() == "1"
+
 
 
 T = TypeVar('T')
@@ -69,8 +72,6 @@ class FileManager:
 
     @staticmethod
     def _remove_path_safety(filepath: str) -> None:
-        if os.path.islink(filepath):
-            raise RuntimeError(f"Invalid path is a soft chain: {filepath}")
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -78,6 +79,8 @@ class FileManager:
     def _write_if_changed(filename: str, contents: str) -> None:
         old_contents: Optional[str]
         filepath = os.path.realpath(filename)
+        if os.path.islink(filepath):
+            raise RuntimeError(f"Invalid path is a soft chain: {filepath}")
         try:
             with open(filepath, 'r') as f:
                 old_contents = f.read()
@@ -244,6 +247,8 @@ def gen_function_declaration(
         sig_str = f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};"
         backend_decalarations["op_api"].append(sig_str)
         backend_decalarations["acl_op"].append(sig_str)
+        if ENABLE_DVM and "dvm" in f.impl_ns:
+            backend_decalarations["lazy_fusion"].append(sig_str)
         if f.sparse is not None:
             op_name += "_sparse"
             backend_decalarations["sparse"].append(f"OP_PLUGIN_HIDDEN {sig.decl(name=op_name)};")
@@ -303,6 +308,18 @@ Use {deprecated_replace} instead.");'
 
         aclnn_extension = os.getenv('ACLNN_EXTENSION_SWITCH') == 'TRUE'
 
+        dvm_call = ""
+        if ENABLE_DVM and "dvm" in f.impl_ns:
+            if len(f.func.returns) == 0:
+                dvm_call = f"""if (lazy_fusion::IsEnabled()) {{
+            lazy_fusion::{impl_name}({args_exprs_str});
+            return;
+        }}"""
+            else:
+                dvm_call = f"""if (lazy_fusion::IsEnabled()) {{
+            return lazy_fusion::{impl_name}({args_exprs_str});
+        }}"""
+
         if "op_api" in f.impl_ns and "acl_op" in f.impl_ns:
             if aclnn_extension:
                 ret.append(f"""{sig.defn(name=op_name)}{{
@@ -319,6 +336,7 @@ Use {deprecated_replace} instead.");'
     ASCEND_LOGI("{impl_name} exec with jit compile: %d{"".join(place_holder)}",
                 !is_jit_disable{"".join(format_display)});
     if (is_jit_disable{"".join(format_check)}) {{
+        {dvm_call}
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         if ({is_aclnn_only}) {{
@@ -337,6 +355,7 @@ Use {deprecated_replace} instead.");'
     OP_EXEC_LOG({impl_name}, "exec aten", {inputs_list});
     ASCEND_LOGI("{impl_name} exec with jit compile: %d", !is_jit_disable);
     if (is_jit_disable) {{
+        {dvm_call}
         return op_api::{impl_name}({args_exprs_str});
     }} else {{
         return acl_op::{impl_name}({args_exprs_str});
@@ -355,6 +374,7 @@ Use {deprecated_replace} instead.");'
                 ret.append(f"""{sig.defn(name=op_name)}{{
     {deprecated_warn}
     OP_EXEC_LOG({impl_name}, "exec aten", {inputs_list});
+    {dvm_call}
     return {ns}::{impl_name}({args_exprs_str});
 }}
 """)
@@ -368,6 +388,7 @@ Use {deprecated_replace} instead.");'
             "Current operator {impl_name} do not support internal format. ",
             PTA_ERROR(ErrCode::NOT_SUPPORT));
     }}
+    {dvm_call}
     return {ns}::{impl_name}({args_exprs_str});
 }}
 """)
@@ -395,6 +416,10 @@ Use {deprecated_replace} instead.");'
     return ret
 
 
+def should_generate_op_interface(f: NativeFunction) -> bool:
+    return f.structured_delegate is None
+
+
 def parse_native_yaml(
     path: str,
     deprecate_path: str,
@@ -402,19 +427,22 @@ def parse_native_yaml(
 
     with open(path, "r") as f:
         es = yaml.safe_load(f)
-    
+
     with open(deprecate_path, "r") as f:
         dp = yaml.safe_load(f)
 
     res = parse_native_yaml_struct(es)
     backend_declarations = defaultdict(list)
     for f in res:
+        if not should_generate_op_interface(f):
+            continue
         gen_function_declaration(f, backend_declarations)
     deprecated = dp["deprecated"]
     deprecated_dict = {}
     if deprecated:
         for item in deprecated:
             deprecated_dict[item.get("name")] = item.get("replace", None)
-    dispatch_registrations_body = sorted(set(concatMap(lambda f: gen_return(f, deprecated_dict), res)))
+    dispatch_registrations_body = sorted(set(concatMap(lambda f: gen_return(f, deprecated_dict),
+                                                       filter(should_generate_op_interface, res))))
 
     return backend_declarations, dispatch_registrations_body

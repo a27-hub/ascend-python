@@ -1,6 +1,7 @@
 # torch_npu.npu_sparse_lightning_indexer_grad_kl_loss
 
 ## 产品支持情况
+
 | 产品                           | 是否支持 |
 |------------------------------| :------: |
 | <term>Atlas A3 训练系列产品</term> | √  |
@@ -12,63 +13,64 @@
 
 - 计算公式：
 
-  1. Top-k value的计算公式：
-     $$
-     I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
-     $$
+    1. Top-k value的计算公式：
+        $$
+        I_{t,:}=W_{t,:}@ReLU(\tilde{q}_{t,:}@\tilde{K}_{:t,:}^\top)
+        $$
   
-     - $W_{t,:}$是第$t$个token对应的$weights$；
-     - $\tilde{q}_{t,:}$是$Q_{index}$矩阵第$t$个token对应的$G$个头合轴后的结果；
-     - $\tilde{K}_{:t,:}$为$K_{index}$矩阵$t$行。
+        - $W_{t,:}$是第$t$个token对应的$weights$；
+        - $\tilde{q}_{t,:}$是$Q_{index}$矩阵第$t$个token对应的$G$个头合轴后的结果；
+        - $\tilde{K}_{:t,:}$为$K_{index}$矩阵$t$行。
   
-  2. 正向的Softmax对应公式：
+    2. 正向的Softmax对应公式：
 
-     $$
-     p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
-     $$
+        $$
+        p_{t,:} = \text{Softmax}(q_{t,:} @ K_{:t,:}^\top/\sqrt{d})
+        $$
     
-     - $p_{t,:}$是第$t$个token对应的Softmax结果；
-     - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
-     - $K$为$K$矩阵$t$行。
+        - $p_{t,:}$是第$t$个token对应的Softmax结果；
+        - $q_{t,:}$是$Q$矩阵第$t$个token对应的$G$个query头合轴后的结果；
+        - $K$为$K$矩阵$t$行。
 
-  3. npu_lightning_indexer会单独训练，对应的loss function为：
-     $$
-     Loss{=}\sum_tD_{KL}(p_{t,:}||Softmax(I_{t,:}))
-     $$
+    3. npu_lightning_indexer会单独训练，对应的loss function为：
+        $$
+        Loss{=}\sum_tD_{KL}(p_{t,:}||Softmax(I_{t,:}))
+        $$
 
-     其中，$p_{t,:}$是target distribution，通过对main attention score 进行所有的head的求和，然后把求和结果沿着上下文方向进行L1正则化得到。$D_{KL}$为KL散度，其表达式为：
+        其中，$p_{t,:}$是target distribution，通过对main attention score 进行所有的head的求和，然后把求和结果沿着上下文方向进行L1正则化得到。$D_{KL}$为KL散度，其表达式为：
 
-     $$
-     D_{KL}(a||b){=}\sum_ia_i\mathrm{log}{\left(\frac{a_i}{b_i}\right)}
-     $$
+        $$
+        D_{KL}(a||b){=}\sum_ia_i\mathrm{log}{\left(\frac{a_i}{b_i}\right)}
+        $$
 
-  4.通过求导可得Loss的梯度表达式：
-     $$
-     dI\mathop{{}}\nolimits_{{t,:}}=Softmax \left( I\mathop{{}}\nolimits_{{t,:}} \left) -p\mathop{{}}\nolimits_{{t,:}}\right. \right.
-     $$
+    4. 通过求导可得Loss的梯度表达式：
+        $$
+        dI\mathop{{}}\nolimits_{{t,:}}=Softmax \left( I\mathop{{}}\nolimits_{{t,:}} \left) -p\mathop{{}}\nolimits_{{t,:}}\right. \right.
+        $$
 
-     利用链式法则可以进行weights，query和key矩阵的梯度计算：
-     $$
-     dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
-     $$
+        利用链式法则可以进行weights，query和key矩阵的梯度计算：
+        $$
+        dW\mathop{{}}\nolimits_{{t,:}}=dI\mathop{{}}\nolimits_{{t,:}}\text{@} \left( ReLU \left( S\mathop{{}}\nolimits_{{t,:}} \left) \left) \mathop{{}}\nolimits^{\top}\right. \right. \right. \right.
+        $$
   
-     $$
-     d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
-     $$
+        $$
+        d\mathop{{\tilde{q}}}\nolimits_{{t,:}}=dS\mathop{{}}\nolimits_{{t,:}}@\tilde{K}\mathop{{}}\nolimits_{{:t,:}}
+        $$
   
-     $$
-     d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
-     $$
+        $$
+        d\tilde{K}\mathop{{}}\nolimits_{{:t,:}}=\left(dS\mathop{{}}\nolimits_{{t,:}} \left) \mathop{{}}\nolimits^{\top}@\tilde{q}\mathop{{}}\nolimits_{{:t, :}}\right. \right.
+        $$
 
-     其中，$S$为$Q_{index}$和$K_{index}$矩阵乘的结果。
+        其中，$S$为$Q_{index}$和$K_{index}$矩阵乘的结果。
 
 ## 函数原型
 
-```
+```python
 npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, weights, sparse_indices, softmax_max, softmax_sum, scale_value, *, query_rope=None, key_rope=None, actual_seq_qlen=None, actual_seq_klen=None, layout='BSND', sparse_mode=3, pre_tokens=2^63-1, next_tokens=2^63-1) -> (Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
+
 **query**(`Tensor`)：必选参数，表示Attention中的query，对应公式中的$q_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N1, D)$、$(T1, N1, D)$。
 
 **key**(`Tensor`)：必选参数，表示Attention中的key，对应公式中的$K_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S2, N2, D)$、$(T2, N2, D)$。
@@ -79,11 +81,11 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **weights**(`Tensor`)：必选参数，表示lightning_indexer的权重系数，对应公式中的$W_{t}$。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`、`float32`。shape支持$(B, S1, N1index)$、$(T1, N1index)$。
 
-**sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
+**sparse_indices**(`Tensor`)：必选参数，表示排序后`key`和`key_index`的token序号。数据格式支持$ND$，数据类型支持`int32`。shape支持$(B, S1, N2index, topK)$、$(T1, N2index, topK)$。
 
 **softmax_max**(`Tensor`)：必选参数，表示Attention softmax结果中的最大值。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
-**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`bfloat16`、`float16`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
+**softmax_sum**(`Tensor`)：必选参数，表示Attention softmax结果的求和。数据格式支持$ND$，数据类型支持`float32`。shape支持$(B, N2, S1, G)$、$(N2, T1, G)$。
 
 **scale_value**(`float`)：必选参数，表示缩放系数，数据类型支持`float`。
 
@@ -103,20 +105,18 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
 
-
-
-
 ## 返回值说明
--   **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{q}_{t}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}_{t}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
--   **d\_weights**(`Tensor`)：对应公式中的$dW_{t}$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
--   **loss**(`Tensor`)：对应公式中的$dI_{t}$，表示网络正向输出和golden值的差异，数据类型支持`float`。
 
+- **d\_query\_index**(`Tensor`)：对应公式中的$d\tilde{q}_{t}$，表示`query_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_key\_index**(`Tensor`)：对应公式中的$d\tilde{K}_{t}$，表示`key_index`的梯度，数据类型支持`bfloat16`、`float16`。
+- **d\_weights**(`Tensor`)：对应公式中的$dW_{t}$，表示`weights`的梯度，数据类型支持`bfloat16`、`float16`、`float32`。
+- **loss**(`Tensor`)：对应公式中的$dI_{t}$，表示网络正向输出和golden值的差异，数据类型支持`float`。
 
 ## 约束说明
--   参数query、key、query_index、key_index的数据类型应保持一致。
--   参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
--   规格约束：
+
+- 参数query、key、query_index、key_index的数据类型应保持一致。
+- 参数weights不为`float32`时，参数query、key、query_index、key_index、weights的数据类型应保持一致。
+- 规格约束：
 
 | 规格项     | 规格                                    | 规格说明                  |
 |---------|---------------------------------------|-----------------------|
@@ -124,7 +124,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 | S1、S2   | S1支持1~8K，S2支持1~128K                   | S1、S2支持不等长            |
 | N1      | 32、64、128                             | -                     |
 | N1index | 8、16、32、64                            | -                     |
-| N2      | 32、64、128                             | -                     |
+| N2      | 1                                       | -                     |
 | N2index | 1                                     | -                     |
 | D       | 512                                   | query与query_index的D不同 |
 | Dr      | 64                                    | -                     |
@@ -132,6 +132,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 | layout  | BSND/TND                              | -                     |
 
 ## 调用示例
+
 - 单算子模式调用
 
     ```python

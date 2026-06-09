@@ -14,15 +14,17 @@
 输入输出支持以下场景：
 
 - 场景一：
+
     ```python
     key:[batch, num_head, k_head_size]
     value:[batch, num_head, v_head_size]
-    key_cache:[num_blocks, num_head * k_head_size /last_dim_k, block_size, last_dim_k]
+    key_cache:[num_blocks, num_head * k_head_size // last_dim_k, block_size, last_dim_k]
     value_cache:[num_blocks, num_head * v_head_size // last_dim_k, block_size, last_dim_k]
     slot_mapping:[batch]
     ```    
 
 - 场景二：
+
     ```python    
     key:[batch, seq_len, num_head, k_head_size]
     value:[batch, seq_len, num_head, v_head_size]
@@ -38,8 +40,8 @@
 
 ## 函数原型
 
-```
-torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None, compress_seq_offsets=None, seq_lens=None) -> ()
+```python
+torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mapping, *, compress_lens=None, compress_seq_offsets=None, seq_lens=None, cache_mode='PA_NZ') -> ()
 ```
 
 ## 参数说明
@@ -52,6 +54,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
 - **compress_lens**（`Tensor`）：可选参数，表示压缩量，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
 - **compress_seq_offsets**（`Tensor`）：可选参数，表示每个batch每个head的压缩起点，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
 - **seq_lens**（`Tensor`）：可选参数，表示每个batch的实际seqLens，数据类型与`slot_mapping`一致，数据格式支持$ND$，默认值为None。
+- **cache_mode**（`str`）：表示`key_cache`和`value_cache`的内存排布格式。当传None或'Norm'时，仅支持ND内存排布格式。当传入'PA_NZ'时，仅支持NZ内存排布格式，默认值为'PA_NZ'。
 
 ## 返回值说明
 
@@ -104,7 +107,7 @@ torch_npu.npu_scatter_pa_kv_cache(key, value, key_cache, value_cache, slot_mappi
     >>> slot_mapping_npu = torch.from_numpy(slot_mapping).npu()
     >>>
     >>> torch_npu.npu_scatter_pa_kv_cache(key_npu, value_npu, key_cache_npu_cast, value_cache_npu_cast, slot_mapping_npu)
-    >>> key_cache_npu_cast
+    >>> print(key_cache_npu_cast)
     tensor([[[[ 0.0219,  0.0201,  0.0049,  ...,  0.0118, -0.0011, -0.0140],
         [ 0.0294,  0.0256, -0.0081,  ...,  0.0267,  0.0067, -0.0117],
         [ 0.0285,  0.0296,  0.0011,  ...,  0.0150,  0.0056, -0.0062],

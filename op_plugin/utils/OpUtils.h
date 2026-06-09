@@ -54,8 +54,6 @@ using NameVector = c10::SmallVector<at::Dimname, at::kDimVectorStaticSize>;
 OP_PLUGIN_HIDDEN std::string get_reduction_str(int64_t reduction);
 OP_PLUGIN_HIDDEN std::string get_vector_str(const std::vector<int64_t> &vec);
 OP_PLUGIN_HIDDEN int64_t make_warp_dim(int64_t dim, int64_t dim_post_expr);
-OP_PLUGIN_HIDDEN bool is_neox_style(std::string rotary_mode);
-OP_PLUGIN_HIDDEN int64_t cache_mode_to_int(std::string cache_mode);
 OP_PLUGIN_HIDDEN bool is_transpose_last_two_dims(const at::Tensor &tensor);
 OP_PLUGIN_HIDDEN bool is_two_tensor_base_format(const at::Tensor &self, const at::Tensor &mat2);
 OP_PLUGIN_HIDDEN bool is_nz_format(const at::Tensor &mat2);
@@ -90,11 +88,14 @@ OP_PLUGIN_HIDDEN bool is_gte_cann_version_850();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_850alpha003();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_851();
 OP_PLUGIN_HIDDEN bool is_gte_cann_version_900();
+OP_PLUGIN_HIDDEN bool is_gte_cann_version_910();
 OP_PLUGIN_HIDDEN int64_t get_rotary_mode(c10::string_view mode);
 OP_PLUGIN_HIDDEN const std::string DTypeToString(int64_t input_type);
-OP_PLUGIN_HIDDEN aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales, int64_t quant_mode);
+OP_PLUGIN_HIDDEN aclDataType get_dynamic_scales_dtype(const at::Tensor &x, const c10::optional<at::Tensor> &scales,
+                                                      c10::optional<int64_t> scales_dtype, int64_t quant_mode);
 OP_PLUGIN_HIDDEN std::vector<int64_t> get_dynamic_shape(const c10::optional<at::Tensor> &scales, int64_t quant_mode, int64_t a, int64_t h);
 OP_PLUGIN_HIDDEN int64_t check_and_get_group_size(at::IntArrayRef group_size_list);
+OP_PLUGIN_HIDDEN int8_t get_cube_math_type_with_passthrough();
 
 }  // namespace utils
 }  // namespace op_plugin

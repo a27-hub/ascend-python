@@ -23,13 +23,9 @@ constexpr int64_t NUM_ONE = 1LL;
 constexpr int64_t DIM_2 = 2LL;
 constexpr int64_t DIM_1 = 1LL;
 constexpr int64_t DIM_0 = 0LL;
-constexpr int64_t WEIGHT_MAX_DIM_NUM = 3LL;
-constexpr int64_t WEIGHT_PENULTIMATE_DIM = 1LL;
-constexpr int64_t WEIGHT_LAST_DIM = 2LL;
 constexpr int64_t DIM_3 = 3LL;
+constexpr int64_t DIM_4 = 4LL;
 constexpr int64_t DIM_5 = 5LL;
-constexpr int64_t WEIGHT_NZ_A8W8_LAST_DIM = 32LL;
-constexpr int64_t WEIGHT_NZ_A4W4_LAST_DIM = 64LL;
 constexpr int64_t FLOAT8_E5M2 = 35LL;
 constexpr int64_t FLOAT8_E4M3FN = 36LL;
 constexpr int64_t HIFLOAT8 = 34LL;
@@ -45,6 +41,43 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
 {
     auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
     y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
+
+bool is_transpose_last_two_dims(const at::Tensor &tensor)
+{
+    if (tensor.dim() < DIM_2) {
+        return false;
+    }
+    auto sizes = tensor.sizes();
+    auto strides = tensor.strides();
+    int64_t last_dim = tensor.dim() - DIM_1;
+    int64_t penultimate_dim = tensor.dim() - DIM_2;
+    if (strides[penultimate_dim] != NUM_ONE || strides[last_dim] != sizes[penultimate_dim]) {
+        return false;
+    }
+    // Match CANN's transposed contiguous-view check: batch strides must also follow the swapped last-two dims.
+    int64_t expected_stride = sizes[last_dim] * sizes[penultimate_dim];
+    for (int64_t batch_dim = tensor.dim() - DIM_3; batch_dim >= DIM_0; --batch_dim) {
+        if (strides[batch_dim] != expected_stride) {
+            return false;
+        }
+        expected_stride *= sizes[batch_dim];
+    }
+    return true;
+}
+
+int64_t infer_nz_logical_n(const at::Tensor &weight_scale, bool is_mx_quant)
+{
+    TORCH_CHECK(weight_scale.dim() >= DIM_2, "The dim of weight_scale[0] should be greater than or equal to 2, "
+                "but got ", weight_scale.dim(), OPS_ERROR(ErrCode::PARAM));
+    if (is_mx_quant) {
+        TORCH_CHECK(weight_scale.dim() == DIM_4, "The dim of weight_scale[0] should be equal to 4 in MX quant mode, "
+                    "but got ", weight_scale.dim(), OPS_ERROR(ErrCode::PARAM));
+        // Runtime callers normalize MX weight to the non-transposed logical layout before this op.
+        // Thus 4D MX weightScale is [E, ceil(K/64), N, 2], and logical N is dim2.
+        return weight_scale.size(DIM_2);
+    }
+    return weight_scale.sizes().back();
 }
 
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
@@ -67,42 +100,59 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     c10::optional<int64_t> weight_scale_dtype,
     c10::optional<int64_t> x_scale_dtype)
 {
-    TORCH_CHECK(weight.size() == 1, "The size of weight should be 1, current size is ", weight.size(), OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(weight_scale.size() == 1, "The size of weight_scale should be 1, current size is ",
+    TORCH_CHECK(weight.size() == NUM_ONE, "The size of weight should be 1, current size is ", weight.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(weight_scale.size() == NUM_ONE, "The size of weight_scale should be 1, current size is ",
                 weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(x.dim() >= DIM_2, "The x dim should greater than 2, but the actual value is ", x.dim(), OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight_scale[DIM_0].sizes().empty(), "The weight_scale[0] is empty.", OPS_ERROR(ErrCode::PARAM));
 
-    const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ
+    const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ ||
+                              at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16
                               || weight[DIM_0].dim() == DIM_5;
     auto x_size = x.sizes();
     int n = 0;
+    bool weight_trans = is_transpose_last_two_dims(weight[DIM_0]);
+    const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool is_5d_nz = is_weight_nz && (weight[DIM_0].dim() == DIM_5);
     if (is_5d_nz) {
-        const int64_t last_dim = weight[DIM_0].size(4);
-        n = (last_dim == WEIGHT_NZ_A8W8_LAST_DIM)
-                ? static_cast<int>(weight_scale[DIM_0].size(1))
-                : static_cast<int>(weight[DIM_0].size(1) * WEIGHT_NZ_A4W4_LAST_DIM);
+        n = static_cast<int>(infer_nz_logical_n(weight_scale[DIM_0], is_mx_quant));
     } else {
-        n = static_cast<int>(weight[DIM_0].sizes()[DIM_2]);
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+            n = static_cast<int>(weight[DIM_0].sizes()[DIM_2]);
+        } else {
+            n = static_cast<int>(weight_scale[DIM_0].sizes().back());
+        }
     }
     int m = x_size[DIM_0];
     int k = x_size[DIM_1];
 
+    const bool mxfp8w4_nz_input = is_weight_nz &&
+                                     x.scalar_type() == at::kFloat8_e4m3fn &&
+                                     weight_dtype.has_value() &&
+                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+
     if (x_dtype.has_value()) {
-        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+        TORCH_CHECK(x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                 || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
                  || x_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
+                    "The optional parameter x_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
     if (weight_dtype.has_value()) {
-        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
+        TORCH_CHECK(weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2)
+                 || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)
                  || weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::HIFLOAT8),
-                    "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
+                    "The optional parameter weight_dtype only supports torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2, torch_npu.hifloat8, or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(weight_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    TORCH_CHECK((x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
-                "The optional parameter x_dtype and weight_dtype should both be torch_npu.float4_e2m1fn_x2, torch_npu.hifloat8, or None.", OPS_ERROR(ErrCode::VALUE));
+
+    if (!mxfp8w4_nz_input) {
+        TORCH_CHECK(
+            (x_dtype.has_value() && weight_dtype.has_value()) || (!x_dtype.has_value() && !weight_dtype.has_value()),
+            "The optional parameter x_dtype and weight_dtype should both be torch_npu.float4_e2m1fn_x2, torch_npu.float4_e1m2fn_x2"
+            "torch_npu.hifloat8, or None.",
+            OPS_ERROR(ErrCode::VALUE));
+    }
 
     if (weight_scale_dtype.has_value()) {
         TORCH_CHECK(weight_scale_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT8_E8M0),
@@ -114,13 +164,15 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "The optional parameter x_scale_dtype only supports float8_e8m0fnu or None, but the actual value is ",
                     c10_npu::CustomDataTypeToString(x_scale_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
     }
-    if (dequant_dtype.has_value()) {
-        TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char)
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half)
-                    || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
-                    "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
-                    c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        if (dequant_dtype.has_value()) {
+            TORCH_CHECK(dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Float)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Char)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::Half)
+                        || dequant_dtype.value() == static_cast<int64_t>(c10::ScalarType::BFloat16),
+                        "The optional parameter dequant_dtype only support torch.float32, torch.int8, torch.float16 and torch.bfloat16 ,but the actual value is ",
+                        c10_npu::CustomDataTypeToString(dequant_dtype.value()), "." + OPS_ERROR(ErrCode::VALUE));
+        }
     }
 
     int64_t dequant_mode_real = dequant_mode.value_or(0);
@@ -141,11 +193,11 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     auto bias_real = bias.value_or(at::Tensor());
     auto smooth_scale_real = smooth_scale.value_or(at::Tensor());
 
-    c10::SmallVector<int64_t, WEIGHT_MAX_DIM_NUM> weight_strides = op_infer::array_to_small_vector(weight[DIM_0].strides());
-    bool weight_trans = !is_weight_nz && (weight_strides[WEIGHT_PENULTIMATE_DIM] == NUM_ONE && weight_strides[WEIGHT_LAST_DIM] == k);
-    static const bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
-                                   x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1) &&
-                                   weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1);
+    const bool mxfp4_input = x_dtype.has_value() && weight_dtype.has_value() &&
+                                   (x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                    x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
+                                   (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
+                                    weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
     at::Tensor output;
     at::Tensor output_scale;
     if (!weight_scale_dtype.has_value()) {
@@ -167,7 +219,11 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         if (!is_weight_nz) {
             TORCH_CHECK(weight[DIM_0].dim() == DIM_3, "weight[0] dim should be equal to 3, but the actual value is ",
                         weight[DIM_0].dim(), OPS_ERROR(ErrCode::PARAM));
-            n = weight[DIM_0].sizes()[DIM_2];
+            if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+                n = static_cast<int>(weight[DIM_0].sizes()[DIM_2]);
+            } else {
+                n = static_cast<int>(weight_scale[DIM_0].sizes().back());
+            }
         }
         c10::TensorOptions options_output = x.options().dtype(quant_dtype.has_value()
                     ? npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(quant_dtype.value()))
@@ -175,6 +231,8 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         c10::TensorOptions options = x.options().dtype(npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(weight_scale_dtype.value())));
 
         if (mxfp4_input) {
+            // In the non-NZ MXFP4 path, uint8 storage packs two FP4 values. For non-transposed weight,
+            // n is the packed physical N from weight.shape[2], while CANN validates against logical N = n * 2.
             if (!weight_trans) {
                 if (c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E5M2 || c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E4M3FN) {
                     create_new_tensor(output, m, ((n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8), options_output);
@@ -224,32 +282,56 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     "Format of weight in npu_grouped_matmul is FRACTAL_NZ, current CANN version "
                     "do not support with this format. Please try to update the version of CANN."
                     + OPS_ERROR(ErrCode::PARAM));
-        at::Tensor weight_for_nz = weight[DIM_0];
-        if (at_npu::native::custom_ops::get_npu_format(weight_for_nz) != ACL_FORMAT_FRACTAL_NZ) {
-            weight_for_nz = weight_for_nz.clone();
-            auto &desc = torch_npu::NPUBridge::GetNpuStorageImpl(weight_for_nz)->npu_desc_;
-            desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
-            desc.storage_sizes_ = op_infer::array_to_small_vector(weight_for_nz.sizes());
+
+        if (mxfp8w4_nz_input) {
+            EXEC_NPU_CMD(
+                aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                x,
+                weight_wrapper,
+                weight_scale_wrapper,
+                weight_assist_matrix_real,
+                bias_real,
+                x_scale_wrapper,
+                smooth_scale_real,
+                group_list,
+                dequant_mode_real,
+                dequant_dtype_real,
+                quant_mode_real,
+                group_list_type_real,
+                tuning_config_real,
+                output,
+                output_scale_wrapper);
+        } else {
+            at::Tensor weight_for_nz = weight[DIM_0];
+            if (at_npu::native::custom_ops::get_npu_format(weight_for_nz) != ACL_FORMAT_FRACTAL_NZ) {
+                weight_for_nz = weight_for_nz.clone();
+                auto &desc = torch_npu::NPUBridge::GetNpuStorageImpl(weight_for_nz)->npu_desc_;
+                desc.npu_format_ = ACL_FORMAT_FRACTAL_NZ;
+                desc.storage_sizes_ = op_infer::array_to_small_vector(weight_for_nz.sizes());
+            }
+            c10::SmallVector<at::Tensor, 1> weight_nz_vec = {weight_for_nz};
+            at::TensorList weight_nz_list(weight_nz_vec);
+            TensorListWrapper weight_nz_wrapper = {weight_nz_list,
+                weight_dtype.has_value() ? c10_npu::GetAclDataType(weight_dtype.value())
+                                 : npu_preparation::convert_to_acl_data_type(weight[0].scalar_type())};
+            EXEC_NPU_CMD(
+                aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                x_wrapper,
+                weight_dtype.has_value() ? weight_wrapper : weight_nz_wrapper,
+                weight_scale_wrapper,
+                weight_assist_matrix_real,
+                bias_real,
+                x_scale_wrapper,
+                smooth_scale_real,
+                group_list,
+                dequant_mode_real,
+                dequant_dtype_real,
+                quant_mode_real,
+                group_list_type_real,
+                tuning_config_real,
+                output_wrapper,
+                output_scale_wrapper);
         }
-        c10::SmallVector<at::Tensor, 1> weight_nz_vec = {weight_for_nz};
-        at::TensorList weight_nz_list(weight_nz_vec);
-        EXEC_NPU_CMD(
-            aclnnGroupedMatmulSwigluQuantWeightNzV2,
-            x,
-            weight_nz_list,
-            weight_scale_wrapper,
-            weight_assist_matrix_real,
-            bias_real,
-            x_scale_wrapper,
-            smooth_scale_real,
-            group_list,
-            dequant_mode_real,
-            dequant_dtype_real,
-            quant_mode_real,
-            group_list_type_real,
-            tuning_config_real,
-            output,
-            output_scale_wrapper);
     } else {
         EXEC_NPU_CMD(
             aclnnGroupedMatmulSwigluQuantV2,

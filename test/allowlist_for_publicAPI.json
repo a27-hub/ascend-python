@@ -1,5 +1,5 @@
 {
-  "torch_npu": 
+  "torch_npu":
   {
     "v2.1": [],
     "v2.5": [],
@@ -9,8 +9,9 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward"
     ],
     "v2.7": [
       "npu_gelu_mul",
@@ -18,8 +19,11 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
     "v2.8": [
       "npu_gelu_mul",
@@ -27,8 +31,11 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
     "v2.9": [
       "npu_gelu_mul",
@@ -36,8 +43,11 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
     "v2.10": [
       "npu_gelu_mul",
@@ -45,8 +55,11 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
     "v2.11": [
       "npu_gelu_mul",
@@ -54,8 +67,11 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
     "v2.12": [
       "npu_gelu_mul",
@@ -63,9 +79,24 @@
       "npu_sim_exponential_",
       "npu_fused_floyd_attention",
       "npu_fused_floyd_attention_backward",
-      "save_npugraph_tensor",
-      "npu_fused_causal_conv1d"
+      "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
     ],
+    "v2.13": [
+ 	    "npu_gelu_mul",
+ 	    "npu_clipped_swiglu",
+ 	    "npu_sim_exponential_",
+ 	    "npu_fused_floyd_attention",
+ 	    "npu_fused_floyd_attention_backward",
+ 	    "npu_fused_causal_conv1d",
+      "npu_masked_causal_conv1d",
+      "npu_masked_causal_conv1d_backward",
+      "npu_apply_rotary_pos_emb",
+      "npu_ring_attention_update"
+ 	  ],
     "all_version": [
       "_npu_dropout",
       "copy_memory_",
@@ -90,7 +121,6 @@
       "npu_rms_norm",
       "npu_add_rms_norm_cast",
       "npu_moe_compute_expert_tokens",
-      "npu_attention_pioneer",
       "npu_fused_infer_attention_score",
       "npu_mla_prolog",
       "npu_mla_prolog_v2",
@@ -110,6 +140,7 @@
       "npu_grouped_matmul",
       "npu_moe_finalize_routing",
       "npu_mhc_sinkhorn",
+      "npu_mhc_sinkhorn_backward",
       "npu_quant_matmul",
       "npu_quant_matmul_reduce_sum",
       "npu_quant_scatter",
@@ -162,14 +193,20 @@
       "ffn_worker_scheduler_",
       "ffn_worker_scheduler",
       "npu_moe_gating_top_k_softmax_v2",
+      "npu_moe_gating_top_k_backward",
       "npu_confusion_transpose",
       "npu_dense_lightning_indexer_grad_kl_loss",
       "npu_dense_lightning_indexer_softmax_lse",
       "npu_one_hot",
       "npu_quant_matmul_gelu",
       "npu_mhc_post",
-      "npu_mhc_pre"
+      "npu_mhc_post_backward",
+      "npu_mhc_pre",
+      "npu_chunk_gated_delta_rule",
+      "npu_rotate_quant",
+      "npu_mhc_pre_backward",
+      "npu_quant_max"
     ]
   }
-  
+
 }

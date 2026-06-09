@@ -15,7 +15,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
 ```
 
@@ -24,19 +24,18 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
 - **input** (`Tensor`)：必选输入，源数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`updates`一致，维数只能是1~8维。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。 
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
-    - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`float16`、`bool`。
+    - <term>Atlas 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
-   
-    
-
+      
 - **indices** (`Tensor`)：必选输入，索引张量，数据类型支持`int32`、`int64`，数据格式支持$ND$，支持非连续的Tensor，`indices`中的索引数据不支持越界。
 - **updates** (`Tensor`)：必选输入，更新数据张量，数据格式支持$ND$，支持非连续的Tensor，数据类型需要与`input`一致。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`、`bfloat16`、`int64`、`int8`。 
-    - <term>Atlas 推理系列加速卡产品</term>：数据类型支持`float32`、`float16`、`bool`。
+    - <term>Atlas 推理系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
     - <term>Atlas 训练系列产品</term>：数据类型支持`float32`、`float16`、`bool`。
    
 ## 返回值
+
 `Tensor`
 
 代表`input`被更新后的结果。
@@ -66,7 +65,7 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
     >>> updates = torch.from_numpy(data_updates).to(torch.float16).npu()
     >>>
     >>> out=torch_npu.npu_scatter_nd_update_(var, indices, updates)
-    >>> out
+    >>> print(out)
     [W compiler_depend.ts:133] Warning: Warning: Device do not support double dtype now, dtype cast replace with float. (function operator())
     tensor([[1.8271, 1.4551, 1.3154,  ..., 1.9854, 1.4365, 1.0732],
             [1.9492, 1.6455, 1.6504,  ..., 1.5957, 1.6201, 1.4385],
@@ -101,7 +100,7 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
             # 调用目标接口
             res = torch_npu.npu_scatter_nd_update_(var, indices, update)
             return res
-    		
+            
     npu_mode = Network()
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
@@ -127,4 +126,3 @@ torch_npu.npu_scatter_nd_update_(input, indices, updates) -> Tensor
     # 执行上述代码的输出类似如下
     torch.Size([33, 5]) torch.float16
     ```
-

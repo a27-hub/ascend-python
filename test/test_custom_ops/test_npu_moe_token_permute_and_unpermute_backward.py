@@ -1,4 +1,5 @@
 # Copyright (c) 2024, Huawei Technologies Co., Ltd.  All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 from typing import Dict, List
 import torch
 import torch_npu
@@ -146,7 +147,7 @@ class TestNpuFusedPermuteAndUnpermute():
         sorted_indices_ori = torch.argsort(sorted_indices_ori, stable=True).to(sorted_indices_fused.dtype)
         assert torch.equal(sorted_indices_ori, sorted_indices_fused)
 
-        # test the grad output for permute backward 
+        # test the grad output for permute backward
         grad_output = torch.ones_like(permuted_tokens_fused).to(dtype)
 
         permuted_tokens_ori.backward(grad_output)
@@ -183,13 +184,13 @@ class TestNpuFusedPermuteAndUnpermute():
             permuted_tokens_fused, sorted_indices_fused, probs=probs_fused)
 
         assert torch.allclose(unpermuted_tokens_ori, unpermuted_tokens_fused, **tols)
-       
-        # test the grad output for unpermute backward       
+
+        # test the grad output for unpermute backward
         grad_output = torch.ones_like(unpermuted_tokens_fused).to(dtype)
-        
+
         unpermuted_tokens_ori.backward(grad_output)
         unpermuted_tokens_fused.backward(grad_output)
-        
+
         assert torch.allclose(permuted_tokens_ori.grad, permuted_tokens_fused.grad, **tols), "Gradient mismatch for permuted_tokens!"
 
         if topk > 1:
@@ -215,3 +216,48 @@ class TestNpuFusedPermuteAndUnpermute():
             assert torch.equal(unpermuted_tokens, tokens)
         else:
             assert torch.allclose(unpermuted_tokens, tokens, **tols)
+
+    @pytest.mark.parametrize('num_tokens', [1024])
+    @pytest.mark.parametrize('hidden_size', [6144])
+    @pytest.mark.parametrize('topk', [4])
+    @pytest.mark.parametrize('num_experts', [8])
+    def test_unpermute_grad_mixed_dtype(self, num_tokens, hidden_size, topk, num_experts):
+        token_dtype = torch.bfloat16
+        probs_dtype = torch.float32
+        tols = dtype_tols(token_dtype)
+
+        permuted_tokens = torch.randn(num_tokens * topk, hidden_size).npu().to(token_dtype).requires_grad_(True)
+        indices = torch.randint(0, num_experts, (num_tokens, topk)).npu()
+        sorted_indices = torch.argsort(indices.view(-1), stable=True).npu().to(torch.int32)
+        probs = (torch.ones(num_tokens, topk) / topk).npu().to(probs_dtype).requires_grad_(True)
+
+        unpermuted_tokens = npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
+
+        grad_output = torch.ones_like(unpermuted_tokens).to(token_dtype)
+        unpermuted_tokens.backward(grad_output)
+
+        assert permuted_tokens.grad is not None
+        assert permuted_tokens.grad.dtype == token_dtype
+
+        assert probs.grad is not None
+        assert probs.grad.dtype == probs_dtype, \
+            f"grad_probs dtype should be {probs_dtype}, but got {probs.grad.dtype}"
+
+    @pytest.mark.parametrize('num_tokens', [1024])
+    @pytest.mark.parametrize('hidden_size', [6144])
+    @pytest.mark.parametrize('topk', [1, 4])
+    @pytest.mark.parametrize('num_experts', [8])
+    def test_unpermute_grad_probs_none(self, num_tokens, hidden_size, topk, num_experts):
+        token_dtype = torch.bfloat16
+
+        permuted_tokens = torch.randn(num_tokens * topk, hidden_size).npu().to(token_dtype).requires_grad_(True)
+        indices = torch.randint(0, num_experts, (num_tokens, topk)).npu()
+        sorted_indices = torch.argsort(indices.view(-1), stable=True).npu().to(torch.int32)
+
+        unpermuted_tokens = npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=None)
+
+        grad_output = torch.ones_like(unpermuted_tokens).to(token_dtype)
+        unpermuted_tokens.backward(grad_output)
+
+        assert permuted_tokens.grad is not None
+        assert permuted_tokens.grad.dtype == token_dtype

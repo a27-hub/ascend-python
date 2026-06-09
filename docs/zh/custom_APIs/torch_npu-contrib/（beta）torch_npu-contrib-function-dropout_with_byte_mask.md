@@ -1,5 +1,8 @@
 # （beta）torch_npu.contrib.function.dropout_with_byte_mask
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,11 +18,12 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.contrib.function.dropout_with_byte_mask(input1, p=0.5, training=True, inplace=False)
 ```
 
 ## 参数说明
+
 - **input1** (`Tensor`): 必选参数，输入张量。
 - **p** (`float`)：可选参数，dropout概率，默认值为0.5。
 - **training** (`bool`)：可选参数，是否启动dropout，当设置为True时启动，False时不启动。默认值为True。
@@ -30,11 +34,12 @@ torch_npu.contrib.function.dropout_with_byte_mask(input1, p=0.5, training=True, 
 仅在设备32核场景下性能提升。
 
 ## 使用示例
+
 ```python
 import torch, torch_npu
 from torch_npu.contrib.function import npu_functional as F
 input = torch.randn(4,4).npu()
 input = torch_npu.npu_format_cast(input, 2)
 output = F.dropout_with_byte_mask(input, p=0.2, training=True)
-output
+print(output)
 ```

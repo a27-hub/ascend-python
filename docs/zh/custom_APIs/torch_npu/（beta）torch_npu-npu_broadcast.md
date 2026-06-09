@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_broadcast(self, size) -> Tensor
 ```
 
@@ -32,11 +32,10 @@ torch_npu.npu_broadcast(self, size) -> Tensor
 ```python
 >>> import torch, torch_npu
 >>> x = torch.tensor([[1],[2],[3]]).npu()
->>> x.shape
+>>> print(x.shape)
 torch.Size([3, 1])
->>> torch_npu.npu_broadcast(x, [3,4])
+>>> print(torch_npu.npu_broadcast(x, [3,4]))
 tensor([[1, 1, 1, 1],
             [2, 2, 2, 2],
             [3, 3, 3, 3]], device='npu:0')
 ```
-

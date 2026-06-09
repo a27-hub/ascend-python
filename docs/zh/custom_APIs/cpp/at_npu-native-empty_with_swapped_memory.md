@@ -1,11 +1,11 @@
 # at_npu::native::empty_with_swapped_memory
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>  | √   |
-
 
 ## 功能说明
 
@@ -17,19 +17,18 @@ torch_npu\csrc\core\npu\NPUFormat.h
 
 ## 函数原型
 
-```
+```cpp
 at::Tensor empty_with_swapped_memory(c10::IntArrayRef size, c10::optional<at::ScalarType> dtype_opt, c10::optional<c10::Device> device_opt)
 ```
 
 ## 参数说明
 
 - **size** (`c10::IntArrayRef`)：必选参数，表示生成Tensor的shape。
-- **dtype_opt** (`c10::optional<at::ScalarType>`)：必选参数，表示生成Tensor的数据类型，若为`c10::nullopt`，则表示使用dtype全局默认值。
-- **device_opt** (`c10::optional<c10::Device>`)：必选参数，表示生成Tensor的设备信息，若为`c10::nullopt`，则表示使用当前默认device。
-
-
+- **dtype_opt** (`c10::optional<at::ScalarType>`)：可选参数，表示生成Tensor的数据类型，若为`c10::nullopt`，则表示使用dtype全局默认值。
+- **device_opt** (`c10::optional<c10::Device>`)：可选参数，表示生成Tensor的设备信息，若为`c10::nullopt`，则表示使用当前默认device。
 
 ## 返回值说明
+
 `at::Tensor`
 
 代表生成的特殊Tensor。
@@ -46,5 +45,5 @@ at::Tensor empty_with_swapped_memory(c10::IntArrayRef size, c10::optional<at::Sc
 `npu_hans_encode`<br>
 `npu_hans_decode`<br>
 
-- 当安装CANN版本8.5.0及以上，且Ascend HDK版本25.5.2及以上时，该接口申请的特殊Tensor支持直接打印。
-- 当安装CANN版本小于8.5.0或者Ascend HDK版本小于25.5.2时，该接口申请的特殊Tensor不支持直接打印，此时会打印warning日志，需要查看值时要先通过`mul_`转为普通Tensor再打印。
+- 当安装CANN版本8.5.0及以上，且Ascend HDK版本26.0.rc1及以上时，该接口申请的特殊Tensor支持直接打印。
+- 当安装CANN版本小于8.5.0或者Ascend HDK版本小于26.0.rc1时，该接口申请的特殊Tensor不支持直接打印，此时会打印warning日志，需要查看值时要先通过`mul_`转为普通Tensor再打印。

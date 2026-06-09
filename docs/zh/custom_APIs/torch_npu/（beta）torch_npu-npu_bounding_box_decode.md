@@ -1,6 +1,9 @@
 # （beta）torch_npu.npu_bounding_box_decode
-## 产品支持情况
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
@@ -12,13 +15,12 @@
 ## 功能说明
 
 根据rois和deltas生成标注框。自定义Faster R-CNN算子。
+
 ## 函数原型
 
-```
+```python
 torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, stds0, stds1, stds2, stds3, max_shape, wh_ratio_clip) -> Tensor
 ```
-
-
 
 ## 参数说明
 
@@ -47,8 +49,7 @@ torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, 
 >>> rois = torch.tensor([[1., 2., 3., 4.], [3.,4., 5., 6.]], dtype = torch.float32).to("npu")
 >>> deltas = torch.tensor([[5., 6., 7., 8.], [7.,8., 9., 6.]], dtype = torch.float32).to("npu")
 >>> output = torch_npu.npu_bounding_box_decode(rois, deltas, 0, 0, 0, 0, 1, 1, 1, 1, (10, 10), 0.1)
->>> output
+>>> print(output)
 tensor([[2.5000, 6.5000, 9.0000, 9.0000],
         [9.0000, 9.0000, 9.0000, 9.0000]], device='npu:0')
 ```
-

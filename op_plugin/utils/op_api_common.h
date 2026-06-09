@@ -313,11 +313,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", __VA_ARGS__);                                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
+        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "1", acl_stream, __VA_ARGS__);                         \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -372,11 +372,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", __VA_ARGS__);                                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
+        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream, __VA_ARGS__);                         \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
         uint32_t aic_num = UINT32_MAX;                                                                                  \
@@ -454,11 +454,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
+        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "1", acl_stream, __VA_ARGS__);         \
         uint64_t workspace_size = 0;                                                                                   \
         uint64_t *workspace_size_addr = &workspace_size;                                                               \
         aclOpExecutor *executor = nullptr;                                                                             \
@@ -519,11 +519,11 @@ auto DecodeDevice(Ts&... args) -> at::Device
         TORCH_CHECK(getWorkspaceSizeFuncAddr != nullptr && opApiFuncAddr != nullptr, #aclnn_api, " or ",               \
                     #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),          \
                     " not found.", OPS_ERROR(ErrCode::PTR));                                                            \
-        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", __VA_ARGS__);                     \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
         if (c10_npu::check_enqueue_need_use(acl_stream)) {                                                             \
             c10_npu::UseStreamResInCurrentThread(acl_stream);                                                          \
         }                                                                                                              \
+        OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_NO_FORMAT_CHECK_CMD", "2", acl_stream, __VA_ARGS__);         \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto acl_call = [copied_params, acl_stream]()->int {                                                           \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
@@ -779,5 +779,41 @@ inline TensorListWrapper make_wrapper(const at::TensorList& tensorlist, c10::opt
 inline TensorListWrapper make_wrapper(const c10::optional<at::TensorList> &opt_tensorlist, c10::optional<int64_t> tensor_dtype)
 {
     return make_wrapper(opt_tensorlist.value_or(at::TensorList()), tensor_dtype);
+}
+
+// Scaled GEMM implementation types
+enum class ScaledGemmImplementation {
+    NONE = 0,
+    TENSORWISE_TENSORWISE = 1,
+    ROWWISE_ROWWISE = 2,
+    BLOCK_128x128_1x128 = 3,
+    BLOCK_1x128_128x128 = 4,
+    BLOCK_1x128_1x128 = 5,
+    MXFP8_MXFP8 = 6,
+    NVFP4_NVFP4 = 7,
+    NVFP4_NVFP4_SINGLE_SCALE = 8,
+    MXFP4_MXFP4 = 9,
+};
+
+// Scaling type for quantized matmul
+enum class ScalingType : std::uint8_t {
+    TensorWise, // fp32 scales
+    RowWise, // fp32 scales
+    BlockWise1x16, // fp8_e4m3fn scales
+    BlockWise1x32, // fp8_e8m0fnu scales
+    BlockWise1x128, // fp32 scales
+    BlockWise128x128, // fp32 scales
+};
+
+// Helper function to convert integer array to enum vector
+template <class EnumType, class ArrayType>
+std::vector<EnumType> convert_int_to_enum(ArrayType& v) {
+    std::vector<EnumType> converted;
+    converted.reserve(v.size());
+
+    for (auto vi : v) {
+        converted.push_back(static_cast<EnumType>(vi));
+    }
+    return converted;
 }
 #endif //  TORCHNPU_TORCH_NPU_CSRC_ATEN_OPS_OP_API_PTA_COMMON_H_

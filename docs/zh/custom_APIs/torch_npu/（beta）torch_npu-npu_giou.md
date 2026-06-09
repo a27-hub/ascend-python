@@ -1,5 +1,8 @@
 # （beta）torch_npu.npu_giou
 
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -15,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_giou(self, gtboxes, trans=False, is_cross=False, mode=0) -> Tensor
 ```
 
@@ -39,4 +42,3 @@ torch_npu.npu_giou(self, gtboxes, trans=False, is_cross=False, mode=0) -> Tensor
 >>> box2=torch.from_numpy(b).to("npu")
 >>> output = torch_npu.npu_giou(box1, box2, trans=True, is_cross=False, mode=0)
 ```
-

@@ -1,6 +1,5 @@
 # torch_npu.npu_prefetch
 
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -8,14 +7,13 @@
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>            |    √     |
 
- 
 ## 功能说明
 
 提供网络`weight`预取功能，用于在计算执行前将指定的权重数据预先加载到L2 Cache中，减少算子访问这些权重时的访存等待时间。例如，在MatMul等算子之前进行预取，算子执行时可直接从低时延的L2 Cache中读取权重，进而提升算子数据访问与计算效率。实际性能收益取决于用户采用的并行方式和配置。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
 ```
 
@@ -34,8 +32,6 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
 
 该接口支持图模式。
 
-
-
 ## 调用示例
 
 - 单算子多流并发调用
@@ -47,24 +43,28 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
     >>> s_cmo = torch.npu.Stream()
     >>> x = torch.randn(10000, 10000, dtype=torch.float32).npu()
     >>> y = torch.randn(10000, 1, dtype=torch.float32).npu()
+    tensor_size = 元素个数 × 每个元素的字节数
+            = (10000 × 1) × 4    # float32 占 4 字节
+            = 40000 字节
     >>> add = torch.add(x, 1)
     >>>
     >>> with torch.npu.stream(s_cmo):
-    ...     torch_npu.npu_prefetch(y, None, 10000000)
+    ...     torch_npu.npu_prefetch(y, None, 40000)
+    ...     torch_npu.npu_prefetch(y, None, 20000, offset=20000)
     ...
     >>> abs = torch.abs(add)
     >>> mul = torch.matmul(abs, abs)
     >>> out = torch.matmul(mul, y)
-    >>> out
-    [W compiler_depend.ts:133] Warning: Warning: Device do not support double dtype now, dtype cast replace with float. (function operator())
-    tensor([[-946066.3750],
-            [-945756.1875],
-            [-953013.2500],
+    >>> print(out)
+    [W428 20:51:15.589252880 ToKernelNpu.cpp:41] Warning: Device do not support double dtype now, dtype cast replace with float. (function operator())
+    tensor([[-993366.4375],
+            [-987970.6250],
+            [-998181.7500],
             ...,
-            [-938365.2500],
-            [-951188.7500],
-            [-941926.4375]], device='npu:0')
-    >>> out.shape
+            [-992221.5625],
+            [-980903.0000],
+            [-999433.1875]], device='npu:0')
+    >>> print(out.shape)
     torch.Size([10000, 1])
     ```
 
@@ -91,7 +91,8 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
 
         def forward(self, x, y):
             add = torch.add(x, 1)
-            torch_npu.npu_prefetch(y, add, 10000000)
+            torch_npu.npu_prefetch(y, add, 40000)
+            torch_npu.npu_prefetch(y, add, 20000, offset=20000)
             abs = torch.abs(add)
             mul = torch.matmul(abs, abs)
             out = torch.matmul(mul, y)
@@ -105,13 +106,12 @@ torch_npu.npu_prefetch(input, dependency, max_size, offset=0) -> None
     print(output.shape)
 
     # 执行上述代码的输出类似如下    
-    tensor([[83962.5078],
-            [87820.6328],
-            [87498.8594],
+    tensor([[-516592.8438],
+            [-510890.9375],
+            [-518402.5938],
             ...,
-            [76254.0781],
-            [87780.6484],
-            [75411.2188]], device='npu:0')
+            [-518633.8750],
+            [-523125.4062],
+            [-509616.8750]], device='npu:0')
     torch.Size([10000, 1])
     ```
-

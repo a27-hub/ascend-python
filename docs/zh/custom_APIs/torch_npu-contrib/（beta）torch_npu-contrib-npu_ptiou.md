@@ -1,7 +1,7 @@
 # （beta）torch_npu.contrib.npu_ptiou
 
 > [!NOTICE]  
-> 该接口计划废弃，可以使用`torch_npu.npu_iou`接口进行替换。
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
 
 ## 产品支持情况
 
@@ -18,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.contrib.npu_ptiou(boxes1, boxes2, mode="ptiou", is_normalized=False, normalized_scale=100.)
 ```
 
@@ -42,4 +42,3 @@ torch_npu.contrib.npu_ptiou(boxes1, boxes2, mode="ptiou", is_normalized=False, n
 >>> box2 = torch.randint(0, 256, size=(16, 4)).npu()
 >>> iou = torch_npu.contrib.npu_ptiou(box1, box2)
 ```
-

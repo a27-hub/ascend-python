@@ -1,4 +1,8 @@
 # （beta）torch_npu.npu_random_choice_with_mask
+
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -14,7 +18,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_random_choice_with_mask(x, count=256, seed=0, seed2=0) -> (Tensor, Tensor)
 ```
 
@@ -36,8 +40,8 @@ torch_npu.npu_random_choice_with_mask(x, count=256, seed=0, seed2=0) -> (Tensor,
 >>> import torch, torch_npu
 >>> x = torch.tensor([1, 0, 1, 0], dtype=torch.bool).to("npu")
 >>> result, mask = torch_npu.npu_random_choice_with_mask(x, 2, 1, 0)
->>> result
+>>> print(result)
 tensor([[0],[2]], device='npu:0', dtype=torch.int32)
->>> mask
+>>> print(mask)
 tensor([True, True], device='npu:0')
 ```

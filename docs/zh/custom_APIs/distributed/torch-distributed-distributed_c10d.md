@@ -1,4 +1,5 @@
 # torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("npu")).get_hccl_comm_name
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -14,7 +15,7 @@
 
 ## 函数原型
 
-```
+```python
 torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("npu")).get_hccl_comm_name(rankid->int,init_comm=True) -> string
 ```
 
@@ -25,7 +26,7 @@ torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("
 
 ## 参数说明
 
-- **rankid** (`int`)：必选参数，集合通信对应device的rankid。传入的rankid为全局的rankid，多机间device具有唯一的rankid。
+- **rankid** (`int`)：必选参数，集合通信对应device的rankid。传入的rankid为全局的rankid，多机之间device具有唯一的rankid。
 
 - **init_comm** (`int`)：可选参数，默认值为True。当值为True时，调用`get_hccl_comm_name`会在hccl还未完成初始化的情况下完成初始化，并返回group name。当值为False时，调用`get_hccl_comm_name`在hccl还未完成初始化时，不会进行初始化（包括申请内存资源等操作），并返回空字符串。
 
@@ -33,6 +34,7 @@ torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("
 >hccl初始化会申请内存资源，造成内存升高，默认申请内存大小为Send buffer与Recv buffer各200M，共400M。buffer大小受环境变量HCCL_BUFFSIZE控制。
 
 ## 返回值说明
+
 `string`
 
 代表string类型的集合通信域的名字。
@@ -41,7 +43,6 @@ torch.distributed.distributed_c10d._world.default_pg._get_backend(torch.device("
 
 - 使用该接口前确保`init_process_group`已被调用，且初始化的backend为hccl。
 - PyTorch 2.1.0及以后版本与PyTorch 2.1.0之前的版本对该接口调用方式不同，见[调用示例](#section14459801435)。
-
 
 ## 调用示例<a name="section14459801435"></a>
 
@@ -75,4 +76,3 @@ if __name__ == "__main__":
 group_name_0
 group_name_0
 ```
-

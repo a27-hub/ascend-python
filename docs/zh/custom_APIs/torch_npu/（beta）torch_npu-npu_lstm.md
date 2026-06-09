@@ -15,14 +15,14 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_lstm(x, weight, bias, seqMask, h, c, has_biases, num_layers, dropout, train, bidirectional, batch_first, flag_seq, direction)
 ```
 
 ## 参数说明
 
 - **x** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`；格式支持FRACTAL_NZ。
-- **weight** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`；格式支持FRACTAL_NZ_LSTM。
+- **weight** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`；格式支持FRACTAL_NZ。
 - **bias** (`Tensor`)：1D张量。数据类型支持`float16`，`float32`；格式支持ND。
 - **seqMask** (`Tensor`)：张量。仅支持FRACTAL_NZ格式的`float16`和ND格式的`int32`类型。
 - **h** (`Tensor`)： 4D张量。数据类型支持`float16`，`float32`；格式支持FRACTAL_NZ。
@@ -46,4 +46,3 @@ torch_npu.npu_lstm(x, weight, bias, seqMask, h, c, has_biases, num_layers, dropo
 - **f** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`。当train=True（训练模式）时，格式为FRACTAL_NZ；当train=False（推理模式）时，格式为ND。
 - **o** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`。当train=True（训练模式）时，格式为FRACTAL_NZ；当train=False（推理模式）时，格式为ND。
 - **tanhct** (`Tensor`)：4D张量。数据类型支持`float16`，`float32`。当train=True（训练模式）时，格式为FRACTAL_NZ；当train=False（推理模式）时，格式为ND。
-

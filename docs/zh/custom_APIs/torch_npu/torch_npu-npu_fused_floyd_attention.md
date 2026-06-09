@@ -1,5 +1,8 @@
 # torch_npu.npu_fused_floyd_attention
 
+> [!NOTICE]  
+> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -19,9 +22,10 @@ $$
 $$
 \text{attention\_out} = \text{einsum}(\text{weights}, \text{value}_1) + \text{einsum}(\text{weights}, \text{value}_2)
 $$
+
 ## 函数原型
 
-```
+```python
 torch_npu.npu_fused_floyd_attention(query_ik, key_ij, value_ij, key_jk, value_jk, *, atten_mask=None, scale_value=1.) -> (Tensor, Tensor, Tensor)
 ```
 
@@ -36,6 +40,7 @@ torch_npu.npu_fused_floyd_attention(query_ik, key_ij, value_ij, key_jk, value_jk
 - **scale_value** (`float`)：可选参数，代表缩放系数，对应公式中的$scale\_value$，数据类型支持`float`。默认值为1。
 
 ## 返回值说明
+
 - **softmax_max_out** (`Tensor`)：输出张量，Softmax计算的Max中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[BHNM8]。数据格式支持$ND$。
 - **softmax_sum_out** (`Tensor`)：输出张量，Softmax计算的Sum中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[BHNM8]。数据格式支持$ND$。
 - **attention_out** (`Tensor`)：输出张量，计算公式的最终输出，对应公式中的$attention\_out$。数据类型支持`bfloat16`、`float16`。数据类型和shape类型与`query_ik`保持一致，数据格式支持$ND$，输入shape支持[BHNMD]。
@@ -62,8 +67,10 @@ torch_npu.npu_fused_floyd_attention(query_ik, key_ij, value_ij, key_jk, value_jk
 - `softmax_max_out`与`softmax_sum_out`的shape需相同。
 - `query_ik`、`key_ij`、`value_ij`、`key_jk`和`value_jk`的数据类型需保持一致。
 - 支持PyTorch2.6.0及以上版本。
+- 该接口的反向计算不支持确定性。
 
 ## 调用示例
+
 ```python
 import torch
 import torch_npu

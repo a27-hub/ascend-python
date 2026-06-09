@@ -9,21 +9,19 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
-
-
 ## 功能说明
 
 从so文件加载的NPU内存分配器。
+
 ## 定义文件
 
 torch_npu/npu/memory.py
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name)
 ```
-
 
 ## 参数说明
 
@@ -37,10 +35,9 @@ torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name
 
 `free_fn_name`内存释放函数名必须与c/c++文件中函数名一致。
 
-
 ## 调用示例
 
-完整调用示例可参考[LINK](https://gitcode.com/ascend/pytorch/blob/v2.7.1-7.3.0/test/allocator/test_pluggable_allocator_extensions.py)。
+完整调用示例可参考[LINK](https://gitcode.com/ascend/pytorch/blob/v2.7.1/test/allocator/test_pluggable_allocator_extensions.py)。
 
 **Python代码示例**：
 
@@ -98,4 +95,3 @@ ASCEND_LOGD("Pluggable Allocator malloc: malloc = %zu", size);
  
 ASCEND_LOGD("Pluggable Allocator free: free= %zu", size);
 ```
-

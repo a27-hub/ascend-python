@@ -1,4 +1,8 @@
 # （beta）torch_npu.npu_grid_assign_positive
+
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -8,14 +12,13 @@
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
 
-
 ## 功能说明
 
 执行position-sensitive的候选区域池化梯度计算。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_grid_assign_positive(self, overlaps, box_responsible_flags, max_overlaps, argmax_overlaps, gt_max_overlaps, gt_argmax_overlaps, num_gts, pos_iou_thr, min_pos_iou, gt_max_assign_all) -> Tensor
 ```
 
@@ -34,6 +37,7 @@ torch_npu.npu_grid_assign_positive(self, overlaps, box_responsible_flags, max_ov
 - **gt_max_assign_all** (`bool`)：必选参数，是否将与某个gt有相同最高重叠的所有检测框分配给该gt。
 
 ## 返回值说明
+
 `Tensor`
 
 候选区域池化梯度计算结果。
@@ -46,11 +50,11 @@ torch_npu.npu_grid_assign_positive(self, overlaps, box_responsible_flags, max_ov
 >>> overlaps = torch.rand(2,4).npu()
 >>> box_responsible_flags = torch.tensor([1, 1, 1, 0], dtype=torch.uint8).npu()
 >>> max_overlap = torch.rand(4).npu()
->>> argmax_overlap = torch.tensor([1, 0, 1, 0], dtype=torch.int32).npu()
+>>> argmax_overlaps = torch.tensor([1, 0, 1, 0], dtype=torch.int32).npu()
 >>> gt_max_overlaps = torch.rand(2).npu()
 >>> gt_argmax_overlaps = torch.tensor([1, 0],dtype=torch.int32).npu()
 >>> num_gts = torch.tensor([128], dtype=torch.int32).npu()
->>> output = torch_npu.npu_grid_assign_positive(assigned_gt_inds, overlaps, box_responsible_flags, max_overlap, argmax_overlap, gt_max_overlaps, gt_argmax_overlaps, num_gts, 0.5, 0., True)
->>> output.shape
+>>> output = torch_npu.npu_grid_assign_positive(assigned_gt_inds, overlaps, box_responsible_flags, max_overlap, argmax_overlaps, gt_max_overlaps, gt_argmax_overlaps, num_gts, 0.5, 0., True)
+>>> print(output.shape)
 torch.Size([4])
 ```

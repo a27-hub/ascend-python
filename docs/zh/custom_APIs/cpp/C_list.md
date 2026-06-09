@@ -2,6 +2,10 @@
 
 本章节包含Ascend Extension for PyTorch中提供的C++拓展接口，供深度优化使用。
 
+## 常规C++接口
+
+常规C++接口覆盖了NPU设备初始化与释放、设备/流管理、事件与随机数管理、Tensor格式处理以及分布式通信等基础能力，详细接口见表1。这些接口符号统一由`libtorch_npu.so`导出。
+
 **表1** C++ API
 <a name="table1728514451512"></a>
 <table><thead align="left"><tr id="row1128511418151"><th class="cellrowborder" valign="top" width="36.13%" id="mcps1.2.3.1.1"><p id="p102854481517"><a name="p102854481517"></a><a name="p102854481517"></a>API名称</p>
@@ -164,52 +168,52 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊Tensor。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard.md">c10_npu::NPUStreamGuard</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard.md">c10_npu::NPUStreamGuard</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流guard，保障作用域内的设备流，与`c10::cuda::CUDAStreamGuard`相同。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-current_device.md">c10_npu::NPUStreamGuard::current_device</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-current_device.md">c10_npu::NPUStreamGuard::current_device</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard当前设备。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-current_stream.md">c10_npu::NPUStreamGuard::current_stream</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-current_stream.md">c10_npu::NPUStreamGuard::current_stream</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard当前保障的流。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-NPUStreamGuard.md">c10_npu::NPUStreamGuard::NPUStreamGuard</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-NPUStreamGuard.md">c10_npu::NPUStreamGuard::NPUStreamGuard</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>构造函数，创建一个流guard。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-original_device.md">c10_npu::NPUStreamGuard::original_device</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-original_device.md">c10_npu::NPUStreamGuard::original_device</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard构造时的设备。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-original_stream.md">c10_npu::NPUStreamGuard::original_stream</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-original_stream.md">c10_npu::NPUStreamGuard::original_stream</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>返回guard构造时设置的流。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-reset_stream.md">c10_npu::NPUStreamGuard::reset_stream</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard-reset_stream.md">c10_npu::NPUStreamGuard::reset_stream</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>给guard重新设置新的流。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-stream_synchronize.md">c10_npu::stream_synchronize</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-stream_synchronize.md">c10_npu::stream_synchronize</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>NPU设备流同步，与`c10::cuda::stream_synchronize`相同。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL.md">c10d_npu::ProcessGroupHCCL</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL.md">c10d_npu::ProcessGroupHCCL</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>ProcessGroupHCCL继承自`c10d::Backend`，实现`HCCL`后端的相关接口，用于通信算子调用。</p>
 </td>
 </tr>
-</tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL-batch_isend_irecv.md">c10d_npu::ProcessGroupHCCL::batch_isend_irecv</a></p>
+<tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL-batch_isend_irecv.md">c10d_npu::ProcessGroupHCCL::batch_isend_irecv</a></p>
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>发送或接收一批tensor，异步处理P2P操作序列中的每一个操作，并返回对应的请求。</p>
 </td>
@@ -217,3 +221,20 @@
 </tbody>
 </table>
 
+## LibTorch Stable ABI接口
+
+PyTorch原生社区已提供LibTorch Stable ABI能力，提供一组稳定的二进制接口，让自定义算子和C++扩展无需绑定特定PyTorch版本也能跨版本兼容。Ascend Extension for PyTorch在此基础上补充NPU侧能力，对外提供以下接口：
+
+- [`torch_npu/csrc/inductor/aoti_torch/c/shim.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/c/shim.h)：补充NPU设备类型及NPU相关Stable ABI接口。
+- [`torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h`](https://gitcode.com/Ascend/pytorch/blob/master/torch_npu/csrc/inductor/aoti_torch/generated/c_shim_npu.h)：提供NPU算子的Stable ABI声明，接口名形如`aoti_torch_npu_*`。
+- `libtorch_npu.so`：导出上述NPU新增Stable ABI接口符号。
+
+## ATB C++接口说明
+
+Ascend Extension for PyTorch提供了一组ATB C++接口，用于在C++侧调用已暴露的ATB能力。这组接口通过统一入口头文件对外提供。
+
+- [`op_plugin/include/atb_ops.h`](../../../../op_plugin/include/atb_ops.h)：ATB C++接口统一入口头文件。
+- [`op_plugin/config/atb_ops.yaml`](../../../../op_plugin/config/atb_ops.yaml)：当前对外暴露接口列表。
+- `libop_plugin_atb.so`：导出上述ATB C++接口对应符号。
+
+相关接口可通过`at_npu::native::atb`命名空间访问。

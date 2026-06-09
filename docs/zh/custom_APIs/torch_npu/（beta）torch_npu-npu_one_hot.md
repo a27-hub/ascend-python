@@ -1,4 +1,8 @@
 # （beta）torch_npu.npu_one_hot
+
+> [!NOTICE]  
+> 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -7,16 +11,16 @@
 |<term>Atlas A2 训练系列产品</term>  | √    |
 |<term>Atlas 推理系列产品</term>                                       |    √     |
 |<term>Atlas 训练系列产品</term>                                       |    √     |
+
 ## 功能说明
 
 返回一个one-hot张量。input中index表示的位置采用on_value值，而其他所有位置采用off_value的值。
 
 ## 函数原型
 
-```
+```python
 torch_npu.npu_one_hot(input, num_classes=-1, depth=1, on_value=1, off_value=0) -> Tensor
 ```
-
 
 ## 参数说明
 
@@ -26,13 +30,12 @@ torch_npu.npu_one_hot(input, num_classes=-1, depth=1, on_value=1, off_value=0) -
 - **on_value** (`Scalar`)：当indices[j] == i时输出中的填充值，默认值为1。
 - **off_value** (`Scalar`)：当indices[j] != i时输出中的填充值，默认值为0。
 
-
 ## 调用示例
 
 ```python
 >>> a=torch.IntTensor([5, 3, 2, 1]).npu()
 >>> b=torch_npu.npu_one_hot(a, depth=5)
->>> b
+>>> print(b)
 tensor([[0., 0., 0., 0., 0.],
         [0., 0., 0., 1., 0.],
         [0., 0., 1., 0., 0.],

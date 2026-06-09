@@ -42,10 +42,12 @@ def main():
 
             acl_op_sup_ver = get_version(item.get('acl_op', None), all_version)
             op_api_sup_ver = get_version(item.get('op_api', None), all_version)
+            dvm_sup_ver = get_version(item.get('dvm', None), all_version)
             sparse = get_version(item.get('sparse', None), all_version)
             internal_format_opapi = get_version(item.get('internal_format_opapi', None), all_version)
             item.update({'acl_op':acl_op_sup_ver})
             item.update({'op_api':op_api_sup_ver})
+            item.update({'dvm':dvm_sup_ver})
             item.update({'sparse':sparse})
             item.update({'internal_format_opapi':internal_format_opapi})
 
@@ -56,6 +58,9 @@ def main():
                     if version in item.get(i, ''):
                         impl_ns.append(i)
                     new_item.pop(i, None)
+                if version in item.get('dvm', ''):
+                    impl_ns.append('dvm')
+                new_item.pop('dvm', None)
                 if len(acl_op_sup_ver) > 0 or len(op_api_sup_ver) > 0:
                     new_item['impl_ns'] = ', '.join(impl_ns)
 
@@ -80,15 +85,17 @@ def main():
             for func in old_yaml[key]:
                 if version in func['version']:
                     new_yaml.get(key).append(func['func'])
-    else:
+    elif 'tocpu' in new_yaml and 'unsupported' in new_yaml:
         del new_yaml['tocpu'], new_yaml['unsupported']
 
-    if version in ['v1.11', 'v2.0', 'v2.1']:
+    if version in ['v1.11', 'v2.0', 'v2.1'] and 'quant' in new_yaml:
         del new_yaml['quant']
 
     # save to new yaml
     flags = os.O_WRONLY | os.O_CREAT
     modes = stat.S_IWUSR | stat.S_IRUSR
+    if os.path.islink(output_dir):
+        raise RuntimeError(f'output_dir: Invalid path is a soft chain')
     with os.fdopen(os.open(f'{output_dir}/op_plugin_functions.yaml', flags, modes), 'w') as f:
         yaml.dump(data=new_yaml, stream=f, width=2000, sort_keys=False)
 

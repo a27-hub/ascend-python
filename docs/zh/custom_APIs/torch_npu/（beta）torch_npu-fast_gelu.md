@@ -15,7 +15,7 @@
 
 ## 函数原型
 
-```
+```python
 torch_npu.fast_gelu(self) -> Tensor
 ```
 
@@ -31,9 +31,9 @@ torch_npu.fast_gelu(self) -> Tensor
 >>> import torch
 >>> import torch_npu
 >>> x = torch.rand(2).npu()
->>> x
+>>> print(x)
 tensor([0.5991, 0.4094], device='npu:0')
->>> torch_npu.fast_gelu(x)
+>>> print(torch_npu.fast_gelu(x))
 tensor([0.4403, 0.2733], device='npu:0')
 ```
 
@@ -49,4 +49,3 @@ tensor([0.4403, 0.2733], device='npu:0')
 ...     torch_npu.fast_gelu(x)
 >>> FakeTensor(..., device='npu:0', size=(2,))
 ```
-
