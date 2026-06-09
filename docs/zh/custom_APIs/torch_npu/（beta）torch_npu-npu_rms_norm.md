@@ -1,4 +1,4 @@
-# (beta)torch_npu.npu_rms_norm
+# （beta）torch_npu.npu_rms_norm
 
 ## 产品支持情况
 

@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-先将`updates`进行量化，然后将`updates`中的值按指定的轴`axis`和索引`indices`更新`input`中的值，并将结果保存到输出tensor，`input`本身的数据不变。
+先将`updates`进行量化，然后将`updates`中的值按指定的轴`axis`和索引`indices`更新`input`中的值，并将结果保存到输出Tensor，`input`本身的数据不变。
 
 ## 函数原型
 

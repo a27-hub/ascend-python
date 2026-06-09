@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-ProcessGroupHCCL继承自`c10d::Backend`，实现`HCCL`后端的相关接口，用于通信算子调用。
+ProcessGroupHCCL继承自`c10d::Backend`，实现HCCL后端的相关接口，用于通信算子调用。
 
 ## 定义文件
 

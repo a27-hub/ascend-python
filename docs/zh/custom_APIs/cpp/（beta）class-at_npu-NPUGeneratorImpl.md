@@ -1,4 +1,4 @@
-# (beta)class at_npu::NPUGeneratorImpl
+# （beta）class at_npu::NPUGeneratorImpl
 
 ## 定义文件
 

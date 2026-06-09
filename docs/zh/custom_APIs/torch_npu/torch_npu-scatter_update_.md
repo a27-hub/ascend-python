@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-将tensor updates中的值按指定的轴axis和索引indices更新tensor data中的值，并将结果保存到输出tensor，data本身的数据被改变。
+将Tensor updates中的值按指定的轴axis和索引indices更新Tensor data中的值，并将结果保存到输出Tensor，data本身的数据被改变。
 
 ## 函数原型
 
