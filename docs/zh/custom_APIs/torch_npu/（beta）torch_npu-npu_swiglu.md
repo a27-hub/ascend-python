@@ -1,4 +1,4 @@
-# (beta)torch\_npu.npu\_swiglu
+# （beta）torch\_npu.npu\_swiglu
 
 ## 产品支持情况
 

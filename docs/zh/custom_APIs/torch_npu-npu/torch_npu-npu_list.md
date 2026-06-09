@@ -14,12 +14,12 @@
 </thead>
 <tbody><tr id="row96642716156"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p8664172152"><a name="p8664172152"></a><a name="p8664172152"></a><a href="（beta）torch_npu-npu-get_npu_overflow_flag.md">（beta）torch_npu.npu.get_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测npu计算过程中是否有数值溢出。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测NPU计算过程中是否有数值溢出。</p>
 </td>
 </tr>
 <tr id="row1066418791520"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p166411751513"><a name="p166411751513"></a><a name="p166411751513"></a><a href="（beta）torch_npu-npu-clear_npu_overflow_flag.md">（beta）torch_npu.npu.clear_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对npu芯片溢出检测进行清零。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对NPU芯片溢出检测进行清零。</p>
 </td>
 </tr>
 <tr id="row2074316127585"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7858135417578"><a name="p7858135417578"></a><a name="p7858135417578"></a><a href="torch_npu-npu-enable_deterministic_with_backward.md">torch_npu.npu.enable_deterministic_with_backward</a></p>
@@ -54,7 +54,7 @@
 </tr>
 <tr id="row14664573152"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1366415716151"><a name="p1366415716151"></a><a name="p1366415716151"></a><a href="（beta）torch_npu-npu-config-allow_internal_format.md">（beta）torch_npu.npu.config.allow_internal_format</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的Tensor，避免了适配层出现私有格式流通。</p>
 </td>
 </tr>
 <tr id="row103074675219"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p73114695216"><a name="p73114695216"></a><a name="p73114695216"></a><a href="（beta）torch_npu-npu-stress_detect.md">（beta）torch_npu.npu.stress_detect</a></p>
@@ -214,7 +214,7 @@
 </tr>
 <tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_impl_enabled.md">torch_npu.npu.are_compatible_impl_enabled</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况。</p>
+<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询torch_npu.npu.use_compatible_impl的配置情况。</p>
 </td>
 </tr>
 
@@ -232,7 +232,7 @@
 </thead>
 <tbody><tr id="row1146411483186"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p946414851817"><a name="p946414851817"></a><a name="p946414851817"></a><a href="（beta）torch_npu-npu-get_amp_supported_dtype.md">（beta）torch_npu.npu.get_amp_supported_dtype</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p1831912712373"><a name="p1831912712373"></a><a name="p1831912712373"></a>获取npu设备支持的数据类型，可能设备支持不止一种数据类型。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p1831912712373"><a name="p1831912712373"></a><a name="p1831912712373"></a>获取NPU设备支持的数据类型，可能设备支持不止一种数据类型。</p>
 </td>
 </tr>
 <tr id="row1746504816188"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p10465648191813"><a name="p10465648191813"></a><a name="p10465648191813"></a><a href="（beta）torch_npu-npu-is_autocast_enabled.md">（beta）torch_npu.npu.is_autocast_enabled</a></p>

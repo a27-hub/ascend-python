@@ -1,4 +1,4 @@
-# (beta)torch_npu.npu.stop_device
+# （beta）torch_npu.npu.stop_device
 
 > [!NOTICE]  
 > 本接口为预留接口，暂不支持。
