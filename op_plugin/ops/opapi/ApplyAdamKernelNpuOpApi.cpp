@@ -51,23 +51,17 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_apply_adam_out(
     DO_COMPATIBILITY(aclnnApplyAdam, acl_op::npu_apply_adam_out(beta1_power, beta2_power, lr,
         beta1, beta2, epsilon, grad, use_locking, use_nesterov, var, m, v));
 
-    if (c10_npu::IsAclnnOnly()) {
-        at::Tensor beta1_power_tensor = npu_preparation::copy_scalar_to_device(beta1_power, at::kFloat, grad.device());
-        at::Tensor beta2_power_tensor = npu_preparation::copy_scalar_to_device(beta2_power, at::kFloat, grad.device());
-        at::Tensor lr_tensor = npu_preparation::copy_scalar_to_device(lr, at::kFloat, grad.device());
-        at::Tensor beta1_tensor = npu_preparation::copy_scalar_to_device(beta1, at::kFloat, grad.device());
-        at::Tensor beta2_tensor = npu_preparation::copy_scalar_to_device(beta2, at::kFloat, grad.device());
-        at::Tensor epsilon_tensor = npu_preparation::copy_scalar_to_device(epsilon, at::kFloat, grad.device());
+    at::Tensor beta1_power_tensor = npu_preparation::copy_scalar_to_device(beta1_power, at::kFloat, grad.device());
+    at::Tensor beta2_power_tensor = npu_preparation::copy_scalar_to_device(beta2_power, at::kFloat, grad.device());
+    at::Tensor lr_tensor = npu_preparation::copy_scalar_to_device(lr, at::kFloat, grad.device());
+    at::Tensor beta1_tensor = npu_preparation::copy_scalar_to_device(beta1, at::kFloat, grad.device());
+    at::Tensor beta2_tensor = npu_preparation::copy_scalar_to_device(beta2, at::kFloat, grad.device());
+    at::Tensor epsilon_tensor = npu_preparation::copy_scalar_to_device(epsilon, at::kFloat, grad.device());
 
-        bool use_locking_value = use_locking.value_or(false);
-        bool use_nesterov_value = use_nesterov.value_or(false);
-        EXEC_NPU_CMD(aclnnApplyAdam, var, m, v, beta1_power_tensor, beta2_power_tensor, lr_tensor,
-            beta1_tensor, beta2_tensor, epsilon_tensor, grad, use_locking_value, use_nesterov_value);
-        return std::tie(var, m, v);
-    } else {
-        TORCH_NPU_WARN("current soc not support aclnn");
-        return acl_op::npu_apply_adam_out(beta1_power, beta2_power, lr,
-            beta1, beta2, epsilon, grad, use_locking, use_nesterov, var, m, v);
-    }
+    bool use_locking_value = use_locking.value_or(false);
+    bool use_nesterov_value = use_nesterov.value_or(false);
+    EXEC_NPU_CMD(aclnnApplyAdam, var, m, v, beta1_power_tensor, beta2_power_tensor, lr_tensor,
+        beta1_tensor, beta2_tensor, epsilon_tensor, grad, use_locking_value, use_nesterov_value);
+    return std::tie(var, m, v);
 }
 }
