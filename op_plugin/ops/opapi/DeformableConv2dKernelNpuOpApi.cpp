@@ -78,13 +78,8 @@ std::tuple<at::Tensor, at::Tensor> npu_deformable_conv2d(const at::Tensor &input
                      acl_op::npu_deformable_conv2d(input, weight, offset, bias, kernel_size, stride, padding, dilation,
                                                    groups, deformable_groups, modulated));
 
-    if (c10_npu::IsAclnnOnly()) {
-        return npu_deformable_conv2d_out(input, weight, offset, bias, kernel_size, stride, padding, dilation,
-                                         groups, deformable_groups, modulated);
-    }
-
-    return acl_op::npu_deformable_conv2d(input, weight, offset, bias, kernel_size, stride, padding, dilation,
-                                         groups, deformable_groups, modulated);
+    return npu_deformable_conv2d_out(input, weight, offset, bias, kernel_size, stride, padding, dilation,
+                                     groups, deformable_groups, modulated);
 }
 
 } // namespace op_api

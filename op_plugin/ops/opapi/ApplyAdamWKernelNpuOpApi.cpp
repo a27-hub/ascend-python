@@ -62,25 +62,19 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> npu_apply_adam_w_out(
             + OPS_ERROR(ErrCode::PARAM));
     }
 
-    if (c10_npu::IsAclnnOnly()) {
-        at::Tensor beta1_power_tensor = npu_preparation::copy_scalar_to_device(beta1_power, grad.scalar_type(), grad.device());
-        at::Tensor beta2_power_tensor = npu_preparation::copy_scalar_to_device(beta2_power, grad.scalar_type(), grad.device());
-        at::Tensor lr_tensor = npu_preparation::copy_scalar_to_device(lr, grad.scalar_type(), grad.device());
-        at::Tensor weight_decay_tensor = npu_preparation::copy_scalar_to_device(weight_decay, grad.scalar_type(), grad.device());
-        at::Tensor beta1_tensor = npu_preparation::copy_scalar_to_device(beta1, grad.scalar_type(), grad.device());
-        at::Tensor beta2_tensor = npu_preparation::copy_scalar_to_device(beta2, grad.scalar_type(), grad.device());
-        at::Tensor epsilon_tensor = npu_preparation::copy_scalar_to_device(epsilon, grad.scalar_type(), grad.device());
+    at::Tensor beta1_power_tensor = npu_preparation::copy_scalar_to_device(beta1_power, grad.scalar_type(), grad.device());
+    at::Tensor beta2_power_tensor = npu_preparation::copy_scalar_to_device(beta2_power, grad.scalar_type(), grad.device());
+    at::Tensor lr_tensor = npu_preparation::copy_scalar_to_device(lr, grad.scalar_type(), grad.device());
+    at::Tensor weight_decay_tensor = npu_preparation::copy_scalar_to_device(weight_decay, grad.scalar_type(), grad.device());
+    at::Tensor beta1_tensor = npu_preparation::copy_scalar_to_device(beta1, grad.scalar_type(), grad.device());
+    at::Tensor beta2_tensor = npu_preparation::copy_scalar_to_device(beta2, grad.scalar_type(), grad.device());
+    at::Tensor epsilon_tensor = npu_preparation::copy_scalar_to_device(epsilon, grad.scalar_type(), grad.device());
 
-        bool amsgrad_value = amsgrad.value_or(false);
-        bool maximize_value = maximize.value_or(false);
-        EXEC_NPU_CMD(aclnnApplyAdamW, var, m, v, beta1_power_tensor, beta2_power_tensor, lr_tensor,
-            weight_decay_tensor, beta1_tensor, beta2_tensor, epsilon_tensor, grad,
-            max_grad_norm, amsgrad_value, maximize_value);
-        return std::tie(var, m, v);
-    } else {
-        TORCH_NPU_WARN("current soc not support aclnn");
-        return acl_op::npu_apply_adam_w_out(beta1_power, beta2_power, lr,
-            weight_decay, beta1, beta2, epsilon, grad, max_grad_norm, amsgrad, maximize, var, m, v);
-    }
+    bool amsgrad_value = amsgrad.value_or(false);
+    bool maximize_value = maximize.value_or(false);
+    EXEC_NPU_CMD(aclnnApplyAdamW, var, m, v, beta1_power_tensor, beta2_power_tensor, lr_tensor,
+        weight_decay_tensor, beta1_tensor, beta2_tensor, epsilon_tensor, grad,
+        max_grad_norm, amsgrad_value, maximize_value);
+    return std::tie(var, m, v);
 }
 }
