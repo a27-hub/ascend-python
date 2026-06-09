@@ -56,7 +56,7 @@
 </tr>
 <tr id="row124831534202119"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p15593155612361"><a name="p15593155612361"></a><a name="p15593155612361"></a><a href="（beta）at_npu-detail-createNPUGenerator.md">（beta）at_npu::detail::createNPUGenerator</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p1059375683612"><a name="p1059375683612"></a><a name="p1059375683612"></a>用于创建NPU设备默认生成器，返回值类型Generator，与at::Generator at::cuda::detail::createCUDAGenerator(c10::DeviceIndex  _device_index_  = -1)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p1059375683612"><a name="p1059375683612"></a><a name="p1059375683612"></a>用于创建NPU设备默认生成器，返回值类型Generator，与at::Generator at::cuda::detail::createCUDAGenerator(c10::DeviceIndex <em>device_index</em> = -1)相同。</p>
 </td>
 </tr>
 <tr id="row1582212372214"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p1145460103719"><a name="p1145460103719"></a><a name="p1145460103719"></a><a href="（beta）class-c10_npu-NPUStream.md">（beta）class c10_npu::NPUStream</a></p>
@@ -76,7 +76,7 @@
 </tr>
 <tr id="row6822103772114"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p2455402378"><a name="p2455402378"></a><a name="p2455402378"></a><a href="（beta）c10_npu-getCurrentNPUStream.md">（beta）c10_npu::getCurrentNPUStream</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p104551505370"><a name="p104551505370"></a><a name="p104551505370"></a>通过设备ID获取当前NPU流，返回值类型NPUStream，与c10::CUDA::CUDAStream c10::cuda::getCurrentCUDAStream(c10::DeviceIndex _device_index_ = -1)相同。</p>
+<td class="cellrowborder" valign="top" width="63.870000000000005%" headers="mcps1.2.3.1.2 "><p id="p104551505370"><a name="p104551505370"></a><a name="p104551505370"></a>通过设备ID获取当前NPU流，返回值类型NPUStream，与c10::CUDA::CUDAStream c10::cuda::getCurrentCUDAStream(c10::DeviceIndex <em>device_index</em> = -1)相同。</p>
 </td>
 </tr>
 <tr id="row1324644442114"><td class="cellrowborder" valign="top" width="36.13%" headers="mcps1.2.3.1.1 "><p id="p10455150143713"><a name="p10455150143713"></a><a name="p10455150143713"></a><a href="（beta）c10_npu-setCurrentNPUStream.md">（beta）c10_npu::setCurrentNPUStream</a></p>
