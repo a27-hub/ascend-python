@@ -468,7 +468,7 @@ class TestNpuMoeInitRoutingV2(TestCase):
         elif quant_mode == 9:
             expanded_scale, expanded_x = simplified_mx_quantize(
                 expanded_x, mx_ele_dtype=quant_mode_dtype_str_map[quant_mode])
-        
+
         elif quant_mode == 11 or quant_mode == 12:
             quant_mode_dtype_str_map = {11: "float8_e5m2", 12: "float8_e4m3fn"}
             from ml_dtypes import float8_e5m2, float8_e4m3fn
@@ -505,11 +505,11 @@ class TestNpuMoeInitRoutingV2(TestCase):
             def pad_to_even_zero(tensor, axis):
                 if tensor.shape[axis] % 2 == 0:
                     return tensor
-                    
+
                 pad_width = [(0, 0)] * tensor.ndim
                 pad_width[axis] = (0, 1)
                 return np.pad(tensor, pad_width, mode='constant', constant_values=0)
-            
+
             def get_dtype_range(dt):
                 if "float8_e5m2" in str(dt):
                     return -float.fromhex("0x1.Cp15"), float.fromhex("0x1.Cp15")
