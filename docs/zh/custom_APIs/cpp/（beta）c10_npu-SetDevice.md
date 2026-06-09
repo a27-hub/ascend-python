@@ -1,4 +1,4 @@
-# (beta)c10_npu::SetDevice
+# （beta）c10_npu::SetDevice
 
 ## 定义文件
 

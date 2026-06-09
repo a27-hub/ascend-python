@@ -20,7 +20,7 @@ device_index：DeviceIndex类型，指定获取生成器的NPU设备id。
 
 ## 支持的型号
 
-- Atlas 训练系列产品
-- Atlas A2 训练系列产品
-- Atlas A3 训练系列产品
-- Atlas 推理系列产品
+- <term>Atlas 训练系列产品</term>
+- <term>Atlas A2 训练系列产品</term>
+- <term>Atlas A3 训练系列产品</term>
+- <term>Atlas 推理系列产品</term>

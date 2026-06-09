@@ -1,4 +1,4 @@
-# (beta)at_npu::native::npu_dropout_gen_mask
+# （beta）at_npu::native::npu_dropout_gen_mask
 
 ## 定义文件
 

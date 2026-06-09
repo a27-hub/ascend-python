@@ -73,7 +73,7 @@ torch_npu.npu_gmm_alltoallv(gmm_x, gmm_weight, hcom, ep_world_size, send_counts,
     - BSK：本卡接收的token数（BS\*K=BSK），是recv\_counts参数累加之和，取值范围\(0, 52428800\)。
 
     - H1：表示路由专家hidden size隐藏层大小，取值范围\(0, 65536\)。
-    - H2：表示共享专家hidden size隐藏层大小，取值范围\(0, 12288\)。
+    - H2：表示共享专家hidden size隐藏层大小，取值范围\(0, 12288\]。
     - e：表示单卡上专家个数，e<=32，e \* ep\_world\_size最大支持256。
     - N1：表示路由专家的head\_num，取值范围\(0, 65536\)。
     - N2：表示共享专家的head\_num，取值范围\(0, 65536\)。

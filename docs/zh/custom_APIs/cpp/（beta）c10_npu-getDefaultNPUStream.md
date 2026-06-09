@@ -1,4 +1,4 @@
-# (beta)c10_npu::getDefaultNPUStream
+# （beta）c10_npu::getDefaultNPUStream
 
 ## 定义文件
 

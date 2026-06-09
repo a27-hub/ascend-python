@@ -1,4 +1,4 @@
-# (beta)at_npu::detail::createNPUGenerator
+# （beta）at_npu::detail::createNPUGenerator
 
 ## 定义文件
 
