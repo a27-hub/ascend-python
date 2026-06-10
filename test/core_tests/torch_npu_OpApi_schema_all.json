@@ -1234,6 +1234,9 @@
   "func: npu_rms_norm_backward(Tensor dy, Tensor self, Tensor gamma, Tensor rstd) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: _npu_rms_norm_backward_quant(Tensor dy, Tensor x, Tensor rstd, Tensor gamma, Tensor scale_x, *, Tensor? offset_x=None, bool? div_mode=True, str quant_mode=\"static\", int? dst_type=1) -> (Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_rms_norm_dynamic_mx_quant(Tensor x, Tensor gamma, *, Tensor? beta=None, float epsilon=1e-06, int scale_alg=0, str round_mode=\"rint\", int dst_type=296) -> (Tensor, Tensor, Tensor)": {
  	  "version": ["all_version"]
  	},
@@ -2158,8 +2161,14 @@
   "func: baddbmm(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor": {
     "version": ["all_version"]
   },
+  "func: baddbmm.dtype(Tensor self, Tensor batch1, Tensor batch2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1) -> Tensor": {
+    "version": ["v2.9", "newest"]
+  },
   "func: baddbmm.out(Tensor self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)": {
     "version": ["all_version"]
+  },
+  "func: baddbmm.dtype_out(Tensor self, Tensor batch1, Tensor batch2, ScalarType output_dtype, *, Scalar beta=1, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)": {
+    "version": ["v2.9", "newest"]
   },
   "func: baddbmm_(Tensor(a!) self, Tensor batch1, Tensor batch2, *, Scalar beta=1, Scalar alpha=1) -> Tensor(a!)": {
     "version": ["all_version"]
