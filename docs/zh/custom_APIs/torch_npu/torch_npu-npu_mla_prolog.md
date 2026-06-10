@@ -12,7 +12,7 @@
 
 ## 功能说明
 
-- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算。
+- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算操作。
 
   主要计算过程分为四路：
 
