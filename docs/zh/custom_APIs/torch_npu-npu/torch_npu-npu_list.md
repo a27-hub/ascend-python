@@ -5,7 +5,6 @@
 **表1** torch_npu.npu API
 
 <a name="table0664117101518"></a>
-
 <table><thead align="left"><tr id="row466412731514"><th class="cellrowborder" valign="top" width="37.4%" id="mcps1.2.3.1.1"><p id="p11664187201510"><a name="p11664187201510"></a><a name="p11664187201510"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="62.6%" id="mcps1.2.3.1.2"><p id="p10664197111510"><a name="p10664197111510"></a><a name="p10664197111510"></a>说明</p>
