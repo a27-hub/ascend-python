@@ -102,17 +102,13 @@ std::tuple<at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_with_kscale(
     at::Tensor q_out = npu_preparation::apply_tensor_without_format(q_out_shape, qkv.options().dtype(at::kFloat8_e4m3fn));
     at::Tensor q_scale = npu_preparation::apply_tensor_without_format(q_scale_shape, qkv.options().dtype(at::kFloat));
 
-    TensorWrapper q_out_wrapper = {q_out, aclDataType::ACL_FLOAT8_E4M3FN};
-    TensorWrapper k_cache_wrapper = {k_cache, aclDataType::ACL_FLOAT8_E4M3FN};
-    TensorWrapper v_cache_wrapper = {v_cache, aclDataType::ACL_FLOAT8_E4M3FN};
-
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnQkvRmsNormRopeCacheWithKScale,
         qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
-        k_cache_wrapper, v_cache_wrapper, k_scale_cache, cu_seq_len,
+        k_cache, v_cache, k_scale_cache, cu_seq_len,
         q_rotation_v, k_rotation_v, v_scale_v,
         head_nums, epsilon,
-        q_out_wrapper, q_scale);
+        q_out, q_scale);
 
     return std::make_tuple(q_out, q_scale);
 }
@@ -153,17 +149,13 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_r
     at::Tensor q_out = npu_preparation::apply_tensor_without_format(q_out_shape, qkv.options().dtype(at::kFloat8_e4m3fn));
     at::Tensor q_scale = npu_preparation::apply_tensor_without_format(q_scale_shape, qkv.options().dtype(at::kFloat));
 
-    TensorWrapper q_out_wrapper = {q_out, aclDataType::ACL_FLOAT8_E4M3FN};
-    TensorWrapper k_cache_wrapper = {k_cache_clone, aclDataType::ACL_FLOAT8_E4M3FN};
-    TensorWrapper v_cache_wrapper = {v_cache_clone, aclDataType::ACL_FLOAT8_E4M3FN};
-
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnQkvRmsNormRopeCacheWithKScale,
         qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
-        k_cache_wrapper, v_cache_wrapper, k_scale_cache_clone, cu_seq_len,
+        k_cache_clone, v_cache_clone, k_scale_cache_clone, cu_seq_len,
         q_rotation_v, k_rotation_v, v_scale_v,
         head_nums, epsilon,
-        q_out_wrapper, q_scale);
+        q_out, q_scale);
 
     return std::make_tuple(q_out, q_scale, k_cache_clone, v_cache_clone, k_scale_cache_clone);
 }
