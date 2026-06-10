@@ -6582,6 +6582,10 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
+  - func: npu_grouped_matmul_activation_quant(Tensor x, Tensor group_list, Tensor x_scale, Tensor[] weight, Tensor[] weight_scale, *, str activation_type, Tensor[]? bias=None, int? dequant_dtype=0, bool transpose_weight=False, int? group_list_type=0, int[]? tuning_config=None, int? quant_dtype=36, str round_mode="rint", int? scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor)
+    op_api: all_version
+    internal_format_opapi: all_version
+
   - func: npu_ffn_worker_batching(Tensor schedule_context, int expert_num, int[4] max_out_shape, *, int token_dtype=0, int need_schedule=0, int layer_num=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
