@@ -14,7 +14,7 @@
 </thead>
 <tbody><tr id="row1149711715114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p13497217191119"><a name="p13497217191119"></a><a name="p13497217191119"></a><a href="（beta）torch_npu-_npu_dropout.md">（beta）torch_npu._npu_dropout</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout结果计数。与torch.dropout相似，优化NPU设备实现。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p349751701118"><a name="p349751701118"></a><a name="p349751701118"></a>不使用种子（seed）进行dropout操作。</p>
 </td>
 </tr>
 <tr id="row13497417121111"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p11170526121211"><a name="p11170526121211"></a><a name="p11170526121211"></a><a href="（beta）torch_npu-copy_memory_.md">（beta）torch_npu.copy_memory_</a></p>
@@ -284,7 +284,7 @@
 </tr>
 <tr id="row7842204261115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p13842442161112"><a name="p13842442161112"></a><a name="p13842442161112"></a><a href="（beta）torch_npu-npu_softmax_cross_entropy_with_logits.md">（beta）torch_npu.npu_softmax_cross_entropy_with_logits</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1842144291119"><a name="p1842144291119"></a><a name="p1842144291119"></a>计算softmax的交叉熵cost。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1842144291119"><a name="p1842144291119"></a><a name="p1842144291119"></a>API功能：计算softmax的交叉熵损失。</p>
 </td>
 </tr>
 <tr id="row1084224211115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p188421442111120"><a name="p188421442111120"></a><a name="p188421442111120"></a><a href="（beta）torch_npu-npu_sort_v2.md">（beta）torch_npu.npu_sort_v2</a></p>
@@ -349,7 +349,7 @@
 </tr>
 <tr id="row106843515114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p168510515113"><a name="p168510515113"></a><a name="p168510515113"></a><a href="torch_npu-npu_group_norm_swish.md">torch_npu.npu_group_norm_swish</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p19342196105315"><a name="p19342196105315"></a><a name="p19342196105315"></a>计算输入input的组归一化结果y，均值mean，标准差的倒数rstd，以及swish的输出。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p19342196105315"><a name="p19342196105315"></a><a name="p19342196105315"></a>API功能：计算输入input的组归一化结果y、均值mean、标准差的倒数rstd，以及swish的输出。</p>
 </td>
 </tr>
 <tr id="row10636159121815"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p763620598183"><a name="p763620598183"></a><a name="p763620598183"></a><a href="torch_npu-npu_cross_entropy_loss.md">torch_npu.npu_cross_entropy_loss</a></p>
@@ -384,7 +384,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu_attention_update.md">torch_npu.npu_attention_update</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>将各SP域PA算子的输出的中间结果lse，local_out两个局部变量结果更新成全局结果。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>将各SP域PA算子的输出的中间结果lse、local_out两个局部变量结果更新成全局结果。</p>
 </td>
 </tr>
 <tr id="row_block_sparse_attention"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p10326218132921"><a name="p10326218132921"></a><a name="p10326218132921"></a><a href="torch_npu-npu_block_sparse_attention.md">torch_npu.npu_block_sparse_attention</a></p>
@@ -494,17 +494,17 @@
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog.md">torch_npu.npu_mla_prolog</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算</span>。</p>
 </td>
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog_v2.md">torch_npu.npu_mla_prolog_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算的增强接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算</span>。</p>
 </td>
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog_v3.md">torch_npu.npu_mla_prolog_v3</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算的增强接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下Multi-Head Latent Attention前处理的计算操作</span>。</p>
 </td>
 </tr>
 <tr id="row125419366217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18998182119294"><a name="p18998182119294"></a><a name="p18998182119294"></a><a href="torch_npu-npu_mm_all_reduce_base.md">torch_npu.npu_mm_all_reduce_base</a></p>
@@ -549,7 +549,7 @@
 </tr>
 <tr id="row1545717422219"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p58181296368"><a name="p58181296368"></a><a name="p58181296368"></a><a href="torch_npu-npu_quant_lightning_indexer.md">torch_npu.npu_quant_lightning_indexer</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1281815913362"><a name="p1281815913362"></a><a name="p1281815913362"></a>获取每一个token对应的Top-k个位置。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1281815913362"><a name="p1281815913362"></a><a name="p1281815913362"></a>API功能：QuantLightningIndexer是推理场景下SparseFlashAttention（SFA）的前处理计算模块，用于选出关键的稀疏token，并对输入query和key进行量化实现存8算8，获取最大收益。</p>
 </td>
 </tr>
 <tr id="row9719124019218"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p14326218132919"><a name="p14326218132919"></a><a name="p14326218132919"></a><a href="torch_npu-npu_quant_matmul.md">torch_npu.npu_quant_matmul</a></p>
@@ -569,7 +569,7 @@
 </tr>
 <tr id="row9368201625615"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p432973317361"><a name="p432973317361"></a><a name="p432973317361"></a><a href="torch_npu-npu_quant_scatter.md">torch_npu.npu_quant_scatter</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新self中的值，并将结果保存到输出Tensor，self本身的数据不变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新input中的值，并将结果保存到输出Tensor，input本身的数据不变。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p20338144125814"></a><a name="p20338144125814"></a><a href="torch_npu-npu_recurrent_gated_delta_rule.md">torch_npu.npu_recurrent_gated_delta_rule</a></p>
@@ -759,7 +759,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-set_device_limit.md">torch_npu.set_device_limit</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>设置指定device上算子在执行时所使用的cube和vector核数。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>设置一个进程上指定device执行算子时所使用的cube和vector核数。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-get_device_limit.md">torch_npu.get_device_limit</a></p>
@@ -829,7 +829,7 @@
 </tr>
 <tr id="save_npugraph_tensor"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_save_npugraph_tensor"><a name="p_save_npugraph_tensor"></a><a name="p_save_npugraph_tensor"></a><a href="torch_npu-save_npugraph_tensor.md">torch_npu.save_npugraph_tensor</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_save_npugraph_tensor_desc"><a name="p_save_npugraph_tensor_desc"></a><a name="p_save_npugraph_tensor_desc"></a><span>save_npugraph_tensor接口提供了类似原生PyTorch的`torch.save`接口特性且不影响aclgraph捕获、重放的Tensor dump能力，允许将aclgraph中间节点的Tensor数据、数据类型、shape信息保存到指定二进制文件中以便用户观察aclgraph的执行过程的Tensor数据，以快速定位问题。</span></p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_save_npugraph_tensor_desc"><a name="p_save_npugraph_tensor_desc"></a><a name="p_save_npugraph_tensor_desc"></a><span>当前接口提供了类似原生PyTorch的torch.save接口特性且不影响aclgraph捕获、重放的Tensor dump能力，允许将aclgraph中间节点的Tensor数据、数据类型、shape信息保存到指定二进制文件中以便用户观察aclgraph的执行过程的tensor数据，以快速定位问题。</span></p>
 </td>
 </tr>
 <tr id="print_npugraph_tensor"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_print_npugraph_tensor"><a name="p_print_npugraph_tensor"></a><a name="p_print_npugraph_tensor"></a><a href="torch_npu-print_npugraph_tensor.md">torch_npu.print_npugraph_tensor</a></p>
@@ -843,7 +843,11 @@
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_apply_rotary_pos_emb_desc"><a name="p_npu_apply_rotary_pos_emb_desc"></a><a name="p_npu_apply_rotary_pos_emb_desc"></a><span>为提升推理网络性能，将query和key两路算子融合为单路，在旋转位置编码计算中直接对结果执行原地更新。</span></p>
 </td>
 </tr>
+<<<<<<< HEAD
 <tr id="npu_add_quant_matmul_"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_npu_add_quant_matmul_"><a name="p_npu_add_quant_matmul_"></a><a name="p_npu_add_quant_matmul_"></a><a href="torch_npu-npu_add_quant_matmul_.md">torch_npu.npu_add_quant_matmul_</a></p>
+=======
+<tr id="row_ring_attention_update"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_ring_attention_update"><a name="p_ring_attention_update"></a><a name="p_ring_attention_update"></a><a href="torch_npu-npu_add_quant_matmul_.md">torch_npu.npu_add_quant_matmul_</a></p>
+>>>>>>> 61a85029... fifth modify document
 </td>
 <td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_npu_add_quant_matmul__desc"><a name="p_npu_add_quant_matmul__desc"></a><a name="p_npu_add_quant_matmul__desc"></a><span>训练场景下micro-batch的梯度累计会存在大量QuantBatchMatmul操作接InplaceAdd操作，本接口将操作融合起来，以提高网络性能。</span></p>
 </td>
