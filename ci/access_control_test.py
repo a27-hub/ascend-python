@@ -262,6 +262,7 @@ def exec_ut(files):
     print("***** Total result:")
     for exec_info in exec_infos:
         print(exec_info)
+    print("op-plugin test finish", flush=True)
     return ret_status
 
 
