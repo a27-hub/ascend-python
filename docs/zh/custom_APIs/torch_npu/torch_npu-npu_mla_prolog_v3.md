@@ -189,7 +189,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     | Nkv          | kv 的 head 数                  | 取值固定为：1                                                               |
     | BlockNum     | PagedAttention 场景下per-tile量的块数    | 取值为计算 `B*Skv/BlockSize` 的结果后向上取整（Skv 表示 kv 的序列长度，允许取 0） |
     | BlockSize    | PagedAttention 场景下的块大小  | 取值范围：16-1024，且为16的倍数                                                           |
-    | T            | BS 合轴后的大小                | 取值范围：不限制；<br>注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos、query_norm 均为 2 维，<br>query_out、query_rope_out 为 3维，<br>cache_index 为 1 维 |                                                    |
+    | T            | BS 合轴后的大小                | 取值范围：不限制；注：若采用 BS 合轴，此时 token_x、rope_sin、rope_cos、query_norm 均为 2 维，query_out、query_rope_out 为 3维，cache_index 为 1 维 |
 
 - 支持场景：
   <table style="table-layout: auto;" border="1">
