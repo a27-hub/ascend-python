@@ -345,7 +345,6 @@
         -   [torch_npu.profiler.profile.disable_profiler_in_child_thread](./torch_npu-profiler/torch_npu-profiler-profile-disable_profiler_in_child_thread.md)
         -   [set_custom_trace_id_callback](./torch_npu-profiler/set_custom_trace_id_callback.md)
         -   [get_trace_id](./torch_npu-profiler/get_trace_id.md)
-    
     -   [torch_npu.utils](./torch_npu-utils/torch_npu-utils.md)
         -   [torch_npu.utils接口列表](./torch_npu-utils/torch_npu-utils_list.md)
     -   [（beta）torch_npu.utils.save_async](./torch_npu-utils/（beta）torch_npu-utils-save_async.md)
