@@ -33,7 +33,7 @@
 </tr>
 <tr id="row17497217181119"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p16497617191116"><a name="p16497617191116"></a><a name="p16497617191116"></a><a href="（beta）torch_npu-npu_alloc_float_status.md">（beta）torch_npu.npu_alloc_float_status</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p6497141711115"><a name="p6497141711115"></a><a name="p6497141711115"></a>为溢出检测模式申请tensor作为入参。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p6497141711115"><a name="p6497141711115"></a><a name="p6497141711115"></a>申请一个专门用于存储浮点运算状态标志的tensor。该tensor用于后续记录计算过程中的溢出状态。</p>
 </td>
 </tr>
 <tr id="row104977172114"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p1849701710119"><a name="p1849701710119"></a><a name="p1849701710119"></a><a href="（beta）torch_npu-npu_anchor_response_flags.md">（beta）torch_npu.npu_anchor_response_flags</a></p>
@@ -283,7 +283,7 @@
 </tr>
 <tr id="row7842204261115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p13842442161112"><a name="p13842442161112"></a><a name="p13842442161112"></a><a href="（beta）torch_npu-npu_softmax_cross_entropy_with_logits.md">（beta）torch_npu.npu_softmax_cross_entropy_with_logits</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1842144291119"><a name="p1842144291119"></a><a name="p1842144291119"></a>API功能：计算softmax的交叉熵损失。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p1842144291119"><a name="p1842144291119"></a><a name="p1842144291119"></a>计算softmax的交叉熵损失。</p>
 </td>
 </tr>
 <tr id="row1084224211115"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p188421442111120"><a name="p188421442111120"></a><a name="p188421442111120"></a><a href="（beta）torch_npu-npu_sort_v2.md">（beta）torch_npu.npu_sort_v2</a></p>
@@ -488,17 +488,17 @@
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog.md">torch_npu.npu_mla_prolog</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算</span>。</p>
 </td>
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog_v2.md">torch_npu.npu_mla_prolog_v2</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算的增强接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算</span>。</p>
 </td>
 </tr>
 <tr id="row1457134215217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p258365124912"><a name="p258365124912"></a><a name="p258365124912"></a><a href="torch_npu-npu_mla_prolog_v3.md">torch_npu.npu_mla_prolog_v3</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention前处理计算的增强接口</span>。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p55830512496"><a name="p55830512496"></a><a name="p55830512496"></a><span>推理场景下，Multi-Head Latent Attention（MLA）前处理的计算</span>。</p>
 </td>
 </tr>
 <tr id="row125419366217"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p18998182119294"><a name="p18998182119294"></a><a name="p18998182119294"></a><a href="torch_npu-npu_mm_all_reduce_base.md">torch_npu.npu_mm_all_reduce_base</a></p>
@@ -563,7 +563,7 @@
 </tr>
 <tr id="row9368201625615"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p432973317361"><a name="p432973317361"></a><a name="p432973317361"></a><a href="torch_npu-npu_quant_scatter.md">torch_npu.npu_quant_scatter</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新self中的值，并将结果保存到输出tensor，self本身的数据不变。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p133291433113614"><a name="p133291433113614"></a><a name="p133291433113614"></a>先将updates进行量化，然后将updates中的值按指定的轴axis和索引indices更新input中的值，并将结果保存到输出tensor，input本身的数据不变。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a name="p20338144125814"></a><a name="p20338144125814"></a><a href="torch_npu-npu_recurrent_gated_delta_rule.md">torch_npu.npu_recurrent_gated_delta_rule</a></p>

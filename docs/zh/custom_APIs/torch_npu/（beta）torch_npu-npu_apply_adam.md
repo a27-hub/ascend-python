@@ -1,4 +1,4 @@
-# (beta)torch_npu.npu_apply_adam
+# （beta）torch_npu.npu_apply_adam
 >
 > [!NOTICE]  
 > 该接口计划废弃，可以使用`torch.optim.Adam`接口进行替换。

@@ -52,7 +52,7 @@ torch_npu.npu.NPUPluggableAllocator(path_to_so_file, alloc_fn_name, free_fn_name
 >>> npu_tensor = torch.zeros(10, device='npu')
 ```
 
-风险提示：自定义的so建议严格参照安全代码示例，内存申请，释放函数必须正确实现。错误的so文件可能出现内存申请失败、内存泄漏等问题。
+风险提示：自定义的so建议严格参照安全代码示例，内存申请、释放函数必须正确实现。错误的so文件可能出现内存申请失败、内存泄漏等问题。
 
 建议处理方式：用户可在内存申请、释放等内存相关操作函数中，增加日志记录内存行为，方便后续定位问题。
 

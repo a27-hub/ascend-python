@@ -13,12 +13,12 @@
 </thead>
 <tbody><tr id="row96642716156"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p8664172152"><a name="p8664172152"></a><a name="p8664172152"></a><a href="（beta）torch_npu-npu-get_npu_overflow_flag.md">（beta）torch_npu.npu.get_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测npu计算过程中是否有数值溢出。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测NPU计算过程中是否有数值溢出。</p>
 </td>
 </tr>
 <tr id="row1066418791520"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p166411751513"><a name="p166411751513"></a><a name="p166411751513"></a><a href="（beta）torch_npu-npu-clear_npu_overflow_flag.md">（beta）torch_npu.npu.clear_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对npu芯片溢出检测进行清零。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对NPU芯片溢出检测进行清零。</p>
 </td>
 </tr>
 <tr id="row2074316127585"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7858135417578"><a name="p7858135417578"></a><a name="p7858135417578"></a><a href="torch_npu-npu-enable_deterministic_with_backward.md">torch_npu.npu.enable_deterministic_with_backward</a></p>
@@ -246,7 +246,7 @@
 </tr>
 <tr id="row174651448111817"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p946574881819"><a name="p946574881819"></a><a name="p946574881819"></a><a href="（beta）torch_npu-npu-get_autocast_dtype.md">（beta）torch_npu.npu.get_autocast_dtype</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置，若未设置则默认为torch.float16。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置或者默认数据类型float16。</p>
 </td>
 </tr>
 <tr id="row1846564819185"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p146584811184"><a name="p146584811184"></a><a name="p146584811184"></a><a href="（beta）torch_npu-npu-set_autocast_dtype.md">（beta）torch_npu.npu.set_autocast_dtype</a></p>

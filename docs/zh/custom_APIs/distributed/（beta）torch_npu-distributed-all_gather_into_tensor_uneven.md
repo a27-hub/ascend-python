@@ -1,4 +1,4 @@
-# (beta)torch_npu.distributed.all_gather_into_tensor_uneven
+# （beta）torch_npu.distributed.all_gather_into_tensor_uneven
 
 ## 产品支持情况
 

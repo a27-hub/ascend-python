@@ -1,4 +1,4 @@
-# (beta)torch_npu.npu_random_choice_with_mask
+# （beta）torch_npu.npu_random_choice_with_mask
 
 > [!NOTICE]  
 > 该接口计划废弃，底层算子kernel实现不再维护，性能、精度等指标无法保障，不建议使用该接口。
