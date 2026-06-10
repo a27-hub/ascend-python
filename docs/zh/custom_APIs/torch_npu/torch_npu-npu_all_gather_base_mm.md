@@ -66,7 +66,7 @@ torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None, x1_scale=N
 
 ## 约束说明
 
-- `x1`不支持输入转置后的tensor，若`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
+- `x1`不支持输入转置后的tensor；若`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
 - `comm_mode`为`ai_cpu`时：
      - 该接口支持训练场景下使用。
      - 该接口支持图模式。  
