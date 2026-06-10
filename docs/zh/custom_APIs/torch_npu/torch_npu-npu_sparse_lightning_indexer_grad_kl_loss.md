@@ -103,7 +103,7 @@ npu_sparse_lightning_indexer_grad_kl_loss(query, key, query_index, key_index, we
 
 **pre_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和前几个token计算关联。数据类型支持`int64`，默认值为2^63-1。
 
-**next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值2^63-1。
+**next_tokens**(`int`)：可选参数，用于稀疏计算，表示Attention需要和后几个token计算关联。数据类型支持`int64`，默认值为2^63-1。
 
 ## 返回值说明
 
