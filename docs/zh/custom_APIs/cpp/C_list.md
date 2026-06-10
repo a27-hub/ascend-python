@@ -165,7 +165,7 @@
 </td>
 </tr><tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="at_npu-native-empty_with_swapped_memory.md">at_npu.native-empty_with_swapped_memory</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊Tensor。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>申请一个device信息为NPU且实际内存在host侧的特殊tensor。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10_npu-NPUStreamGuard.md">c10_npu::NPUStreamGuard</a></p>
@@ -215,7 +215,7 @@
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="c10d_npu-ProcessGroupHCCL-batch_isend_irecv.md">c10d_npu::ProcessGroupHCCL::batch_isend_irecv</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>发送或接收一批tensor，异步处理P2P操作序列中的每一个操作，并返回对应的请求。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>发送或接收一批Tensor，异步处理P2P操作序列中的每一个操作，并返回对应的请求。</p>
 </td>
 </tr>
 </tbody>
