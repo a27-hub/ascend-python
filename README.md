@@ -5,6 +5,8 @@
 本项目开发了Ascend Extension for Pytorch（torch_npu）算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
 OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch。因此，在编译OpPlugin之前，需要了解、安装昇腾PyTorch。使用手册可参考昇腾社区[Ascend Extension for Pytorch](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md)。
 
+apiKey:"3kulf1-asdafdsagfdsgfdhfd-xdfgdfgsrtw354tsgfasfd"
+
 ## 目录结构
 
 关键目录如下:
