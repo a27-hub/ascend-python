@@ -9,7 +9,7 @@ void not_implemented_backward(
     torch::jit::Stack* stack)
 {
     TORCH_WARN(op.operator_name().name,
-               ": backward is not supported.",
+               ":backward is not supported.",
                "This operator does not have a gradient registered.");
     
     size_t num_returns = op.schema().returns().size();
