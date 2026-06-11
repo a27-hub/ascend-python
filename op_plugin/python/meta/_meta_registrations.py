@@ -5722,7 +5722,7 @@ def npu_linear_meta(input_, weight, bias=None):
 
 @impl(m, "npu_moe_finalize_routing")
 def npu_moe_finalize_routing_meta(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row,
-                                  expert_for_source_row, drop_pad_mode=0, zero_expert_range=[-1, -1], copy_expert_range=[-1, -1], constant_expert_range=[-1, -1], k=1):
+                                  expert_for_source_row, drop_pad_mode=0, k=1):
     dimm = expanded_permuted_rows.size(0) // k
     if scales is not None:
         dimm = scales.size(0)
