@@ -52,8 +52,8 @@ ValidationParams validate_inputs(
 
     TORCH_CHECK(qkv.dim() == DIM_THREE,
         "npu_qkv_rms_norm_rope_cache_with_kscale: qkv must be 3D." + OPS_ERROR(ErrCode::PARAM));
-    TORCH_CHECK(qkv.size(DIM_ONE) == Nq + Nk + Nv,
-        "npu_qkv_rms_norm_rope_cache_with_kscale: qkv.shape[1] must equal Nq+Nk+Nv, but got ", qkv.size(DIM_ONE),
+    TORCH_CHECK(qkv.size(DIM_ZERO) == Nq + Nk + Nv,
+        "npu_qkv_rms_norm_rope_cache_with_kscale: qkv.shape[0] must equal Nq+Nk+Nv, but got ", qkv.size(DIM_ZERO),
         " vs expected ", Nq + Nk + Nv, OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(q_rotation.has_value() && q_rotation.value().defined(),
@@ -63,7 +63,7 @@ ValidationParams validate_inputs(
     TORCH_CHECK(v_scale.has_value() && v_scale.value().defined(),
         "npu_qkv_rms_norm_rope_cache_with_kscale: v_scale is required." + OPS_ERROR(ErrCode::PARAM));
 
-    int64_t T = qkv.size(DIM_ZERO);
+    int64_t T = qkv.size(DIM_ONE);
     int64_t D = qkv.size(DIM_TWO);
 
     return {Nq, Nk, Nv, T, D};
@@ -97,8 +97,8 @@ std::tuple<at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_with_kscale(
     const at::Tensor& k_rotation_v = k_rotation.value();
     const at::Tensor& v_scale_v = v_scale.value();
 
-    c10::SmallVector<int64_t, DIM_THREE> q_out_shape = {T, Nq, D};
-    c10::SmallVector<int64_t, DIM_TWO> q_scale_shape = {T, Nq};
+    c10::SmallVector<int64_t, DIM_THREE> q_out_shape = {Nq, T, D};
+    c10::SmallVector<int64_t, DIM_TWO> q_scale_shape = {Nq, T};
     at::Tensor q_out = npu_preparation::apply_tensor_without_format(q_out_shape, qkv.options().dtype(at::kFloat8_e4m3fn));
     at::Tensor q_scale = npu_preparation::apply_tensor_without_format(q_scale_shape, qkv.options().dtype(at::kFloat));
 
@@ -144,8 +144,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_r
     at::Tensor v_cache_clone = v_cache.clone();
     at::Tensor k_scale_cache_clone = k_scale_cache.clone();
 
-    c10::SmallVector<int64_t, DIM_THREE> q_out_shape = {T, Nq, D};
-    c10::SmallVector<int64_t, DIM_TWO> q_scale_shape = {T, Nq};
+    c10::SmallVector<int64_t, DIM_THREE> q_out_shape = {Nq, T, D};
+    c10::SmallVector<int64_t, DIM_TWO> q_scale_shape = {Nq, T};
     at::Tensor q_out = npu_preparation::apply_tensor_without_format(q_out_shape, qkv.options().dtype(at::kFloat8_e4m3fn));
     at::Tensor q_scale = npu_preparation::apply_tensor_without_format(q_scale_shape, qkv.options().dtype(at::kFloat));
 
