@@ -11,7 +11,6 @@ void not_implemented_backward(
     TORCH_WARN(op.operator_name().name,
                ":backward is not supported.",
                "This operator does not have a gradient registered.");
-    
     size_t num_returns = op.schema().returns().size();
     for (size_t i = 0; i < num_returns; ++i) {
         stack->push_back(c10::nullopt);
