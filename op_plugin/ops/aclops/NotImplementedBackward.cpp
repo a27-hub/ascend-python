@@ -1,20 +1,21 @@
-// Copyright (c) 2024 Huawei Technologies Co., Ltd
-// All rights reserved.
 #include <torch/library.h>
 #include <vector>
 #include <string>
-#include <iostream>
 
 namespace {
 
 void not_implemented_backward(
     const c10::OperatorHandle& op,
-    torch::jit::Stack* /* stack */)
+    torch::jit::Stack* stack)
 {
-    std::cerr << op.operator_name().name 
-              << ": backward is not supported. "
-              << "This operator does not have a gradient registered."
-              << std::endl;
+    TORCH_WARN(op.operator_name().name,
+               ": backward is not supported. ",
+               "This operator does not have a gradient registered.");
+    
+    size_t num_returns = op.schema().returns().size();
+    for (size_t i = 0; i < num_returns; ++i) {
+        stack->push_back(c10::nullopt);
+    }
 }
 
 } // namespace
