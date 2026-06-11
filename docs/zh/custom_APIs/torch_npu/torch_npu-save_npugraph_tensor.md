@@ -16,9 +16,9 @@ aclgraph模式下，由于原生PyTorch的`torch.save`函数包含同步处理�
 
 当前接口提供了类似原生PyTorch的`torch.save`接口特性且不影响aclgraph捕获、重放的tensor dump能力，允许将aclgraph中间节点的tensor数据、数据类型、shape信息保存到指定二进制文件中以便用户观察aclgraph的执行过程的tensor数据，以快速定位问题。
 
-支持单个Tensor保存和多个Tensor（tensorlist）保存。
+支持单个tensor保存和多个tensor（tensorlist）保存。
 
-保存的文件可以配合`torch.load()`接口读取二进制文件并重建Tensor。
+保存的文件可以配合`torch.load()`接口读取二进制文件并重建tensor。
 
 ## 函数原型
 
