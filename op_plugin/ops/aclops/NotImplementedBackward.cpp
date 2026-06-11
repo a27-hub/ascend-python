@@ -1,10 +1,9 @@
 // Copyright (c) 2024 Huawei Technologies Co., Ltd
 // All rights reserved.
-
 #include <torch/library.h>
-
+#include <vector>
+#include <string>
 namespace {
-
 void not_implemented_backward(
     const c10::OperatorHandle& op,
     torch::jit::Stack* /* stack */)
@@ -17,13 +16,12 @@ void not_implemented_backward(
         "If you need to use this operator in training, ",
         "please contact the Huawei Ascend development team.");
 }
-
 } // namespace
-
-// Register AutogradPrivateUse1 intercept kernel for npu_add_rms_norm.
-// When autograd tries to backprop through this op, this kernel throws
-// a clear error instead of silently falling through VariableFallbackKernel
-// and producing incorrect gradients.
 TORCH_LIBRARY_IMPL(npu, AutogradPrivateUse1, m) {
-    m.impl("npu_add_rms_norm", not_implemented_backward);
+    // 逐个注册
+    m.impl("npu_add_rms_norm", torch::CppFunction::makeFromBoxedFunction<&not_implemented_backward>());
+    m.impl("npu_apply_rotary_pos_emb", torch::CppFunction::makeFromBoxedFunction<&not_implemented_backward>());
+    m.impl("npu_interleave_rope", torch::CppFunction::makeFromBoxedFunction<&not_implemented_backward>());
+    m.impl("npu_moe_gating_top_k_softmax", torch::CppFunction::makeFromBoxedFunction<&not_implemented_backward>());
 }
+
