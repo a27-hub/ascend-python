@@ -80,6 +80,8 @@ at::Tensor& _index_put_impl_(
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
     std::vector<at::Tensor> all_defined_indices;
+    at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
+    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
@@ -89,9 +91,17 @@ at::Tensor& _index_put_impl_(
         "shape mismatch: value tensor of shape ", value.sizes(),
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
+    int last_defined = -1;
     for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
         if (indices_after[i].defined()) {
+            last_defined = i;
+        }
+    }
+    for (int i = 0; i <= last_defined; i++) {
+        if (indices_after[i].defined()) {
             all_defined_indices.emplace_back(indices_after[i]);
+        } else {
+            all_defined_indices.emplace_back(emptyTensor);
         }
     }
 
