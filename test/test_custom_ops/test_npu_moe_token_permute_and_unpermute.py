@@ -156,6 +156,45 @@ def unpermute(
 
 
 class TestPermute(TestCase):
+    @SupportedDevices(['Ascend950'])
+    def test_permute_mx_quant(self):
+        tokens = torch.randn(8, 128).npu().to(torch.bfloat16)
+        indices = torch.randint(0, 8, (8, 4), dtype=torch.int32).npu()
+
+        output_e5m2, sorted_indices, scale_e5m2 = torch_npu.npu_moe_token_permute(
+            tokens, indices, num_out_tokens=20, quant_mode=2)
+        self.assertEqual(output_e5m2.shape, (20, 128))
+        self.assertEqual(output_e5m2.dtype, torch.float8_e5m2)
+        self.assertEqual(sorted_indices.shape, (32,))
+        self.assertEqual(scale_e5m2.shape, (20, 4))
+        self.assertEqual(scale_e5m2.dtype, torch.float8_e8m0fnu)
+
+        output_e4m3, _, scale_e4m3 = torch_npu.npu_moe_token_permute(
+            tokens, indices, num_out_tokens=20, quant_mode=3)
+        self.assertEqual(output_e4m3.dtype, torch.float8_e4m3fn)
+        self.assertEqual(scale_e4m3.shape, (20, 4))
+
+        output_fp4, _, scale_fp4 = torch_npu.npu_moe_token_permute(
+            tokens, indices, num_out_tokens=20, quant_mode=9)
+        self.assertEqual(output_fp4.shape, (20, 64))
+        self.assertEqual(output_fp4.dtype, torch.uint8)
+        self.assertEqual(scale_fp4.shape, (20, 2, 2))
+
+    @SupportedDevices(['Ascend910B'])
+    def test_permute_quant_mode_is_ignored_on_non_950(self):
+        tokens = torch.randn(16, 64).npu().to(torch.bfloat16)
+        indices = torch.randint(0, 8, (16, 2)).npu()
+
+        expected_tokens, expected_indices, _ = torch_npu.npu_moe_token_permute(tokens, indices)
+        actual_tokens, actual_indices, expanded_scale = torch_npu.npu_moe_token_permute(
+            tokens, indices, quant_mode=2)
+
+        self.assertEqual(actual_tokens, expected_tokens)
+        self.assertEqual(actual_indices, expected_indices)
+        self.assertEqual(actual_tokens.dtype, tokens.dtype)
+        self.assertEqual(expanded_scale.shape, (0,))
+        self.assertEqual(expanded_scale.dtype, torch.float32)
+
     @SupportedDevices(['Ascend910B'])
     @parametrize('num_tokens', [1024, 2048])
     @parametrize('hidden_size', [6144, 8192])
@@ -172,9 +211,11 @@ class TestPermute(TestCase):
         indices_fused = indices_ori.clone().detach()
 
         permuted_tokens_ori, sorted_indices_ori = permute(token_ori, indices_ori)
-        permuted_tokens_fused, sorted_indices_fused = torch_npu.npu_moe_token_permute(token_fused, indices_fused)
+        permuted_tokens_fused, sorted_indices_fused, expanded_scale = torch_npu.npu_moe_token_permute(
+            token_fused, indices_fused)
 
         self.assertEqual(permuted_tokens_ori, permuted_tokens_fused, **tols)
+        self.assertEqual(expanded_scale.numel(), 0)
         # The fusion operator will perform two torch.argsort operations internally
         sorted_indices_ori = torch.argsort(sorted_indices_ori, stable=True).to(sorted_indices_fused.dtype)
         self.assertEqual(sorted_indices_ori, sorted_indices_fused)
@@ -244,7 +285,8 @@ class TestPermute(TestCase):
         if topk > 1:
             probs = (torch.ones_like(indices) / topk).npu().to(dtype)
 
-        permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices)
+        permuted_tokens, sorted_indices, expanded_scale = torch_npu.npu_moe_token_permute(tokens, indices)
+        self.assertEqual(expanded_scale.numel(), 0)
         unpermuted_tokens = torch_npu.npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
 
         if topk == 1:

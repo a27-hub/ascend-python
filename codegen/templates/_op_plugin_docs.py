@@ -14233,7 +14233,7 @@ _add_torch_npu_docstr(
     "npu_moe_token_permute",
     """
 接口原型:
-torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=None, padded_mode=False) -> (Tensor, Tensor)
+torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens=None, padded_mode=False, quant_mode=-1) -> (Tensor, Tensor, Tensor)
 
 功能描述
 MoE的permute计算，根据索引indices将tokens广播并排序。
@@ -14244,10 +14244,12 @@ tokens(torch.Tensor)：必选输入，2维Tensor, shape为(num_tokens，hidden_s
 indices(torch.Tensor): 必选输入，2维Tensor，shape为（num_tokens，topK），数据类型torch.int64，支持非连续Tensor，支持ND
 num_out_tokens(int, optional)：可选输入，默认为None，数据类型int64，表示有效输出token数。设置为0时，表示不会删除任何token。不为0时，会按照num_tokens进行切片丢弃按照indices排序好的token中超过num_tokens的部分，为负数时按照切片索引为负数时处理。
 padded_mode(bool, optional): 可选输入，默认为False，如果为True，表示indices已被填充为代表每个专家选中的token索引，此时不对indices进行排序，目前仅支持为False
+quant_mode(int, optional): 可选输入，默认为-1。Ascend 950支持-1（不量化）、2（MXFP8 E5M2）、3（MXFP8 E4M3FN）和9（MXFP4 E2M1）；其他平台静默忽略该参数。
 
 输出说明:
-permuted_tokens(torch.Tensor)：2维Tensor，数据类型torch.bfloat16(当前版本permuted_tokens仅支持bfloat16)
+permuted_tokens(torch.Tensor)：2维Tensor。非量化或非Ascend 950平台时数据类型与tokens一致；Ascend 950量化模式2、3、9分别以torch.float8_e5m2、torch.float8_e4m3fn、torch.uint8物理存储返回
 sorted_indices(torch.Tensor)：1维Tensor，数据类型torch.int32(当前版本sorted_indices仅支持int32)
+expanded_scale(torch.Tensor)：量化模式下返回与permuted_tokens对应的E8M0 scale；非量化或非Ascend 950平台返回shape为[0]、dtype为torch.float32的空Tensor
 
 约束说明:
 indices 要求元素个数小于16777215，值大于等于0小于16777215(单点支持int32或int64的最大或最小值，其余值不在范围内排序结果不正确)
@@ -14255,11 +14257,12 @@ topK小于等于512
 
 支持版本:
 PyTorch 2.1
-PyTorch 2.5及更高版本
+基础功能支持PyTorch 2.5及更高版本；MXFP8和MXFP4量化功能要求PyTorch 2.7及更高版本
 
 支持的型号:
 Atlas A2训练系列产品
 Atlas A3训练系列产品
+Atlas A5训练系列产品
 
 调用示例:
 import torch
@@ -14271,7 +14274,7 @@ indices = torch.tensor([[0, 4], [4, 3], [4, 2], [1, 1]]).npu()
 num_out_tokens = indices.numel()
 probs = torch.ones_like(indices) / 2
 probs = probs.npu().to(dtype)
-permuted_tokens, sorted_indices = torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens)
+permuted_tokens, sorted_indices, expanded_scale = torch_npu.npu_moe_token_permute(tokens, indices, num_out_tokens)
 """
 )
 

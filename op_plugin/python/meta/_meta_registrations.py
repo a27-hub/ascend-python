@@ -6268,9 +6268,11 @@ def npu_top_k_top_p_meta(logits, p, k):
 
 
 @impl(m, "npu_moe_token_permute")
-def npu_moe_token_permute_meta(tokens, indices, num_out_tokens=None, padded_mode=False):
+def npu_moe_token_permute_meta(tokens, indices, num_out_tokens=None, padded_mode=False, quant_mode=-1):
     torch._check(tokens.dim() == 2, lambda: f"The dims of input tokens should be 2 dimensional, but got {tokens.dim()}-dimensional.")
     torch._check(indices.dim() == 1 or indices.dim() == 2, lambda: f"The dims of input indices should be 2 or 1 dimensional, but got {indices.dim()}-dimensional.")
+    effective_quant_mode = quant_mode if get_soc_version() == 260 else -1
+    torch._check(effective_quant_mode in (-1, 2, 3, 9), lambda: f"quant_mode only supports -1, 2, 3 or 9, but got {quant_mode}.")
 
     num_out_tokens_value = 0 if num_out_tokens is None else num_out_tokens
     flatten_size = indices.numel()
@@ -6279,9 +6281,31 @@ def npu_moe_token_permute_meta(tokens, indices, num_out_tokens=None, padded_mode
         actual_num_out_tokens = min(num_out_tokens_value, flatten_size)
     else:
         actual_num_out_tokens = num_out_tokens_value + flatten_size
-    output_shape = (actual_num_out_tokens, tokens.size(1))
+    hidden_size = tokens.size(1)
+    output_shape = (actual_num_out_tokens, hidden_size)
+    output_dtype = tokens.dtype
+    scale_shape = (0,)
+    scale_dtype = torch.float32
+    if effective_quant_mode == 2:
+        output_dtype = torch.float8_e5m2
+        scale_shape = (actual_num_out_tokens, ((hidden_size + 31) // 32 + 1) // 2 * 2)
+        scale_dtype = torch.float8_e8m0fnu
+    elif effective_quant_mode == 3:
+        output_dtype = torch.float8_e4m3fn
+        scale_shape = (actual_num_out_tokens, ((hidden_size + 31) // 32 + 1) // 2 * 2)
+        scale_dtype = torch.float8_e8m0fnu
+    elif effective_quant_mode == 9:
+        torch._check(hidden_size % 2 == 0, lambda: f"The hidden size must be even when quant_mode is 9, but got {hidden_size}.")
+        output_shape = (actual_num_out_tokens, hidden_size // 2)
+        scale_shape = (actual_num_out_tokens, (hidden_size + 63) // 64, 2)
+        output_dtype = torch.uint8
+        scale_dtype = torch.uint8
 
-    return torch.empty(output_shape, dtype=tokens.dtype, device=tokens.device), torch.empty(indices.numel(), dtype=torch.int32, device=tokens.device)
+    return (
+        torch.empty(output_shape, dtype=output_dtype, device=tokens.device),
+        torch.empty(indices.numel(), dtype=torch.int32, device=tokens.device),
+        torch.empty(scale_shape, dtype=scale_dtype, device=tokens.device),
+    )
 
 
 @impl(m, "npu_moe_token_unpermute")

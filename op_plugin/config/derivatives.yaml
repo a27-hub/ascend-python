@@ -320,7 +320,8 @@ backward:
   permuted_tokens, probs: "drop_and_pad ? npu_moe_token_unpermute_with_routing_map_grad(grad, result1, result2, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape) : npu_moe_token_unpermute_with_routing_map_grad(grad, sorted_indices, sorted_indices, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape)"
   version: [v2.1, newest]
 
-- name: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)
+- name: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False, int quant_mode=-1) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false]
   tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0).expect_int(), tokens.scalar_type(), (indices.dim() == 1) ? 1 : indices.sym_size(-1).expect_int(), padded_mode)"
   version: [v2.1, newest]
 
