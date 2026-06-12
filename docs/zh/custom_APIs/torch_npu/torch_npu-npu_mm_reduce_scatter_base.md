@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
+|<term>Atlas 350 加速卡</term>            |    √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>            |    √     |
 |<term>Atlas A2 训练系列产品</term>    | √  |
 
@@ -14,7 +15,13 @@
     - pertoken 量化：针对激活（Activation）张量，沿序列长度维度（Sequence Length / Token）为每个 Token 维护独立的量化参数。
 
 - 计算公式：
-    $x_1$代表输入`input`, 场景由 `comm_mode` 与 `x1` 数据类型共同决定：`comm_mode` 为 `ai_cpu`时，始终为基础场景；`comm_mode` 为 `aiv` 时，`x1` 为 `float16` 或 `bfloat16` 走基础场景，`x1` 为 `int8` 走量化场景。
+    $x_1$代表输入`input`, 场景由 `comm_mode` 与 `x1` 数据类型共同决定：
+    - <term>Atlas 350 加速卡</term>：
+        `x1` 为 `float16` 或 `bfloat16` 走基础场景，`x1` 为 `int8` 走量化场景。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+        `comm_mode` 为 `ai_cpu`时，始终为基础场景；`comm_mode` 为 `aiv` 时，`x1` 为 `float16` 或 `bfloat16` 走基础场景，`x1` 为 `int8` 走量化场景。
+    - <term>Atlas A2 训练系列产品</term>：
+        `comm_mode` 为 `ai_cpu`时，始终为基础场景；`comm_mode` 为 `aiv` 时，`x1` 为 `float16` 或 `bfloat16` 走基础场景，`x1` 为 `int8` 走量化场景。
 
     - 基础场景：
         $$
@@ -51,8 +58,9 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 - **x2** (`Tensor`)：必选参数。数据类型与`input`一致，数据格式支持$ND$、$NZ$。$NZ$仅在`comm_mode`为`aiv`时支持。输入shape支持2维，形如\(k, n\)。轴满足matmul算子入参要求，k轴相等，且k轴取值范围为\[256, 65535\)，m轴需要整除`world_size`。
 - **hcom** (`str`)：必选参数。通信域handle名，通过get\_hccl\_comm\_name接口获取。
 - **world\_size** (`int`)：必选参数。通信域内的rank总数。
-    - <term>Atlas A2 训练系列产品</term>支持2、4、8卡，支持HCCS链路all mesh组网（每张卡和其它卡两两相连）。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>支持2、4、8、16、32卡，支持HCCS链路double ring组网（多张卡按顺序组成一个圈，每张卡只和左右卡相连）。
+    - <term>Atlas 350 加速卡</term>：支持2、4、8、16、32、64卡。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持2、4、8、16、32卡，支持HCCS链路double ring组网（多张卡按顺序组成一个圈，每张卡只和左右卡相连）。
+    - <term>Atlas A2 训练系列产品</term>：支持2、4、8卡，支持HCCS链路all mesh组网（每张卡和其它卡两两相连）。
 
 - <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **reduce\_op** (`str`)：可选参数。reduce操作类型，当前仅支持'sum'，默认值为'sum'。
@@ -61,7 +69,10 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 - **x2\_scale** (`Tensor`)：可选参数。mm右矩阵反量化参数。数据类型支持`float32`、`int64`，数据格式支持$ND$格式。数据维度为\(1, n\), 支持perchannel量化。如需传入`int64`数据类型的，需要提前调用torch_npu.npu_trans_quant_param来获取`int64`数据类型的`x2_scale`。
 - **comm\_turn** (`int`)：可选参数。表示rank间通信切分粒度，默认值为0，表示默认的切分方式。当前版本仅支持输入0。
 - **output_dtype** (`ScalarType`)：可选参数。表示输出数据类型。仅支持在量化场景且`x1_scale`和`x2_scale`均为`float32`时，可指定输出数据类型为`bfloat16`或`float16`，默认值为`bfloat16`。
-- **comm\_mode** (`str`)：可选参数。表示通信模式，支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。默认值为`ai_cpu`。
+- **comm\_mode** (`str`)：可选参数。表示通信模式。
+    - <term>Atlas 350 加速卡</term>：支持`ai_cpu`、`ccu`、`''`三种模式，默认值为`''`。当输入为`''`时会根据**world\_size**自适应选择通信模式：**world\_size**<=8时选择`ccu`通信，**world\_size**>8时选择`ai_cpu`通信。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。默认值为`ai_cpu`。
+    - <term>Atlas A2 训练系列产品</term>：支持`ai_cpu`、`aiv`两种模式。`ai_cpu`模式仅支持基础场景。`aiv`模式支持基础场景和量化场景。默认值为`ai_cpu`。
 
 ## 返回值说明
 
@@ -76,30 +87,62 @@ torch_npu.npu_mm_reduce_scatter_base(input, x2, hcom, world_size, *, reduce_op='
 - `input`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`input`的最后一维相同，满足matmul的计算条件。
 - `world_size`必须等于实际通信域中的rank总数，且`input`的m轴必须能够被`world_size`整除。
 - **通信模式约束**
-  - `comm_mode`为`ai_cpu`时：
-       - 该接口仅在训练场景下使用。
-       - 该接口支持图模式。
-       - <term>Atlas A2 训练系列产品</term>：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
-  - `comm_mode`为`aiv`时，训练和推理场景均可使用。  
+    - <term>Atlas 350 加速卡</term>：
+        - `comm_mode`为`ai_cpu`、`ccu`或`''`时：
+            - 训练和推理场景均可使用。
+            - 该接口不支持图模式。图模式中会根据`world_size`自适应选择通信模式：`world_size`<=8时选择`ccu`通信模式，`world_size`>8时选择`ai_cpu`通信。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+        - `comm_mode`为`ai_cpu`时：
+            - 该接口仅在训练场景下使用。
+            - 该接口支持图模式。
+        - `comm_mode`为`aiv`时，训练和推理场景均可使用。
+    - <term>Atlas A2 训练系列产品</term>：
+        - `comm_mode`为`ai_cpu`时：
+            - 该接口仅在训练场景下使用。
+            - 该接口支持图模式。
+            - 一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
+        - `comm_mode`为`aiv`时，训练和推理场景均可使用。
 
 - **comm_mode支持矩阵**
 
-|   场景   | `comm_mode` |     `input`数据类型      |  是否支持 |
-| -------- | --------- | -------------------- | -------- |
-| 基础场景 | `ai_cpu` | `float16` / `bfloat16` | 支持 |
-| 量化场景 | `ai_cpu` |       `int8`           | 不支持 |
-| 基础场景 |  `aiv`  |  `float16` / `bfloat16` | 支持 |
-| 量化场景 |  `aiv`  |         `int8`          | 支持 |
+    - <term>Atlas 350 加速卡</term>：
+
+        |   场景   | `comm_mode` |     `input`数据类型      |  是否支持 |
+        | -------- | --------- | -------------------- | -------- |
+        | 基础场景 | `ai_cpu` | `float16` / `bfloat16` | 支持 |
+        | 量化场景 | `ai_cpu` |       `int8`           | 支持 |
+        | 基础场景 |  `ccu`  |  `float16` / `bfloat16` | 支持 |
+        | 量化场景 |  `ccu`  |         `int8`          | 支持 |
+        | 基础场景 |  `''`  |  `float16` / `bfloat16` | 支持 |
+        | 量化场景 |  `''`  |         `int8`          | 支持 |
+
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
+        |   场景   | `comm_mode` |     `input`数据类型      |  是否支持 |
+        | -------- | --------- | -------------------- | -------- |
+        | 基础场景 | `ai_cpu` | `float16` / `bfloat16` | 支持 |
+        | 量化场景 | `ai_cpu` |       `int8`           | 不支持 |
+        | 基础场景 |  `aiv`  |  `float16` / `bfloat16` | 支持 |
+        | 量化场景 |  `aiv`  |         `int8`          | 支持 |
+
+    - <term>Atlas A2 训练系列产品</term>：
+
+        |   场景   | `comm_mode` |     `input`数据类型      |  是否支持 |
+        | -------- | --------- | -------------------- | -------- |
+        | 基础场景 | `ai_cpu` | `float16` / `bfloat16` | 支持 |
+        | 量化场景 | `ai_cpu` |       `int8`           | 不支持 |
+        | 基础场景 |  `aiv`  |  `float16` / `bfloat16` | 支持 |
+        | 量化场景 |  `aiv`  |         `int8`          | 支持 |
 
 - **scale参数组合约束**
 
-|  场景   |  `x1_scale`  | `x2_scale`  |     输出数据类型 |
-| ------- | ---------- | --------- |   ----------- |
-| 基础场景 |    不传    |  不传     |   与`input`一致 |
-| 量化场景 |  不传      | `float32` |  由`output_dtype`指定，默认`bfloat16` |
-| 量化场景 | `float32` | `float32` |  由`output_dtype`指定，默认`bfloat16` |
-| 量化场景 | `float32` |  `int64`  |  由`output_dtype`指定，默认`bfloat16` |
-| 量化场景 |  不传     |  `int64`  |   由`output_dtype`指定，默认`bfloat16` |
+    |  场景   |  `x1_scale`  | `x2_scale`  |     输出数据类型 |
+    | ------- | ---------- | --------- |   ----------- |
+    | 基础场景 |    不传    |  不传     |   与`input`一致 |
+    | 量化场景 |  不传      | `float32` |  由`output_dtype`指定，默认`bfloat16` |
+    | 量化场景 | `float32` | `float32` |  由`output_dtype`指定，默认`bfloat16` |
+    | 量化场景 | `float32` |  `int64`  |  `float16` |
+    | 量化场景 |  不传     |  `int64`  |   `float16` |
 
 ## 调用示例
 
