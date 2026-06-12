@@ -1,6 +1,3 @@
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <torch/library.h>
 #include <torch/csrc/autograd/autograd_not_implemented_fallback.h>
 
@@ -21,7 +18,7 @@
 //     gradients. Training CONTINUES, it is NOT interrupted.
 //   * if no input requires grad (inference / forward-only), it is a plain
 //     redispatch with no warning and no overhead.
-//   
+//
 // NOTE: the default global autograd fallback mode is already Warn (see
 // torch/csrc/autograd/autograd_not_implemented_fallback.cpp), so we do not call
 // setAutogradFallbackMode() -- that switch is process-global and would affect
