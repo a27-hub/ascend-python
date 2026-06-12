@@ -79,9 +79,6 @@ at::Tensor& _index_put_impl_(
 
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
-    std::vector<at::Tensor> all_defined_indices;
-    at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
@@ -91,30 +88,41 @@ at::Tensor& _index_put_impl_(
         "shape mismatch: value tensor of shape ", value.sizes(),
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
-    int last_defined = -1;
-    for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
-        if (indices_after[i].defined()) {
-            last_defined = i;
+
+    std::vector<at::Tensor> indices_padded = indices_after;
+    while (indices_padded.size() < static_cast<size_t>(self.dim())) {
+        indices_padded.emplace_back();
+    }
+    bool contiguous_subspace = at::native::hasContiguousSubspace(indices_padded);
+
+    std::vector<int64_t> dims;
+    std::vector<at::Tensor> defined_indices;
+    dims.reserve(self.dim());
+    for (int64_t i = 0; i < self.dim(); i++) {
+        if (indices_padded[i].defined()) {
+            dims.push_back(i);
+            defined_indices.emplace_back(indices_padded[i]);
         }
     }
-    for (int i = 0; i <= last_defined; i++) {
-        if (indices_after[i].defined()) {
-            all_defined_indices.emplace_back(indices_after[i]);
-        } else {
-            all_defined_indices.emplace_back(emptyTensor);
+    for (int64_t i = 0; i < self.dim(); i++) {
+        if (!indices_padded[i].defined()) {
+            dims.push_back(i);
+        }
+    }
+    for (auto &defined_indice : defined_indices) {
+        if (defined_indice.device() != self.device()) {
+            defined_indice = defined_indice.to(self.device());
         }
     }
 
-  for (auto &all_defined_indice : all_defined_indices) {
-      if (all_defined_indice.device() != self.device()) {
-          all_defined_indice = all_defined_indice.to(self.device());
-      }
-  }
-  at::TensorList indices_tensor_list = all_defined_indices;
-  if (self.numel() != 0 && value.numel() != 0) {
-      EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
-  }
-  return self;
+    at::Tensor self_permuted = self.permute(dims);
+    at::Tensor value_permuted =
+        (value.dim() == self.dim() && contiguous_subspace) ? value.permute(dims) : value;
+    at::TensorList indices_tensor_list = defined_indices;
+    if (self.numel() != 0 && value.numel() != 0) {
+        EXEC_NPU_CMD(aclnnIndexPutImpl, self_permuted, indices_tensor_list, value_permuted, accumulate, unsafe);
+    }
+    return self;
 }
 
 }
