@@ -90,69 +90,119 @@ at::Tensor& _index_put_impl_(
         OPS_ERROR(ErrCode::PARAM));
 
     // aclnnIndexPutImpl crashes (null deref in its internal Transpose) if any
-    // undefined index is forwarded as an empty placeholder tensor. Mirror the
-    // native transposeToFront logic instead: permute self so the defined indices
-    // address the leading dimensions, forward only the defined index tensors,
-    // and let the kernel broadcast over the remaining (None) dimensions. When the
-    // defined indices are not a contiguous block, native moves the indexed result
-    // to the front, so value must be permuted to match; otherwise value already
-    // matches the permuted layout.
+    // undefined index is forwarded as an empty placeholder tensor. It also
+    // requires exactly self.dim() index tensors – passing fewer (e.g. after
+    // transposeToFront) breaks value broadcasting because the kernel aligns
+    // value with the trailing result dimensions instead of the index dimensions.
     //
-    // aclnnIndexPutImpl may not correctly handle non-contiguous input tensors
-    // (e.g. a permuted view whose strides differ from the canonical row-major
-    // order). To be safe, always operate on a contiguous copy and write the
-    // result back into self via the inverse permutation when transpose is needed.
+    // Instead: keep self in its original layout and craft explicit "select all"
+    // sentinel indices for every None dimension. The sentinels and the defined
+    // indices are reshaped so that they broadcast to the Cartesian-product grid
+    // [index_bcast_shape, none_dim_0_size, none_dim_1_size, …].  This ensures
+    // aclnnIndexPutImpl always sees self.dim() index tensors and the value
+    // broadcasts correctly (it aligns from the right with the index dimension
+    // that sits last in the original result layout).
     std::vector<at::Tensor> indices_padded = indices_after;
     while (indices_padded.size() < static_cast<size_t>(self.dim())) {
         indices_padded.emplace_back();
     }
-    bool contiguous_subspace = at::native::hasContiguousSubspace(indices_padded);
 
-    std::vector<int64_t> dims;
+    // Separate defined / None positions.
     std::vector<at::Tensor> defined_indices;
-    dims.reserve(self.dim());
+    std::vector<int64_t> defined_positions;
+    std::vector<int64_t> none_positions;
     for (int64_t i = 0; i < self.dim(); i++) {
         if (indices_padded[i].defined()) {
-            dims.push_back(i);
-            defined_indices.emplace_back(indices_padded[i]);
+            defined_indices.push_back(indices_padded[i]);
+            defined_positions.push_back(i);
+        } else {
+            none_positions.push_back(i);
         }
     }
-    for (int64_t i = 0; i < self.dim(); i++) {
-        if (!indices_padded[i].defined()) {
-            dims.push_back(i);
-        }
-    }
-    for (auto &defined_indice : defined_indices) {
-        if (defined_indice.device() != self.device()) {
-            defined_indice = defined_indice.to(self.device());
-        }
-    }
+    int64_t n_defined = static_cast<int64_t>(defined_indices.size());
+    int64_t n_none = self.dim() - n_defined;
 
-    bool needs_transpose = (defined_indices.size() < static_cast<size_t>(self.dim()));
-    if (needs_transpose) {
-        // Operate on a contiguous copy so aclnnIndexPutImpl never sees a
-        // non-standard stride layout. Write back via inverse permutation.
-        at::Tensor self_permuted = self.permute(dims).contiguous();
-        at::Tensor value_permuted =
-            (value.dim() == self.dim() && contiguous_subspace) ? value.permute(dims) : value;
-        at::TensorList indices_tensor_list = defined_indices;
-        if (self.numel() != 0 && value.numel() != 0) {
-            EXEC_NPU_CMD(aclnnIndexPutImpl, self_permuted, indices_tensor_list, value_permuted,
-                         accumulate, unsafe);
+    // Fast path: no None dims — use indices directly.
+    if (n_none == 0) {
+        for (auto& idx : defined_indices) {
+            if (idx.device() != self.device()) {
+                idx = idx.to(self.device());
+            }
         }
-        // Inverse-permute the contiguous copy back into self.
-        std::vector<int64_t> inverse_dims(self.dim());
-        for (int64_t i = 0; i < self.dim(); i++) {
-            inverse_dims[dims[i]] = i;
-        }
-        self.copy_(self_permuted.permute(inverse_dims));
-    } else {
-        // All indices are defined – no None placeholders needed. Call the kernel
-        // with self directly; no transpose is necessary.
         at::TensorList indices_tensor_list = defined_indices;
         if (self.numel() != 0 && value.numel() != 0) {
             EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
         }
+        return self;
+    }
+
+    // Broadcast all defined indices to a common shape.
+    std::vector<at::Tensor> defined_bcast = defined_indices;
+    std::vector<int64_t> bcast_shape_vec;  // owning copy – safe across reshape
+    {
+        std::vector<int64_t> bcast_shape;
+        for (size_t i = 0; i < defined_bcast.size(); i++) {
+            if (bcast_shape.empty()) {
+                bcast_shape = defined_bcast[i].sizes().vec();
+            } else {
+                bcast_shape = at::infer_size(bcast_shape, defined_bcast[i].sizes());
+            }
+        }
+        for (size_t i = 0; i < defined_bcast.size(); i++) {
+            if (!defined_bcast[i].sizes().equals(bcast_shape)) {
+                defined_bcast[i] = defined_bcast[i].expand(bcast_shape, /*implicit=*/true);
+            }
+        }
+        bcast_shape_vec = std::move(bcast_shape);
+    }
+
+    // Reshape each defined index to [bcast_shape, 1, …, 1]  (n_none trailing 1s).
+    for (auto& idx : defined_bcast) {
+        std::vector<int64_t> new_shape(bcast_shape_vec.begin(), bcast_shape_vec.end());
+        new_shape.insert(new_shape.end(), n_none, 1);
+        idx = idx.reshape(new_shape);
+    }
+
+    // Create sentinel indices for None dims.
+    // sentinel_j shape: [1]*|bcast_shape|  +  [dim_size at position j]  +  [1]*(n_none - j - 1)
+    std::vector<at::Tensor> sentinel_indices;
+    sentinel_indices.reserve(n_none);
+    for (int64_t j = 0; j < n_none; j++) {
+        int64_t none_dim = none_positions[j];
+        int64_t dim_size = self.size(none_dim);
+
+        std::vector<int64_t> sentinel_shape(bcast_shape_vec.size(), 1);
+        for (int64_t k = 0; k < n_none; k++) {
+            sentinel_shape.push_back(k == j ? dim_size : 1);
+        }
+
+        at::Tensor sentinel = at::arange(
+            dim_size, at::TensorOptions().dtype(at::kLong).device(self.device()));
+        sentinel = sentinel.reshape(sentinel_shape);
+        sentinel_indices.push_back(sentinel);
+    }
+
+    // Assemble final index list in the original dimension order.
+    std::vector<at::Tensor> final_indices(self.dim());
+    int defined_idx = 0, none_idx = 0;
+    for (int64_t i = 0; i < self.dim(); i++) {
+        if (indices_padded[i].defined()) {
+            final_indices[i] = defined_bcast[defined_idx++];
+        } else {
+            final_indices[i] = sentinel_indices[none_idx++];
+        }
+    }
+
+    // Ensure all indices are on the correct device.
+    for (auto& idx : final_indices) {
+        if (idx.device() != self.device()) {
+            idx = idx.to(self.device());
+        }
+    }
+
+    at::TensorList indices_tensor_list = final_indices;
+    if (self.numel() != 0 && value.numel() != 0) {
+        EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
     }
     return self;
 }
