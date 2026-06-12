@@ -93,10 +93,6 @@ class TestMmAllReduceBase(TestCase):
             p.start()
             ps.append(p)
 
-        # for _ in range(world_size):
-        #     rank, output = c2p.get()
-        #     self.assertRtolEqual(output, expt_out_list[rank], 0.05, 0.05)
-
         for p in ps:
             p.join()
 
@@ -134,7 +130,7 @@ class TestMmAllReduceBase(TestCase):
         return out_list
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_fp16_fp16_2d(self):
         """
         用例1: 非量化场景 - x1=float16, x2=float16, 2维输入
@@ -153,7 +149,7 @@ class TestMmAllReduceBase(TestCase):
                                 TestMmAllReduceBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_bf16_bf16_2d(self):
         """
         用例2: 非量化场景 - x1=bfloat16, x2=bfloat16, 2维输入
@@ -172,7 +168,7 @@ class TestMmAllReduceBase(TestCase):
                                 TestMmAllReduceBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_fp16_fp16_3d(self):
         """
         用例3: 非量化场景 - x1=float16, x2=float16, 3维输入
@@ -191,7 +187,7 @@ class TestMmAllReduceBase(TestCase):
                                 TestMmAllReduceBase._init_dist_hccl, [expt_out_list, x1_list, x2_list, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_bf16_bf16_3d(self):
         """
         用例4: 非量化场景 - x1=bfloat16, x2=bfloat16, 3维输入
@@ -242,10 +238,6 @@ class TestMmAllReduceBase(TestCase):
             p.start()
             ps.append(p)
 
-        # for _ in range(world_size):
-        #     rank, output = c2p.get()
-        #     self.assertRtolEqual(output, expt_out_list[rank], 0.005, 0.005)
-
         for p in ps:
             p.join()
 
@@ -267,7 +259,7 @@ class TestMmAllReduceBase(TestCase):
         return out_list
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_fp16_int8_perchannel(self):
         """
         用例5: 伪量化场景 - x1=float16, x2=int8, perchannel伪量化
@@ -289,7 +281,7 @@ class TestMmAllReduceBase(TestCase):
                                       [expt_out_list, x1_list, x2_list, scale, offset, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_bf16_int8_perchannel(self):
         """
         用例6: 伪量化场景 - x1=bfloat16, x2=int8, perchannel伪量化
@@ -311,7 +303,7 @@ class TestMmAllReduceBase(TestCase):
                                       [expt_out_list, x1_list, x2_list, scale, offset, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_fp16_int8_pertensor(self):
         """
         用例7: 伪量化场景 - x1=float16, x2=int8, pertensor伪量化
@@ -333,7 +325,7 @@ class TestMmAllReduceBase(TestCase):
                                       [expt_out_list, x1_list, x2_list, scale, offset, world_size])
 
     @skipIfUnsupportMultiNPU(8)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_bf16_int8_pertensor(self):
         """
         用例8: 伪量化场景 - x1=bfloat16, x2=int8, pertensor伪量化
@@ -386,11 +378,6 @@ class TestMmAllReduceBase(TestCase):
             p.start()
             ps.append(p)
 
-        # for _ in range(world_size):
-        #     rank, output = c2p.get()
-        #     self.assertEqual(output, expt_out_list[rank],
-        #                      ("rank {} Expect receive tensor {} but got {}.").format(rank, expt_out_list, output))
-
         for p in ps:
             p.join()
 
@@ -411,7 +398,7 @@ class TestMmAllReduceBase(TestCase):
         return out_list
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_int8_int8_dequant_int64(self):
         """
         用例9: 全量化场景 - x1=int8, x2=int8, dequant_scale=int64
@@ -432,7 +419,7 @@ class TestMmAllReduceBase(TestCase):
                                         [expt_out_list, x1_list, x2_list, scale, world_size])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_int8_int8_dequant_bf16(self):
         """
         用例10: 全量化场景 - x1=int8, x2=int8, dequant_scale=bfloat16
@@ -485,11 +472,6 @@ class TestMmAllReduceBase(TestCase):
             p.start()
             ps.append(p)
 
-        # for _ in range(world_size):
-        #     rank, output = c2p.get()
-        #     self.assertEqual(output, expt_out_list[rank],
-        #                      ("rank {} Expect receive tensor {} but got {}.").format(rank, expt_out_list, output))
-
         for p in ps:
             p.join()
 
@@ -511,7 +493,7 @@ class TestMmAllReduceBase(TestCase):
         return out_list
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_int8_int8_dequant_fp32_pertoken_fp32(self):
         """
         用例11: 全量化场景 - x1=int8, x2=int8, dequant_scale=float32, pertoken_scale=float32
@@ -533,7 +515,7 @@ class TestMmAllReduceBase(TestCase):
                                                  [expt_out_list, x1_list, x2_list, scale, pertoken_scale, world_size])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend910B', 'Ascend950P'])
+    @SupportedDevices(['Ascend910B', 'Ascend950'])
     def test_npu_mm_all_reduce_base_int8_int8_dequant_bf16_pertoken_fp32(self):
         """
         用例12: 全量化场景 - x1=int8, x2=int8, dequant_scale=bfloat16, pertoken_scale=float32
@@ -587,10 +569,6 @@ class TestMmAllReduceBase(TestCase):
             p.start()
             ps.append(p)
 
-        # for _ in range(world_size):
-        #     rank, output = c2p.get()
-        #     self.assertRtolEqual(output, expt_out_list[rank], 0.05, 0.05)
-
         for p in ps:
             p.join()
 
@@ -611,7 +589,7 @@ class TestMmAllReduceBase(TestCase):
         return out_list
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_fp8_e4m3fn_fp8_e4m3fn(self):
         """
         用例13: 扩展场景 - x1=float8_e4m3fn, x2=float8_e4m3fn
@@ -630,7 +608,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_fp8_e5m2_fp8_e5m2(self):
         """
         用例14: 扩展场景 - x1=float8_e5m2, x2=float8_e5m2
@@ -649,7 +627,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_hifloat8_hifloat8(self):
         """
         用例15: 扩展场景 - x1=hifloat8, x2=hifloat8
@@ -670,7 +648,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_fp8_e4m3fn_fp8_e5m2(self):
         """
         用例16: 扩展场景 - x1=float8_e4m3fn, x2=float8_e5m2
@@ -689,7 +667,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_fp8_e5m2_fp8_e4m3fn(self):
         """
         用例17: 扩展场景 - x1=float8_e5m2, x2=float8_e4m3fn
@@ -708,7 +686,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_hifloat8_fp8_e4m3fn(self):
         """
         用例18: 扩展场景 - x1=hifloat8, x2=float8_e4m3fn
@@ -728,7 +706,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_fp8_e4m3fn_hifloat8(self):
         """
         用例19: 扩展场景 - x1=float8_e4m3fn, x2=hifloat8
@@ -748,7 +726,7 @@ class TestMmAllReduceBase(TestCase):
                                      torch_npu.hifloat8, torch_npu.hifloat8, torch.bfloat16])
 
     @skipIfUnsupportMultiNPU(2)
-    @SupportedDevices(['Ascend950P'])
+    @SupportedDevices(['Ascend950'])
     def test_npu_mm_all_reduce_base_hifloat8_fp8_e5m2(self):
         """
         用例20: 扩展场景 - x1=hifloat8, x2=float8_e5m2
