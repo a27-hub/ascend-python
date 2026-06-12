@@ -26,8 +26,6 @@ at::Tensor _cdist_backward(
     double p,
     const at::Tensor& cdist)
 {
-    DO_COMPATIBILITY(aclnnCdistBackward, acl_op::_cdist_backward(grad, x1, x2, p, cdist));
-
     float p_cast;
     
     if (std::isinf(p)) {
@@ -39,6 +37,18 @@ at::Tensor _cdist_backward(
                 + std::to_string(std::numeric_limits<float>::max()) + ")" + OPS_ERROR(ErrCode::PARAM));
         p_cast = static_cast<float>(p);
     }
+    
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        auto output_size = x1.sizes();
+        auto output_dtype = grad.scalar_type();
+        at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(
+            output_size,
+            grad.options().dtype(output_dtype));
+        EXEC_NPU_CMD(aclnnCdistBackward, grad, x1, x2, cdist, p_cast, out);
+        return out;
+    }
+
+    DO_COMPATIBILITY(aclnnCdistBackward, acl_op::_cdist_backward(grad, x1, x2, p, cdist));
     // The current operator has precision issues when handling integers and infinity.
     bool p_in_range = (p_cast >= 0.0 && p_cast <= 2.0) || (p_cast == -1);
     if (p_in_range) {
