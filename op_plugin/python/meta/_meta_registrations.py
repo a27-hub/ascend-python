@@ -5833,6 +5833,85 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
 
+@impl(m, "npu_swiglu_group_quant")
+def npu_swiglu_group_quant_meta(x, *, weight=None, group_index=None, inv_scale=None,
+                                dst_type=None, quant_mode=1, block_size=128, round_scale=False,
+                                clamp_limit=0.0, dst_type_max=0.0, output_origin=False):
+    dim_num = x.dim()
+    x_last_dim = x.size(dim_num - 1)
+    
+    if block_size == 0:
+        if quant_mode == 0:
+            block_size = 128
+        if quant_mode == 1:
+            block_size = 32
+        if quant_mode == 4:
+            block_size = 64
+
+    y_shape = list(x.shape)
+    y_shape[dim_num - 1] = x_last_dim // 2
+    
+    # torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.int8)
+    
+    if quant_mode == 2 or quant_mode == 3:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+    elif dst_type == torch_npu.float4_e2m1fn_x2 or dst_type == torch_npu.float4_e1m2fn_x2:
+        y_last_dim = y_shape[dim_num - 1]
+        y_shape_fp4 = list(y_shape)
+        y_shape_fp4[dim_num - 1] = y_last_dim // 2
+        y = x.new_empty(y_shape_fp4, dtype=torch.uint8)
+    elif dst_type == torch.float_e5m2:
+        y = x.new_empty(y_shape, dtype=torch.float_e5m2)
+    elif dst_type == torch.float_e4m3fn:
+        y = x.new_empty(y_shape, dtype=torch.float_e4m3fn)
+    else:
+        y = x.new_empty(y_shape, dtype=torch.uint8)
+
+    if quant_mode == 0:
+        y_scale_shape = list(x.shape)
+        y_scale_shape[dim_num - 1] = x_last_dim // (2 * block_size)
+        y_scale = x.new_empty(y_scale_shape, dtype=torch.float32)
+    elif quant_mode == 1:
+        y_scale_shape = list(x.shape)
+        y_scale_shape[dim_num - 1] = x_last_dim // (2 * block_size)
+        y_scale_shape.append(2)
+        y_scale = x.new_empty(y_scale_shape, dtype=torch.uint8)
+    elif quant_mode == 2:
+        y_scale = x.new_empty([0], dtype=torch.float32)
+    elif quant_mode == 3:
+        if group_index is not None and group_index.numel() > 0:
+            y_scale = group_index.new_empty(list(group_index.shape), dtype=torch.float32)
+        else:
+            y_scale = group_index.new_empty([1], dtype=torch.float32)
+    elif quant_mode == 4:
+        y_scale_shape = list(x.shape)
+        y_scale_shape[dim_num - 1] = x_last_dim // (2 * block_size)
+        y_scale = x.new_empty(y_scale_shape, dtype=torch.uint8)
+    else:
+        y_scale = None
+        
+        
+    if output_origin:
+        y_origin_shape = list(x.shape)
+        y_origin_shape[dim_num - 1] = x_last_dim // 2
+        y_origin = x.new_empty(y_origin_shape, dtype=x.dtype)
+    else:
+        y_origin = None
+    return (y, y_scale, y_origin)
+
+
+@impl(m, "npu_swiglu_group_quant_backward")
+def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
+    grad_x = torch.empty_like(x, dtype=x.dtype)
+    
+    if weight is not None and weight.numel() > 0:
+        grad_weight = torch.empty_like(weight, dtype=weight.dtype)
+    else:
+        grad_weight = x.new_empty([0], dtype=torch.float32)
+    
+    return (grad_x, grad_weight)
+
+
 @impl(m, "npu_dequant_swiglu_quant")
 def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, bias=None, quant_scale=None,
                                   quant_offset=None, group_index=None, activate_left=False, quant_mode=0,
