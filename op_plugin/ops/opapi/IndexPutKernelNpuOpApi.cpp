@@ -89,6 +89,19 @@ at::Tensor& _index_put_impl_(
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
 
+    // aclnnIndexPutImpl crashes (null deref in its internal Transpose) if any
+    // undefined index is forwarded as an empty placeholder tensor. Mirror the
+    // native transposeToFront logic instead: permute self so the defined indices
+    // address the leading dimensions, forward only the defined index tensors,
+    // and let the kernel broadcast over the remaining (None) dimensions. When the
+    // defined indices are not a contiguous block, native moves the indexed result
+    // to the front, so value must be permuted to match; otherwise value already
+    // matches the permuted layout.
+    //
+    // aclnnIndexPutImpl may not correctly handle non-contiguous input tensors
+    // (e.g. a permuted view whose strides differ from the canonical row-major
+    // order). To be safe, always operate on a contiguous copy and write the
+    // result back into self via the inverse permutation when transpose is needed.
     std::vector<at::Tensor> indices_padded = indices_after;
     while (indices_padded.size() < static_cast<size_t>(self.dim())) {
         indices_padded.emplace_back();
@@ -115,12 +128,31 @@ at::Tensor& _index_put_impl_(
         }
     }
 
-    at::Tensor self_permuted = self.permute(dims);
-    at::Tensor value_permuted =
-        (value.dim() == self.dim() && contiguous_subspace) ? value.permute(dims) : value;
-    at::TensorList indices_tensor_list = defined_indices;
-    if (self.numel() != 0 && value.numel() != 0) {
-        EXEC_NPU_CMD(aclnnIndexPutImpl, self_permuted, indices_tensor_list, value_permuted, accumulate, unsafe);
+    bool needs_transpose = (defined_indices.size() < static_cast<size_t>(self.dim()));
+    if (needs_transpose) {
+        // Operate on a contiguous copy so aclnnIndexPutImpl never sees a
+        // non-standard stride layout. Write back via inverse permutation.
+        at::Tensor self_permuted = self.permute(dims).contiguous();
+        at::Tensor value_permuted =
+            (value.dim() == self.dim() && contiguous_subspace) ? value.permute(dims) : value;
+        at::TensorList indices_tensor_list = defined_indices;
+        if (self.numel() != 0 && value.numel() != 0) {
+            EXEC_NPU_CMD(aclnnIndexPutImpl, self_permuted, indices_tensor_list, value_permuted,
+                         accumulate, unsafe);
+        }
+        // Inverse-permute the contiguous copy back into self.
+        std::vector<int64_t> inverse_dims(self.dim());
+        for (int64_t i = 0; i < self.dim(); i++) {
+            inverse_dims[dims[i]] = i;
+        }
+        self.copy_(self_permuted.permute(inverse_dims));
+    } else {
+        // All indices are defined – no None placeholders needed. Call the kernel
+        // with self directly; no transpose is necessary.
+        at::TensorList indices_tensor_list = defined_indices;
+        if (self.numel() != 0 && value.numel() != 0) {
+            EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
+        }
     }
     return self;
 }
