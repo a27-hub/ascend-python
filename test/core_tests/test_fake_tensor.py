@@ -2957,6 +2957,16 @@ class TestQuantMatmul(TestCase):
             self.assertTrue(expect_ret.shape == res.shape)
             self.assertTrue(expect_ret.dtype == res.dtype)
 
+            x1 = torch.randint(-1, 1, (16, 8), dtype=torch.int32).npu()
+            x2 = torch.randint(-1, 1, (64, 5), dtype=torch.int32).npu()
+            expect_ret = torch.randint(-1, 1, (16, 40), dtype=torch.bfloat16).npu()
+            pertoken_scale = torch.randn(16, dtype=torch.float32).npu()
+            scale = torch.randn(1, dtype=torch.float32).npu()
+            bias = torch.randint(-1, 1, (40,), dtype=torch.int32).npu()
+            res = torch_npu.npu_quant_matmul(x1, x2, scale, offset=None, pertoken_scale=pertoken_scale, bias=bias, output_dtype=torch.bfloat16)
+            self.assertTrue(expect_ret.shape == res.shape)
+            self.assertTrue(expect_ret.dtype == res.dtype)
+
             x1 = torch.randint(-8, 8, (1, 8192), dtype=torch.int8).npu()
             x2 = torch.randint(-8, 8, (8192, 128), dtype=torch.int32).npu()
             expect_ret = torch.randn([1, 128 * 8], dtype=torch.float16).npu()
@@ -6285,6 +6295,34 @@ class TestRotateQuant(TestCase):
             self.assertEqual(output0_npu.dtype, torch.float8_e4m3fn)
             self.assertEqual(output1_npu.shape, torch.Size([M, 16, 2]))
             self.assertEqual(output1_npu.dtype, torch_npu.float8_e8m0fnu)
+
+@unittest.skip("skip until CANN is updated to support aclnnRmsNormGradQuant.")
+class TestNpuRmsNormBackwardQuant(TestCase):
+    def test_npu_rms_norm_backward_quant_meta(self):
+        dy = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+        x = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+        rstd = torch.randn(2, 4, dtype=torch.float32).to("npu")
+        gamma = torch.randn(64, dtype=torch.float16).to("npu")
+        scale_x = torch.randn(1, dtype=torch.float32).to("npu")
+        offset_x = torch.zeros(1, dtype=torch.int32).to("npu")
+
+        actual_dx, actual_dgamma = torch_npu._npu_rms_norm_backward_quant(
+            dy, x, rstd, gamma, scale_x, offset_x=offset_x, dst_type=1)
+
+        with FakeTensorMode():
+            fake_dy = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            fake_x = torch.randn(2, 4, 64, dtype=torch.float16).to("npu")
+            fake_rstd = torch.randn(2, 4, dtype=torch.float32).to("npu")
+            fake_gamma = torch.randn(64, dtype=torch.float16).to("npu")
+            fake_scale_x = torch.randn(1, dtype=torch.float32).to("npu")
+            fake_offset_x = torch.zeros(1, dtype=torch.int32).to("npu")
+
+            fake_dx, fake_dgamma = torch_npu._npu_rms_norm_backward_quant(
+                fake_dy, fake_x, fake_rstd, fake_gamma, fake_scale_x,
+                offset_x=fake_offset_x, dst_type=1)
+
+        self.assertEqual(actual_dx.shape, fake_dx.shape)
+        self.assertEqual(actual_dgamma.shape, fake_dgamma.shape)
 
 
 if __name__ == "__main__":

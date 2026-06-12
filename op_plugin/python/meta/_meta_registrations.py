@@ -2767,6 +2767,17 @@ def npu_add_rms_norm_meta(x1, x2, gamma, epsilon=1e-6):
     rstd = torch.empty(ret, dtype=torch.float32, device='meta')
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
+@impl(m, "_npu_rms_norm_backward_quant")
+def _npu_rms_norm_backward_quant_meta(
+    dy, x, rstd, gamma, scale_x, *, offset_x=None,
+    div_mode=True, quant_mode="static", dst_type=1
+):
+    # dxOut: shape = dy.shape, dtype depends on dst_type
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type)
+    dx_out = torch.empty(dy.shape, dtype=dst_torch_dtype, device=dy.device)
+    # dgammaOut: shape = gamma.shape, dtype = float32
+    dgamma_out = torch.empty(gamma.shape, dtype=torch.float32, device=gamma.device)
+    return (dx_out, dgamma_out)
 
 @impl(m, "npu_add_rms_norm_v2")
 def npu_add_rms_norm_v2_meta(x1, x2, gamma, epsilon=1e-6):
@@ -4399,7 +4410,7 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
             lambda: "When output_dtype is int32, scale's dtype must be bfloat16 or float32, but scale's dtype is " +
                     str(scale.dtype) + ops_error(ErrCode.TYPE),
         )
-    if is_a4w4:
+    if is_a4w4 and pertoken_scale is None:
         torch._check(
             output_dtype == TORCH_DTYPE_MAP[torch.float16],
             lambda: "When input's dtype is int32, output_dtype must be float16, but output_dtype is " +
@@ -5289,6 +5300,8 @@ def npu_anti_quant_meta(x, scale, *, offset=None, dst_dtype=None, src_dtype=None
 def npu_kronecker_quant_meta(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=None, dst_type_max=0.0):
     if dst_dtype is None:
         dst_dtype = torch.int32
+    elif dst_dtype == 3:#3 -> torch.int32
+        dst_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype)
     if dst_dtype != torch.int32 and dst_dtype != torch_npu.float4_e2m1fn_x2:
         raise RuntimeError("the dtype of dst_dtype must be int32, or mxfp4" + ops_error(ErrCode.NOT_SUPPORT))
     dim_num = x.dim()
@@ -7161,4 +7174,3 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
-
