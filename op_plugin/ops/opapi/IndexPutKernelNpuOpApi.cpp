@@ -79,9 +79,6 @@ at::Tensor& _index_put_impl_(
 
     bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
     auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
-    std::vector<at::Tensor> all_defined_indices;
-    at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
     c10::List<c10::optional<at::Tensor>> indices_expand_list;
     for (at::Tensor index_opt : indices_after) {
         indices_expand_list.push_back(index_opt);
@@ -91,24 +88,123 @@ at::Tensor& _index_put_impl_(
         "shape mismatch: value tensor of shape ", value.sizes(),
         " cannot be broadcast to indexing result of shape ", info.src.sizes(),
         OPS_ERROR(ErrCode::PARAM));
-    for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
-        if (indices_after[i].defined()) {
-            all_defined_indices.emplace_back(indices_after[i]);
-        continue;
-        }
-    all_defined_indices.emplace_back(emptyTensor);
+
+    // aclnnIndexPutImpl crashes (null deref in its internal Transpose) if any
+    // undefined index is forwarded as an empty placeholder tensor. It also
+    // requires exactly self.dim() index tensors – passing fewer (e.g. after
+    // transposeToFront) breaks value broadcasting because the kernel aligns
+    // value with the trailing result dimensions instead of the index dimensions.
+    //
+    // Instead: keep self in its original layout and craft explicit "select all"
+    // sentinel indices for every None dimension. The sentinels and the defined
+    // indices are reshaped so that they broadcast to the Cartesian-product grid
+    // [index_bcast_shape, none_dim_0_size, none_dim_1_size, …].  This ensures
+    // aclnnIndexPutImpl always sees self.dim() index tensors and the value
+    // broadcasts correctly (it aligns from the right with the index dimension
+    // that sits last in the original result layout).
+    std::vector<at::Tensor> indices_padded = indices_after;
+    while (indices_padded.size() < static_cast<size_t>(self.dim())) {
+        indices_padded.emplace_back();
     }
 
-  for (auto &all_defined_indice : all_defined_indices) {
-      if (all_defined_indice.device() != self.device()) {
-          all_defined_indice = all_defined_indice.to(self.device());
-      }
-  }
-  at::TensorList indices_tensor_list = all_defined_indices;
-  if (self.numel() != 0 && value.numel() != 0) {
-      EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
-  }
-  return self;
+    // Separate defined / None positions.
+    std::vector<at::Tensor> defined_indices;
+    std::vector<int64_t> defined_positions;
+    std::vector<int64_t> none_positions;
+    for (int64_t i = 0; i < self.dim(); i++) {
+        if (indices_padded[i].defined()) {
+            defined_indices.push_back(indices_padded[i]);
+            defined_positions.push_back(i);
+        } else {
+            none_positions.push_back(i);
+        }
+    }
+    int64_t n_defined = static_cast<int64_t>(defined_indices.size());
+    int64_t n_none = self.dim() - n_defined;
+
+    // Fast path: no None dims — use indices directly.
+    if (n_none == 0) {
+        for (auto& idx : defined_indices) {
+            if (idx.device() != self.device()) {
+                idx = idx.to(self.device());
+            }
+        }
+        at::TensorList indices_tensor_list = defined_indices;
+        if (self.numel() != 0 && value.numel() != 0) {
+            EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
+        }
+        return self;
+    }
+
+    // Broadcast all defined indices to a common shape.
+    std::vector<at::Tensor> defined_bcast = defined_indices;
+    std::vector<int64_t> bcast_shape_vec;  // owning copy – safe across reshape
+    {
+        std::vector<int64_t> bcast_shape;
+        for (size_t i = 0; i < defined_bcast.size(); i++) {
+            if (bcast_shape.empty()) {
+                bcast_shape = defined_bcast[i].sizes().vec();
+            } else {
+                bcast_shape = at::infer_size(bcast_shape, defined_bcast[i].sizes());
+            }
+        }
+        for (size_t i = 0; i < defined_bcast.size(); i++) {
+            if (!defined_bcast[i].sizes().equals(bcast_shape)) {
+                defined_bcast[i] = defined_bcast[i].expand(bcast_shape, /*implicit=*/true);
+            }
+        }
+        bcast_shape_vec = std::move(bcast_shape);
+    }
+
+    // Reshape each defined index to [bcast_shape, 1, …, 1]  (n_none trailing 1s).
+    for (auto& idx : defined_bcast) {
+        std::vector<int64_t> new_shape(bcast_shape_vec.begin(), bcast_shape_vec.end());
+        new_shape.insert(new_shape.end(), n_none, 1);
+        idx = idx.reshape(new_shape);
+    }
+
+    // Create sentinel indices for None dims.
+    // sentinel_j shape: [1]*|bcast_shape|  +  [dim_size at position j]  +  [1]*(n_none - j - 1)
+    std::vector<at::Tensor> sentinel_indices;
+    sentinel_indices.reserve(n_none);
+    for (int64_t j = 0; j < n_none; j++) {
+        int64_t none_dim = none_positions[j];
+        int64_t dim_size = self.size(none_dim);
+
+        std::vector<int64_t> sentinel_shape(bcast_shape_vec.size(), 1);
+        for (int64_t k = 0; k < n_none; k++) {
+            sentinel_shape.push_back(k == j ? dim_size : 1);
+        }
+
+        at::Tensor sentinel = at::arange(
+            dim_size, at::TensorOptions().dtype(at::kLong).device(self.device()));
+        sentinel = sentinel.reshape(sentinel_shape);
+        sentinel_indices.push_back(sentinel);
+    }
+
+    // Assemble final index list in the original dimension order.
+    std::vector<at::Tensor> final_indices(self.dim());
+    int defined_idx = 0, none_idx = 0;
+    for (int64_t i = 0; i < self.dim(); i++) {
+        if (indices_padded[i].defined()) {
+            final_indices[i] = defined_bcast[defined_idx++];
+        } else {
+            final_indices[i] = sentinel_indices[none_idx++];
+        }
+    }
+
+    // Ensure all indices are on the correct device.
+    for (auto& idx : final_indices) {
+        if (idx.device() != self.device()) {
+            idx = idx.to(self.device());
+        }
+    }
+
+    at::TensorList indices_tensor_list = final_indices;
+    if (self.numel() != 0 && value.numel() != 0) {
+        EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
+    }
+    return self;
 }
 
 }
