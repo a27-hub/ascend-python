@@ -371,6 +371,9 @@
   "op_api: torch_npu.npu_convert_weight_to_int4pack(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
+  "op_api: torch_npu.npu_swiglu_group_quant_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
+    "version": ["newest"]
+  },
   "op_api: torch_npu.npu_swiglu(*args, **kwargs)": {
     "version": ["v2.1", "v2.5", "v2.6", "v2.7"]
   },
