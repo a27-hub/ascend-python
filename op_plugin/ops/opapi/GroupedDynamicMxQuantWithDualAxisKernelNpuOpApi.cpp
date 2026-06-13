@@ -89,7 +89,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_grouped_dynamic_m
     TensorWrapper mxscale1_wrapper = {mxscale1, aclDataType::ACL_FLOAT8_E8M0};
     TensorWrapper mxscale2_wrapper = {mxscale2, aclDataType::ACL_FLOAT8_E8M0};
 
-    EXEC_NPU_CMD(aclnnGroupedDynamicMxQuantWithDualAxis, x, group_index, RINT_ROUND_MODE, scale_alg, dst_type,
+    int64_t real_dst_type = static_cast<int64_t>(y_acltype);
+    EXEC_NPU_CMD(aclnnGroupedDynamicMxQuantWithDualAxis, x, group_index, RINT_ROUND_MODE, scale_alg, real_dst_type,
                  dst_type_max, y1_out_wrapper, mxscale1_wrapper, y2_out_wrapper, mxscale2_wrapper);
 
     return std::make_tuple(y1_out, mxscale1, y2_out, mxscale2);
