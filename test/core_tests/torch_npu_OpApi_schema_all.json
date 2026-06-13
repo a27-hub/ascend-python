@@ -5006,6 +5006,9 @@
   "func: npu_dynamic_block_mx_quant(Tensor input, *, str round_mode=\"rint\", int dst_type=296, int scale_alg=0, float dst_type_max=0.0) -> (Tensor, Tensor, Tensor)": {
     "version": ["all_version"]
   },
+  "func: npu_grouped_dynamic_mx_quant_with_dual_axis(Tensor x, Tensor group_index, *, str round_mode=\"rint\", int scale_alg=1, int dst_type=24, float dst_type_max=0) -> (Tensor, Tensor, Tensor, Tensor)": {
+    "version": ["all_version"]
+  },
   "func: npu_rotate_quant(Tensor x, Tensor rotation, *, Tensor? alpha=None, int? dst_dtype=None, int? axis=-1, str? round_mode=\"rint\", int? scale_alg=0, float? dst_type_max=0.0, bool? transpose_y=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },

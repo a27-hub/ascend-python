@@ -6733,6 +6733,38 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
     return (y1, mxscale1, y2, mxscale2)
 
 
+@impl(m, "npu_grouped_dynamic_mx_quant_with_dual_axis")
+def npu_grouped_dynamic_mx_quant_with_dual_axis(x, group_index, *, round_mode="rint", scale_alg=1, dst_type=24, dst_type_max=0):
+    torch._check(x.dim() == 2, lambda: f"The input x should be 2D, but got {x.dim()}D.")
+    torch._check(x.dtype in [torch.float16, torch.bfloat16],
+                 lambda: "The input x only supports float16 or bfloat16.")
+    torch._check(group_index.dim() == 1,
+                 lambda: f"The input group_index should be 1D, but got {group_index.dim()}D.")
+    torch._check(group_index.dtype == torch.int64, lambda: "The input group_index only supports int64.")
+    torch._check(x.size(-1) % 64 == 0 and x.size(-1) > 0,
+                 lambda: "The last dim of input x must be divisible by 64 and more than 0.")
+    torch._check(round_mode == "rint", lambda: "The parameter round_mode only supports rint.")
+    torch._check(scale_alg == 1, lambda: "The parameter scale_alg only supports 1.")
+    torch._check(dst_type_max == 0, lambda: "The parameter dst_type_max only supports 0.")
+
+    torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, dst_type if isinstance(dst_type, torch.dtype) else torch.int8)
+    if torch_dtype == torch.float8_e5m2 or dst_type == 23:
+        y1 = torch.empty_like(x, dtype=torch.float8_e5m2)
+        y2 = torch.empty_like(x, dtype=torch.float8_e5m2)
+    elif torch_dtype == torch.float8_e4m3fn or dst_type == 24:
+        y1 = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+        y2 = torch.empty_like(x, dtype=torch.float8_e4m3fn)
+    else:
+        raise RuntimeError("The parameter dst_type only supports float8_e5m2 or float8_e4m3fn" +
+                           ops_error(ErrCode.PARAM))
+
+    m = x.size(0)
+    n = x.size(1)
+    mxscale1 = x.new_empty([m, n // 64, 2], dtype=torch.uint8)
+    mxscale2 = x.new_empty([m // 64 + group_index.size(0), n, 2], dtype=torch.uint8)
+    return (y1, mxscale1, y2, mxscale2)
+
+
 @impl(m, "npu_grouped_dynamic_block_quant")
 def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0):
     dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
