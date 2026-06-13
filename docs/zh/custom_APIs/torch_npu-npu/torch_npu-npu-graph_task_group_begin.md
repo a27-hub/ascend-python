@@ -13,6 +13,9 @@
 
 NPUGraph场景下，用于标记任务组起始位置。
 
+> [!NOTE]
+> 该接口为底层手动任务组标记接口。若算子已注册`NpuGraphOpHandler`，推荐使用`torch.npu.graph(..., auto_dispatch_capture=True)`配合`NPUGraph.update(cpu_update_input=...)`完成图更新，框架会自动处理任务组标记和参数映射。
+
 ## 函数原型
 
 ```python
