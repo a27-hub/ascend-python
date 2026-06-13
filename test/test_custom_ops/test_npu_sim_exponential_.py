@@ -161,6 +161,13 @@ class TestNPUSimExponential(TestCase):
                 # 验证均值在误差范围内
                 self.assertAlmostEqual(actual_mean, expected_mean, delta=expected_mean * tolerance)
 
+    @unittest.skip("skip") # CI版本不支持
+    @SupportedDevices(['Ascend910D'])
+    def test_npu_sim_exponential_empty_tensor(self):
+        """测试：输入空tensor，正常返回自身"""
+        tensor_npu = torch.empty((0,), device="npu", dtype=torch.float32)
+        result = torch_npu.npu_sim_exponential_(tensor_npu, 1.0)
+        self.assertEqual(result.numel(), 0)
 
 if __name__ == "__main__":
     # 执行所有测试用例
