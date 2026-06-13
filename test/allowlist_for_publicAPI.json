@@ -155,6 +155,7 @@
       "npu_gemma_rms_norm",
       "npu_dequant_swiglu_quant",
       "npu_swiglu",
+      "npu_swiglu_group_quant_backward",
       "npu_gelu",
       "npu_gelu_backward",
       "npu_all_gather_base_mm",
