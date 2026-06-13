@@ -55,6 +55,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_grouped_dynamic_m
     TORCH_CHECK(dst_type_max == DEFAULT_DST_TYPE_MAX,
         "The parameter dst_type_max only supports 0.0" + OPS_ERROR(ErrCode::PARAM));
 
+    static const bool is_available = check_aclnn_kernel_available("aclnnGroupedDynamicMxQuantWithDualAxis");
+    TORCH_CHECK(is_available,
+        "Current CANN version do not support this api: npu_grouped_dynamic_mx_quant_with_dual_axis. "
+        "Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
+
     bool fp8_output_type = (dst_type == 23 || dst_type == 24);
     TORCH_CHECK(fp8_output_type,
         "The parameter dst_type only supports float8_e5m2 or float8_e4m3fn" + OPS_ERROR(ErrCode::PARAM));
