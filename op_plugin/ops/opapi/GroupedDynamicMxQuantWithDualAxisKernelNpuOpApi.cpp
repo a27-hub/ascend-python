@@ -64,6 +64,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_grouped_dynamic_m
     TORCH_CHECK(fp8_output_type,
         "The parameter dst_type only supports float8_e5m2 or float8_e4m3fn" + OPS_ERROR(ErrCode::PARAM));
     aclDataType y_acltype = c10_npu::GetAclDataType(dst_type);
+    int64_t real_dst_type = static_cast<int64_t>(c10_npu::GetAclDataType(dst_type));
 
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
 
@@ -89,7 +90,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_grouped_dynamic_m
     TensorWrapper mxscale1_wrapper = {mxscale1, aclDataType::ACL_FLOAT8_E8M0};
     TensorWrapper mxscale2_wrapper = {mxscale2, aclDataType::ACL_FLOAT8_E8M0};
 
-    int64_t real_dst_type = static_cast<int64_t>(y_acltype);
     EXEC_NPU_CMD(aclnnGroupedDynamicMxQuantWithDualAxis, x, group_index, RINT_ROUND_MODE, scale_alg, real_dst_type,
                  dst_type_max, y1_out_wrapper, mxscale1_wrapper, y2_out_wrapper, mxscale2_wrapper);
 
