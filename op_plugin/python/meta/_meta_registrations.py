@@ -2070,7 +2070,7 @@ def quant_matmul_scale_offset_out_check(scale, offset, pertoken_scale, output_dt
 
 
 @impl(m, "obfuscation_calculate")
-def obfuscation_calculate_meta(fd, x, param, cmd):
+def obfuscation_calculate_meta(fd, x, param, obf_coefficient=1.0):
     return torch.empty_like(x)
 
 
