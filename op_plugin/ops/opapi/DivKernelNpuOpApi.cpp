@@ -30,13 +30,36 @@ static void check_rounding_mode_npu(c10::optional<c10::string_view> rounding_mod
                 *rounding_mode, "'", OPS_ERROR(ErrCode::PARAM));
 }
 
+// A5(Ascend950)除数路由:修正"真实 0 维 CPU tensor 被当立即数"导致的 dtype 精度回退。
+// 返回 {是否走标量路径, 已就绪的 other}。
+// 设计要点:
+// - 非 A5:完全维持原 (other.dim()==0 && !is_npu) 行为,不影响 A2/A3;
+// - A5:仅当 other 是"真实(非 wrapped)0 维 CPU tensor"且 dtype ∈ {f16,bf16,f32} 时,
+//   搬到 device 走 tensor-tensor,使其完整 dtype 参与 promotion(对齐 CUDA zeroResult,修正精度);
+//   立即数(wrapped number)仍走标量倒数(对齐 CUDA is_cpu_scalar,保留性能);
+//   其余 dtype(double/complex/int/bool 等)保持原标量路径——避免落到 A5 不支持的 mode-kernel
+//   (如 aclnnTrunc 在 ARCH3510 不支持 double)而把原本可用的场景变为报错(功能回退)。
+static std::tuple<bool, at::Tensor> div_route_other_npu(const at::Tensor& self, const at::Tensor& other)
+{
+  bool use_scalar = (other.dim() == 0 && !torch_npu::utils::is_npu(other));
+  if (use_scalar && c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&
+      !npu_preparation::is_scalar_wrapped_to_tensor(other)) {
+    auto dt = other.scalar_type();
+    if (dt == at::ScalarType::Half || dt == at::ScalarType::BFloat16 || dt == at::ScalarType::Float) {
+      return {false, other.to(self.device())};
+    }
+  }
+  return {use_scalar, other};
+}
+
 static at::Tensor& div_out_npu_opapi_nocheck(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
   // executing the NPU operator
-  if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-    c10::Scalar others = other.item();
+  auto [use_scalar, other_ready] = div_route_other_npu(self, other);
+  if (use_scalar) {
+    c10::Scalar others = other_ready.item();
     EXEC_NPU_CMD(aclnnDivs, self, others, result);
   } else {
-    EXEC_NPU_CMD(aclnnDiv, self, other, result);
+    EXEC_NPU_CMD(aclnnDiv, self, other_ready, result);
   }
   return result;
 }
@@ -58,15 +81,22 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::ScalarType result_type = at::native::result_type(self, other);
-    if (!isFloatingType(result_type) && !isComplexType(result_type)) {
-        result_type = at::ScalarType::Float;
+    // common_type:输入按三类 promotion 推导的公共类型(true div 整型升 Float)
+    at::ScalarType common_type = at::native::result_type(self, other);
+    if (!isFloatingType(common_type) && !isComplexType(common_type)) {
+        common_type = at::ScalarType::Float;
     }
+    // check_type:校验 out 用;out 为浮点/复数时取 out 自身 dtype(保留安全 cast 语义)
+    at::ScalarType check_type = common_type;
     if (isFloatingType(result.scalar_type()) || isComplexType(result.scalar_type())) {
-        result_type = result.scalar_type();
+        check_type = result.scalar_type();
     }
-    at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
-    npu_preparation::check_tensor({self}, result, result_type, output_size);
+    // A5(Ascend950)对齐 CUDA:计算在输入 common_dtype 进行,再由 aclnn 末尾 cast 到 out,
+    // 不按 out_dtype 计算;故 wrapped self 按 common_dtype 落盘。非 A5 维持原 "按 out dtype 计算" 行为。
+    at::ScalarType self_cast_type =
+        (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) ? common_type : check_type;
+    at::Tensor self_cp = self_tensor_to_device(self, self_cast_type, result.device());
+    npu_preparation::check_tensor({self}, result, check_type, output_size);
 
     // calculate the output result of the NPU
     div_out_npu_opapi_nocheck(self_cp, other, result);
@@ -101,11 +131,12 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, c10::option
     }
 
     // calculate the output result of the NPU
-    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-        c10::Scalar others = other.item();
+    auto [use_scalar, other_ready] = div_route_other_npu(self_cp, other);
+    if (use_scalar) {
+        c10::Scalar others = other_ready.item();
         EXEC_NPU_CMD(aclnnDivMods, self_cp, others, mode, result);
     } else {
-        EXEC_NPU_CMD(aclnnDivMod, self_cp, other, mode, result);
+        EXEC_NPU_CMD(aclnnDivMod, self_cp, other_ready, mode, result);
     }
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
@@ -171,11 +202,12 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other, c10::optional<c1
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
 
     // executing the NPU operator
-    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-        c10::Scalar others = other.item();
+    auto [use_scalar, other_ready] = div_route_other_npu(self_cp, other);
+    if (use_scalar) {
+        c10::Scalar others = other_ready.item();
         EXEC_NPU_CMD(aclnnDivMods, self_cp, others, mode, result);
     } else {
-        EXEC_NPU_CMD(aclnnDivMod, self_cp, other, mode, result);
+        EXEC_NPU_CMD(aclnnDivMod, self_cp, other_ready, mode, result);
     }
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
@@ -183,22 +215,24 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other, c10::optional<c1
 
 static at::Tensor& inplace_div_out_npu_no_check(at::Tensor& self, const at::Tensor& other) {
   // check if other scalar tensor
-  if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-    c10::Scalar others = other.item();
+  auto [use_scalar, other_ready] = div_route_other_npu(self, other);
+  if (use_scalar) {
+    c10::Scalar others = other_ready.item();
     EXEC_NPU_CMD(aclnnInplaceDivs, self, others);
   } else {
-    EXEC_NPU_CMD(aclnnInplaceDiv, self, other);
+    EXEC_NPU_CMD(aclnnInplaceDiv, self, other_ready);
   }
   return self;
 }
 
 static at::Tensor& inplace_div_out_mode_npu_no_check(at::Tensor& self, const at::Tensor& other, int mode) {
   // check if other scalar tensor
-  if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
-    c10::Scalar others = other.item();
+  auto [use_scalar, other_ready] = div_route_other_npu(self, other);
+  if (use_scalar) {
+    c10::Scalar others = other_ready.item();
     EXEC_NPU_CMD(aclnnInplaceDivMods, self, others, mode);
   } else {
-    EXEC_NPU_CMD(aclnnInplaceDivMod, self, other, mode);
+    EXEC_NPU_CMD(aclnnInplaceDivMod, self, other_ready, mode);
   }
   return self;
 }
