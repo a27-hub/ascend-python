@@ -30,11 +30,21 @@ static void check_rounding_mode_npu(c10::optional<c10::string_view> rounding_mod
                 *rounding_mode, "'", OPS_ERROR(ErrCode::PARAM));
 }
 
-static at::Tensor& div_out_npu_opapi_nocheck(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
+static at::Tensor& div_out_npu_opapi_nocheck(const at::Tensor& self, const at::Tensor& other, at::Tensor& result,
+                                             at::ScalarType compute_type) {
   // executing the NPU operator
   if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+    // host 标量(python 立即数 或 真实 0 维 host tensor)= CUDA 的 is_cpu_scalar,走倒数乘。
+    // A5:把 self 提升到 compute_type(= result_type 推导的 common dtype),使 aclnnDivs 的 promote
+    // 跟随 self,从而保留 0 维 host tensor 的完整 dtype(避免标量被降 category 而丢精度)。
+    // compute_type 由 at::native::result_type 推导,已正确区分 wrapped(category)与真 tensor(完整 dtype),
+    // 故此 cast 同时覆盖立即数与真实 host tensor 两种语义。
+    at::Tensor self_c = self;
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && self.scalar_type() != compute_type) {
+      self_c = at_npu::native::custom_ops::_npu_dtype_cast(self, compute_type);
+    }
     c10::Scalar others = other.item();
-    EXEC_NPU_CMD(aclnnDivs, self, others, result);
+    EXEC_NPU_CMD(aclnnDivs, self_c, others, result);
   } else {
     EXEC_NPU_CMD(aclnnDiv, self, other, result);
   }
@@ -58,18 +68,25 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::ScalarType result_type = at::native::result_type(self, other);
-    if (!isFloatingType(result_type) && !isComplexType(result_type)) {
-        result_type = at::ScalarType::Float;
+    // common_type:输入按三类 promotion 推导的公共类型(true div 整型升 Float)
+    at::ScalarType common_type = at::native::result_type(self, other);
+    if (!isFloatingType(common_type) && !isComplexType(common_type)) {
+        common_type = at::ScalarType::Float;
     }
+    // check_type:校验 out 用;out 为浮点/复数时取 out 自身 dtype(保留安全 cast 语义)
+    at::ScalarType check_type = common_type;
     if (isFloatingType(result.scalar_type()) || isComplexType(result.scalar_type())) {
-        result_type = result.scalar_type();
+        check_type = result.scalar_type();
     }
-    at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
-    npu_preparation::check_tensor({self}, result, result_type, output_size);
+    // A5(Ascend950)对齐 CUDA:div.out 在输入 common_dtype 计算,再由 aclnn 末尾 cast 到 out,
+    // 不按 out_dtype 计算;故 wrapped self 按 common_dtype 落盘。非 A5 维持原 "按 out dtype 计算" 行为。
+    at::ScalarType self_cast_type =
+        (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) ? common_type : check_type;
+    at::Tensor self_cp = self_tensor_to_device(self, self_cast_type, result.device());
+    npu_preparation::check_tensor({self}, result, check_type, output_size);
 
-    // calculate the output result of the NPU
-    div_out_npu_opapi_nocheck(self_cp, other, result);
+    // calculate the output result of the NPU(common_type=输入 common dtype,host 标量分支据此保留 0维 host tensor dtype)
+    div_out_npu_opapi_nocheck(self_cp, other, result, common_type);
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
@@ -102,8 +119,15 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, c10::option
 
     // calculate the output result of the NPU
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        // host 标量分支:A5 把 self 提升到 result_type 以保留 0 维 host tensor 的完整 dtype;
+        // trunc/floor 下 double 因 A5 kernel(aclnnTrunc/FloorDiv)不支持 double 而不提升(回避报错)。
+        at::Tensor self_m = self_cp;
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && self_cp.scalar_type() != result_type &&
+            (result_type != at::ScalarType::Double || mode == 0)) {
+            self_m = at_npu::native::custom_ops::_npu_dtype_cast(self_cp, result_type);
+        }
         c10::Scalar others = other.item();
-        EXEC_NPU_CMD(aclnnDivMods, self_cp, others, mode, result);
+        EXEC_NPU_CMD(aclnnDivMods, self_m, others, mode, result);
     } else {
         EXEC_NPU_CMD(aclnnDivMod, self_cp, other, mode, result);
     }
@@ -130,8 +154,8 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other) {
     // construct the output tensor of the NPU
     at::Tensor result = npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
 
-    // calculate the output result of the NPU
-    div_out_npu_opapi_nocheck(self_cp, other, result);
+    // calculate the output result of the NPU(high_type=输入 common dtype,host 标量分支据此保留 0维 host tensor dtype)
+    div_out_npu_opapi_nocheck(self_cp, other, result, high_type);
     at::namedinference::propagate_names_if_nonempty(result, maybe_names);
     return result;
 }
@@ -172,8 +196,15 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other, c10::optional<c1
 
     // executing the NPU operator
     if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        // host 标量分支:A5 把 self 提升到 high_type 以保留 0 维 host tensor 的完整 dtype;
+        // trunc/floor 下 double 因 A5 kernel(aclnnTrunc/FloorDiv)不支持 double 而不提升(回避报错)。
+        at::Tensor self_m = self_cp;
+        if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 && self_cp.scalar_type() != high_type &&
+            (high_type != at::ScalarType::Double || mode == 0)) {
+            self_m = at_npu::native::custom_ops::_npu_dtype_cast(self_cp, high_type);
+        }
         c10::Scalar others = other.item();
-        EXEC_NPU_CMD(aclnnDivMods, self_cp, others, mode, result);
+        EXEC_NPU_CMD(aclnnDivMods, self_m, others, mode, result);
     } else {
         EXEC_NPU_CMD(aclnnDivMod, self_cp, other, mode, result);
     }
