@@ -51,9 +51,66 @@ static at::Tensor self_tensor_to_device(const at::Tensor& tensor, const at::Scal
   return tensor;
 }
 
+// ============================ A5 (Ascend950) 专用路径 ============================
+// 与 A2/A3 完全隔离:各 public 接口顶部 if(SocVersion>=Ascend950){...; return;} 早返回,
+// 原 A2/A3 代码原样保留在下方,不受影响。host/device 区分只能在 op-plugin 做
+// (host tensor 进 aclnn 前必被拷到 device,placement 丢失);dtype/倒数逻辑留在 aclnn。
+//  - host 标量(other.dim()==0 && !is_npu)= CUDA is_cpu_scalar:走倒数乘(aclnnDivs/DivMods),
+//    并把 self 提升到 compute_type(= at::native::result_type 推导的 common dtype,已正确区分
+//    wrapped number=category 与真实 tensor=完整 dtype),保留 0 维 host tensor 的完整 dtype;
+//  - device tensor:走真除(aclnnDiv/DivMod)。
+static at::Tensor& div_a5_nocheck(const at::Tensor& self, const at::Tensor& other, at::Tensor& result,
+                                  at::ScalarType compute_type)
+{
+    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        at::Tensor self_c = (self.scalar_type() != compute_type) ?
+            at_npu::native::custom_ops::_npu_dtype_cast(self, compute_type) : self;
+        c10::Scalar others = other.item();
+        EXEC_NPU_CMD(aclnnDivs, self_c, others, result);
+    } else {
+        EXEC_NPU_CMD(aclnnDiv, self, other, result);
+    }
+    return result;
+}
+
+static at::Tensor& div_a5_mode_nocheck(const at::Tensor& self, const at::Tensor& other, int mode,
+                                       at::Tensor& result, at::ScalarType compute_type)
+{
+    if (other.dim() == 0 && !torch_npu::utils::is_npu(other)) {
+        // trunc/floor 下 double 不提升(A5 aclnnTrunc/FloorDiv 不支持 double,回避报错)
+        at::Tensor self_c = (self.scalar_type() != compute_type &&
+                             (compute_type != at::ScalarType::Double || mode == 0)) ?
+            at_npu::native::custom_ops::_npu_dtype_cast(self, compute_type) : self;
+        c10::Scalar others = other.item();
+        EXEC_NPU_CMD(aclnnDivMods, self_c, others, mode, result);
+    } else {
+        EXEC_NPU_CMD(aclnnDivMod, self, other, mode, result);
+    }
+    return result;
+}
+
 at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result) {
     DO_COMPATIBILITY(aclnnDivs, acl_op::div_out(self, other, result));
     DO_COMPATIBILITY(aclnnDiv, acl_op::div_out(self, other, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        std::vector<at::Tensor> tensor_list = {self, other};
+        auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+        auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+        // common_type:输入 common dtype(true div 整型升 Float);计算在 common 进行,由 aclnn 末尾 cast 到 out
+        at::ScalarType common_type = at::native::result_type(self, other);
+        if (!isFloatingType(common_type) && !isComplexType(common_type)) {
+            common_type = at::ScalarType::Float;
+        }
+        // check_type:仅用于 out 安全 cast 校验(out 为浮点/复数时取 out 自身 dtype)
+        at::ScalarType check_type =
+            (isFloatingType(result.scalar_type()) || isComplexType(result.scalar_type())) ? result.scalar_type() :
+                                                                                            common_type;
+        at::Tensor self_cp = self_tensor_to_device(self, common_type, result.device());
+        npu_preparation::check_tensor({self}, result, check_type, output_size);
+        div_a5_nocheck(self_cp, other, result, common_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
@@ -79,6 +136,24 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, c10::option
 {
     DO_COMPATIBILITY(aclnnDivMods, acl_op::div_out(self, other, rounding_mode, result));
     DO_COMPATIBILITY(aclnnDivMod, acl_op::div_out(self, other, rounding_mode, result));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        check_rounding_mode_npu(rounding_mode);
+        std::vector<at::Tensor> tensor_list = {self, other};
+        auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+        auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::ScalarType compute_type = at::native::result_type(self, other);
+        int mode = 0;
+        if (rounding_mode.has_value() && *rounding_mode == "floor") {
+            mode = MODE_FLOOR;
+        } else if (rounding_mode.has_value() && *rounding_mode == "trunc") {
+            mode = MODE_TRUNC;
+        }
+        at::Tensor self_cp = self_tensor_to_device(self, compute_type, result.device());
+        npu_preparation::check_tensor({self}, result, result.scalar_type(), outputSize);
+        div_a5_mode_nocheck(self_cp, other, mode, result, compute_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     if (rounding_mode.has_value() && *rounding_mode != "floor" && *rounding_mode != "trunc") {
@@ -114,6 +189,23 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, c10::option
 at::Tensor div(const at::Tensor& self, const at::Tensor& other) {
     DO_COMPATIBILITY(aclnnDivs, acl_op::div(self, other));
     DO_COMPATIBILITY(aclnnDiv, acl_op::div(self, other));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        std::vector<at::Tensor> tensor_list = {self, other};
+        auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+        bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
+        at::Tensor outputTensor = isSelfWrapped ? other : self;
+        auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::ScalarType high_type = at::native::result_type(self, other);
+        if (!isFloatingType(high_type) && !isComplexType(high_type)) {
+            high_type = at::ScalarType::Float;
+        }
+        at::Tensor self_cp = self_tensor_to_device(self, high_type, outputTensor.device());
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
+        div_a5_nocheck(self_cp, other, result, high_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
@@ -140,6 +232,29 @@ at::Tensor div(const at::Tensor& self, const at::Tensor& other, c10::optional<c1
 {
     DO_COMPATIBILITY(aclnnDivMods, acl_op::div(self, other, rounding_mode));
     DO_COMPATIBILITY(aclnnDivMod, acl_op::div(self, other, rounding_mode));
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        check_rounding_mode_npu(rounding_mode);
+        std::vector<at::Tensor> tensor_list = {self, other};
+        auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
+        bool isSelfWrapped = npu_preparation::is_scalar_wrapped_to_tensor(self);
+        at::Tensor outputTensor = isSelfWrapped ? other : self;
+        auto outputSize = op_infer::broadcast_ops_npu_output_size(self, other);
+        at::ScalarType high_type = at::native::result_type(self, other);
+        int mode = 0;
+        if (rounding_mode.has_value() && *rounding_mode == "floor") {
+            mode = MODE_FLOOR;
+        } else if (rounding_mode.has_value() && *rounding_mode == "trunc") {
+            mode = MODE_TRUNC;
+        } else if (!isFloatingType(high_type) && !isComplexType(high_type)) {
+            high_type = at::ScalarType::Float;  // None:整型升 Float(输出分配)
+        }
+        at::Tensor self_cp = self_tensor_to_device(self, high_type, outputTensor.device());
+        at::Tensor result =
+            npu_preparation::apply_tensor_without_format(outputSize, outputTensor.options().dtype(high_type));
+        div_a5_mode_nocheck(self_cp, other, mode, result, high_type);
+        at::namedinference::propagate_names_if_nonempty(result, maybe_names);
+        return result;
+    }
     std::vector<at::Tensor> tensor_list = {self, other};
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     if (rounding_mode.has_value() && *rounding_mode != "floor" && *rounding_mode != "trunc") {
