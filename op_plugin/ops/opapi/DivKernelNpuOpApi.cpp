@@ -58,15 +58,22 @@ at::Tensor& div_out(const at::Tensor& self, const at::Tensor& other, at::Tensor&
     auto maybe_names = op_plugin::utils::compute_names_npu(tensor_list);
     // calculate the output size
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
-    at::ScalarType result_type = at::native::result_type(self, other);
-    if (!isFloatingType(result_type) && !isComplexType(result_type)) {
-        result_type = at::ScalarType::Float;
+    // common_type:输入按三类 promotion 推导的公共类型(true div 整型升 Float)
+    at::ScalarType common_type = at::native::result_type(self, other);
+    if (!isFloatingType(common_type) && !isComplexType(common_type)) {
+        common_type = at::ScalarType::Float;
     }
+    // check_type:校验 out 用;out 为浮点/复数时取 out 自身 dtype(保留安全 cast 语义)
+    at::ScalarType check_type = common_type;
     if (isFloatingType(result.scalar_type()) || isComplexType(result.scalar_type())) {
-        result_type = result.scalar_type();
+        check_type = result.scalar_type();
     }
-    at::Tensor self_cp = self_tensor_to_device(self, result_type, result.device());
-    npu_preparation::check_tensor({self}, result, result_type, output_size);
+    // A5(Ascend950)对齐 CUDA:div.out 在输入 common_dtype 计算,再由 aclnn 末尾 cast 到 out,
+    // 不按 out_dtype 计算;故 wrapped self 按 common_dtype 落盘。非 A5 维持原 "按 out dtype 计算" 行为。
+    at::ScalarType self_cast_type =
+        (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) ? common_type : check_type;
+    at::Tensor self_cp = self_tensor_to_device(self, self_cast_type, result.device());
+    npu_preparation::check_tensor({self}, result, check_type, output_size);
 
     // calculate the output result of the NPU
     div_out_npu_opapi_nocheck(self_cp, other, result);
