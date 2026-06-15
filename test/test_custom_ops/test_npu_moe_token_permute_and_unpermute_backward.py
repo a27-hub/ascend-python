@@ -140,7 +140,9 @@ class TestNpuFusedPermuteAndUnpermute():
 
         # test the outputs for permute
         permuted_tokens_ori, sorted_indices_ori = permute(token_ori, indices_ori)
-        permuted_tokens_fused, sorted_indices_fused = npu_moe_token_permute(token_fused, indices_fused)
+        permuted_tokens_fused, sorted_indices_fused, expanded_scale = npu_moe_token_permute(
+            token_fused, indices_fused)
+        assert expanded_scale.numel() == 0
 
         assert torch.allclose(permuted_tokens_ori, permuted_tokens_fused, **tols)
         # The fusion operator will perform two torch.argsort operations internally
@@ -209,7 +211,8 @@ class TestNpuFusedPermuteAndUnpermute():
         if topk > 1:
             probs = (torch.ones_like(indices) / topk).npu().to(dtype)
 
-        permuted_tokens, sorted_indices = npu_moe_token_permute(tokens, indices)
+        permuted_tokens, sorted_indices, expanded_scale = npu_moe_token_permute(tokens, indices)
+        assert expanded_scale.numel() == 0
         unpermuted_tokens = npu_moe_token_unpermute(permuted_tokens, sorted_indices, probs=probs)
 
         if topk == 1:
