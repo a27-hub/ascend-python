@@ -51,7 +51,7 @@ at::Tensor _cdist_backward(
     DO_COMPATIBILITY(aclnnCdistBackward, acl_op::_cdist_backward(grad, x1, x2, p, cdist));
     // The current operator has precision issues when handling integers and infinity.
     bool p_in_range = (p_cast >= 0.0 && p_cast <= 2.0) || (p_cast == -1);
-    if (p_in_range) {
+    if (p_in_range && (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950)) {
         return acl_op::_cdist_backward(grad, x1, x2, p, cdist);
     }
     auto output_size = x1.sizes();
