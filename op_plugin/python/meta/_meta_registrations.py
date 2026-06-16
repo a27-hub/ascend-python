@@ -5497,6 +5497,51 @@ def npu_qkv_rms_norm_rope_cache_functional_meta(qkv, q_gamma, k_gamma, cos, sin,
             torch.empty_like(q_out), torch.empty_like(k_cache), torch.empty_like(v_cache))
 
 
+def _qkv_rms_norm_rope_cache_with_kscale_meta_outputs(qkv, head_nums, q_rotation, k_rotation, v_scale):
+    if head_nums is None:
+        raise RuntimeError("head_nums must not be None" + ops_error(ErrCode.PARAM))
+    if len(head_nums) != 3:
+        raise RuntimeError("head_nums must be length 3 [n_q, n_k, n_v]" + ops_error(ErrCode.PARAM))
+
+    n_q, n_k, n_v = head_nums
+    if n_q <= 0 or n_k <= 0 or n_v <= 0:
+        raise RuntimeError("all head_nums values must be positive" + ops_error(ErrCode.PARAM))
+    if n_v != n_k:
+        raise RuntimeError("Nv must equal Nk" + ops_error(ErrCode.PARAM))
+    if qkv.dim() != 3:
+        raise RuntimeError("3D tensor expected for input qkv" + ops_error(ErrCode.PARAM))
+    if qkv.size(1) != n_q + n_k + n_v:
+        raise RuntimeError("qkv.shape[1] must equal Nq+Nk+Nv" + ops_error(ErrCode.PARAM))
+    if q_rotation is None:
+        raise RuntimeError("q_rotation is required" + ops_error(ErrCode.PARAM))
+    if k_rotation is None:
+        raise RuntimeError("k_rotation is required" + ops_error(ErrCode.PARAM))
+    if v_scale is None:
+        raise RuntimeError("v_scale is required" + ops_error(ErrCode.PARAM))
+
+    q_out = torch.empty([qkv.size(0), n_q, qkv.size(2)], dtype=torch.float8_e4m3fn, device=qkv.device)
+    q_scale = torch.empty([qkv.size(0), n_q], dtype=torch.float32, device=qkv.device)
+    return q_out, q_scale
+
+
+@impl(m, "npu_qkv_rms_norm_rope_cache_with_kscale")
+def npu_qkv_rms_norm_rope_cache_with_kscale_meta(qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
+                                                 k_cache, v_cache, k_scale_cache, cu_seq_len, head_nums,
+                                                 *, q_rotation=None, k_rotation=None, v_scale=None,
+                                                 epsilon=1e-6):
+    return _qkv_rms_norm_rope_cache_with_kscale_meta_outputs(qkv, head_nums, q_rotation, k_rotation, v_scale)
+
+
+@impl(m, "npu_qkv_rms_norm_rope_cache_with_kscale_functional")
+def npu_qkv_rms_norm_rope_cache_with_kscale_functional_meta(qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
+                                                            k_cache, v_cache, k_scale_cache, cu_seq_len,
+                                                            head_nums, *, q_rotation=None, k_rotation=None,
+                                                            v_scale=None, epsilon=1e-6):
+    q_out, q_scale = _qkv_rms_norm_rope_cache_with_kscale_meta_outputs(
+        qkv, head_nums, q_rotation, k_rotation, v_scale)
+    return q_out, q_scale, torch.empty_like(k_cache), torch.empty_like(v_cache), torch.empty_like(k_scale_cache)
+
+
 @impl(m, "npu_apply_rotary_pos_emb")
 def npu_apply_rotary_pos_emb_meta(query, key, cos, sin, layout=1, rotary_mode='half'):
     return (torch.empty_like(query, dtype=query.dtype), torch.empty_like(key, dtype=key.dtype))
