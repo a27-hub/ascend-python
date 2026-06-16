@@ -47,8 +47,10 @@ at::Tensor& multinomial_op_api(
         //     : ((n_dist - 1) / dists_per_launch + 1) * RAND_OFFSET_PER_LAUNCH;
         if (n_dist <= 0) {
             counter_offset = 0;
+        } else if (n_dist <= MAX_DISTS_PER_LAUNCH) {
+            counter_offset = RAND_OFFSET_PER_LAUNCH;
         } else {
-            counter_offset = ((n_dist - 1) / dists_per_launch + 1) * RAND_OFFSET_PER_LAUNCH;
+            counter_offset = ((n_dist - 1) / MAX_DISTS_PER_LAUNCH + 1) * RAND_OFFSET_PER_LAUNCH;
         }
     }
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
