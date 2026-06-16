@@ -33,20 +33,24 @@ at::Tensor& multinomial_op_api(
     auto gen = at::get_generator_or_default<at_npu::NPUGeneratorImpl>(generator, at_npu::detail::getDefaultNPUGenerator());
 
     int64_t counter_offset;
-    // if (!replacement || num_samples == 1) {
-    //     counter_offset = op_plugin::utils::calc_counter_offset(
-    //         self.numel(), op_plugin::utils::UNROLL_4);
-    // } else {
-    //     constexpr int64_t MAX_DISTS_PER_LAUNCH = 65535;
-    //     constexpr int64_t RAND_OFFSET_PER_LAUNCH = 4;
+    if (!replacement || num_samples == 1) {
+        counter_offset = op_plugin::utils::calc_counter_offset(
+            self.numel(), op_plugin::utils::UNROLL_4);
+    } else {
+        constexpr int64_t MAX_DISTS_PER_LAUNCH = 65535;
+        constexpr int64_t RAND_OFFSET_PER_LAUNCH = 4;
 
-    //     int64_t n_dist = (self.dim() == 2) ? self.size(0) : 1;
-    //     int64_t dists_per_launch = std::min(n_dist, MAX_DISTS_PER_LAUNCH);
+        int64_t n_dist = (self.dim() == 2) ? self.size(0) : 1;
+        int64_t dists_per_launch = std::min(n_dist, MAX_DISTS_PER_LAUNCH);
 
-    //     counter_offset = (n_dist <= 0) ? 0
-    //         : ((n_dist - 1) / dists_per_launch + 1) * RAND_OFFSET_PER_LAUNCH;
-    // }
-    counter_offset = 10;
+        // counter_offset = (n_dist <= 0) ? 0
+        //     : ((n_dist - 1) / dists_per_launch + 1) * RAND_OFFSET_PER_LAUNCH;
+        if (n_dist <= 0) {
+            counter_offset = 0;
+        } else {
+            counter_offset = ((n_dist - 1) / dists_per_launch + 1) * RAND_OFFSET_PER_LAUNCH;
+        }
+    }
     auto is_capture = c10_npu::currentStreamCaptureStatusMayInitCtx();
     if (is_capture == c10_npu::CaptureStatus::None) {
         auto pair = gen->philox_engine_inputs(counter_offset);
