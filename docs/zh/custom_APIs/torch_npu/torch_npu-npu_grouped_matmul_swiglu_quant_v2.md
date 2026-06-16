@@ -457,7 +457,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
         def __init__(self):
             super().__init__()
         def forward(self, x, weight, weightscale, xscale, group_list, quant_dtype):
-            output = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weightscale, xscale, group_list, quant_dtype=quant_dtype, dequant_dtype=5)
+            output = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weightscale, xscale, group_list, quant_dtype=quant_dtype)
             return output    
      
     def gen_input_data(E, M, K, N):
@@ -471,7 +471,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     M = 512
     K = 7168
     N = 4096
-    quant_dtype = 1
+    quant_dtype = 2
     x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
     weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
      
@@ -513,7 +513,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
             self.weightScale = nn.Parameter(weightScale, requires_grad=False)
             self.xScale = nn.Parameter(xScale, requires_grad=False)
 
-        def forward(self, x_npu：Torch.Tensor, w：Torch.Tensor, group_list_npu：Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        def forward(self, x_npu:Torch.Tensor, w:Torch.Tensor, group_list_npu:Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             with torch.no_grad():
                 weight = self.weight
                 weightScale = self.weightScale.npu()
@@ -704,7 +704,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
             self.weight = nn.Parameter(weight_npu, requires_grad=False)
             self.weightScale = nn.Parameter(weightScale, requires_grad=False)
             self.xScale = nn.Parameter(xScale, requires_grad=False)
-        def forward(self, x_npu：Torch.Tensor, w：Torch.Tensor, group_list_npu：Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        def forward(self, x_npu:Torch.Tensor, w:Torch.Tensor, group_list_npu:Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             with torch.no_grad():
                 weight = self.weight
                 weightScale = self.weightScale.npu()
