@@ -24,12 +24,19 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
                                     const c10::optional<at::Tensor>& scales,
                                     const at::Tensor& expanded_src_to_dst_row,
                                     const c10::optional<at::Tensor>& expert_for_source_row,
+                                    const c10::optional<at::Tensor>& x,
+                                    const c10::optional<at::Tensor>& alpha1,
+                                    const c10::optional<at::Tensor>& alpha2,
+                                    const c10::optional<at::Tensor>& v,
                                     const c10::optional<int64_t> drop_pad_mode,
+                                    at::IntArrayRef zero_expert_range,
+                                    at::IntArrayRef copy_expert_range,
+                                    at::IntArrayRef constant_expert_range,
                                     const c10::optional<int64_t> k)
 {
-    static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
-    if (!is_moe_finalize_routing_V2_available) {
-        TORCH_CHECK(skip1.has_value(), "skip1 parameter must have value when there is no aclnnMoeFinalizeRoutingV2",
+    static const bool is_moe_finalize_routing_V4_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV4");
+    if (!is_moe_finalize_routing_V4_available) {
+        TORCH_CHECK(skip1.has_value(), "skip1 parameter must have value when there is no aclnnMoeFinalizeRoutingV4",
             OPS_ERROR(ErrCode::PARAM));
         at::Tensor result = npu_preparation::apply_tensor_without_format(skip1.value());
         EXEC_NPU_CMD(aclnnMoeFinalizeRouting, expanded_permuted_rows, skip1, skip2, bias, scales,
@@ -39,8 +46,10 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
 
     at::Tensor result;
     int64_t dim0 = expanded_src_to_dst_row.size(0);
-    int64_t kAttr = c10::value_or_else(k, [] { return 1; });
-    dim0 = dim0 / kAttr;
+    int64_t kAttr = c10::value_or_else(k, [] { return 0; });
+    if (kAttr > 0) {
+        dim0 = dim0 / kAttr;
+    }
     if (scales.has_value()) {
         dim0 = scales.value().size(0);
     }
@@ -53,8 +62,9 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
     output_size.push_back(expanded_permuted_rows.size(dim1Index));
     result = npu_preparation::apply_tensor_without_format(output_size, expanded_permuted_rows.options());
     int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
-    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row,
-                 skip1, skip2, bias, scales, expert_for_source_row, mode, kAttr, result);
+    EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV4, expanded_permuted_rows, expanded_src_to_dst_row,
+                 skip1, skip2, bias, scales, expert_for_source_row, x, alpha1, alpha2, v, mode,
+                 zero_expert_range, copy_expert_range, constant_expert_range, kAttr, result);
     return result;
 }
 } // namespace op_api
