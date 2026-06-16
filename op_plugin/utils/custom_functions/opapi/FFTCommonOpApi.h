@@ -81,13 +81,21 @@ namespace op_api {
         }                                                                                                              \
     } while (0)
 
-/**
- * 异步调用npu执行, 无返回值.
- */
-#define EXEC_ASDSIP_FFT_NPU_CMD(fftExecApi, inData, outData, fftParam)                                                 \
+#define EXEC_ASDSIP_FFT_NPU_CMD_V1(fftExecApi, inData, outData, fftParam)                                              \
     do {                                                                                                               \
+        static const auto initMemAddr = GetOpApiFuncAddr("InitHugeMemThreadLocal");                                    \
+        static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                                \
+        static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
         auto sip_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
+        if (c10_npu::check_enqueue_need_use(sip_stream)) {                                                             \
+            c10_npu::UseStreamResInCurrentThread(sip_stream);                                                          \
+        }                                                                                                              \
+        InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);                    \
+        UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);          \
         at_npu::native::SetDeterministic();                                                                            \
+        if (initMemFunc) {                                                                                             \
+            initMemFunc(nullptr, false);                                                                               \
+        }                                                                                                              \
         asdFftHandle handle = op_api::getHandle(fftParam);                                                             \
         size_t workspace_size = 0;                                                                                     \
         asdSipFftGetWorkspaceSize(handle, workspace_size);                                                             \
@@ -102,13 +110,92 @@ namespace op_api {
         auto input = ConvertType(inData);                                                                         \
         auto output = ConvertType(outData);                                                                       \
         static const auto asdFftExec = GetAsdSipApiFuncAddr("asdFftExec" #fftExecApi);                                 \
-        auto sip_call = [handle, input, output]() mutable -> int {                                                     \
+        auto sip_call = [handle, input, output, sip_stream, asdFftExec]() mutable -> int {            \
+            if (c10_npu::check_dequeue_need_use(sip_stream)) {                                                         \
+                c10_npu::UseStreamResInCurrentThread(sip_stream);                                                      \
+            }                                                                                                          \
             FftExecApiFunc fftExecApiFunc = reinterpret_cast<FftExecApiFunc>(asdFftExec);                              \
             auto api_ret = fftExecApiFunc(handle, input, output);                                                      \
             TORCH_CHECK(api_ret == 0, "call " "asdFftExec" #fftExecApi " failed");                                     \
+            ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                        \
+            if (releaseMemFunc) {                                                                                      \
+                releaseMemFunc(nullptr, false);                                                                        \
+            }                                                                                                          \
             return api_ret;                                                                                            \
         };                                                                                                             \
         at_npu::native::OpCommand::RunOpApiV2("asdFftExec" #fftExecApi, sip_call);                                     \
+        if (unInitMemFunc) {                                                                                           \
+            unInitMemFunc(nullptr, false);                                                                             \
+        }                                                                                                              \
+        UnInitCacheThreadLocal();                                                                                      \
+    } while (false)
+
+#define EXEC_ASDSIP_FFT_NPU_CMD_V2(fftExecApi, inData, outData, fftParam)                                              \
+    do {                                                                                                               \
+        static const auto initMemAddr = GetOpApiFuncAddr("InitHugeMemThreadLocal");                                    \
+        static const auto unInitMemAddr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                                \
+        static const auto releaseMemAddr = GetOpApiFuncAddr("ReleaseHugeMem");                                         \
+        auto sip_stream = c10_npu::getCurrentNPUStream().stream(false);                                                \
+        if (c10_npu::check_enqueue_need_use(sip_stream)) {                                                             \
+            c10_npu::UseStreamResInCurrentThread(sip_stream);                                                          \
+        }                                                                                                              \
+        asdFftHandle handle = op_api::getHandle(fftParam);                                                             \
+        size_t workspace_size = 0;                                                                                     \
+        asdSipFftGetWorkspaceSize(handle, workspace_size);                                                             \
+        void *workspace_addr = nullptr;                                                                                \
+        at::Tensor workspace_tensor;                                                                                   \
+        if (workspace_size != 0) {                                                                                     \
+            workspace_tensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspace_size, sip_stream);     \
+            workspace_addr = const_cast<void *>(workspace_tensor.storage().data());                                    \
+        }                                                                                                              \
+        asdSipFftSetWorkspace(handle, workspace_addr);                                                                 \
+        asdSipFftSetStream(handle, sip_stream);                                                                        \
+        auto input = CopyTypeV2(inData);                                                                         \
+        auto output = CopyTypeV2(outData);                                                                       \
+        auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
+        uint32_t aic_num = UINT32_MAX;                                                                                  \
+        uint32_t aiv_num = UINT32_MAX;                                                                                  \
+        if (c10_npu::is_core_control_enabled()) {                                                                       \
+            aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                          \
+            aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                        \
+        }                                                                                                              \
+        static const auto asdFftExec = GetAsdSipApiFuncAddr("asdFftExec" #fftExecApi);                                 \
+        auto sip_call = [handle, input, output, sip_stream, asdFftExec, deterministic_status, aic_num, aiv_num,     \
+                         initMemAddr, unInitMemAddr, releaseMemAddr]() mutable -> int {                                \
+            if (c10_npu::check_dequeue_need_use(sip_stream)) {                                                         \
+                c10_npu::UseStreamResInCurrentThread(sip_stream);                                                      \
+            }                                                                                                          \
+            InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);               \
+            UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);       \
+            int api_ret = 0;                                                                                            \
+            at_npu::native::SetDeterministicOps(deterministic_status);                                                  \
+            if (initMemFunc) {                                                                                         \
+                initMemFunc(nullptr, false);                                                                           \
+            }                                                                                                          \
+            FftExecApiFunc fftExecApiFunc = reinterpret_cast<FftExecApiFunc>(asdFftExec);                              \
+            api_ret = fftExecApiFunc(handle, input, output);                                                          \
+            TORCH_CHECK(api_ret == 0, "call " "asdFftExec" #fftExecApi " failed");                                     \
+            ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);                         \
+            if (releaseMemFunc) {                                                                                      \
+                releaseMemFunc(nullptr, false);                                                                       \
+            }                                                                                                          \
+            if (unInitMemFunc) {                                                                                       \
+                unInitMemFunc(nullptr, false);                                                                         \
+            }                                                                                                          \
+            UnInitCacheThreadLocal();                                                                                  \
+            return api_ret;                                                                                            \
+        };                                                                                                             \
+        at_npu::native::OpCommand::RunOpApiV2("asdFftExec" #fftExecApi, sip_call);                                     \
+    } while (false)
+
+#define EXEC_ASDSIP_FFT_NPU_CMD(fftExecApi, inData, outData, fftParam)                                                 \
+    do {                                                                                                               \
+        static const auto task_queue_enable = c10_npu::option::OptionsManager::GetTaskQueueEnable();                   \
+        if (task_queue_enable == 2) {                                                                                  \
+            EXEC_ASDSIP_FFT_NPU_CMD_V2(fftExecApi, inData, outData, fftParam);                                        \
+        } else {                                                                                                       \
+            EXEC_ASDSIP_FFT_NPU_CMD_V1(fftExecApi, inData, outData, fftParam);                                        \
+        }                                                                                                              \
     } while (false)
 
 #endif //  __TORCH_NPU_OP_PLUGIN_UTILS_FFT_COMMON_OP_API__
