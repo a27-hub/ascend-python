@@ -24,7 +24,14 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
                                     const c10::optional<at::Tensor>& scales,
                                     const at::Tensor& expanded_src_to_dst_row,
                                     const c10::optional<at::Tensor>& expert_for_source_row,
+                                    const c10::optional<at::Tensor>& x,
+                                    const c10::optional<at::Tensor>& alpha1,
+                                    const c10::optional<at::Tensor>& alpha2,
+                                    const c10::optional<at::Tensor>& v,
                                     const c10::optional<int64_t> drop_pad_mode,
+                                    at::IntArrayRef zero_expert_range,
+                                    at::IntArrayRef copy_expert_range,
+                                    at::IntArrayRef constant_expert_range,
                                     const c10::optional<int64_t> k)
 {
     static const bool is_moe_finalize_routing_V2_available = check_aclnn_kernel_available("aclnnMoeFinalizeRoutingV2");
@@ -39,8 +46,10 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
 
     at::Tensor result;
     int64_t dim0 = expanded_src_to_dst_row.size(0);
-    int64_t kAttr = c10::value_or_else(k, [] { return 1; });
-    dim0 = dim0 / kAttr;
+    int64_t kAttr = c10::value_or_else(k, [] { return 0; });
+    if (kAttr > 0) {
+        dim0 = dim0 / kAttr;
+    }
     if (scales.has_value()) {
         dim0 = scales.value().size(0);
     }
@@ -54,7 +63,8 @@ at::Tensor npu_moe_finalize_routing(const at::Tensor& expanded_permuted_rows, co
     result = npu_preparation::apply_tensor_without_format(output_size, expanded_permuted_rows.options());
     int64_t mode = c10::value_or_else(drop_pad_mode, [] { return 0; });
     EXEC_NPU_CMD(aclnnMoeFinalizeRoutingV2, expanded_permuted_rows, expanded_src_to_dst_row,
-                 skip1, skip2, bias, scales, expert_for_source_row, mode, kAttr, result);
+                 skip1, skip2, bias, scales, expert_for_source_row, x, alpha1, alpha2, v, mode,
+                 zero_expert_range, copy_expert_range, constant_expert_range, kAttr, result);
     return result;
 }
 } // namespace op_api
