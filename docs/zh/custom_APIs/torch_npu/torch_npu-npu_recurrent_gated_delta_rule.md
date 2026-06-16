@@ -126,7 +126,7 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     import os
     import numpy as np
 
-    # "ENABLE_ACLNN"是否使能走aclnn, true: 回调走aclnn, false: 在线编译
+    # "ENABLE_ACLNN"是否走aclnn, true: 回调走aclnn, false: 在线编译
     os.environ["ENABLE_ACLNN"] = "false"
     config = CompilerConfig()
     npu_backend = tng.get_npu_backend(compiler_config=config)
