@@ -7113,7 +7113,10 @@ custom:
   - func: obfuscation_finalize(Tensor fd_to_close) -> Tensor
     op_api: all_version
 
-  - func: obfuscation_calculate(Tensor fd, Tensor x, Tensor param, *, float? obf_coefficient=1.0) -> Tensor
+  - func: obfuscation_calculate(int fd, Tensor x, int param, *, float? obf_coefficient=1.0) -> Tensor
+    op_api: all_version
+
+  - func: obfuscation_calculate.tensor(Tensor fd, Tensor x, Tensor param, *, float? obf_coefficient=1.0) -> Tensor
     op_api: all_version
 
   - func: one_(Tensor(a!) self) -> Tensor(a!)

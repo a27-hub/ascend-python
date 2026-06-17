@@ -4524,7 +4524,7 @@ please check the sizes of scale and pertoken_scale" + ops_error(ErrCode.VALUE),
 
 
 @impl(m, "obfuscation_calculate")
-def obfuscation_calculate_meta(fd, x, param, cmd):
+def obfuscation_calculate_meta(fd, x, param, obf_coefficient=1.0):
     return torch.empty_like(x)
 
 
