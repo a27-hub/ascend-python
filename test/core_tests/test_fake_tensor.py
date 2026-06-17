@@ -4082,13 +4082,14 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             v_cache = torch.empty(block_num, Nv, block_size, D, dtype=torch.float8_e4m3fn).npu()
             k_scale_cache = torch.empty(block_num, Nk, block_size, 1, dtype=torch.float32).npu()
             cu_seq_len = torch.empty(batch + 1, dtype=torch.int32).npu()
+            actual_seq_lens = torch.empty(batch, dtype=torch.int32).npu()
             q_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
             k_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
             v_scale = torch.empty(Nv, dtype=torch.float32).npu()
 
             q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
                 qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
-                k_scale_cache, cu_seq_len, [Nq, Nk, Nv],
+                k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
                 q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
             self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))
@@ -4109,6 +4110,7 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             v_cache = torch.empty(block_num, Nv, block_size, D, dtype=torch.float8_e4m3fn).npu()
             k_scale_cache = torch.empty(block_num, Nk, block_size, 1, dtype=torch.float32).npu()
             cu_seq_len = torch.empty(batch + 1, dtype=torch.int32).npu()
+            actual_seq_lens = torch.empty(batch, dtype=torch.int32).npu()
             q_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
             k_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
             v_scale = torch.empty(Nv, dtype=torch.float32).npu()
@@ -4116,7 +4118,7 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             q_out, q_scale, k_cache_out, v_cache_out, k_scale_cache_out = \
                 torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale_functional(
                     qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
-                    k_scale_cache, cu_seq_len, [Nq, Nk, Nv],
+                    k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
                     q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
             self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))

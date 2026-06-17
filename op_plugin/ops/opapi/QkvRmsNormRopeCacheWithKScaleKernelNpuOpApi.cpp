@@ -32,6 +32,8 @@ struct ValidationParams {
 
 ValidationParams validate_inputs(
     const at::Tensor& qkv,
+    const at::Tensor& cu_seq_len,
+    const at::Tensor& actual_seq_lens,
     at::IntArrayRef head_nums,
     const c10::optional<at::Tensor>& q_rotation,
     const c10::optional<at::Tensor>& k_rotation,
@@ -55,6 +57,10 @@ ValidationParams validate_inputs(
     TORCH_CHECK(qkv.size(DIM_ONE) == Nq + Nk + Nv,
         "npu_qkv_rms_norm_rope_cache_with_kscale: qkv.shape[1] must equal Nq+Nk+Nv, but got ", qkv.size(DIM_ONE),
         " vs expected ", Nq + Nk + Nv, OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(cu_seq_len.dim() == DIM_ONE && cu_seq_len.size(DIM_ZERO) >= 2,
+        "npu_qkv_rms_norm_rope_cache_with_kscale: cu_seq_len must be 1D with length >= 2." + OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(actual_seq_lens.dim() == DIM_ONE && actual_seq_lens.size(DIM_ZERO) == cu_seq_len.size(DIM_ZERO) - 1,
+        "npu_qkv_rms_norm_rope_cache_with_kscale: actual_seq_lens must be 1D with length cu_seq_len.size(0)-1." + OPS_ERROR(ErrCode::PARAM));
 
     TORCH_CHECK(q_rotation.has_value() && q_rotation.value().defined(),
         "npu_qkv_rms_norm_rope_cache_with_kscale: q_rotation is required." + OPS_ERROR(ErrCode::PARAM));
@@ -80,13 +86,14 @@ std::tuple<at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_with_kscale(
     at::Tensor& v_cache,
     at::Tensor& k_scale_cache,
     const at::Tensor& cu_seq_len,
+    const at::Tensor& actual_seq_lens,
     at::IntArrayRef head_nums,
     const c10::optional<at::Tensor>& q_rotation,
     const c10::optional<at::Tensor>& k_rotation,
     const c10::optional<at::Tensor>& v_scale,
     double epsilon)
 {
-    const auto& params = validate_inputs(qkv, head_nums, q_rotation, k_rotation, v_scale);
+    const auto& params = validate_inputs(qkv, cu_seq_len, actual_seq_lens, head_nums, q_rotation, k_rotation, v_scale);
     int64_t Nq = params.Nq;
     int64_t Nk = params.Nk;
     int64_t Nv = params.Nv;
@@ -105,7 +112,7 @@ std::tuple<at::Tensor, at::Tensor> npu_qkv_rms_norm_rope_cache_with_kscale(
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnQkvRmsNormRopeCacheWithKScale,
         qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
-        k_cache, v_cache, k_scale_cache, cu_seq_len,
+        k_cache, v_cache, k_scale_cache, cu_seq_len, actual_seq_lens,
         q_rotation_v, k_rotation_v, v_scale_v,
         head_nums, epsilon,
         q_out, q_scale);
@@ -123,13 +130,14 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_r
     const at::Tensor& v_cache,
     const at::Tensor& k_scale_cache,
     const at::Tensor& cu_seq_len,
+    const at::Tensor& actual_seq_lens,
     at::IntArrayRef head_nums,
     const c10::optional<at::Tensor>& q_rotation,
     const c10::optional<at::Tensor>& k_rotation,
     const c10::optional<at::Tensor>& v_scale,
     double epsilon)
 {
-    const auto& params = validate_inputs(qkv, head_nums, q_rotation, k_rotation, v_scale);
+    const auto& params = validate_inputs(qkv, cu_seq_len, actual_seq_lens, head_nums, q_rotation, k_rotation, v_scale);
     int64_t Nq = params.Nq;
     int64_t Nk = params.Nk;
     int64_t Nv = params.Nv;
@@ -152,7 +160,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_qkv_r
     EXEC_NPU_NO_FORMAT_CHECK_CMD(
         aclnnQkvRmsNormRopeCacheWithKScale,
         qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
-        k_cache_clone, v_cache_clone, k_scale_cache_clone, cu_seq_len,
+        k_cache_clone, v_cache_clone, k_scale_cache_clone, cu_seq_len, actual_seq_lens,
         q_rotation_v, k_rotation_v, v_scale_v,
         head_nums, epsilon,
         q_out, q_scale);

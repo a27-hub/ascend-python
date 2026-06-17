@@ -115,7 +115,7 @@ def e4m3fn_to_uint8(x):
 # ---------------------------------------------------------------------------
 # Golden
 # ---------------------------------------------------------------------------
-def apply_half_split_rope(y, cos_sin, cu_seq_len):
+def apply_half_split_rope(y, cos_sin, cu_seq_len, actual_seq_lens):
     """Apply full-D half-split RoPE and return the per-row RoPE tensor.
 
     The helper returns ``q_rope_out`` / ``k_rope_out`` rows before the dense
@@ -133,8 +133,12 @@ def apply_half_split_rope(y, cos_sin, cu_seq_len):
 
     T = int(y.shape[0])
     cu = np.asarray(cu_seq_len).astype(np.int64)
+    actual = np.asarray(actual_seq_lens).astype(np.int64)
+    local_lens = cu[1:] - cu[:-1]
     b_of_t = np.searchsorted(cu, np.arange(T, dtype=np.int64), side="right") - 1
-    s_of_t = np.arange(T, dtype=np.int64) - cu[b_of_t]
+    local_pos = np.arange(T, dtype=np.int64) - cu[b_of_t]
+    history_offsets = np.maximum(actual - local_lens, 0)
+    s_of_t = history_offsets[b_of_t] + local_pos
 
     cos_sin_f = np.asarray(cos_sin, dtype=np.float32)
     cos = cos_sin_f[s_of_t, 0:half]                          # [T, half]
@@ -157,6 +161,7 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     v_cache,        # [BlockNum, Nv, BlockSize, D]   float8_e4m3fn, initial
     k_scale_cache,  # [BlockNum, Nk, BlockSize, 1]   fp32 (initial)
     cu_seq_len,     # [Batch+1]         int32 prefix sum
+    actual_seq_lens,  # [Batch]         int32 actual sequence lengths after this call
     q_rotation,     # [D, D]            bf16-valued (fp32 storage), Q branch
     k_rotation,     # [D, D]            bf16-valued (fp32 storage), K branch
     v_scale,        # [Nv]              fp32
@@ -198,9 +203,9 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     q_norm = q / q_rms * q_gamma_f[None, None, :]            # [T, Nq, D]
     k_norm = k / k_rms * k_gamma_f[None, None, :]            # [T, Nk, D]
 
-    # --- 3. Q/K RoPE (fp32), position from cu_seq_len prefix sum ----------
-    q_rope_out = apply_half_split_rope(q_norm, cos_sin, cu_seq_len)  # [T,Nq,D]
-    k_rope_out = apply_half_split_rope(k_norm, cos_sin, cu_seq_len)  # [T,Nk,D]
+    # --- 3. Q/K RoPE (fp32), position from local prefix sum + history offset
+    q_rope_out = apply_half_split_rope(q_norm, cos_sin, cu_seq_len, actual_seq_lens)  # [T,Nq,D]
+    k_rope_out = apply_half_split_rope(k_norm, cos_sin, cu_seq_len, actual_seq_lens)  # [T,Nk,D]
 
     # --- 4. dense Cube rotation matmul: Q/K use separate right matrices ----
     q_rope_bf16 = to_bf16(q_rope_out).astype(np.float32)

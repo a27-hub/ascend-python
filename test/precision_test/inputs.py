@@ -17,13 +17,18 @@ from golden import (
 )
 
 
-def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=None):
+def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=None, actual_seq_lens=None):
     rng = np.random.default_rng(seed)
     assert len(seq_lens) == B
     T = int(sum(seq_lens))
     cu_seq_len = np.zeros(B + 1, dtype=np.int32)
     cu_seq_len[1:] = np.cumsum(seq_lens)
-    max_seq_len = int(max(seq_lens))
+    if actual_seq_lens is None:
+        actual_seq_lens = np.asarray(seq_lens, dtype=np.int32)
+    else:
+        actual_seq_lens = np.asarray(actual_seq_lens, dtype=np.int32)
+    assert actual_seq_lens.shape == (B,)
+    max_seq_len = int(max(actual_seq_lens))
 
     H = Nq + Nk + Nv
     qkv = to_bf16(rng.standard_normal((H, T, D)).astype(np.float32))
@@ -49,7 +54,7 @@ def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=
     return dict(
         qkv=qkv, q_gamma=q_gamma, k_gamma=k_gamma, cos_sin=cos_sin,
         slot_mapping=slot_mapping, k_cache=k_cache, v_cache=v_cache,
-        k_scale_cache=k_scale_cache, cu_seq_len=cu_seq_len,
+        k_scale_cache=k_scale_cache, cu_seq_len=cu_seq_len, actual_seq_lens=actual_seq_lens,
         q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale,
         head_nums=[Nq, Nk, Nv], epsilon=1e-6,
     )
@@ -104,6 +109,9 @@ def main():
     # multi-batch: B=2, unequal lengths -> exercises cu_seq_len prefix sum RoPE
     run("multi-batch", make_inputs(2, [2, 7], 16, 2, 2, seed=2))
 
+    # history offset: batch0 continues from position 8192, batch1 starts at 0.
+    run("history-offset", make_inputs(2, [17, 1], 16, 2, 2, seed=7, actual_seq_lens=[8209, 1]))
+
     # head combos
     run("head-combo", make_inputs(1, [64], 64, 8, 8, seed=3))
 
@@ -139,7 +147,7 @@ def main():
     # separately but must use the same half-split RoPE equation and batch-local positions.
     y = np.array([[[1., 2., 3., 4.]], [[-1., -2., 5., 6.]]], dtype=np.float32)
     cs = np.array([[0.5, 0.25, 2.0, 4.0], [1.5, -0.5, -2.0, 0.75]], dtype=np.float32)
-    rot = apply_half_split_rope(y, cs, np.array([0, 2], dtype=np.int32))
+    rot = apply_half_split_rope(y, cs, np.array([0, 2], dtype=np.int32), np.array([2], dtype=np.int32))
     expect = np.array([[[-5.5, -15.5, 3.5, 9.0]], [[8.5, -3.5, 9.5, -4.5]]], dtype=np.float32)
     print(f"    -> q/k half-split RoPE helper max diff: {np.max(np.abs(rot - expect)):.4g}")
     assert np.allclose(rot, expect)

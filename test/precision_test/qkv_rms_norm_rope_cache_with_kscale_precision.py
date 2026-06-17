@@ -132,6 +132,7 @@ def make_torch_inputs(inp, golden_mod, device):
         "v_cache": fp8_numpy_to_torch(inp["v_cache"], golden_mod, device),
         "k_scale_cache": numpy_to_torch(inp["k_scale_cache"], device, torch.float32),
         "cu_seq_len": numpy_to_torch(inp["cu_seq_len"], device, torch.int32),
+        "actual_seq_lens": numpy_to_torch(inp["actual_seq_lens"], device, torch.int32),
         "head_nums": list(inp["head_nums"]),
         "q_rotation": numpy_to_torch(inp["q_rotation"], device, torch.bfloat16),
         "k_rotation": numpy_to_torch(inp["k_rotation"], device, torch.bfloat16),
@@ -170,7 +171,8 @@ def run_npu_op(inp, golden_mod, mode, device):
             # Temporarily disabled while validating golden/compare with zero_outputs.
             q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
                 t["qkv"], t["q_gamma"], t["k_gamma"], t["cos_sin"], t["slot_mapping"],
-                t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["head_nums"],
+                t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["actual_seq_lens"],
+                t["head_nums"],
                 q_rotation=t["q_rotation"], k_rotation=t["k_rotation"], v_scale=t["v_scale"],
                 epsilon=t["epsilon"],
             )
@@ -179,7 +181,8 @@ def run_npu_op(inp, golden_mod, mode, device):
             # Temporarily disabled while validating golden/compare with zero_outputs.
             outputs = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale_functional(
                 t["qkv"], t["q_gamma"], t["k_gamma"], t["cos_sin"], t["slot_mapping"],
-                t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["head_nums"],
+                t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["actual_seq_lens"],
+                t["head_nums"],
                 q_rotation=t["q_rotation"], k_rotation=t["k_rotation"], v_scale=t["v_scale"],
                 epsilon=t["epsilon"],
             )
