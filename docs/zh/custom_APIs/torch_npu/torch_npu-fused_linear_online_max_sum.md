@@ -9,32 +9,65 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合matmul与celoss。当前算子为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
+- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与celoss。本接口为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
 
 - 计算公式：
 
-    1. `input`与$weight^T$做矩阵乘：
-        $$vocabParallelLogits = input @ weight^T$$
+  1. $input$与$wight^T$做矩阵乘得到：
 
-    2. 计算`vocabParallelLogits`每行的最大值：
-        $$logitsMax = max(vocabParallelLogits, dim=-1)$$
+     $$
+     vocabParallelLogitsOutOptional = input @ weight^T
+     $$
+  2. 计算$vocabParallelLogitsOutOptional$每行的最大值：
 
-    3. 计算差值：
-        $$subRes[b][n] = vocabParallelLogits[b][n] - logitsMax[b]$$
+     $$
+     logitsMaxLocalOut = max(vocabParallelLogitsOutOptional, dim=-1)
+     $$
+  3. 计算$vocabParallelLogitsOutOptional$与$logitsMaxLocalOut$的差值：
 
-    4. 计算`subRes`经指数运算后每行的和：
-        $$sumExpLogits = sum(exp(subRes), dim=-1)$$
+     $$
+     subRes[b][n] = vocabParallelLogitsOutOptional[b][n] - logitsMaxLocalOut[b]
+     $$
+  4. 计算$subRes$经过指数运算后每行的和
 
-    5. 计算target是否在`[vocabStartIndex, vocabEndIndex]`范围内的mask：
-        $$targetMask = (target < vocabStartIndex) | (target > vocabEndIndex)$$
+     $$
+     sumExpLogitsLocalOut = sum(exp(subRes), dim=-1)
+     $$
+  5. 计算$target$小于$vocabStartIndex$或$target$大于$vocabEndIndex$的mask
 
-    6. 计算maskedTarget：
-        $$maskedTarget[b] = \begin{cases} 0, \& targetMask[b]=True \\ target[b] - vocabStartIndex, \& targetMask[b]=False \end{cases}$$
+     $$
+     targetMask = (target < vocabStartIndex) | (target > vocabEndIndex)
+     $$
+  6. 计算$maskedTargetOut$
 
-    7. 计算predictedLogits：
-        $$predictedLogits[b] = \begin{cases} 0, \& targetMask[b]=True \\ subRes[b][maskedTarget[b]], \& targetMask[b]=False \end{cases}$$
+     $$
+     maskedTargetOut[b] =
+     \begin{cases}
+     0 & \text{targetMask[b]=true}\\
+     target[b] - vocabStartIndex & \text{targetMask[b]=false}
+     \end{cases}
+     $$
+  7. 计算$predictedLogitsLocalOut$
 
-    8. targetMaskOut为targetMask的packed bit表示（uint8，每bit代表1个布尔值）。
+     $$
+     predictedLogitsLocalOut[b] =
+     \begin{cases}
+     0 & \text{targetMask[b]=true}\\
+     subRes[b][maskedTargetOut[b]] & \text{targetMask[b]=false}
+     \end{cases}
+     $$
+  8. 计算$targetMaskOut$
+
+     $$
+     alignNum = (input.size(0) + 7) / 8 * 8\\
+     maskBit[p] = \begin{cases}
+     uint8(targetMask[p]) & \text{p < input.size(0)}\\
+     1 & \text{input.size(0) <= p < alignNum}
+     \end{cases} \\
+     targetMaskOut[k] = 0b(maskBit[8*k:8*k+8])
+     $$
+
+  其中$0 \le b \lt input.size(0), 0 \le n \lt weight.size(0), 0 \le p \lt alignNum, 0 \le k \lt alignNum / 8$。
 
 ## 函数原型
 
@@ -44,21 +77,21 @@ torch_npu.fused_linear_online_max_sum(input, weight, target, vocab_start_index, 
 
 ## 参数说明
 
-- **input**（`Tensor`）：必选参数，matmul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式ND。`input.size(1)`需小于等于65534。支持空Tensor。
-- **weight**（`Tensor`）：必选参数，matmul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
+- **input**（`Tensor`）：必选参数，MatMul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式ND。`input.size(1)`需小于等于65534。支持空Tensor。
+- **weight**（`Tensor`）：必选参数，MatMul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
 - **target**（`Tensor`）：必选参数，目标索引，1维Tensor。数据类型支持`int32`、`int64`，数据格式ND。`target.size(0)`需与`input.size(0)`一致。支持空Tensor。
 - **vocab\_start\_index**（`int`）：必选参数，本卡分配的词汇表起始索引。取值范围`[0, max(target) - 1]`。
 - **vocab\_end\_index**（`int`）：必选参数，本卡分配的词汇表结束索引。取值范围`[vocab_start_index, min(vocab_start_index + weight.size(0) - 1, max(target) - 1)]`。
-- **return\_logits**（`bool`）：可选参数，是否返回matmul结果`vocabParallelLogits`，默认值为`False`。`True`时走高性能分支，`False`时走省显存分支。
+- **return\_logits**（`bool`）：可选参数，是否返回MatMul结果`vocabParallelLogits`，默认值为`False`。`True`时走高性能分支，`False`时走省显存分支。
 
 ## 返回值说明
 
-- **logits\_max**（`Tensor`）：matmul计算后各行的最大值，数据类型`float32`，shape为`[input.size(0)]`。
+- **logits\_max**（`Tensor`）：MatMul计算后各行的最大值，数据类型`float32`，shape为`[input.size(0)]`。
 - **sum\_exp\_logits**（`Tensor`）：`subRes`经exp后各行累加结果，数据类型`float32`，shape为`[input.size(0)]`。
 - **predicted\_logits**（`Tensor`）：`subRes`经`maskedTarget`筛选后的结果，数据类型`float32`，shape为`[input.size(0)]`。
 - **target\_mask**（`Tensor`）：词汇表mask的packed bit表示，数据类型`uint8`，shape为`[(input.size(0) + 7) // 8]`。
 - **masked\_target**（`Tensor`）：target经mask过滤后的结果，数据类型与`target`一致，shape为`[input.size(0)]`。
-- **vocab\_parallel\_logits**（`Tensor`）：matmul计算结果。`return_logits`为`True`时，数据类型与`input`一致，shape为`[input.size(0), weight.size(0)]`；`return_logits`为`False`时，返回空Tensor。
+- **vocab\_parallel\_logits**（`Tensor`）：MatMul计算结果。`return_logits`为`True`时，数据类型与`input`一致，shape为`[input.size(0), weight.size(0)]`；`return_logits`为`False`时，返回空Tensor。
 
 ## 约束说明
 

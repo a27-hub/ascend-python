@@ -9,27 +9,90 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得fused\_linear\_online\_max\_sum和fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入softmax）和省显存模式（传入logits\_max和sum\_exp\_logits）。
+- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得fused\_linear\_online\_max\_sum和fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入`logits_max`和`sum_exp_logits`）。
 
 - 计算公式：
 
-    高性能模式（softmax非None）：
+&emsp;&emsp;高性能模式（`softmax`非None）：
 
-    $$softmax[arange, maskedTarget] \leftarrow softmax[arange, maskedTarget] - (1 - targetMask)$$
+$$
+\text{softmax} \in \mathbb{R}^{BT \times V}
+$$
 
-    $$softmax \leftarrow softmax \odot grad.unsqueeze(-1)$$
+$$
+\text{arange\_1d} = [0, 1, \dots, BT-1] \in \mathbb{N}^{BT}
+$$
 
-    $$gradInput = softmax \cdot weight^T$$
+$$
+\text{softmax\_update} = \mathbf{1} - \text{target\_mask}.view(-1) \in \mathbb{R}^{BT}
+$$
 
-    $$gradWeight = softmax^T \cdot input$$
+$$
+\text{softmax}[\text{arange\_1d}, \text{masked\_target}] \leftarrow \text{softmax}[\text{arange\_1d}, \text{masked\_target}] - \text{softmax\_update}
+$$
 
-    省显存模式（softmax为None）：
+$$
+\text{softmax} \leftarrow \text{softmax} \odot \text{grad}.unsqueeze(-1) \in \mathbb{R}^{BT \times V}
+$$
 
-    $$vocabParallelLogits = input \cdot weight^T$$
+$$
+\text{grad\_input} = \text{softmax} \cdot \text{weight}^T \in \mathbb{R}^{BT \times H}
+$$
 
-    $$expLogits = \exp(vocabParallelLogits - logitsMax.unsqueeze(-1))$$
+$$
+\text{grad\_weight} = \text{softmax}^T \cdot \text{input} \in \mathbb{R}^{V \times H}
+$$
 
-    $$expLogits \leftarrow \frac{expLogits}{sumExpLogits.unsqueeze(-1)}$$
+<br>
+&emsp;&emsp;省显存模式（`softmax`为None）：
+
+$$
+\text{vocab\_parallel\_logits} = \text{input} \cdot \text{weight}^T \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{logits\_sub} = \text{vocab\_parallel\_logits} - \text{logits\_max}.unsqueeze(-1) \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{exp\_logits} = \exp(\text{logits\_sub}) \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{exp\_logits} \gets \frac{\text{exp\_logits}}{\text{sum\_exp\_logits}.unsqueeze(-1)} \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{grad\_logits} = \text{exp\_logits} \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{grad\_2d} = \text{grad\_logits}.view(-1, \text{partition\_vocab\_size}) \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{arange\_1d} = [0, 1, \dots, BT-1] \quad \in \mathbb{N}^{BT}
+$$
+
+$$
+\text{softmax\_update} = 1 - \text{target\_mask}.view(-1) \quad \in \mathbb{R}^{BT}
+$$
+
+$$
+\text{grad\_2d}[\text{arange\_1d}, \text{masked\_target\_1d}] \gets \text{grad\_2d}[\text{arange\_1d}, \text{masked\_target\_1d}] - \text{softmax\_update}
+$$
+
+$$
+\text{grad\_logits} \gets \text{grad\_logits} \odot \text{grad}.unsqueeze(-1) \quad \in \mathbb{R}^{BT \times V}
+$$
+
+$$
+\text{grad\_input} = \text{grad\_logits} \cdot \text{weight} \quad \in \mathbb{R}^{BT \times H}
+$$
+
+$$
+\text{grad\_weight} = \text{grad\_logits}^T \cdot \text{input} \quad \in \mathbb{R}^{V \times H}
+$$
 
 ## 函数原型
 
@@ -47,7 +110,7 @@ torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(grad, input, weight,
 - **label\_smoothing**（`float`）：可选参数，标签平滑系数，当前仅支持0.0，默认值0.0。
 - **logits\_max**（`Tensor`）：可选参数，全局logits最大值，1维Tensor。数据类型`float32`。`softmax`为None时必须提供。默认值None。
 - **sum\_exp\_logits**（`Tensor`）：可选参数，处理后的logits，1维Tensor。数据类型`float32`。`softmax`为None时必须提供。默认值None。
-- **softmax**（`Tensor`）：可选参数，softmax计算结果，2维Tensor。数据类型`float32`。传入时走高性能模式，不传时走省显存模式（需提供`logits_max`和`sum_exp_logits`）。默认值None。
+- **softmax**（`Tensor`）：可选参数，Softmax计算结果，2维Tensor。数据类型`float32`。传入时走高性能模式，不传时走省显存模式（需提供`logits_max`和`sum_exp_logits`）。默认值None。
 
 ## 返回值说明
 
@@ -62,7 +125,7 @@ torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(grad, input, weight,
 
 ## 调用示例
 
-- 高性能模式（传入softmax）：
+- 高性能模式（传入Softmax）：
 
 ```python
 import torch
