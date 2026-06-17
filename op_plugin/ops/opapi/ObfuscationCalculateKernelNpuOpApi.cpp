@@ -20,6 +20,21 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 at::Tensor obfuscation_calculate(
+    const int64_t fd, const at::Tensor &x,
+    const int64_t &param, c10::optional<double> obf_coefficient
+    )
+{
+    auto cmd_real = static_cast<int32_t>(1);
+    auto obf_coefficient_real = static_cast<float>(obf_coefficient.value_or(1));
+    auto out_size = op_infer::array_to_small_vector(x.sizes());
+    auto out_type = x.scalar_type();
+    c10::TensorOptions options = x.options().dtype(out_type);
+    at::Tensor y = npu_preparation::apply_tensor_without_format(out_size, options);
+    EXEC_NPU_CMD(aclnnObfuscationCalculateV2, fd, x, param, cmd_real, obf_coefficient_real, y);
+    return y;
+}
+
+at::Tensor obfuscation_calculate(
     const at::Tensor &fd, const at::Tensor &x,
     const at::Tensor &param, c10::optional<double> obf_coefficient
     )
