@@ -77,9 +77,9 @@ torch_npu.fused_linear_online_max_sum(input, weight, target, vocab_start_index, 
 
 ## 参数说明
 
-- **input**（`Tensor`）：必选参数，MatMul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式ND。`input.size(1)`需小于等于65534。支持空Tensor。
-- **weight**（`Tensor`）：必选参数，MatMul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
-- **target**（`Tensor`）：必选参数，目标索引，1维Tensor。数据类型支持`int32`、`int64`，数据格式ND。`target.size(0)`需与`input.size(0)`一致。支持空Tensor。
+- **input**（`Tensor`）：必选参数，MatMul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式支持ND。`input.size(1)`需小于等于65534。支持空Tensor。
+- **weight**（`Tensor`）：必选参数，MatMul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式支持ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
+- **target**（`Tensor`）：必选参数，目标索引，1维Tensor。数据类型支持`int32`、`int64`，数据格式支持ND。`target.size(0)`需与`input.size(0)`一致。支持空Tensor。
 - **vocab\_start\_index**（`int`）：必选参数，本卡分配的词汇表起始索引。取值范围`[0, max(target) - 1]`。
 - **vocab\_end\_index**（`int`）：必选参数，本卡分配的词汇表结束索引。取值范围`[vocab_start_index, min(vocab_start_index + weight.size(0) - 1, max(target) - 1)]`。
 - **return\_logits**（`bool`）：可选参数，是否返回MatMul结果`vocabParallelLogits`，默认值为`False`。`True`时走高性能分支，`False`时走省显存分支。

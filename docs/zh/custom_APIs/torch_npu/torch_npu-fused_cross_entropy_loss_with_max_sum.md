@@ -29,14 +29,14 @@ torch_npu.fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, pred
 
 ## 参数说明
 
-- **logits\_max**（`Tensor`）：必选参数，全局通信后的MatMul结果各行最大值，1维Tensor。数据类型`float32`，数据格式ND。
-- **sum\_exp\_logits**（`Tensor`）：必选参数，全局通信后的exp累加结果，1维Tensor。数据类型`float32`，数据格式ND。shape与`logits_max`一致。
-- **predicted\_logits**（`Tensor`）：必选参数，全局通信后的预测logits，1维Tensor。数据类型`float32`，数据格式ND。shape与`logits_max`一致。
+- **logits\_max**（`Tensor`）：必选参数，全局通信后的MatMul结果各行最大值，1维Tensor。数据类型`float32`，数据格式支持ND。
+- **sum\_exp\_logits**（`Tensor`）：必选参数，全局通信后的exp累加结果，1维Tensor。数据类型`float32`，数据格式支持ND。shape与`logits_max`一致。
+- **predicted\_logits**（`Tensor`）：必选参数，全局通信后的预测logits，1维Tensor。数据类型`float32`，数据格式支持ND。shape与`logits_max`一致。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
-- **label\_smoothing**（`float`）：可选参数，标签平滑系数，当前仅支持0.0，默认值0.0。
-- **input**（`Tensor`）：可选参数，MatMul输入左矩阵，当前仅支持None，默认值None。
-- **weight**（`Tensor`）：可选参数，MatMul输入右矩阵，当前仅支持None，默认值None。
-- **vocab\_parallel\_logits**（`Tensor`）：可选参数，MatMul计算结果。传入时计算Softmax输出，不传入时Softmax输出为空Tensor。数据类型支持`float32`、`float16`、`bfloat16`，2维Tensor，shape第0维需与`logits_max`一致。默认值None。
+- **label\_smoothing**（`float`）：可选参数，标签平滑系数，当前仅支持0.0，默认值为0.0。
+- **input**（`Tensor`）：可选参数，MatMul输入左矩阵，当前仅支持None，默认值为None。
+- **weight**（`Tensor`）：可选参数，MatMul输入右矩阵，当前仅支持None，默认值为None。
+- **vocab\_parallel\_logits**（`Tensor`）：可选参数，MatMul计算结果。传入时计算Softmax输出，不传入时Softmax输出为空Tensor。数据类型支持`float32`、`float16`、`bfloat16`，2维Tensor，shape第0维需与`logits_max`一致。默认值为None。
 
 ## 返回值说明
 
