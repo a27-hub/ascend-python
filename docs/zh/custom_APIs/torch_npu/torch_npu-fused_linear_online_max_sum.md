@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合matmul与celoss。当前算子为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
+- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与celoss。本接口为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
 
 - 计算公式：
 
@@ -44,21 +44,21 @@ torch_npu.fused_linear_online_max_sum(input, weight, target, vocab_start_index, 
 
 ## 参数说明
 
-- **input**（`Tensor`）：必选参数，matmul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式ND。`input.size(1)`需小于等于65534。支持空Tensor。
-- **weight**（`Tensor`）：必选参数，matmul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
+- **input**（`Tensor`）：必选参数，MatMul计算的左矩阵，2维Tensor。数据类型支持`bfloat16`、`float16`，数据格式ND。`input.size(1)`需小于等于65534。支持空Tensor。
+- **weight**（`Tensor`）：必选参数，MatMul计算的右矩阵，2维Tensor。数据类型需与`input`一致，数据格式ND。`weight.size(1)`需与`input.size(1)`一致。支持空Tensor。
 - **target**（`Tensor`）：必选参数，目标索引，1维Tensor。数据类型支持`int32`、`int64`，数据格式ND。`target.size(0)`需与`input.size(0)`一致。支持空Tensor。
 - **vocab\_start\_index**（`int`）：必选参数，本卡分配的词汇表起始索引。取值范围`[0, max(target) - 1]`。
 - **vocab\_end\_index**（`int`）：必选参数，本卡分配的词汇表结束索引。取值范围`[vocab_start_index, min(vocab_start_index + weight.size(0) - 1, max(target) - 1)]`。
-- **return\_logits**（`bool`）：可选参数，是否返回matmul结果`vocabParallelLogits`，默认值为`False`。`True`时走高性能分支，`False`时走省显存分支。
+- **return\_logits**（`bool`）：可选参数，是否返回MatMul结果`vocabParallelLogits`，默认值为`False`。`True`时走高性能分支，`False`时走省显存分支。
 
 ## 返回值说明
 
-- **logits\_max**（`Tensor`）：matmul计算后各行的最大值，数据类型`float32`，shape为`[input.size(0)]`。
+- **logits\_max**（`Tensor`）：MatMul计算后各行的最大值，数据类型`float32`，shape为`[input.size(0)]`。
 - **sum\_exp\_logits**（`Tensor`）：`subRes`经exp后各行累加结果，数据类型`float32`，shape为`[input.size(0)]`。
 - **predicted\_logits**（`Tensor`）：`subRes`经`maskedTarget`筛选后的结果，数据类型`float32`，shape为`[input.size(0)]`。
 - **target\_mask**（`Tensor`）：词汇表mask的packed bit表示，数据类型`uint8`，shape为`[(input.size(0) + 7) // 8]`。
 - **masked\_target**（`Tensor`）：target经mask过滤后的结果，数据类型与`target`一致，shape为`[input.size(0)]`。
-- **vocab\_parallel\_logits**（`Tensor`）：matmul计算结果。`return_logits`为`True`时，数据类型与`input`一致，shape为`[input.size(0), weight.size(0)]`；`return_logits`为`False`时，返回空Tensor。
+- **vocab\_parallel\_logits**（`Tensor`）：MatMul计算结果。`return_logits`为`True`时，数据类型与`input`一致，shape为`[input.size(0), weight.size(0)]`；`return_logits`为`False`时，返回空Tensor。
 
 ## 约束说明
 

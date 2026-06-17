@@ -9,11 +9,11 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得fused\_linear\_online\_max\_sum和fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入softmax）和省显存模式（传入logits\_max和sum\_exp\_logits）。
+- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得fused\_linear\_online\_max\_sum和fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入`logits_max`和`sum_exp_logits`）。
 
 - 计算公式：
 
-    高性能模式（softmax非None）：
+    高性能模式（Softmax非None）：
 
     $$softmax[arange, maskedTarget] \leftarrow softmax[arange, maskedTarget] - (1 - targetMask)$$
 
@@ -23,7 +23,7 @@
 
     $$gradWeight = softmax^T \cdot input$$
 
-    省显存模式（softmax为None）：
+    省显存模式（Softmax为None）：
 
     $$vocabParallelLogits = input \cdot weight^T$$
 
@@ -47,7 +47,7 @@ torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(grad, input, weight,
 - **label\_smoothing**（`float`）：可选参数，标签平滑系数，当前仅支持0.0，默认值0.0。
 - **logits\_max**（`Tensor`）：可选参数，全局logits最大值，1维Tensor。数据类型`float32`。`softmax`为None时必须提供。默认值None。
 - **sum\_exp\_logits**（`Tensor`）：可选参数，处理后的logits，1维Tensor。数据类型`float32`。`softmax`为None时必须提供。默认值None。
-- **softmax**（`Tensor`）：可选参数，softmax计算结果，2维Tensor。数据类型`float32`。传入时走高性能模式，不传时走省显存模式（需提供`logits_max`和`sum_exp_logits`）。默认值None。
+- **softmax**（`Tensor`）：可选参数，Softmax计算结果，2维Tensor。数据类型`float32`。传入时走高性能模式，不传时走省显存模式（需提供`logits_max`和`sum_exp_logits`）。默认值None。
 
 ## 返回值说明
 
@@ -62,7 +62,7 @@ torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(grad, input, weight,
 
 ## 调用示例
 
-- 高性能模式（传入softmax）：
+- 高性能模式（传入Softmax）：
 
 ```python
 import torch

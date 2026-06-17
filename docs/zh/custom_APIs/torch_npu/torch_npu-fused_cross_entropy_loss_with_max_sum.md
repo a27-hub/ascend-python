@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题。本算子为计算loss与softmax结果的部分，需配合fused\_linear\_online\_max\_sum使用。在多卡场景下，需先对`logits_max`和`sum_exp_logits`执行全局通信（all-reduce），再调用本接口。
+- API功能：词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题。本接口为计算Loss与Softmax结果的部分，需配合fused\_linear\_online\_max\_sum使用。在多卡场景下，需先对`logits_max`和`sum_exp_logits`执行全局通信（all-reduce），再调用本接口。
 
 - 计算公式：
 
@@ -25,19 +25,19 @@ torch_npu.fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, pred
 
 ## 参数说明
 
-- **logits\_max**（`Tensor`）：必选参数，全局通信后的matmul结果各行最大值，1维Tensor。数据类型`float32`，数据格式ND。
+- **logits\_max**（`Tensor`）：必选参数，全局通信后的MatMul结果各行最大值，1维Tensor。数据类型`float32`，数据格式ND。
 - **sum\_exp\_logits**（`Tensor`）：必选参数，全局通信后的exp累加结果，1维Tensor。数据类型`float32`，数据格式ND。shape与`logits_max`一致。
 - **predicted\_logits**（`Tensor`）：必选参数，全局通信后的预测logits，1维Tensor。数据类型`float32`，数据格式ND。shape与`logits_max`一致。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **label\_smoothing**（`float`）：可选参数，标签平滑系数，当前仅支持0.0，默认值0.0。
-- **input**（`Tensor`）：可选参数，matmul输入左矩阵，当前仅支持None，默认值None。
-- **weight**（`Tensor`）：可选参数，matmul输入右矩阵，当前仅支持None，默认值None。
-- **vocab\_parallel\_logits**（`Tensor`）：可选参数，matmul计算结果。传入时计算softmax输出，不传入时softmax输出为空Tensor。数据类型支持`float32`、`float16`、`bfloat16`，2维Tensor，shape第0维需与`logits_max`一致。默认值None。
+- **input**（`Tensor`）：可选参数，MatMul输入左矩阵，当前仅支持None，默认值None。
+- **weight**（`Tensor`）：可选参数，MatMul输入右矩阵，当前仅支持None，默认值None。
+- **vocab\_parallel\_logits**（`Tensor`）：可选参数，MatMul计算结果。传入时计算Softmax输出，不传入时Softmax输出为空Tensor。数据类型支持`float32`、`float16`、`bfloat16`，2维Tensor，shape第0维需与`logits_max`一致。默认值None。
 
 ## 返回值说明
 
-- **loss**（`Tensor`）：交叉熵loss，数据类型`float32`，shape与`logits_max`一致。
-- **softmax**（`Tensor`）：softmax结果。`vocab_parallel_logits`非None时，数据类型`float32`，shape与`vocab_parallel_logits`一致；`vocab_parallel_logits`为None时，返回空Tensor。
+- **loss**（`Tensor`）：交叉熵Loss，数据类型`float32`，shape与`logits_max`一致。
+- **softmax**（`Tensor`）：Softmax结果。`vocab_parallel_logits`非None时，数据类型`float32`，shape与`vocab_parallel_logits`一致；`vocab_parallel_logits`为None时，返回空Tensor。
 
 ## 约束说明
 
