@@ -18,7 +18,7 @@
     $$
 
     $$
-    softMaxOutOptional = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) \ sum\_exp\_logits.unsqueeze(dim = -1)
+    softMaxOutOptional = exp(vocab\_parallel\_logits -logits\_max.unsqueeze(dim = -1)) / sum\_exp\_logits.unsqueeze(dim = -1)
     $$
 
 ## 函数原型

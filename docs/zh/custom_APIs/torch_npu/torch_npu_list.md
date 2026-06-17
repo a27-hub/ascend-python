@@ -884,7 +884,7 @@
 </tr>
 <tr id="fused_linear_cross_entropy_loss_with_max_sum_grad"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p_fused_linear_cross_entropy_loss_with_max_sum_grad"><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad"></a><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad"></a><a href="torch_npu-fused_linear_cross_entropy_loss_with_max_sum_grad.md">torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"></a><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"></a><span>词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点input和weight的梯度。需要获得fused_linear_online_max_sum和fused_cross_entropy_loss_with_max_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。</span></p></td>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p id="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"></a><a name="p_fused_linear_cross_entropy_loss_with_max_sum_grad_desc"></a><span>词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点input和weight的梯度。需要获得fused_linear_online_max_sum和fused_cross_entropy_loss_with_max_sum的相关输出作为本接口输入。支持高性能模式（传入softmax）和省显存模式（传入logits_max和sum_exp_logits）。</span></p></td>
 </tr>
 </tbody>
 </table>

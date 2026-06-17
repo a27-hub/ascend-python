@@ -15786,15 +15786,15 @@ _add_torch_npu_docstr(
     """
 torch_npu.fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 功能描述
-词汇表并行场景下融合矩阵乘与交叉熵前处理算子。支持vocabulary_size维度切卡融合matmul与celoss，需与fused_cross_entropy_loss_with_max_sum配合使用。
+词汇表并行场景下融合矩阵乘与交叉熵前处理算子。支持vocabulary_size维度切卡融合MatMul与celoss，需与fused_cross_entropy_loss_with_max_sum配合使用。
 
 参数说明
-input (Tensor) - matmul计算的左矩阵，2维，数据类型支持bfloat16、float16。
-weight (Tensor) - matmul计算的右矩阵，2维，数据类型与input一致。
+input (Tensor) - MatMul计算的左矩阵，2维，数据类型支持bfloat16、float16。
+weight (Tensor) - MatMul计算的右矩阵，2维，数据类型与input一致。
 target (Tensor) - 目标索引，1维，数据类型支持int32、int64。
 vocab_start_index (int) - 本卡分配的词汇表起始索引。
 vocab_end_index (int) - 本卡分配的词汇表结束索引。
-return_logits (bool，默认值为False) - 是否返回matmul结果。True走高性能分支，False走省显存分支。
+return_logits (bool，默认值为False) - 是否返回MatMul结果。True走高性能分支，False走省显存分支。
 输出说明
 返回6个Tensor: logits_max(float32), sum_exp_logits(float32), predicted_logits(float32), target_mask(uint8), masked_target(与target类型一致), vocab_parallel_logits(与input类型一致，return_logits为False时返回None)。
 
@@ -15815,16 +15815,16 @@ _add_torch_npu_docstr(
     """
 torch_npu.fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)
 功能描述
-词汇表并行场景下交叉熵计算模块的一部分，计算loss与softmax结果。需配合fused_linear_online_max_sum使用，多卡场景下需先对logits_max和sum_exp_logits执行全局通信。
+词汇表并行场景下交叉熵计算模块的一部分，计算Loss与Softmax结果。需配合fused_linear_online_max_sum使用，多卡场景下需先对logits_max和sum_exp_logits执行全局通信。
 
 参数说明
-logits_max (Tensor) - 全局通信后的matmul结果各行最大值，1维，数据类型float32。
+logits_max (Tensor) - 全局通信后的MatMul结果各行最大值，1维，数据类型float32。
 sum_exp_logits (Tensor) - 全局通信后的exp累加结果，1维，数据类型float32，shape与logits_max一致。
 predicted_logits (Tensor) - 全局通信后的预测logits，1维，数据类型float32，shape与logits_max一致。
 label_smoothing (float，默认值为0.0) - 标签平滑系数，当前仅支持0。
 input (Tensor，可选，默认值为None) - 当前仅支持None。
 weight (Tensor，可选，默认值为None) - 当前仅支持None。
-vocab_parallel_logits (Tensor，可选，默认值为None) - matmul计算结果，传入时计算softmax输出，不传入时返回None。
+vocab_parallel_logits (Tensor，可选，默认值为None) - MatMul计算结果，传入时计算Softmax输出，不传入时返回None。
 输出说明
 返回2个Tensor: loss(float32)和softmax(float32，vocab_parallel_logits为None时返回None)。
 
@@ -15856,7 +15856,7 @@ masked_target (Tensor) - 目标词ID映射到当前设备的局部索引，1维�
 label_smoothing (float，默认值为0.0) - 标签平滑系数，当前仅支持0。
 logits_max (Tensor，可选) - 全局logits最大值，softmax为None时必须提供。
 sum_exp_logits (Tensor，可选) - 处理后的logits，softmax为None时必须提供。
-softmax (Tensor，可选) - softmax计算结果，传入时走高性能模式。
+softmax (Tensor，可选) - Softmax计算结果，传入时走高性能模式。
 输出说明
 返回2个Tensor: input_grad(与input类型一致)和weight_grad(与input类型一致)。
 
