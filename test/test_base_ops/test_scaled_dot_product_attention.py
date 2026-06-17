@@ -166,5 +166,24 @@ class TestScaledDotProductAttention(TestCase):
         self.assertRtolEqual(y, y_compile, 0.001)
 
 
+    @SupportedDevices(['Ascend910B'])
+    def test_sdpa_float_last_dim_not_aligned(self):
+        query = torch.rand(1, 4, 10, 33, dtype=torch.float32)
+        key = torch.rand(1, 4, 10, 33, dtype=torch.float32)
+        value = torch.rand(1, 4, 10, 33, dtype=torch.float32)
+        cpu_output = torch.nn.functional.scaled_dot_product_attention(query, key, value)
+        npu_output = torch.nn.functional.scaled_dot_product_attention(query.npu(), key.npu(), value.npu())
+        self.assertRtolEqual(cpu_output, npu_output, 0.001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_sdpa_last_dim_greater_than_256(self):
+        query = torch.rand(1, 4, 10, 512, dtype=torch.float16)
+        key = torch.rand(1, 4, 10, 512, dtype=torch.float16)
+        value = torch.rand(1, 4, 10, 512, dtype=torch.float16)
+        cpu_output = torch.nn.functional.scaled_dot_product_attention(query.to(torch.float32), key.to(torch.float32), value.to(torch.float32))
+        npu_output = torch.nn.functional.scaled_dot_product_attention(query.npu(), key.npu(), value.npu())
+        self.assertRtolEqual(cpu_output.to(torch.float16), npu_output, 0.001)
+
+
 if __name__ == "__main__":
     run_tests()

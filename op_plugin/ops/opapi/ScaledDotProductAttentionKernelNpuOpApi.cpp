@@ -194,6 +194,13 @@ at::Tensor scaled_dot_product_attention(
     if (compatible_impl) {
         auto& ctx = at::globalContext();
         force_math = ctx.userEnabledMathSDP() && !ctx.userEnabledFlashSDP();
+        if (query.scalar_type() == at::kFloat &&
+            (query.size(-1) % 4 != 0 || key.size(-1) % 4 != 0 || value.size(-1) % 4 != 0)) {
+            force_math = true;
+        }
+        if (query.size(-1) > 256 || key.size(-1) > 256 || value.size(-1) > 256) {
+            force_math = true;
+        }
     }
 
     if (!force_math &&
@@ -302,6 +309,13 @@ at::Tensor scaled_dot_product_attention(
     if (compatible_impl) {
         auto& ctx = at::globalContext();
         force_math = ctx.userEnabledMathSDP() && !ctx.userEnabledFlashSDP();
+        if (query.scalar_type() == at::kFloat &&
+            (query.size(-1) % 4 != 0 || key.size(-1) % 4 != 0 || value.size(-1) % 4 != 0)) {
+            force_math = true;
+        }
+        if (query.size(-1) > 256 || key.size(-1) > 256 || value.size(-1) > 256) {
+            force_math = true;
+        }
     }
 
     if (!force_math &&
