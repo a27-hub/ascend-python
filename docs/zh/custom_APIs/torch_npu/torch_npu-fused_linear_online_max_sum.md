@@ -9,11 +9,11 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与celoss。本接口为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
+- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与CELoss。本接口为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
 
 - 计算公式：
 
-  1. $input$与$wight^T$做矩阵乘得到：
+  1. $input$与$weight^T$做矩阵乘得到：
 
      $$
      vocabParallelLogitsOutOptional = input @ weight^T
