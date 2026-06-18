@@ -15782,11 +15782,11 @@ if __name__ == "__main__":
 )
 
 _add_torch_npu_docstr(
-    "fused_linear_online_max_sum",
+    "npu_fused_linear_online_max_sum",
     """
-torch_npu.fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 功能描述
-词汇表并行场景下融合矩阵乘与交叉熵前处理算子。支持vocabulary_size维度切卡融合MatMul与CELoss，需与fused_cross_entropy_loss_with_max_sum配合使用。
+词汇表并行场景下融合矩阵乘与交叉熵前处理算子。支持vocabulary_size维度切卡融合MatMul与CELoss，需与npu_fused_cross_entropy_loss_with_max_sum配合使用。
 
 参数说明
 input (Tensor) - MatMul计算的左矩阵，2维，数据类型支持bfloat16、float16。
@@ -15806,16 +15806,16 @@ input与weight数据类型必须一致。vocabStartIndex不可小于0。vocabEnd
     >>> weight_tensor = torch.randn(256, 64, dtype=torch.float16).npu()
     >>> target_tensor = torch.randint(0, 256, (128,), dtype=torch.int32).npu()
     >>> logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \\
-    ...     torch_npu.fused_linear_online_max_sum(input_tensor, weight_tensor, target_tensor, 0, 64, return_logits=True)
+    ...     torch_npu.npu_fused_linear_online_max_sum(input_tensor, weight_tensor, target_tensor, 0, 64, return_logits=True)
 """
 )
 
 _add_torch_npu_docstr(
-    "fused_cross_entropy_loss_with_max_sum",
+    "npu_fused_cross_entropy_loss_with_max_sum",
     """
-torch_npu.fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)
+torch_npu.npu_fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)
 功能描述
-词汇表并行场景下交叉熵计算模块的一部分，计算Loss与Softmax结果。需配合fused_linear_online_max_sum使用，多卡场景下需先对logits_max和sum_exp_logits执行全局通信。
+词汇表并行场景下交叉熵计算模块的一部分，计算Loss与Softmax结果。需配合npu_fused_linear_online_max_sum使用，多卡场景下需先对logits_max和sum_exp_logits执行全局通信。
 
 参数说明
 logits_max (Tensor) - 全局通信后的MatMul结果各行最大值，1维，数据类型float32。
@@ -15836,16 +15836,16 @@ logits_max、sum_exp_logits、predicted_logits的shape需一致。label_smoothin
     >>> sum_exp_logits = torch.randn(128, dtype=torch.float32).npu()
     >>> predicted_logits = torch.randn(128, dtype=torch.float32).npu()
     >>> vocab_parallel_logits = torch.randn(128, 256, dtype=torch.float16).npu()
-    >>> loss, softmax = torch_npu.fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, predicted_logits, vocab_parallel_logits=vocab_parallel_logits)
+    >>> loss, softmax = torch_npu.npu_fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, predicted_logits, vocab_parallel_logits=vocab_parallel_logits)
 """
 )
 
 _add_torch_npu_docstr(
-    "fused_linear_cross_entropy_loss_with_max_sum_grad",
+    "npu_fused_linear_cross_entropy_loss_with_max_sum_backward",
     """
-torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
+torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
 功能描述
-词汇表并行场景下交叉熵损失计算的梯度算子，计算叶子节点input和weight的梯度。支持高性能模式（传入softmax）和省显存模式（传入logits_max和sum_exp_logits）。
+词汇表并行场景下交叉熵损失计算的梯度算子，计算叶子节点input和weight的梯度。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。
 
 参数说明
 grad (Tensor) - 当前节点的梯度，1维，数据类型float32。
@@ -15870,7 +15870,7 @@ input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_l
     >>> target_mask = torch.zeros((128 + 7) // 8, dtype=torch.uint8).npu()
     >>> masked_target = torch.randint(0, 256, (128,), dtype=torch.int32).npu()
     >>> softmax = torch.randn(128, 256, dtype=torch.float32).npu()
-    >>> input_grad, weight_grad = torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(
+    >>> input_grad, weight_grad = torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(
     ...     grad, input_tensor, weight_tensor, target_mask, masked_target, softmax=softmax)
 """
 )
