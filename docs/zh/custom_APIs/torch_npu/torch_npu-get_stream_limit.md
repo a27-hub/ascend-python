@@ -11,7 +11,7 @@
 
 - 通过该接口，获取指定Stream的Device资源限制。
 - 若没有调用`torch.npu.set_stream_limit`接口设置Device资源限制，则调用本接口获取到的Device资源优先级为：当前进程的Device资源限制（调用`torch.npu.set_device_limit`接口设置）> 硬件默认资源限制。
-- 当前支持资源类型为Cube Core、Vector Core。
+- 当前支持资源类型为Cube Core、Vector Core
 
 ## 函数原型
 
