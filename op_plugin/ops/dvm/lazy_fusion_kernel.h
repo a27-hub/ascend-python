@@ -21,14 +21,32 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
+#include <string>
+#include <unordered_map>
 #include <ATen/Tensor.h>
 #include <ATen/ATen.h>
 #include <torch/csrc/autograd/graph_task.h>
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/ops/dvm/lazy_fusion_flags.h"
+#include "op_plugin/ops/dvm/lazy_fusion_accuracy.h"
 #include "third_party/dvm/dvm/include/dvm.h"
 
 namespace lazy_fusion {
+
+// Thread-local re-entrancy guard for the online accuracy check. The check
+// computes op_api references and compares them with aten ops (clone, sub, abs,
+// clamp, isclose, min/max, ...). Several of those are themselves DVM-intercepted
+// ops, so running them while a fusion kernel is in flight would recursively
+// build a new fusion that reuses the pooled kernel object and corrupts the
+// check's own state. While this flag is set, IsEnabled() returns false so the
+// helper ops fall through to plain aclnn (no fusion).
+extern thread_local bool g_in_accuracy_check;
+struct AccuracyReentryGuard {
+  bool prev_;
+  AccuracyReentryGuard() : prev_(g_in_accuracy_check) { g_in_accuracy_check = true; }
+  ~AccuracyReentryGuard() { g_in_accuracy_check = prev_; }
+};
+
 class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
  public:
   LazyFusionKernel();
@@ -103,6 +121,46 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     dump_idx_ = outputs_.size();
   }
 
+  // Append an op name to the running accuracy-check op list (for diagnostics).
+  // Called from the free DumpOp() helper when flags_.check_accuracy is true.
+  void AddAccOpName(const std::string &op_name) {
+    if (!acc_ops_str_.empty()) {
+      acc_ops_str_ += ", ";
+    }
+    acc_ops_str_ += op_name;
+  }
+
+  // Eagerly compute this op's op_api reference output(s) and register them in
+  // acc_ref_map_ keyed by the DVM output data_ptr, so a later fused op resolves
+  // this op's *reference* result as its input. `fn` is the inline closure built
+  // by LF_ACC at the op entry: it calls op_api with each tensor argument routed
+  // through the Resolver. Running here (during capture, in the op entry's stack)
+  // means every argument is still alive -- no deferred-replay copies needed.
+  template <typename Fn>
+  void RecordAccEager(Fn &&fn) {
+    size_t out_start = acc_dump_idx_;
+    Resolver resolver(acc_ref_map_);
+    // The reference op_api calls are direct (no dispatch), but the Resolver's
+    // clone()/empty_like() are dispatched ops -- guard so they don't re-fuse.
+    std::vector<at::Tensor> refs;
+    {
+      AccuracyReentryGuard guard;
+      refs = fn(resolver);
+    }
+    for (size_t i = 0; i < refs.size() && (out_start + i) < outputs_.size(); ++i) {
+      acc_ref_map_[outputs_[out_start + i].tensor_meta.data_ptr] = refs[i];
+    }
+    acc_dump_idx_ = outputs_.size();
+  }
+
+  // Run accuracy check: compare the DVM fused outputs against the eagerly
+  // computed op_api references; on mismatch print the DVM graph dump + das.
+  // Called from Flush() after CodeGen+Launch when check_accuracy is enabled.
+  void CheckAccuracy();
+  // Snapshot the (dvm output handle, reference output) pairs before ClearGraphRefs
+  // wipes outputs_/acc_ref_map_. Called from Flush() before CodeGen+Launch.
+  void PrepareAccuracyCheck();
+
  private:
   void ClearGraphRefs() {
     for (size_t i = 0; i < input_used_; i++) {
@@ -122,10 +180,13 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     }
     outputs_.clear();
     dump_ops_.clear();
+    acc_ref_map_.clear();
+    acc_ops_str_.clear();
     input_used_ = 0;
     dvm_ops_used_ = 0;
     cache_shape_used_ = 0;
     dump_idx_ = 0;
+    acc_dump_idx_ = 0;
   }
   void ClearRuntimeState();
   void Clear() {
@@ -216,13 +277,30 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     Store() = delete;
     Store(dvm::NDObject *p, bool is_inplace, const at::Tensor &t)
         : op(p), inplace(is_inplace),
-          storage(t.storage().getWeakStorageImpl()) {}
+          storage(t.storage().getWeakStorageImpl()),
+          tensor_impl(t.getIntrusivePtr()) {}
     dvm::NDObject *op;
     TensorMeta tensor_meta;
     bool inplace{false};
     bool skip{false};
     c10::weak_intrusive_ptr<c10::StorageImpl> storage;
+    // Weak ref to the output TensorImpl, used by accuracy check to read the
+    // fused result after Launch. Does not extend the tensor's lifetime. Uses the
+    // same NullType (UndefinedTensorImpl) as at::Tensor's intrusive_ptr so it can
+    // be constructed from getIntrusivePtr() and locked back into an at::Tensor.
+    c10::weak_intrusive_ptr<c10::TensorImpl, c10::UndefinedTensorImpl> tensor_impl;
   };
+
+  // Helper to rebuild an at::Tensor from a weak TensorImpl ref for accuracy
+  // check. Returns an undefined tensor if the impl is no longer alive.
+  static at::Tensor TensorFromWeakImpl(
+      const c10::weak_intrusive_ptr<c10::TensorImpl, c10::UndefinedTensorImpl> &weak) {
+    auto strong = weak.lock();
+    if (!strong) {
+      return at::Tensor();
+    }
+    return at::Tensor(std::move(strong));
+  }
 
   struct ShapeWithRef : public dvm::ShapeRef {
     ShapeWithRef() {
@@ -274,6 +352,18 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
   bool flushed_{false};
   aclrtStream stream_;
   std::stringstream dump_buf_;
+  // Accuracy check state (only used when flags_.check_accuracy is true).
+  // Maps a DVM output data_ptr to the op_api reference result computed eagerly
+  // for that output; threads references through the fused op chain.
+  std::unordered_map<void *, at::Tensor> acc_ref_map_;
+  size_t acc_dump_idx_{0};                       // outputs_ slice consumed by RecordAccEager
+  std::string acc_ops_str_;                      // running op-name list (capture phase)
+  std::string acc_report_ops_;                   // snapshot of acc_ops_str_ for CheckAccuracy
+  std::string acc_dump_text_;                    // DVM graph dump captured at CodeGen
+  std::string acc_das_text_;                     // DVM das captured at CodeGen
+  bool check_accuracy_pending_{false};
+  std::vector<at::Tensor> check_accuracy_ref_outputs_;
+  std::vector<at::Tensor> check_accuracy_output_handles_;
 };
 
 class Manager {
@@ -364,6 +454,11 @@ extern Manager g_lazy_fusion_manager;
 inline void LazyFusionFlush() { g_lazy_fusion_manager.Flush(); }
 
 inline bool IsEnabled() {
+  // Suppress fusion while the accuracy check runs its reference/compare ops,
+  // otherwise those (DVM-intercepted) aten ops recurse into the pool.
+  if (g_in_accuracy_check) {
+    return false;
+  }
   static const bool global_enabled =
       g_lazy_fusion_manager.flags_.enabled &&
       c10_npu::option::OptionsManager::GetTaskQueueEnable();
