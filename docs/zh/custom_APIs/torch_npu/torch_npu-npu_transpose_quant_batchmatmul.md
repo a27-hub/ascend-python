@@ -111,3 +111,4 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
     model = torch.compile(model, backend=npu_backend, dynamic=False)
     output = model(x1.npu(), x2.npu(), x1_scale.npu(), x2_scale.npu(), torch.float16, (1, 0, 2), (0, 1, 2), (1, 0, 2)).to("cpu")
     ```
+    
