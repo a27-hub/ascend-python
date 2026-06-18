@@ -112,7 +112,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **kr_cache**（`Tensor`）：必选参数，用于key位置编码的cache，计算结果原地更新（对应公式中的$k^R$）。不支持非连续，数据格式支持ND，数据类型支持`bfloat16`、`int8`，当cache_mode为"PA_BSND"、"PA_NZ"、"PA_BLK_BSND"、"PA_BLK_NZ"时shape为[BlockNum, BlockSize, Nkv, Dr]，支持B=0,Skv=0的空Tensor；当cache_mode为"BSND"时shape为[B, S, Nkv, Dr]，不支持空Tensor；当cache_mode为"TND"时shape为[T, Nkv, Dr]，不支持空Tensor；Nkv与N关联，N是超参，故不支持Nkv=0。
 
-- <strong>*</strong>：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 - **cache_index**（`Tensor`）：可选参数，用于存储`kv_cache`和`kr_cache`的索引。不支持非连续，数据格式支持ND，数据类型支持`int64`，当`cache_mode`为"PA_BSND"或"PA_NZ"：BS合轴时shape为[T]，BS非合轴时shape为[B, S]，取值范围需在[0, BlockNum*BlockSize)内; 当`cache_mode`为"PA_BLK_BSND"或"PA_BLK_NZ"：BS合轴时shape为[Sum(Ceil(S_i/BlockSize))]（S_i表示第i个batch的序列长度），BS非合轴时shape为[B, Ceil(S/BlockSize)]，取值范围需在[0, BlockNum)内；当`cache_mode`为"BSND"或"TND"：`cache_index`无需传入。当前不会对传入值的合法性进行校验，需用户自行保证。
 
@@ -206,7 +206,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     |--------------|--------------------------------|------------------------------------------------------------------------------|
     | B            | Batch（输入样本批量大小）      | 取值范围：0~65536                                                           |
     | S            | Seq-Length（输入样本序列长度） | 取值范围：不限制                                                              |
-    | He           | Head-Size（隐藏层大小）        | 取值固定为：1024、2048、3072、4096、5120、6144、7168、7680、8192、7680                                                            |
+    | He           | Head-Size（隐藏层大小）        | 取值固定为：1024、2048、3072、4096、5120、6144、7168、7680、8192                                                      |
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536、 2048                                                           |
     | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
     | Hckv         | kv 低秩矩阵维度                | 取值固定为：512                                                             |
@@ -234,7 +234,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     <tr>
       <td colspan="2"><em>非量化</em></td>
       <td>
-          weight_quant_mode=0，kv_cache_quant_mode=0，query_quant_mode=0<br>
+          weight_quant_mode=0, kv_cache_quant_mode=0, query_quant_mode=0<br>
           入参：所有入参皆为非量化数据<br>
           出参：所有出参皆为非量化数据
       </td>
@@ -243,7 +243,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td rowspan="3"><em>部分量化</em></td>
       <td>kv_cache非量化 </td>
       <td>
-          weight_quant_mode=1，kv_cache_quant_mode=0，query_quant_mode=0<br>
+          weight_quant_mode=1, kv_cache_quant_mode=0, query_quant_mode=0<br>
           入参：weight_uq_qr传入pertoken量化数据，其余入参皆为非量化数据。dequant_scale_w_uq_qr字段必须传入，smooth_scale_cq字段可选传入<br>
           出参：所有出参返回非量化数据
       </td>
@@ -251,7 +251,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     <tr>
       <td>kv_cache per-channel量化 </td>
       <td>
-          weight_quant_mode=1，kv_cache_quant_mode=2，query_quant_mode=0<br>
+          weight_quant_mode=1, kv_cache_quant_mode=2, query_quant_mode=0<br>
           入参：weight_uq_qr传入pertoken量化数据，kv_cache、kr_cache传入perchannel量化数据，其余入参皆为非量化数据 <br>
           dequant_scale_w_uq_qr、quant_scale_ckv、quant_scale_ckr字段必须传入，smooth_scale_cq字段可选传入 <br>
           出参：kv_cache、kr_cache返回perchannel量化数据，其余出参返回非量化数据
@@ -270,7 +270,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td rowspan="3"><em>int8/fp8/hif8全量化</em></td>
       <td> kv_cache非量化</td>
       <td>
-          weight_quant_mode=2/4/5，kv_cache_quant_mode=0，query_quant_mode=0<br>
+          weight_quant_mode=2/4/5, kv_cache_quant_mode=0, query_quant_mode=0<br>
           入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，其余入参皆为非量化数据 <br>
           dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr字段必须传入，smooth_scale_cq字段可选传入 <br>
           出参：所有出参皆为非量化数据
@@ -279,26 +279,26 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     <tr>
       <td> kv_cache per-tensor量化 </td>
       <td>
-          weight_quant_mode=2/4/5，kv_cache_quant_mode=1，query_quant_mode=1<br>
+          weight_quant_mode=2/4/5, kv_cache_quant_mode=1, query_quant_mode=1<br>
           入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，kv_cache传入pertensor量化数据，其余入参皆为非量化数据 <br>
           dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr、quant_scale_ckv字段必须传入，smooth_scale_cq字段可选传入 <br>
-          出参：query_out返回pertoken_head量化数据，kv_cache出参返回pertensor量化数据，其余出参范围非量化数据
+          出参：query_out返回pertoken_head量化数据，kv_cache出参返回pertensor量化数据，其余出参返回非量化数据
       </td>
     </tr>
     <tr>
       <td> kv_cache per-tile量化 </td>
       <td>
-          weight_quant_mode=2/4/5，kv_cache_quant_mode=3，query_quant_mode=0<br>
+          weight_quant_mode=2/4/5, kv_cache_quant_mode=3, query_quant_mode=0<br>
           入参：token_x传入pertoken量化数据，weight_dq、weight_uq_qr、weight_dkv_kr传入perchannel量化数据，其余入参皆为非量化数据 <br>
           dequant_scale_x、dequant_scale_w_dq、dequant_scale_w_uq_qr、dequant_scale_w_dkv_kr、quant_scale_ckv字段必须传入，smooth_scale_cq字段可选传入 <br>
-          出参：query_out返回pertoken_head量化数据，kv_cache出参返回pertensor量化数据，其余出参范围非量化数据
+          出参：query_out返回pertoken_head量化数据，kv_cache出参返回pertensor量化数据，其余出参返回非量化数据
       </td>
     </tr>
     <tr>
       <td rowspan="3"><em>mxfp8全量化</em></td>
       <td> kvCache非量化</td>
       <td>
-        weight_quant_mode=3，kv_cache_quant_mode=0，query_quant_mode=0<br>
+        weight_quant_mode=3, kv_cache_quant_mode=0, query_quant_mode=0<br>
         入参：tokenX传入per-token量化数据，weightDq、weightUqQr、weightDkvKr传入per-channel量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr字段必须传入 <br>
         出参：所有出参返回非量化数据
       </td>
@@ -306,7 +306,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     <tr>
       <td> kvCache per-tensor量化 </td>
       <td>
-        weight_quant_mode=3，kv_cache_quant_mode=1，query_quant_mode=1<br>
+        weight_quant_mode=3, kv_cache_quant_mode=1, query_quant_mode=1<br>
         入参：tokenX传入per-token量化数据，weightDq、weightUqQr、weightDkvKr传入per-channel量化数据，kvCacheRef传入per-tensor量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr、quantScaleCkv字段必须传入 <br>
         出参：queryOut返回per-token-head量化数据，kvCacheRef出参返回per-tensor量化数据，其余出参返回非量化数据
       </td>
@@ -314,7 +314,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     <tr>
       <td> kvCache per-tile量化 </td>
       <td>
-        weight_quant_mode=3，kv_cache_quant_mode=3，query_quant_mode=0<br>
+        weight_quant_mode=3, kv_cache_quant_mode=3, query_quant_mode=0<br>
         入参：tokenX传入per-token量化数据，weightDq、weightUqQr、weightDkvKr传入per-channel量化数据，其余入参皆为非量化数据。dequantScaleX、dequantScaleWDq、dequantScaleWUqQr、dequantScaleWDkvKr字段必须传入 <br>
         出参：kvCacheRef出参返回per-tile量化数据，其余出参返回非量化数据
       </td>
