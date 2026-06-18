@@ -112,7 +112,6 @@ std::tuple<at::Tensor, at::Tensor> npu_dequant_swiglu_quant(
         } else {
             TORCH_CHECK(round_mode_value >= ROUND_MODE_RINT && round_mode_value <= ROUND_MODE_TRUNC,
                         "round_mode only support [0, 1, 2, 3, 4], but got", round_mode_value, OPS_ERROR(ErrCode::PARAM));
-    
             // transform activate_dim
             if (activate_dim_value < 0) {
                 activate_dim_value = activate_dim_value + x.dim();
