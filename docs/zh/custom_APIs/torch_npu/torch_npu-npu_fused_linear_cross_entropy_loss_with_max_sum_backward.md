@@ -1,4 +1,4 @@
-# torch\_npu.fused\_linear\_cross\_entropy\_loss\_with\_max\_sum\_grad
+# torch\_npu.npu\_fused\_linear\_cross\_entropy\_loss\_with\_max\_sum\_backward
 
 ## 产品支持情况
 
@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得fused\_linear\_online\_max\_sum和fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入`logits_max`和`sum_exp_logits`）。
+- API功能：词汇表并行场景下交叉熵损失计算的梯度算子。用于计算叶子节点`input`和`weight`的梯度。需要获得npu\_fused\_linear\_online\_max\_sum和npu\_fused\_cross\_entropy\_loss\_with\_max\_sum的相关输出作为本接口输入。支持高性能模式（传入Softmax）和省显存模式（传入`logits_max`和`sum_exp_logits`）。
 
 - 计算公式：
 
@@ -97,7 +97,7 @@ $$
 ## 函数原型
 
 ```python
-torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(grad, input, weight, target_mask, masked_target, label_smoothing=0.0, logits_max=None, sum_exp_logits=None, softmax=None) -> (Tensor, Tensor)
+torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(grad, input, weight, target_mask, masked_target, label_smoothing=0.0, logits_max=None, sum_exp_logits=None, softmax=None) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -142,7 +142,7 @@ target_mask = torch.zeros((batch + 7) // 8, dtype=torch.uint8).npu()
 masked_target = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 softmax = torch.randn(batch, vocab_size, dtype=torch.float32).npu()
 
-input_grad, weight_grad = torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(
+input_grad, weight_grad = torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(
     grad, input_tensor, weight_tensor, target_mask, masked_target,
     label_smoothing=0.0, softmax=softmax
 )
@@ -166,7 +166,7 @@ masked_target = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 logits_max = torch.randn(batch, dtype=torch.float32).npu()
 sum_exp_logits = torch.abs(torch.randn(batch, dtype=torch.float32)).npu() + 1.0
 
-input_grad, weight_grad = torch_npu.fused_linear_cross_entropy_loss_with_max_sum_grad(
+input_grad, weight_grad = torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(
     grad, input_tensor, weight_tensor, target_mask, masked_target,
     label_smoothing=0.0, logits_max=logits_max, sum_exp_logits=sum_exp_logits, softmax=None
 )
