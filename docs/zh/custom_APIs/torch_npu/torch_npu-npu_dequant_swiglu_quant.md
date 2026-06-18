@@ -94,7 +94,7 @@ torch_npu.npu_dequant_swiglu_quant(x, *, weight_scale=None, activation_scale=Non
   > **注意：**:静态量化下，quant\_scale仅支持float32类型。
 - **quant\_offset** (`Tensor`)：可选参数，表示量化中的偏移项。数据类型支持`float32`、`float16`和`bfloat16`，数据格式为$ND$。`group_index`场景下（非None），该参数不生效，需为None。
 - **group\_index** (`Tensor`)：可选参数，当前只支持count模式，表示该模式下指定分组的Tokens数（要求非负整数）。要求为1维张量，数据类型支持`int64`，数据格式$ND$。
-- **activate\_left** (`bool`)：可选参数，用于控制对输入沿最后一维等分后的左半部分还是右半部分做 swish 激活，仅在 swiglu_mode=0 时生效，默认值为 False。
+- **activate\_left** (`bool`)：可选参数，用于控制对输入沿最后一维等分后的左半部分还是右半部分做 swish 激活，仅在 swiglu_mode=0/2 时生效，默认值为 False。
     - 取True时，out=swish\(split\[x, -1, 2\]\[0\]\)\*split\[x, -1, 2\]\[1\]
     - 取False时，out=swish\(split\[x, -1, 2\]\[1\]\)\*split\[x, -1, 2\]\[0\]
 
