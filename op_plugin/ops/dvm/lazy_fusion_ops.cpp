@@ -609,7 +609,29 @@ void DumpOp(const std::string &op_name, const Args &...inputs) {
     auto k = g_lazy_fusion_manager.Get();
     k->DumpOp(op_name, inputs...);
   }
+  if (g_lazy_fusion_manager.flags_.check_accuracy) {
+    g_lazy_fusion_manager.Get()->AddAccOpName(op_name);
+  }
 }
+
+// Online accuracy check (TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK): compute this
+// op's op_api (aclnn) reference eagerly, co-located with the DVM lowering, and
+// register it for comparison after the fused kernel launches. BODY is a braced
+// statement returning std::vector<at::Tensor> -- the op_api call(s) with each
+// tensor argument routed through the Resolver R (R(tensor)/R(optional)/R(list)).
+// Place it immediately after the matching DumpOp(...) at the op entry, so every
+// argument is still alive (no deferred-replay copies). Compiles away to nothing
+// when the check is disabled.
+// Variadic so a braced body containing top-level commas (e.g. a multi-element
+// `return {a, b}`) is passed through intact -- the preprocessor only shields
+// commas inside parentheses, not braces.
+#define LF_ACC(...)                                                                       \
+  do {                                                                                    \
+    if (g_lazy_fusion_manager.flags_.check_accuracy) {                                    \
+      g_lazy_fusion_manager.Get()->RecordAccEager(                                        \
+          [&](const ::lazy_fusion::Resolver &R) -> std::vector<at::Tensor> __VA_ARGS__);  \
+    }                                                                                      \
+  } while (0)
 }  // namespace
 
 // ===================== Cast =====================
@@ -625,6 +647,7 @@ at::Tensor _npu_dtype_cast(const at::Tensor & self, at::ScalarType dtype) {
   auto out_obj = k->Cast(self_obj, dst_type);
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(dtype));
   DumpOp("cast", self, dtype);
+  LF_ACC({ return {op_api::_npu_dtype_cast(R(self), dtype)}; });
   return out;
 }
 
@@ -639,6 +662,7 @@ at::Tensor abs(const at::Tensor & self) {
   auto out_obj = k->Unary<dvm::UnaryType::kAbs>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("abs", self);
+  LF_ACC({ return {op_api::abs(R(self))}; });
   return out;
 }
 
@@ -652,6 +676,7 @@ at::Tensor neg(const at::Tensor & self) {
   auto out_obj = k->Binary<dvm::BinaryType::kMul>(k->Input(self), -1.0f);
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("neg", self);
+  LF_ACC({ return {op_api::neg(R(self))}; });
   return out;
 }
 
@@ -665,6 +690,7 @@ at::Tensor sqrt(const at::Tensor & self) {
   auto out_obj = k->Unary<dvm::UnaryType::kSqrt>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("sqrt", self);
+  LF_ACC({ return {op_api::sqrt(R(self))}; });
   return out;
 }
 
@@ -678,6 +704,7 @@ at::Tensor exp(const at::Tensor & self) {
   auto out_obj = k->Unary<dvm::UnaryType::kExp>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("exp", self);
+  LF_ACC({ return {op_api::exp(R(self))}; });
   return out;
 }
 
@@ -691,6 +718,7 @@ at::Tensor & exp_(at::Tensor & self) {
   auto out_obj = k->Unary<dvm::UnaryType::kExp>(k->Input(self));
   k->Output(self, out_obj, true);
   DumpOp("exp_", self);
+  LF_ACC({ return {op_api::exp(R(self))}; });
   LazyFusionFlush();
   return self;
 }
@@ -705,6 +733,7 @@ at::Tensor reciprocal(const at::Tensor & self) {
   auto out_obj = k->Unary<dvm::UnaryType::kReciprocal>(k->Input(self));
   auto out = k->Output(out_obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("reciprocal", self);
+  LF_ACC({ return {op_api::reciprocal(R(self))}; });
   return out;
 }
 
@@ -716,6 +745,7 @@ at::Tensor add(const at::Tensor & self, const at::Scalar & other, const at::Scal
     return op_api::add(self, other, alpha);
   }
   DumpOp("add", self, other, alpha);
+  LF_ACC({ return {op_api::add(R(self), other, alpha)}; });
   return out;
 }
 
@@ -726,6 +756,7 @@ at::Tensor add(const at::Tensor & self, const at::Tensor & other, const at::Scal
     return op_api::add(self, other, alpha);
   }
   DumpOp("add", self, other, alpha);
+  LF_ACC({ return {op_api::add(R(self), R(other), alpha)}; });
   return out;
 }
 
@@ -735,6 +766,7 @@ at::Tensor & add_(at::Tensor & self, const at::Tensor & other, const at::Scalar 
     return op_api::add_(self, other, alpha);
   }
   DumpOp("add_", self, other, alpha);
+  LF_ACC({ return {op_api::add(R(self), R(other), alpha)}; });
   LazyFusionFlush();
   return self;
 }
@@ -746,6 +778,7 @@ at::Tensor sub(const at::Tensor & self, const at::Tensor & other, const at::Scal
     return op_api::sub(self, other, alpha);
   }
   DumpOp("sub", self, other, alpha);
+  LF_ACC({ return {op_api::sub(R(self), R(other), alpha)}; });
   return out;
 }
 
@@ -755,6 +788,7 @@ at::Tensor & sub_(at::Tensor & self, const at::Tensor & other, const at::Scalar 
     return op_api::sub_(self, other, alpha);
   }
   DumpOp("sub_", self, other, alpha);
+  LF_ACC({ return {op_api::sub(R(self), R(other), alpha)}; });
   LazyFusionFlush();
   return self;
 }
@@ -766,6 +800,7 @@ at::Tensor mul(const at::Tensor & self, const at::Scalar & other) {
     return op_api::mul(self, other);
   }
   DumpOp("mul", self, other);
+  LF_ACC({ return {op_api::mul(R(self), other)}; });
   return out;
 }
 
@@ -776,6 +811,7 @@ at::Tensor mul(const at::Tensor & self, const at::Tensor & other) {
     return op_api::mul(self, other);
   }
   DumpOp("mul", self, other);
+  LF_ACC({ return {op_api::mul(R(self), R(other))}; });
   return out;
 }
 
@@ -785,6 +821,7 @@ at::Tensor & mul_(at::Tensor & self, const at::Scalar & other) {
     return op_api::mul_(self, other);
   }
   DumpOp("mul_", self, other);
+  LF_ACC({ return {op_api::mul(R(self), other)}; });
   LazyFusionFlush();
   return self;
 }
@@ -795,6 +832,7 @@ at::Tensor & mul_(at::Tensor & self, const at::Tensor & other) {
     return op_api::mul_(self, other);
   }
   DumpOp("mul_", self, other);
+  LF_ACC({ return {op_api::mul(R(self), R(other))}; });
   LazyFusionFlush();
   return self;
 }
@@ -806,6 +844,7 @@ at::Tensor div(const at::Tensor & self, const at::Scalar & other) {
     return op_api::div(self, other);
   }
   DumpOp("div", self, other);
+  LF_ACC({ return {op_api::div(R(self), other)}; });
   return out;
 }
 
@@ -816,6 +855,7 @@ at::Tensor div(const at::Tensor & self, const at::Tensor & other) {
     return op_api::div(self, other);
   }
   DumpOp("div", self, other);
+  LF_ACC({ return {op_api::div(R(self), R(other))}; });
   return out;
 }
 
@@ -825,6 +865,7 @@ at::Tensor & div_(at::Tensor & self, const at::Scalar & other) {
     return op_api::div_(self, other);
   }
   DumpOp("div_", self, other);
+  LF_ACC({ return {op_api::div(R(self), other)}; });
   LazyFusionFlush();
   return self;
 }
@@ -835,6 +876,7 @@ at::Tensor & div_(at::Tensor & self, const at::Tensor & other) {
     return op_api::div_(self, other);
   }
   DumpOp("div_", self, other);
+  LF_ACC({ return {op_api::div(R(self), R(other))}; });
   LazyFusionFlush();
   return self;
 }
@@ -847,6 +889,7 @@ at::Tensor pow(const at::Tensor & self, const at::Scalar & exponent) {
     return op_api::pow(self, exponent);
   }
   DumpOp("pow", self, exponent);
+  LF_ACC({ return {op_api::pow(R(self), exponent)}; });
   return out;
 }
 
@@ -857,6 +900,7 @@ at::Tensor pow(const at::Tensor & self, const at::Tensor & exponent) {
     return op_api::pow(self, exponent);
   }
   DumpOp("pow", self, exponent);
+  LF_ACC({ return {op_api::pow(R(self), R(exponent))}; });
   return out;
 }
 
@@ -866,6 +910,7 @@ at::Tensor & pow_(at::Tensor & self, const at::Scalar & exponent) {
     return op_api::pow_(self, exponent);
   }
   DumpOp("pow_", self, exponent);
+  LF_ACC({ return {op_api::pow(R(self), exponent)}; });
   LazyFusionFlush();
   return self;
 }
@@ -876,6 +921,7 @@ at::Tensor & pow_(at::Tensor & self, const at::Tensor & exponent) {
     return op_api::pow_(self, exponent);
   }
   DumpOp("pow_", self, exponent);
+  LF_ACC({ return {op_api::pow(R(self), R(exponent))}; });
   LazyFusionFlush();
   return self;
 }
@@ -954,6 +1000,7 @@ at::Tensor floor_divide(const at::Tensor & self, const at::Tensor & other) {
     return op_api::floor_divide(self, other);
   }
   DumpOp("floor_divide", self, other);
+  LF_ACC({ return {op_api::floor_divide(R(self), R(other))}; });
   return out;
 }
 
@@ -964,6 +1011,7 @@ at::Tensor floor_divide(const at::Tensor & self, const at::Scalar & other) {
     return op_api::floor_divide(self, other);
   }
   DumpOp("floor_divide", self, other);
+  LF_ACC({ return {op_api::floor_divide(R(self), other)}; });
   return out;
 }
 
@@ -973,6 +1021,7 @@ at::Tensor & floor_divide_(at::Tensor & self, const at::Tensor & other) {
     return op_api::floor_divide_(self, other);
   }
   DumpOp("floor_divide_", self, other);
+  LF_ACC({ return {op_api::floor_divide(R(self), R(other))}; });
   LazyFusionFlush();
   return self;
 }
@@ -983,6 +1032,7 @@ at::Tensor & floor_divide_(at::Tensor & self, const at::Scalar & other) {
     return op_api::floor_divide_(self, other);
   }
   DumpOp("floor_divide_", self, other);
+  LF_ACC({ return {op_api::floor_divide(R(self), other)}; });
   LazyFusionFlush();
   return self;
 }
@@ -1009,6 +1059,7 @@ at::Tensor & floor_divide_out(const at::Tensor & self, const at::Tensor & other,
   auto floor_obj = k->Unary<dvm::UnaryType::kFloor>(div_obj);
   k->Output(out, floor_obj, false);
   DumpOp("floor_divide_out", self, other);
+  LF_ACC({ return {op_api::floor_divide(R(self), R(other))}; });
   LazyFusionFlush();
   return out;
 }
@@ -1021,6 +1072,7 @@ at::Tensor eq(const at::Tensor & self, const at::Scalar & other) {
     return op_api::eq(self, other);
   }
   DumpOp("eq", self, other);
+  LF_ACC({ return {op_api::eq(R(self), other)}; });
   return out;
 }
 
@@ -1031,6 +1083,7 @@ at::Tensor eq(const at::Tensor & self, const at::Tensor & other) {
     return op_api::eq(self, other);
   }
   DumpOp("eq", self, other);
+  LF_ACC({ return {op_api::eq(R(self), R(other))}; });
   return out;
 }
 
@@ -1041,6 +1094,7 @@ at::Tensor ne(const at::Tensor & self, const at::Scalar & other) {
     return op_api::ne(self, other);
   }
   DumpOp("ne", self, other);
+  LF_ACC({ return {op_api::ne(R(self), other)}; });
   return out;
 }
 
@@ -1051,6 +1105,7 @@ at::Tensor ne(const at::Tensor & self, const at::Tensor & other) {
     return op_api::ne(self, other);
   }
   DumpOp("ne", self, other);
+  LF_ACC({ return {op_api::ne(R(self), R(other))}; });
   return out;
 }
 
@@ -1061,6 +1116,7 @@ at::Tensor gt(const at::Tensor & self, const at::Scalar & other) {
     return op_api::gt(self, other);
   }
   DumpOp("gt", self, other);
+  LF_ACC({ return {op_api::gt(R(self), other)}; });
   return out;
 }
 
@@ -1071,6 +1127,7 @@ at::Tensor gt(const at::Tensor & self, const at::Tensor & other) {
     return op_api::gt(self, other);
   }
   DumpOp("gt", self, other);
+  LF_ACC({ return {op_api::gt(R(self), R(other))}; });
   return out;
 }
 
@@ -1081,6 +1138,7 @@ at::Tensor ge(const at::Tensor & self, const at::Scalar & other) {
     return op_api::ge(self, other);
   }
   DumpOp("ge", self, other);
+  LF_ACC({ return {op_api::ge(R(self), other)}; });
   return out;
 }
 
@@ -1091,6 +1149,7 @@ at::Tensor ge(const at::Tensor & self, const at::Tensor & other) {
     return op_api::ge(self, other);
   }
   DumpOp("ge", self, other);
+  LF_ACC({ return {op_api::ge(R(self), R(other))}; });
   return out;
 }
 
@@ -1101,6 +1160,7 @@ at::Tensor lt(const at::Tensor & self, const at::Scalar & other) {
     return op_api::lt(self, other);
   }
   DumpOp("lt", self, other);
+  LF_ACC({ return {op_api::lt(R(self), other)}; });
   return out;
 }
 
@@ -1111,6 +1171,7 @@ at::Tensor lt(const at::Tensor & self, const at::Tensor & other) {
     return op_api::lt(self, other);
   }
   DumpOp("lt", self, other);
+  LF_ACC({ return {op_api::lt(R(self), R(other))}; });
   return out;
 }
 
@@ -1121,6 +1182,7 @@ at::Tensor le(const at::Tensor & self, const at::Scalar & other) {
     return op_api::le(self, other);
   }
   DumpOp("le", self, other);
+  LF_ACC({ return {op_api::le(R(self), other)}; });
   return out;
 }
 
@@ -1131,6 +1193,7 @@ at::Tensor le(const at::Tensor & self, const at::Tensor & other) {
     return op_api::le(self, other);
   }
   DumpOp("le", self, other);
+  LF_ACC({ return {op_api::le(R(self), R(other))}; });
   return out;
 }
 
@@ -1141,6 +1204,7 @@ at::Tensor maximum(const at::Tensor & self, const at::Tensor & other) {
     return op_api::maximum(self, other);
   }
   DumpOp("maximum", self, other);
+  LF_ACC({ return {op_api::maximum(R(self), R(other))}; });
   return out;
 }
 
@@ -1151,6 +1215,7 @@ at::Tensor minimum(const at::Tensor & self, const at::Tensor & other) {
     return op_api::minimum(self, other);
   }
   DumpOp("minimum", self, other);
+  LF_ACC({ return {op_api::minimum(R(self), R(other))}; });
   return out;
 }
 
@@ -1178,6 +1243,7 @@ at::Tensor where(const at::Tensor & condition, const at::Tensor & self, const at
   auto out_obj = k->Select(cond_obj, self_obj, other_obj);
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(result_type));
   DumpOp("where", condition, self, other);
+  LF_ACC({ return {op_api::where(R(condition), R(self), R(other))}; });
   return out;
 }
 
@@ -1205,6 +1271,7 @@ at::Tensor & where_out(const at::Tensor & condition, const at::Tensor & self,
   auto out_obj = k->Select(cond_obj, self_obj, other_obj);
   k->Output(out, out_obj, false);
   DumpOp("where_out", condition, self, other);
+  LF_ACC({ return {op_api::where(R(condition), R(self), R(other))}; });
   LazyFusionFlush();
   return out;
 }
@@ -1225,6 +1292,7 @@ at::Tensor sigmoid(const at::Tensor & self) {
   auto obj = k->Unary<dvm::UnaryType::kReciprocal>(add_exp);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("sigmoid", self);
+  LF_ACC({ return {op_api::sigmoid(R(self))}; });
   return out;
 }
 
@@ -1247,6 +1315,7 @@ at::Tensor sigmoid_backward(const at::Tensor & grad_output, const at::Tensor & o
   auto obj = k->Binary<dvm::BinaryType::kMul>(one_sub_y, y_mul_dy);
   auto out = k->Output(obj, k->GetShape(obj), grad_output.options().dtype(grad_output.scalar_type()));
   DumpOp("sigmoid_backward", grad_output, output);
+  LF_ACC({ return {op_api::sigmoid_backward(R(grad_output), R(output))}; });
   return out;
 }
 
@@ -1264,6 +1333,7 @@ at::Tensor tanh(const at::Tensor & self) {
   auto obj = BuildClampedTanhFp32(k, x);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("tanh", self);
+  LF_ACC({ return {op_api::tanh(R(self))}; });
   return out;
 }
 
@@ -1279,6 +1349,7 @@ at::Tensor & tanh_(at::Tensor & self) {
   auto out_obj = BuildClampedTanhFp32(k, x);
   k->Output(self, out_obj, true);
   DumpOp("tanh_", self);
+  LF_ACC({ return {op_api::tanh(R(self))}; });
   LazyFusionFlush();
   return self;
 }
@@ -1302,6 +1373,7 @@ at::Tensor tanh_backward(const at::Tensor & grad_output, const at::Tensor & outp
   auto obj = k->Binary<dvm::BinaryType::kMul>(dy, one_sub_ysq);
   auto out = k->Output(obj, k->GetShape(obj), grad_output.options().dtype(grad_output.scalar_type()));
   DumpOp("tanh_backward", grad_output, output);
+  LF_ACC({ return {op_api::tanh_backward(R(grad_output), R(output))}; });
   return out;
 }
 
@@ -1330,6 +1402,9 @@ at::Tensor & gelu_out(const at::Tensor & self, c10::string_view approximate, at:
   auto obj = k->Binary<dvm::BinaryType::kMul>(div, exp_min_y_0);
   k->Output(out, obj, false);
   DumpOp("gelu", self, approximate);
+  // op_plugin exposes only gelu.out (no functional op_api::gelu); compute the
+  // reference via the out= variant into a fresh tensor.
+  LF_ACC({ auto s = R(self); auto o = at::empty_like(s); op_api::gelu_out(s, approximate, o); return {o}; });
   return out;
 }
 
@@ -1369,6 +1444,7 @@ at::Tensor gelu_backward(const at::Tensor & grad_output, const at::Tensor & self
   auto obj = k->Binary<dvm::BinaryType::kMul>(dy_obj, result_tmp);
   auto out = k->Output(obj, k->GetShape(obj), grad_output.options().dtype(grad_output.scalar_type()));
   DumpOp("gelu_backward", grad_output, self, approximate);
+  LF_ACC({ return {op_api::gelu_backward(R(grad_output), R(self), approximate)}; });
   return out;
 }
 
@@ -1382,6 +1458,7 @@ at::Tensor relu(const at::Tensor & self) {
   auto obj = k->Binary<dvm::BinaryType::kMaximum>(k->Input(self), 0.0f);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("relu", self);
+  LF_ACC({ return {op_api::relu(R(self))}; });
   return out;
 }
 
@@ -1395,6 +1472,7 @@ at::Tensor & relu_(at::Tensor & self) {
   auto out_obj = k->Binary<dvm::BinaryType::kMaximum>(k->Input(self), 0.0f);
   k->Output(self, out_obj, true);
   DumpOp("relu_", self);
+  LF_ACC({ return {op_api::relu(R(self))}; });
   LazyFusionFlush();
   return self;
 }
@@ -1436,6 +1514,7 @@ at::Tensor leaky_relu(const at::Tensor & self, const at::Scalar & negative_slope
     return op_api::leaky_relu(self, negative_slope);
   }
   DumpOp("leaky_relu", self, negative_slope);
+  LF_ACC({ return {op_api::leaky_relu(R(self), negative_slope)}; });
   return out;
 }
 
@@ -1445,6 +1524,7 @@ at::Tensor & leaky_relu_(at::Tensor & self, const at::Scalar & negative_slope) {
     return op_api::leaky_relu_(self, negative_slope);
   }
   DumpOp("leaky_relu_", self, negative_slope);
+  LF_ACC({ return {op_api::leaky_relu(R(self), negative_slope)}; });
   LazyFusionFlush();
   return self;
 }
@@ -1464,6 +1544,7 @@ at::Tensor silu(const at::Tensor & self) {
   auto obj = k->Binary<dvm::BinaryType::kDiv>(input_obj, add_exp);
   auto out = k->Output(obj, self.sizes(), self.options().dtype(self.scalar_type()));
   DumpOp("silu", self);
+  LF_ACC({ return {op_api::silu(R(self))}; });
   return out;
 }
 
@@ -1492,6 +1573,7 @@ at::Tensor silu_backward(const at::Tensor & grad_output, const at::Tensor & self
   auto obj = k->Binary<dvm::BinaryType::kMul>(sub_res, dout_obj);
   auto out_tensor = k->Output(obj, k->GetShape(obj), grad_output.options().dtype(grad_output.scalar_type()));
   DumpOp("silu_backward", grad_output, self);
+  LF_ACC({ return {op_api::silu_backward(R(grad_output), R(self))}; });
   return out_tensor;
 }
 
@@ -1557,6 +1639,7 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   }
   auto out = k->Output(out_obj, k->GetShape(out_obj), input.options().dtype(input.scalar_type()));
   DumpOp("native_batch_norm", input, weight, bias, running_mean, running_var, training, momentum, eps);
+  LF_ACC({ return {std::get<0>(op_api::native_batch_norm(R(input), R(weight), R(bias), R(running_mean), R(running_var), training, momentum, eps))}; });
   return std::make_tuple(std::move(out), std::move(save_mean), std::move(save_invstd));
 }
 
@@ -1637,6 +1720,15 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
     grad_bias = k->Output(grad_bias_obj, k->GetShape(grad_bias_obj), input.options().dtype(at::kFloat));
   }
   DumpOp("native_batch_norm_backward", grad_out, input, weight, running_mean, running_var, train, eps);
+  LF_ACC({
+    auto r = op_api::native_batch_norm_backward(R(grad_out), R(input), R(weight), R(running_mean),
+                                                R(running_var), R(save_mean), R(save_invstd), train, eps, output_mask);
+    std::vector<at::Tensor> v;
+    if (output_mask[0]) { v.push_back(std::get<0>(r)); }
+    if (output_mask[1]) { v.push_back(std::get<1>(r)); }
+    if (output_mask[2]) { v.push_back(std::get<2>(r)); }
+    return v;
+  });
   return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
 }
 
@@ -1675,6 +1767,7 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   auto out1 = k->Output(input_mean, k->GetShape(invstd), input.options().dtype(input.scalar_type()));
   auto out2 = k->Output(invstd, k->GetShape(invstd), input.options().dtype(input.scalar_type()));
   DumpOp("batch_norm_stats", input, eps);
+  LF_ACC({ auto r = op_api::batch_norm_stats(R(input), eps); return {std::get<0>(r), std::get<1>(r)}; });
   LazyFusionFlush();
   return std::make_tuple(std::move(out1), std::move(out2));
 }
@@ -1747,6 +1840,11 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
     k->Output(running_var_tensor, running_var_new, true);
   }
   DumpOp("batch_norm_gather_stats_with_counts", input, mean, invstd, running_mean, running_var, momentum, eps, counts);
+  LF_ACC({
+    auto r = op_api::batch_norm_gather_stats_with_counts(R(input), R(mean), R(invstd), R(running_mean),
+                                                          R(running_var), momentum, eps, R(counts));
+    return {std::get<0>(r), std::get<1>(r)};
+  });
   LazyFusionFlush();
   return std::make_tuple(std::move(global_mean_tensor), std::move(global_invstd_tensor));
 }
@@ -1784,6 +1882,7 @@ at::Tensor batch_norm_elemt(const at::Tensor & input, const c10::optional<at::Te
   }
   auto out = k->Output(input_obj, k->GetShape(input_obj), input.options().dtype(input.scalar_type()));
   DumpOp("batch_norm_elemt", input, weight, bias, mean, invstd, eps);
+  LF_ACC({ return {op_api::batch_norm_elemt(R(input), R(weight), R(bias), R(mean), R(invstd), eps)}; });
   return out;
 }
 
@@ -1834,6 +1933,7 @@ at::Tensor batch_norm_backward_elemt(const at::Tensor & grad_out, const at::Tens
     k->Binary<dvm::BinaryType::kMul>(invstd_obj, k->Cast(k->Input(weight_tensor_c, true, new_shape_ref), x_dtype)));
   auto out = k->Output(obj, k->GetShape(obj), input.options().dtype(input.scalar_type()));
   DumpOp("batch_norm_backward_elemt", grad_out, input, mean, invstd, weight, sum_dy, sum_dy_xmu, count);
+  LF_ACC({ return {op_api::batch_norm_backward_elemt(R(grad_out), R(input), R(mean), R(invstd), R(weight), R(sum_dy), R(sum_dy_xmu), R(count))}; });
   return out;
 }
 
@@ -1856,6 +1956,7 @@ at::Tensor sum(const at::Tensor & self, c10::optional<at::ScalarType> dtype) {
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), false);
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(out_type));
   DumpOp("sum", self, dtype);
+  LF_ACC({ return {op_api::sum(R(self), dtype)}; });
   LazyFusionFlush();
   return out;
 }
@@ -1886,6 +1987,7 @@ at::Tensor sum(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdi
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), keepdim);
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options().dtype(out_type));
   DumpOp("sum", self, dim, keepdim, dtype);
+  LF_ACC({ return {op_api::sum(R(self), dim, keepdim, dtype)}; });
   LazyFusionFlush();
   return out;
 }
@@ -1918,6 +2020,7 @@ at::Tensor & sum_out(const at::Tensor & self, at::OptionalIntArrayRef dim, bool 
   auto out_obj = k->Reduce<dvm::ReduceType::kSum>(input_obj, k->GetShapeRef(axis), keepdim);
   k->Output(out, out_obj, false);
   DumpOp("sum_out", self, dim, keepdim, dtype);
+  LF_ACC({ return {op_api::sum(R(self), dim, keepdim, dtype)}; });
   LazyFusionFlush();
   return out;
 }
@@ -1933,6 +2036,7 @@ at::Tensor matmul(const at::Tensor & self, const at::Tensor & other) {
     return op_api::matmul(self, other);
   }
   DumpOp("matmul", self, other);
+  LF_ACC({ return {op_api::matmul(R.Native(self), R.Native(other))}; });
   return out;
 }
 
@@ -1946,6 +2050,7 @@ at::Tensor mm(const at::Tensor & self, const at::Tensor & mat2) {
     return op_api::mm(self, mat2);
   }
   DumpOp("mm", self, mat2);
+  LF_ACC({ return {op_api::mm(R.Native(self), R.Native(mat2))}; });
   return out;
 }
 
@@ -1959,6 +2064,7 @@ at::Tensor bmm(const at::Tensor & self, const at::Tensor & mat2) {
     return op_api::bmm(self, mat2);
   }
   DumpOp("bmm", self, mat2);
+  LF_ACC({ return {op_api::bmm(R.Native(self), R.Native(mat2))}; });
   return out;
 }
 
@@ -2003,6 +2109,7 @@ at::Tensor addmm(const at::Tensor & self, const at::Tensor & mat1, const at::Ten
   }
   auto out = k->Output(out_obj, k->GetShape(out_obj), self.options());
   DumpOp("addmm", self, mat1, mat2, beta, alpha);
+  LF_ACC({ return {op_api::addmm(R.Native(self), R.Native(mat1), R.Native(mat2), beta, alpha)}; });
   return out;
 }
 
@@ -2025,6 +2132,7 @@ std::vector<at::Tensor> _foreach_sqrt(at::TensorList tensors) {
     result[i] = k->Output(out_obj, tensors[i].sizes(), tensors[i].options().dtype(tensors[i].scalar_type()));
   }
   DumpOp("_foreach_sqrt", tensors);
+  LF_ACC({ auto v = R(tensors); return op_api::_foreach_sqrt(at::TensorList(v)); });
   return result;
 }
 
@@ -2047,6 +2155,7 @@ void _foreach_sqrt_(at::TensorList tensors) {
     k->Output(tensors[i], out_obj, true);
   }
   DumpOp("_foreach_sqrt_", tensors);
+  LF_ACC({ auto v = R(tensors); return op_api::_foreach_sqrt(at::TensorList(v)); });
   LazyFusionFlush();
 }
 
@@ -2057,6 +2166,7 @@ void _foreach_mul_(const at::TensorList self, const at::Scalar& scalar) {
     return;
   }
   DumpOp("_foreach_mul_", self, scalar);
+  LF_ACC({ auto v = R(self); op_api::_foreach_mul_(at::TensorList(v), scalar); return v; });
   LazyFusionFlush();
 }
 
@@ -2067,6 +2177,7 @@ void _foreach_add_(const at::TensorList self, const at::Scalar& scalar) {
     return;
   }
   DumpOp("_foreach_add_", self, scalar);
+  LF_ACC({ auto v = R(self); op_api::_foreach_add_(at::TensorList(v), scalar); return v; });
   LazyFusionFlush();
 }
 
@@ -2077,6 +2188,7 @@ void _foreach_div_(at::TensorList self, const at::Scalar& scalar) {
     return;
   }
   DumpOp("_foreach_div_", self, scalar);
+  LF_ACC({ auto v = R(self); op_api::_foreach_div_(at::TensorList(v), scalar); return v; });
   LazyFusionFlush();
 }
 
@@ -2087,6 +2199,7 @@ void _foreach_div_(at::TensorList tensors, at::ArrayRef<at::Scalar> scalars) {
     return;
   }
   DumpOp("_foreach_div_", tensors, scalars);
+  LF_ACC({ auto v = R(tensors); op_api::_foreach_div_(at::TensorList(v), scalars); return v; });
   LazyFusionFlush();
 }
 
@@ -2098,6 +2211,7 @@ void _foreach_addcmul_(const at::TensorList input, const at::TensorList tensors1
     return;
   }
   DumpOp("_foreach_addcmul_", input, tensors1, tensors2, scalar);
+  LF_ACC({ auto a = R(input); auto b = R(tensors1); auto c = R(tensors2); op_api::_foreach_addcmul_(at::TensorList(a), at::TensorList(b), at::TensorList(c), scalar); return a; });
   LazyFusionFlush();
 }
 
@@ -2109,6 +2223,7 @@ void _foreach_addcdiv_(const at::TensorList input, const at::TensorList tensors1
     return;
   }
   DumpOp("_foreach_addcdiv_", input, tensors1, tensors2, scalar);
+  LF_ACC({ auto a = R(input); auto b = R(tensors1); auto c = R(tensors2); op_api::_foreach_addcdiv_(at::TensorList(a), at::TensorList(b), at::TensorList(c), scalar); return a; });
   LazyFusionFlush();
 }
 
@@ -2120,6 +2235,7 @@ void _foreach_addcdiv_(const at::TensorList input, const at::TensorList tensors1
     return;
   }
   DumpOp("_foreach_addcdiv_", input, tensors1, tensors2, scalars);
+  LF_ACC({ auto a = R(input); auto b = R(tensors1); auto c = R(tensors2); op_api::_foreach_addcdiv_(at::TensorList(a), at::TensorList(b), at::TensorList(c), scalars); return a; });
   LazyFusionFlush();
 }
 
@@ -2184,6 +2300,7 @@ at::Tensor npu_swiglu(const at::Tensor &self, int64_t dim) {
   out_shape[real_dim] = half;
   auto out = k->Output(out_obj, out_shape, self.options().dtype(self.scalar_type()));
   DumpOp("npu_swiglu", self, dim);
+  LF_ACC({ return {op_api::npu_swiglu(R(self), dim)}; });
   return out;
 }
 }  // namespace lazy_fusion

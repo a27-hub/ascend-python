@@ -243,5 +243,20 @@ LazyFusionFlags::LazyFusionFlags() {
   }
   std::map<std::string, std::string> flag_map = ParseFlags(rest);
   RegisterFlags(&flag_map, this);
+
+  // Independent switch for online accuracy check.
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=True   # enable (report mismatch as ERROR)
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=1      # same as above
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=False  # disable (default)
+  char *acc_env = std::getenv("TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK");
+  if (acc_env != nullptr) {
+    std::string acc_str = acc_env;
+    size_t ai = acc_str.find_first_not_of(" \t");
+    if (ai != std::string::npos) {
+      size_t aj = acc_str.find_first_of(" \t", ai);
+      std::string acc_head = (aj == std::string::npos) ? acc_str.substr(ai) : acc_str.substr(ai, aj - ai);
+      ParseBoolToken(acc_head, &check_accuracy);
+    }
+  }
 }
 }  // namespace lazy_fusion

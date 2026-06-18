@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <ATen/record_function.h>
+#include "op_plugin/ops/dvm/lazy_fusion_accuracy.h"
 #include "torch_npu/csrc/core/npu/NPUFunctions.h"
 #include "torch_npu/csrc/core/npu/NPUStream.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
@@ -27,6 +28,8 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 
 namespace lazy_fusion {
+thread_local bool g_in_accuracy_check = false;
+
 static inline bool DumpEnabled() {
   static const bool v = g_lazy_fusion_manager.flags_.dump_as_text;
   return v;
@@ -443,7 +446,7 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
       }
     }
   }
-  auto &store = outputs_.emplace_back(obj, inplace, tensor);
+  auto &store = outputs_.emplace_back(obj, inplace, tensor, g_lazy_fusion_manager.flags_.check_accuracy);
   CacheTensorMeta(&(store.tensor_meta), tensor);
   ASCEND_LOGD("dvm Output: %%%zu, tensor %p, addr=%p, shape=%s, dtype=%s, inplace=%d",
               outputs_.size() - 1, tensor.unsafeGetTensorImpl(), tensor.data_ptr(),
@@ -499,6 +502,14 @@ void LazyFusionKernel::Flush() {
     DumpGraph();
   }
 
+  // Online accuracy check: the op_api references were computed eagerly during
+  // capture (RecordAccEager). PrepareAccuracyCheck snapshots the (dvm output,
+  // reference) pairs before ClearGraphRefs; CheckAccuracy compares after Launch
+  // and prints the DVM dump + das on mismatch.
+  if (g_lazy_fusion_manager.flags_.check_accuracy) {
+    PrepareAccuracyCheck();
+  }
+
   static const bool codegen_in_task_queue =
       c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
   if (codegen_in_task_queue) {
@@ -511,6 +522,9 @@ void LazyFusionKernel::Flush() {
       ClearRuntimeState();
       return ret;
     });
+    if (check_accuracy_pending_) {
+      CheckAccuracy();
+    }
     return;
   }
   // Level 1: codegen (which calls Alloc for the N-pad workspace) runs on the caller
@@ -527,6 +541,9 @@ void LazyFusionKernel::Flush() {
     ClearRuntimeState();
     return ret;
   });
+  if (check_accuracy_pending_) {
+    CheckAccuracy();
+  }
 }
 
 void LazyFusionKernel::CodeGenAndDump() {
@@ -542,6 +559,15 @@ void LazyFusionKernel::CodeGenAndDump() {
     dump_buf_ << Dump() << "}\n";
     dump_buf_ << Das() << "\n";
     LazyFusionDump::Instance().DumpKernelInfo(dump_buf_);
+  }
+  // Capture the post-split IR dump and disassembly for the accuracy check, so a
+  // mismatch can print them without requiring dump_as_text. Must be done here,
+  // right after CodeGen (Das() requires CodeGen) and before any Clear().
+  if (g_lazy_fusion_manager.flags_.check_accuracy && check_accuracy_pending_) {
+    const char *dump_text = Dump();
+    acc_dump_text_ = dump_text ? dump_text : "";
+    const char *das_text = Das();
+    acc_das_text_ = das_text ? das_text : "";
   }
 }
 
@@ -661,6 +687,164 @@ void LazyFusionKernel::DumpGraph() {
     }
   }
   dump_buf_ << ")\n}\n";
+}
+
+void LazyFusionKernel::PrepareAccuracyCheck() {
+  // References were already computed eagerly into acc_ref_map_ during capture
+  // (see RecordAccEager / LF_ACC). Snapshot, for every non-skip DVM output, the
+  // (output handle, reference output) pair before ClearGraphRefs wipes
+  // outputs_/acc_ref_map_. Outputs whose producing op was not accuracy-covered
+  // simply have no reference and are dropped with a debug warning.
+  check_accuracy_output_handles_.clear();
+  check_accuracy_ref_outputs_.clear();
+  size_t candidate_outputs = 0;
+  size_t skipped_outputs = 0;
+  for (auto &out : outputs_) {
+    if (out.skip) {
+      continue;
+    }
+    candidate_outputs += 1;
+    auto it = acc_ref_map_.find(MakeAccuracyKey(out.tensor_meta));
+    if (it == acc_ref_map_.end() || !it->second.defined()) {
+      skipped_outputs += 1;
+      continue;
+    }
+    at::Tensor handle = TensorFromWeakImpl(out.tensor_impl);
+    if (!handle.defined()) {
+      skipped_outputs += 1;
+      continue;
+    }
+    check_accuracy_output_handles_.push_back(std::move(handle));
+    check_accuracy_ref_outputs_.push_back(it->second);
+  }
+  if (skipped_outputs > 0) {
+    ASCEND_LOGW("CheckAccuracy: skipped %zu/%zu DVM outputs without comparable references for kernel id=%zu",
+                skipped_outputs, candidate_outputs, id_);
+  }
+  acc_report_ops_ = acc_ops_str_;
+  check_accuracy_pending_ = !check_accuracy_output_handles_.empty();
+
+  // Capture the fused kernel's operator spec (original aten input/output shape,
+  // dtype, stride) before ClearGraphRefs wipes inputs_. The DVM graph dump only
+  // shows the flattened DVM shapes; these are the meaningful logical specs,
+  // printed alongside a mismatch. Built only when there is something to compare.
+  if (check_accuracy_pending_) {
+    auto fmt = [](std::stringstream &ss, const at::Tensor &t) {
+      ss << c10::toString(t.scalar_type()) << t.sizes() << "stride" << t.strides();
+    };
+    std::stringstream spec;
+    spec << "inputs: ";
+    bool first = true;
+    for (size_t i = 0; i < input_used_; ++i) {
+      const auto &t = inputs_[i]->tensor;
+      if (!t.defined()) {
+        continue;
+      }
+      if (!first) {
+        spec << ", ";
+      }
+      first = false;
+      fmt(spec, t);
+    }
+    spec << "; outputs: ";
+    for (size_t i = 0; i < check_accuracy_output_handles_.size(); ++i) {
+      if (i != 0) {
+        spec << ", ";
+      }
+      fmt(spec, check_accuracy_output_handles_[i]);
+    }
+    acc_spec_ = spec.str();
+  }
+}
+
+void LazyFusionKernel::CheckAccuracy() {
+  // Called AFTER CodeGen+Launch (from the end of Flush). Synchronize the stream,
+  // collect the DVM fused outputs via the handles snapshotted in
+  // PrepareAccuracyCheck, and compare against the eagerly computed op_api refs.
+  if (!check_accuracy_pending_) {
+    return;
+  }
+  check_accuracy_pending_ = false;
+
+  // RunOpApiV2 enqueues the DVM launch into the current task queue, but the
+  // launch itself writes to the saved raw ACL stream_ captured when this graph
+  // started. Drain the current queue first so the launch lambda has executed,
+  // then synchronize stream_ so the fused output is ready before comparing.
+  bool sync_ok = true;
+  auto enqueue_stream = c10_npu::getCurrentNPUStream().stream();
+  if (enqueue_stream == nullptr) {
+    sync_ok = false;
+    ASCEND_LOGW("CheckAccuracy: drain task queue failed for dvm kernel id=%zu", id_);
+  } else {
+    auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
+    if (err != ACL_ERROR_NONE) {
+      sync_ok = false;
+      ASCEND_LOGW("CheckAccuracy: sync stream failed for dvm kernel id=%zu, error=%d", id_, err);
+    }
+  }
+  if (!sync_ok) {
+    check_accuracy_ref_outputs_.clear();
+    check_accuracy_output_handles_.clear();
+    acc_report_ops_.clear();
+    acc_spec_.clear();
+    acc_dump_text_.clear();
+    acc_das_text_.clear();
+    return;
+  }
+
+  std::vector<at::Tensor> actual_outputs;
+  actual_outputs.reserve(check_accuracy_output_handles_.size());
+  for (auto &t : check_accuracy_output_handles_) {
+    actual_outputs.push_back(t);
+  }
+
+  // The comparison uses aten ops (sub/abs/clamp/isclose/min/max/...), several of
+  // which are DVM-intercepted. Guard the whole compare so it does not recurse
+  // into lazy fusion (which would reuse this pooled kernel and corrupt state).
+  AccuracyReentryGuard guard;
+
+  std::string kernel_name = "lazy_fusion(id=" + std::to_string(id_) + ")";
+  bool compare_failed = false;
+  bool passed = true;
+  try {
+    passed = CompareOutputs(actual_outputs, check_accuracy_ref_outputs_, kernel_name, acc_report_ops_);
+  } catch (const std::exception &e) {
+    compare_failed = true;
+    ASCEND_LOGE("DVM lazy fusion accuracy checker internal error: %s, ops: [%s]",
+                e.what(), acc_report_ops_.c_str());
+    std::cerr << "[ERROR] DVM lazy fusion accuracy checker internal error: "
+              << e.what() << ", Kernel: " << kernel_name
+              << ", ops: [" << acc_report_ops_ << "]" << std::endl;
+  } catch (...) {
+    compare_failed = true;
+    ASCEND_LOGE("DVM lazy fusion accuracy checker internal unknown error, ops: [%s]",
+                acc_report_ops_.c_str());
+    std::cerr << "[ERROR] DVM lazy fusion accuracy checker internal unknown error, Kernel: "
+              << kernel_name << ", ops: [" << acc_report_ops_ << "]" << std::endl;
+  }
+
+  if (!compare_failed && !passed) {
+    // Report as an ERROR and dump the DVM fused graph IR + disassembly so the
+    // failing kernel can be inspected without re-running under
+    // INDUCTOR_DVM_DEBUG_MODE / dump_as_text. Execution continues.
+    ASCEND_LOGE("DVM lazy fusion accuracy mismatch: %s, ops: [%s]", kernel_name.c_str(),
+                acc_report_ops_.c_str());
+    std::cerr << "[ERROR] ============ DVM LAZY FUSION ACCURACY MISMATCH ============\n"
+              << "[ERROR] Kernel: " << kernel_name << ", ops: [" << acc_report_ops_ << "]\n"
+              << "[ERROR] spec: " << acc_spec_ << "\n"
+              << "---------------- DVM graph dump (after split) ----------------\n"
+              << acc_dump_text_ << "\n"
+              << "---------------- DVM das (disassembly) ----------------\n"
+              << acc_das_text_ << "\n"
+              << "[ERROR] ==========================================================" << std::endl;
+  }
+
+  check_accuracy_ref_outputs_.clear();
+  check_accuracy_output_handles_.clear();
+  acc_report_ops_.clear();
+  acc_spec_.clear();
+  acc_dump_text_.clear();
+  acc_das_text_.clear();
 }
 
 bool IsEnabled(const std::string &op, Level required) {
