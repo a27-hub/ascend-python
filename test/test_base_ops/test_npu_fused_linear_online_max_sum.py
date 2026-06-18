@@ -4,8 +4,8 @@ import torch_npu
 from torch_npu.testing.testcase import TestCase, run_tests
 
 
-class TestFusedLinearOnlineMaxSum(TestCase):
-    def test_fused_linear_online_max_sum_fp16(self):
+class TestNpuFusedLinearOnlineMaxSum(TestCase):
+    def test_npu_fused_linear_online_max_sum_fp16(self):
         batch = 128
         hidden = 64
         vocab_size = 256
@@ -17,7 +17,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         target_tensor = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 
         logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \
-            torch_npu.fused_linear_online_max_sum(
+            torch_npu.npu_fused_linear_online_max_sum(
                 input_tensor, weight_tensor, target_tensor,
                 vocab_start, vocab_end, return_logits=True
             )
@@ -35,7 +35,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         self.assertEqual(masked_target.dtype, torch.int32)
         self.assertEqual(vocab_parallel_logits.dtype, torch.float16)
 
-    def test_fused_linear_online_max_sum_bf16(self):
+    def test_npu_fused_linear_online_max_sum_bf16(self):
         batch = 64
         hidden = 32
         vocab_size = 128
@@ -47,7 +47,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         target_tensor = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 
         logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \
-            torch_npu.fused_linear_online_max_sum(
+            torch_npu.npu_fused_linear_online_max_sum(
                 input_tensor, weight_tensor, target_tensor,
                 vocab_start, vocab_end, return_logits=True
             )
@@ -56,7 +56,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         self.assertEqual(sum_exp_logits.shape, torch.Size([batch]))
         self.assertEqual(vocab_parallel_logits.dtype, torch.bfloat16)
 
-    def test_fused_linear_online_max_sum_no_logits(self):
+    def test_npu_fused_linear_online_max_sum_no_logits(self):
         batch = 32
         hidden = 16
         vocab_size = 64
@@ -68,7 +68,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         target_tensor = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 
         logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \
-            torch_npu.fused_linear_online_max_sum(
+            torch_npu.npu_fused_linear_online_max_sum(
                 input_tensor, weight_tensor, target_tensor,
                 vocab_start, vocab_end, return_logits=False
             )
@@ -78,7 +78,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         self.assertEqual(predicted_logits.shape, torch.Size([batch]))
         self.assertIsNone(vocab_parallel_logits)
 
-    def test_fused_linear_online_max_sum_int64_target(self):
+    def test_npu_fused_linear_online_max_sum_int64_target(self):
         batch = 16
         hidden = 8
         vocab_size = 32
@@ -90,7 +90,7 @@ class TestFusedLinearOnlineMaxSum(TestCase):
         target_tensor = torch.randint(0, vocab_size, (batch,), dtype=torch.int64).npu()
 
         logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \
-            torch_npu.fused_linear_online_max_sum(
+            torch_npu.npu_fused_linear_online_max_sum(
                 input_tensor, weight_tensor, target_tensor,
                 vocab_start, vocab_end, return_logits=True
             )

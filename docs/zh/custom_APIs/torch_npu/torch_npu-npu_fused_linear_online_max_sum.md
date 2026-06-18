@@ -1,4 +1,4 @@
-# torch\_npu.fused\_linear\_online\_max\_sum
+# torch\_npu.npu\_fused\_linear\_online\_max\_sum
 
 ## 产品支持情况
 
@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与CELoss。本接口为通信前部分，需与fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
+- API功能：词汇表并行场景下融合矩阵乘与交叉熵前处理算子。功能等价于Megatron的MatMul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切分融合MatMul与CELoss。本接口为通信前部分，需与npu\_fused\_cross\_entropy\_loss\_with\_max\_sum配合使用。
 
 - 计算公式：
 
@@ -72,7 +72,7 @@
 ## 函数原型
 
 ```python
-torch_npu.fused_linear_online_max_sum(input, weight, target, vocab_start_index, vocab_end_index, return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_fused_linear_online_max_sum(input, weight, target, vocab_start_index, vocab_end_index, return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -117,14 +117,14 @@ target_tensor = torch.randint(0, vocab_size, (batch,), dtype=torch.int32).npu()
 
 # 高性能模式（return_logits=True）
 logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \
-    torch_npu.fused_linear_online_max_sum(
+    torch_npu.npu_fused_linear_online_max_sum(
         input_tensor, weight_tensor, target_tensor,
         vocab_start_index=0, vocab_end_index=64, return_logits=True
     )
 
 # 省显存模式（return_logits=False）
 logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, _ = \
-    torch_npu.fused_linear_online_max_sum(
+    torch_npu.npu_fused_linear_online_max_sum(
         input_tensor, weight_tensor, target_tensor,
         vocab_start_index=0, vocab_end_index=64, return_logits=False
     )
