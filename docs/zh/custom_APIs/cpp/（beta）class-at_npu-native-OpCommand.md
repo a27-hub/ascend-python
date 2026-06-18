@@ -72,7 +72,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **template at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::ArrayRef& dimListRef, at::IntArrayRef realShape, at::ScalarType toType, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "", const string& descName = "")**
 
-    OpCommand输入数组，通常输入在CPU端，会在实现中进行h2d，返回值类型为OpCommand。
+    OpCommand输入数组，通常输入在CPU端，会在实现中进行H2d，返回值类型为OpCommand。
 
     dimListRef：ArrayRef类型，输入数组。
 
@@ -88,7 +88,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::IntArrayRef& dimListRef, at::ScalarType toType = at::kLong, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "", const string& descName = "")**
 
-    OpCommand输入整型数组，通常输入在CPU端，会在实现中进行h2d，返回值类型为OpCommand。
+    OpCommand输入整型数组，通常输入在CPU端，会在实现中进行H2d，返回值类型为OpCommand。
 
     dimListRef：IntArrayRef类型，输入整型数组。
 
@@ -102,7 +102,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::ArrayRef& dimListRef, at::IntArrayRef realShape, at::ScalarType toType = at::kDouble, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "")**
 
-    OpCommand输入浮点型数组，通常输入在CPU端，会在实现中进行h2d，返回值类型为OpCommand。
+    OpCommand输入浮点型数组，通常输入在CPU端，会在实现中进行H2d，返回值类型为OpCommand。
 
     dimListRef：ArrayRef类型，输入浮点型数组。
 
@@ -116,7 +116,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::Scalar& input, const at::ScalarType type, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_INDEPENDENT);**
 
-    OpCommand输入标量，会在实现中进行h2d，返回值类型为OpCommand。
+    OpCommand输入标量，会在实现中进行H2d，返回值类型为OpCommand。
 
     input：Scalar类型引用，输入标量。
 

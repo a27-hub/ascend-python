@@ -232,7 +232,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     </td>
     <td class="cellrowborder" valign="top" width="9.09090909090909%"><p id="zh-cn_topic_0000002313328922_p161031714153111"><a name="zh-cn_topic_0000002313328922_p161031714153111"></a><a name="zh-cn_topic_0000002313328922_p161031714153111"></a>bfloat16</p>
     </td>
-    <td class="cellrowborder" valign="top" width="9.080908090809082%"><p id="zh-cn_topic_0000002313328922_p4103191483114"><a name="zh-cn_topic_0000002313328922_p4103191483114"></a><a name="zh-cn_topic_0000002313328922_p4103191483114"></a>He,Hcq</p>
+    <td class="cellrowborder" valign="top" width="9.080908090809082%"><p id="zh-cn_topic_0000002313328922_p4103191483114"><a name="zh-cn_topic_0000002313328922_p4103191483114"></a><a name="zh-cn_topic_0000002313328922_p4103191483114"></a>(He,Hcq)</p>
     </td>
     <td class="cellrowborder" valign="top" width="9.09090909090909%"><p id="zh-cn_topic_0000002313328922_p201031114103115"><a name="zh-cn_topic_0000002313328922_p201031114103115"></a><a name="zh-cn_topic_0000002313328922_p201031114103115"></a>int8</p>
     </td>
