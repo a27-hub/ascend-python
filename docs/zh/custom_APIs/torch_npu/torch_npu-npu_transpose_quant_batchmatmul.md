@@ -68,6 +68,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 
 - 单算子模式调用
   - K-C量化场景：
+
   ```python
   import torch
   import torch_npu
@@ -85,6 +86,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 
 - 图模式调用
   - K-C量化场景：
+  
     ```python
     import torch
     import torch_npu
