@@ -1,4 +1,4 @@
-# torch\_npu.fused\_cross\_entropy\_loss\_with\_max\_sum
+# torch\_npu.npu\_fused\_cross\_entropy\_loss\_with\_max\_sum
 
 ## 产品支持情况
 
@@ -9,7 +9,7 @@
 
 ## 功能说明
 
-- API功能：词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题。本接口为计算Loss与Softmax结果的部分，需配合fused\_linear\_online\_max\_sum使用。在多卡场景下，需先对`logits_max`和`sum_exp_logits`执行全局通信（all-reduce），再调用本接口。
+- API功能：词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题。本接口为计算Loss与Softmax结果的部分，需配合npu\_fused\_linear\_online\_max\_sum使用。在多卡场景下，需先对`logits_max`和`sum_exp_logits`执行全局通信（all-reduce），再调用本接口。
 
 - 计算公式：
 
@@ -24,7 +24,7 @@
 ## 函数原型
 
 ```python
-torch_npu.fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, predicted_logits, *, label_smoothing=0.0, input=None, weight=None, vocab_parallel_logits=None) -> (Tensor, Tensor)
+torch_npu.npu_fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, predicted_logits, *, label_smoothing=0.0, input=None, weight=None, vocab_parallel_logits=None) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
@@ -54,7 +54,7 @@ torch_npu.fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, pred
 import torch
 import torch_npu
 
-# 假设已通过fused_linear_online_max_sum获取输出并完成全局通信
+# 假设已通过npu_fused_linear_online_max_sum获取输出并完成全局通信
 batch = 128
 vocab_size = 256
 
@@ -63,14 +63,14 @@ sum_exp_logits = torch.abs(torch.randn(batch, dtype=torch.float32)).npu() + 1.0
 predicted_logits = torch.randn(batch, dtype=torch.float32).npu()
 
 # 不返回softmax
-loss, _ = torch_npu.fused_cross_entropy_loss_with_max_sum(
+loss, _ = torch_npu.npu_fused_cross_entropy_loss_with_max_sum(
     logits_max, sum_exp_logits, predicted_logits,
     label_smoothing=0.0
 )
 
 # 返回softmax（传入vocab_parallel_logits）
 vocab_parallel_logits = torch.randn(batch, vocab_size, dtype=torch.float16).npu()
-loss, softmax = torch_npu.fused_cross_entropy_loss_with_max_sum(
+loss, softmax = torch_npu.npu_fused_cross_entropy_loss_with_max_sum(
     logits_max, sum_exp_logits, predicted_logits,
     label_smoothing=0.0, vocab_parallel_logits=vocab_parallel_logits
 )
