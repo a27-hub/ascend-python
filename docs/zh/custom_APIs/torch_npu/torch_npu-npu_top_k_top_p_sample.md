@@ -10,7 +10,7 @@
 ## 功能说明
 
 - API功能：
-  根据输入词频`logits`、`top_k`/`top_p`/`min_ps`采样参数、随机采样权重分布`q`，进行topK-topP-minP-Sample采样计算，输出每个batch的最大词频`logits_select_idx`，以及topK-topP采样后的词频分布`logits_top_kp_select`。
+  根据输入`logits`、`top_k`/`top_p`/`min_ps`采样参数、随机采样权重分布`q`，进行topK-topP-minP-Sample采样计算，输出每个batch的最大`logits_select_idx`，以及topK-topP采样后的`logits_top_kp_select`。
 
   算子包含4个可单独开启，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：topK采样、topP采样、minP显著性采样、不采样 / 指数采样 / 多项式随机采样 。目前支持以下12种计算场景。如下表所示：
 
