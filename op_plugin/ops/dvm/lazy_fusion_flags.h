@@ -50,6 +50,15 @@ class LazyFusionFlags {
   std::vector<std::string> disable_ops;
   std::vector<std::string> enable_ops;
   std::vector<std::string> enable_ops_only;
+
+  // Online accuracy check for eager DVM lazy fusion. When enabled, each Flush()
+  // replays the fused op sequence through op_api (aclnn) as the reference
+  // implementation and compares outputs against the DVM fused result.
+  // Usage: export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=True
+  //        export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK="True throw"  # raise on mismatch
+  bool check_accuracy{false};
+  // When true, a mismatch raises a RuntimeError instead of only printing.
+  bool check_accuracy_throw{false};
 };
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_FLAGS_H

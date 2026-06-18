@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <ATen/record_function.h>
+#include "op_plugin/ops/dvm/lazy_fusion_accuracy.h"
 #include "torch_npu/csrc/core/npu/NPUFunctions.h"
 #include "torch_npu/csrc/core/npu/NPUStream.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
@@ -499,6 +500,14 @@ void LazyFusionKernel::Flush() {
     DumpGraph();
   }
 
+  // Online accuracy check: replay op_api reference implementation and compare
+  // against the DVM fused outputs. PrepareAccuracyCheck runs before
+  // CodeGen+Launch (while inputs are alive and not overwritten by inplace ops);
+  // CheckAccuracy runs after Launch (to compare the fused results).
+  if (g_lazy_fusion_manager.flags_.check_accuracy && !replay_ops_.empty()) {
+    PrepareAccuracyCheck();
+  }
+
   static const bool codegen_in_task_queue =
       c10_npu::option::OptionsManager::GetTaskQueueEnable() == 2;
   if (codegen_in_task_queue) {
@@ -511,6 +520,9 @@ void LazyFusionKernel::Flush() {
       ClearRuntimeState();
       return ret;
     });
+    if (check_accuracy_pending_) {
+      CheckAccuracy();
+    }
     return;
   }
   // Level 1: codegen (which calls Alloc for the N-pad workspace) runs on the caller
@@ -527,6 +539,9 @@ void LazyFusionKernel::Flush() {
     ClearRuntimeState();
     return ret;
   });
+  if (check_accuracy_pending_) {
+    CheckAccuracy();
+  }
 }
 
 void LazyFusionKernel::CodeGenAndDump() {
@@ -661,6 +676,128 @@ void LazyFusionKernel::DumpGraph() {
     }
   }
   dump_buf_ << ")\n}\n";
+}
+
+void LazyFusionKernel::PrepareAccuracyCheck() {
+  // Build the input snapshot map: data_ptr -> cloned tensor (bf16 promoted to fp32).
+  std::unordered_map<void *, at::Tensor> input_map;
+  input_map.reserve(input_used_);
+  for (size_t i = 0; i < input_used_; ++i) {
+    const auto &t = inputs_[i]->tensor;
+    if (!t.defined()) {
+      continue;
+    }
+    void *ptr = t.data_ptr();
+    if (input_map.find(ptr) != input_map.end()) {
+      continue;
+    }
+    input_map[ptr] = CloneForAccuracy(t);
+  }
+
+  // Capture output tensor handles (for reading fused results after Launch).
+  // We must capture these *before* ClearGraphRefs releases the weak storage refs.
+  check_accuracy_output_handles_.clear();
+  for (size_t i = 0; i < outputs_.size(); ++i) {
+    if (outputs_[i].skip) {
+      continue;
+    }
+    check_accuracy_output_handles_.push_back(TensorFromWeakImpl(outputs_[i].tensor_impl));
+  }
+
+  // Replay the op sequence through op_api to get reference outputs.
+  std::unordered_map<void *, at::Tensor> output_map;
+  std::vector<at::Tensor> ref_outputs;
+  // Build the set of final (non-skip) output data_ptrs.
+  std::vector<void *> final_output_ptrs;
+  for (size_t i = 0; i < outputs_.size(); ++i) {
+    if (!outputs_[i].skip) {
+      final_output_ptrs.push_back(outputs_[i].tensor_meta.data_ptr);
+    }
+  }
+
+  bool any_replayed = false;
+  for (const auto &rop : replay_ops_) {
+    auto func = ReplayRegistry::Instance().Get(rop.name);
+    if (!func) {
+      std::cout << "CHECK ACCURACY SKIP: no replay func for op '" << rop.name
+                << "', fusion graph id=" << id_ << std::endl;
+      continue;
+    }
+    any_replayed = true;
+    std::vector<at::Tensor> op_refs = func(rop, input_map, output_map);
+    // Register this op's outputs in output_map for downstream ops.
+    for (size_t i = 0; i < op_refs.size() && i < rop.output_data_ptrs.size(); ++i) {
+      output_map[rop.output_data_ptrs[i]] = op_refs[i];
+    }
+    // Collect final (non-skip) outputs in order.
+    for (size_t i = 0; i < rop.output_data_ptrs.size(); ++i) {
+      void *ptr = rop.output_data_ptrs[i];
+      if (std::find(final_output_ptrs.begin(), final_output_ptrs.end(), ptr) != final_output_ptrs.end()) {
+        if (i < op_refs.size()) {
+          ref_outputs.push_back(op_refs[i]);
+        }
+      }
+    }
+  }
+
+  if (!any_replayed) {
+    return;
+  }
+
+  check_accuracy_ref_outputs_ = std::move(ref_outputs);
+  check_accuracy_pending_ = true;
+}
+
+void LazyFusionKernel::CheckAccuracy() {
+  // This is called AFTER CodeGen+Launch has completed (from the end of Flush).
+  // The reference outputs were already computed in PrepareAccuracyCheck (before
+  // Launch). Now we synchronize the stream, collect the DVM fused outputs, and
+  // compare against the reference.
+  if (!check_accuracy_pending_) {
+    return;
+  }
+  check_accuracy_pending_ = false;
+
+  // Synchronize to ensure DVM fused outputs are ready.
+  auto err = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream_);
+  if (err != ACL_ERROR_NONE) {
+    ASCEND_LOGW("CheckAccuracy: sync stream failed for dvm kernel id=%zu, error=%d", id_, err);
+    check_accuracy_ref_outputs_.clear();
+    return;
+  }
+
+  // Collect the DVM fused outputs (non-skip entries in outputs_).
+  // After ClearGraphRefs the storage weak refs may be gone, but ClearGraphRefs
+  // is called *before* Launch in Level1, and *inside* the task queue lambda in
+  // Level2. By the time we reach here (end of Flush), the output tensors' data
+  // has been written. We rely on the output tensor handles captured before
+  // ClearGraphRefs in PrepareAccuracyCheck.
+  std::vector<at::Tensor> actual_outputs;
+  actual_outputs.reserve(check_accuracy_output_handles_.size());
+  for (auto &t : check_accuracy_output_handles_) {
+    actual_outputs.push_back(t);
+  }
+
+  // Build the ops string for diagnostics.
+  std::string ops_str;
+  for (size_t i = 0; i < replay_ops_.size(); ++i) {
+    if (i != 0) {
+      ops_str += ", ";
+    }
+    ops_str += replay_ops_[i].name;
+  }
+
+  std::string kernel_name = "lazy_fusion(id=" + std::to_string(id_) + ")";
+  bool passed = CompareOutputs(actual_outputs, check_accuracy_ref_outputs_, kernel_name, ops_str);
+
+  if (!passed && g_lazy_fusion_manager.flags_.check_accuracy_throw) {
+    check_accuracy_ref_outputs_.clear();
+    check_accuracy_output_handles_.clear();
+    throw std::runtime_error("CHECK ACCURACY FAILED for " + kernel_name + ", ops: [" + ops_str + "]");
+  }
+
+  check_accuracy_ref_outputs_.clear();
+  check_accuracy_output_handles_.clear();
 }
 
 bool IsEnabled(const std::string &op, Level required) {

@@ -26,6 +26,7 @@
 #include <torch/csrc/autograd/graph_task.h>
 #include "op_plugin/utils/OpAdapter.h"
 #include "op_plugin/ops/dvm/lazy_fusion_flags.h"
+#include "op_plugin/ops/dvm/lazy_fusion_replay.h"
 #include "third_party/dvm/dvm/include/dvm.h"
 
 namespace lazy_fusion {
@@ -103,6 +104,31 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     dump_idx_ = outputs_.size();
   }
 
+  // Record a replayable op for accuracy check. Only called when
+  // flags_.check_accuracy is true. The tensor inputs are stored as references
+  // (kept alive by the fusion graph); output data_ptrs are captured from the
+  // outputs_ entries produced by this op.
+  template <typename... Args>
+  void RecordReplayOp(const std::string &op_name, const Args &... inputs) {
+    auto &op = replay_ops_.emplace_back();
+    op.name = op_name;
+    size_t out_start = replay_dump_idx_;
+    op.output_num = outputs_.size() - out_start;
+    (RecordReplayInput(&op, inputs), ...);
+    // Capture output data_ptrs for this op's outputs.
+    for (size_t i = out_start; i < outputs_.size(); ++i) {
+      op.output_data_ptrs.push_back(outputs_[i].tensor_meta.data_ptr);
+    }
+    replay_dump_idx_ = outputs_.size();
+  }
+
+  // Run accuracy check: replay op_api reference, compare against DVM fused
+  // outputs. Called from Flush() before CodeGen when check_accuracy is enabled.
+  void CheckAccuracy();
+  // Prepare reference outputs by replaying op_api. Called before CodeGen+Launch
+  // (while inputs are still alive and not overwritten by inplace ops).
+  void PrepareAccuracyCheck();
+
  private:
   void ClearGraphRefs() {
     for (size_t i = 0; i < input_used_; i++) {
@@ -122,10 +148,12 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     }
     outputs_.clear();
     dump_ops_.clear();
+    replay_ops_.clear();
     input_used_ = 0;
     dvm_ops_used_ = 0;
     cache_shape_used_ = 0;
     dump_idx_ = 0;
+    replay_dump_idx_ = 0;
   }
   void ClearRuntimeState();
   void Clear() {
@@ -191,6 +219,79 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     op->inputs.push_back(ss.str());
   }
 
+  // ---- RecordReplayInput overloads ----
+  // These extract replayable values from each input argument. Tensor inputs are
+  // stored by reference (kept alive by the fusion graph); scalar/int/double/bool
+  // /string inputs are stored by value; TensorList and ScalarArray are stored as
+  // vectors. Optional tensors are stored in opt_tensor_inputs.
+  template <typename T>
+  void RecordReplayInput(ReplayOp *op, const T &t) {
+    // Fallback for unknown types: try int64_t then double then string.
+    // Most call sites pass concrete types covered by the specializations below.
+  }
+
+  void RecordReplayInput(ReplayOp *op, const at::Tensor &t) { op->tensor_inputs.push_back(t); }
+
+  template <typename T>
+  void RecordReplayInput(ReplayOp *op, const c10::optional<T> &t) {
+    if (!t.has_value()) {
+      op->opt_tensor_inputs.push_back(c10::nullopt);
+    } else if constexpr (std::is_same_v<T, at::Tensor>) {
+      op->opt_tensor_inputs.push_back(t.value());
+    } else {
+      RecordReplayInput(op, t.value());
+    }
+  }
+
+  void RecordReplayInput(ReplayOp *op, const at::Scalar &s) { op->scalar_inputs.push_back(s); }
+
+  void RecordReplayInput(ReplayOp *op, int64_t v) { op->int_inputs.push_back(v); }
+  void RecordReplayInput(ReplayOp *op, int v) { op->int_inputs.push_back(static_cast<int64_t>(v)); }
+  void RecordReplayInput(ReplayOp *op, bool v) { op->bool_inputs.push_back(v ? 1 : 0); }
+  void RecordReplayInput(ReplayOp *op, double v) { op->double_inputs.push_back(v); }
+  void RecordReplayInput(ReplayOp *op, float v) { op->double_inputs.push_back(static_cast<double>(v)); }
+
+  void RecordReplayInput(ReplayOp *op, c10::string_view s) { op->str_inputs.emplace_back(s); }
+  void RecordReplayInput(ReplayOp *op, const std::string &s) { op->str_inputs.push_back(s); }
+  void RecordReplayInput(ReplayOp *op, const char *s) { op->str_inputs.emplace_back(s); }
+
+  void RecordReplayInput(ReplayOp *op, at::TensorList tensors) {
+    std::vector<at::Tensor> vec(tensors.begin(), tensors.end());
+    op->tensorlist_inputs.push_back(std::move(vec));
+  }
+
+  void RecordReplayInput(ReplayOp *op, at::ArrayRef<at::Scalar> scalars) {
+    op->scalar_array_inputs.emplace_back(scalars.begin(), scalars.end());
+  }
+
+  // at::OptionalIntArrayRef: record as int_inputs (may be empty = all dims).
+  void RecordReplayInput(ReplayOp *op, at::OptionalIntArrayRef dim) {
+    if (dim.has_value()) {
+      for (auto d : dim.value()) {
+        op->int_inputs.push_back(d);
+      }
+    }
+  }
+
+  // c10::optional<at::ScalarType>: record as int_inputs (with a sentinel for nullopt).
+  void RecordReplayInput(ReplayOp *op, const c10::optional<at::ScalarType> &dtype) {
+    op->int_inputs.push_back(dtype.has_value() ? static_cast<int64_t>(dtype.value())
+                                                : static_cast<int64_t>(at::ScalarType::Undefined));
+  }
+
+  // at::ScalarType (non-optional).
+  void RecordReplayInput(ReplayOp *op, at::ScalarType dtype) {
+    op->int_inputs.push_back(static_cast<int64_t>(dtype));
+  }
+
+  // std::array<bool, N>: record each as bool_inputs.
+  template <size_t N>
+  void RecordReplayInput(ReplayOp *op, const ::std::array<bool, N> &arr) {
+    for (bool v : arr) {
+      op->bool_inputs.push_back(v ? 1 : 0);
+    }
+  }
+
   void DumpGraph();
 
   // Cache the tensor identity and metadata needed by the exact-match fast path.
@@ -216,13 +317,27 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     Store() = delete;
     Store(dvm::NDObject *p, bool is_inplace, const at::Tensor &t)
         : op(p), inplace(is_inplace),
-          storage(t.storage().getWeakStorageImpl()) {}
+          storage(t.storage().getWeakStorageImpl()),
+          tensor_impl(t.unsafeGetTensorImpl()) {}
     dvm::NDObject *op;
     TensorMeta tensor_meta;
     bool inplace{false};
     bool skip{false};
     c10::weak_intrusive_ptr<c10::StorageImpl> storage;
+    // Weak ref to the output TensorImpl, used by accuracy check to read the
+    // fused result after Launch. Does not extend the tensor's lifetime.
+    c10::weak_intrusive_ptr<c10::TensorImpl> tensor_impl;
   };
+
+  // Helper to rebuild an at::Tensor from a weak TensorImpl ref for accuracy
+  // check. Returns an undefined tensor if the impl is no longer alive.
+  static at::Tensor TensorFromWeakImpl(const c10::weak_intrusive_ptr<c10::TensorImpl> &weak) {
+    auto strong = weak.lock();
+    if (!strong) {
+      return at::Tensor();
+    }
+    return at::Tensor(strong);
+  }
 
   struct ShapeWithRef : public dvm::ShapeRef {
     ShapeWithRef() {
@@ -266,14 +381,20 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
   std::vector<DvmOp *> dvm_ops_;
   std::vector<ShapeWithRef *> cached_shape_;
   std::vector<Op> dump_ops_;
+  std::vector<ReplayOp> replay_ops_;
   size_t input_used_{0};
   size_t dvm_ops_used_{0};
   size_t cache_shape_used_{0};
   size_t dump_idx_{0};
+  size_t replay_dump_idx_{0};
   size_t id_{0};
   bool flushed_{false};
   aclrtStream stream_;
   std::stringstream dump_buf_;
+  // Accuracy check state (only used when flags_.check_accuracy is true).
+  bool check_accuracy_pending_{false};
+  std::vector<at::Tensor> check_accuracy_ref_outputs_;
+  std::vector<at::Tensor> check_accuracy_output_handles_;
 };
 
 class Manager {

@@ -609,6 +609,10 @@ void DumpOp(const std::string &op_name, const Args &...inputs) {
     auto k = g_lazy_fusion_manager.Get();
     k->DumpOp(op_name, inputs...);
   }
+  if (g_lazy_fusion_manager.flags_.check_accuracy) {
+    auto k = g_lazy_fusion_manager.Get();
+    k->RecordReplayOp(op_name, inputs...);
+  }
 }
 }  // namespace
 

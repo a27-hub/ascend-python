@@ -243,5 +243,40 @@ LazyFusionFlags::LazyFusionFlags() {
   }
   std::map<std::string, std::string> flag_map = ParseFlags(rest);
   RegisterFlags(&flag_map, this);
+
+  // Independent switch for online accuracy check.
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=True           # enable (warn-only)
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=1              # same as above
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK="True throw"   # enable and raise on mismatch
+  //   export TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK=False          # disable (default)
+  char *acc_env = std::getenv("TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK");
+  if (acc_env != nullptr) {
+    std::string acc_str = acc_env;
+    size_t ai = acc_str.find_first_not_of(" \t");
+    if (ai != std::string::npos) {
+      size_t aj = acc_str.find_first_of(" \t", ai);
+      std::string acc_head = (aj == std::string::npos) ? acc_str.substr(ai) : acc_str.substr(ai, aj - ai);
+      std::string acc_rest = (aj == std::string::npos) ? "" : acc_str.substr(aj + 1);
+      if (ParseBoolToken(acc_head, &check_accuracy)) {
+        if (check_accuracy && !acc_rest.empty()) {
+          std::map<std::string, std::string> acc_map = ParseFlags(acc_rest);
+          FlagRegister acc_reg(&acc_map);
+          acc_reg.AddFlag("throw", &check_accuracy_throw);
+          for (const auto &item : acc_map) {
+            ASCEND_LOGW("Unknown TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK flag: %s", item.first.c_str());
+          }
+        }
+      } else {
+        // No leading bool token — treat the whole value as a flag list, presence enables.
+        check_accuracy = true;
+        std::map<std::string, std::string> acc_map = ParseFlags(acc_str.substr(ai));
+        FlagRegister acc_reg(&acc_map);
+        acc_reg.AddFlag("throw", &check_accuracy_throw);
+        for (const auto &item : acc_map) {
+          ASCEND_LOGW("Unknown TORCH_NPU_LAZY_FUSION_ACCURACY_CHECK flag: %s", item.first.c_str());
+        }
+      }
+    }
+  }
 }
 }  // namespace lazy_fusion
