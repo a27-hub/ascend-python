@@ -38,11 +38,11 @@ class torch_npu.optim.NpuFusedRMSpropTF(params, lr=1e-2, alpha=0.9, eps=1e-10, w
 
 `NpuFusedRMSpropTF`的实现机制要求`params`中的每一个模型参数对象在使用过程中不能被重新申请，否则将导致无法预料的结果。引起模型参数对象被重新申请的操作包括但不限于：
 
-- 将模型或其子Module进行.cpu操作
+- 将模型或其子Module执行.cpu()操作
 - 将模型参数对象指向新的对象
 - 将模型参数对象置为None
 
-对模型参数对象进行inplace计算，或者读取参数的值，`NpuFusedRMSpropTF`可正常工作。
+对模型参数对象进行inplace计算或读取参数的值时，`NpuFusedRMSpropTF`可正常工作。
 
 ## 调用示例
 

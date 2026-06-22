@@ -49,7 +49,7 @@ torch_npu.npu_moe_distribute_combine(expand_x, expert_ids, expand_idx, ep_send_c
 - **ep\_rank\_id** (`int`)：必选参数，EP通信域本卡ID，取值范围\[0, ep\_world\_size\)，同一个EP通信域中各卡的`ep_rank_id`不重复。
 - **moe\_expert\_num** (`int`)：必选参数，MoE专家数量，取值范围\[1, 512\]，并且满足以下条件：moe\_expert\_num\%\(ep\_world\_size - shared\_expert\_rank\_num\)\=0。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：还需满足moe\_expert\_num\/\(ep\_world\_size - shared\_expert\_rank\_num\) <= 24。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **tp\_send\_counts** (`Tensor`)：可选参数，表示本卡每个专家发给TP（Tensor Parallelism）通信域每个卡的数据量。对应[torch\_npu.npu\_moe\_distribute\_dispatch](torch_npu-npu_moe_distribute_dispatch.md)的`tp_recv_counts`输出。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持TP通信域，使用默认输入None。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持TP通信域，要求为一个1维张量，shape为\(tp\_world\_size,\)，数据类型支持`int32`，数据格式为$ND$，支持非连续的Tensor。
@@ -95,7 +95,7 @@ torch_npu.npu_moe_distribute_combine(expand_x, expert_ids, expand_idx, ep_send_c
 - **out\_dtype** (`int`)：预留参数，暂未使用，使用默认值即可。
 - **comm\_quant\_mode** (`int`)：表示通信量化类型。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持取0和2。0表示通信时不量化，2表示通信时进行`int8`量化。仅当HCCL\_INTRA\_PCIE\_ENABLE=1且HCCL\_INTRA\_ROCE\_ENABLE=0且驱动版本不低于25.0.RC1.1时才支持取2。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取0和2。0表示通信时不量化，2表示通信时进行`int8`量化。当且仅当`tp_world_size`不等于2时，可以使能`int8`量化。
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持取0和2。0表示通信时不量化，2表示通信时进行`int8`量化。当且仅当`tp_world_size`不等于2时，可以开启`int8`量化。
 
 - **group\_list\_type** (`int`)：预留参数，暂未使用，使用默认值即可。
 
@@ -110,7 +110,7 @@ torch_npu.npu_moe_distribute_combine(expand_x, expert_ids, expand_idx, ep_send_c
 - 该接口支持推理场景下使用。
 - 该接口支持静态图模式，`npu_moe_distribute_dispatch`和`npu_moe_distribute_combine`必须配套使用。
 - 在不同产品型号、不同通信算法或不同版本中，`npu_moe_distribute_dispatch`的Tensor输出`expand_idx`、`ep_recv_counts`、`tp_recv_counts`、`expand_scales`中的元素值可能不同，使用时直接将上述Tensor传给`npu_moe_distribute_combine`对应参数即可，模型其他业务逻辑不应对其存在依赖。
-- 调用接口过程中使用的`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp`、`tp_world_size`、`expert_shard_type`、`shared_expert_num`、`shared_expert_rank_num`、`global_bs`参数取值所有卡需保持一致，`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp、tp_world_size`、`expert_shard_type`、`global_bs`网络中不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_dispatch](torch_npu-npu_moe_distribute_dispatch.md)对应参数也保持一致。
+- 调用接口过程中使用的`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp`、`tp_world_size`、`expert_shard_type`、`shared_expert_num`、`shared_expert_rank_num`、`global_bs`参数取值所有卡需保持一致，`group_ep`、`ep_world_size`、`moe_expert_num`、`group_tp`、`tp_world_size`、`expert_shard_type`、`global_bs`网络中不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_dispatch](torch_npu-npu_moe_distribute_dispatch.md)对应参数也保持一致。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 - 参数里Shape使用的变量如下：
     - A：表示本卡接收的最大token数量，取值范围如下：

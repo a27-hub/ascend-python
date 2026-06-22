@@ -5,7 +5,6 @@
 **表1** torch_npu.npu API
 
 <a name="table0664117101518"></a>
-
 <table><thead align="left"><tr id="row466412731514"><th class="cellrowborder" valign="top" width="37.4%" id="mcps1.2.3.1.1"><p id="p11664187201510"><a name="p11664187201510"></a><a name="p11664187201510"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="62.6%" id="mcps1.2.3.1.2"><p id="p10664197111510"><a name="p10664197111510"></a><a name="p10664197111510"></a>说明</p>
@@ -14,12 +13,12 @@
 </thead>
 <tbody><tr id="row96642716156"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p8664172152"><a name="p8664172152"></a><a name="p8664172152"></a><a href="（beta）torch_npu-npu-get_npu_overflow_flag.md">（beta）torch_npu.npu.get_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测npu计算过程中是否有数值溢出。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p10664117181519"><a name="p10664117181519"></a><a name="p10664117181519"></a>检测NPU计算过程中是否有数值溢出。</p>
 </td>
 </tr>
 <tr id="row1066418791520"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p166411751513"><a name="p166411751513"></a><a name="p166411751513"></a><a href="（beta）torch_npu-npu-clear_npu_overflow_flag.md">（beta）torch_npu.npu.clear_npu_overflow_flag</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对npu芯片溢出检测进行清零。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p466412710151"><a name="p466412710151"></a><a name="p466412710151"></a>对NPU芯片溢出检测进行清零。</p>
 </td>
 </tr>
 <tr id="row2074316127585"><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p id="p7858135417578"><a name="p7858135417578"></a><a name="p7858135417578"></a><a href="torch_npu-npu-enable_deterministic_with_backward.md">torch_npu.npu.enable_deterministic_with_backward</a></p>
@@ -54,7 +53,7 @@
 </tr>
 <tr id="row14664573152"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1366415716151"><a name="p1366415716151"></a><a name="p1366415716151"></a><a href="（beta）torch_npu-npu-config-allow_internal_format.md">（beta）torch_npu.npu.config.allow_internal_format</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p136645713159"><a name="p136645713159"></a><a name="p136645713159"></a>控制是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。</p>
 </td>
 </tr>
 <tr id="row103074675219"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p73114695216"><a name="p73114695216"></a><a name="p73114695216"></a><a href="（beta）torch_npu-npu-stress_detect.md">（beta）torch_npu.npu.stress_detect</a></p>
@@ -69,7 +68,7 @@
 </tr>
 <tr id="row1050720144182"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p850721410186"><a name="p850721410186"></a><a name="p850721410186"></a><a href="（beta）torch_npu-npu-restart_device.md">（beta）torch_npu.npu.restart_device</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p750791411180"><a name="p750791411180"></a><a name="p750791411180"></a>恢复对应device上的状态，后续在此device上进行计算可以继续进行计算执行。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p750791411180"><a name="p750791411180"></a><a name="p750791411180"></a>恢复对应device上的状态，后续在此device上可继续进行计算。</p>
 </td>
 </tr>
 <tr id="row20250175212437"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1525165254318"><a name="p1525165254318"></a><a name="p1525165254318"></a><a href="（beta）torch_npu-npu-check_uce_in_memory.md">（beta）torch_npu.npu.check_uce_in_memory</a></p>
@@ -89,7 +88,7 @@
 </tr>
 <tr id="row10736640964"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p107361340869"><a name="p107361340869"></a><a name="p107361340869"></a><a href="（beta）torch_npu-npu-utils-npu_check_overflow.md">（beta）torch_npu.npu.utils.npu_check_overflow</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p47368401662"><a name="p47368401662"></a><a name="p47368401662"></a>检测梯度是否溢出，INF_NAN模式下检测输入Tensor是否溢出；饱和模式检查硬件溢出标志位判断。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p47368401662"><a name="p47368401662"></a><a name="p47368401662"></a>检测梯度是否溢出，INF_NAN模式下检测输入tensor是否溢出；饱和模式检查硬件溢出标志位判断。</p>
 </td>
 </tr>
 <tr id="row7615177121914"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p961514711913"><a name="p961514711913"></a><a name="p961514711913"></a><a href="torch_npu-npu-Event()-recorded_time-().md">（beta）torch_npu.npu.Event().recorded_time()</a></p>
@@ -114,7 +113,7 @@
 </tr>
 <tr id="row1629143112919"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p1936712431249"><a name="p1936712431249"></a><a name="p1936712431249"></a><a href="（beta）torch_npu-npu-set_compile_mode.md">（beta）torch_npu.npu.set_compile_mode</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p1236764317242"><a name="p1236764317242"></a><a name="p1236764317242"></a>设置是否开启二进制。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p1236764317242"><a name="p1236764317242"></a><a name="p1236764317242"></a>设置是否开启二进制编译。</p>
 </td>
 </tr>
 <tr id="row2027910351793"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p16367343112416"><a name="p16367343112416"></a><a name="p16367343112416"></a><a href="（beta）torch_npu-npu-is_jit_compile_false.md">（beta）torch_npu.npu.is_jit_compile_false</a></p>
@@ -129,12 +128,12 @@
 </tr>
 <tr id="row628019359916"><td class="cellrowborder" valign="top" width="37.4%" headers="mcps1.2.3.1.1 "><p id="p736894362414"><a name="p736894362414"></a><a name="p736894362414"></a><a href="（beta）torch_npu-npu-get_mm_bmm_format_nd.md">（beta）torch_npu.npu.get_mm_bmm_format_nd</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p183681243112415"><a name="p183681243112415"></a><a name="p183681243112415"></a>确认线性module里面的mm和bmm算子是否有使能ND格式，如果使能了ND，返回True，否则，返回False。</p>
+<td class="cellrowborder" valign="top" width="62.6%" headers="mcps1.2.3.1.2 "><p id="p183681243112415"><a name="p183681243112415"></a><a name="p183681243112415"></a>确认线性module里面的mm和bmm算子是否已启用ND格式，如果启用了ND，返回True，否则返回False。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu-ExternalEvent.md">torch_npu.npu.ExternalEvent</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>ExternalEvent是AscendCL Event的封装。NPUGraph场景在执行图捕获时，ExternalEvent会被作为图外部节点被捕获，用于控制非图内时序控制场景。</p>
+<td class="cellrowborder" valign="top" width="61.39%" headers="mcps1.2.3.1.2 "><p>ExternalEvent是AscendCL Event的封装。NPUGraph场景在执行图捕获时，ExternalEvent会被作为图外部节点被捕获，用于非图内时序控制场景。</p>
 </td>
 </tr>
 <tr><td class="cellrowborder" valign="top" width="38.61%" headers="mcps1.2.3.1.1 "><p><a href="torch_npu-npu-ExternalEvent().record().md">torch_npu.npu.ExternalEvent().record()</a></p>
@@ -194,7 +193,7 @@
 </tr>
 <tr id="row285193313382"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193819"><a name="p2851433193819"></a><a name="p2851433193819"></a><a href="torch_npu-npu-aclnn-allow_hf32.md">torch_npu.npu.aclnn.allow_hf32</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>设置conv算子是否支持hf32，一个属性值，对aclnn的allow_hf32属性的设置和查询。</p>
+<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口为属性值，用于设置和查询aclnn的allow_hf32属性，以控制conv算子是否支持hf32。</p>
 </td>
 </tr>
 <tr id="row285193313382"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193819"><a name="p2851433193819"></a><a name="p2851433193819"></a><a href="torch_npu-npu-set_op_timeout_ms.md">torch_npu.npu.set_op_timeout_ms</a></p>
@@ -214,7 +213,7 @@
 </tr>
 <tr id="row285193313386"><td class="cellrowborder" valign="top" width="38.22%" headers="mcps1.2.3.1.1 "><p id="p2851433193823"><a name="p2851433193821"></a><a name="p2851433193821"></a><a href="torch_npu-npu-are_compatible_impl_enabled.md">torch_npu.npu.are_compatible_impl_enabled</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询`torch_npu.npu.use_compatible_impl`的配置情况。</p>
+<td class="cellrowborder" valign="top" width="61.78%" headers="mcps1.2.3.1.2 "><p id="p785143323817"><a name="p785143323817"></a><a name="p785143323817"></a>该接口用于查询torch_npu.npu.use_compatible_impl的配置情况。</p>
 </td>
 </tr>
 
@@ -232,7 +231,7 @@
 </thead>
 <tbody><tr id="row1146411483186"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p946414851817"><a name="p946414851817"></a><a name="p946414851817"></a><a href="（beta）torch_npu-npu-get_amp_supported_dtype.md">（beta）torch_npu.npu.get_amp_supported_dtype</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p1831912712373"><a name="p1831912712373"></a><a name="p1831912712373"></a>获取npu设备支持的数据类型，可能设备支持不止一种数据类型。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p1831912712373"><a name="p1831912712373"></a><a name="p1831912712373"></a>获取NPU设备支持的数据类型，该设备可能支持不止一种数据类型。</p>
 </td>
 </tr>
 <tr id="row1746504816188"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p10465648191813"><a name="p10465648191813"></a><a name="p10465648191813"></a><a href="（beta）torch_npu-npu-is_autocast_enabled.md">（beta）torch_npu.npu.is_autocast_enabled</a></p>
@@ -242,12 +241,12 @@
 </tr>
 <tr id="row646514813186"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p04651248181813"><a name="p04651248181813"></a><a name="p04651248181813"></a><a href="（beta）torch_npu-npu-set_autocast_enabled.md">（beta）torch_npu.npu.set_autocast_enabled</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p4465194871813"><a name="p4465194871813"></a><a name="p4465194871813"></a>是否在设备上使能AMP。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p4465194871813"><a name="p4465194871813"></a><a name="p4465194871813"></a>在设备上开启或关闭AMP。</p>
 </td>
 </tr>
 <tr id="row174651448111817"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p946574881819"><a name="p946574881819"></a><a name="p946574881819"></a><a href="（beta）torch_npu-npu-get_autocast_dtype.md">（beta）torch_npu.npu.get_autocast_dtype</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置或者默认数据类型torch.float16。</p>
+<td class="cellrowborder" valign="top" width="62.33%" headers="mcps1.2.3.1.2 "><p id="p19465848131818"><a name="p19465848131818"></a><a name="p19465848131818"></a>在amp场景获取设备支持的数据类型，该dtype由torch_npu.npu.set_autocast_dtype设置，若未设置则使用默认数据类型float16。</p>
 </td>
 </tr>
 <tr id="row1846564819185"><td class="cellrowborder" valign="top" width="37.669999999999995%" headers="mcps1.2.3.1.1 "><p id="p146584811184"><a name="p146584811184"></a><a name="p146584811184"></a><a href="（beta）torch_npu-npu-set_autocast_dtype.md">（beta）torch_npu.npu.set_autocast_dtype</a></p>
@@ -261,7 +260,7 @@
 **表3** Random Number Generator API
 
 <a name="table7835196103611"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0000001788617484_row835974815375"><th class="cellrowborder" valign="top" width="38.76%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001788617484_p435984813370"><a name="zh-cn_topic_0000001788617484_p435984813370"></a><a name="zh-cn_topic_0000001788617484_p435984813370"></a>API接口</p>
+<table><thead align="left"><tr id="zh-cn_topic_0000001788617484_row835974815375"><th class="cellrowborder" valign="top" width="38.76%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001788617484_p435984813370"><a name="zh-cn_topic_0000001788617484_p435984813370"></a><a name="zh-cn_topic_0000001788617484_p435984813370"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="61.24000000000001%" id="mcps1.2.3.1.2"><p id="zh-cn_topic_0000001788617484_p113431258183712"><a name="zh-cn_topic_0000001788617484_p113431258183712"></a><a name="zh-cn_topic_0000001788617484_p113431258183712"></a>说明</p>
 </th>
@@ -302,7 +301,7 @@
 **表4** NPU device API
 
 <a name="table14367204362414"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0000001835217389_row1888615477417"><th class="cellrowborder" valign="top" width="54.559999999999995%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001835217389_p188634764114"><a name="zh-cn_topic_0000001835217389_p188634764114"></a><a name="zh-cn_topic_0000001835217389_p188634764114"></a>API接口</p>
+<table><thead align="left"><tr id="zh-cn_topic_0000001835217389_row1888615477417"><th class="cellrowborder" valign="top" width="54.559999999999995%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001835217389_p188634764114"><a name="zh-cn_topic_0000001835217389_p188634764114"></a><a name="zh-cn_topic_0000001835217389_p188634764114"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="45.440000000000005%" id="mcps1.2.3.1.2"><p id="zh-cn_topic_0000001835217389_p188862474415"><a name="zh-cn_topic_0000001835217389_p188862474415"></a><a name="zh-cn_topic_0000001835217389_p188862474415"></a>说明</p>
 </th>
@@ -354,7 +353,7 @@
 **表5** Memory management API
 
 <a name="table1766013612371"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0000001863035964_row1357083844218"><th class="cellrowborder" valign="top" width="63.61%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001863035964_p1757053818424"><a name="zh-cn_topic_0000001863035964_p1757053818424"></a><a name="zh-cn_topic_0000001863035964_p1757053818424"></a>API接口</p>
+<table><thead align="left"><tr id="zh-cn_topic_0000001863035964_row1357083844218"><th class="cellrowborder" valign="top" width="63.61%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001863035964_p1757053818424"><a name="zh-cn_topic_0000001863035964_p1757053818424"></a><a name="zh-cn_topic_0000001863035964_p1757053818424"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="36.39%" id="mcps1.2.3.1.2"><p id="zh-cn_topic_0000001863035964_p2057018381424"><a name="zh-cn_topic_0000001863035964_p2057018381424"></a><a name="zh-cn_topic_0000001863035964_p2057018381424"></a>说明</p>
 </th>
@@ -423,12 +422,12 @@
 </tr>
 <tr id="zh-cn_topic_0000001863035964_row1933424017243"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p7819165411224"><a name="zh-cn_topic_0000001863035964_p7819165411224"></a><a name="zh-cn_topic_0000001863035964_p7819165411224"></a>torch_npu.npu.NPUPluggableAllocator</p>
 </td>
-<td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p172891387259"><a name="zh-cn_topic_0000001863035964_p172891387259"></a><a name="zh-cn_topic_0000001863035964_p172891387259"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-NPUPluggableAllocator.md">torch.npu.npu.NPUPluggableAllocator</a>。</p>
+<td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p172891387259"><a name="zh-cn_topic_0000001863035964_p172891387259"></a><a name="zh-cn_topic_0000001863035964_p172891387259"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-NPUPluggableAllocator.md">torch_npu.npu.NPUPluggableAllocator</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001863035964_row12478193618244"><td class="cellrowborder" valign="top" width="63.61%" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p681913541224"><a name="zh-cn_topic_0000001863035964_p681913541224"></a><a name="zh-cn_topic_0000001863035964_p681913541224"></a>torch_npu.npu.change_current_allocator</p>
 </td>
-<td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p75031810165517"><a name="zh-cn_topic_0000001863035964_p75031810165517"></a><a name="zh-cn_topic_0000001863035964_p75031810165517"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-change_current_allocator.md">torch.npu.npu.change_current_allocator</a>。</p>
+<td class="cellrowborder" valign="top" width="36.39%" headers="mcps1.2.3.1.2 "><p id="zh-cn_topic_0000001863035964_p75031810165517"><a name="zh-cn_topic_0000001863035964_p75031810165517"></a><a name="zh-cn_topic_0000001863035964_p75031810165517"></a>该接口涉及高危操作，使用请参考<a href="torch-npu-npu-change_current_allocator.md">torch_npu.npu.change_current_allocator</a>。</p>
 </td>
 </tr>
 <tr id="zh-cn_topic_0000001863035964_row10860101635520"><td class="cellrowborder" width="63.61%" valign="top" headers="mcps1.2.3.1.1 "><p id="zh-cn_topic_0000001863035964_p1486012165527"><a name="zh-cn_topic_0000001863035964_p1486012165527"></a><a name="zh-cn_topic_0000001863035964_p1486012165527"></a><a href="torch_npu-npu-host_empty_cache.md">torch_npu.npu.host_empty_cache</a></p>
@@ -450,7 +449,7 @@
 </thead>
 <tbody><tr id="row22571533307"><td class="cellrowborder" valign="top" width="37.730000000000004%" headers="mcps1.2.3.1.1 "><p id="p0257163143012"><a name="p0257163143012"></a><a name="p0257163143012"></a><a href="（beta）torch_npu-npu-set_aoe.md">（beta）torch_npu.npu.set_aoe</a></p>
 </td>
-<td class="cellrowborder" valign="top" width="62.27%" headers="mcps1.2.3.1.2 "><p id="p172571338306"><a name="p172571338306"></a><a name="p172571338306"></a>AOE调优使能。</p>
+<td class="cellrowborder" valign="top" width="62.27%" headers="mcps1.2.3.1.2 "><p id="p172571338306"><a name="p172571338306"></a><a name="p172571338306"></a>启用AOE调优。</p>
 </td>
 </tr>
 </tbody>
@@ -512,7 +511,7 @@
 **表8** torch_npu Storage API
 
 <a name="table15668753173210"></a>
-<table><thead align="left"><tr id="zh-cn_topic_0000001835257369_row12327105314411"><th class="cellrowborder" valign="top" width="55.25%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001835257369_p43277535444"><a name="zh-cn_topic_0000001835257369_p43277535444"></a><a name="zh-cn_topic_0000001835257369_p43277535444"></a>API接口</p>
+<table><thead align="left"><tr id="zh-cn_topic_0000001835257369_row12327105314411"><th class="cellrowborder" valign="top" width="55.25%" id="mcps1.2.3.1.1"><p id="zh-cn_topic_0000001835257369_p43277535444"><a name="zh-cn_topic_0000001835257369_p43277535444"></a><a name="zh-cn_topic_0000001835257369_p43277535444"></a>API名称</p>
 </th>
 <th class="cellrowborder" valign="top" width="44.75%" id="mcps1.2.3.1.2"><p id="zh-cn_topic_0000001835257369_p11327125394418"><a name="zh-cn_topic_0000001835257369_p11327125394418"></a><a name="zh-cn_topic_0000001835257369_p11327125394418"></a>说明</p>
 </th>

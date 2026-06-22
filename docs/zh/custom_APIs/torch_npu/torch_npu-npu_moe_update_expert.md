@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-本API支持负载均衡和专家剪枝功能。经过映射后的专家表和mask可传入Moe层进行数据分发和处理。
+本API支持负载均衡和专家剪枝功能。经过映射后的专家表和mask可传入MoE层进行数据分发和处理。
 
 - 负载均衡：完成冗余专家部署场景下每个token的topK个专家逻辑卡号到物理卡号的映射。计算方法如下所示：
 
@@ -84,7 +84,7 @@ torch_npu.npu_moe_update_expert(expert_ids, eplb_table, *, expert_scales=None, p
 
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 - 参数说明里shape格式说明：
-    - `BS`：表示batch sequence size，即本卡最终输出的token数量，<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512。
+    - `BS`：表示batch sequence size，即本卡最终输出的token数量。<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：取值范围为0<BS≤512。
     - `K`：表示选取topK个专家，取值范围为0< K ≤16同时满足0 < K ≤ log_expert_num。
     - `log_expert_num`：表示逻辑专家数量，即`eplb_table`的行数，取值范围\(0, 1024\)。
     - `moe_expert_num`：表示物理专家总数，即所有逻辑专家部署的副本个数之和（等于`eplb_table`第一列count之和），取值范围\(0, 1024\]。

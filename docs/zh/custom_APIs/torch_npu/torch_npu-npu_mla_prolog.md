@@ -12,16 +12,16 @@
 
 ## 功能说明
 
-- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算。
+- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算操作。
 
   主要计算过程分为四路：
 
   - 首先对输入x乘以W<sup>DQ</sup>进行下采样和RmsNorm后分成两路：第一路乘以W<sup>UQ</sup>和W<sup>UK</sup>经过两次上采样后得到q<sup>N</sup>；第二路乘以W<sup>QR</sup>后经过旋转位置编码（ROPE）得到q<sup>R</sup>。
-  - 第三路是输入x乘以W<sup>DKV</sup>进行下采样和RmsNorm后传入Cache中得到k<sup>C</sup>；
+  - 第三路是将输入x乘以W<sup>DKV</sup>进行下采样和RmsNorm后传入Cache中得到k<sup>C</sup>；
   - 第四路是输入x乘以W<sup>KR</sup>后经过旋转位置编码后传入另一个Cache中得到k<sup>R</sup>。
   
 - 计算公式：
-    - RmsNorm公式:
+    - RmsNorm公式：
         $$RmsNorm(x) = \gamma \cdot \frac{x} {\sqrt{\frac{1}{N} \sum_{i=1}^{N} x_i^2 + \epsilon}}$$
 
     - Query计算公式：
@@ -64,7 +64,7 @@ torch_npu.npu_mla_prolog(token_x, weight_dq, weight_uq_qr, weight_uk, weight_dkv
 - **cache\_index**（`Tensor`）：必选参数，表示用于存储`kv_cache`和`kr_cache`的索引。shape支持1维和2维，格式为\(T,\)和\(B, S\)，dtype支持`int64`，数据格式支持ND。`cache_index`的取值范围为[0,BlockNum*BlockSize)，当前不会对`cache_index`传入值的合法性进行校验，需用户自行保证。
 - **kv\_cache**（`Tensor`）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Hckv\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
 - **kr\_cache**（`Tensor`）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Dr\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **dequant\_scale\_x**（`Tensor`）：预留参数，暂未使用，使用默认值即可。
 - **dequant\_scale\_w\_dq**（`Tensor`）：预留参数，暂未使用，使用默认值即可。
 - **dequant\_scale\_w\_uq\_qr**（`Tensor`）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化方式为perchannel。shape支持2维，格式为\(1, N\*\(D+Dr\)\)，dtype支持`float`，数据格式支持ND。

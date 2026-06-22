@@ -29,7 +29,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 - **x1** (`Tensor`)：必选参数。数据类型支持`int8`、`float16`、`bfloat16`。数据格式支持$ND$，输入shape支持2维或者3维。
 - **x2** (`Tensor`)：必选参数。数据类型支持`float16`、`int8`、`bfloat16`，数据格式支持$NZ$（昇腾亲和排布格式）、$ND$。非量化场景，数据类型需要和`x1`保持一致，输入shape维度第0维和`x1`的最后一维保持一致。
 - **hcom** (`str`)：必选参数。通信域handle名，通过`get_hccl_comm_name`接口获取。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **reduce_op** (`str`)：可选参数。reduce操作类型，当前版本仅支持`sum`，默认值：`sum`。
 - **bias** (`Tensor`)：可选参数。数据类型支持`int32`、`float16`、`bfloat16`，数据格式支持$ND$。`bias`当前仅支持一维，且维度大小与`output/x2`的最后一维大小相同。
 - **antiquant_scale** (`Tensor`)：可选参数，对应公式中的$antiquantScale$。伪量化场景对`x2`进行去量化的系数，数据类型支持`float16`、`bfloat16`，数据格式支持$ND$。伪量化场景数据类型需要和`x1`保持一致。
@@ -63,7 +63,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- 增量场景不使能该融合算子，全量场景使能该融合算子。
+- 增量场景不开启该融合算子，全量场景开启该融合算子。
 - 该接口支持图模式。
 - 输入`x1`可为2维或者3维、`x2`必须是2维，分别为$(b, s, k)/(m, k)$, $(k, n)$，$k$轴满足mm算子入参要求，$k$轴相等。`bias`当前仅支持一维，且维度大小与`output`的最后一维大小相同。`x3`的shape与`output`的shape相同。
 - `x1`不支持输入转置后的tensor，`x2`转置后输入，需要满足shape的第一维大小与`x1`的最后一维相同，满足matmul的计算条件。
@@ -75,7 +75,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     - 非量化场景下，$m、k、n$的取值范围均为`[1, 2147483647]`。
     - `comm_quant_scale_1`，`comm_quant_scale_2`的shape应保持一致，dtype与输出的dtype保持一致，且只在全量化场景支持。
 
-- 全量化场景：$m$取值范围均为`[1, 2147483647]`，`x1`、`x2`的最后一维范围为`[1, 65535]`，即$k$的取值范围为`[1, 65535]`、仅当`x2`(`shape=[n,k]`)为转置时$n$可以大于65535。
+- 全量化场景：$m$取值范围均为`[1, 2147483647]`，`x1`、`x2`的最后一维范围为`[1, 65535]`，即$k$的取值范围为`[1, 65535]`，仅当`x2`(`shape=[n,k]`)为转置时$n$可以大于65535。
 - 伪量化场景：$m$取值范围均为`[1, 2147483647]`，$k、n$的取值范围为`[1, 65535]`。
 - Atlas A2 训练系列产品：一个模型中的通算融合算子（AllGatherMatmul、MatmulReduceScatter、MatmulAllReduce），仅支持相同通信域。
 - 在长序列场景，随着$b/s$或者$m$的增大，可能出现内存不足或者计算超时。
@@ -168,7 +168,7 @@ torch_npu.npu_mm_all_reduce_base(x1, x2, hcom, *, reduce_op='sum', bias=None, an
     
 - 图模式调用
 
-     非量化、伪量化、全量化使能NZ调用示例如下：
+     非量化、伪量化、全量化配置NZ调用示例如下：
 
     ```python
     import torch

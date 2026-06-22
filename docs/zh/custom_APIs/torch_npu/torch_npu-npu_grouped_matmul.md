@@ -46,7 +46,7 @@ $y_i[m_i, n_i] =  x_i[m_i, k_i] \times weight_i[k_i, n_i], i = 1 \ldots g$ , 其
         - `x`为`int8`输入，`bias`为`bfloat16`，`float16`，`float32`输入（公式3-2）：
 
             $y_i = (x_i @ weight_i) \times scale_i \times pertokenscale_i + bias_i$
-        - `x`为`int4`输入, `weight`的数据类型为`int4`，数据排布格式为`NZ`的输入（公式3-3）:
+        - `x`为`int4`输入，`weight`的数据类型为`int4`，数据排布格式为`NZ`的输入（公式3-3）:
 
             $y_i=x_i@ (weight_i \times scale_i) \times pertokenscale_i$
         
@@ -81,7 +81,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
     - 列表最大长度为128。
     - 每个张量支持2维或3维输入。
 
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias** (`List[Tensor]`)：可选参数。每个分组的矩阵乘法输出的独立偏置项。
     - 支持的数据类型如下：
         - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：`float16`、`float32`和`int32`。
@@ -110,7 +110,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
     - 列表长度与weight列表长度相同。
     - 每个张量支持输入维度如下（其中$g$为matmul组数，$G$为pergroup数，$G_i$为第i个tensor的pergroup数）：
         - 伪量化perchannel场景，`weight`为单tensor时，shape限制为$[g, n]$；`weight`为多tensor时，shape限制为$[n_i]$。
-        - 伪量化pergroup场景，weight为单tensor时，shape限制为$[g, G, n]$; weight为多tensor时，shape限制为$[G_i, n_i]$。
+        - 伪量化pergroup场景，weight为单tensor时，shape限制为$[g, G, n]$；weight为多tensor时，shape限制为$[G_i, n_i]$。
 
 - **antiquant_offset** (`List[Tensor]`)：可选参数。用于调整伪量化后的数值偏移量，从而更准确地表示原始浮点数值，对应公式（4）。
     - 支持的数据类型如下：
@@ -184,7 +184,7 @@ npu_grouped_matmul(x, weight, *, bias=None, scale=None, offset=None, antiquant_s
 
 ## 约束说明<a name="zh-cn_topic_0000002262888689_section618392112366"></a>
 
-- 该接口支持推理场景下使用。
+- 该接口支持在推理场景下使用。
 - 该接口支持图模式。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>/<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：内轴限制InnerLimit为65536。
 - `x`和`weight`中每一组tensor的最后一维大小都应小于InnerLimit。x<sub>i</sub>的最后一维指当x不转置时<code>x<sub>i</sub></code>的K轴或当`x`转置时<code>x<sub>i</sub></code>的$M$轴。<code>weight<sub>i</sub></code>的最后一维指当`weight`不转置时<code>weight<sub>i</sub></code>的$N$轴或当`weight`转置时<code>weight<sub>i</sub></code>的$K$轴。

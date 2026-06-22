@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-- API功能：当输入Tensor的尾轴为32B对齐场景时，使用该API可对输入Tensor进行GELU与MUL结合的复合计算操作以提高算子性能，若尾轴为非32B对齐场景时，建议走小算子拼接逻辑，即按照下述公式分步拼接计算。
+- API功能：当输入tensor的尾轴为32B对齐场景时，使用该API可对输入tensor进行GELU与MUL结合的复合计算操作以提高算子性能，若尾轴为非32B对齐场景时，建议走小算子拼接逻辑，即按照下述公式分步拼接计算。
 - 计算公式：
 
     给定输入张量`input`（最后一维长度为$2d$，$d$为正整数），函数$\text{GELUMUL}$计算流程如下：
@@ -70,7 +70,7 @@ torch_npu.npu_gelu_mul(input, *, approximate="none") -> Tensor
 >>> output_high_precision = torch_npu.npu_gelu_mul(input, approximate="none")
 
 # 高效率模式（approximate="tanh"）：使用双曲正切（tanh）近似模式，计算效率高，
-# 适用于大规模训练或推理加速场景，如大规模训练或推理加速场景。
+# 适用于大规模训练或推理加速场景。
 >>> output_high_efficiency = torch_npu.npu_gelu_mul(input, approximate="tanh")
 
 ```

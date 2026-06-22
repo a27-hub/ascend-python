@@ -12,7 +12,7 @@
 
 ## 功能说明
 
-- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算。主要计算过程分为五路；
+- API功能：推理场景下，Multi-Head Latent Attention（MLA）前处理的计算操作。主要计算过程分为五路：
     - 首先对输入x乘以W<sup>DQ</sup>进行下采样和RmsNorm后分成两路，第一路乘以W<sup>UQ</sup>和W<sup>UK</sup>经过两次上采样后得到q<sup>N</sup>；
     - 第二路乘以W<sup>QR</sup>后经过旋转位置编码（ROPE）得到q<sup>R</sup>。
     - 第三路是输入x乘以W<sup>DKV</sup>进行下采样和RmsNorm后传入Cache中得到k<sup>C</sup>。
@@ -64,7 +64,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 - **cache\_index**（`Tensor`）：必选参数，表示写入`kv_cache`、`kr_cache`的页式线性槽位索引。shape支持1维和2维，格式为\(T\)和\(B, S\)，dtype支持`int64`，数据格式支持ND。每个元素取值范围为[0, L)，其中 **L** 为`kv_cache`第0维与第1维长度之积（须与`kr_cache`前两维之积一致）。
 - **kv\_cache**（`Tensor`）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Hckv\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
 - **kr\_cache**（`Tensor`）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为\(BlockNum, BlockSize, Nkv, Dr\)，dtype支持`bfloat16`和`int8`，数据格式支持ND。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **dequant\_scale\_x**（`Tensor`）：可选参数，输入`token_x`为int8类型时下采样后进行反量化操作时的参数，`token_x`量化方式为pertoken。其shape支持2维，格式为\(T, 1\)和\(BS, 1\)，dtype支持`float`，数据格式支持ND。
 - **dequant\_scale\_w\_dq**（`Tensor`）：可选参数，输入`token_x`为int8类型时下采样后进行反量化操作时的参数，`token_x`量化方式为perchannel。其shape支持2维，格式为\(1, Hcq\)，dtype支持`float`，数据格式支持ND。
 - **dequant\_scale\_w\_uq\_qr**（`Tensor`）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化方式为perchannel。shape支持2维，格式为\(1, N\*\(D+Dr\)\)，dtype支持`float`，数据格式支持ND。
@@ -86,7 +86,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 ## 约束说明
 
-- 该接口支持推理场景下使用。
+- 该接口支持在推理场景下使用。
 - 该接口支持图模式。
 - 接口参数中shape格式字段含义：
     - B：Batch表示输入样本批量大小，取值范围为0\~65536。
@@ -232,7 +232,7 @@ torch_npu.npu_mla_prolog_v2(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     </td>
     <td class="cellrowborder" valign="top" width="9.09090909090909%"><p id="zh-cn_topic_0000002313328922_p161031714153111"><a name="zh-cn_topic_0000002313328922_p161031714153111"></a><a name="zh-cn_topic_0000002313328922_p161031714153111"></a>bfloat16</p>
     </td>
-    <td class="cellrowborder" valign="top" width="9.080908090809082%"><p id="zh-cn_topic_0000002313328922_p4103191483114"><a name="zh-cn_topic_0000002313328922_p4103191483114"></a><a name="zh-cn_topic_0000002313328922_p4103191483114"></a>He,Hcq</p>
+    <td class="cellrowborder" valign="top" width="9.080908090809082%"><p id="zh-cn_topic_0000002313328922_p4103191483114"><a name="zh-cn_topic_0000002313328922_p4103191483114"></a><a name="zh-cn_topic_0000002313328922_p4103191483114"></a>(He,Hcq)</p>
     </td>
     <td class="cellrowborder" valign="top" width="9.09090909090909%"><p id="zh-cn_topic_0000002313328922_p201031114103115"><a name="zh-cn_topic_0000002313328922_p201031114103115"></a><a name="zh-cn_topic_0000002313328922_p201031114103115"></a>int8</p>
     </td>

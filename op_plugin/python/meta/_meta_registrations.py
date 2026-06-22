@@ -1455,8 +1455,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12, 13],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12, 13]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -1467,7 +1467,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     MXFPX_SCALE_THIRD_DIM_SIZE = 2
     INT4_IN_UINT8 = 2
     is_float4_case = (hasattr(torch, 'float4_e2m1fn_x2') and x.dtype == torch.float4_e2m1fn_x2) or x_dtype == torch_npu.float4_e2m1fn_x2
-    is_dynamic_int4_output = quant_mode == 1 and x_dtype == torch_npu.int4
+    is_legacy_dynamic_int4_output = quant_mode == 1 and x_dtype == torch_npu.int4
+    is_dynamic_int4_output = quant_mode == 13
+    torch._check(
+        not is_legacy_dynamic_int4_output,
+        lambda: "INT4 dynamic quantization uses quant_mode=13. quant_mode=1 only supports INT8 dynamic quantization" + ops_error(ErrCode.VALUE),
+    )
     if is_dynamic_int4_output:
         torch._check(
             drop_pad_mode == 0,
@@ -1484,6 +1489,10 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         torch._check(
             x.size(1) % INT4_IN_UINT8 == 0,
             lambda: "INT4 dynamic quantization requires x.size(1) to be even" + ops_error(ErrCode.VALUE),
+        )
+        torch._check(
+            x_dtype is None or x_dtype == torch_npu.int4,
+            lambda: "x_dtype must be torch_npu.int4 or None when quant_mode=13" + ops_error(ErrCode.VALUE),
         )
     if scale is not None:
         scale_dim = scale.dim()
@@ -1541,36 +1550,35 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
                     lambda: "the 1st dim of offset and the 1st dim of scale should be the same" + ops_error(ErrCode.VALUE),
                 )
         elif quant_mode == 1:
-            if is_dynamic_int4_output:
-                torch._check(
-                    scale_dim == 2,
-                    lambda: "the scale shape support only 2D in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
-                )
-                torch._check(
-                    scale.size(0) == 1,
-                    lambda: "the first dim of scale must be 1 in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
-                )
-                torch._check(
-                    scale.dtype == torch.float32,
-                    lambda: "the scale dtype must be float32 in INT4 dynamic quant mode" + ops_error(ErrCode.TYPE),
-                )
-                torch._check(
-                    x.size(1) == scale.size(1),
-                    lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
-                )
-            else:
-                torch._check(
-                    scale_dim == 2,
-                    lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
-                )
-                torch._check(
-                    scale.size(0) in [expert_range_length, 1],
-                    lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
-                )
-                torch._check(
-                    x.size(1) == scale.size(1),
-                    lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
-                )
+            torch._check(
+                scale_dim == 2,
+                lambda: "the scale shape support only 2D in dynamic quant mode" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                scale.size(0) in [expert_range_length, 1],
+                lambda: "the first dim of scale must be in [expert_range_length, 1]" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                x.size(1) == scale.size(1),
+                lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
+            )
+        elif quant_mode == 13:
+            torch._check(
+                scale_dim == 2,
+                lambda: "the scale shape support only 2D in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                scale.size(0) == 1,
+                lambda: "the first dim of scale must be 1 in INT4 dynamic quant mode" + ops_error(ErrCode.VALUE),
+            )
+            torch._check(
+                scale.dtype == torch.float32,
+                lambda: "the scale dtype must be float32 in INT4 dynamic quant mode" + ops_error(ErrCode.TYPE),
+            )
+            torch._check(
+                x.size(1) == scale.size(1),
+                lambda: "the 2nd dim of scale should be the same with the 2nd dim of x" + ops_error(ErrCode.VALUE),
+            )
         if quant_mode == 7:
             torch._check(
                 scale_dim == 1,
@@ -2623,6 +2631,21 @@ def _npu_dtype_cast_backward_meta(self, dtype):
     return self.new_empty(self.shape, dtype=dtype)
 
 
+@impl(m, "_npu_format_cast")
+def _npu_format_cast_meta(self, acl_format):
+    return self.new_empty(self.shape)
+
+
+@impl(m, "_npu_format_cast.aclnn")
+def _npu_format_cast_aclnn_meta(self, acl_format, customize_dtype):
+    return self.new_empty(self.shape)
+
+
+@impl(m, "_npu_format_cast.input_dtype")
+def _npu_format_cast_input_dtype_meta(self, acl_format, customize_dtype, input_dtype):
+    return self.new_empty(self.shape)
+
+
 @impl(m, "npu_dtype_cast_backward")
 def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None):
     dim_num = self.dim()
@@ -2767,6 +2790,17 @@ def npu_add_rms_norm_meta(x1, x2, gamma, epsilon=1e-6):
     rstd = torch.empty(ret, dtype=torch.float32, device='meta')
     return (torch.empty_like(x1, dtype=x1.dtype), torch.empty_like(rstd), torch.empty_like(x1, dtype=x1.dtype))
 
+@impl(m, "_npu_rms_norm_backward_quant")
+def _npu_rms_norm_backward_quant_meta(
+    dy, x, rstd, gamma, scale_x, *, offset_x=None,
+    div_mode=True, quant_mode="static", dst_type=1
+):
+    # dxOut: shape = dy.shape, dtype depends on dst_type
+    dst_torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type)
+    dx_out = torch.empty(dy.shape, dtype=dst_torch_dtype, device=dy.device)
+    # dgammaOut: shape = gamma.shape, dtype = float32
+    dgamma_out = torch.empty(gamma.shape, dtype=torch.float32, device=gamma.device)
+    return (dx_out, dgamma_out)
 
 @impl(m, "npu_add_rms_norm_v2")
 def npu_add_rms_norm_v2_meta(x1, x2, gamma, epsilon=1e-6):
@@ -5814,6 +5848,18 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
 
 
+@impl(m, "npu_swiglu_group_quant_backward")
+def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
+    grad_x = torch.empty_like(x, dtype=x.dtype)
+
+    if weight is not None and weight.numel() > 0:
+        grad_weight = torch.empty_like(weight, dtype=weight.dtype)
+    else:
+        grad_weight = x.new_empty([0], dtype=torch.float32)
+
+    return (grad_x, grad_weight)
+
+
 @impl(m, "npu_dequant_swiglu_quant")
 def npu_dequant_swiglu_quant_meta(x, weight_scale=None, activation_scale=None, bias=None, quant_scale=None,
                                   quant_offset=None, group_index=None, activate_left=False, quant_mode=0,
@@ -6435,7 +6481,7 @@ def npu_recurrent_gated_delta_rule_functional_meta(query, key, value, state, *, 
     state_shape = (state.size(0), state.size(1), state.size(2), state.size(3))
     out_shape = (value.size(0), value.size(1), value.size(2))
 
-    finalState = torch.empty(state_shape, dtype=torch.bfloat16, device=state.device)
+    finalState = torch.empty(state_shape, dtype=state.dtype, device=state.device)
     out = torch.empty(out_shape, dtype=torch.bfloat16, device=value.device)
 
     return out, finalState
@@ -6715,7 +6761,7 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
 
 
 @impl(m, "npu_grouped_dynamic_block_quant")
-def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0):
+def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0, dst_type_max=0.0):
     dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
     y = torch.empty(x.shape, dtype=dtype, device=x.device)
     scale_shape = list(x.shape)
@@ -7163,4 +7209,3 @@ def npu_ciou_meta(self, gtboxes, trans=False, is_cross=True, mode=0, atan_sub_fl
     else:
         output_size = [1, self.size(1)]
     return torch.empty(output_size, dtype=self.dtype, device=self.device)
-

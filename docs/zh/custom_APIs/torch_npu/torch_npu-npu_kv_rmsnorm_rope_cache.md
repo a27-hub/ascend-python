@@ -43,7 +43,7 @@
             ![](../../figures/zh-cn_formulaimage_0000002239721042.png)
 
             - cos⁡和sin⁡为预计算的旋转角度参数。
-            - RotateHalf\(k\)将k的后半部分元素移至前半部分并取反，后半部分用前半部分的值。具体来说，对于维度d=64：
+            - RotateHalf\(k\)将k的后半部分元素移至前半部分并取反，后半部分用前半部分的值填充。具体来说，对于维度d=64：
 
             ![](../../figures/zh-cn_formulaimage_0000002242091560.png)
 
@@ -74,7 +74,7 @@ torch_npu.npu_kv_rmsnorm_rope_cache(kv, gamma, cos, sin, index, k_cache, ckv_cac
 - **index** (`Tensor`)：必选参数，表示缓存索引张量，用于定位`k_cache`和`ckv_cache`的写入位置。数据类型支持`int64`，数据格式为$ND$。shape取决于`cache_mode`。
 - **k\_cache** (`Tensor`)：必选参数，用于存储量化/非量化的键向量。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
 - **ckv\_cache** (`Tensor`)：必选参数，用于存储量化/非量化的压缩后的kv向量。数据类型支持`bfloat16`、`float16`、`int8`，数据格式为$ND$。shape取决于`cache_mode`。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **k\_rope\_scale** (`Tensor`)：可选参数，默认值None，表示k旋转位置编码的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。
 - **c\_kv\_scale** (`Tensor`)：可选参数，默认值None，表示压缩后kv的量化缩放因子。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rms\_size\]。量化模式下必填。
 - **k\_rope\_offset** (`Tensor`)：可选参数，默认值None，表示k旋转位置编码量化偏移量。数据类型支持`float32`，数据格式为$ND$，要求为1维张量，形状为\[rope\_size\]。量化模式下必填。

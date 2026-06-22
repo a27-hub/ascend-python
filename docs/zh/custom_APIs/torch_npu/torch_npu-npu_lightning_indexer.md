@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | ------------------------------------------------------------ | :------: |
-|<term>Ascend 950PR/Ascend 950DT</term>     | √  |
+|<term>Atlas 350 加速卡</term>              | √  |
 |<term>Atlas A2 推理系列产品</term>         | √  |
 |<term>Atlas A3 推理系列产品</term>         | √  |
 
@@ -37,7 +37,7 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
     
 - **weights**（`Tensor`）：必选参数，不支持非连续，数据格式支持$ND$，数据类型支持`bfloat16`、`float16`和`float32`，支持输入shape[B,S1,N1]、[T,N1]。
     
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 - **actual\_seq\_lengths\_query**（`Tensor`）：可选参数，表示不同Batch中`query`的有效token数，数据类型支持`int32`。如果不指定seqlen可传入None，表示和`query`的shape的S长度相同。
     - 该入参中每个Batch的有效token数不超过`query`中的维度S大小且不小于0。支持长度为B的一维tensor。当`layout_query`为TND时，该入参必须传入，且以该入参元素的数量作为B值，该入参中每个元素的值表示当前batch与之前所有batch的token数总和，即前缀和，因此后一个元素的值必须大于等于前一个元素的值。
@@ -63,11 +63,11 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 
 - **next\_tokens**（`int`）：可选参数，用于稀疏计算，表示attention需要和后几个Token计算关联。数据类型支持`int64`。仅支持默认值2^63-1。
 
-- **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，False表示不输出；默认值为False。该参数仅在训练且`layout_key`不为PA_BSND场景支持。
+- **return\_value**（`bool`）：可选参数，表示是否输出`sparse_values`。True表示输出，False表示不输出；默认值为False。该参数仅在训练且`layout_key`不为PA_BSND场景下支持。
 
 ## 返回值说明
 
-- **sparse\_indices**（`Tensor`）：公式中的Indices输出，数据类型支持`int32`,数据格式支持$ND$，当`layout_query`为"BSND"时输出shape为[B, S1, N2, sparse\_count]，当layout\_query为"TND"时输出shape为[T1, N2, sparse\_count]。
+- **sparse\_indices**（`Tensor`）：公式中的Indices输出，数据类型支持`int32`，数据格式支持$ND$，当`layout_query`为"BSND"时输出shape为[B, S1, N2, sparse\_count]，当layout\_query为"TND"时输出shape为[T1, N2, sparse\_count]。
 
 - **sparse\_values**（`Tensor`）：公式中的Indices输出对应的value值，数据类型支持`bfloat16`、`float16`，数据格式支持$ND$，输出shape与`sparse_indices`保持一致。
 
@@ -78,8 +78,8 @@ torch_npu.npu_lightning_indexer(query, key, weights, *, actual_seq_lengths_query
 - 参数query中的D和参数key中的D值相等为128。
 - 参数query、key的数据类型应保持一致。
 - 参数weights不为`float32`时，参数query、key、weights的数据类型应保持一致。
-- return_value仅在Ascend 950PR/Ascend 950DT支持图模式。
-- Ascend 950PR/Ascend 950DT：
+- return_value仅在Atlas 350 加速卡上支持图模式。
+- Atlas 350 加速卡：
     - query中的N仅支持8、16、24、32、64。
     - 参数weights不支持`float32`类型。
 

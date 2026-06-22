@@ -10,6 +10,7 @@
 
 - API功能：基于一系列计算得到mHC\(Manifold-Constrained Hyper-Connections\)架构中hidden层的H<sup>res</sup>和H<sup>post</sup>投影矩阵，以及Atten层或MLP层的输入矩阵h<sup>in</sup>。
 - 计算公式：
+
 $$
 \begin{aligned}
 \vec{x^{'}_{l}} &=\operatorname{RmsNorm}(\vec{x_{l}})\\
@@ -47,11 +48,11 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 ## 返回值说明
 
 - **h\_in**（`Tensor`）：输出的h\_in作为Atten/MLP层的输入，数据类型为`bfloat16`、`float16`，shape为\(B, S, D\)或\(T, D\)，数据格式支持ND。
-- **h\_post**（`Tensor`）：输出的mHC的h\_post变换矩阵，数据类型为`float32`，shape为\(B, S, D\)或\(T,  D\)，数据格式支持ND。
-- **h\_res**（`Tensor`）：输出的mHC的h\_res变换矩阵（未做sinkhorn变换），数据类型为`float32`，shape为\(B, S, n, n\)或\(T, n, n\)，数据格式支持ND。
+- **h\_post**（`Tensor`）：输出的mHC的h\_post变换矩阵，数据类型为`float32`，shape为\(B, S, D\)或\(T, D\)，数据格式支持ND。
+- **h\_res**（`Tensor`）：输出的mHC的h\_res变换矩阵（未做Sinkhorn变换），数据类型为`float32`，shape为\(B, S, n, n\)或\(T, n, n\)，数据格式支持ND。
 - **inv\_rms**（`Tensor`）：可选输出，RmsNorm计算得到的1/r，数据类型为`float32`，shape为\(B, S\)或\(T\)，数据格式支持ND。
-- **h\_mix**（`Tensor`）：可选输出，x与phi矩阵乘的结果，数据类型为`float32`，shape为\(B, S, n<sup>2</sup>+2n\)或\(T,  n<sup>2</sup>+2n\)，数据格式支持ND。
-- **h\_pre**（`Tensor`）：可选输出，做完sigmoid计算之后的h\_pre矩阵，数据类型为`float32`，shape为\(B, S, n\)或\(T,  n\)，数据格式支持ND。
+- **h\_mix**（`Tensor`）：可选输出，x与phi矩阵乘的结果，数据类型为`float32`，shape为\(B, S, n<sup>2</sup>+2n\)或\(T, n<sup>2</sup>+2n\)，数据格式支持ND。
+- **h\_pre**（`Tensor`）：可选输出，做完sigmoid计算之后的h\_pre矩阵，数据类型为`float32`，shape为\(B, S, n\)或\(T, n\)，数据格式支持ND。
 
 ## 约束说明
 

@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-查询当前支持的torch_npu.profiler.ExportType的性能数据结果文件类型。
+查询当前`torch_npu.profiler.ExportType`支持的性能数据结果文件类型。
 
 ## 函数原型
 
@@ -24,7 +24,7 @@ torch_npu.profiler.supported_export_type()
 
 ## 调用示例
 
-以下是关键步骤的代码示例，不可直接拷贝编译运行，仅供参考。
+以下是关键步骤的代码示例，不可直接拷贝运行，仅供参考。
 
 ```python
 import torch
