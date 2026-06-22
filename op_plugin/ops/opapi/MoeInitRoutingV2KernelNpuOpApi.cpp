@@ -97,10 +97,15 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
 }
 
 tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &expert_idx,
-    const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, int64_t active_num,
-    int64_t expert_capacity, int64_t expert_num, int64_t drop_pad_mode, int64_t expert_tokens_num_type,
-    bool expert_tokens_num_flag, int64_t quant_mode, at::IntArrayRef active_expert_range, int64_t row_idx_type,
+    const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, c10::SymInt active_num,
+    c10::SymInt expert_capacity, c10::SymInt expert_num, int64_t drop_pad_mode, int64_t expert_tokens_num_type,
+    bool expert_tokens_num_flag, int64_t quant_mode, c10::SymIntArrayRef active_expert_range, int64_t row_idx_type,
     c10::optional<int64_t> x_dtype) {
+    int64_t active_num_int = active_num.expect_int();
+    int64_t expert_capacity_int = expert_capacity.expect_int();
+    int64_t expert_num_int = expert_num.expect_int();
+    int64_t expert_num_int = expert_num.expect_int();
+    at::IntArrayRef active_expert_range_int = c10::asIntArrayRefUnchecked(active_expert_range);
 #if !VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     // 小于2.7的版本不支持MXFP8量化需要的float8_e8m0fnu类型
     TORCH_CHECK(!IsQuantModeMXFP8(quant_mode),
@@ -128,7 +133,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         "-Dimension.",
         OPS_ERROR(ErrCode::PARAM));
 
-    at::IntArrayRef current_active_expert_range = init_new_active_expert_range(active_expert_range, expert_num);
+    at::IntArrayRef current_active_expert_range = init_new_active_expert_range(active_expert_range_int, expert_num_int);
     int64_t active_expert_range_length = current_active_expert_range.size();
     TORCH_CHECK(active_expert_range_length == LENGTH_ACTIVE_EXPERT_RANGE,
         "The length of list active_expert_range should be ",
@@ -152,7 +157,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     }
     int k = expert_idx_size[1];
     // more suitable cases for v2
-    bool using_v2 = CheckV2Case(h, expert_num, active_expert_range, expert_tokens_num_type, quant_mode);
+    bool using_v2 = CheckV2Case(h, expert_num_int, active_expert_range_int, expert_tokens_num_type, quant_mode);
 
     TORCH_CHECK(!(quant_mode == QUANT_MODE_DYNAMIC && IsInt4OutputDType(x_dtype)),
         "INT4 dynamic quantization uses quant_mode=13. quant_mode=1 only supports INT8 dynamic quantization.",
@@ -193,14 +198,14 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     at::Tensor expanded_x;
     if (drop_pad_mode == 1) {  // Drop/Pad
         if (quant_mode == QUANT_MODE_UNQUANT) {
-            expanded_x = npu_preparation::apply_tensor_without_format(x, {expert_num, expert_capacity, h});
+            expanded_x = npu_preparation::apply_tensor_without_format(x, {expert_num_int, expert_capacity_int, h});
         } else {
             expanded_x = npu_preparation::apply_tensor_without_format(
-                {expert_num, expert_capacity, h}, x.options().dtype(at::kChar));
+                {expert_num_int, expert_capacity_int, h}, x.options().dtype(at::kChar));
         }
-        expanded_scale_len = expert_num * expert_capacity;
+        expanded_scale_len = expert_num_int * expert_capacity_int;
     } else {  // Dropless
-        expanded_scale_len = (active_num <= 0) ? bs * k : std::min<int64_t>(active_num, bs * k);
+        expanded_scale_len = (active_num_int <= 0) ? bs * k : std::min<int64_t>(active_num_int, bs * k);
         switch (quant_mode) {
 #if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
             case QUANT_MODE_MXFP8_E5M2:
@@ -259,13 +264,13 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
     } else if (expert_tokens_num_type == EXPERT_TOKENS_KEY_VALUE) {
         // key_value in [2, end-start]
         expert_tokens_count_or_cumsum =
-            npu_preparation::apply_tensor_without_format({expert_num, 2}, x.options().dtype(at::kLong));
+            npu_preparation::apply_tensor_without_format({expert_num_int, 2}, x.options().dtype(at::kLong));
     }
 
     if ((using_v2 && !op_plugin::utils::is_gte_cann_version_850alpha003()) || Is310PBoolCheck()) {
         at::Tensor expert_tokens_before_capacity =
-            npu_preparation::apply_tensor_without_format({expert_num}, x.options().dtype(at::kInt));
-        expert_capacity = 0;
+            npu_preparation::apply_tensor_without_format({expert_num_int}, x.options().dtype(at::kInt));
+        expert_capacity_int = 0;
         drop_pad_mode = 0;
         int64_t expert_tokens_count_or_cumsum_flag = Is310PBoolCheck() ? 1 : 2;
         bool expert_tokens_before_capacity_flag = false;
@@ -277,9 +282,9 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
-            active_num,
-            expert_capacity,
-            expert_num,
+            active_num_int,
+            expert_capacity_int,
+            expert_num_int,
             drop_pad_mode,
             expert_tokens_count_or_cumsum_flag,
             expert_tokens_before_capacity_flag,
@@ -361,14 +366,14 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expert_idx,
         scale_wrapper,
         p_offset,
-        active_num,
-        expert_capacity,
-        expert_num,
+        active_num_int,
+        expert_capacity_int,
+        expert_num_int,
         drop_pad_mode,
         expert_tokens_num_type,
         expert_tokens_num_flag,
         quant_mode,
-        active_expert_range,
+        active_expert_range_int,
         row_idx_type,
         expanded_x_wrapper,
         expanded_row_idx,
