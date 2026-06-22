@@ -36,10 +36,10 @@ namespace op_api {
     bool isSupportedDtype(at::ScalarType dtype)
     {
         return dtype == at::ScalarType::Float ||
-            dtype == at::ScalarType::Half ||  
+            dtype == at::ScalarType::Half ||
             dtype == at::ScalarType::BFloat16;
     }
-    
+
     bool isSupportedDtypeCombination(at::ScalarType inputDtype, at::ScalarType outputDtype)
     {
         if (!isSupportedDtype(inputDtype) || !isSupportedDtype(outputDtype)) {
@@ -61,7 +61,7 @@ namespace op_api {
         int64_t input_dim_num = first_sizes.size();
         c10::SmallVector<int64_t, op_infer::SIZE> out_shape;
         out_shape.resize((dim + 1) + 1);
-        
+
         for (int64_t j = 0; j < dim; j++) {
             out_shape[j] = first_sizes[j];
         }
@@ -79,7 +79,7 @@ namespace op_api {
                     dim1Size *= sizes[j];
                 }
                 outputCol += dim1Size;
-            }     
+            }
         }
         out_shape[dim + 1] = outputCol;
         return out_shape;
@@ -87,8 +87,7 @@ namespace op_api {
 
     at::Tensor _chunk_cat( at::TensorList tensors, int64_t dim, int64_t num_chunks)
     {
-        static bool npu_support_aclnn = check_aclnn_kernel_available("aclnnChunkCat")
-                                          && c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950;
+        static bool npu_support_aclnn = check_aclnn_kernel_available("aclnnChunkCat");
         if (!npu_support_aclnn) {
             return at::native::_chunk_cat(tensors, dim, num_chunks);
         }
