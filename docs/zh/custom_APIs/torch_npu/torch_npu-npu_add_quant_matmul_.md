@@ -36,7 +36,7 @@ torch_npu.npu_add_quant_matmul_(self, x1, x2, x2_scale, *, x1_scale=None, group_
 - **x1**（`Tensor`）：必选参数，表示矩阵乘法中的左矩阵，数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`，tensor支持2维，shape为\(K, M\) ，数据格式支持ND。
 - **x2**（`Tensor`）：必选参数，表示矩阵乘法中的右矩阵，数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`，tensor支持2维，shape为\(K, N\)，数据格式支持ND。
 - **x2\_scale**（`Tensor`）：必选参数，表示矩阵乘法中的右矩阵的缩放因子，数据类型支持`float8_e8m0fnu`、`float32`，shape支持3维，其中float8\_e8m0fnu需配置可选参数`x2_scale_dtype`为对应类型，此时`x2_scale`本身的dtype不再生效，但仍需保证`x2_scale`本身的dtype为8bit位的数据类型，以保证shape正确。数据格式支持ND。
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **x1\_scale**（`Tensor`）：可选参数，表示矩阵乘法中的左矩阵的缩放因子，数据类型支持`float8_e8m0fnu`、`float32`，shape支持3维，其中float8\_e8m0fnu需配置可选参数`x1_scale_dtype`为对应类型，此时`x1_scale`本身的dtype不再生效，但仍需保证`x1_scale`本身的dtype为8bit位的数据类型，以保证shape正确。数据格式支持ND。
 - **group\_sizes**（`List[int]`）：可选参数。默认值为None。
   - 非None时，仅支持三维列表，形如\[group\_m, group\_n, group\_k\]，分别表示在m、n、k维度上的量化分组情况。以group\_m为例，表示在m维度上group\_m个数对应一个量化参数。

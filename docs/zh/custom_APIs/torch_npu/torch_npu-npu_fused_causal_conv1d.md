@@ -67,7 +67,7 @@ torch_npu.npu_fused_causal_conv1d(x, weight, conv_states, *, query_start_loc=Non
 - **x**（`Tensor`）：必选参数，表示输入序列，即公式中的$x$。数据类型支持`float16`、`bfloat16`，数据格式要求为ND，支持非连续的Tensor。不支持空Tensor。
 - **weight**（`Tensor`）：必选参数，表示因果1维卷积核，即公式中的$weight$。数据类型、数据格式与`x`保持一致，不支持非连续的Tensor。不支持空Tensor。
 - **conv\_states**（`Tensor`）：必选参数，表示缓存状态张量，存储各序列的历史token数据，各序列计算完成后原地更新，即公式中的$conv\_states$。数据类型、数据格式与`x`保持一致，支持非连续的Tensor。不支持空Tensor。
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **query\_start\_loc**（`Tensor`）：可选参数，表示序列起始位置索引，记录各序列在拼接张量`x`中的起始位置。数据类型支持`int32`，数据格式要求为ND，不支持非连续的Tensor。当`x`的shape为2维时，不可省略，默认值为None。
 - **cache\_indices**（`Tensor`）：可选参数，表示缓存索引，指定每个序列对应的缓存状态在conv\_states中的索引。数据类型支持`int32`，数据格式要求为ND，不支持非连续的Tensor。默认值为None。
 - **initial\_state\_mode**（`Tensor`）：可选参数，初始状态标志，表示各序列是否使用缓存数据，仅prefill场景（run\_mode=0）生效。数据类型支持`int32`，数据格式要求为ND，不支持非连续的Tensor。默认值为None。

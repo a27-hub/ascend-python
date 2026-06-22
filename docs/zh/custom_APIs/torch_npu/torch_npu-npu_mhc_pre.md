@@ -39,7 +39,7 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 - **phi**（`Tensor`）：必选参数，mHC的参数矩阵，顺序是W\_pre\(n, nD\)、W\_post\(n, nD\)、W\_res\(n<sup>2</sup>, nD\)，数据类型为`float32`，shape为\(n<sup>2</sup>+2n, nD\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
 - **alpha**（`Tensor`）：必选参数，mHC的缩放参数，顺序是alpha\_pre、alpha\_post、alpha\_res，数据类型为`float32`，shape为\(3\)，不支持空Tensor。
 - **bias**（`Tensor`）：必选参数，mHC层的bias参数，数据类型为`float32`，shape为\(n<sup>2</sup>+2n\)，不支持空Tensor。
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **gamma**（`Tensor`）：可选参数，表示进行RmsNorm的缩放因子，数据类型为`float32`，shape为\(n, D\)，数据格式支持ND，支持非连续Tensor。
 - **norm\_eps**（`float`）：可选参数，RmsNorm的防除零参数，默认值是1e-6，数据类型为`float32`。
 - **hc\_eps**（`float`）：可选参数，H<sub>pre</sub>的sigmoid后的eps参数，默认值是1e-6，数据类型支持`float32`。

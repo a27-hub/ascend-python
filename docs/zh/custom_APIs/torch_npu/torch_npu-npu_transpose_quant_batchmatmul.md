@@ -28,7 +28,7 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - **x1**（`Tensor`）：必选参数，表示矩阵乘的第一个矩阵。数据格式支持ND。仅支持3维输入，shape要求为（m, b, k）。数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`。
 - **x2**（`Tensor`）：必选参数，表示矩阵乘的第二个矩阵。数据格式支持ND和NZ。仅支持3维输入，shape要求为（b, k, n）或（b, n, k）。`x2`的k维度需要与`x1`的k维度大小相等。数据类型支持`float8_e5m2`、`float8_e4m3fn`、`hifloat8`。
 - **dtype**（`int`）： 必选参数，表示output的数据类型，支持传值`torch.float16`和`torch.bfloat16`。
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **bias**（`Tensor`）：可选参数，表示矩阵乘的偏置矩阵，当前版本暂不支持该参数，使用默认值即可。
 - **x1\_scale**（`Tensor`）：可选参数，表示左矩阵的量化系数。数据格式支持ND。数据类型支持`float32`、`float8_e8m0fnu`。shape支持1维或4维。
 - **x2\_scale**（`Tensor`）：可选参数，表示右矩阵的量化系数。数据格式支持ND。数据类型支持`float32`、`float8_e8m0fnu`。shape支持1维或4维。

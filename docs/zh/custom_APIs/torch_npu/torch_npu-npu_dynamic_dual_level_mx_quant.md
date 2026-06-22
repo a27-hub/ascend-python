@@ -57,7 +57,7 @@ torch_npu.npu_dynamic_dual_level_mx_quant(input, *, smooth_scale=None, round_mod
 ## 参数说明
 
 - **input**（`Tensor`）：必选参数，表示待量化的数据，对应公式中的$x_{i}$，支持1-7维，最后一维必须是偶数。支持非连续Tensor。数据格式支持ND。数据类型支持`bfloat16`、`float16`。不支持空Tensor。
-- \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：代表其之前的变量是位置相关，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **smooth\_scale**（`Tensor`）：可选参数，当前该功能暂不支持，传入默认值即可。
 - **round\_mode**（`str`）：可选参数，表示数据转换模式，对应公式中的$round\_mode$，支持\{"rint", "round", 'floor'\}，默认值为"rint"。
 
