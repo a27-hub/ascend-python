@@ -1,8 +1,5 @@
 # at_npu::native::empty_with_swapped_memory
 
-> [!NOTICE]  
-> 该接口计划废弃。
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
