@@ -96,11 +96,12 @@ static bool CheckV2Case(int hidden_dim, int64_t expert_num, at::IntArrayRef acti
     return false;
 }
 
-tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &expert_idx,
-    const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, int64_t active_num,
+tensor_list npu_moe_init_routing_v2_symint(const at::Tensor &x, const at::Tensor &expert_idx,
+    const c10::optional<at::Tensor> &scale, const c10::optional<at::Tensor> &offset, c10::SymInt active_num,
     int64_t expert_capacity, int64_t expert_num, int64_t drop_pad_mode, int64_t expert_tokens_num_type,
     bool expert_tokens_num_flag, int64_t quant_mode, at::IntArrayRef active_expert_range, int64_t row_idx_type,
     c10::optional<int64_t> x_dtype) {
+    int64_t active_num_int = active_num.expect_int();
 #if !VERSION_BETWEEN(V2R7, VERSION_NEWEST)
     // 小于2.7的版本不支持MXFP8量化需要的float8_e8m0fnu类型
     TORCH_CHECK(!IsQuantModeMXFP8(quant_mode),
@@ -200,7 +201,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         }
         expanded_scale_len = expert_num * expert_capacity;
     } else {  // Dropless
-        expanded_scale_len = (active_num <= 0) ? bs * k : std::min<int64_t>(active_num, bs * k);
+        expanded_scale_len = (active_num_int <= 0) ? bs * k : std::min<int64_t>(active_num_int, bs * k);
         switch (quant_mode) {
 #if VERSION_BETWEEN(V2R7, VERSION_NEWEST)
             case QUANT_MODE_MXFP8_E5M2:
@@ -277,7 +278,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         EXEC_NPU_CMD(aclnnMoeInitRoutingV2,
             x,
             expert_idx,
-            active_num,
+            active_num_int,
             expert_capacity,
             expert_num,
             drop_pad_mode,
@@ -361,7 +362,7 @@ tensor_list npu_moe_init_routing_v2(const at::Tensor &x, const at::Tensor &exper
         expert_idx,
         scale_wrapper,
         p_offset,
-        active_num,
+        active_num_int,
         expert_capacity,
         expert_num,
         drop_pad_mode,
