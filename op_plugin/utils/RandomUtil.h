@@ -17,6 +17,7 @@
 #include <ATen/Tensor.h>
 #include <cstdint>
 #include <vector>
+#include "torch_npu/csrc/core/npu/NpuVariables.h"
 
 namespace op_plugin {
 namespace utils {
