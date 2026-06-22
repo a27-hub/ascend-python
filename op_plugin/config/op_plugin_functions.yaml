@@ -6570,7 +6570,7 @@ custom:
     op_api: all_version
     exposed: all_version
 
-  - func: npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, int[2] active_expert_range=[], int row_idx_type=0, int? x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
+  - func: npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, SymInt active_num=-1, SymInt expert_capacity=-1, SymInt expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, SymInt[2] active_expert_range=[], int row_idx_type=0, int? x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
   - func: npu_moe_init_routing_quant(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=1024, int expert_capacity=0, int expert_num=256, int drop_pad_mode=0, int expert_tokens_num_mode=0, bool expert_tokens_before_capacity_flag=False, int quant_mode=1) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
@@ -7709,6 +7709,9 @@ symint:
     op_api: all_version
 
   - func: npu_dense_lightning_indexer_softmax_lse(Tensor query_index, Tensor key_index, Tensor weights, *, SymInt[]? actual_seq_qlen=None, SymInt[]? actual_seq_klen=None, str? layout='BSND', int? sparse_mode=3, int? pre_tokens=9223372036854775807, int? next_tokens=9223372036854775807) -> (Tensor, Tensor)
+    op_api: all_version
+
+  - func: npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, SymInt active_num=-1, SymInt expert_capacity=-1, SymInt expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, SymInt[2] active_expert_range=[], int row_idx_type=0, int? x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
 quant:
