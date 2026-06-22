@@ -2518,6 +2518,7 @@ official:
 
   - func: gru.input(Tensor input, Tensor hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, bool batch_first) -> (Tensor, Tensor)
     acl_op: all_version
+    op_api: all_version
 
   - func: gt.Scalar(Tensor self, Scalar other) -> Tensor
     acl_op: all_version
