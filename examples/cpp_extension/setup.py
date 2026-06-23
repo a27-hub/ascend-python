@@ -34,7 +34,7 @@ def get_npu_arch():
                 continue
             match = re.search(r'^\s*(\d+)\s+([A-Za-z0-9]+)',line)
             if match:
-                chip_name = match.group(1)
+                chip_name = match.group(2)
                 break
         
         if not chip_name:
