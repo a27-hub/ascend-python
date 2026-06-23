@@ -50,6 +50,17 @@ class LazyFusionFlags {
   std::vector<std::string> disable_ops;
   std::vector<std::string> enable_ops;
   std::vector<std::string> enable_ops_only;
+
+  // foreach launch-bound gate. A _foreach_ op carries a list of N independently
+  // allocated tensors; DVM addresses one contiguous buffer per kernel, so it
+  // emits one kernel per tensor (launch-bound when N is large and tensors are
+  // small, e.g. optimizer states), whereas native aclnn foreach groups up to
+  // ~48 tensors per kernel via multi-tensor-apply. Keep the DVM path only when
+  // the list is short (<= foreach_max_tensors) or every tensor is large enough
+  // to be compute/bandwidth-bound (numel >= foreach_min_numel); otherwise fall
+  // back to native. Set foreach_max_tensors very large to always use DVM.
+  uint64_t foreach_max_tensors{8};
+  uint64_t foreach_min_numel{65536};
 };
 }  // namespace lazy_fusion
 #endif  // DVM_LAZY_FUSION_FLAGS_H

@@ -414,7 +414,30 @@ bool BinaryTensor(const at::Tensor &self, const at::Tensor &other, dvm::BinaryOp
   return true;
 }
 
+// A _foreach_ op carries a list of N independently-allocated tensors. DVM's
+// vgraph addresses a single contiguous buffer per kernel, so it emits one kernel
+// per tensor (the after-split step). That is launch-bound when N is large and
+// the tensors are small (e.g. optimizer states), whereas native aclnn foreach
+// groups up to ~48 tensors per kernel via multi-tensor-apply. Keep the DVM path
+// only when the list is short or every tensor is large enough to be
+// compute/bandwidth-bound; otherwise bail so the caller falls back to native.
+bool ForeachWorthFusing(at::TensorList self) {
+  const auto &flags = g_lazy_fusion_manager.flags_;
+  if (self.size() <= flags.foreach_max_tensors) {
+    return true;
+  }
+  for (const auto &t : self) {
+    if (static_cast<size_t>(t.numel()) < flags.foreach_min_numel) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ForeachBinaryScalar(at::TensorList self, const at::Scalar& scalar, dvm::BinaryOpType op_type) {
+  if (!ForeachWorthFusing(self)) {
+    return false;
+  }
   for (size_t i = 0; i < self.size(); ++i) {
     if (!InputCheck(self[i])) {
       return false;
@@ -434,6 +457,9 @@ bool ForeachBinaryScalar(at::TensorList self, const at::Scalar& scalar, dvm::Bin
 }
 
 bool ForeachBinaryScalar(at::TensorList self, at::ArrayRef<at::Scalar> scalars, dvm::BinaryOpType op_type) {
+  if (!ForeachWorthFusing(self)) {
+    return false;
+  }
   if (scalars.size() != self.size()) {
     return false;
   }
@@ -454,6 +480,9 @@ bool ForeachBinaryScalar(at::TensorList self, at::ArrayRef<at::Scalar> scalars, 
 
 bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
                  const at::TensorList tensors2, const at::Scalar &scalar, dvm::BinaryOpType op_type) {
+  if (!ForeachWorthFusing(input)) {
+    return false;
+  }
   float scalar_value = 1.0f;
   if (tensors1.size() != input.size() || tensors2.size() != input.size() || !GetScalarValue(scalar, &scalar_value)) {
     return false;
@@ -483,6 +512,10 @@ bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
 
 bool ForeachAddc(const at::TensorList input, const at::TensorList tensors1,
                  const at::TensorList tensors2, at::ArrayRef<at::Scalar> scalars, dvm::BinaryOpType op_type) {
+  // No ForeachWorthFusing gate here: this ScalarList overload serves
+  // _foreach_addcdiv_.ScalarList (AdamW param update), which op-plugin does NOT group
+  // natively (always per-tensor addcdiv_), so DVM's fused DvmDivMulAdd is at least as
+  // fast; bailing to native would only pick the slower per-tensor path.
   if (tensors1.size() != input.size() || tensors2.size() != input.size() || scalars.size() != input.size()) {
     return false;
   }
@@ -1566,13 +1599,43 @@ bool BatchNormVectorCheck(const c10::optional<at::Tensor> &tensor, int64_t chann
   const c10::optional<at::Tensor> & save_mean, const c10::optional<at::Tensor> & save_invstd,
   bool train, double eps, ::std::array<bool,3> output_mask) {
   static auto enable = IsEnabled("native_batch_norm_backward", Level::kO2);
-  if (!enable || train || grad_out.scalar_type() != at::ScalarType::Float || input.scalar_type() != at::ScalarType::Float ||
+  if (!enable || grad_out.scalar_type() != at::ScalarType::Float || input.scalar_type() != at::ScalarType::Float ||
       grad_out.scalar_type() != input.scalar_type() || input.dim() < 2 || input.dim() > 4 ||
       !NpuCheck(grad_out, input, weight, running_mean, running_var)) {
     return op_api::native_batch_norm_backward(
       grad_out, input, weight, running_mean, running_var, save_mean, save_invstd, train, eps, output_mask);
   }
   auto channels = input.size(1);
+
+  if (train) {
+    // === Training BatchNorm backward ===
+    if (!save_mean.has_value() || !save_invstd.has_value() ||
+        !BatchNormVectorCheck(weight, channels) ||
+        !BatchNormVectorCheck(save_mean, channels) ||
+        !BatchNormVectorCheck(save_invstd, channels) ||
+        !NpuCheck(save_mean.value(), save_invstd.value())) {
+      return op_api::native_batch_norm_backward(
+        grad_out, input, weight, running_mean, running_var, save_mean, save_invstd, train, eps, output_mask);
+    }
+    auto reduce_res = op_api::batch_norm_backward_reduce(
+      grad_out, input, save_mean.value(), save_invstd.value(), weight,
+      output_mask[0], output_mask[1], output_mask[2]);
+    at::Tensor sum_dy = std::get<0>(reduce_res);
+    at::Tensor sum_dy_xmu = std::get<1>(reduce_res);
+    auto rstd = op_api::reciprocal(
+      op_api::sqrt(op_api::add(save_invstd.value(), at::Scalar(eps), at::Scalar(1))));
+    at::Tensor grad_input;
+    at::Tensor grad_weight = output_mask[1] ? op_api::mul(sum_dy_xmu, rstd) : at::Tensor();
+    at::Tensor grad_bias = output_mask[2] ? std::get<3>(reduce_res) : at::Tensor();
+    if (output_mask[0]) {
+      auto count = at::full({1},
+        static_cast<double>(input.numel() / channels), input.options().dtype(at::kFloat));
+      grad_input = lazy_fusion::batch_norm_backward_elemt(
+        grad_out, input, save_mean.value(), rstd, weight, sum_dy, sum_dy_xmu, count);
+    }
+    DumpOp("native_batch_norm_backward", grad_out, input, weight, save_mean, save_invstd, train, eps);
+    return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+  }
   if (!BatchNormVectorCheck(weight, channels) ||
       !BatchNormVectorCheck(running_mean, channels) ||
       !BatchNormVectorCheck(running_var, channels)) {
@@ -2009,7 +2072,7 @@ at::Tensor addmm(const at::Tensor & self, const at::Tensor & mat1, const at::Ten
 // ===================== Foreach =====================
 std::vector<at::Tensor> _foreach_sqrt(at::TensorList tensors) {
   static auto enable = IsEnabled("_foreach_sqrt");
-  if (!enable) {
+  if (!enable || !ForeachWorthFusing(tensors)) {
     return op_api::_foreach_sqrt(tensors);
   }
   for (size_t i = 0; i < tensors.size(); ++i) {
@@ -2030,7 +2093,7 @@ std::vector<at::Tensor> _foreach_sqrt(at::TensorList tensors) {
 
 void _foreach_sqrt_(at::TensorList tensors) {
   static auto enable = IsEnabled("_foreach_sqrt_");
-  if (!enable) {
+  if (!enable || !ForeachWorthFusing(tensors)) {
     op_api::_foreach_sqrt_(tensors);
     return;
   }
