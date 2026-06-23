@@ -2,7 +2,6 @@ import os
 import glob
 import subprocess
 import re
-import shutil
 import sysconfig
 from distutils.errors import CompileError
 from distutils.spawn import find_executable
@@ -21,7 +20,7 @@ source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True
 def get_npu_arch():
     """Get NPU architecture version from npu-smi info."""
     try:
-        result = shutil.which(
+        result = subprocess.run( # nosec B607
             ["npu-smi", "info"], capture_output=True, text=True, check=True
         )
         output = result.stdout
@@ -143,3 +142,4 @@ setup(
     packages=find_packages(),
     cmdclass={"build_ext": AscendBuildExtension.with_options(use_ninja=USE_NINJA)},
 )
+
