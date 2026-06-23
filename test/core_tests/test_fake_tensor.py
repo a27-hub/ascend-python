@@ -4069,7 +4069,7 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             self.assertEqual(v_out_before_quant.shape, torch.Size([B * S, Nv * D]))
             self.assertEqual(v_out_before_quant.dtype, dtype)
 
-    def test_npu_qkv_rms_norm_rope_cache_with_kscale_meta(self):
+    def test_npu_qkv_rms_norm_rope_cache_with_k_scale_meta(self):
         T, Nq, Nk, Nv, D = 4, 8, 2, 2, 128
         block_num, block_size, max_seq_len, batch = 10, 16, 32, 2
         with FakeTensorMode():
@@ -4087,9 +4087,10 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             k_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
             v_scale = torch.empty(Nv, dtype=torch.float32).npu()
 
-            q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
+            q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
                 qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
                 k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                "TND",
                 q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
             self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))
@@ -4097,7 +4098,16 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             self.assertEqual(q_scale.shape, torch.Size([T, Nq]))
             self.assertEqual(q_scale.dtype, torch.float32)
 
-    def test_npu_qkv_rms_norm_rope_cache_with_kscale_functional_meta(self):
+            qkv_ntd = torch.empty(Nq + Nk + Nv, T, D, dtype=torch.bfloat16).npu()
+            q_out_ntd, q_scale_ntd = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                qkv_ntd, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
+                k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                "NTD",
+                q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
+            self.assertEqual(q_out_ntd.shape, torch.Size([Nq, T, D]))
+            self.assertEqual(q_scale_ntd.shape, torch.Size([Nq, T]))
+
+    def test_npu_qkv_rms_norm_rope_cache_with_k_scale_functional_meta(self):
         T, Nq, Nk, Nv, D = 4, 8, 2, 2, 128
         block_num, block_size, max_seq_len, batch = 10, 16, 32, 2
         with FakeTensorMode():
@@ -4116,9 +4126,10 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             v_scale = torch.empty(Nv, dtype=torch.float32).npu()
 
             q_out, q_scale, k_cache_out, v_cache_out, k_scale_cache_out = \
-                torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale_functional(
+                torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale_functional(
                     qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
                     k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                    "TND",
                     q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
             self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))

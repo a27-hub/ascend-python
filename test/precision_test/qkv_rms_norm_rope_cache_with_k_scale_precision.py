@@ -1,4 +1,4 @@
-"""Precision checker for torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale.
+"""Precision checker for torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale.
 
 The script builds inputs with the design asset ``inputs.py``, computes the CPU
 numpy golden with ``golden.py``, runs the op path, and checks that the number
@@ -10,8 +10,8 @@ outputs so the golden calculation and compare/reporting path can be tested
 without executing the NPU kernel.
 
 Example:
-    python3 test/precision_test/qkv_rms_norm_rope_cache_with_kscale_precision.py
-    python3 test/precision_test/qkv_rms_norm_rope_cache_with_kscale_precision.py --case smoke --mode inplace
+    python3 test/precision_test/qkv_rms_norm_rope_cache_with_k_scale_precision.py
+    python3 test/precision_test/qkv_rms_norm_rope_cache_with_k_scale_precision.py --case smoke --mode inplace
 
 The default asset directory is this script's directory. Override it with
 ``--assets-dir`` if the assets are elsewhere.
@@ -74,9 +74,11 @@ def load_assets(assets_dir):
 
 def build_cases(inputs_mod):
     cases = []
-    cases.append(("smoke", inputs_mod.make_inputs(1, [1], 16, 2, 2)))
+    cases.append(("smoke_ntd", inputs_mod.make_inputs(1, [1], 16, 2, 2)))
+    cases.append(("smoke_tnd", inputs_mod.make_inputs(1, [1], 16, 2, 2, input_layout="TND")))
     cases.append(("normal", inputs_mod.make_inputs(1, [128], 32, 4, 4, seed=1)))
     cases.append(("multi_batch", inputs_mod.make_inputs(2, [2, 7], 16, 2, 2, seed=2)))
+    cases.append(("multi_batch_tnd", inputs_mod.make_inputs(2, [2, 7], 16, 2, 2, seed=8, input_layout="TND")))
     cases.append(("head_combo", inputs_mod.make_inputs(1, [64], 64, 8, 8, seed=3)))
 
     inp = inputs_mod.make_inputs(1, [8], 16, 2, 2, seed=4, max_slot=60)
@@ -95,13 +97,11 @@ def build_cases(inputs_mod):
 
 def expected_outputs(inp, golden_mod):
     q_out, q_scale, k_cache, v_cache, k_scale_cache = (
-        golden_mod.qkv_rms_norm_rope_cache_with_kscale_golden(**inp)
+        golden_mod.qkv_rms_norm_rope_cache_with_k_scale_golden(**inp)
     )
     return {
-        # golden.py uses [Nq, T, D] / [Nq, T], while torch_npu returns
-        # [T, Nq, D] / [T, Nq]. Keep the layout conversion explicit here.
-        "q_out": np.transpose(np.asarray(q_out).astype(np.float32), (1, 0, 2)),
-        "q_scale": np.transpose(np.asarray(q_scale, dtype=np.float32), (1, 0)),
+        "q_out": np.asarray(q_out).astype(np.float32),
+        "q_scale": np.asarray(q_scale, dtype=np.float32),
         "k_cache": np.asarray(k_cache).astype(np.float32),
         "v_cache": np.asarray(v_cache).astype(np.float32),
         "k_scale_cache": np.asarray(k_scale_cache, dtype=np.float32),
@@ -123,7 +123,7 @@ def numpy_to_torch(array, device, dtype=None):
 
 def make_torch_inputs(inp, golden_mod, device):
     return {
-        "qkv": numpy_to_torch(np.transpose(inp["qkv"], (1, 0, 2)), device, torch.bfloat16),
+        "qkv": numpy_to_torch(inp["qkv"], device, torch.bfloat16),
         "q_gamma": numpy_to_torch(inp["q_gamma"], device, torch.float32),
         "k_gamma": numpy_to_torch(inp["k_gamma"], device, torch.float32),
         "cos_sin": numpy_to_torch(inp["cos_sin"], device, torch.float32),
@@ -134,6 +134,7 @@ def make_torch_inputs(inp, golden_mod, device):
         "cu_seq_len": numpy_to_torch(inp["cu_seq_len"], device, torch.int32),
         "actual_seq_lens": numpy_to_torch(inp["actual_seq_lens"], device, torch.int32),
         "head_nums": list(inp["head_nums"]),
+        "input_layout": inp.get("input_layout", "NTD"),
         "q_rotation": numpy_to_torch(inp["q_rotation"], device, torch.bfloat16),
         "k_rotation": numpy_to_torch(inp["k_rotation"], device, torch.bfloat16),
         "v_scale": numpy_to_torch(inp["v_scale"], device, torch.float32),
@@ -147,11 +148,14 @@ def tensor_to_numpy(tensor):
 
 def zero_outputs(inp):
     n_q, _, _ = inp["head_nums"]
-    total_tokens = int(inp["qkv"].shape[1])
+    input_layout = inp.get("input_layout", "NTD")
+    total_tokens = int(inp["qkv"].shape[0] if input_layout == "TND" else inp["qkv"].shape[1])
     head_dim = int(inp["qkv"].shape[2])
+    q_out_shape = (total_tokens, n_q, head_dim) if input_layout == "TND" else (n_q, total_tokens, head_dim)
+    q_scale_shape = (total_tokens, n_q) if input_layout == "TND" else (n_q, total_tokens)
     return {
-        "q_out": np.zeros((total_tokens, n_q, head_dim), dtype=np.float32),
-        "q_scale": np.zeros((total_tokens, n_q), dtype=np.float32),
+        "q_out": np.zeros(q_out_shape, dtype=np.float32),
+        "q_scale": np.zeros(q_scale_shape, dtype=np.float32),
         "k_cache": np.zeros_like(np.asarray(inp["k_cache"], dtype=np.float32)),
         "v_cache": np.zeros_like(np.asarray(inp["v_cache"], dtype=np.float32)),
         "k_scale_cache": np.zeros_like(np.asarray(inp["k_scale_cache"], dtype=np.float32)),
@@ -169,20 +173,20 @@ def run_npu_op(inp, golden_mod, mode, device):
     with torch.no_grad():
         if mode == "inplace":
             # Temporarily disabled while validating golden/compare with zero_outputs.
-            q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
+            q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
                 t["qkv"], t["q_gamma"], t["k_gamma"], t["cos_sin"], t["slot_mapping"],
                 t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["actual_seq_lens"],
-                t["head_nums"],
+                t["head_nums"], t["input_layout"],
                 q_rotation=t["q_rotation"], k_rotation=t["k_rotation"], v_scale=t["v_scale"],
                 epsilon=t["epsilon"],
             )
             outputs = q_out, q_scale, t["k_cache"], t["v_cache"], t["k_scale_cache"]
         elif mode == "functional":
             # Temporarily disabled while validating golden/compare with zero_outputs.
-            outputs = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale_functional(
+            outputs = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale_functional(
                 t["qkv"], t["q_gamma"], t["k_gamma"], t["cos_sin"], t["slot_mapping"],
                 t["k_cache"], t["v_cache"], t["k_scale_cache"], t["cu_seq_len"], t["actual_seq_lens"],
-                t["head_nums"],
+                t["head_nums"], t["input_layout"],
                 q_rotation=t["q_rotation"], k_rotation=t["k_rotation"], v_scale=t["v_scale"],
                 epsilon=t["epsilon"],
             )

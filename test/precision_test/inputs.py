@@ -13,13 +13,15 @@ from golden import (
     cast_to_e4m3fn_sat_rint,
     e4m3fn_to_uint8,
     apply_half_split_rope,
-    qkv_rms_norm_rope_cache_with_kscale_golden,
+    qkv_rms_norm_rope_cache_with_k_scale_golden,
 )
 
 
-def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=None, actual_seq_lens=None):
+def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=None,
+                actual_seq_lens=None, input_layout="NTD"):
     rng = np.random.default_rng(seed)
     assert len(seq_lens) == B
+    assert input_layout in ("NTD", "TND")
     T = int(sum(seq_lens))
     cu_seq_len = np.zeros(B + 1, dtype=np.int32)
     cu_seq_len[1:] = np.cumsum(seq_lens)
@@ -31,7 +33,8 @@ def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=
     max_seq_len = int(max(actual_seq_lens))
 
     H = Nq + Nk + Nv
-    qkv = to_bf16(rng.standard_normal((H, T, D)).astype(np.float32))
+    qkv_shape = (T, H, D) if input_layout == "TND" else (H, T, D)
+    qkv = to_bf16(rng.standard_normal(qkv_shape).astype(np.float32))
     q_gamma = rng.standard_normal(D).astype(np.float32)
     k_gamma = rng.standard_normal(D).astype(np.float32)
     cos_sin = rng.standard_normal((max_seq_len, D)).astype(np.float32)
@@ -56,7 +59,7 @@ def make_inputs(B, seq_lens, Nq, Nk, Nv, D=128, block_size=16, seed=0, max_slot=
         slot_mapping=slot_mapping, k_cache=k_cache, v_cache=v_cache,
         k_scale_cache=k_scale_cache, cu_seq_len=cu_seq_len, actual_seq_lens=actual_seq_lens,
         q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale,
-        head_nums=[Nq, Nk, Nv], epsilon=1e-6,
+        head_nums=[Nq, Nk, Nv], input_layout=input_layout, epsilon=1e-6,
     )
 
 
@@ -64,9 +67,10 @@ def run(name, inp):
     k_in = inp["k_cache"].copy()
     v_in = inp["v_cache"].copy()
     q_out, q_scale, k_cache, v_cache, k_scale_cache = \
-        qkv_rms_norm_rope_cache_with_kscale_golden(**inp)
+        qkv_rms_norm_rope_cache_with_k_scale_golden(**inp)
 
-    T = inp["qkv"].shape[1]
+    input_layout = inp.get("input_layout", "NTD")
+    T = inp["qkv"].shape[0] if input_layout == "TND" else inp["qkv"].shape[1]
     Nq, Nk, Nv = inp["head_nums"]
     D = inp["qkv"].shape[2]
     bs = inp["k_cache"].shape[2]
@@ -102,6 +106,7 @@ def run(name, inp):
 def main():
     # smoke: B=1, S=1
     run("smoke", make_inputs(1, [1], 16, 2, 2))
+    run("smoke-tnd", make_inputs(1, [1], 16, 2, 2, input_layout="TND"))
 
     # normal: B=1, S=128
     run("normal", make_inputs(1, [128], 32, 4, 4, seed=1))

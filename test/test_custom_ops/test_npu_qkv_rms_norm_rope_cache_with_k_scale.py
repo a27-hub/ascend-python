@@ -6,8 +6,12 @@ from torch_npu.testing.common_utils import SupportedDevices
 
 class TestNPUQkvRmsNormRopeCacheWithKScale(TestCase):
 
-    def _generate_inputs(self, T=4, Nq=8, Nk=2, Nv=2, D=128, BlockNum=10, BlockSize=16, MaxSeqLen=32, Batch=2):
-        qkv = torch.randn(T, Nq + Nk + Nv, D, dtype=torch.bfloat16, device='npu')
+    def _generate_inputs(self, T=4, Nq=8, Nk=2, Nv=2, D=128, BlockNum=10, BlockSize=16, MaxSeqLen=32, Batch=2,
+                         input_layout="TND"):
+        if input_layout == "TND":
+            qkv = torch.randn(T, Nq + Nk + Nv, D, dtype=torch.bfloat16, device='npu')
+        else:
+            qkv = torch.randn(Nq + Nk + Nv, T, D, dtype=torch.bfloat16, device='npu')
         q_gamma = torch.randn(D, dtype=torch.float32, device='npu')
         k_gamma = torch.randn(D, dtype=torch.float32, device='npu')
         cos_sin = torch.randn(MaxSeqLen, D, dtype=torch.float32, device='npu')
@@ -25,16 +29,18 @@ class TestNPUQkvRmsNormRopeCacheWithKScale(TestCase):
         k_rotation = torch.randn(D, D, dtype=torch.bfloat16, device='npu')
         v_scale = torch.ones(Nv, dtype=torch.float32, device='npu')
         return (qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
-                k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, q_rotation, k_rotation, v_scale)
+                k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, input_layout, q_rotation, k_rotation, v_scale)
 
     @SupportedDevices(['Ascend950'])
     def test_normal_inplace(self, device="npu"):
         (qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
-         k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, q_rotation, k_rotation, v_scale) = self._generate_inputs()
+         k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, input_layout, q_rotation, k_rotation, v_scale) = \
+            self._generate_inputs()
 
-        q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
+        q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
             qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
             k_cache, v_cache, k_scale_cache, cu_seq_len, actual_seq_lens, head_nums,
+            input_layout,
             q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
         T, Nq, Nk, Nv, D = qkv.shape[0], head_nums[0], head_nums[1], head_nums[2], qkv.shape[2]
@@ -46,12 +52,14 @@ class TestNPUQkvRmsNormRopeCacheWithKScale(TestCase):
     @SupportedDevices(['Ascend950'])
     def test_normal_functional(self, device="npu"):
         (qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
-         k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, q_rotation, k_rotation, v_scale) = self._generate_inputs()
+         k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, input_layout, q_rotation, k_rotation, v_scale) = \
+            self._generate_inputs()
 
         q_out, q_scale, k_cache_out, v_cache_out, k_scale_cache_out = \
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale_functional(
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale_functional(
                 qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
                 k_cache, v_cache, k_scale_cache, cu_seq_len, actual_seq_lens, head_nums,
+                input_layout,
                 q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
 
         T, Nq, Nk, Nv, D = qkv.shape[0], head_nums[0], head_nums[1], head_nums[2], qkv.shape[2]
@@ -69,60 +77,84 @@ class TestNPUQkvRmsNormRopeCacheWithKScale(TestCase):
         self.assertEqual(k_scale_cache_out.dtype, torch.float32)
 
     @SupportedDevices(['Ascend950'])
+    def test_ntd_output_layout(self, device="npu"):
+        (qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
+         k_scale_cache, cu_seq_len, actual_seq_lens, head_nums, input_layout, q_rotation, k_rotation, v_scale) = \
+            self._generate_inputs(input_layout="NTD")
+
+        q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+            qkv, q_gamma, k_gamma, cos_sin, slot_mapping,
+            k_cache, v_cache, k_scale_cache, cu_seq_len, actual_seq_lens, head_nums,
+            input_layout,
+            q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
+
+        T, Nq, D = qkv.shape[1], head_nums[0], qkv.shape[2]
+        self.assertEqual(q_out.shape, (Nq, T, D))
+        self.assertEqual(q_scale.shape, (Nq, T))
+
+    @SupportedDevices(['Ascend950'])
     def test_missing_q_rotation(self, device="npu"):
         inputs = self._generate_inputs()
         with self.assertRaisesRegex(RuntimeError, "q_rotation"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:11], q_rotation=None, k_rotation=inputs[12], v_scale=inputs[13])
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:12], q_rotation=None, k_rotation=inputs[13], v_scale=inputs[14])
 
     @SupportedDevices(['Ascend950'])
     def test_missing_k_rotation(self, device="npu"):
         inputs = self._generate_inputs()
         with self.assertRaisesRegex(RuntimeError, "k_rotation"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:11], q_rotation=inputs[11], k_rotation=None, v_scale=inputs[13])
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:12], q_rotation=inputs[12], k_rotation=None, v_scale=inputs[14])
 
     @SupportedDevices(['Ascend950'])
     def test_missing_v_scale(self, device="npu"):
         inputs = self._generate_inputs()
         with self.assertRaisesRegex(RuntimeError, "v_scale"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:11], q_rotation=inputs[11], k_rotation=inputs[12], v_scale=None)
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:12], q_rotation=inputs[12], k_rotation=inputs[13], v_scale=None)
 
     @SupportedDevices(['Ascend950'])
     def test_invalid_head_nums_length(self, device="npu"):
         inputs = self._generate_inputs()
         with self.assertRaisesRegex(RuntimeError, "head_nums"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:10], head_nums=[1, 2],
-                q_rotation=inputs[11], k_rotation=inputs[12], v_scale=inputs[13])
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:10], head_nums=[1, 2], input_layout=inputs[11],
+                q_rotation=inputs[12], k_rotation=inputs[13], v_scale=inputs[14])
 
     @SupportedDevices(['Ascend950'])
     def test_nv_not_equal_nk(self, device="npu"):
         inputs = self._generate_inputs()
         with self.assertRaisesRegex(RuntimeError, "Nv"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:10], head_nums=[4, 2, 3],
-                q_rotation=inputs[11], k_rotation=inputs[12], v_scale=inputs[13])
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:10], head_nums=[4, 2, 3], input_layout=inputs[11],
+                q_rotation=inputs[12], k_rotation=inputs[13], v_scale=inputs[14])
 
     @SupportedDevices(['Ascend950'])
     def test_actual_seq_lens_shape_mismatch(self, device="npu"):
         inputs = self._generate_inputs()
         actual_seq_lens_wrong = torch.ones(inputs[8].numel(), dtype=torch.int32, device='npu')
         with self.assertRaisesRegex(RuntimeError, "actual_seq_lens"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
-                *inputs[:9], actual_seq_lens_wrong, inputs[10],
-                q_rotation=inputs[11], k_rotation=inputs[12], v_scale=inputs[13])
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:9], actual_seq_lens_wrong, inputs[10], inputs[11],
+                q_rotation=inputs[12], k_rotation=inputs[13], v_scale=inputs[14])
+
+    @SupportedDevices(['Ascend950'])
+    def test_invalid_input_layout(self, device="npu"):
+        inputs = self._generate_inputs()
+        with self.assertRaisesRegex(RuntimeError, "input_layout"):
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                *inputs[:10], inputs[10], "tnd",
+                q_rotation=inputs[12], k_rotation=inputs[13], v_scale=inputs[14])
 
     @SupportedDevices(['Ascend950'])
     def test_qkv_shape_mismatch(self, device="npu"):
         inputs = self._generate_inputs()
         qkv_wrong = torch.randn(4, 5, 128, dtype=torch.bfloat16, device='npu')
         with self.assertRaisesRegex(RuntimeError, "qkv"):
-            torch_npu.npu_qkv_rms_norm_rope_cache_with_kscale(
+            torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
                 qkv_wrong, inputs[1], inputs[2], inputs[3], inputs[4],
-                inputs[5], inputs[6], inputs[7], inputs[8], inputs[9], inputs[10],
-                q_rotation=inputs[11], k_rotation=inputs[12], v_scale=inputs[13])
+                inputs[5], inputs[6], inputs[7], inputs[8], inputs[9], inputs[10], inputs[11],
+                q_rotation=inputs[12], k_rotation=inputs[13], v_scale=inputs[14])
 
 
 if __name__ == "__main__":

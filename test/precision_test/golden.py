@@ -151,8 +151,8 @@ def apply_half_split_rope(y, cos_sin, cu_seq_len, actual_seq_lens):
     return np.concatenate([out_low, out_high], axis=-1)       # [T, H, D]
 
 
-def qkv_rms_norm_rope_cache_with_kscale_golden(
-    qkv,            # [Nq+Nk+Nv, T, D]  bf16-valued (fp32 storage)
+def qkv_rms_norm_rope_cache_with_k_scale_golden(
+    qkv,            # NTD: [Nq+Nk+Nv, T, D], TND: [T, Nq+Nk+Nv, D]
     q_gamma,        # [D]               fp32
     k_gamma,        # [D]               fp32
     cos_sin,        # [MaxSeqLen, D]    fp32 (first D/2 cos, last D/2 sin)
@@ -166,6 +166,7 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     k_rotation,     # [D, D]            bf16-valued (fp32 storage), K branch
     v_scale,        # [Nv]              fp32
     head_nums,      # [Nq, Nk, Nv]
+    input_layout="NTD",
     epsilon=1e-6,
 ):
     """Return (q_out, q_scale, k_cache, v_cache, k_scale_cache).
@@ -176,14 +177,22 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     with only the touched slots updated (input/output alias semantics).
     """
     Nq, Nk, Nv = (int(head_nums[0]), int(head_nums[1]), int(head_nums[2]))
-    T = int(qkv.shape[1])
-    D = int(qkv.shape[2])  # qkv: [H, T, D]
-    assert qkv.shape[0] == Nq + Nk + Nv, "qkv.shape[0] must equal sum(head_nums)"
+    assert input_layout in ("NTD", "TND"), "input_layout must be NTD or TND"
+    qkv_f = np.asarray(qkv, dtype=np.float32)
+    if input_layout == "TND":
+        T = int(qkv_f.shape[0])
+        D = int(qkv_f.shape[2])
+        assert qkv_f.shape[1] == Nq + Nk + Nv, "qkv.shape[1] must equal sum(head_nums)"
+        qkv_t = qkv_f
+    else:
+        T = int(qkv_f.shape[1])
+        D = int(qkv_f.shape[2])  # qkv: [H, T, D]
+        assert qkv_f.shape[0] == Nq + Nk + Nv, "qkv.shape[0] must equal sum(head_nums)"
+        qkv_t = np.transpose(qkv_f, (1, 0, 2))
     assert D % 2 == 0, "D must be even (RoPE half-split)"
 
     block_size = int(k_cache.shape[2])
 
-    qkv_f = np.asarray(qkv, dtype=np.float32)
     q_gamma_f = np.asarray(q_gamma, dtype=np.float32)
     k_gamma_f = np.asarray(k_gamma, dtype=np.float32)
     q_rotation_f = to_bf16(q_rotation).astype(np.float32)  # external Q bf16 matrix
@@ -191,9 +200,9 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     slot = np.asarray(slot_mapping).astype(np.int64)
 
     # --- 1. split Q/K/V ---------------------------------------------------
-    q = np.transpose(qkv_f[0:Nq, :, :], (1, 0, 2))             # [T, Nq, D]
-    k = np.transpose(qkv_f[Nq:Nq + Nk, :, :], (1, 0, 2))       # [T, Nk, D]
-    v = np.transpose(qkv_f[Nq + Nk:Nq + Nk + Nv, :, :], (1, 0, 2))  # [T, Nv, D]
+    q = qkv_t[:, 0:Nq, :]                                      # [T, Nq, D]
+    k = qkv_t[:, Nq:Nq + Nk, :]                                # [T, Nk, D]
+    v = qkv_t[:, Nq + Nk:Nq + Nk + Nv, :]                      # [T, Nv, D]
 
     # --- 2. Q/K RMSNorm (fp32, separate gamma) ----------------------------
     q_sum_sq = np.sum(q * q, axis=-1, keepdims=True)         # [T, Nq, 1]
@@ -224,8 +233,14 @@ def qkv_rms_norm_rope_cache_with_kscale_golden(
     v_out = cast_to_e4m3fn_sat_rint(v_scaled)               # [T, Nv, D] float8_e4m3fn
 
     # --- 7. outputs ------------------------------------------------------
-    q_out = np.transpose(qk_quant[:, 0:Nq, :], (1, 0, 2)).copy()  # [Nq, T, D] float8_e4m3fn
-    q_scale = np.transpose(scale[:, 0:Nq], (1, 0)).copy().astype(np.float32)  # [Nq, T]
+    q_out_t = qk_quant[:, 0:Nq, :].copy()                       # [T, Nq, D] float8_e4m3fn
+    q_scale_t = scale[:, 0:Nq].copy().astype(np.float32)         # [T, Nq]
+    if input_layout == "TND":
+        q_out = q_out_t
+        q_scale = q_scale_t
+    else:
+        q_out = np.transpose(q_out_t, (1, 0, 2)).copy()
+        q_scale = np.transpose(q_scale_t, (1, 0)).copy()
 
     k_cache_out = np.asarray(k_cache).copy()
     v_cache_out = np.asarray(v_cache).copy()

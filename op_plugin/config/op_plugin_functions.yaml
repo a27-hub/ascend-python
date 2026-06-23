@@ -5882,10 +5882,10 @@ custom:
   - func: npu_qkv_rms_norm_rope_cache_functional(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos, Tensor sin, Tensor index, Tensor q_out, Tensor k_cache, Tensor v_cache, int[4] qkv_size, int[3] head_nums, *, Tensor? k_scale=None, Tensor? v_scale=None, Tensor? k_offset=None, Tensor? v_offset=None, float epsilon=1e-6, str cache_mode='PA_NZ', bool is_output_qkv=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: [v2.6, newest]
 
-  - func: npu_qkv_rms_norm_rope_cache_with_kscale(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos_sin, Tensor slot_mapping, Tensor(a!) k_cache, Tensor(b!) v_cache, Tensor(c!) k_scale_cache, Tensor cu_seq_len, Tensor actual_seq_lens, int[3] head_nums, *, Tensor? q_rotation=None, Tensor? k_rotation=None, Tensor? v_scale=None, float epsilon=1e-6) -> (Tensor, Tensor)
+  - func: npu_qkv_rms_norm_rope_cache_with_k_scale(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos_sin, Tensor slot_mapping, Tensor(a!) k_cache, Tensor(b!) v_cache, Tensor(c!) k_scale_cache, Tensor cu_seq_len, Tensor actual_seq_lens, int[3] head_nums, str input_layout, *, Tensor? q_rotation=None, Tensor? k_rotation=None, Tensor? v_scale=None, float epsilon=1e-6) -> (Tensor, Tensor)
     op_api: all_version
 
-  - func: npu_qkv_rms_norm_rope_cache_with_kscale_functional(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos_sin, Tensor slot_mapping, Tensor k_cache, Tensor v_cache, Tensor k_scale_cache, Tensor cu_seq_len, Tensor actual_seq_lens, int[3] head_nums, *, Tensor? q_rotation=None, Tensor? k_rotation=None, Tensor? v_scale=None, float epsilon=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
+  - func: npu_qkv_rms_norm_rope_cache_with_k_scale_functional(Tensor qkv, Tensor q_gamma, Tensor k_gamma, Tensor cos_sin, Tensor slot_mapping, Tensor k_cache, Tensor v_cache, Tensor k_scale_cache, Tensor cu_seq_len, Tensor actual_seq_lens, int[3] head_nums, str input_layout, *, Tensor? q_rotation=None, Tensor? k_rotation=None, Tensor? v_scale=None, float epsilon=1e-6) -> (Tensor, Tensor, Tensor, Tensor, Tensor)
     op_api: all_version
 
   - func: npu_batch_gather_matmul(Tensor self, Tensor x, Tensor weight_b, Tensor indices, Tensor? weight_a=None, int layer_idx=0, float scale=1e-3, int y_offset=0, int y_slice_size=-1) -> Tensor
