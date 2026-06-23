@@ -32,13 +32,13 @@ def get_npu_arch():
                 continue
             if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=',line):
                 continue
-            match = re.search(r'^\s*(\d+)\s+([A-Za-z0-9]+)',line)
+            match = re.search(r'^\s*|？\s*(\d+)\s*|?\s*([A-Za-z0-9]+)',line)
             if match:
                 chip_name = match.group(2)
                 break
         
         if not chip_name:
-            raise RuntimeError("Falied to parse chip name from npu-smi info.")
+            raise RuntimeError("Failed to parse chip name from npu-smi info.")
         
         if '950' in chip_name:
             return 'dav-3510'
@@ -50,7 +50,7 @@ def get_npu_arch():
     except FileNotFoundError:
         raise RuntimeError("npu-smi info is not found,please ensure CANN is installed")
     except subprocess.CalledProcessError as e:
-        raise RecursionError(f"Failed to excute npu-smi info:{e}")
+        raise RecursionError(f"Failed to execute npu-smi info:{e}")
     except Exception as e:
         raise RuntimeError(f"Failed get NPU architecture:{e}")
 
