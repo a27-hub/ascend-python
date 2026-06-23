@@ -17,7 +17,7 @@ USE_NINJA = os.getenv('USE_NINJA') == '1'
 source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
 
 def get_npu_arch():
-    
+
     """Get NPU architecture version from npu-smi info."""
 
     try:
@@ -32,7 +32,7 @@ def get_npu_arch():
                 continue
             if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=', line):
                 continue
-            match = re.search(r'^\s*\d+\s+([A-Za-z0-9]+)', line)
+            match = re.search(r'^\s*\|?\s*\d+\s*\|?\s*([A-Za-z0-9]+)', line) 
             if match:
                 chip_name = match.group(1)
                 break
