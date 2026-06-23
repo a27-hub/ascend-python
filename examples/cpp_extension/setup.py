@@ -142,4 +142,3 @@ setup(
     packages=find_packages(),
     cmdclass={"build_ext": AscendBuildExtension.with_options(use_ninja=USE_NINJA)},
 )
-
