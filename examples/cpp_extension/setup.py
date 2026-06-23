@@ -2,6 +2,7 @@ import os
 import glob
 import subprocess
 import re
+import shutil
 import sysconfig
 from distutils.errors import CompileError
 from distutils.spawn import find_executable
@@ -20,7 +21,7 @@ source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True
 def get_npu_arch():
     """Get NPU architecture version from npu-smi info."""
     try:
-        result = subprocess.run(
+        result = shutil.which(
             ["npu-smi", "info"], capture_output=True, text=True, check=True
         )
         output = result.stdout
