@@ -17,32 +17,37 @@ USE_NINJA = os.getenv('USE_NINJA') == '1'
 source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
 
 def get_npu_arch():
+    """Get NPU architecture version from nup-smi info."""
     try:
         result = subprocess.run(
-            ["npu-smi", "info"], capture_output=True, text=True, check=True
+            ["npu-smi" , "info"],capture_output=True, text=True, check=True
         )
-        output = result.stdout
+        output =result.stderr
+
         chip_name = None
-        pat = re.compile(r"(\d+)\s+([A-Za-z0-9]+)")
         for line in output.split('\n'):
-            match = pat.search(line)
+            if not line.split():
+                continue
+            if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=',line):
+                continue
+            match = re.search(r'^\s*（\d+）\s+([A-Za-z0-9]+)',line)
             if match:
                 chip_name = match.group(2)
                 break
+        
         if not chip_name:
-            raise RuntimeError("Failed to parse chip model from npu-smi")
-        if "950" in chip_name:
-            return "dav-3510"
-        elif "910" in chip_name:
-            return "dav-2201"
-        else:
-            raise RuntimeError(f"Unsupported new chip model {chip_name}, only 910/950 series are supported")
-    except FileNotFoundError:
-        raise RuntimeError("npu-smi info not found, please install CANN")
+            raise RuntimeError("Falied to parse chip name from npu-smi info.")
+        
+        if chip_name.startswith('Ascend960') or chip_name.startswith('950'):
+            return 'dav-3510'
+        return 'dav-2201'
+    
+    except FileExistsError:
+        raise RuntimeError("npu-smi info is not found,please ensure CANN is installed")
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to execute npu-smi info: {e}")
+        raise RecursionError(f"Failed to excute npu-smi info:{e}")
     except Exception as e:
-        raise RuntimeError(f"Failed to get architecture: {e}")
+        raise RuntimeError(f"Failed get NPU architecture:{e}")
 
 def get_dependency_paths():
     python_include = sysconfig.get_config_var("INCLUDEPY")
@@ -92,12 +97,12 @@ class AscendBuildExtension(BuildExtension):
         use_cxx11_abi = torch._C._GLIBCXX_USE_CXX11_ABI
         abi_value = "1" if use_cxx11_abi else "0"
 
-        npu_arch=get_npu_arch()
+        npu_arch=get_npu_arch
 
         compile_cmd = [
             "bisheng",
             "-x", "asc",
-            f"--npu-arch={npu_arch}", 
+            f"--npu-arch={get_npu_arch}", # A2 和A5 不一样还
             "-shared",
             "-fPIC",
             "-std=c++17",
