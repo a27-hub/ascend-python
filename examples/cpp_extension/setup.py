@@ -1,5 +1,7 @@
 import os
 import glob
+import subprocess
+import re
 import sysconfig
 from distutils.errors import CompileError
 from distutils.spawn import find_executable
@@ -14,6 +16,38 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 USE_NINJA = os.getenv('USE_NINJA') == '1'
 source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
 
+def get_npu_arch():
+    """Get NPU architecture version from nup-smi info."""
+    try:
+        result = subprocess.run(
+            ["npu-smi" , "info"],capture_output=True, text=True, check=True
+        )
+        output =result.stderr
+
+        chip_name = None
+        for line in output.split('\n'):
+            if not line.split():
+                continue
+            if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=',line):
+                continue
+            match = re.search(r'^\s*（\d+）\s+([A-Za-z0-9]+)',line)
+            if match:
+                chip_name = match.group(2)
+                break
+        
+        if not chip_name:
+            raise RuntimeError("Falied to parse chip name from npu-smi info.")
+        
+        if chip_name.startswith('Ascend960') or chip_name.startswith('950'):
+            return 'dav-3510'
+        return 'dav-2201'
+    
+    except FileExistsError:
+        raise RuntimeError("npu-smi info is not found,please ensure CANN is installed")
+    except subprocess.CalledProcessError as e:
+        raise RecursionError(f"Failed to excute npu-smi info:{e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed get NPU architecture:{e}")
 
 def get_dependency_paths():
     python_include = sysconfig.get_config_var("INCLUDEPY")
@@ -63,10 +97,12 @@ class AscendBuildExtension(BuildExtension):
         use_cxx11_abi = torch._C._GLIBCXX_USE_CXX11_ABI
         abi_value = "1" if use_cxx11_abi else "0"
 
+        npu_arch=get_npu_arch()
+
         compile_cmd = [
             "bisheng",
             "-x", "asc",
-            "--npu-arch=dav-2201",
+            f"--npu-arch={npu_arch}", # A2 和A5 不一样还
             "-shared",
             "-fPIC",
             "-std=c++17",
