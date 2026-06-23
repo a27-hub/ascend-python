@@ -5044,5 +5044,8 @@
   },
   "func: _scaled_grouped_mm_v2(Tensor mat_a, Tensor mat_b, Tensor[] scale_a, int[] recipe_a, int[] swizzle_a, Tensor[] scale_b, int[] recipe_b, int[] swizzle_b, Tensor? offs=None, Tensor? bias=None, ScalarType? out_dtype=None, int[] contraction_dim=[], bool use_fast_accum=False) -> Tensor": {
     "version": ["v2.10", "newest"]
+  },
+  "func: npu_isin_part_v1(Tensor value, Tensor index, int elements_num) -> Tensor": {
+    "version": ["v2.1", "newest"]
   }
 }

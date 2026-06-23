@@ -7613,6 +7613,9 @@ custom:
   - func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
     op_api: all_version
 
+  - func: npu_isin_part_v1(Tensor value, Tensor index, int elements_num) -> Tensor
+    op_api: [v2.1, newest]
+
 symint:
   - func: npu_gather_sparse_index_backward(Tensor grad, SymInt[] self_sizes, Tensor index) -> Tensor
     op_api: all_version
