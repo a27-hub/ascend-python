@@ -206,25 +206,27 @@ void LazyFusionKernel::CacheTensorMeta(TensorMeta *meta, const at::Tensor &tenso
   meta->data_ptr = tensor.data_ptr();
   meta->storage_offset = tensor.storage_offset();
   meta->dtype = tensor.scalar_type();
-  meta->dim = tensor.dim();
-  meta->sizes.resize(meta->dim);
-  meta->strides.resize(meta->dim);
-  for (size_t i = 0; i < meta->sizes.size(); ++i) {
-    meta->sizes[i] = tensor.size(i);
-    meta->strides[i] = tensor.stride(i);
-  }
+  auto sizes = tensor.sizes();
+  auto strides = tensor.strides();
+  meta->dim = static_cast<int64_t>(sizes.size());
+  meta->sizes.assign(sizes.begin(), sizes.end());
+  meta->strides.assign(strides.begin(), strides.end());
 }
 
 // Exact-match reuse intentionally includes shape/stride metadata so sibling views
 // that share one storage do not reuse the wrong NDObject.
 bool LazyFusionKernel::MatchTensorMeta(const TensorMeta &meta, const at::Tensor &tensor) {
-  auto dim = tensor.dim();
   if (meta.tensor_impl != tensor.unsafeGetTensorImpl() || meta.data_ptr != tensor.data_ptr() ||
-      meta.storage_offset != tensor.storage_offset() || meta.dtype != tensor.scalar_type() || meta.dim != dim) {
+      meta.storage_offset != tensor.storage_offset() || meta.dtype != tensor.scalar_type()) {
+    return false;
+  }
+  auto sizes = tensor.sizes();
+  auto strides = tensor.strides();
+  if (meta.dim != static_cast<int64_t>(sizes.size())) {
     return false;
   }
   for (size_t i = 0; i < meta.sizes.size(); ++i) {
-    if (meta.sizes[i] != tensor.size(i) || meta.strides[i] != tensor.stride(i)) {
+    if (meta.sizes[i] != sizes[i] || meta.strides[i] != strides[i]) {
       return false;
     }
   }
@@ -243,16 +245,28 @@ bool LazyFusionKernel::MatchTensorMeta(const TensorMeta &meta, const at::Tensor 
 // for `mean`. If reuse only compares at::Tensor::sizes(), the [1, C, 1, 1]
 // version could be wrongly reused when add expects [C], and the later DVM
 // shape/broadcast inference would be wrong.
-void LazyFusionKernel::CacheDvmShape(DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape) {
-  auto req_shape = shape != nullptr ? c10::IntArrayRef(shape->data, shape->size) : default_shape;
-  dvm_op->dvm_shape.resize(req_shape.size());
-  for (size_t i = 0; i < req_shape.size(); ++i) {
-    dvm_op->dvm_shape[i] = req_shape[i];
+void LazyFusionKernel::CacheDvmShape(DvmOp *dvm_op, dvm::ShapeRef *shape) {
+  // No shape override -> dvm_shape would just duplicate tensor_meta.sizes (both =
+  // tensor.sizes()), so skip materializing it; MatchDvmShape then relies on the
+  // tensor_meta.sizes comparison done by MatchTensorMeta. Only an explicit override
+  // (e.g. batch_norm_elemt feeding mean as [1,C,1,1]) is stored/compared.
+  dvm_op->has_shape_override = (shape != nullptr);
+  if (shape == nullptr) {
+    return;
   }
+  c10::IntArrayRef req_shape(shape->data, shape->size);
+  dvm_op->dvm_shape.assign(req_shape.begin(), req_shape.end());
 }
 
-bool LazyFusionKernel::MatchDvmShape(const DvmOp *dvm_op, dvm::ShapeRef *shape, c10::IntArrayRef default_shape) {
-  auto req_shape = shape != nullptr ? c10::IntArrayRef(shape->data, shape->size) : default_shape;
+bool LazyFusionKernel::MatchDvmShape(const DvmOp *dvm_op, dvm::ShapeRef *shape) {
+  bool has_override = (shape != nullptr);
+  if (dvm_op->has_shape_override != has_override) {
+    return false;
+  }
+  if (!has_override) {
+    return true;  // tensor_meta.sizes match (via MatchTensorMeta) already covers this
+  }
+  c10::IntArrayRef req_shape(shape->data, shape->size);
   if (dvm_op->dvm_shape.size() != req_shape.size()) {
     return false;
   }
@@ -265,7 +279,7 @@ bool LazyFusionKernel::MatchDvmShape(const DvmOp *dvm_op, dvm::ShapeRef *shape, 
 }
 
 bool LazyFusionKernel::MatchDvmOp(const DvmOp *dvm_op, const at::Tensor &tensor, dvm::ShapeRef *shape) {
-  return MatchTensorMeta(dvm_op->tensor_meta, tensor) && MatchDvmShape(dvm_op, shape, tensor.sizes());
+  return MatchTensorMeta(dvm_op->tensor_meta, tensor) && MatchDvmShape(dvm_op, shape);
 }
 
 void LazyFusionKernel::CacheDvmOp(torch_npu::NPUStorageImpl *storage, const at::Tensor &tensor, const TensorMeta *tensor_meta,
@@ -280,7 +294,7 @@ void LazyFusionKernel::CacheDvmOp(torch_npu::NPUStorageImpl *storage, const at::
   } else {
     CacheTensorMeta(&(p->tensor_meta), tensor);
   }
-  CacheDvmShape(p, shape, tensor.sizes());
+  CacheDvmShape(p, shape);
   p->reloadable_from_gm = reloadable_from_gm;
   storage->lazy_fusion_data_ = p;
 }
