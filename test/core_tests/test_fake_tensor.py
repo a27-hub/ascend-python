@@ -4079,6 +4079,80 @@ class TestNpuQkvRmsNormRopeCache(TestCase):
             self.assertEqual(v_out_before_quant.shape, torch.Size([B * S, Nv * D]))
             self.assertEqual(v_out_before_quant.dtype, dtype)
 
+    def test_npu_qkv_rms_norm_rope_cache_with_k_scale_meta(self):
+        T, Nq, Nk, Nv, D = 4, 8, 2, 2, 128
+        block_num, block_size, max_seq_len, batch = 10, 16, 32, 2
+        with FakeTensorMode():
+            qkv = torch.empty(T, Nq + Nk + Nv, D, dtype=torch.bfloat16).npu()
+            q_gamma = torch.empty(D, dtype=torch.float32).npu()
+            k_gamma = torch.empty(D, dtype=torch.float32).npu()
+            cos_sin = torch.empty(max_seq_len, D, dtype=torch.float32).npu()
+            slot_mapping = torch.empty(T, dtype=torch.int32).npu()
+            k_cache = torch.empty(block_num, Nk, block_size, D, dtype=torch.float8_e4m3fn).npu()
+            v_cache = torch.empty(block_num, Nv, block_size, D, dtype=torch.float8_e4m3fn).npu()
+            k_scale_cache = torch.empty(block_num, Nk, block_size, 1, dtype=torch.float32).npu()
+            cu_seq_len = torch.empty(batch + 1, dtype=torch.int32).npu()
+            actual_seq_lens = torch.empty(batch, dtype=torch.int32).npu()
+            q_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
+            k_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
+            v_scale = torch.empty(Nv, dtype=torch.float32).npu()
+
+            q_out, q_scale = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
+                k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                "TND",
+                q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
+
+            self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))
+            self.assertEqual(q_out.dtype, torch.float8_e4m3fn)
+            self.assertEqual(q_scale.shape, torch.Size([T, Nq]))
+            self.assertEqual(q_scale.dtype, torch.float32)
+
+            qkv_ntd = torch.empty(Nq + Nk + Nv, T, D, dtype=torch.bfloat16).npu()
+            q_out_ntd, q_scale_ntd = torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale(
+                qkv_ntd, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
+                k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                "NTD",
+                q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
+            self.assertEqual(q_out_ntd.shape, torch.Size([Nq, T, D]))
+            self.assertEqual(q_scale_ntd.shape, torch.Size([Nq, T]))
+
+    def test_npu_qkv_rms_norm_rope_cache_with_k_scale_functional_meta(self):
+        T, Nq, Nk, Nv, D = 4, 8, 2, 2, 128
+        block_num, block_size, max_seq_len, batch = 10, 16, 32, 2
+        with FakeTensorMode():
+            qkv = torch.empty(T, Nq + Nk + Nv, D, dtype=torch.bfloat16).npu()
+            q_gamma = torch.empty(D, dtype=torch.float32).npu()
+            k_gamma = torch.empty(D, dtype=torch.float32).npu()
+            cos_sin = torch.empty(max_seq_len, D, dtype=torch.float32).npu()
+            slot_mapping = torch.empty(T, dtype=torch.int32).npu()
+            k_cache = torch.empty(block_num, Nk, block_size, D, dtype=torch.float8_e4m3fn).npu()
+            v_cache = torch.empty(block_num, Nv, block_size, D, dtype=torch.float8_e4m3fn).npu()
+            k_scale_cache = torch.empty(block_num, Nk, block_size, 1, dtype=torch.float32).npu()
+            cu_seq_len = torch.empty(batch + 1, dtype=torch.int32).npu()
+            actual_seq_lens = torch.empty(batch, dtype=torch.int32).npu()
+            q_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
+            k_rotation = torch.empty(D, D, dtype=torch.bfloat16).npu()
+            v_scale = torch.empty(Nv, dtype=torch.float32).npu()
+
+            q_out, q_scale, k_cache_out, v_cache_out, k_scale_cache_out = \
+                torch_npu.npu_qkv_rms_norm_rope_cache_with_k_scale_functional(
+                    qkv, q_gamma, k_gamma, cos_sin, slot_mapping, k_cache, v_cache,
+                    k_scale_cache, cu_seq_len, actual_seq_lens, [Nq, Nk, Nv],
+                    "TND",
+                    q_rotation=q_rotation, k_rotation=k_rotation, v_scale=v_scale)
+
+            self.assertEqual(q_out.shape, torch.Size([T, Nq, D]))
+            self.assertEqual(q_out.dtype, torch.float8_e4m3fn)
+            self.assertEqual(q_scale.shape, torch.Size([T, Nq]))
+            self.assertEqual(q_scale.dtype, torch.float32)
+            self.assertEqual(k_cache_out.shape, k_cache.shape)
+            self.assertEqual(k_cache_out.dtype, k_cache.dtype)
+            self.assertEqual(v_cache_out.shape, v_cache.shape)
+            self.assertEqual(v_cache_out.dtype, v_cache.dtype)
+            self.assertEqual(k_scale_cache_out.shape, k_scale_cache.shape)
+            self.assertEqual(k_scale_cache_out.dtype, k_scale_cache.dtype)
+
 
 class TestNpuMoeTokenPermuteAndUnpermute(TestCase):
     def test_npu_moe_token_permute_unpermute_meta(self):
