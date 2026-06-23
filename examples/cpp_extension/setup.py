@@ -16,10 +16,9 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 USE_NINJA = os.getenv('USE_NINJA') == '1'
 source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
 
+
 def get_npu_arch():
-
     """Get NPU architecture version from npu-smi info."""
-
     try:
         result = subprocess.run(
             ["npu-smi", "info"], capture_output=True, text=True, check=True
@@ -32,7 +31,7 @@ def get_npu_arch():
                 continue
             if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=', line):
                 continue
-            match = re.search(r'^\s*\|?\s*\d+\s*\|?\s*([A-Za-z0-9]+)', line) 
+            match = re.search(r'^\s*\|?\s*\d+\s*\|?\s*([A-Za-z0-9]+)', line)
             if match:
                 chip_name = match.group(1)
                 break
@@ -53,6 +52,7 @@ def get_npu_arch():
         raise RuntimeError(f"Failed to execute npu-smi info: {e}")
     except Exception as e:
         raise RuntimeError(f"Failed get NPU architecture: {e}")
+
 
 def get_dependency_paths():
     python_include = sysconfig.get_config_var("INCLUDEPY")
@@ -107,7 +107,7 @@ class AscendBuildExtension(BuildExtension):
         compile_cmd = [
             "bisheng",
             "-x", "asc",
-            f"--npu-arch={npu_arch}", 
+            f"--npu-arch={npu_arch}",
             "-shared",
             "-fPIC",
             "-std=c++17",
