@@ -29,7 +29,8 @@ at::Tensor isclose(
 {
     TORCH_CHECK(self.scalar_type() == other.scalar_type(), self.scalar_type(), " did not match ", other.scalar_type(),
         OPS_ERROR(ErrCode::TYPE));
-    at::Tensor result = npu_preparation::apply_tensor_with_format(self.sizes(), self.options().dtype(at::kBool), ACL_FORMAT_ND);
+    auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
+    at::Tensor result = npu_preparation::apply_tensor_with_format(output_size, self.options().dtype(at::kBool), ACL_FORMAT_ND);
 
     TORCH_NPU_WARN_ONCE("Device do not support double dtype of rtol and atol now, dtype cast repalce with float.");
     auto rtol1 = static_cast<float>(rtol);

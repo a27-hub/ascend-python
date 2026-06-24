@@ -788,9 +788,7 @@ c10::SmallVector<int64_t, SIZE> isclose_output_size(const at::Tensor& self, cons
         rtol >= 0, "rtol must be greater than or equal to zero, but got ", rtol);
     TORCH_CHECK(
         atol >= 0, "atol must be greater than or equal to zero, but got ", atol);
-    return at::isFloatingType(self.scalar_type()) && equal_nan
-        ? c10::SmallVector<int64_t, SIZE>(self.sizes())
-        : broadcast_ops_npu_output_size(self, other);
+    return broadcast_ops_npu_output_size(self, other);
 }
 
 c10::SmallVector<int64_t, SIZE> nnpack_spatial_convolution_npu_output_size(const at::Tensor &input,
