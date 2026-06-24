@@ -24,7 +24,10 @@ using npu_preparation = at_npu::native::OpPreparation;
 at::Tensor npu_isin_part_v1(const at::Tensor& value, const at::Tensor& index, int64_t elements_num)
 {
     // 1. Prepare output shape
-    c10::SmallVector<int64_t, 8> output_size = {elements_num};
+{
+    TORCH_CHECK(elements_num >= 0, "elements_num must be non-negative, but got ", elements_num, OPS_ERROR(ErrCode::PARAM));
+
+    // 1. Prepare output shape
 
     // 2. Prepare output Tensor (Bool + ND format)
     at::Tensor result = npu_preparation::apply_tensor_with_format(
