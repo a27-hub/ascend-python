@@ -166,12 +166,12 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     TORCH_CHECK(dst.size() == src.size(), "dst and src size,must be equal but in realiry, the dst size is", dst.size(),
                 " and the src size is ", dst.size(), "." + OPS_ERROR(ErrCode::PARAM));
     size_t count = dst.size();
-    void *dsts[count];
-    void *srcs[count];
-    size_t dstLens[count];
-    size_t srcLens[count];
-    size_t attrsIndexes[count];
-    aclrtMemcpyBatchAttr attrs[count];
+    std::vector<void*> dsts[count];
+    std::vector<void*> srcs[count];
+    std::vector<void*> dstLens[count];
+    std::vector<void*> srcLens[count];
+    std::vector<void*> attrsIndexes[count];
+    std::vector<aclrtMemcpyBatchAttr> attrs[count];
     for (size_t i = 0; i < count; ++i) {
         aclrtMemcpyBatchAttr attr;
         aclrtMemLocation dstLoc;
@@ -211,8 +211,8 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     size_t failIdx = SIZE_MAX;
     auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);
     if (non_blocking) {
-        auto ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes,
-                                                            count, acl_stream);
+        auto ret = c10_npu::queue::LaunchBatchAsyncCopyTask(dsts.data(), dstLens.data(), srcs.data(), srcLens.data(),
+                                                            count, attrs.data(), attrsIndexes.data(),count, acl_stream);
         NPU_CHECK_ERROR(ret, "aclrtMemcpyBatchAsync");
     } else {
         aclError error = c10_npu::acl::AclrtSynchronizeStreamWithTimeout(acl_stream);
@@ -226,9 +226,21 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
                 AT_ERROR("ACL stream synchronize failed, error code:", error);
             }
         }
-        auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count,
-                                                  &failIdx);
-        NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
+        constexpr size_t ACK_SYNC_BATCH_MAX = 4096
+         for (size_t start = 0; start < count;) {
+            const size_t remain = count - start;
+            const size_t batch_cnt = remain > ACK_SYNC_BATCH_MAX ? ACK_SYNC_BATCH_MAX : remain;
+            const size_t end = start + bath_cnt;
+            std::vector<void *> batch_dsts(dsts.begin() + start, dsts.begin() + end);
+            std::vector<void *> batch_srcs(srcs.begin() + start, srcs.begin() + end);
+            std::vector<void *> dbatch_dstLens(dstLens.begin() + start, dstLens.begin() + end);
+            std::vector<void *> batch_srcLens(srcLens.begin() + start, srcLens.begin() + end);
+            std::vector<void *> batch_attrIdx(attrsIndexes.begin() + start, attrsIndexes.begin() + end);
+            std::vector<aclrtMemcpyBatchAttr> batch_attrs(attrs.begin() + start, attrs.begin() + end);
+            auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count, &failIdx);
+            NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
+            strart = end
+         }
     }
 }
 
