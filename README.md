@@ -75,3 +75,4 @@ op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的
 OpPlugin的使用许可证，详见[LICENSE](http://gitcode.com/Ascend/op-plugin/blob/master/LICENSE)。
 ## 致谢
 感谢来自社区的每一个PR，欢迎贡献Ascend Extension for TensorPipe插件！
+<!-- TTFHW CI-timing test, no-op line, closed unmerged -->
