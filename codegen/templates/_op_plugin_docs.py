@@ -507,6 +507,37 @@ tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
 
 
 _add_torch_npu_docstr(
+    "batch_norm_reduce",
+    """
+torch_npu.batch_norm_reduce(input, eps) -> (Tensor, Tensor)
+
+功能描述
+按BatchNorm通道维对输入Tensor进行规约，返回通道维上的元素和与平方和。
+
+参数说明
+input (Tensor) - 待规约的输入Tensor。
+eps (Float) - 保留参数，不参与元素和与平方和的计算。
+
+返回值说明
+两个一维float32 Tensor，分别表示元素和与平方和。输入按NCHW格式排布且shape为(N, C, H, W)时，两个输出的shape均为(C,)。
+
+约束说明
+input的维度需大于1。
+
+示例
+>>> import torch
+>>> import torch_npu
+>>> input = torch.randn(2, 3, 12, 12, dtype=torch.float32, device="npu")
+>>> sum_out, square_sum_out = torch_npu.batch_norm_reduce(input, 1e-5)
+>>> sum_out.shape
+torch.Size([3])
+>>> square_sum_out.shape
+torch.Size([3])
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_block_sparse_attention",
     """
 功能描述:
