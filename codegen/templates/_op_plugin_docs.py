@@ -507,6 +507,46 @@ tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
 
 
 _add_torch_npu_docstr(
+    "batch_norm_reduce",
+    """
+功能描述:
+按BatchNorm通道维对输入Tensor进行规约，返回通道维上的元素和sum与平方和square_sum。
+
+接口原型:
+torch_npu.batch_norm_reduce(input, eps) -> (Tensor, Tensor)
+
+参数说明:
+input (Tensor): 必选参数，表示待规约的输入Tensor。
+eps (float): 必选参数，保留参数。该参数不参与sum和square_sum的计算。
+
+输出说明:
+sum (Tensor): 输入Tensor按通道维规约后的元素和，为一维float32 Tensor，长度为通道维长度。例如，输入按NCHW格式排布且shape为(N, C, H, W)时，输出shape为(C,)。
+square_sum (Tensor): 输入Tensor按通道维规约后的平方和，为一维float32 Tensor，shape同sum。
+
+约束说明:
+input的维度需大于1。
+
+支持的型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+调用示例:
+import torch
+import torch_npu
+
+input = torch.randn(2, 3, 12, 12, dtype=torch.float32, device="npu")
+
+sum_out, square_sum_out = torch_npu.batch_norm_reduce(input, 1e-5)
+
+print("sum_out.shape:", sum_out.shape)
+print("sum_out.dtype:", sum_out.dtype)
+print("square_sum_out.shape:", square_sum_out.shape)
+print("square_sum_out.dtype:", square_sum_out.dtype)
+"""
+)
+
+
+_add_torch_npu_docstr(
     "npu_block_sparse_attention",
     """
 功能描述:
