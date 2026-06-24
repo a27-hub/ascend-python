@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/ATen.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -47,6 +48,19 @@ at::Tensor& index_add_out(
     if (!result.is_same(self)) {
         result.copy_(self);
     }
+
+    // 添加的确定性逻辑
+    if (at::globalContext().deterministicAlgorithms()) {
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back();
+        }
+        indices.emplace_back(index.to(at::kLong));
+        result.index_put_(indices, source * alpha, true);
+        return result;
+    }
+
     EXEC_NPU_CMD(aclnnIndexAdd, result, dim, index, source, alpha, result);
     return result;
 }
@@ -72,6 +86,20 @@ at::Tensor index_add(
                 source.sizes(),
                 OPS_ERROR(ErrCode::PARAM));
     at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
+
+    // 添加的确定性逻辑
+    if (at::globalContext().deterministicAlgorithms()) {
+        result.copy_(self);
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back();
+        }
+        indices.emplace_back(index.to(at::kLong));
+        result.index_put_(indices, source * alpha, true);
+        return result;
+    }
+
     EXEC_NPU_CMD(aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result.copy_(self));
     return result;
 }
@@ -81,9 +109,8 @@ at::Tensor index_add(
     at::Dimname dim,
     const at::Tensor& index,
     const at::Tensor& source,
-    const at::Scalar& alpha)
-{
+    const at::Scalar& alpha) {
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
-}
+} // namespace op_api
