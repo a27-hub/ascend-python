@@ -51,7 +51,10 @@ at::Tensor& index_add_out(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
+        ASCEND_LOGI("index_add_out: Enter deterministic path, dim=%ld, self.dim()=%ld", dim, self.dim());
         auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        ASCEND_LOGI("index_add_out: wrapped_dim=%ld", wrapped_dim);
+        
         c10::List<c10::optional<at::Tensor>> indices;
         indices.reserve(self.dim());
         for (const auto i : c10::irange(self.dim())) {
@@ -93,7 +96,10 @@ at::Tensor index_add(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
+        ASCEND_LOGI("index_add: Enter deterministic path, dim=%ld, self.dim()=%ld", dim, self.dim());
         auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        ASCEND_LOGI("index_add: wrapped_dim=%ld", wrapped_dim);
+        
         result.copy_(self);
         c10::List<c10::optional<at::Tensor>> indices;
         indices.reserve(self.dim());
