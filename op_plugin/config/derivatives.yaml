@@ -1,5 +1,10 @@
-all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10]
+all_version: [v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13]
 backward:
+- name: linalg_cholesky(Tensor self, *, bool upper=False) -> Tensor
+  self: cholesky_backward(grad, upper, result)
+  result: cholesky_jvp(self_t, result, upper)
+  version: all_version
+
 - name: npu_gather_sparse_index(Tensor input, Tensor index) -> Tensor
   input: npu_gather_sparse_index_backward(grad, input.sym_sizes(), index)
   version: all_version
@@ -30,6 +35,10 @@ backward:
   self: grad
   version: [v2.1, newest]
 
+- name: _npu_format_cast.input_dtype(Tensor self, int acl_format, int customize_dtype, int input_dtype) -> Tensor
+  self: grad
+  version: [v2.6, newest]
+
 - name: binary_cross_entropy_with_logits(Tensor self, Tensor target, Tensor? weight=None, Tensor? pos_weight=None, int reduction=Mean) -> Tensor
   self: npu_binary_cross_entropy_with_logits_backward(grad, self, target, weight, pos_weight, reduction)
   target: non_differentiable
@@ -45,12 +54,17 @@ backward:
 
 - name: kl_div(Tensor self, Tensor target, int reduction=Mean, *, bool log_target=False) -> Tensor
   self: kl_div_backward(grad, self, target, reduction, log_target)
-  target: non_differentiable
+  target: kl_div_target_backward(grad, self, target, reduction, log_target)
   version: [v2.1, newest]
 
 - name: l1_loss(Tensor self, Tensor target, int reduction=Mean) -> Tensor
   self: l1_loss_backward(grad, self, target, reduction)
   target: l1_loss_backward(grad, self, target, reduction) * -1
+  version: [v2.1, newest]
+
+- name: matmul(Tensor self, Tensor other) -> Tensor
+  self, other: matmul_backward(grad, self, other, grad_input_mask)
+  result: matmul(self_t, other_p) + matmul(self_p, other_t)
   version: [v2.1, newest]
 
 - name: matmul_backward(Tensor grad_out, Tensor self, Tensor other, bool[2] mask) -> (Tensor, Tensor)
@@ -72,6 +86,12 @@ backward:
   mat2: npu_bmm_v2_mat2_backward(grad, self, mat2, mat2.sym_sizes())
   version: [v2.1, newest]
 
+- name: npu_block_sparse_attention(Tensor query, Tensor key, Tensor value, Tensor block_sparse_mask, int[] block_shape, *, str q_input_layout='TND', str kv_input_layout='TND', int num_key_value_heads=1, float scale_value=0.0, int inner_precise=1, int[]? actual_seq_lengths=None, int[]? actual_seq_lengths_kv=None, int? softmax_lse_flag=0) -> (Tensor, Tensor)
+  output_differentiability: [true, false]
+  query, key, value: npu_block_sparse_attention_backward(grad, query, key, value, result0, result1, block_sparse_mask, block_shape, actual_seq_lengths, actual_seq_lengths_kv, q_input_layout, kv_input_layout, num_key_value_heads, scale_value)
+  block_sparse_mask: non_differentiable
+  version: [v2.6, newest]
+
 - name: npu_confusion_transpose(Tensor self, int[] perm, int[] shape, bool transpose_first) -> Tensor
   self: npu_confusion_transpose_backward(grad, perm, self.sym_sizes(), !transpose_first)
   version: [v2.1, newest]
@@ -89,7 +109,7 @@ backward:
   x, gx, beta, gamma: npu_deep_norm_backward(grad, x, gx, gamma, result0, result1, alpha)
   version: [v2.1, newest]
 
-- name: npu_deformable_conv2d(Tensor input, Tensor weight, Tensor offset, Tensor? bias, int[2] kernel_size, int[] stride, int[] padding, int[] dilation=[1,1,1,1], int groups=1, int deformable_groups=1, bool modulated=True) -> (Tensor, Tensor)
+- name: npu_deformable_conv2d(Tensor input, Tensor weight, Tensor offset, Tensor? bias, int[2] kernel_size, int[] stride, int[] padding, int[4] dilation=[1,1,1,1], int groups=1, int deformable_groups=1, bool modulated=True) -> (Tensor, Tensor)
   input, weight, offset, bias: npu_deformable_conv2dbk(input, grad, result1, weight, offset, kernel_size, stride, padding, dilation, groups, deformable_groups, modulated)
   version: [v2.1, newest]
 
@@ -106,9 +126,9 @@ backward:
   self, x1: npu_dropout_with_add_softmax_backward(grad, result0, result1, alpha, prob, dim)
   version: [v2.1, newest]
 
-- name: npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
-  self: npu_dtype_cast_backward(grad, self.scalar_type())
-  output_differentiability: [isDifferentiableType(dtype)]
+- name: npu_dtype_cast(Tensor self, int dtype, int? input_dtype=None) -> Tensor
+  self: npu_dtype_cast_backward(grad, self.scalar_type(), dtype, input_dtype)
+  output_differentiability: [true]
   version: [v2.1, newest]
 
 - name: _npu_dtype_cast(Tensor self, ScalarType dtype) -> Tensor
@@ -120,15 +140,25 @@ backward:
   query_layer, key_layer, value_layer: npu_fused_attention_score_backward(grad, result1, query_layer, key_layer, value_layer, result2, scale, keep_prob, query_transpose, key_transpose, value_transpose, dx_transpose)
   version: [v2.1, newest]
 
-- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="") -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+- name: npu_fusion_attention_v3(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, SymInt[]? prefix=None, Tensor? actual_seq_qlen=None, Tensor? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, true, false, false]
+  query, key, value, pse, sink: npu_fusion_attention_grad_v3(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout, sink)
+  version: [v2.6, newest]
+
+- name: npu_fusion_attention(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, float scale=1., float keep_prob=1., int pre_tockens=2147483647, int next_tockens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, str softmax_layout="", Tensor? sink=None, Tensor? dropout_mask=None, int seed=0, int offset=0) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
   output_differentiability: [true, true, true, true, false, false, false]
-  query, key, value, pse: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout)
+  query, key, value, pse, sink: npu_fusion_attention_grad(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, scale, keep_prob, pre_tockens, next_tockens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, softmax_layout, sink)
   version: [v2.1, newest]
 
-- name: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
+- name: npu_fusion_attention_v2(Tensor query, Tensor key, Tensor value, int head_num, str input_layout, *, Tensor? pse=None, Tensor? padding_mask=None, Tensor? atten_mask=None, Tensor? query_rope=None, Tensor? key_rope=None, float scale=1., float keep_prob=1., int pre_tokens=2147483647, int next_tokens=2147483647, int inner_precise=0, int[]? prefix=None, int[]? actual_seq_qlen=None, int[]? actual_seq_kvlen=None, int sparse_mode=0, bool gen_mask_parallel=True, bool sync=False, int pse_type=1, int[]? q_start_idx=None, int[]? kv_start_idx=None, str softmax_layout="", Tensor? sink=None, Tensor? dropout_mask=None, int seed=0, int offset=0) -> (Tensor, Tensor, Tensor, Tensor, int, int, int)
   output_differentiability: [true, true, true, true, false, false, false]
-  query, key, value, pse, query_rope, key_rope: npu_fusion_attention_grad_v2(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, query_rope, key_rope, scale, keep_prob, pre_tokens, next_tokens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, pse_type, q_start_idx, kv_start_idx)
+  query, key, value, pse, query_rope, key_rope, sink: npu_fusion_attention_grad_v2(query, key, value, grad, head_num, input_layout, pse, padding_mask, atten_mask, result1, result2, result3, result0, query_rope, key_rope, scale, keep_prob, pre_tokens, next_tokens, inner_precise, result4, result5, result6, prefix, actual_seq_qlen, actual_seq_kvlen, sparse_mode, gen_mask_parallel, sync, pse_type, q_start_idx, kv_start_idx, softmax_layout, sink)
   version: [v2.1, newest]
+
+- name: npu_fused_floyd_attention(Tensor query_ik, Tensor key_ij, Tensor value_ij, Tensor key_jk, Tensor value_jk, *, Tensor? atten_mask=None, float scale_value=1.) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [false, false, true]
+  query_ik, key_ij, value_ij, key_jk, value_jk: npu_fused_floyd_attention_backward(grad, query_ik, key_ij, value_ij, key_jk, value_jk, result2, result0, result1, atten_mask, scale_value)
+  version: [v2.6, newest]
 
 - name: npu_geglu(Tensor self, int dim=-1, int approximate=1, bool activate_left=False) -> (Tensor, Tensor)
   output_differentiability: [true, false]
@@ -164,6 +194,11 @@ backward:
   input, weight, bias, h, c: npu_lstm_data_backward(grads[0], grads[1], grads[2], input, batch_sizes, weight, bias, h, c, result0, result1, result2, result3, result4, result5, result6, result7, direction)
   version: [v2.1, newest]
 
+- name: _lstm_npu(Tensor input, Tensor[] hx, Tensor[] params, bool has_biases, int num_layers, float dropout, bool train, bool bidirectional, *, bool? batch_first=False, Tensor? batch_sizes=None) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, false, false, false, false, false, false, false]
+  input, hx, params: _lstm_npu_backward(grads[0], grads[1], grads[2], input, hx, params, result3, result4, result5, result6, result7, result8, result9, has_biases, num_layers, dropout, train, bidirectional, batch_first, batch_sizes)
+  version: all_version
+
 - name: npu_max.dim(Tensor self, int dim, bool keepdim=False) -> (Tensor values, Tensor indices)
   self: npu_max_backward(grad, dim, indices, self.sym_sizes(), keepdim)
   version: [v2.1, newest]
@@ -190,8 +225,9 @@ backward:
   self, gamma: npu_rms_norm_backward(grad, self, gamma, result1)
   version: [v2.1, newest]
 
-- name: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, str rotary_mode='half') -> Tensor
+- name: npu_rotary_mul(Tensor self, Tensor r1, Tensor r2, str rotary_mode='half', Tensor? rotate=None) -> Tensor
   self, r1, r2: npu_rotary_mul_backward(grad, self, r1, r2, rotary_mode)
+  rotate: non_differentiable
   version: [v2.1, newest]
 
 - name: npu_scaled_masked_softmax(Tensor x, Tensor mask, Scalar scale=1, bool fixed_triu_mask=False) -> Tensor
@@ -205,6 +241,10 @@ backward:
 - name: npu_softmax_cross_entropy_with_logits(Tensor self, Tensor labels) -> Tensor
   self: npu_softmax_cross_entropy_with_logits_backward(grad, self, labels)
   version: [v2.1, newest]
+
+- name: npu_masked_causal_conv1d(Tensor input, Tensor weight, *, Tensor? mask=None) -> Tensor
+  input, weight: npu_masked_causal_conv1d_backward(grad, input, weight, mask)
+  version: [v2.6, newest]
 
 - name: npu_swiglu(Tensor self, int dim=-1) -> Tensor
   self: npu_swiglu_backward(grad, self, dim)
@@ -236,10 +276,12 @@ backward:
 
 - name: _fft_r2c(Tensor self, int[] dim, int normalization, bool onesided) -> Tensor
   self: fft_r2c_backward(grad, dim, normalization, onesided, self.size(dim.back()))
+  result: auto_linear
   version: [v2.1, newest]
 
 - name: _fft_c2r(Tensor self, int[] dim, int normalization, SymInt last_dim_size) -> Tensor
   self: fft_c2r_backward(grad, dim, normalization)
+  result: auto_linear
   version: [v2.1, newest]
 
 - name: npu_moe_token_permute_with_routing_map(Tensor tokens, Tensor routing_map, *, Tensor? probs=None, int? num_out_tokens=None, bool drop_and_pad=False) -> (Tensor, Tensor, Tensor)
@@ -277,11 +319,48 @@ backward:
   output_differentiability: [true, false, false, false]
   permuted_tokens, probs: "drop_and_pad ? npu_moe_token_unpermute_with_routing_map_grad(grad, result1, result2, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape) : npu_moe_token_unpermute_with_routing_map_grad(grad, sorted_indices, sorted_indices, routing_map, permuted_tokens, probs, drop_and_pad, restore_shape)"
   version: [v2.1, newest]
-  
+
 - name: npu_moe_token_permute(Tensor tokens, Tensor indices, int? num_out_tokens=None, bool padded_mode=False) -> (Tensor, Tensor)
-  tokens: npu_moe_token_permute_grad(tokens, grad, indices, result1, padded_mode)
+  tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0).expect_int(), tokens.scalar_type(), (indices.dim() == 1) ? 1 : indices.sym_size(-1).expect_int(), padded_mode)"
   version: [v2.1, newest]
 
 - name: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
   permuted_tokens, probs: npu_moe_token_unpermute_grad(permuted_tokens, grad, sorted_indices, probs, padded_mode, restore_shape)
   version: [v2.1, newest]
+
+- name: npu_sparse_flash_attention(Tensor query, Tensor key, Tensor value, Tensor sparse_indices, float scale_value, *, Tensor? block_table=None, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_kv=None, Tensor? query_rope=None, Tensor? key_rope=None, int sparse_block_size=1, str layout_query="BSND", str layout_kv="BSND", int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, int attention_mode=0, bool return_softmax_lse=False) -> (Tensor, Tensor, Tensor)
+  query, key, value, query_rope, key_rope: npu_sparse_flash_attention_grad(query, key, value, sparse_indices, grad, result0, result1, result2, scale_value, sparse_block_size, query_rope, key_rope, actual_seq_lengths_query, actual_seq_lengths_kv, layout_query, sparse_mode, pre_tokens, next_tokens, attention_mode)
+  version: all_version
+
+- name: npu_lightning_indexer(Tensor query, Tensor key, Tensor weights, *, Tensor? actual_seq_lengths_query=None, Tensor? actual_seq_lengths_key=None, Tensor? block_table=None, str layout_query="BSND", str layout_key="BSND", int sparse_count=2048, int sparse_mode=3, int pre_tokens=9223372036854775807, int next_tokens=9223372036854775807, bool return_value=False) -> (Tensor, Tensor)
+  output_differentiability: [false, true]
+  query, key, weights: npu_lightning_indexer_grad(query, key, grad, result0, weights, actual_seq_lengths_query, actual_seq_lengths_key, layout_query, sparse_mode, pre_tokens, next_tokens)
+  version: all_version
+
+- name: native_dropout(Tensor input, float p, bool? train) -> (Tensor, Tensor)
+  input: "native_dropout_backward(grad, result1, (!train.has_value() || !train.value() ? 1 : (p == 1 ? 0.0 : 1.0 / (1.0 - p))))"
+  version: all_version
+
+- name: cdist(Tensor x1, Tensor x2, float p=2, int? compute_mode=None) -> Tensor
+  x1: _cdist_backward(grad, x1, x2, p, result)
+  x2: _cdist_backward(grad.mT().contiguous(), x2, x1, p, result.mT().contiguous())
+  version: all_version
+
+- name: npu_mhc_pre(Tensor x, Tensor phi, Tensor alpha, Tensor bias, *, Tensor? gamma=None, float norm_eps=1e-6, float hc_eps=1e-6, int out_flag=0) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, true, true, false, false, false]
+  x, phi, alpha, bias, gamma: 'npu_mhc_pre_backward(x, phi, alpha, grads[0], grads[1], grads[2], result3, result4, result5, result1, gamma, hc_eps, c10::nullopt)'
+  version: all_version
+
+- name: npu_mhc_sinkhorn(Tensor x, *, float eps=1e-6, SymInt num_iters=20, int out_flag=0) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false]
+  x: npu_mhc_sinkhorn_backward(grad, result1, result2)
+  version: all_version
+
+- name: npu_mhc_post(Tensor x, Tensor h_res, Tensor h_out, Tensor h_post) -> Tensor
+  x, h_res, h_out, h_post: npu_mhc_post_backward(grad, x, h_res, h_out, h_post)
+  version: all_version
+
+- name: npu_moe_gating_top_k(Tensor x, int k, *, Tensor? bias=None, int k_group=1, int group_count=1, int group_select_mode=0, int renorm=0, int norm_type=0, bool out_flag=False, float routed_scaling_factor=1.0, float eps=1e-20) -> (Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false]
+  x: npu_moe_gating_top_k_backward(result2, grad, result1, renorm, norm_type, routed_scaling_factor, eps)
+  version: all_version

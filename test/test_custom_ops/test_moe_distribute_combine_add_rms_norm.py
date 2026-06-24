@@ -147,9 +147,9 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
                     shared[i][j] = int(bs // sharedExpertRankNum)
         result_tensor = torch.cat((shared, result_tensor), dim=0)
         return result_tensor.flatten()
-    
+
     class ConstructArgs:
-        def __init__(self, x1_list, topk1_list, bs, h, k, globalBS, 
+        def __init__(self, x1_list, topk1_list, bs, h, k, globalBS,
                      sharedExpertRankNum, moeExpertNum, ep_world_size, tp_world_size, scales1):
             self.x1_list = x1_list
             self.topk1_list = topk1_list
@@ -274,7 +274,7 @@ class TestMoeDistributeCombineAddRmsNorm(TestCase):
         return expand_x_list, out_list, idx_list, ep_recvCount_list, tp_recvCount_list
 
     @skipIfUnsupportMultiNPU(16)
-    @SupportedDevices(['Ascend910_'])
+    @SupportedDevices(['Ascend910_93', 'Ascend950'])
     def test_npu_moe_distribute_combine_add_rms_norm(self):
         ep_world_size = 8
         tp_world_size = 1

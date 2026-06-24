@@ -32,7 +32,7 @@ at::Tensor& upsample_bilinear2d_out_nocheck(
 {
     at_npu::native::OpCommand cmd;
     bool half_pixel_centers = !align_corners;
-    TORCH_CHECK(output_size.size() >= 1, "The dim input tensor [output_size] must more than 1."
+    TORCH_CHECK(output_size.size() >= 2, "The dim input tensor [output_size] must be at least 2."
         + OPS_ERROR(ErrCode::PARAM));
     int64_t H = output_size[0];
     int64_t W = output_size[1];
@@ -58,7 +58,7 @@ at::Tensor& upsample_bilinear2d_out(
 {
     at::Tensor self_apply = self;
     if (self_apply.scalar_type() != at::ScalarType::Float) {
-        self_apply = at_npu::native::custom_ops::npu_dtype_cast(self_apply, at::ScalarType::Float);
+        self_apply = at_npu::native::custom_ops::_npu_dtype_cast(self_apply, at::ScalarType::Float);
     }
     auto op_infer_output_size = op_infer::upsample_bilinear2d_npu_output_size(
         self_apply, output_size);
@@ -89,7 +89,7 @@ at::Tensor upsample_bilinear2d(
 {
     at::Tensor self_apply = self;
     if (self_apply.scalar_type() != at::ScalarType::Float) {
-        self_apply = at_npu::native::custom_ops::npu_dtype_cast(self_apply, at::ScalarType::Float);
+        self_apply = at_npu::native::custom_ops::_npu_dtype_cast(self_apply, at::ScalarType::Float);
     }
     auto op_infer_output_size = op_infer::upsample_bilinear2d_npu_output_size(
         self_apply, output_size);
@@ -98,7 +98,7 @@ at::Tensor upsample_bilinear2d(
     upsample_bilinear2d_out_nocheck(
         result, self_apply, output_size, align_corners, scales_h, scales_w);
     if (result.dtype() != self.dtype()) {
-        result = at_npu::native::custom_ops::npu_dtype_cast(result, self.scalar_type());
+        result = at_npu::native::custom_ops::_npu_dtype_cast(result, self.scalar_type());
     }
     return result;
 }

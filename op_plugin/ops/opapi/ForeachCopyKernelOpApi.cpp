@@ -24,12 +24,43 @@
 #include "torch_npu/csrc/core/npu/interface/AclInterface.h"
 
 namespace op_api {
+namespace {
+    bool should_group(const at::TensorList tensors, const at::TensorList tensors2)
+    {
+        if (tensors.empty() && tensors2.empty()) {
+            return false;
+        }
+
+        const at::Tensor& base_tensor = !tensors.empty() ? tensors[0] : tensors2[0];
+        const auto base_device = base_tensor.device();
+        const auto base_dtype = base_tensor.scalar_type();
+
+        bool has_dtype_mismatch = false;
+
+        auto check_list = [&base_device, &base_dtype, &has_dtype_mismatch](const at::TensorList& list) -> bool {
+            for (const auto& t : list) {
+                if (t.device() != base_device) {
+                    return false;
+                }
+                if (t.scalar_type() != base_dtype) {
+                    has_dtype_mismatch = true;
+                }
+            }
+            return true;
+        };
+        if (!check_list(tensors) || !check_list(tensors2)) {
+            return false;
+        }
+
+        return has_dtype_mismatch;
+    }
+} // namespace anonymous
+
 #if VERSION_BETWEEN(V2R1, VERSION_NEWEST)
 const size_t SIZE_OF_NOT_INT = 4;
 const size_t SIZE_OF_SHORT = 2;
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_calcu_util = at_npu::native::CalcuOpUtil;
-
 
 void exec_npu_cmd_copy(const at::TensorList dst, at::TensorList src, bool non_blocking)
 {
@@ -201,18 +232,42 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
     }
 }
 
-void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
+bool is_supported_cross_dtype_copy(at::ScalarType src_dtype, at::ScalarType dst_dtype)
 {
-    DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
-    at::native::check_foreach_api_restrictions(self, src);
-    static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
-    static const bool is_support_batch = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
-                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
-                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9391);
+    if (src_dtype == at::ScalarType::Float &&
+        (dst_dtype == at::ScalarType::Half || dst_dtype == at::ScalarType::BFloat16)) {
+        return true;
+    }
+    if ((src_dtype == at::ScalarType::Half || src_dtype == at::ScalarType::BFloat16) &&
+        dst_dtype == at::ScalarType::Float) {
+        return true;
+    }
+    return false;
+}
 
-    if (!is_support_nd_out || !at::native::can_use_fast_route(self, src) || !check_tensor_dtype_support_base(src)) {
+bool check_cross_dtype_supported(const at::TensorList dst, const at::TensorList src)
+{
+    if (!op_plugin::utils::is_gte_cann_version_910()) {
+        return false;
+    }
+    if (dst.size() != src.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < src.size(); ++i) {
+        if (!is_supported_cross_dtype_copy(src[i].scalar_type(), dst[i].scalar_type())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void process_tensor_list_batch(const at::TensorList self, const at::TensorList src, bool non_blocking,
+    bool is_support_nd_out, bool is_support_batch)
+{
+    bool can_fast_route = at::native::can_use_fast_route(self, src);
+    bool cross_dtype_supported = !can_fast_route && check_cross_dtype_supported(self, src);
+
+    if (!is_support_nd_out || (!can_fast_route && !cross_dtype_supported) || !check_tensor_dtype_support_base(src)) {
         if (is_support_batch && ((non_blocking && c10_npu::acl::IsExistMemcpyBatchAsync()) ||
                 (!non_blocking && c10_npu::acl::IsExistMemcpyBatch())) && check_tensor_device_dtype_base(self, src, non_blocking)) {
             return memcpyBatch(self, src, non_blocking);
@@ -226,7 +281,36 @@ void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool no
         return at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking);
     }
 
-    split_and_exec_npu_cmd_copy(self, src, non_blocking);
+    split_and_exec_npu_cmd_copy(self, src, /*non_blocking=*/true);
+}
+
+void _foreach_copy_(const at::TensorList self, const at::TensorList src, bool non_blocking)
+{
+    DO_COMPATIBILITY(aclnnForeachCopy, at::native::foreach_tensor_copy_list_kernel_slow_(self, src, non_blocking));
+    at::native::check_foreach_api_restrictions(self, src);
+    static const bool is_support_nd_out = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend310B4);
+    static const bool is_support_batch = (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend910B1 &&
+                                          c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend310B1) ||
+                                          (c10_npu::GetSocVersion() > c10_npu::SocVersion::Ascend910_9391);
+
+    if (!should_group(src, self)) {
+        process_tensor_list_batch(self, src, non_blocking, is_support_nd_out, is_support_batch);
+    } else {
+        std::unordered_map<c10::ScalarType, std::pair<std::vector<at::Tensor>, std::vector<at::Tensor>>> temp_groups;
+        for (size_t i = 0; i < src.size(); ++i) {
+            temp_groups[src[i].scalar_type()].first.push_back(self[i]);
+            temp_groups[src[i].scalar_type()].second.push_back(src[i]);
+        }
+
+        for (auto const& [dtype, vecs] : temp_groups) {
+            at::TensorList current_self(vecs.first);
+            at::TensorList current_src(vecs.second);
+
+            process_tensor_list_batch(current_self, current_src, non_blocking, is_support_nd_out, is_support_batch);
+        }
+    }
 }
 
 #endif

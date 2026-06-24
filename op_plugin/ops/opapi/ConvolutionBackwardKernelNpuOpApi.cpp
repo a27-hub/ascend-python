@@ -20,6 +20,48 @@
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 using tensor_list3 = std::tuple<at::Tensor, at::Tensor, at::Tensor>;
+namespace {
+constexpr int64_t kWeightOutputChannelDim = 0;
+constexpr int64_t kChannelDim = 1;
+constexpr size_t kGradInputIndex = 0;
+constexpr size_t kGradWeightIndex = 1;
+constexpr size_t kGradBiasIndex = 2;
+
+inline bool is_empty_channel_input(const at::Tensor& input)
+{
+    return input.size(kChannelDim) == 0;
+}
+
+inline void check_bias_sizes_opt(const c10::optional<at::IntArrayRef>& bias_sizes_opt, bool need_grad_bias)
+{
+    TORCH_CHECK(!need_grad_bias || bias_sizes_opt.has_value(),
+        "bias_sizes_opt must have value when grad bias is requested", OPS_ERROR(ErrCode::PARAM));
+}
+
+tensor_list3 make_empty_channel_backward_output(
+    const at::Tensor& input,
+    const at::Tensor& weight,
+    const c10::optional<at::IntArrayRef>& bias_sizes_opt,
+    const std::array<bool, 3>& output_mask)
+{
+    at::Tensor grad_input;
+    at::Tensor grad_weight;
+    at::Tensor grad_bias;
+
+    if (output_mask[kGradInputIndex]) {
+        grad_input = at::zeros_like(input);
+    }
+    if (output_mask[kGradWeightIndex]) {
+        grad_weight = at::zeros_like(weight);
+    }
+    if (output_mask[kGradBiasIndex]) {
+        check_bias_sizes_opt(bias_sizes_opt, output_mask[kGradBiasIndex]);
+        grad_bias = at::zeros(*bias_sizes_opt, weight.options());
+    }
+
+    return std::make_tuple(std::move(grad_input), std::move(grad_weight), std::move(grad_bias));
+}
+}
 
 static inline c10::SmallVector<int64_t, op_infer::N> expand_dim_if_needed(
     at::IntArrayRef list_param,
@@ -52,7 +94,8 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
     bool is_allow_internel_format = !at_npu::native::env::CheckForbidInternalFormat();
     ASCEND_LOGI("_calc_convolution_backward exec with jit compile: %d, allow internal format: %d",
                 is_jit_enable, is_allow_internel_format);
-    if ((is_allow_internel_format || is_jit_enable) && (dim != 3)) {
+    static auto conv_sc = at_npu::native::env::CheckCompatibleImpl();
+    if ((is_allow_internel_format || is_jit_enable) && (dim != 3) && (!conv_sc)) { // 3 for dimensions
         return acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                             transposed, output_padding, groups, output_mask);
     }
@@ -80,7 +123,8 @@ static tensor_list3 _calc_convolution_backward(const at::Tensor &grad_output, co
 
     gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
     gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
-    if (output_mask[2]) {
+    if (output_mask[kGradBiasIndex]) {
+        check_bias_sizes_opt(bias_sizes_opt, output_mask[kGradBiasIndex]);
         gradBias = npu_preparation::apply_tensor_without_format(*bias_sizes_opt, grad_output.options());
     } else {
         gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
@@ -99,6 +143,9 @@ tensor_list3 convolution_backward(const at::Tensor &grad_output, const at::Tenso
                                   at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
                                   at::IntArrayRef output_padding, int64_t groups, ::std::array<bool, 3> output_mask)
 {
+    if (is_empty_channel_input(input)) {
+        return make_empty_channel_backward_output(input, weight, bias_sizes_opt, output_mask);
+    }
     DO_COMPATIBILITY(aclnnConvolutionBackward,
                      acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                                   transposed, output_padding, groups, output_mask));
@@ -227,7 +274,13 @@ tensor_list3 convolution_backward_overrideable(const at::Tensor &grad_output, co
                                                c10::IntArrayRef output_padding, int64_t groups,
                                                std::array<bool, 3> output_mask)
 {
-    c10::optional<at::IntArrayRef> bias_sizes_opt = {grad_output.size(1)};
+    c10::SmallVector<int64_t, SIZE> bias_sizes = transposed ?
+        c10::SmallVector<int64_t, SIZE>{weight.size(kChannelDim) * groups} :
+        c10::SmallVector<int64_t, SIZE>{weight.size(kWeightOutputChannelDim)};
+    c10::optional<at::IntArrayRef> bias_sizes_opt = bias_sizes;
+    if (is_empty_channel_input(input)) {
+        return make_empty_channel_backward_output(input, weight, bias_sizes_opt, output_mask);
+    }
     DO_COMPATIBILITY(aclnnConvolutionBackward,
                      acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                                   transposed, output_padding, groups, output_mask));
@@ -251,7 +304,8 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     ASCEND_LOGI("_calc_convolution_backward exec with jit compile: %d, allow internal format: %d",
                 is_jit_enable, is_allow_internel_format);
     // CheckForbidInternalFormat = False: turn on private format��CheckJitDisable = False: turn on JitCompile
-    if ((is_allow_internel_format || is_jit_enable) && (dim != 3)) {
+    static auto conv_sc = at_npu::native::env::CheckCompatibleImpl();
+    if ((is_allow_internel_format || is_jit_enable) && (dim != 3) && (!conv_sc)) { // 3 for dimensions
         return acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
                                             transposed, output_padding, groups, output_mask);
     }
@@ -276,11 +330,26 @@ static std::tuple<at::Tensor, at::Tensor, at::Tensor> _calc_convolution_backward
     at::Tensor gradWeight;
     at::Tensor gradBias;
 
-    gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
-    gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
+    bool maskInput = output_mask[kGradInputIndex];
+    bool maskWeight = output_mask[kGradWeightIndex];
+    bool maskBias = output_mask[kGradBiasIndex];
 
-    // use 2nd dimension of outputSizes
-    gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+    if (!op_plugin::utils::is_gte_cann_version_851()) {
+        gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
+        gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
+        gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+    } else {
+        if (maskInput) {
+            gradInput = npu_preparation::apply_tensor_without_format(std::get<0>(outputSizes), input.options());
+        }
+        if (maskWeight) {
+            gradWeight = npu_preparation::apply_tensor_without_format(std::get<1>(outputSizes), weight.options());
+        }
+        if (maskBias) {
+            // use 2nd dimension of outputSizes
+            gradBias = npu_preparation::apply_tensor_without_format(std::get<2>(outputSizes), grad_output.options());
+        }
+    }
 
     int64_t input_dim = input.ndimension();
     at::optional<c10::IntArrayRef> bias_sizes = c10::nullopt;
@@ -305,11 +374,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> convolution_backward(
     at::IntArrayRef output_padding,
     int64_t groups,
     std::array<bool, 3> output_mask) {
-  DO_COMPATIBILITY(aclnnConvolutionBackward, acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt,
-                                                                          stride, padding, dilation, transposed,
-                                                                          output_padding, groups, output_mask));
-  return _calc_convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
-                                    transposed, output_padding, groups, output_mask);
+    if (is_empty_channel_input(input)) {
+        c10::optional<at::IntArrayRef> bias_sizes =
+            bias_sizes_opt.has_value() ? c10::optional<at::IntArrayRef>(bias_sizes_opt.value()) : c10::nullopt;
+        return make_empty_channel_backward_output(input, weight, bias_sizes, output_mask);
+    }
+    DO_COMPATIBILITY(aclnnConvolutionBackward, acl_op::convolution_backward(grad_output, input, weight, bias_sizes_opt,
+                                                                            stride, padding, dilation, transposed,
+                                                                            output_padding, groups, output_mask));
+    return _calc_convolution_backward(grad_output, input, weight, bias_sizes_opt, stride, padding, dilation,
+                                      transposed, output_padding, groups, output_mask);
 }
 #endif
 }

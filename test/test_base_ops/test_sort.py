@@ -73,6 +73,14 @@ class TestSort(TestCase):
                 npu_output, npu_indices = self.npu_default_op_exec(npu_input1)
             self.assertRtolEqual(cpu_output.astype(np.float16), npu_output)
 
+    def test_sort_stride(self):
+        cpu_input = torch.tensor([[3, 1, 2], [6, 4, 5]], dtype=torch.float32)
+        npu_input = cpu_input.npu()
+        cpu_values, cpu_indices = torch.sort(cpu_input, dim=1)
+        npu_values, npu_indices = torch.sort(npu_input, dim=1)
+        self.assertEqual(cpu_values.stride(), npu_values.stride())
+        self.assertEqual(cpu_indices.stride(), npu_indices.stride())
+
 
 if __name__ == "__main__":
     run_tests()

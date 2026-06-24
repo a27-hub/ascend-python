@@ -3097,6 +3097,9 @@ as_strided:
   test_variant_consistency_eager:
   - complex64
   - float32
+as_strided_copy:
+  test_non_standard_bool_values:
+  - bool
 as_strided_scatter:
   test_backward:
   - float32
@@ -3614,8 +3617,6 @@ diagflat:
   - bool
   test_variant_consistency_eager:
   - complex64
-  - float32
-  test_operator:
   - float32
 copysign:
   test_neg_view:
@@ -8305,6 +8306,13 @@ nonzero:
   test_variant_consistency_eager:
   - complex64
   - float32
+nonzero_static:
+  test_conj_view:
+  - complex64
+  test_neg_conj_view:
+  - complex128
+  test_variant_consistency_eager:
+  - complex64
 ormqr:
   test_backward:
   - float32
@@ -11063,6 +11071,6 @@ _refs.nn.functional.channel_shuffle:
   test_neg_view:
   - float64
   test_conj_view:
-  - complex64  
+  - complex64
   test_neg_conj_view:
   - complex128

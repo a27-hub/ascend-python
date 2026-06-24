@@ -122,21 +122,21 @@ class TestWhere(TestCase):
                 cpuout = torch.where(condition > 0, input1, input2)
                 npuout = torch.where((condition > 0).npu(), input1.npu(), input2.npu())
                 self.assertRtolEqual(cpuout, npuout.cpu())
-    
+
     def assert_equal_tuple(self, cpu_out, npu_out):
         self.assertTrue(len(cpu_out) == len(npu_out))
-        
+
         for i in range(len(cpu_out)):
             self.assertRtolEqual(cpu_out[i], npu_out[i].cpu())
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_where_condition_only(self):
         zero_dim_tensor = torch.tensor(37)
         cpu_out = torch.where(zero_dim_tensor)
         npu_out = torch.where(zero_dim_tensor.npu())
-        
+
         self.assert_equal_tuple(cpu_out, npu_out)
-        
+
         dtype_list = [torch.float16, torch.float32, torch.float64]
         for dtype in dtype_list:
             input1 = torch.randn(3, 5, dtype=dtype)
@@ -144,6 +144,33 @@ class TestWhere(TestCase):
             cpu_out = torch.where(input1)
             npu_out = torch.where(input1.npu())
             self.assert_equal_tuple(cpu_out, npu_out)
+
+    def where_result_scalar(self, shape_format):
+        for item in shape_format:
+            cpu_input1, npu_input1 = create_common_tensor(item, -100, 100)
+            cpu_ones = torch.ones_like(cpu_input1)
+            npu_ones = cpu_ones.to("npu")
+            scalar_input = torch.tensor(0.0)
+            if cpu_input1.dtype == torch.float16:
+                cpu_input1 = cpu_input1.to(torch.float32)
+                cpu_ones = cpu_ones.to(torch.float32)
+
+            cpu_output_s = self.cpu_op_exec_condition(cpu_input1, scalar_input)
+            npu_output_s = self.npu_op_exec_condition(npu_input1, scalar_input)
+            cpu_output_s = cpu_output_s.astype(npu_output_s.dtype)
+
+            cpu_output_s_self = self.cpu_op_exec_condition(scalar_input, cpu_ones)
+            npu_output_s_self = self.npu_op_exec_condition(scalar_input, npu_ones)
+            cpu_output_s_self = cpu_output_s_self.astype(npu_output_s_self.dtype)
+
+            self.assertRtolEqual(cpu_output_s, npu_output_s)
+            self.assertRtolEqual(cpu_output_s_self, npu_output_s_self)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_where_scalar(self):
+        format_list = [0, 3]
+        shape_format = [[np.float32, i, [18]] for i in format_list]
+        self.where_result_scalar(shape_format)
 
 if __name__ == "__main__":
     run_tests()

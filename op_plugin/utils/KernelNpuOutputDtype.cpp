@@ -17,7 +17,8 @@
 #include "torch_npu/csrc/core/npu/NPUException.h"
 #include "torch_npu/csrc/core/npu/NpuVariables.h"
 #include "op_plugin/utils/KernelNpuOutputDtype.h"
-
+#include "op_plugin/utils/op_api_common.h"
+#include "op_plugin/OpApiInterface.h"
 namespace op_infer {
 
 at::ScalarType angle_out_dtype(const at::Tensor& self)
@@ -44,6 +45,23 @@ at::ScalarType polar_out_dtype(const at::Tensor& abs, const at::Tensor& angle)
     return high_type;
 }
 
+at::ScalarType npu_group_norm_silu_dst_type(const at::Tensor& input, const c10::optional<at::Tensor>& weight,
+                                            const c10::optional<at::Tensor>& bias)
+{
+    at::native::ResultTypeState state = {};
+    state = at::native::update_result_type_state(input, state);
+
+    if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
+        if (weight.has_value()) {
+            state = at::native::update_result_type_state(weight.value(), state);
+        } else if (bias.has_value()) {
+            state = at::native::update_result_type_state(bias.value(), state);
+        }
+    }
+
+    return at::native::result_type(state);
+}
+
 at::ScalarType npu_group_quant_dst_type(c10::optional<at::ScalarType> dst_dtype)
 {
     at::ScalarType dst_type = c10::value_or_else(dst_dtype, [] {return at::ScalarType::Char;});
@@ -56,6 +74,18 @@ at::ScalarType npu_group_quant_dst_type(c10::optional<at::ScalarType> dst_dtype)
         dst_type = at::ScalarType::Int;
     }
     return dst_type;
+}
+
+at::ScalarType npu_add_rms_norm_dynamic_quant_y_dtype(c10::optional<at::ScalarType> y_dtype)
+{
+    at::ScalarType dtype = c10::value_or_else(y_dtype, [] { return at::ScalarType::Char; });
+    TORCH_CHECK(dtype == at::ScalarType::Char || dtype == at::ScalarType::QUInt4x2,
+                "y_dtype must be torch.int8 or torch.quint4x2, but got ", dtype, OPS_ERROR(ErrCode::PARAM));
+    // aclnn int4 output uses DT_INT32 (8 int4 packed per int32)
+    if (dtype == at::ScalarType::QUInt4x2) {
+        return at::ScalarType::Int;
+    }
+    return dtype;
 }
 
 at::ScalarType clamp_out_dtype(const at::Tensor& self, const c10::optional<at::Tensor>& min, const c10::optional<at::Tensor>& max)
@@ -94,6 +124,26 @@ at::ScalarType clamp_scalar_out_dtype(const at::Tensor& self, const c10::optiona
     }
 
     return at::native::result_type(state);
+}
+
+at::ScalarType abs_out_dtype(const at::Tensor& self)
+{
+    at::ScalarType output = self.scalar_type();
+    if (output == at::ScalarType::ComplexFloat) {
+        output = at::ScalarType::Float;
+    } else if (output == at::ScalarType::ComplexDouble) {
+        output = at::ScalarType::Double;
+    } else if (output == at::ScalarType::ComplexHalf) {
+        output = at::ScalarType::Half;
+    }
+    return output;
+}
+
+at::ScalarType npu_moe_distribute_dispatch_setup_out_dtype(c10::optional<int64_t> y_dtype)
+{
+    auto output_dtype = at::kChar;
+    output_dtype = at_npu::native::OpPreparation::convert_to_scalar_type(c10_npu::GetAclDataType(y_dtype.value()));
+    return output_dtype;
 }
 
 } // namespace op_infer

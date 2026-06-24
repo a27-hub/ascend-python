@@ -84,7 +84,7 @@ static c10::SmallVector<int64_t, op_infer::SIZE> get_output_size(const at::Tenso
 static inline void matmul_implement_npu(at::Tensor &out, const at::Tensor &self, const at::Tensor &mat2)
 {
     // allow dicrease precision
-    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     // matmul & matmul_out have processed the aclop scenario
     if (op_plugin::utils::is_nd_nz_format(self, mat2)) {
         EXEC_NPU_CMD(aclnnMatmulWeightNz, self, mat2, out, cube_math_type);

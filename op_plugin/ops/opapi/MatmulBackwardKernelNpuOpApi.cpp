@@ -17,6 +17,7 @@
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/op_api_common.h"
 #include "op_plugin/utils/KernelNpuOutputSize.h"
+#include "op_plugin/utils/OpUtils.h"
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -29,7 +30,7 @@ static inline void matmul_implement_npu(at::Tensor &out,
                                         const at::Tensor &mat2)
 {
     // allow dicrease precision
-    int8_t cube_math_type = npu_preparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
+    int8_t cube_math_type = op_plugin::utils::get_cube_math_type_with_passthrough();
     EXEC_NPU_CMD(aclnnMatmul, self, mat2, out, cube_math_type);
     FLOP_COUNT(FlopCounter::mm_flop, self, mat2);
     return;
@@ -114,7 +115,16 @@ at::Tensor matmul_mat1_backward(const at::Tensor self,
         output = at_npu::native::OpPreparation::apply_tensor_without_format(mat1.sizes(), grad.options());
         mat2 = mat2.transpose(-2, -1);
         mat2 = mat2.reshape({-1, mat2.size(-1)});
-        grad = grad.view({grad.size(-2), -1});
+
+        int64_t dim = grad.dim(); // dim for length of grad dimention
+        c10::SmallVector<int64_t, op_infer::SIZE> permute_order;
+        permute_order.reserve(dim);
+        permute_order.push_back(dim - 2); // 2 for matmul specific dimension
+        for (int64_t i = 0; i < dim - 2; ++i) { // 2 for matmul specific dimension
+            permute_order.push_back(i);
+        }
+        permute_order.push_back(dim - 1);
+        grad = grad.permute(permute_order).contiguous().reshape({grad.size(-2), -1}); // 2 for matmul specific dimension
         matmul_implement_npu(output, grad, mat2);
         output = output.reshape(self.sizes());
     } else { // bmm

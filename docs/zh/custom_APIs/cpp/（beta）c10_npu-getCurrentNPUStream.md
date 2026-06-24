@@ -1,0 +1,26 @@
+# （beta）c10_npu::getCurrentNPUStream
+
+## 定义文件
+
+torch_npu\csrc\core\npu\NPUStream.h
+
+## 函数原型
+
+```cpp
+c10_npu::NPUStream c10_npu::getCurrentNPUStream(c10::DeviceIndex device_index = -1)
+```
+
+## 功能说明
+
+通过设备ID获取当前NPU流，返回值类型为NPUStream，与c10::CUDA::CUDAStream c10::cuda::getCurrentCUDAStream(c10::DeviceIndex _device_index_ = -1)相同。
+
+## 参数说明
+
+device_index：DeviceIndex类型，获取流的NPU设备ID。
+
+## 支持的型号
+
+- <term>Atlas 训练系列产品</term>
+- <term>Atlas A2 训练系列产品</term>
+- <term>Atlas A3 训练系列产品</term>
+- <term>Atlas 推理系列产品</term>

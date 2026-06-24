@@ -1,10 +1,10 @@
+import unittest
 import torch
 import numpy as np
 import torch_npu
 
 from torch_npu.testing.testcase import TestCase, run_tests
-from torch_npu.testing.common_utils import create_common_tensor
-
+from torch_npu.testing.common_utils import create_common_tensor, SupportedDevices
 
 class TestNorm(TestCase):
     def norm_output_size(self, data, dimVal, keepdimVal):
@@ -68,7 +68,6 @@ class TestNorm(TestCase):
             output = torch.norm((y - y), 1, 2)
         exception = cm.exception
         self.assertTrue("Dimension out of range (expected to be in range of [-1, 0], but got 2)" in str(exception))
-
 
 if __name__ == "__main__":
     run_tests()

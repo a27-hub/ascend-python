@@ -21,13 +21,18 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 cd $CDIR/
 
 # Following updates only add incompatible ops files in corresponding branch folder.
-newest_minor_version=10
+newest_minor_version=13
 for minor_version in $(seq 1 ${newest_minor_version}); do
     # Merge base info and version related info (unsupported ops)
     sed -i "1r test/unsupported_ops_info_base.yaml" test/test_v2r${minor_version}_ops/unsupported_ops_info.yaml
 done
 
 PYTORCH_VERSION="$1"
+if ! [[ "$PYTORCH_VERSION" =~ ^[0-9.]+[a-zA-Z0-9.+-]*$ ]]; then
+    echo "Error: Invalid $PYTORCH_VERSION format"
+    exit 1
+fi
+
 IFS='.' read -ra version_parts <<< "$PYTORCH_VERSION"
 PYTORCH_VERSION_DIR="v${version_parts[0]}r${version_parts[1]}"
 python_execute="$2"
@@ -43,26 +48,32 @@ if [ "$PYTORCH_VERSION_DIR" == "v1r11" ]; then
     cp $CDIR/op_plugin/config/aclnn_derivatives.yaml $OUTPUT_DIR
 fi
 
-${python_execute} -m codegen.gen_op_plugin_functions  \
+${python_execute} -m torchnpugen.gen_op_plugin_functions  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$OUTPUT_DIR/" \
   --source_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
 
-${python_execute} -m codegen.gen_derivatives  \
+${python_execute} -m torchnpugen.gen_derivatives  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$OUTPUT_DIR/" \
   --source_yaml="$CDIR/op_plugin/config/derivatives.yaml"
 
-${python_execute} -m codegen.gen_backend_stubs  \
+${python_execute} -m torchnpugen.gen_op_backend  \
   --version="$PYTORCH_VERSION" \
   --output_dir="$CDIR/op_plugin/" \
   --source_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
   --deprecate_yaml="$CDIR/op_plugin/config/deprecated.yaml" \
   --impl_path="$CDIR/torch_npu/csrc/aten"  # Used to double-check the yaml file definitions.
 
-${python_execute} -m codegen.struct.gen_struct_opapi  \
+${python_execute} -m torchnpugen.struct.gen_struct_opapi  \
   --output_dir="$CDIR/op_plugin/ops/opapi/" \
   --native_yaml="$OUTPUT_DIR/op_plugin_functions.yaml" \
   --struct_yaml="$CDIR/op_plugin/config/op_plugin_functions.yaml"
+
+${python_execute} -m torchnpugen.gen_atb_ops \
+  --config="$CDIR/op_plugin/config/atb_ops.yaml" \
+  --header="$CDIR/op_plugin/include/AtbOpsInterface.h" \
+  --source="$CDIR/op_plugin/ops/atb/AtbOpsInterface.cpp" \
+  --atb-src-dir="$CDIR/op_plugin/ops/atb"
 
 sh $CDIR/op_plugin/third_party/atb/libs/build_stub.sh

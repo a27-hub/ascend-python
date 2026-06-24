@@ -2,7 +2,7 @@
 
 ## 适配文件结构
 
-```
+```text
 ├── op_plugin
 │   ├── config  # 算子配置文件目录
 │   │   ├── deprecated.yaml # 生成废弃接口告警配置文件
@@ -21,26 +21,26 @@
 └──...
 ```
 
-
 ## NPU适配算子开发
 
 ### 算子Yaml配置
 
 算子的aten ir定义位于op_plugin/config/op_plugin_functions.yaml文件中，所有版本的定义都在这个文件里面，通过配置不同版本来区分。
+
 ```yaml
 # op_plugin_functions.yaml
-all_version: [v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10]
+all_version: [v1.11, v2.0, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13]
 # 官方算子
 official:
   - func: abs(Tensor self) -> Tensor
     acl_op: all_version
-    op_api: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10
+    op_api: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13
     gen_opapi:
       structured_inherit: abs.out
 # 自定义算子
 custom:
   - func: my_abs(Tensor self) -> Tensor
-    acl_op: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10
+    acl_op: v1.11, v2.1, v2.2, v2.3, v2.4, v2.5, v2.6, v2.7, v2.8, v2.9, v2.10, v2.11, v2.12, v2.13
     op_api: all_version
 symint:
   - func: zeros(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
@@ -67,8 +67,6 @@ symint:
     acl_op: [v2.1, newest]
     op_api: [v2.1, newest]
 ```
-
-
 
 ### 适配代码实现
 
@@ -292,8 +290,8 @@ Pytorch的算子自动反向微分依赖于算子的前反向绑定，即前向�
 
 所有版本的算子前反向绑定都在同一个derivatives.yaml里面，通过`version`字段来区分版本。
 
-
 ## 结构化适配介绍
+
 结构化适配指通过在`op_plugin_functions.yaml`中进行配置，可自动生成算子实现Kernel。仅支持op_api对应的算子。
 
 如何判断是否可结构化：opapi对应的Aclnn算子与Aten IR的语义对齐，适配层除申请output tensor，无其他适配逻辑。
@@ -301,8 +299,10 @@ Pytorch的算子自动反向微分依赖于算子的前反向绑定，即前向�
 自动生成的适配文件位于`op_plugin/ops/opapi/StructKernelNpuOpApi.cpp`。
 
 ### Yaml配置说明
+
 每个结构化适配的函数必须在`op_plugin_functions.yaml`中配置, 具有如下格式：
 方式一（常规场景）：
+
 ```yaml
 - func: func_name(ArgType arg0[=default], ArgType arg1[=default], ...) -> Return
   op_api: v2.1
@@ -315,6 +315,7 @@ Pytorch的算子自动反向微分依赖于算子的前反向绑定，即前向�
       arg3: arg0.value_or(0)
     exec: aclnnFuncName, arg0, arg1, out, arg3
 ```
+
 各个字段的含义如下：
 
 - `gen_opapi`: 表示对应API可结构化，其他字段需要配置在此字段下
@@ -322,6 +323,7 @@ Pytorch的算子自动反向微分依赖于算子的前反向绑定，即前向�
 - `out`: 表示函数的输出，此字段下面包含size和dtype字段，如果包含多个输出，可配置成out0、out1等。对于out类接口，此字段不可自定义，需要与Aten IR定义的输出参数名相同。对于inplace类接口，不需要配置此字段。
 
 - `size`: 配置输出tensor的shape大小，如果大小和schema中的某个参数相同，可以配置成输入参数的名字。也可配置成自定义infershape函数，infershape函数需在`KernelNpuOutputSize.h`中实现。对于out类接口，如果输出shape不变，可省略此字段。配置方式主要包含以下几种：
+
 ```yaml
 Aten IR定义：
 - func: func_name(ArgType arg0, ArgType arg1, ...) -> Return
@@ -336,6 +338,7 @@ Aten IR定义：
 ```
 
 - `dtype`: 配置输出tensor的dtype大小，如果大小和schema中的某个参数相同，可以配置成输入参数的名字。也可配置成自定义inferdtype函数，inferdtype函数需在`KernelNpuOutputDtype.h`中实现。对于out类接口，如果输出dtype不需要check，可省略此字段。配置方式主要包含以下几种：
+
 ```yaml
 Aten IR定义：
 - func: func_name(ArgType arg0, ArgType arg1, ...) -> Return
@@ -352,12 +355,14 @@ Aten IR定义：
 - `name`: 输出结果涉及named tensor逻辑，可配置此字段，当前仅支持name和输入参数相同的配置。不涉及可忽略。
 
 - `new_params`: 可选字段，支持新增自定义变量，配置格式如下：
+
 ```yaml
     new_params:
       arg0: func(arg1)
 ```
 
-- `exec`: 配置`EXEC_NPU_CMD`对应的参数。如果除aclnnname（原函数可排除out参数），其它参数顺序和Aten IR的顺序相同，可只配置aclnnname。以`abs`为例，`exec`字段可以配置成下面两种方式
+- `exec`: 配置`EXEC_NPU_CMD`对应的参数。如果除aclnnname（原函数可排除out参数），其它参数顺序和Aten IR的顺序相同，可只配置aclnnname。以`abs`为例，`exec`字段可以配置成下面两种方式。
+
 ```yaml
     - func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
       方式一：
@@ -365,7 +370,9 @@ Aten IR定义：
       方式二：
       exec: aclnnAbs
 ```
+
 方式二（继承场景）:
+
 ```yaml
 - func: func_name(ArgType arg0[=default], ArgType arg1[=default], ...) -> Return
   op_api: v2.1
@@ -375,6 +382,7 @@ Aten IR定义：
 
 - `structured_inherit`：如果原函数或inplace类接口的字段配置与out类接口的字段配置相同，可通过此字段继承对应的out类接口。
 以`abs`为例，原函数和out类函数的out属性和`exec`相同，可通过`structured_inherit`字段继承。
+
 ```yaml
   - func: abs.out(Tensor self, *, Tensor(a!) out) -> Tensor(a!)
     op_api: [v1.11, newest]
@@ -395,6 +403,7 @@ Aten IR定义：
 ### Yaml配置说明
 
 当自定义接口的aten需要废弃时，可以通过位于op_plugin/config/deprecated.yaml文件自动添加废弃告警。
+
 ```yaml
 deprecated:
   # 废弃且无替换
@@ -407,23 +416,30 @@ deprecated:
 ```
 
 其中：
+
 - `name`表示当前将要废弃的aten名称，需要注意的是该名称需要包括重载名，例如样例中`npu_broadcast.out`即为`npu_broadcast`的out重载变体
 - `replace`表示对应aten的替换方案，例如`torch.broadcast_to`是`npu_broadcast`的替换方案。
 
 当存在`replace`时，生成告警信息格式为：
+
 ```python
 f'TORCH_WARN_ONCE("{name} is deprecated and will be removed in future version. Use {replace} instead.");'
 ```
+
 其中`name`不会包含重载名。以`npu_broadcast.out`为例，生成告警为：
+
 ```python
 'TORCH_WARN_ONCE("npu_broadcast is deprecated and will be removed in future version. Use torch.broadcast_to instead.");'
 ```
 
 当不存在`replace`时，生成告警信息格式为：
+
 ```python
 f'TORCH_WARN_ONCE("{name} is deprecated and will be removed in future version.");'
 ```
+
 该场景下`name`同样不会包含重载名。以`npu_nms_rotated`为例，生成告警为：
+
 ```python
 'TORCH_WARN_ONCE("npu_nms_rotated is deprecated and will be removed in future version.");'
 ```

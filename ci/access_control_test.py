@@ -5,7 +5,9 @@ import re
 import sys
 import subprocess
 import threading
+import argparse
 import queue
+import glob
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
@@ -21,8 +23,6 @@ not_support_in_910b = [
     "test_custom_ops/test_incre_flash_attention",
     "test_custom_ops/test_npu_ffn",
     "test_base_ops/test_adaptive_max_pool2d_backward",
-    "test_base_ops/test_random",
-    "test_base_ops/test_im2col_backward",
     "test_base_ops/test_conv_transpose2d_backward",
     "test_base_ops/test_gru_true",
 ]
@@ -39,23 +39,21 @@ class AccurateTest(metaclass=ABCMeta):
     @staticmethod
     def find_ut_by_regex(regex, test_path):
         ut_files = []
-        cmd = "find {} -name {}".format(test_path, regex)
-        status, output = subprocess.getstatusoutput(cmd)
-        # For the ones that cannot be found, no action will be taken temporarily.
-        if status or not output:
-            pass
-        else:
-            files = output.split('\n')
+        pattern = os.path.join(test_path, "**", regex)
+        try:
+            files = glob.glob(pattern, recursive=True)
             for ut_file in files:
                 if ut_file.endswith(".py"):
                     ut_files.append(ut_file)
+        except Exception as e:
+            pass
         return ut_files
 
     def get_ut_files(self, regex):
         test_custom_path = os.path.join(TEST_DIR, 'test_custom_ops')
         check_dir_path_readable(test_custom_path)
         ut_files = self.find_ut_by_regex(regex, test_custom_path)
-        
+
         version_path = get_test_torch_version_path()
         test_version_path = os.path.join(TEST_DIR, version_path)
         check_dir_path_readable(test_version_path)
@@ -87,7 +85,7 @@ class OpStrategy(AccurateTest):
             the test file names that contain all of these keywords.
         """
         filename = Path(modify_file).name
-        if filename.find('KernelNpu') >= 0: 
+        if filename.find('KernelNpu') >= 0:
             feature_line = filename.split('KernelNpu')[0]
             features = re.findall('[A-Z][^A-Z]*', feature_line)
             regex = '*_' + '*'.join([f"{feature.lower()}" for feature in features]) + '.py'
@@ -156,7 +154,7 @@ class TestMgr():
             for changed_file in unique_files
             if Path(changed_file).exists()
         ]
-        
+
         if "Ascend910B" in torch_npu.npu.get_device_name():
             supported_ut_files = []
             for ut_file in exist_ut_file:
@@ -167,6 +165,17 @@ class TestMgr():
             self.test_files['ut_files'] = supported_ut_files
         else:
             self.test_files['ut_files'] = exist_ut_file
+
+    def split_test_files(self, rank, world_size):
+        if rank > world_size:
+            raise Exception(f'rank {rank} is greater than world_size {world_size}')
+
+        def ordered_split(files, start, step):
+            return sorted(files)[start::step] if files else []
+
+        # node rank starts from 1
+        self.test_files['ut_files'] = ordered_split(self.test_files['ut_files'], rank - 1, world_size)
+        self.test_files['op_ut_files'] = ordered_split(self.test_files['op_ut_files'], rank - 1, world_size)
 
     def get_test_files(self):
         return self.test_files
@@ -180,7 +189,7 @@ class TestMgr():
         print("ut files:")
         for ut_file in self.test_files['ut_files']:
             print(ut_file)
-    
+
     def print_op_ut_files(self):
         print("op ut files:")
         for op_ut_file in self.test_files['op_ut_files']:
@@ -194,7 +203,7 @@ def exec_ut(files):
     """
     def get_op_name(ut_file):
         return ut_file.split('/')[-1].split('.')[0].lstrip('test_')
-    
+
     def get_ut_name(ut_file):
         return str(Path(ut_file).relative_to(TEST_DIR))[:-3]
 
@@ -293,10 +302,17 @@ def get_test_torch_version_path():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Control needed ut cases')
+    parser.add_argument('--rank', default=0, type=int, help='Index of current ut nodes')
+    parser.add_argument('--world_size', default=0, type=int, help='Number of ut nodes')
+    options = parser.parse_args()
+    print(f"options: {options}")
     cur_modify_files = os.path.join(BASE_DIR, 'modify_files.txt')
     test_mgr = TestMgr()
     test_mgr.load(cur_modify_files)
     test_mgr.analyze()
+    if options.rank > 0 and options.world_size > 0:
+        test_mgr.split_test_files(options.rank, options.world_size)
     cur_test_files = test_mgr.get_test_files()
 
     test_mgr.print_modify_files()

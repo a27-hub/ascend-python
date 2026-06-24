@@ -1,121 +1,144 @@
 import os
+import glob
 import subprocess
-import stat
-import shutil
-import multiprocessing
-from distutils.version import LooseVersion
-from setuptools import find_packages, setup
-from setuptools import Extension
-from setuptools.command.build_clib import build_clib
-from setuptools.command.build_ext import build_ext
+import re
+import sysconfig
+from distutils.errors import CompileError
+from distutils.spawn import find_executable
 import torch
 import torch_npu
-from torch_npu.utils.cpp_extension import NpuExtension
+from torch.utils.cpp_extension import BuildExtension
+import torch.utils.cpp_extension as cpp_extension
+from setuptools import setup, Extension, find_packages
+from setuptools.command.build_ext import build_ext
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+USE_NINJA = os.getenv('USE_NINJA') == '1'
+source_files = glob.glob(os.path.join(BASE_DIR, "csrc", "*.asc"), recursive=True)
 
 
-BUILD_PERMISSION = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = 'op-extension'
+def get_npu_arch():
+    """Get NPU architecture version from npu-smi info."""
+    try:
+        result = subprocess.run( # nosec B607
+            ["npu-smi", "info"], capture_output=True, text=True, check=True
+        )
+        output = result.stdout
 
+        chip_name = None
+        for line in output.split('\n'):
+            if not line.strip():
+                continue
+            if re.search(r'Health|NPU\s+ID|Name|Version|\+|---|=', line):
+                continue
+            match = re.search(r'^\s*\|?\s*\d+\s*\|?\s*([A-Za-z0-9]+)', line)
+            if match:
+                chip_name = match.group(1)
+                break
 
-def which(thefile):
-    path = os.environ.get("PATH", os.defpath).split(os.pathsep)
-    for d in path:
-        fname = os.path.join(d, thefile)
-        fnames = [fname]
-        for name in fnames:
-            if os.access(name, os.F_OK | os.X_OK) and not os.path.isdir(name):
-                return name
-    return None
+        if not chip_name:
+            raise RuntimeError("Failed to parse chip name from npu-smi info.")
 
-
-def get_cmake_command():
-    def _get_version(cmd):
-        for line in subprocess.check_output([cmd, '--version']).decode('utf-8').split('\n'):
-            if 'version' in line:
-                return LooseVersion(line.strip().split(' ')[2])
-        raise RuntimeError('no version found')
-    "Returns cmake command."
-    cmake_command = 'cmake'
-    cmake3 = which('cmake3')
-    cmake = which('cmake')
-    if cmake3 is not None and _get_version(cmake3) >= LooseVersion("3.18.0"):
-        cmake_command = 'cmake3'
-        return cmake_command
-    elif cmake is not None and _get_version(cmake) >= LooseVersion("3.18.0"):
-        return cmake_command
-    else:
-        raise RuntimeError('no cmake or cmake3 with version >= 3.18.0 found')
-
-
-class CPPLibBuild(build_clib, object):
-    def run(self):
-        cmake = get_cmake_command()
-
-        if cmake is None:
-            raise RuntimeError(
-                "CMake must be installed to build the following extensions: " +
-                ", ".join(e.name for e in self.extensions))
-        self.cmake = cmake
-        build_py = self.get_finalized_command("build_py")
-        extension_dir = os.path.join(BASE_DIR, build_py.build_lib, build_py.get_package_dir("op_extension"))
-
-        build_dir = os.path.join(BASE_DIR, "build")
-        build_type_dir = os.path.join(build_dir)
-        output_lib_path = os.path.join(build_type_dir, "lib")
-        os.makedirs(build_type_dir, exist_ok=True)
-        os.chmod(build_type_dir, mode=BUILD_PERMISSION)
-        os.makedirs(output_lib_path, exist_ok=True)
-        self.build_lib = os.path.relpath(os.path.join(build_dir))
-        self.build_temp = os.path.relpath(build_type_dir)
-
-        cmake_args = [
-            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + os.path.realpath(output_lib_path),
-            '-DTORCH_PATH=' + os.path.realpath(os.path.dirname(torch.__file__)),
-            '-DTORCH_NPU_PATH=' + os.path.realpath(os.path.dirname(torch_npu.__file__)),
-            ]
-
-        if torch.compiled_with_cxx11_abi():
-            cmake_args.append('-DGLIBCXX_USE_CXX11_ABI=1')
+        if '950' in chip_name:
+            return 'dav-3510'
+        elif '910' in chip_name:
+            return 'dav-2201'
         else:
-            cmake_args.append('-DGLIBCXX_USE_CXX11_ABI=0')
+            raise RuntimeError(f"New chip model: {chip_name}, please check the corresponding architecture: dav-xxx")
 
-        max_jobs = os.getenv("MAX_JOBS", str(multiprocessing.cpu_count()))
-        build_args = ['-j', max_jobs]
-
-        subprocess.check_call([self.cmake, BASE_DIR] + cmake_args, cwd=build_type_dir, env=os.environ)
-        for base_dir, dirs, files in os.walk(build_type_dir):
-            for dir_name in dirs:
-                dir_path = os.path.join(base_dir, dir_name)
-                os.chmod(dir_path, mode=BUILD_PERMISSION)
-            for file_name in files:
-                file_path = os.path.join(base_dir, file_name)
-                os.chmod(file_path, mode=BUILD_PERMISSION)
-
-        subprocess.check_call(['make'] + build_args, cwd=build_type_dir, env=os.environ)
-        dst_dir = os.path.join(extension_dir, 'lib')
-        if os.path.exists(dst_dir):
-            shutil.rmtree(dst_dir)
-        shutil.copytree(output_lib_path, dst_dir)
+    except FileNotFoundError:
+        raise RuntimeError("npu-smi info is not found, please ensure CANN is installed")
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to execute npu-smi info: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Failed get NPU architecture: {e}")
 
 
-class Build(build_ext, object):
+def get_dependency_paths():
+    python_include = sysconfig.get_config_var("INCLUDEPY")
+    python_lib = sysconfig.get_config_var("LIBDIR")
 
-    def run(self):
-        self.run_command('build_clib')
-        self.build_lib = os.path.relpath(os.path.join(BASE_DIR, "build"))
-        self.build_temp = os.path.relpath(os.path.join(BASE_DIR, "build/temp"))
-        self.library_dirs.append(
-            os.path.relpath(os.path.join(BASE_DIR, "build/lib")))
-        super(Build, self).run()
+    torch_include_paths = cpp_extension.include_paths()
+    torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
+
+    torch_npu_path = os.path.dirname(torch_npu.__file__)
+    torch_npu_include = os.path.join(torch_npu_path, "include")
+    torch_npu_lib = os.path.join(torch_npu_path, "lib")
+
+    all_include_paths = list([
+        *torch_include_paths,
+        python_include,
+        torch_npu_include,
+    ])
+
+    all_libs = list([
+        python_lib,
+        torch_lib,
+        torch_npu_lib,
+    ])
+
+    return {
+        "all_includes": all_include_paths,
+        "all_libs": all_libs
+    }
 
 
-setup(name='op_extension',
-      description='NPU bridge for Torchvision',
-      packages=find_packages(),
-        ext_modules=[NpuExtension("op_extension._C", sources=[])],
-      cmdclass={
-          'build_clib': CPPLibBuild,
-          'build_ext': Build,
-                }
-      )
+class AscendBuildExtension(BuildExtension):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _check_bisheng_compiler(self):
+        bisheng_compiler = find_executable('bisheng')
+        if not bisheng_compiler:
+            raise RuntimeError("bisheng command not found!")
+
+    def build_extension(self, ext):
+        self._check_bisheng_compiler()
+        dep_paths = get_dependency_paths()
+
+        ext_fullpath = self.get_ext_fullpath(ext.name)
+        os.makedirs(os.path.dirname(ext_fullpath), exist_ok=True)
+
+        use_cxx11_abi = torch._C._GLIBCXX_USE_CXX11_ABI
+        abi_value = "1" if use_cxx11_abi else "0"
+
+        npu_arch = get_npu_arch()
+
+        compile_cmd = [
+            "bisheng",
+            "-x", "asc",
+            f"--npu-arch={npu_arch}",
+            "-shared",
+            "-fPIC",
+            "-std=c++17",
+            f"-D_GLIBCXX_USE_CXX11_ABI={abi_value}",
+            "-ltorch_npu", "-ltorch", "-lc10",
+            *ext.sources,
+            "-o", ext_fullpath,
+        ]
+
+        for include_dir in dep_paths["all_includes"]:
+            compile_cmd.append(f"-I{include_dir}")
+
+        for lib_dir in dep_paths["all_libs"]:
+            compile_cmd.append(f"-L{lib_dir}")
+
+        try:
+            self.spawn(compile_cmd)
+        except Exception as e:
+            raise CompileError(f"{str(e)}") from e
+
+
+your_ext = Extension(
+    name="op_extension.custom_ops_lib",
+    sources=source_files,
+    language="asc",
+)
+
+setup(
+    name="op_extension",
+    version="0.1",
+    ext_modules=[your_ext],
+    packages=find_packages(),
+    cmdclass={"build_ext": AscendBuildExtension.with_options(use_ninja=USE_NINJA)},
+)

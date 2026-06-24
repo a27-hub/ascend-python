@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <c10/core/GradMode.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -50,6 +51,9 @@ at::Tensor& minimum_out(const at::Tensor& self, const at::Tensor& other, at::Ten
 
 at::Tensor min(const at::Tensor& self)
 {
+    TORCH_CHECK(self.numel() > 0,
+    "min(): Expected reduction dim to be specified for input.numel() == 0. "
+    "Specify the reduction dim with the 'dim' argument.");
     DO_COMPATIBILITY(aclnnMin, acl_op::min(self));
     at::SmallVector<int64_t, op_infer::SIZE> dims = op_plugin::utils::get_dimlist_for_tensor(self);
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dims, false);
@@ -88,6 +92,9 @@ std::tuple<at::Tensor, at::Tensor> min(const at::Tensor& self, int64_t dim, bool
 
 at::Tensor& min_out(const at::Tensor& self, const at::Tensor& other, at::Tensor& result)
 {
+    TORCH_CHECK(!(self.requires_grad() || other.requires_grad() || result.requires_grad()) || !at::GradMode::is_enabled(),
+                "minimum(): functions with out=... arguments don`t support automatic differentiation, "
+                "but one of the arguments requires grad.");
     DO_COMPATIBILITY(aclnnMinimum, acl_op::min_out(self, other, result));
     auto output_size = op_infer::broadcast_ops_npu_output_size(self, other);
     at_npu::native::OpPreparation::check_tensor({self, other}, result, result.scalar_type(), output_size);

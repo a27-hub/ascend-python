@@ -23,6 +23,20 @@ namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
 
 namespace {
+constexpr int DIM_2D = 2;
+
+static void check_linalg_solve_triangular_inputs(const at::Tensor& self, const at::Tensor& B)
+{
+    TORCH_CHECK(
+        self.dim() >= DIM_2D,
+        "linalg.solve_triangular: The input tensor A must have at least 2 dimensions.",
+        OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(
+        B.dim() >= DIM_2D,
+        "linalg.solve_triangular: The input tensor B must have at least 2 dimensions.",
+        OPS_ERROR(ErrCode::PARAM));
+}
+
 at::Tensor exec_triangular_solve(
     const at::Tensor& self,
     const at::Tensor& A,
@@ -30,12 +44,16 @@ at::Tensor exec_triangular_solve(
     bool transpose,
     bool unitriangular)
 {
+    at::native::checkInputsSolver(A, self, true, "linalg.solve_triangular");
     at::Tensor self_broadcasted;
     at::Tensor a_broadcasted;
-    std::tie(self_broadcasted, a_broadcasted) = at::native::_linalg_broadcast_batch_dims(self, A, "triangular_solve");
+    std::tie(self_broadcasted, a_broadcasted) = at::native::_linalg_broadcast_batch_dims(self, A, nullptr);
+    if (self_broadcasted.scalar_type() != a_broadcasted.scalar_type()) {
+        self_broadcasted = self_broadcasted.to(a_broadcasted.scalar_type());
+    }
     auto self_working_copy = npu_preparation::apply_tensor(self_broadcasted);
     auto a_working_copy = a_broadcasted.clone();
-    EXEC_NPU_CMD(aclnnTriangularSolve, self, A, upper, transpose, unitriangular, self_working_copy, a_working_copy);
+    EXEC_NPU_CMD(aclnnTriangularSolve, self_broadcasted, a_broadcasted, upper, transpose, unitriangular, self_working_copy, a_working_copy);
     return self_working_copy;
 }
 
@@ -49,6 +67,7 @@ at::Tensor& linalg_solve_triangular_out(
     bool unitriangular,
     at::Tensor& out)
 {
+    check_linalg_solve_triangular_inputs(self, B);
     at::Tensor X;
     at::Tensor X_transpose;
     bool transpose = false;
@@ -70,6 +89,7 @@ at::Tensor linalg_solve_triangular(
     bool left,
     bool unitriangular)
 {
+    check_linalg_solve_triangular_inputs(self, B);
     at::Tensor X;
     at::Tensor X_transpose;
     bool transpose = false;

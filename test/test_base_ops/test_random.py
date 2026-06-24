@@ -132,7 +132,7 @@ class TestRandom(TestCase):
     def test_random_toIsNone(self, dtype):
         size = 2000
         alpha = 0.1
-        from_ = -800
+        from_ = 8
 
         if dtype == torch.float:
             to_inc = 1 << 24
@@ -141,6 +141,8 @@ class TestRandom(TestCase):
         elif dtype == torch.half:
             to_inc = 1 << 11
         else:
+            # fix: min of int8/uint8 is bigger than from_'s default value, causing ut error
+            from_ = torch.iinfo(dtype).min
             to_inc = torch.iinfo(dtype).max
 
         t = torch.empty(size, dtype=dtype, device="cpu").to("npu")

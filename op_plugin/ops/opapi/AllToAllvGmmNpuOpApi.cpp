@@ -22,7 +22,7 @@ namespace op_api {
                                                                      c10::string_view hcom, int64_t ep_world_size, at::IntArrayRef send_counts, at::IntArrayRef recv_counts,
                                                                      const c10::optional<at::Tensor> &send_counts_tensor, const c10::optional<at::Tensor> &recv_counts_tensor,
                                                                      const c10::optional<at::Tensor> &mm_x, const c10::optional<at::Tensor> &mm_weight,
-                                                                     bool trans_gmm_weight, bool trans_mm_weight, bool permute_out_flag)
+                                                                     bool trans_gmm_weight, bool trans_mm_weight, bool permute_out_flag, c10::optional<c10::string_view> comm_mode)
     {
         at::Tensor mm_y{nullptr};
         at::Tensor permute_out{nullptr};
@@ -47,24 +47,48 @@ namespace op_api {
         const at::Tensor &mm_weight_real = mm_weight.value_or(at::Tensor());
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
-        const char *hcom_ptr = (char *)hcom.data();
-        EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
-                     gmm_x,
-                     gmm_weight,
-                     send_count_tensor_real,
-                     recv_count_tensor_real,
-                     mm_x_real,
-                     mm_weight_real,
-                     hcom_ptr,
-                     ep_world_size,
-                     send_counts,
-                     recv_counts,
-                     trans_gmm_weight,
-                     trans_mm_weight,
-                     permute_out_flag,
-                     gmm_y,
-                     mm_y,
-                     permute_out);
+        char* hcom_ptr = const_cast<char*>(hcom.data());
+        if (comm_mode.has_value()) {
+            TORCH_CHECK(check_aclnn_kernel_available("aclnnAlltoAllvGroupedMatMulV2"),
+                        "Current CANN version do not support this api. Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
+            const char* comm_mode_real = const_cast<char *>(comm_mode.value().data());
+            EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
+                         gmm_x,
+                         gmm_weight,
+                         send_count_tensor_real,
+                         recv_count_tensor_real,
+                         mm_x_real,
+                         mm_weight_real,
+                         hcom_ptr,
+                         comm_mode_real,
+                         ep_world_size,
+                         send_counts,
+                         recv_counts,
+                         trans_gmm_weight,
+                         trans_mm_weight,
+                         permute_out_flag,
+                         gmm_y,
+                         mm_y,
+                         permute_out);
+        } else {
+            EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMul,
+                         gmm_x,
+                         gmm_weight,
+                         send_count_tensor_real,
+                         recv_count_tensor_real,
+                         mm_x_real,
+                         mm_weight_real,
+                         hcom_ptr,
+                         ep_world_size,
+                         send_counts,
+                         recv_counts,
+                         trans_gmm_weight,
+                         trans_mm_weight,
+                         permute_out_flag,
+                         gmm_y,
+                         mm_y,
+                         permute_out);
+        }
         return std::tie(gmm_y, mm_y, permute_out);
     }
 } // namespace op_api

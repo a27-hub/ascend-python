@@ -16,17 +16,35 @@
 
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/utils/OpAdapter.h"
+#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
+#include <ATen/DTensorState.h>
+#endif
 
 namespace acl_op {
 using npu_preparation = at_npu::native::OpPreparation;
 using npu_compile_type = at_npu::native::CompileType;
 
 at::Tensor one_hot(const at::Tensor& self, int64_t num_classes) {
+    auto ks = self.key_set();
+    bool is_fake_or_meta = ks.has_all(c10::DispatchKeySet(c10::BackendComponent::MetaBit)) ||
+        ks.has_all(c10::DispatchKeySet(c10::DispatchKey::Python)) ||
+        self.is_meta();
+    if (is_fake_or_meta) {
+        TORCH_CHECK(num_classes != -1, "FakeTensorMode does not support num_classes == -1.");
+
+#if VERSION_BETWEEN(V2R9, VERSION_NEWEST)
+        at::DTensorAllowImplicitReplication guard;
+#endif
+
+        auto options = self.options().dtype(at::kLong);
+        at::Tensor index = at::arange(num_classes, options);
+        return at::eq(self.unsqueeze(-1), index).to(at::kLong);
+    }
     at::Scalar on_value = 1;
     at::Scalar off_value = 0;
     int64_t axis = -1;
     int64_t depth;
-    auto self_temp = at_npu::native::custom_ops::npu_dtype_cast(self, at::kFloat);
+    auto self_temp = at_npu::native::custom_ops::_npu_dtype_cast(self, at::kFloat);
 
     if (self.numel() == 0) {
         TORCH_CHECK(num_classes > 0, "Can not infer total number of classes from empty tensor."

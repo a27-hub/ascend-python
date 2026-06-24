@@ -61,7 +61,7 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> broadcast_ops_npu_output_size(c
 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> reduce_ops_npu_output_size(const at::Tensor& self,
                                                                             c10::IntArrayRef dim, bool keepdim);
-                                                                            
+
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> reduce_lastdim_output_size(const at::Tensor& self);
 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> mse_loss_npu_output_size(const at::Tensor& self,
@@ -156,6 +156,9 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> index_npu_output_size(const at:
 
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> index_select_npu_output_size(const at::Tensor& self, int64_t dim,
                                                                               const at::Tensor& index);
+
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> isclose_output_size(const at::Tensor& self, const at::Tensor& other, double rtol,
+                                                                     double atol, bool equal_nan);
 
 OP_PLUGIN_HIDDEN std::tuple<c10::IntArrayRef, c10::IntArrayRef, c10::IntArrayRef> layer_norm_backward_npu_output_size(
     const at::Tensor& X, const at::Tensor& gamma);
@@ -356,14 +359,9 @@ OP_PLUGIN_HIDDEN at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_zloss_out
 OP_PLUGIN_HIDDEN at::SmallVector<int64_t, SIZE> npu_cross_entropy_loss_lse_for_zloss_output_size(const at::Tensor &input,
                                                                                                  float lse_square_scale_for_zloss);
 
-OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> kronecker_quant_out_size(const at::Tensor &self);
-
-OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> kronecker_quant_scale_size(const at::Tensor &self);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> matmul_output_size(const at::Tensor &tensor1, const at::Tensor &tensor2);
-OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_transpose_batchmatmul_output_size(const at::Tensor &input, const at::Tensor &weight, const at::Tensor &scale_real,
-                                                                                       at::IntArrayRef perm_x1_real, at::IntArrayRef perm_x2_real, at::IntArrayRef perm_y_real,
-                                                                                       int32_t batch_split_factor_value);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_group_quant_out_size(const at::Tensor& x, c10::optional<at::ScalarType> dst_dtype);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_add_rms_norm_dynamic_quant_y_size(const at::Tensor& x1, c10::optional<at::ScalarType> y_dtype);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_gather_sparse_index_out_size(const at::Tensor& input, const at::Tensor& index);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_nsa_compress_out_size(const at::Tensor& input, c10::optional<int64_t> actual_seq_len_type, at::OptionalIntArrayRef actual_seq_len, int64_t compress_block_size, int64_t compress_stride);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_nsa_select_attention_infer_out_size(const at::Tensor& query, const at::Tensor& value, int64_t head_num, int64_t key_value_head_num, c10::string_view layout);
@@ -373,12 +371,32 @@ OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_nsa_compress_attention_infe
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_out_size(const at::Tensor &tokens, const at::Tensor &indices, c10::optional<int64_t> num_out_tokens);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_out_size(const at::Tensor& permuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor>& probs);
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_grad_v2_out_size(const int64_t tokens_size_0, const at::Tensor &grad_permuted_tokens, const at::Tensor &sorted_indices);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_permute_grad_out_size(const at::Tensor &tokens, const at::Tensor &permuted_tokens, const at::Tensor &indices, const at::Tensor &sorted_indices);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_permuted_tokens_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs);
 OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_moe_token_unpermute_grad_probs_out_size(const at::Tensor &permuted_tokens, const at::Tensor &grad_unpermuted_tokens, const at::Tensor &sorted_indices, const c10::optional<at::Tensor> &probs);
-OP_PLUGIN_HIDDEN c10::SmallVector<c10::SmallVector<int64_t, SIZE>, SIZE> split_with_sizes_copy_output_size(const c10::SmallVector<int64_t, SIZE>& input_shape, const c10::IntArrayRef split_sizes, int64_t dim);
 
 OP_PLUGIN_HIDDEN std::tuple<c10::SmallVector<int64_t, SIZE>, c10::SmallVector<int64_t, SIZE>> triangular_solve_output_size(const at::Tensor& self, const at::Tensor& A);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> npu_gelu_mul_output_size(const at::Tensor &input);
 
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_output_size(const at::Tensor &input, at::TensorList params, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_output1_2_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_npu_ijfo_hc_tanhc_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool train, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
+
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_backward_npu_output_size(const at::Tensor &input, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
+OP_PLUGIN_HIDDEN c10::SmallVector<int64_t, SIZE> lstm_backward_npu_hc_prev_output_size(const at::Tensor &input, at::TensorList params, int64_t num_layers, bool bidirectional, bool batch_first, const c10::optional<at::Tensor> &batch_sizes);
+
+OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_teardown_out_size(
+    const at::Tensor &x, const at::Tensor expert_ids, int64_t ep_world_size, int64_t ep_rank_id,
+    int64_t moe_expert_num, int64_t expert_shard_type, int64_t shared_expert_rank_num, int64_t global_bs, int64_t quant_mode);
+OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_dispatch_setup_out_size(
+    const at::Tensor &x, const at::Tensor &expert_ids, int64_t ep_world_size, int64_t ep_rank_id,
+    int64_t moe_expert_num, int64_t expert_shard_type, int64_t shared_expert_num, int64_t shared_expert_rank_num,
+    int64_t quant_mode, c10::optional<int64_t> y_dtype);
+OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_setup_out_size(
+    const at::Tensor expand_x, int64_t ep_world_size);
+OP_PLUGIN_HIDDEN std::vector<c10::SmallVector<int64_t, SIZE>> npu_moe_distribute_combine_teardown_out_size(
+    const at::Tensor expand_x, const at::Tensor expert_ids);
+    
 } // namespace op_infer
 #endif // OP_PLUGIN_UTILS_KERNEL_NPU_INFER_SHAPE

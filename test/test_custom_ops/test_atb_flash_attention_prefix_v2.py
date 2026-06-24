@@ -49,7 +49,6 @@ class TestFlashAttentionPrefixEncoder(TestCase):
             s_offset += dim1len
         return torch.from_numpy(kv[0:sum(seq_len)][:])
 
-    # pylint:disable = huawei-too-many-arguments
     def set_data_params(self, dynamic_batch=False, batch_state=None, window_size=0, cache_type=0,
                         is_mask=True, is_decoder=False, is_alibi=False, alibi_dim=4,
                         batch=1, kv_head=1, heads=1, embeddim=128, embeddimv=0, max_seq=2048,
@@ -60,7 +59,7 @@ class TestFlashAttentionPrefixEncoder(TestCase):
                         tor=1, bnsd=False, is_compress=False, q_seqlens=None, num_blocks=None,
                         block_size=None):
         if kv_seqLen is None:
-            kv_seqLen = [] 
+            kv_seqLen = []
         self.dynamic_batch = dynamic_batch
         self.batch_state = batch_state
         self.is_mask = is_mask
@@ -856,7 +855,7 @@ class TestFlashAttentionPrefixEncoder(TestCase):
         else:
             print("accuracy is correct in old standard: %r", (float(strict_error_count) / out_len) <= ratios[0])
 
-        calc_times = self.heads * self.max_seq + 4 
+        calc_times = self.heads * self.max_seq + 4
         if self.data_type == torch.bfloat16:
             if calc_times < 2048:
                 error = 2**(-7)

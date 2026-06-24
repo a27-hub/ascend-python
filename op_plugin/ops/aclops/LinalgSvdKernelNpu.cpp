@@ -39,5 +39,4 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> _linalg_svd(
 {
     return _svd_helper(A, !full_matrices, compute_uv);
 }
-
 } // namespace acl_op

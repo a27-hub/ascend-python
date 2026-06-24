@@ -27,10 +27,10 @@ class TestAtbFakeTensor(TestCase):
             block_tables = torch.randint(0, 10, (batch, max_num_blocks_per_query), dtype=torch.int32).npu()
             context_lens = [2] * batch
             atten_out = torch_npu.atb.npu_multi_head_latent_attention(q_nope, q_rope, ctkv, k_rope, block_tables, context_lens, 32, 1.0, 1)
-            
+
             self.assertTrue(atten_out.shape == q_nope.shape)
             self.assertEqual(atten_out.dtype, q_rope.dtype)
-    
+
     def test_npu_multi_head_latent_attentionn_lse(self):
         with FakeTensorMode():
             block_size = 128
@@ -50,7 +50,7 @@ class TestAtbFakeTensor(TestCase):
             context_lens = [2] * batch
             return_lse = True
             atten_out, lse_out = torch_npu.atb.npu_multi_head_latent_attention(q_nope, q_rope, ctkv, k_rope, block_tables, context_lens, 32, 1.0, 1, return_lse)
-            
+
             self.assertTrue(atten_out.shape == q_nope.shape)
             self.assertEqual(atten_out.dtype, q_rope.dtype)
             self.assertTrue(lse_out.shape == torch.Size([num_tokens, num_heads, 1]))
@@ -166,7 +166,26 @@ class TestAtbFakeTensor(TestCase):
             self.assertTrue(output[1].shape == indices.shape)
             self.assertEqual(output[0].dtype, torch.float32)
             self.assertEqual(output[1].dtype, torch.int32)
+    def test_npu_quant_max(self):
+        with FakeTensorMode():
+            x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+            scale = torch.randn((1,), dtype=torch.float32).npu()
 
+            y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291)
+            self.assertTrue(y.shape == x.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertTrue(amax.shape == torch.Size([1]))
+            self.assertEqual(amax.dtype, x.dtype)
+
+            y2, amax2 = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=292)
+            self.assertTrue(y2.shape == x.shape)
+            self.assertEqual(y2.dtype, torch.float8_e4m3fn)
+            self.assertEqual(amax2.dtype, x.dtype)
+
+            y3, amax3 = torch_npu.npu_quant_max(x, scale, round_mode="hybrid", dst_dtype=290)
+            self.assertTrue(y3.shape == x.shape)
+            self.assertEqual(y3.dtype, torch.uint8)
+            self.assertEqual(amax3.dtype, x.dtype)
 
 if __name__ == "__main__":
     run_tests()

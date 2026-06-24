@@ -5,109 +5,84 @@
 本项目开发了Ascend Extension for Pytorch（torch_npu）算子插件，为使用PyTorch框架的开发者提供便捷的NPU算子库调用能力。
 OpPlugin算子插件的编译、使用依赖昇腾Ascend Extension for PyTorch。因此，在编译OpPlugin之前，需要了解、安装昇腾PyTorch。使用手册可参考昇腾社区[Ascend Extension for Pytorch](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md)。
 
+## 目录结构
+
+关键目录如下:
+
+```ColdFusion
+├─docs                             # 文档目录
+├─ci                               # 自动化构建与测试脚本目录
+├─op_plugin                        # 项目核心目录
+│  ├─config                        # 配置管理目录
+│  ├─ops                           # 算子实现目录
+│  ├─python                        # python绑定目录
+├─codegen                          # 代码生成目录
+├─examples                         # 示例目录
+└─test                             # 测试目录
+```
+
 ## 版本配套表
+
 op-plugin仓旨在为**torch_npu**提供运行所需要的算子适配文件，两个仓的对应关系如下：
+
 | op-plugin分支 | 对应Ascend Extension for PyTorch版本 |
 | ------------- | :----------------------------------: |
-| master        |     主线版本，如v2.1.0等             |
+| master       |     主线版本，如v2.7.1等              |
+| 26.0.0       |    26.0.0版本，如v2.7.1-26.0.0等      |
+| 7.3.0        |     7.3.0版本，如v2.7.1-7.3.0等       |
+| 7.2.0        |     7.2.0版本，如v2.7.1-7.2.0等       |
 | 7.1.0        |     7.1.0版本，如v2.1.0-7.1.0等       |
 | 7.0.0        |     7.0.0版本，如v2.1.0-7.0.0等       |
 | 6.0.0        |     6.0.0版本，如v2.1.0-6.0.0等       |
-| 6.0.rc3       |   6.0.rc3版本，如v2.1.0-6.0.rc3等    |
-| 6.0.rc2       |   6.0.rc2版本，如v2.1.0-6.0.rc2等    |
-| 6.0.rc1       |   6.0.rc1版本，如v2.1.0-6.0.rc1等    |
-| 5.0.0         |     5.0.0版本，如v2.1.0-5.0.0等      |
-| 5.0.rc3       |   5.0.rc3版本，如v2.1.0-5.0.rc3等    |
+| 6.0.rc3      |   6.0.rc3版本，如v2.1.0-6.0.rc3等     |
+| 6.0.rc2      |   6.0.rc2版本，如v2.1.0-6.0.rc2等     |
+| 6.0.rc1      |   6.0.rc1版本，如v2.1.0-6.0.rc1等     |
+| 5.0.0        |     5.0.0版本，如v2.1.0-5.0.0等       |
+| 5.0.rc3      |   5.0.rc3版本，如v2.1.0-5.0.rc3等     |
 
 ## 安装OpPlugin
 
-### 发布包安装
-暂未正式发布
+支持通过源码编译的方式安装OpPlugin。具体操作，请参考[安装OpPlugin](docs/zh/install.md)。
 
-### 源码编译安装
+## 快速入门
 
-#### 安装依赖
+提供了一个通过OpPlugin插件实现PyTorch调用Ascend C自定义算子的完整开发指南，涵盖了从环境配置、算子注册、适配实现到测试验证提供了全流程说明。具体操作，请参考[调用样例](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/framework_feature_guide_pytorch/opplugin_operator_adaptation.md)。
 
-安装时需要安装系统依赖及官方PyTorch框架，建议使用torch_npu提供的docker镜像进行编译，依赖安装和镜像使用指导可参考[Ascend Extension for Pytorch](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md#%E4%BD%BF%E7%94%A8%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91%E5%AE%89%E8%A3%85pytorch%E6%A1%86%E6%9E%B6)。
+## API参考
 
-#### 操作步骤
-
-1. 配置CANN环境变量脚本。
-
-   ```
-   source <CANN软件安装目录>/<CANN软件路径>/set_env.sh
-   ```
-
-   环境变量脚本的默认路径一般为：/usr/local/Ascend/ascend-toolkit/set_env.sh，其中ascend-toolkit路径取决于安装的CANN软件名称。
-
-2. 编译生成插件的二进制安装包。
-
-   下载对应OpPlugin版本分支代码，进入插件根目录，以v2.1为例。
-   ```
-   git clone --branch master https://gitcode.com/ascend/op-plugin.git
-   cd op-plugin
-   ```
-   执行编译构建，当前支持torch_npu 2.1/2.3/2.4/2.5/2.6/2.7/2.8/master版本。
-   ```
-   bash ci/build.sh --python=3.8 --pytorch=v2.1.0
-   ```
-   >**须知：**<br>
-   >请注意，编译时gcc版本遵循如下约束：
-   >   - ARM架构下推荐使用gcc 10.2版本
-   >   - X86架构下推荐使用gcc 9.3.1; PyTorch 2.6.0及之后版本的编译推荐使用gcc 11.2.1
-   
-
-   | 参数      | 取值范围                                                           | 说明                  | 缺省值    | 备注                                |
-   |---------|----------------------------------------------------------------|---------------------|--------|-----------------------------------|
-   | PyTorch | v2.1.0, v2.3.1, v2.4.0, v2.5.1, v2.6.0, v2.7.1, v2.8.0, master | 指定编译过程中使用的PyTorch版本 | master | master对应的PyTorch版本为2.9            |
-   | Python  | 3.8, 3.9, 3.10, 3.11                                           | 指定编译过程中使用的Python版本  | 3.8    | 编译基于PyTorch2.5及后续版本时，不支持Python3.8 |
-
-   | PyTorch      | Python               | GCC                |
-   |--------------|----------------------|--------------------|
-   | v2.1.0       | 3.8, 3.9, 3.10, 3.11 | ARM: 10.2 x86: 9.3 |
-   | v2.6.0       | 3.9, 3.10, 3.11      | ARM: 11.2 x86: 9.3 |
-   | v2.7.1       | 3.9, 3.10, 3.11      | 11.2               |
-   | v2.8.0       | 3.9, 3.10, 3.11      | 13.3               |
-   | v2.9.0       | 3.10, 3.11           | 13.3               |
-   | master(2.10) | 3.10, 3.11           | 13.3               |
-
-   >编译过程中，会在插件根目录新建build文件夹，并下载torch_npu对应版本的源码，协同编译。 若build/pytorch目录存在，则编译op-plugin时，不再重复下载torch_npu源码。如需下载所依赖的最新torch_npu源码，删除build/pytorch目录即可。
-
-3. 完成编译后，安装dist目录下生成的插件torch\_npu包，如果使用非root用户安装，需要在命令后加`--user`。
-
-   ```
-   pip3 install --upgrade dist/torch_npu-{torch_npu_version}-{Python_version}-{arch}.whl
-   # 实际执行时需要根据生成的whl包名称进行替换，其中{torch_npu_version}表示编译的torch_npu版本，{Python_version} 为所使用的 Python 版本，{arch} 则代表目标架构。
-   # 典型的whl包名类似：torch_npu-2.1.0.post13-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
-   ```
-
-
-## 硬件配套
-
-昇腾训练设备包含以下型号，都可作为PyTorch模型的训练环境。
-| 产品系列               | 产品型号                         |
-|-----------------------|----------------------------------|
-| Atlas 训练系列产品     | Atlas 800 训练服务器（型号：9000） |
-|                       | Atlas 800 训练服务器（型号：9010） |
-|                       | Atlas 900 PoD（型号：9000）       |
-|                       | Atlas 300T 训练卡（型号：9000）    |
-|                       | Atlas 300T Pro 训练卡（型号：9000）|
-| Atlas A2 训练系列产品  | Atlas 800T A2 训练服务器          |
-|                       | Atlas 900 A2 PoD 集群基础单元     |
-|                       | Atlas 200T A2 Box16 异构子框      |
-| Atlas A3 训练系列产品  | Atlas 800T A3 训练服务器          |
-|                       | Atlas 900 A3 SuperPoD 超节点     |
-
-昇腾推理设备包含以下型号，都可作为大模型的推理环境。
-| 产品系列               | 产品型号                         |
-|-----------------------|----------------------------------|
-| Atlas 800I A2推理产品  | Atlas 800I A2 推理服务器          |
-
+基于PyTorch2.10.0/2.9.0/2.8.0/2.7.1版本，提供Ascend Extension for PyTorch自定义API的功能说明、函数原型、参数说明与调用示例等。具体信息，请参考[自定义API参考](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/menu_Pytorch_API.md)。
 
 ## 生命周期
+
 op-plugin仓依赖**torch_npu**运行，生命周期请参考**torch_npu**中的[PyTorch版本维护策略](https://gitcode.com/ascend/pytorch/blob/master/README.zh.md#pytorch%E7%89%88%E6%9C%AC%E7%BB%B4%E6%8A%A4%E7%AD%96%E7%95%A5)。
 
+## 贡献指导
+
+介绍如何向OpPlugin仓库贡献代码，具体请参见[贡献指南](https://gitcode.com/Ascend/pytorch/blob/master/CONTRIBUTING.md)。
+
+## 联系我们
+
+如果有任何疑问或建议，请提交[GitCode Issues](https://gitcode.com/Ascend/pytorch/issues)，我们会尽快回复。感谢您的支持。
 
 ## 安全声明
 
-[OpPlugin安全声明](SECURITYNOTE.md)
+主要描述了OpPlugin的安全加固信息、公网地址信息及通信矩阵等内容。具体介绍，请参考[OpPlugin安全声明](docs/zh/SECURITYNOTE.md)。
+
+## 免责声明
+
+致OpPlugin插件使用者
+
+- 本插件仅供调试和开发使用，使用者需自行承担使用风险，并理解以下内容：
+    - 数据处理及删除：用户在使用本插件过程中产生的数据属于用户责任范畴。建议用户在使用完毕后及时删除相关数据，以防信息泄露。
+    - 数据保密与传播：使用者了解并同意不得将通过本插件产生的数据随意外发或传播。对于由此产生的信息泄露、数据泄露或其他不良后果，本插件及其开发者概不负责。
+    - 用户输入安全性：用户需自行保证输入的命令行的安全性，并承担因输入不当而导致的任何安全风险或损失。对于输入命令行不当所导致的问题，本插件及其开发者概不负责。
+- 免责声明范围：本免责声明适用于所有使用本插件的个人或实体。使用本插件即表示您同意并接受本声明的内容，并愿意承担因使用该功能而产生的风险和责任，如有异议请停止使用本插件。
+- 在使用本工具之前，请谨慎阅读并理解以上免责声明的内容。对于使用本插件所产生的任何问题或疑问，请及时联系开发者。
+
+  ## License
+
+  OpPlugin的使用许可证，详见[LICENSE](http://gitcode.com/Ascend/op-plugin/blob/master/LICENSE)。
+
+  ## 致谢
+
+  感谢来自社区的每一个PR，欢迎贡献Ascend Extension for TensorPipe插件！

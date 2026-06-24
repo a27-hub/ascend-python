@@ -26,9 +26,9 @@ std::tuple<c10::SmallVector<int64_t, N>, c10::SmallVector<int64_t, N>> qr_npu_ou
     const at::Tensor& self,
     bool some)
 {
-    int m = self.size(-2);
-    int n = self.size(-1);
-    auto k = std::min<int>(m, n);
+    int64_t m = self.size(-2);
+    int64_t n = self.size(-1);
+    auto k = std::min<int64_t>(m, n);
     auto shape = op_infer::array_to_small_vector(self.sizes());
     c10::SmallVector<int64_t, N> q_size(shape.begin(), shape.end() - 2);
     c10::SmallVector<int64_t, N> r_size(shape.begin(), shape.end() - 2);
@@ -42,13 +42,25 @@ std::tuple<c10::SmallVector<int64_t, N>, c10::SmallVector<int64_t, N>> qr_npu_ou
     return std::tie(q_size, r_size);
 }
 
-inline void qr_check(
-    const at::Tensor& self)
+inline bool mode_valid(c10::string_view mode)
 {
+    return (mode == "reduced" || mode == "complete" || mode == "r");
+}
+
+void check_linalg_qr_input(const at::Tensor& self, c10::string_view mode)
+{
+    constexpr int MATRIX_DIM = 2;
     TORCH_CHECK(
-        self.ndimension() >= 2,
-        "Expected nonempty least 2D tensor, but got a tensor with sizes ",
+        self.dim() >= MATRIX_DIM,
+        "linalg_qr: The input tensor must have at least 2 dimensions, but got ",
         self.dim(),
+        OPS_ERROR(ErrCode::PARAM));
+
+    TORCH_CHECK(
+        mode_valid(mode),
+        "linalg_qr: received unrecognized mode '",
+        mode,
+        "', expected one of 'reduced'(default), 'r', or 'complete'",
         OPS_ERROR(ErrCode::PARAM));
 }
 
@@ -76,8 +88,8 @@ std::tuple<at::Tensor&, at::Tensor&> linalg_qr_out(
     at::Tensor& Q,
     at::Tensor& R)
 {
+    check_linalg_qr_input(self, mode);
     bool some = (mode == "complete") ? false : true;
-    qr_check(self);
     auto sizes = qr_npu_output_size(self, some);
     npu_preparation::CheckOut(
         {self},
@@ -115,8 +127,8 @@ std::tuple<at::Tensor, at::Tensor> linalg_qr(
     const at::Tensor& self,
     c10::string_view mode)
 {
+    check_linalg_qr_input(self, mode);
     bool some = (mode == "complete") ? false : true;
-    qr_check(self);
     auto sizes = qr_npu_output_size(self, some);
     at::Tensor Q = npu_preparation::apply_tensor(self, std::get<0>(sizes));
     at::Tensor R = npu_preparation::apply_tensor(self, std::get<1>(sizes));

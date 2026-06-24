@@ -144,16 +144,16 @@ std::tuple<at::Tensor&, at::Tensor&, at::Tensor&> batch_norm_impl(
     auto weight_fp32 = weight;
 
     if (train && (running_mean.scalar_type() != at::kFloat)) {
-        running_mean_fp32 = at_npu::native::custom_ops::npu_dtype_cast(running_mean, at::kFloat);
+        running_mean_fp32 = at_npu::native::custom_ops::_npu_dtype_cast(running_mean, at::kFloat);
     }
 
     if (train && (running_var.scalar_type() != at::kFloat)) {
-        running_var_fp32 = at_npu::native::custom_ops::npu_dtype_cast(running_var, at::kFloat);
+        running_var_fp32 = at_npu::native::custom_ops::_npu_dtype_cast(running_var, at::kFloat);
     }
 
     // (Ascend) change dtype for matching op requirement.
     if (train && (weight.scalar_type() != at::kFloat)) {
-        weight_fp32 = at_npu::native::custom_ops::npu_dtype_cast(weight, at::kFloat);
+        weight_fp32 = at_npu::native::custom_ops::_npu_dtype_cast(weight, at::kFloat);
     }
     at::Tensor bias_cp = bias;
     auto self_format = npu_preparation::get_tensor_npu_format(self);
@@ -214,8 +214,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> native_batch_norm(
             npu_preparation::apply_tensor(
                 running_var_tensor.sizes(), running_var_tensor.options().dtype(at::kFloat), self);
     } else {
-        save_mean = at::empty({0}, self.options());
-        save_invstd = at::empty({0}, self.options());
+        // Inference: BNInfer does not fill batch_mean/batch_variance outputs; shapes must still match
+        // PyTorch meta and CUDA ([num_features]), not empty ([0]), so run_meta_crossref / downstream
+        // dispatch_meta_outplace_native_batch_norm_* tests agree with real PrivateUse1 outputs.
+        save_mean = at::empty({dim_c}, self.options());
+        save_invstd = at::empty({dim_c}, self.options());
     }
 
     return acl_op::native_batch_norm_out(self, weight_opt, bias_opt,

@@ -31,12 +31,12 @@ class TestAntiQuant(TestCase):
         scale = torch.broadcast_to(scale, input_x.shape)
         if offset is None:
             offset = torch.zeros_like(scale)
-        
+
         x = input_x.to(torch.float32)
-        
+
         offset_temp = x + offset
         output = offset_temp * scale
-        
+
         output = output.to(dst_dtype)
         return output.cpu().detach()
 
@@ -54,16 +54,16 @@ class TestAntiQuant(TestCase):
             [[np.int8, -1, [10, 100]], [np.float32, -1, [100]], None, torch.bfloat16, None],
             [[np.int8, -1, [10, 100]], [np.float32, -1, [100]], [np.float32, -1, [100]], torch.bfloat16, torch.int8],
             [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, None],
-            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], [np.float32, -1, [100]], torch.float16, None],
-            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, None],
-            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.bfloat16, None],
+            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], [np.float32, -1, [800]], torch.float16, None],
+            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.float16, torch.quint4x2],
+            [[np.int32, -1, [10, 100]], [np.float32, -1, [800]], None, torch.bfloat16, torch.quint4x2],
         ]
-        
+
         for item in shape_format:
             cpu_input_x, npu_input_x = create_common_tensor(item[0], -127, 127)
             cpu_scale, npu_scale = create_common_tensor(item[1], -100, 100)
             cpu_offset, npu_offset = (None, None) if item[2] is None else create_common_tensor(item[2], -100, 100)
-            
+
             npu_output = self.npu_op_exec(npu_input_x, npu_scale, npu_offset, *item[3:])
             custom_output = self.custom_op_exec(cpu_input_x, cpu_scale, cpu_offset, *item[3:])
 
@@ -71,6 +71,28 @@ class TestAntiQuant(TestCase):
                 npu_output = npu_output.to(torch.float32)
                 custom_output = custom_output.to(torch.float32)
             self.assertRtolEqual(npu_output, custom_output)
+
+
+    @SupportedDevices(['Ascend910B'])
+    def test_anti_quant_invalid_dtype(self, device="npu"):
+        npu_input_x = torch.tensor([1,2,3,4], dtype=torch.int8).npu()
+        npu_scale = torch.tensor([2,0], dtype=torch.float32).npu()
+        npu_offset = torch.tensor([2], dtype=torch.int32).npu()
+
+        invalid_dst_type = -10
+        try:
+            out_npu = torch_npu.npu_anti_quant(
+                npu_input_x,
+                npu_scale,
+                offset = npu_offset,
+                dst_type = invalid_dst_type,
+                src_dtype = torch.int8
+            )
+            self.fail("Do not throw the expected exception")
+        except Exception as e:
+            excepted_error = "Input dst_type must be valid, but got UNKNOWN_SCALAR"
+            self.assertTrue(excepted_error in str(e), f"err message mismatch, exception:{e}")
+
 
 if __name__ == "__main__":
     run_tests()

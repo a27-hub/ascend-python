@@ -21,7 +21,18 @@ class TestGroupedMatmul(TestCase):
         uint64_deq_scale = np.frombuffer(temp_quant_tensor_api, np.int64)
         return fp32_deq_scale, uint64_deq_scale
 
-    def single_matmul(self, x, w, *, b=None, scale=None, offset=None, antiquantScale=None, antiquantOffset=None):
+    def perchannelcube_templater_scale_generate(self, deq_scale_shape):
+        fp32_deq_scale = np.random.uniform(low=-5, high=5, size=deq_scale_shape).astype(np.float32)
+
+        uint32_deq_scale = np.frombuffer(fp32_deq_scale, np.uint32)
+        uint32_deq_scale &= 0XFFFFE000
+        fp32_deq_scale_post = np.frombuffer(uint32_deq_scale, np.float32)
+        uint64_deq_scale = np.zeros(deq_scale_shape, np.uint64).flatten()
+        uint64_deq_scale |= np.uint64(uint32_deq_scale)
+        int64_deq_scale = np.frombuffer(uint64_deq_scale, np.int64)
+        return fp32_deq_scale_post.reshape(deq_scale_shape), int64_deq_scale.reshape(deq_scale_shape)
+
+    def single_matmul(self, x, w, *, b=None, scale=None, offset=None, antiquantScale=None, antiquantOffset=None, out_dtype=None):
         if antiquantScale is not None:
             w = torch.from_numpy(w).to(torch.float16)
             w = (w + antiquantOffset) * antiquantScale
@@ -29,14 +40,17 @@ class TestGroupedMatmul(TestCase):
         if b is not None:
             y += b
         if scale is not None:
-            y = y * scale
-            y = self.float32_to_int9(y)
-            y = np.clip(y, -128, 127)
-            y = y.astype(np.int8)
+            if out_dtype == torch.int8 or not out_dtype:
+                y = y * scale
+                y = self.float32_to_int9(y)
+                y = np.clip(y, -128, 127)
+                y = y.astype(np.int8)
+            elif out_dtype == torch.bfloat16 or out_dtype == torch.float16 or out_dtype == torch.float32:
+                y = y * scale
         return y
 
     def supported_op_exec(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
-                          antiquantOffset=None, group_list=None, split_item=0, group_type=None, tuning_config=None):
+                          antiquantOffset=None, group_list=None, split_item=0, group_type=None, tuning_config=None, out_dtype=None):
         x_split = []
         if split_item == 0 or split_item == 2:
             x_split = x
@@ -57,13 +71,72 @@ class TestGroupedMatmul(TestCase):
                                          antiquantOffset=antiquantOffset[i]) for i in range(len(weight))]
         elif scale is not None:
             output = [torch.from_numpy(self.single_matmul(x_split[i], weight[i], b=bias[i],
-                                       scale=scale[i])) for i in range(len(weight))]
+                                       scale=scale[i], out_dtype=out_dtype)) for i in range(len(weight))]
         elif group_type == 2:
             output = []
             for i, _ in enumerate(weight):
                 output.append(self.single_matmul(x_split[i], weight[i], b=bias[i]).unsqueeze(0))
         else:
             output = [self.single_matmul(x_split[i], weight[i], b=bias[i]) for i in range(len(weight))]
+        if split_item == 2 or split_item == 3:
+            output = [torch.cat(output, 0)]
+        return output
+
+    def weight_quant_single_matmul(self, x, w, *, b=None, scale=None, offset=None, antiquantScale=None,
+                                   antiquantOffset=None, pertokenScale=None, out_dtype=None):
+        is_mx_a8w4 = x.dtype == torch.float8_e4m3fn and w.dtype == torch.float32
+        w = w.to(torch.float32)
+        w = w / 64 if is_mx_a8w4 else w
+        if antiquantOffset is not None:
+            w = w + antiquantOffset
+        w = w * antiquantScale.to(torch.float16)
+        w = w.to(torch.float32)
+        x = x.to(torch.float32)
+        if pertokenScale is not None:
+            x = x * pertokenScale.to(torch.float32)
+        y = torch.matmul(x, w)
+        if b is not None:
+            y += b
+        if scale is not None:
+            if out_dtype == torch.int8 or not out_dtype:
+                y = y * scale
+                y = self.float32_to_int9(y)
+                y = np.clip(y, -128, 127)
+                y = y.astype(np.int8)
+            elif out_dtype == torch.bfloat16 or out_dtype == torch.float16 or out_dtype == torch.float32:
+                y = y * scale
+        return y
+
+    def gmm_weight_quant_op_exec(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
+                                 pertokenScale=None, antiquantOffset=None, group_list=None, split_item=0,
+                                 tuning_config=None, out_dtype=None, group_list_type=None):
+        # 单单单
+        wi = weight[0]
+        ai = antiquantScale[0]
+        # 数据按E切分
+        x_split, w_split, pk_split, antiS_split, antiO_split = [], [], [], [], []
+        E = len(group_list)
+        if split_item == 3 and group_list_type == 1:
+            s_offset = 0
+            for i in range(E):
+                end = s_offset + group_list[i]
+                x_split.append(x[0][s_offset:end, :])
+                pk_split.append(pertokenScale[0][s_offset:end, :])
+                s_offset += group_list[i]
+                w_split.append(wi[i])
+                antiS_split.append(ai[i])
+        if antiquantOffset is not None:
+            antiO_split = np.split(antiquantOffset, E, axis=0)
+
+        bias = bias or [None] * len(w_split)
+        antiO_split = antiO_split if antiquantOffset is not None else [None] * len(w_split)
+        pk_split = pk_split if pertokenScale is not None else [None] * len(w_split)
+
+        output = []
+        if antiquantOffset is None:
+            output = [self.weight_quant_single_matmul(x_split[i], w_split[i], b=bias[i], antiquantScale=antiS_split[i],
+                                            pertokenScale=pk_split[i], antiquantOffset=antiO_split[i])
+                        for i in range(len(w_split))]
         if split_item == 2 or split_item == 3:
             output = [torch.cat(output, 0)]
         return output
@@ -75,16 +148,36 @@ class TestGroupedMatmul(TestCase):
 
     def custom_op_exec(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
                        antiquantOffset=None, group_list=None, split_item=0, group_type=None,
+                       output_dtype=None, tuning_config=None, group_list_type=None, per_token_scale=None,
+                       per_token_scale_dtype=None):
+        if group_type is not None:
+            return torch_npu.npu_grouped_matmul(x, weight, bias=bias, scale=scale, offset=offset,
+                                                antiquant_scale=antiquantScale, antiquant_offset=antiquantOffset,
+                                                group_list=group_list, split_item=split_item,
+                                                group_type=group_type, output_dtype=output_dtype,
+                                                group_list_type=group_list_type, per_token_scale=per_token_scale,
+                                                per_token_scale_dtype=per_token_scale_dtype)
+        else:
+            return torch_npu.npu_grouped_matmul(x, weight, bias=bias, scale=scale, offset=offset,
+                                                antiquant_scale=antiquantScale, antiquant_offset=antiquantOffset,
+                                                group_list=group_list, split_item=split_item, output_dtype=output_dtype)
+
+    def custom_op_exec_mxfp4(self, x, weight, *, bias=None, scale=None, offset=None, antiquantScale=None,
+                       antiquantOffset=None, group_list=None, split_item=0, group_type=None,
                        output_dtype=None, tuning_config=None):
         if group_type is not None:
             return torch_npu.npu_grouped_matmul(x, weight, bias=bias, scale=scale, offset=offset,
                                                 antiquant_scale=antiquantScale, antiquant_offset=antiquantOffset,
                                                 group_list=group_list, split_item=split_item,
-                                                group_type=group_type, output_dtype=output_dtype)
+                                                group_type=group_type, output_dtype=output_dtype,
+                                                x_dtype=torch_npu.float4_e2m1fn_x2, weight_dtype=torch_npu.float4_e2m1fn_x2,
+                                                scale_dtype=torch_npu.float8_e8m0fnu, per_token_scale_dtype=torch_npu.float8_e8m0fnu)
         else:
             return torch_npu.npu_grouped_matmul(x, weight, bias=bias, scale=scale, offset=offset,
                                                 antiquant_scale=antiquantScale, antiquant_offset=antiquantOffset,
-                                                group_list=group_list, split_item=split_item, output_dtype=output_dtype)
+                                                group_list=group_list, split_item=split_item, output_dtype=output_dtype,
+                                                x_dtype=torch_npu.float4_e2m1fn_x2, weight_dtype=torch_npu.float4_e2m1fn_x2,
+                                                scale_dtype=torch_npu.float8_e8m0fnu, per_token_scale_dtype=torch_npu.float8_e8m0fnu)
 
     def get_group_list(self, m, g):
         step = (m - 0) // (g - 1)
@@ -92,7 +185,7 @@ class TestGroupedMatmul(TestCase):
         group_list = torch.tensor(data, dtype=torch.int64).npu()
         group_list[-1] = m
         return group_list
-    
+
     @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_0(self): # 多多多
         torch.manual_seed(0)
@@ -220,7 +313,7 @@ class TestGroupedMatmul(TestCase):
         for bias_i in bias:
             bias_clone.append(bias_i.clone().npu())
 
-        supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list, 
+        supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list,
                                                   split_item=split_item)
         custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list,
                                             split_item=split_item, group_type=group_type)
@@ -324,10 +417,92 @@ class TestGroupedMatmul(TestCase):
         x_clone = [x1.T.clone().npu()]
         weight_clone = [weight1.clone().npu()]
 
-        supported_output = self.supported_op_exec(x, weight, bias=None, group_list=group_list_tensor, split_item=split_item, 
+        supported_output = self.supported_op_exec(x, weight, bias=None, group_list=group_list_tensor, split_item=split_item,
                                                   group_type=group_type)
         custom_output = self.custom_op_exec(x_clone, weight_clone, bias=None, group_list=group_list_tensor,
                                             split_item=split_item, group_type=group_type)
+        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_7(self): # 单多单fp32
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(1792, 1024), dtype=torch.float32)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(1024, 256), dtype=torch.float32)
+        weight2 = torch.normal(mean=0., std=0.1, size=(1024, 256), dtype=torch.float32)
+        weight3 = torch.normal(mean=0., std=0.1, size=(1024, 256), dtype=torch.float32)
+        weight = [weight1, weight2, weight3]
+        bias1 = torch.normal(mean=0., std=0.1, size=(256,), dtype=torch.float32)
+        bias2 = torch.normal(mean=0., std=0.1, size=(256,), dtype=torch.float32)
+        bias3 = torch.normal(mean=0., std=0.1, size=(256,), dtype=torch.float32)
+        bias = [bias1, bias2, bias3]
+        group_list = torch.tensor([256, 1280, 1792]).npu()
+        split_item = 3
+        group_type = 0
+
+        x_clone = []
+        weight_clone = []
+        bias_clone = []
+        for x_i in x:
+            x_clone.append(x_i.clone().npu())
+        for weight_i in weight:
+            weight_clone.append(weight_i.clone().npu())
+        for bias_i in bias:
+            bias_clone.append(bias_i.clone().npu())
+
+        supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list, split_item=split_item)
+        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list,
+                                            split_item=split_item, group_type=group_type)
+
+        self.assertRtolEqual(x[0], x_clone[0], 0.001)
+        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_8(self): # 单多单fp32
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(1792, 256), dtype=torch.float32)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(3, 256, 128), dtype=torch.float32)
+        weight = [weight1[0], weight1[1], weight1[2]]
+        bias1 = torch.normal(mean=0., std=0.1, size=(3, 128), dtype=torch.float32)
+        bias = [bias1[0], bias1[1], bias1[2]]
+        group_list = [256, 1280, 1792]
+        split_item = 3
+
+        x_clone = [x1.clone().npu()]
+        weight_clone = [weight1.clone().npu()]
+        bias_clone = [bias1.clone().npu()]
+        group_list_npu = torch.tensor(group_list, dtype=torch.int64).npu()
+
+        supported_output = self.supported_op_exec(x, weight, bias=bias, group_list=group_list, split_item=split_item)
+        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list_npu,
+                                            split_item=split_item, group_type=0)
+
+        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_9(self): # 单单单fp32
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(1792, 1024), dtype=torch.float32)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(2, 1024, 256), dtype=torch.float32)
+        weight = [weight1[0], weight1[1]]
+        group_list = torch.tensor([256, 1792]).npu()
+        split_item = 3
+        group_type = 0
+
+        x_clone = []
+        weight_clone = []
+        bias_clone = []
+        for x_i in x:
+            x_clone.append(x_i.clone().npu())
+
+        weight_clone.append(weight1.clone().npu())
+
+        supported_output = self.supported_op_exec(x, weight, bias=None, group_list=group_list, split_item=split_item)
+        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=None, group_list=group_list,
+                                            split_item=split_item, group_type=group_type)
+
         self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
 
     @unittest.skip("skip test_npu_grouped_matmul_antiquant_0 now")
@@ -600,7 +775,7 @@ class TestGroupedMatmul(TestCase):
         diff = np.isclose(array1, array2, 0.005, 0.005, equal_nan=True)
         compare = np.sum(diff == True) / len(diff)
         self.assertTrue(compare >= 0.995)
-    
+
     @unittest.skip("Skipping test_npu_grouped_matmul_A8W4 for now")
     @SupportedDevices(['Ascend910B'])
     def test_npu_grouped_matmul_A8W4(self):
@@ -692,12 +867,12 @@ class TestGroupedMatmul(TestCase):
 
         out_shape = out[0].shape
         golden_shape = out_golden.shape
-        
+
         out_dim1 = out_shape[1]
-        
+
         golden_dim0 = golden_shape[0]
         golden_dim1 = golden_shape[1]
-        
+
         self.assertEqual(out_dim1, golden_dim1)
         self.assertEqual(out[0][:golden_dim0, :], out_golden.npu())
 
@@ -737,6 +912,275 @@ class TestGroupedMatmul(TestCase):
         with self.assertRaisesRegex(RuntimeError, "Requires manual passing group_type"):
             _ = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, group_list=group_list,
                                     split_item=split_item)
+
+    @SupportedDevices(['Ascend910B'])
+    def test_npu_grouped_matmul_invalid_group_type(self):
+        # Negative test: invalid group_type should be rejected by C++ layer
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(1792, 256), dtype=torch.float16)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(1792, 256), dtype=torch.float16)
+        weight = [weight1]
+        group_list = torch.tensor([256, 512, 1024, 1792]).npu()
+        split_item = 3
+
+        x_clone = [x1.clone().npu()]
+        weight_clone = [weight1.clone().npu()]
+
+        for invalid_type in [1, 3, 100]:
+            with self.assertRaisesRegex(RuntimeError, "The group type must be"):
+                self.custom_op_exec(x_clone, weight_clone, group_list=group_list,
+                                    split_item=split_item, group_type=invalid_type)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_quant_950(self): # 量化 单单单
+        torch.manual_seed(0)
+        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        split_item = 2
+        group_type = 0
+
+        scale_output_dtype_list = [[torch.int64, torch.float32], [torch.float32, torch.float32]]
+        for item in scale_output_dtype_list:
+            x1 = torch.randint(2, 3, size=(16, 256), dtype=torch.int8).view(torch.float8_e4m3fn)
+            x = [x1]
+            weight1 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.float8_e4m3fn)
+            weight = [weight1]
+            dtype = item[0]
+            output_dtype = item[1]
+            x_clone = []
+            weight_clone = []
+            scales_npu = []
+            scales_fp32 = []
+            outs = []
+
+            for x_i in x:
+                x_clone.append(x_i.clone().npu())
+            x[0] = x[0].to(torch.float32).numpy()
+            for weight_i in weight:
+                weight_clone.append(weight_i.clone().npu())
+            weight[0] = weight[0].to(torch.float32).numpy()
+            if dtype == torch.int64:
+                scale_fp32, scale_int64 = self.perchannelcube_templater_scale_generate((1, 32))
+                scales_fp32.append(scale_fp32)
+                scales_npu.append(torch.from_numpy(scale_int64).npu().to(dtype))
+            else:
+                deq_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
+                scales_fp32.append(deq_scale)
+                scales_npu.append(torch.from_numpy(deq_scale).npu().to(dtype))
+
+            supported_output = self.single_matmul(x[0], weight[0][0], b=None, scale=scales_fp32[0][0], out_dtype=output_dtype)
+            custom_output = self.custom_op_exec(x_clone, weight_clone, bias=None, scale=scales_npu,
+                                                group_list=group_list, split_item=split_item, group_type=group_type,
+                                                output_dtype=output_dtype)
+
+            self.assertRtolEqual(supported_output[0], custom_output[0].cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_no_quant_case_1(self): # 单单单
+        torch.manual_seed(0)
+        x1 = torch.normal(mean=0., std=0.1, size=(64, 256), dtype=torch.float16)
+        x = [x1]
+        weight1 = torch.normal(mean=0., std=0.1, size=(1, 256, 1024), dtype=torch.float16)
+        weight = [weight1]
+        group_list = torch.tensor([64]).npu()
+        split_item = 3
+        group_type = 0
+
+        x_clone = []
+        weight_clone = []
+        bias_clone = []
+        for x_i in x:
+            x_clone.append(x_i.clone().npu())
+
+        weight_clone.append(weight1.clone().npu())
+
+        supported_output = self.supported_op_exec(x, weight, bias=None, group_list=group_list, split_item=split_item)
+        custom_output = self.custom_op_exec(x_clone, weight_clone, bias=None, group_list=group_list,
+                                            split_item=split_item, group_type=group_type)
+
+        self.assertRtolEqual(supported_output[0], custom_output[0], 0.001)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_quant_950_mxfp4(self): # 量化 单单单
+        torch.manual_seed(0)
+        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        split_item = 2
+        group_type = 0
+
+        scale_output_dtype_list = [[torch.int64, torch.float32], [torch.float32, torch.float32]]
+        for item in scale_output_dtype_list:
+            x1 = torch.randint(2, 3, size=(16, 128), dtype=torch.int8).view(torch.uint8)
+            x = [x1]
+            weight1 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.uint8)
+            weight = [weight1]
+            dtype = item[0]
+            output_dtype = item[1]
+            x_clone = []
+            weight_clone = []
+            scales_npu = []
+            scales_fp32 = []
+            outs = []
+
+            for x_i in x:
+                x_clone.append(x_i.clone().npu())
+            x[0] = x[0].to(torch.float32).numpy()
+            for weight_i in weight:
+                weight_clone.append(weight_i.clone().npu())
+            weight[0] = weight[0].to(torch.float32).numpy()
+            if dtype == torch.int64:
+                scale_fp32, scale_int64 = self.perchannelcube_templater_scale_generate((1, 32))
+                scales_fp32.append(scale_fp32)
+                scales_npu.append(torch.from_numpy(scale_int64).npu().to(dtype))
+            else:
+                deq_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
+                scales_fp32.append(deq_scale)
+                scales_npu.append(torch.from_numpy(deq_scale).npu().to(dtype))
+
+            supported_output = self.single_matmul(x[0], weight[0][0], b=None, scale=scales_fp32[0][0], out_dtype=output_dtype)
+            custom_output = self.custom_op_exec_mxfp4(x_clone, weight_clone, bias=None, scale=scales_npu,
+                                                      group_list=group_list, split_item=split_item,
+                                                      group_type=group_type, output_dtype=output_dtype)
+
+            self.assertRtolEqual(supported_output[0], custom_output[0].cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_quant_int8_nz(self): # 全量化 NZ
+        torch.manual_seed(0)
+        x1 = torch.randint(1, 5, size=(16384, 7168), dtype=torch.int8)
+        x = [x1]
+        weight1 = torch.randint(1, 5, size=(4, 4096, 7168), dtype=torch.int8)
+        weight = [weight1]
+        bias1 = torch.randint(1, 5, size=(4, 4096), dtype=torch.int32)
+        bias = [bias1]
+        group_list = torch.tensor([8403, 808, 3101, 4072]).npu()
+        split_item = 2
+        group_type = 0
+
+        scale_output_dtype_list = [[torch.float32, torch.float16], [torch.bfloat16, torch.bfloat16]]
+        for item in scale_output_dtype_list:
+            dtype = item[0]
+            output_dtype = item[1]
+            x_clone = []
+            weight_clone = []
+            bias_clone = []
+            scale_npu = []
+            scale_fp32 = []
+
+            for x_i in x:
+                x_clone.append(x_i.clone().npu())
+            for weight_i in weight:
+                weight_nz = torch_npu.npu_format_cast(weight_i.clone().npu(), 29)
+                weight_clone.append(weight_nz)
+            for bias_i in bias:
+                bias_clone.append(bias_i.clone().npu())
+            for _ in range(3):
+                scale, _ = self.deq_scale_generate(256)
+                scale_fp32.append(scale)
+                scale_npu.append(torch.from_numpy(scale).npu().to(dtype))
+
+            supported_output = self.supported_op_exec(x, weight, bias=bias, scale=scale_fp32, group_list=group_list,
+                                                    split_item=split_item)
+            custom_output = self.custom_op_exec(x_clone, weight_clone, bias=bias_clone, scale=scale_npu,
+                                                group_list=group_list, split_item=split_item, group_type=group_type,
+                                                output_dtype=output_dtype)
+
+            self.assertRtolEqual(x[0], x_clone[0], 1)
+            self.assertRtolEqual(supported_output[0], custom_output[0], 1)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_mx_a8w4_nz_sss(self):
+        # 单单单
+        torch.manual_seed(0)
+        m = 16
+        k = 256
+        n = 512
+        e = 2
+        group_size = 32
+        split_item = 3
+        group_type = 0
+        group_list_type = 1
+
+        x = torch.ones(size=(m, k)).to(torch.float8_e4m3fn)
+        weight_nd = torch.ones(size=(e, n, k), dtype=torch.float32)
+        weight_nz = torch_npu.npu_format_cast(weight_nd.npu(), 29, torch.float8_e4m3fn)
+        weight_nz = torch_npu.npu_convert_weight_to_int4pack(weight_nz)
+        antiquantscale = torch.randint(low=124, high=130, size=(e, n, k//group_size), dtype=torch.uint8)
+        cpu_antiquantscale = (2 ** (antiquantscale.to(torch.float64) - 127))
+        cpu_antiquantscale = torch.repeat_interleave(cpu_antiquantscale, group_size, dim=2)
+
+        pertokenscale = torch.randint(low=124, high=130, size=(m, k//group_size), dtype=torch.uint8)
+        cpu_pertokenscale = (2 ** (pertokenscale.to(torch.float64) - 127))
+        cpu_pertokenscale = torch.repeat_interleave(cpu_pertokenscale, group_size, dim=1)
+
+        group_list = torch.tensor([8, 8]).to(torch.int64).npu()
+
+        weight_nz = weight_nz.transpose(-1, -2)
+        weight_nd = weight_nd.transpose(-1, -2)
+        antiquantscale = antiquantscale.transpose(-1, -2)
+        cpu_antiquantscale = cpu_antiquantscale.transpose(-1, -2)
+        supported_output = self.gmm_weight_quant_op_exec([x], [weight_nd], bias=None, antiquantScale=[cpu_antiquantscale],
+                                                  pertokenScale=[cpu_pertokenscale], group_list=group_list,
+                                                  split_item=split_item, group_list_type=group_list_type)
+        custom_output = self.custom_op_exec([x.npu()], [weight_nz.npu()], antiquantScale=[antiquantscale.npu()],
+                                            pertokenScale=[pertokenscale.npu()], bias=None, group_list=group_list,
+                                            split_item=split_item, group_type=group_type, output_dtype=torch.float16,
+                                            group_list_type=group_list_type, per_token_scale_dtype=torch_npu.float8_e8m0fnu)
+
+        self.assertRtolEqual(supported_output[0].to(torch.float32).numpy(),
+                             custom_output[0].to(torch.float32).cpu().numpy(), 0.001)
+
+    @SupportedDevices(['Ascend950'])
+    def test_npu_grouped_matmul_quant_float4_weight_nz(self): # 全量化 float4 + weight NZ
+        torch.manual_seed(0)
+        group_list = torch.tensor([16, ]).to(torch.int64).npu()
+        split_item = 2
+        group_type = 0
+
+        dtype_list = [
+            [torch_npu.float4_e2m1fn_x2, torch_npu.float4_e2m1fn_x2],
+            [torch_npu.float4_e1m2fn_x2, torch_npu.float4_e1m2fn_x2],
+        ]
+        scale_output_dtype_list = [[torch.int64, torch.float32], [torch.float32, torch.float32]]
+
+        for x_dtype, weight_dtype in dtype_list:
+            for scale_dtype, output_dtype in scale_output_dtype_list:
+                # uint8 storage: each byte packs two float4 values, logical K is 256.
+                x1 = torch.randint(2, 3, size=(16, 128), dtype=torch.int8).view(torch.uint8)
+                x = [x1]
+
+                weight1 = torch.randint(2, 3, size=(1, 256, 32), dtype=torch.int8).view(torch.uint8)
+                weight = [weight1]
+
+                x_clone = [x1.clone().npu()]
+                weight_nz = torch_npu.npu_format_cast(weight1.clone().npu(), 29)
+                weight_clone = [weight_nz]
+
+                scales_npu = []
+                scales_fp32 = []
+                if scale_dtype == torch.int64:
+                    scale_fp32, scale_int64 = self.perchannelcube_templater_scale_generate((1, 32))
+                    scales_fp32.append(scale_fp32)
+                    scales_npu.append(torch.from_numpy(scale_int64).npu().to(scale_dtype))
+                else:
+                    deq_scale = np.random.uniform(low=-5, high=5, size=(1, 32)).astype(np.float32)
+                    scales_fp32.append(deq_scale)
+                    scales_npu.append(torch.from_numpy(deq_scale).npu().to(scale_dtype))
+
+                # Golden follows existing mxfp4 UT style: use unpacked fp32 path for shape and scale validation.
+                x_fp32 = x1.to(torch.float32).numpy()
+                weight_fp32 = weight1.to(torch.float32).numpy()
+                supported_output = self.single_matmul(
+                    x_fp32, weight_fp32[0], b=None, scale=scales_fp32[0][0], out_dtype=output_dtype)
+
+                custom_output = torch_npu.npu_grouped_matmul(
+                    x_clone, weight_clone, bias=None, scale=scales_npu, offset=None,
+                    antiquant_scale=None, antiquant_offset=None, group_list=group_list,
+                    split_item=split_item, group_type=group_type, output_dtype=output_dtype,
+                    x_dtype=x_dtype, weight_dtype=weight_dtype,
+                    scale_dtype=torch_npu.float8_e8m0fnu,
+                    per_token_scale_dtype=torch_npu.float8_e8m0fnu)
+
+                self.assertRtolEqual(supported_output[0], custom_output[0].cpu().numpy(), 0.001)
 
 
 if __name__ == "__main__":
