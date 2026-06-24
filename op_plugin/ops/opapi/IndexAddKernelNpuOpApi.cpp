@@ -51,12 +51,16 @@ at::Tensor& index_add_out(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(dim + 1);
-        for (const auto i : c10::irange(dim)) {
-            indices.emplace_back();
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(at::indexing::Slice());
+            }
         }
-        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -89,13 +93,17 @@ at::Tensor index_add(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         result.copy_(self);
         c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(dim + 1);
-        for (const auto i : c10::irange(dim)) {
-            indices.emplace_back();
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(at::indexing::Slice());
+            }
         }
-        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -114,3 +122,4 @@ at::Tensor index_add(
 }
 
 } // namespace op_api
+
