@@ -58,7 +58,7 @@ at::Tensor& index_add_out(
             if (i == wrapped_dim) {
                 indices.emplace_back(index.to(at::kLong));
             } else {
-                indices.emplace_back(at::indexing::Slice());
+                indices.emplace_back(c10::nullopt);
             }
         }
         result.index_put_(indices, source * alpha, true);
@@ -101,7 +101,7 @@ at::Tensor index_add(
             if (i == wrapped_dim) {
                 indices.emplace_back(index.to(at::kLong));
             } else {
-                indices.emplace_back(at::indexing::Slice());
+                indices.emplace_back(c10::nullopt);
             }
         }
         result.index_put_(indices, source * alpha, true);
