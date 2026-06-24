@@ -227,7 +227,7 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
             }
         }
         constexpr size_t ACK_SYNC_BATCH_MAX = 4096
-         for (size_t start = 0; start < count;) {
+        for (size_t start = 0; start < count;) {
             const size_t remain = count - start;
             const size_t batch_cnt = remain > ACK_SYNC_BATCH_MAX ? ACK_SYNC_BATCH_MAX : remain;
             const size_t end = start + bath_cnt;
@@ -240,7 +240,7 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
             auto ret = c10_npu::acl::AclrtMemcpyBatch(dsts, dstLens, srcs, srcLens, count, attrs, attrsIndexes, count, &failIdx);
             NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
             strart = end
-         }
+        }
     }
 }
 
