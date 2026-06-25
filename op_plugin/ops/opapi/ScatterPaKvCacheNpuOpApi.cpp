@@ -53,9 +53,9 @@ void npu_scatter_pa_kv_cache(
     const c10::optional<at::Tensor>& compress_lens,
     const c10::optional<at::Tensor>& compress_seq_offsets,
     const c10::optional<at::Tensor>& seq_lens,
+    c10::optional<c10::string_view> cache_mode,
     const c10::optional<at::Tensor>& key_scale,
-    const c10::optional<at::Tensor>& key_scale_cache,
-    c10::optional<c10::string_view> cache_mode)
+    const c10::optional<at::Tensor>& key_scale_cache)
 {
     char* cache_mode_ptr = cache_mode.has_value() ? const_cast<char *>(cache_mode.value().data()) : nullptr;
     char* scatter_mode = "None";
