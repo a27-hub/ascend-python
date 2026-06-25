@@ -22,6 +22,9 @@
 | 0                        | aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 0)<br>aclrtSetSysParamOpt(ACL_OPT_STRONG_CONSISTENCY, 0) | 关闭确定性 | torch.use_deterministic_algorithms(False) |
 | 1                        | aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 1)<br>aclrtSetSysParamOpt(ACL_OPT_STRONG_CONSISTENCY, 0) | 仅开启确定性 | torch.use_deterministic_algorithms(True) |
 | 2                        | aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 1)<br>aclrtSetSysParamOpt(ACL_OPT_STRONG_CONSISTENCY, 1) | 开启强一致性 | 用于解决部分场景下，某些算子因为累加顺序不一致而导致结果不一致的问题 |
+| 3                        | AclSetCompileopt(ACL_OP_DETERMINISTIC, "3") | 开启batch一致性 | 用于解决部分场景下，batch维度相关算子因为累加顺序不一致而导致结果不一致的问题 |
+
+> **说明**：在新CANN版本（RUNTIME和OPP算子包版本均达到要求）下，确定性优先级统一通过`ACL_OP_DETERMINISTIC`编译期选项控制，level 0/1/2/3分别对应配置值"0"/"1"/"2"/"3"。在旧CANN版本下，保持通过`ACL_OPT_DETERMINISTIC`和`ACL_OPT_STRONG_CONSISTENCY`运行时选项控制，仅支持level 0/1/2。
 
 开启强一致性计算后，会导致算子执行速度变慢，影响性能。仅建议在需要严格保证不同位置上的相同数据计算结果一致，或进行精度调优时，才开启强一致性计算，以辅助模型调试和优化。
 
@@ -33,7 +36,7 @@ torch_npu.npu.set_deterministic_level(level)
 
 ## 参数说明
 
-**level**(`int`)：所配置的确定性等级，目前仅可配置为0/1/2，默认值为0。
+**level**(`int`)：所配置的确定性等级，目前可配置为0/1/2/3，默认值为0。其中level 3仅在新CANN版本（RUNTIME和OPP算子包版本均达到要求）下支持。
 
 ## 返回值说明
 
@@ -43,13 +46,13 @@ torch_npu.npu.set_deterministic_level(level)
 
 - 该功能当前仅影响`torch.mm`计算结果。
 
-- 该接口不支持动态修改，在算子下发与执行过程中更改配置，可能会引发未知错误。
+- 在新CANN版本下，该接口支持运行时动态修改，调用后下一次算子下发即生效。在旧CANN版本下，该接口不支持动态修改，在算子下发与执行过程中更改配置，可能会引发未知错误。
 
 - 调用该接口时，会根据所配置的`level`覆盖之前`torch.use_deterministic_algorithms`的配置。
 
 - 调用该接口后，不应该再调用`torch.use_deterministic_algorithms`来修改确定性配置。
 
-- 仅支持8.5.0及以上的CANN版本。
+- level 0/1/2仅支持8.5.0及以上的CANN版本；level 3仅支持新CANN版本（RUNTIME和OPP算子包版本均达到要求）。
 
 ## 调用示例
 

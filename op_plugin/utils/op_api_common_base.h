@@ -387,11 +387,13 @@ template <typename Tuple> auto ConvertToOpApiFunc(const Tuple &params, void *opA
 struct CacheParams {
 public:
     bool GetDeterministicStatus() const;
+    uint32_t GetDeterministicLevel() const;
     uint32_t GetAicNum() const;
     uint32_t GetAivNum() const;
 
 private:
     bool deterministic_status_ = false;
+    uint32_t deterministic_level_ = 0;
     uint32_t aic_num_ = UINT32_MAX;
     uint32_t aiv_num_ = UINT32_MAX;
     friend CacheParams GetCacheParams();
