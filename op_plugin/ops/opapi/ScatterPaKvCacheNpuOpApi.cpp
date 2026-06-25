@@ -53,7 +53,9 @@ void npu_scatter_pa_kv_cache(
     const c10::optional<at::Tensor>& compress_lens,
     const c10::optional<at::Tensor>& compress_seq_offsets,
     const c10::optional<at::Tensor>& seq_lens,
-    c10::optional<c10::string_view> cache_mode)
+    c10::optional<c10::string_view> cache_mode,
+    const c10::optional<at::Tensor>& key_scale,
+    const c10::optional<at::Tensor>& key_scale_cache)
 {
     char* cache_mode_ptr = cache_mode.has_value() ? const_cast<char *>(cache_mode.value().data()) : nullptr;
     char* scatter_mode = "None";
@@ -61,9 +63,14 @@ void npu_scatter_pa_kv_cache(
     at::IntArrayRef strides = at::IntArrayRef(strides_size);
     c10::SmallVector<int64_t, op_infer::SIZE> offsets_size = {0, 0};
     at::IntArrayRef offsets = at::IntArrayRef(offsets_size);
+    if (key_scale != nullptr) {
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnScatterPaKvCacheWithKScale, key, value, key_cache, value_cache, slot_mapping, key_scale,
+ 	               key_scale_cache, cache_mode_ptr);
+    } else {
+        EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnScatterPaKvCache, key, key_cache, slot_mapping, value, value_cache,
+                    compress_lens, compress_seq_offsets, seq_lens, cache_mode_ptr, scatter_mode, strides, offsets);
+    }
 
-    EXEC_NPU_NO_FORMAT_CHECK_CMD(aclnnScatterPaKvCache, key, key_cache, slot_mapping, value, value_cache,
-        compress_lens, compress_seq_offsets, seq_lens, cache_mode_ptr, scatter_mode, strides, offsets);
 }
 
 }

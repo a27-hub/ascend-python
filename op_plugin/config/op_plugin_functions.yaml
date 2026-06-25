@@ -6937,7 +6937,7 @@ custom:
     op_api: all_version
     internal_format_opapi: all_version
 
-  - func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str? cache_mode='PA_NZ') -> ()
+  - func: npu_scatter_pa_kv_cache(Tensor key, Tensor value, Tensor(a!) key_cache, Tensor(b!) value_cache, Tensor slot_mapping, *, Tensor? compress_lens=None, Tensor? compress_seq_offsets=None, Tensor? seq_lens=None, str? cache_mode='PA_NZ', Tensor? key_scale=None, Tensor? key_scale_cache=None) -> ()
     op_api: all_version
     internal_format_opapi: all_version
     exposed: all_version
