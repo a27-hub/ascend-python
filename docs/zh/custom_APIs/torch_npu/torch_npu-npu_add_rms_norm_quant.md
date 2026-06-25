@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 | <term>Atlas 推理系列产品 </term>                             |    √     |
@@ -69,6 +70,10 @@ torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None
   - **x**（`Tensor`）：表示`x1`和`x2`的和，公式中的$x$。数据格式支持$ND$，支持非连续的Tensor。数据类型和shape与输入`x1`一致。
 
 ## 约束说明
+
+- 该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。使用`beta`、`scales2`、`zero_points2`、`div_mode=False`参数时，需要CANN x.x及以上版本。
+
+- <term>Ascend 950PR/Ascend 950DT</term>：当CANN版本较低时（未适配aclnnAddRmsNormQuantV2），`beta`参数仅支持传入None，此时走aclnnAddRmsNormQuant(V1)路径。若需要使用`beta`参数，请升级CANN包至适配aclnnAddRmsNormQuantV2的版本。
 
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`的最后一维数据个数不能小于32。`gamma`、`beta`、`scales1`、`zero_points1`、`scales2`、`zero_points2`的数据个数不能小于32。
 
