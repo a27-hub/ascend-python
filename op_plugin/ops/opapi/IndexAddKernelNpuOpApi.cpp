@@ -28,10 +28,12 @@ at::Tensor& index_add_out(
     const at::Scalar& alpha,
     at::Tensor& result) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
+    
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
     if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         self_sizes.erase(self_sizes.begin() + wrapped_dim);
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
@@ -53,7 +55,7 @@ at::Tensor& index_add_out(
         torch::List<c10::optional<at::Tensor>> indices;
         indices.reserve(self.dim());
         for (const auto i : c10::irange(self.dim())) {
-            if (i == dim) {
+            if (i == wrapped_dim) {
                 indices.emplace_back(index.to(at::kLong));
             } else {
                 indices.emplace_back(c10::nullopt);
@@ -74,10 +76,12 @@ at::Tensor index_add(
     const at::Tensor& source,
     const at::Scalar& alpha) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
+    
+    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+    
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
     if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         self_sizes.erase(self_sizes.begin() + wrapped_dim);
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
@@ -94,7 +98,7 @@ at::Tensor index_add(
         torch::List<c10::optional<at::Tensor>> indices;
         indices.reserve(self.dim());
         for (const auto i : c10::irange(self.dim())) {
-            if (i == dim) {
+            if (i == wrapped_dim) {
                 indices.emplace_back(index.to(at::kLong));
             } else {
                 indices.emplace_back(c10::nullopt);
