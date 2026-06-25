@@ -200,7 +200,7 @@ template <typename... Args> bool hit_cache(aclrtStream acl_stream, const char *a
 template <typename ...Ts>
 bool hit_cache_v2(
     aclrtStream acl_stream, const char *aclnn_api, void *phrase2, const std::tuple<Ts...> &args, int* api_ret,
-    bool deterministic_status, uint32_t aic_num, uint32_t aiv_num)
+    uint32_t deterministic_level, uint32_t aic_num, uint32_t aiv_num)
 {
     static const auto ptaFindExecCacheAddr = GetOpApiFuncAddr("PTAFindExecCache");
     static const auto initPTACacheThreadLocalAddr = GetOpApiFuncAddr("InitPTACacheThreadLocal");
@@ -220,7 +220,7 @@ bool hit_cache_v2(
     uint64_t *workspace_size_addr = &workspace_size;
     initPTACacheThreadLocalFunc();
     g_hash_offset = 0;
-    add_param_to_buf_v2(deterministic_status);
+    add_param_to_buf_v2(deterministic_level);
     if (aic_num != UINT32_MAX && aiv_num != UINT32_MAX) {
         add_param_to_buf_v2(aic_num);
         add_param_to_buf_v2(aiv_num);
@@ -379,13 +379,14 @@ auto DecodeDevice(Ts&... args) -> at::Device
         OP_EXEC_LOG_WITH_TASK_QUEUE(#aclnn_api, "EXEC_NPU_CMD", "2", acl_stream, __VA_ARGS__);                         \
         auto copied_params = CopyTypesV2(__VA_ARGS__);                                                                 \
         auto deterministic_status = at::globalContext().deterministicAlgorithms();                                     \
+        uint32_t deterministic_level = c10_npu::GetDeterministicLevel();                                               \
         uint32_t aic_num = UINT32_MAX;                                                                                  \
         uint32_t aiv_num = UINT32_MAX;                                                                                  \
         if (c10_npu::is_core_control_enabled()) {                                                            \
             aic_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_CUBE_CORE);                           \
             aiv_num = c10_npu::GetResInCurrentThread(c10_npu::acl::ACL_RT_DEV_RES_VECTOR_CORE);                         \
         }                                                                                                              \
-        auto acl_call = [copied_params, acl_stream, deterministic_status, aic_num, aiv_num]()->int {                     \
+        auto acl_call = [copied_params, acl_stream, deterministic_status, deterministic_level, aic_num, aiv_num]()->int { \
             if (c10_npu::check_dequeue_need_use(acl_stream)) {                                                         \
                 c10_npu::UseStreamResInCurrentThread(acl_stream);                                                      \
             }                                                                                                          \
@@ -397,7 +398,7 @@ auto DecodeDevice(Ts&... args) -> at::Device
             UnInitHugeMemThreadLocal unInitMemFunc = reinterpret_cast<UnInitHugeMemThreadLocal>(unInitMemAddr);        \
             int api_ret = 0;                                                                                           \
             if (hit_cache_v2(                                                                                          \
-               acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_status, aic_num, aiv_num))  \
+               acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, deterministic_level, aic_num, aiv_num))  \
             {                                                                                                          \
                 return api_ret;                                                                                        \
             }                                                                                                          \
