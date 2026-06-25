@@ -282,6 +282,7 @@ at::Tensor npu_convert_weight_to_int4pack(const at::Tensor &weight, int64_t inne
     if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
         return npu_convert_weight_to_b4pack(weight);
     }
+    TORCH_CHECK(weight.dim() == 2, "The Dimension of weight should be 2." + OPS_ERROR(ErrCode::PARAM));
     auto weight_dim_num = weight.dim();
     auto weight_first_dim = weight.size(weight_dim_num - 2);
     auto weight_last_dim = weight.size(weight_dim_num - 1);
