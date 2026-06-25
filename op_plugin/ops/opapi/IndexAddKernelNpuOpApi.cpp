@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/ATen.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -28,12 +27,10 @@ at::Tensor& index_add_out(
     const at::Scalar& alpha,
     at::Tensor& result) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
-    
-    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-    
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
     if (source.dim() != 0 && self.dim() != 0) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         self_sizes.erase(self_sizes.begin() + wrapped_dim);
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
@@ -53,14 +50,11 @@ at::Tensor& index_add_out(
 
     if (at::globalContext().deterministicAlgorithms()) {
         torch::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back(c10::nullopt);
         }
+        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -76,12 +70,10 @@ at::Tensor index_add(
     const at::Tensor& source,
     const at::Scalar& alpha) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
-    
-    auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-    
     auto self_sizes = self.sizes().vec();
     auto source_sizes = source.sizes().vec();
     if (source.dim() != 0 && self.dim() != 0) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
         self_sizes.erase(self_sizes.begin() + wrapped_dim);
         source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
@@ -96,14 +88,11 @@ at::Tensor index_add(
     if (at::globalContext().deterministicAlgorithms()) {
         result.copy_(self);
         torch::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back(c10::nullopt);
         }
+        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -117,7 +106,8 @@ at::Tensor index_add(
     at::Dimname dim,
     const at::Tensor& index,
     const at::Tensor& source,
-    const at::Scalar& alpha) {
+    const at::Scalar& alpha)
+{
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
