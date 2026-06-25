@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/ATen.h>
+#include <iostream>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -48,13 +50,22 @@ at::Tensor& index_add_out(
         result.copy_(self);
     }
 
+    // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
-        torch::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(dim + 1);
-        for (const auto i : c10::irange(dim)) {
-            indices.emplace_back(c10::nullopt);
+        std::cout << "[DEBUG] index_add_out: Enter deterministic path, dim=" << dim 
+                  << ", self.dim()=" << self.dim() << std::endl;
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        std::cout << "[DEBUG] index_add_out: wrapped_dim=" << wrapped_dim << std::endl;
+        
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(c10::nullopt);
+            }
         }
-        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -85,14 +96,23 @@ at::Tensor index_add(
                 OPS_ERROR(ErrCode::PARAM));
     at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
 
+    // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
+        std::cout << "[DEBUG] index_add: Enter deterministic path, dim=" << dim 
+                  << ", self.dim()=" << self.dim() << std::endl;
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        std::cout << "[DEBUG] index_add: wrapped_dim=" << wrapped_dim << std::endl;
+        
         result.copy_(self);
-        torch::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(dim + 1);
-        for (const auto i : c10::irange(dim)) {
-            indices.emplace_back(c10::nullopt);
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(c10::nullopt);
+            }
         }
-        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -106,8 +126,7 @@ at::Tensor index_add(
     at::Dimname dim,
     const at::Tensor& index,
     const at::Tensor& source,
-    const at::Scalar& alpha)
-{
+    const at::Scalar& alpha) {
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
