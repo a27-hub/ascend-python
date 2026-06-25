@@ -233,8 +233,7 @@ bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
   if (IsCPUScalar(other)) {
     return AddScalar(self, other.item(), alpha, out);
   }
-  bool inplace = (out == nullptr);
-  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/!inplace) ||
+  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/true) ||
       !InputCheck(other, IsFloatIntType, /*allow_non_contig=*/true)) {
     return false;
   }
@@ -272,8 +271,7 @@ bool Add(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
 }
 
 bool Sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alpha, at::Tensor *out = nullptr) {
-  bool inplace = (out == nullptr);
-  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/!inplace) ||
+  if (!InputCheck(self, IsFloatIntType, /*allow_non_contig=*/true) ||
       !InputCheck(other, IsFloatIntType, /*allow_non_contig=*/true)) {
     return false;
   }
@@ -315,11 +313,7 @@ bool Sub(const at::Tensor &self, const at::Tensor &other, const at::Scalar &alph
 bool BinaryScalar(const at::Tensor &self, const at::Scalar &other, dvm::BinaryOpType op_type,
             const std::function<bool(const at::ScalarType &type)> &type_check,
             dvm::DType dst_type = dvm::DType::kDataTypeEnd, at::Tensor *out = nullptr) {
-  // out == nullptr is the inplace path (writes back to self) → must be contig.
-  // out != nullptr is the functional path (fresh output) → self is read-only,
-  // can be a non-contig view; Input() will route to a strided Load.
-  bool allow_non_contig = (out != nullptr);
-  if (!InputCheck(self, type_check, allow_non_contig)) {
+  if (!InputCheck(self, type_check, true)) {
     return false;
   }
   float scalar = 1.0f;
@@ -380,11 +374,7 @@ bool BinaryTensor(const at::Tensor &self, const at::Tensor &other, dvm::BinaryOp
   if (IsCPUScalar(other)) {
     return BinaryScalar(self, other.item(), op_type, type_check, dst_type, out);
   }
-  // out == nullptr → inplace into self → self must be contig (DVM Store has no
-  // strided form). other is always read-only and may be non-contig.
-  // out != nullptr → functional path, both self and other are read-only.
-  bool inplace = (out == nullptr);
-  if (!InputCheck(self, type_check, /*allow_non_contig=*/!inplace) ||
+  if (!InputCheck(self, type_check, /*allow_non_contig=*/true) ||
       !InputCheck(other, type_check, /*allow_non_contig=*/true)) {
     return false;
   }
@@ -907,8 +897,7 @@ at::Tensor & pow_(at::Tensor & self, const at::Tensor & exponent) {
 
 // ===================== FloorDivide =====================
 bool FloorDivideScalar(const at::Tensor &self, const at::Scalar &other, at::Tensor *out) {
-  bool inplace = (out == nullptr);
-  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace)) {
+  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/true)) {
     return false;
   }
   float scalar = 1.0f;
@@ -943,7 +932,6 @@ bool FloorDivideTensor(const at::Tensor &self, const at::Tensor &other, at::Tens
   if (IsCPUScalar(other)) {
     return FloorDivideScalar(self, other.item(), out);
   }
-  bool inplace = (out == nullptr);
   if (!InputCheck(self, IsFloatType) || !InputCheck(other, IsFloatType)) {
     return false;
   }
@@ -1426,12 +1414,11 @@ at::Tensor & relu_(at::Tensor & self) {
 
 bool LeakyRelu(const at::Tensor &self, const at::Scalar &negative_slope, at::Tensor *out = nullptr) {
   float slope = 0.0f;
-  bool inplace = (out == nullptr);
-  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/!inplace) ||
+  if (!InputCheck(self, IsFloatType, /*allow_non_contig=*/true) ||
       !GetScalarValue(negative_slope, &slope)) {
     return false;
   }
-  if (inplace) {
+  if (out == nullptr) {
     PrepareWritableOutput(self);
   }
   PrepareFusionInput(self);

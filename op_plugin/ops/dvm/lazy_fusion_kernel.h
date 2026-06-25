@@ -222,6 +222,7 @@ class LazyFusionKernel final : public dvm::Kernel, public dvm::WsAllocator {
     TensorMeta tensor_meta;
     bool inplace{false};
     bool skip{false};
+    bool has_stride{false};           // true → strided (view) Store for non-contiguous output
     c10::weak_intrusive_ptr<c10::StorageImpl> storage;
   };
 

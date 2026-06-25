@@ -437,6 +437,26 @@ dvm::NDObject *LazyFusionKernel::ViewInput(const at::Tensor &base, void *data_pt
   return cast_to_fp32 ? Cast(load_op, dvm::DType::kFloat32) : load_op;
 }
 
+// Same innermost-contiguous constraint as IsViewLoadable (ops): DVM's strided (view)
+// Store vectorizes the last dim, so it must be contiguous (stride==1).
+static bool IsViewStorable(const at::Tensor &t) {
+  if (!t.defined()) {
+    return false;
+  }
+  auto ndim = t.dim();
+  if (ndim == 0) {
+    return false;
+  }
+  auto sizes = t.sizes();
+  auto strides = t.strides();
+  for (int64_t i = 0; i < ndim; ++i) {
+    if (sizes[i] <= 0 || strides[i] < 0) {
+      return false;
+    }
+  }
+  return strides[ndim - 1] == 1 && sizes[ndim - 1] != 1;
+}
+
 void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool inplace) {
   auto tensor_type = TransType(tensor.scalar_type());
   if (dvm::Kernel::GetDType(obj) != tensor_type) {
@@ -459,6 +479,17 @@ void LazyFusionKernel::Output(const at::Tensor &tensor, dvm::NDObject *obj, bool
   }
   auto &store = outputs_.emplace_back(obj, inplace, tensor);
   CacheTensorMeta(&(store.tensor_meta), tensor);
+  // Non-contiguous output (e.g. in-place on a strided view) needs a strided Store,
+  // emitted in Flush via dvm::Kernel::Store(addr, op, stride) (DVM viewstore). The
+  // output carries the SAME innermost-contiguous constraint as a view Load; for
+  // in-place ops self is both input and output, so InputCheck's IsViewLoadable(self)
+  // gate already guarantees it. Assert to make the implicit contract explicit.
+  if (!tensor.is_contiguous()) {
+    TORCH_INTERNAL_ASSERT(IsViewStorable(tensor),
+        "DVM lazy fusion: non-view-storable output reached Output(); gate non-contiguous "
+        "outputs with IsViewLoadable in the handler before building the graph.");
+    store.has_stride = true;
+  }
   ASCEND_LOGD("dvm Output: %%%zu, tensor %p, addr=%p, shape=%s, dtype=%s, inplace=%d",
               outputs_.size() - 1, tensor.unsafeGetTensorImpl(), tensor.data_ptr(),
               ToString(tensor).c_str(), c10::toString(tensor.scalar_type()), inplace);
@@ -504,7 +535,9 @@ void LazyFusionKernel::Flush() {
       out.skip = true;
       continue;
     }
-    auto store = dvm::Kernel::Store(out.tensor_meta.data_ptr, out.op);
+    auto store = out.has_stride
+        ? dvm::Kernel::Store(out.tensor_meta.data_ptr, out.op, GetShapeRef(out.tensor_meta.strides))
+        : dvm::Kernel::Store(out.tensor_meta.data_ptr, out.op);
     if (out.inplace) {
       dvm::Kernel::SetStoreInplace(store);
     }
