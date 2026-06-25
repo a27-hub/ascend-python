@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <ATen/ATen.h>
+#include <iostream>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -51,9 +52,10 @@ at::Tensor& index_add_out(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
-        ASCEND_LOGI("index_add_out: Enter deterministic path, dim=%ld, self.dim()=%ld", dim, self.dim());
+        std::cout << "[DEBUG] index_add_out: Enter deterministic path, dim=" << dim 
+                  << ", self.dim()=" << self.dim() << std::endl;
         auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        ASCEND_LOGI("index_add_out: wrapped_dim=%ld", wrapped_dim);
+        std::cout << "[DEBUG] index_add_out: wrapped_dim=" << wrapped_dim << std::endl;
         
         c10::List<c10::optional<at::Tensor>> indices;
         indices.reserve(self.dim());
@@ -96,9 +98,10 @@ at::Tensor index_add(
 
     // 添加的确定性逻辑
     if (at::globalContext().deterministicAlgorithms()) {
-        ASCEND_LOGI("index_add: Enter deterministic path, dim=%ld, self.dim()=%ld", dim, self.dim());
+        std::cout << "[DEBUG] index_add: Enter deterministic path, dim=" << dim 
+                  << ", self.dim()=" << self.dim() << std::endl;
         auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        ASCEND_LOGI("index_add: wrapped_dim=%ld", wrapped_dim);
+        std::cout << "[DEBUG] index_add: wrapped_dim=" << wrapped_dim << std::endl;
         
         result.copy_(self);
         c10::List<c10::optional<at::Tensor>> indices;
