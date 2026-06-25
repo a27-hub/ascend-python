@@ -4,6 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term> |    √     |
 | <term>Atlas 推理系列产品 </term>                             |    √     |
@@ -70,6 +71,10 @@ torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None
 
 ## 约束说明
 
+- 该接口与PyTorch配合使用时，需要保证CANN相关包与PyTorch相关包的版本匹配。
+
+- <term>Ascend 950PR/Ascend 950DT</term>：当CANN版本较低时（未适配aclnnAddRmsNormQuantV2），`beta`参数仅支持传入None，此时走aclnnAddRmsNormQuant(V1)路径。若需要使用`beta`参数，请升级CANN包至适配aclnnAddRmsNormQuantV2的版本。
+
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`的最后一维数据个数不能小于32。`gamma`、`beta`、`scales1`、`zero_points1`、`scales2`、`zero_points2`的数据个数不能小于32。
 
 - **边界值场景说明**
@@ -94,6 +99,18 @@ torch_npu.npu_add_rms_norm_quant(x1, x2, gamma, scales1, zero_points1, beta=None
     | x1 | x2 | gamma | scales1| scales2 | zero_points1 | zero_points2 | beta | y1 | y2 | x |
     | ---------- | ---------- | ------------- | --------------- | ----------------------- | --------------------------- | --------------------------- | -------------------- | ------------- | ------------- | ------------ |
     | float16    | float16    | float16       | float32         | float32                 | int32                       | int32                       | float16              | int8          | int8          | float16      |
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+
+    | x1 | x2 | gamma | scales1 | scales2 | zero_points1 | zero_points2 | beta | y1 | y2 | x |
+    | ---------- | ---------- | ------------- | --------------- | ----------------------- | --------------------------- | --------------------------- | -------------------- | ------------- | ------------- | ------------ |
+    | float16    | float16    | float16       | float32         | float32                 | int32                       | int32                       | float16              | int8          | int8          | float16      |
+    | bfloat16   | bfloat16   | bfloat16      | float32         | float32                 | int32                       | int32                       | bfloat16             | int8          | int8          | bfloat16     |
+    | float32    | float32    | float32       | float32         | float32                 | float32                     | float32                     | float32              | int8          | int8          | float32      |
+    | float16    | float16    | float16       | float16         | float16                 | float16                     | float16                     | float16              | int8          | int8          | float16      |
+    | bfloat16   | bfloat16   | bfloat16      | bfloat16        | bfloat16                | bfloat16                    | bfloat16                    | bfloat16             | int8          | int8          | bfloat16     |
+    | float16    | float16    | float16       | float32         | float32                 | float32                     | float32                     | float32              | int8          | int8          | float16      |
+    | bfloat16   | bfloat16   | bfloat16      | float32         | float32                 | float32                     | float32                     | float32              | int8          | int8          | bfloat16     |
     
 ## 调用示例
 
