@@ -69,7 +69,8 @@ class TestMoeFinalizeRouting(TestCase):
                                                   scales_npu,
                                                   torch.tensor(data_struct.expanded_src_to_dst_row).npu(),
                                                   expert_for_source_row_npu,
-                                                  data_struct.drop_pad_mode)
+                                                  data_struct.drop_pad_mode,
+                                                  K)
     
     def generate_input_data(self, expert_num=16, token_len=10, top_k=4, num_rows=50):
         expanded_permuted_rows = np.random.randn(num_rows * top_k, token_len).astype(np.float32)
@@ -114,4 +115,4 @@ class TestMoeFinalizeRouting(TestCase):
         self.assertRtolEqual(expected_output, custom_output.cpu().numpy(), 0.0001)
 
 if __name__ == "__main__":
-    run_tests()        
+    run_tests()
