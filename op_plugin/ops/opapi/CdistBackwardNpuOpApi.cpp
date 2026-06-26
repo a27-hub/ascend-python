@@ -44,14 +44,62 @@ at::Tensor _cdist_backward(
     if (p_in_range && (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950)) {
         return acl_op::_cdist_backward(grad, x1, x2, p, cdist);
     }
-    auto output_size = x1.sizes();
+    
+    // Broadcast x1 to match x2's dimensions (excluding last two dims)
+    auto x1_sizes = x1.sizes();
+    auto x2_sizes = x2.sizes();
+    
+    // Compute broadcast shape for x1: broadcast all dims except last two
+    std::vector<int64_t> broadcast_dims;
+    size_t x1_ndim = x1_sizes.size();
+    size_t x2_ndim = x2_sizes.size();
+    size_t max_ndim = std::max(x1_ndim, x2_ndim);
+    
+    for (size_t i = 0; i < max_ndim - 2; ++i) {
+        int64_t dim1 = (i < x1_ndim - 2) ? x1_sizes[i] : 1;
+        int64_t dim2 = (i < x2_ndim - 2) ? x2_sizes[i] : 1;
+        TORCH_CHECK(
+            dim1 == dim2 || dim1 == 1 || dim2 == 1,
+            "The size of tensor a ", dim1, " must match the size of tensor b ", dim2,
+            " at non-singleton dimension ", i, OPS_ERROR(ErrCode::PARAM));
+        broadcast_dims.push_back(std::max(dim1, dim2));
+    }
+    // Add last two dimensions from x1
+    broadcast_dims.push_back(x1_sizes[x1_ndim - 2]);
+    broadcast_dims.push_back(x1_sizes[x1_ndim - 1]);
+    
+    at::Tensor x1_broadcast = x1;
+    if (x1_sizes.vec() != broadcast_dims) {
+        x1_broadcast = x1.expand(broadcast_dims);
+    }
+    
+    auto output_size = x1_broadcast.sizes();
     auto output_dtype = grad.scalar_type();
 
     at::Tensor out = at_npu::native::OpPreparation::apply_tensor_without_format(
         output_size,
         grad.options().dtype(output_dtype));
 
-    EXEC_NPU_CMD(aclnnCdistBackward, grad, x1, x2, cdist, p_cast, out);
+
+    EXEC_NPU_CMD(aclnnCdistBackward, grad, x1_broadcast, x2, cdist, p_cast, out);
+
+    // Reduce gradient back to original x1 shape (sum over broadcast dims)
+    if (x1_sizes.vec() != broadcast_dims) {
+        std::vector<int64_t> reduce_dims;
+        size_t out_ndim = out.dim();
+        size_t orig_ndim = x1_sizes.size();
+        
+        for (size_t i = 0; i < out_ndim - 2; ++i) {
+            if (i >= orig_ndim - 2 || (x1_sizes[i] == 1 && out.sizes()[i] > 1)) {
+                reduce_dims.push_back(i);
+            }
+        }
+        
+        if (!reduce_dims.empty()) {
+            out = op_api::sum(out, reduce_dims, true, c10::nullopt);
+        }
+        out = out.reshape(x1_sizes);
+    }
 
     return out;
 }
