@@ -15601,7 +15601,7 @@ _add_torch_npu_docstr(
 计算公式: y = cast(x * scale, dst_dtype), amax = max(|x|)
 
 接口原型:
-torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None)) -> (Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
