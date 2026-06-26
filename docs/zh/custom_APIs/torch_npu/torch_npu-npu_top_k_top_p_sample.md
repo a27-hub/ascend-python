@@ -351,7 +351,7 @@ import torch_npu
 logits = torch.from_numpy(np.random.uniform(-2, 2, size=[2, 4])).type(torch.float16).npu()
 top_ks = torch.from_numpy(np.random.uniform(1, 2, size=[2, ])).type(torch.int32).npu()
 top_ps = torch.from_numpy(np.random.uniform(0.4, 0.5, size=[2, ])).type(torch.float16).npu()
-q = None
+q = torch.randint(0, 100, size=[2, 2], dtype=torch.int64).npu()
 min_ps = torch.from_numpy(np.random.uniform(0.1, 0.5, size=[2, ])).type(torch.float16).npu()
 post_sample = 'multiNomial'
 if post_sample == "multiNomial":
