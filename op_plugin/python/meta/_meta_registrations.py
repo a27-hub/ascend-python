@@ -2631,6 +2631,21 @@ def _npu_dtype_cast_backward_meta(self, dtype):
     return self.new_empty(self.shape, dtype=dtype)
 
 
+@impl(m, "_npu_format_cast")
+def _npu_format_cast_meta(self, acl_format):
+    return self.new_empty(self.shape)
+
+
+@impl(m, "_npu_format_cast.aclnn")
+def _npu_format_cast_aclnn_meta(self, acl_format, customize_dtype):
+    return self.new_empty(self.shape)
+
+
+@impl(m, "_npu_format_cast.input_dtype")
+def _npu_format_cast_input_dtype_meta(self, acl_format, customize_dtype, input_dtype):
+    return self.new_empty(self.shape)
+
+
 @impl(m, "npu_dtype_cast_backward")
 def npu_dtype_cast_backward_meta(self, dtype, grad_dtype=None, input_dtype=None):
     dim_num = self.dim()
@@ -5149,7 +5164,7 @@ def npu_dynamic_quant_asymmetric(input_dummy, *, smooth_scales=None, group_index
 
 @impl(m, "npu_dynamic_mx_quant")
 def npu_dynamic_mx_quant(input_dummy, *, axis=-1, round_mode="rint", dst_type=296, block_size=32,
-                         scale_alg=0, dst_type_max=0.0):
+                         scale_alg=0, dst_type_max=0.0, max_low_bound=0.0):
     dim_num = input_dummy.dim()
     mxscale_shape = []
     if axis < -dim_num or axis >= dim_num:
@@ -5831,6 +5846,18 @@ def npu_swiglu_quant_meta(x, smooth_scales=None, offsets=None, group_index=None,
     y_size.append(math.floor(x.size(x.dim() - 1) / 2))
     return (torch.empty(y_size, dtype=dst_type, device=x.device),
             torch.empty(scale_size, dtype=torch.float32, device=x.device))
+
+
+@impl(m, "npu_swiglu_group_quant_backward")
+def npu_swiglu_group_quant_backward_meta(grad_y, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0):
+    grad_x = torch.empty_like(x, dtype=x.dtype)
+
+    if weight is not None and weight.numel() > 0:
+        grad_weight = torch.empty_like(weight, dtype=weight.dtype)
+    else:
+        grad_weight = x.new_empty([0], dtype=torch.float32)
+
+    return (grad_x, grad_weight)
 
 
 @impl(m, "npu_dequant_swiglu_quant")
@@ -6734,7 +6761,7 @@ def npu_dynamic_mx_quant_with_dual_axis(input_dummy, *, round_mode="rint", dst_t
 
 
 @impl(m, "npu_grouped_dynamic_block_quant")
-def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0):
+def npu_grouped_dynamic_block_quant_meta(x, group_list, *, min_scale=0.0, round_mode="rint", dst_type=torch.float8_e5m2, row_block_size=1, col_block_size=128, group_list_type=0, dst_type_max=0.0):
     dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_type, torch.float8_e5m2)
     y = torch.empty(x.shape, dtype=dtype, device=x.device)
     scale_shape = list(x.shape)

@@ -1,5 +1,8 @@
 # torch_npu.npu_rotate_quant
 
+> [!NOTICE]  
+> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
+
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -22,7 +25,7 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 - **x**（`Tensor`）：必选输入，输入tensor。shape支持2维[m,n]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
 - **rotation**（`Tensor`）：必选输入，旋转矩阵tensor。shape支持2维[k,k]，数据类型支持`bfloat16`和`float16`，数据格式支持ND，支持非连续的Tensor。
 - **alpha**（`float`）：可选输入，旋转角度缩放因子，数据类型为`float`，默认值为0.0。
-- **dst_dtype**（`int`）：可选输入, 指定量化输出的类型, 传None时当做torch.int8处理。
+- **dst_dtype**（`int`）：可选输入，指定量化输出的类型, 传None时当做torch.int8处理。
 
 ## 返回值说明
 
@@ -33,7 +36,7 @@ torch_npu.npu_rotate_quant(x, rotation, *, alpha=0.0, dst_dtype=None) -> (Tensor
 
 - 该接口支持推理和训练场景下使用。
 - 该接口支持图模式。
-- n支持128-16000，8字节对齐，需要能整除k。
+- n支持128-16000，8字节对齐，需要能被k整除。
 - 输入和输出Tensor支持的数据类型组合如下：
 
     |x|rotation|dst_dtype|y|scale|

@@ -9,9 +9,10 @@
 
 ## 功能说明<a name="zh-cn_topic_0000002259406069_section14441124184110"></a>
 
-- **API功能**: GroupedMatMul和MoeFinalizeRouting的融合算子，其中，GroupedMatMul负责分专家计算，MoeFinalizeRouting负责按路由关系回填并聚合GroupedMatMul结果，两者串联形成完整的MoE输出路径。
-  - **MoE**: Mixture of Experts，混合专家模型。每个token按路由结果分配到一个或多个专家进行计算。
-  - **MoeFinalizeRouting**: MoE路由最终化过程。将各专家计算结果按路由索引回填到token原始顺序，并对同一token的多个专家结果进行聚合，得到最终输出。  
+GroupedMatMul和MoeFinalizeRouting的融合算子，其中，GroupedMatMul负责分专家计算，MoeFinalizeRouting负责按路由关系回填并聚合GroupedMatMul结果，两者串联形成完整的MoE输出路径。
+
+- **MoE**: Mixture of Experts，混合专家模型。每个token按路由结果分配到一个或多个专家进行计算。
+- **MoeFinalizeRouting**: MoE路由最终化过程。将各专家计算结果按路由索引回填到token原始顺序，并对同一token的多个专家结果进行聚合，得到最终输出。  
 
 其中，GroupedMatMul是一种针对批量稀疏矩阵乘法的优化计算模式。在MoE（Mixture of Experts，混合专家模型）结构中，每个token被分配给某个专家，不同专家处理的token数量不同。GroupedMatMul将同一专家负责的所有token聚合为一个组，然后一次性执行该专家的矩阵乘法，从而避免为每个token单独调用矩阵乘法带来的调度开销，提升计算效率。
 
@@ -37,7 +38,7 @@ torch_npu.npu_grouped_matmul_finalize_routing(x, w, group_list, *, scale=None, b
     - A8W4量化场景下数据格式支持$ND$，维度为\(e, k, n\)，k支持2048，n只支持7168。
 
 - **group\_list** (`Tensor`)：必选参数。GroupedMatMul的各分组大小。不支持非连续的Tensor。数据类型支持`int64`，数据格式支持$ND$，维度为\(e,\)，e与`w`的e一致。`group_list`的值总和要求≤m。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **scale** (`Tensor`)：可选参数。矩阵计算反量化参数，对应weight矩阵。A8W8场景下支持perchannel量化方式，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度\(e, n\)，这里的n=n1\*n0，A8W4量化场景下，数据类型支持`int64`，维度为\(e, 1, n\)。
 - **bias** (`Tensor`)：可选参数。矩阵计算的bias参数，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，维度为\(e, n\)，只支持A8W4量化场景。
 - **offset** (`Tensor`)：可选参数。矩阵计算量化参数的偏移量，不支持非连续的Tensor。数据类型支持`float32`，数据格式支持$ND$，输入维度只支持3维。只支持A8W4量化场景。

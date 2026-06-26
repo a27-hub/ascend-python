@@ -1,8 +1,5 @@
 # torch\_npu.npu\_swiglu\_quant
 
-> [!NOTICE]  
-> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -57,7 +54,7 @@ torch_npu.npu_swiglu_quant(x, *, smooth_scales=None, offsets=None, group_index=N
 > - N：计算输入`x`的最后一维大小的二分之一，取值\>0。
 
 - **x** (`Tensor`)：必选参数，表示目标张量。数据类型支持`float16`、`bfloat16`、`float32`，支持非连续的`Tensor`，数据格式为$ND$，`x`的维数必须大于1维，尾轴为偶数且长度不超过8192，当`dst_type`为`int4`量化时，`x`的最后一维需要为4的倍数。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **smooth\_scales** (`Tensor`)：可选参数，表示smooth量化系数。数据类型支持`float32`，支持非连续的`Tensor`，数据格式为$ND$。shape支持[G, N]，[G, ]。
 - **offsets** (`Tensor`)：可选参数，表示量化中的偏移项，该参数在动态量化场景下不生效，传入`None`即可。静态量化场景下：数据类型支持`float`，支持非连续的`Tensor`，数据格式为$ND$。per_channel模式下shape支持[G, N]，per_tensor模式下shape支持[G, ]，且数据类型和shape需要与`smooth_scales`保持一致。
 - **group\_index** (`Tensor`)：可选参数，当前支持`cumsum`和`count`两种模式，要求为1维张量，数据类型支持`int32`，数据格式$ND$，shape支持[G, ]，`group_index`内元素要求为非递减，且最大值不得超过输入`x`的除最后一维之外的所有维度大小之积。

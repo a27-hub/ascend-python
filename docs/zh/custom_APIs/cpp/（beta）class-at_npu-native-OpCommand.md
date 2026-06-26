@@ -20,19 +20,19 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Name(const string& name)**
 
-    OpCommand待执行算子名称，返回值类型OpCommand。
+    OpCommand待执行算子名称，返回值类型为OpCommand。
 
     name：string类型，待执行的算子名称。
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::SetCustomHandler(PROC_FUNC func)**
 
-    OpCommand设置自定义处理方法，返回值类型OpCommand。
+    OpCommand设置自定义处理方法，返回值类型为OpCommand。
 
     func：PROC_FUNC类型，待设置的自定义处理方法。
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::DynamicInputReg(DynamicInputRegFunc func, DyNumAndIndex num_and_index)**
 
-    OpCommand动态输入方法注册，返回值类型OpCommand。
+    OpCommand动态输入方法注册，返回值类型为OpCommand。
 
     func：DynamicInputRegFunc类型，待注册的动态输入方法。
 
@@ -40,17 +40,17 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Expect(UnifiedResult unified_result)**
 
-    OpCommand设置预期结果形式，返回值类型OpCommand。
+    OpCommand设置预期结果形式，返回值类型为OpCommand。
 
     unified_result：UnifiedResult类型，包含预期结果的类型、形状和是否已定义。
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input()**
 
-    OpCommand空输入，返回值类型OpCommand。
+    OpCommand空输入，返回值类型为OpCommand。
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const at::Tensor& input, const string& descName = "", const c10::optional& sensitive_format = c10::nullopt, const string& realData = "")**
 
-    OpCommand输入Tensor，要求连续，返回值类型OpCommand。
+    OpCommand输入Tensor，要求连续，返回值类型为OpCommand。
 
     input：Tensor类型，输入tensor，要求是连续的。
 
@@ -62,7 +62,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::InputWithoutContiguous(const at::Tensor& input, const string& descName = "", const string& realData = "")**
 
-    OpCommand输入Tensor，不要求连续，返回值类型OpCommand。
+    OpCommand输入Tensor，不要求连续，返回值类型为OpCommand。
 
     input：Tensor类型，输入tensor。
 
@@ -72,7 +72,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **template at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::ArrayRef& dimListRef, at::IntArrayRef realShape, at::ScalarType toType, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "", const string& descName = "")**
 
-    OpCommand输入数组，通常输入在cpu端，会在实现中进行h2d，返回值类型OpCommand。
+    OpCommand输入数组，通常输入在CPU端，会在实现中进行H2D，返回值类型为OpCommand。
 
     dimListRef：ArrayRef类型，输入数组。
 
@@ -88,7 +88,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::IntArrayRef& dimListRef, at::ScalarType toType = at::kLong, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "", const string& descName = "")**
 
-    OpCommand输入整型数组，通常输入在cpu端，会在实现中进行h2d，返回值类型OpCommand。
+    OpCommand输入整型数组，通常输入在CPU端，会在实现中进行H2D，返回值类型为OpCommand。
 
     dimListRef：IntArrayRef类型，输入整型数组。
 
@@ -102,7 +102,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::ArrayRef& dimListRef, at::IntArrayRef realShape, at::ScalarType toType = at::kDouble, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_DEPENDENT, const string& realDtype = "")**
 
-    OpCommand输入浮点型数组，通常输入在cpu端，会在实现中进行h2d，返回值类型OpCommand。
+    OpCommand输入浮点型数组，通常输入在CPU端，会在实现中进行H2D，返回值类型为OpCommand。
 
     dimListRef：ArrayRef类型，输入浮点型数组。
 
@@ -116,7 +116,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::Scalar& input, const at::ScalarType type, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_INDEPENDENT);**
 
-    OpCommand输入标量，会在实现中进行h2d，返回值类型OpCommand。
+    OpCommand输入标量，会在实现中进行H2D，返回值类型为OpCommand。
 
     input：Scalar类型引用，输入标量。
 
@@ -126,13 +126,13 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Inputs(const at::TensorList& inputs)**
 
-    OpCommand输入tensor list，返回值类型OpCommand。
+    OpCommand输入tensor list，返回值类型为OpCommand。
 
     inputs：TensorList类型引用，输入的tensor list。
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::InputScalarToNPUTensor(const c10::Scalar& input, const at::ScalarType type)**
 
-    OpCommand输入标量，返回值类型OpCommand。
+    OpCommand输入标量，返回值类型为OpCommand。
 
     input：Scalar类型引用，输入标量。
 
@@ -140,7 +140,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Output(at::Tensor& output, const string& descName = "", const c10::optional& sensitive_format = c10::nullopt, const string& realType = "")**
 
-    OpCommand输出tensor，返回值类型OpCommand。
+    OpCommand输出tensor，返回值类型为OpCommand。
 
     output：Tensor类型引用，输出tensor。
 
@@ -152,7 +152,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **template at_npu::native::OpCommand& at_npu::native::OpCommand::Attr(const string& name, dataType value)**
 
-    OpCommand设置属性，返回值类型OpCommand。
+    OpCommand设置属性，返回值类型为OpCommand。
 
     name：string类型常量引用，属性名称。
 
@@ -160,7 +160,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **template at_npu::native::OpCommand& at_npu::native::OpCommand::Attr(const string& name, dataType value, bool cond)**
 
-    OpCommand根据条件设置属性，返回值类型OpCommand。
+    OpCommand根据条件设置属性，返回值类型为OpCommand。
 
     name：string类型常量引用，属性名称。
 
@@ -174,7 +174,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
 - **at_npu::native::OpCommand& at_npu::native::OpCommand::Sync(c10::SmallVector<int64_t, N\>& sync_index)**
 
-    OpCommand设置同步index，返回值类型OpCommand。
+    OpCommand设置同步index，返回值类型为OpCommand。
 
     sync_index：SmallVector<int64_t, N\>类型引用，需要同步的index。
 

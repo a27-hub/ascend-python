@@ -13,76 +13,76 @@
 - API功能：MoE（Mixture of Experts）的routing计算，根据[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)的计算结果做routing处理，支持不量化、动态量化和静态量化模式。
 - 计算公式：  
 
-  1.对输入expertIdx做排序，得出排序后的结果sortedExpertIdx和对应的序号sortedRowIdx：
+    1. 对输入expertIdx做排序，得出排序后的结果sortedExpertIdx和对应的序号sortedRowIdx：
 
-    $$
-    sortedExpertIdx, sortedRowIdx=keyValueSort(expertIdx,rowIdx)
-    $$
+        $$
+        sortedExpertIdx, sortedRowIdx=keyValueSort(expertIdx,rowIdx)
+        $$
 
-  2.以sortedRowIdx做位置映射得出expandedRowIdxOut：
-    - rowIdxType等于1时, 输出scatter索引
-      $$
-      expandedRowIdxOut[i]=sortedRowIdx[i]
-      $$
-    - rowIdxType等于0时, 输出gather索引
-      $$
-      expandedRowIdxOut[sortedRowIdx[i]]=i
-      $$
-      
-  3.对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
+    2. 以sortedRowIdx做位置映射得出expandedRowIdxOut：
+        - rowIdxType等于1时, 输出scatter索引
+            $$
+            expandedRowIdxOut[i]=sortedRowIdx[i]
+            $$
+        - rowIdxType等于0时, 输出gather索引
+            $$
+            expandedRowIdxOut[sortedRowIdx[i]]=i
+            $$
+        
+    3. 对sortedExpertIdx的每个专家统计直方图结果，得出expertTokensCountOrCumsumOutOptional：
 
-    $$
-    expertTokensCountOrCumsumOutOptional[i]=Histogram(sortedExpertIdx)
-    $$
+        $$
+        expertTokensCountOrCumsumOutOptional[i]=Histogram(sortedExpertIdx)
+        $$
 
-  4.如果quantMode不等于-1, 计算量化结果：
-     - 静态量化：
-     $$
-     quantResult=round((x∗scaleOptional)+offsetOptional)
-     $$
-     
-     - 动态量化：
-        - 若不输入scale：
+    4. 如果quantMode不等于-1, 计算量化结果：
+        - 静态量化：
             $$
-            dynamicQuantScaleOutOptional = row\_max(abs(x)) / 127
+            quantResult=round((x∗scaleOptional)+offsetOptional)
             $$
+        
+        - 动态量化：
+            - 若不输入scale：
+                $$
+                dynamicQuantScaleOutOptional = row\_max(abs(x)) / 127
+                $$
 
-            $$
-            quantResult = round(x / dynamicQuantScaleOutOptional)
-            $$
-        - 若输入scale:
-            $$
-            dynamicQuantScaleOutOptional = row\_max(abs(x * scaleOptional)) / 127
-            $$
+                $$
+                quantResult = round(x / dynamicQuantScaleOutOptional)
+                $$
+            - 若输入scale:
+                $$
+                dynamicQuantScaleOutOptional = row\_max(abs(x * scaleOptional)) / 127
+                $$
 
-            $$
-            quantResult = round(x / dynamicQuantScaleOutOptional)
-            $$
+                $$
+                quantResult = round(x / dynamicQuantScaleOutOptional)
+                $$
   
-  5.若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
-    - 非量化场景
-      - 按照Scatter索引搬运
-      $$
-      expandedXOut[i]=x[scatterRowIdx[i]//K]
-      $$
-      - 按照Gather索引搬运
-      $$
-      expandedXOut[gatherRowIdx[i]]=x[i//K]
-      $$
-    - 量化场景
-      - 按照Scatter索引搬运
-      $$
-      expandedXOut[i]=quantResult[scatterRowIdx[i]//K]
-      $$
-      - 按照Gather索引搬运
-      $$
-      expandedXOut[gatherRowIdx[i]]=quantResult[i//K]
-      $$
+    5. 若活跃的expert范围为全专家范围时，按照Scatter索引搬运token；反之按照Gather索引搬运token。在dropPadMode为1时将每个专家需要处理的Token个数对齐为expertCapacity个，超过expertCapacity个的Token会被Drop，不足的会用0填充。得出expandedXOut：
+        - 非量化场景
+            - 按照Scatter索引搬运
+                $$
+                expandedXOut[i]=x[scatterRowIdx[i]//K]
+                $$
+            - 按照Gather索引搬运
+                $$
+                expandedXOut[gatherRowIdx[i]]=x[i//K]
+                $$
+        - 量化场景
+            - 按照Scatter索引搬运
+                $$
+                expandedXOut[i]=quantResult[scatterRowIdx[i]//K]
+                $$
+            - 按照Gather索引搬运
+                $$
+                expandedXOut[gatherRowIdx[i]]=quantResult[i//K]
+                $$
 
-  6.expandedRowIdxOut的有效元素数量availableIdxNum，计算方式为expertIdx中activeExpertRangeOptional范围内的元素的个数
-    $$
-    availableIdxNum = |\{x\in expertIdx| expert\_start \le x<expert\_end \ \}|
-    $$
+    6. expandedRowIdxOut的有效元素数量availableIdxNum，计算方式为expertIdx中activeExpertRangeOptional范围内的元素的个数
+        $$
+        availableIdxNum = |\{x\in expertIdx| expert\_start \le x<expert\_end \ \}|
+        $$
 
 - 等价计算逻辑
 
@@ -605,7 +605,7 @@ torch_npu.npu_moe_init_routing_v2(x, expert_idx, *, scale=None, offset=None, act
 
 - **x** (`Tensor`)：必选参数，表示MoE的输入即token特征输入，要求为2维张量，shape为(NUM_ROWS, H)。数据类型支持`float16`、`bfloat16`、`float32`、`int8`，数据格式要求为$ND$。
 - **expert_idx** (`Tensor`)：必选参数，表示[torch_npu.npu_moe_gating_top_k_softmax](torch_npu-npu_moe_gating_top_k_softmax.md)输出每一行特征对应的K个处理专家，要求是2维张量，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持`int32`，数据格式要求为$ND$。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **scale** (`Tensor`)：可选参数，默认为None，用于计算量化结果的参数。数据类型支持`float32`，数据格式要求为$ND$。如果不输入表示计算时不使用`scale`，且输出`expanded_scale`中的值无意义。
     - 非量化场景下，如果输入则要求为1维张量，shape为(NUM_ROWS,)。
     - 静态量化场景必须输入，输入要求为1D的Tensor，shape为(1,)

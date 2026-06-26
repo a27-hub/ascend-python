@@ -11,7 +11,7 @@
 
 ## 功能说明
 
-是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。
+控制是否使用私有格式，设置为True时允许使用私有格式，设置为False时，不允许申请任何私有格式的tensor，避免了适配层出现私有格式流通。
 
 ## 函数原型
 
@@ -25,6 +25,7 @@ torch_npu.npu.config.allow_internal_format = bool
 
 - <term>Atlas A2 训练系列产品</term>/<term>Atlas A3 训练系列产品</term>默认值为`False`。
 - <term>Atlas 推理系列产品</term>/<term>Atlas 训练系列产品</term>默认值为`True`。
+- <term>Atlas 350 加速卡</term>仅支持`False`；设置为`True`会被忽略并回退为`False`。
 
 ## 约束说明
 

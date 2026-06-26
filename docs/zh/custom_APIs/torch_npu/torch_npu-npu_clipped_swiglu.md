@@ -1,8 +1,5 @@
 # torch_npu.npu_clipped_swiglu
 
-> [!NOTICE]  
-> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -81,8 +78,8 @@ torch_npu.npu_clipped_swiglu(x, *, group_index=None, dim=-1, alpha=1.702, limit=
 
 ## 参数说明
 
-- **x** (`Tensor`)：必选参数，表示目标张量。数据类型支持`float16`、`bfloat16`、`float32`，不支持非连续的`Tensor`，数据格式为$ND$，`x`的维数必须大于1维且第`dim`轴为偶数。
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- **x** (`Tensor`)：必选参数，表示目标张量。数据类型支持`float16`、`bfloat16`、`float32`，不支持非连续的`Tensor`，数据格式为$ND$，`x`的维数必须大于1维且第`dim`轴的元素数量为偶数。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 - **group_index** (`Tensor`)：可选参数，表示对`x`进行分组的情况。要求为1维张量，第i个元素代表第i组需要处理的`x`合轴后的token数量，数据类型支持`int64`，数据格式$ND$。默认值为None，表示不对`x`进行分组处理。
 - **dim** (`int`)：可选参数，表示需要对`x`进行切分的维度序号，取值范围为[-x.dim(), x.dim()-1]，默认值为-1。
 - **alpha** (`float`)：可选参数，表示GLU激活函数系数，默认值为1.702。

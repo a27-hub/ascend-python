@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-- 接口功能：`npu_grouped_matmul_swiglu_quant_v2`是一种融合分组矩阵乘法（GroupedMatmul）、反量化（dequant）、SwiGLU混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGLU激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。支持以下量化场景：
+- API功能：`npu_grouped_matmul_swiglu_quant_v2`是一种融合分组矩阵乘法（GroupedMatmul）、反量化（dequant）、SwiGLU混合激活函数、量化（quant）的计算方法。该方法适用于需要对矩阵乘法结果进行SwiGLU激活函数激活的场景，融合算子在底层能够对部分过程并行，达到性能优化的效果。支持以下量化场景：
 
 - 计算公式：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
@@ -457,7 +457,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
         def __init__(self):
             super().__init__()
         def forward(self, x, weight, weightscale, xscale, group_list, quant_dtype):
-            output = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weightscale, xscale, group_list, quant_dtype=quant_dtype)
+            output = torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weightscale, xscale, group_list, quant_dtype=quant_dtype, dequant_dtype=5)
             return output    
      
     def gen_input_data(E, M, K, N):
@@ -471,7 +471,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
     M = 512
     K = 7168
     N = 4096
-    quant_dtype = 2
+    quant_dtype = 1
     x, weight, weightScale, xScale, groupList = gen_input_data(E, M, K, N)
     weight_npu = torch_npu.npu_format_cast(weight.npu(), 29)
      
@@ -513,7 +513,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
             self.weightScale = nn.Parameter(weightScale, requires_grad=False)
             self.xScale = nn.Parameter(xScale, requires_grad=False)
 
-        def forward(self, x_npu：Torch.Tensor, w：Torch.Tensor, group_list_npu：Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        def forward(self, x_npu: Torch.Tensor, w: Torch.Tensor, group_list_npu: Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             with torch.no_grad():
                 weight = self.weight
                 weightScale = self.weightScale.npu()
@@ -704,7 +704,7 @@ torch_npu.npu_grouped_matmul_swiglu_quant_v2(x, weight, weight_scale, x_scale, g
             self.weight = nn.Parameter(weight_npu, requires_grad=False)
             self.weightScale = nn.Parameter(weightScale, requires_grad=False)
             self.xScale = nn.Parameter(xScale, requires_grad=False)
-        def forward(self, x_npu：Torch.Tensor, w：Torch.Tensor, group_list_npu：Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        def forward(self, x_npu: Torch.Tensor, w: Torch.Tensor, group_list_npu: Torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             with torch.no_grad():
                 weight = self.weight
                 weightScale = self.weightScale.npu()

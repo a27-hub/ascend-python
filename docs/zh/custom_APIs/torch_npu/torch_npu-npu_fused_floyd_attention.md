@@ -1,8 +1,5 @@
 # torch_npu.npu_fused_floyd_attention
 
-> [!NOTICE]  
-> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
@@ -31,19 +28,19 @@ torch_npu.npu_fused_floyd_attention(query_ik, key_ij, value_ij, key_jk, value_jk
 
 ## 参数说明
 
-- **query_ik** (`Tensor`)：必选参数，输入张量，对应公式中的$query$，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[BHNMD]。
-- **key_ij** (`Tensor`)：必选参数，输入张量，对应公式中的$key_1$，代表从节点i到其直接邻居j的关系或特征，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[BHNKD]。
-- **value_ij** (`Tensor`)：必选参数，输入张量，对应公式中的$value_1$，代表从节点i到其直接邻居j的信息内容，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[BHNKD]。
-- **key_jk** (`Tensor`)：必选参数，输入张量，对应公式中的$key_2$，代表从直接邻居j到支点k的关系或特征，数据类型支持`bfloat16`、`float16`，数据格式支持$ND$，输入shape支持[BHKMD]。
-- **value_jk** (`Tensor`)：必选参数，输入张量，对应公式中的$value_2$，代表从节点j到其直接邻居k的信息内容，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$，输入shape支持[BHKMD]。
-- **atten_mask** (`Tensor`)：可选参数，输入张量，对应公式中的$atten\_mask$，数据类型支持`bool`、`uint8`，数据格式支持$ND$，输入shape类型需为[B1N1K]，取值为1代表该位不参与计算，为0代表该位参与计算。默认值为None。
+- **query_ik** (`Tensor`)：必选参数，输入张量，对应公式中的$query$，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[B,H,N,M,D]。
+- **key_ij** (`Tensor`)：必选参数，输入张量，对应公式中的$key_1$，代表从节点i到其直接邻居j的关系或特征，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[B,H,N,K,D]。
+- **value_ij** (`Tensor`)：必选参数，输入张量，对应公式中的$value_1$，代表从节点i到其直接邻居j的信息内容，数据类型支持`bfloat16`、`float16`。数据格式支持$ND$，输入shape支持[B,H,N,K,D]。
+- **key_jk** (`Tensor`)：必选参数，输入张量，对应公式中的$key_2$，代表从直接邻居j到支点k的关系或特征，数据类型支持`bfloat16`、`float16`，数据格式支持$ND$，输入shape支持[B,H,K,M,D]。
+- **value_jk** (`Tensor`)：必选参数，输入张量，对应公式中的$value_2$，代表从节点j到其直接邻居k的信息内容，数据类型支持`bfloat16`、`float16`、`float32`，数据格式支持$ND$，输入shape支持[B,H,K,M,D]。
+- **atten_mask** (`Tensor`)：可选参数，输入张量，对应公式中的$atten\_mask$，数据类型支持`bool`、`uint8`，数据格式支持$ND$，输入shape类型需为[B,1,N,1,K]，取值为1代表该位不参与计算，为0代表该位参与计算。默认值为None。
 - **scale_value** (`float`)：可选参数，代表缩放系数，对应公式中的$scale\_value$，数据类型支持`float`。默认值为1。
 
 ## 返回值说明
 
-- **softmax_max_out** (`Tensor`)：输出张量，Softmax计算的Max中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[BHNM8]。数据格式支持$ND$。
-- **softmax_sum_out** (`Tensor`)：输出张量，Softmax计算的Sum中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[BHNM8]。数据格式支持$ND$。
-- **attention_out** (`Tensor`)：输出张量，计算公式的最终输出，对应公式中的$attention\_out$。数据类型支持`bfloat16`、`float16`。数据类型和shape类型与`query_ik`保持一致，数据格式支持$ND$，输入shape支持[BHNMD]。
+- **softmax_max_out** (`Tensor`)：输出张量，Softmax计算的Max中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[B,H,N,M,8]。数据格式支持$ND$。
+- **softmax_sum_out** (`Tensor`)：输出张量，Softmax计算的Sum中间结果，用于反向计算。数据类型支持`float`，输出的shape类型为[B,H,N,M,8]。数据格式支持$ND$。
+- **attention_out** (`Tensor`)：输出张量，计算公式的最终输出，对应公式中的$attention\_out$。数据类型支持`bfloat16`、`float16`。数据类型和shape类型与`query_ik`保持一致，数据格式支持$ND$，输入shape支持[B,H,N,M,D]。
 
 ## 约束说明
 

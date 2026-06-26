@@ -1,8 +1,5 @@
 # torch_npu.npu_quant_matmul_gelu
 
-> [!NOTICE]  
-> 此接口为本版本新增功能，具体依赖要求请参考《版本说明》中的“[接口变更说明](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/release_notes/release_notes.md#%E6%8E%A5%E5%8F%A3%E5%8F%98%E6%9B%B4%E8%AF%B4%E6%98%8E)”。
-
 ## 产品支持情况
 
 | 产品                                            | 是否支持 |
@@ -56,7 +53,7 @@ A8W8量化场景下，支持昇腾亲和的$NZ$数据排布格式，可通过`to
 
 - **x2_scale** (`Tensor`)：必选参数，`x2`的量化缩放因子，数据格式支持$ND$。数据类型支持`float32`、`bfloat16`。shape需要是1维$(n,)$或$(1,)$，其中$n$与`x2`的$n$一致。采用perchannel量化方式，每个输出通道有一个独立的scale值，或使用pertensor量化（shape为$(1,)$）。
 
-- <strong>*</strong>：必选参数，代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
+- <strong>*</strong>：语法分隔符，用于区分位置参数和关键字参数。其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
 
 - **bias** (`Tensor`)：可选参数，默认值为`None`，偏置项，数据格式支持$ND$。数据类型支持`int32`、`float32`、`bfloat16`、`float16`。
 
