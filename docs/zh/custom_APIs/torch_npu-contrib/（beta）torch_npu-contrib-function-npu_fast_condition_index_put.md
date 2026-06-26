@@ -23,13 +23,13 @@ torch_npu.contrib.function.npu_fast_condition_index_put(x, condition, value)
 
 - **x** (`Tensor`)：输入张量。
 - **condition** (`BoolTensor`)：判断条件。
-- **value** (`int`/`float`)：bboxes步长。
+- **value** (`int`/`float`)：满足条件时用于替换的值。
 
 ## 返回值说明
 
 `Tensor`
 
-代表框转换deltas。
+返回经过条件替换后的张量。
 
 ## 调用示例
 
@@ -40,7 +40,8 @@ torch_npu.contrib.function.npu_fast_condition_index_put(x, condition, value)
 >>> x = torch.randn(128, 8192).npu()
 >>> condition = x < 0.5
 >>> value = 0.
->>> x1 = copy.deepcopy(x)[condition] = value
+>>> x1 = copy.deepcopy(x)
+>>> x1[condition] = value
 >>> x1_opt = npu_fast_condition_index_put(x, condition, value)
 >>> print(x1_opt)
 tensor([[0.9661, 1.6750, 0.0000,  ..., 0.0000, 0.0000, 0.0000],

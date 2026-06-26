@@ -19,12 +19,13 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_get_float_status(self) -> Tensor
+torch_npu.npu_get_float_status(self, mode=0) -> Tensor
 ```
 
 ## 参数说明
 
-**self** (`Tensor`)：数据内存地址张量，数据类型为`float32`。
+- **self** (`Tensor`)：数据内存地址张量，数据类型为`float32`。
+- **mode** (`int`)：溢出检测模式。支持0（原始模式）和1（调试模式），默认值为0。
 
 ## 返回值说明
 

@@ -48,7 +48,7 @@ torch_npu.npu_all_gather_base_mm(x1, x2, hcom, world_size, bias=None, x1_scale=N
 - **world\_size** (`int`)：必选参数，通信域内的rank总数。
     - <term>Atlas A2 训练系列产品</term>：支持2、4、8卡，支持HCCS链路all mesh组网（每张卡和其它卡两两相连）。
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持2、4、8、16、32卡，支持HCCS链路double ring组网（多张卡按顺序组成一个圈，每张卡只和左右卡相连）。
-- **bias** (`Tensor`)：可选参数，数据类型支持float16、bfloat16，数据格式支持ND格式。数据类型需要和`x1`保持一致。bias仅支持一维，且维度大小与`output`的第1维大小相同。**当前版本暂不支持bias输入为非0的场景。**
+- **bias** (`Tensor`)：可选参数，数据类型支持float16、bfloat16，数据格式支持ND格式。数据类型需要和`x1`保持一致。bias仅支持一维，shape为\(n,\)，元素个数与`output`的最后一维（`output.shape[1]`）相同。**当前版本暂不支持bias输入为非0的场景。**
 - **x1\_scale** (`Tensor`)：可选参数，mm左矩阵反量化参数。数据类型支持`float32`，数据格式支持$ND$格式。数据维度为\(m, 1\)，支持pertoken量化。
 - **x2\_scale** (`Tensor`)：可选参数，mm右矩阵反量化参数。数据类型支持`float32`、`int64`，数据格式支持$ND$格式。数据维度为\(1, n\)，支持perchannel量化。如需传入`int64`数据类型，需要提前调用torch_npu.npu_trans_quant_param来获取`int64`数据类型的`x2_scale`。
 - **gather\_index** (`int`)：可选参数，表示gather操作对象，0表示对`x1`做gather，1表示对`x2`做gather。默认值0。**当前版本仅支持输入0。**
