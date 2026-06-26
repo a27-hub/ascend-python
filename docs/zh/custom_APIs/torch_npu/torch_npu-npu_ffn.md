@@ -42,7 +42,7 @@ torch_npu.npu_ffn(x, weight1, weight2, activation, *, expert_tokens=None, expert
 
 - **x** (`Tensor`)：必选参数，输入张量，对应公式中的$x$，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持$ND$，支持输入的维度最少是2维$[M, K1]$，最多是8维。
 
-- **weight1** (`Tensor`)：必选参数，专家的权重数据，对应公式中的$W1$，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持$ND$，输入在有/无专家时分别为$[E, K1, N1]$/$[K1, N1]$。
+- **weight1** (`Tensor`)：必选参数，专家的权重数据，对应公式中的$W_1$，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持$ND$，输入在有/无专家时分别为$[E, K1, N1]$/$[K1, N1]$。
 
 - **weight2** (`Tensor`)：必选参数，专家的权重数据，对应公式中的$W2$，数据类型支持`float16`、`bfloat16`、`int8`，数据格式支持$ND$，输入在有/无专家时分别为$[E, K2, N2]$/$[K2, N2]$。
 

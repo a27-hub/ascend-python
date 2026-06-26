@@ -644,7 +644,7 @@ torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, 
 根据rois和deltas生成标注框。自定义FasterRcnn算子。
 
 参数说明
-rois (Tensor) - 区域候选网络(RPN)生成的region of interests(ROI)。shape为(N,4)数据类型为float32或float16的2D张量。“N”表示ROI的数量， “4”表示“x0”、“x1”、“y0”和“y1”。
+rois (Tensor) - 区域候选网络(RPN)生成的regions of interest(ROIs)。shape为(N,4)，数据类型为float32或float16的2D张量。“N”表示ROI的数量，“4”表示“x0”、“x1”、“y0”和“y1”。
 deltas (Tensor) - RPN生成的ROI和真值框之间的绝对变化。shape为(N,4)数据类型为float32或float16的2D张量。“N”表示错误数，“4”表示“dx”、“dy”、“dw”和“dh”。
 means0 (Float) - index。
 means1 (Float) - index。
@@ -1571,7 +1571,7 @@ head_num: int类型, 代表head个数, 数据类型支持int64. 综合约束请�
 input_layout: string类型, 代表输入query、key、value的数据排布格式, 支持BSH、SBH、BSND、BNSD、TND(actual_seq_qlen/actual_seq_kvlen需传值); 后续章节如无特殊说明, S表示query或key、value的sequence length, Sq表示query的sequence length, Skv表示key、value的sequence length, SS表示Sq*Skv.
 pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 非varlen场景支持四维输入, 包含BNSS格式、BN1Skv格式、1NSS格式. 如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse_mode为0、2、3的下三角掩码场景, 可使能alibi位置编码压缩, 此时只需要输入原始PSE最后1024行进行内存优化, 即alibi_compress = ori_pse[:, :, -1024:, :], 参数每个batch不相同时, 输入BNHSkv(H=1024), 每个batch相同时, 输入1NHSkv(H=1024).
 padding_mask: Tensor类型, 暂不支持该传参.
-atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
+atten_mask: Tensor类型, 可选参数, 取值为1(或True)代表该位不参与计算(被遮蔽), 取值为0(或False)代表该位参与计算(被保留), 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
 scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1.
 keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留.
 pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明.
@@ -1622,7 +1622,7 @@ pre_tockens >= first_Skv.
 next_tockens范围无约束, 根据实际情况进行配置.
 当前模式下不支持可选输入pse.
 gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为True: 同AI Core计算并行; 设为False: 同AI Core计算串行.
-sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
+sync: 布尔型, 可选参数, 在gen_mask_parallel=True时控制是否同步等待dropout mask生成完成. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
 
 输出说明
 共7个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、int、int、int.
@@ -1876,7 +1876,7 @@ head_num: int类型, 代表head个数, 数据类型支持int64. 综合约束请�
 input_layout: string类型, 代表输入query、key、value的数据排布格式, 支持BSH、SBH、BSND、BNSD、TND(actual_seq_qlen/actual_seq_kvlen需传值); 后续章节如无特殊说明, S表示query或key、value的sequence length, Sq表示query的sequence length, Skv表示key、value的sequence length, SS表示Sq*Skv.
 pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 非varlen场景支持四维输入, 包含BNSS格式、BN1Skv格式、1NSS格式. 如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse_mode为0、2、3的下三角掩码场景, 可使能alibi位置编码压缩, 此时只需要输入原始PSE最后1024行进行内存优化, 即alibi_compress = ori_pse[:, :, -1024:, :], 参数每个batch不相同时, 输入BNHSkv(H=1024), 每个batch相同时, 输入1NHSkv(H=1024).
 padding_mask: Tensor类型, 暂不支持该传参.
-atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
+atten_mask: Tensor类型, 可选参数, 取值为1(或True)代表该位不参与计算(被遮蔽), 取值为0(或False)代表该位参与计算(被保留), 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
 scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1.
 keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留.
 pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明.
@@ -1927,7 +1927,7 @@ pre_tockens >= first_Skv.
 next_tockens范围无约束, 根据实际情况进行配置.
 当前模式下不支持可选输入pse.
 gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为True: 同AI Core计算并行; 设为False: 同AI Core计算串行.
-sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
+sync: 布尔型, 可选参数, 在gen_mask_parallel=True时控制是否同步等待dropout mask生成完成. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
 
 输出说明
 共6个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、Tensor、Tensor.
@@ -6587,7 +6587,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_scatter_nd_update(Tensor input, Tensor indices, Tensor updates) -> Tensor
 
 参数说明:
-input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维数只能是1~8维。
+input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维度只能是1~8维。
         Atlas 推理系列加速卡产品：数据类型支持float32、float16、bool。
         Atlas 训练系列产品：数据类型支持float32、float16、bool。
         Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：数据类型支持float32、float16、bool、bfloat16、int64、int8。
@@ -6838,7 +6838,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_scatter_nd_update_(Tensor(a!) input, Tensor indices, Tensor updates) -> Tensor(a!)
 
 参数说明:
-input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维数只能是1~8维。
+input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维度只能是1~8维。
         Atlas 推理系列加速卡产品：数据类型支持float32、float16、bool。
         Atlas 训练系列产品：数据类型支持float32、float16、bool。
         Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：数据类型支持float32、float16、bool、bfloat16、int64、int8。
@@ -7514,7 +7514,7 @@ torch_npu.npu_ffn(Tensor x, Tensor weight1, Tensor weight2, str activation, *, i
 
 参数说明:
 x: Tensor类型, 输入参数, 公式中的x, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 支持输入的维度最少是2维[M, K1], 最多是8维.
-weight1: Tensor类型, 专家的权重数据, 公式中的W1, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K1, N1]/[K1, N1].
+weight1: Tensor类型, 专家的权重数据, 公式中的W_1, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K1, N1]/[K1, N1].
 weight2: Tensor类型, 专家的权重数据, 公式中的W2, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K2, N2]/[K2, N2].
 M表示token个数, 对应transform中的BS(B: Batch, 表示输入样本批量大小, S: Seq-Length, 表示输入样本序列长度); K1表示第一个matmul的输入通道数, 对应transform中的H(Head-Size, 表示隐藏层的大小); N1表示第一个matmul的输出通道数; K2表示第二个matmul的输入通道数; N2表示第二个matmul的输出通道数, 对应transform中的H; E表示有专家场景的专家数.
 expert_tokens: List类型, 可选参数. 代表各专家的token数, 数据类型支持int32, 数据格式支持ND, 若不为空时可支持的最大长度为256个.
@@ -11042,11 +11042,11 @@ torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=
     offset：Tensor类型，可选参数，用于计算量化结果的偏移值。数据类型支持float32，数据格式要求为ND。
         在非量化场景下不输入。
         动态quant场景下不输入。
-    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，当前入参校验需大于等于0。当前未使用，校验需等于NUM_ROWS*K。
+    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的。在dropless场景下，取值需大于等于-1；-1和0均表示按全部tokens处理，大于0时表示Active场景，约束所有专家共同处理tokens总量。
     expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
     expert_num：int类型，表示专家数，要求大于0。expert_tokens_num_type为key_value模式时，取值范围为(0, 5120]；其他模式取值范围为(0, 10240]。
     drop_pad_mode：int类型，表示是否为drop_pad场景，取值为0和1。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
-    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值 。当前仅支持1和2。
+    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量；2表示key_value模式，即输出的值为专家和对应专家处理token数量的键值对。当前仅支持1和2。
     expert_tokens_num_flag：bool类型，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
     quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。x数据类型为int8时仅支持-1，不可再量化。
     active_expert_range：int类型长度为2的数组，表示活跃expert的范围。数组内值为[expert_start, expert_end]，表示活跃的expert范围在[expert_start, expert_end)区间内，左闭右开。要求数组内的值大于等于0，并且expert_end不大于expert_num。
