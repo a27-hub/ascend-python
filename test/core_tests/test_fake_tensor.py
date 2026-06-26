@@ -5979,6 +5979,21 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
+@unittest.skip("skip until CANN is updated to support aclnnGroupedQuantMax")
+class TestNpuQuantMax(TestCase):
+    def test_npu_quant_max(self):
+        with FakeTensorMode():
+            x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+            scale = torch.randn((2,), dtype=torch.float32).npu()
+            group_list = torch.randn((2,), dtype=torch.float32).npu()
+
+            y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291, group_list)
+            self.assertTrue(y.shape == x.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertTrue(amax.shape == torch.Size([2]))
+            self.assertEqual(amax.dtype, x.dtype)
+            self.assertTrue(group_list.shape == torch.Size([2]))
+            self.assertEqual(group_list.dtype, torch.int64)
 
 class TestNpuMultiHeadAttention(TestCase):
     def test_npu_multi_head_attention_meta(self):
