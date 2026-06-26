@@ -66,6 +66,33 @@ at::Tensor& index_add_out(
                 indices.emplace_back(c10::nullopt);
             }
         }
+        
+        // 打印 indices 信息
+        std::cout << "[DEBUG] index_add_out: indices list size = " << indices.size() << std::endl;
+        for (size_t i = 0; i < indices.size(); ++i) {
+            if (indices[i].has_value()) {
+                std::cout << "[DEBUG] index_add_out: indices[" << i << "] shape = " << indices[i].value().sizes() << std::endl;
+                std::cout << "[DEBUG] index_add_out: indices[" << i << "] dtype = " << indices[i].value().scalar_type() << std::endl;
+            } else {
+                std::cout << "[DEBUG] index_add_out: indices[" << i << "] is nullopt" << std::endl;
+            }
+        }
+        
+        // 打印 source 信息
+        std::cout << "[DEBUG] index_add_out: source shape = " << source.sizes() << std::endl;
+        std::cout << "[DEBUG] index_add_out: source dtype = " << source.scalar_type() << std::endl;
+        std::cout << "[DEBUG] index_add_out: source device = " << source.device() << std::endl;
+        
+        // 打印 alpha 信息
+        std::cout << "[DEBUG] index_add_out: alpha value = " << alpha.toDouble() << std::endl;
+        std::cout << "[DEBUG] index_add_out: alpha type = " << alpha.type() << std::endl;
+        
+        // 打印 source * alpha 信息
+        at::Tensor scaled_source = source * alpha;
+        std::cout << "[DEBUG] index_add_out: source * alpha shape = " << scaled_source.sizes() << std::endl;
+        std::cout << "[DEBUG] index_add_out: source * alpha dtype = " << scaled_source.scalar_type() << std::endl;
+        std::cout << "[DEBUG] index_add_out: source * alpha device = " << scaled_source.device() << std::endl;
+        
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -113,6 +140,33 @@ at::Tensor index_add(
                 indices.emplace_back(c10::nullopt);
             }
         }
+        
+        // 打印 indices 信息
+        std::cout << "[DEBUG] index_add: indices list size = " << indices.size() << std::endl;
+        for (size_t i = 0; i < indices.size(); ++i) {
+            if (indices[i].has_value()) {
+                std::cout << "[DEBUG] index_add: indices[" << i << "] shape = " << indices[i].value().sizes() << std::endl;
+                std::cout << "[DEBUG] index_add: indices[" << i << "] dtype = " << indices[i].value().scalar_type() << std::endl;
+            } else {
+                std::cout << "[DEBUG] index_add: indices[" << i << "] is nullopt" << std::endl;
+            }
+        }
+        
+        // 打印 source 信息
+        std::cout << "[DEBUG] index_add: source shape = " << source.sizes() << std::endl;
+        std::cout << "[DEBUG] index_add: source dtype = " << source.scalar_type() << std::endl;
+        std::cout << "[DEBUG] index_add: source device = " << source.device() << std::endl;
+        
+        // 打印 alpha 信息
+        std::cout << "[DEBUG] index_add: alpha value = " << alpha.toDouble() << std::endl;
+        std::cout << "[DEBUG] index_add: alpha type = " << alpha.type() << std::endl;
+        
+        // 打印 source * alpha 信息
+        at::Tensor scaled_source = source * alpha;
+        std::cout << "[DEBUG] index_add: source * alpha shape = " << scaled_source.sizes() << std::endl;
+        std::cout << "[DEBUG] index_add: source * alpha dtype = " << scaled_source.scalar_type() << std::endl;
+        std::cout << "[DEBUG] index_add: source * alpha device = " << scaled_source.device() << std::endl;
+        
         result.index_put_(indices, source * alpha, true);
         return result;
     }
