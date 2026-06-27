@@ -104,6 +104,9 @@ at::Tensor& _index_put_impl_(
           all_defined_indice = all_defined_indice.to(self.device());
       }
   }
+  if (accumulate && at::globalContext().deterministicAlgorithms()) {
+      return acl_op::_index_put_impl_(self, indices, value, accumulate, unsafe);
+  }
   at::TensorList indices_tensor_list = all_defined_indices;
   if (self.numel() != 0 && value.numel() != 0) {
       EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
