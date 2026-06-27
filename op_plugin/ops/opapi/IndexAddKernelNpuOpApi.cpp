@@ -129,3 +129,5 @@ at::Tensor index_add(
     const at::Scalar& alpha) {
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
+
+}
