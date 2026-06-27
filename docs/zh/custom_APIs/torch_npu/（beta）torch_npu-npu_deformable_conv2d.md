@@ -68,7 +68,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_deformable_conv2d(self, weight, offset, bias=None, kernel_size, stride, padding, dilation=[1,1,1,1], groups=1, deformable_groups=1, modulated=True) -> (Tensor, Tensor)
+torch_npu.npu_deformable_conv2d(self, weight, offset, bias, kernel_size, stride, padding, dilation=[1,1,1,1], groups=1, deformable_groups=1, modulated=True) -> (Tensor, Tensor)
 ```
 
 ## 参数说明
