@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/ATen.h>
-#include <iostream>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
@@ -29,19 +27,6 @@ at::Tensor& index_add_out(
     const at::Scalar& alpha,
     at::Tensor& result) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
-    auto self_sizes = self.sizes().vec();
-    auto source_sizes = source.sizes().vec();
-    if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        self_sizes.erase(self_sizes.begin() + wrapped_dim);
-        source_sizes.erase(source_sizes.begin() + wrapped_dim);
-    }
-    TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
     at_npu::native::OpPreparation::check_tensor({self, index, source},
                                                 result,
                                                 result.scalar_type(),
@@ -50,49 +35,14 @@ at::Tensor& index_add_out(
         result.copy_(self);
     }
 
-    // 添加的确定性逻辑
+    // 确定性计算分支：对齐原生 index_add_cuda_impl (Indexing.cu:1156-1165)
     if (at::globalContext().deterministicAlgorithms()) {
-        std::cout << "[DEBUG] index_add_out: Enter deterministic path, dim=" << dim 
-                  << ", self.dim()=" << self.dim() << std::endl;
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        std::cout << "[DEBUG] index_add_out: wrapped_dim=" << wrapped_dim << std::endl;
-        
         c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back();
         }
-        
-        // 打印 indices 信息
-        std::cout << "[DEBUG] index_add_out: indices list size = " << indices.size() << std::endl;
-        for (size_t i = 0; i < indices.size(); ++i) {
-            if (indices[i].has_value()) {
-                std::cout << "[DEBUG] index_add_out: indices[" << i << "] shape = " << indices[i].value().sizes() << std::endl;
-                std::cout << "[DEBUG] index_add_out: indices[" << i << "] dtype = " << indices[i].value().scalar_type() << std::endl;
-            } else {
-                std::cout << "[DEBUG] index_add_out: indices[" << i << "] is nullopt" << std::endl;
-            }
-        }
-        
-        // 打印 source 信息
-        std::cout << "[DEBUG] index_add_out: source shape = " << source.sizes() << std::endl;
-        std::cout << "[DEBUG] index_add_out: source dtype = " << source.scalar_type() << std::endl;
-        std::cout << "[DEBUG] index_add_out: source device = " << source.device() << std::endl;
-        
-        // 打印 alpha 信息
-        std::cout << "[DEBUG] index_add_out: alpha value = " << alpha.toDouble() << std::endl;
-        std::cout << "[DEBUG] index_add_out: alpha type = " << alpha.type() << std::endl;
-        
-        // 打印 source * alpha 信息
-        at::Tensor scaled_source = source * alpha;
-        std::cout << "[DEBUG] index_add_out: source * alpha shape = " << scaled_source.sizes() << std::endl;
-        std::cout << "[DEBUG] index_add_out: source * alpha dtype = " << scaled_source.scalar_type() << std::endl;
-        std::cout << "[DEBUG] index_add_out: source * alpha device = " << scaled_source.device() << std::endl;
-        
+        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -108,65 +58,17 @@ at::Tensor index_add(
     const at::Tensor& source,
     const at::Scalar& alpha) {
     DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
-    auto self_sizes = self.sizes().vec();
-    auto source_sizes = source.sizes().vec();
-    if (source.dim() != 0 && self.dim() != 0) {
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        self_sizes.erase(self_sizes.begin() + wrapped_dim);
-        source_sizes.erase(source_sizes.begin() + wrapped_dim);
-    }
-    TORCH_CHECK(self_sizes == source_sizes,
-                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
-                self.sizes(),
-                " source.shape = ",
-                source.sizes(),
-                OPS_ERROR(ErrCode::PARAM));
     at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
 
-    // 添加的确定性逻辑
+    // 确定性计算分支：对齐原生 index_add_cuda_impl (Indexing.cu:1156-1165)
     if (at::globalContext().deterministicAlgorithms()) {
-        std::cout << "[DEBUG] index_add: Enter deterministic path, dim=" << dim 
-                  << ", self.dim()=" << self.dim() << std::endl;
-        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
-        std::cout << "[DEBUG] index_add: wrapped_dim=" << wrapped_dim << std::endl;
-        
         result.copy_(self);
         c10::List<c10::optional<at::Tensor>> indices;
-        indices.reserve(self.dim());
-        for (const auto i : c10::irange(self.dim())) {
-            if (i == wrapped_dim) {
-                indices.emplace_back(index.to(at::kLong));
-            } else {
-                indices.emplace_back(c10::nullopt);
-            }
+        indices.reserve(dim + 1);
+        for (const auto i : c10::irange(dim)) {
+            indices.emplace_back();
         }
-        
-        // 打印 indices 信息
-        std::cout << "[DEBUG] index_add: indices list size = " << indices.size() << std::endl;
-        for (size_t i = 0; i < indices.size(); ++i) {
-            if (indices[i].has_value()) {
-                std::cout << "[DEBUG] index_add: indices[" << i << "] shape = " << indices[i].value().sizes() << std::endl;
-                std::cout << "[DEBUG] index_add: indices[" << i << "] dtype = " << indices[i].value().scalar_type() << std::endl;
-            } else {
-                std::cout << "[DEBUG] index_add: indices[" << i << "] is nullopt" << std::endl;
-            }
-        }
-        
-        // 打印 source 信息
-        std::cout << "[DEBUG] index_add: source shape = " << source.sizes() << std::endl;
-        std::cout << "[DEBUG] index_add: source dtype = " << source.scalar_type() << std::endl;
-        std::cout << "[DEBUG] index_add: source device = " << source.device() << std::endl;
-        
-        // 打印 alpha 信息
-        std::cout << "[DEBUG] index_add: alpha value = " << alpha.toDouble() << std::endl;
-        std::cout << "[DEBUG] index_add: alpha type = " << alpha.type() << std::endl;
-        
-        // 打印 source * alpha 信息
-        at::Tensor scaled_source = source * alpha;
-        std::cout << "[DEBUG] index_add: source * alpha shape = " << scaled_source.sizes() << std::endl;
-        std::cout << "[DEBUG] index_add: source * alpha dtype = " << scaled_source.scalar_type() << std::endl;
-        std::cout << "[DEBUG] index_add: source * alpha device = " << scaled_source.device() << std::endl;
-        
+        indices.emplace_back(index.to(at::kLong));
         result.index_put_(indices, source * alpha, true);
         return result;
     }
@@ -180,8 +82,9 @@ at::Tensor index_add(
     at::Dimname dim,
     const at::Tensor& index,
     const at::Tensor& source,
-    const at::Scalar& alpha) {
+    const at::Scalar& alpha)
+{
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
-} // namespace op_api
+}
