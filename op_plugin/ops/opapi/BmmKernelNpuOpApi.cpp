@@ -43,6 +43,31 @@ static bool is_compatible_impl_enabled()
     return compatible_env != nullptr && std::string(compatible_env) == "1";
 }
 
+// When size(0)==1, stride(0) is semantically irrelevant (batch index is always 0).
+// _matmul_impl's reshape may normalize stride(0) to stride(1)*size(1) instead of
+// size(1)*size(2) (e.g. [16,1,16] instead of [256,1,16] for a [1,16,16] transposed
+// tensor), which prevents CANN's aclnnBatchMatMul from recognizing the transpose
+// layout via a flag and forces a redundant physical Transpose op.
+// Here we reset stride(0) to size(1)*size(2) so CANN can handle the layout natively.
+static at::Tensor normalize_batch1_stride(const at::Tensor &t)
+{
+    if (t.dim() != 3 || t.size(0) != 1) {
+        return t;
+    }
+    int64_t expected = t.size(1) * t.size(2);
+    if (t.stride(0) == expected) {
+        return t;
+    }
+    fprintf(stderr, "[normalize_batch1_stride] size=[%ld,%ld,%ld] stride=[%ld,%ld,%ld] -> stride(0)=%ld\n",
+            t.size(0), t.size(1), t.size(2), t.stride(0), t.stride(1), t.stride(2), expected);
+    auto sizes = std::array<int64_t, 3>{1, t.size(1), t.size(2)};
+    auto strides = std::array<int64_t, 3>{expected, t.stride(1), t.stride(2)};
+    auto ret = t.as_strided(sizes, strides);
+    fprintf(stderr, "[normalize_batch1_stride] after as_strided: stride=[%ld,%ld,%ld]\n",
+            ret.stride(0), ret.stride(1), ret.stride(2));
+    return ret;
+}
+
 // A dim-1 slice (e.g. t[:, start:end, :]) of a 3D tensor leaves stride(0) untouched
 // while shape(1) shrinks, breaking the contiguity between dim 0 and dim 1:
 //   stride(0) == orig_M * K  !=  M' * K  == stride(1) * shape(1)
@@ -82,6 +107,10 @@ static std::pair<at::Tensor, at::Tensor> maybe_restore_broadcast(
     }
     at::Tensor self_in = is_normal_broadcast_expanded(self) ? restore_broadcast_tensor(self) : self;
     at::Tensor mat2_in = is_normal_broadcast_expanded(mat2) ? restore_broadcast_tensor(mat2) : mat2;
+    // For batch=1 tensors whose stride(0) was mangled by _matmul_impl's reshape,
+    // normalize stride(0) so CANN recognizes the layout without a Transpose op.
+    self_in = normalize_batch1_stride(self_in);
+    mat2_in = normalize_batch1_stride(mat2_in);
     return {self_in, mat2_in};
 }
 
