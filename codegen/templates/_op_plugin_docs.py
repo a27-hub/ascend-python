@@ -465,15 +465,12 @@ nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数�
 _add_torch_npu_docstr(
     "npu_bert_apply_adam",
     """
-torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var,m,v))
+torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
 功能描述
 adam结果计数。
 
 参数说明
 参数:
-var (Tensor) - float16或float32类型张量。
-m (Tensor) - 数据类型和shape与exp_avg相同。
-v (Tensor) - 数据类型和shape与exp_avg相同。
 lr (Scalar) - 数据类型与exp_avg相同。
 beta1 (Scalar) - 数据类型与exp_avg相同。
 beta2 (Scalar) - 数据类型与exp_avg相同。
@@ -485,7 +482,9 @@ weight_decay (Scalar) - 数据类型与exp_avg相同。
 step_size (Tensor，可选，默认值为None) - shape为(1, )，数据类型与exp_avg一致。
 adam_mode (Int，默认值为0) - 选择adam模式。0表示“adam”，1表示“mbert_adam”。
 关键字参数:
-out (Tensor，可选) - 输出张量。
+out (tuple[Tensor, Tensor, Tensor]) - 包含var、m、v三个输出张量的元组。其中var为float16或float32类型张量；m、v的数据类型和shape与var相同。
+输出说明
+返回包含var、m、v三个Tensor的元组，分别为out中传入的var、m、v输出张量。
 示例
 >>> var_in = torch.rand(321538).uniform_(-32., 21.).npu()
 >>> m_in = torch.zeros(321538).npu()

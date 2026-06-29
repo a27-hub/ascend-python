@@ -18,14 +18,11 @@
 ## 函数原型
 
 ```python
-torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, var,m,v)
+torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明
 
-- **var** (`Tensor`)：`float16`或`float32`类型张量。
-- **m** (`Tensor`)：数据类型和shape与`var`相同。
-- **v** (`Tensor`)：数据类型和shape与`var`相同。
 - **lr** (`Scalar`)：数据类型与`var`相同。Shape为\(1, \)。
 - **beta1** (`Scalar`)：数据类型与`var`相同。Shape为\(1, \)。
 - **beta2** (`Scalar`)：数据类型与`var`相同。Shape为\(1, \)。
@@ -36,6 +33,13 @@ torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, gl
 - **weight\_decay**(`Scalar`)：数据类型与`var`相同。Shape为\(1, \)。
 - **step\_size** (`Tensor`)：可选参数，数据类型与`var`相同。Shape为\(1, \)。默认值为None。
 - **adam\_mode** (`int`)：选择adam模式。0表示“adam”，1表示“mbert\_adam”。默认值为0。
+- **out** (`tuple[Tensor, Tensor, Tensor]`)：包含`var`、`m`、`v`三个输出张量的元组。其中`var`为`float16`或`float32`类型张量；`m`、`v`的数据类型和shape与`var`相同。
+
+## 返回值说明
+
+`tuple[Tensor, Tensor, Tensor]`
+
+返回包含`var`、`m`、`v`三个Tensor的元组，分别为`out`中传入的`var`、`m`、`v`输出张量。
 
 ## 调用示例
 
