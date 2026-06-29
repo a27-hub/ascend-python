@@ -15616,16 +15616,31 @@ _add_torch_npu_docstr(
     "npu_quant_max",
     """
 功能描述:
-算子功能: 对输入张量x进行量化操作，同时计算并输出绝对值最大值amax。
-计算公式: y = cast(x * scale, dst_dtype), amax = max(|x|)
+算子功能: 对输入张量x进行量化或分组量化操作，同时计算并输出绝对值最大值amax。
+计算公式:
+- group_list为 None或者 group_list 只有一个元素时：
+    y = cast(x * scale, dst_dtype), amax = max(|x|)
+- 其它：
+    $$
+    x\_g = x[group\_list[g-1] : group\_list[g], ...]
+    $$
+
+    $$
+    y = \text{Cast}(x\_g \times scale[g], \text{dst\_type}, \text{round\_mode})
+    $$
+
+    $$
+    amax[g] = \max(|x\_g|)
+    $$
+    其中，$x$ 表示输入张量，$x\_g$ 表示输入张量的第g组数据，g=0 时下界为0。
 
 接口原型:
-torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None)) -> (Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
 数据类型支持`float32`、`bfloat16`和`float16`。
-scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(1,)。数据格式支持ND。
+scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(num_groups,), num_groups为group_list的元素数量，group_list为None时，num_groups默认为1。数据格式支持ND。
 数据类型支持float32。
 round_mode: String类型, 可选参数, 舍入模式, 默认值为"rint"。支持的取值:
 - "rint": 四舍六入五成双舍入模式, 适用于float8_e5m2/float8_e4m3fn输出类型。
@@ -15635,11 +15650,12 @@ dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举�
 - torch_npu.hifloat8
 - torch.float8_e5m2
 - torch.float8_e4m3fn
+group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（cumsum模式），默认为None，数据类型支持int64。
 
 输出说明:
 返回两个Tensor:
 - y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
-- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[1]。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[num_groups]。
 
 约束说明:
 该接口支持推理、训练场景下使用。
