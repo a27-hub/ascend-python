@@ -100,7 +100,7 @@ inline at::Tensor norm_imp(const at::Tensor &self,
         auto outputSize = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
         auto dtype_checked = dtype;
         if (self.is_complex()) {
-            dtype_checked = self.scalar_type() == at::kComplexFloat ? at::kFloat : at::kDouble;
+            dtype_checked = c10::toRealValueType(self.scalar_type());
         }
         at::Tensor out = npu_preparation::apply_tensor_with_sizes(outputSize, self.options().dtype(dtype_checked));
         return norm_out_npu_nocheck_opapi(out, self, p, dim, keepdim);

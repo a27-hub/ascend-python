@@ -53,7 +53,7 @@ at::Tensor linalg_vector_norm(
                      acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : c10::toRealValueType(self.scalar_type());
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(dtype));
     EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, out);
     return out;
@@ -74,7 +74,7 @@ at::Tensor& linalg_vector_norm_out(
                      acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : c10::toRealValueType(self.scalar_type());
     npu_preparation::check_tensor(
         {self},
         result,
