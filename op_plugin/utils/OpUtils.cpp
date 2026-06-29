@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/NamedTensorUtils.h>
+#include "op_plugin/utils/NamedTensorCompat.h"
 
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
@@ -261,6 +261,7 @@ at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
 {
     NameVector names;
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
     bool has_names = false;
 
     for (auto tensor : tensor_list) {
@@ -281,6 +282,7 @@ NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
             names = NameVector(at::unify_from_right(names, tensor.names()));
         }
     }
+#endif
     return names;
 }
 
