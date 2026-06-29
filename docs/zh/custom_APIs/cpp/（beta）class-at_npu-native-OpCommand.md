@@ -48,7 +48,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
     OpCommand空输入，返回值类型为OpCommand。
 
-- **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const at::Tensor& input, const string& descName = "", const c10::optional& sensitive_format = c10::nullopt, const string& realData = "")**
+- **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const at::Tensor& input, const string& descName = "", const c10::optional<aclFormat>& sensitive_format = c10::nullopt, const string& realData = "")**
 
     OpCommand输入Tensor，要求连续，返回值类型为OpCommand。
 
@@ -114,7 +114,7 @@ OpCommand是一个封装下层算子调用的类，实现了NPU设备下层算�
 
     realDtype：string类型，实际dtype。
 
-- **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::Scalar& input, const at::ScalarType type, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_INDEPENDENT);**
+- **at_npu::native::OpCommand& at_npu::native::OpCommand::Input(const c10::Scalar& input, const at::ScalarType type, CompileType compileType = CompileType::MEMORY_HOST_COMPILE_INDEPENDENT)**
 
     OpCommand输入标量，会在实现中进行H2D，返回值类型为OpCommand。
 
