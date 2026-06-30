@@ -60,12 +60,17 @@ at::Tensor& index_add_out(
                 indices.emplace_back(c10::nullopt);
             }
         }
-        // 将 result 和 source * alpha 转换为 Float 类型
-        at::Tensor result_float = result.to(at::kFloat);
-        at::Tensor source_alpha_float = (source * alpha).to(at::kFloat);
-        result_float.index_put_(indices, source_alpha_float, true);
-        // 将结果转回原始类型
-        result.copy_(result_float.to(result.scalar_type()));
+        
+        // 只有 BF16 类型时才转换为 Float，其他类型保持原样
+        if (self.scalar_type() == at::kBFloat16) {
+            at::Tensor result_float = result.to(at::kFloat);
+            at::Tensor source_alpha_float = (source * alpha).to(at::kFloat);
+            result_float.index_put_(indices, source_alpha_float, true);
+            result.copy_(result_float.to(result.scalar_type()));
+        } else {
+            // 非 BF16 类型，直接使用原始类型
+            result.index_put_(indices, source * alpha, true);
+        }
         return result;
     }
 
@@ -107,12 +112,17 @@ at::Tensor index_add(
                 indices.emplace_back(c10::nullopt);
             }
         }
-        // 将 result 和 source * alpha 转换为 Float 类型
-        at::Tensor result_float = result.to(at::kFloat);
-        at::Tensor source_alpha_float = (source * alpha).to(at::kFloat);
-        result_float.index_put_(indices, source_alpha_float, true);
-        // 将结果转回原始类型
-        result.copy_(result_float.to(result.scalar_type()));
+        
+        // 只有 BF16 类型时才转换为 Float，其他类型保持原样
+        if (self.scalar_type() == at::kBFloat16) {
+            at::Tensor result_float = result.to(at::kFloat);
+            at::Tensor source_alpha_float = (source * alpha).to(at::kFloat);
+            result_float.index_put_(indices, source_alpha_float, true);
+            result.copy_(result_float.to(result.scalar_type()));
+        } else {
+            // 非 BF16 类型，直接使用原始类型
+            result.index_put_(indices, source * alpha, true);
+        }
         return result;
     }
 
