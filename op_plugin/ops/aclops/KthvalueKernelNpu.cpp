@@ -33,7 +33,11 @@ void kthvalue_shape_modify(
     const at::Tensor& self,
     int64_t dim,
     bool keepdim) {
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
   at::Tensor self_rename = self.rename(c10::nullopt);
+#else
+  at::Tensor self_rename = self;
+#endif
   auto output_size = kthvalue_npu_output_size(self, dim, keepdim);
   if (values.defined()) {
     TORCH_CHECK(
@@ -110,7 +114,11 @@ std::tuple<at::Tensor, at::Tensor> kthvalue_out_nocheck(
     int64_t dim,
     bool keepdim) {
   dim = op_plugin::utils::make_warp_dim(dim, self.dim());
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
   at::Tensor self_rename = self.rename(c10::nullopt);
+#else
+  at::Tensor self_rename = self;
+#endif
   kthvalue_shape_modify(values, indices, self, dim, keepdim);
 
   bool change_type = false;
