@@ -129,7 +129,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             # 当前 rank 属于前半部分，需与后面 rank 通信
             target_ranks = list(range(ffn_worker_num, world_size))
         window_size = 120 * 1024 * 200
-        comm_group._get_backend(torch.device('npu')._window_register_and_exchange(window_size, target_ranks))
+        comm_group._get_backend(torch.device('npu'))._window_register_and_exchange(window_size, target_ranks)
 
 
     def run_npu_process(rank):
@@ -216,6 +216,10 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             p.start()
         for p in p_list:
             p.join()
+
+        for p in p_list:
+            if p.exitcode != 0:
+                raise RuntimeError(f"subprocess {p.pid} failed with exitcode {p.exitcode}")
 
         print("run npu success.")
     ```
@@ -318,7 +322,7 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             # 当前 rank 属于前半部分，需与后面 rank 通信
             target_ranks = list(range(ffn_worker_num, world_size))
         window_size = 120 * 1024 * 200
-        comm_group._get_backend(torch.device('npu')._window_register_and_exchange(window_size, target_ranks))
+        comm_group._get_backend(torch.device('npu'))._window_register_and_exchange(window_size, target_ranks)
 
 
     def run_npu_process(rank):
@@ -402,6 +406,10 @@ torch_npu.npu_attention_to_ffn(x, session_id, micro_batch_id, layer_id, expert_i
             p.start()
         for p in p_list:
             p.join()
+
+        for p in p_list:
+            if p.exitcode != 0:
+                raise RuntimeError(f"subprocess {p.pid} failed with exitcode {p.exitcode}")
 
         print("run npu success.")
     ```
