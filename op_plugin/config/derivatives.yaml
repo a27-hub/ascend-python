@@ -326,7 +326,7 @@ backward:
 
 - name: npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, int[2] active_expert_range=[], int row_idx_type=0, int? x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
   output_differentiability: [true, false, false, false]
-  x: "npu_moe_init_routing_v2_grad(grads[0], result1, (expert_idx.dim() == 1) ? 1 : expert_idx.sym_size(-1).expect_int(), drop_pad_mode, active_num)"
+  x: "npu_moe_init_routing_v2_grad(grad, result1, (expert_idx.dim() == 1) ? 1 : expert_idx.sym_size(-1).expect_int(), drop_pad_mode, active_num)"
   expert_idx: non_differentiable
   version: [v2.1, newest]
 
