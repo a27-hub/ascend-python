@@ -55,14 +55,13 @@ at::Tensor& index_add_out(
         indices.reserve(self.dim());
         for (const auto i : c10::irange(self.dim())) {
             if (i == wrapped_dim) {
-                // 将 index 转换为 Float 类型
-                indices.emplace_back(index.to(at::kFloat));
+                indices.emplace_back(index.to(at::kLong));
             } else {
                 indices.emplace_back(c10::nullopt);
             }
         }
         // 将 result 和 source * alpha 转换为 Float 类型
-        at::Tensor result_float = result.to();
+        at::Tensor result_float = result.to(at::kFloat);
         at::Tensor source_alpha_float = (source * alpha).to(at::kFloat);
         result_float.index_put_(indices, source_alpha_float, true);
         // 将结果转回原始类型
@@ -103,8 +102,7 @@ at::Tensor index_add(
         indices.reserve(self.dim());
         for (const auto i : c10::irange(self.dim())) {
             if (i == wrapped_dim) {
-                // 将 index 转换为 Float 类型
-                indices.emplace_back(index.to());
+                indices.emplace_back(index.to(at::kLong));
             } else {
                 indices.emplace_back(c10::nullopt);
             }
