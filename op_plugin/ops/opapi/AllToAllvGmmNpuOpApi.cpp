@@ -47,11 +47,13 @@ namespace op_api {
         const at::Tensor &mm_weight_real = mm_weight.value_or(at::Tensor());
         const at::Tensor &send_count_tensor_real = send_counts_tensor.value_or(at::Tensor());
         const at::Tensor &recv_count_tensor_real = recv_counts_tensor.value_or(at::Tensor());
-        char* hcom_ptr = const_cast<char*>(hcom.data());
+        std::string hcom_str(hcom);
+        char* hcom_ptr = const_cast<char*>(hcom_str.data());
         if (comm_mode.has_value()) {
             TORCH_CHECK(check_aclnn_kernel_available("aclnnAlltoAllvGroupedMatMulV2"),
                         "Current CANN version do not support this api. Please try to update the version of CANN." + OPS_ERROR(ErrCode::PARAM));
-            const char* comm_mode_real = const_cast<char *>(comm_mode.value().data());
+            std::string comm_mode_str(comm_mode.value());
+            const char* comm_mode_real = const_cast<char *>(comm_mode_str.data());
             EXEC_NPU_CMD(aclnnAlltoAllvGroupedMatMulV2,
                          gmm_x,
                          gmm_weight,
