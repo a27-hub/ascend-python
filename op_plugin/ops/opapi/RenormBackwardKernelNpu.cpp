@@ -9,6 +9,8 @@
 #include <utility>
 #include <optional>
 
+#include "op_plugin/AclOpsInterface.h"  
+
 namespace op_api {
 
 // ============================================================
@@ -99,9 +101,10 @@ at::Tensor npu_renorm_backward(
   
   grad_output = grad_output.sum(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
-
+  
+  std::optional<at:Scalar> opt_p = p;
   auto nb = norm_backward(
-      std::move(grad_output), self, p, norm, reduce_dims, /*keepdim=*/true);
+      std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
   auto invnorm = (norm + 1e-7).reciprocal();
   auto grad_norm = maxnorm * invnorm * (grad - invnorm * nb);
