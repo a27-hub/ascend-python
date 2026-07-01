@@ -102,7 +102,7 @@ at::Tensor npu_renorm_backward(
   grad_output = grad_output.sum(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
   
-  std::optional<at:Scalar> opt_p = p;
+  std::optional<at::Scalar> opt_p = p;
   auto nb = norm_backward(
       std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
