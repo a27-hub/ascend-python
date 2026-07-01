@@ -9,7 +9,7 @@
 
 namespace op_api {
 
-at::Tensor renorm_backward(
+at::Tensor npu_renorm_backward(
     const at::Tensor& grad,
     const at::Tensor& self,
     const Scalar& p,

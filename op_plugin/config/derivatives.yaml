@@ -366,7 +366,7 @@ backward:
   version: all_version
 
 - name: renorm(Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor
-  self: renorm_backward(grad, self, p, dim, maxnorm)
+  self: npu_renorm_backward(grad, self, p, dim, maxnorm)
+  result: renorm_jvp(self_p, self_t, p, dim, maxnorm)
   version: all_version
 
-  # result: renorm_jvp(self_p, self_t, p, dim, maxnorm)
