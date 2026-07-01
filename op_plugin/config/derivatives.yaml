@@ -324,6 +324,17 @@ backward:
   tokens: "npu_moe_token_permute_grad_v2(grad, result1, tokens.sym_size(0).expect_int(), tokens.scalar_type(), (indices.dim() == 1) ? 1 : indices.sym_size(-1).expect_int(), padded_mode)"
   version: [v2.1, newest]
 
+- name: npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, int[2] active_expert_range=[], int row_idx_type=0, int? x_dtype=None) -> (Tensor, Tensor, Tensor, Tensor)
+  output_differentiability: [true, false, false, false]
+  x: "npu_moe_init_routing_v2_grad(grad, result1, result1.sym_size(0).expect_int() / x.sym_size(0).expect_int(), drop_pad_mode, (active_num > 0) ? active_num : 0)"
+  version: [v2.1, newest]
+
+- name: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0, int? k=1) -> Tensor
+  expanded_permuted_rows, scales: "npu_moe_finalize_routing_v2_grad(grad, expanded_src_to_dst_row, expanded_permuted_rows, scales, export_for_source_row, bias, drop_pad_mode.value_or(0), 0, (expanded_permuted_rows.dim() == 3 ? expanded_permuted_rows.sym_size(0).expect_int() : 0), (expanded_permuted_rows.dim() == 3 ? expanded_permuted_rows.sym_size(1).expect_int() : 0))"
+  skip1: grad
+  skip2: grad
+  version: [v2.1, newest]
+
 - name: npu_moe_token_unpermute(Tensor permuted_tokens, Tensor sorted_indices, Tensor? probs=None, bool padded_mode=False, int[]? restore_shape=None) -> Tensor
   permuted_tokens, probs: npu_moe_token_unpermute_grad(permuted_tokens, grad, sorted_indices, probs, padded_mode, restore_shape)
   version: [v2.1, newest]

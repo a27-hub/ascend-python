@@ -1668,6 +1668,21 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             x.new_empty(tuple(expanded_scale_dim_list), dtype=expanded_scale_dtype))
 
 
+@impl(m, "npu_moe_init_routing_v2_grad")
+def npu_moe_init_routing_v2_grad_meta(grad_expanded_x, expanded_row_idx, top_k, drop_pad_mode=0, active_num=0):
+    torch._check(
+        grad_expanded_x.dim() == 2 or grad_expanded_x.dim() == 3,
+        lambda: "the grad_expanded_x shape support only 2D or 3D" + ops_error(ErrCode.VALUE),
+    )
+    torch._check(
+        expanded_row_idx.dim() == 1,
+        lambda: "the expanded_row_idx shape support only 1D" + ops_error(ErrCode.VALUE),
+    )
+    n = expanded_row_idx.size(0) // top_k
+    h = grad_expanded_x.size(-1)
+    return grad_expanded_x.new_empty((n, h))
+
+
 @impl(m, "ffn_worker_scheduler_")
 def ffn_worker_scheduler__meta(self, *, sync_group_size=1, execute_mode=0):
     return self
@@ -5771,6 +5786,28 @@ def npu_moe_finalize_routing_meta(expanded_permuted_rows, skip1, skip2_optional,
         # dropLess场景, expanded_permuted_rows shape 为[NUM_ROWS * K, H]
         dimn = expanded_permuted_rows.size(1)
     return expanded_permuted_rows.new_empty((dimm, dimn))
+
+
+@impl(m, "npu_moe_finalize_routing_v2_grad")
+def npu_moe_finalize_routing_v2_grad_meta(grad_y, expanded_row_idx, expanded_x=None, scales=None,
+                                            expert_idx=None, bias=None, drop_pad_mode=0, active_num=0,
+                                            expert_num=0, expert_capacity=0):
+    r = grad_y.size(0)
+    h = grad_y.size(1)
+
+    if drop_pad_mode == 1:
+        grad_expanded_x_shape = (expert_num, expert_capacity, h)
+    else:
+        dim0 = expanded_row_idx.size(0)
+        if active_num > 0 and active_num < dim0:
+            dim0 = active_num
+        grad_expanded_x_shape = (dim0, h)
+
+    grad_scales_dim1 = scales.size(1) if scales is not None else 1
+    grad_scales_dtype = scales.dtype if scales is not None else grad_y.dtype
+
+    return (grad_y.new_empty(grad_expanded_x_shape),
+            grad_y.new_empty((r, grad_scales_dim1), dtype=grad_scales_dtype))
 
 
 has_side_effect(torch.ops.npu.npu_prefetch.default)
