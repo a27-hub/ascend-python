@@ -2,6 +2,7 @@
 #include <ATen/AccumulateType.h>
 #include <ATen/WrapDimUtils.h>
 #include <c10/core/Scalar.h>
+#include <torch/library.h>
 
 #include <numeric>
 #include <utility>
@@ -52,3 +53,8 @@ at::Tensor renorm_backward(
 }
 
 } // namespace op_api
+
+// ============ 注册到 NPU 后端 ============
+TORCH_LIBRARY_IMPL(aten, PrivateUse1, m) {
+    m.impl("renorm_backward", &op_api::renorm_backward);
+}
