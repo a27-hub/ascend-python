@@ -234,7 +234,7 @@ void memcpyBatch(const at::TensorList dst, at::TensorList src, bool non_blocking
                 std::vector<size_t> batch_attrIdx(attrsIndexes.begin() + start, attrsIndexes.begin() + end);
                 std::vector<aclrtMemcpyBatchAttr> batch_attrs(attrs.begin() + start, attrs.begin() + end);
                 auto ret = c10_npu::acl::AclrtMemcpyBatch(batch_dsts.data(), dstLens.data(), srcs.data(),
-                    srcLens.data(), count, attrs.data(), attrsIndexes.data(), count, &failIdx);
+                    srcLens.data(), batch_cnt, attrs.data(), attrsIndexes.data(), batch_cnt, &failIdx);
                 NPU_CHECK_ERROR(ret, "aclrtMemcpyBatch");
                 start = end;
             }
