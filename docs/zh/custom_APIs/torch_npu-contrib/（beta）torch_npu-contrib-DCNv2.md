@@ -24,16 +24,16 @@ torch_npu.contrib.DCNv2(in_channels, out_channels, kernel_size, stride=1, paddin
 
 ## 参数说明
 
-- **in_channels**（`int`）：输入图像的channel数量。
-- **out_channels**（`int`）：卷积输出channel的数量。
-- **kernel_size**（`int`, `tuple`）：卷积核的尺寸。
-- **stride**（`int`, `tuple`）：卷积的stride，默认值为1。
-- **padding**（`int` or `tuple`）：对输入图像两侧添加0填充，默认值为0。
-- **dilation**（`int` or `tuple`）：卷积核元素间距，默认值为1。
-- **groups**（`int`）：输入通道和输出通道的组数量，默认值为1。
-- **deformable_groups**（`int`）：可变形分区数量，默认值为1。
-- **bias**（`bool`）：设置为True将对output添加bias，默认值为True。
-- **pack**（`bool`）：设置为True则将在模型中添加conv_offset和mask，默认值为True。
+- **in_channels**（`int`）：必选参数，输入图像的channel数量。
+- **out_channels**（`int`）：必选参数，卷积输出channel的数量。
+- **kernel_size**（`int`, `tuple`）：必选参数，卷积核的尺寸。
+- **stride**（`int`, `tuple`）：可选参数，卷积的stride，默认值为1。
+- **padding**（`int` or `tuple`）：可选参数，对输入图像两侧添加0填充，默认值为0。
+- **dilation**（`int` or `tuple`）：可选参数，卷积核元素间距，默认值为1。
+- **groups**（`int`）：可选参数，输入通道和输出通道的组数量，默认值为1。
+- **deformable_groups**（`int`）：可选参数，可变形分区数量，默认值为1。
+- **bias**（`bool`）：可选参数，设置为True将对output添加bias，默认值为True。
+- **pack**（`bool`）：可选参数，设置为True则将在模型中添加conv_offset和mask，默认值为True。
 
 ## 约束说明
 
