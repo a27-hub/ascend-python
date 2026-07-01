@@ -17,13 +17,13 @@ namespace op_api {
 // ============================================================
 // norm_backward 实现（keepdim=true 专用，删掉 keepdim 逻辑）
 // ============================================================
-at::Tensor norm_backward(
-    const at::Tensor& grad,
-    const at::Tensor& self,
-    const std::optional<at::Scalar>& p_,
-    const at::Tensor& norm) {
-  return norm_backward_impl(grad, self, p_, norm, {}, true);
-}
+// at::Tensor norm_backward(
+//     const at::Tensor& grad,
+//     const at::Tensor& self,
+//     const std::optional<at::Scalar>& p_,
+//     const at::Tensor& norm) {
+//   return norm_backward_impl(grad, self, p_, norm, {}, true);
+// }
 
 at::Tensor norm_backward_impl(
     at::Tensor grad,
@@ -104,7 +104,7 @@ at::Tensor npu_renorm_backward(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
   
   std::optional<at::Scalar> opt_p = p;
-  auto nb = norm_backward(
+  auto nb = norm_backward_impl(
       std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
   auto invnorm = (norm + 1e-7).reciprocal();
