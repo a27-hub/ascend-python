@@ -2,66 +2,39 @@
 #include <ATen/AccumulateType.h>
 #include <ATen/WrapDimUtils.h>
 #include <c10/core/Scalar.h>
+#include <c10/util/Optional.h>
 #include <torch/library.h>
 
 #include <numeric>
 #include <utility>
+#include <optional>
 
 namespace op_api {
 
 // ============================================================
-// 辅助函数：unsqueeze_multiple
+// norm_backward 实现（keepdim=true 专用，删掉 keepdim 逻辑）
 // ============================================================
-static Tensor unsqueeze_multiple(
-    const Tensor& t,
-    OptionalIntArrayRef opt_dim,
-    size_t n_dims) {
-  if (opt_dim.has_value()) {
-    IntArrayRef dim = opt_dim.value();
-    auto dim_size = dim.size();
-    if (dim_size == 0) {
-      return t;
-    } else if (dim_size == 1) {
-      return t.unsqueeze(dim[0]);
-    }
-  }
-  auto dims_to_unsqueeze = at::dim_list_to_bitset(opt_dim, n_dims);
-  Tensor res = t;
-  for (const auto i : c10::irange(n_dims)) {
-    if (dims_to_unsqueeze[i]) {
-      res = res.unsqueeze(static_cast<int64_t>(i));
-    }
-  }
-  return res;
-}
-
-// ============================================================
-// norm_backward 实现
-// ============================================================
-Tensor norm_backward(
-    const Tensor& grad,
-    const Tensor& self,
-    const std::optional<Scalar>& p_,
-    const Tensor& norm) {
+at::Tensor norm_backward(
+    const at::Tensor& grad,
+    const at::Tensor& self,
+    const std::optional<at::Scalar>& p_,
+    const at::Tensor& norm) {
   return norm_backward(grad, self, p_, norm, {}, true);
 }
 
-Tensor norm_backward(
-    Tensor grad,
-    const Tensor& self,
-    const std::optional<Scalar>& p_,
-    Tensor norm,
-    IntArrayRef dim,
-    bool keepdim) {
-  size_t ndim = self.dim();
+at::Tensor norm_backward(
+    at::Tensor grad,
+    const at::Tensor& self,
+    const std::optional<at::Scalar>& p_,
+    at::Tensor norm,
+    at::IntArrayRef dim,
+    bool /* keepdim */) {  // keepdim 参数保留但不用，因为永远为 true
+  
   double p = p_.value_or(2.0).toDouble();
-  Tensor self_scaled;
-  Tensor scale_v;
+  at::Tensor self_scaled;
+  at::Tensor scale_v;
 
-  if (!keepdim && self.dim() != 0) {
-    grad = unsqueeze_multiple(grad, dim, ndim);
-    norm = unsqueeze_multiple(norm, dim, ndim);
-  }
+  // keepdim 永远为 true，所以不需要 unsqueeze 逻辑
 
   if (p == 0.0) {
     return {};
@@ -96,9 +69,9 @@ Tensor norm_backward(
 at::Tensor npu_renorm_backward(
     const at::Tensor& grad,
     const at::Tensor& self,
-    const c10::Scalar& p,
+    const at::Scalar& p,
     int64_t dim,
-    const c10::Scalar& maxnorm) {
+    const at::Scalar& maxnorm) {
     
   auto n = self.dim();
   dim = c10::maybe_wrap_dim(dim, n);
@@ -114,7 +87,7 @@ at::Tensor npu_renorm_backward(
                   ? c10::ScalarType::Float
                   : scalar_type;
 
-  auto norm = at::linalg_vector_norm(
+  auto norm = op_api::linalg_vector_norm(
       self, p, reduce_dims, /*keepdim=*/true, /*dtype=*/acc_type);
 
   const auto real_acc_type = c10::toRealValueType(acc_type);
@@ -127,7 +100,6 @@ at::Tensor npu_renorm_backward(
   grad_output = grad_output.sum(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
 
-  // 调用同文件中的 norm_backward
   auto nb = norm_backward(
       std::move(grad_output), self, p, norm, reduce_dims, /*keepdim=*/true);
 
