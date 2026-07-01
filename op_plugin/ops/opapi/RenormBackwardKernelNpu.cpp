@@ -53,8 +53,3 @@ at::Tensor renorm_backward(
 }
 
 } // namespace op_api
-
-// ============ 注册到 NPU 后端 ============
-TORCH_LIBRARY_IMPL(aten, PrivateUse1, m) {
-    m.impl("renorm_backward", &op_api::renorm_backward);
-}
