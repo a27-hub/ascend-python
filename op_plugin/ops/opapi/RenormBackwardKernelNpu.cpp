@@ -21,10 +21,10 @@ at::Tensor norm_backward(
     const at::Tensor& self,
     const std::optional<at::Scalar>& p_,
     const at::Tensor& norm) {
-  return norm_backward(grad, self, p_, norm, {}, true);
+  return norm_backward_impl(grad, self, p_, norm, {}, true);
 }
 
-at::Tensor norm_backward(
+at::Tensor norm_backward_impl(
     at::Tensor grad,
     const at::Tensor& self,
     const std::optional<at::Scalar>& p_,
@@ -103,7 +103,7 @@ at::Tensor npu_renorm_backward(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
   
   std::optional<at::Scalar> opt_p = p;
-  auto nb = norm_backward(
+  auto nb = norm_backward_impl(
       std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
   auto invnorm = (norm + 1e-7).reciprocal();
