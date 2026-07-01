@@ -7739,6 +7739,4 @@ quant:
   - func: _empty_affine_quantized(SymInt[] size, *, ScalarType? dtype=None, Layout? layout=None, Device? device=None, bool? pin_memory=None, float scale=1, int zero_point=0, MemoryFormat? memory_format=contiguous_format) -> Tensor
     acl_op: [v2.2, newest]
 
-  - func: renorm_backward(Tensor grad, Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor
-    op_api: [v2.1, v2.9]
 
