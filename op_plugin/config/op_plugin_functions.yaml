@@ -710,13 +710,19 @@ official:
   - func: _softmax_backward_data(Tensor grad_output, Tensor output, int dim, ScalarType input_dtype) -> Tensor
     acl_op: all_version
     op_api: all_version
-    structured_delegate: _softmax_backward_data.out
+    gen_opapi:
+      grad_input:
+        size: output
+        dtype: output
+      exec: aclnnSoftmaxBackward, grad_output, output, dim, grad_input
 
   - func: _softmax_backward_data.out(Tensor grad_output, Tensor output, int dim, ScalarType input_dtype, *, Tensor(a!) grad_input) -> Tensor(a!)
     acl_op: all_version
     op_api: all_version
-    structured: True
     gen_opapi:
+      grad_input:
+        size: grad_output
+        dtype: grad_output
       exec: aclnnSoftmaxBackward, grad_output, output, dim, grad_input
 
   - func: _prelu_kernel(Tensor self, Tensor weight) -> Tensor
