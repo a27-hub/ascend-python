@@ -7463,8 +7463,8 @@ def run_mc2_a16w8(x1_shape, x2_shape, hcom_info):
     input = torch.tensor(np_input).npu()
     weight = torch.tensor(np_weight).npu()
     weight_nz = torch_npu.npu_format_cast(weight.contiguous(), 29)
-    antiquant_scale = torch.randn(x2_shape[0], dtype=torch.float16).uniform_(float(-1), float(1)).npu()
-    antiquant_offset = torch.ones(x2_shape[0], dtype=torch.float16).npu()
+    antiquant_scale = torch.randn(x2_shape[-1] dtype=torch.float16).uniform_(float(-1), float(1)).npu()
+    antiquant_offset = torch.ones(x2_shape[-1], dtype=torch.float16).npu()
     output_a16w8 = get_graph(input, weight_nz, hcom_info, None, None, antiquant_scale, antiquant_offset, None)
     return output_a16w8
 
@@ -9316,7 +9316,7 @@ torch_npu.npu_mla_prolog_v2(Tensor token_x, Tensor weight_dq, Tensor weight_uq_q
 -   kv_cache（Tensor）：必选参数，表示用于cache索引的aclTensor。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Hckv)，dtype支持bfloat16和int8，数据格式支持ND。
 -   kr_cache（Tensor）：必选参数，表示用于key位置编码的cache。shape支持4维，格式为(BlockNum, BlockSize, Nkv, Dr)，dtype支持bfloat16和int8，数据格式支持ND。
 -   dequant_scale_x（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为pertoken。其shape支持2维，格式为(T, 1)和(BS, 1)，dtype支持float，数据格式支持ND。
--   dequant_scale_w_dq（Tensor）：可选参数，用于输入token_x为int8类型时，下采样后进行反量化操作时的参数，token_x量化方式为perchannel。其shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
+-   dequant_scale_w_dq（Tensor）：可选参数，用于输入weight_dq为int8类型时，下采样后进行反量化操作时的参数，weight_dq量化方式为perchannel。其shape支持2维，格式为(1, Hcq)，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_uq_qr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化参数维perchannel。shape支持2维，格式为(1, N*(D+Dr))，dtype支持float，数据格式支持ND。
 -   dequant_scale_w_dkv_kr（Tensor）：可选参数，用于对MatmulQcQr矩阵乘后进行反量化操作时的参数，量化算法为perchannel。其shape支持2维，格式为(1, Hckv+Dr)，dtype支持float，数据格式支持ND。
 -   quant_scale_ckv（Tensor）：可选参数，用于对输出到kv_cache_out中的数据做量化操作时的参数。shape支持2维，格式为(1, Hckv)，dtype支持float，数据格式支持ND。
