@@ -104,7 +104,7 @@ at::Tensor npu_renorm_backward(
       reduce_dims, /*keepdim=*/true, /*dtype=*/real_acc_type);
   
   std::optional<at::Scalar> opt_p = p;
-  auto nb = norm_backward_impl(
+  auto nb = norm_backward(
       std::move(grad_output), self, opt_p, norm, reduce_dims, /*keepdim=*/true);
 
   auto invnorm = (norm + 1e-7).reciprocal();
