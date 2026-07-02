@@ -5605,13 +5605,13 @@ class TestNpuConvolutionTranspose(TestCase):
 class TestBatchNormReduce(TestCase):
     def test_batch_norm_reduce(self):
         with FakeTensorMode():
-            input_fake_tensor = torch.randn(2, 3, 12, 12, device="npu", requires_grad=True)
+            input_fake_tensor = torch.randn(2, 3, 12, 12, dtype=torch.float16, device="npu", requires_grad=True)
             eps = 1e-5
             output_fake_tensor1, output_fake_tensor2 = torch_npu.batch_norm_reduce(input_fake_tensor, eps)
             self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor1.shape[0])
-            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor1.dtype)
+            self.assertEqual(torch.float32, output_fake_tensor1.dtype)
             self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor2.shape[0])
-            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor2.dtype)
+            self.assertEqual(torch.float32, output_fake_tensor2.dtype)
 
 
 class TestMatmul(TestCase):
@@ -5979,6 +5979,23 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
+@unittest.skip("skip until CANN is updated to support aclnnGroupedQuantMax")
+class TestNpuQuantMax(TestCase):
+    def test_npu_quant_max(self):
+        with FakeTensorMode():
+            x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+            scale = torch.randn((2,), dtype=torch.float32).npu()
+            # group_list must be a 1-D int64 tensor whose last value equals x.shape[0]
+            group_list = torch.tensor([8, 16], dtype=torch.int64).npu()
+
+            y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291, group_list=group_list)
+            self.assertTrue(y.shape == x.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertTrue(amax.shape == torch.Size([2]))
+            self.assertEqual(amax.dtype, x.dtype)
+            self.assertTrue(group_list.shape == torch.Size([2]))
+            self.assertEqual(group_list.dtype, torch.int64)
+            self.assertEqual(group_list.dim(), 1)
 
 class TestNpuMultiHeadAttention(TestCase):
     def test_npu_multi_head_attention_meta(self):

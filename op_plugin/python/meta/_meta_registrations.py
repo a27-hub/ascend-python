@@ -1,5 +1,6 @@
 import math
 import os
+import warnings
 import torch
 import torch_npu
 from torch.library import Library, impl
@@ -1455,8 +1456,8 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
         lambda: "expert_tokens_num_flag is None or invalid. must be in [True, False]"
     )
     torch._check(
-        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12, 13],
-        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 6, 7, 8, 9, 11, 12, 13]"
+        quant_mode is not None and isinstance(quant_mode, int) and quant_mode in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15],
+        lambda: "quant_mode is None or invalid. must be in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]"
     )
     torch._check(
         row_idx_type is not None and isinstance(row_idx_type, int) and row_idx_type in [0, 1],
@@ -1466,6 +1467,7 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     THREE_DIM_NUM = 3
     MXFPX_SCALE_THIRD_DIM_SIZE = 2
     INT4_IN_UINT8 = 2
+    FP8_QUANT_BLOCK_SIZE = 128
     is_float4_case = (hasattr(torch, 'float4_e2m1fn_x2') and x.dtype == torch.float4_e2m1fn_x2) or x_dtype == torch_npu.float4_e2m1fn_x2
     is_legacy_dynamic_int4_output = quant_mode == 1 and x_dtype == torch_npu.int4
     is_dynamic_int4_output = quant_mode == 13
@@ -1613,9 +1615,9 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
     elif quant_mode == 9:
         expanded_x_dtype = torch.uint8
         expanded_scale_dtype = torch.float8_e8m0fnu
-    elif quant_mode == 11:
+    elif quant_mode in [4, 11, 14]:
         expanded_x_dtype = torch.float8_e5m2
-    elif quant_mode == 12:
+    elif quant_mode in [5, 12, 15]:
         expanded_x_dtype = torch.float8_e4m3fn
 
     if drop_pad_mode == 1:
@@ -1643,11 +1645,12 @@ def npu_moe_init_routing_v2_meta(x, expert_idx, *, scale=None, offset=None, acti
             scale_cols = math.ceil(h / ALIGN_BASE)
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, 2]
         elif quant_mode in [11, 12]:
-            FP8_QUANT_BLOCK_SIZE = 128
             PAD_TO_EVEN_FACTOR = 2
             block_size = FP8_QUANT_BLOCK_SIZE * PAD_TO_EVEN_FACTOR
             scale_cols = math.ceil(h / block_size)
             expanded_scale_dim_list = [num_expanded_rows, scale_cols, PAD_TO_EVEN_FACTOR]
+        elif quant_mode in [4, 5, 14, 15]:
+            expanded_scale_dim_list = [num_expanded_rows, math.ceil(h / FP8_QUANT_BLOCK_SIZE)]
     if quant_mode in [0, 6, 7]:
         expanded_scale_dim_list = []
 
@@ -2078,6 +2081,11 @@ def npu_fused_infer_attention_score_v2_forward(query, key, value, *, query_rope=
         lambda: "numHeads should be greater than 0, but got " + str(num_query_heads) +
             ops_error(ErrCode.VALUE),
     )
+    torch._check(
+        query_quant_mode != 3 and key_quant_mode != 3 and value_quant_mode != 2,
+        lambda: "GQA FP8 Fullquant(Query/Key Per-Token-Head, Value PerHead) only supports path 0." + ops_error(ErrCode.VALUE),
+    )
+
     num_key_value_heads = num_query_heads if num_key_value_heads == 0 else num_key_value_heads
 
     # get query_layout, attention_out_layout
@@ -2217,11 +2225,33 @@ def npu_kv_quant_sparse_flash_attention_forward(query, key, value, sparse_indice
     return out
 
 
+# Keep in sync with torch_npu/csrc/core/npu/NpuVariables.h: SocVersion::Ascend950.
+_ASCEND950_SOC_VERSION = 260
+_npu_fusion_attention_warning_printed = False
+
+
+def _warn_npu_fusion_attention_compile_once():
+    # Remove this warning helper after torch.compile correctly preserves seed, offset and numels
+    # for npu_fusion_attention on supported Ascend950 versions.
+    global _npu_fusion_attention_warning_printed
+    if _npu_fusion_attention_warning_printed or get_soc_version() < _ASCEND950_SOC_VERSION:
+        return
+    warnings.warn(
+        "CAUTION: On Ascend950, when npu_fusion_attention is compiled by torch.compile, the seed, "
+        "offset, and numels may be optimized, which can cause results to differ from eager mode "
+        "when the random seed is set. This issue will be fixed in later version.",
+        UserWarning,
+        stacklevel=2,
+    )
+    _npu_fusion_attention_warning_printed = True
+
+
 @impl(m, "npu_fusion_attention")
 def npu_fusion_attention_forward(query, key, value, head_num, input_layout, pse=None, padding_mask=None,
                                  atten_mask=None, scale=1.0, keep_prob=1.0, pre_tockens=2147483647, next_tockens=2147483647,
                                  inner_precise=0, prefix=None, actual_seq_qlen=None, actual_seq_kvlen=None, sparse_mode=0,
                                  gen_mask_parallel=True, sync=False, softmax_layout="", sink=None, dropout_mask=None, seed=0, offset=0):
+    _warn_npu_fusion_attention_compile_once()
     B = query.size(0)
     N = head_num
     S1 = query.size(2)
@@ -5756,10 +5786,12 @@ def npu_linear_meta(input_, weight, bias=None):
 
 @impl(m, "npu_moe_finalize_routing")
 def npu_moe_finalize_routing_meta(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row,
-                                  expert_for_source_row, drop_pad_mode=0):
-    if scales is None:
-        return torch.empty_like(expanded_permuted_rows, dtype=expanded_permuted_rows.dtype)
-    dimm = scales.size(0)
+                                  expert_for_source_row, drop_pad_mode=0, k=1):
+    dimm = expanded_src_to_dst_row.size(0)
+    if scales is not None:
+        dimm = scales.size(0)
+    elif k > 0:
+        dimm = dimm // k
     if drop_pad_mode == 1 or drop_pad_mode == 3:
         # dropPad场景, expanded_permuted_rows shape 为[E, C, H]
         dimn = expanded_permuted_rows.size(2)
@@ -6899,8 +6931,8 @@ def convolution_meta(input_tensor, weight, bias, stride, padding, dilation, tran
 
 @impl(m, "batch_norm_reduce")
 def batch_norm_reduce_meta(self, eps):
-    out_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
-    out_square_sum = torch.empty(self.size(1), dtype=self.dtype, device='meta')
+    out_sum = torch.empty(self.size(1), dtype=torch.float32, device='meta')
+    out_square_sum = torch.empty(self.size(1), dtype=torch.float32, device='meta')
     return (out_sum, out_square_sum)
 
 
@@ -7173,7 +7205,7 @@ def npu_rotate_quant(x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_
 
 
 @impl(m, "npu_quant_max")
-def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
+def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291, group_list=None):
     torch_dtype = TORCH_DTYPE_ENUM_VALUE_TO_SCALAR_TYPE_MAP.get(dst_dtype, torch.int8)
     if torch_dtype == torch.float8_e5m2 or dst_dtype == 291:
         y = torch.empty_like(x, dtype=torch.float8_e5m2)
@@ -7182,7 +7214,10 @@ def npu_quant_max(x, scale, *, round_mode="rint", dst_dtype=291):
     else:
         # hifloat8 等 PyTorch 无原生 dtype 对应，存储用 uint8 承载
         y = torch.empty_like(x, dtype=torch.uint8)
-    amax = x.new_empty([1], dtype=x.dtype)
+    if group_list is not None and group_list.shape[0] != 1:
+        amax = x.new_empty([group_list.shape[0]], dtype=x.dtype)
+    else:
+        amax = x.new_empty([1], dtype=x.dtype)
     return (y, amax)
 
 

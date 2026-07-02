@@ -1711,7 +1711,7 @@
   "func: npu_quant_conv2d(Tensor input, Tensor weight, Tensor scale, int[2] strides=1, int[2] pads=0, int[2] dilations=1, int groups=1, int offset_x=0, str round_mode='rint', int? output_dtype=None, Tensor? bias=None, Tensor? offset=None, int? input_dtype=None, int? weight_dtype=None)-> Tensor": {
     "version": ["all_version"]
   },
-  "func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor": {
+  "func: npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0, int? k=1) -> Tensor": {
     "version": ["all_version"]
   },
   "func: matmul_double_backward(Tensor? grad_self, Tensor? grad_other, Tensor grad_out, Tensor self, Tensor other, bool[3] mask) -> (Tensor, Tensor, Tensor)": {
@@ -5012,7 +5012,7 @@
   "func: npu_rotate_quant(Tensor x, Tensor rotation, *, Tensor? alpha=None, int? dst_dtype=None, int? axis=-1, str? round_mode=\"rint\", int? scale_alg=0, float? dst_type_max=0.0, bool? transpose_y=False) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
-  "func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode=\"rint\", int dst_dtype=291) -> (Tensor, Tensor)": {
+  "func: npu_quant_max(Tensor x, Tensor scale, *, str round_mode=\"rint\", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)": {
     "version": ["all_version"]
   },
   "op_api: torch_npu.npu_quant_max(*args, **kwargs)": {
@@ -5044,6 +5044,12 @@
   },
   "func: _scaled_grouped_mm_v2(Tensor mat_a, Tensor mat_b, Tensor[] scale_a, int[] recipe_a, int[] swizzle_a, Tensor[] scale_b, int[] recipe_b, int[] swizzle_b, Tensor? offs=None, Tensor? bias=None, ScalarType? out_dtype=None, int[] contraction_dim=[], bool use_fast_accum=False) -> Tensor": {
     "version": ["v2.10", "newest"]
+  },
+  "func: _fused_sgd_(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] momentum_buffer_list, *, float weight_decay, float momentum, float lr, float dampening, bool nesterov, bool maximize, bool is_first_step, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()": {
+    "version": ["v2.7", "newest"]
+  },
+  "func: _fused_sgd_.tensor_lr(Tensor(a!)[] self, Tensor(b!)[] grads, Tensor(c!)[] momentum_buffer_list, *, float weight_decay, float momentum, Tensor lr, float dampening, bool nesterov, bool maximize, bool is_first_step, Tensor? grad_scale=None, Tensor? found_inf=None) -> ()": {
+    "version": ["v2.7", "newest"]
   },
   "func: npu_renorm_backward(Tensor grad, Tensor self, Scalar p, int dim, Scalar maxnorm) -> Tensor": {
     "version": ["v2.7", "newest"]
