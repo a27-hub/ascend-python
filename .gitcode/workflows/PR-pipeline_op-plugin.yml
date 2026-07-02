@@ -118,9 +118,11 @@ stages:
           - name: setup-python
             uses: setup-python
           - name: setup-python310
-            run: |-
-                ln -sf /usr/local/bin/python3.10 /usr/local/bin/python
-                python --version
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                  ln -sf /usr/local/bin/python3.10 /usr/local/bin/python
+                  python --version
           - name: pre-commit
             uses: openlibing-pre-commit-action
             with:
