@@ -465,7 +465,6 @@ nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数�
 _add_torch_npu_docstr(
     "npu_bert_apply_adam",
     """
-<<<<<<< HEAD
 torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
 功能描述
 adam结果计数。
@@ -488,30 +487,6 @@ out (tuple[Tensor, Tensor, Tensor]) - 必选关键字参数，包含var、m、v�
 返回包含var、m、v三个Tensor的元组，分别为out中传入的var、m、v输出张量。
 示例
 >>> var_in = torch.rand(321538).uniform_(-32., 21.).npu()
-=======
-torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
-功能描述
-adam结果计数。
-
-参数说明
-参数:
-lr (Scalar) - 必选参数，数据类型与var相同。
-beta1 (Scalar) - 必选参数，数据类型与var相同。
-beta2 (Scalar) - 必选参数，数据类型与var相同。
-epsilon (Scalar) - 必选参数，数据类型与var相同。
-grad (Tensor) - 必选参数，数据类型和shape与var相同。
-max_grad_norm (Scalar) - 必选参数，数据类型与var相同。
-global_grad_norm (Scalar) - 必选参数，数据类型与var相同。
-weight_decay (Scalar) - 必选参数，数据类型与var相同。
-step_size (Scalar) - 可选参数，默认值为None，数据类型与var一致。
-adam_mode (Int) - 可选参数，默认值为0，选择adam模式。0表示“adam”，1表示“mbert_adam”。
-关键字参数:
-out (tuple[Tensor, Tensor, Tensor]) - 必选关键字参数，包含var、m、v三个输出张量的元组。其中var为float16或float32类型张量；m、v的数据类型和shape与var相同。
-输出说明
-返回包含var、m、v三个Tensor的元组，分别为out中传入的var、m、v输出张量。
-示例
->>> var_in = torch.rand(321538).uniform_(-32., 21.).npu()
->>>>>>> 8ec50a95974ed0717d6fba3c7d0ed482ee4df699
 >>> m_in = torch.zeros(321538).npu()
 >>> v_in = torch.zeros(321538).npu()
 >>> grad = torch.rand(321538).uniform_(-0.05, 0.03).npu()
