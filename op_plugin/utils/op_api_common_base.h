@@ -387,11 +387,13 @@ template <typename Tuple> auto ConvertToOpApiFunc(const Tuple &params, void *opA
 struct CacheParams {
 public:
     bool GetDeterministicStatus() const;
+    uint32_t GetDeterministicEffectiveLevel() const;
     uint32_t GetAicNum() const;
     uint32_t GetAivNum() const;
 
 private:
     bool deterministic_status_ = false;
+    uint32_t deterministic_effective_level_ = 0;
     uint32_t aic_num_ = UINT32_MAX;
     uint32_t aiv_num_ = UINT32_MAX;
     friend CacheParams GetCacheParams();
@@ -545,13 +547,13 @@ TORCH_NPU_API uint32_t OpApiGetTaskQueueEnable();
             /* 5.1.初始化子进程上下文 */                                                                                  \
             InitExecSubTheadCtx(acl_stream);                                                                           \
             int api_ret = 0;                                                                                           \
-            /* 5.2.缓存查询 */                                                                                          \
+            /* 5.2.设置执行配置 */                                                                                       \
+            SetExecConfigV2(cache_params);                                                                             \
+            /* 5.3.缓存查询 */                                                                                          \
             if (hit_cache_v2_ext(acl_stream, #aclnn_api, opApiFuncAddr, copied_params, &api_ret, cache_params))        \
             {                                                                                                          \
                 return api_ret;                                                                                        \
             }                                                                                                          \
-            /* 5.3.设置执行配置 */                                                                                       \
-            SetExecConfigV2(cache_params);                                                                             \
             /* 5.4.初始化执行上下文：内存管理相关 */                                                                         \
             InitExecCommonCtx();                                                                                       \
             /* 5.5.参数转换、获取workspace_size和executor（涉及可变参数未封装） */                                            \
