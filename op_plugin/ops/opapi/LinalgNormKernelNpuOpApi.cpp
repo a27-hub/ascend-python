@@ -27,15 +27,22 @@ inline bool check_use_aclop(const at::Scalar& scalar_ord)
         return false;
     }
     if (op_plugin::utils::is_gte_cann_version_900()) {
-        // Version 9.0.0 of cann supports all norm operators in aclnn
         return false;
     }
     float val = op_plugin::utils::get_scalar_float_value(scalar_ord);
     if (op_plugin::utils::is_gte_cann_version_810rc1() && (val == INFINITY || val == -INFINITY)) {
-        // Version 8.1.RC1 of cann began to support norm operators with p being inf or -inf
         return false;
     }
     return val != 0.0 && val != 1.0 && val != 2.0 && val != 3.0;
+}
+
+// 转换 scalar_ord 为 float
+inline at::Scalar convert_ord_to_float(const at::Scalar& scalar_ord) {
+    if (scalar_ord.type() == c10::ScalarType::Double) {
+        double val = scalar_ord.toDouble();
+        return at::Scalar(static_cast<float>(val));
+    }
+    return scalar_ord;
 }
 }
 
@@ -49,13 +56,27 @@ at::Tensor linalg_vector_norm(
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype);
     }
+
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
+    
+    // 1. 先定义 dtype
     auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    
+    // 2. 强制转换低精度类型为 Float
+    if (dtype == c10::ScalarType::BFloat16 ||
+        dtype == c10::ScalarType::Half ||
+        dtype == c10::ScalarType::Float) {
+        dtype = c10::ScalarType::Float;
+    }
+    
+    // 3. 转换 scalar_ord 为 float（double → float）
+    at::Scalar converted_ord = convert_ord_to_float(scalar_ord);
+    
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(dtype));
-    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, out);
+    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, converted_ord, dim, keepdim, dtype, out);
     return out;
 }
 
@@ -70,18 +91,31 @@ at::Tensor& linalg_vector_norm_out(
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
+
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
+    
+    // 1. 先定义 dtype
     auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    
+    // 2. 强制转换低精度类型为 Float
+    if (dtype == c10::ScalarType::BFloat16 ||
+        dtype == c10::ScalarType::Half ||
+        dtype == c10::ScalarType::Float) {
+        dtype = c10::ScalarType::Float;
+    }
+    
+    // 3. 转换 scalar_ord 为 float（double → float）
+    at::Scalar converted_ord = convert_ord_to_float(scalar_ord);
+    
     npu_preparation::check_tensor(
         {self},
         result,
         dtype,
         output_size);
-
-    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, result);
+    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, converted_ord, dim, keepdim, dtype, result);
     return result;
 }
 }
