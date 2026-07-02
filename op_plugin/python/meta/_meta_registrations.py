@@ -6394,7 +6394,8 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
 
     is_mxfp8w4 = x.dtype == torch.float8_e4m3fn and weight_dtype == torch_npu.float4_e2m1fn_x2
     is_mx_weight_nz_multi = weight_scale_dtype is not None and not is_mxfp8w4 and len(weight) > 0 and \
-        len(weight_scale) > 0 and weight[0].dim() == 2 and weight_scale[0].dim() == 3
+        len(weight_scale) > 0 and len(weight) == len(weight_scale) and weight[0].dim() == 2 and \
+        weight_scale[0].dim() == 3
 
     if not is_mx_weight_nz_multi:
         torch._check(

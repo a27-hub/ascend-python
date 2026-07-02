@@ -87,6 +87,7 @@ bool is_mx_weight_nz_multi_tensor(const at::TensorList weight, const at::TensorL
     return c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&
            is_weight_nz && is_mx_quant && !is_mxfp8w4 &&
            weight.size() > NUM_ZERO && weight_scale.size() > NUM_ZERO &&
+           weight.size() == weight_scale.size() &&
            weight[DIM_0].dim() == DIM_2 && weight_scale[DIM_0].dim() == DIM_3;
 }
 
