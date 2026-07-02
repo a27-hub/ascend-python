@@ -81,6 +81,15 @@ int64_t infer_nz_logical_n(const at::Tensor &weight_scale, bool is_mx_quant)
     return weight_scale.sizes().back();
 }
 
+bool is_mx_weight_nz_multi_tensor(const at::TensorList weight, const at::TensorList weight_scale, bool is_weight_nz,
+                                  bool is_mx_quant, bool is_mxfp8w4)
+{
+    return c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950 &&
+           is_weight_nz && is_mx_quant && !is_mxfp8w4 &&
+           weight.size() > NUM_ZERO && weight_scale.size() > NUM_ZERO &&
+           weight[DIM_0].dim() == DIM_2 && weight_scale[DIM_0].dim() == DIM_3;
+}
+
 std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const at::Tensor & x,
     const at::TensorList weight,
@@ -103,11 +112,19 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
 {
     TORCH_CHECK(weight.size() > NUM_ZERO, "The size of weight should be greater than 0, current size is ",
                 weight.size(), OPS_ERROR(ErrCode::PARAM));
+    TORCH_CHECK(weight_scale.size() > NUM_ZERO, "The size of weight_scale should be greater than 0, current size is ",
+                weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
 
     const bool mxfp8w4 =
         x.scalar_type() == at::kFloat8_e4m3fn &&
         ((weight_dtype.has_value() && weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) ||
          aclDataType::ACL_FLOAT4_E2M1 == c10_npu::GetAclDataType(static_cast<int64_t>(weight[0].scalar_type())));
+    const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ ||
+                              at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16 ||
+                              weight[DIM_0].dim() == DIM_5;
+    const bool is_mx_quant = weight_scale_dtype.has_value();
+    const bool is_mx_weight_nz_multi = is_mx_weight_nz_multi_tensor(weight, weight_scale, is_weight_nz, is_mx_quant,
+                                                                    mxfp8w4);
 
     if (mxfp8w4) {
         TORCH_CHECK(weight.size() >= NUM_ONE,
@@ -116,7 +133,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         TORCH_CHECK(weight_scale.size() >= NUM_ONE,
                     "The size of weight_scale should be greater than or equal to 1, current size is ",
                     weight_scale.size(), OPS_ERROR(ErrCode::PARAM));
-    } else {
+    } else if (!is_mx_weight_nz_multi) {
         TORCH_CHECK(weight.size() == NUM_ONE, "The size of weight should be 1, current size is ", weight.size(),
                     OPS_ERROR(ErrCode::PARAM));
         TORCH_CHECK(weight_scale.size() == NUM_ONE, "The size of weight_scale should be 1, current size is ",
@@ -127,16 +144,14 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     TORCH_CHECK(!weight_scale[DIM_0].sizes().empty(), "The weight_scale[0] is empty.", OPS_ERROR(ErrCode::PARAM));
     TORCH_CHECK(!weight[DIM_0].sizes().empty(), "The weight[0] is empty.", OPS_ERROR(ErrCode::PARAM));
 
-    const bool is_weight_nz = at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ ||
-                              at_npu::native::custom_ops::get_npu_format(weight[DIM_0]) == ACL_FORMAT_FRACTAL_NZ_C0_16
-                              || weight[DIM_0].dim() == DIM_5;
     auto x_size = x.sizes();
     int n = 0;
     bool weight_trans = is_transpose_last_two_dims(weight[DIM_0]);
-    const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool is_5d_nz = is_weight_nz && (weight[DIM_0].dim() == DIM_5);
     if (is_5d_nz) {
         n = static_cast<int>(infer_nz_logical_n(weight_scale[DIM_0], is_mx_quant));
+    } else if (is_mx_weight_nz_multi) {
+        n = static_cast<int>(weight[DIM_0].sizes()[DIM_1]);
     } else {
         if (c10_npu::GetSocVersion() >= c10_npu::SocVersion::Ascend950) {
             if (mxfp8w4) {
@@ -253,7 +268,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     : x[DIM_0].scalar_type());
         c10::TensorOptions options = x.options().dtype(npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(weight_scale_dtype.value())));
 
-        if (mxfp4_input) {
+        if (mxfp4_input && !is_weight_nz) {
             // In the non-NZ MXFP4 path, uint8 storage packs two FP4 values. For non-transposed weight,
             // n is the packed physical N from weight.shape[2], while CANN validates against logical N = n * 2.
             if (!weight_trans) {
@@ -323,6 +338,24 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                 group_list_type_real,
                 tuning_config_real,
                 output,
+                output_scale_wrapper);
+        } else if (is_mx_weight_nz_multi) {
+            EXEC_NPU_CMD(
+                aclnnGroupedMatmulSwigluQuantWeightNzV2,
+                x_wrapper,
+                weight_wrapper,
+                weight_scale_wrapper,
+                weight_assist_matrix_real,
+                bias_real,
+                x_scale_wrapper,
+                smooth_scale_real,
+                group_list,
+                dequant_mode_real,
+                dequant_dtype_real,
+                quant_mode_real,
+                group_list_type_real,
+                tuning_config_real,
+                output_wrapper,
                 output_scale_wrapper);
         } else {
             at::Tensor weight_for_nz = weight[DIM_0];

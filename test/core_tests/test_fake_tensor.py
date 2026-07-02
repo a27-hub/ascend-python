@@ -4500,6 +4500,56 @@ class TestGroupedMatmulSwigluQuantV2(TestCase):
                 weight_scale_dtype=torch_npu.float8_e8m0fnu,
                 x_scale_dtype=torch_npu.float8_e8m0fnu)
 
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mx_multi_weight_shape(self):
+        with FakeTensorMode():
+            # MX WeightNz multi tensor: distinguish by weight[0].dim() == 2, including E == 1.
+            M = 8
+            K = 128
+            N = 512
+            for E in (1, 2):
+                x = torch.empty((M, K), dtype=torch.float8_e4m3fn)
+                weight = [torch.empty((K, N), dtype=torch.float8_e4m3fn).npu() for _ in range(E)]
+                weight_scale = [torch.empty((math.ceil(K / 64), N, 2), dtype=torch.uint8).npu() for _ in range(E)]
+                x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8)
+                group_list = torch.zeros(E, dtype=torch.int64)
+                with self.subTest(e=E):
+                    output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                        x.npu(), weight, weight_scale, x_scale.npu(), group_list.npu(),
+                        dequant_mode=2, dequant_dtype=6, quant_mode=2,
+                        quant_dtype=24,
+                        weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                        x_scale_dtype=torch_npu.float8_e8m0fnu)
+                    self.assertTrue(output.shape == torch.Size([M, N // 2]))
+                    self.assertTrue(output_scale.shape == torch.Size([M, math.ceil((N // 2) / 64), 2]))
+
+    @unittest.skipIf(
+        not hasattr(torch_npu, "float4_e2m1fn_x2"),
+        "torch_npu float4 dtype wrappers are required for Ascend950 MXFP4 fake shape cases.")
+    def test_npu_grouped_matmul_swiglu_quant_v2_nz_mxfp4_multi_weight_shape(self):
+        with FakeTensorMode():
+            E = 2
+            M = 8
+            K = 128
+            N = 512
+            x = torch.empty((M, K // 2), dtype=torch.uint8)
+            weight = [torch.empty((K, N), dtype=torch.uint8).npu() for _ in range(E)]
+            weight_scale = [torch.empty((math.ceil(K / 64), N, 2), dtype=torch.uint8).npu() for _ in range(E)]
+            x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8)
+            group_list = torch.zeros(E, dtype=torch.int64)
+            expected_output_n = N // 2
+            if not hasattr(torch, "float4_e2m1fn_x2"):
+                expected_output_n //= 2
+            output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
+                x.npu(), weight, weight_scale, x_scale.npu(), group_list.npu(),
+                dequant_mode=2, dequant_dtype=6, quant_mode=2,
+                quant_dtype=torch_npu.float4_e2m1fn_x2,
+                weight_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_scale_dtype=torch_npu.float8_e8m0fnu,
+                x_dtype=torch_npu.float4_e2m1fn_x2,
+                weight_dtype=torch_npu.float4_e2m1fn_x2)
+            self.assertTrue(output.shape == torch.Size([M, expected_output_n]))
+            self.assertTrue(output_scale.shape == torch.Size([M, math.ceil((N // 2) / 64), 2]))
+
     def _assert_npu_grouped_matmul_swiglu_quant_v2_ascend950_mxfp4_shape(
             self, case_name, e, m, k, n, output_tensor_dtype, group_list_type,
             expected_output_shape, expected_output_scale_shape):
