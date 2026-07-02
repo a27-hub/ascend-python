@@ -117,8 +117,6 @@ stages:
             uses: checkout
           - name: setup-python
             uses: setup-python
-            with:
-              version: 3.8
           - name: pre-commit
             uses: openlibing-pre-commit-action
             with:
