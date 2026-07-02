@@ -43,6 +43,8 @@ mask操作的结果。
 ## 调用示例
 
 ```python
+    >>> import torch
+    >>> import torch_npu
     >>> box1 = torch.randn(4, 32).npu()
     >>> box1.requires_grad = True
     >>> box2 = torch.randn(4, 32).npu()
