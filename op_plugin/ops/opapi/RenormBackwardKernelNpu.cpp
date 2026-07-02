@@ -32,7 +32,7 @@ at::Tensor norm_backward_impl(
         return self.sgn() * grad;
     } else if (p == 2.0) {
         // NOLINT: 除零后立即被 masked_fill_ 覆盖为0，参考PyTorch原生实现
-        return grad * (self / norm).masked_fill_(norm == 0, 0);  // NOLINT
+        return grad * (self / norm).masked_fill_(norm == 0, 0);  
     } else if (std::isinf(p)) {
         auto self_abs = self.abs();
         auto mask = self_abs.eq(norm).logical_or(self_abs.isnan());
@@ -40,15 +40,15 @@ at::Tensor norm_backward_impl(
     } else if (p < 1.0) {
         self_scaled =
             self.sgn() * self.abs().pow_(p - 1).masked_fill_(self == 0, 0);  
-        return self_scaled * grad * norm.pow(1 - p); // NOLINT
+        return self_scaled * grad * norm.pow(1 - p); 
     } else if (p < 2.0) {
         self_scaled = self.sgn() * self.abs().pow_(p - 1);
-        scale_v = grad / norm.pow(p - 1); // NOLINT
+        scale_v = grad / norm.pow(p - 1); 
         scale_v.masked_fill_(norm == 0, 0);  
         return self_scaled * scale_v;
     } else {
         self_scaled = self * self.abs().pow_(p - 2);
-        scale_v = grad / norm.pow(p - 1); // NOLINT
+        scale_v = grad / norm.pow(p - 1); 
         scale_v.masked_fill_(norm == 0, 0);  
         return self_scaled * scale_v;
     }
