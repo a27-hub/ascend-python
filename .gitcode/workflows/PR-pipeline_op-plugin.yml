@@ -110,7 +110,7 @@ stages:
         name: CodeCheck_pre_commit
         runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a1_x86_64_builder:20260518
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
           - name: checkout
@@ -119,7 +119,8 @@ stages:
             uses: setup-python
           - name: setup-python310
             run: |-
-                ln -sf /usr/local/bin/python3.10 /usr/local/bin/python3
+                ln -sf /usr/local/bin/python3.10 /usr/local/bin/python
+                python --version
           - name: pre-commit
             uses: openlibing-pre-commit-action
             with:
