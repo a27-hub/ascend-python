@@ -417,6 +417,14 @@ Use {deprecated_replace} instead.");'
 
 
 def should_generate_op_interface(f: NativeFunction) -> bool:
+    # The cat family (cat / cat.out) carries structured metadata in the yaml,
+    # but its kernels are still hand-implemented in op_plugin and consumed via
+    # the regular OpInterface/OpApiInterface/AclOpsInterface declarations (the
+    # generated dispatch wrapper in RegisterNPU.cpp calls op_plugin::cat).
+    # Keep generating their interfaces, mirroring the cat special-case in
+    # gen_backend_stubs.py.
+    if str(f.func.name.name) == "cat":
+        return True
     return f.structured_delegate is None
 
 
