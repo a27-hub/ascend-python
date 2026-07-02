@@ -110,7 +110,7 @@ stages:
         name: CodeCheck_pre_commit
         runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a1_x86_64_builder:20260518
           options: --user root
         steps:
           - name: checkout
