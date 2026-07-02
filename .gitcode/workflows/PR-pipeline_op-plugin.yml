@@ -131,7 +131,7 @@ stages:
               gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
-        runs-on: default
+        runs-on: [ self-hosted, arch=x64, os=euler ]
         steps:
           - name: Checkout
             uses: checkout
@@ -148,7 +148,7 @@ stages:
         
       Antipoison:
         name: Antipoison
-        runs-on: default
+        runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -168,7 +168,7 @@ stages:
 
   #     monitor:
   #       name: monitor
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
@@ -186,7 +186,7 @@ stages:
 
   #     CodeCheck_pre-commit:
   #       name: CodeCheck_pre-commit
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
@@ -210,7 +210,7 @@ stages:
 
   #     Only_doc_commit:
   #       name: Only_doc_commit
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
