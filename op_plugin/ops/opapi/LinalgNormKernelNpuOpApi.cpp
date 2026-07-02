@@ -36,13 +36,36 @@ inline bool check_use_aclop(const at::Scalar& scalar_ord)
     return val != 0.0 && val != 1.0 && val != 2.0 && val != 3.0;
 }
 
-// 转换 scalar_ord 为 float
+// 转换 scalar_ord 为 float（double → float）
 inline at::Scalar convert_ord_to_float(const at::Scalar& scalar_ord) {
     if (scalar_ord.type() == c10::ScalarType::Double) {
         double val = scalar_ord.toDouble();
         return at::Scalar(static_cast<float>(val));
     }
     return scalar_ord;
+}
+
+// 将 double tensor 转换为 float tensor
+inline at::Tensor convert_tensor_to_float(const at::Tensor& tensor) {
+    if (tensor.scalar_type() == c10::ScalarType::Double) {
+        return tensor.to(c10::ScalarType::Float);
+    }
+    return tensor;
+}
+
+// 获取合适的 dtype（将 double 也转为 float）
+inline c10::ScalarType get_valid_dtype(
+    const at::Tensor& self,
+    at::optional<at::ScalarType> opt_dtype) {
+    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    // BFloat16/Half/Float/Double → Float
+    if (dtype == c10::ScalarType::BFloat16 ||
+        dtype == c10::ScalarType::Half ||
+        dtype == c10::ScalarType::Float ||
+        dtype == c10::ScalarType::Double) {
+        return c10::ScalarType::Float;
+    }
+    return dtype;
 }
 }
 
@@ -62,17 +85,10 @@ at::Tensor linalg_vector_norm(
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
     
-    // 1. 先定义 dtype
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    // 1. 获取有效的 dtype（BFloat16/Half/Float/Double → Float）
+    auto dtype = get_valid_dtype(self, opt_dtype);
     
-    // 2. 强制转换低精度类型为 Float
-    if (dtype == c10::ScalarType::BFloat16 ||
-        dtype == c10::ScalarType::Half ||
-        dtype == c10::ScalarType::Float) {
-        dtype = c10::ScalarType::Float;
-    }
-    
-    // 3. 转换 scalar_ord 为 float（double → float）
+    // 2. 转换 scalar_ord 为 float（double → float）
     at::Scalar converted_ord = convert_ord_to_float(scalar_ord);
     
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(dtype));
@@ -97,25 +113,29 @@ at::Tensor& linalg_vector_norm_out(
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
     
-    // 1. 先定义 dtype
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    // 1. 获取有效的 dtype（BFloat16/Half/Float/Double → Float）
+    auto dtype = get_valid_dtype(self, opt_dtype);
     
-    // 2. 强制转换低精度类型为 Float
-    if (dtype == c10::ScalarType::BFloat16 ||
-        dtype == c10::ScalarType::Half ||
-        dtype == c10::ScalarType::Float) {
-        dtype = c10::ScalarType::Float;
-    }
-    
-    // 3. 转换 scalar_ord 为 float（double → float）
+    // 2. 转换 scalar_ord 为 float（double → float）
     at::Scalar converted_ord = convert_ord_to_float(scalar_ord);
+    
+    // 3. 如果 result 是 double，也转成 float
+    at::Tensor result_float = result;
+    if (result.scalar_type() == c10::ScalarType::Double) {
+        result_float = result.to(c10::ScalarType::Float);
+    }
     
     npu_preparation::check_tensor(
         {self},
-        result,
+        result_float,
         dtype,
         output_size);
-    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, converted_ord, dim, keepdim, dtype, result);
+    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, converted_ord, dim, keepdim, dtype, result_float);
+    
+    // 如果 result 原本是 double，把结果转回 double
+    if (result.scalar_type() == c10::ScalarType::Double) {
+        result.copy_(result_float);
+    }
     return result;
 }
 }
