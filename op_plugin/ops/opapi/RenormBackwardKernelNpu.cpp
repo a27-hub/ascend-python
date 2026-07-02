@@ -31,6 +31,7 @@ at::Tensor norm_backward_impl(
     } else if (p == 1.0) {
         return self.sgn() * grad;
     } else if (p == 2.0) {
+        // NOLINT: 除零后立即被 masked_fill_ 覆盖为0，参考PyTorch原生实现
         return grad * (self / norm).masked_fill_(norm == 0, 0);
     } else if (std::isinf(p)) {
         auto self_abs = self.abs();
