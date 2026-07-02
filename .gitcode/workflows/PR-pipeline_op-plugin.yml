@@ -88,19 +88,22 @@ stages:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
-          - name: Login to CodeArts
-            uses: codearts-login
-            with:
-              region: cn-north-4
-              name: Ascend_Pytorch_CI
-              password: ${{ secrets.IAM_USER_PASSWORD }}
-              domain-name: hwstaff_jsz_gjl
-          - name: check测试执行
-            uses: codecheck_gitcode_v2
-            with:
-              project_id: a9b188a62f334fc0963bcfb523426d17
-              task_name: wwq-op-plugin-test
-              branch: 7.3.0
+          - name: hello action
+            run: |
+              echo "hello action"
+          # - name: Login to CodeArts
+          #   uses: codearts-login
+          #   with:
+          #     region: cn-north-4
+          #     name: Ascend_Pytorch_CI
+          #     password: ${{ secrets.IAM_USER_PASSWORD }}
+          #     domain-name: hwstaff_jsz_gjl
+          # - name: check测试执行
+          #   uses: codecheck_gitcode_v2
+          #   with:
+          #     project_id: a9b188a62f334fc0963bcfb523426d17
+          #     task_name: wwq-op-plugin-test
+          #     branch: 7.3.0
 
 
   #     CodeCheck_pre-commit:
