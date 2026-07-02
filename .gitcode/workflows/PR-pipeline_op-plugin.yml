@@ -81,7 +81,7 @@ stages:
     name: 阶段_1
     select: selected_by_default
     jobs:
-      CodeCheck
+      CodeCheck:
         name: CodeCheck
         runs-on: default
         container:
