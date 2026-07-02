@@ -110,3 +110,4 @@ at::Tensor npu_renorm_backward(
 }
 
 } // namespace op_api
+
