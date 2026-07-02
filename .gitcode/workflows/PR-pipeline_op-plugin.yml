@@ -117,6 +117,9 @@ stages:
             uses: checkout
           - name: setup-python
             uses: setup-python
+          - name: setup-python310
+            run: |-
+                ln -sf /usr/local/bin/python3.10 /usr/local/bin/python3
           - name: pre-commit
             uses: openlibing-pre-commit-action
             with:
