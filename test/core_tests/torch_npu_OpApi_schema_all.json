@@ -5053,5 +5053,5 @@
   },
   "op_api: torch_npu.npu_renorm_backward(*args: _P.args, **kwargs: _P.kwargs) -> ~_T": {
     "version": ["v2.8", "newest"]
-}
+  }
 }
