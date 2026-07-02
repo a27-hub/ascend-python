@@ -35,7 +35,7 @@ torch_npu.npu.obfuscation_finalize(fd_to_close) -> Tensor
 
 ## 参数说明
 
-**fd_to_close**（`Tensor`）：填写调用[obfuscation_initialize](./torch_npu-npu-obfuscation_initialize.md)接口的返回值，数据类型为`int32`。
+**fd_to_close**（`Tensor`）：填写调用[obfuscation_initialize](./（beta）torch_npu-npu-obfuscation_initialize.md)接口的返回值，数据类型为`int32`。
 
 ## 返回值说明
 `Tensor`
