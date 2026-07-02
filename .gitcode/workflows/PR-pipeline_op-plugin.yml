@@ -83,8 +83,7 @@ stages:
     jobs:
       CodeCheck
         name: CodeCheck
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -106,8 +105,7 @@ stages:
 
       CodeCheck_pre-commit:
         name: CodeCheck_pre-commit
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -124,8 +122,7 @@ stages:
               gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
-        runs-on:
-          - default
+        runs-on: default
         steps:
           - name: Checkout
             uses: checkout
@@ -142,8 +139,7 @@ stages:
         
       Antipoison:
         name: Antipoison
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -163,8 +159,7 @@ stages:
 
       monitor:
         name: monitor
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -182,8 +177,7 @@ stages:
 
       CodeCheck_pre-commit:
         name: CodeCheck_pre-commit
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -194,9 +188,7 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                #!/bin/bash
                 set +x
-                # 所有输出只会打印内容，不会显示命令本身
                 echo "pre-commit begin!!!"
                 echo "------------------------------------1. git clone code-----------------------------------"
                 rm -rf pylint
@@ -209,8 +201,7 @@ stages:
 
       Only_doc_commit:
         name: Only_doc_commit
-        runs-on:
-          - default
+        runs-on: default
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
