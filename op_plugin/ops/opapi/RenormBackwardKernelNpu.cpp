@@ -31,13 +31,11 @@ at::Tensor norm_backward_impl(
     const std::optional<at::Scalar>& p_,
     at::Tensor norm,
     at::IntArrayRef dim,
-    bool /* keepdim */) {  // keepdim 参数保留但不用，因为永远为 true
+    bool /* keepdim */) {  
   
   double p = p_.value_or(2.0).toDouble();
   at::Tensor self_scaled;
   at::Tensor scale_v;
-
-  // keepdim 永远为 true，所以不需要 unsqueeze 逻辑
 
   if (p == 0.0) {
     return {};
@@ -66,9 +64,7 @@ at::Tensor norm_backward_impl(
   }
 }
 
-// ============================================================
-// npu_renorm_backward 主逻辑
-// ============================================================
+
 at::Tensor npu_renorm_backward(
     const at::Tensor& grad,
     const at::Tensor& self,
