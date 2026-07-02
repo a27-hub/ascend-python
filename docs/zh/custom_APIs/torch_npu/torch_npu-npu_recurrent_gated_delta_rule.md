@@ -85,14 +85,14 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     # 构造输入
     bs, mtp, nk, nv, dk, dv = (2, 3, 4, 8, 128, 128)
     actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
-    BlockNum = int(torch.sum(actual_seq_lengths))
+    T = int(torch.sum(actual_seq_lengths))
 
-    state = torch.rand((BlockNum, nv, dv, dk), dtype=torch.bfloat16).npu()
-    query = torch.rand((BlockNum, nk, dk), dtype=torch.bfloat16).npu()
-    key = torch.rand((BlockNum, nk, dk), dtype=torch.bfloat16).npu()
-    value = torch.rand((BlockNum, nv, dv), dtype=torch.bfloat16).npu()
-    g = torch.rand((BlockNum, nv), dtype=torch.float32).npu() * (-1.0)
-    beta = torch.rand((BlockNum, nv), dtype=torch.bfloat16).npu()
+    state = torch.rand((T, nv, dv, dk), dtype=torch.bfloat16).npu()
+    query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+    key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+    value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+    g = torch.rand((T, nv), dtype=torch.float32).npu() * (-1.0)
+    beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
 
     ssm_state_indices = (torch.arange(T).npu()).to(torch.int32)
     query = torch.nn.functional.normalize(query, p=2, dim=-1)
@@ -142,14 +142,14 @@ torch_npu.npu_recurrent_gated_delta_rule(query, key, value, state, *, beta=None,
     # 构造输入
     bs, mtp, nk, nv, dk, dv = (2, 3, 4, 8, 128, 128)
     actual_seq_lengths = (torch.ones(bs) * mtp).npu().to(torch.int32)
-    BlockNum = int(torch.sum(actual_seq_lengths))
+    T = int(torch.sum(actual_seq_lengths))
 
-    state = torch.rand((BlockNum, nv, dv, dk), dtype=torch.bfloat16).npu()
-    query = torch.rand((BlockNum, nk, dk), dtype=torch.bfloat16).npu()
-    key = torch.rand((BlockNum, nk, dk), dtype=torch.bfloat16).npu()
-    value = torch.rand((BlockNum, nv, dv), dtype=torch.bfloat16).npu()
-    g = torch.rand((BlockNum, nv), dtype=torch.float32).npu() * (-1.0)
-    beta = torch.rand((BlockNum, nv), dtype=torch.bfloat16).npu()
+    state = torch.rand((T, nv, dv, dk), dtype=torch.bfloat16).npu()
+    query = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+    key = torch.rand((T, nk, dk), dtype=torch.bfloat16).npu()
+    value = torch.rand((T, nv, dv), dtype=torch.bfloat16).npu()
+    g = torch.rand((T, nv), dtype=torch.float32).npu() * (-1.0)
+    beta = torch.rand((T, nv), dtype=torch.bfloat16).npu()
 
     ssm_state_indices = (torch.arange(T).npu()).to(torch.int32)
     query = torch.nn.functional.normalize(query, p=2, dim=-1)
