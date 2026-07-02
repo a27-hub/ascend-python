@@ -83,7 +83,7 @@ stages:
     jobs:
       CodeCheck:
         name: CodeCheck
-        runs-on: default
+        runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -91,13 +91,13 @@ stages:
           - name: hello action
             run: |
               echo "hello action"
-          # - name: Login to CodeArts
-          #   uses: codearts-login
-          #   with:
-          #     region: cn-north-4
-          #     name: Ascend_Pytorch_CI
-          #     password: ${{ secrets.IAM_USER_PASSWORD }}
-          #     domain-name: hwstaff_jsz_gjl
+          - name: Login to CodeArts
+            uses: codearts-login
+            with:
+              region: cn-north-4
+              name: Ascend_Pytorch_CI
+              password: ${{ secrets.IAM_USER_PASSWORD }}
+              domain-name: hwstaff_jsz_gjl
           # - name: check测试执行
           #   uses: codecheck_gitcode_v2
           #   with:
@@ -106,23 +106,23 @@ stages:
           #     branch: 7.3.0
 
 
-  #     CodeCheck_pre-commit:
-  #       name: CodeCheck_pre-commit
-  #       runs-on: default
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: checkout
-  #           uses: checkout
-  #         - name: setup-python
-  #           uses: setup-python
-  #           with:
-  #             version: 3.14.3
-  #         - name: pre-commit
-  #           uses: openlibing-pre-commit-action
-  #           with:
-  #             gc_token: ${{ secrets.GC_TOKEN }}
+      CodeCheck_pre_commit:
+        name: CodeCheck_pre_commit
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: checkout
+            uses: checkout
+          - name: setup-python
+            uses: setup-python
+            with:
+              version: 3.14.3
+          - name: pre-commit
+            uses: openlibing-pre-commit-action
+            with:
+              gc_token: ${{ secrets.GC_TOKEN }}
   #     SCA:
   #       name: SCA
   #       runs-on: default
