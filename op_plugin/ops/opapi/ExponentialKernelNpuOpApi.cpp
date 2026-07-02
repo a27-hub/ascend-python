@@ -29,6 +29,26 @@ at::Tensor& exponential_(at::Tensor& self, double lambd, c10::optional<at::Gener
         return self;
     }
     
+    // Low-precision floating types (bf16/fp16) must not be sampled and
+    // transformed in place: the uniform source, the (1 - u) subtraction and
+    // the final clamp all collapse onto the coarse bf16/fp16 grid, so the
+    // exponential tail is quantized to a handful of levels (bf16: min ~= eps/2
+    // = 3.9e-3, only ~128 distinct values). Do the whole draw in fp32 and cast
+    // back, matching the CPU/fp32 reference distribution.
+    if (self.scalar_type() == at::kBFloat16 || self.scalar_type() == at::kHalf) {
+        auto tmp = at::empty(self.sizes(), self.options().dtype(at::kFloat));
+        tmp.uniform_(0.0, 1.0, generator);
+        tmp.neg_();
+        tmp.add_(1.0);
+        auto eps = std::numeric_limits<float>::epsilon() / 2;
+        auto mask = tmp >= (1.0 - eps);
+        tmp.masked_fill_(mask, 1.0 - eps);
+        tmp.log_();
+        tmp.mul_(-1.0 / lambd);
+        self.copy_(tmp);
+        return self;
+    }
+
     self.uniform_(0.0, 1.0, generator);
 
     if (self.dtype() == at::kDouble) {
