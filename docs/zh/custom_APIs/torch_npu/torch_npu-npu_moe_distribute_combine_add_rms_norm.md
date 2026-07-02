@@ -110,10 +110,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 - **out\_dtype**（`int`）：可选参数，**预留参数暂未使用，使用默认值即可**。
 - **comm\_quant\_mode**（`int`）：可选参数，表示通信量化类型。**预留参数暂未使用，使用默认值即可**。
 - **group\_list\_type**（`int`）：可选参数，**预留参数暂未使用，使用默认值即可**。
-- **comm\_alg** (`str`)：可选参数，表示通信亲和内存布局算法。
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当前版本支持""，"hierarchy"两种输入方式。
-        - ""：默认值，token数据直接通过MTE方式发回目标卡。
-        - "hierarchy"：token数据经过机内、跨机两次发送，先在server内将同一个token数据汇总求和，再跨机发送，以减少跨机数据量。该模板仅支持`tp_world_size`为1、共享专家为0的场景，且不支持二维mask、特殊专家、动态缩容、性能打点场景。
+- **comm\_alg** (`str`)：可选参数，**预留参数暂未使用，使用默认值即可**。
 - **norm\_eps**（`float`）：可选参数，用于防止add\_rms\_norm除0错误，默认值为1e-6。
 
 - **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。取值范围\[0, MAX_INT32\)，其中MAX_INT32值为2147483647，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。
