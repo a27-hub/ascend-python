@@ -465,27 +465,26 @@ nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数�
 _add_torch_npu_docstr(
     "npu_bert_apply_adam",
     """
-torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var,m,v))
+torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
 功能描述
 adam结果计数。
 
 参数说明
 参数:
-var (Tensor) - float16或float32类型张量。
-m (Tensor) - 数据类型和shape与exp_avg相同。
-v (Tensor) - 数据类型和shape与exp_avg相同。
-lr (Scalar) - 数据类型与exp_avg相同。
-beta1 (Scalar) - 数据类型与exp_avg相同。
-beta2 (Scalar) - 数据类型与exp_avg相同。
-epsilon (Scalar) - 数据类型与exp_avg相同。
-grad (Tensor) - 数据类型和shape与exp_avg相同。
-max_grad_norm (Scalar) - 数据类型与exp_avg相同。
-global_grad_norm (Scalar) - 数据类型与exp_avg相同。
-weight_decay (Scalar) - 数据类型与exp_avg相同。
-step_size (Tensor，可选，默认值为None) - shape为(1, )，数据类型与exp_avg一致。
-adam_mode (Int，默认值为0) - 选择adam模式。0表示“adam”，1表示“mbert_adam”。
+lr (Scalar) - 必选参数，数据类型与var相同。
+beta1 (Scalar) - 必选参数，数据类型与var相同。
+beta2 (Scalar) - 必选参数，数据类型与var相同。
+epsilon (Scalar) - 必选参数，数据类型与var相同。
+grad (Tensor) - 必选参数，数据类型和shape与var相同。
+max_grad_norm (Scalar) - 必选参数，数据类型与var相同。
+global_grad_norm (Scalar) - 必选参数，数据类型与var相同。
+weight_decay (Scalar) - 必选参数，数据类型与var相同。
+step_size (Scalar) - 可选参数，默认值为None，数据类型与var一致。
+adam_mode (Int) - 可选参数，默认值为0，选择adam模式。0表示“adam”，1表示“mbert_adam”。
 关键字参数:
-out (Tensor，可选) - 输出张量。
+out (tuple[Tensor, Tensor, Tensor]) - 必选关键字参数，包含var、m、v三个输出张量的元组。其中var为float16或float32类型张量；m、v的数据类型和shape与var相同。
+输出说明
+返回包含var、m、v三个Tensor的元组，分别为out中传入的var、m、v输出张量。
 示例
 >>> var_in = torch.rand(321538).uniform_(-32., 21.).npu()
 >>> m_in = torch.zeros(321538).npu()
@@ -502,6 +501,43 @@ out (Tensor，可选) - 输出张量。
 >>> var_out
 tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
       device='npu:0')
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "batch_norm_reduce",
+    """
+功能描述:
+该接口用于按BatchNorm通道维对输入Tensor进行规约，计算通道维以外维度上的元素和sum与平方和square_sum。
+
+接口原型:
+torch_npu.batch_norm_reduce(input, eps) -> (Tensor, Tensor)
+
+参数说明:
+input (Tensor): 必选参数，表示待规约的输入Tensor。支持4D Tensor，shape为(N, C, H, W)。数据类型支持float32、float16、bfloat16。
+eps (float): 必选参数，保留参数。该参数不参与sum和square_sum的计算，建议按BatchNorm常用配置传入1e-5。
+
+输出说明:
+sum (Tensor): 输入Tensor按通道维规约后的元素和，为1D float32 Tensor，长度为通道维长度。输入为4D Tensor且shape为(N, C, H, W)时，输出shape为(C,)。
+square_sum (Tensor): 输入Tensor按通道维规约后的平方和，为1D float32 Tensor，shape同sum。
+
+支持的型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+调用示例:
+import torch
+import torch_npu
+
+input = torch.randn(2, 3, 12, 12, dtype=torch.float32, device="npu")
+
+sum_out, square_sum_out = torch_npu.batch_norm_reduce(input, 1e-5)
+
+print("sum_out.shape:", sum_out.shape)
+print("sum_out.dtype:", sum_out.dtype)
+print("square_sum_out.shape:", square_sum_out.shape)
+print("square_sum_out.dtype:", square_sum_out.dtype)
 """
 )
 
