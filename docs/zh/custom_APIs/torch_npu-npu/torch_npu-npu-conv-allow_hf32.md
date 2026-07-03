@@ -15,17 +15,17 @@ conv类算子开启支持hf32类型能力。
 
 `torch_npu.npu.conv.allow_hf32`功能和调用方式与`torch.backends.cudnn.allow_tf32`类似，`torch.backends.cudnn.allow_tf32`的功能具体请参考[https://pytorch.org/docs/stable/backends.html\#torch.backends.cudnn.allow_tf32](https://pytorch.org/docs/stable/backends.html#torch.backends.cudnn.allow_tf32)。
 
-## 函数原型
+## 属性说明
 
 ```python
-torch_npu.npu.conv.allow_hf32 = bool
+torch_npu.npu.conv.allow_hf32: bool
 ```
 
-## 参数说明
+## 配置说明
 
-输入bool值，默认值True。
+该接口为布尔型配置属性，用于控制是否开启hf32类型支持。默认值为True。
 
-## 输出说明
+## 属性类型
 
 `bool`
 
