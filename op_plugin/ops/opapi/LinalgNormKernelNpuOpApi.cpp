@@ -27,15 +27,34 @@ inline bool check_use_aclop(const at::Scalar& scalar_ord)
         return false;
     }
     if (op_plugin::utils::is_gte_cann_version_900()) {
-        // Version 9.0.0 of cann supports all norm operators in aclnn
         return false;
     }
     float val = op_plugin::utils::get_scalar_float_value(scalar_ord);
     if (op_plugin::utils::is_gte_cann_version_810rc1() && (val == INFINITY || val == -INFINITY)) {
-        // Version 8.1.RC1 of cann began to support norm operators with p being inf or -inf
         return false;
     }
     return val != 0.0 && val != 1.0 && val != 2.0 && val != 3.0;
+}
+
+// 获取计算用的 dtype：根据 self 的类型决定
+// BFloat16/Half/Float → Float（提升精度）
+// Double → Double（保留）
+inline c10::ScalarType get_acc_dtype(const at::Tensor& self) {
+    auto scalar_type = self.scalar_type();
+    if (scalar_type == c10::ScalarType::BFloat16 ||
+        scalar_type == c10::ScalarType::Half ||
+        scalar_type == c10::ScalarType::Float) {
+        return c10::ScalarType::Float;
+    }
+    return scalar_type;
+}
+
+// 将 self 转换为 acc_dtype 对应的类型
+inline at::Tensor convert_to_acc_dtype(const at::Tensor& tensor, c10::ScalarType dtype) {
+    if (tensor.scalar_type() != dtype) {
+        return tensor.to(dtype);
+    }
+    return tensor;
 }
 }
 
@@ -49,13 +68,27 @@ at::Tensor linalg_vector_norm(
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype);
     }
+
+
+    // 1. 根据 self 的类型获取计算用的 dtype
+    auto dtype = get_acc_dtype(self);
+    if (opt_dtype.has_value()) {
+        dtype = opt_dtype.value();
+    }
+    
+    // 2. 将 self 转换为计算用的 dtype
+    at::Tensor self_acc = convert_to_acc_dtype(self, dtype);
+
+
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
-    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self.options().dtype(dtype));
-    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, out);
+    
+
+    
+    at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self_acc.options().dtype(dtype));
+    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self_acc, scalar_ord, dim, keepdim, dtype, out);
     return out;
 }
 
@@ -70,18 +103,39 @@ at::Tensor& linalg_vector_norm_out(
     if (check_use_aclop(scalar_ord)) {
         return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
+
+    // 1. 根据 self 的类型获取计算用的 dtype
+    auto dtype = get_acc_dtype(self);
+    if (opt_dtype.has_value()) {
+        dtype = opt_dtype.value();
+    }
+    
+    // 2. 将 self 转换为计算用的 dtype
+    at::Tensor self_acc = convert_to_acc_dtype(self, dtype);
+    
+    // 3. 将 result 转换为计算用的 dtype
+    at::Tensor result_acc = convert_to_acc_dtype(result, dtype);
+
+
     DO_COMPATIBILITY(aclnnLinalgVectorNorm,
                      acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result));
     auto dim = opt_dim.value_or(at::IntArrayRef{});
     auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    auto dtype = opt_dtype.has_value() ? opt_dtype.value() : self.scalar_type();
+    
+
+    
     npu_preparation::check_tensor(
-        {self},
-        result,
+        {self_acc},
+        result_acc,
         dtype,
         output_size);
-
-    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self, scalar_ord, dim, keepdim, dtype, result);
+    EXEC_NPU_CMD(aclnnLinalgVectorNorm, self_acc, scalar_ord, dim, keepdim, dtype, result_acc);
+    
+    // // 4. 如果 result 原始类型和计算 dtype 不同，拷贝回原始 dtype
+    //  是不是不需要呀，因为后面还会有算子。如果又回到double 
+    // if (result.scalar_type() != dtype) {
+    //     result.copy_(result_acc);
+    // }
     return result;
 }
 }
