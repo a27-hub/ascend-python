@@ -1,16 +1,23 @@
 name: PR-pipeline_op-plugin
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ "7.3.0" ]
-    paths: [ ".gitcode/workflows/PR-pipeline_op-plugin.yml" ]
-
+  pull_request:
+    branches:
+      - 7.3.0
+      - 7.3.0_test
+    types:
+      - open
+      - update
+      - reopen
+      - merge
+    branches-ignore: []
+    paths-ignore: []
+    code-update: false
 inputs:
   repo:
     type: string
     description: "仓库名称"
-    default: "${test_REPOSITORY_NAME}"
+    default: ${{ atomgit.event.repository.name }}
   owner:
     type: string
     description: "仓库所有者"
@@ -18,15 +25,15 @@ inputs:
   TARGET_BRANCH:
     type: string
     description: "目标分支"
-    default: "${test_TARGET_BRANCH}"
+    default: ${{ atomgit.event.pull_request.base.ref }}
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
-    default: "${test_REPO_URL}"
+    default: ${{ atomgit.url }}
   pr_id:
     type: string
     description: "PR ID"
-    default: "${MERGE_ID}"
+    default: ${{ atomgit.event.pull_request.id }}
   py_version:
     type: string
     description: "Python版本"
@@ -35,6 +42,8 @@ inputs:
     type: string
     description: "工作目录"
     default: "/workspace"
+
+env:
   CP_pipeline_run_id:
     type: string
     description: "流水线运行ID"
@@ -90,7 +99,9 @@ stages:
         steps:
           - name: hello action
             run: |
-              echo "hello action"
+              echo "print env"
+              env
+              echo "print env end"
           - name: Login to CodeArts
             uses: codearts-login
             with:
@@ -129,7 +140,8 @@ stages:
               gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
-        runs-on: default
+        if: atomgit.event_name == 'pull_request'
+        runs-on: [ self-hosted, arch=x64, os=euler ]
         steps:
           - name: Checkout
             uses: checkout
@@ -146,7 +158,7 @@ stages:
         
       Antipoison:
         name: Antipoison
-        runs-on: default
+        runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -162,11 +174,11 @@ stages:
                 wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
                 unzip -q ApiGateway-python-sdk-2.0.7.zip
                 cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-                python3.8 cie/codecheck/anti_poison.py --created_appId ${created_appId} --created_secretKey ${created_secretKey} --result_appId ${result_appId} --result_secretKey ${result_secretKey} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+                python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
   #     monitor:
   #       name: monitor
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
@@ -184,7 +196,7 @@ stages:
 
   #     CodeCheck_pre-commit:
   #       name: CodeCheck_pre-commit
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
@@ -208,7 +220,7 @@ stages:
 
   #     Only_doc_commit:
   #       name: Only_doc_commit
-  #       runs-on: default
+  #       runs-on: [ self-hosted, arch=x64, os=euler ]
   #       container:
   #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
   #         options: --user root
