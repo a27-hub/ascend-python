@@ -92,8 +92,9 @@ stages:
         steps:
           - name: hello action
             run: |
+              echo "print env"
               env
-              echo "hello action"
+              echo "print env end"
           - name: Login to CodeArts
             uses: codearts-login
             with:
