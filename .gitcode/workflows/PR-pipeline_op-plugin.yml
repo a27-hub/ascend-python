@@ -148,7 +148,6 @@ stages:
               scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
               pr-id: ${{ atomgit.event.pull_request.number }}
               repository-name: ${{ atomgit.repository }}
-              platform-domain: ${{ atomgit.api_url }}
               project-name: ${{ atomgit.repository }}
         
       Antipoison:
