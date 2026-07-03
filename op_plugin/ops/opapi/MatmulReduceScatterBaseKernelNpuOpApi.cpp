@@ -35,6 +35,7 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor & self, const at::Tensor 
     bool isSocBelowAscend950 = (c10_npu::GetSocVersion() < c10_npu::SocVersion::Ascend950);
     std::string default_comm_mode = isSocBelowAscend950 ? "ai_cpu" : "";
     c10::string_view comm_mode_value = comm_mode.value_or(default_comm_mode);
+    std::string comm_mode_str = std::string(comm_mode_value);
     auto output_size = {self.size(0) / world_size, x2.size(1)};
     auto result_dtype = self.scalar_type();
     bool has_quant = x2_scale.has_value();
@@ -44,7 +45,7 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor & self, const at::Tensor 
     auto result = at_npu::native::OpPreparation::apply_tensor_without_format(output_size, self.options().dtype(result_dtype));
     char *reduce_op_ptr = const_cast<char *>(reduce_op.data());
     char *hcom_ptr = const_cast<char *>(hcom.data());
-    char *comm_mode_ptr = const_cast<char *>(comm_mode_value.data());
+    char *comm_mode_ptr = const_cast<char *>(comm_mode_str.data());
     const at::Tensor &bias_real = bias.value_or(at::Tensor());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
     int64_t block_size = 0;
@@ -52,7 +53,7 @@ at::Tensor npu_mm_reduce_scatter_base(const at::Tensor & self, const at::Tensor 
     at::Tensor quant_scale;
     at::Tensor amax_out;
     if (isSocBelowAscend950) {
-        if (comm_mode_value == "ai_cpu") {
+        if (comm_mode_str == "ai_cpu") {
             TORCH_CHECK(!has_quant, "When comm_mode is ai_cpu, quantization not supported." + OPS_ERROR(ErrCode::PARAM));
             EXEC_NPU_CMD(aclnnMatmulReduceScatter, self, x2, bias_real, hcom_ptr, reduce_op_ptr, comm_turn, stream_mode, result);
         } else {
