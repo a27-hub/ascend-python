@@ -110,7 +110,6 @@ stages:
               gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
-        if: atomgit.event_name == 'pull_request'
         runs-on: [ self-hosted, arch=x64, os=euler ]
         steps:
           - name: Checkout
