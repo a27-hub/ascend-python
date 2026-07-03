@@ -14,7 +14,7 @@
 - 计算公式：
 
 $$
-out = \sum_{i=0}^{batch}(x1_i @ x2_i) * x1Scale_i * x2Scale
+out = \sum_{i=0}^{batch - 1}(x1_i @ x2_i) * x1Scale_i * x2Scale
 $$
 
 ## 函数原型
@@ -57,6 +57,8 @@ torch_npu.npu_quant_matmul_reduce_sum(x1, x2, *, x1_scale=None, x2_scale=None) -
   ```python
   import torch
   import torch_npu
+
+  torch_npu.npu.config.allow_internal_format = True
 
   b,m,k,n = (2,3,4,5)
   x1 = torch.ones((b, m, k), dtype=torch.int8).npu()

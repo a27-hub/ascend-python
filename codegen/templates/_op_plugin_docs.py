@@ -465,27 +465,26 @@ nmsed_num (Tensor) - shape为(batch)的1D张量，指定nmsed_boxes的有效数�
 _add_torch_npu_docstr(
     "npu_bert_apply_adam",
     """
-torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var,m,v))
+torch_npu.npu_bert_apply_adam(lr, beta1, beta2, epsilon, grad, max_grad_norm, global_grad_norm, weight_decay, step_size=None, adam_mode=0, *, out=(var, m, v)) -> (Tensor, Tensor, Tensor)
 功能描述
 adam结果计数。
 
 参数说明
 参数:
-var (Tensor) - float16或float32类型张量。
-m (Tensor) - 数据类型和shape与exp_avg相同。
-v (Tensor) - 数据类型和shape与exp_avg相同。
-lr (Scalar) - 数据类型与exp_avg相同。
-beta1 (Scalar) - 数据类型与exp_avg相同。
-beta2 (Scalar) - 数据类型与exp_avg相同。
-epsilon (Scalar) - 数据类型与exp_avg相同。
-grad (Tensor) - 数据类型和shape与exp_avg相同。
-max_grad_norm (Scalar) - 数据类型与exp_avg相同。
-global_grad_norm (Scalar) - 数据类型与exp_avg相同。
-weight_decay (Scalar) - 数据类型与exp_avg相同。
-step_size (Tensor，可选，默认值为None) - shape为(1, )，数据类型与exp_avg一致。
-adam_mode (Int，默认值为0) - 选择adam模式。0表示“adam”，1表示“mbert_adam”。
+lr (Scalar) - 必选参数，数据类型与var相同。
+beta1 (Scalar) - 必选参数，数据类型与var相同。
+beta2 (Scalar) - 必选参数，数据类型与var相同。
+epsilon (Scalar) - 必选参数，数据类型与var相同。
+grad (Tensor) - 必选参数，数据类型和shape与var相同。
+max_grad_norm (Scalar) - 必选参数，数据类型与var相同。
+global_grad_norm (Scalar) - 必选参数，数据类型与var相同。
+weight_decay (Scalar) - 必选参数，数据类型与var相同。
+step_size (Scalar) - 可选参数，默认值为None，数据类型与var一致。
+adam_mode (Int) - 可选参数，默认值为0，选择adam模式。0表示“adam”，1表示“mbert_adam”。
 关键字参数:
-out (Tensor，可选) - 输出张量。
+out (tuple[Tensor, Tensor, Tensor]) - 必选关键字参数，包含var、m、v三个输出张量的元组。其中var为float16或float32类型张量；m、v的数据类型和shape与var相同。
+输出说明
+返回包含var、m、v三个Tensor的元组，分别为out中传入的var、m、v输出张量。
 示例
 >>> var_in = torch.rand(321538).uniform_(-32., 21.).npu()
 >>> m_in = torch.zeros(321538).npu()
@@ -502,6 +501,43 @@ out (Tensor，可选) - 输出张量。
 >>> var_out
 tensor([ 14.7733, -30.1218,  -1.3647,  ..., -16.6840,   7.1518,   8.4872],
       device='npu:0')
+"""
+)
+
+
+_add_torch_npu_docstr(
+    "batch_norm_reduce",
+    """
+功能描述:
+该接口用于按BatchNorm通道维对输入Tensor进行规约，计算通道维以外维度上的元素和sum与平方和square_sum。
+
+接口原型:
+torch_npu.batch_norm_reduce(input, eps) -> (Tensor, Tensor)
+
+参数说明:
+input (Tensor): 必选参数，表示待规约的输入Tensor。支持4D Tensor，shape为(N, C, H, W)。数据类型支持float32、float16、bfloat16。
+eps (float): 必选参数，保留参数。该参数不参与sum和square_sum的计算，建议按BatchNorm常用配置传入1e-5。
+
+输出说明:
+sum (Tensor): 输入Tensor按通道维规约后的元素和，为1D float32 Tensor，长度为通道维长度。输入为4D Tensor且shape为(N, C, H, W)时，输出shape为(C,)。
+square_sum (Tensor): 输入Tensor按通道维规约后的平方和，为1D float32 Tensor，shape同sum。
+
+支持的型号:
+Atlas A3 训练系列产品/Atlas A3 推理系列产品
+Atlas A2 训练系列产品/Atlas A2 推理系列产品
+
+调用示例:
+import torch
+import torch_npu
+
+input = torch.randn(2, 3, 12, 12, dtype=torch.float32, device="npu")
+
+sum_out, square_sum_out = torch_npu.batch_norm_reduce(input, 1e-5)
+
+print("sum_out.shape:", sum_out.shape)
+print("sum_out.dtype:", sum_out.dtype)
+print("square_sum_out.shape:", square_sum_out.shape)
+print("square_sum_out.dtype:", square_sum_out.dtype)
 """
 )
 
@@ -644,7 +680,7 @@ torch_npu.npu_bounding_box_decode(rois, deltas, means0, means1, means2, means3, 
 根据rois和deltas生成标注框。自定义FasterRcnn算子。
 
 参数说明
-rois (Tensor) - 区域候选网络(RPN)生成的region of interests(ROI)。shape为(N,4)数据类型为float32或float16的2D张量。“N”表示ROI的数量， “4”表示“x0”、“x1”、“y0”和“y1”。
+rois (Tensor) - 区域候选网络(RPN)生成的regions of interest(ROIs)。shape为(N,4)，数据类型为float32或float16的2D张量。“N”表示ROI的数量，“4”表示“x0”、“x1”、“y0”和“y1”。
 deltas (Tensor) - RPN生成的ROI和真值框之间的绝对变化。shape为(N,4)数据类型为float32或float16的2D张量。“N”表示错误数，“4”表示“dx”、“dy”、“dw”和“dh”。
 means0 (Float) - index。
 means1 (Float) - index。
@@ -1571,7 +1607,7 @@ head_num: int类型, 代表head个数, 数据类型支持int64. 综合约束请�
 input_layout: string类型, 代表输入query、key、value的数据排布格式, 支持BSH、SBH、BSND、BNSD、TND(actual_seq_qlen/actual_seq_kvlen需传值); 后续章节如无特殊说明, S表示query或key、value的sequence length, Sq表示query的sequence length, Skv表示key、value的sequence length, SS表示Sq*Skv.
 pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 非varlen场景支持四维输入, 包含BNSS格式、BN1Skv格式、1NSS格式. 如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse_mode为0、2、3的下三角掩码场景, 可使能alibi位置编码压缩, 此时只需要输入原始PSE最后1024行进行内存优化, 即alibi_compress = ori_pse[:, :, -1024:, :], 参数每个batch不相同时, 输入BNHSkv(H=1024), 每个batch相同时, 输入1NHSkv(H=1024).
 padding_mask: Tensor类型, 暂不支持该传参.
-atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
+atten_mask: Tensor类型, 可选参数, 取值为1(或True)代表该位不参与计算(被遮蔽), 取值为0(或False)代表该位参与计算(被保留), 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
 scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1.
 keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留.
 pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明.
@@ -1622,7 +1658,7 @@ pre_tockens >= first_Skv.
 next_tockens范围无约束, 根据实际情况进行配置.
 当前模式下不支持可选输入pse.
 gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为True: 同AI Core计算并行; 设为False: 同AI Core计算串行.
-sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
+sync: 布尔型, 可选参数, 在gen_mask_parallel=True时控制是否同步等待dropout mask生成完成. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
 
 输出说明
 共7个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、int、int、int.
@@ -1876,7 +1912,7 @@ head_num: int类型, 代表head个数, 数据类型支持int64. 综合约束请�
 input_layout: string类型, 代表输入query、key、value的数据排布格式, 支持BSH、SBH、BSND、BNSD、TND(actual_seq_qlen/actual_seq_kvlen需传值); 后续章节如无特殊说明, S表示query或key、value的sequence length, Sq表示query的sequence length, Skv表示key、value的sequence length, SS表示Sq*Skv.
 pse: Tensor类型, 可选参数, 表示位置编码. 数据类型支持float16、bfloat16、float32, 数据格式支持ND. 非varlen场景支持四维输入, 包含BNSS格式、BN1Skv格式、1NSS格式. 如果非varlen场景Sq大于1024或varlen场景、每个batch的Sq与Skv等长且是sparse_mode为0、2、3的下三角掩码场景, 可使能alibi位置编码压缩, 此时只需要输入原始PSE最后1024行进行内存优化, 即alibi_compress = ori_pse[:, :, -1024:, :], 参数每个batch不相同时, 输入BNHSkv(H=1024), 每个batch相同时, 输入1NHSkv(H=1024).
 padding_mask: Tensor类型, 暂不支持该传参.
-atten_mask: Tensor类型, 可选参数, 取值为1代表该位不参与计算(不生效), 为0代表该位参与计算, 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
+atten_mask: Tensor类型, 可选参数, 取值为1(或True)代表该位不参与计算(被遮蔽), 取值为0(或False)代表该位参与计算(被保留), 数据类型支持bool、uint8, 数据格式支持ND, 输入shape类型支持BNSS格式、B1SS格式、11SS格式、SS格式. varlen场景只支持SS格式, SS分别是maxSq和maxSkv. 综合约束请见约束说明.
 scale: 浮点型, 可选参数, 代表缩放系数, 作为计算流中Muls的scalar值, 数据类型支持float, 默认值为1.
 keep_prob: 浮点型, 可选参数, 代表Dropout中1的比例, 取值范围为(0, 1]. 数据类型支持float, 默认值为1, 表示全部保留.
 pre_tockens: 整型, 用于稀疏计算的参数, 可选参数, 数据类型支持int64, 默认值为2147483647. 综合约束请见约束说明.
@@ -1927,7 +1963,7 @@ pre_tockens >= first_Skv.
 next_tockens范围无约束, 根据实际情况进行配置.
 当前模式下不支持可选输入pse.
 gen_mask_parallel: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为True: 同AI Core计算并行; 设为False: 同AI Core计算串行.
-sync: 布尔型, DSA生成dropout随机数向量mask的控制开关. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
+sync: 布尔型, 可选参数, 在gen_mask_parallel=True时控制是否同步等待dropout mask生成完成. 默认值为False: dropout mask异步生成; 设为True: dropout mask同步生成.
 
 输出说明
 共6个输出, 类型依次为Tensor、Tensor、Tensor、Tensor、Tensor、Tensor.
@@ -6587,7 +6623,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_scatter_nd_update(Tensor input, Tensor indices, Tensor updates) -> Tensor
 
 参数说明:
-input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维数只能是1~8维。
+input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维度只能是1~8维。
         Atlas 推理系列加速卡产品：数据类型支持float32、float16、bool。
         Atlas 训练系列产品：数据类型支持float32、float16、bool。
         Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：数据类型支持float32、float16、bool、bfloat16、int64、int8。
@@ -6838,7 +6874,7 @@ _add_torch_npu_docstr(
 torch_npu.npu_scatter_nd_update_(Tensor(a!) input, Tensor indices, Tensor updates) -> Tensor(a!)
 
 参数说明:
-input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维数只能是1~8维。
+input：Tensor类型，必选输入，源数据张量，数据格式支持ND，支持非连续的Tensor，数据类型需要与updates一致，维度只能是1~8维。
         Atlas 推理系列加速卡产品：数据类型支持float32、float16、bool。
         Atlas 训练系列产品：数据类型支持float32、float16、bool。
         Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件：数据类型支持float32、float16、bool、bfloat16、int64、int8。
@@ -7506,22 +7542,22 @@ _add_torch_npu_docstr(
 功能描述:
 算子功能: 该FFN算子提供MoeFFN和FFN的计算功能. 在没有专家分组(expert_tokens为空)时是FFN, 有专家分组时是MoeFFN.
 计算公式:
-out=activation(xW1+b1)W2+b2
+out=activation(xW_1+b_1)W_2+b_2
 激活层为geglu/swiglu/reglu时, 性能使能需要满足门槛要求, 即整网中FFN结构所对应的小算子中vector耗时30us且占比10%以上的用例方可尝试FFN融合算子; 或在不知道小算子性能的情况下, 尝试使能FFN, 若性能劣化则不使能FFN.
 
 接口原型:
 torch_npu.npu_ffn(Tensor x, Tensor weight1, Tensor weight2, str activation, *, int[]? expert_tokens=None, int[]? expert_tokens_index=None, Tensor? bias1=None, Tensor? bias2=None, Tensor? scale=None, Tensor? offset=None, Tensor? deq_scale1=None, Tensor? deq_scale2=None, Tensor? antiquant_scale1=None, Tensor? antiquant_scale2=None, Tensor? antiquant_offset1=None, Tensor? antiquant_offset2=None, int? inner_precise=None, ScalarType? output_dtype=None) -> Tensor
 
 参数说明:
-x: Tensor类型, 输入参数, 公式中的x, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 支持输入的维度最少是2维[M, K1], 最多是8维.
-weight1: Tensor类型, 专家的权重数据, 公式中的W1, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K1, N1]/[K1, N1].
-weight2: Tensor类型, 专家的权重数据, 公式中的W2, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K2, N2]/[K2, N2].
+x: Tensor类型, 必选参数, 输入参数, 公式中的x, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 支持输入的维度最少是2维[M, K1], 最多是8维.
+weight1: Tensor类型, 必选参数, 专家的权重数据, 公式中的W_1, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K1, N1]/[K1, N1].
+weight2: Tensor类型, 必选参数, 专家的权重数据, 公式中的W_2, 数据类型支持float16、bfloat16、int8, 数据格式支持ND, 输入在有/无专家时分别为[E, K2, N2]/[K2, N2].
 M表示token个数, 对应transform中的BS(B: Batch, 表示输入样本批量大小, S: Seq-Length, 表示输入样本序列长度); K1表示第一个matmul的输入通道数, 对应transform中的H(Head-Size, 表示隐藏层的大小); N1表示第一个matmul的输出通道数; K2表示第二个matmul的输入通道数; N2表示第二个matmul的输出通道数, 对应transform中的H; E表示有专家场景的专家数.
 expert_tokens: List类型, 可选参数. 代表各专家的token数, 数据类型支持int32, 数据格式支持ND, 若不为空时可支持的最大长度为256个.
 expert_tokens_index: List类型, 可选参数. 代表各专家计算token的索引值, 数据类型支持int32, 数据格式支持ND, 若不为空时可支持的最大长度为256个.
-bias1: Tensor类型, 可选参数. 权重数据修正值, 公式中的b1, 数据类型支持float16、float32、int32, 数据格式支持ND, 输入在有/无专家时分别为[E, N1]/[N1].
-bias2: Tensor类型, 可选参数. 权重数据修正值, 公式中的b2, 数据类型支持float16、float32、int32, 数据格式支持ND, 输入在有/无专家时分别为[E, N2]/[N2].
-activation: string类型, 代表使用的激活函数, 即输入参数中的activation. 当前仅支持fastgelu、gelu、relu、silu、geglu、swiglu、reglu.
+bias1: Tensor类型, 可选参数. 权重数据修正值, 公式中的b_1, 数据类型支持float16、float32、int32, 数据格式支持ND, 输入在有/无专家时分别为[E, N1]/[N1].
+bias2: Tensor类型, 可选参数. 权重数据修正值, 公式中的b_2, 数据类型支持float16、float32、int32, 数据格式支持ND, 输入在有/无专家时分别为[E, N2]/[N2].
+activation: string类型, 必选参数, 代表使用的激活函数, 即输入参数中的activation. 当前仅支持fastgelu、gelu、relu、silu、geglu、swiglu、reglu.
 scale: Tensor类型, 可选参数, 量化参数, 量化缩放系数, 数据类型支持float32, 数据格式支持ND. per-tensor下输入在有/无专家时均为一维向量, 输入元素个数在有/无专家时分别为[E]/[1]; per-channel下输入在有/无专家时为二维向量/一维向量, 输入元素个数在有/无专家时分别为[E, N1]/[N1].
 offset: Tensor类型, 可选参数, 量化参数, 量化偏移量, 数据类型支持float32, 数据格式支持ND, 一维向量, 输入元素个数在有/无专家时分别为[E]/[1].
 deq_scale1: Tensor类型, 可选参数, 量化参数, 第一组matmul的反量化缩放系数, 数据类型支持int64、float32、bfloat16, 数据格式支持ND, 输入在有/无专家时分别为[E, N1]/[N1].
@@ -10554,7 +10590,7 @@ _add_torch_npu_docstr(
     "npu_moe_finalize_routing",
     """
 接口原型：
-torch_npu.npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor
+torch_npu.npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0, int? k=1) -> Tensor
 
 功能描述
 算子功能: MoE计算中, 最后处理合并MoE FFN的输出结果.
@@ -10571,6 +10607,7 @@ scales: Tensor类型, 可选参数, 专家的权重, 要求是一个2D的Tensor,
 expanded_src_to_dst_row: Tensor类型, 必选参数, 保存每个专家处理结果的索引, 要求是一个1D的Tensor, 数据类型支持int32. shape支持(NUM_ROWS * K), NUM_ROWS为行数, K为从总的专家E中选出K个专家, drop_pad_mode参数为0时, Tensor中的值取值范围是[0, NUM_ROWS * K-1].
 export_for_source_row: Tensor类型, 可选参数, 每行处理的专家号, 要求是一个2D的Tensor, 数据类型支持int32. shape支持(NUM_ROWS, K), NUM_ROWS为行数, K为从总的专家E中选出K个专家.
 drop_pad_mode: int类型, 可选参数, 表示是否支持丢弃模式, 取值范围为0, 默认值为0.
+k: int类型, 可选参数, 表示每个token选出的top-K专家个数, 默认值为1. 当scales为None时，则需要指定k.
 
 输出说明
 out: Tensor类型, 最后处理合并MoE FFN的输出结果.
@@ -10607,7 +10644,8 @@ scales = torch.randn((num_rows, top_k), device=device, dtype=dtype)
 expert_for_source_row = torch.randint(low=0, high=expert_num, size=(num_rows, top_k), device=device, dtype=torch.int32)
 expanded_src_to_dst_row = torch.randint(low=0, high=num_rows * top_k, size=(num_rows * top_k,), device=device, dtype=torch.int32)
 drop_pad_mode = 0
-output = torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+k = 4
+output = torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 图模式调用
 import torch
 import torch.nn as nn
@@ -10620,8 +10658,8 @@ class GMMModel(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode):
-        return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+    def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k):
+        return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 def main():
     expert_num = 16
     token_len = 10
@@ -10637,9 +10675,10 @@ def main():
     expert_for_source_row = torch.randint(low=0, high=expert_num, size=(num_rows, top_k), device=device, dtype=torch.int32)
     expanded_src_to_dst_row = torch.randint(low=0, high=num_rows * top_k, size=(num_rows * top_k,), device=device, dtype=torch.int32)
     drop_pad_mode = 0
+    k = 4
     model = GMMModel().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
-    custom_output = model(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+    custom_output = model(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 if __name__ == '__main__':
     main()
 """
@@ -11032,25 +11071,25 @@ _add_torch_npu_docstr(
 算子功能：MoE（Mixture of Expert）的routing计算，根据3.28 torch_npu.npu_moe_gating_top_k_softmax的计算结果做routing处理，支持不量化和动态量化模式。
 
 接口原型
-torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=0, int[2] active_expert_range=[], int row_idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
+torch_npu.npu_moe_init_routing_v2(Tensor x, Tensor expert_idx, *, Tensor? scale=None, Tensor? offset=None, int active_num=-1, int expert_capacity=-1, int expert_num=-1, int drop_pad_mode=0, int expert_tokens_num_type=0, bool expert_tokens_num_flag=False, int quant_mode=-1, int[2] active_expert_range=[], int row_idx_type=0) -> (Tensor, Tensor, Tensor, Tensor)
 参数说明
-    x：Tensor类型，表示MoE的输入即token特征输入，要求为2D的Tensor，shape为(NUM_ROWS, H)，H代表每个Token的长度。数据类型支持float16、bfloat16、float32、int8，数据格式要求为ND。
-    expert_idx：Tensor类型，表示torch_npu.npu_moe_gating_top_k_softmax输出每一行特征对应的K个处理专家，要求是2D的Tensor，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持int32，数据格式要求为ND。
+    x：Tensor类型，必选参数，表示MoE的输入即token特征输入，要求为2D的Tensor，shape为(NUM_ROWS, H)，H代表每个Token的长度。数据类型支持float16、bfloat16、float32、int8，数据格式要求为ND。
+    expert_idx：Tensor类型，必选参数，表示torch_npu.npu_moe_gating_top_k_softmax输出每一行特征对应的K个处理专家，要求是2D的Tensor，shape为(NUM_ROWS, K)，且专家id不能超过专家数。数据类型支持int32，数据格式要求为ND。
     scale：Tensor类型，可选参数，用于计算量化结果的参数。数据类型支持float32，数据格式要求为ND。如果不输入表示计算时不使用scale，且输出expanded_scale中的值未定义。
         非量化场景下，如果输入则要求为1D的Tensor，shape为(NUM_ROWS,)。
         动态quant场景下，如果输入则要求为2D的Tensor，shape为(expert_end-expert_start, H)。
     offset：Tensor类型，可选参数，用于计算量化结果的偏移值。数据类型支持float32，数据格式要求为ND。
         在非量化场景下不输入。
         动态quant场景下不输入。
-    active_num：int类型，表示总的最大处理row数，输出expanded_x只有这么多行是有效的，当前入参校验需大于等于0。当前未使用，校验需等于NUM_ROWS*K。
-    expert_capacity：int类型，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
-    expert_num：int类型，表示专家数，要求大于0。expert_tokens_num_type为key_value模式时，取值范围为(0, 5120]；其他模式取值范围为(0, 10240]。
-    drop_pad_mode：int类型，表示是否为drop_pad场景，取值为0和1。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
-    expert_tokens_num_type：int类型，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量的累计值；2表示key_value模式，即输出的值为专家和对应专家处理token数量的累计值 。当前仅支持1和2。
-    expert_tokens_num_flag：bool类型，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
-    quant_mode：int类型，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。x数据类型为int8时仅支持-1，不可再量化。
-    active_expert_range：int类型长度为2的数组，表示活跃expert的范围。数组内值为[expert_start, expert_end]，表示活跃的expert范围在[expert_start, expert_end)区间内，左闭右开。要求数组内的值大于等于0，并且expert_end不大于expert_num。
-    row_idx_type：int类型，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。
+    active_num：int类型，可选参数，表示总的最大处理row数，输出expanded_x只有这么多行是有效的。在dropless场景下，取值需大于等于-1；-1和0均表示按全部tokens处理，大于0时表示Active场景，约束所有专家共同处理tokens总量。
+    expert_capacity：int类型，可选参数，表示每个专家能够处理的tokens数，取值范围大于等于0。当前未使用，仅校验非空。
+    expert_num：int类型，可选参数，表示专家数，要求大于0。expert_tokens_num_type为key_value模式时，取值范围为(0, 5120]；其他模式取值范围为(0, 10240]。
+    drop_pad_mode：int类型，可选参数，表示是否为drop_pad场景，取值为0和1。0表示dropless场景，该场景下不校验expert_capacity。1表示drop_pad场景。当前仅支持0。
+    expert_tokens_num_type：int类型，可选参数，取值为0、1和2。0表示cumsum模式；1表示count模式，即输出的值为各个专家处理的token数量；2表示key_value模式，即输出的值为专家和对应专家处理token数量的键值对。当前仅支持1和2。
+    expert_tokens_num_flag：bool类型，可选参数，表示是否输出expert_token_cumsum_or_count，默认False表示不输出。当前仅支持True。
+    quant_mode：int类型，可选参数，表示量化模式，支持取值为0、1、-1。0表示静态量化，-1表示不量化场景；1表示动态quant场景。当前仅支持-1和1。x数据类型为int8时仅支持-1，不可再量化。
+    active_expert_range：int类型长度为2的数组，可选参数，表示活跃expert的范围。数组内值为[expert_start, expert_end]，表示活跃的expert范围在[expert_start, expert_end)区间内，左闭右开。要求数组内的值大于等于0，并且expert_end不大于expert_num。
+    row_idx_type：int类型，可选参数，表示输出expanded_row_idx使用的索引类型，支持取值0和1，默认值0。0表示gather类型的索引；1表示scatter类型的索引。
 输出说明
     expanded_x：Tensor类型，根据expert_idx进行扩展过的特征，要求是2D的Tensor，shape为(NUM_ROWS*K, H)。非量化场景下数据类型同x；量化场景下数据类型支持int8。数据格式要求为ND。前available_idx_num*H个元素为有效数据，其余由row_idx_type决定。其中available_idx_num为expert_idx中在active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值未定义。
     expanded_row_idx：Tensor类型，expanded_x和x的映射关系， 要求是1D的Tensor，shape为(NUM_ROWS*K,)，数据类型支持int32，数据格式要求为ND。当row_idx_type为0时，有效元素与无效元素共存，其中无效元素由-1填充；当row_idx_type为1时，前available_idx_num个元素有效，其余无效元素值未定义。其中available_idx_num为expert_idx中在active_expert_range范围的元素的个数。量化场景下，当x的数据类型为int8时，输出值未定义。
@@ -15616,16 +15655,31 @@ _add_torch_npu_docstr(
     "npu_quant_max",
     """
 功能描述:
-算子功能: 对输入张量x进行量化操作，同时计算并输出绝对值最大值amax。
-计算公式: y = cast(x * scale, dst_dtype), amax = max(|x|)
+算子功能: 对输入张量x进行量化或分组量化操作，同时计算并输出绝对值最大值amax。
+计算公式:
+- group_list为 None或者 group_list 只有一个元素时：
+    y = cast(x * scale, dst_dtype), amax = max(|x|)
+- 其它：
+    $$
+    x\_g = x[group\_list[g-1] : group\_list[g], ...]
+    $$
+
+    $$
+    y = \text{Cast}(x\_g \times scale[g], \text{dst\_type}, \text{round\_mode})
+    $$
+
+    $$
+    amax[g] = \max(|x\_g|)
+    $$
+    其中，$x$ 表示输入张量，$x\_g$ 表示输入张量的第g组数据，g=0 时下界为0。
 
 接口原型:
-torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
 数据类型支持`float32`、`bfloat16`和`float16`。
-scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(1,)。数据格式支持ND。
+scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(num_groups,), num_groups为group_list的元素数量，group_list为None时，num_groups默认为1。数据格式支持ND。
 数据类型支持float32。
 round_mode: String类型, 可选参数, 舍入模式, 默认值为"rint"。支持的取值:
 - "rint": 四舍六入五成双舍入模式, 适用于float8_e5m2/float8_e4m3fn输出类型。
@@ -15635,11 +15689,12 @@ dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举�
 - torch_npu.hifloat8
 - torch.float8_e5m2
 - torch.float8_e4m3fn
+group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（cumsum模式），默认为None，数据类型支持int64。
 
 输出说明:
 返回两个Tensor:
 - y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
-- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[1]。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[num_groups]。
 
 约束说明:
 该接口支持推理、训练场景下使用。
