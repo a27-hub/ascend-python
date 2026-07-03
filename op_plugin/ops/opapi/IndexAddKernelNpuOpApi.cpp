@@ -61,31 +61,7 @@ at::Tensor& index_add_out(
             }
         }
         
-        // 分别判断 result 和 source * alpha 是否为 BF16，只在 BF16 时才转换为 Float
-        at::Tensor source_alpha = source * alpha;
-        
-        // result：只在 BF16 时转换为 Float
-        at::Tensor result_float = result;
-        bool is_result_bf16 = (result.scalar_type() == at::kBFloat16);
-        if (is_result_bf16) {
-            result_float = result.to(at::kFloat);
-        }
-        
-        // source * alpha：只在 BF16 时转换为 Float
-        at::Tensor source_alpha_float = source_alpha;
-        bool is_source_bf16 = (source_alpha.scalar_type() == at::kBFloat16);
-        if (is_source_bf16) {
-            source_alpha_float = source_alpha.to(at::kFloat);
-        }
-        
-        result_float.index_put_(indices, source_alpha_float, true);
-        
-        // 如果 result 原来是 BF16，转回 BF16
-        if (is_result_bf16) {
-            result.copy_(result_float.to(result.scalar_type()));
-        } else {
-            result.copy_(result_float);
-        }
+        result.index_put_(indices, source * alpha, true);
         return result;
     }
 
@@ -128,35 +104,11 @@ at::Tensor index_add(
             }
         }
         
-        // 分别判断 result 和 source * alpha 是否为 BF16，只在 BF16 时才转换为 Float
-        at::Tensor source_alpha = source * alpha;
-        
-        // result：只在 BF16 时转换为 Float
-        at::Tensor result_float = result;
-        bool is_result_bf16 = (result.scalar_type() == at::kBFloat16);
-        if (is_result_bf16) {
-            result_float = result.to(at::kFloat);
-        }
-        
-        // source * alpha：只在 BF16 时转换为 Float
-        at::Tensor source_alpha_float = source_alpha;
-        bool is_source_bf16 = (source_alpha.scalar_type() == at::kBFloat16);
-        if (is_source_bf16) {
-            source_alpha_float = source_alpha.to(at::kFloat);
-        }
-        
-        result_float.index_put_(indices, source_alpha_float, true);
-        
-        // 如果 result 原来是 BF16，转回 BF16
-        if (is_result_bf16) {
-            result.copy_(result_float.to(result.scalar_type()));
-        } else {
-            result.copy_(result_float);
-        }
+        result.index_put_(indices, source * alpha, true);
         return result;
     }
 
-    EXEC_NPU_CMD(aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result.copy_(self));
+    EXEC_NPU_CMD(aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result);
     return result;
 }
 
@@ -169,4 +121,4 @@ at::Tensor index_add(
     return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
 
-}
+} // namespace op_api
