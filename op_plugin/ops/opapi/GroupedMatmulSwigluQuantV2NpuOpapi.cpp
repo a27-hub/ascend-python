@@ -13,6 +13,8 @@
 
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
+#include <iostream>
+#include <sstream>
 
 namespace op_api {
 using npu_preparation = at_npu::native::OpPreparation;
@@ -42,6 +44,20 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
 {
     auto output_size = op_infer::array_to_small_vector({batch, dim_m, dim_n});
     y = npu_preparation::apply_tensor_without_format(output_size, options);
+}
+
+std::string int_array_ref_to_string(c10::IntArrayRef values)
+{
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (i != 0) {
+            oss << ",";
+        }
+        oss << values[i];
+    }
+    oss << "]";
+    return oss.str();
 }
 
 bool is_transpose_last_two_dims(const at::Tensor &tensor)
@@ -126,6 +142,23 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
     const bool is_mx_quant = weight_scale_dtype.has_value();
     const bool is_mx_weight_nz_multi = is_mx_weight_nz_multi_tensor(weight, weight_scale, is_weight_nz, is_mx_quant,
                                                                     mxfp8w4);
+    std::cerr << "[GMM_SWIGLU_V2_DEBUG] enter opapi"
+              << " weight_size=" << weight.size()
+              << " weight_scale_size=" << weight_scale.size()
+              << " weight0_sizes=" << int_array_ref_to_string(weight[DIM_0].sizes())
+              << " weight0_strides=" << int_array_ref_to_string(weight[DIM_0].strides())
+              << " weight0_dim=" << weight[DIM_0].dim()
+              << " weight0_format=" << at_npu::native::custom_ops::get_npu_format(weight[DIM_0])
+              << " weight_scale0_sizes=" << int_array_ref_to_string(weight_scale[DIM_0].sizes())
+              << " weight_scale0_strides=" << int_array_ref_to_string(weight_scale[DIM_0].strides())
+              << " weight_scale0_dim=" << weight_scale[DIM_0].dim()
+              << " x_sizes=" << int_array_ref_to_string(x.sizes())
+              << " x_strides=" << int_array_ref_to_string(x.strides())
+              << " is_weight_nz=" << is_weight_nz
+              << " is_mx_quant=" << is_mx_quant
+              << " is_mx_weight_nz_multi=" << is_mx_weight_nz_multi
+              << " mxfp8w4=" << mxfp8w4
+              << std::endl;
 
     if (mxfp8w4) {
         TORCH_CHECK(weight.size() >= NUM_ONE,
@@ -237,6 +270,25 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
                                    (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    std::cerr << "[GMM_SWIGLU_V2_DEBUG] inferred"
+              << " m=" << m
+              << " k=" << k
+              << " n=" << n
+              << " weight_trans=" << weight_trans
+              << " is_5d_nz=" << is_5d_nz
+              << " mxfp8w4_nz_input=" << mxfp8w4_nz_input
+              << " mxfp4_input=" << mxfp4_input
+              << " quant_dtype_has=" << quant_dtype.has_value()
+              << " quant_dtype=" << quant_dtype.value_or(-1)
+              << " quant_acl_dtype="
+              << (quant_dtype.has_value() ? static_cast<int64_t>(c10_npu::GetAclDataType(quant_dtype.value())) : -1)
+              << " x_dtype_has=" << x_dtype.has_value()
+              << " x_dtype=" << x_dtype.value_or(-1)
+              << " weight_dtype_has=" << weight_dtype.has_value()
+              << " weight_dtype=" << weight_dtype.value_or(-1)
+              << " weight_scale_dtype_has=" << weight_scale_dtype.has_value()
+              << " weight_scale_dtype=" << weight_scale_dtype.value_or(-1)
+              << std::endl;
     at::Tensor output;
     at::Tensor output_scale;
     if (!weight_scale_dtype.has_value()) {
@@ -270,6 +322,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
         c10::TensorOptions options = x.options().dtype(npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(weight_scale_dtype.value())));
 
         if (mxfp4_input && !is_weight_nz) {
+            std::cerr << "[GMM_SWIGLU_V2_DEBUG] output branch=non_nz_mxfp4"
+                      << " weight_trans=" << weight_trans
+                      << " n=" << n
+                      << std::endl;
             // In the non-NZ MXFP4 path, uint8 storage packs two FP4 values. For non-transposed weight,
             // n is the packed physical N from weight.shape[2], while CANN validates against logical N = n * 2.
             if (!weight_trans) {
@@ -291,10 +347,20 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                 }
             }
         } else {
+            std::cerr << "[GMM_SWIGLU_V2_DEBUG] output branch=default_mx_or_weight_nz"
+                      << " n=" << n
+                      << " output_n=" << n / MXFP_MULTI_BASE_SIZE
+                      << std::endl;
             create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
             create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
         }
     }
+    std::cerr << "[GMM_SWIGLU_V2_DEBUG] output allocated"
+              << " output_sizes=" << int_array_ref_to_string(output.sizes())
+              << " output_strides=" << int_array_ref_to_string(output.strides())
+              << " output_scale_sizes=" << int_array_ref_to_string(output_scale.sizes())
+              << " output_scale_strides=" << int_array_ref_to_string(output_scale.strides())
+              << std::endl;
 
     TensorWrapper x_wrapper = {x,
         x_dtype.has_value() ? c10_npu::GetAclDataType(x_dtype.value())
