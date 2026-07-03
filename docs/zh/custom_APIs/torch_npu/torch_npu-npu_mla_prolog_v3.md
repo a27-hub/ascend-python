@@ -78,6 +78,30 @@
         k^R = Cache(ROPE(x \cdot W^{KR}))
         $$
 
+  - ROPE操作补充说明
+
+    torch_npu.npu_mla_prolog_v3算子实现中融合rotary操作的interleave-half模式，该模式会先将奇数位的输入抽取到前半部分，将偶数位的输入抽取到后半部分，再进行half处理。
+
+    $$
+    x_1 = x[..., ::2]
+    $$
+
+    $$
+    x_2 = x[..., 1::2]
+    $$
+
+    $$
+    x_{part1} = torch.cat((x_1, x_2), dim = -1)
+    $$
+
+    $$
+    x_{part2} = torch.cat((-x_2, x_1), dim = -1)
+    $$
+
+    $$
+    y = x_{part1} * cos + x_{part2} * sin
+    $$
+
 ## 函数原型
 
 ```python
@@ -116,7 +140,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
 
 - **cache_index**（`Tensor`）：可选参数，用于存储`kv_cache`和`kr_cache`的索引。不支持非连续，数据格式支持ND，数据类型支持`int64`，当`cache_mode`为"PA_BSND"或"PA_NZ"：BS合轴时shape为[T]，BS非合轴时shape为[B, S]，取值范围需在[0, BlockNum*BlockSize)内; 当`cache_mode`为"PA_BLK_BSND"或"PA_BLK_NZ"：BS合轴时shape为[Sum(Ceil(S_i/BlockSize))]（S_i表示第i个batch的序列长度），BS非合轴时shape为[B, Ceil(S/BlockSize)]，取值范围需在[0, BlockNum)内；当`cache_mode`为"BSND"或"TND"：`cache_index`无需传入。当前不会对传入值的合法性进行校验，需用户自行保证。
 
-- **dequant_scale_x**（`Tensor`）：可选参数，token_x的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[T]或[B\*S, 1]；weight_quant_mode=3时，shape为[T, He/32]或[B*S, He/32]；weight_quant_mode=1时无需赋值。支持B=0,S=0,T=0的空Tensor。
+- **dequant_scale_x**（`Tensor`）：可选参数，token_x的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[T, 1]或[B\*S, 1]；weight_quant_mode=3时，shape为[T, He/32]或[B*S, He/32]；weight_quant_mode=1时无需赋值。支持B=0,S=0,T=0的空Tensor。
 
 - **dequant_scale_w_dq**（`Tensor`）：可选参数，weight_dq的反量化参数。不支持非连续，数据格式支持ND，数据类型支持`float`、`float8_e8m0`。weight_quant_mode=2/4/5时，shape为[1,Hcq]；weight_quant_mode=3时，shape为[Hcq, He/32]；weight_quant_mode=1时无需赋值。
 
@@ -210,7 +234,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     | Hcq          | q 低秩矩阵维度                 | 取值固定为：1536、 2048                                                           |
     | N            | Head-Num（多头数）             | 取值范围：1、2、4、8、16、32、64、128                                       |
     | Hckv         | kv 低秩矩阵维度                | 取值固定为：512                                                             |
-    | Dtile        | kv_cache的D轴维度              | 取值固定为：per-tile场景下为656，非per-tensor场景下为512                                                          |
+    | Dtile        | kv_cache的D轴维度              | 取值固定为：per-tile场景下为656，非per-tile场景下为512                                                          |
     | D            | qk 不含位置编码维度            | 取值固定为：128、 192                                                             |
     | Dr           | qk 位置编码维度                | 取值固定为：64                                                              |
     | Nkv          | kv 的 head 数                  | 取值固定为：1                                                               |
@@ -262,7 +286,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
       <td>
           weight_quant_mode=1, kv_cache_quant_mode=3, query_quant_mode=0<br>
           入参：weight_uq_qr传入pertoken量化数据，kv_cache传入per-tile量化数据，其余入参皆为非量化数据 <br>
-          dequant_scale_w_uq_qr、quant_scale_ckv字段必须传入，smooth_scale_cq字段可选传入 <br>
+          dequant_scale_w_uq_qr字段必须传入，smooth_scale_cq字段可选传入 <br>
           出参：kv_cache_out返回pertile量化数据，其余出参返回非量化数据
       </td>
     </tr>
@@ -828,7 +852,7 @@ torch_npu.npu_mla_prolog_v3(token_x, weight_dq, weight_uq_qr, weight_uk, weight_
     </tr>
     <tr>
       <td> dequant_scale_q_norm_out </td>
-      <td>float</td>
+      <td>无需赋值</td>
       <td>float</td>
       <td>float</td>
       <td>float</td>

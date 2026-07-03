@@ -51,7 +51,8 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 ## 约束说明
 
 - 该接口支持训练、推理场景下使用。
-- 该接口仅支持单算子模式调用。
+- 该接口支持单算子模式和图模式。
+- 图模式支持K-C、mx量化模式。
 - K-C量化场景下：
   - `x1_scale`、`x2_scale`仅支持1维输入，`x1_scale`要求shape为\(m, \)，`x2_scale`要求shape为\(n, \)。
   - `x2`仅支持ND格式输入。
@@ -61,22 +62,57 @@ torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, *, bias=None, x1_scale=
 - mx量化场景下：
   - `x1`、`x2`仅支持float8\_e4m3fn输入。k仅支持64的倍数。
   - `x1_scale`、`x2_scale`仅支持4维输入，`x1_scale`要求shape为\(m, b, k/64, 2\)；`perm_x2`为\[0,1,2\]时，`x2_scale`要求shape为\(b, k/64, n, 2\)，`perm_x2`为\[0,2,1\]时，`x2_scale`要求shape为\(b, n, k/64, 2\)。
+  - 支持将`x2`转为昇腾亲和的数据排布以提高搬运效率。需要调用`torch_npu.npu_format_cast`完成输入`x2`（weight）为昇腾亲和的数据排布功能。
 
 ## 调用示例
 
-单算子模式调用
+- 单算子模式调用
+  - K-C量化场景：
 
-```python
-import torch
-import torch_npu
+  ```python
+  import torch
+  import torch_npu
 
-M, K, N, Batch = 32, 512, 128, 32
-x1 = torch.randint(-5, 5, (M, Batch, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
-x2 = torch.randint(-5, 5, (Batch, K, N), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+  M, K, N, Batch = 32, 512, 128, 32
+  x1 = torch.randint(-5, 5, (M, Batch, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+  x2 = torch.randint(-5, 5, (Batch, K, N), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
 
-x1_scale = torch.randint(-3, 3, (M, ), dtype=torch.float32).npu()
-x2_scale = torch.randint(-3, 3, (N, ), dtype=torch.float32).npu()
-y = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype=torch.float16, x1_scale=x1_scale,
-                                        x2_scale=x2_scale, perm_x1=[1, 0, 2],
-                                        perm_x2=[0, 1, 2], perm_y=[1, 0, 2])
-```
+  x1_scale = torch.randint(-3, 3, (M, ), dtype=torch.float32).npu()
+  x2_scale = torch.randint(-3, 3, (N, ), dtype=torch.float32).npu()
+  y = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype=torch.float16, x1_scale=x1_scale,
+                                          x2_scale=x2_scale, perm_x1=[1, 0, 2],
+                                          perm_x2=[0, 1, 2], perm_y=[1, 0, 2])
+  ```
+
+- 图模式调用
+  - K-C量化场景：
+  
+    ```python
+    import torch
+    import torch_npu
+    import torchair as tng
+    from torchair.configs.compiler_config import CompilerConfig
+
+    torch.npu.set_compile_mode(jit_compile=True)
+    config = CompilerConfig()
+    npu_backend = tng.get_npu_backend(compiler_config=config)
+    M, K, N, Batch = 32, 512, 128, 32
+    x1 = torch.randint(-5, 5, (M, Batch, K), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+    x2 = torch.randint(-5, 5, (Batch, K, N), dtype=torch.int8).to(torch.float8_e4m3fn).npu()
+
+    x1_scale = torch.randint(-3, 3, (M, ), dtype=torch.float32).npu()
+    x2_scale = torch.randint(-3, 3, (N, ), dtype=torch.float32).npu()
+
+    class MyModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self, x1, x2, x1_scale, x2_scale, dtype, perm_x1, perm_x2, perm_y, batch_split_factor=1):
+            output = torch_npu.npu_transpose_quant_batchmatmul(x1, x2, dtype, x1_scale=x1_scale, x2_scale=x2_scale, perm_x1=perm_x1, perm_x2=perm_x2, perm_y=perm_y, batch_split_factor=batch_split_factor)
+            return output
+
+    model = MyModel().npu()
+    model = torch.compile(model, backend=npu_backend, dynamic=False)
+    output = model(x1.npu(), x2.npu(), x1_scale.npu(), x2_scale.npu(), torch.float16, (1, 0, 2), (0, 1, 2), (1, 0, 2)).to("cpu")
+    ```
+    
