@@ -1,28 +1,24 @@
 name: 'Only_Doc_Commit_Check'
 author: 'Ascend'
 version: '1.0.0'
-description: >
-  检查 PR 是否仅包含文档变更。
-  通过 clone 目标仓库并模拟 pre-merge，获取变更文件列表，
-  判断是否所有变更均为文档类型（.md/.rst/.log/.png/.jpg/.doc），
-  输出 JSON 结果供后续阶段判断是否跳过构建和 UT。
+description: 检查 PR 是否仅包含文档变更。
 inputs:
   pr_id:
-    description: "PR/MR ID，用于 fetch merge-request head 并执行预合并"
+    description: PR ID
     required: true
   target_branch:
-    description: "目标分支名称，用于 clone 和 merge 基准"
+    description: 目标分支名称
     required: true
   result_msg_path:
-    description: "结果消息输出目录路径（不含文件名）"
+    description: 结果消息输出目录路径
     required: false
     default: ""
   step_id:
-    description: "步骤ID，与 result_msg_path 拼接生成结果文件路径 <result_msg_path>/<step_id>_result.json"
+    description: 步骤ID
     required: false
     default: ""
   remote_url:
-    description: "目标仓库的远程 URL，Python 脚本将 clone 此仓库以执行 pre-merge 和 diff 分析"
+    description: 目标仓库的远程 URL
     required: true
     default: ""
 
