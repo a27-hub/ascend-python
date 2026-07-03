@@ -90,40 +90,6 @@ stages:
               task_name: wwq-op-plugin-test
               branch: 7.3.0
 
-      CodeCheck_pre_commit:
-        name: CodeCheck_pre_commit
-        runs-on: [ self-hosted, arch=x64, os=euler ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-          options: --user root
-        steps:
-          # - name: checkout
-          #   uses: checkout
-          - name: checkout 
-            uses: official_shell_plugin
-            with:
-              OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
-                  pwd
-                  cd ../../
-                  rm -rf *
-                  set -ex
-                  git config --global user.name wangwq129
-                  git config --global user.email wangweiqi22@huawei.com
-                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-                fi
-          - name: setup-python
-            uses: setup-python
-          - name: setup-python310
-            uses: official_shell_plugin
-            with:
-              OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                  ln -sf /usr/local/bin/python3.10 /usr/bin/python
-                  python --version
-          - name: pre-commit
-            uses: openlibing-pre-commit-action
-            with:
-              gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
         runs-on: [ self-hosted, arch=x64, os=euler ]
@@ -192,14 +158,14 @@ stages:
                 cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
                 python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-      monitor:
-        name: monitor
+      CodeCheck_pre_commit:
+        name: CodeCheck_pre_commit
         runs-on: [ self-hosted, arch=x64, os=euler ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
-          # - name: Checkout
+          # - name: checkout
           #   uses: checkout
           - name: checkout 
             uses: official_shell_plugin
@@ -214,54 +180,47 @@ stages:
                   git config --global user.email wangweiqi22@huawei.com
                   git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
                 fi
-          - name: Monitor
+          - name: setup-python
+            uses: setup-python
+          - name: setup-python310
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-                git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-                echo "------"
-                python3.8 cie/monitor/result_table_wrapper.py --owner ${owner} --repo_name ${repo} --pr_id ${pr_id} --access_token ${access_token} --appId ${appId} --secretKey ${secretKey} --pipeline_id ${pipeline_id} --pipeline_run_id ${pipeline_run_id}
+                  ln -sf /usr/local/bin/python3.10 /usr/bin/python
+                  python --version
+          - name: pre-commit
+            uses: openlibing-pre-commit-action
+            with:
+              gc_token: ${{ secrets.GC_TOKEN }}
 
-  #     CodeCheck_pre-commit:
-  #       name: CodeCheck_pre-commit
-  #       runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: Checkout
-  #           uses: checkout
-  #         - name: Pre-commit CodeCheck
-  #           uses: official_shell_plugin
-  #           with:
-  #             OFFICIAL_SHELL_SCRIPT_INPUT: |-
-  #               set +x
-  #               echo "pre-commit begin!!!"
-  #               echo "------------------------------------1. git clone code-----------------------------------"
-  #               rm -rf pylint
-  #               mkdir -p pylint
-  #               cd pylint
-  #               git clone ${repo_url} -b ${TARGET_BRANCH} precommit
-  #               cd precommit
-  #               git config --global user.email AtlasAccount@noreply.gitcode.com
-  #               git config --global user.name AtlasAccount
-
-  #     Only_doc_commit:
-  #       name: Only_doc_commit
-  #       runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: Checkout
-  #           uses: checkout
-  #         - name: Only Doc Commit Check
-  #           uses: official_shell_plugin
-  #           with:
-  #             OFFICIAL_SHELL_SCRIPT_INPUT: |-
-  #              git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie 
-  #              python cie/plugin/only_doc.py "${pr_id}" "${TARGET_BRANCH}" "${RESULT_MSG_PATH}/${STEP_ID}_result.json" "${test_REPO_URL}"
+      Only_doc_commit:
+        name: Only_doc_commit
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          # - name: checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+          - name: Only Doc Commit Check
+            uses: ./.gitcode/actions/Only_Doc_Commit_Check
+            with:
+              pr_id: ${{ inputs.pr_id }}
+              target_branch: ${{ inputs.TARGET_BRANCH }}
+              remote_url: ${{ REMOTE_URL }}
 
   # stage_2:
   #   name: stage_2
