@@ -216,7 +216,7 @@ stages:
                   git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
                 fi
           - name: Only Doc Commit Check
-            uses: ./.gitcode/actions/Only_Doc_Commit_Check
+            identifier: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
               pr_id: ${{ inputs.pr_id }}
               target_branch: ${{ inputs.TARGET_BRANCH }}
