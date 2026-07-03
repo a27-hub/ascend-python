@@ -21,7 +21,7 @@ inputs:
   owner:
     type: string
     description: "仓库所有者"
-    default: "Ascend"
+    default: "wangwq129"
   TARGET_BRANCH:
     type: string
     description: "目标分支"
@@ -33,11 +33,11 @@ inputs:
   org_name:
     type: string
     description: "组织名称"
-    default: "Ascend"
+    default: "wangwq129"
   pr_id:
     type: string
     description: "PR ID"
-    default: ${{ atomgit.event.pull_request.id }}
+    default: ${{ atomgit.event.pull_request.number }}
   py_version:
     type: string
     description: "Python版本"
