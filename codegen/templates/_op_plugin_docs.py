@@ -10553,7 +10553,7 @@ _add_torch_npu_docstr(
     "npu_moe_finalize_routing",
     """
 接口原型：
-torch_npu.npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0) -> Tensor
+torch_npu.npu_moe_finalize_routing(Tensor expanded_permuted_rows, Tensor? skip1, Tensor? skip2, Tensor? bias, Tensor? scales, Tensor expanded_src_to_dst_row, Tensor? export_for_source_row, int? drop_pad_mode=0, int? k=1) -> Tensor
 
 功能描述
 算子功能: MoE计算中, 最后处理合并MoE FFN的输出结果.
@@ -10570,6 +10570,7 @@ scales: Tensor类型, 可选参数, 专家的权重, 要求是一个2D的Tensor,
 expanded_src_to_dst_row: Tensor类型, 必选参数, 保存每个专家处理结果的索引, 要求是一个1D的Tensor, 数据类型支持int32. shape支持(NUM_ROWS * K), NUM_ROWS为行数, K为从总的专家E中选出K个专家, drop_pad_mode参数为0时, Tensor中的值取值范围是[0, NUM_ROWS * K-1].
 export_for_source_row: Tensor类型, 可选参数, 每行处理的专家号, 要求是一个2D的Tensor, 数据类型支持int32. shape支持(NUM_ROWS, K), NUM_ROWS为行数, K为从总的专家E中选出K个专家.
 drop_pad_mode: int类型, 可选参数, 表示是否支持丢弃模式, 取值范围为0, 默认值为0.
+k: int类型, 可选参数, 表示每个token选出的top-K专家个数, 默认值为1. 当scales为None时，则需要指定k.
 
 输出说明
 out: Tensor类型, 最后处理合并MoE FFN的输出结果.
@@ -10606,7 +10607,8 @@ scales = torch.randn((num_rows, top_k), device=device, dtype=dtype)
 expert_for_source_row = torch.randint(low=0, high=expert_num, size=(num_rows, top_k), device=device, dtype=torch.int32)
 expanded_src_to_dst_row = torch.randint(low=0, high=num_rows * top_k, size=(num_rows * top_k,), device=device, dtype=torch.int32)
 drop_pad_mode = 0
-output = torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+k = 4
+output = torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 图模式调用
 import torch
 import torch.nn as nn
@@ -10619,8 +10621,8 @@ class GMMModel(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode):
-        return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+    def forward(self, expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k):
+        return torch_npu.npu_moe_finalize_routing(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 def main():
     expert_num = 16
     token_len = 10
@@ -10636,9 +10638,10 @@ def main():
     expert_for_source_row = torch.randint(low=0, high=expert_num, size=(num_rows, top_k), device=device, dtype=torch.int32)
     expanded_src_to_dst_row = torch.randint(low=0, high=num_rows * top_k, size=(num_rows * top_k,), device=device, dtype=torch.int32)
     drop_pad_mode = 0
+    k = 4
     model = GMMModel().npu()
     model = torch.compile(model, backend=npu_backend, dynamic=False)
-    custom_output = model(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode)
+    custom_output = model(expanded_permuted_rows, skip1, skip2_optional, bias, scales, expanded_src_to_dst_row, expert_for_source_row, drop_pad_mode, k)
 if __name__ == '__main__':
     main()
 """
@@ -15615,16 +15618,31 @@ _add_torch_npu_docstr(
     "npu_quant_max",
     """
 功能描述:
-算子功能: 对输入张量x进行量化操作，同时计算并输出绝对值最大值amax。
-计算公式: y = cast(x * scale, dst_dtype), amax = max(|x|)
+算子功能: 对输入张量x进行量化或分组量化操作，同时计算并输出绝对值最大值amax。
+计算公式:
+- group_list为 None或者 group_list 只有一个元素时：
+    y = cast(x * scale, dst_dtype), amax = max(|x|)
+- 其它：
+    $$
+    x\_g = x[group\_list[g-1] : group\_list[g], ...]
+    $$
+
+    $$
+    y = \text{Cast}(x\_g \times scale[g], \text{dst\_type}, \text{round\_mode})
+    $$
+
+    $$
+    amax[g] = \max(|x\_g|)
+    $$
+    其中，$x$ 表示输入张量，$x\_g$ 表示输入张量的第g组数据，g=0 时下界为0。
 
 接口原型:
-torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291) -> (Tensor, Tensor)
+torch_npu.npu_quant_max(Tensor x, Tensor scale, *, str round_mode="rint", int dst_dtype=291, Tensor? group_list=None) -> (Tensor, Tensor)
 
 参数说明:
 x: Tensor类型, 输入张量, 待量化的数据。数据格式支持ND, 支持非连续的Tensor。输入最大支持8维。
 数据类型支持`float32`、`bfloat16`和`float16`。
-scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(1,)。数据格式支持ND。
+scale: Tensor类型, 量化缩放因子。仅支持1维Tensor, shape为(num_groups,), num_groups为group_list的元素数量，group_list为None时，num_groups默认为1。数据格式支持ND。
 数据类型支持float32。
 round_mode: String类型, 可选参数, 舍入模式, 默认值为"rint"。支持的取值:
 - "rint": 四舍六入五成双舍入模式, 适用于float8_e5m2/float8_e4m3fn输出类型。
@@ -15634,11 +15652,12 @@ dst_dtype: int类型, 可选参数, 指定输出y的数据类型对应的枚举�
 - torch_npu.hifloat8
 - torch.float8_e5m2
 - torch.float8_e4m3fn
+group_list: 可选输入张量，表示输入x在0轴上每个group的偏移（cumsum模式），默认为None，数据类型支持int64。
 
 输出说明:
 返回两个Tensor:
 - y: Tensor类型, 量化后的输出, 数据类型由dst_dtype指定, shape与输入x相同。
-- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[1]。
+- amax: Tensor类型, 输入x的绝对值最大值, 数据类型与输入x相同, 一维Tensor, shape为[num_groups]。
 
 约束说明:
 该接口支持推理、训练场景下使用。
@@ -15777,5 +15796,99 @@ def test_npu_apply_rotary_pos_emb():
 
 if __name__ == "__main__":
     test_npu_apply_rotary_pos_emb()
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_fused_linear_online_max_sum",
+    """
+torch_npu.npu_fused_linear_online_max_sum(Tensor input, Tensor weight, Tensor target, int vocab_start_index, int vocab_end_index, bool return_logits=False) -> (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor)
+功能描述
+词汇表并行场景下融合矩阵乘与交叉熵前处理算子。支持vocabulary_size维度切卡融合MatMul与CELoss，需与npu_fused_cross_entropy_loss_with_max_sum配合使用。
+
+参数说明
+input (Tensor) - MatMul计算的左矩阵，2维，数据类型支持bfloat16、float16。
+weight (Tensor) - MatMul计算的右矩阵，2维，数据类型与input一致。
+target (Tensor) - 目标索引，1维，数据类型支持int32、int64。
+vocab_start_index (int) - 本卡分配的词汇表起始索引。
+vocab_end_index (int) - 本卡分配的词汇表结束索引。
+return_logits (bool，默认值为False) - 是否返回MatMul结果。True走高性能分支，False走省显存分支。
+输出说明
+返回6个Tensor: logits_max(float32), sum_exp_logits(float32), predicted_logits(float32), target_mask(uint8), masked_target(与target类型一致), vocab_parallel_logits(与input类型一致，return_logits为False时返回None)。
+
+约束说明
+input与weight数据类型必须一致。vocabStartIndex不可小于0。vocabEndIndex不可小于vocabStartIndex。默认确定性实现。
+
+示例
+    >>> input_tensor = torch.randn(128, 64, dtype=torch.float16).npu()
+    >>> weight_tensor = torch.randn(256, 64, dtype=torch.float16).npu()
+    >>> target_tensor = torch.randint(0, 256, (128,), dtype=torch.int32).npu()
+    >>> logits_max, sum_exp_logits, predicted_logits, target_mask, masked_target, vocab_parallel_logits = \\
+    ...     torch_npu.npu_fused_linear_online_max_sum(input_tensor, weight_tensor, target_tensor, 0, 64, return_logits=True)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_fused_cross_entropy_loss_with_max_sum",
+    """
+torch_npu.npu_fused_cross_entropy_loss_with_max_sum(Tensor logits_max, Tensor sum_exp_logits, Tensor predicted_logits, *, float? label_smoothing=0.0, Tensor? input=None, Tensor? weight=None, Tensor? vocab_parallel_logits=None) -> (Tensor, Tensor)
+功能描述
+词汇表并行场景下交叉熵计算模块的一部分，计算Loss与Softmax结果。需配合npu_fused_linear_online_max_sum使用，多卡场景下需先对logits_max和sum_exp_logits执行全局通信。
+
+参数说明
+logits_max (Tensor) - 全局通信后的MatMul结果各行最大值，1维，数据类型float32。
+sum_exp_logits (Tensor) - 全局通信后的exp累加结果，1维，数据类型float32，shape与logits_max一致。
+predicted_logits (Tensor) - 全局通信后的预测logits，1维，数据类型float32，shape与logits_max一致。
+label_smoothing (float，默认值为0.0) - 标签平滑系数，当前仅支持0。
+input (Tensor，可选，默认值为None) - 当前仅支持None。
+weight (Tensor，可选，默认值为None) - 当前仅支持None。
+vocab_parallel_logits (Tensor，可选，默认值为None) - MatMul计算结果，传入时计算Softmax输出，不传入时返回None。
+输出说明
+返回2个Tensor: loss(float32)和softmax(float32，vocab_parallel_logits为None时返回None)。
+
+约束说明
+logits_max、sum_exp_logits、predicted_logits的shape需一致。label_smoothing当前仅支持0。默认确定性实现。
+
+示例
+    >>> logits_max = torch.randn(128, dtype=torch.float32).npu()
+    >>> sum_exp_logits = torch.randn(128, dtype=torch.float32).npu()
+    >>> predicted_logits = torch.randn(128, dtype=torch.float32).npu()
+    >>> vocab_parallel_logits = torch.randn(128, 256, dtype=torch.float16).npu()
+    >>> loss, softmax = torch_npu.npu_fused_cross_entropy_loss_with_max_sum(logits_max, sum_exp_logits, predicted_logits, vocab_parallel_logits=vocab_parallel_logits)
+"""
+)
+
+_add_torch_npu_docstr(
+    "npu_fused_linear_cross_entropy_loss_with_max_sum_backward",
+    """
+torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(Tensor grad, Tensor input, Tensor weight, Tensor target_mask, Tensor masked_target, float label_smoothing=0.0, Tensor? logits_max=None, Tensor? sum_exp_logits=None, Tensor? softmax=None) -> (Tensor, Tensor)
+功能描述
+词汇表并行场景下交叉熵损失计算的梯度算子，计算叶子节点input和weight的梯度。支持高性能模式（传入Softmax）和省显存模式（传入logits_max和sum_exp_logits）。
+
+参数说明
+grad (Tensor) - 当前节点的梯度，1维，数据类型float32。
+input (Tensor) - 矩阵乘的输入矩阵，2维，数据类型支持float16、bfloat16。
+weight (Tensor) - 矩阵乘的权重矩阵，2维，数据类型与input一致，第0维长度不支持小于128。
+target_mask (Tensor) - 目标词ID是否在范围内的位掩码，1维，数据类型uint8。
+masked_target (Tensor) - 目标词ID映射到当前设备的局部索引，1维，数据类型支持int32、int64。
+label_smoothing (float，默认值为0.0) - 标签平滑系数，当前仅支持0。
+logits_max (Tensor，可选) - 全局logits最大值，softmax为None时必须提供。
+sum_exp_logits (Tensor，可选) - 处理后的logits，softmax为None时必须提供。
+softmax (Tensor，可选) - Softmax计算结果，传入时走高性能模式。
+输出说明
+返回2个Tensor: input_grad(与input类型一致)和weight_grad(与input类型一致)。
+
+约束说明
+input与weight数据类型必须一致。softmax为None时logits_max和sum_exp_logits必须同时提供。默认确定性实现。
+
+示例
+    >>> grad = torch.randn(128, dtype=torch.float32).npu()
+    >>> input_tensor = torch.randn(128, 64, dtype=torch.float16).npu()
+    >>> weight_tensor = torch.randn(256, 64, dtype=torch.float16).npu()
+    >>> target_mask = torch.zeros((128 + 7) // 8, dtype=torch.uint8).npu()
+    >>> masked_target = torch.randint(0, 256, (128,), dtype=torch.int32).npu()
+    >>> softmax = torch.randn(128, 256, dtype=torch.float32).npu()
+    >>> input_grad, weight_grad = torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward(
+    ...     grad, input_tensor, weight_tensor, target_mask, masked_target, softmax=softmax)
 """
 )

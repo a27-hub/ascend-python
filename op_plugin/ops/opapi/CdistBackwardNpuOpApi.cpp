@@ -90,7 +90,6 @@ at::Tensor _cdist_backward(
         output_size,
         x1_broadcast.options().dtype(output_dtype));
 
-
     EXEC_NPU_CMD(aclnnCdistBackward, grad_contiguous, x1_broadcast, x2_broadcast, cdist_contiguous, p_cast, out);
 
     return out;
