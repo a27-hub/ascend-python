@@ -4537,6 +4537,7 @@ class TestGroupedMatmulSwigluQuantV2(TestCase):
             x_scale = torch.empty((M, math.ceil(K / 64), 2), dtype=torch.uint8)
             group_list = torch.zeros(E, dtype=torch.int64)
             expected_output_n = N // 2
+            expected_output_n //= 2
             output, output_scale = torch_npu.npu_grouped_matmul_swiglu_quant_v2(
                 x.npu(), weight, weight_scale, x_scale.npu(), group_list.npu(),
                 dequant_mode=2, dequant_dtype=6, quant_mode=2,

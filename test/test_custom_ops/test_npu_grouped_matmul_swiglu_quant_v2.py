@@ -417,7 +417,7 @@ class TestNpuGroupedMatmulSwigluQuant(TestCase):
             x_dtype=torch_npu.float4_e2m1fn_x2,
             weight_dtype=torch_npu.float4_e2m1fn_x2)
         self._assert_gmm_swiglu_quant_shape(
-            output, output_scale, (M, N // 2), (M, math.ceil((N // 2) / 64), 2))
+            output, output_scale, (M, N // 4), (M, math.ceil((N // 2) / 64), 2))
 
     @unittest.skipIf(
         not hasattr(torch_npu, "float4_e2m1fn_x2"),

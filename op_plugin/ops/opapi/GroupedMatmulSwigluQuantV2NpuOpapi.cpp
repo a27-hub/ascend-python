@@ -270,6 +270,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                     x_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1)) &&
                                    (weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E1M2) ||
                                     weight_dtype.value() == static_cast<int64_t>(c10_npu::DType::FLOAT4_E2M1));
+    const aclDataType quant_acl_dtype = quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()) :
+                                                                  aclDataType::ACL_FLOAT;
+    const bool is_fp4_output = quant_acl_dtype == aclDataType::ACL_FLOAT4_E2M1 ||
+                               quant_acl_dtype == aclDataType::ACL_FLOAT4_E1M2;
     std::cerr << "[GMM_SWIGLU_V2_DEBUG] inferred"
               << " m=" << m
               << " k=" << k
@@ -280,8 +284,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
               << " mxfp4_input=" << mxfp4_input
               << " quant_dtype_has=" << quant_dtype.has_value()
               << " quant_dtype=" << quant_dtype.value_or(-1)
-              << " quant_acl_dtype="
-              << (quant_dtype.has_value() ? static_cast<int64_t>(c10_npu::GetAclDataType(quant_dtype.value())) : -1)
+              << " quant_acl_dtype=" << static_cast<int64_t>(quant_acl_dtype)
               << " x_dtype_has=" << x_dtype.has_value()
               << " x_dtype=" << x_dtype.value_or(-1)
               << " weight_dtype_has=" << weight_dtype.has_value()
@@ -351,7 +354,10 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                       << " n=" << n
                       << " output_n=" << n / MXFP_MULTI_BASE_SIZE
                       << std::endl;
-            create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
+            size_t output_n = (is_mx_weight_nz_multi && is_fp4_output) ?
+                                  n / MXFP_MULTI_BASE_SIZE / NUM_TWO :
+                                  n / MXFP_MULTI_BASE_SIZE;
+            create_new_tensor(output, m, output_n, options_output);
             create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
         }
     }
@@ -377,7 +383,7 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                                 : (!x_scale.numel() ? aclDataType::ACL_FLOAT
                                 : npu_preparation::convert_to_acl_data_type(x_scale.scalar_type()))};
     TensorWrapper output_wrapper = {output,
-        quant_dtype.has_value() ? c10_npu::GetAclDataType(quant_dtype.value()): aclDataType::ACL_FLOAT};
+        quant_acl_dtype};
     TensorWrapper output_scale_wrapper = {output_scale,
         weight_scale_dtype.has_value() ? aclDataType::ACL_FLOAT8_E8M0 : aclDataType::ACL_FLOAT};
 
