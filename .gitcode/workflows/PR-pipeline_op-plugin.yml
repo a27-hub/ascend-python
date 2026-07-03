@@ -3,8 +3,14 @@ name: PR-pipeline_op-plugin
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ "7.3.0", "7.3.0_test" ]
-    types: [ open, update, reopen ]
+    branches:
+      - 7.3.0
+      - 7.3.0_test
+    types:
+      - open
+      - update
+      - reopen
+    code-update: false
 inputs:
   repo:
     type: string
