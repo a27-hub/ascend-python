@@ -6448,7 +6448,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     # [E, ceil(K/64), N, 2]. The tail axis is fixed to 2 and cannot be used as logical N.
     if weight_scale_dtype is not None:
         if is_mx_weight_nz_multi:
-            n = weight[0].size(1)
+            n = weight_scale[0].size(1)
         else:
             torch._check(
                 weight_scale[0].dim() == 4,
