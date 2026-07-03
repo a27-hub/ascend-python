@@ -43,6 +43,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(
     TORCH_CHECK(self.size(0) % world_size == 0, "The M-axis in input of Matmul should be be divisible by world_size",
                 OPS_ERROR(ErrCode::PARAM));
     c10::string_view comm_mode_value = comm_mode.value_or("");
+    std::string comm_mode_str = std::string(comm_mode_value);
     at::IntArrayRef group_size_list = group_sizes.value_or(at::IntArrayRef{});
     int64_t group_size = op_plugin::utils::check_and_get_group_size(group_size_list);
     TORCH_CHECK(group_size != -1, "Invalid group_sizes.", OPS_ERROR(ErrCode::PARAM));
@@ -69,7 +70,7 @@ std::tuple<at::Tensor, at::Tensor> npu_quant_mm_reduce_scatter(
     auto result = npu_preparation::apply_tensor_without_format(output_size, options);
     char* reduce_op_ptr = const_cast<char*>(reduce_op.data());
     char* hcom_ptr = const_cast<char*>(hcom.data());
-    char *comm_mode_ptr = const_cast<char *>(comm_mode_value.data());
+    char *comm_mode_ptr = const_cast<char *>(comm_mode_str.data());
     const at::Tensor& bias_real = bias.value_or(at::Tensor());
     const at::Tensor& quant_scale_real = quant_scale.value_or(at::Tensor());
     int64_t stream_mode = ACL_STOP_ON_FAILURE;
