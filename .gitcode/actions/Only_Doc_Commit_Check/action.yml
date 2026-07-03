@@ -1,7 +1,7 @@
 name: 'Only_Doc_Commit_Check'
 author: 'Ascend'
 version: '1.0.0'
-description: 检查 PR 是否仅包含文档变更。
+description: 'Check if the PR contains only documentation'
 inputs:
   pr_id:
     description: PR ID
