@@ -9,26 +9,12 @@
  *
  */
 
+import core from '@actions/core'
+
 const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs").promises;
 const fsSync = require("fs");
-
-// ============================================================
-// @actions/core polyfill
-// GitCode/AtomGit 通过 INPUT_<CAPITALIZED_NAME> 环境变量传递 inputs
-// ============================================================
-
-function getInput(name, options) {
-    const envKey = `INPUT_${name.toUpperCase()}`;
-    const val = process.env[envKey] || "";
-    const altVal = process.env[`INPUT_${name}`] || "";
-    const result = val || altVal;
-    if (!result && options && options.required) {
-        throw new Error(`Input required and not supplied: ${name}`);
-    }
-    return result.trim();
-}
 
 function info(message) {
     process.stdout.write(`${message}\n`);
@@ -103,11 +89,11 @@ function execShellScript(script, args, cwd, timeoutMs) {
 async function run() {
     try {
         // 读取输入参数
-        const pr_id = getInput("pr_id", { required: true });
-        const target_branch = getInput("target_branch", { required: true });
-        const remote_url = getInput("remote_url", { required: true });
-        const result_msg_path = getInput("result_msg_path");
-        const step_id = getInput("step_id");
+        const pr_id = core.getInput("pr_id", { required: true });
+        const target_branch = core.getInput("target_branch", { required: true });
+        const remote_url = core.getInput("remote_url", { required: true });
+        const result_msg_path = core.getInput("result_msg_path");
+        const step_id = core.getInput("step_id");
 
         // 获取脚本路径
         const scriptPath = path.resolve(__dirname, "./only_doc_check.sh");
