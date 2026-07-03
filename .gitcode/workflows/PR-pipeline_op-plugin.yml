@@ -2,9 +2,6 @@ name: PR-pipeline_op-plugin
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "7.3.0", "7.3.0_test" ]
-    paths: [ ".gitcode/workflows/PR-pipeline_op-plugin.yml" ]
   pull_request:
     branches: [ "7.3.0", "7.3.0_test" ]
     types: [ open, update, reopen ]
@@ -12,7 +9,7 @@ inputs:
   repo:
     type: string
     description: "仓库名称"
-    default: "${gitcode_REPOSITORY_NAME}"
+    default: ${{ atomgit.event.repository.name }}
   owner:
     type: string
     description: "仓库所有者"
@@ -20,15 +17,15 @@ inputs:
   TARGET_BRANCH:
     type: string
     description: "目标分支"
-    default: "${gitcode_TARGET_BRANCH}"
+    default: ${{ atomgit.event.pull_request.base.ref }}
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
-    default: "${test_REPO_URL}"
+    default: ${{ atomgit.url }}
   pr_id:
     type: string
     description: "PR ID"
-    default: "${MERGE_ID}"
+    default: ${{ atomgit.event.pull_request.id }}
   py_version:
     type: string
     description: "Python版本"
@@ -37,6 +34,8 @@ inputs:
     type: string
     description: "工作目录"
     default: "/workspace"
+
+env:
   CP_pipeline_run_id:
     type: string
     description: "流水线运行ID"
