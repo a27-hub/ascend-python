@@ -204,7 +204,7 @@ torch_npu.npu_fused_infer_attention_score_v2(query, key, value, *, query_rope=No
 
 ## 返回值说明<a name="zh-cn_topic_0000001832267082_section22231435517"></a>
 
-- **attention\_out**（`Tensor`）：公式中的输出，数据类型支持`float16`、`bfloat16`、`int8`。数据格式支持ND。限制：该输出的D维度与`value`的D保持一致，其余维度需要与入参`query`的shape保持一致。
+- **attention\_out**（`Tensor`）：公式中的输出，数据类型支持`float16`、`bfloat16`、`int8`。数据格式支持ND。限制：输出的D维度需要与`value`的D保持一致，其余维度需要与入参`query`的shape保持一致。
 - **softmax\_lse**（`Tensor`）：ring attention算法对query乘key的结果先取max得到softmax\_max，query乘key的结果减去softmax\_max，再取exp，最后取sum，得到softmax\_sum，最后对softmax\_sum取log，再加上softmax\_max得到的结果。数据类型支持`float32`，当`return_softmax_lse`为True时，一般情况下输出shape为\(B, Q\_N, Q\_S, 1\)，若input\_layout为TND/NTD\_TND时，输出shape为\(T,Q\_N,1\)；当`return_softmax_lse`为False时，输出shape为\[1\]的值为0的Tensor。
 
 ## 约束说明<a name="zh-cn_topic_0000001832267082_section12345537164214"></a>
