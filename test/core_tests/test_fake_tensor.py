@@ -5932,6 +5932,24 @@ class TestSwigluMxQuant(TestCase):
             self.assertEqual(mxscale_npu.dtype, torch.uint8)
 
 
+class TestSwigluGroupQuantBackward(TestCase):
+    def test_npu_swiglu_group_quant_backward_meta(self):
+        with FakeTensorMode():
+            grad_y = torch.randn([4, 8], dtype=torch.float32, device='npu')
+            x = torch.randn([4, 16], dtype=torch.float32, device='npu')
+            weight = torch.randn([4, 1], dtype=torch.float32, device='npu')
+            y_origin = torch.randn([4, 8], dtype=torch.float32, device='npu')
+            group_index = None
+            clamp_limit = 0.0
+            grad_x_npu, grad_weight_npu = torch_npu.npu_swiglu_group_quant_backward(grad_y, x, weight=weight,
+                                                                           y_origin=y_origin, group_index=group_index,
+                                                                           clamp_limit=clamp_limit)
+            self.assertEqual(grad_x_npu.shape, torch.Size([4, 16]))
+            self.assertEqual(grad_x_npu.dtype, torch.float32)
+            self.assertEqual(grad_weight_npu.shape, torch.Size([4, 1]))
+            self.assertEqual(grad_weight_npu.dtype, torch.float32)
+
+
 @unittest.skip("skip until CANN is updated to support aclnnDynamicBlockMxQuant")
 class TestNpuDynamicBlockMxQuant(TestCase):
     def test_npu_dynamic_block_mx_quant_meta(self):
@@ -5961,6 +5979,23 @@ class TestNpuDynamicBlockMxQuant(TestCase):
         self.assertEqual(actual_scale1.dtype, fake_scale1.dtype)
         self.assertEqual(actual_scale2.dtype, fake_scale2.dtype)
 
+@unittest.skip("skip until CANN is updated to support aclnnGroupedQuantMax")
+class TestNpuQuantMax(TestCase):
+    def test_npu_quant_max(self):
+        with FakeTensorMode():
+            x = torch.randn((16, 128), dtype=torch.bfloat16).npu()
+            scale = torch.randn((2,), dtype=torch.float32).npu()
+            # group_list must be a 1-D int64 tensor whose last value equals x.shape[0]
+            group_list = torch.tensor([8, 16], dtype=torch.int64).npu()
+
+            y, amax = torch_npu.npu_quant_max(x, scale, round_mode="rint", dst_dtype=291, group_list=group_list)
+            self.assertTrue(y.shape == x.shape)
+            self.assertEqual(y.dtype, torch.float8_e5m2)
+            self.assertTrue(amax.shape == torch.Size([2]))
+            self.assertEqual(amax.dtype, x.dtype)
+            self.assertTrue(group_list.shape == torch.Size([2]))
+            self.assertEqual(group_list.dtype, torch.int64)
+            self.assertEqual(group_list.dim(), 1)
 
 class TestNpuMultiHeadAttention(TestCase):
     def test_npu_multi_head_attention_meta(self):

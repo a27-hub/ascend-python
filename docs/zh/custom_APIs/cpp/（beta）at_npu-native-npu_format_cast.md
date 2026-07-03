@@ -7,7 +7,7 @@ torch_npu\csrc\core\npu\NPUFormat.h
 ## 函数原型
 
 ```cpp
-at::Tensor at_npu::native::npu_format_cast(const at::Tensor& self, int64_t acl_format)
+at::Tensor at_npu::native::npu_format_cast(const at::Tensor& self, int64_t acl_format, c10::optional<int64_t> customize_dtype = c10::nullopt)
 ```
 
 ## 功能说明
