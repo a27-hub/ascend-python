@@ -69,11 +69,7 @@ at::Tensor linalg_vector_norm(
         return acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype);
     }
 
-    DO_COMPATIBILITY(aclnnLinalgVectorNorm,
-                     acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
-    auto dim = opt_dim.value_or(at::IntArrayRef{});
-    auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    
+
     // 1. 根据 self 的类型获取计算用的 dtype
     auto dtype = get_acc_dtype(self);
     if (opt_dtype.has_value()) {
@@ -82,6 +78,14 @@ at::Tensor linalg_vector_norm(
     
     // 2. 将 self 转换为计算用的 dtype
     at::Tensor self_acc = convert_to_acc_dtype(self, dtype);
+
+
+    DO_COMPATIBILITY(aclnnLinalgVectorNorm,
+                     acl_op::linalg_vector_norm(self, scalar_ord, opt_dim, keepdim, opt_dtype));
+    auto dim = opt_dim.value_or(at::IntArrayRef{});
+    auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
+    
+
     
     at::Tensor out = npu_preparation::apply_tensor_without_format(output_size, self_acc.options().dtype(dtype));
     EXEC_NPU_CMD(aclnnLinalgVectorNorm, self_acc, scalar_ord, dim, keepdim, dtype, out);
@@ -100,11 +104,6 @@ at::Tensor& linalg_vector_norm_out(
         return acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result);
     }
 
-    DO_COMPATIBILITY(aclnnLinalgVectorNorm,
-                     acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result));
-    auto dim = opt_dim.value_or(at::IntArrayRef{});
-    auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
-    
     // 1. 根据 self 的类型获取计算用的 dtype
     auto dtype = get_acc_dtype(self);
     if (opt_dtype.has_value()) {
@@ -116,6 +115,14 @@ at::Tensor& linalg_vector_norm_out(
     
     // 3. 将 result 转换为计算用的 dtype
     at::Tensor result_acc = convert_to_acc_dtype(result, dtype);
+
+
+    DO_COMPATIBILITY(aclnnLinalgVectorNorm,
+                     acl_op::linalg_vector_norm_out(self, scalar_ord, opt_dim, keepdim, opt_dtype, result));
+    auto dim = opt_dim.value_or(at::IntArrayRef{});
+    auto output_size = op_infer::reduce_ops_npu_output_size(self, dim, keepdim);
+    
+
     
     npu_preparation::check_tensor(
         {self_acc},
@@ -124,10 +131,11 @@ at::Tensor& linalg_vector_norm_out(
         output_size);
     EXEC_NPU_CMD(aclnnLinalgVectorNorm, self_acc, scalar_ord, dim, keepdim, dtype, result_acc);
     
-    // 4. 如果 result 原始类型和计算 dtype 不同，拷贝回原始 dtype
-    if (result.scalar_type() != dtype) {
-        result.copy_(result_acc);
-    }
+    // // 4. 如果 result 原始类型和计算 dtype 不同，拷贝回原始 dtype
+    //  是不是不需要呀，因为后面还会有算子。如果又回到double 
+    // if (result.scalar_type() != dtype) {
+    //     result.copy_(result_acc);
+    // }
     return result;
 }
 }
