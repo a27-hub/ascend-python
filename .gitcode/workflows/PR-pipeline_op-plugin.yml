@@ -100,7 +100,7 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "main" ] || [ "$TARGET_BRANCH" = "main_wwq" ]; then
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
                   pwd
                   cd ../../
                   rm -rf *
@@ -131,7 +131,7 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "main" ] || [ "$TARGET_BRANCH" = "main_wwq" ]; then
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
                   pwd
                   cd ../../
                   rm -rf *
@@ -164,7 +164,7 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "main" ] || [ "$TARGET_BRANCH" = "main_wwq" ]; then
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
                   pwd
                   cd ../../
                   rm -rf *
@@ -184,23 +184,37 @@ stages:
                 cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
                 python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
-  #     monitor:
-  #       name: monitor
-  #       runs-on: [ self-hosted, arch=x64, os=euler ]
-  #       container:
-  #         image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
-  #         options: --user root
-  #       steps:
-  #         - name: Checkout
-  #           uses: checkout
-  #         - name: Monitor
-  #           uses: official_shell_plugin
-  #           with:
-  #             OFFICIAL_SHELL_SCRIPT_INPUT: |-
-  #               pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-  #               git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-  #               echo "------"
-  #               python3.8 cie/monitor/result_table_wrapper.py --owner ${owner} --repo_name ${repo} --pr_id ${pr_id} --access_token ${access_token} --appId ${appId} --secretKey ${secretKey} --pipeline_id ${pipeline_id} --pipeline_run_id ${pipeline_run_id}
+      monitor:
+        name: monitor
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          # - name: Checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+
+          - name: Monitor
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+                git clone https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+                echo "------"
+                python3.8 cie/monitor/result_table_wrapper.py --owner ${owner} --repo_name ${repo} --pr_id ${pr_id} --access_token ${access_token} --appId ${appId} --secretKey ${secretKey} --pipeline_id ${pipeline_id} --pipeline_run_id ${pipeline_run_id}
 
   #     CodeCheck_pre-commit:
   #       name: CodeCheck_pre-commit
