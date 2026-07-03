@@ -12,7 +12,7 @@ inputs:
   repo:
     type: string
     description: "仓库名称"
-    default: "${test_REPOSITORY_NAME}"
+    default: "${gitcode_REPOSITORY_NAME}"
   owner:
     type: string
     description: "仓库所有者"
@@ -20,7 +20,7 @@ inputs:
   TARGET_BRANCH:
     type: string
     description: "目标分支"
-    default: "${test_TARGET_BRANCH}"
+    default: "${gitcode_TARGET_BRANCH}"
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
@@ -92,6 +92,7 @@ stages:
         steps:
           - name: hello action
             run: |
+              env
               echo "hello action"
           - name: Login to CodeArts
             uses: codearts-login
@@ -131,6 +132,7 @@ stages:
               gc_token: ${{ secrets.GC_TOKEN }}
       SCA:
         name: SCA
+        if: atomgit.event_name == 'pull_request'
         runs-on: [ self-hosted, arch=x64, os=euler ]
         steps:
           - name: Checkout
@@ -164,7 +166,7 @@ stages:
                 wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
                 unzip -q ApiGateway-python-sdk-2.0.7.zip
                 cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-                python3.8 cie/codecheck/anti_poison.py --created_appId ${created_appId} --created_secretKey ${created_secretKey} --result_appId ${result_appId} --result_secretKey ${result_secretKey} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+                python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
   #     monitor:
   #       name: monitor
