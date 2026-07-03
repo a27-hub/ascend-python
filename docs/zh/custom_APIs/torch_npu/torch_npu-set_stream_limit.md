@@ -10,7 +10,7 @@
 ## 功能说明
 
 - 设置指定Stream的Device资源限制。
-- 本接口应在调用`torch.npu.set_device_limit`接口之后且在算子执行之前调用，如果对同一stream进行多次设置，将以最后一次设置为准。
+- 本接口应在算子执行之前调用，如果对同一stream进行多次设置，将以最后一次设置为准。
 - 该接口设置完后，可以跨线程传递stream使用。
 
 ## 函数原型
@@ -22,8 +22,8 @@ torch.npu.set_stream_limit(stream, cube_num=-1, vector_num=-1) -> None
 ## 参数说明
 
 - **stream** (`torch_npu.npu.Stream`)：必选参数，设置控核的流。
-- **cube_num** (`int`)：可选参数，设置的cube的核数，默认为-1不设置分核。
-- **vector_num** (`int`)：可选参数，设置的vector的核数，默认为-1不设置分核。
+- **cube_num** (`int`)：可选参数，设置的cube的核数，默认为-1不设置控核。
+- **vector_num** (`int`)：可选参数，设置的vector的核数，默认为-1不设置控核。
 
 ## 返回值说明
 
