@@ -44,46 +44,16 @@ inputs:
     default: "/workspace"
 
 env:
-  CP_pipeline_run_id:
-    type: string
-    description: "流水线运行ID"
-    default: "${PIPELINE_RUN_ID}"
-  CP_repo_url:
-    type: string
-    description: "自定义仓库URL"
-    default: "${test_REPO_URL}"
-  CP_merge_id:
-    type: string
-    description: "自定义合并ID"
-    default: "${MERGE_ID}"
-  CP_target_branch:
-    type: string
-    description: "自定义目标分支"
-    default: "${test_TARGET_BRANCH}"
-  img_2_6_0:
-    type: string
-    description: "PyTorch 2.6.0 ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.6.0_a2_aarch64_builder:20260418"
-  img_2_7_1:
-    type: string
-    description: "PyTorch 2.7.1 ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260518"
-  img_2_9_0:
-    type: string
-    description: "PyTorch 2.9.0 ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a2_aarch64_builder:20260518"
-  img_2_10_0:
-    type: string
-    description: "PyTorch 2.10.0 ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a2_aarch64_builder:20260518"
-  img_2_11_0:
-    type: string
-    description: "PyTorch 2.11.0 ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a2_aarch64_builder:20260518"
-  img_master:
-    type: string
-    description: "PyTorch master ARM构建镜像"
-    default: "swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518"
+  CP_pipeline_run_id: ${PIPELINE_RUN_ID}
+  CP_repo_url: ${test_REPO_URL}
+  CP_merge_id: ${MERGE_ID}
+  CP_target_branch: ${test_TARGET_BRANCH}
+  img_2_6_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.6.0_a2_aarch64_builder:20260418
+  img_2_7_1: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260518
+  img_2_9_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a2_aarch64_builder:20260518
+  img_2_10_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a2_aarch64_builder:20260518
+  img_2_11_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a2_aarch64_builder:20260518
+  img_master: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
 
 stages:
   stage_1:
