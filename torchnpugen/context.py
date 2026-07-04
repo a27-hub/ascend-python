@@ -47,7 +47,11 @@ def native_function_manager(g: Union[NativeFunctionsGroup, NativeFunction]) -> I
     with context(lambda: f'in native_functions.yaml func:\n  {f.func}'):
         with local.parametrize(
             param_use_const_ref_for_mutable_tensors=f.use_const_ref_for_mutable_tensors,
-            param_use_ilistref_for_tensor_lists=f.part_of_structured_group,
+            # cat/cat.out kernels are hand-written against ITensorListRef even
+            # after their structured metadata is removed from yaml.
+            param_use_ilistref_for_tensor_lists=(
+                f.part_of_structured_group or str(f.func.name.name) == "cat"
+            ),
         ):
             yield
 
