@@ -24,9 +24,9 @@ torch_npu.npu_conv_transpose2d(input, weight, bias, padding, output_padding, str
 
 ## 参数说明
 
-- **input**（`Tensor`）：输入张量，shape为(minibatch, in_channels, iH, iW)。
+- **input**（`Tensor`）：输入张量，其shape为(minibatch, in_channels, iH, iW)。
 - **weight**（`Tensor`）：过滤器张量，其shape为(in_channels, out_channels/groups, kH, kW)。
-- **bias**（`Tensor`）：可选参数，偏置张量，shape为(out_channels)。
+- **bias**（`Tensor`）：可选参数，偏置张量，其shape为(out_channels)。
 - **padding**（`List[int]`）：(dilation \* (kernel_size - 1) - padding)用零来填充输入矩阵的边缘。
 - **output_padding**（`List[int]`）：添加到输出shape每个维度一侧的附加尺寸。
 - **stride**（`List[int]`）：卷积核步长。

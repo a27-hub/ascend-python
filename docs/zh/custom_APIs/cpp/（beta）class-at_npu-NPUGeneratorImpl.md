@@ -50,7 +50,7 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     new_state：TensorImpl类型，待设置的状态，需要通过at::detail::check_rng_state检测。
 
-- **c10::intrusive_ptr\<c10::TensorImpl> c10::TensorImpl at_npu::NPUGeneratorImpl::get_state()**
+- **c10::intrusive_ptr\<c10::TensorImpl> at_npu::NPUGeneratorImpl::get_state()**
 
     NPUGeneratorImpl状态获取，返回值类型intrusive_ptr\<c10::TensorImpl>，返回生成器状态，与c10::intrusive_ptr\<c10::TensorImpl> at::CUDAGeneratorImpl::get_state()相同。
 
@@ -80,7 +80,7 @@ NPUGeneratorImpl是一个随机数生成器类，实现了NPU设备随机数的�
 
     NPUGeneratorImpl设备类型获取，返回值类型DeviceType，与c10::DeviceType at::CUDAGeneratorImpl::device_type()相同。
 
-Pytorch2.5.1及以上版本，移除以下成员函数，Pytorch2.5.1之前版本以下成员函数仍旧存在：
+PyTorch2.5.1及以上版本，移除以下成员函数，PyTorch2.5.1之前版本以下成员函数仍旧存在：
 
 - **void at_npu::NPUGeneratorImpl::capture_prologue()**
 
@@ -92,7 +92,7 @@ Pytorch2.5.1及以上版本，移除以下成员函数，Pytorch2.5.1之前版�
 
 Pytorch2.5.1及以上版本，新增以下成员函数：
 
-- **void graphsafe_set_state(const c10::intrusive_ptr& state)**
+- **void graphsafe_set_state(const c10::intrusive_ptr\<c10::GeneratorImpl>& state)**
 
     在capture状态下为aclgraph设置期望的随机数生成状态，与at::CUDAGeneratorImpl::graphsafe_set_state(const c10::intrusive_ptr& state)功能相同。
     
