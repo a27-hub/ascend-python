@@ -137,7 +137,7 @@ at::Tensor cat(const at::ITensorListRef& tensors, int64_t dim)
 
     // check tensors_dim for output format setting
     bool tensors_dim_check = true;
-    for (at::Tensor t : materialized) {
+    for (const auto& t : input_tensors) {
         if (t.sizes().size() != 4) {
             break;
         }
