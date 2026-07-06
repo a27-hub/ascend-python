@@ -27,7 +27,7 @@ function setFailed(message) {
 function setOutput(key, value) {
     // core.info(`::set-output var=${key}:${value}`);
     // core.setOutput(`${key}`, `${value}`);
-    const filePath = core.getInputForEnv("step_output");
+    const filePath = process.env.STEP_OUTPUT;
     if (!filePath) {
         core.error("step_output 文件路径为空");
         return;
