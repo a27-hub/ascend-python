@@ -32,7 +32,10 @@ function setFailed(message) {
  * 设置 action 输出变量
  */
 function setOutput(key, value) {
-    core.setOutput(key, value);
+    // GitCode/AtomGit 工作流命令格式: ::set-output var=<key>:<value>
+    // 同时调用 core.setOutput 以兼容标准 GitHub Actions 格式
+    const output = `::set-output var=${key}:${value}`;
+    info(output);
 }
 
 // ============================================================
