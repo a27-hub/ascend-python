@@ -39,7 +39,11 @@ function setOutput(key, value) {
             core.info(`写入 ${key}:${value} -> ${filePath}`);
         }
     });
-
+    fs.readFile(filePath, "utf-8").then((content) => {
+        core.info(`STEP_OUTPUT 文件内容:\n${content}`);
+    }).catch((err) => {
+        core.error(`读取 ${filePath} 文件失败: ${err.message}`);
+    });
 }
 
 // ============================================================
