@@ -32,7 +32,7 @@ function setOutput(key, value) {
         core.error("step_output 文件路径为空");
         return;
     }
-    fs.appendFile(filePath, `${key}:${value}`, async(err) => {
+    fs.appendFile(filePath, `${key}=${value}`, async(err) => {
         if (err) {
             core.error(`写入 ${filePath} 文件失败: ${err.message}`);
         } else {
