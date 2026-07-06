@@ -31,7 +31,7 @@ inputs:
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
-    default: ${{ atomgit.repositoryurl }}
+    default: ${{ ATOMGIT_REPOSITORYURL }}
   org_name:
     type: string
     description: "组织名称"
