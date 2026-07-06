@@ -15,27 +15,28 @@ const path = require("path");
 const fs = require("fs").promises;
 const fsSync = require("fs");
 
-function info(message) {
-    process.stdout.write(`${message}\n`);
-}
-
-function error(message) {
-    process.stderr.write(`\x1b[31m[ERROR] ${message}\x1b[0m\n`);
-}
-
 function setFailed(message) {
-    error(message);
+    core.error(message);
     process.exit(1);
 }
 
 /**
  * 设置 action 输出变量
+ * 写入 $STEP_OUTPUT 文件，平台自动回收内容作为 output 结果归档
  */
 function setOutput(key, value) {
-    // GitCode/AtomGit 工作流命令格式: ::set-output var=<key>:<value>
-    // 同时调用 core.setOutput 以兼容标准 GitHub Actions 格式
-    const output = `::set-output var=${key}:${value}`;
-    info(output);
+    const stepOutputFile = process.env.STEP_OUTPUT;
+    if (stepOutputFile) {
+        try {
+            fsSync.appendFileSync(stepOutputFile, `::set-output var=${key}:${value}\n`, "utf-8");
+            core.info(`写入 ::set-output var=${key}:${value} -> ${stepOutputFile}`);
+        } catch (err) {
+            core.error(`写入 STEP_OUTPUT 文件失败: ${err.message}`);
+        }
+    } else {
+        // 兜底: 使用 workflow 命令格式输出到 stdout
+        core.info(`::set-output var=${key}:${value}`);
+    }
 }
 
 // ============================================================
@@ -61,10 +62,10 @@ function execShellScript(script, args, cwd, timeoutMs) {
             },
         });
         child.stdout?.on("data", (data) => {
-            info(data.toString().trimEnd());
+            core.info(data.toString().trimEnd());
         });
         child.stderr?.on("data", (data) => {
-            info(data.toString().trimEnd());
+            core.info(data.toString().trimEnd());
         });
         child.on("close", (code) => {
             if (code === 0) resolve();
@@ -98,16 +99,16 @@ async function run() {
         const scriptPath = path.resolve(__dirname, "./only_doc_check.sh");
         await fs.access(scriptPath);
 
-        info("==============================================");
-        info("  Only_Doc_Commit_Check Action");
-        info("==============================================");
-        info(`脚本路径:       ${scriptPath}`);
-        info(`PR ID:          ${pr_id}`);
-        info(`目标分支:       ${target_branch}`);
-        info(`远程仓库URL:    ${remote_url}`);
-        info(`结果路径:       ${result_msg_path}`);
-        info(`步骤ID:         ${step_id}`);
-        info("==============================================");
+        core.info("==============================================");
+        core.info("  Only_Doc_Commit_Check Action");
+        core.info("==============================================");
+        core.info(`脚本路径:       ${scriptPath}`);
+        core.info(`PR ID:          ${pr_id}`);
+        core.info(`目标分支:       ${target_branch}`);
+        core.info(`远程仓库URL:    ${remote_url}`);
+        core.info(`结果路径:       ${result_msg_path}`);
+        core.info(`步骤ID:         ${step_id}`);
+        core.info("==============================================");
 
         // 执行 shell 脚本 (git clone + merge 可能较慢, 10分钟超时)
         const timeoutMs = 10 * 60 * 1000; // 10 minutes
@@ -124,31 +125,31 @@ async function run() {
             ? path.join(resultDir, `${step_id}_result.json`)
             : path.join(resultDir, "only_doc_result.json");
 
-        info("");
-        info(`读取结果文件: ${resultFile}`);
+        core.info("");
+        core.info(`读取结果文件: ${resultFile}`);
 
         let isOnlyDoc = "unknown";
         try {
             const raw = fsSync.readFileSync(resultFile, "utf-8");
             const result = JSON.parse(raw);
             isOnlyDoc = result.is_only_doc || "unknown";
-            info(`JSON 解析成功: is_only_doc = ${isOnlyDoc}`);
+            core.info(`JSON 解析成功: is_only_doc = ${isOnlyDoc}`);
         } catch (readErr) {
-            error(`读取结果文件失败: ${readErr.message}`);
+            core.error(`读取结果文件失败: ${readErr.message}`);
         }
 
         // 使用工作流命令格式输出结果，供下游步骤引用
         setOutput("is_only_doc", isOnlyDoc);
 
-        info("");
-        info("Only_Doc_Commit_Check action completed successfully.");
+        core.info("");
+        core.info("Only_Doc_Commit_Check action completed successfully.");
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         setFailed(errorMessage);
     }
 }
 
-module.exports = { info, error, setFailed, setOutput, execShellScript, run };
+module.exports = { setFailed, setOutput, execShellScript, run };
 
 // 仅在直接执行时运行 (非 require/import 时)
 if (require.main === module) {
