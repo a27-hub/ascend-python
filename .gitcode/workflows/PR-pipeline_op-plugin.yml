@@ -101,7 +101,7 @@ stages:
           # - name: checkout
           #   uses: checkout
           - name: checkout
-            runs: |-
+            run: |
               pwd
               rm -rf *
               set -ex
@@ -129,7 +129,7 @@ stages:
           # - name: checkout
           #   uses: checkout
           - name: checkout
-            runs: |
+            run: |
               pwd
               rm -rf *
               set -ex
