@@ -202,7 +202,13 @@ stages:
               git checkout new_${pr_id}
               git merge origin/${TARGET_BRANCH}
               ls -al
-          - name: npm install
+          - name: setup-node
+            uses: setup-node@1.0.3
+            with:
+              node-version: '18'
+              package-manager: 'npm'
+              registry-url: 'https://registry.npmmirror.com/'
+          - name: actions install
             run: |
               npm install @actions/core
               pwd
