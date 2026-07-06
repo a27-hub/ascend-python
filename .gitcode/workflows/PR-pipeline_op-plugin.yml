@@ -184,6 +184,9 @@ stages:
               ln -sf /usr/local/bin/python3.10 /usr/bin/python
               python --version
               pwd
+              cd ${ WORKSPAC }
+              cd ../
+              pwd
               ls -al
           - name: pre-commit
             uses: openlibing-pre-commit-action
