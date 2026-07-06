@@ -5,6 +5,8 @@ on:
     branches:
       - 7.3.0
       - 7.3.0_test
+      - master
+      - master_test
     types:
       - open
       - update
@@ -88,7 +90,7 @@ stages:
             with:
               project_id: a9b188a62f334fc0963bcfb523426d17
               task_name: wwq-op-plugin-test
-              branch: 7.3.0
+              branch: master
 
       SCA:
         name: SCA
@@ -100,15 +102,13 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
-                  pwd
-                  cd ../../
-                  rm -rf *
-                  set -ex
-                  git config --global user.name wangwq129
-                  git config --global user.email wangweiqi22@huawei.com
-                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-                fi
+                pwd
+                cd ../../
+                rm -rf *
+                set -ex
+                git config --global user.name wangwq129
+                git config --global user.email wangweiqi22@huawei.com
+                git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: Run SCA PR Scan
             id: sca-pr-scan
             uses: sca-pr-scan
@@ -138,15 +138,13 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
-                  pwd
-                  cd ../../
-                  rm -rf *
-                  set -ex
-                  git config --global user.name wangwq129
-                  git config --global user.email wangweiqi22@huawei.com
-                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-                fi
+                pwd
+                cd ../../
+                rm -rf *
+                set -ex
+                git config --global user.name wangwq129
+                git config --global user.email wangweiqi22@huawei.com
+                git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: Antipoison
             uses: official_shell_plugin
             with:
@@ -172,15 +170,13 @@ stages:
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
                 echo "remote_url= ${{ REMOTE_URL }}"
-                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
-                  pwd
-                  cd ../../
-                  rm -rf *
-                  set -ex
-                  git config --global user.name wangwq129
-                  git config --global user.email wangweiqi22@huawei.com
-                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-                fi
+                pwd
+                cd ../../
+                rm -rf *
+                set -ex
+                git config --global user.name wangwq129
+                git config --global user.email wangweiqi22@huawei.com
+                git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: setup-python
             uses: setup-python
           - name: setup-python310
@@ -207,16 +203,14 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
-                  pwd
-                  echo "remote_url= ${{ REMOTE_URL }}"
-                  cd ../../
-                  rm -rf *
-                  set -ex
-                  git config --global user.name wangwq129
-                  git config --global user.email wangweiqi22@huawei.com
-                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
-                fi
+                pwd
+                echo "remote_url= ${{ REMOTE_URL }}"
+                cd ../../
+                rm -rf *
+                set -ex
+                git config --global user.name wangwq129
+                git config --global user.email wangweiqi22@huawei.com
+                git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
