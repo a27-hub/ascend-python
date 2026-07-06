@@ -165,18 +165,18 @@ stages:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
-          # - name: checkout
-          #   uses: checkout
-          - name: checkout 
-            run: |
-              echo "remote_url= ${{ REMOTE_URL }}"
-              pwd
-              cd ../../
-              rm -rf *
-              set -ex
-              git config --global user.name wangwq129
-              git config --global user.email wangweiqi22@huawei.com
-              git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+          - name: checkout
+            uses: checkout
+          # - name: checkout 
+          #   run: |
+          #     echo "remote_url= ${{ REMOTE_URL }}"
+          #     pwd
+          #     cd ../../
+          #     rm -rf *
+          #     set -ex
+          #     git config --global user.name wangwq129
+          #     git config --global user.email wangweiqi22@huawei.com
+          #     git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: setup-python
             uses: setup-python
           - name: setup-python310
