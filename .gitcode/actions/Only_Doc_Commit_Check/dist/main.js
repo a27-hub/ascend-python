@@ -25,18 +25,7 @@ function setFailed(message) {
  * 写入 $STEP_OUTPUT 文件，平台自动回收内容作为 output 结果归档
  */
 function setOutput(key, value) {
-    const stepOutputFile = process.env.STEP_OUTPUT;
-    if (stepOutputFile) {
-        try {
-            fsSync.appendFileSync(stepOutputFile, `${key}:yes\n`, "utf-8");
-            core.info(`写入 ${key}:${value} -> ${stepOutputFile}`);
-        } catch (err) {
-            core.error(`写入 STEP_OUTPUT 文件失败: ${err.message}`);
-        }
-    } else {
-        // 兜底: 使用 workflow 命令格式输出到 stdout
-        core.info(`::set-output var=${key}:${value}`);
-    }
+    core.info(`::set-output var=${key}:${value}`);
 }
 
 // ============================================================
