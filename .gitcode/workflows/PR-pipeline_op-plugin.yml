@@ -68,7 +68,8 @@ stages:
     jobs:
       CodeCheck:
         name: CodeCheck
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -94,7 +95,8 @@ stages:
 
       SCA:
         name: SCA
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         steps:
           # - name: checkout
           #   uses: checkout
@@ -121,7 +123,8 @@ stages:
         
       Antipoison:
         name: Antipoison
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -156,7 +159,8 @@ stages:
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
@@ -186,7 +190,8 @@ stages:
 
       Only_doc_commit:
         name: Only_doc_commit
-        runs-on: [ self-hosted, arch=x64, os=euler ]
+        # runs-on: [ self-hosted, arch=x64, os=euler ]
+        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
           image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
