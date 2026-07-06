@@ -28,8 +28,8 @@ function setOutput(key, value) {
     const stepOutputFile = process.env.STEP_OUTPUT;
     if (stepOutputFile) {
         try {
-            fsSync.appendFileSync(stepOutputFile, `var=${key}:${value}\n`, "utf-8");
-            core.info(`写入 ::set-output var=${key}:${value} -> ${stepOutputFile}`);
+            fsSync.appendFileSync(stepOutputFile, `${key}:${value}\n`, "utf-8");
+            core.info(`写入 ${key}:${value} -> ${stepOutputFile}`);
         } catch (err) {
             core.error(`写入 STEP_OUTPUT 文件失败: ${err.message}`);
         }
