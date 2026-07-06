@@ -24,14 +24,10 @@ inputs:
     type: string
     description: "仓库所有者"
     default: "wangwq129"
-  # TARGET_BRANCH:
-  #   type: string
-  #   description: "目标分支"
-  #   default: ${{ atomgit.event.pull_request.base.ref }}
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
-    default: ${{ ATOMGIT_REPOSITORYURL }}
+    default: ${ATOMGIT_REPOSITORYURL}
   org_name:
     type: string
     description: "组织名称"
