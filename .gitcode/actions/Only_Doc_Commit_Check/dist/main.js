@@ -34,8 +34,7 @@ function setFailed(message) {
  * 参考 @actions/core setOutput: ::set-output name=<name>::<value>
  */
 function setOutput(key, value) {
-    const output = `::set-output var=${key}:${value}`;
-    info(output);
+    core.setOutput(key, value);
 }
 
 // ============================================================

@@ -237,7 +237,6 @@ stages:
               echo "target_branch= ${TARGET_BRANCH}"
               echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
-            identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
               pr_id: ${{ env.pr_id }}
