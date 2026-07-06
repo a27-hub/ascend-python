@@ -100,7 +100,7 @@ stages:
         steps:
           # - name: checkout
           #   uses: checkout
-          - name: checkout 
+          - name: checkout
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
@@ -120,7 +120,7 @@ stages:
               pr-id: ${{ atomgit.event.pull_request.number }}
               repository-name: ${{ atomgit.repository }}
               project-name: ${{ atomgit.repository }}
-        
+
       Antipoison:
         name: Antipoison
         # runs-on: [ self-hosted, arch=x64, os=euler ]
@@ -137,7 +137,7 @@ stages:
               echo "pr_id= ${pr_id}"
           # - name: checkout
           #   uses: checkout
-          - name: checkout 
+          - name: checkout
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
@@ -167,7 +167,7 @@ stages:
         steps:
           # - name: checkout
           #   uses: checkout
-          - name: checkout 
+          - name: checkout
             run: |
               echo "remote_url= ${{ REMOTE_URL }}"
               pwd
@@ -198,7 +198,7 @@ stages:
         steps:
           # - name: checkout
           #   uses: checkout
-          - name: checkout 
+          - name: checkout
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
