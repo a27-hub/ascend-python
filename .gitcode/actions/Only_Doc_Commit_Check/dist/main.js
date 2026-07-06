@@ -25,8 +25,6 @@ function setFailed(message) {
  * 写入 $STEP_OUTPUT 文件，平台自动回收内容作为 output 结果归档
  */
 function setOutput(key, value) {
-    // core.info(`::set-output var=${key}:${value}`);
-    // core.setOutput(`${key}`, `${value}`);
     const filePath = process.env.ATOMGIT_OUTPUT;
     if (!filePath) {
         core.error("step_output 文件路径为空");
@@ -34,9 +32,9 @@ function setOutput(key, value) {
     }
     fs.appendFile(filePath, `${key}=${value}`, async(err) => {
         if (err) {
-            core.error(`写入 ${filePath} 文件失败: ${err.message}`);
+            core.error(`写入 ATOMGIT_OUTPUT 文件失败: ${err.message}`);
         } else {
-            core.info(`写入 ${key}:${value} -> ${filePath}`);
+            core.info(`写入 ATOMGIT_OUTPUT 文件成功`);
         }
     });
 }
