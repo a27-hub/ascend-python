@@ -219,104 +219,104 @@ stages:
               target_branch: ${{ inputs.TARGET_BRANCH }}
               remote_url: ${{ REMOTE_URL }}
 
-  stage_2:
-    name: stage_2
-    jobs:
-      Build_master_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: ${TARGET_BRANCH}
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  # stage_2:
+  #   name: stage_2
+  #   jobs:
+  #     Build_master_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: ${TARGET_BRANCH}
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_7_1_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_7_1
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_7_1_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_7_1
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_9_0_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_9_0
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_9_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_9_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_10_0_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_10_0
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_10_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_10_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_11_0_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_11_0
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_11_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_11_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_12_0_ARM:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_12_0
-          arch: ARM
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_12_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_12_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_master_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: ${TARGET_BRANCH}
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_master_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: ${TARGET_BRANCH}
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_7_1_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_7_1
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_7_1_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_7_1
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_9_0_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_9_0
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_9_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_9_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_10_0_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_10_0
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_10_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_10_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_11_0_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_11_0
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_11_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_11_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
-      Build_v2_12_0_x86:
-        uses: .gitcode/workflows/build-job.yml
-        with:
-          branch_version: v2_12_0
-          arch: x86
-          target_branch: ${{ inputs.TARGET_BRANCH }}
-          py_version: ${{ inputs.py_version }}
+  #     Build_v2_12_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_12_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
 
   # stage_3:
   #   name: stage_3
