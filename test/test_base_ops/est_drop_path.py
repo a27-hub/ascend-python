@@ -8,7 +8,7 @@ from torch_npu.contrib.module import NpuDropPath
 class TestNpuDropPath(TestCase):
 
     def test_basic_forward(self):
-        """基础前向传播：参考使用手册示例"""
+        """基础前向传播"""
         drop_path = NpuDropPath(0).npu()
         x = torch.randn(68, 5, device='npu')
         
@@ -18,7 +18,7 @@ class TestNpuDropPath(TestCase):
         self.assertEqual(output.device, x.device)
 
     def test_drop_prob_0(self):
-        """drop_prob=0 时输出等于输入（使用手册示例）"""
+        """drop_prob=0 时输出等于输入"""
         drop_path = NpuDropPath(0).npu()
         x = torch.randn(68, 5, device='npu')
         
@@ -27,7 +27,7 @@ class TestNpuDropPath(TestCase):
         self.assertTrue(torch.allclose(output, x))
 
     def test_backward(self):
-        """反向传播：参考使用手册的 autograd 示例"""
+        """反向传播：autograd 示例"""
         drop_path = NpuDropPath(0).npu()
         
         input1 = torch.randn(68, 5, device='npu', requires_grad=True)
