@@ -35,6 +35,7 @@ function setFailed(message) {
  */
 function setOutput(key, value) {
     core.setOutput(key, value);
+    log.info(`::set-output var=${key}:${value}`);
 }
 
 // ============================================================
