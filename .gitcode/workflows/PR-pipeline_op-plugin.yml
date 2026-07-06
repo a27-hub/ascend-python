@@ -233,16 +233,16 @@ stages:
               cd -
           - name: print params
             run: |
-              echo "pr_id= ${{ inputs.pr_id }}"
-              echo "target_branch= ${{ inputs.TARGET_BRANCH }}"
-              echo "remote_url= ${{ inputs.REMOTE_URL }}"
+              echo "pr_id= ${{ pr_id }}"
+              echo "target_branch= ${{ TARGET_BRANCH }}"
+              echo "remote_url= ${{ REMOTE_URL }}"
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
-              pr_id: 4
-              target_branch: master
-              remote_url: ${{ inputs.REMOTE_URL }}
+              pr_id: ${{ pr_id }}
+              target_branch: ${{ TARGET_BRANCH }}
+              remote_url: ${{ REMOTE_URL }}
 
   # stage_2:
   #   name: stage_2
