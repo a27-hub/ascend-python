@@ -242,7 +242,7 @@ stages:
             with:
               pr_id: 4
               target_branch: master
-              remote_url: https://gitcode.com/wangwq129/op-plugin.git
+              remote_url: ${{ inputs.REMOTE_URL }}
 
   # stage_2:
   #   name: stage_2
