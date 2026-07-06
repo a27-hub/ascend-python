@@ -245,6 +245,7 @@ stages:
               remote_url: ${{ env.REMOTE_URL }}
           - name: result print
             run: |
+              env
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
   # stage_2:
