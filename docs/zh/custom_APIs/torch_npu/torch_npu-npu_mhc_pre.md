@@ -36,7 +36,7 @@ torch_npu.npu_mhc_pre(x, phi, alpha, bias, *, gamma=None, norm_eps=1e-6, hc_eps=
 ## 参数说明
 
 - **x**（`Tensor`）：必选参数，待计算的数据，表示网络中mHC层的输入数据，数据类型支持`bfloat16`、`float16`，shape为\(B, S, n, D\)或\(T, n, D\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
-- **phi**（`Tensor`）：必选参数，mHC的参数矩阵，顺序是W\_pre\(n, nD\)、W\_post\(n, nD\)、W\_res\(n<sup>2</sup>, nD\)，数据类型为`float32`，shape为\(n<sup>2</sup>+2n, nD\)或\(2n\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
+- **phi**（`Tensor`）：必选参数，mHC的参数矩阵，顺序是W\_pre\(n, nD\)、W\_post\(n, nD\)、W\_res\(n<sup>2</sup>, nD\)，数据类型为`float32`，shape为\(n<sup>2</sup>+2n, nD\)或\(2n, nD\)，数据格式支持ND，支持非连续Tensor，不支持空Tensor。
 - **alpha**（`Tensor`）：必选参数，mHC的缩放参数，顺序是alpha\_pre、alpha\_post、alpha\_res，数据类型为`float32`，shape为\(3\)或\(2\)，不支持空Tensor。
 - **bias**（`Tensor`）：必选参数，mHC层的bias参数，数据类型为`float32`，shape为\(n<sup>2</sup>+2n\)或\(2n\)，不支持空Tensor。
 - \*：代表其之前的变量是位置相关的，必须按照顺序输入；之后的变量是可选参数，位置无关，需要使用键值对赋值，不赋值会使用默认值。
