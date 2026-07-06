@@ -9,7 +9,20 @@
  *
  */
 
-import core from "@actions/core";
+/**
+ * 加载 @actions/core，兼容 ESM (v3) 和 CJS (v1) 两种版本。
+ *
+ * 策略：
+ *   1. 优先 CJS require —— 适用于 dist/ 下有 @actions/core v1 的场景，
+ *      以及 GitHub Actions runner (Node 16) 预装 CJS 版本的场景。
+ *   2. 若 require 因 ESM-only 包失败，尝试 ESM import —— 适用于
+ *      Node 18+ 且父目录安装了 @actions/core v3 的场景。
+ *   3. 若 ESM import 也失败 (如 Node 16 缺少 ReadableStream)，
+ *      抛出明确错误，提示安装 CJS 版本到 dist/node_modules。
+ */
+async function loadCore() {
+        return require('@actions/core');
+}
 
 const { execFile } = require("child_process");
 const path = require("path");
@@ -88,6 +101,9 @@ function execShellScript(script, args, cwd, timeoutMs) {
 
 async function run() {
     try {
+        // 加载 @actions/core (兼容 ESM v3 / CJS v1)
+        const core = await loadCore();
+
         // 读取输入参数
         const pr_id = core.getInput("pr_id", { required: true });
         const target_branch = core.getInput("target_branch", { required: true });
