@@ -31,7 +31,7 @@ inputs:
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
-    default: ${{ atomgit.url }}
+    default: ${{ atomgit.repositoryurl }}
   org_name:
     type: string
     description: "组织名称"
@@ -216,8 +216,8 @@ stages:
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
-              pr_id: ${{ inputs.pr_id }}
-              target_branch: ${{ inputs.TARGET_BRANCH }}
+              pr_id: 4
+              target_branch: master
               remote_url: ${{ REMOTE_URL }}
 
   # stage_2:
