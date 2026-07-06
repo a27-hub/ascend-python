@@ -24,10 +24,10 @@ inputs:
     type: string
     description: "仓库所有者"
     default: "wangwq129"
-  TARGET_BRANCH:
-    type: string
-    description: "目标分支"
-    default: ${{ atomgit.event.pull_request.base.ref }}
+  # TARGET_BRANCH:
+  #   type: string
+  #   description: "目标分支"
+  #   default: ${{ atomgit.event.pull_request.base.ref }}
   REMOTE_URL:
     type: string
     description: "远程仓库URL"
@@ -36,10 +36,10 @@ inputs:
     type: string
     description: "组织名称"
     default: "wangwq129"
-  pr_id:
-    type: string
-    description: "PR ID"
-    default: ${{ atomgit.event.pull_request.number }}
+  # pr_id:
+  #   type: string
+  #   description: "PR ID"
+  #   default: ${{ atomgit.event.pull_request.number }}
   py_version:
     type: string
     description: "Python版本"
