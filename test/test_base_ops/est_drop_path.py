@@ -11,9 +11,7 @@ class TestNpuDropPath(TestCase):
         """基础前向传播"""
         drop_path = NpuDropPath(0).npu()
         x = torch.randn(68, 5, device='npu')
-        
-        output = drop_path(x)
-        
+        output = drop_path(x)       
         self.assertEqual(output.shape, x.shape)
         self.assertEqual(output.device, x.device)
 
@@ -59,4 +57,3 @@ class TestNpuDropPath(TestCase):
 
 if __name__ == '__main__':
     run_tests()
-    
