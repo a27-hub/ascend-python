@@ -237,11 +237,15 @@ stages:
               echo "target_branch= ${TARGET_BRANCH}"
               echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
+            id: only-doc-check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ env.TARGET_BRANCH }}
               remote_url: ${{ env.REMOTE_URL }}
+          - name: result print
+            run: |
+              echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
   # stage_2:
   #   name: stage_2
