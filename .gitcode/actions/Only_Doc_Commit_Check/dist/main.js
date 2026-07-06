@@ -25,7 +25,8 @@ function setFailed(message) {
  * 写入 $STEP_OUTPUT 文件，平台自动回收内容作为 output 结果归档
  */
 function setOutput(key, value) {
-    core.info(`::set-output var=${key}:${value}`);
+    // core.info(`::set-output var=${key}:${value}`);
+    core.setOutput(`${key}`, `${value}`);
 }
 
 // ============================================================
