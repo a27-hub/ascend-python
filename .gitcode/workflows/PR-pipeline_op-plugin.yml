@@ -146,15 +146,13 @@ stages:
                 git config --global user.email wangweiqi22@huawei.com
                 git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: Antipoison
-            uses: official_shell_plugin
-            with:
-              OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-                pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
-                wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
-                unzip -q ApiGateway-python-sdk-2.0.7.zip
-                cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
-                python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+            run: |
+              git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+              pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+              wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
+              unzip -q ApiGateway-python-sdk-2.0.7.zip
+              cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
+              python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
 
       CodeCheck_pre_commit:
         name: CodeCheck_pre_commit
@@ -166,25 +164,21 @@ stages:
           # - name: checkout
           #   uses: checkout
           - name: checkout 
-            uses: official_shell_plugin
-            with:
-              OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                echo "remote_url= ${{ REMOTE_URL }}"
-                pwd
-                cd ../../
-                rm -rf *
-                set -ex
-                git config --global user.name wangwq129
-                git config --global user.email wangweiqi22@huawei.com
-                git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+            run: |
+              echo "remote_url= ${{ REMOTE_URL }}"
+              pwd
+              cd ../../
+              rm -rf *
+              set -ex
+              git config --global user.name wangwq129
+              git config --global user.email wangweiqi22@huawei.com
+              git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
           - name: setup-python
             uses: setup-python
           - name: setup-python310
-            uses: official_shell_plugin
-            with:
-              OFFICIAL_SHELL_SCRIPT_INPUT: |-
-                  ln -sf /usr/local/bin/python3.10 /usr/bin/python
-                  python --version
+            run: |
+              ln -sf /usr/local/bin/python3.10 /usr/bin/python
+              python --version
           - name: pre-commit
             uses: openlibing-pre-commit-action
             with:
@@ -211,6 +205,12 @@ stages:
                 git config --global user.name wangwq129
                 git config --global user.email wangweiqi22@huawei.com
                 git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+          - name: merge
+            run: |
+              git fetch origin
+              git fetch origin refs/merge-requests/${pr_id}/head:new_${pr_id}
+              git checkout new_${pr_id}
+              git merge origin/${TARGET_BRANCH}
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
@@ -219,104 +219,104 @@ stages:
               target_branch: ${{ inputs.TARGET_BRANCH }}
               remote_url: ${{ REMOTE_URL }}
 
-  # stage_2:
-  #   name: stage_2
-  #   jobs:
-  #     Build_master_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: ${TARGET_BRANCH}
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  stage_2:
+    name: stage_2
+    jobs:
+      Build_master_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: ${TARGET_BRANCH}
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_7_1_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_7_1
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_7_1_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_7_1
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_9_0_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_9_0
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_9_0_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_9_0
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_10_0_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_10_0
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_10_0_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_10_0
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_11_0_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_11_0
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_11_0_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_11_0
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_12_0_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_12_0
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_12_0_ARM:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_12_0
+          arch: ARM
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_master_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: ${TARGET_BRANCH}
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_master_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: ${TARGET_BRANCH}
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_7_1_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_7_1
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_7_1_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_7_1
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_9_0_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_9_0
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_9_0_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_9_0
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_10_0_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_10_0
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_10_0_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_10_0
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_11_0_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_11_0
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_11_0_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_11_0
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
-  #     Build_v2_12_0_x86:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: v2_12_0
-  #         arch: x86
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+      Build_v2_12_0_x86:
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          branch_version: v2_12_0
+          arch: x86
+          target_branch: ${{ inputs.TARGET_BRANCH }}
+          py_version: ${{ inputs.py_version }}
 
   # stage_3:
   #   name: stage_3
