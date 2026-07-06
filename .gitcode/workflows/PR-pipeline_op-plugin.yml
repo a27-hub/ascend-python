@@ -211,6 +211,7 @@ stages:
               git fetch origin refs/merge-requests/${pr_id}/head:new_${pr_id}
               git checkout new_${pr_id}
               git merge origin/${TARGET_BRANCH}
+              ls -al
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
