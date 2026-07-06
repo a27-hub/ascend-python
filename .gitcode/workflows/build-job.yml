@@ -1,0 +1,74 @@
+name: Build Job
+
+on:
+  workflow_call:
+    inputs:
+      branch_version:
+        required: true
+        type: string
+        default: "master"
+      arch:
+        required: true
+        type: string
+        default: "X86"
+      target_branch:
+        required: false
+        type: string
+        default: "26.1.0"
+      py_version:
+        required: false
+        type: string
+        default: "3.10"
+
+jobs:
+  build:
+    name: Build_${{ inputs.branch_version }}_${{ inputs.arch }}
+    runs-on:
+      - default
+    container:
+      image: swr.cn-southwest-2.myhuaweicloud.com/modelfoundry/karmada:latest
+      options: --cpus 1 --user root
+    steps:
+      - name: Checkout
+        uses: checkout
+      - name: Create build script
+        uses: official_shell_plugin
+        with:
+          OFFICIAL_SHELL_SCRIPT_INPUT: |
+            cat > shell.sh << EOF
+            #!/bin/bash
+            set -e
+            rm -rf *
+            git config --global http.postBuffer 524288000
+            git config --global http.lowSpeedLimit 5000
+            git config --global http.lowSpeedTime 300
+            git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+            bash cie/common/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${workspace}
+            cd ./CODE
+            git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
+            cat ../modify_files.txt
+            cd -
+            source cie/common/common/ccache_env.sh
+            bash cie/common/build/op-plugin_build.sh ${{ inputs.branch_version }} ${py_version} ${pr_id} ${workspace} ${TARGET_BRANCH}
+            EOF
+      - name: Download file manage
+        uses: official_shell_plugin
+        with:
+          OFFICIAL_SHELL_SCRIPT_INPUT: |
+            wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/k8s/kubeconfig_karmada.key --no-check-certificate
+      - name: Execute SWR container
+        uses: official_shell_plugin
+        with:
+          OFFICIAL_SHELL_SCRIPT_INPUT: |
+            /workspace/workflowtool/entrypoint.sh
+      - name: Upload to OBS
+        uses: obs-upload
+        with:
+          endpoint: "obs.cn-north-4.myhuaweicloud.com"
+          bucket: "pta-pr"
+          access-key: "${{ Secret.OBS_AK }}"
+          secret-key: "${{ Secret.OBS_SK }}"
+          artifact-path: "*.tar.gz*"
+          object-prefix: "op-plugin/${{ inputs.branch_version }}/${{ inputs.arch }}/"
+          if-no-files-found: warn
+          overwrite: true
