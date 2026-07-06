@@ -26,7 +26,20 @@ function setFailed(message) {
  */
 function setOutput(key, value) {
     // core.info(`::set-output var=${key}:${value}`);
-    core.setOutput(`${key}`, `${value}`);
+    // core.setOutput(`${key}`, `${value}`);
+    const filePath = core.getInputForEnv("step_output");
+    if (!filePath) {
+        core.error("step_output 文件路径为空");
+        return;
+    }
+    fs.appendFile(filePath, `${key}:${value}\n`, async(err) => {
+        if (err) {
+            core.error(`写入 ${filePath} 文件失败: ${err.message}`);
+        } else {
+            core.info(`写入 ${key}:${value} -> ${filePath}`);
+        }
+    });
+
 }
 
 // ============================================================
