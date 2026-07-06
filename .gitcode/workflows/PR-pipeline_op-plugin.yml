@@ -1,0 +1,377 @@
+name: PR-pipeline_op-plugin
+
+on:
+  pull_request:
+    branches:
+      - 7.3.0
+      - 7.3.0_test
+    types:
+      - open
+      - update
+      - reopen
+      - merge
+    branches-ignore: []
+    paths-ignore: []
+    code-update: false
+inputs:
+  repo:
+    type: string
+    description: "仓库名称"
+    default: ${{ atomgit.event.repository.name }}
+  owner:
+    type: string
+    description: "仓库所有者"
+    default: "wangwq129"
+  TARGET_BRANCH:
+    type: string
+    description: "目标分支"
+    default: ${{ atomgit.event.pull_request.base.ref }}
+  REMOTE_URL:
+    type: string
+    description: "远程仓库URL"
+    default: ${{ atomgit.url }}
+  org_name:
+    type: string
+    description: "组织名称"
+    default: "wangwq129"
+  pr_id:
+    type: string
+    description: "PR ID"
+    default: ${{ atomgit.event.pull_request.number }}
+  py_version:
+    type: string
+    description: "Python版本"
+    default: "3.10"
+  workspace:
+    type: string
+    description: "工作目录"
+    default: "/workspace"
+
+env:
+  CP_pipeline_run_id: ${PIPELINE_RUN_ID}
+  CP_repo_url: ${test_REPO_URL}
+  CP_merge_id: ${MERGE_ID}
+  CP_target_branch: ${test_TARGET_BRANCH}
+  img_2_6_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.6.0_a2_aarch64_builder:20260418
+  img_2_7_1: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260518
+  img_2_9_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a2_aarch64_builder:20260518
+  img_2_10_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a2_aarch64_builder:20260518
+  img_2_11_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a2_aarch64_builder:20260518
+  img_master: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
+
+stages:
+  stage_1:
+    name: stage_1
+    select: selected_by_default
+    jobs:
+      CodeCheck:
+        name: CodeCheck
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: hello action
+            run: |
+              echo "print env"
+              env
+              echo "print env end"
+          - name: Login to CodeArts
+            uses: codearts-login
+            with:
+              region: cn-north-4
+              name: Ascend_Pytorch_CI
+              password: ${{ secrets.IAM_USER_PASSWORD }}
+              domain-name: hwstaff_jsz_gjl
+          - name: codecheck
+            uses: codecheck_gitcode_v2
+            with:
+              project_id: a9b188a62f334fc0963bcfb523426d17
+              task_name: wwq-op-plugin-test
+              branch: 7.3.0
+
+      SCA:
+        name: SCA
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        steps:
+          # - name: checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+          - name: Run SCA PR Scan
+            id: sca-pr-scan
+            uses: sca-pr-scan
+            with:
+              scan-access-key: ${{ secrets.SCAN_ACCESS_KEY }}
+              scan-secret-key: ${{ secrets.SCAN_SECRET_KEY }}
+              pr-id: ${{ atomgit.event.pull_request.number }}
+              repository-name: ${{ atomgit.repository }}
+              project-name: ${{ atomgit.repository }}
+        
+      Antipoison:
+        name: Antipoison
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          - name: print params
+            run: |
+              echo "repo= ${repo}"
+              echo "TARGET_BRANCH= ${TARGET_BRANCH}"
+              echo "org_name= ${org_name}"
+              echo "pr_id= ${pr_id}"
+          # - name: checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+          - name: Antipoison
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+                pip3.8 install --trusted-host https://repo.huaweicloud.com -i https://repo.huaweicloud.com/repository/pypi/simple requests
+                wget -q https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/tools/ApiGateway-python-sdk-2.0.7.zip --no-check-certificate
+                unzip -q ApiGateway-python-sdk-2.0.7.zip
+                cp -rf ApiGateway-python-sdk-2.0.7/apig_sdk cie/codecheck/
+                python3.8 cie/codecheck/anti_poison.py --created_appId ${{ secrets.ANTIPOISON_CREATED_APPID }} --created_secretKey ${{ secrets.ANTIPOISON_CREATED_SECRETKEY }} --result_appId ${{ secrets.ANTIPOISON_RESULT_APPID }} --result_secretKey ${{ secrets.ANTIPOISON_RESULT_SECRETKEY }} --org_name ${org_name} --pr_id ${pr_id} --repo ${repo}
+
+      CodeCheck_pre_commit:
+        name: CodeCheck_pre_commit
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          # - name: checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                echo "remote_url= ${{ REMOTE_URL }}"
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+          - name: setup-python
+            uses: setup-python
+          - name: setup-python310
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                  ln -sf /usr/local/bin/python3.10 /usr/bin/python
+                  python --version
+          - name: pre-commit
+            uses: openlibing-pre-commit-action
+            with:
+              gc_token: ${{ secrets.GC_TOKEN }}
+
+      Only_doc_commit:
+        name: Only_doc_commit
+        runs-on: [ self-hosted, arch=x64, os=euler ]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+          options: --user root
+        steps:
+          # - name: checkout
+          #   uses: checkout
+          - name: checkout 
+            uses: official_shell_plugin
+            with:
+              OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
+                  pwd
+                  echo "remote_url= ${{ REMOTE_URL }}"
+                  cd ../../
+                  rm -rf *
+                  set -ex
+                  git config --global user.name wangwq129
+                  git config --global user.email wangweiqi22@huawei.com
+                  git clone --depth=1 -b ${TARGET_BRANCH} https://wangwq129:${{secrets.ACCESS_WWQ}}@gitcode.com/wangwq129/op-plugin.git .
+                fi
+          - name: Only Doc Commit Check
+            identifier: Only_Doc_Commit_Check
+            uses: ./.gitcode/actions/Only_Doc_Commit_Check
+            with:
+              pr_id: ${{ inputs.pr_id }}
+              target_branch: ${{ inputs.TARGET_BRANCH }}
+              remote_url: ${{ REMOTE_URL }}
+
+  # stage_2:
+  #   name: stage_2
+  #   jobs:
+  #     Build_master_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: ${TARGET_BRANCH}
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_7_1_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_7_1
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_9_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_9_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_10_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_10_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_11_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_11_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_12_0_ARM:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_12_0
+  #         arch: ARM
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_master_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: ${TARGET_BRANCH}
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_7_1_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_7_1
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_9_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_9_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_10_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_10_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_11_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_11_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  #     Build_v2_12_0_x86:
+  #       uses: .gitcode/workflows/build-job.yml
+  #       with:
+  #         branch_version: v2_12_0
+  #         arch: x86
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+  #         py_version: ${{ inputs.py_version }}
+
+  # stage_3:
+  #   name: stage_3
+  #   jobs:
+  #     UT_master_ARM_01:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: master
+  #         job_suffix: _01
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_master_ARM_02:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: master
+  #         job_suffix: _02
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_v2_7_1_ARM:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: v2_7_1
+  #         job_suffix: ""
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_v2_9_0_ARM:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: v2_9_0
+  #         job_suffix: ""
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_v2_10_0_ARM:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: v2_10_0
+  #         job_suffix: ""
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_v2_11_0_ARM:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: v2_11_0
+  #         job_suffix: ""
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
+
+  #     UT_v2_12_0_ARM:
+  #       uses: .gitcode/workflows/ut-job.yml
+  #       with:
+  #         branch_version: v2_12_0
+  #         job_suffix: ""
+  #         target_branch: ${{ inputs.TARGET_BRANCH }}
