@@ -233,9 +233,9 @@ stages:
               cd -
           - name: print params
             run: |
-              echo "pr_id= ${{ pr_id }}"
-              echo "target_branch= ${{ TARGET_BRANCH }}"
-              echo "remote_url= ${{ REMOTE_URL }}"
+              echo "pr_id= ${pr_id}"
+              echo "target_branch= ${TARGET_BRANCH}"
+              echo "remote_url= ${REMOTE_URL}"
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
