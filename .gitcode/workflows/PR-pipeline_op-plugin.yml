@@ -240,9 +240,9 @@ stages:
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
             with:
-              pr_id: ${{ pr_id }}
-              target_branch: ${{ TARGET_BRANCH }}
-              remote_url: ${{ REMOTE_URL }}
+              pr_id: ${{ env.pr_id }}
+              target_branch: ${{ env.TARGET_BRANCH }}
+              remote_url: ${{ env.REMOTE_URL }}
 
   # stage_2:
   #   name: stage_2
