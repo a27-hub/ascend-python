@@ -27,7 +27,7 @@ function setFailed(message) {
 function setOutput(key, value) {
     // core.info(`::set-output var=${key}:${value}`);
     // core.setOutput(`${key}`, `${value}`);
-    const filePath = process.env.STEP_OUTPUT;
+    const filePath = process.env.ATOMGIT_OUTPUT;
     if (!filePath) {
         core.error("step_output 文件路径为空");
         return;
@@ -38,11 +38,6 @@ function setOutput(key, value) {
         } else {
             core.info(`写入 ${key}:${value} -> ${filePath}`);
         }
-    });
-    fs.readFile(filePath, "utf-8").then((content) => {
-        core.info(`STEP_OUTPUT 文件内容:\n${content}`);
-    }).catch((err) => {
-        core.error(`读取 ${filePath} 文件失败: ${err.message}`);
     });
 }
 
