@@ -30,12 +30,9 @@ function setFailed(message) {
 
 /**
  * 设置 action 输出变量
- * GitCode/AtomGit 工作流命令格式: ::set-output var=<key>:<value>
- * 参考 @actions/core setOutput: ::set-output name=<name>::<value>
  */
 function setOutput(key, value) {
     core.setOutput(key, value);
-    log.info(`::set-output var=${key}:${value}`);
 }
 
 // ============================================================
