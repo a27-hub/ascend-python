@@ -209,7 +209,7 @@ stages:
               registry-url: 'https://registry.npmmirror.com/'
           - name: actions install
             run: |
-              cd .gitcode/actions/Only_Doc_Commit_Check/dist
+              cd .gitcode/actions/Only_Doc_Commit_Check
               npm install @actions/core
               cd -
           - name: Only Doc Commit Check
