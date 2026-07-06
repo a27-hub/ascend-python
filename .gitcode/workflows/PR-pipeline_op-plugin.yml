@@ -171,6 +171,7 @@ stages:
             uses: official_shell_plugin
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
+                echo "remote_url= ${{ REMOTE_URL }}"
                 if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
                   pwd
                   cd ../../
