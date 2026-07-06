@@ -184,7 +184,7 @@ stages:
               ln -sf /usr/local/bin/python3.10 /usr/bin/python
               python --version
               pwd
-              cd ${ WORKSPACE }
+              cd ${WORKSPACE}
               cd ../
               pwd
               ls -al
