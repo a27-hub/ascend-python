@@ -210,7 +210,7 @@ stages:
           - name: actions install
             run: |
               cd .gitcode/actions/Only_Doc_Commit_Check
-              npm install @actions/core
+              npm install @actions/core@^1.10.0
               cd -
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
