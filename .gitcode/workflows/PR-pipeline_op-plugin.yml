@@ -203,7 +203,7 @@ stages:
               git merge origin/${TARGET_BRANCH}
               ls -al
           - name: setup-node
-            uses: setup-node@1.0.3
+            uses: setup-node
             with:
               node-version: '18'
               package-manager: 'npm'
