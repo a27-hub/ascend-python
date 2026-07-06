@@ -9,7 +9,7 @@
  *
  */
 
-import core from '@actions/core'
+const core = require('@actions/core');
 
 const { execFile } = require("child_process");
 const path = require("path");
@@ -149,7 +149,7 @@ async function run() {
     }
 }
 
-module.exports = { getInput, info, error, setFailed, setOutput, execShellScript, run };
+module.exports = { info, error, setFailed, setOutput, execShellScript, run };
 
 // 仅在直接执行时运行 (非 require/import 时)
 if (require.main === module) {

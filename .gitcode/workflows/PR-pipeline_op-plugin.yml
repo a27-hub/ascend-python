@@ -208,6 +208,7 @@ stages:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
                 if [ "$TARGET_BRANCH" = "7.3.0" ] || [ "$TARGET_BRANCH" = "7.3.0_test" ]; then
                   pwd
+                  echo "remote_url= ${{ REMOTE_URL }}"
                   cd ../../
                   rm -rf *
                   set -ex
