@@ -105,7 +105,6 @@ stages:
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
                 pwd
-                cd ../../
                 rm -rf *
                 set -ex
                 git config --global user.name wangwq129
@@ -142,7 +141,6 @@ stages:
             with:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
                 pwd
-                cd ../../
                 rm -rf *
                 set -ex
                 git config --global user.name wangwq129
@@ -204,7 +202,6 @@ stages:
               OFFICIAL_SHELL_SCRIPT_INPUT: |-
                 pwd
                 echo "remote_url= ${{ REMOTE_URL }}"
-                cd ../../
                 rm -rf *
                 set -ex
                 git config --global user.name wangwq129
@@ -217,6 +214,10 @@ stages:
               git checkout new_${pr_id}
               git merge origin/${TARGET_BRANCH}
               ls -al
+          - name: npm install
+            run: |
+              npm install @actions/core
+              pwd
           - name: Only Doc Commit Check
             identifier: Only_Doc_Commit_Check
             uses: ./.gitcode/actions/Only_Doc_Commit_Check
