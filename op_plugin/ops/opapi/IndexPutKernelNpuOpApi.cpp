@@ -104,7 +104,8 @@ at::Tensor& _index_put_impl_(
           all_defined_indice = all_defined_indice.to(self.device());
       }
   }
-  at::TensorList indices_tensor_list = all_defined_indices;
+//   at::TensorList indices_tensor_list = all_defined_indices;
+  at::TensorList indices_tensor_list = indices;
   if (self.numel() != 0 && value.numel() != 0) {
       EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
   }
