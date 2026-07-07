@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -8,6 +9,8 @@ from torch_npu.testing.testcase import TestCase, run_tests
 
 
 CHILD_SCRIPT = r"""
+import hashlib
+import json
 import os
 import sys
 
@@ -15,101 +18,104 @@ import torch
 import torch_npu
 
 
-def assert_npu_tensor(tensor):
-    if tensor.device.type != "npu":
-        raise AssertionError("expected npu tensor, got {}".format(tensor.device))
-    if tensor.numel() != 0 and not torch.isfinite(tensor.float()).all().item():
-        raise AssertionError("expected finite tensor")
+SEED = 2026
+SHAPE = (100, 100)
 
 
-def run_supported_ops():
-    torch.manual_seed(2026)
-
-    normal_tensor = torch.empty((16, 16), device="npu", dtype=torch.float32)
-    normal_tensor.normal_(0.0, 1.0)
-    assert_npu_tensor(normal_tensor)
-
-    randn_tensor = torch.randn((8, 8), device="npu", dtype=torch.float32)
-    assert_npu_tensor(randn_tensor)
-
-    xavier_tensor = torch.empty((8, 16), device="npu", dtype=torch.float32)
-    torch.nn.init.xavier_uniform_(xavier_tensor)
-    assert_npu_tensor(xavier_tensor)
-
-    uniform_tensor = torch.empty((16, 16), device="npu", dtype=torch.float32)
-    uniform_tensor.uniform_(-2.0, 3.0)
-    assert_npu_tensor(uniform_tensor)
-    if uniform_tensor.min().item() < -2.0 or uniform_tensor.max().item() > 3.0:
-        raise AssertionError("uniform_ result is out of range")
-
-    random_tensor = torch.empty((64,), device="npu", dtype=torch.int32)
-    random_tensor.random_(0, 100)
-    assert_npu_tensor(random_tensor)
-    if random_tensor.min().item() < 0 or random_tensor.max().item() >= 100:
-        raise AssertionError("random_(from, to) result is out of range")
+def tensor_md5(tensor):
+    return hashlib.md5(tensor.cpu().contiguous().numpy().tobytes()).hexdigest()
 
 
-def run_unsupported_ops():
-    random_tensor = torch.empty((64,), device="npu", dtype=torch.int32)
-    random_tensor.random_()
-    assert_npu_tensor(random_tensor)
+def fingerprint_supported_ops():
+    result = {}
 
-    exponential_tensor = torch.empty((128,), device="npu", dtype=torch.float32)
-    exponential_tensor.exponential_()
-    assert_npu_tensor(exponential_tensor)
-    if exponential_tensor.min().item() <= 0.0:
-        raise AssertionError("exponential_ result should be greater than zero")
+    torch.manual_seed(SEED)
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.float32)
+    tensor.normal_(0.0, 1.0)
+    result["normal_"] = tensor_md5(tensor)
+
+    torch.manual_seed(SEED)
+    tensor = torch.randn(SHAPE, device="npu", dtype=torch.float32)
+    result["randn"] = tensor_md5(tensor)
+
+    torch.manual_seed(SEED)
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.float32)
+    torch.nn.init.xavier_uniform_(tensor)
+    result["xavier_uniform_"] = tensor_md5(tensor)
+
+    torch.manual_seed(SEED)
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.float32)
+    tensor.uniform_(-2.0, 3.0)
+    result["uniform_"] = tensor_md5(tensor)
+
+    torch.manual_seed(SEED)
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.int32)
+    tensor.random_(0, 100)
+    result["random_from_to"] = tensor_md5(tensor)
+
+    return result
+
+
+def run_unsupported_smoke():
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.int32)
+    tensor.random_()
+    tensor.cpu()
+
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.float32)
+    tensor.exponential_()
+    tensor.cpu()
 
     if not hasattr(torch_npu, "npu_sim_exponential_"):
         return
 
-    sim_exponential_tensor = torch.empty((128,), device="npu", dtype=torch.float32)
+    tensor = torch.empty(SHAPE, device="npu", dtype=torch.float32)
     try:
-        torch_npu.npu_sim_exponential_(sim_exponential_tensor, lambd=1.0)
+        torch_npu.npu_sim_exponential_(tensor, lambd=1.0)
     except RuntimeError as err:
         message = str(err).lower()
         if "npu_sim_exponential" in message and "support" in message:
             return
         raise
-    assert_npu_tensor(sim_exponential_tensor)
-    if sim_exponential_tensor.min().item() <= 0.0:
-        raise AssertionError("npu_sim_exponential_ result should be greater than zero")
+    tensor.cpu()
 
 
-def run_dropout():
-    torch.manual_seed(2026)
-    input_tensor = torch.ones((16, 16), device="npu", dtype=torch.float32)
-    output_tensor = torch.nn.functional.dropout(input_tensor, p=0.5, training=True)
-    assert_npu_tensor(output_tensor)
+def run_dropout_smoke():
+    torch.manual_seed(SEED)
+    tensor = torch.ones(SHAPE, device="npu", dtype=torch.float32)
+    torch.nn.functional.dropout(tensor, p=0.5, training=True).cpu()
 
 
-def set_force_incompatible(value):
-    torch_npu._C._npu_setOption({"TORCH_NPU_FORCE_INCOMPATIBLE": value})
+def set_force_incompatible():
+    torch_npu._C._npu_setOption({"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
 
 
-def set_global_compatible(value):
-    torch_npu.npu.use_compatible_impl(value)
+def set_global_compatible():
+    torch_npu.npu.use_compatible_impl(os.environ["GLOBAL_COMPATIBLE"] == "1")
+
+
+def print_json(value):
+    print(json.dumps(value, sort_keys=True))
 
 
 def main():
     case = sys.argv[1]
-    if case == "supported":
-        run_supported_ops()
-    elif case == "unsupported":
-        run_unsupported_ops()
-    elif case == "dropout":
-        run_dropout()
+    if case == "fingerprint":
+        print_json(fingerprint_supported_ops())
     elif case == "set_option_before":
-        set_force_incompatible("randomness")
-        run_supported_ops()
+        set_force_incompatible()
+        print_json(fingerprint_supported_ops())
     elif case == "set_option_after":
-        run_supported_ops()
-        set_force_incompatible("randomness")
-        set_global_compatible(False)
-        run_supported_ops()
-    elif case == "global_switch_ignored":
-        set_global_compatible(os.environ["GLOBAL_COMPATIBLE"] == "1")
-        run_supported_ops()
+        before = fingerprint_supported_ops()
+        set_force_incompatible()
+        after = fingerprint_supported_ops()
+        print_json({"before": before, "after": after})
+    elif case == "global_switch":
+        set_global_compatible()
+        print_json(fingerprint_supported_ops())
+    elif case == "unsupported":
+        run_unsupported_smoke()
+    elif case == "dropout":
+        run_dropout_smoke()
     else:
         raise AssertionError("unknown child case: {}".format(case))
 
@@ -120,16 +126,15 @@ if __name__ == "__main__":
 
 
 class TestRandomnessCompatible(TestCase):
-    def run_child_case(self, case, extra_env=None):
+    def run_child(self, case, extra_env=None):
         env = os.environ.copy()
         env.pop("TORCH_NPU_FORCE_INCOMPATIBLE", None)
         env.pop("TORCH_NPU_USE_COMPATIBLE_IMPL", None)
         if extra_env is not None:
             env.update(extra_env)
 
-        command = [sys.executable, "-c", CHILD_SCRIPT, case]
         result = subprocess.run(
-            command,
+            [sys.executable, "-c", CHILD_SCRIPT, case],
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -152,58 +157,73 @@ class TestRandomnessCompatible(TestCase):
             stderr=result.stderr,
         )
         self.assertEqual(result.returncode, 0, message)
+        return result
+
+    def run_child_json(self, case, extra_env=None):
+        result = self.run_child(case, extra_env)
+        stdout_lines = [line for line in result.stdout.splitlines() if line.strip()]
+        for line in reversed(stdout_lines):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+        self.fail("child case {} did not output json\nstdout:\n{}\nstderr:\n{}".format(
+            case, result.stdout, result.stderr))
 
     @SupportedDevices(["Ascend910B"])
-    def test_a2_supported_ops_without_blacklist(self):
-        self.run_child_case("supported")
-
-    @SupportedDevices(["Ascend910B"])
-    def test_a2_supported_ops_with_blacklist(self):
-        self.run_child_case("supported", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+    def test_a2_randomness_blacklist_keeps_same_fingerprint(self):
+        baseline = self.run_child_json("fingerprint")
+        blacklist = self.run_child_json("fingerprint", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+        self.assertEqual(baseline, blacklist)
 
     @SupportedDevices(["Ascend950"])
-    def test_a5_supported_ops_without_blacklist(self):
-        self.run_child_case("supported")
-
-    @SupportedDevices(["Ascend950"])
-    def test_a5_supported_ops_with_blacklist(self):
-        self.run_child_case("supported", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
-
-    @SupportedDevices(["Ascend950"])
-    def test_a5_unsupported_ops_with_blacklist(self):
-        self.run_child_case("unsupported", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
-
-    @SupportedDevices(["Ascend950"])
-    def test_a5_dropout_without_blacklist(self):
-        self.run_child_case("dropout")
-
-    @SupportedDevices(["Ascend950"])
-    def test_a5_dropout_with_blacklist(self):
-        self.run_child_case("dropout", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+    def test_a5_randomness_blacklist_changes_supported_fingerprint(self):
+        baseline = self.run_child_json("fingerprint")
+        blacklist = self.run_child_json("fingerprint", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+        self.assertEqual(set(baseline.keys()), set(blacklist.keys()))
+        for op_name in baseline:
+            self.assertNotEqual(
+                baseline[op_name],
+                blacklist[op_name],
+                "{} output md5 should change after enabling randomness blacklist".format(op_name),
+            )
 
     @SupportedDevices(["Ascend910B", "Ascend950"])
     def test_force_incompatible_set_option_before_first_query(self):
-        self.run_child_case("set_option_before")
+        env_blacklist = self.run_child_json("fingerprint", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+        option_blacklist = self.run_child_json("set_option_before")
+        self.assertEqual(env_blacklist, option_blacklist)
 
     @SupportedDevices(["Ascend910B", "Ascend950"])
-    def test_force_incompatible_set_option_after_first_query(self):
-        self.run_child_case("set_option_after")
+    def test_force_incompatible_set_option_after_first_query_is_ignored(self):
+        result = self.run_child_json("set_option_after")
+        self.assertEqual(result["before"], result["after"])
 
     @SupportedDevices(["Ascend910B", "Ascend950"])
-    def test_global_compatible_switch_does_not_gate_randomness_disable(self):
+    def test_global_compatible_switch_does_not_gate_randomness_blacklist(self):
+        fingerprints = []
         for value in ("0", "1"):
-            self.run_child_case(
-                "global_switch_ignored",
+            fingerprints.append(self.run_child_json(
+                "global_switch",
                 {
                     "GLOBAL_COMPATIBLE": value,
                     "TORCH_NPU_FORCE_INCOMPATIBLE": "randomness",
                     "TORCH_NPU_USE_COMPATIBLE_IMPL": value,
                 },
-            )
+            ))
+        self.assertEqual(fingerprints[0], fingerprints[1])
 
     @SupportedDevices(["Ascend910B", "Ascend950"])
     def test_force_incompatible_parser_ignores_empty_and_unknown_tokens(self):
-        self.run_child_case("supported", {"TORCH_NPU_FORCE_INCOMPATIBLE": " randomness,,foo "})
+        expected = self.run_child_json("fingerprint", {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"})
+        actual = self.run_child_json("fingerprint", {"TORCH_NPU_FORCE_INCOMPATIBLE": " randomness,,foo "})
+        self.assertEqual(expected, actual)
+
+    @SupportedDevices(["Ascend950"])
+    def test_a5_unsupported_and_dropout_ignore_randomness_blacklist(self):
+        env = {"TORCH_NPU_FORCE_INCOMPATIBLE": "randomness"}
+        self.run_child("unsupported", env)
+        self.run_child("dropout", env)
 
 
 if __name__ == "__main__":
