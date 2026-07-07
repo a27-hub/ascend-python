@@ -255,49 +255,50 @@ stages:
     name: stage_2
     select: selected_by_default
     jobs:
-      build:
-        name: build
-        runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
-        container:
-          image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
-          options: --user root
-        steps:
-          - name: print env
-            run: |
-              env
-          - name: build
-            run: |
-              rm -rf *
-              git config --global http.postBuffer 524288000
-              git config --global http.lowSpeedLimit 5000
-              git config --global http.lowSpeedTime 300
-              git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
-              bash cie/common/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${WORKSPACE}
-              cd ./CODE
-              git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
-              cat ../modify_files.txt
-              cd -
-              source cie/common/common/ccache_env.sh
-              bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${WORKSPACE} ${TARGET_BRANCH}
-          - name: Upload to OBS
-            uses: obs-upload
-            with:
-              endpoint: "obs.cn-north-4.myhuaweicloud.com"
-              bucket: "pta-pr"
-              access-key: "${{ secrets.OBS_AK }}"
-              secret-key: "${{ secrets.OBS_SK }}"
-              artifact-path: "*.tar.gz*"
-              object-prefix: "op-plugin/PR/${{env.pr_id}}/"
-      # Build_master_ARM:
-      #   name: Build_master_ARM
-      #   if : ${{ env.BUILD_SKIP == 'no' }}
-      #   uses: .gitcode/workflows/build_job.yml
-      #   secrets:
-      #     OBS_AK: ${{ secrets.OBS_AK }}
-      #     OBS_SK: ${{ secrets.OBS_SK }}
-      #   with:
-      #     pytorch_branch: master
-      #     CP_DOCKER_IMG: ${{ env.img_master_arm }}
+      Build_master_ARM:
+        name: Build_master_ARM
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build_job.yml
+        secrets:
+          OBS_AK: ${{ secrets.OBS_AK }}
+          OBS_SK: ${{ secrets.OBS_SK }}
+        with:
+          pytorch_branch: master
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+
+      # build:
+      #   name: build
+      #   runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+      #   container:
+      #     image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
+      #     options: --user root
+      #   steps:
+      #     - name: print env
+      #       run: |
+      #         env
+      #     - name: build
+      #       run: |
+      #         rm -rf *
+      #         git config --global http.postBuffer 524288000
+      #         git config --global http.lowSpeedLimit 5000
+      #         git config --global http.lowSpeedTime 300
+      #         git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
+      #         bash cie/common/common/merge.sh ${TARGET_BRANCH} ${REMOTE_URL} ${pr_id} ${WORKSPACE}
+      #         cd ./CODE
+      #         git diff-tree -r --name-only --no-commit-id origin/${TARGET_BRANCH} HEAD > ../modify_files.txt
+      #         cat ../modify_files.txt
+      #         cd -
+      #         source cie/common/common/ccache_env.sh
+      #         bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${WORKSPACE} ${TARGET_BRANCH}
+      #     - name: Upload to OBS
+      #       uses: obs-upload
+      #       with:
+      #         endpoint: "obs.cn-north-4.myhuaweicloud.com"
+      #         bucket: "pta-pr"
+      #         access-key: "${{ secrets.OBS_AK }}"
+      #         secret-key: "${{ secrets.OBS_SK }}"
+      #         artifact-path: "*.tar.gz*"
+      #         object-prefix: "op-plugin/PR/${{env.pr_id}}/"
 
   #     Build_v2_7_1_ARM:
   #       uses: .gitcode/workflows/build-job.yml
