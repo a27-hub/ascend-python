@@ -35,27 +35,26 @@ inputs:
   pr_id:
     type: string
     description: "PR ID"
-    default: ${{ atomgit.event.pull_request.number }}
-  py_version:
-    type: string
-    description: "Python版本"
-    default: "3.10"
+    default: ${{ event.MERGE_ID }}
   workspace:
     type: string
     description: "工作目录"
-    default: "/workspace"
+    default: ${{ env.ATOMGIT_WORKSPACE }}
 
 env:
-  CP_pipeline_run_id: ${PIPELINE_RUN_ID}
-  CP_repo_url: ${test_REPO_URL}
-  CP_merge_id: ${MERGE_ID}
-  CP_target_branch: ${test_TARGET_BRANCH}
-  img_2_6_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.6.0_a2_aarch64_builder:20260418
-  img_2_7_1: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260518
-  img_2_9_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a2_aarch64_builder:20260518
-  img_2_10_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a2_aarch64_builder:20260518
-  img_2_11_0: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a2_aarch64_builder:20260518
-  img_master: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
+  BUILD_SKIP: "yes"
+  img_master_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
+  img_2_7_1_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a2_aarch64_builder:20260518
+  img_2_9_0_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a2_aarch64_builder:20260518
+  img_2_10_0_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a2_aarch64_builder:20260518
+  img_2_11_0_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a2_aarch64_builder:20260518
+  img_2_12_0_arm: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.12.0_a2_aarch64_builder:20260518
+  img_master_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a1_x86_64_builder:20260418
+  img_2_7_1_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.7.1_a1_x86_64_builder:20260418
+  img_2_9_0_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.9.0_a1_x86_64_builder:20260418
+  img_2_10_0_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.10.0_a1_x86_64_builder:20260418
+  img_2_11_0_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.11.0_a1_x86_64_builder:20260418
+  img_2_12_0_x86: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_2.12.0_a1_x86_64_builder:20260518
 
 stages:
   stage_1:
@@ -243,20 +242,23 @@ stages:
               pr_id: ${{ env.pr_id }}
               target_branch: ${{ env.TARGET_BRANCH }}
               remote_url: ${{ env.REMOTE_URL }}
-          - name: result print
+          - name: set build skip flag
             run: |
+              export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
-  # stage_2:
-  #   name: stage_2
-  #   jobs:
-  #     Build_master_ARM:
-  #       uses: .gitcode/workflows/build-job.yml
-  #       with:
-  #         branch_version: ${TARGET_BRANCH}
-  #         arch: ARM
-  #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  stage_2:
+    name: stage_2
+    jobs:
+      Build_master_ARM:
+        if : ${{ env.BUILD_SKIP == 'no' }}
+        uses: .gitcode/workflows/build-job.yml
+        with:
+          arch: ARM
+          pytorch_branch: master
+          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+
+
 
   #     Build_v2_7_1_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -264,7 +266,7 @@ stages:
   #         branch_version: v2_7_1
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_9_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -272,7 +274,7 @@ stages:
   #         branch_version: v2_9_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_10_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -280,7 +282,7 @@ stages:
   #         branch_version: v2_10_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_11_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -288,7 +290,7 @@ stages:
   #         branch_version: v2_11_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_12_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -296,7 +298,7 @@ stages:
   #         branch_version: v2_12_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_master_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -304,7 +306,7 @@ stages:
   #         branch_version: ${TARGET_BRANCH}
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_7_1_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -312,7 +314,7 @@ stages:
   #         branch_version: v2_7_1
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_9_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -320,7 +322,7 @@ stages:
   #         branch_version: v2_9_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_10_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -328,7 +330,7 @@ stages:
   #         branch_version: v2_10_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_11_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -336,7 +338,7 @@ stages:
   #         branch_version: v2_11_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   #     Build_v2_12_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -344,7 +346,7 @@ stages:
   #         branch_version: v2_12_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         py_version: ${{ inputs.py_version }}
+  #         
 
   # stage_3:
   #   name: stage_3
