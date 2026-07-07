@@ -24,7 +24,7 @@ torch_npu.profiler.schedule (wait, active, warmup = 0, repeat = 0, skip_first = 
 
 - **`active`** (`int`): Required. Number of profile data collection steps.
 
-- **`warmup`** (`int`): Optional. Number of warmup steps. The default value is `0`. The recommended value is ``1`.
+- **`warmup`** (`int`): Optional. Number of warmup steps. The default value is `0`. The recommended value is `1`.
 
 - **`repeat`** (`int`): Optional. Number of times to repeat the `wait + warmup + active` process. The value must be an integer greater than or equal to 0. The default value is `0`.
 
