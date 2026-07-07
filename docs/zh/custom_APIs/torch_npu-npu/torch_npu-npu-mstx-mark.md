@@ -18,7 +18,7 @@
 ## 函数原型
 
 ```python
-torch_npu.npu.mstx.mark(message: str='None', stream=None, domain: str='default') -> none:
+torch_npu.npu.mstx.mark(message: str='None', stream=None, domain: str='default') -> None:
 ```
 
 ## 参数说明
