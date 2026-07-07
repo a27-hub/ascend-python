@@ -46,7 +46,7 @@ inputs:
     default: ${{ env.ATOMGIT_WORKSPACE }}
 
 env:
-  BUILD_SKIP: "yes"
+  BUILD_SKIP: "no"
   img_master_arm: "pytorch_master_a2_aarch64_builder:20260518"
   img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260518"
   img_2_9_0_arm: "pytorch_2.9.0_a2_aarch64_builder:20260518"
@@ -248,7 +248,7 @@ stages:
               remote_url: ${{ env.REMOTE_URL }}
           - name: set build skip flag
             run: |
-
+              export BUILD_SKIP=${{ steps.only-doc-check.outputs.is_only_doc }}
               echo "Only Doc Commit Check result: ${{ steps.only-doc-check.outputs.is_only_doc }}"
 
   stage_2:
