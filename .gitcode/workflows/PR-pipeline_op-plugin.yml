@@ -266,7 +266,6 @@ stages:
             run: |
               echo "hello step"
 
-
       Build_master_ARM:
         name: Build_master_ARM
         if : ${{ env.BUILD_SKIP == 'no' }}

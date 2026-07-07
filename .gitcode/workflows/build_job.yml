@@ -61,7 +61,7 @@ jobs:
           cat ../modify_files.txt
           cd -
           source cie/common/common/ccache_env.sh
-          bash cie/common/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} ${{ inputs.py_version }} ${{ env.pr_id }} ${WORKSPACE} ${TARGET_BRANCH}
+          bash cie/common/build/op-plugin_build.sh ${{ inputs.pytorch_branch }} 3.10 ${{ env.pr_id }} ${WORKSPACE} ${TARGET_BRANCH}
       - name: Upload to OBS
         uses: obs-upload
         with:
