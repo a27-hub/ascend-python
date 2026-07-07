@@ -33,10 +33,10 @@ on:
 jobs:
   build:
     name: build
-    runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
+    runs-on: default
     container:
       image: ${{ env.CP_DOCKER_IMG }}
-      options: --cpus 1 --user root
+      options: --user root
     steps:
       - name: build
         run: |
