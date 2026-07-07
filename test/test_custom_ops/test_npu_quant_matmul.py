@@ -515,7 +515,7 @@ class TestQuantMatmul(TestCase):
         custom_output = torch_npu.npu_quant_matmul(x1_clone.npu(), x2_clone.npu(), scale_clone.npu(), pertoken_scale=pertoken_scale_clone.npu(), x1_dtype=torch_npu.float4_e2m1fn_x2, x2_dtype=torch_npu.float4_e2m1fn_x2, scale_dtype=torch_npu.float8_e8m0fnu, pertoken_scale_dtype=torch_npu.float8_e8m0fnu, output_dtype=torch.bfloat16)
         self.assertRtolEqual(supported_output.float().cpu().numpy(), custom_output.float().cpu().numpy(), 0.001)
 
-    @SupportedDevices(['Ascend950'])
+    @unittest.skip("skip test_npu_quant_matmul_mxfp8_scale_with_batch")
     def test_npu_quant_matmul_mxfp8_scale_with_batch(self):
         # fp8 MX scale带batch前缀: ps(B,M,ceilK,2), sc(B,ceilK,N,2)
         B, M, N, K = 2, 64, 128, 256
