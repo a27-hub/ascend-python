@@ -266,7 +266,6 @@ stages:
           pytorch_branch: master
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
 
-
       build:
         name: build
         runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
