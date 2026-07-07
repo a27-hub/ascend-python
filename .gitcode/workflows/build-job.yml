@@ -3,9 +3,6 @@ name: Build Job
 on:
   workflow_call:
     inputs:
-      arch:
-        required: true
-        type: string
       py_version:
         required: false
         type: string
@@ -28,7 +25,7 @@ on:
 
 jobs:
   build:
-    name: Build_${{ env.pytorch_branch }}_${{ env.arch }}
+    name: build
     runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
     container:
       image: ${{ env.CP_DOCKER_IMG }}

@@ -255,7 +255,6 @@ stages:
         if : ${{ env.BUILD_SKIP == 'no' }}
         uses: .gitcode/workflows/build-job.yml
         with:
-          arch: ARM
           pytorch_branch: master
           CP_DOCKER_IMG: ${{ env.img_master_arm }}
 
