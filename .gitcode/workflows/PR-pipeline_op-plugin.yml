@@ -265,7 +265,6 @@ stages:
           - name: HELLO_STEP
             run: |
               echo "hello step"
-              env
 
       Build_master_ARM:
         name: Build_master_ARM
