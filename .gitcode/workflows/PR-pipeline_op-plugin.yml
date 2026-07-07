@@ -266,7 +266,7 @@ stages:
   #         branch_version: v2_7_1
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_9_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -274,7 +274,7 @@ stages:
   #         branch_version: v2_9_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_10_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -282,7 +282,7 @@ stages:
   #         branch_version: v2_10_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_11_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -290,7 +290,7 @@ stages:
   #         branch_version: v2_11_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_12_0_ARM:
   #       uses: .gitcode/workflows/build-job.yml
@@ -298,7 +298,7 @@ stages:
   #         branch_version: v2_12_0
   #         arch: ARM
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_master_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -306,7 +306,7 @@ stages:
   #         branch_version: ${TARGET_BRANCH}
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_7_1_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -314,7 +314,7 @@ stages:
   #         branch_version: v2_7_1
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_9_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -322,7 +322,7 @@ stages:
   #         branch_version: v2_9_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_10_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -330,7 +330,7 @@ stages:
   #         branch_version: v2_10_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_11_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -338,7 +338,7 @@ stages:
   #         branch_version: v2_11_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   #     Build_v2_12_0_x86:
   #       uses: .gitcode/workflows/build-job.yml
@@ -346,7 +346,7 @@ stages:
   #         branch_version: v2_12_0
   #         arch: x86
   #         target_branch: ${{ inputs.TARGET_BRANCH }}
-  #         
+  #
 
   # stage_3:
   #   name: stage_3
