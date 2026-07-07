@@ -128,12 +128,12 @@ inline bool ConfigureCannRandomnessDisabledOnce()
         using AclnnSetPytorchRandomFunc = int32_t (*)(int32_t);
         static const auto func_addr = GetOpApiFuncAddr("aclnnSetPytorchRandom");
         if (func_addr == nullptr) {
-            ASCEND_LOGW("GetOpApiFuncAddr aclnnSetPytorchRandom failed. Randomness compatible blacklist is ignored.");
+            TORCH_WARN("GetOpApiFuncAddr aclnnSetPytorchRandom failed. Randomness compatible blacklist is ignored.");
             return;
         }
         auto aclnn_set_pytorch_random = reinterpret_cast<AclnnSetPytorchRandomFunc>(func_addr);
         NPU_CHECK_ERROR(aclnn_set_pytorch_random(CANN_RANDOM_COMPAT_DISABLED), "call aclnnSetPytorchRandom failed");
-        ASCEND_LOGD("Set aclnnSetPytorchRandom value to %d.", CANN_RANDOM_COMPAT_DISABLED);
+        ASCEND_LOGI("aclnnSetPytorchRandom configured successfully, value=%d.", CANN_RANDOM_COMPAT_DISABLED);
         cann_randomness_compat_configured = true;
     });
     return cann_randomness_compat_configured;
@@ -145,7 +145,9 @@ inline bool PrepareRandomnessCompatible(bool support_cann_random_switch = true)
         at_npu::native::env::CompatibleKey::Randomness);
     const bool is_aclnn_only = c10_npu::IsAclnnOnly();
     if (support_cann_random_switch && is_aclnn_only && force_incompatible) {
-        return !ConfigureCannRandomnessDisabledOnce();
+        bool cann_randomness_disabled = ConfigureCannRandomnessDisabledOnce();
+        bool compatible = !cann_randomness_disabled;
+        return compatible;
     }
     return is_aclnn_only;
 }

@@ -30,7 +30,6 @@ static const double NUMBER_ONE = 1.0;
 
 std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p)
 {
-    // TODO: Keep dropout out of Randomness blacklist until DropoutV3 supports aclnnSetPytorchRandom.
     const bool is_aclnn_only = c10_npu::IsAclnnOnly();
     if (!is_aclnn_only) {
         DO_COMPATIBILITY(aclnnDropoutGenMaskV2, acl_op::_npu_dropout(self, p));
@@ -48,7 +47,11 @@ std::tuple<at::Tensor, at::Tensor> _npu_dropout(const at::Tensor& self, double p
         if (nelem == 0) {
             return std::tie(result, mask);
         }
-        int64_t counterOffset = op_plugin::utils::calc_counter_offset(nelem, op_plugin::utils::UNROLL_4);
+        // TODO: Remove false after aclnnDropoutV3 supports aclnnSetPytorchRandom.
+        const bool randomness_compatible = op_plugin::utils::PrepareRandomnessCompatible(false);
+        int64_t counterOffset = randomness_compatible
+            ? op_plugin::utils::calc_counter_offset(nelem, op_plugin::utils::UNROLL_4)
+            : op_plugin::utils::LEGACY_RAND_COUNTER_OFFSET;
         auto pair = at::check_generator<at_npu::NPUGeneratorImpl>(gen)->philox_engine_inputs(counterOffset);
         const uint64_t seed = pair.first;
         const uint64_t offset = pair.second;
