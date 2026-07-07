@@ -18,9 +18,9 @@
 
     - group分组（支持`cumsum`和`count`两种模式）：
 
-        对输入`x`经过swiglu计算后的结果进行分组计算，`group_index`表示每个group分组的tokens数，每组使用不同的量化`smooth_scales`。
+        对输入`x`经过swiglu计算后的结果进行分组计算，每组使用不同的量化`smooth_scales`。当`group_list_type=0`时，`group_index`表示各group的累积tokens结束位置；当`group_list_type=1`时，`group_index`表示各group的tokens数。
 
-        举例说明：假设x.shape=\[6, 2N\]，在`cumsum`模式下，`group_index`的shape为\[2, 4, 6\]，表示有3个group，对应的`smooth_scales`维度为\[3, H\]。每个group数据使用不同的`smooth_scales`分别做quant量化操作。
+        举例说明：假设x.shape=\[6, 2N\]，在`cumsum`模式下，`group_index`的值为\[2, 4, 6\]，表示有3个group，对应的`smooth_scales`维度为\[3, H\]。每个group数据使用不同的`smooth_scales`分别做quant量化操作。
 
         - group0=x\[0:2, :\]，scale0=smooth_scales\[0, :\]
         - group1=x\[2:4, :\]，scale1=smooth_scales\[1, :\]
