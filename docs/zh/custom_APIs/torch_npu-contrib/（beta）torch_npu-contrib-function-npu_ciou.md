@@ -14,7 +14,7 @@
 
 ## 功能说明
 
-应用基于NPU的CIoU操作。在DIoU的基础上增加了penalty term，并propose CIoU。
+在DIoU的基础上增加惩罚项，并提出CIoU。
 
 ## 函数原型
 
