@@ -298,8 +298,13 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
             size_t output_n = (is_mx_weight_nz_multi && is_fp4_output) ?
                                   n / MXFP_MULTI_BASE_SIZE / NUM_TWO :
                                   n / MXFP_MULTI_BASE_SIZE;
+            size_t output_scale_n = n / MXFP_MULTI_BASE_SIZE;
+            if (mxfp4_input && is_weight_nz && !is_mx_weight_nz_multi && is_fp4_output && !weight_trans) {
+                output_scale_n = n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE;
+            }
             create_new_tensor(output, m, output_n, options_output);
-            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
+            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(output_scale_n, MXFP_DIVISOR_SIZE),
+                                    MXFP_MULTI_BASE_SIZE, options);
         }
     }
 
