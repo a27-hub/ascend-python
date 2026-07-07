@@ -1,0 +1,30 @@
+name: 'Only_Doc_Commit_Check'
+author: 'Ascend'
+version: '1.0.0'
+description: 'Check if the PR contains only documentation'
+inputs:
+  pr_id:
+    description: PR ID
+    required: true
+  target_branch:
+    description: 目标分支名称
+    required: true
+  result_msg_path:
+    description: 结果消息输出目录路径
+    required: false
+    default: ""
+  step_id:
+    description: 步骤ID
+    required: false
+    default: ""
+  remote_url:
+    description: 目标仓库的远程 URL
+    required: true
+    default: ""
+outputs:
+  is_only_doc:
+    description: 是否为文档提交
+
+runs:
+  using: 'node16'
+  main: 'dist/main.js'
