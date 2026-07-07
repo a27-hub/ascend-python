@@ -251,6 +251,7 @@ stages:
     name: stage_2
     jobs:
       Build_master_ARM:
+        name: Build_master_ARM
         if : ${{ env.BUILD_SKIP == 'no' }}
         uses: .gitcode/workflows/build-job.yml
         with:
