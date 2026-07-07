@@ -24,10 +24,8 @@ on:
     secrets:
       OBS_AK:
         required: true
-        type: string
       OBS_SK:
         required: true
-        type: string
 
 
 jobs:
