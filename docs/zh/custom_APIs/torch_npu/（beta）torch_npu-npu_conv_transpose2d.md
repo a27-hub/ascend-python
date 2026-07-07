@@ -32,4 +32,3 @@ torch_npu.npu_conv_transpose2d(input, weight, bias, padding, output_padding, str
 - **stride**（`List[int]`）：可选参数，默认为[1,1]，卷积核步长。
 - **dilation**（`List[int]`）：可选参数，默认为[1,1]，内核元素间距。
 - **groups**（`int`）：可选参数，默认为1，对输入进行分组。in_channels和out_channels均可被组数整除。
-
