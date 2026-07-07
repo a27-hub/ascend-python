@@ -41,6 +41,7 @@ jobs:
       - name: print env
         run: |
           env
+
       - name: compile
         run: |
           rm -rf *

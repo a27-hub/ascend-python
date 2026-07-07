@@ -276,7 +276,7 @@ stages:
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: "master"
-          CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
+          CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
 
   #     Build_v2_7_1_ARM:
   #       uses: .gitcode/workflows/build-job.yml
