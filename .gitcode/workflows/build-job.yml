@@ -21,6 +21,13 @@ on:
       pytorch_branch:
         required: true
         type: string
+    secrets:
+      OBS_AK:
+        required: true
+        type: string
+      OBS_SK:
+        required: true
+        type: string
 
 
 jobs:
