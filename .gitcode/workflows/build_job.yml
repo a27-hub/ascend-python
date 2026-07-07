@@ -31,17 +31,18 @@ on:
 
 
 jobs:
-  build:
-    name: build
+  JOB_compile:
+    name: JOB_compile
+    select: selected_by_default
     runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
     container:
-      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/pytorch_master_a2_aarch64_builder:20260518
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
       options: --user root
     steps:
       - name: print env
         run: |
           env
-      - name: build
+      - name: compile
         run: |
           rm -rf *
           git config --global http.postBuffer 524288000
