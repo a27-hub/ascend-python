@@ -15,6 +15,10 @@ on:
     branches-ignore: []
     paths-ignore: []
     code-update: false
+  pull_request_comment:
+    types: [created]
+    branches: [ '*' ]
+    comments: [ '^(?:\/)?compile*' ]
 inputs:
   repo:
     type: string
