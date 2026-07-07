@@ -47,18 +47,18 @@ inputs:
 
 env:
   BUILD_SKIP: "no"
-  img_master_arm: pytorch_master_a2_aarch64_builder:20260518
-  img_2_7_1_arm: pytorch_2.7.1_a2_aarch64_builder:20260518
-  img_2_9_0_arm: pytorch_2.9.0_a2_aarch64_builder:20260518
-  img_2_10_0_arm: pytorch_2.10.0_a2_aarch64_builder:20260518
-  img_2_11_0_arm: pytorch_2.11.0_a2_aarch64_builder:20260518
-  img_2_12_0_arm: pytorch_2.12.0_a2_aarch64_builder:20260518
-  img_master_x86: pytorch_master_a1_x86_64_builder:20260418
-  img_2_7_1_x86: pytorch_2.7.1_a1_x86_64_builder:20260418
-  img_2_9_0_x86: pytorch_2.9.0_a1_x86_64_builder:20260418
-  img_2_10_0_x86: pytorch_2.10.0_a1_x86_64_builder:20260418
-  img_2_11_0_x86: pytorch_2.11.0_a1_x86_64_builder:20260418
-  img_2_12_0_x86: pytorch_2.12.0_a1_x86_64_builder:20260518
+  img_master_arm: "pytorch_master_a2_aarch64_builder:20260518"
+  img_2_7_1_arm: "pytorch_2.7.1_a2_aarch64_builder:20260518“
+  img_2_9_0_arm: “pytorch_2.9.0_a2_aarch64_builder:20260518“
+  img_2_10_0_arm: “pytorch_2.10.0_a2_aarch64_builder:20260518“
+  img_2_11_0_arm: “pytorch_2.11.0_a2_aarch64_builder:20260518“
+  img_2_12_0_arm: “pytorch_2.12.0_a2_aarch64_builder:20260518“
+  img_master_x86: “pytorch_master_a1_x86_64_builder:20260418“
+  img_2_7_1_x86: "pytorch_2.7.1_a1_x86_64_builder:20260418“
+  img_2_9_0_x86: "pytorch_2.9.0_a1_x86_64_builder:20260418“
+  img_2_10_0_x86: "pytorch_2.10.0_a1_x86_64_builder:20260418“
+  img_2_11_0_x86: "pytorch_2.11.0_a1_x86_64_builder:20260418“
+  img_2_12_0_x86: "pytorch_2.12.0_a1_x86_64_builder:20260518“
 
 stages:
   # stage_1:
@@ -276,7 +276,7 @@ stages:
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
           pytorch_branch: master
-          CP_DOCKER_IMG: ${{ env.img_master_arm }}
+          CP_DOCKER_IMG: ${{env.img_master_arm}}
 
   #     Build_v2_7_1_ARM:
   #       uses: .gitcode/workflows/build-job.yml
