@@ -211,7 +211,7 @@ stages:
           - name: checkout
             run: |
               pwd
-              echo "remote_url= ${{ REMOTE_URL }}"
+              echo "TARGET_BRANCH= ${TARGET_BRANCH}"
               rm -rf *
               git config --global user.name wangwq129
               git config --global user.email wangweiqi22@huawei.com
