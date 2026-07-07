@@ -46,8 +46,8 @@ torch_npu.npu_moe_gating_top_k_softmax(x, finished=None, k=1) -> (Tensor, Tensor
 - <term>Atlas 推理系列产品</term>:
   - 输入x shape为[token_num, expert_num], expert_num必须满足16对齐，即expert_num是16整数倍，且不能超过256。
   - 输入x仅支持FLOAT16。
-  - 输入不支持finishedOptional，只能输入None。
-  - 输出不支持rowIdxOut。
+  - 输入不支持finished，只能输入None。
+  - 输出不支持rowIdx。
 
 ## 调用示例
 
