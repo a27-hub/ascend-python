@@ -45,7 +45,7 @@
 ## 函数原型<a name="zh-cn_topic_0000002322738573_section470115437220"></a>
 
 ```python
-torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, norm_eps=1e-06, int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0) -> (Tensor, Tensor, Tensor)
+torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_idx, ep_send_counts, expert_scales, residual_x, gamma, group_ep, ep_world_size, ep_rank_id, moe_expert_num, *, tp_send_counts=None, x_active_mask=None, activation_scale=None, weight_scale=None, group_list=None, expand_scales=None, shared_expert_x=None, elastic_info=None, ori_x=None, const_expert_alpha_1=None, const_expert_alpha_2=None, const_expert_v=None, group_tp="", tp_world_size=0, tp_rank_id=0, expert_shard_type=0, shared_expert_num=1, shared_expert_rank_num=0, global_bs=0, out_dtype=0, comm_quant_mode=0, group_list_type=0, comm_alg="", norm_eps=1e-06, int zero_expert_num=0, int copy_expert_num=0, int const_expert_num=0) -> (Tensor, Tensor, Tensor)
 ```
 
 ## 参数说明<a name="zh-cn_topic_0000002322738573_section187018431529"></a>
@@ -110,6 +110,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 - **out\_dtype**（`int`）：可选参数，**预留参数暂未使用，使用默认值即可**。
 - **comm\_quant\_mode**（`int`）：可选参数，表示通信量化类型。**预留参数暂未使用，使用默认值即可**。
 - **group\_list\_type**（`int`）：可选参数，**预留参数暂未使用，使用默认值即可**。
+- **comm\_alg** (`str`)：可选参数，**预留参数暂未使用，使用默认值即可**。
 - **norm\_eps**（`float`）：可选参数，用于防止add\_rms\_norm除0错误，默认值为1e-6。
 
 - **zero\_expert\_num** (`int`)：可选参数，表示零专家的数量。取值范围\[0, MAX_INT32\)，其中MAX_INT32值为2147483647，合法的零专家的ID值是\[moe\_expert\_num, moe\_expert\_num+zero\_expert\_num\)。
@@ -128,7 +129,7 @@ torch_npu.npu_moe_distribute_combine_add_rms_norm(expand_x, expert_ids, expand_i
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
-- 调用接口过程中使用的expert_ids、x_active_mask、elastic_info、group_ep、ep_world_size、moe_expert_num、group_tp、tp_world_size、expert_shard_type、shared_expert_num、shared_expert_rank_num、global_bs、comm_alg、zero_expert_num、copy_expert_num、const_expert_num参数、HCCL_BUFFSIZE取值所有卡需保持一致，网络中不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)对应参数也保持一致。
+- 调用接口过程中使用的expert_ids、x_active_mask、elastic_info、group_ep、ep_world_size、moe_expert_num、group_tp、tp_world_size、expert_shard_type、shared_expert_num、shared_expert_rank_num、global_bs、comm_quant_mode、zero_expert_num、copy_expert_num、const_expert_num参数、HCCL_BUFFSIZE取值所有卡需保持一致，网络中不同层中也需保持一致，且和[torch\_npu.npu\_moe\_distribute\_dispatch\_v2](torch_npu-npu_moe_distribute_dispatch_v2.md)对应参数也保持一致。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：该场景下单卡包含双DIE（简称为“晶粒”或“裸片”），因此参数说明里的“本卡”均表示单DIE。
 - moe_expert_num + zero_expert_num + copy_expert_num + const_expert_num < MAX_INT32，其中MAX_INT32值为2147483647。
 - 参数里Shape使用的变量如下：
