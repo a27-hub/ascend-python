@@ -374,10 +374,10 @@ class FakeTensorTest(TestCase):
             x = torch.rand([4])
             y = torch.rand([4], device="npu")
 
-            with self.assertRaisesRegex(Exception, "found two different devices"):
+            with self.assertRaisesRegex(Exception, "found.+two.+devices"):
                 torch.sin(x, out=y)
 
-            with self.assertRaisesRegex(Exception, "found two different devices"):
+            with self.assertRaisesRegex(Exception, "found.+two.+devices"):
                 x.add_(y)
 
 
@@ -5605,13 +5605,13 @@ class TestNpuConvolutionTranspose(TestCase):
 class TestBatchNormReduce(TestCase):
     def test_batch_norm_reduce(self):
         with FakeTensorMode():
-            input_fake_tensor = torch.randn(2, 3, 12, 12, device="npu", requires_grad=True)
+            input_fake_tensor = torch.randn(2, 3, 12, 12, dtype=torch.float16, device="npu", requires_grad=True)
             eps = 1e-5
             output_fake_tensor1, output_fake_tensor2 = torch_npu.batch_norm_reduce(input_fake_tensor, eps)
             self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor1.shape[0])
-            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor1.dtype)
+            self.assertEqual(torch.float32, output_fake_tensor1.dtype)
             self.assertEqual(input_fake_tensor.shape[1], output_fake_tensor2.shape[0])
-            self.assertEqual(input_fake_tensor.dtype, output_fake_tensor2.dtype)
+            self.assertEqual(torch.float32, output_fake_tensor2.dtype)
 
 
 class TestMatmul(TestCase):
@@ -5930,6 +5930,32 @@ class TestSwigluMxQuant(TestCase):
             self.assertEqual(y_npu.dtype, torch.uint8)
             self.assertEqual(mxscale_npu.shape, torch.Size([4, 1, 2]))
             self.assertEqual(mxscale_npu.dtype, torch.uint8)
+
+
+class TestSwigluGroupQuant(TestCase):
+    def test_npu_swiglu_group_quant_meta(self):
+        with FakeTensorMode():
+            x = torch.randn([4, 16], dtype=torch.float32, device='npu')
+            weight = torch.randn([4, 1], dtype=torch.float32, device='npu')
+            group_index = torch.randint(0, 10, (2,), dtype=torch.int64, device="npu")
+            scale = torch.randn([2], dtype=torch.float32, device='npu')
+
+            quant_mode = 3
+            round_scale = False
+            clamp_limit = 0.01
+            dst_type_max = 15.0
+            output_origin = True
+
+            y_npu, y_scale_npu, y_origin = torch_npu.npu_swiglu_group_quant(x, weight=weight, group_index=group_index,
+                                                                           scale=scale, quant_mode=quant_mode,
+                                                                           round_scale=round_scale, clamp_limit=clamp_limit,
+                                                                           dst_type_max=dst_type_max, output_origin=output_origin)
+            self.assertEqual(y_npu.shape, torch.Size([4, 8]))
+            self.assertEqual(y_npu.dtype, torch.uint8)
+            self.assertEqual(y_scale_npu.shape, torch.Size([2]))
+            self.assertEqual(y_scale_npu.dtype, torch.float32)
+            self.assertEqual(y_origin.shape, torch.Size([4, 8]))
+            self.assertEqual(y_origin.dtype, torch.float32)
 
 
 class TestSwigluGroupQuantBackward(TestCase):

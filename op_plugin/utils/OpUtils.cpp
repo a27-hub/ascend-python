@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ATen/NamedTensorUtils.h>
+#include "op_plugin/utils/NamedTensorCompat.h"
 
 #include "torch_npu/csrc/aten/CustomFunctions.h"
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
@@ -261,6 +261,7 @@ at::Tensor get_cast_input(const at::Tensor& self, at::ScalarType calculate_type)
 NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
 {
     NameVector names;
+#if !VERSION_BETWEEN(V2R13, VERSION_NEWEST)
     bool has_names = false;
 
     for (auto tensor : tensor_list) {
@@ -281,6 +282,7 @@ NameVector compute_names_npu(std::vector<at::Tensor> tensor_list)
             names = NameVector(at::unify_from_right(names, tensor.names()));
         }
     }
+#endif
     return names;
 }
 
@@ -359,7 +361,7 @@ bool check_foreach_tensor_dtype_spport_base_and_int(at::ScalarType tensorDtype)
 
 bool check_foreach_scalar_dtype_spport(at::ScalarType scalarDtype)
 {
-    return at::isIntegralType(scalarDtype) || at::isFloatingType(scalarDtype);
+    return at::isIntegralType(scalarDtype, false) || at::isFloatingType(scalarDtype);
 }
 
 bool check_mapping_between_tensor_and_scalar_list(at::ScalarType tensorDtype, at::ScalarType scalarDtype, ForeachMappingType mapping)
@@ -370,7 +372,7 @@ bool check_mapping_between_tensor_and_scalar_list(at::ScalarType tensorDtype, at
 
     switch (mapping) {
         case ForeachMappingType::MAP_SCALARLIST_DEFAULT:
-            return (at::isIntegralType(scalarDtype) && at::isIntegralType(tensorDtype)) ||
+            return (at::isIntegralType(scalarDtype, false) && at::isIntegralType(tensorDtype, false)) ||
                    (at::isFloatingType(scalarDtype) && at::isFloatingType(tensorDtype));
         default:
             TORCH_CHECK(false, "Invalid  ForeachMappingType Parm Between Tensor And ScalarList", OPS_ERROR(ErrCode::PARAM));
@@ -385,7 +387,7 @@ bool check_mapping_between_tensor_and_scalar(at::ScalarType tensorDtype, at::Sca
 
     switch (mapping) {
         case ForeachMappingType::MAP_SCALAR_DEFAULT:
-            return !at::isIntegralType(tensorDtype) && at::isFloatingType(scalarDtype);
+            return !at::isIntegralType(tensorDtype, false) && at::isFloatingType(scalarDtype);
         case ForeachMappingType::MAP_POW_SCALAR_AND_TENSOR:
             return true;
         default:
@@ -523,7 +525,7 @@ int64_t check_and_get_group_size(at::IntArrayRef group_size_list)
                                   (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
     return groups;
 }
-    
+
 int8_t get_cube_math_type_with_passthrough()
 {
     int8_t cube_math_type = at_npu::native::OpPreparation::get_cube_math_type(at_npu::native::env::IsAllowMatmulHF32());
