@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: print env
         run: |
-          echo "CP_DOCKER_IMG=${{ inputs.CP_DOCKER_IMG }}"
+          env
       - name: compile
         run: |
           rm -rf *

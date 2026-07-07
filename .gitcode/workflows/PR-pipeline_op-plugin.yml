@@ -275,7 +275,7 @@ stages:
           OBS_AK: ${{ secrets.OBS_AK }}
           OBS_SK: ${{ secrets.OBS_SK }}
         with:
-          pytorch_branch: master
+          pytorch_branch: "master"
           CP_DOCKER_IMG: "pytorch_master_a2_aarch64_builder:20260518"
 
   #     Build_v2_7_1_ARM:
