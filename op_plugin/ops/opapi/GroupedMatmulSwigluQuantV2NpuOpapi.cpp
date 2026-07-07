@@ -44,6 +44,36 @@ void create_new_tensor_batch(at::Tensor &y, size_t batch, size_t dim_m, size_t d
     y = npu_preparation::apply_tensor_without_format(output_size, options);
 }
 
+void create_mxfp4_single_weight_output(at::Tensor &output, at::Tensor &output_scale, size_t m, size_t n,
+                                       bool weight_trans, bool is_fp8_output,
+                                       const c10::TensorOptions &options_output,
+                                       const c10::TensorOptions &options)
+{
+    if (!weight_trans) {
+        if (is_fp8_output) {
+            create_new_tensor(output, m, (n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8, options_output);
+            create_new_tensor_batch(output_scale, m,
+                                    op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
+                                    MXFP_MULTI_BASE_SIZE, options);
+        } else {
+            create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
+            create_new_tensor_batch(output_scale, m,
+                                    op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
+                                    MXFP_MULTI_BASE_SIZE, options);
+        }
+    } else {
+        if (is_fp8_output) {
+            create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
+            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
+                                    MXFP_MULTI_BASE_SIZE, options);
+        } else {
+            create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / NUM_TWO, options_output);
+            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
+                                    MXFP_MULTI_BASE_SIZE, options);
+        }
+    }
+}
+
 bool is_transpose_last_two_dims(const at::Tensor &tensor)
 {
     if (tensor.dim() < DIM_2) {
@@ -273,37 +303,16 @@ std::tuple<at::Tensor, at::Tensor> npu_grouped_matmul_swiglu_quant_v2(
                     : x[DIM_0].scalar_type());
         c10::TensorOptions options = x.options().dtype(npu_preparation::convert_to_scalar_type(c10_npu::GetAclDataType(weight_scale_dtype.value())));
 
-        if (mxfp4_input && !is_weight_nz) {
-            // In the non-NZ MXFP4 path, uint8 storage packs two FP4 values. For non-transposed weight,
-            // n is the packed physical N from weight.shape[2], while CANN validates against logical N = n * 2.
-            if (!weight_trans) {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E5M2 || c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E4M3FN) {
-                    create_new_tensor(output, m, ((n / MXFP_MULTI_BASE_SIZE) * FP4_IN_INT8), options_output);
-                    create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
-                                            MXFP_MULTI_BASE_SIZE, options);
-                } else {
-                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
-                    create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-                }
-            } else {
-                if (c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E5M2 || c10_npu::GetAclDataType(quant_dtype.value()) == FLOAT8_E4M3FN) {
-                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE, options_output);
-                    create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-                } else {
-                    create_new_tensor(output, m, n / MXFP_MULTI_BASE_SIZE / NUM_TWO, options_output);
-                    create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE, options);
-                }
-            }
+        if (mxfp4_input && !is_mx_weight_nz_multi) {
+            const bool is_fp8_output = quant_acl_dtype == FLOAT8_E5M2 || quant_acl_dtype == FLOAT8_E4M3FN;
+            create_mxfp4_single_weight_output(output, output_scale, m, n, weight_trans, is_fp8_output,
+                                              options_output, options);
         } else {
             size_t output_n = (is_mx_weight_nz_multi && is_fp4_output) ?
                                   n / MXFP_MULTI_BASE_SIZE / NUM_TWO :
                                   n / MXFP_MULTI_BASE_SIZE;
-            size_t output_scale_n = n / MXFP_MULTI_BASE_SIZE;
-            if (mxfp4_input && is_weight_nz && !is_mx_weight_nz_multi && is_fp4_output && !weight_trans) {
-                output_scale_n = n * FP4_IN_INT8 / MXFP_MULTI_BASE_SIZE;
-            }
             create_new_tensor(output, m, output_n, options_output);
-            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(output_scale_n, MXFP_DIVISOR_SIZE),
+            create_new_tensor_batch(output_scale, m, op_infer::CeilDiv(n / MXFP_MULTI_BASE_SIZE, MXFP_DIVISOR_SIZE),
                                     MXFP_MULTI_BASE_SIZE, options);
         }
     }
