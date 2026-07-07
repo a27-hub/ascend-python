@@ -1,5 +1,4 @@
 // Copyright (c) 2023 Huawei Technologies Co., Ltd
-// Copyright (c) 2019, Facebook CORPORATION.
 // All rights reserved.
 //
 // Licensed under the BSD 3-Clause License  (the "License");
@@ -14,101 +13,112 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ATen/ATen.h>
 #include "op_plugin/AclOpsInterface.h"
 #include "op_plugin/OpApiInterface.h"
 #include "op_plugin/utils/op_api_common.h"
-#include "op_plugin/utils/AdvancedIndex.h"
-#include "torch_npu/csrc/aten/mirror/NPUMemoryOverlap.h"
 
 namespace op_api {
-using npu_preparation = at_npu::native::OpPreparation;
 
-namespace {
-void check_no_overlap(const at::Tensor& a, const at::Tensor& b)
-{
-    const auto overlap_status = at_npu::native::get_overlap_status(a, b);
-    TORCH_CHECK(overlap_status != at_npu::native::MemOverlapStatus::PARTIAL &&
-                    overlap_status != at_npu::native::MemOverlapStatus::FULL,
-                "unsupported operation: some elements of the input tensor and "
-                "the written-to tensor refer to a single memory location. "
-                "Please clone() the tensor before performing the operation.",
-                OPS_ERROR(ErrCode::NOT_SUPPORT));
-}
-} // namespace
-
-at::Tensor index_put(
+at::Tensor& index_add_out(
     const at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices,
-    const at::Tensor& value,
-    bool accumulate) {
-    DO_COMPATIBILITY(aclnnIndexPutImpl, acl_op::index_put(self, indices, value, accumulate));
-    return self.clone(at::MemoryFormat::Contiguous).index_put_(indices, value, accumulate);
-}
-
-at::Tensor& index_put_(
-    at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices,
-    const at::Tensor& value,
-    const bool accumulate) {
-    DO_COMPATIBILITY(aclnnIndexPutImpl, acl_op::index_put_(self, indices, value, accumulate));
-    return at::_index_put_impl_(self, indices, value, accumulate, false);
-}
-
-at::Tensor& _index_put_impl_(
-    at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices,
-    const at::Tensor& value,
-    const bool accumulate,
-    const bool unsafe) {
-    DO_COMPATIBILITY(aclnnIndexPutImpl, acl_op::_index_put_impl_(self, indices, value, accumulate, unsafe));
-    if (self.device().type() == at::kCPU) {
-        return at::native::_index_put_impl_(self, indices, value, accumulate, unsafe);
+    int64_t dim,
+    const at::Tensor& index,
+    const at::Tensor& source,
+    const at::Scalar& alpha,
+    at::Tensor& result) {
+    DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add_out(self, dim, index, source, alpha, result));
+    auto self_sizes = self.sizes().vec();
+    auto source_sizes = source.sizes().vec();
+    if (source.dim() != 0 && self.dim() != 0) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        self_sizes.erase(self_sizes.begin() + wrapped_dim);
+        source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
-    if (at_npu::native::has_internal_overlap(self) == at_npu::native::MemOverlap::YES) {
-        TORCH_WARN(
-            "Use of index_put_ on expanded tensors is deprecated. "
-            "Please clone() the tensor before performing this operation. "
-            "This also applies to advanced indexing e.g. tensor[indices] = tensor");
+    TORCH_CHECK(self_sizes == source_sizes,
+                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+                self.sizes(),
+                " source.shape = ",
+                source.sizes(),
+                OPS_ERROR(ErrCode::PARAM));
+    at_npu::native::OpPreparation::check_tensor({self, index, source},
+                                                result,
+                                                result.scalar_type(),
+                                                self.sizes());
+    if (!result.is_same(self)) {
+        result.copy_(self);
     }
-    check_no_overlap(self, value);
-    for (const c10::optional<at::Tensor>& index : indices) {
-        if (index.has_value()) {
-            check_no_overlap(self, *index);
+
+    if (at::globalContext().deterministicAlgorithms()) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(c10::nullopt);
+            }
         }
+        
+        result.index_put_(indices, source * alpha, true);
+        return result;
     }
 
-    bool needCast = op_plugin::AdvanceIndex::checkIndexTensorTypes(indices);
-    auto indices_after = op_plugin::AdvanceIndex::npu_expand_tensors(self, indices, needCast, true);
-    std::vector<at::Tensor> all_defined_indices;
-    at::SmallVector<int64_t, op_infer::N> zeroSize = {0};
-    at::Tensor emptyTensor = npu_preparation::apply_tensor_without_format(self, zeroSize);
-    c10::List<c10::optional<at::Tensor>> indices_expand_list;
-    for (at::Tensor index_opt : indices_after) {
-        indices_expand_list.push_back(index_opt);
+    EXEC_NPU_CMD(aclnnIndexAdd, result, dim, index, source, alpha, result);
+    return result;
+}
+
+at::Tensor index_add(
+    const at::Tensor& self,
+    int64_t dim,
+    const at::Tensor& index,
+    const at::Tensor& source,
+    const at::Scalar& alpha) {
+    DO_COMPATIBILITY(aclnnIndexAdd, acl_op::index_add(self, dim, index, source, alpha));
+    auto self_sizes = self.sizes().vec();
+    auto source_sizes = source.sizes().vec();
+    if (source.dim() != 0 && self.dim() != 0) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        self_sizes.erase(self_sizes.begin() + wrapped_dim);
+        source_sizes.erase(source_sizes.begin() + wrapped_dim);
     }
-    auto info = op_plugin::AdvanceIndex::make_info(self, indices_expand_list);
-    TORCH_CHECK(op_plugin::AdvanceIndex::is_expandable_to(value.sizes(), info.src.sizes()),
-        "shape mismatch: value tensor of shape ", value.sizes(),
-        " cannot be broadcast to indexing result of shape ", info.src.sizes(),
-        OPS_ERROR(ErrCode::PARAM));
-    for (int i = 0; i < static_cast<int>(indices_after.size()); i++) {
-        if (indices_after[i].defined()) {
-            all_defined_indices.emplace_back(indices_after[i]);
-        continue;
+    TORCH_CHECK(self_sizes == source_sizes,
+                "source tensor shape must match self tensor shape, excluding the specified dimension. Got self.shape = ",
+                self.sizes(),
+                " source.shape = ",
+                source.sizes(),
+                OPS_ERROR(ErrCode::PARAM));
+    at::Tensor result = at_npu::native::OpPreparation::apply_tensor_without_format(self.sizes(), self.options());
+
+    if (at::globalContext().deterministicAlgorithms()) {
+        auto wrapped_dim = at::maybe_wrap_dim(dim, self.dim());
+        result.copy_(self);
+        c10::List<c10::optional<at::Tensor>> indices;
+        indices.reserve(self.dim());
+        for (const auto i : c10::irange(self.dim())) {
+            if (i == wrapped_dim) {
+                indices.emplace_back(index.to(at::kLong));
+            } else {
+                indices.emplace_back(c10::nullopt);
+            }
         }
-    all_defined_indices.emplace_back(emptyTensor);
+        
+        result.index_put_(indices, source * alpha, true);
+        return result;
     }
 
-  for (auto &all_defined_indice : all_defined_indices) {
-      if (all_defined_indice.device() != self.device()) {
-          all_defined_indice = all_defined_indice.to(self.device());
-      }
-  }
-  at::TensorList indices_tensor_list = all_defined_indices;
-  if (self.numel() != 0 && value.numel() != 0) {
-      EXEC_NPU_CMD(aclnnIndexPutImpl, self, indices_tensor_list, value, accumulate, unsafe);
-  }
-  return self;
+    EXEC_NPU_CMD(aclnnIndexAdd, result.copy_(self), dim, index, source, alpha, result);
+    return result;
 }
 
+at::Tensor index_add(
+    const at::Tensor& self,
+    at::Dimname dim,
+    const at::Tensor& index,
+    const at::Tensor& source,
+    const at::Scalar& alpha) {
+    return op_api::index_add(self, dimname_to_position(self, dim), index, source, alpha);
 }
+
+} // namespace op_api
