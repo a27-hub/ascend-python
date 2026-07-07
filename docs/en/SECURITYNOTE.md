@@ -8,7 +8,7 @@ You are advised to enable **address space layout randomization** (ASLR) (level 2
 
 ## Recommended Running Users
 
-The execution of OpPlugin depends on `torch_npu`. For details, see [Recommended Running Users](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/en/SECURITYNOTE.md#file-permission-control) in the `torch_npu` repository.
+The execution of OpPlugin depends on `torch_npu`. For details, see [Recommended Running Users](https://gitcode.com/Ascend/pytorch/blob/v2.7.1-26.0.0/docs/en/SECURITYNOTE.md#running-user-recommendations) in the `torch_npu` repository.
 
 ## File Permission Control
 
