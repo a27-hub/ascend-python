@@ -35,7 +35,7 @@ inputs:
   pr_id:
     type: string
     description: "PR ID"
-    default: ${{ event.MERGE_ID }}
+    default: ${{ env.MERGE_ID }}
   workspace:
     type: string
     description: "工作目录"
