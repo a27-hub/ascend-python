@@ -34,9 +34,8 @@ jobs:
     select: selected_by_default
     runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
     container:
-      # image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
-
-      image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
+      image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ inputs.CP_DOCKER_IMG }}
+      # image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
       options: --user root
     steps:
       - name: print env
