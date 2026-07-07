@@ -6392,20 +6392,14 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     weight_assist_matrix=None, bias=None, dequant_mode=0, dequant_dtype=0, quant_mode=0, quant_dtype=1,
     group_list_type=0, tuning_config=None, x_dtype=None, weight_dtype=None, weight_scale_dtype=None, x_scale_dtype=None):
 
-    is_mxfp8w4 = x.dtype == torch.float8_e4m3fn and weight_dtype == torch_npu.float4_e2m1fn_x2
-    is_mx_weight_nz_multi = weight_scale_dtype is not None and not is_mxfp8w4 and len(weight) > 0 and \
-        len(weight_scale) > 0 and len(weight) == len(weight_scale) and weight[0].dim() == 2 and \
-        weight_scale[0].dim() == 3
-
-    if not is_mx_weight_nz_multi:
-        torch._check(
-            len(weight) == 1,
-            lambda: f"The size of weight should be 1, current size is {len(weight)}.",
-        )
-        torch._check(
-            len(weight_scale) == 1,
-            lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
-        )
+    torch._check(
+        len(weight) == 1,
+        lambda: f"The size of weight should be 1, current size is {len(weight)}.",
+    )
+    torch._check(
+        len(weight_scale) == 1,
+        lambda: f"The size of weight_scale should be 1, current size is {len(weight_scale)}.",
+    )
 
     if x_dtype is not None:
         torch._check(
@@ -6447,14 +6441,11 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
     # In MX mode op-plugin normalizes weight to non-transposed layout, so 4D weightScale is
     # [E, ceil(K/64), N, 2]. The tail axis is fixed to 2 and cannot be used as logical N.
     if weight_scale_dtype is not None:
-        if is_mx_weight_nz_multi:
-            n = weight_scale[0].size(1)
-        else:
-            torch._check(
-                weight_scale[0].dim() == 4,
-                lambda: f"The dim of weight_scale[0] should be equal to 4 in MX quant mode, but got {weight_scale[0].dim()}.",
-            )
-            n = weight_scale[0].size(2)
+        torch._check(
+            weight_scale[0].dim() == 4,
+            lambda: f"The dim of weight_scale[0] should be equal to 4 in MX quant mode, but got {weight_scale[0].dim()}.",
+        )
+        n = weight_scale[0].size(2)
     else:
         n = weight_scale[0].size(-1)
     is_a8w8_input = (x.dtype == torch.float8_e5m2 or x.dtype == torch.float8_e4m3fn) and \
@@ -6485,10 +6476,7 @@ def npu_grouped_matmul_swiglu_quant_v2_meta(x, weight, weight_scale, x_scale, gr
         output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
     elif (quant_dtype == torch_npu.float4_e2m1fn_x2 or quant_dtype == torch_npu.float4_e1m2fn_x2) and dequant_mode == 2:
         if is_a4w4_input:
-            if is_mx_weight_nz_multi:
-                output_shape = torch.empty([batch_size, output_n // mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
-                output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
-            elif hasattr(torch, "float4_e2m1fn_x2"):
+            if hasattr(torch, "float4_e2m1fn_x2"):
                 if quant_dtype == torch_npu.float4_e2m1fn_x2:
                     output_shape = torch.empty([batch_size, output_n], dtype=torch.uint8, device=x.device)
                     output_scale_shape = torch.empty([batch_size, math.ceil(output_scale_n), mxfp_multi_base_size], dtype=torch.uint8, device=x.device)
