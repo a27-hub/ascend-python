@@ -6,6 +6,7 @@
 | ------------------------------------------------------------ | :------: |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>           |    √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>  | √   |
+|<term>Atlas 推理系列产品</term>  | √   |
 
 ## 功能说明
 
@@ -42,6 +43,11 @@ torch_npu.npu_moe_gating_top_k_softmax(x, finished=None, k=1) -> (Tensor, Tensor
 
 - 该接口支持推理场景下使用。
 - 该接口支持图模式。
+- <term>Atlas 推理系列产品</term>:
+  - 输入x shape为[token_num, expert_num], expert_num必须满足16对齐，即expert_num是16整数倍，且不能超过256。
+  - 输入x仅支持FLOAT16。
+  - 输入不支持finishedOptional，只能输入None。
+  - 输出不支持rowIdxOut。
 
 ## 调用示例
 
