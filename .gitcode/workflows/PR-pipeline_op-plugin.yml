@@ -270,7 +270,7 @@ stages:
         name: build
         runs-on: [ 'codearts-hosted', 'ubuntu-latest', 'x64', 'large' ]
         container:
-          image: swr.cn-north-4.myhuaweicloud.com/frameworkptadapter/${{ env.img_master_arm }}
+          image: swr.cn-north-4.myhuaweicloud.com/pytorch_images_x86/pytorchx86:v_03
           options: --user root
         steps:
           - name: print env
