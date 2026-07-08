@@ -180,7 +180,7 @@ stages:
       #     #   uses: checkout
       #     - name: checkout
       #       run: |
-      #         echo "remote_url= ${{ REMOTE_URL }}"
+      #         echo "remote_url= ${REMOTE_URL}"
       #         pwd
       #         rm -rf *
       #         git config --global user.name wangwq129
@@ -270,7 +270,6 @@ stages:
       #   with:
       #     pytorch_branch: "master"
       #     CP_DOCKER_IMG: "pytorch_master_a1_x86_64_builder:20260418"
-
 
       Build_v2_7_1_x86:
         name: Build_v2_7_1_x86
