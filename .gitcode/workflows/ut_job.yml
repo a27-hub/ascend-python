@@ -40,13 +40,13 @@ jobs:
 
           git clone -b master https://codehub.devcloud.cn-north-4.huaweicloud.com/a9b188a62f334fc0963bcfb523426d17/ci_gitcode.git cie
 
-          bash cie/common/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${REMOTE_URL} ${pr_id} ${workspace}
+          bash cie/common/common/merge.sh ${{ atomgit.event.pull_request.base.ref }} ${REMOTE_URL} ${pr_id} ${ATOMGIT_WORKSPACE}
 
           cd ./CODE
           git diff-tree -r --name-only --no-commit-id origin/${{ atomgit.event.pull_request.base.ref }} HEAD > ../modify_files.txt
           cat ../modify_files.txt 
           cd -
           source cie/common/common/ccache_env.sh
-          bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${workspace} ${{ atomgit.event.pull_request.base.ref }}
+          bash cie/common/build/op-plugin_build.sh ${pytorch_branch} ${py_version} ${pr_id} ${ATOMGIT_WORKSPACE} ${{ atomgit.event.pull_request.base.ref }}
 
 
